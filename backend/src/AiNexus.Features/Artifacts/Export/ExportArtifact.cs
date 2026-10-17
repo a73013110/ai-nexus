@@ -5,8 +5,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Artifacts.Export;
 
 /// <summary>
-/// Downloads one version as Word, PDF or Markdown. Read access is checked again after rendering, so access revoked
-/// while a slow PDF renders is not bypassed; the file is never cached.
+/// 下載單一版本，格式為 Word、PDF 或 Markdown。渲染後會再檢查一次讀取權限：PDF 渲染較慢，期間被撤銷的權限不能被繞過；檔案不快取。
 /// </summary>
 internal sealed class ExportArtifact(GetArtifact reader, ArtifactExport exporter)
 {

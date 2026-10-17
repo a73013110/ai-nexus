@@ -5,7 +5,7 @@ namespace AiNexus.Features.Persistence;
 
 public static class AuditOutcomes
 {
-    // Legacy records retain their original result; filters must recognize every successful operation.
+    // 舊紀錄保留當時的結果值，篩選條件必須涵蓋所有成功操作，否則舊紀錄會漏列。
     public static readonly string[] Accepted = ["saved", "read", "completed", "success", "granted", "granted_once", "created", "deleted", "soft_deleted", "queued", "running", "cancelled", "revoked", "removed", "assigned", "read-only", "private", "started", "restored", "activated", "cleared", "connected", "csv", "metrics", "reindexing", "snapshot"];
 }
 
@@ -28,7 +28,7 @@ public sealed class AuditEvent
     public string Action { get; set; } = "";
     [Comment("稽核對象的業務資源識別碼。")]
     public Guid? ResourceId { get; set; }
-    // New committed business events have an explicit outcome; stored legacy nulls remain null.
+    // 新寫入的業務事件一律帶明確結果；資料庫中既有的 null 保持 null，不回填。
     [Comment("稽核操作結果或失敗代碼。")]
     public string? Result { get; set; } = "completed";
     [Comment("稽核前後狀態或操作範圍 JSON；不含密碼、hash、token 或對話內容。")]

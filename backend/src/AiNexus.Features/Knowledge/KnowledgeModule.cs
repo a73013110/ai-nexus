@@ -19,14 +19,13 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Knowledge;
 
 /// <summary>
-/// Knowledge collections, documents and retrieval. Other modules use <see cref="DocumentService"/>,
-/// <see cref="KnowledgeRetrieval"/> and <see cref="RetrievalAuthorization"/>; each endpoint use case has its own file.
+/// 知識庫模組的組合根：註冊服務與端點。其他模組只透過 <see cref="DocumentService"/>、<see cref="KnowledgeRetrieval"/> 與 <see cref="RetrievalAuthorization"/> 存取。
 /// </summary>
 public sealed class KnowledgeModule : IFeatureModule
 {
     public const string RetrievalModelsClient = "RetrievalModels";
 
-    /// <summary>The configured embedding model, named in usage reports and price lists.</summary>
+    /// <summary>目前設定的向量模型，用於用量報表與價目表的模型名稱。</summary>
     public static ServiceModel EmbeddingModel(KnowledgeOptions options) => new(options.Embedding.Provider, options.Embedding.Model, "知識向量模型", "embedding-model");
 
     public static void AddServices(IHostApplicationBuilder builder)
@@ -47,7 +46,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<RetrievalModelProbe>();
         services.AddScoped<IBackgroundJobHandler, EmbeddingReindexHandler>();
         services.AddHostedService<EmbeddingBootstrapWorker>();
-        // SQL Server uses native vector/full-text search; SQLite test fixtures use the in-memory ranking store.
+        // SQL Server 使用原生向量與全文檢索；SQLite 測試環境改用記憶體內的排序實作，結果排序細節可能與正式環境不同。
         services.AddScoped<IRetrievalStore>(s => s.GetRequiredService<NexusDbContext>().Database.IsSqlServer()
             ? ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(s) : ActivatorUtilities.CreateInstance<InMemoryRetrievalStore>(s));
         services.AddScoped<KnowledgeRetrieval>();
@@ -58,7 +57,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddSingleton<IRerankClient, NoneRerankClient>();
         services.AddSingleton<IRerankClient, TeiRerankClient>();
         services.AddSingleton<IRerankClient, OpenAiCompatibleRerankClient>();
-        // Query rewriting uses ModelTaskService and its scoped database context.
+        // 查詢改寫會用到 ModelTaskService 與其 scoped 的資料庫 context，因此這裡必須是 scoped，不可改成 singleton。
         services.AddScoped<IQueryRewriter>(s => s.GetRequiredService<IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
             ? ActivatorUtilities.CreateInstance<ModelQueryRewriter>(s) : new NoopQueryRewriter());
         services.AddSingleton<RetrievalHttp>();
@@ -75,7 +74,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddFeaturePolicy(FeatureIds.Knowledge);
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點註冊順序即為發布的 OpenAPI 順序；調整順序會改變 contracts/openapi.json 的內容。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge).WithTags("Knowledge");

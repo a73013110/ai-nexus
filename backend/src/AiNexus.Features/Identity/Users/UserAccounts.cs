@@ -5,10 +5,10 @@ namespace AiNexus.Features.Identity.Users;
 
 public static class UserAccounts
 {
-    /// <summary>The directory account without domain prefix or UPN suffix.</summary>
+    /// <summary>去掉網域前綴（<c>DOMAIN\</c>）與 UPN 後綴（<c>@domain</c>）後的目錄帳號名。</summary>
     public static string AccountName(string account) => account.Trim().Split('\\').Last().Split('@')[0];
 
-    /// <summary>The stored form of an account that <see cref="IsValid"/> accepted; <see langword="null"/> when not set.</summary>
+    /// <summary>通過 <see cref="IsValid"/> 的帳號所對應的儲存形式（去空白、Unicode FormC、大寫）；未設定時回傳 <see langword="null"/>。</summary>
     public static string? Normalize(string? account)
     {
         if (string.IsNullOrWhiteSpace(account)) return null;
@@ -17,7 +17,7 @@ public static class UserAccounts
         return value.ToUpperInvariant();
     }
 
-    /// <summary>Whether <see cref="Normalize"/> accepts <paramref name="account"/>; an empty account means "not set".</summary>
+    /// <summary>判斷 <see cref="Normalize"/> 是否接受此帳號；空白代表「未設定」，同樣視為有效。</summary>
     public static bool IsValid(string? account) => string.IsNullOrWhiteSpace(account) || Matches(account.Trim().Normalize(NormalizationForm.FormC));
 
     private static bool Matches(string value) => Regex.IsMatch(value, @"^[\p{L}\p{N}][\p{L}\p{N}._-]{0,63}$");

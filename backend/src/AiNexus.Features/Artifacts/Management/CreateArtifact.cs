@@ -12,7 +12,7 @@ namespace AiNexus.Features.Artifacts.Management;
 
 public sealed record CreateArtifactRequest(string Title, string Content, Guid? SourceMessageId = null, Guid? ProjectId = null);
 
-/// <summary>Content only. An invalid title is reported first, with its own code, by the handler.</summary>
+/// <summary>只驗證內容；標題不合法時由 handler 先回傳自己的錯誤代碼。</summary>
 internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateArtifactRequest>
 {
     public override string ProblemCode => ArtifactsErrors.ContentInvalidCode;
@@ -24,8 +24,8 @@ internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateAr
 }
 
 /// <summary>
-/// Creates a personal artifact (at most 200), optionally from a message the user owns and inside a project they may edit.
-/// Also reached through <see cref="ArtifactService"/> by callers that bypass the request filter, so it checks the body itself.
+/// 建立個人成果（每人上限 200 份），可選擇由使用者擁有的訊息產生，並可放入使用者有編輯權的專案。
+/// 其他模組會經由 <see cref="ArtifactService"/> 直接呼叫、不經請求過濾器，因此這裡自己檢查內文。
 /// </summary>
 internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, ConversationService conversations, AccessService features, GetArtifact reader, TimeProvider clock)
 {

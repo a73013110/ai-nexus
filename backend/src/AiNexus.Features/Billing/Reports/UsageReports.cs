@@ -15,7 +15,7 @@ public sealed record TokenDayDto(string Date, string ModelId, int Requests, int 
 public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, long OutputTokens);
 public sealed record TokenUsageDto(DateTimeOffset From, DateTimeOffset Until, int TimezoneOffsetMinutes, IReadOnlyList<TokenDayDto> Daily);
 
-/// <summary>One accounting query for personal and authorized administrative reports. Callers own authorization.</summary>
+/// <summary>個人與授權管理員報表共用的會計查詢；授權檢查由呼叫端負責。</summary>
 public sealed class UsageReports(NexusDbContext db, ModelPresentation presentation, TimeProvider clock)
 {
     public DateTimeOffset Since => UtcDay.Start(clock.GetUtcNow()).AddDays(-29);
@@ -39,7 +39,7 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
             .Select(g => new OwnerUsageDto(g.Key, new UsageTotalsDto(g.Count(), g.Count(x => x.Status == "completed"), g.Count(x => x.Status == "failed"), g.Count(x => x.Status == "cancelled"),
                 g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0), g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue), g.Sum(x => x.DurationMilliseconds ?? 0), g.Count(x => x.DurationMilliseconds.HasValue)))).ToListAsync(ct);
     public Task<UsageTotalsDto> AllAsync(CancellationToken ct) => AllSinceAsync(Since, ct);
-    /// <summary>Every owner's totals from <paramref name="from"/> on, such as today's usage for runtime monitoring.</summary>
+    /// <summary>從 <paramref name="from"/> 起所有擁有者的合計，例如執行期監控使用的今日用量。</summary>
     public async Task<UsageTotalsDto> AllSinceAsync(DateTimeOffset from, CancellationToken ct) => await Entries(from).GroupBy(x => 1)
         .Select(g => new UsageTotalsDto(g.Count(), g.Count(x => x.Status == "completed"), g.Count(x => x.Status == "failed"), g.Count(x => x.Status == "cancelled"),
             g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0), g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue), g.Sum(x => x.DurationMilliseconds ?? 0), g.Count(x => x.DurationMilliseconds.HasValue))).SingleOrDefaultAsync(ct) ?? new(0, 0, 0, 0, 0, 0, 0);
@@ -54,7 +54,7 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
     public async Task<IReadOnlyList<UsageDayDto>> DailyAsync(Guid owner, CancellationToken ct)
     {
         var query = Entries().Where(x => x.OwnerId == owner);
-        // SQL aggregates dates; SQLite's test-only offset converter requires grouping its tiny fixtures in memory.
+        // SQL 負責依日期彙總；SQLite 的時區轉換只用於測試，無法在資料庫端分組，所以改在記憶體中分組。
         if (db.Database.IsSqlServer()) return await query.GroupBy(x => x.CreatedAt.Date).OrderBy(g => g.Key)
             .Select(g => new UsageDayDto(DateOnly.FromDateTime(g.Key), g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToListAsync(ct);
         return (await query.ToListAsync(ct)).GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime)).OrderBy(g => g.Key)
@@ -69,7 +69,7 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
             .Select(x => new TokenDayDto(x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.ModelId, x.Requests, x.Known, x.Input, x.Output)).ToArray();
         else rows = (await query.ToListAsync(ct)).GroupBy(x => new { Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(period.Offset)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.ModelId })
             .Select(g => new TokenDayDto(g.Key.Day, g.Key.ModelId, g.Count(), g.Count(x => x.InputTokens != null && x.OutputTokens != null), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToArray();
-        // Merge aliases after presentation so hidden model identifiers never enter personal reports.
+        // 先做呈現再合併別名，避免隱藏的模型識別碼進入個人報表。
         var presented = rows.GroupBy(x => new { x.Date, Model = administrator ? x.ModelId : presentation.PublicId(x.ModelId) })
             .Select(g => new TokenDayDto(g.Key.Date, g.Key.Model, g.Sum(x => x.Requests), g.Sum(x => x.RequestsWithUsage), g.Sum(x => x.InputTokens), g.Sum(x => x.OutputTokens), presentation.DisplayName(g.First().ModelId, administrator)))
             .OrderBy(x => x.Date).ThenBy(x => x.ModelId).ToArray();

@@ -12,8 +12,8 @@ using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Repositories;
 
 /// <summary>
-/// Gitea with each user's own token: browsing code, history, issues and pull requests; handing files to a conversation or a
-/// knowledge collection; background AI reviews, which may be posted back as a pull-request comment.
+/// 以每位使用者自己的 token 存取 Gitea：瀏覽程式碼、歷史、issue 與 pull request；把檔案交給對話或知識庫；
+/// 背景 AI review，結果可選擇回貼成 pull request 留言。
 /// </summary>
 public sealed class RepositoriesModule : IFeatureModule
 {
@@ -32,11 +32,11 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<IBackgroundJobHandler, RepositoryImportHandler>();
         services.AddSingleton<RepositoryWriteLock>();
         services.AddFeaturePolicy(FeatureIds.Repositories);
-        // Every read is a Gitea call made with the user's token; writes also start model work, uploads or remote comments.
+        // 每次讀取都會實際呼叫 Gitea（使用使用者的 token）；寫入還可能啟動模型工作、上傳檔案或遠端留言，所以限制較嚴。
         services.AddRateLimiter(options => options.AddPerUserLimit(ReadRateLimit, 240).AddPerUserLimit(WriteRateLimit, 20));
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點註冊順序即為發布的 OpenAPI 順序；調整時需同步重產 openapi.json。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).WithTags("Repositories").RequireRateLimiting(ReadRateLimit);

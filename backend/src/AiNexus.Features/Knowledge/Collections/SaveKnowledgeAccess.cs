@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-/// <summary>The owner replaces a collection's named members and group grants.</summary>
+/// <summary>擁有者整批取代知識庫的指定成員與群組授權。</summary>
 internal sealed class SaveKnowledgeAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Jobs;
 
 /// <summary>
-/// Overview of durable background jobs. In progress means queued or running; failed is only <c>failed</c>, never every
-/// unfinished job. The kinds in the period form the distribution.
+/// 持久化背景工作總覽。「處理中」指 queued 或 running；「失敗」只計 <c>failed</c>，不含其他未完成的工作。期間內各種類的數量形成分布。
 /// </summary>
 internal sealed class JobsDashboard(NexusDbContext db) : IDashboardSource
 {

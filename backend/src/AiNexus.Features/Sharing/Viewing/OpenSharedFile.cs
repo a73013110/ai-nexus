@@ -12,8 +12,8 @@ namespace AiNexus.Features.Sharing.Viewing;
 public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
 
 /// <summary>
-/// Preview and download of a file the owner explicitly included. The grant is the share's own reference, never the
-/// recipient's access to the original attachment; the name shown is the one frozen in the snapshot.
+/// 預覽與下載擁有者明確納入分享的檔案。授權來源是分享本身的引用，絕不是收件人對原始附件的存取權；
+/// 顯示的名稱是快照中凍結的那一個。
 /// </summary>
 internal sealed class OpenSharedFile(NexusDbContext db, ShareAccess shares, AttachmentService files)
 {

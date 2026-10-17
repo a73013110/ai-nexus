@@ -8,7 +8,7 @@ public sealed class AdministrationOptions
 {
     public const string Section = "Administration";
 
-    /// <summary>Directory short accounts granted the administrator role on first bootstrap; later changes go through the admin pages.</summary>
+    /// <summary>首次啟動時授予管理者角色的目錄短帳號；之後的變更一律透過管理頁面進行。</summary>
     [MaxLength(20), IdentifierItems] public string[] BootstrapAdministrators { get; set; } = [];
 }
 

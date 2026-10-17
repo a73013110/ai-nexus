@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Sharing;
 
 /// <summary>
-/// Who may see a share. Shares are bound to accounts and checked independently of the source's own ACL: the share must
-/// be live and addressed to the reader, its source must still exist, and the owner must still have the source's feature.
+/// 誰能看見分享。分享綁定帳號，且獨立於來源本身的 ACL 檢查：分享必須仍有效並寄給該讀者、
+/// 來源必須仍存在，且擁有者仍具備來源所屬的功能。
 /// </summary>
 internal sealed class ShareAccess(NexusDbContext db, AccessService features, TimeProvider clock)
 {
@@ -26,7 +26,7 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
         : await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
 
-    /// <summary>The rows of <paramref name="rows"/> whose source still exists (<see cref="SourceExistsAsync"/>), in order, in at most two queries.</summary>
+    /// <summary><paramref name="rows"/> 中來源仍存在（<see cref="SourceExistsAsync"/>）的列，維持原順序，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
     {
         var conversations = rows.Where(x => x.Kind == "conversation").Select(x => x.SourceId).Distinct().ToArray();
@@ -45,18 +45,18 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
     public async Task<ShareDto> DescribeAsync(Guid actor, ShareLink x, CancellationToken ct)
     {
         var owner = await db.Users.Where(u => u.Id == x.OwnerId).Select(u => u.DisplayName).SingleAsync(ct);
-        // Only the sender sees the full recipient list.
+        // 只有寄件者能看到完整的收件人清單
         var recipients = actor == x.OwnerId ? await (from r in db.Set<ShareRecipient>() join u in db.Users on r.UserId equals u.Id where r.ShareId == x.Id select u.DisplayName).ToListAsync(ct) : [];
         return new(x.Id, x.Kind, x.Title, owner, x.OwnerId == actor, x.IsRevoked, x.ExpiresAt, x.CreatedAt, recipients, x.IncludeAttachments);
     }
 
-    /// <summary><see cref="DescribeAsync"/> for a list, in its order, in at most two queries.</summary>
+    /// <summary><see cref="DescribeAsync"/> 的清單版本，依原順序回傳，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareDto>> DescribeAllAsync(Guid actor, IReadOnlyList<ShareLink> rows, CancellationToken ct)
     {
         if (rows.Count == 0) return [];
         var ownerIds = rows.Select(x => x.OwnerId).Distinct().ToArray();
         var owners = await db.Users.Where(u => ownerIds.Contains(u.Id)).Select(u => new { u.Id, u.DisplayName }).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
-        // Only the sender sees the full recipient list.
+        // 只有寄件者能看到完整的收件人清單
         var sent = rows.Where(x => x.OwnerId == actor).Select(x => x.Id).ToArray();
         var recipients = sent.Length == 0 ? [] : (await (from r in db.Set<ShareRecipient>() join u in db.Users on r.UserId equals u.Id where sent.Contains(r.ShareId) select new { r.ShareId, u.DisplayName }).ToListAsync(ct))
             .GroupBy(x => x.ShareId).ToDictionary(g => g.Key, g => g.Select(x => x.DisplayName).ToList());

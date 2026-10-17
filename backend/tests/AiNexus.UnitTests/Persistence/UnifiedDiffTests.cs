@@ -28,7 +28,7 @@ public sealed class UnifiedDiffTests
         after[8] = "nine";
         after[25] = "twenty-six";
         var diff = UnifiedDiff.Create("a", "b", before, after);
-        // Lines 2 and 9 are six unchanged lines apart, so their contexts touch; line 26 is far away.
+        // 第 2 行與第 9 行之間只隔 6 行未變動，兩者的上下文（各 3 行）剛好相接，所以合併成同一個 hunk；第 26 行距離夠遠，另成一個 hunk。
         Assert.Equal(["@@ -1,12 +1,12 @@", "@@ -23,7 +23,7 @@"], diff.Split(Environment.NewLine).Where(x => x.StartsWith("@@", StringComparison.Ordinal)));
     }
 

@@ -2,10 +2,14 @@ using System.Text.Json;
 
 namespace AiNexus.Platform.Diagnostics;
 
-/// <summary>Audit has its own approved schema and durable transaction policy; it is never sampled.</summary>
+/// <summary>
+/// 稽核日誌遮罩器。
+/// 稽核紀錄擁有獨立的核准結構描述（Schema）與持久化交易策略，絕不進行抽樣略過。
+/// </summary>
 public static class AuditRedactor
 {
-    private static readonly HashSet<string> Fields = new(StringComparer.OrdinalIgnoreCase) {
+    private static readonly HashSet<string> Fields = new(StringComparer.OrdinalIgnoreCase)
+    {
         "resourceKey", "before", "after", "failureCode", "kind", "recipients", "expiresAt", "includeAttachments", "users", "groupIds", "source", "count", "externalId", "revision",
         "testId", "administratorId", "userId", "reason", "caseIndex", "variantIndex", "score", "id", "version", "conversationId", "offset", "profiles", "status", "activatedAt", "retiredAt", "vectors",
         "allowedModelIds", "dailyTokenLimits", "storedAttachmentLimitBytes", "attachmentLimitBytes", "enabled", "account", "displayName", "deletedAt", "securityVersion", "authentication",
@@ -14,49 +18,122 @@ public static class AuditRedactor
         "fileSizeBytes", "flushIntervalMs", "retrySeconds", "sqlTimeoutSeconds", "shutdownSeconds", "maxQueryDays", "maxExportDays", "maxExportRows", "serviceName", "cleanupBatchSize", "locationFingerprint",
         "search", "action", "results", "category"
     };
+
+    /// <summary>
+    /// 清理並過濾稽核 JSON 物件，僅保留核准白名單欄位並限制深淺大小。
+    /// </summary>
     public static string? Sanitize(string? json, bool historical = false)
     {
-        if (json is null) return null;
+        if (json is null)
+        {
+            return null;
+        }
+
         try
         {
-            if (json.Length > 40000) throw new JsonException();
+            if (json.Length > 40000)
+            {
+                throw new JsonException();
+            }
+
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 });
-            using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Write(writer, document.RootElement, "", 0);
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                Write(writer, document.RootElement, "", 0);
+            }
+
             var result = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-            if (result.Length > 40000) throw new JsonException();
+            if (result.Length > 40000)
+            {
+                throw new JsonException();
+            }
+
             return result;
         }
-        catch (JsonException) when (historical) { return "{\"diagnostic\":\"[LEGACY DETAIL OMITTED]\"}"; }
-        catch (JsonException) { throw new InvalidOperationException("稽核紀錄無法安全保存。"); }
+        catch (JsonException) when (historical)
+        {
+            return "{\"diagnostic\":\"[LEGACY DETAIL OMITTED]\"}";
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("稽核紀錄無法安全保存。");
+        }
     }
+
     private static void Write(Utf8JsonWriter writer, JsonElement value, string key, int depth)
     {
-        if (depth > 7) throw new JsonException();
+        if (depth > 7)
+        {
+            throw new JsonException();
+        }
+
         switch (value.ValueKind)
         {
             case JsonValueKind.Object:
-                if (value.EnumerateObject().Count() > 128) throw new JsonException();
+                if (value.EnumerateObject().Count() > 128)
+                {
+                    throw new JsonException();
+                }
+
                 writer.WriteStartObject();
                 foreach (var property in value.EnumerateObject())
                 {
-                    var dictionaryKey = key.Equals("dailyTokenLimits", StringComparison.OrdinalIgnoreCase) && property.Name.Length <= 160 && property.Name.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or ':' or '-' or '_' or '.');
-                    if (!Fields.Contains(property.Name) && !dictionaryKey) continue;
-                    writer.WritePropertyName(property.Name); Write(writer, property.Value, property.Name, depth + 1);
+                    var dictionaryKey = key.Equals("dailyTokenLimits", StringComparison.OrdinalIgnoreCase)
+                        && property.Name.Length <= 160
+                        && property.Name.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or ':' or '-' or '_' or '.');
+
+                    if (!Fields.Contains(property.Name) && !dictionaryKey)
+                    {
+                        continue;
+                    }
+
+                    writer.WritePropertyName(property.Name);
+                    Write(writer, property.Value, property.Name, depth + 1);
                 }
-                writer.WriteEndObject(); break;
+                writer.WriteEndObject();
+                break;
+
             case JsonValueKind.Array:
-                if (value.GetArrayLength() > 128) throw new JsonException();
-                writer.WriteStartArray(); foreach (var item in value.EnumerateArray()) Write(writer, item, key, depth + 1); writer.WriteEndArray(); break;
+                if (value.GetArrayLength() > 128)
+                {
+                    throw new JsonException();
+                }
+
+                writer.WriteStartArray();
+                foreach (var item in value.EnumerateArray())
+                {
+                    Write(writer, item, key, depth + 1);
+                }
+                writer.WriteEndArray();
+                break;
+
             case JsonValueKind.String:
                 var text = value.GetString();
-                // Free-form identity-test justifications may contain document/chat content. Retain their presence,
-                // while preserving the server's fixed reasons for session end/revocation.
-                if (key.Equals("reason", StringComparison.OrdinalIgnoreCase) && text is not ("returned" or "signed_in" or "signed_out" or "expired" or "target_changed")) text = "[REASON PROVIDED; TEXT OMITTED]";
-                writer.WriteStringValue(DiagnosticRedactor.Text(text, 240)); break;
-            case JsonValueKind.Number: value.WriteTo(writer); break;
-            case JsonValueKind.True: writer.WriteBooleanValue(true); break;
-            case JsonValueKind.False: writer.WriteBooleanValue(false); break;
-            default: writer.WriteNullValue(); break;
+                // 自由填寫的身分測試理由可能包含敏感文件或對話文字；僅保留其存在性，
+                // 同時保留伺服器預設的固定工作階段結束/撤銷原因代碼。
+                if (key.Equals("reason", StringComparison.OrdinalIgnoreCase) && text is not ("returned" or "signed_in" or "signed_out" or "expired" or "target_changed"))
+                {
+                    text = "[REASON PROVIDED; TEXT OMITTED]";
+                }
+                writer.WriteStringValue(DiagnosticRedactor.Text(text, 240));
+                break;
+
+            case JsonValueKind.Number:
+                value.WriteTo(writer);
+                break;
+
+            case JsonValueKind.True:
+                writer.WriteBooleanValue(true);
+                break;
+
+            case JsonValueKind.False:
+                writer.WriteBooleanValue(false);
+                break;
+
+            default:
+                writer.WriteNullValue();
+                break;
         }
     }
 }

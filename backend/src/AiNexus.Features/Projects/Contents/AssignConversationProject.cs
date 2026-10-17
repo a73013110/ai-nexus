@@ -12,13 +12,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
-/// <summary>A null <c>ProjectId</c> removes the conversation from its project.</summary>
+/// <summary><c>ProjectId</c> 為 null 時會把對話移出專案。</summary>
 [ValidatedInHandler("Every check needs the database: the project must be active and readable.")]
 public sealed record ConversationProjectRequest(Guid? ProjectId);
 
 /// <summary>
-/// Moves one of the user's own conversations into an active project they may read, or out of its project. Runs under the
-/// conversation's generation lock so it cannot race a starting answer.
+/// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答競態。
 /// </summary>
 internal sealed class AssignConversationProject(NexusDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
 {

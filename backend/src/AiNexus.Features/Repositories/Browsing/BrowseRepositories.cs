@@ -13,7 +13,7 @@ public sealed record RepositoryDetailDto(RepositoryDto Repository, string? Commi
 public sealed record RepositoryEntryDto(string Name, string Path, string Kind, long Size);
 public sealed record RepositoryTreeDto(string Commit, string Path, IReadOnlyList<RepositoryEntryDto> Entries, RepositoryFileDto? Readme);
 
-/// <summary>Read-only browsing with the user's own token: the repository list, one repository with its refs, folders and files.</summary>
+/// <summary>以使用者自己的 token 唯讀瀏覽：程式庫清單、單一程式庫（含分支與標籤）、資料夾與檔案。</summary>
 internal sealed class BrowseRepositories(NexusDbContext db, RepositoryService gitea)
 {
     private const int PageSize = 20;
@@ -63,7 +63,7 @@ internal sealed class BrowseRepositories(NexusDbContext db, RepositoryService gi
         var pinned = await db.Set<RepositoryPin>().AsNoTracking().AnyAsync(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo, ct);
         var repository = Describe(metadata.RootElement, _ => pinned);
         if (repository.Empty) return new RepositoryDetailDto(repository, null, [], []);
-        // The token is cached by now, so the two ref lists may load in parallel.
+        // token 此時已快取，兩份參照清單可以並行讀取。
         var branchesRead = gitea.GetListAsync(owner, route + "/branches?limit=50", ct);
         var tagsRead = gitea.GetListAsync(owner, route + "/tags?limit=50", ct);
         await Task.WhenAll(branchesRead, tagsRead);

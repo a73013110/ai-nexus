@@ -8,7 +8,7 @@ namespace AiNexus.Features.Administration.ModelPolicies;
 
 public sealed record AdminUserModelPolicyDto(ModelPolicyRequest Personal, EffectiveModelPolicyDto Effective);
 
-/// <summary>A user's personal policy and the effective result, with internal model ids.</summary>
+/// <summary>使用者的個人策略與有效結果，回傳內部模型 id（供管理端使用）。</summary>
 internal sealed class GetUserModelPolicy(NexusDbContext db, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes

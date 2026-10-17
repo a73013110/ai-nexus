@@ -51,7 +51,7 @@ public sealed class MonitoringSnapshotTests
         var first = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
         Assert.Equal(2, first.Version);
         Assert.Equal(["generation", "model-providers", "jobs", "log-pipeline", "knowledge-index", "usage-today", "storage", "integrations"], first.Subsystems.Select(x => x.Id));
-        // Reads run in the background; the page gets them with the next snapshot.
+        // 讀取在背景執行；頁面會在下一次快照時取得結果。
         await factory.Services.GetRequiredService<SubsystemReadings>().Settled;
         clock.Advance(MonitoringSnapshots.ReuseFor);
         var snapshot = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
@@ -62,7 +62,7 @@ public sealed class MonitoringSnapshotTests
         Assert.Equal(1, Assert.Single(jobs.Facts, x => x.Id == "expired_leases").Value);
         var logs = Assert.Single(snapshot.Subsystems, x => x.Id == "log-pipeline");
         Assert.Equal(SubsystemStates.Healthy, logs.Status);
-        // The monitoring card carries every pipeline fact; the system log page only notes degradation.
+        // 監控卡片帶有所有管線狀態；系統日誌頁面只標示降級。
         Assert.Superset(new HashSet<string> { "replayed", "sampled", "disk_bytes", "estimated_sql_rows", "export_failures", "last_sql_write", "last_file_write" }, logs.Facts.Select(x => x.Id).ToHashSet());
         Assert.Equal(MonitoringHealth.Attention, snapshot.Health.Status);
         Assert.Contains(snapshot.Health.Issues, x => x is { Code: "subsystem_degraded", Subject: "jobs" });
@@ -90,7 +90,7 @@ public sealed class MonitoringSnapshotTests
         var responses = new List<HttpResponseMessage>(); var readers = new List<StreamReader>();
         try
         {
-            // A reload leaves the old streams open until the server notices; the next page must still connect.
+            // 重新載入後，舊串流會保持開啟直到伺服器察覺；下一個頁面仍必須能成功連線。
             for (var i = 0; i <= MonitoringStreams.PerUser; i++)
             {
                 var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
@@ -121,7 +121,7 @@ public sealed class MonitoringSnapshotTests
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators")); await db.SaveChangesAsync(cancel.Token);
         }
-        // Grants are re-checked every 15 seconds of stream time.
+        // 串流期間每 15 秒重新檢查一次授權。
         clock.Advance(TimeSpan.FromSeconds(15));
         var ended = false;
         while (!cancel.IsCancellationRequested) {

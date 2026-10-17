@@ -1,11 +1,10 @@
 namespace AiNexus.Features.AccessControl.Navigation;
 
-/// <summary>Rules over the menu-group hierarchy, shared by the menu payload and the administrator's group edits.</summary>
+/// <summary>選單分群階層的規則，由選單 payload 與管理者的分群編輯共用。</summary>
 public static class NavigationTree
 {
     /// <summary>
-    /// The groups that hold at least one of <paramref name="features"/> with a page, directly or in a subgroup, with every
-    /// ancestor of such a group. Grant-only features (empty route) never keep a group visible.
+    /// 含有至少一個有頁面功能（直接或透過子分群）的分群，連同這些分群的所有祖先。純授權功能（Route 為空）不會讓分群顯示。
     /// </summary>
     public static IReadOnlyList<NavigationGroupDto> VisibleGroups(IReadOnlyList<NavigationGroupDto> groups, IEnumerable<FeatureDto> features)
     {
@@ -14,13 +13,13 @@ public static class NavigationTree
         foreach (var feature in features)
         {
             if (string.IsNullOrEmpty(feature.Route)) continue;
-            // The visited set stops at a group already shown, and guards against a cycle in hand-edited data.
+            // visible 集合同時作為走訪的停止條件：遇到已加入的分群就停；也避免手動改過的資料有循環時無窮迴圈。
             for (var id = feature.GroupId; id is not null && parents.ContainsKey(id) && visible.Add(id);) id = parents[id];
         }
         return groups.Where(x => visible.Contains(x.Id)).ToArray();
     }
 
-    /// <summary>Whether placing <paramref name="id"/> under <paramref name="parentId"/> would make it its own ancestor.</summary>
+    /// <summary>判斷把 <paramref name="id"/> 放到 <paramref name="parentId"/> 之下，是否會讓它變成自己的祖先。</summary>
     public static bool CreatesCycle(IReadOnlyDictionary<string, string?> parents, string id, string? parentId)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);

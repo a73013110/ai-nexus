@@ -43,8 +43,8 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
         return result;
     }
     /// <summary>
-    /// Queues a rebuild of the profile, or returns the one already running. Like the other administrative changes below,
-    /// the caller holds <see cref="KnowledgeWriteLock"/> and audits it; nothing is saved here.
+    /// 把向量模型的重建排入佇列；若已有進行中的重建，直接回傳它。與下方其他管理變更相同，呼叫端需持有
+    /// <see cref="KnowledgeWriteLock"/> 並自行稽核，這裡不儲存任何變更。
     /// </summary>
     public async Task<Result<BackgroundJob>> QueueRebuildAsync(Guid actor, int id, CancellationToken ct)
     {

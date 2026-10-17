@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Jobs;
 
 /// <summary>
-/// Queues a failed or cancelled job of the user again, at most six attempts in all, when its kind is still handled, the
-/// handler accepts the retry and no other job is active for the same subject. The update is fenced on the read status.
+/// 把使用者的失敗或已取消工作重新排入佇列。全部嘗試上限為 6 次；且工作種類仍有處理器、處理器接受重試，
+/// 同一業務對象沒有其他進行中的工作。更新以讀到的狀態作為條件（fencing），避免覆寫併發的狀態變更。
 /// </summary>
 internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, TimeProvider clock)
 {
@@ -21,7 +21,7 @@ internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, Tim
         if (job is null) return JobsErrors.JobNotFound;
         if (job.Status is not ("failed" or "cancelled")) return JobsErrors.JobNotRetryable;
         if (job.Attempt >= 6) return JobsErrors.JobRetryLimit;
-        // Handlers are resolved only for a retryable job; their own checks belong to their module.
+        // 只有可重試的工作才解析處理器；處理器自己的檢查屬於其所在模組，這裡不重複。
         var handler = services.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == job.Kind);
         if (handler is null) return JobsErrors.JobHandlerMissing;
         var allowed = await handler.ValidateRetryAsync(job, ct);

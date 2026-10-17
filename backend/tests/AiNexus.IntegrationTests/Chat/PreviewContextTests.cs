@@ -48,7 +48,7 @@ public sealed class PreviewContextTests
         Guid? parent = null;
         for (var round = 1; round <= 5; round++)
         {
-            // About 270 budget units per round: with the system prompt and the new prompt, only one earlier round fits.
+            // 每輪約 270 個預算單位：加上系統提示與新提示後，只放得下一輪先前的對話。
             var run = await WaitForTerminal(client, (await CreateRun(client, conversation.Id, new string('中', 60) + round, parent)).Id);
             parent = run.AssistantMessageId;
         }
@@ -66,7 +66,7 @@ public sealed class PreviewContextTests
         var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;
         Assert.Equal(18000, catalog.Policy.MaxInputCharacters);
         var preview = await client.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, new string('文', 12000), "test-model"));
-        preview.EnsureSuccessStatusCode(); // Escaped Chinese JSON is larger than the ordinary 64 KB body limit.
+        preview.EnsureSuccessStatusCode(); // 跳脫後的中文 JSON 會超過一般 64 KB 的 body 上限。
         Assert.True((await preview.Content.ReadFromJsonAsync<ContextUsageDto>())!.BudgetExceeded);
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.AccessControl.ModelPolicies;
 
-/// <summary>A group's model whitelist, daily token caps and attachment capacity. Groups grant additively.</summary>
+/// <summary>功能群組的模型白名單、各模型每日 token 上限與附件空間。多個群組的授權採聯集。</summary>
 [Comment("功能群組的模型白名單、各模型每日 token 及附件空間限制。")]
 public sealed class GroupModelPolicy
 {

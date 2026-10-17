@@ -13,7 +13,7 @@ public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string
 
 public sealed record EvaluationDetailDto(EvaluationRunDto Run, IReadOnlyList<EvaluationCase> Cases, IReadOnlyList<EvaluationVariant> Variants, IReadOnlyList<EvaluationResultDto> Results, bool CanReview);
 
-/// <summary>A set's latest 100 runs, and one run with its frozen cases, variants and results. Both require read access to the set.</summary>
+/// <summary>某題組最近 100 筆執行紀錄；單筆執行另含凍結的題目、變體與結果。兩者都需要該題組的讀取權限。</summary>
 internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess access, ModelPresentation presentation)
 {
     public static void Map(RouteGroupBuilder routes)
@@ -22,6 +22,7 @@ internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess acc
             .WithRequestBodyLimit(QualityModule.SetBodyLimit);
         routes.MapGet("/runs/{id:guid}", (Guid id, ICurrentUser user, BrowseEvaluationRuns handler, HttpContext http, CancellationToken ct) =>
         {
+            // 結果含個人回答與人工審閱內容，不可被瀏覽器或中間快取保存。
             http.Response.Headers.CacheControl = "private, no-store";
             return handler.DetailAsync(user.Id, id, ct).ToHttpResultAsync();
         });

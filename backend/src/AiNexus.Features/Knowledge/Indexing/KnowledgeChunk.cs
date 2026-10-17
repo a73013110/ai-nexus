@@ -4,7 +4,7 @@ using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Indexing;
 
-/// <summary>One indexed passage of a collection document; <see cref="SearchId"/> is the full-text key.</summary>
+/// <summary>知識庫文件的一段索引片段；<see cref="SearchId"/> 是全文索引使用的鍵。</summary>
 [Comment("結構化檢索片段、頁碼與內容指紋；查詢先套用資料 ACL。")]
 public sealed class KnowledgeChunk
 {

@@ -8,9 +8,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Integrations;
 
 /// <summary>
-/// Runtime monitoring of external integrations from configuration alone: web search, Gitea and the legacy data
-/// sources. Nothing is contacted; their actual calls appear as dependencies. Degraded when an enabled integration is
-/// missing part of its setup, idle when none is enabled.
+/// 外部整合的執行期監控，只依設定判斷、不實際連線（實際呼叫會以 dependency 形式另外出現）。
+/// 已啟用但設定不完整即為 degraded；全部未啟用則為 idle。
 /// </summary>
 internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, IOptions<GiteaOptions> gitea, IOptions<IntegrationsOptions> sources,
     IOptions<DatabasesOptions> databases) : IMonitoringSource

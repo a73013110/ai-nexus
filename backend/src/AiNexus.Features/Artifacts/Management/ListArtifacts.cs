@@ -7,7 +7,7 @@ namespace AiNexus.Features.Artifacts.Management;
 
 public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
 
-/// <summary>The 200 most recently updated artifacts the user may read, with whether each one is editable.</summary>
+/// <summary>使用者可讀取、依更新時間排序的前 200 份成果，並標示每份是否可編輯。</summary>
 internal sealed class ListArtifacts(NexusDbContext db, ResourceAccess access)
 {
     private const int PageSize = 200;
@@ -19,7 +19,7 @@ internal sealed class ListArtifacts(NexusDbContext db, ResourceAccess access)
     public async Task<IReadOnlyList<ArtifactSummaryDto>> HandleAsync(Guid actor, CancellationToken ct)
     {
         var query = await access.QueryAsync(actor, Artifact.Kind, ct);
-        // Editable: owner, a named editor, or an editor of the live parent project.
+        // 可編輯條件：擁有者、具編輯角色的成員，或目前父專案的編輯者（即時計算，不是快照）。
         return await (from resource in query.AsNoTracking() join item in db.Set<Artifact>() on resource.Id equals item.Id orderby resource.UpdatedAt descending
             select new ArtifactSummaryDto(new(resource.Id, resource.Name, resource.Kind,
                 resource.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == item.Id && m.UserId == actor && m.Role == "editor")

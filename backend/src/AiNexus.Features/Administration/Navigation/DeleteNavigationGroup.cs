@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Navigation;
 
-/// <summary>Removes an empty menu group. Audited; refused while subgroups or features are still placed in it.</summary>
+/// <summary>刪除選單群組。仍有子群組或功能掛在其下時拒絕，不會級聯刪除。會稽核。</summary>
 internal sealed class DeleteNavigationGroup(NexusDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes

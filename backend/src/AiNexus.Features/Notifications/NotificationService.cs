@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Notifications;
 
-/// <summary>The module's contract for other modules: queue a notification alongside their own change.</summary>
+/// <summary>其他模組排入通知的契約入口。</summary>
 public sealed class NotificationService(NexusDbContext db)
 {
-    /// <summary>Caller saves the event with its source change in the same transaction.</summary>
+    /// <summary>必須與來源變更在同一個交易中由呼叫端儲存；同一 EventKey 重複排入會被忽略。</summary>
     public async Task PublishAsync(Guid owner, string key, string type, string severity, string title, string body, string target, Guid id, CancellationToken ct, string? issueCode = null)
     {
         if (target is not ("conversation" or "task" or "share" or "repository-review") || severity is not ("info" or "success" or "error"))

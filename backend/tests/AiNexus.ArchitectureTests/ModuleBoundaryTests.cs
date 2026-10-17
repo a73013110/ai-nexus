@@ -5,15 +5,14 @@ using NetArchTest.Rules;
 namespace AiNexus.ArchitectureTests;
 
 /// <summary>
-/// Modules may depend on each other, but never in a cycle: the dependency graph must stay layered so each module can be
-/// read, tested and changed with only the modules below it in mind. To break a new cycle, move the type to the module
-/// that owns the behavior, let the lower module define an interface the upper one implements, or publish a domain event.
+/// 模組之間可以互相依賴，但不可形成循環，依賴圖必須維持分層，讓每個模組只需考慮下層模組即可閱讀與修改。
+/// 打破新循環的做法：把型別搬到擁有該行為的模組、由下層定義介面讓上層實作，或改用領域事件（domain event）。
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
     private const string Root = "AiNexus.Features.";
 
-    // Shared infrastructure of the Features assembly, not business modules.
+    // Features 組件中的共用基礎設施，不是業務模組。
     private static readonly HashSet<string> Infrastructure = ["Persistence"];
 
     [Fact]
@@ -24,7 +23,7 @@ public sealed class ModuleBoundaryTests
         Assert.True(cycles.Count == 0, "Module dependency cycles (each line: the types that create the dependency):\n" + string.Join("\n\n", cycles));
     }
 
-    /// <summary>A module is a folder of the Features project; its root holds <c>&lt;Module&gt;Module.cs</c>, the one place it is registered.</summary>
+    /// <summary>模組就是 Features 專案下的一個資料夾；根目錄的 <c>&lt;Module&gt;Module.cs</c> 是唯一註冊模組的地方。</summary>
     [Fact]
     public void EveryModuleHasAModuleClassAtItsRoot()
     {
@@ -36,7 +35,7 @@ public sealed class ModuleBoundaryTests
         Assert.True(missing.Count == 0, "Modules without <Module>/<Module>Module.cs declaring <Module>Module: " + string.Join(", ", missing));
     }
 
-    /// <summary>A module's expected failures are listed in one place, <c>&lt;Module&gt;Errors</c> at the module root.</summary>
+    /// <summary>模組預期的錯誤集中定義在模組根目錄的 <c>&lt;Module&gt;Errors</c>。</summary>
     [Fact]
     public void ErrorsAreDeclaredInTheModuleErrorsClass()
     {
@@ -52,14 +51,14 @@ public sealed class ModuleBoundaryTests
         Assert.True(misplaced.Count == 0, "Move these errors to <Module>Errors:\n" + string.Join("\n", misplaced));
     }
 
-    /// <summary>Each module-to-module dependency with the types of the depending module that cause it.</summary>
+    /// <summary>每組模組對模組的依賴，以及造成該依賴的來源模組型別。</summary>
     internal static Dictionary<(string From, string To), IReadOnlyList<string>> Edges()
     {
         var modules = Assemblies.Features.GetTypes()
             .Select(t => t.Namespace).OfType<string>().Where(ns => ns.StartsWith(Root, StringComparison.Ordinal))
             .Select(ns => ns[Root.Length..].Split('.')[0]).Where(m => !Infrastructure.Contains(m)).ToHashSet(StringComparer.Ordinal);
         var edges = new Dictionary<(string, string), IReadOnlyList<string>>();
-        // Read the assembly once; every pair query filters the same type list.
+        // 組件只讀一次；之後每組配對查詢都篩同一份型別清單，避免對每個配對重掃組件。
         var types = Types.InAssembly(Assemblies.Features);
         foreach (var from in modules)
         {
@@ -73,14 +72,14 @@ public sealed class ModuleBoundaryTests
         return edges;
     }
 
-    // Compiler-generated lambdas and state machines are reported as the type that declares them.
+    // 編譯器產生的 lambda 與狀態機會以宣告它們的型別回報（巢狀型別以 '+' 分隔），這裡只取最外層的型別名。
     private static string TopLevelName(string fullName)
     {
         var type = fullName.Split('/', '+')[0];
         return type[(type.LastIndexOf('.') + 1)..];
     }
 
-    // Tarjan's strongly connected components; a component with more than one module contains a cycle.
+    // Tarjan 強連通元件演算法；元件內若有超過一個模組，就代表存在循環。
     private static List<List<string>> Components(Dictionary<(string From, string To), IReadOnlyList<string>> edges)
     {
         var next = edges.Keys.GroupBy(x => x.From).ToDictionary(g => g.Key, g => g.Select(x => x.To).Order(StringComparer.Ordinal).ToList());
@@ -107,7 +106,7 @@ public sealed class ModuleBoundaryTests
         }
     }
 
-    // A shortest cycle through the component's first module, found breadth-first inside the component.
+    // 在元件內以廣度優先搜尋，找出經過元件第一個模組的最短循環，讓錯誤訊息最短、最易讀。
     private static List<string> Cycle(List<string> component, Dictionary<(string From, string To), IReadOnlyList<string>> edges)
     {
         var members = component.ToHashSet(StringComparer.Ordinal);

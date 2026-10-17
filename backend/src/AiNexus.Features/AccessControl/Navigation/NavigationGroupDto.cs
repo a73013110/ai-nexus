@@ -1,4 +1,4 @@
 namespace AiNexus.Features.AccessControl.Navigation;
 
-/// <summary>A menu group; <c>ParentId</c> null is the top level. Features and groups of one level are ordered features first, each by <c>SortOrder</c> then id.</summary>
+/// <summary>選單分群。<c>ParentId</c> 為 null 代表最上層；同一層中功能排在分群之前，兩者各自依 <c>SortOrder</c>、再依 Id 排序。</summary>
 public sealed record NavigationGroupDto(string Id, string? ParentId, string Name, int SortOrder);

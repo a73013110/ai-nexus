@@ -4,9 +4,8 @@ using AiNexus.Features.Identity.Users;
 namespace AiNexus.Features.Identity;
 
 /// <summary>
-/// The signed-in user, already resolved when an endpoint handler runs. Endpoints that declare an
-/// <see cref="ICurrentUser"/> parameter get it resolved once by <see cref="CurrentUserResolution"/>; handlers read
-/// <see cref="Id"/> synchronously instead of awaiting a lookup at every call site.
+/// 目前登入的使用者，在 handler 執行時已解析完成。宣告 <see cref="ICurrentUser"/> 參數的端點會由 <see cref="CurrentUserResolution"/> 先解析一次，
+/// handler 直接同步讀取 <see cref="Id"/>，不必在每個呼叫處各自 await 查詢。
 /// </summary>
 public interface ICurrentUser
 {
@@ -16,7 +15,7 @@ public interface ICurrentUser
 
 public static class CurrentUserResolution
 {
-    /// <summary>Resolves the user before handlers that take <see cref="ICurrentUser"/>; other endpoints are untouched.</summary>
+    /// <summary>在有 <see cref="ICurrentUser"/> 參數的 handler 執行前解析使用者；其他端點不受影響。</summary>
     public static RouteGroupBuilder WithCurrentUser(this RouteGroupBuilder group) => group.AddEndpointFilterFactory((context, next) =>
         !context.MethodInfo.GetParameters().Any(parameter => parameter.ParameterType == typeof(ICurrentUser)) ? next : async invocation =>
         {

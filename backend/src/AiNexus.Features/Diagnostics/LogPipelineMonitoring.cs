@@ -4,9 +4,8 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Diagnostics;
 
 /// <summary>
-/// Runtime monitoring of the diagnostic log pipeline, read from the in-memory <see cref="DiagnosticHealth"/> counters
-/// (the same degraded flag as the system log page). This is the full set of pipeline facts; the system log page only notes degradation.
-/// Counts are since process start; disk bytes and SQL rows are the latest readings.
+/// 日誌管線的完整監控事實，來源是記憶體中的 <see cref="DiagnosticHealth"/>；日誌頁只標示是否降級，細節在這裡。
+/// 計數自程序啟動起累計；磁碟位元組與 SQL 筆數只是最新一次讀值。
 /// </summary>
 internal sealed class LogPipelineMonitoring(DiagnosticHealth health, TimeProvider clock) : IMonitoringSource
 {

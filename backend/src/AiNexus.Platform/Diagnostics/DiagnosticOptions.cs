@@ -39,8 +39,8 @@ public sealed class DiagnosticOptions : IValidatableObject
     }
 
     /// <summary>
-    /// Reads the section before dependency injection exists (startup failure journal, exporter wiring). Malformed
-    /// settings fall back to the defaults here because options validation reports them when the host starts.
+    /// 在相依性注入容器建立之前讀取診斷組態（供啟動失敗期刊記錄與匯出器接線使用）。
+    /// 若組態格式不正確，此處將自動回退至預設值，因為主機啟動時 Options 驗證會負責回報詳細驗證錯誤。
     /// </summary>
     public static DiagnosticOptions Read(IConfiguration configuration)
     {
@@ -49,7 +49,10 @@ public sealed class DiagnosticOptions : IValidatableObject
             var options = configuration.GetSection(Section).Get<DiagnosticOptions>() ?? new();
             return new DiagnosticOptionsValidator().Validate(null, options).Succeeded ? options : new();
         }
-        catch (Exception) { return new(); }
+        catch (Exception)
+        {
+            return new();
+        }
     }
 }
 

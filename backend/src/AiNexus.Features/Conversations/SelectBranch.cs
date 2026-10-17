@@ -10,7 +10,7 @@ namespace AiNexus.Features.Conversations;
 [ValidatedInHandler("Every check needs the database: the leaf must be a message of this conversation.")]
 public sealed record SelectBranchRequest(Guid LeafId);
 
-/// <summary>Shows another version (leaf message) of one of the user's own idle conversations. Runs under the conversation's generation lock.</summary>
+/// <summary>切換到使用者自己對話的另一個分支（指定葉節點訊息）。只允許閒置對話，並在對話的生成鎖內執行。</summary>
 internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

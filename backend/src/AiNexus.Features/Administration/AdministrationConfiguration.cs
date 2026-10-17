@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Administration;
 
-/// <summary>The administrator role, group and feature, seeded with <c>HasData</c>.</summary>
+/// <summary>系統管理員的角色、群組與功能種子資料，隨 migration 以 <c>HasData</c> 寫入。</summary>
 public sealed class AdministrationConfiguration() : FeatureSeed(new PlatformFeature(Feature, "存取管理", "/admin", 90, BuiltInAccess.SystemNavigation, "lock", AdministratorsOnly: true)),
     IEntityTypeConfiguration<AccessControl.Roles.Role>, IEntityTypeConfiguration<RoleGroup>, IEntityTypeConfiguration<RoleGroupRole>
 {

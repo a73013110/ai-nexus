@@ -2,15 +2,15 @@ using Microsoft.EntityFrameworkCore.Migrations.Operations;
 
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
-/// <summary>One numbered release SQL file.</summary>
-/// <param name="Number">Execution order, shared by schema/ and data/ and spaced by <see cref="ReleaseScriptGenerator.NumberStep"/>.</param>
-/// <param name="Kind">The folder it goes to and the DBA who runs it.</param>
-/// <param name="Target">The object it changes: <c>schema.Table</c>, a schema name, or the operation name.</param>
-/// <param name="MigrationId">The migration it belongs to; <see langword="null"/> for the shared history-table file.</param>
-/// <param name="OutsideTransaction">It holds statements that SQL Server cannot run inside a transaction.</param>
-/// <param name="Path">Relative path with forward slashes, for example <c>schema/0420_knowledge.Chunks.sql</c>.</param>
-/// <param name="Sql">The batches as EF generates them, without the header comment.</param>
-/// <param name="Operations">The migration operations it was generated from; empty for history rows.</param>
+/// <summary>一個有編號的發布 SQL 檔。</summary>
+/// <param name="Number">執行順序。schema/ 與 data/ 共用同一套序號，序號之間以 <see cref="ReleaseScriptGenerator.NumberStep"/> 間隔。</param>
+/// <param name="Kind">所屬資料夾，也決定由哪一方 DBA 執行。</param>
+/// <param name="Target">變動的物件：<c>schema.Table</c>、schema 名稱或操作名稱。</param>
+/// <param name="MigrationId">所屬的 migration；共用的 history 表檔案為 <see langword="null"/>。</param>
+/// <param name="OutsideTransaction">含有 SQL Server 不能在交易內執行的語句。</param>
+/// <param name="Path">使用斜線的相對路徑，例如 <c>schema/0420_knowledge.Chunks.sql</c>。</param>
+/// <param name="Sql">EF 產生的批次內容，不含檔頭註解。</param>
+/// <param name="Operations">產生此檔所依據的 migration 操作；寫入 history 的檔案為空。</param>
 public sealed record ReleaseScriptFile(
     int Number,
     ReleaseScriptKind Kind,
@@ -23,10 +23,10 @@ public sealed record ReleaseScriptFile(
 {
     public string Folder => Kind == ReleaseScriptKind.Data ? "data" : "schema";
 
-    /// <summary>The zero-padded number as it appears in the file name.</summary>
+    /// <summary>檔名中的補零序號。</summary>
     public string Label => Path[(Folder.Length + 1)..Path.IndexOf('_', StringComparison.Ordinal)];
 
-    /// <summary>The comment lines written above <see cref="Sql"/>.</summary>
+    /// <summary>寫在 <see cref="Sql"/> 上方的註解行。</summary>
     public string Header
     {
         get

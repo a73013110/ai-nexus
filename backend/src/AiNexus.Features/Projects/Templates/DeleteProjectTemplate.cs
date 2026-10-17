@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Templates;
 
-/// <summary>Deletes a template of an active project the user may edit; deleting a missing template succeeds.</summary>
+/// <summary>刪除可編輯的有效專案中的範本；刪除不存在的範本也視為成功。</summary>
 internal sealed class DeleteProjectTemplate(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

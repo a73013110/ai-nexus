@@ -14,7 +14,7 @@ public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, strin
 
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, IReadOnlyList<AdminMessageDto> Messages, int Offset, int Total);
 
-/// <summary>Any conversation's messages, 100 per page, with attachments and timings. The read is audited.</summary>
+/// <summary>任一對話的訊息，每頁 100 筆，附附件與執行耗時；讀取會稽核。</summary>
 internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeReadAudit reads, ModelPresentation models)
 {
     public static void Map(RouteGroupBuilder routes) => routes

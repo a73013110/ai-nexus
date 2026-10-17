@@ -2,8 +2,7 @@ using AiNexus.Features.Monitoring.Traffic;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// The snapshot every monitoring read and stream tick uses. A snapshot built less than <see cref="ReuseFor"/> ago for the
-/// same window is shared, so N viewers cost one build per window and second, and subsystem readings come from the cache.
+/// 所有監控讀取與串流推送共用的快照。同一時間窗內，距上次建置不到 <see cref="ReuseFor"/> 者直接共用，因此 N 位檢視者每個時間窗每秒只建置一次，子系統讀數也來自快取。
 /// </summary>
 public sealed class MonitoringSnapshots(RuntimeTraffic traffic, SubsystemReadings subsystems, TimeProvider clock)
 {
@@ -18,7 +17,7 @@ public sealed class MonitoringSnapshots(RuntimeTraffic traffic, SubsystemReading
         {
             var now = clock.GetUtcNow();
             if (recent[slot] is { } cached && now >= cached.At && now - cached.At < ReuseFor) return cached;
-            // Disabled monitoring reads nothing, including other modules' sources.
+            // 監控停用時不讀取任何子系統，避免停用後仍向其他模組的資料來源查詢。
             return recent[slot] = traffic.Snapshot(minutes, traffic.Enabled ? subsystems.Read() : []);
         }
     }

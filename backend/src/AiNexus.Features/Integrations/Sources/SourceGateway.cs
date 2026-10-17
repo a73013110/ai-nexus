@@ -10,8 +10,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Integrations.Sources;
 
 /// <summary>
-/// The only path to the read-only legacy sources. Authorization is checked before every query and again after it, so a
-/// grant revoked mid-query never releases data; every read is audited.
+/// 讀取舊系統唯讀來源的唯一入口。每次查詢前後都檢查授權，查詢期間被撤銷的授權不會讓資料外流；每次讀取都寫入稽核。
 /// </summary>
 internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
     IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
@@ -23,10 +22,10 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
 
     private sealed record Target(IControlledSourceAdapter Adapter, SourceOptions Options, SourceActor Actor);
 
-    /// <summary>The configured sources with their display names and <c>Databases</c> entries.</summary>
+    /// <summary>目錄中的來源與其 <c>Databases</c> 設定；不含使用者權限，僅供列舉與健康判定。</summary>
     public static IEnumerable<(string Id, string Name, string Database)> Sources => Catalog.Select(x => (x.Id, x.Name, x.Database));
 
-    /// <summary>How far a source is set up, before any user's grant: disabled, unsupported-transport, acl-unconfirmed, unconfigured or configured.</summary>
+    /// <summary>在任何使用者授權之前，判斷來源的設定進度（停用、傳輸不支援、ACL 未確認、未設定連線、已設定）。</summary>
     public static string SetupStatus(SourceOptions option, bool connectionConfigured) => !option.Enabled ? "disabled" : option.Transport != "sql" ? "unsupported-transport"
         : !option.AclContractConfirmed ? "acl-unconfirmed" : !connectionConfigured ? "unconfigured" : "configured";
 
@@ -84,7 +83,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         return row;
     }
 
-    // A re-check after the source call is fresh: grants read earlier in this request may have been revoked meanwhile.
+    // 來源查詢後的第二次授權檢查必須 fresh（捨棄快取）：本次請求稍早讀到的授權可能已在查詢期間被撤銷。
     private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct, bool fresh = false)
     {
         var item = Catalog.SingleOrDefault(x => x.Id == source);
@@ -101,7 +100,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         return new Target(adapters.Single(x => x.Id == source), value, new(user.Sid, user.Account));
     }
 
-    // Connectivity failures of the external system are infrastructure faults, not expected outcomes, so they stay exceptions.
+    // 外部系統的連線失敗屬於基礎設施故障而非預期結果，因此維持拋出例外，不轉成 Result。
     private async Task<T> SafeAsync<T>(string source, Func<Task<T>> work, CancellationToken ct)
     {
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = source });

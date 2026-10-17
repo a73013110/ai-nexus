@@ -3,7 +3,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Notifications;
 
-/// <summary>Workspace inbox. Other modules publish through <see cref="NotificationService"/>; each use case has its own file.</summary>
+/// <summary>工作區收件匣。其他模組透過 <see cref="NotificationService"/> 排入通知。</summary>
 public sealed class NotificationsModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)

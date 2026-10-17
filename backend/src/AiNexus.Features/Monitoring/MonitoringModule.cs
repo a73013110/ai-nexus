@@ -12,7 +12,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Monitoring;
 
-/// <summary>Live presence, request traffic and dependency health of this instance. Each use case has its own file.</summary>
+/// <summary>本實例的即時在線、請求流量與相依服務健康度。每個用例各自一個檔案。</summary>
 public sealed class MonitoringModule : IFeatureModule
 {
     public const string Feature = "monitoring", Policy = Policies.Prefix + Feature;
@@ -35,12 +35,12 @@ public sealed class MonitoringModule : IFeatureModule
         services.AddRateLimiter(options => options.AddPerUserLimit(PresenceRateLimit, 120));
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點順序即為已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         HeartbeatPresence.Map(api);
         LeavePresence.Map(api);
-        // Monitoring reads share the log query rate limit, are audited and kept out of the request log.
+        // 監控讀取與日誌查詢共用速率限制、會被稽核，且不列入請求日誌，避免監控自己的查詢洗版日誌。
         var monitor = api.MapGroup("/admin/monitoring").RequireAuthorization(Policy).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog()).WithTags("Runtime monitoring");
         GetMonitoringSnapshot.Map(monitor);
@@ -51,7 +51,7 @@ public sealed class MonitoringModule : IFeatureModule
 
 public static class RuntimeTrafficMiddlewareExtensions
 {
-    /// <summary>Outermost: measures every request, including ones the diagnostic and security layers reject.</summary>
+    /// <summary>必須最外層註冊：才能量測每個請求，包括被診斷或安全層拒絕的請求。</summary>
     public static IApplicationBuilder UseRuntimeTraffic(this IApplicationBuilder app) => app.UseMiddleware<RuntimeTrafficMiddleware>();
 }
 

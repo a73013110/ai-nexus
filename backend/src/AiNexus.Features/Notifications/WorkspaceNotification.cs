@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Notifications;
 
-// Payload version and typed targets are independent of delivery channels and UI URLs.
+// 內容版本與型別化的目標與投遞管道、前端 URL 無關；改 URL 不應影響已存下的通知。
 [Comment("使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。")]
 public sealed class WorkspaceNotification
 {
@@ -40,7 +40,7 @@ public sealed class WorkspaceNotification
 
 internal static class NotificationQueries
 {
-    /// <summary>The owner's notifications that are still in the inbox.</summary>
+    /// <summary>擁有者仍在收件匣中的通知。</summary>
     public static IQueryable<WorkspaceNotification> Inbox(this IQueryable<WorkspaceNotification> notifications, Guid owner)
         => notifications.Where(x => x.OwnerId == owner && x.DismissedAt == null);
 }

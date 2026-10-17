@@ -10,8 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge;
 
 /// <summary>
-/// Overview of knowledge collections: their source documents by processing status and the index segments. Only
-/// documents added to a collection count here; private reader and project documents are not knowledge documents.
+/// 知識庫總覽：來源文件依處理狀態統計，並列出索引分段。只計入加入知識庫的文件；私人讀取與專案文件不算知識庫文件。
 /// </summary>
 internal sealed class KnowledgeDashboard(NexusDbContext db) : IDashboardSource
 {

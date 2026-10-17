@@ -32,7 +32,7 @@ public sealed class ListActivityAuditTests
         var catalog = (await auditor.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
         Assert.Contains(catalog.Features, feature => feature.Id == "audit" && feature.GroupId == "system");
         Assert.NotEmpty(catalog.Models);
-        // Every group, not only those of the auditor's own menu: recorded changes may name any feature.
+        // 列出所有群組，而不只限稽核者自己選單中的群組：紀錄的變更可能指向任何功能。
         Assert.Equal(["work", "collaboration", "system", "reports"], catalog.NavigationGroups.Select(x => x.Id));
         Assert.Contains(catalog.NavigationGroups, group => group is { Id: "reports", ParentId: "system", Name: "報表" });
         var rows = (await auditor.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=administration"))!;
@@ -96,7 +96,7 @@ public sealed class ListActivityAuditTests
         Assert.Equal("executor_lost", Assert.Single(failures).Result);
         var accepted = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.lifecycle&result=success"))!;
         Assert.Equal(6, accepted.Length);
-        // Several outcomes match any of them; a group and an exact outcome combine.
+        // 多個結果條件符合任一即可；群組與精確結果可以混用，同樣是符合任一。
         var chosen = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.lifecycle&result=created&result=deleted"))!;
         Assert.Equal(["deleted", "created"], chosen.Select(x => x.Result));
         var mixed = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.lifecycle&result=failed&result=queued"))!;
@@ -138,7 +138,7 @@ public sealed class ListActivityAuditTests
         Assert.Equal(["authentication"], Assert.Single(catalog.Actions, x => x.Value == "identity.login").Categories);
         Assert.Equal(["access"], Assert.Single(catalog.Actions, x => x.Value == "logs.").Categories);
         Assert.Equal(["access"], Assert.Single(catalog.Actions, x => x.Value == "audit.export").Categories);
-        // A prefix covers the administrative reads beneath it as well as its own category.
+        // 前綴同時涵蓋自身分類，以及其下的管理讀取動作。
         Assert.Equal(["administration", "access"], Assert.Single(catalog.Actions, x => x.Value == "admin.").Categories);
         Assert.Equal(["activity", "access"], Assert.Single(catalog.Actions, x => x.Value == "integration.").Categories);
     }
@@ -170,7 +170,7 @@ public sealed class ListActivityAuditTests
         var lines = System.Text.Encoding.UTF8.GetString(bytes[3..]).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
         Assert.StartsWith("\"紀錄 ID\",\"時間（UTC）\",\"操作者\"", lines[0]);
         Assert.Equal(3, lines.Length);
-        // Newest first; formula-like text is neutralized in every cell.
+        // 依時間由新到舊排序；每個儲存格中類似公式的文字都會被中和。
         Assert.Contains("\"failed\"", lines[1]);
         Assert.Contains("\"'=HYPERLINK(\"\"evil\"\")\"", lines[2]);
         using (var scope = factory.Services.CreateScope())

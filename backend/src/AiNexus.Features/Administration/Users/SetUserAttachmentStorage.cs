@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Users;
 
-/// <summary>Sets or clears a user's personal attachment capacity under the owner's quota lock. Audited.</summary>
+/// <summary>設定或清除使用者個人的附件容量上限，於擁有者的配額鎖內更新。會稽核。</summary>
 internal sealed class SetUserAttachmentStorage(NexusDbContext db, AdministrativeAudit audit, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes

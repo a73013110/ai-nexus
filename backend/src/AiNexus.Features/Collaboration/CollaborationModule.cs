@@ -2,7 +2,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Collaboration;
 
-/// <summary>Resource ownership, ACLs and lifecycle shared by projects, knowledge, artifacts and evaluations, and the directory of people and groups to share them with.</summary>
+/// <summary>專案、知識、成果與評估共用的資源擁有權、ACL 與生命週期，以及可分享對象的目錄。</summary>
 public sealed class CollaborationModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)

@@ -16,9 +16,8 @@ namespace AiNexus.Features.Knowledge.Documents;
 public sealed record AddDocumentRequest(Guid AttachmentId);
 
 /// <summary>
-/// Adds one of the caller's attachments as a document of a collection they may edit, of a project (through
-/// <see cref="DocumentService"/>), or as a standalone document, and queues its ingest job. Adding the same attachment
-/// again returns the existing document. Extraction already completed for the same original is copied, never redone.
+/// 把呼叫者的附件加入知識庫（需有編輯權）、專案（經 <see cref="DocumentService"/>）或成為獨立文件，並排入匯入工作。
+/// 同一附件重複加入會回傳既有文件；同一原始檔若已完成擷取，直接複製擷取結果，不重跑擷取。
 /// </summary>
 internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess access, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs,
     DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock)
@@ -28,7 +27,7 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
             (await handler.HandleAsync(user.Id, id, request.AttachmentId, ct)).ToHttpResult())
         .WithName("AddKnowledgeDocument");
 
-    /// <summary>Reads an attachment as a standalone document, for the conversation document viewer.</summary>
+    /// <summary>把附件讀成獨立文件，供對話中的文件檢視器使用。</summary>
     public static RouteHandlerBuilder MapAttachment(RouteGroupBuilder api) => api
         .MapPost("/attachments/{id:guid}/document", async (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, null, id, ct)).ToHttpResult())
@@ -65,7 +64,7 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
             db.Add(resource); db.Add(document); db.Add(new AttachmentReference { ResourceId = resource.Id, AttachmentId = file.Id });
             if (collection is not null || project is not null)
                 await db.Set<Attachment>().Where(x => x.Id == file.Id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            // Reuse completed extraction for the same immutable original; each collection keeps its own ACL/index.
+            // 同一原始檔不會改變，已完成的擷取可直接複製；但每個知識庫仍各自保有 ACL 與索引。
             var extracted = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.AttachmentId == attachment && !x.IsDeleted && x.Status == "ready").OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
             if (extracted is not null)
             {

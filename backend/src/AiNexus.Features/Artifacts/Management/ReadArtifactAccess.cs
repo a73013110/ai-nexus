@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>The owner reads who else may view or edit an artifact.</summary>
+/// <summary>擁有者讀取有哪些人可以檢視或編輯此成果。</summary>
 internal sealed class ReadArtifactAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

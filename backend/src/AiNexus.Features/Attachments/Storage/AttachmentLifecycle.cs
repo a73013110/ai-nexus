@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Attachments.Storage;
 
-/// <summary>Deleting is a durable outbox state. Metadata and quota survive until physical deletion succeeds.</summary>
+/// <summary>刪除是持久化的 outbox 狀態：中繼資料與配額要保留到實體檔案真的刪除為止。</summary>
 public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
 {
     private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
@@ -14,22 +14,22 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
     {
         if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("Attachment reference removal requires a transaction.");
         var files = ids.Distinct().ToArray();
-        // A collaborator may remove a reader owned by another user. Lock the original's owner,
-        // matching every reference-creation path, before deciding that its bytes can be deleted.
+        // 協作者可以移除別人擁有的讀取器，所以要鎖原始檔案的擁有者（與所有建立引用的路徑一致），
+        // 才能判斷位元組可以刪除。
         var owners = await db.Set<Attachment>().Where(x => files.Contains(x.Id) && !x.InLibrary).Select(x => x.OwnerId).Distinct().Order().ToListAsync(ct);
         foreach (var owner in owners) await quota.LockOwnerAsync(owner, ct);
         return await Unreferenced().Where(x => files.Contains(x.Id) && !x.InLibrary)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
     }
 
-    /// <summary>The owner's standalone documents (readers), deleted or not.</summary>
+    /// <summary>擁有者的獨立文件（讀取器），包含已刪除的。</summary>
     public IQueryable<Guid> PrivateReaders(Guid owner) => readers.All.Where(x => x.OwnerId == owner).Select(x => x.Id);
 
     public Task RemovePrivateReadersAsync(Guid owner, IReadOnlyList<Guid> files, CancellationToken ct) => readers.RemoveAsync(owner, files, ct);
 
     private IQueryable<Attachment> ExpiredDrafts(DateTimeOffset cutoff, DateTimeOffset interrupted)
     {
-        // A file read only by its owner's private readers is still a draft.
+        // 只被擁有者自己的私人讀取器引用的檔案，仍視為草稿
         return db.Set<Attachment>().Where(x => !x.InLibrary &&
             (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
             !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
@@ -43,11 +43,10 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
         {
             await quota.LockOwnerAsync(upload.OwnerId, ct);
             var state = await db.Set<Attachment>().Where(x => x.Id == upload.Id).Select(x => x.StorageState).SingleOrDefaultAsync(ct);
-            // Activation may have committed even if its acknowledgement was lost.
+            // 啟用可能已經提交，只是確認回應遺失，所以要先看狀態
             if (state == AttachmentStates.Ready) return;
-            // An expired reservation may already have been reclaimed before its writer resumes.
-            // Give cleanup a new row identity, so an earlier collector cannot delete this outbox
-            // after it has checked the disk but before the late write actually reaches the disk.
+            // 過期的預約可能已被回收，寫入端才恢復。清理時換一個新的 row 身分，避免較早的收集者
+            // 在檢查磁碟後、遲到的寫入實際落地前，把這筆 outbox 刪掉。
             await db.Set<Attachment>().Where(x => x.Id == upload.Id && x.StorageState != AttachmentStates.Ready).ExecuteDeleteAsync(ct);
             db.Entry(upload).State = EntityState.Detached;
             var cleanup = new Attachment { OwnerId = upload.OwnerId, FileName = upload.FileName, ContentType = upload.ContentType,
@@ -79,8 +78,8 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
     }
 
     /// <summary>
-    /// Reclaims up to 100 expired drafts. The scheduled worker reclaims everyone's; an upload passes its <paramref name="owner"/>
-    /// so the owner's expired drafts stop counting against the quota it is about to check, and only their bytes are deleted inline.
+    /// 最多回收 100 筆過期草稿。排程 Worker 回收所有人的；上傳時會傳入 <paramref name="owner"/>，
+    /// 讓該擁有者的過期草稿不再計入即將檢查的配額，且只有他們的位元組會在這次呼叫中同步刪除。
     /// </summary>
     public async Task ReclaimAsync(CancellationToken ct, Guid? owner = null)
     {
@@ -106,8 +105,8 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
         else if (reclaimed.Count > 0) await DeletePendingAsync(reclaimed, ct);
     }
 
-    // Reconcile only in the scheduled worker, not on each upload. A grace period protects
-    // recent writes; normal uploads commit their SQL reservation before any file appears.
+    // 對帳只在排程 Worker 做，不在每次上傳時做。寬限期保護剛寫入的檔案；
+    // 一般上傳會先在 SQL 提交預約，之後才會出現檔案。
     public async Task ReconcileAsync(CancellationToken ct)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);

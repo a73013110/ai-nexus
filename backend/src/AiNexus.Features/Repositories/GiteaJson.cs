@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace AiNexus.Features.Repositories;
 
-/// <summary>Bounded, tolerant reads of Gitea JSON: a missing or mistyped field becomes empty, never an exception.</summary>
+/// <summary>有界限、寬容地讀取 Gitea JSON：欄位缺失或型別不符時回傳空值，不丟例外。</summary>
 internal static class GiteaJson
 {
     public static string Text(JsonElement element, string key, int max) =>
@@ -30,7 +30,7 @@ internal static class GiteaJson
         return list.ValueKind == JsonValueKind.Array ? list.EnumerateArray() : [];
     }
 
-    /// <summary>A user object's login, falling back to its full name.</summary>
+    /// <summary>使用者物件的 login；沒有 login 時退回 full_name。</summary>
     public static string Login(JsonElement element, string key)
     {
         var user = Child(element, key);
@@ -41,7 +41,7 @@ internal static class GiteaJson
     public static IReadOnlyList<RepositoryLabelDto> Labels(JsonElement element) => Items(element, "labels").Take(10)
         .Select(x => new RepositoryLabelDto(Text(x, "name", 60), Color(Text(x, "color", 9)))).Where(x => x.Name.Length > 0).ToArray();
 
-    /// <summary>Gitea label colours as #rrggbb; anything else is dropped rather than echoed into styles.</summary>
+    /// <summary>Gitea 標籤顏色格式為 #rrggbb；其他格式直接捨棄，避免外部字串被原樣放進樣式。</summary>
     private static string Color(string value)
     {
         var hex = value.TrimStart('#');

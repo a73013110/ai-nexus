@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Notifications;
 
-/// <summary>Everything listed up to <see cref="Through"/>; later arrivals stay unread.</summary>
+/// <summary>標為已讀的截止時間（含）；之後才到的通知維持未讀。</summary>
 public sealed record ReadNotificationsRequest(DateTimeOffset Through);
 
 internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadNotificationsRequest>
@@ -16,7 +16,7 @@ internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadN
     public ReadNotificationsRequestValidator() => RuleFor(x => x.Through).NotEmpty();
 }
 
-/// <summary>Marks the user's notifications read, all of them up to a time or one by id.</summary>
+/// <summary>將使用者的通知標為已讀：截止時間（含）之前的全部，或單一 id。</summary>
 internal sealed class ReadNotifications(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)

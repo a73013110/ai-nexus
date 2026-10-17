@@ -7,7 +7,7 @@ namespace AiNexus.Features.Sharing.Viewing;
 
 public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 
-/// <summary>The frozen snapshot, with model ids shown as they are presented today.</summary>
+/// <summary>凍結的快照，模型 ID 以目前對外呈現的樣子顯示。</summary>
 internal sealed class ReadShare(ShareAccess shares, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

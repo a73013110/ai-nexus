@@ -9,7 +9,7 @@ namespace AiNexus.Features.Conversations;
 
 public sealed record ConversationSettingsRequest(bool? IsFavorite = null, bool? IsArchived = null, string? SystemInstruction = null, IReadOnlyList<string>? Labels = null);
 
-/// <summary>The instruction length. Invalid labels have their own code and are reported by the handler.</summary>
+/// <summary>只驗證指令長度；無效標籤有自己的代碼，由 handler 回報。</summary>
 internal sealed class ConversationSettingsRequestValidator : RequestValidator<ConversationSettingsRequest>
 {
     public override string ProblemCode => ConversationsErrors.InstructionTooLongCode;
@@ -18,8 +18,7 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 }
 
 /// <summary>
-/// Favorite, archive, instruction and labels of one of the user's own conversations; only the given fields change.
-/// Runs under the conversation's generation lock, and a conversation cannot be archived while an answer is being generated.
+/// 修改使用者自己對話的收藏、封存、指令與標籤；只變更有帶入的欄位。在對話的生成鎖內執行，生成中的對話不能封存。
 /// </summary>
 internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationScheduler scheduler)
 {
@@ -43,7 +42,7 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
             {
                 var names = ConversationLabel.Clean(requested);
                 if (names is null) return ConversationsErrors.InvalidLabels;
-                // Keep unchanged tracked keys; removing and adding the same key breaks EF identity tracking.
+                // 保留未變動的標籤實體：同一個主鍵若先移除再加回，會破壞 EF 的追蹤身分。
                 var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
                 db.Set<ConversationLabel>().RemoveRange(removed);
                 foreach (var label in removed) conversation.Labels.Remove(label);

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-// All retrieval model endpoints share transport, bounded retries and invocation accounting.
+// 所有檢索模型端點共用同一套傳輸、有上限的重試與呼叫計量。
 public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalHttp> logger)
 {
     public async Task<JsonDocument> PostAsync(string client, string url, object payload, CancellationToken ct, string? apiKey = null)
@@ -52,13 +52,13 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var billing = scope.ServiceProvider.GetRequiredService<BillingService>();
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model, CreatedAt = clock.GetUtcNow() };
-        // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
+        // 交易中最先取得的擁有者列鎖負責序列化配額預留；交易在呼叫供應商之前就結束，避免鎖在外部呼叫期間被持有。
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
             var start = UtcDay.Start(call.CreatedAt); var end = start.AddDays(1);
-            // Every embedding and rerank call passes through here, deep inside indexing and search, so the daily cap is
-            // reported like a provider limit.
+            // 所有嵌入與重排呼叫都經過這裡（位於索引與搜尋的深處），因此每日上限要回報成供應商限制（RateLimited），
+            // 而不是一般的內部錯誤。
             if (await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && (x.Kind == "embedding" || x.Kind == "rerank") && x.CreatedAt >= start && x.CreatedAt < end, ct) >= options.Value.Embedding.MaxDailyRequests)
                 throw new ExternalServiceException(Error.RateLimited("embedding_daily_quota"), "今日索引、語意查詢與重排次數已達系統上限，請稍後重試。");
             await billing.ReserveAsync(call.Id, owner, null, provider, model, kind, call.CreatedAt, ct);

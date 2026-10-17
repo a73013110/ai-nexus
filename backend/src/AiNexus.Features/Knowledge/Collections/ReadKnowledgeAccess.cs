@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-/// <summary>The owner reads who else may view or edit a collection.</summary>
+/// <summary>擁有者讀取可檢視或編輯此知識庫的成員與群組授權。</summary>
 internal sealed class ReadKnowledgeAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

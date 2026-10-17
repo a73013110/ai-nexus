@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>The owner replaces an artifact's named members and group grants.</summary>
+/// <summary>擁有者整批取代成果的具名成員與群組授權。</summary>
 internal sealed class SaveArtifactAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

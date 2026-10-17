@@ -10,8 +10,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Repositories;
 
 /// <summary>
-/// Overview of Gitea use: connected accounts, AI reviews started in the period and those still running. Without Gitea
-/// configured there is nothing to count, so the section is left out.
+/// Gitea 使用概況：已連線帳號、期間內啟動的 AI review，以及仍在執行中的數量。
+/// 未設定 Gitea 時沒有可統計的內容，因此不顯示此區塊。
 /// </summary>
 internal sealed class RepositoriesDashboard(NexusDbContext db, IOptions<GiteaOptions> gitea) : IDashboardSource
 {

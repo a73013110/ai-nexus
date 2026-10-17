@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Templates;
 
-/// <summary>The templates of a project the user may read, by title.</summary>
+/// <summary>使用者可讀取的專案範本，依標題排序。</summary>
 internal sealed class ListProjectTemplates(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

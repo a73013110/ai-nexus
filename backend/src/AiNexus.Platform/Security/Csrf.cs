@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 
 namespace AiNexus.Platform.Security;
 
-/// <summary>Header-token CSRF protection for every state-changing API request, including sign-in.</summary>
+/// <summary>標頭權杖（Header-token）CSRF 防護機制，涵蓋所有變更狀態之 API 請求（包含登入端點）。</summary>
 public static class Csrf
 {
     public const string HeaderName = "X-Nexus-CSRF";

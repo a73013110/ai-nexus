@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.ArchitectureTests;
 
 /// <summary>
-/// <c>NexusDbContext</c> applies entity configurations with <c>ApplyConfigurationsFromAssembly</c>, which silently skips a
-/// configuration class without a public parameterless constructor; its mapping would vanish from the model.
+/// <c>NexusDbContext</c> 以 <c>ApplyConfigurationsFromAssembly</c> 套用實體設定，但它會靜默略過沒有公開無參數建構式的設定類別，
+/// 該實體的對應就會從模型中消失，所以這裡提前擋下。
 /// </summary>
 public sealed class EntityConfigurationTests
 {

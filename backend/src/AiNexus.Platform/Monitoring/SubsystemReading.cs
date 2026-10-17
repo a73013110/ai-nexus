@@ -1,11 +1,10 @@
 namespace AiNexus.Platform.Monitoring;
 
-/// <summary>What a <see cref="IMonitoringSource"/> reports: a status from <see cref="SubsystemStates"/>, an optional one-line summary and its figures.</summary>
+/// <summary><see cref="IMonitoringSource"/> 回報的監控讀數：包含來自 <see cref="SubsystemStates"/> 的狀態碼、選填的單行摘要與數值指標清單。</summary>
 public sealed record SubsystemReading(string Status, string? Summary, IReadOnlyList<SubsystemFact> Facts);
 
 /// <summary>
-/// One figure of a subsystem. <c>Value</c> is null when unknown; <c>Unit</c> (<see cref="SubsystemUnits"/>) tells the
-/// page how to format it, and <c>text</c> facts carry their words in <c>Text</c> instead.
+/// 子系統的單一指標數值。<c>Value</c> 為 null 代表未知；<c>Unit</c> (<see cref="SubsystemUnits"/>) 指引前端頁面的格式化方式，文字類型指標則將內容置於 <c>Text</c>。
 /// </summary>
 public sealed record SubsystemFact(string Id, string Label, double? Value, string Unit, string? Text, string Tone)
 {

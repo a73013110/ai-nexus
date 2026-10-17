@@ -9,7 +9,7 @@ namespace AiNexus.Features.Administration.Roles;
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
 
-/// <summary>Creates or updates a role and its groups. Audited; refused when it would remove the actor's own administrator access.</summary>
+/// <summary>建立或更新角色與其所屬群組。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
 internal sealed class SaveRole(NexusDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes

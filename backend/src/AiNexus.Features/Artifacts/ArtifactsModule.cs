@@ -11,10 +11,10 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Artifacts;
 
-/// <summary>Versioned documents, their export and text transforms. Other modules create artifacts through <see cref="ArtifactService"/>; each use case has its own file.</summary>
+/// <summary>有版本的成果文件、匯出與文字轉換。其他模組透過 <see cref="ArtifactService"/> 建立成果；每個 use case 各一個檔案。</summary>
 public sealed class ArtifactsModule : IFeatureModule
 {
-    /// <summary>Largest artifact body (characters) accepted by any artifact endpoint.</summary>
+    /// <summary>所有成果端點接受的內文字元數上限。</summary>
     public const int MaxContentCharacters = 64000;
 
     public static void AddServices(IHostApplicationBuilder builder)
@@ -31,7 +31,7 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點註冊順序即 OpenAPI 發佈順序；調整順序會改變 contracts/openapi.json。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/artifacts").RequireAuthorization(Policies.Artifacts).WithTags("Artifacts").WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxContentCharacters));

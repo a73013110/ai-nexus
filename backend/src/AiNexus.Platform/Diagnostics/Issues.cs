@@ -7,8 +7,8 @@ using AiNexus.Platform.Security;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// Ids of the core events that code outside their <c>[LoggerMessage]</c> declaration refers to. Every event id and
-/// name is listed in docs/architecture/log-events.md.
+/// 核心診斷事件識別碼常數。
+/// 供宣告於 [LoggerMessage] 之外的各層級程式碼引用；每個事件 ID 與名稱均登載於 docs/architecture/log-events.md。
 /// </summary>
 public static class DiagnosticEvents
 {
@@ -16,71 +16,138 @@ public static class DiagnosticEvents
     public const string ConfigurationName = "service.startup.failed";
 }
 
-/// <summary>Successful observability reads are already audited; do not feed them back into their own log list.</summary>
+/// <summary>
+/// 可觀測性端點成功請求日誌抑制標記。
+/// 成功的可觀測性查詢操作已具備稽核記錄；不可重複反饋寫入自身的日誌清單中。
+/// </summary>
 public sealed class SuppressSuccessfulRequestLog;
 
+/// <summary>
+/// 受信任的平台 W3C 分散式追蹤工廠。
+/// 確保內部 Trace 不會意外被外部不受信任的 HTTP 標頭污染。
+/// </summary>
 public static class DiagnosticTrace
 {
     public const string SourceName = "AiNexus";
     public static readonly ActivitySource Source = new(SourceName, "1.0");
+
+    /// <summary>
+    /// 啟動一組新的受信任 Activity。
+    /// 明確指定父內容（包含預設值），以防止意外繼承未受信任的請求或佇列呼叫端。
+    /// </summary>
     public static Activity Start(string name, string? traceId = null, string? spanId = null, ActivityKind kind = ActivityKind.Internal)
     {
         ActivityContext parent = default;
-        if (traceId?.Length == 32 && spanId?.Length == 16 && ActivityContext.TryParse("00-" + traceId + "-" + spanId + "-01", null, out var parsed)) parent = parsed;
-        // Explicit parent, including default, prevents accidental inheritance from the request/queue caller.
-        var activity = Source.StartActivity(name, kind, parent) ?? new Activity(name).SetIdFormat(ActivityIdFormat.W3C)
-            .SetParentId(parent == default ? ActivityTraceId.CreateRandom() : parent.TraceId, parent == default ? ActivitySpanId.CreateRandom() : parent.SpanId, ActivityTraceFlags.Recorded).Start();
-        activity.SetTag("nexus.trusted", true); return activity;
+        if (traceId?.Length == 32 && spanId?.Length == 16 && ActivityContext.TryParse("00-" + traceId + "-" + spanId + "-01", null, out var parsed))
+        {
+            parent = parsed;
+        }
+
+        var activity = Source.StartActivity(name, kind, parent)
+            ?? new Activity(name).SetIdFormat(ActivityIdFormat.W3C)
+                .SetParentId(parent == default ? ActivityTraceId.CreateRandom() : parent.TraceId, parent == default ? ActivitySpanId.CreateRandom() : parent.SpanId, ActivityTraceFlags.Recorded)
+                .Start();
+
+        activity.SetTag("nexus.trusted", true);
+        return activity;
     }
 }
 
+/// <summary>
+/// 公開問題結果紀錄。
+/// </summary>
 public sealed record PublicProblem(int Status, string Code, string Title, string IssueCode);
-public sealed record SafeProblemDetails(string Type, string Title, int Status, string Code, string IssueCode,
+
+/// <summary>
+/// 符合 RFC 7807 且安全脫敏的 ProblemDetails。
+/// </summary>
+public sealed record SafeProblemDetails(
+    string Type,
+    string Title,
+    int Status,
+    string Code,
+    string IssueCode,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyDictionary<string, string[]>? Errors = null);
+
+/// <summary>
+/// 路由群組安全錯誤中繼資料宣告擴充。
+/// </summary>
 public static class SafeErrorMetadata
 {
     public static RouteGroupBuilder WithSafeErrors(this RouteGroupBuilder group)
     {
         foreach (var status in new[] { 400, 401, 403, 404, 405, 409, 413, 415, 429, 500, 502, 503, 504 })
+        {
             group.WithMetadata(new Microsoft.AspNetCore.Http.ProducesResponseTypeMetadata(status, typeof(SafeProblemDetails), ["application/problem+json"]));
+        }
         return group;
     }
 }
 
+/// <summary>
+/// 平台錯誤與查證代碼（IssueCode）集中管理器。
+/// 確保例外跨層時僅被記錄一次，產生全域不重複且不透明的 NX- 查證代碼，並映射對外安全的錯誤提示。
+/// </summary>
 public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? factory = null)
 {
     private const string Key = "AiNexus.IssueCode";
+
     public static string NewCode() => "NX-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
     public static bool ValidCode(string? code) => code is { Length: 35 } && code.StartsWith("NX-", StringComparison.Ordinal) && code[3..].All(char.IsAsciiHexDigit);
     public static string Message(string? issue) => "操作未完成，請聯絡管理員。查證代碼：" + (ValidCode(issue) ? issue : "無法取得");
-    /// <summary>The stored text of a failure that has no HTTP response, such as a background job: an expected error keeps its reviewed hint.</summary>
+
+    /// <summary>
+    /// 無 HTTP 回應之失敗事件的持久化文字（如背景任務）；預期內的錯誤保留審查過的繁中提示。
+    /// </summary>
     public static string Message(Error error, string issue)
         => Problems.Status(error.Kind) is var status && status < 500 ? PublicErrorCatalog.Message(error.Code, status) + " 查證代碼：" + issue : Message(issue);
+
     public string Report(Exception exception, string code, LogLevel level = LogLevel.Error) => Report(exception, code, level, rejection: false);
 
-    /// <summary>Records an expected failure that has no exception, such as a background job that returned an <see cref="Error"/>.</summary>
+    /// <summary>
+    /// 記錄無例外的預期失敗，例如回傳 <see cref="Error"/> 的背景任務。
+    /// </summary>
     public string Report(Error error) => Record(Problems.Status(error.Kind), error.Code);
 
     private string Report(Exception exception, string code, LogLevel level, bool rejection)
     {
-        // An exception crossing layers is recorded once. Each distinct exception receives its own opaque code.
+        // 跨越各架構層級的例外只記錄一次；每個不同的例外獲取其獨一無二的不透明代碼。
         lock (exception.Data)
         {
-            if (exception.Data[Key] is string existing) return existing;
-            var issue = NewCode(); exception.Data[Key] = issue;
-            var origin = new StackTrace(exception, false).GetFrames()?.Select(frame => frame.GetMethod()?.DeclaringType?.FullName).FirstOrDefault(name => name?.StartsWith("AiNexus.Features.", StringComparison.Ordinal) == true);
+            if (exception.Data[Key] is string existing)
+            {
+                return existing;
+            }
+
+            var issue = NewCode();
+            exception.Data[Key] = issue;
+
+            var origin = new StackTrace(exception, false).GetFrames()?
+                .Select(frame => frame.GetMethod()?.DeclaringType?.FullName)
+                .FirstOrDefault(name => name?.StartsWith("AiNexus.Features.", StringComparison.Ordinal) == true);
+
             var category = origin is null ? null : string.Join('.', origin.Split('.').Take(3));
             var target = category is null ? logger : factory?.CreateLogger(category) ?? logger;
+
             using var scope = target.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
-            if (rejection) LogRejection(target, level, exception, code, issue);
-            else LogFailure(target, level, exception, code, issue);
+            if (rejection)
+            {
+                LogRejection(target, level, exception, code, issue);
+            }
+            else
+            {
+                LogFailure(target, level, exception, code, issue);
+            }
+
             Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
             return issue;
         }
     }
 
-    /// <summary>The public status and code of an exception that escaped a request.</summary>
+    /// <summary>
+    /// 判斷逃逸出請求範圍之例外的公開 HTTP 狀態碼與錯誤代碼。
+    /// </summary>
     public static (int Status, string Code) Classify(Exception exception) => exception switch
     {
         ExternalServiceException external => (Problems.Status(external.Error.Kind), external.Error.Code),
@@ -96,15 +163,24 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
         return Public(status, code, issue);
     }
 
-    /// <summary>A failure written without an exception: an <see cref="Error"/> result, validation, or an empty framework status.</summary>
+    /// <summary>
+    /// 無例外時寫入的公開問題：如 <see cref="Error"/> 結果、模型驗證失敗或框架空狀態。
+    /// </summary>
     public PublicProblem Problem(int status, string code, string? recordedIssue = null) => Public(status, code, recordedIssue ?? Record(status, code));
 
     private string Record(int status, string code)
     {
         var issue = NewCode();
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
-        if (status < 500) LogRejection(logger, LogLevel.Information, null, code, issue);
-        else LogFailure(logger, LogLevel.Error, null, code, issue);
+        if (status < 500)
+        {
+            LogRejection(logger, LogLevel.Information, null, code, issue);
+        }
+        else
+        {
+            LogFailure(logger, LogLevel.Error, null, code, issue);
+        }
+
         Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
         return issue;
     }
@@ -115,12 +191,14 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     [LoggerMessage(EventId = DiagnosticEvents.Failure, EventName = "operation.failed", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.")]
     private static partial void LogFailure(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
-    // The diagnostic provider keeps rejections below its minimum level, so the generated enabled check must not drop them.
+    // 診斷日誌提供者常態維持過濾拒絕事件於其最低層級之下，此處產生的 IsEnabled 檢查不得直接將其捨棄。
     [LoggerMessage(EventId = DiagnosticEvents.Rejection, EventName = "http.rejected", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.", SkipEnabledCheck = true)]
     private static partial void LogRejection(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
-    // Only Problems' writer calls this; everything else goes through IProblemDetailsService.
-    /// <summary>The problem as the final <c>error</c> event of a server-sent event stream that has already started.</summary>
+    // 僅供 Problems 錯誤寫入器呼叫；其餘皆透過標準 IProblemDetailsService 傳遞。
+    /// <summary>
+    /// 當 Server-Sent Events (SSE) 串流已經啟動時，將錯誤作為最後一個 error 事件輸出並正常結束。
+    /// </summary>
     internal static Task WriteEventAsync(HttpContext http, PublicProblem problem)
         => http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
 
@@ -129,6 +207,10 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
             statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
 }
 
+/// <summary>
+/// HTTP 請求診斷與可觀測性中介軟體。
+/// 注入 WebSecurity 標頭、初始化受信任的 W3C Trace、捕獲例外並轉換為安全脫敏之 RFC 7807 錯誤結構。
+/// </summary>
 public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext http, Issues issues, ILogger<DiagnosticRequestMiddleware> logger)
@@ -136,52 +218,104 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
         WebSecurity.Headers(http);
         var previous = Activity.Current;
         Activity.Current = null;
+
         using var activity = DiagnosticTrace.Start("http.request", kind: ActivityKind.Server);
         http.Items["Nexus.TraceId"] = activity.TraceId.ToHexString();
+
         var watch = Stopwatch.StartNew();
-        var operation = Guid.NewGuid(); http.TraceIdentifier = Guid.NewGuid().ToString("N");
+        var operation = Guid.NewGuid();
+        http.TraceIdentifier = Guid.NewGuid().ToString("N");
         activity.SetTag("operation.id", operation.ToString());
+
         var address = http.Connection.RemoteIpAddress;
-        if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
-        // Connection metadata may have been resolved by the host's trusted proxy middleware.
-        // Do not parse caller-controlled X-Forwarded-For here.
-        using var scope = logger.BeginScope(new Dictionary<string, object?> {
-            ["RequestId"] = http.TraceIdentifier, ["OperationId"] = operation, ["Method"] = http.Request.Method,
-            ["ClientAddress"] = address?.ToString(), ["UserAgent"] = DiagnosticRedactor.Text(http.Request.Headers.UserAgent.ToString(), 240),
-            ["RequestProtocol"] = http.Request.Protocol, ["RequestScheme"] = http.Request.Scheme
+        if (address?.IsIPv4MappedToIPv6 == true)
+        {
+            address = address.MapToIPv4();
+        }
+
+        // 連線中繼資料可能已由主機信任的反向代理中介軟體解析完畢。
+        // 此處切勿重複解析客戶端可任意偽造的 X-Forwarded-For 標頭。
+        using var scope = logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["RequestId"] = http.TraceIdentifier,
+            ["OperationId"] = operation,
+            ["Method"] = http.Request.Method,
+            ["ClientAddress"] = address?.ToString(),
+            ["UserAgent"] = DiagnosticRedactor.Text(http.Request.Headers.UserAgent.ToString(), 240),
+            ["RequestProtocol"] = http.Request.Protocol,
+            ["RequestScheme"] = http.Request.Scheme
         });
+
         var outcome = "completed";
         try
         {
-            // Empty framework failures (challenge, forbid, unmatched route) get their body from UseStatusCodePages.
+            // 框架空狀態錯誤（驗證挑戰、禁止存取、無匹配路由）交由 UseStatusCodePages 提供本體。
             await next(http);
         }
-        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested) { outcome = "cancelled"; }
+        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
+        {
+            outcome = "cancelled";
+        }
         catch (Exception exception)
         {
             outcome = "failed";
-            using var failureScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method,
-                ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = Issues.Classify(exception).Status });
-            if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Problems.WriteAsync(http, exception); }
+            using var failureScope = logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["Method"] = http.Request.Method,
+                ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText,
+                ["StatusCode"] = Issues.Classify(exception).Status
+            });
+
+            if (!http.Response.HasStarted)
+            {
+                http.Response.Clear();
+                WebSecurity.Headers(http);
+                await Problems.WriteAsync(http, exception);
+            }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
+            {
                 await Issues.WriteEventAsync(http, issues.Problem(exception));
-            else http.Abort();
+            }
+            else
+            {
+                http.Abort();
+            }
         }
         finally
         {
             watch.Stop();
             var duration = Math.Round(watch.Elapsed.TotalMilliseconds, 3);
             var route = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
-            activity.SetTag("http.route", route); activity.SetTag("http.request.method", http.Request.Method); activity.SetTag("http.response.status_code", http.Response.StatusCode);
-            activity.SetTag("client.address", address?.ToString()); activity.SetTag("network.protocol.version", http.Request.Protocol.Replace("HTTP/", "", StringComparison.OrdinalIgnoreCase));
-            if (outcome == "failed" || http.Response.StatusCode >= 500) activity.SetStatus(ActivityStatusCode.Error);
+
+            activity.SetTag("http.route", route);
+            activity.SetTag("http.request.method", http.Request.Method);
+            activity.SetTag("http.response.status_code", http.Response.StatusCode);
+            activity.SetTag("client.address", address?.ToString());
+            activity.SetTag("network.protocol.version", http.Request.Protocol.Replace("HTTP/", "", StringComparison.OrdinalIgnoreCase));
+
+            if (outcome == "failed" || http.Response.StatusCode >= 500)
+            {
+                activity.SetStatus(ActivityStatusCode.Error);
+            }
+
             var user = http.RequestServices.GetService<AiNexus.Platform.Security.IRequestUser>()?.ResolvedId;
-            using var completionScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method, ["Route"] = route,
-                ["StatusCode"] = http.Response.StatusCode, ["DurationMs"] = duration, ["UserId"] = user,
-                ["RequestOutcome"] = outcome, ["RequestAborted"] = http.RequestAborted.IsCancellationRequested, ["ResponseStarted"] = http.Response.HasStarted });
-            if (outcome != "completed" || http.Response.StatusCode >= 400 ||
-                http.GetEndpoint()?.Metadata.GetMetadata<SuppressSuccessfulRequestLog>() is null)
+            using var completionScope = logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["Method"] = http.Request.Method,
+                ["Route"] = route,
+                ["StatusCode"] = http.Response.StatusCode,
+                ["DurationMs"] = duration,
+                ["UserId"] = user,
+                ["RequestOutcome"] = outcome,
+                ["RequestAborted"] = http.RequestAborted.IsCancellationRequested,
+                ["ResponseStarted"] = http.Response.HasStarted
+            });
+
+            if (outcome != "completed" || http.Response.StatusCode >= 400 || http.GetEndpoint()?.Metadata.GetMetadata<SuppressSuccessfulRequestLog>() is null)
+            {
                 LogRequestFinished(logger, http.Response.StatusCode, duration);
+            }
+
             Activity.Current = previous;
         }
     }

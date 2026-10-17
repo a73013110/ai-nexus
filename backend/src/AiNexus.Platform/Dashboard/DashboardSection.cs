@@ -1,8 +1,8 @@
 namespace AiNexus.Platform.Dashboard;
 
 /// <summary>
-/// Builds a <see cref="DashboardSectionDto"/> so sources read as a list of figures. The state becomes active or
-/// attention from the tones used, unless set explicitly.
+/// 儀表板區塊建立器。將各模組指標資料組裝為 <see cref="DashboardSectionDto"/>。
+/// 除非明確指定，否則區塊狀態會自動根據指標色調（Tone）推導為 active 或 attention。
 /// </summary>
 public sealed class DashboardSection(string id, string feature, string title = "", string? route = null)
 {
@@ -12,15 +12,15 @@ public sealed class DashboardSection(string id, string feature, string title = "
     private readonly List<DashboardItemDto> items = [];
     private string? state;
 
-    /// <summary>A current figure, such as how many collections exist now.</summary>
+    /// <summary>當前狀態指標，例如現存的知識庫集合總數。</summary>
     public DashboardSection Count(string key, string label, double? value, string unit, string tone = DashboardTones.Neutral, string? hint = null)
         => Metric(new(key, label, value, unit, DashboardFormats.Count, tone, false, hint));
 
-    /// <summary>A current size in bytes.</summary>
+    /// <summary>當前容量大小指標（以位元組為單位）。</summary>
     public DashboardSection Size(string key, string label, long bytes, string? hint = null)
         => Metric(new(key, label, bytes, "", DashboardFormats.Bytes, DashboardTones.Neutral, false, hint));
 
-    /// <summary>A figure that follows the reporting window, such as questions asked in the period.</summary>
+    /// <summary>依統計時間區間累計的指標，例如該期間內的提問總次數。</summary>
     public DashboardSection Period(string key, string label, double? value, string unit, string format = DashboardFormats.Count,
         string tone = DashboardTones.Neutral, string? hint = null) => Metric(new(key, label, value, unit, format, tone, true, hint));
 
@@ -32,7 +32,7 @@ public sealed class DashboardSection(string id, string feature, string title = "
         return this;
     }
 
-    /// <summary>A distribution part; zero parts are left out.</summary>
+    /// <summary>分佈佔比項目；數值為 0 者自動略過。</summary>
     public DashboardSection Share(string key, string label, double value, string tone = DashboardTones.Neutral)
     {
         if (value > 0) shares.Add(new(key, label, value, tone));
@@ -47,10 +47,10 @@ public sealed class DashboardSection(string id, string feature, string title = "
 
     public DashboardSection State(string value) { state = value; return this; }
 
-    /// <summary>Marks the section active when <paramref name="active"/> is above zero.</summary>
+    /// <summary>當 <paramref name="active"/> 大於零時，將此區塊標記為活躍狀態（Active）。</summary>
     public DashboardSection ActiveWhen(double? active) => active > 0 && state is null ? State(DashboardStates.Active) : this;
 
-    /// <summary>Builds the section. Facts stay empty: configuration and service status belong to the administration pages.</summary>
+    /// <summary>建立區塊 DTO。注意 Facts 保持為空，因系統配置與服務狀態屬於維運管理頁面範疇。</summary>
     public DashboardSectionDto Build() => new(id, feature, title, route, state ?? Derived(), metrics, series, shares, items, []);
 
     private string Derived() => metrics.Any(x => x.Tone == DashboardTones.Danger && x.Value > 0) ? DashboardStates.Attention : DashboardStates.Idle;

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
-// Every persisted checkpoint is fenced by the current lease in the same transaction.
+// 每個已保存的檢查點都與當前租約（fencing token）在同一交易中比對；租約已失效或已要求取消時拒絕寫入。
 public sealed class JobExecution(NexusDbContext db, BackgroundJob job, Guid lease)
 {
     public BackgroundJob Job => job;

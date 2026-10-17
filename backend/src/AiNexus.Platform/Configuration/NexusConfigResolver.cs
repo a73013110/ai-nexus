@@ -1,7 +1,9 @@
 namespace AiNexus.Platform.Configuration;
 
+/// <summary>解析後的環境組態檔案路徑集合（包含工作區根目錄、本機設定、機密設定及資料保護金鑰圈路徑）。</summary>
 public sealed record ResolvedConfigPaths(string WorkspaceRoot, string? LocalConfigPath, string? SecretsConfigPath, string KeyRingPath);
 
+/// <summary>環境組態檔案路徑解析器。依據環境（開發/測試/正式）動態定位對應的設定檔與機密檔。</summary>
 public static class NexusConfigResolver
 {
     public static string Absolute(string root, string path) => Path.GetFullPath(path, root);
@@ -18,7 +20,7 @@ public static class NexusConfigResolver
             while (directory.Parent is not null && !fileExists(Path.Combine(directory.FullName, "global.json"))) directory = directory.Parent;
         var workspace = development && fileExists(Path.Combine(directory.FullName, "global.json")) ? directory.FullName : root;
         var sibling = Path.GetFullPath("..", root);
-        // Production never discovers the repository's .local credentials.
+        // 正式環境絕不自動探索版控庫中的 .local 本機認證檔。
         var localCandidates = development
             ? new[] { Path.Combine(workspace, ".local", "config", "appsettings.Local.json"), Path.Combine(root, "appsettings.Local.json") }
             : new[] { Path.Combine(sibling, "config", $"appsettings.{environmentName}.json"), Path.Combine(root, "config", $"appsettings.{environmentName}.json"), Path.Combine(root, "appsettings.Local.json") };

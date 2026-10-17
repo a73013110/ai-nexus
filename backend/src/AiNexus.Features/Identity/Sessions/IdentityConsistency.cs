@@ -5,8 +5,7 @@ namespace AiNexus.Features.Identity.Sessions;
 public static class IdentityConsistency
 {
     /// <summary>
-    /// Tells the client which identity served each API response, and refuses work submitted under an identity that was
-    /// switched back (administrator test identity) mid-flight.
+    /// 在每個 <c>/api/v1</c> 回應加上 <c>X-Nexus-Identity</c> 標頭，告知實際服務的身分；若請求是在測試身分被切回管理者的途中送出，則拒絕執行。
     /// </summary>
     public static IApplicationBuilder UseIdentityConsistency(this IApplicationBuilder app) => app.Use(async (http, next) =>
     {
@@ -22,7 +21,7 @@ public static class IdentityConsistency
         if (http.Items.ContainsKey(SessionIdentity.Restored) && http.Request.Path.StartsWithSegments("/api/v1") &&
             !http.Request.Path.StartsWithSegments("/api/v1/auth"))
         {
-            // An operation submitted as the target must never execute under the restored administrator.
+            // 以測試目標身分送出的操作，絕不能在已切回的管理者身分下執行，因此直接回 identity_changed。
             await Problems.WriteAsync(http, Problems.Status(IdentityErrors.IdentityChanged.Kind), IdentityErrors.IdentityChanged.Code);
             return;
         }

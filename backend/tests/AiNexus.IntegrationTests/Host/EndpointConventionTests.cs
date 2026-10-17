@@ -9,7 +9,7 @@ namespace AiNexus.IntegrationTests.Host;
 
 public sealed class EndpointConventionTests
 {
-    // Deny-by-default is the fallback policy; this keeps every endpoint's access an explicit, reviewable decision.
+    // 預設拒絕是 fallback policy；此測試確保每個 endpoint 的存取權都是明確且可審查的決定。
     [Fact]
     public async Task EveryEndpointDeclaresAuthorizationOrAnonymousAccess()
     {
@@ -23,7 +23,7 @@ public sealed class EndpointConventionTests
         Assert.True(undeclared.Count == 0, "Endpoints without an explicit authorization decision: " + string.Join(", ", undeclared));
     }
 
-    // A misspelled policy name fails only at request time; catch it at build time instead.
+    // 政策名稱拼錯只會在請求時才失敗，這裡改為在測試階段就攔下。
     [Fact]
     public async Task EveryReferencedPolicyIsRegistered()
     {
@@ -46,7 +46,7 @@ public sealed class EndpointConventionTests
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
     }
 
-    // Every request body has a RequestValidator<T>, or states why its rules stay in the handler.
+    // 每個 request body 都要有 RequestValidator<T>，或明確標示為何規則留在 handler 中。
     [Fact]
     public async Task EveryRequestBodyHasAValidatorOrAStatedReason()
     {

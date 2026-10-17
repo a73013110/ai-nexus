@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>A document the user may read, with whether they may edit it and the state of its current job.</summary>
+/// <summary>使用者可讀取的文件，附帶其是否可編輯與目前工作的狀態。</summary>
 internal sealed class GetDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

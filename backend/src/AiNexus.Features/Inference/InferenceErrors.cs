@@ -12,12 +12,12 @@ internal static class InferenceErrors
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
     public static readonly Error QueueFull = new(ErrorKind.RateLimited, "queue_full");
     public static readonly Error KnowledgeSelectionChanged = Error.Conflict("knowledge_selection_changed");
-    /// <summary>A regeneration reuses the original prompt's attachments.</summary>
+    /// <summary>重新生成對話時自動重複使用原始提問之附件。</summary>
     public static readonly Error RegenerateWithAttachments = Error.Invalid("invalid_request");
     public static readonly Error ModelGroupForbidden = Error.Forbidden("model_group_forbidden");
     public static readonly Error ModelTokenQuota = Error.RateLimited("model_token_quota");
     public static readonly Error TaskInputTooLong = Error.Invalid("task_input_too_long");
-    /// <summary>The model finished normally without producing text; not a provider failure, so retrying does not help.</summary>
+    /// <summary>模型正常結束但未產生任何文字內容；此非供應商故障，故重試亦無法解決。</summary>
     public static readonly Error TaskResponseEmpty = Error.Unprocessable("task_response_empty");
     public static readonly Error VisionNotSupported = Error.Invalid("vision_not_supported");
     public static readonly Error ContextBudgetExceeded = Error.Invalid("context_budget_exceeded");

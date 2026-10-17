@@ -2,7 +2,7 @@ using NetArchTest.Rules;
 
 namespace AiNexus.ArchitectureTests;
 
-/// <summary>Dependency direction between projects: Host → Features → Platform, never the reverse.</summary>
+/// <summary>專案之間的依賴方向：Host → Features → Platform，不可反向。</summary>
 public sealed class LayerTests
 {
     [Fact]

@@ -3,8 +3,8 @@ using AiNexus.Features.Persistence.ReleaseScripts;
 namespace AiNexus.UnitTests.Persistence;
 
 /// <summary>
-/// SqlPackage prints a response-file argument it cannot parse, password included, so the quoting must match its parser:
-/// white space splits outside double quotes, <c>\"</c> is a quote, other backslashes are literal.
+/// SqlPackage 無法解析的 response-file 參數會連同密碼一起印出，所以跳脫規則必須與它的解析器一致：
+/// 雙引號外的空白會切開參數，<c>\"</c> 代表引號，其他反斜線都是字面字元。
 /// </summary>
 public sealed class SqlPackageTests
 {

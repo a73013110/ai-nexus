@@ -13,10 +13,10 @@ public sealed class IntegrationsOptions
     public SourceOptions For(string id) => id switch { "gdweb" => Gdweb, "meiho" => Meiho, _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
 }
 
-/// <summary>Business settings of one source; its SQL connection is the source's entry under <c>Databases</c>.</summary>
+/// <summary>單一來源的業務設定；其 SQL 連線位於 <c>Databases</c> 下同名的項目。</summary>
 public sealed class SourceOptions
 {
-    /// <summary>Only <c>sql</c> is implemented; other values show the source as unsupported instead of falling back.</summary>
+    /// <summary>目前只實作 <c>sql</c>；其他值會把來源標示為不支援，而不是退回預設值。</summary>
     public string Transport { get; set; } = "sql";
     public bool Enabled { get; set; }
     public bool AclContractConfirmed { get; set; }

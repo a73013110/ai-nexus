@@ -4,8 +4,8 @@ using Microsoft.Playwright;
 namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
-/// Browser for real-browser tests (<c>Category=Browser</c>), from <c>AINEXUS_TEST_BROWSER</c>: a channel
-/// (<c>msedge</c>, <c>chrome</c>, <c>chromium</c>) or an absolute executable path such as <c>/opt/pw-browsers/chromium</c>.
+/// 真瀏覽器測試（<c>Category=Browser</c>）所用的瀏覽器，設定來自 <c>AINEXUS_TEST_BROWSER</c>：可為頻道名稱
+/// （<c>msedge</c>、<c>chrome</c>、<c>chromium</c>），或絕對路徑的執行檔，例如 <c>/opt/pw-browsers/chromium</c>。
 /// </summary>
 public static class TestBrowser
 {

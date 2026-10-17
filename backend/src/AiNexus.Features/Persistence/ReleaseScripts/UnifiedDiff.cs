@@ -4,21 +4,21 @@ using System.Text;
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
 /// <summary>
-/// Line diff in the unified format of <c>diff -u</c> and <c>git diff</c>, so a DBA reads it in any diff viewer. Object
-/// scripts are a few hundred lines, so the longest common subsequence is computed exactly between the first and last
-/// differing lines; a pair too large for that is shown as one replaced block instead.
+/// 採用 <c>diff -u</c> 與 <c>git diff</c> 的 unified 格式，DBA 用任何 diff 工具都能看。
+/// 物件腳本通常只有幾百行，因此在第一行與最後一行差異之間精確計算最長共同子序列（LCS）；
+/// 若表格太大，則改為把整段視為一個取代區塊，不做精確比對。
 /// </summary>
 public static class UnifiedDiff
 {
     public const int ContextLines = 3;
 
-    /// <summary>Label of the missing side of an added or removed object, as in <c>diff -u</c>.</summary>
+    /// <summary>新增或刪除物件時，缺少的那一側所用的標籤，與 <c>diff -u</c> 相同。</summary>
     public const string Missing = "/dev/null";
 
-    // Cells of the LCS table (about 100 MB of ints); far beyond any object script.
+    // LCS 表格的格子上限（約 100 MB 的 int），遠大於任何物件腳本；超過時改用整段取代，避免記憶體暴增。
     private const long MaxTableCells = 25_000_000;
 
-    /// <returns>The diff with <c>---</c>/<c>+++</c> headers, or an empty string when the lines are equal.</returns>
+    /// <returns>含 <c>---</c>／<c>+++</c> 標頭的差異；內容相同時回傳空字串。</returns>
     public static string Create(string oldLabel, string newLabel, IReadOnlyList<string> oldLines, IReadOnlyList<string> newLines, int context = ContextLines)
     {
         ArgumentNullException.ThrowIfNull(oldLines);
@@ -32,7 +32,7 @@ public static class UnifiedDiff
         text.AppendLine("--- " + oldLabel).AppendLine("+++ " + newLabel);
         for (var first = 0; first < changes.Count;)
         {
-            // Changes closer than two contexts apart share a hunk, so no line is printed twice.
+            // 距離不到兩段 context 的變更併入同一個 hunk，避免同一行被印兩次。
             var last = first;
             while (last + 1 < changes.Count && changes[last + 1] - changes[last] <= 2 * context + 1) last++;
             var start = Math.Max(0, changes[first] - context);
@@ -46,7 +46,7 @@ public static class UnifiedDiff
         return text.ToString();
     }
 
-    /// <summary>Lines of a text file, whatever its line endings; a final line break does not add an empty line.</summary>
+    /// <summary>文字檔的各行，不論換行符號為何；結尾的換行不會多出一個空行。</summary>
     public static IReadOnlyList<string> Lines(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -54,14 +54,14 @@ public static class UnifiedDiff
         return lines.Length > 0 && lines[^1].Length == 0 ? lines[..^1] : lines;
     }
 
-    /// <summary><c>start,count</c> with 1-based lines; an empty range names the line before it, and a count of 1 is omitted.</summary>
+    /// <summary>產生 <c>start,count</c>（行號從 1 開始）；空範圍指向它前面那一行，數量為 1 時省略。</summary>
     private static string Range(int lineBefore, int count)
     {
         var start = count == 0 ? lineBefore : lineBefore + 1;
         return count == 1 ? start.ToString(CultureInfo.InvariantCulture) : string.Create(CultureInfo.InvariantCulture, $"{start},{count}");
     }
 
-    /// <summary>Every line in order: kept (' '), removed ('-') or added ('+'), with the lines of each side before it.</summary>
+    /// <summary>依順序列出每一行：保留（' '）、刪除（'-'）或新增（'+'），並記錄兩側各自的行號。</summary>
     private static List<Edit> Edits(IReadOnlyList<string> before, IReadOnlyList<string> after)
     {
         var prefix = 0;
@@ -88,7 +88,7 @@ public static class UnifiedDiff
         }
         else
         {
-            // common[i, j]: length of the longest common subsequence of removed[i..] and added[j..].
+            // common[i, j]：removed[i..] 與 added[j..] 的最長共同子序列長度。
             var common = new int[removed.Count + 1, added.Count + 1];
             for (var i = removed.Count - 1; i >= 0; i--)
                 for (var j = added.Count - 1; j >= 0; j--)
@@ -97,7 +97,7 @@ public static class UnifiedDiff
             while (r < removed.Count && a < added.Count)
             {
                 if (removed[r] == added[a]) { Add(' ', removed[r]); r++; a++; }
-                // Removals first on a tie, so a changed line reads as "- old" then "+ new".
+                // 長度相同時先輸出刪除，讓修改的行顯示為「- 舊」接「+ 新」。
                 else if (common[r + 1, a] >= common[r, a + 1]) Add('-', removed[r++]);
                 else Add('+', added[a++]);
             }

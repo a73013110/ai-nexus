@@ -3,7 +3,7 @@ using AiNexus.Features.Inference.ModelPolicies;
 
 namespace AiNexus.Features.Administration.ModelPolicies;
 
-/// <summary>The signed-in user's effective model whitelist, token budgets and storage cap, with public model ids.</summary>
+/// <summary>目前登入者的有效模型白名單、Token 額度與儲存上限，回傳對外的模型 id。</summary>
 internal sealed class GetEffectiveModelPolicy(ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder root) => root

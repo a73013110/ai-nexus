@@ -49,7 +49,7 @@ public sealed class ListSharesTests
         Assert.Equal("carol", received[0].Owner); Assert.Equal(["alice", "alice"], received.Skip(1).Select(x => x.Owner));
         Assert.Empty((await alice.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!);
 
-        // A source that disappeared without revoking its share is hidden from recipients but still listed for the sender.
+        // 來源已消失但未撤銷分享時，對接收者隱藏，但仍會列在分享者的清單中。
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<WorkspaceResource>().Where(x => x.Id == artifact.Resource.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true));
         Assert.DoesNotContain((await bob.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!, x => x.Id == document.Id);

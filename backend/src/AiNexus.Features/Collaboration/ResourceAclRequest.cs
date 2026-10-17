@@ -8,8 +8,8 @@ public sealed record ResourceAclRequest(IReadOnlyList<ResourceMemberUpdate> Memb
 public sealed record ResourceMemberUpdate(Guid UserId, string Role);
 
 /// <summary>
-/// The access list's shape, for every module's access endpoint. Known accounts, enabled groups and the implicit owner
-/// need the database and stay in <see cref="ResourceAccess.SetAclAsync"/>.
+/// 存取清單的形狀檢查，所有模組的存取端點共用。需查資料庫的部分（帳號是否存在、群組是否啟用、隱含的擁有者）
+/// 留在 <see cref="ResourceAccess.SetAclAsync"/>。
 /// </summary>
 internal sealed class ResourceAclRequestValidator : RequestValidator<ResourceAclRequest>
 {

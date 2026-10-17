@@ -6,13 +6,12 @@ using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Administration.Roles;
 
-/// <summary><c>GroupId</c> null places the feature at the menu's top level; <c>SortOrder</c> orders it within that group.</summary>
+/// <summary><c>GroupId</c> 為 null 代表放在選單頂層；<c>SortOrder</c> 決定它在該分群內的順序。</summary>
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabled, string? GroupId, string Icon);
 
 /// <summary>
-/// Renames, reorders, regroups, re-icons, enables or disables an existing feature. Audited; refused when it would remove
-/// the actor's own administrator access.
+/// 更名、調整排序、換群組、換圖示、啟用或停用既有功能。會稽核；若會移除執行者自己的管理員權限則拒絕。
 /// </summary>
 internal sealed class SaveFeature(NexusDbContext db, AdministrativeAudit audit)
 {
@@ -22,7 +21,7 @@ internal sealed class SaveFeature(NexusDbContext db, AdministrativeAudit audit)
 
     public Task<Result> HandleAsync(string id, FeatureUpdateRequest request, CancellationToken ct) => audit.MutateAsync("admin.feature", null, id, async () =>
     {
-        // No id format rule: modules choose feature ids (`logs.query`), and an unknown id is simply not found.
+        // 不檢查 id 格式：功能 id 由各模組定義（如 `logs.query`），查無此 id 就直接回 NotFound。
         if ((AccessRules.Name(request.Name) ?? NavigationRules.Order(request.SortOrder) ?? NavigationRules.Icon(request.Icon)) is { } invalid) return invalid;
         var feature = await db.Set<Feature>().FindAsync([id], ct);
         if (feature is null) return AdministrationErrors.NotFound;

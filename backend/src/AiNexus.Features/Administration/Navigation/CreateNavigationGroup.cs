@@ -9,7 +9,7 @@ namespace AiNexus.Features.Administration.Navigation;
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (NavigationRules).")]
 public sealed record NavigationGroupCreateRequest(string Id, string Name, string? ParentId, int SortOrder);
 
-/// <summary>Adds a menu group at the top level or under another group. Audited.</summary>
+/// <summary>新增選單群組，可放在頂層或某群組之下。會稽核。</summary>
 internal sealed class CreateNavigationGroup(NexusDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes

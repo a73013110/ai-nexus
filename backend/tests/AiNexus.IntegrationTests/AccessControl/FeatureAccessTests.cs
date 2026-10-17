@@ -51,7 +51,7 @@ public sealed class FeatureAccessTests
             }
             await db.SaveChangesAsync();
         }
-        // /me remains usable for account/preferences even when chat is unavailable.
+        // 即使聊天功能不可用，/me 仍可用於帳號與偏好設定。
         Assert.DoesNotContain((await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "chat");
         foreach (var route in new[] { "models", "conversations", $"conversations/{conversation.Id}" })
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/v1/{route}")).StatusCode);
@@ -127,14 +127,14 @@ public sealed class FeatureAccessTests
         Assert.DoesNotContain(bobFeatures, x => x.Id == "admin");
     }
 
-    /// <summary>Every missing grant, from a policy or a handler's own check, answers with the one shared code.</summary>
+    /// <summary>無論缺少的授權來自 policy 或 handler 自行檢查，都回應同一個共用代碼。</summary>
     private static async Task AssertFeatureForbiddenAsync(HttpResponseMessage response)
     {
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("feature_forbidden", (await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("code").GetString());
     }
 
-    // Only the effective-feature read of AccessService joins this table.
+    // 只有 AccessService 的有效功能查詢會 join 這張表。
     private const string GrantRead = "RoleGroupFeatures";
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class FeatureAccessTests
         var path = $"/api/v1/projects/{project.Resource.Id}/files";
         queries.Clear();
         (await client.GetAsync(path)).EnsureSuccessStatusCode();
-        // The feature policy, the project ACL and the document check each need the grants.
+        // 功能 policy、專案 ACL 與文件檢查各自都需要授權。
         Assert.Equal(1, queries.Count(path, GrantRead));
         (await client.GetAsync(path)).EnsureSuccessStatusCode();
         Assert.Equal(2, queries.Count(path, GrantRead));
@@ -163,7 +163,7 @@ public sealed class FeatureAccessTests
         await using var factory = new NexusFactory(administrators: ["alice"], services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        // The request authorized with administrator grants; removing them must still be detected after the write.
+        // 請求原本以管理員授權通過；寫入後撤銷這些授權，仍必須被偵測到。
         Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["member"]))).StatusCode);
         Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "admin");
     }

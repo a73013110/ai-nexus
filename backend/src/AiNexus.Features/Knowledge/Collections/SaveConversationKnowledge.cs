@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge.Collections;
 
 /// <summary>
-/// Replaces the collections (at most three the user may read) used by one of the user's own idle conversations. Runs
-/// under the conversation's generation lock so a starting answer never sees a half-changed selection.
+/// 取代使用者自己的閒置對話所用的知識庫（最多三個，且須為使用者可讀取者）。
+/// 在對話的生成鎖內執行，避免正在啟動的回答讀到修改到一半的選取。
 /// </summary>
 internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
 {

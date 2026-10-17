@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Projects;
 
-/// <summary>Shared instructions and reference files for conversations. Its name, owner and sharing live on the <see cref="WorkspaceResource"/> with the same id.</summary>
+/// <summary>供對話共用的指示與參考檔案。名稱、擁有者與分享設定存放在同一 id 的 <see cref="WorkspaceResource"/> 上。</summary>
 [Comment("專案資源、共用指令及範本版本。")]
 public sealed class Project
 {
@@ -39,7 +39,7 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
 internal static class ProjectQueries
 {
-    /// <summary>The project as the actor may see it.</summary>
+    /// <summary>操作者能看到的專案內容。</summary>
     public static async Task<Result<ProjectDto>> LoadProjectAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
     {
         var resource = await access.RequireAsync(actor, id, Project.Kind, ct);
@@ -48,7 +48,7 @@ internal static class ProjectQueries
         return project.ToDto(await access.DescribeAsync(actor, resource.Value, ct));
     }
 
-    /// <summary>Read (or edit) access first, then the project must not be archived.</summary>
+    /// <summary>先檢查讀取（或編輯）權限，再檢查專案未被封存。</summary>
     public static async Task<Result<Project>> RequireActiveAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, bool write, CancellationToken ct)
     {
         if (await access.RequireAsync(actor, id, Project.Kind, ct, write) is { IsSuccess: false } denied) return denied.Error;

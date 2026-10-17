@@ -25,7 +25,7 @@ public static class RetrievalRanking
             counts[hit.DocumentId] = count + 1; selected.Add(hit);
             if (selected.Count == options.TopK) break;
         }
-        // Keep relevance order between groups; within adjacent groups restore document order.
+        // 群組之間保持相關性順序；相鄰群組內部則還原文件順序，讓上下文讀起來連貫。
         var merged = new List<KnowledgeHitDto>(); var consumed = new HashSet<Guid>();
         foreach (var anchor in selected)
         {
@@ -52,7 +52,7 @@ public static class RetrievalRanking
     }
     private static string Join(string left, string right)
     {
-        // Only remove overlap at a complete boundary, never arbitrary matching words.
+        // 只在完整的句界去除重疊，不可任意比對相同的字詞，否則會誤刪內容。
         for (var length = Math.Min(2000, Math.Min(left.Length, right.Length)); length > 0; length--)
             if (left.AsSpan(left.Length - length).SequenceEqual(right.AsSpan(0, length)) && (length == right.Length || right[length - 1] is '。' or '！' or '？' or ';' or '；' or '.' or '!' or '?' or '\n'))
                 return left + right[length..];

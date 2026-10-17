@@ -7,7 +7,7 @@ using AiNexus.Features.Knowledge.Collections;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>Creates a plain-text source in a collection the user may edit: the text is uploaded as a .txt attachment and queued for indexing.</summary>
+/// <summary>在使用者可編輯的知識庫中建立純文字來源：文字以 .txt 附件上傳，並排入索引工作。</summary>
 internal sealed class CreateTextDocument(ResourceAccess access, AttachmentService attachments, AddKnowledgeDocument add)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

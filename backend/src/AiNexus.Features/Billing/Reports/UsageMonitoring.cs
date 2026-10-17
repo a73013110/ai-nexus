@@ -3,9 +3,9 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Billing.Reports;
 
 /// <summary>
-/// Runtime monitoring of today's model usage (server-local day) from the accounting query of <see cref="UsageReports"/>:
-/// chat runs and model tasks of every owner. Degraded when at least <see cref="MinimumFailures"/> calls failed and they
-/// are more than <see cref="FailurePercent"/> percent of today's calls.
+/// 今日模型用量的執行期監控（以伺服器本地日計算），資料來自 <see cref="UsageReports"/> 的會計查詢，
+/// 涵蓋所有擁有者的聊天執行與模型工作。失敗次數至少達 <see cref="MinimumFailures"/>，且占今日呼叫超過
+/// <see cref="FailurePercent"/>% 時為 degraded。
 /// </summary>
 internal sealed class UsageMonitoring(UsageReports reports, TimeProvider clock) : IMonitoringSource
 {

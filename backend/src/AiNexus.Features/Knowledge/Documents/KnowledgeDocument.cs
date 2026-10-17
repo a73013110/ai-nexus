@@ -6,9 +6,9 @@ using AiNexus.Features.Knowledge.Collections;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>
-/// A source document: in a collection (<see cref="CollectionId"/>), or a standalone document of a conversation or project.
-/// Its name, owner and project live on the <see cref="WorkspaceResource"/> with the same id. Text sources keep their
-/// editable text and a <see cref="TextVersion"/> that guards concurrent edits.
+/// 來源文件：屬於某個知識庫（<see cref="CollectionId"/>），或屬於對話／專案的獨立文件。
+/// 名稱、擁有者與專案存在同 Id 的 <see cref="WorkspaceResource"/>。純文字來源保留可編輯內容，
+/// 並以 <see cref="TextVersion"/> 防止並行編輯互相覆蓋。
 /// </summary>
 [Comment("知識庫文件的原始附件、分析／索引狀態與 embedding profile。")]
 public sealed class KnowledgeDocument

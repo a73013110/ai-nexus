@@ -11,16 +11,15 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>
-/// Uploaded files, their storage quota and the file library. Other modules upload, look up and read files through
-/// <see cref="AttachmentService"/>, <see cref="AttachmentQuota"/> and <see cref="AttachmentLifecycle"/>; each endpoint
-/// use case has its own file.
+/// 已上傳的檔案、儲存配額與檔案庫。其他模組透過 <see cref="AttachmentService"/>、<see cref="AttachmentQuota"/>、
+/// <see cref="AttachmentLifecycle"/> 上傳、查詢與讀取檔案；每個端點用例各自一個檔案。
 /// </summary>
 public sealed class AttachmentsModule : IFeatureModule
 {
-    /// <summary>Multipart upload ceiling: one file at the largest configurable size plus form overhead.</summary>
+    /// <summary>multipart 上傳的請求大小上限：最大可設定檔案大小加上表單額外負荷。</summary>
     public const long UploadBodyLimit = 9 * 1024 * 1024;
 
-    /// <summary>Each upload reads, sniffs, extracts and stores a file of up to <see cref="UploadBodyLimit"/>.</summary>
+    /// <summary>每次上傳都會讀取、偵測類型、抽取文字並儲存檔案；請求大小受 <see cref="UploadBodyLimit"/> 限制。</summary>
     public const string UploadRateLimit = "attachment-upload";
     public const int UploadsPerMinute = 30;
 
@@ -46,8 +45,8 @@ public sealed class AttachmentsModule : IFeatureModule
         services.AddFeaturePolicy(Policies.Attachments, FeatureIds.Files, FeatureIds.Chat, FeatureIds.Knowledge, FeatureIds.Projects);
     }
 
-    // Endpoint order is the published OpenAPI order: the file library first, then attachments. Knowledge lists the
-    // library, since a file's usages include documents.
+    // 端點順序即已發布的 OpenAPI 順序：檔案庫在前、附件在後。知識庫模組也會列出檔案庫，
+    // 因為一個檔案的使用處可能包含文件。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var library = api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library");
@@ -64,7 +63,7 @@ public sealed class AttachmentsModule : IFeatureModule
         RemoveAttachment.MapDraft(routes);
     }
 
-    /// <summary>Fails startup (and every host command) when the storage root is unusable, before any request is accepted.</summary>
+    /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>
     public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
 }
 

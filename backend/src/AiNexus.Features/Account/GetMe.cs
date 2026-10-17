@@ -11,7 +11,7 @@ namespace AiNexus.Features.Account;
 
 public sealed record MeDto(Guid Id, string Account, string DisplayName, PreferencesDto Preferences, string CsrfToken, Guid? ActiveRunId, AccessDto Access);
 
-/// <summary>The signed-in user, their appearance preferences, a fresh CSRF token, their active run and their access.</summary>
+/// <summary>登入者資料、外觀偏好、新的 CSRF token、進行中的生成任務與存取權限。</summary>
 internal sealed class GetMe(NexusDbContext db, IAntiforgery csrf, AccessService access, ModelPresentation models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>One diagnostic event with its properties and exception, under its own policy. The read is audited first.</summary>
+/// <summary>單一診斷事件的屬性與例外詳情，使用獨立的權限政策；讀取前會先寫稽核。</summary>
 internal sealed class GetSystemLogDetail(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs

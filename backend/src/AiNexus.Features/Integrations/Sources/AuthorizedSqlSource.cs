@@ -15,8 +15,8 @@ public sealed class SourceRow
     public SourceRecordDto Describe() => new(RecordId, RecordKind, Title, Status, Revision, ModifiedAt);
 }
 
-// SQL is fixed in code. Only the source-side authorized views are readable by the SQL login.
-// Both full AD account and SID must match; account suffixes are never used as identities.
+// SQL 寫死在程式碼中，不接受外部輸入組成查詢；SQL 登入只能讀取來源端的授權 view。
+// AD 帳號與 SID 必須同時相符，且不得以帳號後綴做為身分識別。
 public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db) : IControlledSourceAdapter
 {
     public abstract string Id { get; }
@@ -53,7 +53,7 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
         if (row is null) return IntegrationsErrors.RecordMissing;
         if (row.Body is null) return IntegrationsErrors.BodyTooLarge;
         var history = (await db.QueryAsync<SourceHistoryDto>(HistorySql, args, commandTimeout: timeout, cancellationToken: ct)).ToArray();
-        // Recheck the primary grant after retrieving child history as revocation can happen between calls.
+        // 取得歷史後再查一次主紀錄：授權可能在兩次查詢之間被撤銷，也可能紀錄已被改版（Revision 不符即視為已變更）。
         var confirmed = await db.QuerySingleOrDefaultAsync<SourceRow>(ReadSql, args, commandTimeout: timeout, cancellationToken: ct);
         if (confirmed is null) return IntegrationsErrors.RecordMissing;
         if (confirmed.Revision != row.Revision) return IntegrationsErrors.Changed;

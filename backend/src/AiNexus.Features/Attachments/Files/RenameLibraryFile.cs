@@ -19,7 +19,7 @@ internal sealed class RenameLibraryFileRequestValidator : RequestValidator<Renam
     }
 }
 
-/// <summary>Renames a library file. The extension must stay, and the rename fails if someone renamed it first.</summary>
+/// <summary>重新命名檔案庫中的檔案。副檔名必須保留；若別人已先改名，這次改名會失敗。</summary>
 internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -27,7 +27,7 @@ internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService fil
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithName("RenameLibraryFile");
 
-    /// <summary>1 to 180 characters, no path, control or reserved characters, and not ending with a dot.</summary>
+    /// <summary>1 到 180 個字元，不可含路徑、控制字元或保留字元，且不可以點結尾。</summary>
     internal static bool NameIsValid(string name) => name.Length is >= 1 and <= Attachment.FileNameMaxLength && !name.Any(char.IsControl)
         && name.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) < 0 && !name.EndsWith('.') && name is not ("." or "..");
 

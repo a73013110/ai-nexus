@@ -6,8 +6,8 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
-/// One private repository, hanglong/nexus, at commit aaaa…: README.md, docs/guide.md, docs/logo.png and src/app.cs; issue #1 and
-/// pull request #2 (head aaaa…, merge base bbbb…).
+/// 一個私有 repository hanglong/nexus（commit aaaa…）：包含 README.md、docs/guide.md、docs/logo.png 與 src/app.cs；另有 issue #1 與
+/// pull request #2（head aaaa…，merge base bbbb…）。
 /// </summary>
 internal sealed class FixtureGitea : IGiteaClient
 {

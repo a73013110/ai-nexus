@@ -6,14 +6,14 @@ using AiNexus.Features.Identity.Sessions;
 namespace AiNexus.Features.Identity;
 
 /// <summary>
-/// The sign-in handshake under <c>/api/v1/auth</c>. This group has no <see cref="CurrentUserResolution.WithCurrentUser"/>
-/// filter: these endpoints establish the session, so they resolve <see cref="CurrentUser"/> themselves where needed.
+/// <c>/api/v1/auth</c> 下的登入交握端點。此群組不掛 <see cref="CurrentUserResolution.WithCurrentUser"/> 過濾器：這些端點負責建立 session，
+/// 需要時自行解析 <see cref="CurrentUser"/>。
 /// </summary>
 public static class AuthEndpoints
 {
     public const string CookieScheme = "NexusCookie";
 
-    /// <summary>Endpoint order is the published OpenAPI order.</summary>
+    /// <summary>端點註冊順序即 OpenAPI 發布順序。</summary>
     public static void MapNexusAuthentication(this IEndpointRouteBuilder app)
     {
         var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithRequestValidation();

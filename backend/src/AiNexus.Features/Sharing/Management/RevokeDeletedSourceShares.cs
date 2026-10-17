@@ -5,7 +5,7 @@ using AiNexus.Platform.Events;
 
 namespace AiNexus.Features.Sharing.Management;
 
-/// <summary>Shares of a deleted conversation or artifact stop working in the deleting transaction, before its save.</summary>
+/// <summary>被刪除的對話或成果，其分享會在刪除交易中、儲存之前就失效。</summary>
 internal sealed class RevokeDeletedSourceShares(ShareService shares) : IDomainEventHandler<ConversationDeleted>, IDomainEventHandler<ArtifactDeleted>
 {
     public Task HandleAsync(ConversationDeleted e, CancellationToken ct) => shares.RevokeSourceAsync("conversation", e.ConversationId, ct);

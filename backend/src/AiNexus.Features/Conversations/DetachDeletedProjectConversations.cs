@@ -8,8 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Conversations;
 
 /// <summary>
-/// A deleted project's conversations stay with their owners; only the project link is cleared, in the deleting
-/// transaction. Deleted conversations count too, and an answer still generating in any of them blocks the deletion.
+/// 已刪除專案的對話仍歸原擁有者，只在刪除交易中清除專案關聯。軟刪除的對話也會被計入：其中任一仍在生成的回答都會阻擋專案刪除。
 /// </summary>
 internal sealed class DetachDeletedProjectConversations(NexusDbContext db) : IDomainEventHandler<ContainerDeleted>, IContainerDeletionCheck
 {

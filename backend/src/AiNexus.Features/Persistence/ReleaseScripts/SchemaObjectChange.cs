@@ -1,13 +1,13 @@
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
-/// <summary>One schema object whose definition differs between two SqlPackage per-object extracts.</summary>
-/// <param name="Status">Added, removed or modified by the release.</param>
-/// <param name="Path">The object's script in the extract, with forward slashes: <c>knowledge/Tables/Chunks.sql</c>.</param>
-/// <param name="Type">SqlPackage's folder for the object kind: <c>Tables</c>, <c>Views</c>, <c>Security</c> (schemas), …</param>
-/// <param name="Name">The object, <c>schema.Name</c> for schema-scoped objects.</param>
-/// <param name="Diff">Unified diff of the object's script, from before to after.</param>
+/// <summary>兩份 SqlPackage 逐物件匯出結果之間，定義有差異的一個結構物件。</summary>
+/// <param name="Status">此次發布對該物件的變化：新增、移除或修改。</param>
+/// <param name="Path">物件腳本在匯出目錄中的路徑，使用斜線，例如 <c>knowledge/Tables/Chunks.sql</c>。</param>
+/// <param name="Type">SqlPackage 對該物件種類的資料夾名稱，例如 <c>Tables</c>、<c>Views</c>、<c>Security</c>（schema）。</param>
+/// <param name="Name">物件名稱；屬於某個 schema 的物件為 <c>schema.Name</c>。</param>
+/// <param name="Diff">物件腳本由舊到新的 unified diff。</param>
 public sealed record SchemaObjectChange(SchemaObjectStatus Status, string Path, string Type, string Name, string Diff)
 {
-    /// <summary>The diff's file name: the path with its folders joined by dots, for example <c>knowledge.Tables.Chunks.diff</c>.</summary>
+    /// <summary>差異檔名：把路徑的資料夾以點連接，例如 <c>knowledge.Tables.Chunks.diff</c>。</summary>
     public string FileName => System.IO.Path.ChangeExtension(Path, null).Replace('/', '.') + ".diff";
 }

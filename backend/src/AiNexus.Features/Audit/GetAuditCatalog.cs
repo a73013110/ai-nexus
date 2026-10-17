@@ -11,9 +11,8 @@ public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOn
     IReadOnlyList<AuditCategoryDto> Categories, IReadOnlyList<AuditActionDto> Actions);
 
 /// <summary>
-/// Feature, model and menu-group names for presenting audit entries; every group is listed, since a recorded feature change
-/// is arranged as the menu does. Also the category and action filters, so the page offers what the server classifies.
-/// Read-only; does not depend on account or policy administration.
+/// 稽核頁顯示用的功能、模型與選單群組名稱，以及分類與動作篩選。所有群組都列出，因為已記錄的功能異動是依選單分群排列的。
+/// 唯讀，且不依賴帳號或政策管理功能。
 /// </summary>
 internal sealed class GetAuditCatalog(NexusDbContext db, ModelCatalog catalog, AccessService access)
 {

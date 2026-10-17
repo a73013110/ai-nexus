@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Monitoring.Snapshots;
 
-/// <summary>This instance's live sessions, traffic and dependencies over the last 1, 5 or 15 minutes. The read is audited.</summary>
+/// <summary>本實例最近 1、5 或 15 分鐘的即時工作階段、流量與相依服務；讀取會被稽核。</summary>
 internal sealed class GetMonitoringSnapshot(MonitoringSnapshots snapshots, NexusDbContext db)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor

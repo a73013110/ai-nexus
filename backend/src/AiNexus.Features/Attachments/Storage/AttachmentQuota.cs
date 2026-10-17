@@ -8,13 +8,13 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Attachments.Storage;
 
-/// <summary>A personal storage limit set by an administrator; <c>null</c> falls back to the group or default limit.</summary>
+/// <summary>管理員設定的個人儲存上限；<c>null</c> 代表沿用群組或預設上限。</summary>
 [ValidatedInHandler("The limit is checked inside the audited administrative transaction (SetUserAttachmentStorage).")]
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
 
 public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOptions<AttachmentOptions> options)
 {
-    // Personal overrides deliberately take precedence over inherited limits, including group caps.
+    // 個人覆寫刻意優先於繼承的上限（包含群組上限）。
     public static long Effective(long? personal, long? group, long baseline) => personal ?? group ?? baseline;
 
     public async Task<AttachmentStorageDto> ForAsync(Guid owner, CancellationToken ct) => (await ForOwnersAsync([owner], ct))[owner];
@@ -35,8 +35,8 @@ public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOp
         });
     }
 
-    // Call inside the caller's transaction before checking bytes or binding/removing a reference.
-    // The database row lock coordinates all processes using the same SQL database.
+    // 需在呼叫端的交易內呼叫，並在檢查位元組或綁定、解除引用之前執行。
+    // 資料庫列鎖讓同一個 SQL 資料庫的所有程序彼此協調。
     public Task<int> LockOwnerAsync(Guid owner, CancellationToken ct) => db.Users.Where(x => x.Id == owner)
         .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
 

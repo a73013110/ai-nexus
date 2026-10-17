@@ -4,7 +4,7 @@ using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 
-/// <summary>A numbered source of an answer, frozen when the answer was generated.</summary>
+/// <summary>回答中的編號來源，於回答生成當下凍結，之後不隨文件內容變動。</summary>
 [Comment("回答生成當時的知識引用、文件頁碼與摘要快照。")]
 public sealed class MessageCitation
 {

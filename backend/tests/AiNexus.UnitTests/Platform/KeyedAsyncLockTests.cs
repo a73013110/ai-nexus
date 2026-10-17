@@ -12,15 +12,15 @@ public sealed class KeyedAsyncLockTests
         var first = await locks.AcquireAsync(a, CancellationToken.None);
         var second = locks.AcquireAsync(a, CancellationToken.None);
         Assert.False(second.IsCompleted);
-        // Another key is independent of the held one.
+        // 另一個鍵與已持有的鍵互不影響，應該能立即取得。
         using (await locks.AcquireAsync(b, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))) Assert.Equal(2, locks.Count);
         Assert.Equal(1, locks.Count);
         first.Dispose();
-        first.Dispose(); // A second dispose must not release the next holder's turn.
+        first.Dispose(); // 重複 Dispose 不可釋放下一位等待者的鎖。
         Task<IDisposable> third;
         using (await second.WaitAsync(TimeSpan.FromSeconds(5)))
         {
-            // A waiter's task can only complete when the holder releases, so checking it at once is deterministic.
+            // 等待者的 Task 只有在持有者釋放後才會完成，所以此時立即斷言未完成是確定性的，不受排程時序影響。
             third = locks.AcquireAsync(a, CancellationToken.None);
             Assert.False(third.IsCompleted);
             Assert.Equal(1, locks.Count);

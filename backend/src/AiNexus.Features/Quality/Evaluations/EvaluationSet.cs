@@ -6,7 +6,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>A versioned question bank. Its name, owner and sharing live on the <see cref="WorkspaceResource"/> with the same id.</summary>
+/// <summary>版本化的題庫。名稱、擁有者與分享設定存放在相同 id 的 <see cref="WorkspaceResource"/>，這裡只存題目與版本。</summary>
 [Comment("評測題庫、固定測試案例與版本。")]
 public sealed class EvaluationSet
 {
@@ -26,7 +26,7 @@ public sealed class EvaluationSet
 
 internal static class EvaluationSetQueries
 {
-    /// <summary>The set as the actor may see it.</summary>
+    /// <summary>以操作者的權限讀取題組；無讀取權限時直接回傳錯誤。</summary>
     public static async Task<Result<EvaluationSetDto>> LoadSetAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
     {
         var resource = await access.RequireAsync(actor, id, EvaluationSet.Kind, ct);

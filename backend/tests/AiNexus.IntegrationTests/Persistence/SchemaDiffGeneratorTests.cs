@@ -7,8 +7,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.IntegrationTests.Persistence;
 
 /// <summary>
-/// The temporary database lives on a shared server, so it must be gone whatever happens after it is created. The happy
-/// path needs SqlPackage and is verified end to end by <c>Publish-IIS.ps1 -FromMigration</c> (docs/operations/iis-deployment.md).
+/// 暫存資料庫位於共用伺服器上，因此不論建立後發生什麼事，都必須被清除。正常路徑
+/// 需要 SqlPackage，並由 <c>Publish-IIS.ps1 -FromMigration</c> 端對端驗證（見 docs/operations/iis-deployment.md）。
 /// </summary>
 [Trait("Category", "SqlServer")]
 public sealed class SchemaDiffGeneratorTests : IDisposable

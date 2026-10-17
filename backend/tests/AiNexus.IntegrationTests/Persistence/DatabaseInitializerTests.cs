@@ -27,7 +27,7 @@ public sealed class DatabaseInitializerTests
             await using var writer = new SqlConnection(connection); await writer.OpenAsync();
             await using var transaction = (SqlTransaction)await writer.BeginTransactionAsync();
             await writer.ExecuteAsync("UPDATE [identity].[Users] SET [DisplayName] = N'未提交' WHERE [Id] = @Id", new { user.Id }, transaction);
-            // Locking READ COMMITTED would wait for the writer and time out; row versioning returns the committed name.
+            // 若使用鎖定式 READ COMMITTED 會等待寫入者而逾時；列版本控制（row versioning）則回傳已提交的名稱。
             await using var reader = new SqlConnection(connection); await reader.OpenAsync();
             Assert.Equal("已提交", await reader.QuerySingleAsync<string>(new CommandDefinition("SELECT [DisplayName] FROM [identity].[Users] WHERE [Id] = @Id", new { user.Id }, commandTimeout: 5)));
             await transaction.RollbackAsync();

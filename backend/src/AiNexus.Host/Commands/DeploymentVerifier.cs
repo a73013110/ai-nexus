@@ -18,11 +18,18 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Host.Commands;
 
+/// <summary>
+/// 系統部署就緒度驗證器。
+/// 執行唯讀 SQL 檢查、設定檢驗、模型清單盤點、合成 Embedding/Rerank 探針以及暫時性儲存目錄寫入測試。
+/// 絕不調用大型語言模型生成實際對話回答，不消耗生產環境提問配額。
+/// </summary>
 public static class DeploymentVerifier
 {
     private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    // Read-only SQL checks, synthetic embedding/rerank requests and a transient attachment IO probe.
+    /// <summary>
+    /// 驗證部署環境之資料庫、認證、模型、附件儲存與診斷日誌是否健全。
+    /// </summary>
     public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration config, IHostEnvironment environment, CancellationToken ct)
     {
         using var scope = services.CreateScope();
@@ -34,43 +41,94 @@ public static class DeploymentVerifier
             var knowledge = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
             var attachments = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value;
             var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<AiNexus.Platform.Diagnostics.DiagnosticOptions>>().Value;
+
             var diagnosticPath = AiNexus.Platform.Diagnostics.DiagnosticJournal.Resolve(diagnostics.Directory, environment);
             Directory.CreateDirectory(diagnosticPath);
             var diagnosticProbe = Path.Combine(diagnosticPath, ".verify-" + Guid.NewGuid().ToString("N"));
-            try { await File.WriteAllTextAsync(diagnosticProbe, "AiNexus diagnostic storage write probe", ct); }
-            finally { if (File.Exists(diagnosticProbe)) File.Delete(diagnosticProbe); }
+            try
+            {
+                await File.WriteAllTextAsync(diagnosticProbe, "AiNexus diagnostic storage write probe", ct);
+            }
+            finally
+            {
+                if (File.Exists(diagnosticProbe))
+                {
+                    File.Delete(diagnosticProbe);
+                }
+            }
+
             _ = scope.ServiceProvider.GetRequiredService<IOptions<ExportOptions>>().Value;
             _ = scope.ServiceProvider.GetRequiredService<IOptions<IntegrationsOptions>>().Value;
             var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchOptions>>().Value;
             var gitea = scope.ServiceProvider.GetRequiredService<IOptions<GiteaOptions>>().Value;
             var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(NexusDbContext.DatabaseName));
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+
             var connected = await db.Database.CanConnectAsync(ct);
-            if (connected) await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
+            if (connected)
+            {
+                await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
+            }
+
             var pending = connected ? await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().PendingMigrationsAsync(ct) : null;
             var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.Providers.Google.ApiKey);
             var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
             await scope.ServiceProvider.GetRequiredService<IAttachmentStorage>().VerifyAsync(ct);
+
             var retrieval = await scope.ServiceProvider.GetRequiredService<RetrievalModelProbe>().CheckAsync(null, ct);
-            var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured) && retrieval.Embedding.Available == true && retrieval.Rerank.Available == true;
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
+            var ready = connected
+                && pending?.Count == 0
+                && catalog.ProviderAvailable
+                && catalog.Models.Count > 0
+                && providerConfigured
+                && (ad.Mode == "Windows" || ad.Configured)
+                && retrieval.Embedding.Available == true
+                && retrieval.Rerank.Available == true;
+
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
                 environment = environment.EnvironmentName,
-                sqlConnected = connected, pendingMigrations = pending?.Count ?? -1, pendingMigrationIds = pending,
+                sqlConnected = connected,
+                pendingMigrations = pending?.Count ?? -1,
+                pendingMigrationIds = pending,
                 sqlEncrypted = sql.Encrypt != SqlConnectionEncryptOption.Optional,
-                trustsSqlCertificate = sql.TrustServerCertificate, authMode = ad.Mode, adConfigured = ad.Mode == "Windows" || ad.Configured,
-                providers = catalog.Providers, providerConfigured, configuredModelCount = inference.Models.Count,
-                providerAvailable = catalog.ProviderAvailable, availableModelCount = catalog.Models.Count, modelNotice = catalog.Notice,
-                embeddingProvider = knowledge.Embedding.Provider, embeddingDimensions = knowledge.Embedding.Dimensions,
-                embeddingAvailable = retrieval.Embedding.Available, embeddingNotice = retrieval.Embedding.Notice, rerankAvailable = retrieval.Rerank.Available, rerankNotice = retrieval.Rerank.Notice,
-                webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
-                keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true,
-                diagnosticStoragePath = diagnosticPath, diagnosticStorageWritable = true, diagnosticCapacityBytes = diagnostics.MaxDiskBytes, diagnosticMaxSqlRows = diagnostics.MaxSqlRows, diagnosticOtlpEnabled = diagnostics.OtlpEnabled, ready
+                trustsSqlCertificate = sql.TrustServerCertificate,
+                authMode = ad.Mode,
+                adConfigured = ad.Mode == "Windows" || ad.Configured,
+                providers = catalog.Providers,
+                providerConfigured,
+                configuredModelCount = inference.Models.Count,
+                providerAvailable = catalog.ProviderAvailable,
+                availableModelCount = catalog.Models.Count,
+                modelNotice = catalog.Notice,
+                embeddingProvider = knowledge.Embedding.Provider,
+                embeddingDimensions = knowledge.Embedding.Dimensions,
+                embeddingAvailable = retrieval.Embedding.Available,
+                embeddingNotice = retrieval.Embedding.Notice,
+                rerankAvailable = retrieval.Rerank.Available,
+                rerankNotice = retrieval.Rerank.Notice,
+                webSearchEnabled = search.Enabled,
+                giteaEnabled = gitea.Enabled,
+                keyRingPath = config["DataProtection:KeyRingPath"],
+                attachmentStoragePath = attachments.StoragePath,
+                attachmentStorageWritable = true,
+                diagnosticStoragePath = diagnosticPath,
+                diagnosticStorageWritable = true,
+                diagnosticCapacityBytes = diagnostics.MaxDiskBytes,
+                diagnosticMaxSqlRows = diagnostics.MaxSqlRows,
+                diagnosticOtlpEnabled = diagnostics.OtlpEnabled,
+                ready
             }, Indented));
+
             return ready;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : ex is Microsoft.Extensions.Options.OptionsValidationException ? "Deployment configuration validation failed. Check database, model, authentication, tool, connector and limit settings." : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
+            Console.Error.WriteLine(ex is ExternalServiceException external
+                ? external.Message
+                : ex is Microsoft.Extensions.Options.OptionsValidationException
+                    ? "部署組態驗證失敗。請檢查資料庫、模型、身分驗證、外部工具、連線器與配額設定。"
+                    : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
             return false;
         }
     }

@@ -5,27 +5,26 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// Turns a snapshot into the page's verdict. Pure and threshold-based: traffic rules read <see cref="MonitoringSnapshot.RecentTraffic"/>
-/// (the last minute), resource rules the last <see cref="SustainedPoints"/> resource buckets, dependencies the selected window.
-/// Thresholds are documented in docs/features/monitoring.md.
+/// 把快照轉成頁面的判定。純函式、以門檻為準：流量規則讀 <see cref="MonitoringSnapshot.RecentTraffic"/>（最後一分鐘），資源規則讀最後 <see cref="SustainedPoints"/> 個資源區間，相依服務讀所選時間窗。
+/// 門檻值的說明見 docs/features/monitoring.md。
 /// </summary>
 public static class MonitoringHealth
 {
     public const string Healthy = "healthy", Attention = "attention", Critical = "critical", Unobserved = "unobserved";
     public const string Warning = "warning";
 
-    /// <summary>Error and latency rules stay quiet below this many requests in the last minute.</summary>
+    /// <summary>最近一分鐘請求數未達此值時，錯誤率與延遲規則都不判定，避免樣本太少而誤報。</summary>
     public const int MinimumRequests = 20;
     public const double ErrorWarningPercent = 5, ErrorCriticalPercent = 25;
     public const double LatencyWarningMs = 3000;
-    /// <summary>A dependency whose calls all failed is critical from this many calls; fewer is a warning.</summary>
+    /// <summary>相依服務的呼叫全部失敗時：呼叫數達此值為嚴重，否則為警告。</summary>
     public const int DependencyCriticalCalls = 3;
-    /// <summary>Resource rules need this many consecutive ten-second buckets over the threshold.</summary>
+    /// <summary>資源規則需要連續這麼多個十秒區間都超過門檻，才會判定，以濾掉單次尖峰。</summary>
     public const int SustainedPoints = 3;
     public const double CpuWarningPercent = 85, GcPauseWarningPercent = 10, MemoryWarningPercent = 90;
     public const long ThreadPoolQueueWarning = 100;
 
-    /// <summary>Placeholder until <see cref="Evaluate"/> runs.</summary>
+    /// <summary>尚未執行 <see cref="Evaluate"/> 前的佔位值。</summary>
     public static readonly HealthSummary Pending = new(Unobserved, []);
 
     public static HealthSummary Evaluate(MonitoringSnapshot snapshot)
@@ -51,7 +50,7 @@ public static class MonitoringHealth
                 $"最近 1 分鐘 {N(recent.Requests)} 次要求中有 {N(recent.Errors)} 次錯誤（{P(recent.ErrorPercent)}）。"));
         if (recent.ServerErrors > 0)
             issues.Add(new("server_errors", Warning, "api", "發生伺服器錯誤", $"最近 1 分鐘有 {N(recent.ServerErrors)} 次 5xx 回應。"));
-        // A null P95 with timed requests means beyond the last histogram bound.
+        // 有計時過的請求卻沒有 P95，代表落在直方圖最後一個上界之外。
         var slow = recent.P95Ms > LatencyWarningMs || recent is { P95Ms: null, AverageMs: not null };
         if (recent.Requests >= MinimumRequests && slow)
             issues.Add(new("latency_high", Warning, "api", "回應變慢", recent.P95Ms is { } bound
@@ -95,12 +94,12 @@ public static class MonitoringHealth
             issues.Add(new("subsystem_failing", Critical, subsystem.Id, subsystem.Name + "異常", subsystem.Summary ?? subsystem.Name + "目前無法運作。"));
         else if (subsystem.Status == SubsystemStates.Degraded)
             issues.Add(new("subsystem_degraded", Warning, subsystem.Id, subsystem.Name + "需要注意", subsystem.Summary ?? subsystem.Name + "部分功能受影響。"));
-        // Sources report idle when unused; unobserved after a read means the read itself failed or timed out.
+        // 來源未被使用時回報 idle；只有讀取過卻仍為 unobserved，才代表讀取本身失敗或逾時。
         else if (subsystem is { Status: SubsystemStates.Unobserved, ObservedAt: not null })
             issues.Add(new("subsystem_unreadable", Warning, subsystem.Id, subsystem.Name + "無法讀取", $"最近一次讀取{subsystem.Name}狀態失敗或逾時。"));
     }
 
-    /// <summary>Anything measured at all: completed requests, a process sample, a dependency call or a subsystem reading.</summary>
+    /// <summary>是否量測到任何資料：完成的請求、程序取樣、相依服務呼叫或子系統讀數。</summary>
     private static bool Observed(MonitoringSnapshot snapshot) =>
         snapshot.Traffic.Requests > 0 || snapshot.RecentTraffic.Requests > 0 || snapshot.Resources.WorkingSetBytes > 0
         || snapshot.Dependencies.Any(x => x.Status != "unobserved") || snapshot.Subsystems.Any(x => x.ObservedAt is not null && x.Status != SubsystemStates.Unobserved);

@@ -23,7 +23,7 @@ public sealed class EmbeddingOptions : IValidatableObject
     [AllowedValues("plain", "qwen-query")] public string InputFormat { get; set; } = "plain";
     [Required, MaxLength(500)] public string QueryInstruction { get; set; } = "Given a web search query, retrieve relevant passages that answer the query";
     [MaxLength(64)] public string Revision { get; set; } = "";
-    /// <summary>Empty uses the Ollama inference endpoint.</summary>
+    /// <summary>留空時使用 Ollama 推論端點。</summary>
     [HttpEndpoint] public string Endpoint { get; set; } = "";
     [Range(5, 300)] public int TimeoutSeconds { get; set; } = 60;
     [Range(1, 100000)] public int MaxDailyRequests { get; set; } = 20000;
@@ -66,10 +66,10 @@ public sealed class RetrievalOptions : IValidatableObject
     [Range(1, 200)] public int RerankCandidates { get; set; } = 30;
     [Range(1, 20)] public int TopK { get; set; } = 6;
     [Range(1, 20)] public int MaxChunksPerDocument { get; set; } = 3;
-    /// <summary>0 keeps every vector hit.</summary>
+    /// <summary>0 表示保留所有向量命中結果。</summary>
     [Range(-1d, 1d)] public double MinVectorScore { get; set; }
     [Range(100, 16000)] public int ContextTokens { get; set; } = 3500;
-    /// <summary>0 disables the query vector cache.</summary>
+    /// <summary>0 表示停用查詢向量快取。</summary>
     [Range(0, 60)] public int QueryCacheMinutes { get; set; } = 10;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

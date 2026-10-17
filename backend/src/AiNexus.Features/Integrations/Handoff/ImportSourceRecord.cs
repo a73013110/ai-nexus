@@ -21,7 +21,7 @@ internal sealed class SourceImportRequestValidator : RequestValidator<SourceImpo
     }
 }
 
-/// <summary>Copies a record into a private artifact. The snapshot grants nobody access to the live source.</summary>
+/// <summary>把紀錄複製成一份私人成果。快照不授予任何人存取即時來源的權限。</summary>
 internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access, SourceGateway gateway, ArtifactService artifacts, TimeProvider clock)
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };

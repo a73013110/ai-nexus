@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Repositories.Handoff;
 
-/// <summary>Provenance of a knowledge document imported as a snapshot of one file at a pinned commit.</summary>
+/// <summary>知識文件的來源紀錄：由某個固定 commit 上的一個檔案快照匯入。</summary>
 [Comment("程式庫文件匯入所固定的主機、repository、commit 與檔案路徑。")]
 public sealed class RepositoryImport
 {

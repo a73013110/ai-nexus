@@ -10,7 +10,7 @@ using FluentValidation;
 
 namespace AiNexus.Features.Repositories.Handoff;
 
-/// <summary>Exactly one source: files at one commit, an issue, or a pull request.</summary>
+/// <summary>來源只能三選一：同一 commit 的檔案、一個 issue，或一個 pull request。</summary>
 public sealed record StartRepositoryChatRequest(string? Commit, IReadOnlyList<string>? Paths, int? Issue, int? Pull);
 public sealed record RepositoryChatDto(ConversationDto Conversation, AttachmentDto Attachment, string Prompt, IReadOnlyList<string> Skipped);
 
@@ -29,8 +29,8 @@ internal sealed class StartRepositoryChatRequestValidator : RequestValidator<Sta
 }
 
 /// <summary>
-/// Opens a private conversation with the source bundled into one Markdown attachment, re-read from Gitea at the pinned
-/// commit. The draft prompt marks the attachment as data; nothing is sent to a model until the user sends it.
+/// 開啟一段私人對話，來源內容打包成一個 Markdown 附件，並在固定的 commit 上重新從 Gitea 讀取。
+/// 草稿提示會把附件標為參考資料；使用者送出前不會呼叫任何模型。
 /// </summary>
 internal sealed class StartRepositoryChat(AccessService access, RepositoryService gitea, BrowseRepositoryIssues issues, BrowseRepositoryHistory history,
     AttachmentService attachments, ConversationService conversations)
@@ -130,7 +130,7 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
 
     private static string Quoted(string body) => body.Trim().Length == 0 ? "（沒有內容）\n" : body.Trim() + "\n";
 
-    /// <summary>A fence longer than any backtick run in the source, so file content cannot close it early.</summary>
+    /// <summary>比來源中最長的反引號連續字元還長的 fence，避免檔案內容提早結束程式碼區塊。</summary>
     private static string Fenced(string source, string language)
     {
         var longest = 0; var run = 0;

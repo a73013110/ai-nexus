@@ -9,18 +9,18 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Repositories;
 
+/// <summary>Gitea REST API 的存取介面；每個呼叫都以使用者自己的 token 進行。</summary>
 public interface IGiteaClient
 {
     Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct);
-    /// <summary>A UTF-8 text body, or null when it is longer than <paramref name="maxBytes"/>.</summary>
+    /// <summary>UTF-8 文字內容；超過 <paramref name="maxBytes"/> 時回傳 null。</summary>
     Task<string?> GetTextAsync(string token, string path, int maxBytes, CancellationToken ct);
-    /// <summary>The only write: a comment on an issue or pull request.</summary>
+    /// <summary>唯一的寫入操作：在 issue 或 pull request 上留言。</summary>
     Task<JsonDocument> PostCommentAsync(string token, string path, string body, CancellationToken ct);
 }
 
 /// <summary>
-/// HTTP access to the configured Gitea host only. Remote status codes become fixed public errors; remote bodies, the token
-/// and redirects never reach callers or logs.
+/// 只能連到設定中的 Gitea 主機。遠端狀態碼會轉成固定的公開錯誤；遠端回應內容、token 與重新導向都不會傳給呼叫端，也不會寫進日誌。
 /// </summary>
 public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOptions> options) : IGiteaClient
 {

@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-// Lexical checks are explicit diagnostics, not a claim of semantic correctness.
+// 詞彙比對只是明確的診斷指標，不代表回答語意正確。
 public static class EvaluationMetrics
 {
     public static (int Matches, int Total, int Forbidden) Measure(string answer, EvaluationCase test)
@@ -59,7 +59,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
                 if (await RequireAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
                 await execution.CheckpointAsync($"第 {c + 1} 題 · {variants[v].Label}", completed, total, ct);
                 var timer = Stopwatch.StartNew();
-                // The reference answer and check terms are withheld from the model.
+                // 參考答案與檢查詞不可送進模型，否則模型可能照抄而使評測失真。
                 var generated = await model.GenerateAsync(run.OwnerId, "evaluation", cases[c].Question, variants[v].Instruction, ct, presentation.PublicId(variants[v].ModelId), expectedConfiguration: variants[v].Configuration?.Fingerprint);
                 if (!generated.IsSuccess) return generated.Error;
                 var answer = generated.Value;

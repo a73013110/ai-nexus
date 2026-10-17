@@ -4,7 +4,7 @@ namespace AiNexus.Platform.Security;
 
 public static class TransportSecurity
 {
-    /// <summary>HSTS and HTTPS everywhere; plain HTTP is only accepted on loopback when development explicitly allows it.</summary>
+    /// <summary>全域強制啟用 HSTS 與 HTTPS 傳輸安全；僅在開發環境明確配置且來源為 Loopback（本機迴路）時才允許純 HTTP 連線。</summary>
     public static WebApplication UseTransportSecurity(this WebApplication app)
     {
         var testing = app.Environment.IsEnvironment("Testing");

@@ -1,9 +1,10 @@
 namespace AiNexus.Platform.Threading;
 
 /// <summary>
-/// An in-process async mutex per key: holders of the same key run one at a time, different keys never wait for each
-/// other. An entry exists only while someone holds or waits for its key, so keys that are no longer used do not
-/// accumulate. Not reentrant, and it coordinates one process only.
+/// 依鍵值（Key）劃分的行程內非同步互斥鎖（in-process async mutex）：
+/// 持有相同鍵的操作循序執行，不同鍵之間完全並行、不互相阻塞。
+/// 內部項目僅在該鍵被持有或等待時存在，無人使用時自動清除，避免鍵值字典無限膨脹。
+/// 注意：本鎖不具可重新進入性（not reentrant），且協調範圍僅限於單一處理程序。
 /// </summary>
 public sealed class KeyedAsyncLock<TKey> where TKey : notnull
 {
@@ -11,7 +12,7 @@ public sealed class KeyedAsyncLock<TKey> where TKey : notnull
 
     public KeyedAsyncLock(IEqualityComparer<TKey>? comparer = null) => entries = new(comparer);
 
-    /// <summary>Keys currently held or awaited.</summary>
+    /// <summary>目前正被持有或等待中的鍵數量。</summary>
     public int Count { get { lock (entries) return entries.Count; } }
 
     public async Task<IDisposable> AcquireAsync(TKey key, CancellationToken ct)
@@ -53,7 +54,7 @@ public sealed class KeyedAsyncLock<TKey> where TKey : notnull
         public void Dispose()
         {
             if (Interlocked.Exchange(ref released, 1) != 0) return;
-            // Drop the entry before releasing: a later caller then creates a fresh one, and waiters still hold this one.
+            // 先從字典中移除項目再釋放號誌：後續進來的呼叫者將建立全新項目，而當前等待佇列中的等待者仍持有此執行個體
             owner.Leave(key, entry);
             entry.Gate.Release();
         }

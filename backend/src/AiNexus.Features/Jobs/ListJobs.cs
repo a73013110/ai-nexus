@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
-/// <summary>The user's 100 newest background jobs.</summary>
+/// <summary>使用者最新的 100 筆背景工作。</summary>
 internal sealed class ListJobs(NexusDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes

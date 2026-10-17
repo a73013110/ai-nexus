@@ -103,7 +103,7 @@ public sealed class AttachmentStorageTests
     {
         await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; }, services: services =>
         {
-            // A separate semaphore per service scope simulates independent application processes.
+            // 每個服務 scope 各自使用獨立的 semaphore，模擬彼此獨立的應用程式程序。
             services.RemoveAll<AttachmentWriteLock>(); services.AddScoped<AttachmentWriteLock>();
         });
         using var client = await factory.SignedInAsync();

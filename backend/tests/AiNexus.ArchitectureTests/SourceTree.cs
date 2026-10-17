@@ -2,38 +2,38 @@ using System.Text.RegularExpressions;
 
 namespace AiNexus.ArchitectureTests;
 
-/// <summary>The C# sources under backend/src and backend/tests, read from the repository the tests were built from.</summary>
+/// <summary>backend/src 與 backend/tests 底下的 C# 原始碼，以建置測試時所在的儲存庫為根。</summary>
 internal static partial class SourceTree
 {
     public static readonly string Root = FindRoot();
 
-    /// <summary>Hand-written source files: generated migrations and the host's top-level program are left out.</summary>
+    /// <summary>手寫的原始碼檔；排除產生的 Migrations，以及 Host 的頂層 Program.cs。</summary>
     public static IEnumerable<string> Files(string project) => Directory
         .EnumerateFiles(Path.Combine(Root, "backend", Area(project), project), "*.cs", SearchOption.AllDirectories)
         .Where(path => !Relative(path).Split('/').Any(part => part is "bin" or "obj" or "Migrations"))
         .Where(path => !(project == "AiNexus.Host" && Path.GetFileName(path) == "Program.cs"));
 
-    /// <summary>Path relative to backend/src or backend/tests with forward slashes, starting with the project folder.</summary>
+    /// <summary>相對於 backend/src 或 backend/tests 的路徑，使用正斜線，開頭為專案資料夾名稱。</summary>
     public static string Relative(string path)
     {
         var relative = Path.GetRelativePath(Path.Combine(Root, "backend"), path).Replace('\\', '/');
         return relative[(relative.IndexOf('/', StringComparison.Ordinal) + 1)..];
     }
 
-    /// <summary>Feature module folders of AiNexus.Features.</summary>
+    /// <summary>AiNexus.Features 底下的模組資料夾名稱。</summary>
     public static IReadOnlySet<string> Modules() => Directory.EnumerateDirectories(Path.Combine(Root, "backend", "src", "AiNexus.Features"))
         .Select(Path.GetFileName).OfType<string>().Where(name => name is not ("bin" or "obj")).ToHashSet(StringComparer.Ordinal);
 
     private static string Area(string project) => project.EndsWith("Tests", StringComparison.Ordinal) ? "tests" : "src";
 
-    /// <summary>Type names declared at the top level of a file-scoped namespace (declarations start at column 0).</summary>
+    /// <summary>檔案範圍 namespace 下頂層宣告的型別名。只認第 0 欄開始的宣告，巢狀型別因為有縮排而不會被列入。</summary>
     public static IReadOnlyList<string> TopLevelTypes(string path) => [.. File.ReadLines(path)
         .Select(line => Declaration().Match(line)).Where(m => m.Success).Select(m => m.Groups["name"].Value)];
 
     public static string? Namespace(string path) => File.ReadLines(path)
         .Select(line => FileNamespace().Match(line)).FirstOrDefault(m => m.Success)?.Groups["name"].Value;
 
-    /// <summary>Names of the [Fact] and [Theory] methods in a file.</summary>
+    /// <summary>檔案中 [Fact] 與 [Theory] 測試方法的名稱。</summary>
     public static IEnumerable<string> TestMethods(string path) => TestMethod().Matches(File.ReadAllText(path)).Select(m => m.Groups["name"].Value);
 
     private static string FindRoot()

@@ -41,7 +41,7 @@ public sealed class GetDashboardTests
                 new Attachment { Size = 1, OwnerId = b, InLibrary = true });
             var collection = new WorkspaceResource { OwnerId = a, Kind = "knowledge", Name = "規章" };
             db.AddRange(collection, new KnowledgeCollection { Id = collection.Id });
-            // Two independently processed sources reuse the same original; only the one in a collection is a knowledge document.
+            // 兩個獨立處理的來源共用同一份原始檔；只有放進知識庫集合的那一個才會成為知識文件。
             foreach (var (status, inCollection) in new[] { ("ready", true), ("failed", true), ("ready", false) })
             {
                 var resource = new WorkspaceResource { OwnerId = a, Kind = "document", Name = "processed-source" };
@@ -50,7 +50,7 @@ public sealed class GetDashboardTests
             }
             await db.SaveChangesAsync();
         }
-        // Current counts ignore the reporting window, which is in the past here.
+        // 目前的計數不受統計區間影響；此處的統計區間設在過去，因此不影響結果。
         var personal = await Read(alice, Period);
         Assert.Equal(2, Value(personal, "files", "files"));
         Assert.Equal(15, Value(personal, "files", "size"));
@@ -74,11 +74,11 @@ public sealed class GetDashboardTests
         using var bob = await factory.SignedInAsync("bob");
         var personal = await Read(alice, Period);
         Assert.Contains(personal.Sections, x => x.Id == "chat");
-        // The feature's (possibly customised) name and route title the section; an explicit title stays.
+        // 區段標題取自功能的名稱與路由（名稱可能已被客製化）；明確指定的標題則保留不變。
         Assert.Equal(("對話", "/chat"), (Section(personal, "chat").Title, Section(personal, "chat").Route));
         Assert.Equal(("通知", ""), (Section(personal, "notifications").Title, Section(personal, "notifications").Route));
         var platform = await Read(alice, "scope=platform&" + Period);
-        // The overview looks the same for everyone: the platform scope widens the figures, not the sections.
+        // 總覽對所有人的區段結構都相同：平台範圍只會擴大數字，不會改變區段。
         Assert.DoesNotContain(platform.Sections, x => x.Id is "platform" or "monitoring");
         Assert.Equal(personal.Sections.Select(x => x.Id), platform.Sections.Select(x => x.Id));
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform&" + Period)).StatusCode);

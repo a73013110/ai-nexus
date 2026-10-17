@@ -16,8 +16,8 @@ public sealed record LibraryFileDto(AttachmentDto File, DateTimeOffset CreatedAt
 public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int Total, AttachmentStorageDto Storage, int Offset, int Limit);
 
 /// <summary>
-/// The caller's library files with where each is used. The original is stored once; history and knowledge index it
-/// through independent references, and only usages the caller can still open are listed.
+/// 呼叫者的檔案庫，並列出每個檔案被哪裡使用。原始檔只儲存一份；對話紀錄與知識庫各自以獨立參照指向它，
+/// 且只列出呼叫者仍能開啟的使用處。
 /// </summary>
 internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentQuota quota)
 {
@@ -55,7 +55,7 @@ internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access,
         if (source == "projects") query = query.Where(x => projectFiles.Any(l => l.AttachmentId == x.Id));
         if (source == "library") query = query.Where(x => !chatFiles.Any(l => l.AttachmentId == x.Id) && !resourceFiles.Any(l => l.AttachmentId == x.Id && (l.CollectionId != null || l.ParentId != null)));
         var total = await query.CountAsync(ct);
-        // Metadata only: never load binary files or extracted document text for a library listing.
+        // 只載入中繼資料：檔案庫列表不得讀取二進位內容或已擷取的文字，否則列表會隨檔案大小變慢。
         var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(offset).Take(limit)
             .Select(x => new { x.Id, x.FileName, x.ContentType, x.Size, x.CreatedAt,
                 HasText = x.ExtractedText != null && x.ExtractedText != "",

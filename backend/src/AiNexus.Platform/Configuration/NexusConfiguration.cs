@@ -1,13 +1,14 @@
 namespace AiNexus.Platform.Configuration;
 
+/// <summary>全域組態來源統一載入器。統一替換主機的組態來源，整合階層式 JSON、環境變數與命令列引數。</summary>
 public static class NexusConfiguration
 {
-    /// <param name="builder">The host whose configuration sources are replaced.</param>
-    /// <param name="args">Command-line arguments; they override every other source.</param>
+    /// <param name="builder">欲替換組態來源之主機應用程式建置器。</param>
+    /// <param name="args">命令列參數；其優先權高於所有其他組態來源。</param>
     public static void Load(WebApplicationBuilder builder, string[] args)
     {
         ResolvedConfigPaths? resolved = null;
-        // Test hosts never load machine credentials. Production uses explicit paths or environment.
+        // 測試主機絕不載入實體機密。正式環境則使用明確指定路徑或環境變數。
         if (!builder.Environment.IsEnvironment("Testing"))
         {
             resolved = NexusConfigResolver.Resolve(

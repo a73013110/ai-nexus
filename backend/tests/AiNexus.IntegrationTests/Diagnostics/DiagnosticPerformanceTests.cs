@@ -17,7 +17,7 @@ public sealed class DiagnosticPerformanceTests
     [Fact, Trait("Category", "Performance")]
     public async Task MeasureRequestThroughputLatencyAndMemoryWithBoundedPersistence()
     {
-        // TestServer + SQLite isolates app/logging cost, not IIS networking or production SQL performance.
+        // TestServer + SQLite 只能隔離應用程式與日誌本身的成本，無法代表 IIS 網路或正式環境 SQL 的效能。
         var baseline = await MeasureAsync(false); var logging = await MeasureAsync(true);
         var report = new {
             measuredAtUtc = DateTimeOffset.UtcNow, environment = new { os = RuntimeInformation.OSDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(), dotnet = Environment.Version.ToString(), processors = Environment.ProcessorCount, gcAvailableBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes, optimized = typeof(DiagnosticPerformanceTests).Assembly.GetCustomAttributes(typeof(DebuggableAttribute), false).OfType<DebuggableAttribute>().All(x => !x.IsJITOptimizerDisabled) },

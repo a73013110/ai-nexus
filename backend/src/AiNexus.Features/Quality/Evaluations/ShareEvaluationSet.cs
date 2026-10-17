@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>Who may read or edit a set, through the shared resource access list.</summary>
+/// <summary>控制誰可讀取或編輯題組，使用共用資源的存取清單。</summary>
 internal sealed class ShareEvaluationSet(ResourceAccess access)
 {
     public static void Map(RouteGroupBuilder routes)

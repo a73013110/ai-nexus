@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace AiNexus.Platform.Security;
 
-/// <summary>One policy for sessions, API caching and browser/file isolation.</summary>
+/// <summary>統籌會話（Session）、API 快取控制與瀏覽器/檔案隔離之全域安全性原則。</summary>
 public static class WebSecurity
 {
     public static bool AllowsLocalHttp(IHostEnvironment environment, IConfiguration configuration) =>
@@ -15,7 +15,7 @@ public static class WebSecurity
 
     public static void NoStore(HttpResponse response)
     {
-        // Matches antiforgery's policy before tokens are generated, including anonymous login.
+        // 含個人資料的回應不可被瀏覽器或中間代理留存；匿名情境（尚未產生防偽權杖）也一併禁止快取。
         response.Headers.CacheControl = "no-cache, no-store";
         response.Headers.Pragma = "no-cache";
         response.Headers.Expires = "0";
@@ -48,7 +48,7 @@ public static class WebSecurity
     public static FileStreamHttpResult File(HttpContext http, Stream stream, string contentType, string name, bool download)
     {
         NoStore(http.Response);
-        // Uploaded data never inherits the application's scripting privileges when opened directly.
+        // 使用者上傳之檔案在被直接開啟時，絕不繼承應用程式之指令碼執行權限（以 CSP 完全限制）。
         http.Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
         var inline = !download && (contentType is "application/pdf" or "image/png" or "image/jpeg" or "image/webp");
         return TypedResults.File(stream, contentType, fileDownloadName: inline ? null : name);
@@ -59,8 +59,8 @@ public static class WebSecurity
         name.EndsWith(".html", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".htm", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Serves an uploaded HTML file so the app's own iframe can run it. The CSP sandbox (no allow-same-origin) gives the
-    /// document an opaque origin even when opened directly, and no external resource can be loaded or contacted.
+    /// 以完全隔離的沙箱提供上傳的 HTML 內容，使應用程式內建 iframe 能夠安全渲染。
+    /// CSP 沙箱中排除 allow-same-origin，確保即使直接開啟亦具備不透明來源（opaque origin），且無法載入任何外部資源或對外發送請求。
     /// </summary>
     public static FileStreamHttpResult SandboxedHtml(HttpContext http, Stream stream)
     {

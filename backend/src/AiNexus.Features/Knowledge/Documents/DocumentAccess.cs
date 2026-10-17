@@ -10,14 +10,13 @@ using AiNexus.Features.Knowledge.Collections;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>
-/// Who may read or change a document. A collection document follows its collection's ACL and needs the knowledge
-/// feature; a standalone document follows its own resource (and its project's ACL when it belongs to one).
-/// Missing documents and missing features are <see cref="KnowledgeErrors.DocumentNotFound"/>; ACL failures are the errors
-/// of <see cref="ResourceAccess"/>.
+/// 決定誰可讀取或變更文件。知識庫文件沿用所屬知識庫的 ACL，且需開通知識庫功能；獨立文件沿用自己的資源權限，
+/// 若屬於專案則再加上專案的 ACL。找不到文件或功能未開通時一律回傳 <see cref="KnowledgeErrors.DocumentNotFound"/>，
+/// 不區分兩者，以免洩漏文件是否存在；ACL 失敗則回傳 <see cref="ResourceAccess"/> 的錯誤。
 /// </summary>
 internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, AccessService features)
 {
-    /// <summary>The tracked document.</summary>
+    /// <summary>以追蹤模式載入文件並完成權限檢查，供呼叫端修改。</summary>
     public async Task<Result<KnowledgeDocument>> FindAsync(Guid actor, Guid id, CancellationToken ct, bool write = false)
     {
         var doc = await db.Set<KnowledgeDocument>().SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
@@ -51,8 +50,8 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
     }
 
     /// <summary>
-    /// <see cref="DetailAsync"/> for a list, in the list's order and with the same checks and failures, in a fixed number
-    /// of queries: the first document that fails fails the list.
+    /// <see cref="DetailAsync"/> 的批次版本：結果順序與輸入相同，檢查與失敗規則也相同，且查詢次數固定。
+    /// 任一文件失敗即整批失敗。
     /// </summary>
     public async Task<Result<IReadOnlyList<DocumentDto>>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct)
     {
@@ -61,7 +60,7 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         var granted = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         var collections = docs.Values.Where(x => x.CollectionId != null).Select(x => x.CollectionId!.Value).Distinct().ToArray();
         var standalone = docs.Values.Where(x => x.CollectionId == null).Select(x => x.Id).ToArray();
-        // The resources DescribeAsync reports on: the collection, or the standalone document itself.
+        // DescribeAsync 回報權限所依據的資源：知識庫文件看所屬知識庫，獨立文件看它自己。
         var readable = new Dictionary<Guid, WorkspaceResource>();
         if (collections.Length > 0)
             foreach (var item in await (await access.QueryAsync(actor, KnowledgeCollection.Kind, ct)).AsNoTracking().Where(x => collections.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
@@ -97,7 +96,7 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         return ids.Select((id, index) => Describe(docs[id], editable.Contains(resources[index].Id), docs[id].JobId is Guid job ? states.GetValueOrDefault(job) : null)).ToArray();
     }
 
-    /// <summary>The stored original of a document the actor may read.</summary>
+    /// <summary>取得呼叫者可讀取文件的原始附件；附件必須已就緒（儲存狀態為 Ready）。</summary>
     public async Task<Result<Attachment>> OriginalAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var document = await FindAsync(actor, id, ct);
@@ -117,6 +116,6 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         return Describe(doc, editable, state);
     }
 
-    /// <summary>A ready document always reads as ready; otherwise the state of its current job wins over the stored status.</summary>
+    /// <summary>已就緒的文件一律顯示為就緒；否則以目前工作的狀態為準，覆蓋儲存的狀態。</summary>
     public static DocumentDto Describe(KnowledgeDocument x, bool edit, string? jobStatus = null) => new(x.Id, x.CollectionId, x.FileName, x.ContentType, x.Status == "ready" ? "ready" : jobStatus ?? x.Status, x.PageCount, x.ChunkCount, x.Warning, x.JobId, edit, x.AttachmentId != null, x.TextVersion);
 }

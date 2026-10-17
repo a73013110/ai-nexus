@@ -11,7 +11,7 @@ namespace AiNexus.Features.Integrations.Handoff;
 
 public sealed record SourceChatDto(ConversationDto Conversation, string Prompt);
 
-/// <summary>Opens a conversation pre-filled with the record as quoted data (never as instructions).</summary>
+/// <summary>開啟新對話，並把紀錄以引用資料（而非指令）的形式放進提示詞。</summary>
 internal sealed class StartSourceChat(AccessService access, SourceGateway gateway, ConversationService conversations, IOptions<InferenceOptions> inference)
 {
     private static readonly JsonSerializerOptions Readable = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };

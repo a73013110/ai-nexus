@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.ArchitectureTests;
 
-/// <summary>Rules for the SQL Server model that the migrations are generated from.</summary>
+/// <summary>SQL Server 模型的規則；migrations 是由這個模型產生的。</summary>
 public sealed class DatabaseModelTests
 {
     [Fact]
@@ -30,14 +30,14 @@ public sealed class DatabaseModelTests
         Assert.True(mismatched.Length == 0, string.Join(", ", mismatched));
     }
 
-    // AuditEvent lives in Persistence because NexusDbContext masks and writes it for every module; its table belongs to Audit.
+    // AuditEvent 放在 Persistence，是因為 NexusDbContext 會替每個模組遮罩並寫入它；但資料表屬於 audit 結構描述，所以這裡特別對應。
     private static string ExpectedSchema(Type type)
         => type == typeof(AuditEvent) ? "audit" : type.Namespace!.Split('.')[2].ToLowerInvariant();
 
     private static IEnumerable<IEntityType> EntityTypes()
     {
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlServer("Server=.;Database=AiNexus").Options);
-        // Comments are design-time metadata; the runtime model drops them.
+        // [Comment] 只存在於設計期模型，執行期模型會丟棄，所以必須改用 IDesignTimeModel 才讀得到。
         return db.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
     }
 

@@ -13,12 +13,12 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Repositories;
 
 /// <summary>
-/// The only path to Gitea: it decrypts the user's own token (once per request), builds controlled paths and owns the reads
-/// several slices share. Expected failures (not connected, invalid names, unsupported content) are results; Gitea transport
-/// failures and refusals stay <see cref="ExternalServiceException"/> raised by <see cref="IGiteaClient"/>.
+/// 通往 Gitea 的唯一路徑：解密使用者自己的 token、組出受控路徑，並提供多個切片共用的讀取方法。
+/// 預期內的失敗（未連線、名稱不合法、內容不支援）以結果回傳；Gitea 的傳輸失敗與拒絕則由 <see cref="IGiteaClient"/> 丟出 <see cref="ExternalServiceException"/>。
 /// </summary>
 public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, IDataProtectionProvider protection, IOptions<GiteaOptions> options)
 {
+    // 同一個實例（即同一個請求）只解密一次 token；解密失敗的結果也會被快取，不會在同一請求中重試。
     private Result<string>? token;
 
     public string BaseUrl { get; } = new Uri(options.Value.BaseUrl.TrimEnd('/') + "/").AbsoluteUri;
@@ -69,7 +69,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         return Result.Success;
     }
 
-    /// <summary>A commit against its parent, or the net change between two commits.</summary>
+    /// <summary>單一 commit 與其父 commit 的差異，或兩個 commit 之間的淨變更。</summary>
     public async Task<Result<string>> DiffAsync(Guid owner, string repo, string head, string? basis, CancellationToken ct)
     {
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
@@ -86,7 +86,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public const int MaxDiffBytes = 256000;
 
-    /// <summary>Reads a text file at a pinned commit. Handoffs call this again: browser content is never a trusted snapshot.</summary>
+    /// <summary>在指定的 commit 讀取文字檔。交給對話或知識庫時會再呼叫一次：瀏覽器上的內容不能當成可信的快照。</summary>
     public async Task<Result<RepositoryFileDto>> FileAsync(Guid owner, string repo, string commit, string path, CancellationToken ct)
     {
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
@@ -123,7 +123,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), BaseUrl);
 
-    /// <summary>The repository's page on the Gitea host.</summary>
+    /// <summary>程式庫在 Gitea 主機上的頁面網址。</summary>
     public string Link(string repo) => BaseUrl + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
 
     public static string Route(string repo) => "api/v1/repos/" + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
@@ -134,7 +134,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public static bool IsCommit([NotNullWhen(true)] string? value) => value is { Length: 40 or 64 } && value.All(char.IsAsciiHexDigit);
 
-    /// <summary>A branch, tag or commit name, passed to Gitea only as an escaped query value.</summary>
+    /// <summary>分支、標籤或 commit 名稱；只會以跳脫後的查詢參數送到 Gitea。</summary>
     public static bool IsRef([NotNullWhen(true)] string? value) => value is { Length: >= 1 and <= 250 } && !value.Any(char.IsControl) &&
         !value.Contains("..", StringComparison.Ordinal) && !value.Any(c => c is ' ' or '~' or '^' or ':' or '?' or '*' or '[' or '\\');
 

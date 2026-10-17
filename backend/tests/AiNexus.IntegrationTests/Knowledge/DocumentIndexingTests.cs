@@ -43,7 +43,7 @@ public sealed class DocumentIndexingTests
         var done = (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!;
         Assert.Equal("completed", done.Status); Assert.Equal(2, done.Attempt);
         Assert.Equal(2, (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!.ChunkCount);
-        Assert.Equal(2, factory.Embeddings.Calls); // one failed batch and one resumed batch
+        Assert.Equal(2, factory.Embeddings.Calls); // 一次失敗的批次與一次續傳的批次。
     }
 
     [Fact]

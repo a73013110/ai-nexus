@@ -16,8 +16,7 @@ public sealed record UserAccountRequest(string DisplayName, bool Enabled, bool A
 public sealed record CreatedUserDto(Guid Id);
 
 /// <summary>
-/// Login account names are checked first, with their own code; the name, roles and login methods are checked
-/// afterwards by <see cref="ManageUserAccounts"/>, in that order.
+/// 登入帳號格式先在此檢查並回傳專屬代碼；名稱衝突、角色與登入方式則之後在 <see cref="ManageUserAccounts"/> 的稽核交易內檢查，順序不可對調。
 /// </summary>
 internal sealed class UserAccountRequestValidator : RequestValidator<UserAccountRequest>
 {
@@ -30,7 +29,7 @@ internal sealed class UserAccountRequestValidator : RequestValidator<UserAccount
     }
 }
 
-/// <summary>Creates, edits and deletes accounts; <see cref="AdministrativeAudit"/> audits each change.</summary>
+/// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeAudit"/> 稽核。</summary>
 internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, TimeProvider clock)
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes
@@ -71,7 +70,7 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
                 return AdministrationErrors.Lockout;
             if (await db.Users.AnyAsync(x => x.Id != key && (local != null && x.LocalAccount == local || ad != null && x.AdAccount == ad), ct))
                 return AdministrationErrors.AccountExists;
-            // A pre-provisioned AD name must not take over an existing, SID-bound user.
+            // 預先建立的 AD 帳號名稱不可接管既有、已綁定 SID 的使用者，否則等於把別人的身分轉移過來。
             if (ad is not null)
             {
                 var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
@@ -104,7 +103,7 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
             if (user is null) return AdministrationErrors.UserNotFound;
             user.DeletedAt = clock.GetUtcNow(); user.Enabled = false; user.AdEnabled = false; user.LocalEnabled = false;
             user.PasswordHash = null; user.SecurityVersion++;
-            // Keep SID, names, resources and historical relationships to prevent takeover or cascading loss.
+            // 只做軟刪除，保留 SID、帳號名稱、資源與歷史關聯：避免帳號名被重新註冊接管，也避免連鎖遺失資料。
             return Result.Success;
         }, ct);
 }

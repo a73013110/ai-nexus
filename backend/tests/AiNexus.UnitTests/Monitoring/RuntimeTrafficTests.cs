@@ -98,7 +98,7 @@ public sealed class RuntimeTrafficTests
         Assert.Equal(new ResourcePoint(snapshot.Timeline[0].At, 20, 300, 150, 5, 2), snapshot.ResourceTimeline[0]);
         Assert.Equal(new ResourcePoint(snapshot.Timeline[1].At, null, null, null, null, null), snapshot.ResourceTimeline[1]);
         Assert.Equal(300, snapshot.Resources.WorkingSetBytes);
-        // The ring reuses a slot once its bucket leaves the 15-minute retention.
+        // 環狀緩衝區在桶超出 15 分鐘保留期後會覆寫同一格，這裡確認舊的取樣不會殘留在結果中。
         clock.Advance(TimeSpan.FromSeconds(890)); traffic.SampleResources(Sample(50, 400, 0, 0)); clock.Advance(TimeSpan.FromSeconds(10));
         snapshot = traffic.Snapshot(15);
         Assert.Equal(90, snapshot.ResourceTimeline.Length);

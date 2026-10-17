@@ -127,7 +127,7 @@ public sealed class RepositoryReviewTests
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             Assert.Equal(["review", "summary"], await db.Set<RepositoryReview>().OrderBy(x => x.CreatedAt).Select(x => x.Purpose).ToListAsync());
-            // The list reads the purpose column; an unreadable snapshot would otherwise show every review as "review".
+            // 清單會讀取 purpose 欄位；若快照無法讀取，所有審查都會被顯示為 "review"。
             await db.Set<RepositoryReview>().ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, "{}"));
         }
         var listed = (await client.GetFromJsonAsync<RepositoryReviewDto[]>(Reviews))!;
@@ -226,7 +226,7 @@ public sealed class RepositoryReviewTests
         public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
         public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
         {
-            // Like Ollama, read the instruction only from the message list rather than from provider-specific parameters.
+            // 與 Ollama 相同，指令只從訊息列表讀取，而不從特定供應商的參數讀取。
             var system = messages.Single(x => x.Role == "system").Content;
             var prompt = messages.Single(x => x.Role == "user").Content; Calls.Add((prompt, parameters)); await Task.Yield(); ct.ThrowIfCancellationRequested();
             var report = system.Contains("請產生一份"); var analysis = system.Contains("一個區段");

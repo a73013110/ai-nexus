@@ -7,7 +7,7 @@ namespace AiNexus.Features.Billing.Charges;
 [Comment("各呼叫當時的價格與用量快照；未知費用保持空值。")]
 public sealed class ModelCharge
 {
-    // Call ID is also the primary key: retries cannot create a second charge for a call.
+    // 以呼叫 ID 作為主鍵：重試不會為同一次呼叫建立第二筆費用。
     [Comment("資料的主鍵識別碼。")]
     public Guid Id { get; set; }
     [Comment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。")]
@@ -46,7 +46,7 @@ public sealed class ModelCharge
     public long? InputTokens { get; set; }
     [Comment("模型回報的快取輸入 tokens。")]
     public long? CachedInputTokens { get; set; }
-    // Output includes the provider's billed reasoning tokens; these are a subset, not extra.
+    // 輸出 tokens 已包含供應商計費的推理 tokens；推理 tokens 是其子集，不可再另外加總。
     [Comment("模型回報的輸出 tokens；未知保持空值。")]
     public long? OutputTokens { get; set; }
     [Comment("模型回報的推理 tokens。")]

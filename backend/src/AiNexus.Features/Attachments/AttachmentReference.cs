@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Attachments;
 
-// A resource pins its original file independently of chat history and browser drafts.
+// 資源會獨立持有原始檔案，不依賴對話紀錄或瀏覽器草稿。
 [Comment("知識庫或專案資源與附件的引用關聯。")]
 public sealed class AttachmentReference
 {

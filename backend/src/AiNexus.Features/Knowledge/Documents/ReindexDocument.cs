@@ -8,8 +8,7 @@ using AiNexus.Features.Jobs;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>
-/// Queues a collection document the user may edit for indexing again: only embedding when its pages are already
-/// extracted, otherwise the full ingest. A document still being processed is a conflict.
+/// 把使用者可編輯的知識庫文件重新排入索引：頁面已擷取過就只重做嵌入，否則完整重跑匯入。仍在處理中的文件回傳衝突。
 /// </summary>
 internal sealed class ReindexDocument(NexusDbContext db, DocumentAccess documents, AttachmentWriteLock writes, JobService jobs)
 {

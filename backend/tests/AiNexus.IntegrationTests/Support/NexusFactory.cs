@@ -25,13 +25,13 @@ using Microsoft.Extensions.Hosting;
 namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
-/// One application host per test, on its own SQLite file copied from a schema template. Only the generation worker runs;
-/// other hosted workers are opt-in through <c>workers</c>, and tests drive periodic work by calling it directly.
-/// These substitutions are confined to the test assembly. Production has no fake-user header.
+/// 每個測試一個應用程式 host，使用從 schema 範本複製出的獨立 SQLite 檔。只執行生成工作者；
+/// 其他 hosted worker 需透過 <c>workers</c> 選擇加入，測試則直接呼叫來驅動週期性工作。
+/// 這些替換只存在於測試組件中，正式環境沒有假使用者 header。
 /// </summary>
 public sealed class NexusFactory : WebApplicationFactory<Program>
 {
-    /// <summary>Far below production work, so password tests do not spend their time hashing.</summary>
+    /// <summary>遠低於正式環境的工作量，讓密碼相關測試不會把時間花在雜湊運算上。</summary>
     public static readonly Argon2Cost PasswordCost = new(1024, 1);
     private static readonly Lazy<string> Template = new(CreateTemplate);
     private readonly bool ldap;
@@ -132,8 +132,8 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private static DbContextOptions<NexusDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(ConnectionString(path)).Options;
 
     /// <summary>
-    /// Closes the pooled connections to one file so it can be copied or deleted. <c>ClearAllPools</c> is process-wide
-    /// and disposes the native handles of hosts still running in parallel tests, which then fail with 503.
+    /// 關閉某個檔案的連線池連線，以便複製或刪除。<c>ClearAllPools</c> 是程序範圍的操作，
+    /// 會釋放仍在平行測試中執行之其他 host 的原生控制代碼，導致它們以 503 失敗，因此不使用它。
     /// </summary>
     private static void ReleaseFile(string path)
     {

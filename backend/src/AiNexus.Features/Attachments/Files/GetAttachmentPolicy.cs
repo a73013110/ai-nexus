@@ -5,7 +5,7 @@ namespace AiNexus.Features.Attachments.Files;
 
 public sealed record AttachmentPolicyDto(long MaxFileBytes, int MaxFilesPerMessage, long MaxMessageBytes, string[] Extensions);
 
-/// <summary>Upload limits and accepted extensions for the composer.</summary>
+/// <summary>輸入框使用的上傳上限與接受的副檔名。</summary>
 internal sealed class GetAttachmentPolicy(IOptions<AttachmentOptions> options)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

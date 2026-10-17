@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Projects.Templates;
 
-/// <summary>A reusable opening prompt of a project.</summary>
+/// <summary>專案中可重複使用的開場提示詞。</summary>
 [Comment("專案建立範本與預設指令。")]
 public sealed class ProjectTemplate
 {

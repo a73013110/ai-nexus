@@ -12,9 +12,8 @@ using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Administration;
 
 /// <summary>
-/// Platform administration. Access management (<see cref="AdministrationConfiguration"/>): roles, groups, features, menu groups, users,
-/// model policies and audited inspection. Platform operations (<see cref="OperationsConfiguration"/>): platform usage and
-/// retrieval administration. Each use case has its own file. Every mutation goes through <see cref="AdministrativeAudit"/>.
+/// 平台管理模組。存取管理（<see cref="AdministrationConfiguration"/>）包含角色、群組、功能、選單群組、使用者、模型策略與稽核式檢視；
+/// 平台營運（<see cref="OperationsConfiguration"/>）包含平台用量與檢索管理。每個 use case 各自一個檔案；所有變更都必須經過 <see cref="AdministrativeAudit"/>。
 /// </summary>
 public sealed class AdministrationModule : IFeatureModule
 {
@@ -30,7 +29,7 @@ public sealed class AdministrationModule : IFeatureModule
         services.AddFeaturePolicy(OperationsConfiguration.Policy, OperationsConfiguration.Feature);
     }
 
-    // Endpoint order is the published OpenAPI order, so the access-management and operations groups interleave.
+    // 端點註冊順序即 OpenAPI 發布順序，所以「存取管理」與「平台營運」兩組端點會交錯排列，不可隨意重排。
     public static void MapEndpoints(RouteGroupBuilder root)
     {
         var knowledge = Operations(root).MapGroup("/knowledge");

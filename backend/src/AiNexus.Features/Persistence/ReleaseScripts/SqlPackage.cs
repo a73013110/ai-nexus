@@ -3,27 +3,26 @@ using System.Diagnostics;
 
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
-/// <summary>
-/// Runs Microsoft's SqlPackage. The connection string, password included, goes through a response file in a private
-/// temporary folder that is deleted right after the run, never on a command line other processes can read.
-/// </summary>
+/// <summary>執行 Microsoft 的 SqlPackage。</summary>
+/// <remarks>
+/// 連線字串（含密碼）透過私有暫存資料夾中的 response file 傳入，執行後立即刪除。絕不放上命令列，以免被其他程序讀到。
+/// </remarks>
 /// <param name="executable">
-/// SqlPackage's executable or <c>.dll</c>; <see langword="null"/> runs <c>dotnet tool run sqlpackage</c> in the working
-/// directory, which is the version pinned in the repository's <c>.config/dotnet-tools.json</c>.
+/// SqlPackage 的執行檔或 <c>.dll</c>。為 <see langword="null"/> 時在工作目錄執行 <c>dotnet tool run sqlpackage</c>，
+/// 版本由 repo 的 <c>.config/dotnet-tools.json</c> 固定。
 /// </param>
 public sealed class SqlPackage(string? executable)
 {
     /// <summary>
-    /// Extracts the database <paramref name="connectionString"/> opens into <paramref name="target"/>: a <c>.dacpac</c>
-    /// file, or with <paramref name="perObject"/> a folder with one script per object. <paramref name="ct"/> kills SqlPackage.
+    /// 把 <paramref name="connectionString"/> 指向的資料庫匯出到 <paramref name="target"/>：預設是 <c>.dacpac</c> 檔；
+    /// <paramref name="perObject"/> 為 true 時則是每個物件一份腳本的資料夾。取消 <paramref name="ct"/> 會終止 SqlPackage。
     /// </summary>
     public Task ExtractAsync(string connectionString, string target, bool perObject, CancellationToken ct)
         => RunAsync("Extract", connectionString, [$"/TargetFile:{target}", $"/p:ExtractTarget={(perObject ? "SchemaObjectType" : "DacPac")}"], ct);
 
     /// <summary>
-    /// One response-file argument. SqlPackage splits response files on white space outside double quotes and reads
-    /// <c>\"</c> as a quote; other backslashes are literal. It prints an argument it cannot parse, so a mistake here
-    /// would show the password: the value is quoted, its quotes escaped, and it never ends in a backslash.
+    /// 產生 response file 中的一個參數。SqlPackage 以空白切分參數（雙引號內除外），並把 <c>\"</c> 當成引號；其他反斜線都是字面字元。
+    /// 它解析失敗時會把整個參數印出來，等於洩漏密碼，所以值一律加引號、跳脫引號，且不能以反斜線結尾。
     /// </summary>
     public static string ResponseFileArgument(string name, string value)
     {
@@ -31,14 +30,14 @@ public sealed class SqlPackage(string? executable)
         ArgumentNullException.ThrowIfNull(value);
         if (value.Contains('\r', StringComparison.Ordinal) || value.Contains('\n', StringComparison.Ordinal))
             throw new ReleaseScriptException($"SqlPackage 的 {name} 不能含換行。");
-        // A closing quote after a trailing backslash would read as an escaped quote; a connection string may end in ';'.
+        // 結尾反斜線後接的結束引號會被當成跳脫字元，所以補一個分號（連線字串本來就可以以分號結尾）。
         if (value.EndsWith('\\')) value += ";";
         return $"/{name}:\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
     }
 
     private async Task RunAsync(string action, string connectionString, IReadOnlyList<string> arguments, CancellationToken ct)
     {
-        // Directory.CreateTempSubdirectory gives a folder only the current user can open (per-user %TEMP% on Windows, 0700 elsewhere).
+        // CreateTempSubdirectory 建立的資料夾只有目前使用者能開啟（Windows 為使用者自己的 %TEMP%，其他系統為 0700），避免密碼外洩給其他使用者。
         var folder = Directory.CreateTempSubdirectory("AiNexus-sqlpackage-");
         try
         {

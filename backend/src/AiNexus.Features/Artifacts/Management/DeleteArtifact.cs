@@ -7,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>Raised in the deleting transaction; subscribers (Sharing revokes the artifact's shares) run before it is saved.</summary>
+/// <summary>在刪除交易中發出；訂閱者（分享模組會在此撤銷成果的分享）於儲存前執行。</summary>
 public sealed record ArtifactDeleted(Guid ArtifactId, Guid OwnerId) : IDomainEvent;
 
-/// <summary>The owner deletes an artifact: its shares are revoked and every revision is erased in the same transaction.</summary>
+/// <summary>擁有者刪除成果：成果本身只標記為軟刪除，所有版本則實際清除，兩者與分享撤銷（由事件處理）在同一交易中完成。</summary>
 internal sealed class DeleteArtifact(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

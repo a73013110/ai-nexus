@@ -4,7 +4,7 @@ using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Monitoring.Presence;
 
-/// <summary>A closing tab leaves the live session list at once instead of timing out.</summary>
+/// <summary>分頁關閉時立即從即時在線清單移除，而不是等待逾時。</summary>
 internal sealed class LeavePresence(RuntimeTraffic traffic)
 {
     public static void Map(RouteGroupBuilder api) => api

@@ -1,9 +1,9 @@
 namespace AiNexus.Features.Monitoring.Traffic;
 
-/// <summary>Counts application body bytes at the shared boundary, including streamed writes. It never retains content.</summary>
+/// <summary>在共用邊界統計應用程式的本文位元組數（含串流寫入）；絕不保存內容。</summary>
 public sealed class TrafficCountingStream(Stream inner, Action<long>? received = null, Action<long>? written = null) : Stream
 {
-    // Stream's own Dispose leaves `inner` open: the request/response feature owns it.
+    // 本類別的 Dispose 不會關閉 inner，由 request/response 功能負責釋放它。
     private long read, sent;
     public long ReadBytes => Interlocked.Read(ref read);
     public long WrittenBytes => Interlocked.Read(ref sent);

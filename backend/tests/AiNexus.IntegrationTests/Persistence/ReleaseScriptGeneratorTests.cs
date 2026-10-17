@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Migrations.Operations;
 namespace AiNexus.IntegrationTests.Persistence;
 
 /// <summary>
-/// The release SQL is generated from the real migrations with SQL Server's generator and no connection, and must say
-/// exactly what <c>dotnet ef migrations script --idempotent</c> says, split by object and kind.
+/// 發佈 SQL 由真實 migration 以 SQL Server 的產生器產出，且不需要連線，內容必須
+/// 與 <c>dotnet ef migrations script --idempotent</c> 產出的內容完全一致，並依物件與種類拆分。
 /// </summary>
 public sealed partial class ReleaseScriptGeneratorTests
 {
@@ -33,7 +33,7 @@ public sealed partial class ReleaseScriptGeneratorTests
         var ids = db.Database.GetMigrations().ToList();
         var fromId = ids[from < 0 ? ids.Count + from : from];
         var toId = to is null ? null : ids[ids.Count + to.Value];
-        // Names resolve like ids do.
+        // 名稱的解析方式與 id 相同。
         var script = new ReleaseScriptGenerator(Context).Generate(fromId[(fromId.IndexOf('_', StringComparison.Ordinal) + 1)..], toId);
         Assert.Equal(ids.Where(id => string.CompareOrdinal(id, fromId) > 0 && (toId is null || string.CompareOrdinal(id, toId) <= 0)), script.Migrations);
         Assert.Equal(Statements(Reference(db, fromId, toId)), Statements(WrittenFiles(script)));
@@ -68,7 +68,7 @@ public sealed partial class ReleaseScriptGeneratorTests
             Assert.Equal(ReleaseScriptGenerator.HistoryTarget, files[^1].Target);
             Assert.Contains($"N'{id}'", files[^1].Sql, StringComparison.Ordinal);
             Assert.All(files, file => Assert.Equal(file == files[^1], file.Sql.Contains("INSERT INTO [__EFMigrationsHistory]", StringComparison.Ordinal)));
-            // Files of the next migration start only after this history row.
+            // 下一個 migration 的檔案，只有在這筆歷史列寫入之後才會開始。
             Assert.Equal(files[^1].Number, script.Files.Where(x => x.MigrationId == id).Max(x => x.Number));
             Assert.True(script.Files.Where(x => x.MigrationId is not null && string.CompareOrdinal(x.MigrationId, id) > 0).All(x => x.Number > files[^1].Number));
         }
@@ -130,7 +130,7 @@ public sealed partial class ReleaseScriptGeneratorTests
         Assert.DoesNotContain("BEGIN TRANSACTION", fullText.Sql, StringComparison.Ordinal);
         Assert.Contains("交易外", fullText.Header, StringComparison.Ordinal);
         Assert.Contains($"`{fullText.Path}` | 交易外 |", script.Manifest(), StringComparison.Ordinal);
-        // Like EF, the history row of a migration with such a statement is not written in a transaction either.
+        // 與 EF 相同，含有此類陳述式的 migration，其歷史列同樣不在交易中寫入。
         var row = script.Files.Last(x => x.MigrationId == fullText.MigrationId);
         Assert.True(row.OutsideTransaction);
         Assert.DoesNotContain("BEGIN TRANSACTION", row.Sql, StringComparison.Ordinal);
@@ -207,7 +207,7 @@ public sealed partial class ReleaseScriptGeneratorTests
 
     private static bool IsSeed(MigrationOperation operation) => operation is InsertDataOperation or UpdateDataOperation or DeleteDataOperation;
 
-    /// <summary>The files as a DBA receives them, header comments removed, joined in number order.</summary>
+    /// <summary>DBA 實際收到的檔案內容：移除檔頭註解後，依編號順序串接。</summary>
     private static string WrittenFiles(ReleaseScript script)
     {
         var directory = Path.Combine(Path.GetTempPath(), "release-script-" + Guid.NewGuid().ToString("N"));
@@ -221,9 +221,9 @@ public sealed partial class ReleaseScriptGeneratorTests
     }
 
     /// <summary>
-    /// The statements in order with whitespace collapsed: the history-table check and each command EF wraps in its
-    /// history condition. Transaction statements and batch separators are dropped, because EF opens one transaction
-    /// (and batch) per migration while every release file opens its own.
+    /// 依序列出陳述式並壓縮空白：包含歷史表檢查，以及 EF 包在歷史條件中的每個指令。
+    /// 交易陳述式與批次分隔符會被移除，因為 EF 每個 migration 只開一個交易（與一個批次），
+    /// 而每個發佈檔案各自開啟自己的交易。
     /// </summary>
     private static List<string> Statements(string script)
     {

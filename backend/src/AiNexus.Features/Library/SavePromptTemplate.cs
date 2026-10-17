@@ -20,7 +20,7 @@ internal sealed class SavePromptRequestValidator : RequestValidator<SavePromptRe
     }
 }
 
-/// <summary>Creates a template, or edits one the user owns.</summary>
+/// <summary>建立範本，或編輯使用者自己擁有的範本。</summary>
 internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)

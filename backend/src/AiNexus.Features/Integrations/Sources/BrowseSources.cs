@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Integrations.Sources;
 
-/// <summary>Source list, search and record reading: read-only, never cached by the browser.</summary>
+/// <summary>來源清單、搜尋與紀錄讀取，皆為唯讀；回應標示 <c>no-store</c>，紀錄內容不得被瀏覽器快取。</summary>
 internal sealed class BrowseSources(SourceGateway gateway)
 {
     public static void Map(RouteGroupBuilder routes)

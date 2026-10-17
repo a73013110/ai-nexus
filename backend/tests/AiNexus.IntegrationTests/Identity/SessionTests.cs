@@ -81,7 +81,7 @@ public sealed class SessionTests
         var queries = factory.Services.GetRequiredService<RequestQueries>(); queries.Clear();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("alice", me.Account.Split('@')[0]);
-        // Cookie validation reads the row; the current user reuses it instead of a second single-row read.
+        // Cookie 驗證已讀取該筆 session；目前使用者重用這個結果，而不是再單獨讀一次。
         Assert.Equal(1, queries.Count("/api/v1/me", "FROM \"Users\" AS", "LIMIT 2"));
     }
 
@@ -103,7 +103,7 @@ public sealed class SessionTests
         selected.EnsureSuccessStatusCode();
         var switched = (await selected.Content.ReadFromJsonAsync<AuthSessionDto>())!;
         Assert.Equal(("personal", session.UserId), (switched.Identity, switched.UserId));
-        // The answer carries the token for the re-issued cookie; writes keep working with it.
+        // 回應帶有重新簽發之 cookie 的 token；之後的寫入要能以它正常進行。
         client.DefaultRequestHeaders.Remove("X-Nexus-CSRF"); client.DefaultRequestHeaders.Add("X-Nexus-CSRF", switched.CsrfToken);
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/auth/logout", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("personal"))).StatusCode);

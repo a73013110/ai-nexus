@@ -8,16 +8,14 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
 /// <summary>
-/// Splits the idempotent migration script into numbered files a DBA runs one at a time. Consecutive operations of the
-/// same kind (<see cref="ReleaseScriptKind"/>) on the same object share a file; operations are never reordered, because
-/// EF already put them in dependency order. The SQL comes from the context's own <see cref="IMigrationsSqlGenerator"/>
-/// and history repository with the migration's target model, exactly as <c>dotnet ef migrations script --idempotent</c>
-/// generates it and without a database connection; only the transaction boundaries move, to one per file.
+/// 把可重跑（idempotent）的 migration 腳本拆成編號檔案，讓 DBA 一次執行一個。同一物件上、同種類且連續的操作共用一個檔案。
+/// 操作順序絕不重排，因為 EF 已依相依性排好。SQL 內容來自 <see cref="IMigrationsSqlGenerator"/> 與 history repository，
+/// 搭配 migration 的目標模型產生，與 <c>dotnet ef migrations script --idempotent</c> 的結果一致，且不需要資料庫連線。
+/// 唯一的差異是交易邊界：改為每個檔案各自一個交易。
 /// </summary>
 /// <param name="createContext">
-/// Creates a SQL Server context; it is never opened. Two are used: one generates the files, a fresh one the whole
-/// migrations as EF does, and they must agree. The generator numbers its variables (<c>@description12</c>) across calls,
-/// so only a generator that saw the same calls in the same order gives the same text.
+/// 建立 SQL Server context，但不會真的開啟連線。會用到兩個：一個產生檔案，另一個依 EF 的方式整段產生，兩者結果必須一致。
+/// 產生器會跨呼叫為變數編號（如 <c>@description12</c>），所以只有以相同順序呼叫的產生器，才會得到相同的文字。
 /// </param>
 public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
 {
@@ -27,9 +25,9 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
 
     private const MigrationsSqlGenerationOptions Options = MigrationsSqlGenerationOptions.Script | MigrationsSqlGenerationOptions.Idempotent;
 
-    /// <param name="from">The production database's last applied migration (id or name), or <c>0</c> for an empty database.</param>
-    /// <param name="to">The last migration to include; <see langword="null"/> for the latest.</param>
-    /// <exception cref="ReleaseScriptException">The range is invalid, or a migration in it cannot be delivered file by file.</exception>
+    /// <param name="from">正式資料庫最後套用的 migration（id 或名稱）；空庫用 <c>0</c>。</param>
+    /// <param name="to">要包含的最後一個 migration；<see langword="null"/> 表示最新。</param>
+    /// <exception cref="ReleaseScriptException">範圍無效，或範圍內有 migration 無法逐檔交付。</exception>
     public ReleaseScript Generate(string from, string? to = null)
     {
         using var db = createContext();
@@ -47,7 +45,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
             throw new ReleaseScriptException($"--to {toId} 早於 --from {fromId}；拆檔只產生升級 SQL，不產生降版 SQL。");
         var range = ids.Where(id => (fromId is null || Compare(id, fromId) > 0) && toId is not null && Compare(id, toId) <= 0).ToList();
 
-        // Like EF's script, a range from an empty database starts by creating the history table every later file checks.
+        // 與 EF 的腳本一致：空庫起跑時，先建立之後每個檔案都會檢查的 history 表。
         var drafts = new List<Draft>();
         if (fromId is null && range.Count > 0) drafts.Add(new(ReleaseScriptKind.Schema, HistoryTarget, null, false, history.GetCreateIfNotExistsScript() + sql.BatchTerminator, []));
         foreach (var id in range) drafts.AddRange(Split(services, id, assembly.CreateMigration(assembly.Migrations[id], db.Database.ProviderName!)));
@@ -64,7 +62,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         return new ReleaseScript(fromId, toId, range, files);
     }
 
-    /// <summary>Data: EF seed operations (<c>HasData</c>) and raw SQL marked by <see cref="MigrationBuilderExtensions.DataSql"/>.</summary>
+    /// <summary>資料檔：EF 的 seed 操作（<c>HasData</c>）與 <see cref="MigrationBuilderExtensions.DataSql"/> 標記的原生 SQL。其餘為結構。</summary>
     public static ReleaseScriptKind Classify(MigrationOperation operation) => operation switch
     {
         InsertDataOperation or UpdateDataOperation or DeleteDataOperation => ReleaseScriptKind.Data,
@@ -72,7 +70,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         _ => ReleaseScriptKind.Schema,
     };
 
-    /// <summary>The object an operation changes: <c>schema.Table</c>, the schema itself, or the operation name.</summary>
+    /// <summary>操作所變動的物件：<c>schema.Table</c>、schema 本身，或操作名稱。</summary>
     public static string TargetOf(MigrationOperation operation, string defaultSchema = "dbo") => operation switch
     {
         SqlOperation raw => raw[MigrationBuilderExtensions.ObjectAnnotation] as string ?? "sql",
@@ -88,11 +86,10 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
     };
 
     /// <summary>
-    /// Operations that make SQL Server rewrite a table that already holds rows, which a DBA delivering ALTERs object by
-    /// object must not receive silently. Adding a column is always <c>ALTER TABLE … ADD</c> and is never listed. A
-    /// clustered key or index on a table created by the same migration is built while the table is still empty.
+    /// 找出會讓 SQL Server 重寫整張已有資料的表的操作。逐物件交付 ALTER 的 DBA 不能在不知情的情況下收到這類操作。
+    /// 新增欄位永遠是 <c>ALTER TABLE … ADD</c>，不列入。同一個 migration 內新建的表，其叢集鍵或索引是在空表上建立，也不列入。
     /// </summary>
-    /// <returns>One line per offending operation; empty when the migration only alters in place.</returns>
+    /// <returns>每個有問題的操作一行；migration 只做原地 ALTER 時為空。</returns>
     public static IReadOnlyList<string> FindTableRebuilds(IReadOnlyList<MigrationOperation> operations)
     {
         ArgumentNullException.ThrowIfNull(operations);
@@ -116,7 +113,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         return found;
     }
 
-    // Provider annotation names (SqlServerAnnotationNames is internal to EF).
+    // SQL Server provider 的 annotation 名稱。EF 的 SqlServerAnnotationNames 是 internal，只能在這裡自行定義。
     private const string ClusteredAnnotation = "SqlServer:Clustered";
     private const string MemoryOptimizedAnnotation = "SqlServer:MemoryOptimized";
     private const string IdentityAnnotation = "SqlServer:Identity";
@@ -128,7 +125,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         if (rebuilds.Count > 0)
             throw new ReleaseScriptException($"{id} 含會在 SQL Server 重建資料表的操作，不能以逐物件的 ALTER 交付；請改寫 migration 或另與 DBA 規劃停機搬移：{Environment.NewLine}- {string.Join(Environment.NewLine + "- ", rebuilds)}");
 
-        // Migrator.GenerateScript finalizes the target model the same way.
+        // 與 Migrator.GenerateScript 一樣先定案目標模型，否則產生的 SQL 會與 dotnet ef 的結果不同。
         var model = migration.TargetModel is { } targetModel ? services.Initializer.Initialize(targetModel, designTime: true, validationLogger: null) : null;
         var defaultSchema = model?.GetDefaultSchema() ?? "dbo";
         var groups = new List<Group>();
@@ -141,8 +138,8 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
             else groups.Add(new(kind, target, suppressed, [operation]));
         }
 
-        // The files must say exactly what `dotnet ef migrations script` says for the whole migration; a generator that
-        // depended on the other operations of the migration would fail here, loudly, instead of shipping different SQL.
+        // 檔案內容必須與 `dotnet ef migrations script` 對整段 migration 的結果完全相同。
+        // 若產生器依賴同一 migration 中的其他操作，這裡會直接失敗，而不是悄悄交付不同的 SQL。
         var parts = groups.Select(group => (Group: group, Commands: services.Generator.Generate(group.Operations, model, Options))).ToList();
         var split = parts.SelectMany(x => x.Commands).Select(x => (x.CommandText, x.TransactionSuppressed));
         var whole = services.Reference.Generate(operations, model, Options).Select(x => (x.CommandText, x.TransactionSuppressed));
@@ -151,14 +148,13 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
 
         foreach (var (group, commands) in parts.Where(x => x.Commands.Count > 0))
             yield return new(group.Kind, group.Target, id, commands.Any(x => x.TransactionSuppressed), Render(services, id, commands.Select(x => (x.CommandText, x.TransactionSuppressed))), group.Operations);
-        // EF writes the history row outside a transaction too when any command of the migration is, so a failure cannot
-        // leave the row committed without the work.
+        // 只要 migration 中有任何指令在交易外執行，EF 寫入 history 列時也會在交易外進行；這樣失敗時才不會出現「列已提交、工作卻沒完成」的情況。
         var outside = parts.SelectMany(x => x.Commands).Any(x => x.TransactionSuppressed);
         var row = services.History.GetInsertScript(new HistoryRow(id, ProductInfo.GetVersion()));
         yield return new(ReleaseScriptKind.Schema, HistoryTarget, id, outside, Render(services, id, [(row, outside)]), []);
     }
 
-    /// <summary>EF's script layout (Migrator.GenerateScript) for the commands of one file, with its own transaction.</summary>
+    /// <summary>依 EF 的腳本格式（Migrator.GenerateScript）輸出一個檔案的指令，每個檔案有自己的交易。</summary>
     private static string Render(Services services, string id, IEnumerable<(string Text, bool Suppressed)> commands)
     {
         var (history, sql) = (services.History, services.Sql);
@@ -179,7 +175,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
             builder.AppendLine(history.GetBeginIfNotExistsScript(id));
             using (builder.Indent()) builder.AppendLines(text);
             builder.Append(history.GetEndIfScript());
-            // As in EF's script: commands inside a transaction share one batch; GO only where none is open.
+            // 與 EF 的腳本一致：交易內的指令共用同一批次；只有在沒有開啟交易時才加 GO。
             builder.Append(inTransaction ? Environment.NewLine : sql.BatchTerminator);
         }
         if (inTransaction) builder.AppendLine(sql.CommitTransactionStatement).Append(sql.BatchTerminator);
@@ -190,7 +186,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         => assembly.FindMigrationId(nameOrId)
             ?? throw new ReleaseScriptException($"{option} 找不到 migration：{nameOrId}。請用 migration id（例如 20261009225825_InitialCreate）或名稱；空庫用 0。");
 
-    // EF orders migration ids the same way.
+    // 與 EF 排序 migration id 的方式相同（不分大小寫）。
     private static int Compare(string left, string right) => string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
 
     private static string FileName(string target)

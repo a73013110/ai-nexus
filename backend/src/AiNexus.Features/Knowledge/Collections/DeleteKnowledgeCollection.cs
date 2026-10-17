@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge.Collections;
 
 /// <summary>
-/// The owner deletes a collection with all of its documents: running jobs are cancelled, the index, pages and
-/// conversation selections are erased and originals nothing else holds are released. Bytes are deleted after commit.
+/// 擁有者刪除知識庫連同所有文件：進行中的工作會取消，索引、頁面與對話選取會清除，沒有其他參照的原始檔會釋放。
+/// 檔案位元組在交易提交後才實際刪除，避免交易回滾時檔案已消失。
 /// </summary>
 internal sealed class DeleteKnowledgeCollection(NexusDbContext db, ResourceAccess access, AttachmentService attachments, AttachmentWriteLock writes, AttachmentLifecycle lifecycle)
 {

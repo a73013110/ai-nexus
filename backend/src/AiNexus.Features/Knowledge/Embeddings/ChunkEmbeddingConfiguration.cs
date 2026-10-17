@@ -5,7 +5,7 @@ using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-/// <summary>One vector table per supported dimension.</summary>
+/// <summary>每個支援的向量維度各有一張向量表。</summary>
 internal abstract class ChunkEmbeddingConfiguration<T>(string table, int dimensions) : IEntityTypeConfiguration<T> where T : class
 {
     public void Configure(EntityTypeBuilder<T> item)

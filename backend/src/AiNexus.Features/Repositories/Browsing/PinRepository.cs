@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Browsing;
 
-/// <summary>Keeps a repository the user can read at the top of the list, with the name and description Gitea shows now.</summary>
+/// <summary>把使用者可讀取的程式庫釘在清單頂端，並同步為 Gitea 目前的名稱與說明。</summary>
 internal sealed class PinRepository(NexusDbContext db, RepositoryService gitea, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
@@ -26,6 +26,7 @@ internal sealed class PinRepository(NexusDbContext db, RepositoryService gitea, 
             isPrivate = GiteaJson.Flag(json.RootElement, "private");
         }
         if (!RepositoryService.IsRepository(name)) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
+        // 釘選數量上限是先計數再新增，兩個並行請求可能同時通過檢查，所以用寫入鎖序列化。
         await writes.Gate.WaitAsync(ct);
         try
         {

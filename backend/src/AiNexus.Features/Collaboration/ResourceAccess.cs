@@ -8,17 +8,16 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Collaboration;
 
 /// <summary>
-/// Serializes writes in this process per resource (versioned saves, ACL changes, deletion) or per other id-scoped invariant;
-/// writes to different resources do not wait for each other. Callers taking two keys take the owner-scoped key first.
+/// 只在本程序內序列化寫入（多實例部署不互斥）：依資源鎖住版本化儲存、ACL 變更與刪除，或依其他以 ID 為範圍的不變式。
+/// 不同資源互不等待。同時取兩把鎖時，必須先取擁有者範圍的鎖，否則可能死結。
 /// </summary>
 public sealed class ResourceWriteLock
 {
     private readonly KeyedAsyncLock<(string Scope, Guid Id)> keys = new();
 
-    /// <summary>The write lock of one resource.</summary>
     public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
 
-    /// <summary>The lock of another per-id invariant, such as one owner's limit or one message's feedback.</summary>
+    /// <summary>其他以 ID 為範圍的不變式鎖，例如單一擁有者的額度、單一訊息的回饋；<paramref name="scope"/> 用來區分不同用途。</summary>
     public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
 }
 
@@ -48,7 +47,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
 
-    /// <summary>Every resource the actor reads by <see cref="QueryAsync"/>, or the error of <see cref="RequireAsync"/>; one query for the whole list.</summary>
+    /// <summary>與 <see cref="RequireAsync"/> 的可見性規則相同，但一次查完整批；任一筆不可見即回傳 not found。</summary>
     public async Task<Result> RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
     {
         if (ids.Count == 0) return Result.Success;
@@ -56,7 +55,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         return ids.All(readable.Contains) ? Result.Success : CollaborationErrors.ResourceNotFound;
     }
 
-    /// <summary>The ids among <paramref name="values"/> that <see cref="CanEditAsync"/> allows, in at most two queries.</summary>
+    /// <summary>與 <see cref="CanEditAsync"/> 判斷相同，但以至多兩次查詢批次完成，回傳可編輯的 id 集合。</summary>
     public async Task<IReadOnlySet<Guid>> EditableAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
     {
         var editable = values.Where(x => x.OwnerId == actor).Select(x => x.Id).ToHashSet();
@@ -72,7 +71,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         return editable;
     }
 
-    /// <summary><see cref="DescribeAsync"/> for a list, in the list's order.</summary>
+    /// <summary>批次版本的 <see cref="DescribeAsync"/>，結果保持輸入順序。</summary>
     public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
     {
         var editable = await EditableAsync(actor, values, ct);
@@ -97,7 +96,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             var users = request.Members.Select(x => x.UserId).ToArray();
             if (await db.Users.CountAsync(x => users.Contains(x.Id), ct) != users.Length || await db.Set<RoleGroup>().CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
                 return CollaborationErrors.UnknownMember;
-            // Group grants are intentionally read-only; editors must be named members.
+            // 群組授權刻意只給唯讀；可編輯者必須是具名成員，不能靠群組取得編輯權。
             var oldMembers = await db.Set<ResourceMember>().Where(x => x.ResourceId == id).ToListAsync(ct);
             db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
             foreach (var item in request.Members)
@@ -119,7 +118,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
             ? resource : CollaborationErrors.ResourceNotFound;
 
-    /// <summary>A resource name: trimmed, 1 to 120 characters, no control characters.</summary>
+    /// <summary>資源名稱：去除前後空白後 1 到 120 字，且不可含控制字元。</summary>
     public static bool IsValidName(string? value) => value?.Trim() is { Length: >= 1 and <= 120 } trimmed && !trimmed.Any(char.IsControl);
 
     public static Result<string> Name(string value) => IsValidName(value) ? value.Trim() : CollaborationErrors.InvalidName;

@@ -8,7 +8,7 @@ public sealed class DependencyCatalog
 {
     private readonly List<(string Host, int Port, string Id)> http = [];
     private readonly List<(string Server, string Database, string Id)> sql = [];
-    /// <summary>Display names of the known <c>Databases</c> entries; any other configured entry is listed by its name.</summary>
+    /// <summary>已知 <c>Databases</c> 項目的顯示名稱；其餘已設定的項目以原名列出。</summary>
     private static readonly Dictionary<string, string> DatabaseLabels = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Nexus"] = "主資料庫", ["Gdweb"] = "公文資料庫", ["Meiho"] = "校務資料庫"
@@ -33,7 +33,7 @@ public sealed class DependencyCatalog
         void AddHttp(string? value, string id, string name)
         {
             if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return;
-            // Shared model endpoints represent one transport dependency, without counting each model as a server.
+            // 同一端點上的多個模型共用一條傳輸相依，不應把每個模型都計為一台伺服器。
             if (http.Any(x => x.Host.Equals(uri.Host, StringComparison.OrdinalIgnoreCase) && x.Port == uri.Port)) return;
             http.Add((uri.Host, uri.Port, id)); traffic.RegisterDependency(id, name, "http");
         }

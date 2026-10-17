@@ -3,14 +3,13 @@ using AiNexus.Features.Identity.Users;
 namespace AiNexus.Features.Identity.Authentication;
 
 /// <summary>
-/// A grant applied when a directory user signs in, such as the configured bootstrap administrators. Modules above
-/// Identity implement it, so sign-in does not depend on them.
+/// 登入時套用的額外授權（例如設定中的初始管理員）。由 Identity 之上的模組實作，登入流程本身因此不依賴那些模組。
 /// </summary>
 public interface ISignInGrant
 {
-    /// <summary>Whether <see cref="ApplyAsync"/> would grant anything, so sign-in must take the identity write gate.</summary>
+    /// <summary>回報 <see cref="ApplyAsync"/> 是否會實際授權；為 true 時登入必須先取得 identity 寫入鎖。</summary>
     Task<bool> PendingAsync(NexusUser user, CancellationToken ct);
 
-    /// <summary>Called under the identity write gate.</summary>
+    /// <summary>在 identity 寫入鎖內呼叫。</summary>
     Task ApplyAsync(NexusUser user, CancellationToken ct);
 }

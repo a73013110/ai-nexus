@@ -69,7 +69,7 @@ public sealed partial class DiagnosticBrowserTests
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "此範圍沒有日誌" })).ToBeVisibleAsync();
         var injection = new DiagnosticEvent { At = factory.Services.GetRequiredService<TimeProvider>().GetUtcNow(), IssueCode = Issues.NewCode(), Level = Microsoft.Extensions.Logging.LogLevel.Warning, MessageTemplate = "<img src=x onerror=\"globalThis.__logInjected=true\">", Category = "=HYPERLINK(\"evil\")", EventName = "fixture.injection" };
-        db.Add(injection); await db.SaveChangesAsync(); // Deliberately bypass producer redaction to test the UI/CSV boundary.
+        db.Add(injection); await db.SaveChangesAsync(); // 刻意繞過產生端的遮罩，以測試 UI 與 CSV 的邊界。
         await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(injection.IssueCode!);
         await page.RouteAsync("**/api/v1/admin/logs?*", async route => { await Task.Delay(300); await route.ContinueAsync(); });
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
@@ -80,7 +80,7 @@ public sealed partial class DiagnosticBrowserTests
         var download = await page.RunAndWaitForDownloadAsync(() => page.GetByRole(AriaRole.Button, new() { Name = "匯出 CSV", Exact = true }).ClickAsync());
         var csvPath = Path.Combine(evidence, "safe-export.csv"); await download.SaveAsAsync(csvPath);
         Assert.Contains("'=HYPERLINK", await File.ReadAllTextAsync(csvPath));
-        factory.Services.GetRequiredService<DiagnosticHealth>().Emergency("important_queue_full", 1); // Controlled health-state injection, not a physical disk outage.
+        factory.Services.GetRequiredService<DiagnosticHealth>().Emergency("important_queue_full", 1); // 受控地注入健康狀態，並非實際的磁碟故障。
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "日誌系統降級" })).ToBeVisibleAsync();
         await page.RouteAsync("**/api/v1/admin/logs?*", route => route.FulfillAsync(new() { Status = 503, ContentType = "application/problem+json", Body = JsonSerializer.Serialize(new { code = "service_unavailable", title = "Password=fixture-ui-secret https://private.test/provider", issueCode = issue }) }));

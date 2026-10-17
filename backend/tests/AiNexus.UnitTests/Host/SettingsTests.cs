@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.UnitTests.Host;
 
-/// <summary>Settings are bound per module section; unknown keys and invalid values stop startup and name the key.</summary>
+/// <summary>設定依模組區段綁定；未知的鍵或無效的值會阻止啟動，並在錯誤訊息中指出該鍵。</summary>
 public sealed class SettingsTests
 {
     internal static string RepositoryRoot()
@@ -25,7 +25,7 @@ public sealed class SettingsTests
 
     private static readonly string Host = Path.Combine(RepositoryRoot(), "backend", "src", "AiNexus.Host");
 
-    /// <summary>Every settings root: a type that declares the section it binds.</summary>
+    /// <summary>所有設定根：宣告了 <c>Section</c> 常數的型別，由反射找出。</summary>
     private static readonly Type[] Roots = new[] { typeof(PlatformServices).Assembly, typeof(FeatureModules).Assembly }
         .SelectMany(x => x.GetTypes())
         .Where(x => x.GetField("Section", BindingFlags.Public | BindingFlags.Static) is { IsLiteral: true })
@@ -117,7 +117,7 @@ public sealed class SettingsTests
     {
         var settings = new ConfigurationManager();
         settings.AddJsonFile(Path.Combine(Host, "appsettings.json")).AddJsonFile(Path.Combine(Host, template));
-        // Windows drive paths in the templates are not rooted on Linux test machines.
+        // 範本中的 Windows 磁碟路徑在 Linux 測試機上不是有效根路徑，因此這裡改用暫存目錄覆寫。
         settings["Attachments:StoragePath"] = Path.GetTempPath();
         using var services = Services(settings);
         foreach (var root in Roots)
@@ -160,7 +160,7 @@ public sealed class SettingsTests
         return Services(settings);
     }
 
-    /// <summary>The real module registrations over the given configuration, without starting a host.</summary>
+    /// <summary>以真實的模組註冊套用指定設定，但不啟動 Host。</summary>
     private static ServiceProvider Services(ConfigurationManager settings)
     {
         var builder = WebApplication.CreateEmptyBuilder(new() { EnvironmentName = "Production" });

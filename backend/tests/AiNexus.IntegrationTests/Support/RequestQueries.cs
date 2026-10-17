@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Support;
 
-/// <summary>SQL commands issued while serving a request path; background work has no request and is not counted.</summary>
+/// <summary>處理請求路徑期間發出的 SQL 指令；背景工作沒有請求，因此不計入。</summary>
 public sealed class RequestQueries(IHttpContextAccessor http) : DbCommandInterceptor
 {
     private readonly ConcurrentQueue<(string Path, string Sql)> commands = new();
@@ -19,7 +19,7 @@ public sealed class RequestQueries(IHttpContextAccessor http) : DbCommandInterce
     }
 
     public void Clear() => commands.Clear();
-    /// <summary>Commands for <paramref name="path"/> whose SQL contains every one of <paramref name="texts"/>.</summary>
+    /// <summary>對應 <paramref name="path"/> 的指令，且其 SQL 包含 <paramref name="texts"/> 中的每一段文字。</summary>
     public int Count(string path, params string[] texts) => commands.Count(x => x.Path == path && texts.All(text => x.Sql.Contains(text, StringComparison.Ordinal)));
 
     private void Record(DbCommand command)

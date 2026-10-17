@@ -4,7 +4,7 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>One comparison of model variants over a frozen copy of a set's cases, executed by <see cref="EvaluationHandler"/>.</summary>
+/// <summary>對題組凍結的案例副本，比較多組模型變體的一次評測；由 <see cref="EvaluationHandler"/> 執行。</summary>
 [Comment("評測執行的題庫與模型設定快照、背景工作與狀態。")]
 public sealed class EvaluationRun
 {

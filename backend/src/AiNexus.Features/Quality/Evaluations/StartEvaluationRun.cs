@@ -24,7 +24,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 {
     public override string ProblemCode => "evaluation_variants_invalid";
 
-    // One to three variants with distinct (case-insensitive) labels of 1 to 80 characters.
+    // 變體 1 至 3 個；標籤去除空白後不分大小寫不得重複，每個 1 至 80 字元。
     public EvaluationRunRequestValidator()
     {
         RuleFor(x => x.Variants).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode("count");
@@ -38,7 +38,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
     }
 }
 
-/// <summary>Freezes the set's cases and each variant's model settings, and queues the comparison (one active per user).</summary>
+/// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
 internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPolicyService policy,
     IOptions<InferenceOptions> inference, TimeProvider clock)
 {
@@ -56,7 +56,7 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
             if (await policy.RequireAsync(actor, model.Value.Id, ct) is { IsSuccess: false } refused) return refused.Error;
             variants.Add(new(variant.Label.Trim(), model.Value.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model.Value, inference.Value)));
         }
-        // The owner's one active evaluation and run limit, then the set (always in this order).
+        // 固定先取擁有者的鎖、後取題組的鎖；反向取鎖會與其他請求死鎖。上限與進行中檢查也都在鎖內完成。
         using (await writes.AcquireAsync("evaluation-runs", actor, ct))
         using (await writes.AcquireAsync(setId, ct))
         {

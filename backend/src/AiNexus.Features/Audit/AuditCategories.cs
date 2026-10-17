@@ -5,7 +5,7 @@ namespace AiNexus.Features.Audit;
 
 public sealed record AuditCategoryDto(string Value, string Label);
 
-/// <summary>同一個分類 expression 同時用於 SQL 篩選（轉成 CASE WHEN）與輸出時的分類，兩邊不會不一致。</summary>
+/// <summary>同一個分類運算式同時用於 SQL 篩選（轉成 CASE WHEN）與輸出時的分類，兩邊不會不一致。</summary>
 public static class AuditCategories
 {
     public static readonly string[] Values = ["authentication", "administration", "access", "activity"];

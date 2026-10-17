@@ -9,7 +9,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>The documents of a collection the user may read, by file name, with the state of their current job.</summary>
+/// <summary>使用者可讀取的知識庫文件，依檔名排序並附目前工作狀態；筆數受 MaxDocumentsPerCollection 上限限制。</summary>
 internal sealed class ListKnowledgeDocuments(NexusDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

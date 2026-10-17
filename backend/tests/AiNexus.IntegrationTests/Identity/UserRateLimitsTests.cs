@@ -16,7 +16,7 @@ public sealed class UserRateLimitsTests
     public async Task UploadingIsLimitedPerUserWithRetryAfter()
         => await AssertPerUserLimitAsync("/api/v1/attachments", AttachmentsModule.UploadsPerMinute, client => client.PostAsync("/api/v1/attachments", new StringContent("")));
 
-    // The limiter runs before binding, so requests the endpoint then rejects still count.
+    // 限流器在模型綁定之前執行，因此之後被 endpoint 拒絕的請求仍會計入。
     private static async Task AssertPerUserLimitAsync(string path, int permits, Func<HttpClient, Task<HttpResponseMessage>> send)
     {
         await using var factory = new NexusFactory();

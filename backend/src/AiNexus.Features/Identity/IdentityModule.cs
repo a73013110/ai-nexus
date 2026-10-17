@@ -13,6 +13,7 @@ using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Identity;
 
+/// <summary>身分模組：Cookie 與 Negotiate 驗證、登入速率限制，以及帳密登入服務的註冊。</summary>
 public sealed class IdentityModule : IFeatureModule
 {
     public const string LoginRateLimit = "ad-login";
@@ -23,7 +24,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
         services.AddAuthentication("NexusSession")
-            // An existing session cookie wins; otherwise the configured directory mode picks cookie (LDAP) or Negotiate.
+            // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("NexusSession", null, options => options.ForwardDefaultSelector = http =>
                 http.Request.Cookies.ContainsKey("Nexus.Session") || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
                     ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)

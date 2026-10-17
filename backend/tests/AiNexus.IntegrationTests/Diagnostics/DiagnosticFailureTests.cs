@@ -67,7 +67,7 @@ public sealed class DiagnosticFailureTests
         Assert.True(completed);
     }
 
-    // SQL failure is injected at the SQL seam, exercising the production retrieval/fallback branch.
+    // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支。
     private sealed class FullTextFailure : ISqlDatabase<NexusDbContext>
     {
         public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
@@ -80,7 +80,7 @@ public sealed class DiagnosticFailureTests
 
     private static SqlException SqlFailure()
     {
-        // Microsoft.Data.SqlClient intentionally has no public factory for server errors; reflection is confined to this fixture.
+        // Microsoft.Data.SqlClient 刻意不提供伺服器錯誤的公開工廠方法，因此反射僅限於此 fixture 內使用。
         var errorConstructor = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).First(x => x.GetParameters().Length == 9);
         var error = (SqlError)errorConstructor.Invoke([30053, (byte)1, (byte)16, "fixture-server", "fixture-secret", "fixture-procedure", 1, 0, null]);
         var collection = (SqlErrorCollection)Activator.CreateInstance(typeof(SqlErrorCollection), nonPublic: true)!;

@@ -2,7 +2,7 @@ using AiNexus.Features.Identity;
 
 namespace AiNexus.Features.Attachments.Storage;
 
-/// <summary>The caller's stored bytes and effective limit.</summary>
+/// <summary>呼叫者已使用的儲存位元組與生效中的上限。</summary>
 internal sealed class GetAttachmentStorage(AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

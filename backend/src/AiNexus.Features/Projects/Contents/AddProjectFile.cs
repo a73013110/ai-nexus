@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
-/// <summary>Adds an uploaded file as a reference document of an active project the user may edit (at most 50).</summary>
+/// <summary>把上傳的檔案加為可編輯的有效專案的參考文件（最多 50 個）。</summary>
 internal sealed class AddProjectFile(NexusDbContext db, ResourceAccess access, DocumentService documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

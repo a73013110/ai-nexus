@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AiNexus.IntegrationTests.Persistence;
 
 /// <summary>
-/// The SQL a DBA runs (<c>migrations.sql</c>) on a real SQL Server: tests apply migrations one command at a time, which
-/// hides batch compile errors such as a statement naming a column added earlier in the same migration.
+/// 驗證 DBA 在真實 SQL Server 上執行的 SQL（<c>migrations.sql</c>）。測試若逐一指令套用 migration，
+/// 會掩蓋批次編譯錯誤，例如同一 migration 中的陳述式引用了較早才新增的欄位。
 /// </summary>
 [Trait("Category", "SqlServer")]
 public sealed class IdempotentScriptTests
@@ -24,7 +24,7 @@ public sealed class IdempotentScriptTests
         }, migrate: false);
     }
 
-    /// <summary>Runs <paramref name="script"/> the way sqlcmd does: one batch per <c>GO</c>, stopping at the first error.</summary>
+    /// <summary>以 sqlcmd 的方式執行 <paramref name="script"/>：每個 <c>GO</c> 為一批，遇到第一個錯誤即停止。</summary>
     private static async Task RunAsync(string connectionString, string script)
     {
         await using var connection = new SqlConnection(connectionString);

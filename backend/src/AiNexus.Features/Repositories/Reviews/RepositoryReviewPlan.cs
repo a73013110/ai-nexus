@@ -6,14 +6,14 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Repositories.Reviews;
 
 public sealed record ReviewSlice(string Label, string Diff, bool Binary);
-/// <summary>Everything a review job needs, frozen at creation. <see cref="Version"/> changes when the prompts or result contract change.</summary>
+/// <summary>review 工作所需的全部資料，建立時即凍結。提示詞或結果格式改變時，應遞增 <see cref="Version"/>（目前值見 <c>Current</c>）。</summary>
 public sealed record ReviewSnapshot(int Version, string Instruction, ReviewSlice[] Slices, string Purpose, string ReportInstruction, string ReductionInstruction,
     int InputBudget, bool Direct, int ReportOutputTokens, int AnalysisOutputTokens)
 {
     public const int Current = 3;
 }
 
-/// <summary>Freezes the purpose, prompts and byte budget with the source, independently of worker retries.</summary>
+/// <summary>與來源一起凍結用途、提示詞與位元組預算；與 worker 是否重試無關。</summary>
 public static class RepositoryReviewPlan
 {
     public const int ReportOrdinal = -1;
@@ -39,7 +39,7 @@ public static class RepositoryReviewPlan
             RepositoryReviewBrief.Instruction;
         var reduction = Safety + focus + "這是整體報告的中間彙整。保留變更事實、最重要的有證據問題、檔案／行號及限制，" +
             "合併重複問題，保留跨檔關係。不要宣稱已完成整體檢閱，不加入新問題，不重複範本。使用 Markdown，限 120 字，至多 3 點，輸出務必比輸入精簡。";
-        // ModelTaskService conservatively counts UTF-8 bytes as tokens. Reserve the same output and framing space.
+        // ModelTaskService 保守地把 UTF-8 位元組當成 token 計算，這裡預留同樣的輸出與框架空間。
         var context = Context(repository, head, basis, note);
         var budget = Math.Min(Math.Min(14000, ModelTaskService.MaxPromptCharacters - context.Length - 2048),
             model.ContextTokens - Math.Min(model.MaxOutputTokens, 1400) - ModelTaskService.FramingTokenReserve - 2048 -
@@ -53,7 +53,7 @@ public static class RepositoryReviewPlan
             ReportOutputTokens: 1400, AnalysisOutputTokens: 384);
     }
 
-    // File boundaries are evidence, not a reason for an extra model call. Pack adjacent text changes to the input budget.
+    // 檔案邊界是證據，不是多打一次模型的理由。相鄰的文字變更會打包到輸入預算之內。
     private static ReviewSlice[] Pack(ReviewSlice[] slices, int budget)
     {
         var packed = new List<ReviewSlice>(); var labels = new List<string>(); var text = new StringBuilder();
@@ -80,7 +80,7 @@ public static class RepositoryReviewPlan
     public static string Source(IEnumerable<ReviewSlice> slices) => string.Concat(slices.Select(x => x.Binary
         ? $"\n需人工確認的二進位變更：{x.Label}\n" : x.Diff));
 
-    /// <summary>Bound complete Unicode characters and prefer line boundaries; never silently drop source or evidence.</summary>
+    /// <summary>以完整的 Unicode 字元為單位切分，並盡量在換行處切開；不能靜默丟棄來源或證據。</summary>
     public static IEnumerable<string> Chunks(string text, int budget)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(budget, 4);

@@ -13,7 +13,7 @@ public sealed class AttachmentOptions : IValidatableObject
     [Range(1, 8)] public int MaxFilesPerMessage { get; set; } = 4;
     [Range(1024, 16 * 1024 * 1024)] public int MaxMessageBytes { get; set; } = 8 * 1024 * 1024;
     public long DefaultOwnerLimitBytes { get; set; } = DefaultLimitBytes;
-    /// <summary>Absolute directory outside the site; Development defaults to <c>.local/data/attachments</c>.</summary>
+    /// <summary>站台目錄之外的絕對路徑；開發環境預設為 <c>.local/data/attachments</c>。</summary>
     public string StoragePath { get; set; } = "";
     [Range(1, 1440)] public int CleanupIntervalMinutes { get; set; } = 60;
     [Range(1000, 256000)] public int MaxExtractedCharacters { get; set; } = 64000;

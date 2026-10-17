@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
-/// <summary>One of the user's background jobs.</summary>
+/// <summary>使用者的單一背景工作。</summary>
 internal sealed class GetJob(NexusDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes

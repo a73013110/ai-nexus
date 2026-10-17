@@ -4,7 +4,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Library;
 
-/// <summary>Personal prompt templates. Each use case lives in its own file next to this module.</summary>
+/// <summary>使用者個人的提示詞範本。</summary>
 public sealed class LibraryModule : IFeatureModule
 {
     public const int MaxTemplateCharacters = 12000;

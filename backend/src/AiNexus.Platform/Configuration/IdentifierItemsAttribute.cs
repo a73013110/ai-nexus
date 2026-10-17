@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AiNexus.Platform.Configuration;
 
-/// <summary>Every item of a string list is a 1–64 character identifier of ASCII letters, digits, <c>.</c>, <c>_</c> or <c>-</c> (directory accounts, group ids).</summary>
+/// <summary>字串清單中之每個元素皆必須為 1–64 個字元的 ASCII 字母、數字、<c>.</c>、<c>_</c> 或 <c>-</c> 識別碼（如帳號、群組識別碼）。</summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class IdentifierItemsAttribute : ValidationAttribute
 {

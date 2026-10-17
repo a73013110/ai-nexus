@@ -5,7 +5,7 @@ using AiNexus.Platform.Security;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>Streams the original file of a document the user may read, inline or as a download, through the safe file response.</summary>
+/// <summary>以安全的檔案回應串流使用者可讀取文件的原始檔，可內嵌顯示或作為下載。</summary>
 internal sealed class DownloadDocumentOriginal(DocumentAccess documents, AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes)

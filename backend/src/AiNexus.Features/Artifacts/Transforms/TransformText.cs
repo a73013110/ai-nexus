@@ -10,7 +10,7 @@ namespace AiNexus.Features.Artifacts.Transforms;
 public sealed record TransformTextRequest(string Text, string Action, string? ModelId = null, string Language = "繁體中文");
 public sealed record TransformTextDto(string Text, bool Truncated);
 
-/// <summary>Selection and language. An unsupported action has its own code and is reported by the handler afterwards.</summary>
+/// <summary>只驗證輸入的文字與語言；不支援的 action 有自己的錯誤代碼，由 handler 之後回報。</summary>
 internal sealed class TransformTextRequestValidator : RequestValidator<TransformTextRequest>
 {
     public const int MaxTextCharacters = 8000;
@@ -24,7 +24,7 @@ internal sealed class TransformTextRequestValidator : RequestValidator<Transform
     }
 }
 
-/// <summary>Rewrites, summarizes, explains or translates a selected passage with a model the user may use.</summary>
+/// <summary>以使用者可用的模型，改寫、摘要、解釋或翻譯所選段落。</summary>
 internal sealed class TransformText(ModelTaskService models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api

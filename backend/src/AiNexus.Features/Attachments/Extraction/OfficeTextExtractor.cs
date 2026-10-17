@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace AiNexus.Features.Attachments.Extraction;
 
-/// <summary>Bounded, passive OOXML extraction. Never evaluates formulas, macros or external relationships.</summary>
+/// <summary>有上限、被動式的 OOXML 文字抽取；不計算公式、不執行巨集，也不跟隨外部關聯。</summary>
 internal sealed class OfficeTextExtractor : IDisposable
 {
     private readonly ZipArchive zip;

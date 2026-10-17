@@ -14,12 +14,12 @@ public sealed record ImportRepositoryFolderRequest(string Commit, string Path, G
 public sealed record RepositoryFolderImportDto(Guid Id, int Files, JobDto Job);
 
 /// <summary>
-/// Lists the text files under a folder at a pinned commit and queues their import into a knowledge collection. The file
-/// list is fixed now, so the job's retries import the same snapshot.
+/// 列出固定 commit 上某資料夾底下的文字檔，並把匯入排入知識庫的佇列。
+/// 檔案清單在此時固定，因此工作重試時匯入的仍是同一份快照。
 /// </summary>
 internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes)
 {
-    // Extensions whose files are worth indexing as text; anything else is binary or generated more often than not.
+    // 值得當成文字建立索引的副檔名；其他多半是二進位或產生的檔案，直接略過。
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".md", ".markdown", ".txt", ".rst", ".adoc", ".cs", ".csproj", ".props", ".targets", ".slnx", ".config", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
@@ -63,7 +63,7 @@ internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryServic
         finally { writes.Gate.Release(); }
     }
 
-    /// <summary>Text files under the folder, from Gitea's recursive tree; more than the limit stops early.</summary>
+    /// <summary>從 Gitea 的遞迴樹列出資料夾下的文字檔；超過上限就提早停止。</summary>
     private async Task<Result<IReadOnlyList<string>>> ListAsync(Guid owner, string repo, string commit, string folder, CancellationToken ct)
     {
         var route = RepositoryService.Route(repo);
@@ -80,6 +80,7 @@ internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryServic
             if (!RepositoryService.IsCommit(tree)) return RepositoriesErrors.NotDirectory;
         }
         var paths = new List<string>();
+        // 最多讀 20 頁（每頁 1000 筆），避免超大的程式庫無止境地列舉。
         for (var page = 1; page <= 20; page++)
         {
             var read = await gitea.GetAsync(owner, route + "/git/trees/" + tree + $"?recursive=true&page={page}&per_page=1000", ct);

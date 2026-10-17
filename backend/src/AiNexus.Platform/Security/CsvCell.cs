@@ -1,6 +1,6 @@
 namespace AiNexus.Platform.Security;
 
-/// <summary>CSV exports opened in a spreadsheet: every cell is quoted, and text that would start a formula is prefixed with <c>'</c>.</summary>
+/// <summary>供試算表軟體開啟的 CSV 輸出防護：每個儲存格皆以雙引號包裹；若開頭字元可能觸發公式計算（=, +, -, @），則前綴單引號以防止公式注入（CSV Formula Injection）。</summary>
 public static class CsvCell
 {
     private static readonly char[] FormulaStarts = ['=', '+', '-', '@'];

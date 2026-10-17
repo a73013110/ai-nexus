@@ -8,7 +8,7 @@ namespace AiNexus.Features.Administration.Retrieval;
 
 public sealed record AdminRetrievalSearchRequest(string Query, IReadOnlyList<Guid> CollectionIds, string? Mode = null, bool? Rerank = null);
 
-/// <summary>The query rule of <see cref="RetrievalPipeline.SearchAsync"/>, which also checks the mode and collection access afterwards.</summary>
+/// <summary>與 <see cref="RetrievalPipeline.SearchAsync"/> 相同的查詢規則；模式與集合權限由 pipeline 之後再檢查。</summary>
 internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<AdminRetrievalSearchRequest>
 {
     public override string ProblemCode => "knowledge_query_invalid";
@@ -19,7 +19,7 @@ internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<Ad
     }
 }
 
-/// <summary>Runs the retrieval pipeline as the administrator, with an optional mode and rerank override.</summary>
+/// <summary>以管理者身分執行檢索管線，可覆寫模式與 rerank，用於管理端測試檢索結果。</summary>
 internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
 {
     public static void Map(RouteGroupBuilder routes) => routes

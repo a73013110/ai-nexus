@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
-/// <summary>Asks a queued or running job of the user to stop; the worker finishes it as cancelled.</summary>
+/// <summary>要求停止使用者排隊中或執行中的工作；實際停止由 worker 完成，並收尾為 cancelled。</summary>
 internal sealed class CancelJob(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes

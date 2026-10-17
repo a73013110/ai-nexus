@@ -3,10 +3,7 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// Cached readings of every registered <see cref="IMonitoringSource"/>. Reading never waits: a stale source starts one
-/// background read (single-flight, own scope, observer traffic suppressed, <see cref="Timeout"/>) and the last reading is
-/// returned at once. Nothing is read while nobody asks for a snapshot. Once the application is stopping no read starts,
-/// and stopping waits (up to <see cref="Timeout"/>) for running ones, so none touches the database while it shuts down.
+/// 所有已註冊 <see cref="IMonitoringSource"/> 的快取讀數。讀取本身從不等待：過期的來源會啟動一次背景讀取（同時只允許一個、使用獨立 scope、抑制觀測流量，逾時為 <see cref="Timeout"/>），呼叫端則立即拿到上一次的讀數。沒有人要快照時完全不讀。應用程式停止中就不再啟動新讀取；停止時會等待進行中的讀取至多 <see cref="Timeout"/>，確保關機期間不再碰資料庫。
 /// </summary>
 public sealed partial class SubsystemReadings
 {
@@ -27,7 +24,7 @@ public sealed partial class SubsystemReadings
         lifetime?.ApplicationStopping.Register(Stop);
     }
 
-    /// <summary>The cached readings, ordered for display; starts reads for sources older than their refresh interval.</summary>
+    /// <summary>依顯示順序回傳快取讀數；超過更新間隔的來源會在此啟動新讀取。</summary>
     public MonitoredSubsystem[] Read()
     {
         var all = Entries();
@@ -42,7 +39,7 @@ public sealed partial class SubsystemReadings
         return result;
     }
 
-    /// <summary>Completes when every read started so far has finished; reads never fault.</summary>
+    /// <summary>等待目前已啟動的所有讀取完成；讀取本身不會拋出例外。</summary>
     public Task Settled => Task.WhenAll(Volatile.Read(ref entries)?.Select(x => x.Pending) ?? []);
 
     private Entry[] Entries()
@@ -51,7 +48,7 @@ public sealed partial class SubsystemReadings
         lock (gate)
         {
             if (entries is not null) return entries;
-            // Metadata only: one scope to read each source's id, name, order and interval, once.
+            // 只需要中繼資料（id、名稱、順序與更新間隔），用一個 scope 讀一次即可。
             using var scope = scopes.CreateScope();
             var built = registrations.DistinctBy(x => x.Type).Select(x => (Type: x.Type, Source: (IMonitoringSource)scope.ServiceProvider.GetRequiredService(x.Type)))
                 .OrderBy(x => x.Source.Order).ThenBy(x => x.Source.Id, StringComparer.Ordinal)
@@ -63,7 +60,7 @@ public sealed partial class SubsystemReadings
 
     private Task Start(Entry entry)
     {
-        // The viewer's request trace, log scopes and identity must not flow into a shared background read.
+        // 檢視者的請求追蹤、log scope 與身分不可流入共用的背景讀取。
         if (ExecutionContext.IsFlowSuppressed()) return Task.Run(() => ReadAsync(entry));
         using (ExecutionContext.SuppressFlow()) return Task.Run(() => ReadAsync(entry));
     }
@@ -82,14 +79,14 @@ public sealed partial class SubsystemReadings
         }
         catch (Exception error)
         {
-            // A monitoring read must never fail the page; the subsystem shows as unobserved until the next read.
+            // 監控讀取不可讓頁面失敗；該子系統會顯示為 unobserved，直到下一次讀取成功。
             if (!stopping) LogSourceUnavailable(logger, entry.Id, error.GetType().Name);
             reading = new(entry.Id, entry.Name, SubsystemStates.Unobserved, UnreadableSummary, [], clock.GetUtcNow());
         }
         entry.Complete(reading);
     }
 
-    /// <summary>Starts no further read and waits briefly for running ones; host shutdown calls it.</summary>
+    /// <summary>不再啟動新讀取，並短暫等待進行中的讀取；主機關閉時呼叫。</summary>
     public void Stop()
     {
         stopping = true;

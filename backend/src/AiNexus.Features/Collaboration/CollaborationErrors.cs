@@ -2,7 +2,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Collaboration;
 
-/// <summary>Public because every module that shares resources answers with these codes.</summary>
+/// <summary>刻意公開：所有分享資源的模組都要回傳這些代碼，前端才能一致處理。</summary>
 public static class CollaborationErrors
 {
     public static readonly Error ResourceNotFound = Error.NotFound("resource_not_found");

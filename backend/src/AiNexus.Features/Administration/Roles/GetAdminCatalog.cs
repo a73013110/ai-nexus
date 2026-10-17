@@ -18,7 +18,7 @@ public sealed record AdminFeatureDto(string Id, string Name, string Route, int S
 
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models, IReadOnlyList<NavigationGroupDto> NavigationGroups);
 
-/// <summary>Every role, group (with its model policy), feature and menu group, and the configured models.</summary>
+/// <summary>所有角色、群組（含模型策略）、功能與選單群組，以及已設定的模型。</summary>
 internal sealed class GetAdminCatalog(NexusDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes

@@ -3,10 +3,11 @@ using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Platform.Data;
 
-/// <summary>Turns a SQL connection or initialization failure into an operator message without credentials.</summary>
+/// <summary>將 SQL 連線或初始化異常轉化為便於維運人員排除問題的診斷訊息，並遮蔽敏感認證資訊。</summary>
 public static class DatabaseDiagnosis
 {
-    /// <summary><paramref name="database"/> is the <c>Databases</c> entry that failed, so the message names the keys to check.</summary>
+    /// <param name="exception">發生的例外狀況。</param>
+    /// <param name="database">發生失敗的 <c>Databases</c> 設定名稱，訊息中將明確標示該檢核鍵。</param>
     public static string Describe(Exception exception, string database)
     {
         var sql = exception as SqlException;

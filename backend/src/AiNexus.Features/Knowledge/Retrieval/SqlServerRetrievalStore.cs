@@ -28,7 +28,7 @@ public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IO
             WHERE @MinVectorScore = 0 OR 1.0 - v.[Distance] >= @MinVectorScore
             ORDER BY v.[Distance], a.[ChunkId]
             """;
-        // FREETEXTTABLE's global top_n_by_rank would truncate before ACL. Rank authorized matches instead.
+        // FREETEXTTABLE 的全域 top_n_by_rank 會在 ACL 過濾之前就截斷結果，所以改為只對已授權的命中排名。
         var ftsSql = !fts ? "SELECT CAST(NULL AS uniqueidentifier) AS ChunkId, CAST(NULL AS bigint) AS FtsRank WHERE 1 = 0" : """
             SELECT TOP (@FtsCandidates) a.[ChunkId], ROW_NUMBER() OVER (ORDER BY f.[RANK] DESC, a.[ChunkId]) AS [FtsRank]
             FROM Authorized a JOIN FREETEXTTABLE([knowledge].[Chunks], ([Text], [HeadingPath]), @Query, LANGUAGE 1028) f ON f.[KEY] = a.[SearchId]
@@ -56,7 +56,7 @@ public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IO
         }
         catch (SqlException error) when (fts && error.Number is 30010 or 30046 or 30053)
         {
-            // Installed components can still fail at runtime (word breaker / FDHost).
+            // 全文元件雖已安裝，執行期仍可能失敗（斷詞器或 FDHost），因此要把全文狀態快取設為未就緒。
             cache.Set("knowledge-fulltext-ready", false, TimeSpan.FromSeconds(30));
             if (mode == "hybrid" && vector is not null) {
                 RetrievalDiagnostics.Degraded(logger, "hybrid", "vector", "fulltext_unavailable", error);

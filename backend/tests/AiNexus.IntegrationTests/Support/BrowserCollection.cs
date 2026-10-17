@@ -1,6 +1,6 @@
 namespace AiNexus.IntegrationTests.Support;
 
-/// <summary>Dashboard browser tests each start Kestrel and Chromium; they run alone so timing assertions are not starved.</summary>
+/// <summary>每個 Dashboard 瀏覽器測試都會啟動 Kestrel 與 Chromium，因此獨立執行，避免計時斷言被其他測試搶走資源。</summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class BrowserCollection
 {

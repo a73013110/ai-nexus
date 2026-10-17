@@ -3,8 +3,8 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Collaboration;
 
 /// <summary>
-/// Another module's reason to refuse deleting a container, asked inside the deleting transaction before anything is
-/// written. Implemented by the module that owns the blocking records (Conversations: an answer still generating).
+/// 其他模組表達「不可刪除此容器」的理由。在刪除交易內、寫入任何資料之前詢問；由擁有阻擋紀錄的模組實作
+/// （例如對話模組：仍在生成中的回答）。
 /// </summary>
 public interface IContainerDeletionCheck
 {

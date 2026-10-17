@@ -26,7 +26,7 @@ public sealed class ModelCatalogTests
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
         Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.SupportsImages);
         Assert.Equal(1, provider.Checks);
-        // Capabilities are cached; configured generation parameters still reflect current options.
+        // 模型能力會快取，但生成參數（如 MaxOutputTokens）每次都讀取目前的選項，改設定後不必等快取過期。
         options.Value.Models[0].MaxOutputTokens = 128;
         Assert.Equal(128, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.MaxOutputTokens);
     }
@@ -45,7 +45,7 @@ public sealed class ModelCatalogTests
         Assert.Equal(1, provider.Calls);
         clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);
         provider.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        // Discovery now hangs; callers still get the cached models immediately, and only one refresh is started.
+        // 此時模型探索卡住：呼叫端仍會立即拿到快取的模型，而且背景刷新只會啟動一次。
         for (var i = 0; i < 3; i++) Assert.Single((await catalog.GetAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Models);
         await provider.SecondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.Equal(2, provider.Calls);

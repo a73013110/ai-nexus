@@ -11,7 +11,7 @@ public sealed record AdminConversationDto(Guid Id, string Title, DateTimeOffset 
 
 public sealed record AdminConversationPageDto(IReadOnlyList<AdminConversationDto> Items, int Total, int Offset);
 
-/// <summary>A user's conversations, 50 per page, optionally with deleted ones. The read is audited without the search text.</summary>
+/// <summary>某使用者的對話列表，每頁 50 筆，可選擇含已刪除。稽核只記錄「是否有搜尋」，不記錄搜尋文字本身。</summary>
 internal sealed class ListAdminUserConversations(NexusDbContext db, AdministrativeReadAudit reads)
 {
     public static void Map(RouteGroupBuilder routes) => routes

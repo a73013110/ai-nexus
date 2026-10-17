@@ -10,7 +10,7 @@ namespace AiNexus.Features.Administration.Users;
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 
-/// <summary>Replaces a user's roles. Audited; refused when it would remove the actor's own administrator access.</summary>
+/// <summary>整批取代使用者的角色。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
 internal sealed class SetUserRoles(NexusDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes

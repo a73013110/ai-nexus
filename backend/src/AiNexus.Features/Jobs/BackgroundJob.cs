@@ -67,7 +67,7 @@ internal sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<Back
         job.Property(x => x.IssueCode).HasMaxLength(40); job.Property(x => x.TraceId).HasMaxLength(32); job.Property(x => x.ParentSpanId).HasMaxLength(16);
         job.Property(x => x.ActiveKey).HasMaxLength(100); job.Property(x => x.ErrorCode).HasMaxLength(80); job.Property(x => x.ErrorMessage).HasMaxLength(240);
         job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL"); job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt }); job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
-        job.HasIndex(x => x.SubjectId); // Active work on a document or embedding profile.
+        job.HasIndex(x => x.SubjectId); // 依業務對象（文件或向量設定檔）查詢其工作。
     }
 }
 
@@ -75,7 +75,7 @@ internal static class BackgroundJobQueries
 {
     public static IQueryable<BackgroundJob> OwnedBy(this IQueryable<BackgroundJob> jobs, Guid owner) => jobs.Where(x => x.OwnerId == owner);
 
-    /// <summary>Re-reads a job after a bulk update; tracked entities are discarded first.</summary>
+    /// <summary>批次更新（ExecuteUpdate）後重新讀取工作；先清空 ChangeTracker，否則會拿到更新前的追蹤實體。</summary>
     public static async Task<Result<JobDto>> ReloadJobAsync(this NexusDbContext db, Guid owner, Guid id, CancellationToken ct)
     {
         db.ChangeTracker.Clear();

@@ -4,7 +4,7 @@ using AiNexus.Platform.Events;
 
 namespace AiNexus.Features.Monitoring.Presence;
 
-/// <summary>A signed-out browser session stops counting as live presence at once instead of after its heartbeat expires.</summary>
+/// <summary>使用者登出時，該瀏覽器工作階段立即不再計為即時在線，不必等心跳逾時。</summary>
 internal sealed class LeaveSignedOutSession(RuntimeTraffic traffic) : IDomainEventHandler<UserSignedOut>
 {
     public Task HandleAsync(UserSignedOut e, CancellationToken ct)

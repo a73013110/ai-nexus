@@ -8,14 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Administration;
 
-/// <summary>Grants the administrator role once to the accounts listed in <see cref="AdministrationOptions.BootstrapAdministrators"/>.</summary>
+/// <summary>依 <see cref="AdministrationOptions.BootstrapAdministrators"/> 所列的帳號，一次性授予管理者角色。</summary>
 public sealed class AdminBootstrap(NexusDbContext db, AccessService access, IOptions<AdministrationOptions> options) : ISignInGrant
 {
     private bool Applies(string account) => options.Value.BootstrapAdministrators.Contains(UserAccounts.AccountName(account), StringComparer.OrdinalIgnoreCase);
 
     public async Task<bool> PendingAsync(NexusUser user, CancellationToken ct)
         => Applies(user.Account) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
-    // A durable marker prevents a revoked grant from reappearing on login.
+    // 永久標記（AdministratorBootstrap）確保管理員權限被撤銷後，下次登入不會再被自動補回。
     public async Task ApplyAsync(NexusUser user, CancellationToken ct)
     {
         if (!Applies(user.Account) ||

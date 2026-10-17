@@ -8,8 +8,7 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Billing;
 
 /// <summary>
-/// Model prices, metered charges, usage and spend reports. Other modules meter calls through <see cref="BillingService"/>
-/// and read usage through <see cref="UsageReports"/>.
+/// 模型價格、計量費用、用量與花費報表。其他模組透過 <see cref="BillingService"/> 計量呼叫，並透過 <see cref="UsageReports"/> 讀取用量。
 /// </summary>
 public sealed class BillingModule : IFeatureModule
 {

@@ -15,22 +15,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
 
-/// <summary>All administrative mutations and their before/after record share one transaction.</summary>
+/// <summary>所有行政變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。</summary>
 public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    /// <summary>
-    /// An access-management change: <see cref="MutateAsync(string, string, Guid?, string, Func{Task{Result}}, CancellationToken)"/>
-    /// requiring <see cref="AdministrationConfiguration.Feature"/>.
-    /// </summary>
+
+    /// <summary>存取管理類變更，權限要求為 <see cref="AdministrationConfiguration.Feature"/>。</summary>
     internal Task<Result> MutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
         => MutateAsync(AdministrationConfiguration.Feature, action, resource, key, mutation, ct);
 
     /// <summary>
-    /// Under the administrative write lock and one serializable transaction: the actor must still hold
-    /// <paramref name="feature"/>, the before snapshot is taken, the mutation runs and is saved, the actor must keep that
-    /// feature, and the after snapshot is audited. Any failure, returned or an <see cref="ExternalServiceException"/>,
-    /// rolls back and is audited with its code.
+    /// 在行政寫入鎖與 Serializable 交易內執行變更。執行者必須在交易內仍持有 <paramref name="feature"/>（前後各檢一次，
+    /// 且不採用請求開始時授權用的快取）；任何失敗（回傳錯誤或 <see cref="ExternalServiceException"/>）都會回滾，並以錯誤代碼寫入稽核。
     /// </summary>
     internal async Task<Result> MutateAsync(string feature, string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
@@ -53,7 +49,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
         async Task<Error?> CommitAsync()
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            // Both checks read SQL inside this transaction, not the grants the request authorized with.
+            // 兩次權限檢查都在交易內讀 SQL，不信任請求一開始授權時的快取結果。
             access.Invalidate();
             if (!await HoldsAsync(actor, feature, ct)) return AccessControlErrors.FeatureForbidden;
             before = await SnapshotAsync(action, resource, key, ct);
@@ -68,7 +64,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
             return null;
         }
 
-        // Runs after the failed transaction is disposed. Do not accidentally save pending grants.
+        // 失敗交易釋放後才會執行。先清空 ChangeTracker，避免交易中尚未提交的授權變更被順便寫入。
         async Task RecordFailureAsync(string code)
         {
             db.ChangeTracker.Clear(); access.Invalidate();

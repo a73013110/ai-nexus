@@ -34,7 +34,7 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
     public async Task StartAsync(Guid id, CancellationToken ct)
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
-        if (charge is null) return; // Calls made before the billing migration have no invented price.
+        if (charge is null) return; // 遷移前的呼叫沒有費用紀錄，這裡不補算價格，費用保持未知。
         charge.StartedAt ??= clock.GetUtcNow(); charge.Outcome = "running";
     }
     public async Task MeterAsync(Guid id, long? input, long? output, long? cached, long? reasoning, CancellationToken ct, bool complete = false)
@@ -46,8 +46,8 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
         charge.UsageComplete |= complete;
     }
     /// <summary>
-    /// <see cref="MeterAsync"/> as one UPDATE for streaming callers, without loading the charge: a null keeps the stored
-    /// value and completion only ever turns on. Runs immediately, so call it inside the caller's transaction.
+    /// 串流呼叫端使用的 <see cref="MeterAsync"/> 單一 UPDATE 版本，不需先載入費用紀錄：null 保留既有值，完成旗標只會由 false 變為 true。
+    /// 立即執行，因此應在呼叫端的交易內呼叫。
     /// </summary>
     public async Task MeterInPlaceAsync(Guid id, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
     {

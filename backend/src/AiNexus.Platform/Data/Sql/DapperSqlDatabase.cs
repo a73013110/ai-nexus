@@ -3,10 +3,10 @@ using Dapper;
 
 namespace AiNexus.Platform.Data.Sql;
 
-/// <summary>Runs <see cref="ISqlDatabase{TDatabase}"/> commands through Dapper; subclasses decide where the connection comes from.</summary>
+/// <summary>透過 Dapper 執行 <see cref="ISqlDatabase{TDatabase}"/> 命令之基底類別；由子類別決定連線來源（共用或獨立連線池）。</summary>
 public abstract class DapperSqlDatabase<TDatabase> : ISqlDatabase<TDatabase>
 {
-    /// <summary>Runs <paramref name="command"/> on an open connection with the transaction it must join (if any).</summary>
+    /// <summary>在已開啟的連線上執行 <paramref name="command"/>，並帶入當前應加入之交易（若有）。</summary>
     protected abstract Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken);
 
     public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)

@@ -8,12 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Management;
 
-/// <summary>An edit names the <c>ExpectedVersion</c> it was based on; a newer saved version is a conflict.</summary>
+/// <summary>編輯時需帶上所依據的 <c>ExpectedVersion</c>；若已有更新的已儲存版本，就視為衝突。</summary>
 public sealed record ProjectRequest(string Name, string Description = "", string Instructions = "", int ExpectedVersion = 1, bool IsArchived = false);
 
 /// <summary>
-/// Description, instructions and version. An invalid name is reported first, with its own code, by the handler, so
-/// these rules only apply once the name is valid.
+/// 描述、指示與版本。名稱不合法時，handler 會先以自己的錯誤代碼回報，因此這些規則只在名稱合法後才適用。
 /// </summary>
 internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 {
@@ -30,7 +29,7 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
     }
 }
 
-/// <summary>Creates a personal project (at most 100), or saves a new version of one the user may edit.</summary>
+/// <summary>建立個人專案（最多 100 個），或儲存使用者可編輯的專案的新版本。</summary>
 internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
