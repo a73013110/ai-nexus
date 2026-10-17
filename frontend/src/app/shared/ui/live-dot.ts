@@ -2,9 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { BadgeTone } from './count-badge';
 
 /**
- * A small status dot. While `live`, a same-colour halo grows out of it and fades, slowly and
- * only in opacity and scale; a paused or warning state rests as a plain dot. Decorative: the
- * text beside it carries the state.
+ * 小型狀態點。`live` 時，同色的光暈會從它向外擴散並淡出，速度緩慢，且只變化透明度與縮放；
+ * 暫停或警告狀態則維持為普通的點。這是裝飾：旁邊的文字才承載狀態。
  */
 @Component({
   selector: 'nx-live-dot',

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorkspaceLayout } from './workspace-layout';
 import { Icon } from '@shared/ui/icon';
 
-/** The same reachable mobile navigation entry on chat, feature pages and readers. */
+/** 聊天、功能頁與閱讀器上相同的手機導覽入口。 */
 @Component({
   selector: 'nx-workspace-menu-button',
   imports: [Icon],

@@ -38,7 +38,7 @@ describe('NexusIsland', () => {
     expect(
       TestBed.inject(IslandService)
         .items()
-        .map((x) => x.id),
+        .map((item) => item.id),
     ).toEqual(['high', 'low']);
     fixture.destroy();
     expect(TestBed.inject(IslandService).items()).toEqual([]);

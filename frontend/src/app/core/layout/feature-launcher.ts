@@ -16,11 +16,10 @@ import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navi
 import { WorkspaceCommands } from './workspace-commands';
 
 /**
- * Every feature the account can open, in the administrators' menu groups (`navigationTree`) as
- * three-column icons or one per line: top-level features first, then each group with its
- * subgroups nested inside. Pinned features stay in their group with a pin mark, so the catalogue
- * never reshuffles; editing turns every entry into a pin toggle. A pinned current page is marked
- * once, on its pinned row.
+ * 帳號可以開啟的每個功能，依管理員的選單群組（`navigationTree`）排列，呈現為三欄圖示或每行一個：
+ * 最上層功能在前，接著是各群組，子群組巢狀放在其內。釘選的功能仍留在原群組並顯示釘選標記，
+ * 因此目錄不會重新洗牌；
+ * 編輯時每個項目都會變成釘選切換。目前頁面若已釘選，只在它的釘選列上標記一次。
  */
 @Component({
   selector: 'nx-feature-launcher',
@@ -143,8 +142,8 @@ export class FeatureLauncher {
   readonly editing = signal(false);
   readonly limit = PIN_LIMIT;
   /**
-   * One button flips between the two displays, so the toolbar keeps a single cell. It shows the
-   * display it switches to, the convention of a toggle whose two states are both views.
+   * 一個按鈕在兩種顯示之間切換，讓工具列只佔一格。它顯示的是切換後的顯示方式，
+   * 這是兩種狀態都是視圖的切換鈕的慣例。
    */
   readonly nextDisplay = computed<{ value: NavigationDisplay; label: string }>(() =>
     this.pins.display() === 'icons'
@@ -152,7 +151,7 @@ export class FeatureLauncher {
       : { value: 'icons', label: '切換為圖示顯示' },
   );
   readonly icon = featureIcon;
-  /** Template contexts are untyped; these restore the types for the recursive sections. */
+  /** 範本的脈絡沒有型別；這裡為遞迴的區段恢復型別。 */
   asFeatures = (features: unknown) => features as FeatureDto[];
   asNode = (node: unknown) => node as NavigationNode<FeatureDto>;
 }

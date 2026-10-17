@@ -14,8 +14,8 @@ export const jobStates: SelectOption[] = [
 ];
 
 /**
- * Local state shared by the workbench sections, provided by the page so a reset in one section
- * restores the others. Nothing here calls a model or writes data.
+ * 工作台各區段共用的本地狀態，由頁面提供，讓一個區段的重設能還原其他區段。
+ * 這裡不會呼叫模型，也不寫入資料。
  */
 @Injectable()
 export class DesignSamples {
@@ -24,7 +24,7 @@ export class DesignSamples {
   readonly title = signal(sampleTitle);
   readonly titleVersion = signal(0);
   readonly selection = signal('standard');
-  /** Bumped by the action menu; the inline title sample starts editing when it changes. */
+  /** 由動作選單遞增；內嵌標題範例在它改變時開始編輯。 */
   readonly editRequest = signal(0);
   readonly demo = signal<JobDto>({
     id: 'design-sample',
@@ -46,7 +46,7 @@ export class DesignSamples {
   private demoVersion = 0;
 
   restore() {
-    this.titleVersion.update((x) => x + 1);
+    this.titleVersion.update((item) => item + 1);
     this.title.set(sampleTitle);
     this.selection.set('standard');
     this.setState('completed');
@@ -54,9 +54,9 @@ export class DesignSamples {
   }
   setState(status: string) {
     this.demoVersion++;
-    const stage = jobStates.find((x) => x.value === status)?.label ?? '處理中';
-    this.demo.update((x) => ({
-      ...x,
+    const stage = jobStates.find((item) => item.value === status)?.label ?? '處理中';
+    this.demo.update((item2) => ({
+      ...item2,
       status,
       stage,
       completedUnits: status === 'completed' ? 3 : 0,
@@ -65,26 +65,26 @@ export class DesignSamples {
   }
   play() {
     const version = ++this.demoVersion;
-    this.demo.update((x) => ({
-      ...x,
+    this.demo.update((item3) => ({
+      ...item3,
       status: 'running',
       stage: '讀取文件',
       completedUnits: 0,
       errorMessage: null,
     }));
-    ['整理文字', '建立索引', '處理完成'].forEach((stage, i) =>
+    ['整理文字', '建立索引', '處理完成'].forEach((stage, index) =>
       this.scope.later(
         () => {
           if (version !== this.demoVersion) return;
-          this.demo.update((x) => ({
-            ...x,
+          this.demo.update((item4) => ({
+            ...item4,
             stage,
-            completedUnits: i + 1,
-            status: i === 2 ? 'completed' : 'running',
+            completedUnits: index + 1,
+            status: index === 2 ? 'completed' : 'running',
           }));
         },
-        (i + 1) * 700,
-        `design-stage-${i}`,
+        (index + 1) * 700,
+        `design-stage-${index}`,
       ),
     );
   }

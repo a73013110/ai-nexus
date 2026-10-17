@@ -90,7 +90,7 @@ export class InlineTitle {
   readonly scope = input.required<string>();
   readonly disabled = input(false);
   readonly appearance = input<'inline' | 'block'>('inline');
-  /** Off where a menu already offers renaming; double click and F2 still edit in place. */
+  /** 選單已提供重新命名時關閉；雙擊與 F2 仍可原地編輯。 */
   readonly editButton = input(true);
   readonly save = input.required<(value: string) => Promise<boolean>>();
   readonly editing = signal(false);

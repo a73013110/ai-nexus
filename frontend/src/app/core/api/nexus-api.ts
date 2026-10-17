@@ -7,7 +7,7 @@ import type {
   PreferencesDto,
 } from './schema';
 
-/** Sign-in, the conversation list and the run lifecycle used by the chat workspace. */
+/** 登入、對話列表與聊天工作區使用的執行生命週期。 */
 @Injectable({ providedIn: 'root' })
 export class NexusApi {
   private readonly api = inject(ApiClient);

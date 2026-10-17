@@ -3,7 +3,7 @@ import { Icon } from '@shared/ui/icon';
 
 export type SubmitPhase = 'idle' | 'loading' | 'success';
 
-/** A sign-in button whose content and shape morph from its label to loading to a docked check. */
+/** 登入按鈕，其內容與形狀會從標籤變為載入中，再變為停靠的勾號。 */
 @Component({
   selector: 'button[nxLoginSubmit]',
   styleUrl: './login-submit.scss',

@@ -93,7 +93,7 @@ export class MessageFeedback {
   private readonly scope = inject(ViewScope);
   private readonly savedRating = signal<number | null>(null);
   readonly rating = computed(() => this.savedRating() ?? this.message().feedbackRating ?? 0);
-  /** Supplementary details are read when the user first opens them. */
+  /** 補充細節在使用者第一次開啟時才讀取。 */
   private readonly requested = signal(false);
   private readonly detailsRead = apiResource({
     params: () => (this.requested() ? this.message().id : undefined),
@@ -147,8 +147,8 @@ export class MessageFeedback {
       this.rated.emit({ id, rating: value });
       this.requested.set(false);
       this.notice.set(value ? '回饋已儲存' : '回饋已移除');
-    } catch (e) {
-      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(e));
+    } catch (error2) {
+      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(error2));
     } finally {
       if (alive()) this.saving.set(false);
     }

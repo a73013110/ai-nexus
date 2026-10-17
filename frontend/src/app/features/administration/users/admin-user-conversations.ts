@@ -22,9 +22,8 @@ import { RunTimingDisplay } from '@features/conversations/run-timing';
 import { UserConversationReader } from './user-conversation-reader';
 
 /**
- * The read-only conversations tab: a searchable list beside the conversation being read, each
- * scrolling on its own. Narrow screens show one at a time; choosing a conversation opens it and
- * its back button returns to the same row.
+ * 唯讀的對話分頁：左側是可搜尋的列表，右側是正在閱讀的對話，兩者各自捲動。窄螢幕一次只顯示一個；
+ * 選取對話會開啟它，而其返回鈕會回到同一列。
  */
 @Component({
   selector: 'nx-admin-user-conversations',
@@ -55,7 +54,7 @@ export class AdminUserConversations {
   constructor() {
     this.reader.start();
   }
-  /** On narrow screens the list gives way to the reading, so focus follows to its back button. */
+  /** 窄螢幕上列表讓位給閱讀區，因此焦點會移到其返回鈕。 */
   open(id: string) {
     this.reader.read(id);
     if (this.narrow())

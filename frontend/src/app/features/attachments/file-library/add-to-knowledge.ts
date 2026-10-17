@@ -77,7 +77,7 @@ export class AddToKnowledge {
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly file = signal<LibraryFileDto | null>(null);
-  /** Each opening reads the collections again; nothing is read before the first one. */
+  /** 每次開啟都會重新讀取集合；第一次開啟前不讀取任何東西。 */
   private readonly opened = signal(0);
   private readonly collectionsRead = apiResource({
     params: () => this.opened() || undefined,

@@ -22,9 +22,8 @@ const CONNECTION: Record<string, string> = {
 };
 
 /**
- * The page's answer at a glance: one headline for the system's health, the next step, where the
- * data comes from and how fresh it is, plus a dot per dependency and subsystem. The only part of
- * the page that reads the one-second clock.
+ * 頁面的一眼答案：系統健康的一個標題、下一步、資料來源與新鮮度，以及每個依賴與子系統的一個點，
+ * 這是頁面中唯一讀取一秒時鐘的部分。
  */
 @Component({
   selector: 'nx-monitoring-hero',
@@ -83,7 +82,10 @@ export class MonitoringHero {
         at: this.data().at,
         minutes: this.data().windowMinutes || this.store.minutes(),
       }),
-    { equal: (a, b) => a.key === b.key && a.title === b.title && a.detail === b.detail },
+    {
+      equal: (first, second) =>
+        first.key === second.key && first.title === second.title && first.detail === second.detail,
+    },
   );
   readonly live = computed(
     () => this.data().enabled && this.store.connection() === 'live' && !this.store.stale(),
@@ -103,16 +105,18 @@ export class MonitoringHero {
       items: readonly { id: string; name: string; status: string }[],
       words: (status: string) => string,
     ) => {
-      const problems = items.filter((i) => i.status === 'degraded' || i.status === 'failing');
-      const healthy = items.filter((i) => i.status === 'healthy').length;
+      const problems = items.filter(
+        (index) => index.status === 'degraded' || index.status === 'failing',
+      );
+      const healthy = items.filter((index2) => index2.status === 'healthy').length;
       return {
         key,
         label,
         problems: problems.length,
-        dots: items.map((i) => ({
-          id: i.id,
-          tone: toneOf(i.status),
-          title: `${i.name}：${words(i.status)}`,
+        dots: items.map((index3) => ({
+          id: index3.id,
+          tone: toneOf(index3.status),
+          title: `${index3.name}：${words(index3.status)}`,
         })),
         text: !items.length
           ? '尚未設定'

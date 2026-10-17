@@ -160,9 +160,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
                 {{ copy.copied() ? '已複製' : '複製結果' }}
               </button>
               @if (canReplace()) {
-                <button class="primary-button" (click)="replace.emit(result()); close()">
-                  套用到選取段落
-                </button>
+                <button class="primary-button" (click)="replaceAndClose()">套用到選取段落</button>
               }
               @if (session.has('artifacts')) {
                 <button class="secondary-button" (click)="mode.set('save')">另存成果</button>
@@ -184,7 +182,7 @@ export class TextTools {
   readonly projectId = input<string | null>(null);
   readonly canReplace = input(false);
   readonly replace = output<string>();
-  /** A new artifact was saved; the tools then open it. */
+  /** 新的成品已儲存；工具隨後會開啟它。 */
   readonly created = output<void>();
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly surface = viewChild.required<CompactDialog>('surface');
@@ -240,7 +238,7 @@ export class TextTools {
     this.title.set(
       text
         .split('\n')
-        .find((x) => x.trim())
+        .find((item) => item.trim())
         ?.replace(/^#+\s*/, '')
         .slice(0, 80) || '工作成果',
     );
@@ -298,6 +296,10 @@ export class TextTools {
   stop() {
     this.controller?.abort();
     this.busy.set(false);
+  }
+  replaceAndClose() {
+    this.replace.emit(this.result());
+    this.close();
   }
   close() {
     if (this.saving()) return;

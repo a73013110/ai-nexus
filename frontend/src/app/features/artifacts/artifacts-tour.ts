@@ -2,7 +2,7 @@ import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The opening step points to the chat's "儲存成果" only for viewers with chat;
- * the card step is skipped while no document is listed.
+ * 卡片步驟在沒有文件列出時會略過。
  */
 export function artifactsTour(options: { chat: boolean }): ProductTourDefinition {
   return {
@@ -41,17 +41,17 @@ export function artifactsTour(options: { chat: boolean }): ProductTourDefinition
 }
 
 /**
- * The document tour. Which steps exist follows the viewer's rights and whether the editor is open,
- * and the version picker shows only once a second version exists.
+ * 文件導覽。哪些步驟存在取決於檢視者的權限與編輯器是否開啟；
+ * 版本選擇器只在第二個版本存在後才出現。
  */
 export function artifactTour(options: {
-  /** The viewer may edit the version on screen. */
+  /** 檢視者可以編輯畫面上的版本。 */
   editable: boolean;
   /** The editor is open (編輯 or 並排預覽). */
   editing: boolean;
   /** The owner's "成果操作" menu is shown. */
   manage: boolean;
-  /** Read-only links can be created. */
+  /** 可以建立唯讀連結。 */
   shared: boolean;
 }): ProductTourDefinition {
   const steps: TourStep[] = [

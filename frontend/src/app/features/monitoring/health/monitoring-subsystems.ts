@@ -9,8 +9,8 @@ import { MonitoringStore } from '../monitoring-store';
 import { factText, factTone, subsystemStatus, toneOf } from '../monitoring-format';
 
 /**
- * One card per module that reports its own health, in the server's order. A card shows the first
- * three facts and opens the rest. On a phone, cards without a problem fold into a disclosure.
+ * 每個回報自身健康的模組一張卡片，依伺服器的順序排列。卡片顯示前三項事實，其餘收合；
+ * 手機上沒有問題的卡片會收進一個可展開的區塊。
  */
 @Component({
   selector: 'nx-monitoring-subsystems',
@@ -84,26 +84,27 @@ export class MonitoringSubsystems {
   readonly selected = output<string>();
   readonly phone = mediaQuery(below('phone'));
   readonly cards = computed(() =>
-    this.store.subsystems().map((s) => ({
-      id: s.id,
-      name: s.name,
-      status: s.status,
-      tone: toneOf(s.status),
-      statusText: subsystemStatus(s.status),
-      summary: s.summary || (s.status === 'unobserved' ? '尚未取得這個子系統的狀態。' : ''),
-      facts: s.facts.slice(0, 3).map((f) => ({
-        id: f.id,
-        label: f.label,
-        text: factText(f),
-        tone: factTone(f.tone),
+    this.store.subsystems().map((segment) => ({
+      id: segment.id,
+      name: segment.name,
+      status: segment.status,
+      tone: toneOf(segment.status),
+      statusText: subsystemStatus(segment.status),
+      summary:
+        segment.summary || (segment.status === 'unobserved' ? '尚未取得這個子系統的狀態。' : ''),
+      facts: segment.facts.slice(0, 3).map((file) => ({
+        id: file.id,
+        label: file.label,
+        text: factText(file),
+        tone: factTone(file.tone),
       })),
-      more: Math.max(0, s.facts.length - 3),
+      more: Math.max(0, segment.facts.length - 3),
     })),
   );
   readonly problems = computed(() =>
-    this.cards().filter((c) => c.status === 'degraded' || c.status === 'failing'),
+    this.cards().filter((card) => card.status === 'degraded' || card.status === 'failing'),
   );
   readonly calm = computed(() =>
-    this.cards().filter((c) => c.status !== 'degraded' && c.status !== 'failing'),
+    this.cards().filter((card2) => card2.status !== 'degraded' && card2.status !== 'failing'),
   );
 }

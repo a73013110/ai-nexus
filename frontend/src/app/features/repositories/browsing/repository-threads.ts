@@ -43,7 +43,7 @@ interface ThreadRow {
   refs: string;
 }
 
-/** Issues or pull requests of the repository, filtered by state; issues can also be searched. */
+/** 儲存庫的議題或拉取請求，依狀態篩選；議題也可搜尋。 */
 @Component({
   selector: 'nx-repository-threads',
   imports: [RouterLink, Icon, Notice, SearchField, ViewSwitch],
@@ -153,12 +153,12 @@ export class RepositoryThreads {
         ? { key, kind: this.kind(), state: this.state(), q: this.q(), page: this.page() }
         : undefined;
     },
-    loader: async ({ key, kind, state, q, page }): Promise<ThreadRead> => {
+    loader: async ({ key, kind, state, q: query2, page }): Promise<ThreadRead> => {
       const data =
         kind === 'pulls'
           ? await this.api.pulls(key, state, page)
-          : await this.api.issues(key, state, page, q);
-      return { id: `${key.owner}/${key.name}:${kind}:${state}:${q}`, page, data };
+          : await this.api.issues(key, state, page, query2);
+      return { id: `${key.owner}/${key.name}:${kind}:${state}:${query2}`, page, data };
     },
   });
   private readonly id = computed(
@@ -168,16 +168,16 @@ export class RepositoryThreads {
     const read = this.read.value();
     return read && read.id === this.id() ? read : null;
   });
-  /** The last list stays, dimmed, while another state or search loads. */
+  /** 切換到其他狀態或搜尋載入時，上一份列表會保留並變暗。 */
   readonly stale = computed(() => !!this.read.value() && !this.latest());
   readonly rows = linkedSignal<ThreadRead | undefined, ThreadRow[]>({
     source: this.read.value,
     computation: (read, previous) => {
       if (!read) return previous?.value ?? [];
-      const rows = read.data.items.map((x) => this.row(x));
+      const rows = read.data.items.map((item) => this.row(item));
       if (read.page === 1) return rows;
-      const seen = new Set(previous?.value.map((x) => x.number));
-      return [...(previous?.value ?? []), ...rows.filter((x) => !seen.has(x.number))];
+      const seen = new Set(previous?.value.map((item) => item.number));
+      return [...(previous?.value ?? []), ...rows.filter((item) => !seen.has(item.number))];
     },
   });
   readonly hasMore = computed(() => !!this.latest()?.data.hasMore);
@@ -208,7 +208,7 @@ export class RepositoryThreads {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((x) => x + 1);
+    if (!this.loading()) this.page.update((item) => item + 1);
   }
   private row(item: RepositoryIssueDto | RepositoryPullDto): ThreadRow {
     const open = item.state === 'open';

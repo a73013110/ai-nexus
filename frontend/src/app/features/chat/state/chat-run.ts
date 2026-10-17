@@ -3,7 +3,7 @@ import { ApiError } from '@core/errors/safe-errors';
 import type { RunDto } from '@core/api/schema';
 import { RunStream } from '@core/stream/run-stream';
 
-/** The one generation this browser follows: its status, streamed text and connection. */
+/** 此瀏覽器追蹤的那一次生成：其狀態、串流文字與連線。 */
 @Injectable({ providedIn: 'root' })
 export class ChatRun {
   private readonly stream = inject(RunStream);
@@ -14,8 +14,9 @@ export class ChatRun {
   private subscription: AbortController | null = null;
 
   /**
-   * Follows events until the run settles, then lets the caller reload what it produced. A newer
-   * follow, a stop or a reset ends this one silently; other failures mark the connection lost.
+   * 追蹤事件直到執行結束，接著讓呼叫端重新讀取它產生的內容。較新的追蹤、停止或重設會靜
+   * 默結束這次追蹤；
+   * 其他失敗則把連線標為已中斷。
    */
   async follow(run: RunDto, settled: (terminal: RunDto) => Promise<void>) {
     this.subscription?.abort();
@@ -42,7 +43,7 @@ export class ChatRun {
     }
   }
 
-  /** Stops following after a server-side cancel, keeping the partial answer on screen. */
+  /** 伺服器端取消後停止追蹤，並保留畫面上的部分回答。 */
   stopped(final: RunDto) {
     this.subscription?.abort();
     this.text.set(final.content);

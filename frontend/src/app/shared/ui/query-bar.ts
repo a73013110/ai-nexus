@@ -7,13 +7,16 @@ import type { QueryChip, QueryState } from './query-state';
 let sequence = 0;
 
 /**
- * 資料頁的查詢列，搭配 `QueryState`：欄位只改草稿，按「查詢」（或在欄位按 Enter）才套用，「重設」套用預設值。
+ * 資料頁的查詢列，搭配 `QueryState`：欄位只改草稿，按「查詢」（或在欄位按 Enter）才套用，「重設」
+ * 套用預設值。
  * 草稿未套用時顯示提示；已套用條件顯示成 chip，可逐一移除。
  *
  * 投影位置：`[query-lead]` 放在欄位上方（會立即套用的分類 `ViewSwitch`）；預設 slot 放主要欄位；
  * `[query-more]` 放較少用的欄位，收在「＋條件」popover（需 `more`）。
- * 表單加 `novalidate`：必填欄位可能藏在關閉的 popover 裡，瀏覽器原生驗證會卡住送出，改由 state 的 `validate` 判斷。
- * 查詢中的按鈕用 `aria-disabled` 而非 `disabled`：停用的按鈕無法聚焦，剛按下的按鈕或移除 chip 後的焦點目標會讓焦點掉回 body。
+ * 表單加 `novalidate`：必填欄位可能藏在關閉的 popover 裡，瀏覽器原生驗證會卡住送出，改由 state 的
+ * `validate` 判斷。
+ * 查詢中的按鈕用 `aria-disabled` 而非 `disabled`：停用的按鈕無法聚焦，剛按下的按鈕或移除 chip
+ * 後的焦點目標會讓焦點掉回 body。
  */
 @Component({
   selector: 'nx-query-bar',
@@ -141,7 +144,8 @@ export class QueryBar {
   remove(chip: QueryChip<any>, index: number) {
     if (this.busy()) return;
     this.state().commit(chip.clear);
-    // 被移除的 chip 按鈕會消失，焦點移到補上同位置的 chip；沒有 chip 了就移到「查詢」，避免焦點掉回 body。
+    // 被移除的 chip 按鈕會消失，焦點移到補上同位置的 chip；沒有 chip 了就移到「查詢」，
+    // 避免焦點掉回 body。
     requestAnimationFrame(() => {
       const form = this.form().nativeElement;
       const buttons = form.querySelectorAll<HTMLButtonElement>('[data-chip-remove]');

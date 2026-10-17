@@ -1,4 +1,4 @@
-/** Coalesces bursts without losing snapshots or delaying a terminal status. */
+/** 合併突發的更新，不會遺失快照，也不會延遲終結狀態。 */
 export class FramePublisher {
   private pending: number | null = null;
   private value = '';

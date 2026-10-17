@@ -19,7 +19,7 @@ import {
   validIssueCode,
 } from './safe-errors';
 
-/** A page exception leaves the app usable, so its notice clears itself unless something replaced it. */
+/** 頁面例外不會讓應用失去可用性，因此它的通知會自行清除，除非被其他東西取代。 */
 const PAGE_NOTICE_MS = 12_000;
 
 @Injectable({ providedIn: 'root' })
@@ -57,7 +57,7 @@ export class ClientIssues implements ErrorHandler {
   }
   async report(error: unknown, kind: 'exception' | 'rejection') {
     if (isCancellation(error) || error instanceof ClientValidationError) return;
-    // The server only receives the error type; during development the stack is the only way to find the cause.
+    // 伺服器只接收錯誤類型；開發時只有堆疊才能找到原因。
     if (isDevMode()) console.error(error);
     const current = this.auth.guard();
     const generation = this.auth.generation();
@@ -70,7 +70,7 @@ export class ClientIssues implements ErrorHandler {
       this.notice.set(safeMessage(error));
       return;
     }
-    // Never transmit message, stack, page URL, prompt, document or arbitrary rejection values.
+    // 絕不傳送訊息、堆疊、頁面 URL、提問、文件或任意的 rejection 值。
     const type =
       error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : 'Unknown';
     const now = Date.now();
@@ -101,7 +101,7 @@ export class ClientIssues implements ErrorHandler {
         if (this.notice() === localMessage) this.show(message);
       }
     } catch {
-      /* Keep the explicitly local code. A failed report must never report itself. */
+      /* 保留明確的本地代碼。回報失敗本身絕不可以再回報自己。 */
     }
   }
 }

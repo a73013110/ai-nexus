@@ -9,8 +9,8 @@ export interface MonitoringTarget {
 }
 
 /**
- * The health issues, critical first as the server orders them. An issue about a dependency or a
- * subsystem opens its details. Rows settle in and collapse away as issues come and go.
+ * 健康問題，依伺服器排序，嚴重的在前。關於依賴或子系統的問題會展開其細節；
+ * 問題出現或消失時，列會滑入或收合。
  */
 @Component({
   selector: 'nx-monitoring-issues',
@@ -118,8 +118,8 @@ export class MonitoringIssues {
   private readonly store = inject(MonitoringStore);
   readonly selected = output<MonitoringTarget>();
   readonly issues = computed(() => {
-    const dependencies = new Set(this.store.dependencies().map((d) => d.id));
-    const subsystems = new Set(this.store.subsystems().map((s) => s.id));
+    const dependencies = new Set(this.store.dependencies().map((draft) => draft.id));
+    const subsystems = new Set(this.store.subsystems().map((segment) => segment.id));
     return (this.store.health()?.issues ?? []).map((issue) => ({
       ...issue,
       tone: issue.severity === 'critical' ? ('danger' as const) : ('warning' as const),

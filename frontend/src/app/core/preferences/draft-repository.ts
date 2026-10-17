@@ -54,15 +54,15 @@ export class DraftRepository {
           key,
           JSON.stringify({ text, attachmentIds, updatedAt: Date.now() } satisfies Draft),
         );
-      // Keep storage bounded per account; drafts are intentionally local to this browser.
+      // 依帳號限制儲存空間；草稿刻意只存在於此瀏覽器中。
       const prefix = `nexus.draft.${user}.`;
       const keys = Object.keys(localStorage).filter((key) => key.startsWith(prefix));
       if (keys.length > 40)
         keys
           .sort(
-            (a, b) =>
-              (decodeDraft(localStorage.getItem(a))?.updatedAt ?? 0) -
-              (decodeDraft(localStorage.getItem(b))?.updatedAt ?? 0),
+            (text2, text3) =>
+              (decodeDraft(localStorage.getItem(text2))?.updatedAt ?? 0) -
+              (decodeDraft(localStorage.getItem(text3))?.updatedAt ?? 0),
           )
           .slice(0, keys.length - 40)
           .forEach((key) => localStorage.removeItem(key));

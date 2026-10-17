@@ -80,7 +80,7 @@ describe('DataTable', () => {
     fixture.detectChanges();
     const row = (fixture.nativeElement as HTMLElement).querySelector('tr')!;
     const action = row.querySelector<HTMLElement>('[data-row-action]')!;
-    // The browser's focus-visible decision, which a dialog closed with Escape sets to true.
+    // 瀏覽器的 focus-visible 判斷；以 Escape 關閉的對話框會把它設為 true。
     let visible = false;
     Object.defineProperty(action, 'matches', {
       value: (selector: string) =>
@@ -100,10 +100,10 @@ describe('DataTable', () => {
       expect(row.classList).toContain('is-focus-returned');
       action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       expect(row.classList).not.toContain('is-focus-returned');
-      // Opened from the keyboard, the returning focus keeps its ring.
+      // 以鍵盤開啟時，返回的焦點會保留外框。
       focus(inside);
       expect(row.classList).not.toContain('is-focus-returned');
-      // A focus move from a live control is the keyboard's, never a return.
+      // 來自有作用的控制項的焦點移動屬於鍵盤，絕不算是返回。
       visible = false;
       focus(row.ownerDocument.body);
       visible = true;

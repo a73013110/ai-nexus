@@ -2,33 +2,32 @@ import { DestroyRef, inject, linkedSignal, type WritableSignal } from '@angular/
 import { ThemeService } from '@core/preferences/theme-service';
 
 export interface FollowScrollOptions {
-  /** The scrolling element; it may come and go with the view. */
+  /** 捲動的元素；它可能隨視圖出現或消失。 */
   viewport: () => HTMLElement | undefined;
-  /** Whether to follow from the start; recomputed when the signals it reads change. */
+  /** 是否從開頭開始跟隨；所讀取的 signal 變化時會重新計算。 */
   initial?: () => boolean;
-  /** Distance from the bottom, in pixels, that still counts as reading the latest. */
+  /** 距離底部多少像素以內仍視為正在閱讀最新內容。 */
   threshold?: number;
 }
 
 export interface FollowScroll {
-  /** True while growing content keeps the view at the bottom. */
+  /** 內容持續增長時，讓視圖維持在底部。 */
   readonly following: WritableSignal<boolean>;
-  /** Content grew: scrolls to the bottom on the next frame while following, once per frame. */
+  /** 內容增長：跟隨中時，下一幀捲到底部（每幀最多一次）。 */
   schedule(): void;
-  /** Bind to the viewport's `(scroll)`: reaching the bottom resumes following, leaving pauses. */
+  /** 綁定到視口的 `(scroll)`：捲回底部會恢復跟隨，離開則暫停。 */
   scrolled(): void;
-  /** Stops following where the view is, e.g. before jumping elsewhere in the content. */
+  /** 在目前的位置停止跟隨，例如要跳到內容的其他地方之前。 */
   pause(): void;
-  /** Scrolls to the bottom and follows from there; `smooth` honours reduced motion. */
+  /** 捲到底部並從那裡開始跟隨；`smooth` 會遵守減少動態效果。 */
   toLatest(smooth?: boolean): void;
-  /** Records a position set in code, so the next scroll event compares against it. */
+  /** 記錄程式設定的位置，讓下一次捲動事件可以與它比較。 */
   mark(): void;
 }
 
 /**
- * Stick-to-bottom for streaming views (chat answers, logs): new content keeps the newest line in
- * view until the reader scrolls up, and scrolling back to the bottom resumes it. Call it in an
- * injection context; a pending frame ends with the caller.
+ * 串流視圖（聊天回答、日誌）的貼底功能：新內容會讓最新一行留在視野中，直到讀者往上捲；
+ * 捲回底部時會恢復。在 injection context 中呼叫；尚未完成的幀由呼叫端結束。
  */
 export function followScroll(options: FollowScrollOptions): FollowScroll {
   const theme = inject(ThemeService);
@@ -62,7 +61,7 @@ export function followScroll(options: FollowScrollOptions): FollowScroll {
       const view = options.viewport();
       if (!view) return;
       const near = view.scrollHeight - view.scrollTop - view.clientHeight < threshold;
-      // A smooth jump upwards begins near the bottom; that first event must not resume following.
+      // 向上的平滑跳動從接近底部開始；第一個事件不可以因此恢復跟隨。
       following.set(near && (following() || view.scrollTop > lastTop));
       lastTop = view.scrollTop;
       if (!near) cancel();

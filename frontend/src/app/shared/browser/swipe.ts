@@ -1,13 +1,13 @@
-/** Movement before a press becomes a drag, so taps and clicks on a handle still work. */
+/** 按下後移動多少距離才算拖曳，讓把手上的點擊仍然有效。 */
 const SLOP = 6;
-/** Release speed (px/ms) that dismisses a short, quick flick. */
+/** 能被視為快速輕彈而關閉的放開速度（px/ms）。 */
 const FLING = 0.45;
-/** Only the last stretch of movement counts toward the release speed. */
+/** 放開速度只看最後一段移動。 */
 const WINDOW = 100;
 
 /**
- * Follows one pointer along an axis. Toward the way out the surface tracks the pointer; the other
- * way it resists, since that is not a way out. It dismisses past a distance or on a fast flick.
+ * 沿著單一軸追蹤一個指標。朝離開的方向時表面跟隨指標；反方向則加上阻力，因為那不是離開。
+ * 超過距離或快速輕彈時就關閉。
  */
 export class SwipeTracker {
   offset = 0;
@@ -26,7 +26,7 @@ export class SwipeTracker {
     while (this.samples.length > 2 && time - this.samples[0][1] > WINDOW) this.samples.shift();
     return this.offset;
   }
-  /** Velocity toward the way out at `time`; a pointer that paused before release has none. */
+  /** `time` 時朝離開方向的速度；放開前已停住的指標速度為零。 */
   velocity(time: number) {
     const recent = this.samples.filter(([, at]) => time - at <= WINDOW);
     if (recent.length < 2) return 0;
@@ -41,22 +41,22 @@ export class SwipeTracker {
 }
 
 export interface SwipeSession {
-  /** Distance past which a release dismisses. */
+  /** 放開時超過此距離就關閉。 */
   distance: number;
-  /** Called with the offset on every move once the press has become a drag. */
+  /** 按下變成拖曳後，每次移動都以位移量呼叫。 */
   move(offset: number): void;
-  /** Called once a drag ends: released past the distance or flung, or not (also on cancel). */
+  /** 拖曳結束時呼叫一次：超過距離或被輕彈而放開，或沒有（取消時也會）。 */
   end(dismiss: boolean): void;
 }
 
 export interface SwipeGesture {
   axis: 'x' | 'y';
   direction: 1 | -1;
-  /** Starts a session for this press, or null when it is not on a handle right now. */
+  /** 為此次按下開始一個工作階段；若目前不在把手上則為 null。 */
   begin(event: PointerEvent): SwipeSession | null;
 }
 
-/** How long a spring back runs (`--motion-panel`) before the surface takes its usual transitions. */
+/** 回彈動畫的長度（`--motion-panel`），之後表面才套用一般的過場。 */
 export function swipeSettleTime(element: HTMLElement) {
   return parseFloat(getComputedStyle(element).getPropertyValue('--motion-panel')) || 240;
 }
@@ -64,9 +64,9 @@ export function swipeSettleTime(element: HTMLElement) {
 const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 
 /**
- * Swipe-to-dismiss on handles only (sheet headers, the drawer heading), so scrolling and text
- * selection elsewhere stay with the browser. Handles set `touch-action: none` in CSS; a press only
- * becomes a drag after the slop along the axis, and the click that follows a drag is swallowed.
+ * 只有把手可以滑動關閉（表單標題、抽屜標題），其他地方的捲動與文字選取仍交給瀏覽器。
+ * 把手在 CSS 設定 `touch-action: none`；按下後只有沿著軸超過容許範圍才變成拖曳，
+ * 拖曳後緊接的點擊會被吞掉。
  */
 export function bindSwipe(target: HTMLElement | Document, gesture: SwipeGesture) {
   const at = (event: PointerEvent) => (gesture.axis === 'x' ? event.clientX : event.clientY);
@@ -89,7 +89,7 @@ export function bindSwipe(target: HTMLElement | Document, gesture: SwipeGesture)
         try {
           (press.target as Element).setPointerCapture(press.pointerId);
         } catch {
-          // The element left the DOM; the document listeners still follow the pointer.
+          // 元素已離開 DOM；文件層級的監聽器仍會跟隨指標。
         }
         document.getSelection()?.removeAllRanges();
       }
@@ -118,7 +118,7 @@ export function bindSwipe(target: HTMLElement | Document, gesture: SwipeGesture)
   return () => target.removeEventListener('pointerdown', down);
 }
 
-/** A drag that ends on a button must not also press it. */
+/** 在按鈕上放開的拖曳，不可以同時觸發該按鈕。 */
 function swallowClick() {
   const swallow = (event: Event) => {
     event.stopPropagation();

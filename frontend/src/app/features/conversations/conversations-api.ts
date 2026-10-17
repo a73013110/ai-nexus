@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import type { ConversationBackup, ConversationSettingsRequest } from '@core/api/schema';
 
-/** Organizing conversations: labels, per-conversation settings and backup import. */
+/** 整理對話：標籤、每個對話的設定與備份匯入。 */
 @Injectable({ providedIn: 'root' })
 export class ConversationsApi {
   private readonly api = inject(ApiClient);

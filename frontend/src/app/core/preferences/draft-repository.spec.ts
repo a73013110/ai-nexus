@@ -44,7 +44,8 @@ describe('Personal draft persistence', () => {
     vi.spyOn(Date, 'now').mockImplementation(() => ++time);
     drafts.save('bob', 'keep', '其他人的草稿', []);
     localStorage.setItem('nexus.draft.alice.broken', '{broken');
-    for (let i = 0; i < 42; i++) drafts.save('alice', String(i), `提問 ${i}`, []);
+    for (let index = 0; index < 42; index++)
+      drafts.save('alice', String(index), `提問 ${index}`, []);
     expect(drafts.load('alice', '0')).toBeNull();
     expect(drafts.load('alice', '1')).toBeNull();
     expect(drafts.load('alice', '2')?.text).toBe('提問 2');

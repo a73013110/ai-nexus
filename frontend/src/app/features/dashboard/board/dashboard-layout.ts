@@ -9,13 +9,12 @@ import {
 } from '../widgets/dashboard-widgets';
 
 /**
- * Tiles that no longer exist anywhere (the administrator-only sections and the service status
- * tile, which belong to the administration pages). Saved arrangements may still name them; they
- * are dropped on read so they neither show nor linger.
+ * 已不存在於任何地方的磚塊（僅限管理員的區段，以及服務狀態磚塊，它們屬於系統管理頁面）。
+ * 已儲存的排列仍可能提到它們；讀取時會丟棄，讓它們既不顯示也不殘留。
  */
 const RETIRED = new Set(['section:monitoring', 'section:platform', 'services']);
 
-/** A tile's place and shape as the viewer arranged it. */
+/** 檢視者排列後，磚塊的位置與形狀。 */
 export interface TileState {
   id: string;
   size: TileSize;
@@ -26,27 +25,31 @@ export interface PlacedTile extends TileState {
   widget: DashboardWidget;
 }
 
-/** Reads a saved arrangement, dropping anything malformed instead of failing. */
+/** 讀取已儲存的排列；格式錯誤的項目會被丟棄，不會失敗。 */
 export function parseTiles(value: unknown): TileState[] | null {
   const tiles = (value as { v?: number; tiles?: unknown } | null)?.tiles;
   if (!Array.isArray(tiles)) return null;
   return tiles
     .filter(
-      (x): x is TileState =>
-        !!x &&
-        typeof x.id === 'string' &&
-        x.id.length <= 120 &&
-        !RETIRED.has(x.id) &&
-        isTileSize(x.size),
+      (item2): item2 is TileState =>
+        !!item2 &&
+        typeof item2.id === 'string' &&
+        item2.id.length <= 120 &&
+        !RETIRED.has(item2.id) &&
+        isTileSize(item2.size),
     )
     .slice(0, 100)
-    .map((x) => ({ id: x.id, size: x.size, tall: x.tall === true, hidden: x.hidden === true }));
+    .map((item) => ({
+      id: item.id,
+      size: item.size,
+      tall: item.tall === true,
+      hidden: item.hidden === true,
+    }));
 }
 
 /**
- * The saved arrangement with the widgets available now. Saved tiles keep their order (including
- * ones unavailable at the moment, so a feature granted again returns to its place); widgets the
- * viewer has never arranged, such as a new feature's section, are added at the end.
+ * 依目前可用的小工具，回傳已儲存的排列。已儲存的磚塊保留原順序（包括暫時不可用的，
+ * 因此重新授權的功能會回到原位）；檢視者從未排列過的小工具（例如新功能的區段）則加在最後。
  */
 export function mergeTiles(
   widgets: readonly DashboardWidget[],
@@ -64,10 +67,10 @@ export function mergeTiles(
   return [...tiles, ...widgets.filter((widget) => !seen.has(widget.id)).map(defaults)];
 }
 
-/** Moves `id` to where `target` is, before it when moving up and after it when moving down. */
+/** 把 `id` 移到 `target` 的位置：往上移時放在它之前，往下移時放在它之後。 */
 export function moveTile(tiles: readonly TileState[], id: string, target: string): TileState[] {
-  const from = tiles.findIndex((x) => x.id === id),
-    to = tiles.findIndex((x) => x.id === target);
+  const from = tiles.findIndex((item) => item.id === id),
+    to = tiles.findIndex((item) => item.id === target);
   if (from < 0 || to < 0 || from === to) return [...tiles];
   const result = [...tiles];
   const [tile] = result.splice(from, 1);
@@ -75,13 +78,13 @@ export function moveTile(tiles: readonly TileState[], id: string, target: string
   return result;
 }
 
-/** Changes one tile's size, height or visibility; every size can follow every other. */
+/** 改變一個磚塊的大小、高度或可見性；每種大小都可以接到其他大小。 */
 export function updateTile(
   tiles: readonly TileState[],
   id: string,
   change: Partial<Omit<TileState, 'id'>>,
 ): TileState[] {
-  return tiles.map((x) => (x.id === id ? { ...x, ...change } : x));
+  return tiles.map((item3) => (item3.id === id ? { ...item3, ...change } : item3));
 }
 
 function read(key: string): unknown {
@@ -96,14 +99,13 @@ function write(key: string, value: unknown) {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* A convenience only; storage can be disabled by policy. */
+    /* 只是便利功能；儲存可能被政策停用。 */
   }
 }
 
 /**
- * How this browser shows the overview for the signed-in account: per scope, which tiles appear in
- * what order and size. Presentation only; it never changes what is read. (A visual style saved by
- * earlier versions under `nexus.dashboard.style.*` is no longer read.)
+ * 此瀏覽器如何為已登入的帳號顯示總覽：依範圍決定哪些磚塊以什麼順序與大小出現。
+ * 只影響呈現，不影響讀取的內容。（舊版以 `nexus.dashboard.style.*` 儲存的視覺樣式已不再讀取。）
  */
 @Injectable()
 export class DashboardLayout {
@@ -122,23 +124,23 @@ export class DashboardLayout {
   private readonly saved = linkedSignal(() => parseTiles(read(this.key())));
   readonly tiles = computed(() => mergeTiles(this.widgets(), this.saved()));
   private readonly placed = computed(() => {
-    const widgets = new Map(this.widgets().map((x) => [x.id, x]));
+    const widgets = new Map(this.widgets().map((item) => [item.id, item]));
     return this.tiles()
-      .filter((x) => widgets.has(x.id))
-      .map((x): PlacedTile => ({ ...x, widget: widgets.get(x.id)! }));
+      .filter((item) => widgets.has(item.id))
+      .map((item4): PlacedTile => ({ ...item4, widget: widgets.get(item4.id)! }));
   });
-  readonly visible = computed(() => this.placed().filter((x) => !x.hidden));
-  readonly hidden = computed(() => this.placed().filter((x) => x.hidden));
-  /** The viewer arranged this scope; reset returns to the defaults. */
+  readonly visible = computed(() => this.placed().filter((item) => !item.hidden));
+  readonly hidden = computed(() => this.placed().filter((item) => item.hidden));
+  /** 檢視者為此範圍做過排列；重設會回到預設值。 */
   readonly customized = computed(() => this.saved() !== null);
 
   move(id: string, target: string) {
     this.commit(moveTile(this.tiles(), id, target));
   }
-  /** Moves a tile by `offset` places among the visible tiles. */
+  /** 在可見磚塊之間，把磚塊往後移 `offset` 個位置。 */
   shift(id: string, offset: number) {
     const visible = this.visible();
-    const index = visible.findIndex((x) => x.id === id);
+    const index = visible.findIndex((item) => item.id === id);
     const target = visible[Math.max(0, Math.min(visible.length - 1, index + offset))];
     if (index >= 0 && target) this.move(id, target.id);
   }

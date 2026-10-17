@@ -23,8 +23,8 @@ const arrays = [
 ] as const;
 
 /**
- * Accepts version 2 snapshots only and normalises the parts a newer server might leave out, so a
- * malformed frame fails loudly (and reconnects) instead of rendering half a page.
+ * 只接受版本 2 的快照，並把較新伺服器可能省略的部分補齊；格式錯誤的串流幀會明確失敗（並重新連線），
+ * 而不會只渲染半個頁面。
  */
 export function readSnapshot(value: unknown): MonitoringSnapshot {
   const snapshot = value as MonitoringSnapshot | null;
@@ -43,38 +43,43 @@ export function readSnapshot(value: unknown): MonitoringSnapshot {
   return {
     ...snapshot,
     recentTraffic: snapshot.recentTraffic ?? snapshot.traffic,
-    subsystems: snapshot.subsystems.map((s) => ({
-      ...s,
-      facts: Array.isArray(s.facts) ? s.facts : [],
+    subsystems: snapshot.subsystems.map((segment) => ({
+      ...segment,
+      facts: Array.isArray(segment.facts) ? segment.facts : [],
     })),
   };
 }
 
-/** Series compare by their newest completed bucket: a bucket never changes once it is closed. */
+/** 數列以最新完成的桶比較：桶關閉後就不會再變。 */
 const sameSeries = (
-  a: readonly (TrafficPoint | ResourcePoint)[],
-  b: readonly (TrafficPoint | ResourcePoint)[],
+  items: readonly (TrafficPoint | ResourcePoint)[],
+  items2: readonly (TrafficPoint | ResourcePoint)[],
 ) =>
-  a === b ||
-  (a.length === b.length && a.at(0)?.at === b.at(0)?.at && a.at(-1)?.at === b.at(-1)?.at);
+  items === items2 ||
+  (items.length === items2.length &&
+    items.at(0)?.at === items2.at(0)?.at &&
+    items.at(-1)?.at === items2.at(-1)?.at);
 const healthKey = (health: HealthSummary | null) =>
   health
     ? health.status +
       '|' +
       health.issues
-        .map((i) => [i.code, i.severity, i.subject, i.title, i.detail].join('·'))
+        .map((index) =>
+          [index.code, index.severity, index.subject, index.title, index.detail].join('·'),
+        )
         .join('|')
     : '';
-const sameJson = <T>(a: T, b: T) => a === b || JSON.stringify(a) === JSON.stringify(b);
+const sameJson = <T>(first2: T, second: T) =>
+  first2 === second || JSON.stringify(first2) === JSON.stringify(second);
 
 /**
- * Speaks only once a new health state holds for two snapshots in a row, so a value hovering at a
- * threshold does not chatter; the first settled state is the page itself and is not announced.
+ * 只有新的健康狀態連續兩次快照都成立才發聲，避免數值在門檻附近來回跳動；
+ * 第一次穩定的狀態就是頁面本身，不會播報。
  */
 export class AnnouncementGate {
   private pending = '';
   private settled: string | null = null;
-  /** Returns the text to announce, or null. */
+  /** 回傳要播報的文字，或 null。 */
   observe(key: string, text: string): string | null {
     if (key !== this.pending) {
       this.pending = key;
@@ -98,13 +103,12 @@ export class MonitoringStore {
   readonly minutes = signal(5);
   readonly paused = signal(false);
   readonly now = signal(Date.now());
-  /** The polite announcement of a settled health change (see `AnnouncementGate`). */
+  /** 穩定的健康狀態變化的禮貌播報（見 `AnnouncementGate`）。 */
   readonly announcement = signal('');
 
-  // Slices keep their reference while their content is unchanged, so a 3-second snapshot only
-  // re-renders the parts that actually moved.
+  // 切片在內容沒變時保留參考，所以每 3 秒的快照只重新渲染真正變動的部分。
   readonly health = computed(() => this.snapshot()?.health ?? null, {
-    equal: (a, b) => healthKey(a) === healthKey(b),
+    equal: (first3, second2) => healthKey(first3) === healthKey(second2),
   });
   readonly timeline = computed<readonly TrafficPoint[]>(() => this.snapshot()?.timeline ?? [], {
     equal: sameSeries,
@@ -124,13 +128,13 @@ export class MonitoringStore {
   readonly issueCount = computed(() => this.health()?.issues.length ?? 0);
   readonly worstSeverity = computed<'critical' | 'warning' | null>(() => {
     const issues = this.health()?.issues ?? [];
-    return issues.some((i) => i.severity === 'critical')
+    return issues.some((index2) => index2.severity === 'critical')
       ? 'critical'
       : issues.length
         ? 'warning'
         : null;
   });
-  /** Data older than four refreshes, or no live stream, is shown as such. */
+  /** 資料超過四次更新，或沒有即時串流時，會以此狀態顯示。 */
   readonly stale = computed(() => {
     const snapshot = this.snapshot();
     return (
@@ -161,7 +165,7 @@ export class MonitoringStore {
       document.removeEventListener('visibilitychange', visibility);
     });
   }
-  /** The one-second clock behind staleness and uptime; it stops while the tab is hidden. */
+  /** 過期判斷與運行時間所依賴的一秒時鐘；分頁隱藏時停止。 */
   private tick() {
     clearInterval(this.clock);
     this.now.set(Date.now());
@@ -178,7 +182,7 @@ export class MonitoringStore {
     this.restart();
   }
   toggle() {
-    this.paused.update((v) => !v);
+    this.paused.update((flag) => !flag);
     this.error.set('');
     this.restart();
   }
@@ -188,7 +192,7 @@ export class MonitoringStore {
     this.retries = 0;
     this.restart();
   }
-  /** Applies one snapshot from the stream. */
+  /** 套用來自串流的一份快照。 */
   receive(value: unknown) {
     const snapshot = readSnapshot(value);
     this.snapshot.set(snapshot);
@@ -196,7 +200,7 @@ export class MonitoringStore {
     const said = this.gate.observe(
       snapshot.health.status +
         ':' +
-        snapshot.health.issues.map((i) => i.code + '/' + i.subject).join(','),
+        snapshot.health.issues.map((index3) => index3.code + '/' + index3.subject).join(','),
       healthAnnouncement(snapshot.health),
     );
     if (said) this.announcement.set(said);
@@ -237,7 +241,7 @@ export class MonitoringStore {
         this.armWatchdog(Math.max(15000, snapshot.refreshSeconds * 4000));
       }
       if (signal.aborted || revision !== this.revision) return;
-      // The server ends every stream after ten minutes so the cookie is checked again; that is not an error.
+      // 伺服器每十分鐘會結束一次串流，好重新檢查 cookie；這不是錯誤。
       if (received) {
         this.restart();
         return;
@@ -252,7 +256,7 @@ export class MonitoringStore {
         this.error.set(safeMessage(error));
         return;
       }
-      // A newer stream of this account (another window) took over; reconnecting would take it back in turn.
+      // 同一帳號的較新串流（另一個視窗）已接手；此時重新連線會反過來搶回。
       if (error instanceof ApiError && error.code === 'stream_superseded') {
         this.paused.set(true);
         this.connection.set('paused');

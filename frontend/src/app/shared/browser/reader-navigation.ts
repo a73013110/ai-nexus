@@ -12,7 +12,7 @@ export interface ReaderOrigin {
   navigationId: number;
 }
 
-/** Only workspace destinations are valid, including when a reader URL is shared. */
+/** 只有工作區的目的地有效，即使閱讀器的 URL 被分享也一樣。 */
 export function readerReturnUrl(value: unknown): string | null {
   if (
     typeof value !== 'string' ||
@@ -55,7 +55,7 @@ export class ReaderNavigation {
   constructor() {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart && this.active) {
-        // Covers the browser Back button as well as the reader's own return action.
+        // 同時涵蓋瀏覽器的上一頁按鈕與閱讀器自己的返回動作。
         if (event.url === this.active.url) this.returning = this.active;
         this.active = null;
       }

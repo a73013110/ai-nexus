@@ -32,7 +32,7 @@ export function presenceFeature(url: string): string | null {
   return features.has(feature) ? feature : null;
 }
 
-/** A single application heartbeat. It records a fixed page category and activity state only. */
+/** 單一應用程式心跳，只記錄固定的頁面類別與活動狀態。 */
 @Injectable({ providedIn: 'root' })
 export class BrowserPresence {
   private readonly api = inject(ApiClient);
@@ -56,7 +56,7 @@ export class BrowserPresence {
     document.addEventListener('visibilitychange', visibility);
     this.router.events
       .pipe(
-        filter((e) => e instanceof NavigationEnd),
+        filter((event2) => event2 instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
       .subscribe(() => this.schedule(Math.max(0, 5000 - (Date.now() - this.lastHeartbeat))));
@@ -109,7 +109,7 @@ export class BrowserPresence {
       });
       enabled = result.enabled;
     } catch {
-      /* Presence is advisory; telemetry failures never interrupt the user's work. */
+      /* 在線狀態只供參考；遙測失敗絕不中斷使用者的工作。 */
     }
     if (revision === this.revision && enabled) this.schedule(25000);
   }

@@ -1,14 +1,14 @@
 export interface LruCacheOptions<K, V> {
-  /** Most entries kept. */
+  /** 保留的最多項目數。 */
   maxEntries: number;
-  /** Most total weight kept (for example characters); a single heavier value is not cached. */
+  /** 保留的最大總權重（例如字元數）；單一過重的值不會被快取。 */
   maxWeight?: number;
   weigh?: (value: V, key: K) => number;
-  /** Called when a value leaves the cache by eviction, replacement or `clear`. */
+  /** 值因淘汰、替換或 `clear` 離開快取時呼叫。 */
   evicted?: (value: V, key: K) => void;
 }
 
-/** Bounded least-recently-used map. `get` refreshes recency; the oldest entries go first. */
+/** 有上限的最近最少使用對應表。`get` 會更新新近度；最舊的項目先被淘汰。 */
 export class LruCache<K, V> {
   private readonly entries = new Map<K, { value: V; weight: number }>();
   private readonly options: LruCacheOptions<K, V>;
@@ -25,7 +25,7 @@ export class LruCache<K, V> {
   get(key: K): V | undefined {
     const entry = this.entries.get(key);
     if (!entry) return undefined;
-    // Map iteration follows insertion order; re-inserting marks the entry most recent.
+    // Map 的迭代依插入順序；重新插入會把該項目標記為最新。
     this.entries.delete(key);
     this.entries.set(key, entry);
     return entry.value;

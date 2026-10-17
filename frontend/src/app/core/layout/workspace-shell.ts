@@ -13,9 +13,9 @@ import { WorkspaceLayout } from './workspace-layout';
 import { WorkspaceSidebar } from './workspace-sidebar';
 
 /**
- * The signed-in frame. The sidebar lives here once, so navigating between pages keeps its state
- * and lets motion continue across routes; pages contribute only their main area, an optional
- * sidebar panel and their Ctrl+K commands.
+ * 已登入的外框。側邊欄只在這裡存在一次，因此在頁面之間導覽時會保留其狀態，且動效可以跨路由延續；
+ * 頁面只提供主要區域、
+ * 選用的側邊欄面板，以及它們的 Ctrl+K 指令。
  */
 @Component({
   selector: 'nx-workspace-shell',
@@ -66,7 +66,7 @@ export class WorkspaceShell {
   run(id: string) {
     this.layout.closeMobile();
     const feature = id.startsWith('feature:')
-      ? this.pins.features().find((x) => 'feature:' + x.id === id)
+      ? this.pins.features().find((item) => 'feature:' + item.id === id)
       : null;
     if (feature) void this.router.navigateByUrl(feature.route!);
     else this.workspaceCommands.source()?.run(id);

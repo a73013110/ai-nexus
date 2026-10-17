@@ -14,7 +14,9 @@ import { emptyLogFilter, type LogFilter } from './diagnostics-api';
 
 /** GUID 格式的搜尋要比對哪個欄位：同一種格式可能是 Job、Run 或 Operation，由使用者指定。 */
 export type LogGuidField = 'runId' | 'jobId' | 'operationId';
-/** 日誌頁的查詢條件。查證代碼、TraceId、GUID 與訊息文字共用一個搜尋欄，依格式判斷（`searchKind`）。 */
+/**
+ * 日誌頁的查詢條件。查證代碼、TraceId、GUID 與訊息文字共用一個搜尋欄，依格式判斷（`searchKind`）。
+ */
 export interface LogQuery {
   range: TimeRange;
   levels: LogLevel[];
@@ -54,7 +56,9 @@ export const LOG_MORE_FIELDS: { key: LogMoreField; label: string; maxLength: num
 ];
 const DEFAULT_RANGE = '24h';
 const DAY = hoursAgo(24);
-/** 與伺服器 `Diagnostics.MaxQueryDays` 的預設值相同；調整設定時伺服器仍會擋，這裡只是先給明確的訊息。 */
+/**
+ * 與伺服器 `Diagnostics.MaxQueryDays` 的預設值相同；調整設定時伺服器仍會擋，這裡只是先給明確的訊息。
+ */
 export const MAX_QUERY_DAYS = 31;
 const TRACE = /^[a-f\d]{32}$/i;
 const ISSUE = /^NX-[a-f\d]{32}$/i;

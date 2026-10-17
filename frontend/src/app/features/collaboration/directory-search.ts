@@ -6,8 +6,8 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { CollaborationApi } from './collaboration-api';
 
 /**
- * People picker lookup: the directory is searched once typing pauses, from two characters on.
- * Results leave out the signed-in user and anyone `chosen` already lists. Needs a `ViewScope`.
+ * 人員選擇器的查詢：輸入暫停後才搜尋目錄，從兩個字元起算。
+ * 結果會排除已登入的使用者與 `chosen` 已列出的人。需要 `ViewScope`。
  */
 export function directorySearch(chosen: () => string[]) {
   const api = inject(CollaborationApi);
@@ -22,7 +22,7 @@ export function directorySearch(chosen: () => string[]) {
   const results = computed<DirectoryUserDto[]>(() => {
     if (text().trim() !== query()) return [];
     const excluded = new Set([session.me()?.id, ...chosen()]);
-    return (read.value() ?? []).filter((x) => !excluded.has(x.id));
+    return (read.value() ?? []).filter((item) => !excluded.has(item.id));
   });
   return {
     text: text.asReadonly(),

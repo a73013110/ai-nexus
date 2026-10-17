@@ -5,7 +5,7 @@ import { chargeKind, money } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 import { compactNumber, figureMoney, metricFormatter } from '@shared/browser/format';
 
-/** The headline figures for the period and the work in progress now, each with its trend. */
+/** 期間的標題數字與目前進行中的工作，各附其趨勢。 */
 @Component({
   selector: 'nx-overview-widget',
   imports: [NumberTicker, Sparkline],
@@ -48,7 +48,7 @@ export class OverviewWidget {
     const generating = this.store.metric('chat', 'generating') ?? 0,
       jobs = this.store.metric('tasks', 'active') ?? 0;
     const count = metricFormatter('count');
-    // Headline counts shorten past a hundred thousand so they fit the narrowest tile.
+    // 標題計數超過十萬時會縮寫，才能放進最窄的磚塊。
     const figure = (value: number) =>
       Math.abs(value) >= 100_000 ? compactNumber(value) : count(value);
     return [
@@ -62,7 +62,7 @@ export class OverviewWidget {
         hint:
           (total ? chargeKind(total.kind) : '期間沒有已知費用') +
           (unknown ? ` · 各類型共 ${unknown} 次費用未知` : ''),
-        trend: this.store.spendDaily().map((x) => x.value),
+        trend: this.store.spendDaily().map((item) => item.value),
         live: false,
       },
       {
@@ -73,7 +73,7 @@ export class OverviewWidget {
         exact: count(data.spend.requests),
         unit: '次',
         hint: `${data.spend.pendingCalls} 次待結算 · 含搜尋、OCR、索引與評測`,
-        trend: this.store.callsDaily().map((x) => x.value),
+        trend: this.store.callsDaily().map((item) => item.value),
         live: false,
       },
       {
@@ -84,7 +84,7 @@ export class OverviewWidget {
         exact: count(tokens.input + tokens.output),
         unit: '',
         hint: `輸入 ${count(tokens.input)} · 輸出 ${count(tokens.output)}`,
-        trend: this.store.tokensDaily().map((x) => x.value),
+        trend: this.store.tokensDaily().map((item) => item.value),
         live: false,
       },
       {

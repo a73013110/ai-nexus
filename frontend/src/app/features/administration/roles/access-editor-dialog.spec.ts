@@ -77,7 +77,7 @@ function setup(testing = false) {
       { provide: WorkspaceSession, useValue: { testing: signal(testing) } },
     ],
   });
-  // The editor's logic is under test; its template needs browser layout APIs jsdom lacks.
+  // 測試的是編輯器的邏輯；它的範本需要 jsdom 沒有的瀏覽器版面 API。
   TestBed.overrideComponent(AccessEditorDialog, {
     set: {
       template: '<dialog #editorDialog></dialog><nx-confirm-dialog />',
@@ -105,9 +105,9 @@ describe('AccessEditorDialog', () => {
   it('previews the enabled features of the enabled groups a role would join', () => {
     const { dialog } = setup();
     dialog.open('role', role);
-    expect(dialog.proposedFeatures().map((x) => x.id)).toEqual(['chat']);
+    expect(dialog.proposedFeatures().map((item) => item.id)).toEqual(['chat']);
     dialog.update('ids', ['basic', 'review']);
-    expect(dialog.proposedFeatures().map((x) => x.id)).toEqual(['chat', 'repositories']);
+    expect(dialog.proposedFeatures().map((item) => item.id)).toEqual(['chat', 'repositories']);
     dialog.update('enabled', false);
     expect(dialog.proposedFeatures()).toEqual([]);
   });
@@ -137,7 +137,9 @@ describe('AccessEditorDialog', () => {
     const { dialog } = setup();
     dialog.open('group', group);
     expect(
-      dialog.featureChoices().map((x) => [x.name, x.options.map((option) => option.label)]),
+      dialog
+        .featureChoices()
+        .map((item) => [item.name, item.options.map((option) => option.label)]),
     ).toEqual([
       ['最上層', ['停用功能（停用）']],
       ['工作台', ['對話']],
@@ -147,7 +149,11 @@ describe('AccessEditorDialog', () => {
     expect(dialog.groupChoices()).toEqual([
       expect.objectContaining({ name: '全部功能群組', options: expect.any(Array) }),
     ]);
-    expect(dialog.groupChoices()[0].options.map((x) => x.id)).toEqual(['basic', 'review', 'admin']);
+    expect(dialog.groupChoices()[0].options.map((item) => item.id)).toEqual([
+      'basic',
+      'review',
+      'admin',
+    ]);
   });
 
   it('names a feature by id and route, leaves out a missing route and keeps its order', async () => {
@@ -180,7 +186,7 @@ describe('AccessEditorDialog', () => {
   it('moves a feature to the end of another menu group, or to the top level', async () => {
     const { dialog, api } = setup();
     dialog.open('feature', catalog.features[0] as AdminFeatureDto);
-    expect(dialog.placements().map((x) => x.label)).toEqual([
+    expect(dialog.placements().map((item2) => item2.label)).toEqual([
       '最上層（不分群）',
       '工作台',
       '系統管理',
@@ -222,7 +228,7 @@ describe('AccessEditorDialog', () => {
     expect(store.reordered).toHaveBeenCalled();
     expect(store.saved).not.toHaveBeenCalled();
     dialog.open('menu', navigationGroups[1]);
-    expect(dialog.placements().map((x) => x.value)).toEqual(['', 'work']);
+    expect(dialog.placements().map((item) => item.value)).toEqual(['', 'work']);
     dialog.update('name', '系統');
     await dialog.save(new Event('submit'));
     expect(api.updateNavigationGroup).toHaveBeenCalledWith('system', {
@@ -266,10 +272,10 @@ describe('AccessEditorDialog', () => {
     const { dialog, api } = setup();
     dialog.open('group', group);
     expect(dialog.dirty()).toBe(false);
-    // Nothing to save: the save is refused like its disabled button.
+    // 沒有可儲存的內容：儲存會像其停用的按鈕一樣被拒絕。
     await dialog.save(new Event('submit'));
     expect(api.group).not.toHaveBeenCalled();
-    // The same ids in another order, and a blank token limit, save the same policy.
+    // 相同的 id 以不同順序排列，且空白的 token 上限，儲存的政策相同。
     dialog.update('ids', ['off', 'repositories']);
     dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, tokenLimits: { m: ' ' } });
     expect(dialog.dirty()).toBe(false);
@@ -277,10 +283,10 @@ describe('AccessEditorDialog', () => {
     dialog.update('storage', '3');
     dialog.update('enabled', false);
     expect(dialog.dirty()).toBe(true);
-    // One save covers both tabs, so the tab holding the change is marked.
-    expect(dialog.groupSections().map((x) => x.dirty)).toEqual([true, false]);
+    // 一次儲存涵蓋兩個分頁，所以持有變更的那個分頁會被標記。
+    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false]);
     dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, restricted: true });
-    expect(dialog.groupSections().map((x) => x.dirty)).toEqual([true, true]);
+    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, true]);
     dialog.revert();
     expect(dialog.dirty()).toBe(false);
     expect(dialog.editor()!.enabled).toBe(true);

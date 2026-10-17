@@ -1,19 +1,20 @@
 /**
- * Keeps docked content (the composer, bottom sheets) above the on-screen keyboard.
- * `interactive-widget=resizes-content` (index.html) makes Chromium shrink the layout viewport, and
- * with it `dvh`, while the keyboard is up. Safari ignores it and only shrinks the visual viewport,
- * so the covered height is published as `--keyboard-inset` for the frame to subtract, and the
- * document scroll Safari adds to reveal the field is undone, since the frame has moved up instead.
+ * 讓停靠的內容（輸入框、底部面板）留在螢幕鍵盤之上。
+ * `interactive-widget=resizes-content`（index.html）讓 Chromium
+ * 在鍵盤開啟時縮小版面視口（連帶縮小 `dvh`）。
+ * Safari 會忽略它，只縮小視覺視口，
+ * 因此被遮住的高度會發布為 `--keyboard-inset` 供框架扣除；
+ * Safari 為露出欄位而加上的文件捲動也會被抵銷，因為框架已經往上移動。
  */
 export function trackKeyboardInset() {
   const viewport = window.visualViewport;
   if (!viewport) return () => undefined;
   const root = document.documentElement;
   let frame = 0;
-  // Smaller gaps are a desktop scrollbar or a collapsing toolbar, not a keyboard.
+  // 較小的間隙是桌面的捲軸或收合的工具列，不是鍵盤。
   const keyboard = 80;
   const measure = () => {
-    // Pinch zoom also shrinks the visual viewport; only an unzoomed one means a keyboard.
+    // 雙指縮放也會縮小視覺視口；只有未縮放時的視口，才代表鍵盤開啟。
     const covered = viewport.scale > 1.01 ? 0 : Math.round(window.innerHeight - viewport.height);
     const inset = covered >= keyboard ? covered : 0;
     if (inset) root.style.setProperty('--keyboard-inset', inset + 'px');

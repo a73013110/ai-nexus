@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { StatusBadge } from '@shared/ui/status-badge';
 
-/** Whether a user, role, group or feature is switched on; disabled rows stand out as a warning. */
+/** 使用者、角色、群組或功能是否開啟；停用的列會以警告標示。 */
 @Component({
   selector: 'nx-access-status',
   imports: [StatusBadge],

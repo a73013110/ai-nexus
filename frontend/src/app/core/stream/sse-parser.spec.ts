@@ -11,7 +11,7 @@ describe('SSE framing', () => {
     const frames = new SseParser().feed(
       ': heartbeat\n\nid: 1\ndata: a\ndata: b\n\nid: 2\ndata: c\n\n',
     );
-    expect(frames.map((x) => x.data)).toEqual(['a\nb', 'c']);
+    expect(frames.map((item) => item.data)).toEqual(['a\nb', 'c']);
   });
   it('bounds memory when the server never terminates a frame', () => {
     expect(() => new SseParser().feed('x'.repeat(1048577))).toThrow();

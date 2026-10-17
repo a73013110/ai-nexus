@@ -7,8 +7,8 @@ import {
 } from '@core/layout/navigation-tree';
 
 /**
- * Feature names in menu order, under the path of their menu group. Without `groups` every feature
- * sits in one unlabelled list.
+ * 依選單順序列出功能名稱，置於其選單群組的路徑之下。沒有 `groups` 時，每個功能都
+ * 位於一份沒有標題的清單中。
  */
 @Component({
   selector: 'nx-feature-summary',

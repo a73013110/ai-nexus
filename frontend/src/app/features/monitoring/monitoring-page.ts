@@ -95,7 +95,7 @@ export class MonitoringPage {
     { value: '15', label: '15 分鐘' },
   ];
   readonly drawerTitle = computed(() => DRAWER_TITLES[this.selection()?.kind ?? 'dependency']);
-  /** Whether the inspector is open; its content stays while it leaves. */
+  /** 檢視器是否開啟；退場時內容會保留。 */
   readonly drawerOpen = signal(false);
   readonly openSessionId = computed(() =>
     this.drawerOpen() ? (this.selectedSession()?.id ?? null) : null,
@@ -106,12 +106,12 @@ export class MonitoringPage {
   });
   readonly liveSession = computed(() => {
     const id = this.selectedSession()?.id;
-    return (id && this.store.snapshot()?.sessions.find((s) => s.id === id)) || null;
+    return (id && this.store.snapshot()?.sessions.find((segment) => segment.id === id)) || null;
   });
   readonly liveDependency = computed(() => {
     const selection = this.selection();
     return selection?.kind === 'dependency'
-      ? (this.store.dependencies().find((d) => d.id === selection.id) ?? null)
+      ? (this.store.dependencies().find((draft) => draft.id === selection.id) ?? null)
       : null;
   });
   readonly subsystemId = computed(() => {
@@ -120,7 +120,7 @@ export class MonitoringPage {
   });
   readonly liveSubsystem = computed(() => {
     const id = this.subsystemId();
-    return (id && this.store.subsystems().find((s) => s.id === id)) || null;
+    return (id && this.store.subsystems().find((segment2) => segment2.id === id)) || null;
   });
   readonly summary = computed(() =>
     monitoringSummary(
@@ -135,7 +135,7 @@ export class MonitoringPage {
   readonly pageSessions = computed(() => this.people()?.list()?.visible() ?? []);
   readonly sessionIndex = computed(() => {
     const id = this.selectedSession()?.id;
-    return id ? this.pageSessions().findIndex((s) => s.id === id) : -1;
+    return id ? this.pageSessions().findIndex((segment3) => segment3.id === id) : -1;
   });
   constructor() {
     void this.load();

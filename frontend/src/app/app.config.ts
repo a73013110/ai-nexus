@@ -16,7 +16,7 @@ export const appConfig: ApplicationConfig = {
     { provide: ErrorHandler, useExisting: ClientIssues },
     provideAppInitializer(() => {
       const issues = inject(ClientIssues);
-      // Extensions and cross-origin scripts are not ours to report: they carry no error object or another origin.
+      // 擴充功能與跨來源的腳本不屬於我們要回報的範圍：它們不帶錯誤物件，或來自另一個來源。
       const error = (event: ErrorEvent) => {
         if (
           !event.error ||

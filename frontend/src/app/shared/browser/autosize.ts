@@ -8,7 +8,7 @@ import {
   input,
 } from '@angular/core';
 
-/** Uses CSS min/max heights, so typography and design tokens remain authoritative. */
+/** 使用 CSS 的 min／max 高度，因此字體與設計 token 仍是權威來源。 */
 @Directive({ selector: 'textarea[nxAutosize]', host: { '(input)': 'schedule()' } })
 export class Autosize {
   readonly nxAutosize = input('');

@@ -113,19 +113,21 @@ export class DocumentViewer {
   });
   readonly total = computed(() => this.pdfPages() || this.document()?.pageCount || 1);
   readonly pageOptions = computed(() =>
-    Array.from({ length: this.total() }, (_, i) => ({
-      value: String(i + 1),
-      label: `第 ${i + 1} 頁`,
+    Array.from({ length: this.total() }, (_, index) => ({
+      value: String(index + 1),
+      label: `第 ${index + 1} 頁`,
     })),
   );
   readonly zoomOptions = ['0.75', '1', '1.25', '1.5', '2'].map((value) => ({
     value,
     label: `${Number(value) * 100}%`,
   }));
-  readonly text = computed(() => this.pages().find((x) => x.pageNumber === this.page()));
+  readonly text = computed(() => this.pages().find((item) => item.pageNumber === this.page()));
   readonly matches = computed(() =>
     this.query().trim()
-      ? this.pages().filter((x) => x.text.toLowerCase().includes(this.query().trim().toLowerCase()))
+      ? this.pages().filter((item) =>
+          item.text.toLowerCase().includes(this.query().trim().toLowerCase()),
+        )
       : [],
   );
   readonly isPdf = computed(() => this.document()?.contentType === 'application/pdf');
@@ -135,7 +137,7 @@ export class DocumentViewer {
     return info ? richKind(info.fileName, info.contentType) : 'other';
   });
   readonly isRich = computed(() => this.kind() !== 'other');
-  /** Side by side needs width; below the tablet breakpoint it falls back to the preview. */
+  /** 並排檢視需要寬度；低於平板斷點時退回預覽。 */
   readonly view = computed(() =>
     this.mode() === 'split' && this.narrow() ? 'preview' : this.mode(),
   );
@@ -144,7 +146,7 @@ export class DocumentViewer {
     () =>
       this.rawText() ||
       this.pages()
-        .map((x) => x.text)
+        .map((item) => item.text)
         .join('\n\n'),
   );
   readonly format = computed(() =>
@@ -288,7 +290,7 @@ export class DocumentViewer {
       if (attachment && !target.shareId) {
         const file = await this.uploads.attachment(id);
         if (!valid()) return;
-        // Previewing a raster image does not enqueue OCR or incur a model call.
+        // 預覽點陣圖片不會排入 OCR，也不會產生模型呼叫。
         if (file.isImage) {
           this.rawImage.set(true);
           this.document.set({
@@ -373,7 +375,7 @@ export class DocumentViewer {
         this.pdf = pdf;
         this.pdfPages.set(pdf.numPages);
         this.page.set(Math.max(1, Math.min(this.page(), pdf.numPages)));
-        this.pdfRevision.update((x) => x + 1);
+        this.pdfRevision.update((item) => item + 1);
       }
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));
@@ -381,7 +383,7 @@ export class DocumentViewer {
       if (valid()) this.loading.set(false);
     }
   }
-  /** Raw text for the Markdown preview and the HTML script check (same-origin GET). */
+  /** Markdown 預覽與 HTML 腳本檢查使用的原始文字（同源 GET）。 */
   private async loadRaw(
     info: DocumentDto,
     target: ReaderTarget,
@@ -397,7 +399,7 @@ export class DocumentViewer {
       this.rawText.set(text);
       if (html) this.gate.inspect(text);
     } catch {
-      // Without the text the HTML cannot be vetted, so it stays in the script-free sandbox.
+      // 沒有文字就無法審查 HTML，因此它會留在無腳本的沙箱中。
       if (valid() && html) this.gate.inspect('');
     }
   }
@@ -503,6 +505,10 @@ export class DocumentViewer {
     } finally {
       if (guard() && version === this.renderVersion) this.rendering.set(false);
     }
+  }
+  openMatch(pageNumber: number) {
+    this.navigate(pageNumber);
+    void this.setMode('text');
   }
   navigate(number: number) {
     this.page.set(Math.max(1, Math.min(number, this.total())));

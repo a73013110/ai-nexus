@@ -3,7 +3,7 @@ import { Icon } from './icon';
 import { IssueCode } from './issue-code';
 import type { BadgeTone } from './count-badge';
 
-/** One compact feedback surface for page, dialog, composer and global notices. */
+/** 頁面、對話框、輸入框與全域通知共用的精簡回饋表面。 */
 @Component({
   selector: 'nx-notice',
   imports: [Icon, IssueCode],

@@ -2,7 +2,7 @@ import type { MessageDto } from '@core/api/schema';
 
 type ExportedMessage = Pick<MessageDto, 'role' | 'content' | 'attachments'>;
 
-/** The visible branch as a Markdown document; attachments are listed by name only. */
+/** 可見分支的 Markdown 文件；附件只列出名稱。 */
 export function conversationMarkdown(title: string, messages: readonly ExportedMessage[]) {
   return [
     '# ' + title,

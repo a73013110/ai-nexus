@@ -8,9 +8,9 @@ import {
 } from '@angular/core';
 
 /**
- * The foot of a settings form that edits something saved: note | revert | save. The buttons keep
- * their place; with nothing changed both rest and the note says so. `note` replaces it (e.g. while
- * writes are refused). Placed inside the `form`, whose submit is the save.
+ * 編輯已儲存內容的設定表單底部：備註 | 還原 | 儲存。按鈕保持位置；沒有任何變更時兩者都是靜止狀態，
+ * 備註也會說明。
+ * `note` 會取代它（例如寫入被拒絕時）。放在 `form` 內，其送出即為儲存。
  */
 @Component({
   selector: 'nx-dialog-save-bar',
@@ -37,12 +37,12 @@ export class DialogSaveBar {
   /** The save button's text, e.g. 「儲存角色」. */
   readonly label = input.required<string>();
   readonly saving = input(false);
-  /** Saving is refused (e.g. while testing another identity); revert stays available. */
+  /** 儲存被拒絕（例如測試其他身分時）；還原仍可使用。 */
   readonly disabled = input(false);
   readonly note = input('');
   readonly revert = output<void>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  /** The button disables itself, so focus moves to the form's first field instead of the page. */
+  /** 按鈕會自行停用，因此焦點會移到表單的第一個欄位，而不是頁面。 */
   undo() {
     this.revert.emit();
     this.host.nativeElement

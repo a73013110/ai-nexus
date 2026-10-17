@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
- * One entry of the component workbench: a heading row (name, one-line purpose, source component)
- * and a bordered stage holding the live examples. Notes projected with `[design-notes]` sit under
- * the stage. The page's index links to the `id`.
+ * 元件工作台的一筆：標題列（名稱、一行用途、來源元件），
+ * 與一個有框的舞台，舞台中放即時範例。以 `[design-notes]` 投影的說明放在舞台下方，
+ * 頁面的索引連結到 `id`。
  */
 @Component({
   selector: 'nx-design-section',
@@ -72,13 +72,13 @@ export class DesignSection {
   readonly id = input.required<string>();
   readonly title = input.required<string>();
   readonly description = input('');
-  /** The production component or class the examples use. */
+  /** 範例使用的正式元件或類別。 */
   readonly api = input('');
-  /** Examples one per row instead of wrapping side by side. */
+  /** 範例每行一個，而不是並排換行。 */
   readonly stacked = input(false);
 }
 
-/** A labelled example inside a stage: the variant name above the live component. */
+/** 舞台內有標籤的範例：上方是變體名稱，下方是即時元件。 */
 @Component({
   selector: 'nx-design-example',
   changeDetection: ChangeDetectionStrategy.OnPush,

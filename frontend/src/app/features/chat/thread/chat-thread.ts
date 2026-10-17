@@ -24,8 +24,8 @@ import { ChatStore } from '../chat-store';
 import { ConversationOutline } from './conversation-outline';
 
 /**
- * The scrolling message list. It follows new output while the reader stays at the bottom, pauses
- * when they scroll up, and returns to a saved position after visiting the document reader.
+ * 可捲動的訊息列表。讀者停在底部時會跟隨新輸出；往上捲時暫停，
+ * 造訪文件閱讀器回來後，會回到先前儲存的位置。
  */
 @Component({
   selector: 'div[nxChatThread]',
@@ -39,11 +39,11 @@ export class ChatThread {
   private readonly themes = inject(ThemeService);
   readonly matches = input<string[]>([]);
   readonly currentMatch = input<string | null>(null);
-  /** Set on each navigation; a saved reader position wins over auto-follow. */
+  /** 每次導覽都會設定；已儲存的閱讀位置優先於自動跟隨。 */
   readonly arrival = input<{ position: ReaderOrigin | null }>({ position: null });
-  /** Set once the conversation has loaded, to scroll back to where the reader left. */
+  /** 對話載入後設定一次，用來捲回讀者離開的位置。 */
   readonly restoreTo = input<ReaderOrigin | null>(null);
-  /** A prompt was opened for editing, so the composer should take focus. */
+  /** 提問已打開進行編輯，因此輸入框應取得焦點。 */
   readonly edited = output<void>();
   private readonly viewport = viewChild.required<ElementRef<HTMLElement>>('viewport');
   readonly scroll = followScroll({
@@ -55,14 +55,13 @@ export class ChatThread {
     source: this.arrival,
     computation: () => null,
   });
-  /** The answer being generated; only its row reads the streamed text. */
+  /** 正在產生的回答；只有它的列會讀取串流文字。 */
   readonly activeId = computed(() => this.store.liveRun()?.assistantMessageId ?? null);
   readonly runStatus = computed(() => this.store.liveRun()?.status ?? '');
   readonly matched = computed(() => new Set(this.matches()));
   /**
-   * Messages that arrived after the conversation was shown (a sent prompt, a new answer), so they
-   * animate in. Opening a conversation or another version renders everything at once, and the
-   * server's copy of a sent prompt replaces the one already shown without arriving again.
+   * 對話顯示之後才抵達的訊息（已送出的提問、新回答）會有進場動畫。開啟對話或其他版本時
+   * 會一次渲染全部；已送出提問在伺服器上的副本，會取代已顯示的那則，而且不會再次進場。
    */
   readonly entering = linkedSignal<EnteringSource, ReadonlySet<string>>({
     source: () => ({
@@ -111,13 +110,13 @@ export class ChatThread {
     effect(() => {
       this.store.streamingText();
       this.store.visibleMessages();
-      // Read on every change so each arrival is compared with what was on screen before it.
+      // 每次變更都要讀取，讓每則新到的訊息都能與它出現前畫面上的內容比較。
       this.entering();
       this.scroll.schedule();
     });
   }
 
-  /** A new prompt was sent; follow its answer when the person prefers that. */
+  /** 剛送出新提問；若使用者偏好如此，就跟隨其回答。 */
   follow() {
     this.following.set(this.store.personal.value().autoFollow);
   }

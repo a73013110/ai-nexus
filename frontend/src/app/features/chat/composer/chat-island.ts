@@ -5,8 +5,8 @@ import { ChatConversations } from '../state/chat-conversations';
 import { ChatStore } from '../chat-store';
 
 /**
- * Everything the composer needs to tell the person, as island notices: the open run's progress,
- * states that block or change sending, and warnings about the draft. Call in an injection context.
+ * 輸入框需要告訴使用者的一切，以島的通知呈現：進行中執行的進度、
+ * 會阻擋或改變送出的狀態，以及草稿的警告。需在 injection context 中呼叫。
  */
 export function chatIslandItems() {
   const store = inject(ChatStore);

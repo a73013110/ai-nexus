@@ -21,7 +21,7 @@ import { DesignSamples, jobStates } from './design-samples';
 
 type IslandSample = 'live' | 'warning' | 'info';
 
-/** Notices, the island, badges, progress and empty states. */
+/** 通知、島、徽章、進度與空狀態。 */
 @Component({
   selector: 'nx-design-feedback',
   imports: [
@@ -52,7 +52,7 @@ export class DesignFeedback {
   private burst = 0;
   readonly states = jobStates;
   readonly generation = computed(() => generationStatus(this.samples.demo().status, false));
-  /** The island shows whatever is registered while this page is open, so only local samples. */
+  /** 頁面開啟期間島會顯示所有已登記的內容，因此這裡只用本地範例。 */
   readonly islandItems = signal<IslandItem[]>([]);
   readonly islandSamples: Record<IslandSample, IslandItem> = {
     live: { id: 'live', priority: 50, tone: 'live', icon: 'activity', label: '正在生成回答' },
@@ -100,7 +100,7 @@ export class DesignFeedback {
       action: { label: '復原', run: () => this.toast.success('已復原封存') },
     });
   }
-  /** One id carries the toast from in-progress to done, so it updates in place. */
+  /** 同一個 id 讓提示從進行中到完成，因此會原地更新。 */
   toastUpload() {
     const id = 'design-upload';
     this.toast.show({ id, tone: 'info', title: '正在上傳 季度報告.pdf', duration: 0 });
@@ -118,8 +118,12 @@ export class DesignFeedback {
     });
   }
   toastBurst() {
-    for (const [i, title] of ['來源已移除', '已安排重新索引', '知識庫已儲存'].entries())
-      this.scope.later(() => this.toast.success(title), i * 180, `design-burst-${++this.burst}`);
+    for (const [index, title] of ['來源已移除', '已安排重新索引', '知識庫已儲存'].entries())
+      this.scope.later(
+        () => this.toast.success(title),
+        index * 180,
+        `design-burst-${++this.burst}`,
+      );
   }
   hasIsland(kind: IslandSample) {
     return this.islandItems().some((item) => item.id === kind);

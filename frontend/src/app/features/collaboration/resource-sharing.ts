@@ -127,7 +127,7 @@ export class ResourceSharing {
   private readonly api = inject(CollaborationApi);
   private readonly scope = inject(ViewScope);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  /** Each opening reads the current permissions; edits stay local until saved. */
+  /** 每次開啟都會讀取目前的權限；編輯在儲存前只留在本地。 */
   private readonly opened = signal(0);
   private readonly aclRead = apiResource({
     params: () =>
@@ -152,7 +152,7 @@ export class ResourceSharing {
       options: this.groups().map((group) => ({ id: group.id, label: group.name })),
     },
   ]);
-  readonly people = directorySearch(() => this.members().map((x) => x.userId));
+  readonly people = directorySearch(() => this.members().map((item) => item.userId));
   readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
   readonly loading = this.aclRead.loading;
@@ -168,7 +168,7 @@ export class ResourceSharing {
     this.opened.update((value) => value + 1);
   }
   add(user: DirectoryUserDto) {
-    if (this.members().some((x) => x.userId === user.id)) return;
+    if (this.members().some((item) => item.userId === user.id)) return;
     this.members.update((rows) => [
       ...rows,
       { userId: user.id, account: user.account, displayName: user.displayName, role: 'viewer' },
@@ -176,10 +176,12 @@ export class ResourceSharing {
     this.people.clear();
   }
   remove(id: string) {
-    this.members.update((rows) => rows.filter((x) => x.userId !== id));
+    this.members.update((rows) => rows.filter((item) => item.userId !== id));
   }
   role(id: string, role: string) {
-    this.members.update((rows) => rows.map((x) => (x.userId === id ? { ...x, role } : x)));
+    this.members.update((rows) =>
+      rows.map((item2) => (item2.userId === id ? { ...item2, role } : item2)),
+    );
   }
   cancel(event: Event) {
     if (this.saving()) event.preventDefault();
@@ -193,7 +195,7 @@ export class ResourceSharing {
     this.saveError.set('');
     try {
       await this.api.saveAccess(kind, id, {
-        members: this.members().map((x) => ({ userId: x.userId, role: x.role })),
+        members: this.members().map((item) => ({ userId: item.userId, role: item.role })),
         groupIds: this.groupIds(),
       });
       if (valid() && this.kind() === kind && this.resourceId() === id) {

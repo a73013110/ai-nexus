@@ -26,18 +26,18 @@ export interface TableColumn {
 export type TableSortDirection = 'asc' | 'desc';
 
 /**
- * Semantic table shell with view preferences. Data fetching and query state remain feature
- * responsibilities. `stacked` opts into cards at the `narrow` breakpoint and below: cells stack in
- * one column, `data-stack="end"` sits top-right (the row's menu or edit button), `data-stack="hide"`
- * is left to the detail view and `data-label` names a value that needs its column header. The
- * table's own minimum width goes in `--table-min-width` so the cards can drop it.
+ * 語意化的表格外殼，附帶檢視偏好。資料讀取與查詢狀態仍屬於功能頁。
+ * `stacked` 讓列在 `narrow` 斷點以下變成卡片：儲存格排成單欄，`data-stack="end"`
+ * 固定在右上角（列的選單或編輯鈕），
+ * `data-stack="hide"` 的內容交給詳情檢視；`data-label` 標出需要表頭名稱的值。
+ * 表格本身的最小寬度放在 `--table-min-width`，卡片模式才能清掉它。
  *
- * The toolbar holds the title (`[table-toolbar]`), then the table's own actions such as export
- * (`[table-actions]`) beside the column picker; `nx-table-state` covers loading, empty and error.
+ * 工具列放標題（`[table-toolbar]`），表格自己的動作（如匯出，`[table-actions]`）接在欄位選擇器旁邊；
+ * `nx-table-state` 負責載入中、無資料與錯誤三種狀態。
  *
- * The visible frame is as tall as its rows and never taller than the host: a page that gives the
- * host the remaining height (`layoutMode="data"`) gets an inner scroll with a sticky header and no
- * empty area under a short list. Row states and the shared styles are in `styles/data-workspace.scss`.
+ * 可見外框的高度跟著列數走，不會超過宿主；頁面若把剩餘高度交給宿主（`layoutMode="data"`），
+ * 表格改由內部捲動、表頭固定，列數少時下方也不會留白。列的狀態與共用樣式在
+ * `styles/data-workspace.scss`。
  */
 @Component({
   selector: 'nx-data-table',
@@ -106,7 +106,7 @@ export class DataTable {
   readonly busy = input(false);
   readonly columns = input<TableColumn[]>([]);
   readonly preferenceKey = input('');
-  /** Rows become cards on narrow screens (see the class comment). */
+  /** 窄螢幕時列會變成卡片，細節見類別註解。 */
   readonly stacked = input(false);
   readonly hidden = signal<string[]>([]);
   readonly id = 'nx-table-columns-' + ++tableSequence;
@@ -144,7 +144,7 @@ export class DataTable {
               .map((column) => column.id);
           }
         } catch {
-          /* A missing or unavailable preference never prevents rendering. */
+          /* 偏好缺漏或讀取失敗時，仍要照常渲染。 */
         }
       }
       untracked(() => this.hidden.set(hidden));
@@ -186,7 +186,7 @@ export class DataTable {
       );
       localStorage.setItem('ai-nexus.table.' + this.preferenceKey(), JSON.stringify(preferences));
     } catch {
-      /* Optional preference. */
+      /* 選用偏好。 */
     }
   }
   resetScroll() {
@@ -200,7 +200,7 @@ function isRowAction(target: EventTarget | null): target is HTMLElement {
   return target instanceof HTMLElement && target.matches('[data-row-action]');
 }
 
-/** Apply the same column ID to col/th/td; visibility has one owner. */
+/** 同一欄位 ID 套用到 col、th、td；可見與否只由一處決定。 */
 @Directive({ selector: '[nxTableColumn]', host: { '[hidden]': '!table.isVisible(id())' } })
 export class DataTableColumn {
   readonly id = input.required<string>({ alias: 'nxTableColumn' });
@@ -238,13 +238,12 @@ export class TableSortHeader {
 }
 
 /**
- * Row-sized pointer target; nested controls and text selection retain their own behavior. A click
- * moves focus to the row's `[data-row-action]` without a visible ring, so a dialog or drawer can
- * return focus to the row; keyboard focus on that action rings the whole row (data-workspace.scss).
- * Focus that comes back on its own (a dialog or drawer closing, the window regaining focus) keeps
- * the ring state it left with: browsers ring a restored focus after Escape even when the row was
- * clicked, so the row is marked `is-focus-returned` until the next key press or focus move.
- * Arrow keys, Home and End move between the actions of every row group in the table.
+ * 列大小的指標目標；巢狀控制項與文字選取維持原本行為。點擊時焦點移到列內的 `[data-row-action]`，
+ * 但不顯示外框，
+ * 讓對話框或抽屜關閉後能把焦點還給該列；鍵盤聚焦到該動作時才框住整列（見 data-workspace.scss）。
+ * 瀏覽器會在 Escape 後為還原的焦點畫外框，即使列是被點擊的，所以列上標 `is-focus-returned`，
+ * 直到下一次按鍵或焦點移動才清掉。
+ * 方向鍵、Home、End 在表格所有列的動作之間移動。
  */
 @Directive({
   selector: 'tr[nxTableRow]',
@@ -260,12 +259,12 @@ export class DataTableRow {
   readonly enabled = input(true, { alias: 'rowEnabled' });
   readonly rowActivate = output<void>();
   private readonly host = inject<ElementRef<HTMLTableRowElement>>(ElementRef);
-  /** Whether the row action shows its ring; read when focus comes back to it. */
+  /** 列動作是否顯示外框；焦點回到它時讀取。 */
   private ringed = true;
   focusReturned(event: FocusEvent) {
     if (!isRowAction(event.target)) return;
     const from = event.relatedTarget;
-    // Set before paint (not through change detection), so the ring never flashes.
+    // 在繪製前直接設定（不經過變更偵測），外框才不會閃一下。
     if (
       !this.ringed &&
       !(from instanceof Element && from.isConnected && !from.closest('dialog:not([open])'))
@@ -297,7 +296,7 @@ export class DataTableRow {
     this.rowActivate.emit();
   }
   navigate(event: KeyboardEvent) {
-    // Any key but a modifier shows the ring again, as the browser does for a clicked control.
+    // 修飾鍵以外的按鍵都會重新顯示外框，與瀏覽器對點擊控制項的做法一致。
     if (isRowAction(event.target) && !['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
       this.quiet(false);
       this.ringed = true;
@@ -330,7 +329,8 @@ export class DataTableRow {
 }
 
 /**
- * 表頭下方的載入中、無資料與讀取失敗狀態。失敗時顯示訊息與重試；仍有列顯示時整個隱藏（錯誤由頁面自己顯示）。
+ * 表頭下方的載入中、無資料與讀取失敗狀態。失敗時顯示訊息與重試；仍有列顯示時整個隱藏（錯誤由
+ * 頁面自己顯示）。
  */
 @Component({
   selector: 'nx-table-state',
@@ -395,8 +395,10 @@ export class TableState {
 /**
  * 表格頁尾的分頁列：左側是範圍與每頁筆數，右側是一組有外框的翻頁按鈕，頁碼在按鈕中間。
  * `cursor`（游標分頁、不算總數）：上一頁、下一頁與回到第一頁，大表不必計數也不會跳過資料。
- * `offset`（已知總數）：顯示範圍，可輸入頁碼跳頁。`pageChange` 前後移一頁；`pageSelect` 到指定頁（第一頁、輸入的頁碼）。
- * 讀取中（`busy`）不送出事件，但按鈕與頁碼欄只用 `aria-disabled`／`readonly`：真的停用會讓剛操作的控制項失去焦點。
+ * `offset`（已知總數）：顯示範圍，可輸入頁碼跳頁。`pageChange` 前後移一頁；`pageSelect`
+ * 到指定頁（第一頁、輸入的頁碼）。
+ * 讀取中（`busy`）不送出事件，但按鈕與頁碼欄只用 `aria-disabled`／`readonly`：
+ * 真的停用會讓剛操作的控制項失去焦點。
  */
 @Component({
   selector: 'nx-table-pagination',

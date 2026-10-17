@@ -9,7 +9,7 @@
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header [heading]="e.title" [detail]="e.subtitle" closeLabel="關閉管理編輯" />
       @if (e.kind === 'group') {
-        <!-- The tabs stay above the scrolling body; the frame follows each tab's height. -->
+        <!-- 頁籤留在可捲動內容的上方；外框隨每個頁籤的高度調整。 -->
         <nx-tabs
           #sections
           label="功能群組設定分類"
@@ -31,7 +31,7 @@
       } @else {
         <div #body class="dialog-body"><ng-container [ngTemplateOutlet]="content" /></div>
       }
-      <!-- A role, a feature or a group's first tab is one page of sections, like the user's tabs. -->
+      <!-- 角色、功能或群組的第一個頁籤是一頁區段，與使用者的頁籤相同。 -->
       <ng-template #content>
         @if (editorError()) {
           <nx-notice tone="danger" [message]="editorError()" />

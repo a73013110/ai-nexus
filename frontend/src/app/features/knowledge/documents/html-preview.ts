@@ -49,6 +49,6 @@ export class HtmlPreview {
   readonly running = input(false);
   readonly run = output<void>();
   readonly viewSource = output<void>();
-  // Same-origin render URL built by the app, never user-supplied.
+  // 同源的渲染 URL 由應用程式建立，絕非使用者提供。
   readonly frame = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.url()));
 }

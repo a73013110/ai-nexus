@@ -96,7 +96,7 @@ export class PromptLibraryDialog {
   private readonly api = inject(LibraryApi);
   readonly draft = input('');
   readonly used = output<string>();
-  /** Each opening reads the saved prompts. */
+  /** 每次開啟都會讀取已儲存的提示。 */
   private readonly opened = signal(0);
   private readonly promptsRead = apiResource({
     params: () => this.opened() || undefined,
@@ -127,7 +127,7 @@ export class PromptLibraryDialog {
     this.editingId.set(prompt?.id ?? null);
     this.model.set({ title: prompt?.title ?? '', content: prompt?.content ?? this.draft() });
   }
-  /** Focus brings the editor into view where the sheet stacks it under the list. */
+  /** 焦點移入時，若編輯器在列表下方堆疊，會把它捲到可見處。 */
   compose(prompt: PromptTemplateDto | null) {
     this.edit(prompt);
     this.titleField()?.nativeElement.focus();

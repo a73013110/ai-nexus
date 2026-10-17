@@ -36,7 +36,7 @@ const PAGE_SIZE = 10;
 })
 export class MonitoringSessions {
   readonly sessions = input.required<OnlineSession[]>();
-  /** The session open in the inspector, highlighted like any open row. */
+  /** 在檢視器中開啟的工作階段，與任何開啟的列一樣標示。 */
   readonly selectedId = input<string | null>(null);
   readonly selected = output<OnlineSession>();
   readonly feature = model('all');
@@ -56,7 +56,7 @@ export class MonitoringSessions {
   ];
   readonly featureOptions = computed(() => [
     { value: 'all', label: '所有功能' },
-    ...[...new Set(this.sessions().map((s) => s.feature))]
+    ...[...new Set(this.sessions().map((segment) => segment.feature))]
       .sort()
       .map((id) => ({ value: id, label: this.featureName(id) })),
   ]);
@@ -64,19 +64,26 @@ export class MonitoringSessions {
     const query = this.query().trim().toLocaleLowerCase();
     return this.sessions()
       .filter(
-        (s) =>
-          (this.state() === 'all' || s.state === this.state()) &&
-          (this.feature() === 'all' || s.feature === this.feature()) &&
+        (segment2) =>
+          (this.state() === 'all' || segment2.state === this.state()) &&
+          (this.feature() === 'all' || segment2.feature === this.feature()) &&
           (!query ||
-            [s.displayName, s.account, s.address, s.browser, s.device]
+            [
+              segment2.displayName,
+              segment2.account,
+              segment2.address,
+              segment2.browser,
+              segment2.device,
+            ]
               .join(' ')
               .toLocaleLowerCase()
               .includes(query)),
       )
-      .sort((a, b) =>
+      .sort((first, second) =>
         this.sort() === 'requests'
-          ? b.requests - a.requests || a.id.localeCompare(b.id)
-          : a.displayName.localeCompare(b.displayName, 'zh-TW') || a.id.localeCompare(b.id),
+          ? second.requests - first.requests || first.id.localeCompare(second.id)
+          : first.displayName.localeCompare(second.displayName, 'zh-TW') ||
+            first.id.localeCompare(second.id),
       );
   });
   readonly lastPage = computed(() =>

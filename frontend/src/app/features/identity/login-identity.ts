@@ -10,8 +10,8 @@ const KINDS: Readonly<Record<string, string>> = {
 };
 
 /**
- * The step after sign-in for accounts with several identities. Options arrive one after another
- * along the same axis the form left on; arrow keys move between them.
+ * 帳號有多個身分時，登入後的步驟。選項會沿著表單離開時的同一軸向依序出現；
+ * 方向鍵在它們之間移動。
  */
 @Component({
   selector: 'nx-login-identity',

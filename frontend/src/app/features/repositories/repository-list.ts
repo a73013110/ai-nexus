@@ -18,7 +18,7 @@ import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { RepositoriesApi } from './repositories-api';
 
-/** Every repository the user's token can read, recently updated first, with their pins on top. */
+/** 使用者的 token 能讀取的每個儲存庫，依最近更新排序，釘選的在最上方。 */
 @Component({
   selector: 'nx-repository-list',
   imports: [RouterLink, EmptyState, Icon, Notice, ResourceCard, ResourceGallery],
@@ -106,20 +106,24 @@ import { RepositoriesApi } from './repositories-api';
 export class RepositoryList {
   private readonly api = inject(RepositoriesApi);
   private readonly scope = inject(ViewScope);
-  /** What the search field shows; the query follows it after a short pause. */
+  /** 搜尋欄顯示的文字；查詢在短暫停頓後才跟上。 */
   readonly search = signal('');
   readonly query = signal('');
   private readonly page = signal(1);
   private readonly read = apiResource({
     feature: 'repositories',
     params: () => ({ q: this.query(), page: this.page() }),
-    loader: async ({ q, page }) => ({ q, page, data: await this.api.list(q, page) }),
+    loader: async ({ q: query2, page }) => ({
+      q: query2,
+      page,
+      data: await this.api.list(query2, page),
+    }),
   });
   private readonly latest = computed(() => {
     const read = this.read.value();
     return read && read.q === this.query() ? read : null;
   });
-  /** Pages loaded so far for the current query, without repeats. */
+  /** 目前查詢已載入的頁數，不重複。 */
   readonly items = linkedSignal<
     { q: string; page: number; data: RepositoryPageDto } | null,
     RepositoryDto[]
@@ -128,8 +132,11 @@ export class RepositoryList {
     computation: (read, previous) => {
       if (!read) return previous?.value ?? [];
       if (read.page === 1) return read.data.items;
-      const seen = new Set(previous?.value.map((x) => x.fullName));
-      return [...(previous?.value ?? []), ...read.data.items.filter((x) => !seen.has(x.fullName))];
+      const seen = new Set(previous?.value.map((item) => item.fullName));
+      return [
+        ...(previous?.value ?? []),
+        ...read.data.items.filter((item) => !seen.has(item.fullName)),
+      ];
     },
   });
   readonly pinned = computed(() => this.latest()?.data.pinned ?? []);
@@ -154,7 +161,7 @@ export class RepositoryList {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((x) => x + 1);
+    if (!this.loading()) this.page.update((item) => item + 1);
   }
   link(fullName: string) {
     return ['/repositories', ...fullName.split('/')];

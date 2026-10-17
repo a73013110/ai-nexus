@@ -160,7 +160,8 @@ select:where(.ui-input) {
     outline-offset: -3px;
   }
 }
-// With nothing under the scroll region (no footer, no shown state), the last row sits in the frame's
+// With nothing under the scroll region (no footer, no shown state), the last row sits
+// in the frame's
 // rounded bottom corners; its tint and ring take the frame's inner radius instead of being cut off.
 .ui-table-frame
   > .ui-table-scroll:last-child

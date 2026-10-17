@@ -23,7 +23,7 @@ import { JobToasts } from '@features/jobs/job-toasts';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryStore } from '../repository-store';
 
-/** What a review reads: one commit, a range, or a pull request's head against its merge base. */
+/** 審查讀取的內容：一個提交、一個範圍，或拉取請求的 head 對比其合併基底。 */
 export interface ReviewTarget {
   label: string;
   commit: string | null;
@@ -37,7 +37,7 @@ const purposes = {
   summary: '用繁體中文說明改了什麼、為什麼改，以及最需要確認的影響。',
 } as const;
 
-/** Starts a background review; it keeps running after the dialog and the page are closed. */
+/** 啟動背景審查；對話框與頁面關閉後它仍會繼續執行。 */
 @Component({
   selector: 'nx-repository-review-dialog',
   imports: [CompactDialog, DialogHeader, Field, Icon, Notice, Select, ViewSwitch],
@@ -151,7 +151,7 @@ export class RepositoryReviewDialog {
   });
   readonly models = computed(() => this.modelsRead.value() ?? null);
   readonly choices = computed(
-    () => this.models()?.models.map((x) => ({ value: x.id, label: x.displayName })) ?? [],
+    () => this.models()?.models.map((item) => ({ value: item.id, label: item.displayName })) ?? [],
   );
   readonly model = linkedSignal(() => {
     const models = this.models();
@@ -161,7 +161,7 @@ export class RepositoryReviewDialog {
   readonly saving = signal(false);
   private readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.modelsRead.error());
-  /** One key per opening, so a retried submit cannot start the same review twice. */
+  /** 每次開啟一個 key，因此重試的送出不會啟動同一個審查兩次。 */
   private key = '';
 
   open(target: ReviewTarget) {
@@ -170,7 +170,7 @@ export class RepositoryReviewDialog {
     this.note.set('');
     this.saveError.set('');
     this.key = crypto.randomUUID();
-    this.opened.update((x) => x + 1);
+    this.opened.update((item) => item + 1);
     this.dialog().nativeElement.showModal();
   }
   async save(event: Event) {
@@ -195,8 +195,8 @@ export class RepositoryReviewDialog {
       if (!valid()) return;
       this.dialog().nativeElement.close();
       void this.router.navigate(this.store.link('reviews', review.id));
-    } catch (e) {
-      if (valid()) this.saveError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.saveError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.saving.set(false);
     }

@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 
-/** The signed-in user's notification inbox. */
+/** 已登入使用者的通知收件匣。 */
 @Injectable({ providedIn: 'root' })
 export class NotificationsApi {
   private readonly api = inject(ApiClient);

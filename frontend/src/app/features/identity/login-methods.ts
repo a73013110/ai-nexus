@@ -10,11 +10,11 @@ interface CredentialCopy {
 export interface LoginMethodSpec {
   readonly label: string;
   readonly description: string;
-  /** Password methods share one form; Windows sign-in is a browser challenge without one. */
+  /** 密碼登入方式共用一個表單；Windows 登入則是不需要表單的瀏覽器挑戰。 */
   readonly credentials: CredentialCopy | null;
 }
 
-/** Every sign-in method the page can offer; the server's session decides which ones appear. */
+/** 頁面可以提供的所有登入方式；由伺服器的工作階段決定實際出現哪些。 */
 export const LOGIN_METHODS: Readonly<Record<LoginMethod, LoginMethodSpec>> = {
   ad: {
     label: 'AD 帳號',
@@ -47,7 +47,7 @@ export function isLoginMethod(value: unknown): value is LoginMethod {
   return typeof value === 'string' && Object.hasOwn(LOGIN_METHODS, value);
 }
 
-/** The methods the server offers, in its order; unknown names from a newer server are dropped. */
+/** 伺服器提供的登入方式，依其順序；較新伺服器送來的未知名稱會被丟棄。 */
 export function offeredMethods(
   session: { mode: string; methods?: readonly string[] | null } | null,
 ) {

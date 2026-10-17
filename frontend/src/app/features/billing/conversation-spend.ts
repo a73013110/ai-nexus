@@ -70,11 +70,11 @@ import { BillingApi, chargeKind, money } from './billing-api';
 export class ConversationSpendView {
   readonly id = input.required<string>();
   readonly revision = input('');
-  /** Set when an overflow menu shows the cost (`menuLabel`) and opens the panel (`open`). */
+  /** 溢出選單顯示成本（`menuLabel`）並開啟面板（`open`）時設定。 */
   readonly anchor = input<HTMLElement | null>(null);
   private readonly popover = viewChild(InfoPopover);
   private readonly api = inject(BillingApi);
-  /** Read again for each new revision of the conversation (a finished run adds spending). */
+  /** 對話的每個新修訂都會重新讀取（完成的執行會增加花費）。 */
   private readonly spendRead = apiResource({
     params: () => ({ id: this.id(), revision: this.revision() }),
     loader: async ({ id }) => ({ id, spend: await this.api.conversation(id) }),
@@ -86,7 +86,7 @@ export class ConversationSpendView {
   readonly failed = computed(() => !!this.spendRead.error());
   readonly money = money;
   readonly kind = chargeKind;
-  /** The overflow menu item; null while the first read is still loading. */
+  /** 溢出選單項目；第一次讀取仍在載入時為 null。 */
   readonly menuLabel = computed(() => {
     const spend = this.data();
     if (!spend) return this.failed() ? '重新載入全對話費用' : null;
@@ -102,12 +102,14 @@ export class ConversationSpendView {
     else this.load();
   }
   summary(spend: ConversationSpendDto) {
-    const priced = spend.totals.filter((x) => !!x.currency);
+    const priced = spend.totals.filter((item) => !!item.currency);
     if (!priced.length) return spend.requests ? '費用未定價' : '全對話費用';
     if (priced.length === 1)
       return (
         (priced[0].knownCalls ? money(priced[0].amount, priced[0].currency) : '費用待確認') +
-        (spend.totals.some((x) => x.unknownCalls > 0) || spend.legacyCalls || spend.pendingCalls
+        (spend.totals.some((item2) => item2.unknownCalls > 0) ||
+        spend.legacyCalls ||
+        spend.pendingCalls
           ? ' +'
           : '')
       );

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { AttachmentStorageDto } from '@core/api/schema';
 import { formatBytes, formatNumber } from '@shared/browser/format';
 
-/** The original-file quota in one line: a thin meter, used of limit, and what remains. */
+/** 原始檔案配額，一行呈現：細長的計量條、已用量與上限，以及剩餘量。 */
 @Component({
   selector: 'nx-storage-usage',
   changeDetection: ChangeDetectionStrategy.OnPush,

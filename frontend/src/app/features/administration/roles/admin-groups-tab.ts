@@ -7,7 +7,7 @@ import { AdministrationStore } from '../administration-store';
 import { FeatureSummary } from './feature-summary';
 import { AccessStatus } from './access-status';
 
-/** Feature groups grant features, models and storage. */
+/** 功能群組授予功能、模型與儲存空間。 */
 @Component({
   selector: 'nx-admin-groups-tab',
   imports: [Icon, DataTable, DataTableRow, AccessStatus, FeatureSummary],
@@ -93,7 +93,7 @@ export class AdminGroupsTab {
   readonly store = inject(AdministrationStore);
   readonly edit = output<AdminGroupDto | undefined>();
   readonly groups = computed(() => this.store.catalog()?.groups ?? []);
-  /** Models with a daily token limit in this group. */
+  /** 此群組中每日 token 有上限的模型。 */
   limited(group: AdminGroupDto) {
     return Object.keys(group.policy?.dailyTokenLimits ?? {}).length;
   }

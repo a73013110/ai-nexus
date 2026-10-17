@@ -21,7 +21,7 @@ const usageIcons: Record<string, string> = {
   knowledge: 'library',
 };
 
-/** Library files as tiles: a preview, the name and where it is used; actions share one menu. */
+/** 檔案庫中的檔案以磚塊呈現：預覽、名稱與其使用處；動作共用一個選單。 */
 @Component({
   selector: 'nx-file-browser',
   imports: [ReaderLink, RouterLink, Icon, MenuPanel],
@@ -90,7 +90,7 @@ export class FileBrowser {
   readonly usageIcons = usageIcons;
   readonly date = (value: string) => formatDate(value).split(' ')[0];
   private readonly menu = viewChild.required(MenuPanel);
-  /** The file whose menu is open; one panel serves every tile. */
+  /** 選單開啟中的檔案；一個面板服務所有磚塊。 */
   private readonly chosen = signal<LibraryFileDto | null>(null);
   readonly actions = computed<MenuAction[]>(() => {
     const item = this.chosen();

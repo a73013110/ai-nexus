@@ -5,27 +5,31 @@ import { Notice } from '@shared/ui/notice';
 import { AdministrationStore } from '../administration-store';
 import { FeatureSummary } from '../roles/feature-summary';
 
-/** What a user would be able to open: enabled features of enabled groups of enabled roles. */
+/** 使用者能開啟的功能：已啟用角色中，已啟用群組裡已啟用的功能。 */
 export function userFeatures(catalog: AdminCatalogDto | null, roleIds: string[], enabled: boolean) {
   if (!catalog || !enabled) return [];
   const groups = new Set(
-    catalog.roles.filter((x) => x.enabled && roleIds.includes(x.id)).flatMap((x) => x.groupIds),
+    catalog.roles
+      .filter((item) => item.enabled && roleIds.includes(item.id))
+      .flatMap((item) => item.groupIds),
   );
   const features = new Set(
-    catalog.groups.filter((x) => x.enabled && groups.has(x.id)).flatMap((x) => x.featureIds),
+    catalog.groups
+      .filter((item) => item.enabled && groups.has(item.id))
+      .flatMap((item) => item.featureIds),
   );
-  return catalog.features.filter((x) => x.enabled && features.has(x.id));
+  return catalog.features.filter((item) => item.enabled && features.has(item.id));
 }
 
-export function sameIds(a: readonly string[], b: readonly string[]) {
-  return a.length === b.length && a.every((id) => b.includes(id));
+export function sameIds(items: readonly string[], items2: readonly string[]) {
+  return items.length === items2.length && items.every((id) => items2.includes(id));
 }
 
 let sequence = 0;
 
 /**
- * Role assignment and a preview of the features it grants, as two form sections; shared by the
- * create dialog and the inspector, which wrap them in `.form-sections`.
+ * 角色指派與其授予功能的預覽，分成兩個表單區段；由建立對話框與檢視器共用，
+ * 兩者會把它們包在 `.form-sections` 中。
  */
 @Component({
   selector: 'nx-user-role-fields',
@@ -70,7 +74,7 @@ export class UserRoleFields {
   readonly id = `nx-user-roles-${++sequence}`;
   readonly store = inject(AdministrationStore);
   readonly roleIds = input.required<string[]>();
-  /** A disabled user keeps their roles but can open nothing. */
+  /** 停用的使用者保留角色，但無法開啟任何內容。 */
   readonly enabled = input(true);
   readonly disabled = input(false);
   readonly roleIdsChange = output<string[]>();

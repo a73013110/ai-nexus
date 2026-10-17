@@ -349,7 +349,7 @@ export class MermaidDiagram implements OnInit {
       this.held?.release();
     });
   }
-  /** A diagram rendered before (e.g. while streaming) is shown in the first paint, not after it. */
+  /** 先前已渲染的圖（例如串流途中），會在第一次繪製時顯示，而不是之後。 */
   ngOnInit() {
     const { config, semantics } = this.theme();
     const cached = cachedDiagram(this.source(), config, semantics);

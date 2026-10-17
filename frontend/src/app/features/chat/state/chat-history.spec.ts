@@ -38,7 +38,7 @@ describe('chat history', () => {
     pending[1](rows('new', 1));
     pending[0](rows('old', 1));
     await Promise.all([older, newer]);
-    expect(history.conversations().map((x) => x.id)).toEqual(['new0']);
+    expect(history.conversations().map((item) => item.id)).toEqual(['new0']);
     expect(conversations.mock.calls.map((call) => call[0])).toEqual(['舊', '新']);
   });
 
@@ -74,14 +74,14 @@ describe('chat history', () => {
     ]);
 
     history.place(row('c', '2026-01-01', { isFavorite: true }));
-    expect(history.conversations().map((x) => x.id)).toEqual(['c', 'a', 'b']);
+    expect(history.conversations().map((item) => item.id)).toEqual(['c', 'a', 'b']);
 
     history.place(row('a', '2026-01-03', { isArchived: true }));
-    expect(history.conversations().map((x) => x.id)).toEqual(['c', 'b']);
+    expect(history.conversations().map((item) => item.id)).toEqual(['c', 'b']);
 
     history.label.set('工作');
     history.place(row('b', '2026-01-02', { title: '改名' }));
-    expect(history.conversations().map((x) => x.id)).toEqual(['c']);
+    expect(history.conversations().map((item) => item.id)).toEqual(['c']);
   });
 
   it('drops labels that arrive after the account changed', async () => {

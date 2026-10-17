@@ -19,7 +19,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   providers: [TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './text-selection-toolbar.scss',
-  // Focus moves between the toolbar buttons; the container only routes arrow keys.
+  // 焦點在工具列按鈕之間移動；容器只負責路由方向鍵。
   template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div
       #panel

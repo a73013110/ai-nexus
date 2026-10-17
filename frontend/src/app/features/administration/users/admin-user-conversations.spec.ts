@@ -14,7 +14,7 @@ const item = (id: string, title: string) => ({
   messages: 0,
 });
 
-/** The tab's view of the reader; the reader's own requests and audit are not under test here. */
+/** 分頁對閱讀器的檢視；閱讀器自己的請求與稽核不在此測試範圍內。 */
 function fakeReader() {
   const selected = signal<string | null>(null);
   return {

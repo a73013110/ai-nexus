@@ -1,4 +1,4 @@
-/** Compact and focused composers share the same IME-safe submission rule. */
+/** 精簡與聚焦的輸入框共用同一套 IME 安全的送出規則。 */
 export function isSubmitKey(event: KeyboardEvent, composing: boolean, enterToSend: boolean) {
   return (
     event.key === 'Enter' &&

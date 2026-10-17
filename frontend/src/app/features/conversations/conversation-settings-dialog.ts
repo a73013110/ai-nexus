@@ -78,9 +78,9 @@ export class ConversationSettingsDialog {
   private readonly projects = inject(ProjectsApi);
   private readonly scope = inject(ViewScope);
   readonly projectId = signal('');
-  /** The conversation being edited. */
+  /** 正在編輯的對話。 */
   private readonly target = signal<ConversationDto | null>(null);
-  /** Each opening reads the projects it can move to, even for the same conversation. */
+  /** 每次開啟都會讀取可移入的專案，即使是同一個對話。 */
   private readonly opened = signal(0);
   private readonly projectsRead = apiResource({
     params: () => (this.opened() && this.session.has('projects') ? this.opened() : undefined),
@@ -89,14 +89,14 @@ export class ConversationSettingsDialog {
   readonly projectOptions = computed(() => [
     { value: '', label: '個人對話' },
     ...(this.projectsRead.value() ?? [])
-      .filter((x) => !x.isArchived || x.resource.id === this.target()?.projectId)
-      .map((x) => ({ value: x.resource.id, label: x.resource.name })),
+      .filter((item) => !item.isArchived || item.resource.id === this.target()?.projectId)
+      .map((item) => ({ value: item.resource.id, label: item.resource.name })),
   ]);
   readonly save =
     input.required<
       (conversation: ConversationDto, settings: ConversationSettingsRequest) => Promise<boolean>
     >();
-  /** Moves the conversation into a project, or back to personal with `null`. */
+  /** 把對話移入專案，或以 `null` 移回個人。 */
   readonly assignProject =
     input.required<(conversation: ConversationDto, projectId: string | null) => Promise<boolean>>();
   readonly model = signal({ instruction: '', labels: '' });

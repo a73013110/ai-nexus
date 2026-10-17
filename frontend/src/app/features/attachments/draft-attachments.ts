@@ -44,7 +44,7 @@ export class DraftAttachments {
     );
     if (results.some((result) => result.status === 'rejected'))
       this.error.set('部分草稿附件已無法使用，請重新上傳。');
-    if (this.files().some((x) => x.analysisMode === 'ocr-required'))
+    if (this.files().some((item) => item.analysisMode === 'ocr-required'))
       void this.processScans(version);
   }
   async use(file: AttachmentDto) {
@@ -115,18 +115,18 @@ export class DraftAttachments {
     const controller = activeController ?? (this.controller = new AbortController());
     this.uploading.set(true);
     try {
-      for (const file of this.files().filter((x) => x.analysisMode === 'ocr-required')) {
+      for (const file of this.files().filter((item2) => item2.analysisMode === 'ocr-required')) {
         if (version !== this.version) return;
         this.processingLabel.set(`正在辨識 ${file.fileName}`);
         let doc = await this.documents.readAttachment(file.id, controller.signal);
         while (['queued', 'running', 'processing'].includes(doc.status)) {
           await abortableDelay(2000, controller.signal);
           if (version !== this.version) return;
-          if (!this.files().some((x) => x.id === file.id)) break;
+          if (!this.files().some((item) => item.id === file.id)) break;
           doc = await this.documents.document(doc.id, controller.signal);
         }
         if (version !== this.version) return;
-        if (!this.files().some((x) => x.id === file.id)) continue;
+        if (!this.files().some((item) => item.id === file.id)) continue;
         if (doc.status !== 'ready') {
           const detail = await this.documents.job(doc.id);
           throw new ApiError(
@@ -138,7 +138,7 @@ export class DraftAttachments {
         }
         const updated = await this.api.attachment(file.id);
         if (version === this.version)
-          this.files.update((rows) => rows.map((x) => (x.id === file.id ? updated : x)));
+          this.files.update((rows) => rows.map((item) => (item.id === file.id ? updated : item)));
       }
     } catch (error) {
       if (version === this.version && !controller.signal.aborted)
@@ -155,7 +155,7 @@ export class DraftAttachments {
   }
   async remove(id: string, savedInHistory = false) {
     const version = this.version;
-    // A reused edit attachment belongs to history; remove it from this draft only.
+    // 重用的編輯附件屬於歷史；只從此草稿移除它。
     try {
       if (!savedInHistory) await this.api.removeAttachment(id);
       if (version !== this.version) return;

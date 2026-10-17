@@ -1,7 +1,7 @@
 import { ApiError } from '../errors/safe-errors';
 import { SseParser } from './sse-parser';
 
-/** Decode bounded SSE frames through the existing parser, sharing error and cancellation semantics. */
+/** 透過既有的解析器解碼有界的 SSE 幀，並沿用其錯誤與取消的語意。 */
 export async function* jsonEvents<T>(
   response: Response,
   eventName: string,

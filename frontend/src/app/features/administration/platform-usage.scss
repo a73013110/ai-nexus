@@ -38,7 +38,8 @@
 .usage-status-column {
   width: 6.5rem;
 }
-// The meter and its percentage stay inline, so a card still reads 「占比 ▬▬ 81.3%」 after its label.
+// The meter and its percentage stay inline, so a card still reads 「占比 ▬▬ 81.3%」
+// after its label.
 .usage-share {
   white-space: nowrap;
   meter {

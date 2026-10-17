@@ -9,7 +9,7 @@ export interface LocalDateTime {
 }
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
 
-/** Calendar arithmetic uses UTC as a wall-clock container, never the browser's zone. */
+/** 日曆運算以 UTC 作為牆上時間的容器，絕不使用瀏覽器的時區。 */
 export function calendarDate(parts: LocalDateTime) {
   const date = new Date(0);
   date.setUTCFullYear(parts.year, parts.month - 1, parts.day);

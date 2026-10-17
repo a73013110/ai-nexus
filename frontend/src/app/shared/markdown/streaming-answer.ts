@@ -15,7 +15,7 @@ import { CopyFeedback } from '../browser/copy-feedback';
 import { Notice } from '../ui/notice';
 import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './streaming-markdown';
 
-/** Presentation smoothing only. The stream/store remains the authoritative full text. */
+/** 只做呈現上的平滑；串流與 store 仍是完整文字的權威來源。 */
 @Component({
   selector: 'nx-streaming-answer',
   imports: [MarkdownView, Notice],
@@ -90,7 +90,7 @@ export class StreamingAnswer {
   private advance(time: number) {
     this.frame = 0;
     const remaining = this.target.length - this.shown().length;
-    // Cap Markdown work near 20 fps; absorb provider bursts with a short adaptive buffer.
+    // 把 Markdown 的工作限制在約 20 fps；以短的自適應緩衝吸收提供者的爆發式輸出。
     if (time - this.lastFrame >= 48 && remaining > 0) {
       const elapsed = Math.min(120, time - this.lastFrame);
       this.lastFrame = time;
@@ -122,7 +122,7 @@ export class StreamingAnswer {
       );
   }
   private boundary(end: number) {
-    // Never display half a surrogate pair (emoji/non-BMP text).
+    // 絕不顯示半個代理對（emoji 或非 BMP 文字）。
     const value = this.target || this.shown();
     return end > 0 && /[\uD800-\uDBFF]/.test(value[end - 1]) ? end - 1 : end;
   }

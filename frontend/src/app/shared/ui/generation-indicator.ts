@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Diagonal index (row + column) of each dot in the 3×3 matrix; it staggers the wave. */
+/** 3×3 矩陣中每個點的對角索引（列 + 欄）；它讓波浪錯開。 */
 const DOTS = [0, 1, 2, 1, 2, 3, 2, 3, 4];
 
-/** The surrounding workflow owns live announcements; this component only presents its state. */
+/** 外層的工作流程負責即時播報；這個元件只呈現其狀態。 */
 @Component({
   selector: 'nx-generation-indicator',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -65,7 +65,7 @@ describe('DialogHeader', () => {
     expect(title.querySelector('h2 + .badge')?.textContent).toBe('啟用');
     expect(root.querySelector('h2')?.textContent).toBe('王小明');
     const bar = root.querySelector('nx-dialog-header')!;
-    expect([...bar.children].map((x) => x.className)).toEqual([
+    expect([...bar.children].map((item) => item.className)).toEqual([
       'dialog-title',
       'tool',
       'icon-button',

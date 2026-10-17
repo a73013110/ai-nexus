@@ -99,7 +99,7 @@ export class TextSourceEditor {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly saved = output<DocumentDto>();
-  /** What the dialog edits: a new source in a collection, or an existing document's text. */
+  /** 對話框編輯的內容：集合中的新來源，或既有文件的文字。 */
   private readonly editing = signal<{ collection: string; documentId: string } | null>(null);
   private readonly sourceRead = apiResource({
     params: () => {
@@ -115,7 +115,7 @@ export class TextSourceEditor {
   readonly documentId = computed(() => this.editing()?.documentId ?? '');
   readonly title = linkedSignal(() => this.source()?.title ?? '');
   readonly text = linkedSignal(() => this.source()?.text ?? '');
-  /** The content as opened, to tell whether closing would discard edits. */
+  /** 開啟時的內容，用來判斷關閉是否會捨棄編輯。 */
   private readonly initial = computed(() =>
     JSON.stringify([this.source()?.title ?? '', this.source()?.text ?? '']),
   );
@@ -169,8 +169,8 @@ export class TextSourceEditor {
         this.dialog().nativeElement.close();
         this.saved.emit(result);
       }
-    } catch (e) {
-      if (current()) this.saveError.set(this.scope.message(e));
+    } catch (error2) {
+      if (current()) this.saveError.set(this.scope.message(error2));
     } finally {
       if (current()) this.busy.set(false);
     }

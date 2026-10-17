@@ -2,11 +2,13 @@ import type { DashboardMetricDto } from '@core/api/schema';
 import { metricText } from '@shared/browser/format';
 import type { BadgeTone } from '@shared/ui/count-badge';
 
-/** Tones the backend uses for metrics, shares and items, as badge tones and colors. */
+/** 後端用於指標、比例與項目的色調，同時作為徽章色調與顏色。 */
 export function tone(value: string): BadgeTone {
-  return (['info', 'success', 'warning', 'danger'] as const).find((x) => x === value) ?? 'neutral';
+  return (
+    (['info', 'success', 'warning', 'danger'] as const).find((item) => item === value) ?? 'neutral'
+  );
 }
-/** Tones as colors: the accent for information, status colors only for states that are real. */
+/** 以顏色表示的色調：資訊用強調色，狀態色只用於真正的狀態。 */
 export const TONE_COLORS: Record<BadgeTone, string> = {
   neutral: 'var(--muted)',
   info: 'var(--accent)',
@@ -15,23 +17,23 @@ export const TONE_COLORS: Record<BadgeTone, string> = {
   danger: 'var(--danger)',
 };
 
-/** A metric read aloud or shown as one string: value and unit. */
+/** 要朗讀或以單一字串顯示的指標：數值與單位。 */
 export function metricLabel(metric: Pick<DashboardMetricDto, 'value' | 'format' | 'unit'>) {
   const text = metricText(metric.value, metric.format);
   return metric.unit && metric.value !== null ? `${text} ${metric.unit}` : text;
 }
-/** Local days from `from` through `through`, inclusive, as `YYYY-MM-DD`. */
+/** 從 `from` 到 `through`（含）的本地日期，格式為 `YYYY-MM-DD`。 */
 export function dayRange(from: string, through: string): string[] {
   const days: string[] = [];
   const day = new Date(from + 'T00:00:00'),
     end = new Date(through + 'T00:00:00');
-  for (let i = 0; day <= end && i < 367; i++, day.setDate(day.getDate() + 1))
+  for (let index = 0; day <= end && index < 367; index++, day.setDate(day.getDate() + 1))
     days.push(
       `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`,
     );
   return days;
 }
-/** A daily series filled with zeros for days without data. */
+/** 沒有資料的日子以零填滿的每日數列。 */
 export function fillDays(
   days: readonly string[],
   points: readonly { date: string; value: number }[],
@@ -54,12 +56,12 @@ const SECTION_ICONS: Record<string, string> = {
   repositories: 'git',
   notifications: 'bell',
 };
-/** Icon for a section; unknown sections (new features) get a neutral chart. */
+/** 區段的圖示；未知的區段（例如新功能）使用中性的圖表。 */
 export function sectionIcon(id: string) {
   return SECTION_ICONS[id] ?? 'chart';
 }
 
-/** Splits a workspace path from the backend into router parts; anything else is not a link. */
+/** 把後端的工作區路徑拆成路由片段；其他的都不是連結。 */
 export function workspaceLink(link: string | null | undefined) {
   if (!link || !link.startsWith('/') || link.startsWith('//')) return null;
   const [path, search = ''] = link.split('?', 2);

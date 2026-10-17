@@ -5,7 +5,7 @@ import type { DiagramSemantics } from './mermaid-theme';
 
 export type Diagram = ReturnType<typeof sanitizeDiagramSvg>;
 
-/** One mount's hold on a shared render. Release it when the mount is replaced or destroyed. */
+/** 單一掛載點對共用渲染結果的持有。掛載點被替換或銷毀時釋放。 */
 export interface DiagramView {
   readonly diagram: Diagram;
   readonly url: string;
@@ -22,11 +22,11 @@ interface RenderedDiagram {
 let library: Promise<{ default: typeof import('mermaid').default }> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 let sequence = 0;
-// An unused Blob URL lingers so the stream → final swap and quick remounts show the same, already
-// decoded image instead of a blank frame; it is then revoked (the SVG text stays cached).
+// 未使用的 Blob URL 會暫留，讓串流轉最終結果，以及快速重新掛載時，
+// 顯示同一張已解碼的圖片而非空白畫面；之後才撤銷（SVG 文字仍快取）。
 const linger = 2000;
-// Rendering dominates the cost; SVGs run from a few to a few hundred KB, so the size bound
-// (~8 MB of UTF-16) usually applies before the count.
+// 渲染才是主要成本；SVG 大小從數 KB 到數百 KB，因此大小上限（約 8 MB UTF-16）
+// 通常比數量上限先生效。
 const rendered = new LruCache<string, RenderedDiagram>({
   maxEntries: 48,
   maxWeight: 4_000_000,
@@ -36,11 +36,11 @@ const rendered = new LruCache<string, RenderedDiagram>({
   },
 });
 
-// The theme is computed from the host's tokens, so light/dark and token changes produce new keys.
+// 主題由宿主的 token 計算，所以淺色／深色與 token 改變時會產生新的 key。
 const diagramKey = (source: string, config: MermaidConfig, semantics?: DiagramSemantics) =>
   JSON.stringify([source, config, semantics ?? null]);
 
-/** A finished render of this source and theme, synchronously, or null. Failures are not cached. */
+/** 此來源與主題已完成的渲染結果（同步取得），沒有則為 null。失敗不快取。 */
 export function cachedDiagram(
   source: string,
   config: MermaidConfig,
@@ -53,7 +53,7 @@ export function cachedDiagram(
 function acquire(entry: RenderedDiagram): DiagramView {
   clearTimeout(entry.idle);
   entry.users++;
-  // Each mount displays the SVG in its own image document, so identical IDs never collide.
+  // 每個掛載點在自己的影像文件中顯示 SVG，所以相同的 ID 不會衝突。
   entry.url ||= URL.createObjectURL(new Blob([entry.diagram.svg], { type: 'image/svg+xml' }));
   let held = true;
   return {
@@ -74,8 +74,8 @@ function revoke(entry: RenderedDiagram) {
 }
 
 /**
- * Mermaid owns global configuration; serialize rendering to keep themes and IDs isolated.
- * Requests queued behind a render of the same source and theme reuse its result.
+ * Mermaid 擁有全域設定；渲染需要序列化，才能讓主題與 ID 互不干擾。
+ * 排在同一來源與主題的渲染之後的請求，會重用其結果。
  */
 export function renderDiagram(
   source: string,
@@ -91,8 +91,8 @@ export function renderDiagram(
       if (cached) return active() ? acquire(cached) : null;
       if (!active()) return null;
       if (source.length > 50000) throw new Error('Diagram exceeds the supported size');
-      // Official browser ESM distribution keeps upstream CommonJS internals prebundled,
-      // with every diagram type available and no bundler-specific dependency exceptions.
+      // 官方的瀏覽器 ESM 發行版已預先打包上游的 CommonJS 內部模組，
+      // 所有圖表類型都可用，也不需要任何 bundler 專屬的例外處理。
       library ||= import('mermaid/dist/mermaid.esm.min.mjs').catch((error) => {
         library = undefined;
         throw error;
@@ -123,8 +123,8 @@ export function renderDiagram(
           'themeCSS',
         ],
       });
-      // Mermaid's image nodes fetch assets while measuring, before SVG sanitization.
-      // Inspect parsed flowchart nodes first to preserve Markdown's no-image-request contract.
+      // Mermaid 的影像節點會在量測時、SVG 消毒之前抓取資源。
+      // 因此先檢查解析後的流程圖節點，以維持 Markdown「不發出影像請求」的約定。
       const parsed = await mermaid.mermaidAPI.getDiagramFromText(source);
       if (parsed.type.startsWith('flowchart')) {
         const data = (parsed.db as { getData(): { nodes: { img?: string }[] } }).getData();
@@ -132,7 +132,7 @@ export function renderDiagram(
       }
       if (!active()) return null;
       const container = document.createElement('div');
-      // Mermaid measures text in a laid-out but invisible container outside any component.
+      // Mermaid 在一個已排版但不可見、位於任何元件之外的容器中量測文字。
       Object.assign(container.style, {
         position: 'fixed',
         inset: '0 auto auto 0',
@@ -144,7 +144,7 @@ export function renderDiagram(
       document.body.append(container);
       try {
         const result = await mermaid.render(`nx-mermaid-${++sequence}`, source, container);
-        // Kept even when the requester has gone: the settled answer remounts the same diagram.
+        // 即使請求者已離開也保留：已完成的結果會讓同一張圖重新掛載。
         const entry: RenderedDiagram = {
           diagram: measureDiagramBounds(
             sanitizeDiagramSvg(

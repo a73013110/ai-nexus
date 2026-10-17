@@ -13,7 +13,7 @@ import { MonitoringSessions } from './monitoring-sessions';
 import { monitoringFeatureNames } from '../monitoring-format';
 
 /**
- * Who is online: the features they have open, as filters, and the session list behind them.
+ * 誰在線上：他們開啟的功能（作為篩選），以及其後的工作階段列表。
  */
 @Component({
   selector: 'nx-monitoring-people',
@@ -114,9 +114,10 @@ export class MonitoringPeople {
   private readonly featureName = monitoringFeatureNames();
   readonly features = computed(() => {
     const counts = new Map<string, number>();
-    for (const s of this.sessions()) counts.set(s.feature, (counts.get(s.feature) ?? 0) + 1);
+    for (const segment of this.sessions())
+      counts.set(segment.feature, (counts.get(segment.feature) ?? 0) + 1);
     return [...counts]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .sort((first, second) => second[1] - first[1] || first[0].localeCompare(second[0]))
       .slice(0, 8)
       .map(([feature, count]) => ({ feature, count, name: this.featureName(feature) }));
   });

@@ -72,7 +72,7 @@ export class ArtifactsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
   private readonly listRead = apiResource({
@@ -90,7 +90,7 @@ export class ArtifactsPage {
     loader: async (id) => ({ id, rows: await this.api.versions(id) }),
   });
   readonly list = computed<ArtifactSummaryDto[]>(() => this.listRead.value() ?? []);
-  /** The document on screen: the one in the URL, or a version or save that replaced it. */
+  /** 畫面上的文件：網址中的那個，或取代它的某個版本或儲存。 */
   readonly document = linkedSignal<ArtifactDto | null>(() => {
     const value = this.documentRead.value();
     return value && value.resource.id === this.id() ? value : null;
@@ -125,7 +125,7 @@ export class ArtifactsPage {
     { id: 'pdf', label: 'PDF', icon: 'download' },
     { id: 'md', label: 'Markdown', icon: 'download' },
   ];
-  // Editing state starts over whenever another document or version is loaded or saved.
+  // 每當載入或儲存另一份文件或版本時，編輯狀態都會重新開始。
   readonly mode = linkedSignal(() => {
     this.document();
     return 'read';
@@ -149,9 +149,9 @@ export class ArtifactsPage {
     const term = this.filter().toLowerCase(),
       ownership = this.ownership();
     return this.list().filter(
-      (x) =>
-        (ownership === 'all' || x.resource.isOwner === (ownership === 'mine')) &&
-        x.resource.name.toLowerCase().includes(term),
+      (item2) =>
+        (ownership === 'all' || item2.resource.isOwner === (ownership === 'mine')) &&
+        item2.resource.name.toLowerCase().includes(term),
     );
   });
   readonly dirty = computed(
@@ -166,7 +166,7 @@ export class ArtifactsPage {
       this.document()?.resource.canEdit &&
       (this.document()?.version === this.document()?.currentVersion || this.restoring()),
   );
-  /** The line under the title: the viewer's access, the version on screen and whether it is saved. */
+  /** 標題下方的一行：檢視者的權限、畫面上的版本，以及是否已儲存。 */
   readonly summary = computed(() => {
     const doc = this.document();
     if (!doc) return this.id() ? '' : '把回答整理為可交付的文件，保留每次修改，與同事協作核對。';
@@ -183,7 +183,7 @@ export class ArtifactsPage {
       { id: 'delete', label: '移除成果文件', icon: 'trash', danger: true, disabled: this.busy() },
     ];
   });
-  /** The collection's tour, or the open document's for what this viewer can do there. */
+  /** 集合的導覽，或已開啟文件的導覽（依此檢視者在該處可做的事決定）。 */
   readonly tour = computed(() =>
     this.id()
       ? artifactTour({
@@ -204,10 +204,10 @@ export class ArtifactsPage {
       : []),
   ]);
   readonly choices = computed(() =>
-    this.revisions().map((x) => ({
-      value: String(x.version),
-      label: `版本 ${x.version}`,
-      description: `${x.author} · ${formatDate(x.createdAt)}`,
+    this.revisions().map((item3) => ({
+      value: String(item3.version),
+      label: `版本 ${item3.version}`,
+      description: `${item3.author} · ${formatDate(item3.createdAt)}`,
     })),
   );
   private version = 0;
@@ -235,7 +235,7 @@ export class ArtifactsPage {
     this.documentRead.reload();
     this.revisionsRead.reload();
   }
-  /** An artifact saved from the text tools opens on this same page, so the list is read again. */
+  /** 從文字工具儲存的成品會在同一頁開啟，因此列表會重新讀取。 */
   created() {
     this.listRead.reload();
   }
@@ -307,6 +307,10 @@ export class ArtifactsPage {
         }))
     );
   }
+  onEditorInput(event: Event) {
+    this.content.set((event.target as HTMLTextAreaElement).value);
+    this.selection.set(null);
+  }
   pick() {
     const editor = this.editor()?.nativeElement;
     if (!editor || editor.selectionEnd <= editor.selectionStart) {
@@ -375,8 +379,10 @@ export class ArtifactsPage {
       await this.api.remove(doc.resource.id);
       if (valid()) {
         this.document.set(null);
-        // The page stays mounted across /artifacts and /artifacts/:id, so the list drops it here.
-        this.listRead.value.update((all) => all?.filter((x) => x.resource.id !== doc.resource.id));
+        // 頁面在 /artifacts 與 /artifacts/:id 之間保持掛載，所以列表在這裡移除它。
+        this.listRead.value.update((all) =>
+          all?.filter((item) => item.resource.id !== doc.resource.id),
+        );
         this.listRead.reload();
         this.busy.set(false);
         await this.router.navigate(['/artifacts']);

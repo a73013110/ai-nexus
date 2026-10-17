@@ -1,15 +1,15 @@
 import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 /**
- * The collection tour. The opening step names where shares are created only for the features the
- * viewer has; the card step exists only while a share is listed.
+ * 收藏的導覽。開頭的步驟只說明檢視者有權限的功能在哪裡建立分享；
+ * 分享卡片的步驟只在有分享列出時才存在。
  */
 export function sharesTour(options: {
-  /** Conversations can be shared from the chat's top bar. */
+  /** 對話可以從聊天的頂部列分享。 */
   chat: boolean;
   /** Owned artifacts can be shared from their "成果操作" menu. */
   artifacts: boolean;
-  /** At least one share card is on screen. */
+  /** 至少有一張分享卡片在畫面上。 */
   cards: boolean;
 }): ProductTourDefinition {
   const places = [
@@ -51,13 +51,13 @@ export function sharesTour(options: {
 }
 
 /**
- * The open share's tour. The snapshot step follows what was shared, and only the owner learns how
- * to revoke it.
+ * 已開啟分享的導覽。快照步驟說明分享了什麼，只有擁有者才會知道
+ * 如何撤銷它。
  */
 export function shareTour(options: {
-  /** The share holds an artifact version rather than a conversation branch. */
+  /** 分享的是成品版本，而不是對話分支。 */
   artifact: boolean;
-  /** The conversation's attachments were shared too. */
+  /** 對話的附件也一併分享了。 */
   attachments: boolean;
   /** The owner's "分享操作" menu is shown. */
   manage: boolean;

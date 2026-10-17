@@ -12,8 +12,8 @@ export const routes: Routes = [
   },
   { path: '', pathMatch: 'full', redirectTo: WORKSPACE_HOME },
   {
-    // Every workspace page requires a signed-in session; the guard is declared once here, and the
-    // shell keeps the sidebar alive across pages.
+    // 每個工作區頁面都需要已登入的工作階段；守衛在此宣告一次，
+    // 殼層則讓側邊欄跨頁面保持存活。
     path: '',
     canActivateChild: [authenticated],
     loadComponent: () =>
@@ -27,38 +27,48 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('@features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+          import('@features/dashboard/dashboard-page').then((match) => match.DashboardPage),
       },
       {
         matcher: repositoryRoute,
         loadComponent: () =>
-          import('@features/repositories/repositories-page').then((m) => m.RepositoriesPage),
+          import('@features/repositories/repositories-page').then(
+            (match2) => match2.RepositoriesPage,
+          ),
       },
       {
         path: 'design',
-        loadComponent: () => import('@features/design/design-page').then((m) => m.DesignPage),
+        loadComponent: () =>
+          import('@features/design/design-page').then((match3) => match3.DesignPage),
       },
       {
         path: 'integrations',
         loadComponent: () =>
-          import('@features/integrations/integrations-page').then((m) => m.IntegrationsPage),
+          import('@features/integrations/integrations-page').then(
+            (match4) => match4.IntegrationsPage,
+          ),
       },
       {
         path: 'quality/retrieval',
         loadComponent: () =>
-          import('@features/quality/retrieval-evaluation').then((m) => m.RetrievalEvaluation),
+          import('@features/quality/retrieval-evaluation').then(
+            (match5) => match5.RetrievalEvaluation,
+          ),
       },
       {
         matcher: optionalId('quality'),
-        loadComponent: () => import('@features/quality/quality-page').then((m) => m.QualityPage),
+        loadComponent: () =>
+          import('@features/quality/quality-page').then((match6) => match6.QualityPage),
       },
       {
         matcher: optionalId('shared'),
-        loadComponent: () => import('@features/sharing/shared-page').then((m) => m.SharedPage),
+        loadComponent: () =>
+          import('@features/sharing/shared-page').then((match7) => match7.SharedPage),
       },
       {
         matcher: optionalId('projects'),
-        loadComponent: () => import('@features/projects/projects-page').then((m) => m.ProjectsPage),
+        loadComponent: () =>
+          import('@features/projects/projects-page').then((match8) => match8.ProjectsPage),
       },
       {
         matcher: optionalId('artifacts'),
@@ -99,22 +109,28 @@ export const routes: Routes = [
       {
         path: 'admin/operations',
         loadComponent: () =>
-          import('@features/administration/operations-page').then((m) => m.OperationsPage),
+          import('@features/administration/operations-page').then(
+            (match9) => match9.OperationsPage,
+          ),
       },
       {
         path: 'admin/monitoring',
         loadComponent: () =>
-          import('@features/monitoring/monitoring-page').then((m) => m.MonitoringPage),
+          import('@features/monitoring/monitoring-page').then((match10) => match10.MonitoringPage),
       },
       {
         path: 'admin/logs',
         loadComponent: () =>
-          import('@features/diagnostics/system-logs-page').then((m) => m.SystemLogsPage),
+          import('@features/diagnostics/system-logs-page').then(
+            (match11) => match11.SystemLogsPage,
+          ),
       },
       {
         path: 'admin/audit',
         loadComponent: () =>
-          import('@features/audit/activity-audit-page').then((m) => m.ActivityAuditPage),
+          import('@features/audit/activity-audit-page').then(
+            (match12) => match12.ActivityAuditPage,
+          ),
       },
       {
         path: 'admin',
@@ -129,7 +145,7 @@ export const routes: Routes = [
           import('@features/account/settings-entry').then((module) => module.SettingsEntry),
       },
       {
-        // One route for /chat and /chat/:id, so starting a conversation keeps the same workspace.
+        // /chat 與 /chat/:id 共用同一條路由，因此開始新對話時工作區不會改變。
         matcher: optionalId('chat'),
         loadComponent: () =>
           import('@features/chat/chat-workspace').then((module) => module.ChatWorkspace),

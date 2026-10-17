@@ -17,18 +17,17 @@ import { SwipeTracker } from '../browser/swipe';
 import { Icon } from './icon';
 import { ToastService, toastIcon, type Toast } from './toast-service';
 
-/** Toasts drawn behind the front one while collapsed. */
+/** 收合時，位於最前面的提示後方的提示。 */
 const VISIBLE = 3;
 const PEEK = 10;
 const GAP = 8;
 const SWIPE_DISMISS = 64;
 
 /**
- * The bottom-right stack for `ToastService`. Collapsed, newer toasts sit in front of a short pile
- * (Sonner's stack); hovering or focusing fans it out on the spring and holds every timer. Each toast
- * arrives as a capsule that morphs into its card, like the island. The layer is a manual popover,
- * so it stays above page content, and re-enters the top layer when a toast arrives over a modal.
- * Screen readers hear one live region per urgency rather than the cards themselves.
+ * `ToastService` 的右下角堆疊。收合時，較新的提示排在一小疊的前面（參考 Sonner 的堆疊）；
+ * 懸停或聚焦時會以彈簧展開，並暫停所有計時器。每則提示先以膠囊形式出現，再 morph 成卡片，與島相同。
+ * 此層是手動的 popover，所以會留在頁面內容之上；提示在對話框上方抵達時，會重新進入最上層。
+ * 螢幕閱讀器依緊急程度各聽一個 live region，而不是逐張聽卡片。
  */
 @Component({
   selector: 'nx-toaster',
@@ -123,13 +122,13 @@ export class Toaster {
   private readonly injector = inject(Injector);
   private returnFocus: HTMLElement | null = null;
 
-  /** Distance of each toast above the bottom edge: a small peek collapsed, its full place fanned. */
+  /** 每則提示距離底邊的高度：收合時只露出一點，展開時是完整位置。 */
   readonly offsets = computed(() => {
     const heights = this.heights();
-    let y = 0;
-    return this.toasts().map((toast, i) => {
-      const offset = this.expanded() ? y : i * PEEK;
-      y += (heights[toast.id] ?? 0) + GAP;
+    let pointY = 0;
+    return this.toasts().map((toast, index2) => {
+      const offset = this.expanded() ? pointY : index2 * PEEK;
+      pointY += (heights[toast.id] ?? 0) + GAP;
       return offset;
     });
   });
@@ -165,14 +164,14 @@ export class Toaster {
       destroyRef.onDestroy(() => observer.disconnect());
     }
 
-    // Announce each new or replaced toast once; a modal opened since needs the layer raised again.
+    // 每則新提示或被取代的提示只播報一次；其後開啟的對話框需要重新把此層提升。
     let seen = new Map<string, number>();
     effect(() => {
       const toasts = this.toasts();
       const fresh = toasts.find((toast) => seen.get(toast.id) !== toast.version);
       seen = new Map(toasts.map((toast) => [toast.id, toast.version]));
       untracked(() => {
-        // An emptied stack can shrink away under a still pointer, which never fires pointerleave.
+        // 清空的堆疊可能在靜止的指標下收縮，而指標不會觸發 pointerleave。
         if (!toasts.length) this.hover(false);
         this.heights.update((heights) =>
           Object.fromEntries(Object.entries(heights).filter(([id]) => seen.has(id))),
@@ -193,7 +192,7 @@ export class Toaster {
     destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', visibility));
   }
 
-  /** Collapsed, the cards behind take the front card's height so only their edges show. */
+  /** 收合時，後面的卡片採用前卡的高度，只露出邊緣。 */
   cardHeight(toast: Toast, index: number) {
     const id = this.expanded() || index === 0 ? toast.id : this.toasts()[0].id;
     const height = this.heights()[id];
@@ -218,7 +217,7 @@ export class Toaster {
     this.focused.set(false);
     this.syncTimers();
   }
-  /** Escape dismisses the toast that holds focus. */
+  /** Escape 會關閉取得焦點的提示。 */
   escape(event: Event) {
     const id = (event.target as HTMLElement).closest<HTMLElement>('.toast-body')?.dataset['id'];
     const toast = this.toasts().find((item) => item.id === id);
@@ -227,7 +226,7 @@ export class Toaster {
   act(toast: Toast, keyboard: boolean) {
     this.dismiss(toast, keyboard, () => this.service.act(toast.id));
   }
-  /** Keyboard dismissal keeps focus in the stack, or returns it where it came from. */
+  /** 鍵盤關閉會把焦點留在堆疊中，或歸還到來源處。 */
   dismiss(toast: Toast, keyboard = false, close = () => this.service.dismiss(toast.id)) {
     const next = this.toasts().find((item) => item.id !== toast.id);
     close();
@@ -265,7 +264,7 @@ export class Toaster {
     this.dragging.set(null);
     if (event.type === 'pointercancel' || !drag.swipe.dismisses(SWIPE_DISMISS, event.timeStamp))
       return;
-    // Set on the element itself: the leaving view's bindings are no longer refreshed.
+    // 直接設定在元素本身：離開中的視圖的綁定不會再更新。
     const element = event.currentTarget as HTMLElement;
     element.dataset['swiped'] = '';
     element.style.setProperty('--swipe-x', drag.x + 'px');

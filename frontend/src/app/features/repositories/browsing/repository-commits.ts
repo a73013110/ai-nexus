@@ -26,8 +26,8 @@ const dayFormat = new Intl.DateTimeFormat('zh-TW', {
 });
 
 /**
- * History from the pinned commit, grouped by day. Picking two commits opens their range: the
- * older one's changes are included, so the range reads "from this commit to that one".
+ * 釘選提交的歷史，依日期分組。選取兩個提交會開啟它們的範圍：較舊的那個提交的變更也會包含在內，
+ * 因此範圍讀作「從這個提交到那個提交」。
  */
 @Component({
   selector: 'nx-repository-commits',
@@ -148,8 +148,8 @@ export class RepositoryCommits {
     computation: (read, previous) => {
       if (!read) return [];
       if (read.page === 1) return read.data.items;
-      const seen = new Set(previous?.value.map((x) => x.sha));
-      return [...(previous?.value ?? []), ...read.data.items.filter((x) => !seen.has(x.sha))];
+      const seen = new Set(previous?.value.map((item) => item.sha));
+      return [...(previous?.value ?? []), ...read.data.items.filter((item) => !seen.has(item.sha))];
     },
   });
   readonly days = computed(() => {
@@ -165,14 +165,14 @@ export class RepositoryCommits {
   readonly hasMore = computed(() => !!this.latest()?.data.hasMore);
   readonly loading = this.read.loading;
   readonly error = this.read.error;
-  /** Up to two commits; picking a third replaces the older pick. */
+  /** 最多兩個提交；選第三個會取代較舊的那個選擇。 */
   readonly picked = signal<string[]>([]);
   readonly range = computed(() => {
-    const [a, b] = this.picked();
-    if (!a || !b) return null;
+    const [text, text2] = this.picked();
+    if (!text || !text2) return null;
     const items = this.items(),
-      ia = items.findIndex((x) => x.sha === a),
-      ib = items.findIndex((x) => x.sha === b);
+      ia = items.findIndex((item) => item.sha === text),
+      ib = items.findIndex((item) => item.sha === text2);
     if (ia < 0 || ib < 0) return null;
     const head = items[Math.min(ia, ib)],
       from = items[Math.max(ia, ib)];
@@ -187,9 +187,9 @@ export class RepositoryCommits {
     const range = this.range();
     if (!range) return new Set<string>();
     const items = this.items(),
-      start = items.findIndex((x) => x.sha === range.head),
-      end = items.findIndex((x) => x.sha === range.from);
-    return new Set(items.slice(start, end + 1).map((x) => x.sha));
+      start = items.findIndex((item) => item.sha === range.head),
+      end = items.findIndex((item) => item.sha === range.from);
+    return new Set(items.slice(start, end + 1).map((item) => item.sha));
   });
   readonly short = shortSha;
   readonly when = relativeTime;
@@ -210,11 +210,11 @@ export class RepositoryCommits {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((x) => x + 1);
+    if (!this.loading()) this.page.update((item) => item + 1);
   }
   pick(sha: string) {
     this.picked.update((current) =>
-      current.includes(sha) ? current.filter((x) => x !== sha) : [...current.slice(-1), sha],
+      current.includes(sha) ? current.filter((item) => item !== sha) : [...current.slice(-1), sha],
     );
   }
   compare() {

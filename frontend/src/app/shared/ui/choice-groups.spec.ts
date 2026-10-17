@@ -28,7 +28,7 @@ class Host {
     { id: 'system', name: '系統', options: [{ id: 'admin', label: '存取管理' }] },
     { id: 'empty', name: '空分類', options: [] },
   ];
-  // `retired` is outside every group and must survive any change.
+  // `retired` 在所有群組之外，任何變更都必須保留它。
   readonly selected = signal<string[]>(['retired', 'files']);
   readonly disabled = signal(false);
 }
@@ -79,7 +79,7 @@ describe('ChoiceGroups', () => {
     batch().click();
     fixture.detectChanges();
     expect(host.selected()).toEqual(['retired']);
-    // A single option needs no batch button.
+    // 只有一個選項不需要批次按鈕。
     expect(cards()[1].querySelector('.choice-group-batch')).toBeNull();
   });
 

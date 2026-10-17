@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { MermaidDiagram } from './mermaid-diagram';
 
-/** Lazy Angular widget host. Parsing/sanitization stays in the common Markdown boundary. */
+/** 延遲載入的 Angular 小工具宿主。解析與消毒仍在共用的 Markdown 邊界內進行。 */
 export function mountMarkdownDiagrams(
   host: HTMLElement,
   diagrams: readonly string[],

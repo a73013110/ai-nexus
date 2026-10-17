@@ -53,8 +53,8 @@ import {
 import { sameIds } from '../users/user-role-fields';
 
 /**
- * Users are edited in the user inspector and created in `AdminUserCreateDialog`. `menu` is a
- * navigation group: it only arranges the menu and grants nothing.
+ * 使用者在使用者檢視器中編輯、在 `AdminUserCreateDialog` 中建立。`menu` 是導覽群組：只整理選單、
+ * 不授予任何權限。
  */
 export type AccessKind = 'role' | 'group' | 'feature' | 'menu';
 export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto | NavigationGroupDto;
@@ -63,43 +63,42 @@ interface Editor {
   kind: AccessKind;
   id: string;
   name: string;
-  /** Fixed at open so the heading names what is being edited, not the draft name. */
+  /** 開啟時固定，讓標題顯示正在編輯的對象，而不是草稿名稱。 */
   title: string;
   subtitle: string;
   enabled: boolean;
   ids: string[];
   modelPolicy: ModelPolicyDraft;
   storage: string;
-  /** Kept as it is: the order is changed on the features list. */
+  /** 保留原狀：順序在功能清單上調整。 */
   order: number;
-  /** A feature's menu group, or a menu group's parent; '' is the top level. */
+  /** 功能所屬的選單群組，或群組的上層；空字串代表最上層。 */
   placement: string;
-  /** A feature's icon name. */
+  /** 功能的圖示名稱。 */
   icon: string;
   isNew: boolean;
 }
 
-/** Whether a draft would save what is already saved. */
-function sameEditor(a: Editor, b: Editor) {
+/** 草稿是否與已儲存的內容相同。 */
+function sameEditor(first: Editor, second: Editor) {
   return (
-    a.id === b.id &&
-    a.name === b.name &&
-    a.enabled === b.enabled &&
-    sameIds(a.ids, b.ids) &&
-    sameModelPolicy(a.modelPolicy, b.modelPolicy) &&
-    a.storage.trim() === b.storage.trim() &&
-    a.placement === b.placement &&
-    a.icon === b.icon
+    first.id === second.id &&
+    first.name === second.name &&
+    first.enabled === second.enabled &&
+    sameIds(first.ids, second.ids) &&
+    sameModelPolicy(first.modelPolicy, second.modelPolicy) &&
+    first.storage.trim() === second.storage.trim() &&
+    first.placement === second.placement &&
+    first.icon === second.icon
   );
 }
 
 let sequence = 0;
 
 /**
- * Creates or edits a role, feature group or feature in one dialog, laid out like the user
- * inspector: `.form-sections` in the body and, when editing, `DialogSaveBar` at the foot. A group
- * adds a tab for its model policy beside that page; one save covers both. Closing with unsaved
- * changes asks first.
+ * 在同一個對話框中建立或編輯角色、功能群組或功能，版面與使用者檢視器相同：內容放在 `.form-sections`，
+ * 編輯時底部為 `DialogSaveBar`。
+ * 群組會在旁邊多一個分頁放模型政策；一次儲存涵蓋兩者。有未儲存的變更時，關閉會先詢問。
  */
 @Component({
   selector: 'nx-access-editor-dialog',
@@ -141,7 +140,7 @@ export class AccessEditorDialog {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AdministrationApi);
   readonly editor = signal<Editor | null>(null);
-  /** The draft as opened, for revert and the unsaved-changes check. */
+  /** 開啟時的草稿，用於還原與未儲存變更的檢查。 */
   private readonly opened = signal<Editor | null>(null);
   readonly dirty = computed(() => {
     const draft = this.editor(),
@@ -149,12 +148,12 @@ export class AccessEditorDialog {
     return !!draft && !!opened && !sameEditor(draft, opened);
   });
   readonly saving = signal(false);
-  /** Fields are read-only while saving or while testing another identity. */
+  /** 儲存中或測試其他身分時，欄位唯讀。 */
   readonly locked = computed(() => this.saving() || this.session.testing());
   readonly editorError = signal('');
-  /** A feature group's settings: its page of sections, and its model policy. */
+  /** 功能群組的設定：它的區段頁面與模型政策。 */
   readonly groupSection = signal<GroupSection>('settings');
-  /** One save covers both tabs, so each marks the changes it holds. */
+  /** 兩個分頁由同一次儲存送出，各自標記自己持有的變更。 */
   readonly groupSections = computed<readonly (TabItem & { value: GroupSection })[]>(() => {
     const draft = this.editor(),
       opened = this.opened();
@@ -176,7 +175,7 @@ export class AccessEditorDialog {
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly injector = inject(Injector);
-  /** A group grants features, listed by the menu's groups. */
+  /** 群組授予功能，清單由選單的群組列出。 */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
     navigationSections(
       navigationTree(this.store.catalog()?.features || [], this.store.navigationGroups()),
@@ -191,7 +190,7 @@ export class AccessEditorDialog {
       })),
     })),
   );
-  /** A role joins feature groups; they have no categories, so they form one card. */
+  /** 角色加入功能群組；群組沒有分類，所以整體顯示為一張卡片。 */
   readonly groupChoices = computed<ChoiceGroup[]>(() => [
     {
       id: 'groups',
@@ -204,14 +203,15 @@ export class AccessEditorDialog {
     },
   ]);
   /**
-   * Where a feature or menu group can go: the top level or any group, shown by its path. A group
-   * cannot move under itself or its own subgroups.
+   * 功能或選單群組可以移到的位置：最上層或任一群組，以路徑顯示。群組不能移到自己或自己的子群組之下。
    */
   readonly placements = computed<SelectOption[]>(() => {
-    const e = this.editor(),
+    const event2 = this.editor(),
       groups = this.store.navigationGroups();
     const excluded =
-      e?.kind === 'menu' && !e.isNew ? descendantIds(groups, e.id) : new Set<string>();
+      event2?.kind === 'menu' && !event2.isNew
+        ? descendantIds(groups, event2.id)
+        : new Set<string>();
     return [
       { value: '', label: '最上層（不分群）' },
       ...navigationSections(navigationTree([], groups, { keepEmpty: true }))
@@ -224,18 +224,20 @@ export class AccessEditorDialog {
     label: name,
   }));
   readonly icon = featureIcon;
-  /** What a role would grant once saved: enabled features of its enabled groups. */
+  /** 角色儲存後會授予的內容：已啟用群組中已啟用的功能。 */
   readonly proposedFeatures = computed(() => {
-    const e = this.editor(),
-      c = this.store.catalog();
-    if (!e || !e.enabled || e.kind !== 'role' || !c) return [];
-    const groups = new Set(e.ids);
+    const event3 = this.editor(),
+      card = this.store.catalog();
+    if (!event3 || !event3.enabled || event3.kind !== 'role' || !card) return [];
+    const groups = new Set(event3.ids);
     const features = new Set(
-      c.groups.filter((x) => x.enabled && groups.has(x.id)).flatMap((x) => x.featureIds),
+      card.groups
+        .filter((item) => item.enabled && groups.has(item.id))
+        .flatMap((item) => item.featureIds),
     );
-    return c.features.filter((x) => x.enabled && features.has(x.id));
+    return card.features.filter((item) => item.enabled && features.has(item.id));
   });
-  /** The draft stays after closing, so the dialog does not empty during its exit. */
+  /** 關閉後草稿仍保留，讓對話框在退場動畫中不會被清空。 */
   open(kind: AccessKind, item?: AccessItem) {
     this.editorError.set('');
     const role = kind === 'role' ? (item as AdminRoleDto) : null,
@@ -248,7 +250,7 @@ export class AccessEditorDialog {
       id: item?.id || '',
       name,
       title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
-      // A feature without a page (a permission such as `logs.export`) has no route to show.
+      // 沒有頁面的功能（例如 `logs.export` 這類權限）沒有路由可顯示。
       subtitle: feature ? [feature.id, feature.route].filter(Boolean).join(' · ') : item?.id || '',
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: [...(role?.groupIds || group?.featureIds || [])],
@@ -267,7 +269,7 @@ export class AccessEditorDialog {
     this.selectSection('settings');
     this.dialog().nativeElement.showModal();
   }
-  /** Each tab, and each opening, starts at the top of the body. */
+  /** 每個分頁與每次開啟，都從內容頂端開始。 */
   selectSection(section: GroupSection) {
     this.groupSection.set(section);
     this.body()?.nativeElement.scrollTo({ top: 0 });
@@ -275,27 +277,27 @@ export class AccessEditorDialog {
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
     this.editor.update((old) => (old ? { ...old, [key]: value } : null));
   }
-  /** Back to the values as opened; the tab stays where it is. */
+  /** 還原為開啟時的值；分頁停留在原位。 */
   revert() {
     this.editor.set(this.opened());
     this.editorError.set('');
   }
-  /** Escape, the close button, the sheet's swipe and 「取消」 arrive here. */
+  /** Escape、關閉鈕、抽屜的滑動關閉都會走到這裡。 */
   cancel(event: Event) {
     event.preventDefault();
     void this.requestClose();
   }
   async requestClose() {
     if (this.saving()) return;
-    const e = this.editor();
+    const event4 = this.editor();
     if (
-      e &&
+      event4 &&
       this.dirty() &&
       !(await this.confirmation().ask({
         title: '放棄未儲存的變更？',
-        message: e.isNew
-          ? `尚未建立${this.label(e.kind)}，關閉後會捨棄已填寫的內容。`
-          : `「${e.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`,
+        message: event4.isNew
+          ? `尚未建立${this.label(event4.kind)}，關閉後會捨棄已填寫的內容。`
+          : `「${event4.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`,
         confirm: '放棄變更',
       }))
     )
@@ -304,12 +306,12 @@ export class AccessEditorDialog {
   }
   async save(event: Event) {
     event.preventDefault();
-    const e = this.editor();
-    if (!e || this.locked() || (!e.isNew && !this.dirty())) return;
-    // An error opens the tab that holds the field and focuses it (or shows the message), so the
-    // fix is in view even when the field sits further down the page.
+    const event5 = this.editor();
+    if (!event5 || this.locked() || (!event5.isNew && !this.dirty())) return;
+    // 錯誤會打開含有該欄位的分頁並聚焦（或顯示訊息），
+    // 即使欄位位於頁面較下方，修正處也能被看到。
     const fail = (section: GroupSection, message: string, field?: string) => {
-      if (e.kind === 'group') this.selectSection(section);
+      if (event5.kind === 'group') this.selectSection(section);
       this.editorError.set(message);
       afterNextRender(
         () => {
@@ -321,17 +323,17 @@ export class AccessEditorDialog {
         { injector: this.injector },
       );
     };
-    if (!e.id || !e.name.trim())
-      return fail('settings', '請輸入識別碼與名稱。', e.id ? 'name' : 'id');
+    if (!event5.id || !event5.name.trim())
+      return fail('settings', '請輸入識別碼與名稱。', event5.id ? 'name' : 'id');
     let policy: GroupPolicyRequest | undefined;
-    if (e.kind === 'group') {
+    if (event5.kind === 'group') {
       try {
-        policy = modelPolicyRequest(e.modelPolicy);
+        policy = modelPolicyRequest(event5.modelPolicy);
       } catch (error) {
         return fail('models', safeMessage(error));
       }
       try {
-        policy.storedAttachmentLimitBytes = parseStorageLimitGb(e.storage);
+        policy.storedAttachmentLimitBytes = parseStorageLimitGb(event5.storage);
       } catch (error) {
         return fail('settings', safeMessage(error), 'storage');
       }
@@ -339,50 +341,56 @@ export class AccessEditorDialog {
     this.saving.set(true);
     this.editorError.set('');
     try {
-      if (e.kind === 'role')
-        await this.api.role(e.id, { name: e.name, enabled: e.enabled, groupIds: e.ids });
-      if (e.kind === 'group' && policy)
-        await this.api.group(e.id, {
-          name: e.name,
-          enabled: e.enabled,
-          featureIds: e.ids,
+      if (event5.kind === 'role')
+        await this.api.role(event5.id, {
+          name: event5.name,
+          enabled: event5.enabled,
+          groupIds: event5.ids,
+        });
+      if (event5.kind === 'group' && policy)
+        await this.api.group(event5.id, {
+          name: event5.name,
+          enabled: event5.enabled,
+          featureIds: event5.ids,
           policy,
         });
-      if (e.kind === 'feature')
-        await this.api.feature(e.id, {
-          name: e.name,
-          enabled: e.enabled,
-          // A feature moved to another group goes to that group's end.
-          sortOrder: this.order(e, () =>
+      if (event5.kind === 'feature')
+        await this.api.feature(event5.id, {
+          name: event5.name,
+          enabled: event5.enabled,
+          // 移到其他群組的功能，放到該群組的最後。
+          sortOrder: this.order(event5, () =>
             (this.store.catalog()?.features ?? []).filter(
-              (x) => (x.groupId ?? '') === e.placement && x.id !== e.id,
+              (item) => (item.groupId ?? '') === event5.placement && item.id !== event5.id,
             ),
           ),
-          groupId: e.placement || null,
-          icon: e.icon,
+          groupId: event5.placement || null,
+          icon: event5.icon,
         });
-      if (e.kind === 'menu') {
+      if (event5.kind === 'menu') {
         const body = {
-          name: e.name,
-          parentId: e.placement || null,
-          // A new group, or one moved under another parent, goes after its new siblings.
-          sortOrder: this.order(e, () =>
+          name: event5.name,
+          parentId: event5.placement || null,
+          // 新的群組，或移到另一個上層之下的群組，放在新的同層兄弟之後。
+          sortOrder: this.order(event5, () =>
             this.store
               .navigationGroups()
-              .filter((x) => (x.parentId ?? '') === e.placement && x.id !== e.id),
+              .filter(
+                (item) => (item.parentId ?? '') === event5.placement && item.id !== event5.id,
+              ),
           ),
         };
-        if (e.isNew) await this.api.createNavigationGroup({ id: e.id, ...body });
-        else await this.api.updateNavigationGroup(e.id, body);
+        if (event5.isNew) await this.api.createNavigationGroup({ id: event5.id, ...body });
+        else await this.api.updateNavigationGroup(event5.id, body);
       }
-      this.opened.set(e);
+      this.opened.set(event5);
       this.dialog().nativeElement.close();
-      if (e.kind === 'menu') {
-        this.store.toast.success(e.isNew ? '已建立選單分群' : '已儲存', '側欄選單已更新。');
+      if (event5.kind === 'menu') {
+        this.store.toast.success(event5.isNew ? '已建立選單分群' : '已儲存', '側欄選單已更新。');
         this.store.reordered();
       } else
         this.store.saved(
-          e.isNew ? '已建立' + this.label(e.kind) : '已儲存',
+          event5.isNew ? '已建立' + this.label(event5.kind) : '已儲存',
           '授權變更會在下一次操作生效。',
         );
     } catch (error) {
@@ -391,10 +399,10 @@ export class AccessEditorDialog {
       this.saving.set(false);
     }
   }
-  /** The saved place, or the end of the new parent's list when the placement changed. */
-  private order(e: Editor, siblings: () => readonly { sortOrder: number }[]) {
-    return !e.isNew && e.placement === this.opened()?.placement
-      ? e.order
+  /** 已儲存的位置；若位置有變，則是新上層清單的末尾。 */
+  private order(event6: Editor, siblings: () => readonly { sortOrder: number }[]) {
+    return !event6.isNew && event6.placement === this.opened()?.placement
+      ? event6.order
       : nextSortOrder(siblings());
   }
   label(kind: AccessKind) {

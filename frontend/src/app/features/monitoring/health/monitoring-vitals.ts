@@ -8,14 +8,14 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { MonitoringStore } from '../monitoring-store';
 import { monitoringLatency } from '../monitoring-format';
 
-/** Known values of a series; decorative trends skip the buckets that had no samples. */
+/** 數列的已知值；裝飾用的趨勢會略過沒有樣本的桶。 */
 const known = (values: readonly (number | null)[]) =>
-  values.filter((v): v is number => v !== null && Number.isFinite(v));
+  values.filter((value2): value2 is number => value2 !== null && Number.isFinite(value2));
 const decimals = (value: number) =>
   value.toLocaleString('zh-TW', { maximumFractionDigits: value >= 100 ? 0 : value >= 10 ? 1 : 2 });
 const whole = (value: number) => formatNumber(Math.round(value));
 const fixed = [0, 1, 2].map((digits) => (value: number) => value.toFixed(digits));
-/** Bytes split into a rolling number and a fixed unit, scaled by the current value. */
+/** 位元組拆成滾動數字加固定單位，依目前的值縮放。 */
 function byteScale(value: number) {
   return value >= 1e9
     ? { scale: 1e9, unit: 'GB', digits: 2 }
@@ -35,9 +35,8 @@ interface Vital {
 }
 
 /**
- * Six vital signs of the instance right now (the last minute, whatever the window) with their
- * trend over the window. Tiles and their sparklines keep their instances across snapshots, so
- * numbers roll and lines draw only once.
+ * 此執行個體目前的六項生命指標（最近一分鐘，與視窗無關），以及它在視窗內的趨勢。磁貼與其迷你圖
+ * 會在快照之間保留其執行個體，因此數字會滾動，線條只繪製一次。
  */
 @Component({
   selector: 'nx-monitoring-vitals',
@@ -81,16 +80,16 @@ interface Vital {
 export class MonitoringVitals {
   private readonly store = inject(MonitoringStore);
   readonly data = input.required<MonitoringSnapshot>();
-  // One array per series, recomputed only when a new bucket closes (store slices).
+  // 每個數列一個陣列，只有新的桶關閉時才重新計算（store 的切片）。
   private readonly series = computed(() => {
     const traffic = this.store.timeline(),
       resources = this.store.resourceTimeline();
     return {
-      requests: traffic.map((p) => p.requestsPerSecond),
-      p95: known(traffic.map((p) => p.p95Ms)),
-      errors: traffic.map((p) => p.serverErrors),
-      cpu: known(resources.map((p) => p.cpuPercent)),
-      memory: known(resources.map((p) => p.workingSetBytes)),
+      requests: traffic.map((part) => part.requestsPerSecond),
+      p95: known(traffic.map((part2) => part2.p95Ms)),
+      errors: traffic.map((part3) => part3.serverErrors),
+      cpu: known(resources.map((part4) => part4.cpuPercent)),
+      memory: known(resources.map((part5) => part5.workingSetBytes)),
     };
   });
   private readonly tones = computed(() => {

@@ -13,7 +13,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { ChatConversations } from './state/chat-conversations';
 
-/** Confirms renaming or deleting a conversation from the history list or the topbar menu. */
+/** 從歷史列表或頂部列選單重新命名或刪除對話前的確認。 */
 @Component({
   selector: 'nx-conversation-dialog',
   imports: [CompactDialog, DialogHeader, Field, FormField],

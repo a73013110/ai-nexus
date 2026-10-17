@@ -1,7 +1,7 @@
 /**
- * Seeded defaults (each module's `FeatureSeed`), for names `/me` cannot give: before it loads, and
- * features this account is not granted (access notices, monitoring). Administrator-defined names
- * from `/me` always win.
+ * 預設的種子名稱（每個模組的 `FeatureSeed`），用於 `/me` 無法提供名稱的情況：載入前，
+ * 以及此帳號未被授予的功能
+ * （存取提示、監控）。管理員定義的、來自 `/me` 的名稱永遠優先。
  */
 export const FEATURE_NAMES: Readonly<Record<string, string>> = {
   dashboard: '總覽',

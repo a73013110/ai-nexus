@@ -68,7 +68,7 @@ export class SettingsPage {
   readonly service = inject(UserSettingsService);
   private readonly api = inject(NexusApi);
   private readonly drafts = inject(DraftRepository);
-  /** The settings are read fresh with the account, never from another device's cache. */
+  /** 設定與帳號一起重新讀取，絕不使用其他裝置的快取。 */
   private readonly settingsRead = apiResource({
     freshAccount: true,
     loader: () => this.service.load(this.session.me()!.id, true),
@@ -78,11 +78,11 @@ export class SettingsPage {
     loader: () => (this.session.has('chat') ? this.api.models() : Promise.resolve(null)),
   });
   private readonly policyRead = apiResource({ loader: () => this.service.policy() });
-  /** The composer hides web search when it is unavailable, so the reason lives here. */
+  /** 輸入框在網路搜尋不可用時會隱藏它，因此原因放在這裡。 */
   private readonly webSearchRead = apiResource({
     loader: () => (this.session.has('chat') ? this.api.webSearchStatus() : Promise.resolve(null)),
   });
-  /** What the server holds; the draft starts from it and is compared against it. */
+  /** 伺服器上保存的值；草稿從它開始，並與它比較。 */
   readonly saved = linkedSignal<UserSettingsDto>(() =>
     structuredClone(this.settingsRead.value() ?? defaultSettings()),
   );
@@ -129,22 +129,24 @@ export class SettingsPage {
     { id: 'shortcuts', name: '鍵盤快捷鍵', icon: 'command', keywords: '操作 快速 指令' },
   ];
   readonly visibleSections = computed(() =>
-    this.sections.filter((x) => `${x.name} ${x.keywords}`.includes(this.search().trim())),
+    this.sections.filter((item) => `${item.name} ${item.keywords}`.includes(this.search().trim())),
   );
-  readonly currentSection = computed(() => this.sections.find((x) => x.id === this.section())!);
+  readonly currentSection = computed(() =>
+    this.sections.find((item) => item.id === this.section())!,
+  );
   readonly changed = computed(() => JSON.stringify(this.draft()) !== JSON.stringify(this.saved()));
   readonly themeOptions = [
     { value: 'system', label: '跟隨系統' },
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((x) => ({
-    value: String(x),
-    label: `${x} px`,
+  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((pointX) => ({
+    value: String(pointX),
+    label: `${pointX} px`,
   }));
-  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((x) => ({
-    value: String(x),
-    label: `${x} 倍`,
+  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((pointX2) => ({
+    value: String(pointX2),
+    label: `${pointX2} 倍`,
   }));
   readonly densityOptions = [
     { value: 'comfortable', label: '舒適', description: '適合長文閱讀' },
@@ -155,9 +157,9 @@ export class SettingsPage {
     { value: 'standard', label: '標準' },
     { value: 'wide', label: '寬廣' },
   ];
-  readonly sidebarOptions = [240, 264, 288, 320, 360].map((x) => ({
-    value: String(x),
-    label: `${x} px`,
+  readonly sidebarOptions = [240, 264, 288, 320, 360].map((pointX3) => ({
+    value: String(pointX3),
+    label: `${pointX3} px`,
   }));
   readonly effortOptions = [
     { value: 'auto', label: '依模型預設' },
@@ -168,7 +170,10 @@ export class SettingsPage {
   ];
   readonly modelOptions = computed(() => [
     { value: '', label: '依系統預設' },
-    ...(this.models()?.models || []).map((x) => ({ value: x.id, label: formatModelName(x) })),
+    ...(this.models()?.models || []).map((item) => ({
+      value: item.id,
+      label: formatModelName(item),
+    })),
   ]);
   private alive = true;
   constructor() {
@@ -200,7 +205,10 @@ export class SettingsPage {
   }
   searchChanged(value: string) {
     this.search.set(value);
-    if (!this.visibleSections().some((x) => x.id === this.section()) && this.visibleSections()[0])
+    if (
+      !this.visibleSections().some((item) => item.id === this.section()) &&
+      this.visibleSections()[0]
+    )
       this.section.set(this.visibleSections()[0].id);
   }
   reset() {

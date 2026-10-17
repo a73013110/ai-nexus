@@ -32,7 +32,8 @@ export interface QueryStateOptions<T> {
 /**
  * 查詢表單的兩份條件：`draft` 是正在編輯、尚未送出的，`applied` 是目前結果所用的。
  * - `apply` 每次都給 `applied` 新物件，條件沒變也會重新查詢（等於重新整理）。
- * - 已套用條件以 replaceUrl 寫回 URL；同一頁的其他導覽（連結、側邊欄）改了參數時，反過來套用 URL 的條件。
+ * - 已套用條件以 replaceUrl 寫回 URL；同一頁的其他導覽（連結、側邊欄）改了參數時，反過來套用
+ * URL 的條件。
  * - 分頁、排序、每頁筆數不屬於查詢條件，由頁面自己管理。
  * 在 injection context 用 `queryState()` 建立。
  */
@@ -43,7 +44,10 @@ export class QueryState<T extends object> {
   readonly error = signal('');
   readonly dirty: Signal<boolean>;
   readonly chips: Signal<QueryChip<T>[]>;
-  /** 最近寫入或讀到的 URL 參數。自己寫 URL 也會觸發 queryParamMap，靠它比對才不會把同一組條件再套用一次。 */
+  /**
+   * 最近寫入或讀到的 URL 參數。自己寫 URL 也會觸發 queryParamMap，
+   * 靠它比對才不會把同一組條件再套用一次。
+   */
   private seen = '';
 
   constructor(
@@ -135,7 +139,9 @@ export function queryState<T extends object>(options: QueryStateOptions<T>): Que
 function stableJson(value: unknown): string {
   return JSON.stringify(value, (_, item: unknown) =>
     item && typeof item === 'object' && !Array.isArray(item)
-      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+      ? Object.fromEntries(
+          Object.entries(item).sort(([text], [text2]) => text.localeCompare(text2)),
+        )
       : item,
   );
 }
@@ -152,6 +158,8 @@ function paramsKey(params: ParamMap | Params): string {
             : (Array.isArray(value) ? value : [value]).map(String),
         ]);
   return JSON.stringify(
-    entries.filter(([, values]) => values.length).sort(([a], [b]) => a.localeCompare(b)),
+    entries
+      .filter(([, values]) => values.length)
+      .sort(([text3], [text4]) => text3.localeCompare(text4)),
   );
 }

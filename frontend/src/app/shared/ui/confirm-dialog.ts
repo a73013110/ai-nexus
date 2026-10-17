@@ -30,7 +30,7 @@ let sequence = 0;
     class="platform-dialog"
     [attr.aria-label]="value()?.title"
     [attr.aria-describedby]="id + '-message'"
-    (cancel)="$event.preventDefault(); answer(false)"
+    (cancel)="onCancel($event)"
   >
     <nx-dialog-header [heading]="value()?.title ?? ''" closeLabel="關閉確認視窗" />
     <div class="dialog-body">
@@ -62,6 +62,10 @@ export class ConfirmDialog {
     this.value.set(value);
     this.dialog().nativeElement.showModal();
     return new Promise<boolean>((resolve) => (this.resolve = resolve));
+  }
+  onCancel(event: Event) {
+    event.preventDefault();
+    this.answer(false);
   }
   answer(value: boolean) {
     this.dialog().nativeElement.close();

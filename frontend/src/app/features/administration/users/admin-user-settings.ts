@@ -13,8 +13,8 @@ import { UserAccountFields } from './user-account-fields';
 import { UserRoleFields } from './user-role-fields';
 
 /**
- * The inspector's editable tabs. Each is its own form with its own save, error and unsaved state;
- * the fields are `.form-sections` that scroll, and `DialogSaveBar` stays at the foot.
+ * 檢視器中可編輯的分頁。每一個都是獨立的表單，有自己的儲存、錯誤與未儲存狀態；
+ * 欄位是可捲動的 `.form-sections`，`DialogSaveBar` 則固定在底部。
  */
 @Component({
   selector: 'nx-admin-user-settings',

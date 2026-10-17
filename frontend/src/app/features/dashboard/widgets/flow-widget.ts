@@ -16,14 +16,14 @@ interface Stage {
   live?: string;
 }
 
-/** The path information takes, from saved originals to shared results; each stage is its feature. */
+/** 工作從已保存的原始檔到共享結果所經過的路徑；每個階段各屬於一個功能。 */
 const STAGES: Stage[] = [
   {
     section: 'files',
     icon: 'files',
     metric: 'files',
     unit: '個原檔',
-    meta: (s) => `期間保存 ${metricText(s.metric('files', 'uploads'), 'count')} 個`,
+    meta: (segment) => `期間保存 ${metricText(segment.metric('files', 'uploads'), 'count')} 個`,
   },
   {
     section: 'tasks',
@@ -31,14 +31,14 @@ const STAGES: Stage[] = [
     metric: 'active',
     unit: '件處理中',
     live: 'active',
-    meta: (s) => `期間完成 ${metricText(s.metric('tasks', 'completed'), 'count')} 件`,
+    meta: (segment2) => `期間完成 ${metricText(segment2.metric('tasks', 'completed'), 'count')} 件`,
   },
   {
     section: 'knowledge',
     icon: 'library',
     metric: 'documents',
     unit: '份文件',
-    meta: (s) => `${metricText(s.metric('knowledge', 'chunks'), 'count')} 段索引`,
+    meta: (segment3) => `${metricText(segment3.metric('knowledge', 'chunks'), 'count')} 段索引`,
   },
   {
     section: 'chat',
@@ -46,21 +46,23 @@ const STAGES: Stage[] = [
     metric: 'replies',
     unit: '則回覆',
     live: 'generating',
-    meta: (s) => `${metricText(s.metric('chat', 'generating'), 'count')} 件生成中`,
+    meta: (segment4) => `${metricText(segment4.metric('chat', 'generating'), 'count')} 件生成中`,
   },
   {
     section: 'artifacts',
     icon: 'document',
     metric: 'versions',
     unit: '個版本',
-    meta: (s) => `${metricText(s.metric('artifacts', 'artifacts'), 'count')} 份成果文件`,
+    meta: (segment5) =>
+      `${metricText(segment5.metric('artifacts', 'artifacts'), 'count')} 份成果文件`,
   },
   {
     section: 'shared',
     icon: 'share',
     metric: 'sent',
     unit: '個有效分享',
-    meta: (s) => `${metricText(s.metric('shared', 'expiring'), 'count')} 個 7 天內到期`,
+    meta: (segment6) =>
+      `${metricText(segment6.metric('shared', 'expiring'), 'count')} 個 7 天內到期`,
   },
 ];
 

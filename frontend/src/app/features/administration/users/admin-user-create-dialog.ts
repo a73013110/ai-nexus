@@ -16,8 +16,8 @@ import { UserAccountFields, userAccountDraft, userAccountRequest } from './user-
 import { UserRoleFields } from './user-role-fields';
 
 /**
- * Creating a user needs only the account and its roles; model policy, storage and activity exist
- * once the user does, so they stay in the inspector.
+ * 建立使用者只需要帳號與其角色；模型政策、儲存空間與活動要等使用者建立後才有，
+ * 所以它們留在檢視器中。
  */
 @Component({
   selector: 'nx-admin-user-create-dialog',
@@ -78,7 +78,7 @@ export class AdminUserCreateDialog {
   private readonly api = inject(AdministrationApi);
   private readonly store = inject(AdministrationStore);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  /** The form is built on first open and kept, so the closing dialog does not empty. */
+  /** 表單在首次開啟時建立並保留，讓關閉中的對話框不會被清空。 */
   readonly opened = signal(false);
   readonly account = signal(userAccountDraft());
   readonly roleIds = signal(['member']);

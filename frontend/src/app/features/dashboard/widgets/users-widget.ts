@@ -3,7 +3,7 @@ import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { money } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
-/** Spend per user in the chosen currency; picking one narrows the whole overview to them. */
+/** 以所選幣別計算每位使用者的花費；選取一位會把整個總覽縮小到他。 */
 @Component({
   selector: 'nx-users-widget',
   imports: [DataTable, DataTableRow, TableState],
@@ -100,6 +100,8 @@ import { DashboardStore } from '../dashboard-store';
 export class UsersWidget {
   readonly store = inject(DashboardStore);
   readonly money = money;
-  readonly users = computed(() => [...this.store.users()].sort((a, b) => b.amount - a.amount));
-  readonly max = computed(() => Math.max(1e-8, ...this.users().map((x) => x.amount)));
+  readonly users = computed(() =>
+    [...this.store.users()].sort((first, second) => second.amount - first.amount),
+  );
+  readonly max = computed(() => Math.max(1e-8, ...this.users().map((item) => item.amount)));
 }

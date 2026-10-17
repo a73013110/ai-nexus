@@ -44,7 +44,7 @@ describe('workspace date inputs', () => {
 
 describe('figures and metrics', () => {
   it('shortens long amounts so headline money always fits its tile', () => {
-    // Intl joins the code and the number with a no-break space, which keeps them on one line.
+    // Intl 會以不斷行空白連接代碼與數字，讓它們保持在同一行。
     const figure = (amount: number, currency: string) =>
       figureMoney(amount, currency).replace(/\s/g, ' ');
     expect(figure(15.1208, 'USD')).toBe('USD 15.12');

@@ -15,7 +15,7 @@ import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 
-/** Text fields, search, dates and in-place editing. */
+/** 文字欄位、搜尋、日期與原地編輯。 */
 @Component({
   selector: 'nx-design-forms',
   imports: [

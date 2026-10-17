@@ -61,7 +61,7 @@
       </button>
     </div>
     <div class="composer-bottom">
-      <!-- Narrow composers fold attach, library, sources and web search into this one menu. -->
+      <!-- 窄版輸入框把附件、檔案庫、來源與網路搜尋收進這一個選單。 -->
       <nx-action-menu
         #toolsMenu
         class="tools-menu"
@@ -71,7 +71,7 @@
         [items]="tools()"
         (action)="tool($event)"
       />
-      <!-- Keep upload unavailable during the initial DOM creation, before readiness binds. -->
+      <!-- 在 DOM 首次建立、就緒狀態綁定之前，上傳保持不可用。 -->
       <button
         type="button"
         class="icon-button attach-button"

@@ -61,7 +61,7 @@ describe('notification store', () => {
     const { store, api, me, settle } = setup();
     await settle();
     expect(api.list).toHaveBeenCalledTimes(1);
-    expect(store.items().map((x) => x.id)).toEqual(['a', 'b']);
+    expect(store.items().map((item) => item.id)).toEqual(['a', 'b']);
     expect(store.unread()).toBe(1);
     expect(store.completed('c-a')).toBe(true);
     expect(store.completed('c-b')).toBe(false);
@@ -78,7 +78,7 @@ describe('notification store', () => {
     await store.read(store.items()[0]);
     expect(api.read).toHaveBeenCalledWith('a');
     expect(store.unread()).toBe(0);
-    expect(store.items().map((x) => x.id)).toEqual([]);
+    expect(store.items().map((item) => item.id)).toEqual([]);
   });
 
   it('keeps the list when marking read fails and reports why', async () => {

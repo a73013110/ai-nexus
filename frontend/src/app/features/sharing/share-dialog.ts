@@ -133,7 +133,7 @@ export class ShareDialog {
   readonly version = input<number | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly recipients = signal<DirectoryUserDto[]>([]);
-  readonly people = directorySearch(() => this.recipients().map((x) => x.id));
+  readonly people = directorySearch(() => this.recipients().map((item) => item.id));
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);
@@ -166,11 +166,11 @@ export class ShareDialog {
     return `${location.origin}/shared/${id}`;
   }
   add(user: DirectoryUserDto) {
-    if (!this.recipients().some((x) => x.id === user.id) && this.recipients().length < 20)
+    if (!this.recipients().some((item) => item.id === user.id) && this.recipients().length < 20)
       this.recipients.update((all) => [...all, user]);
   }
   remove(id: string) {
-    this.recipients.update((all) => all.filter((x) => x.id !== id));
+    this.recipients.update((all) => all.filter((item) => item.id !== id));
   }
   async create() {
     if (this.busy() || !this.recipients().length || !this.context) return;
@@ -183,14 +183,14 @@ export class ShareDialog {
       const value = await this.api.create({
         kind: context.kind,
         sourceId: context.id,
-        recipientIds: this.recipients().map((x) => x.id),
+        recipientIds: this.recipients().map((item) => item.id),
         hours: Number(this.hours()),
         includeAttachments: this.includeAttachments(),
         artifactVersion: context.version,
       });
       if (valid()) this.created.set(value);
-    } catch (e) {
-      if (valid()) this.createError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.createError.set(this.scope.message(error2));
     } finally {
       if (alive()) this.busy.set(false);
     }

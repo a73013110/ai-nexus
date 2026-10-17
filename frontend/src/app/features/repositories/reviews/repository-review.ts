@@ -30,7 +30,7 @@ import { RepositoryStore } from '../repository-store';
 
 const commentLimit = 20_000;
 
-/** One review: its progress while it runs, then the report and the evidence it read. */
+/** 一次審查：執行中顯示進度，之後是報告與它讀取的證據。 */
 @Component({
   selector: 'nx-repository-review',
   imports: [
@@ -230,7 +230,7 @@ export class RepositoryReview {
   private readonly jobs = inject(JobToasts);
   private readonly toast = inject(ToastService);
   private readonly commentDialog = viewChild.required<ElementRef<HTMLDialogElement>>('comment');
-  /** A queued or running review is read again every 3 seconds. */
+  /** 排隊中或執行中的審查每 3 秒重新讀取一次。 */
   private readonly read = apiResource({
     feature: 'repositories',
     params: () => {
@@ -253,7 +253,9 @@ export class RepositoryReview {
   readonly active = computed(() =>
     ['queued', 'running'].includes(this.detail()?.review.job.status ?? ''),
   );
-  readonly binary = computed(() => this.detail()?.sections.filter((x) => x.binary).length ?? 0);
+  readonly binary = computed(
+    () => this.detail()?.sections.filter((item) => item.binary).length ?? 0,
+  );
   readonly expanded = signal<ReadonlySet<number>>(new Set());
   readonly busy = signal(false);
   private readonly actionError = signal('');
@@ -298,8 +300,8 @@ export class RepositoryReview {
       const job = await this.api.reviewJob(id, retry);
       if (retry) this.jobs.track(job);
       if (valid()) this.read.reload();
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scopeGuard.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scopeGuard.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -323,11 +325,11 @@ export class RepositoryReview {
     try {
       const review = await this.api.comment(id, body);
       if (!valid()) return;
-      this.read.value.update((x) => (x ? { ...x, review } : x));
+      this.read.value.update((item2) => (item2 ? { ...item2, review } : item2));
       this.commentDialog().nativeElement.close();
       this.toast.success('已貼到 Pull Request');
-    } catch (e) {
-      if (valid()) this.commentError.set(this.scopeGuard.message(e));
+    } catch (error3) {
+      if (valid()) this.commentError.set(this.scopeGuard.message(error3));
     } finally {
       if (valid()) this.posting.set(false);
     }

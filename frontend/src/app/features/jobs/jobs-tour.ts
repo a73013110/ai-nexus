@@ -1,15 +1,15 @@
 import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /**
- * The task list tour. The card steps follow what the current filter shows: the result link and
- * stop / retry steps appear only when some card offers them.
+ * 任務列表的導覽。卡片步驟依目前篩選顯示的內容而定：結果連結與停止／重試步驟，
+ * 只有某張卡片提供時才會出現。
  */
 export function jobsTour(options: {
-  /** At least one task card is listed. */
+  /** 至少列出一張任務卡片。 */
   cards: boolean;
-  /** A listed card links to the document or review it produced. */
+  /** 列出的卡片會連到它產生的文件或審查。 */
   results: boolean;
-  /** A listed card can be stopped or retried. */
+  /** 列出的卡片可以被停止或重試。 */
   controls: boolean;
 }): ProductTourDefinition {
   const steps: TourStep[] = [

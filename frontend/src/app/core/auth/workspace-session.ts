@@ -5,10 +5,10 @@ import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
 import { FEATURE_NAMES } from './feature-names';
 
-/** Shown where a management write is refused because the account is testing another identity. */
+/** 管理寫入因帳號正在測試其他身分而被拒絕時顯示。 */
 export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
 
-/** Account context shared by feature pages; it never loads conversation history. */
+/** 功能頁共用的帳號脈絡；它永遠不載入對話歷史。 */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceSession {
   readonly auth = inject(AuthService);
@@ -16,9 +16,9 @@ export class WorkspaceSession {
   private readonly api = inject(NexusApi);
   readonly settings = inject(UserSettingsService);
   private generation = -1;
-  /** An administrator is acting as another identity; management writes are refused meanwhile. */
+  /** 管理員正以其他身分操作；期間管理寫入會被拒絕。 */
   readonly testing = computed(() => !!this.auth.session()?.testing);
-  /** {@link TESTING_IDENTITY_NOTE} while testing, otherwise empty (for a save bar's `note`). */
+  /** 測試期間為 {@link TESTING_IDENTITY_NOTE}，否則為空（供儲存列的 `note` 使用）。 */
   readonly testingNote = computed(() => (this.testing() ? TESTING_IDENTITY_NOTE : ''));
   constructor() {
     effect(() => {
@@ -47,9 +47,11 @@ export class WorkspaceSession {
     return me;
   }
   has(id: string) {
-    return this.me()?.access.features?.some((x) => x.id === id) ?? false;
+    return this.me()?.access.features?.some((item) => item.id === id) ?? false;
   }
   featureName(id: string) {
-    return this.me()?.access.features?.find((x) => x.id === id)?.name || FEATURE_NAMES[id] || id;
+    return (
+      this.me()?.access.features?.find((item) => item.id === id)?.name || FEATURE_NAMES[id] || id
+    );
   }
 }

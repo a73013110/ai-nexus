@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { SettingsOverlay } from '@core/preferences/settings-overlay';
 import { WORKSPACE_HOME } from '@core/layout/workspace-home';
 
-/** Compatibility for bookmarks; regular entry points open over the current page. */
+/** 為書籤保留的相容性；一般入口會在目前頁面上開啟。 */
 @Component({ template: '' })
 export class SettingsEntry {
   constructor() {

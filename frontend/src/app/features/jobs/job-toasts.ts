@@ -8,14 +8,14 @@ import { NotificationStore } from '@features/notifications/notification-store';
 import { jobKindName } from './job-kind';
 
 interface Watched {
-  /** The job being waited on; a document moves on to its embedding job. */
+  /** 正在等待的工作；文件會接續到它的向量化工作。 */
   id: string;
-  /** The job the person started, so a handoff or retry updates one toast. */
+  /** 使用者開始的工作，因此交接或重試時只更新同一則提示。 */
   toast: string;
   kind: string;
   subjectId: string;
   label: string;
-  /** Server time the job was (re)queued; older terminal events belong to an earlier attempt. */
+  /** 工作（重新）排入佇列的伺服器時間；較早的終結事件屬於前一次嘗試。 */
   since: number;
   document: boolean;
 }
@@ -23,10 +23,10 @@ interface Watched {
 const ACTIVE = ['queued', 'running', 'processing', 'indexing', 'building'];
 
 /**
- * Announces, as a toast, how the background jobs this tab started ended. It adds no requests:
- * the shell's notification poll reports every finished job, and pages that already poll a job
- * (tasks, knowledge, reader) settle it sooner. Jobs started elsewhere — another tab, before a
- * reload, by the server — are only in the inbox and the tasks page, so nothing is announced twice.
+ * 以提示通知此分頁開始的背景工作如何結束。本身不發出請求：殼層的通知輪詢會回報每個結束的工作，
+ * 已經在輪詢工作的頁面（工作、知識庫、閱讀器）會更早結束它。在別處開始的工作（其他分頁、
+ * 重新整理前、伺服器），
+ * 只會出現在收件匣與工作頁，因此同一件事不會被通知兩次。
  */
 @Injectable({ providedIn: 'root' })
 export class JobToasts {
@@ -50,7 +50,7 @@ export class JobToasts {
     });
   }
 
-  /** A job the person just started or retried here. */
+  /** 使用者剛在此開始或重試的工作。 */
   track(job: JobDto | null | undefined) {
     if (!job || !ACTIVE.includes(job.status)) return;
     this.watch({
@@ -63,7 +63,7 @@ export class JobToasts {
       document: job.kind.startsWith('document-'),
     });
   }
-  /** A knowledge document the person just added, edited or reindexed. */
+  /** 使用者剛新增、編輯或重建索引的知識庫文件。 */
   trackDocument(document: DocumentDto) {
     if (!document.jobId || !ACTIVE.includes(document.status)) return;
     this.watch({
@@ -76,13 +76,13 @@ export class JobToasts {
       document: true,
     });
   }
-  /** A fresher read of a job by a page that polls it anyway; safe to call from an effect. */
+  /** 會輪詢工作的頁面提供的較新讀取；可在 effect 中呼叫。 */
   observe(job: JobDto) {
     const watched = this.watched.get(job.id);
     if (watched && Date.parse(job.updatedAt) >= watched.since)
       untracked(() => void this.settle(watched, job.status));
   }
-  /** A fresher read of a document by a page that polls it anyway; safe to call from an effect. */
+  /** 會輪詢文件的頁面提供的較新讀取；可在 effect 中呼叫。 */
   observeDocument(document: DocumentDto) {
     const watched = [...this.watched.values()].find(
       (item) => item.document && item.subjectId === document.id,
@@ -103,7 +103,7 @@ export class JobToasts {
       item.target.kind === 'task'
         ? this.watched.get(item.target.id)
         : [...this.watched.values()].find(
-            (x) => x.kind === item.target.kind && x.subjectId === item.target.id,
+            (item2) => item2.kind === item.target.kind && item2.subjectId === item.target.id,
           );
     if (watched && Date.parse(item.createdAt) >= watched.since)
       void this.settle(watched, item.type.slice('task.'.length));
@@ -112,21 +112,21 @@ export class JobToasts {
     if (!['completed', 'failed', 'cancelled'].includes(status)) return;
     if (this.watched.get(watched.id) !== watched) return;
     this.watched.delete(watched.id);
-    // Stopping is the person's own act; it needs no confirmation.
+    // 停止是使用者自己的動作，不需要確認。
     if (status === 'cancelled') return;
     if (status === 'failed' || !watched.document) return this.announce(watched, status);
-    // Recognising a document hands it to a separate embedding job; only the document says
-    // whether it can be searched yet.
+    // 辨識文件時會把它交給另一個向量化工作；只有文件本身知道
+    // 是否已可搜尋。
     const generation = this.session.auth.generation();
     try {
       const document = await this.knowledge.document(watched.subjectId);
       if (generation === this.session.auth.generation())
         this.documentState(watched, document, true);
     } catch {
-      /* The document was removed or is no longer readable; the tasks page still has the job. */
+      /* 文件已被刪除或不再可讀；工作頁仍有該工作。 */
     }
   }
-  /** `ended`: the watched job has finished, so only a handoff to another job keeps waiting. */
+  /** `ended`：被監看的工作已結束，只有交接給另一個工作時才繼續等待。 */
   private documentState(watched: Watched, document: DocumentDto, ended: boolean) {
     const moved = !!document.jobId && document.jobId !== watched.id,
       current = moved ? { ...watched, id: document.jobId! } : watched;

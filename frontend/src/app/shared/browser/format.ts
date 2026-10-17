@@ -14,14 +14,15 @@ const workspaceDateTime = new Intl.DateTimeFormat('en-CA', {
 });
 export const formatDate = (value: string, calendar: CalendarSystem = 'gregory') =>
   formatCalendarValue(formatDateTimeInput(new Date(value)), calendar);
-/** The workspace-zone date of a timestamp, without the time. */
+/** 時間戳記在工作區時區的日期，不含時間。 */
 export const formatDay = (value: string, calendar: CalendarSystem = 'gregory') =>
   formatCalendarValue(formatDateTimeInput(new Date(value)), calendar, false);
-/** ISO wall-clock values use the workspace zone, independently of browser locale and zone. */
+/** ISO 的牆上時間一律使用工作區時區，與瀏覽器的語系與時區無關。 */
 export function formatDateTimeInput(date: Date) {
   if (!Number.isFinite(date.getTime())) return '';
   const parts = workspaceDateTime.formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)!.value;
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part2) => part2.type === type)!.value;
   return `${part('year').padStart(4, '0')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}`;
 }
 export const parseDateTimeInput = (value: string) =>
@@ -31,7 +32,7 @@ const percentFormat = new Intl.NumberFormat('zh-TW', {
   style: 'percent',
   maximumFractionDigits: 1,
 });
-/** A ratio (0.25) as a percentage with at most one decimal (25%). */
+/** 比率（0.25）以最多一位小數的百分比顯示（25%）。 */
 export const formatPercent = (ratio: number) => percentFormat.format(ratio);
 export const formatBytes = (value: number) =>
   value < 1000
@@ -77,7 +78,7 @@ export function relativeTime(iso: string, now = Date.now()) {
   if (abs < 86400 * 30) return relative.format(Math.round(seconds / 86400), 'day');
   return iso.slice(0, 10);
 }
-/** The number part of a metric, without its unit; unknown values never read as zero. */
+/** 指標的數字部分，不含單位；未知的值絕不會被讀成零。 */
 export function metricText(value: number | null | undefined, format: string): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   switch (format) {
@@ -94,16 +95,16 @@ export function metricText(value: number | null | undefined, format: string): st
 export function metricFormatter(format: string): (value: number) => string {
   return (value) => metricText(value, format);
 }
-/** Compact numbers for hero figures: 12.3K, 4.5M. */
+/** 焦點數字的精簡格式：12.3K、4.5M。 */
 export function compactNumber(value: number) {
   return new Intl.NumberFormat('zh-TW', { notation: 'compact', maximumFractionDigits: 1 }).format(
     value,
   );
 }
 /**
- * Money as a headline figure that fits any tile: cents as usual, sub-unit amounts to three
+ * 以標題數字呈現的金額，能放進任何磚塊：一般金額保留到分，不足一單位的金額取到三位小數，
  * significant digits, and from ten thousand on the compact form (`USD 1.23萬`). Exact amounts stay
- * with `money()` in tables, tooltips and the accessible name.
+ * 表格、提示與無障礙名稱中都使用 `money()`。
  */
 export function figureMoney(amount: number, currency: string) {
   if (!currency) return compactNumber(amount);

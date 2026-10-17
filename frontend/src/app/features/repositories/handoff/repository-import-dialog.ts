@@ -22,7 +22,7 @@ import { JobToasts } from '@features/jobs/job-toasts';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryStore, shortSha } from '../repository-store';
 
-/** Imports the text files under a folder, at the pinned commit, into a knowledge collection. */
+/** 以釘選的提交，把資料夾下的文字檔匯入知識庫集合。 */
 @Component({
   selector: 'nx-repository-import-dialog',
   imports: [RouterLink, CompactDialog, DialogHeader, Notice, Select],
@@ -92,7 +92,7 @@ export class RepositoryImportDialog {
   readonly folder = signal('');
   readonly commit = signal('');
   readonly short = shortSha;
-  /** Each opening reads the collections again; nothing is read before the first one. */
+  /** 每次開啟都會重新讀取集合；第一次開啟前不讀取任何東西。 */
   private readonly opened = signal(0);
   private readonly collectionsRead = apiResource({
     params: () => this.opened() || undefined,
@@ -103,11 +103,11 @@ export class RepositoryImportDialog {
   );
   readonly choices = computed(() =>
     this.collections()
-      .filter((x) => x.resource.canEdit)
-      .map((x) => ({
-        value: x.resource.id,
-        label: x.resource.name,
-        description: x.resource.isOwner ? '私人或由你共用的知識庫' : '共用知識庫 · 成員可閱讀',
+      .filter((item) => item.resource.canEdit)
+      .map((item2) => ({
+        value: item2.resource.id,
+        label: item2.resource.name,
+        description: item2.resource.isOwner ? '私人或由你共用的知識庫' : '共用知識庫 · 成員可閱讀',
       })),
   );
   readonly selected = linkedSignal(() => this.choices()[0]?.value ?? '');
@@ -120,12 +120,12 @@ export class RepositoryImportDialog {
     this.folder.set(folder);
     this.commit.set(commit);
     this.saveError.set('');
-    this.opened.update((x) => x + 1);
+    this.opened.update((item) => item + 1);
     this.dialog().nativeElement.showModal();
   }
   async save() {
     const key = this.store.key(),
-      collection = this.choices().find((x) => x.value === this.selected());
+      collection = this.choices().find((item) => item.value === this.selected());
     if (!key || !collection || this.saving()) return;
     const valid = this.scope.guard();
     this.saving.set(true);
@@ -142,8 +142,8 @@ export class RepositoryImportDialog {
         `完成後可在「${collection.label}」查詢；可以先離開這個頁面。`,
       );
       if (valid()) this.dialog().nativeElement.close();
-    } catch (e) {
-      if (valid()) this.saveError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.saveError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.saving.set(false);
     }

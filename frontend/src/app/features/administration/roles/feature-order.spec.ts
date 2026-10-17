@@ -15,7 +15,7 @@ const work = [
   { id: 'files', sortOrder: 20 },
   { id: 'knowledge', sortOrder: 30 },
 ];
-const ids = (list: readonly { id: string }[]) => list.map((x) => x.id);
+const ids = (list: readonly { id: string }[]) => list.map((item) => item.id);
 
 describe('feature order', () => {
   it('orders like the server, then groups like the sidebar', () => {
@@ -72,11 +72,11 @@ describe('feature order', () => {
   });
 
   it('writes only the moved feature when its new gap has room', () => {
-    // Between chat (10) and projects (15).
+    // 位於 chat（10）與 projects（15）之間。
     expect(reorderWrites(work, 'files', shiftId(ids(work), 'files', -1))).toEqual([
       { id: 'files', sortOrder: 12 },
     ]);
-    // Past either end: 10 beyond the neighbour, never below 0.
+    // 超出任一端：比鄰居多 10，且不會低於 0。
     expect(reorderWrites(work, 'chat', shiftId(ids(work), 'chat', 'last'))).toEqual([
       { id: 'chat', sortOrder: 40 },
     ]);

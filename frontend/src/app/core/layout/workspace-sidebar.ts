@@ -87,7 +87,7 @@ let sequence = 0;
       [compact]="layout.compact()"
       [expanded]="navigationExpanded()"
       (expandedChange)="navigationExpanded.set($event)"
-      (activated)="layout.closeMobile(); activated.emit()"
+      (activated)="closeMobileAndActivate()"
     />
     <div
       class="workspace-sidebar-content ui-density-compact"
@@ -118,12 +118,16 @@ export class WorkspaceSidebar {
     });
     inject(DestroyRef).onDestroy(this.bindSwipe());
   }
+  closeMobileAndActivate() {
+    this.layout.closeMobile();
+    this.activated.emit();
+  }
   collapse() {
     this.layout.closeMobile();
   }
   /**
-   * The open drawer follows a leftward drag on its heading or the scrim and closes past a third of
-   * its width or on a flick; otherwise it springs back. The nav list keeps its own scrolling.
+   * 開啟的抽屜會跟隨標題或遮罩上的向左拖曳；拖過寬度的三分之一或快速輕彈時關閉，
+   * 否則會彈回。導覽列表保有自己的捲動。
    */
   private bindSwipe() {
     const host = this.element.nativeElement;
@@ -153,7 +157,7 @@ export class WorkspaceSidebar {
           },
           end: (dismiss) => {
             if (dismiss) {
-              // Hold the dragged position until the closed class lands, so the slide out starts there.
+              // 保持拖曳的位置，直到 closed class 生效，讓滑出動畫從那裡開始。
               this.layout.closeMobile();
               afterNextRender(clear, { injector });
               return;
@@ -168,13 +172,13 @@ export class WorkspaceSidebar {
       },
     });
   }
-  /** The desktop center is non-modal, so the bell stays reachable and closes it again. */
+  /** 桌面版中央是非模態的，因此鈴鐺仍可觸及，並能再次關閉它。 */
   toggleNotifications(event: MouseEvent) {
     if (this.notifications.opened()) this.notifications.close();
     else this.notifications.open(event.currentTarget as HTMLElement);
   }
   key(event: KeyboardEvent) {
-    // An open notification popover sits outside the drawer: it owns Escape, and Tab follows the bell.
+    // 開啟中的通知 popover 位於抽屜之外：它負責 Escape，Tab 則跟隨鈴鐺。
     if (
       event.defaultPrevented ||
       !this.layout.overlay() ||
@@ -192,11 +196,11 @@ export class WorkspaceSidebar {
           'a[href], button:enabled, input, select, [tabindex="0"]',
         ),
       ].filter(
-        (x) =>
-          x.tabIndex >= 0 &&
-          x.getClientRects().length &&
-          getComputedStyle(x).visibility === 'visible' &&
-          !x.classList.contains('workspace-backdrop'),
+        (item) =>
+          item.tabIndex >= 0 &&
+          item.getClientRects().length &&
+          getComputedStyle(item).visibility === 'visible' &&
+          !item.classList.contains('workspace-backdrop'),
       );
       const first = controls[0],
         last = controls.at(-1);

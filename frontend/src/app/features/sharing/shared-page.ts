@@ -65,13 +65,16 @@ export class SharedPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   readonly confirm = viewChild.required(ConfirmDialog);
-  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
-  private readonly sentParam = toSignal(this.route.queryParamMap.pipe(map((p) => p.get('sent'))), {
-    initialValue: null,
-  });
-  /** Access is checked again before the share expires and at least every 30 seconds. */
+  private readonly sentParam = toSignal(
+    this.route.queryParamMap.pipe(map((part2) => part2.get('sent'))),
+    {
+      initialValue: null,
+    },
+  );
+  /** 分享過期前會再檢查一次，且至少每 30 秒檢查一次。 */
   private readonly contentRead = apiResource({
     feature: 'shared',
     params: () => this.id() || undefined,
@@ -81,12 +84,12 @@ export class SharedPage {
         ? Math.max(50, Math.min(30000, new Date(value.share.expiresAt).getTime() - Date.now()))
         : null,
   });
-  /** A failed check hides the content at once: the share may have been revoked or expired. */
+  /** 檢查失敗時立即隱藏內容：分享可能已被撤銷或過期。 */
   readonly content = computed<SharedContentDto | null>(() => {
     const value = this.contentRead.value();
     return value && value.share.id === this.id() ? value : null;
   });
-  /** The tab in the link, else the side of the open share, else the last one shown. */
+  /** 連結中的分頁；沒有時用已開啟分享的那一側，再沒有則用上一次顯示的。 */
   readonly sent = linkedSignal<{ param: string | null; owner: boolean | undefined }, boolean>({
     source: () => ({ param: this.sentParam(), owner: this.content()?.share.isOwner }),
     computation: (source, previous) =>
@@ -106,14 +109,14 @@ export class SharedPage {
     { value: 'sent', label: '我分享的' },
   ];
   readonly visible = computed(() =>
-    this.list().filter((x) => x.title.toLowerCase().includes(this.term().toLowerCase())),
+    this.list().filter((item) => item.title.toLowerCase().includes(this.term().toLowerCase())),
   );
   readonly shareActions = computed<MenuAction[]>(() =>
     this.content()?.share.isOwner
       ? [{ id: 'revoke', label: '撤銷分享', icon: 'stop', danger: true, disabled: this.busy() }]
       : [],
   );
-  /** The collection's tour, or the open share's for what it holds and who is viewing. */
+  /** 集合的導覽，或已開啟分享的導覽（依其內容與目前檢視者決定）。 */
   readonly tour = computed(() => {
     const share = this.content()?.share;
     if (this.id())
@@ -136,7 +139,7 @@ export class SharedPage {
     () => this.actionError() || this.contentRead.error() || this.listRead.error(),
   );
   constructor() {
-    // The reader overlay never keeps showing a share this page no longer shows.
+    // 閱讀器的覆蓋層絕不會繼續顯示本頁已不再顯示的分享。
     let shown: string | null = null;
     effect(() => {
       const id = this.content()?.share.id ?? null;
@@ -152,7 +155,7 @@ export class SharedPage {
   }
   readonly date = formatDate;
   readonly when = relativeTime;
-  /** Shares that can no longer be read say so on their card. */
+  /** 無法再讀取的分享會在卡片上註明。 */
   state(share: ShareDto): { label: string; tone: BadgeTone } | null {
     if (share.isRevoked) return { label: '已撤銷', tone: 'neutral' };
     if (new Date(share.expiresAt).getTime() <= Date.now())
@@ -186,8 +189,8 @@ export class SharedPage {
         this.listRead.reload();
         await this.router.navigate(['/shared'], { queryParams: { sent: this.sent() } });
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }

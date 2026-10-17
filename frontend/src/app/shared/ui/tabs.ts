@@ -12,14 +12,14 @@ import { SlidingIndicator } from './sliding-indicator';
 export interface TabItem {
   value: string;
   label: string;
-  /** A neutral CountBadge after the label; the tab's name carries the number. */
+  /** 標籤後的中性計數徽章；分頁名稱本身已帶有數字。 */
   count?: number;
-  /** The tab holds unsaved changes: a dot after the label, and the tab's name says so. */
+  /** 分頁有未儲存的變更：標籤後顯示一個點，分頁名稱也會說明此事。 */
   dirty?: boolean;
 }
 let sequence = 0;
 
-/** Tabs for linked tabpanels; shares ViewSwitch's sliding underline. */
+/** 連結到 tabpanel 的分頁；與 ViewSwitch 共用滑動底線。 */
 @Component({
   selector: 'nx-tabs',
   imports: [CountBadge],
@@ -27,7 +27,7 @@ let sequence = 0;
   hostDirectives: [SlidingIndicator],
   host: { role: 'tablist', '[attr.aria-label]': 'label()' },
   styles: `
-    /* Like ViewSwitch: min-height keeps a sideways scroller from being squeezed in a column, and
+    /* 與 ViewSwitch 相同：min-height 讓橫向捲動的列不會在直欄中被擠壓，並
        the underline sits on the bottom edge whatever padding the host is given. */
     :host {
       position: relative;
@@ -83,7 +83,7 @@ let sequence = 0;
       color: var(--accent);
       font-weight: 600;
     }
-    /* The save bar's unsaved colour (dialog-save-bar.scss), so the two read as one signal. */
+    /* 儲存列的未儲存顏色（dialog-save-bar.scss），讓兩者看起來是同一個訊號。 */
     .tab-dirty {
       width: 0.375rem;
       height: 0.375rem;
@@ -120,7 +120,7 @@ export class Tabs {
   readonly valueChange = output<string>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly id = `nx-tabs-${++sequence}`;
-  /** Only when the visible label is not the whole name: a count, or unsaved changes. */
+  /** 只有當可見標籤不是完整名稱時才需要：計數或未儲存的變更。 */
   accessibleName(item: TabItem) {
     if (!item.count && !item.dirty) return null;
     return (

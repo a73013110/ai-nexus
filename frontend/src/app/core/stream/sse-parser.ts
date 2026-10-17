@@ -4,7 +4,7 @@ export interface SseFrame {
   data: string;
 }
 
-// Frames may span arbitrary network chunks; comments and CRLF are valid SSE.
+// 幀可能跨越任意的網路區塊；註解與 CRLF 都是合法的 SSE。
 export class SseParser {
   private buffer = '';
   feed(chunk: string): SseFrame[] {

@@ -5,10 +5,11 @@ import { AuthService } from '@core/auth/auth-service';
 import { ConversationsApi } from '@features/conversations/conversations-api';
 
 const PAGE_SIZE = 100;
-const listOrder = (a: ConversationDto, b: ConversationDto) =>
-  Number(b.isFavorite) - Number(a.isFavorite) || b.updatedAt.localeCompare(a.updatedAt);
+const listOrder = (first: ConversationDto, second: ConversationDto) =>
+  Number(second.isFavorite) - Number(first.isFavorite) ||
+  second.updatedAt.localeCompare(first.updatedAt);
 
-/** The sidebar's conversation list with its search, view and label filters. */
+/** 側邊欄的對話列表，含搜尋、檢視與標籤篩選。 */
 @Injectable({ providedIn: 'root' })
 export class ChatHistory {
   private readonly api = inject(NexusApi);
@@ -22,7 +23,7 @@ export class ChatHistory {
   readonly labels = signal<string[]>([]);
   private version = 0;
 
-  /** Only the latest request applies, so fast typing never shows an older result. */
+  /** 只套用最新的請求，因此快速輸入時不會顯示較舊的結果。 */
   async refresh(more = false) {
     const version = ++this.version;
     const rows = await this.api.conversations(
@@ -37,8 +38,8 @@ export class ChatHistory {
   }
 
   /**
-   * Shows a conversation's new state where the server's list would put it (favourites first, then
-   * most recently updated), or drops it when it no longer matches the view or label filter.
+   * 把對話的新狀態放在伺服器列表會排列的位置（我的最愛在前，再依最近更新排序）；若已不符合檢視或標
+   * 籤篩選，則移除它。
    */
   place(conversation: ConversationDto) {
     const view = this.view(),
@@ -53,7 +54,7 @@ export class ChatHistory {
     });
   }
 
-  /** Labels change with conversation settings and imports, so callers reload them after those. */
+  /** 標籤會隨對話設定與匯入而變，呼叫端在這些操作後要重新讀取。 */
   async reloadLabels() {
     const current = this.auth.guard();
     const labels = await this.conversationsApi.labels();

@@ -4,7 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { ReaderOverlay } from './reader-overlay';
 
-/** Native links support new tabs; same-tab navigation also retains the reading position. */
+/** 原生連結支援開新分頁；同分頁導覽也會保留閱讀位置。 */
 @Directive({
   selector: 'a[nxReaderLink]',
   host: { '[attr.href]': 'href()', '[attr.data-reader-id]': 'id()', '(click)': 'open($event)' },

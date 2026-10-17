@@ -94,8 +94,8 @@ export class NameDialog {
     try {
       await request.save(this.name().trim());
       this.dialog().nativeElement.close();
-    } catch (e) {
-      this.error.set(safeMessage(e));
+    } catch (error2) {
+      this.error.set(safeMessage(error2));
     } finally {
       this.busy.set(false);
     }

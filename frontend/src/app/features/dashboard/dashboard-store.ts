@@ -9,14 +9,14 @@ import { BillingApi, chargeKind, datePeriod, localDate } from '@features/billing
 import { DashboardApi } from './dashboard-api';
 import { dayRange, fillDays } from './dashboard-format';
 
-/** The personal overview refreshes itself; the audited platform read waits for the viewer. */
+/** 個人總覽會自行重新整理；需稽核的平台讀取則等檢視者操作。 */
 const REFRESH_MS = 60_000;
-/** Typed dates apply once the viewer pauses, so a half-typed day is not read (or audited). */
+/** 輸入的日期要等檢視者停止輸入後才套用，避免讀到輸到一半的日期（或被稽核）。 */
 const DATE_SETTLE_MS = 600;
 
 /**
- * The overview's one read and the choices around it: scope, period, selected user and the
- * currency shown. Provided by the page, so every widget reads the same snapshot.
+ * 總覽的一次讀取，以及其周圍的選擇：範圍、期間、所選使用者與顯示的幣別。
+ * 由頁面提供，讓每個小工具讀取同一份快照。
  */
 @Injectable()
 export class DashboardStore {
@@ -29,7 +29,7 @@ export class DashboardStore {
       ? 'platform'
       : 'personal',
   );
-  /** Only platform operations can see the whole platform; others always see their own work. */
+  /** 只有平台操作者能看到整個平台；其他人永遠只看到自己的工作。 */
   readonly scope = computed<'personal' | 'platform'>(() =>
     this.requestedScope() === 'platform' && this.session.has('operations')
       ? 'platform'
@@ -47,7 +47,7 @@ export class DashboardStore {
     { value: 'custom', label: '自訂' },
   ];
   readonly range = signal('30');
-  /** The period and owner last submitted; the read follows it and the scope. */
+  /** 最後送出的期間與擁有者；讀取會跟著它與範圍。 */
   private readonly query = signal({ from: this.from(), through: this.through(), owner: '' });
   private readonly resource = apiResource({
     feature: 'dashboard',
@@ -58,7 +58,7 @@ export class DashboardStore {
     }),
     poll: (value) => (value?.query.scope === 'personal' ? REFRESH_MS : null),
   });
-  /** Figures from another scope are never shown under this scope's label. */
+  /** 其他範圍的數字絕不會顯示在此範圍的標籤下。 */
   readonly data = computed<DashboardDto | null>(() => {
     const value = this.resource.value();
     return value?.query.scope === this.scope() ? value.data : null;
@@ -78,66 +78,68 @@ export class DashboardStore {
       ? '我的工作'
       : this.appliedOwner()
         ? '使用者：' +
-          (this.data()?.spend.users.find((x) => x.ownerId === this.appliedOwner())?.displayName ??
-            '指定使用者')
+          (this.data()?.spend.users.find((item2) => item2.ownerId === this.appliedOwner())
+            ?.displayName ?? '指定使用者')
         : '整個平台',
   );
   readonly sections = computed(() => this.data()?.sections ?? []);
   private readonly byId = computed(
-    () => new Map<string, DashboardSectionDto>(this.sections().map((x) => [x.id, x])),
+    () => new Map<string, DashboardSectionDto>(this.sections().map((item) => [item.id, item])),
   );
   section(id: string) {
     return this.byId().get(id) ?? null;
   }
-  /** A current or period figure of a section, or `null` when the section or metric is absent. */
+  /** 區段或指標的當期或期間數字；區段或指標不存在時為 `null`。 */
   metric(section: string, key: string) {
-    return this.section(section)?.metrics.find((x) => x.key === key)?.value ?? null;
+    return this.section(section)?.metrics.find((item) => item.key === key)?.value ?? null;
   }
 
   readonly units = computed(() =>
-    (this.data()?.spend.totals ?? []).map((x) => ({
-      value: x.currency + ':' + x.kind,
-      label: x.currency ? x.currency + ' · ' + chargeKind(x.kind) : '未設定價格',
+    (this.data()?.spend.totals ?? []).map((item3) => ({
+      value: item3.currency + ':' + item3.kind,
+      label: item3.currency ? item3.currency + ' · ' + chargeKind(item3.kind) : '未設定價格',
     })),
   );
-  /** Keep the chosen currency while it still has spending; otherwise show the first one. */
+  /** 所選幣別仍有花費時保留；否則顯示第一個。 */
   readonly unit = linkedSignal<{ value: string }[], string>({
     source: this.units,
     computation: (options, previous) =>
-      previous && options.some((x) => x.value === previous.value)
+      previous && options.some((item) => item.value === previous.value)
         ? previous.value
         : (options[0]?.value ?? ''),
   });
   readonly total = computed(
-    () => this.data()?.spend.totals.find((x) => x.currency + ':' + x.kind === this.unit()) ?? null,
+    () =>
+      this.data()?.spend.totals.find((item) => item.currency + ':' + item.kind === this.unit()) ??
+      null,
   );
   readonly unknownCalls = computed(
     () =>
-      (this.data()?.spend.totals.reduce((a, x) => a + x.unknownCalls, 0) ?? 0) +
+      (this.data()?.spend.totals.reduce((first, item4) => first + item4.unknownCalls, 0) ?? 0) +
       (this.data()?.spend.legacyCalls ?? 0),
   );
-  /** Known spend per day in the chosen currency and kind. */
+  /** 所選幣別與類型下，每天的已知花費。 */
   readonly spendDaily = computed(() =>
     fillDays(
       this.days(),
       (this.data()?.spend.daily ?? [])
-        .filter((x) => x.currency + ':' + x.kind === this.unit())
-        .map((x) => ({ date: x.label, value: x.amount })),
+        .filter((item) => item.currency + ':' + item.kind === this.unit())
+        .map((item) => ({ date: item.label, value: item.amount })),
     ),
   );
-  /** Model and tool calls per day, across currencies and kinds. */
+  /** 每天的模型與工具呼叫次數，跨所有幣別與類型。 */
   readonly callsDaily = computed(() =>
     fillDays(
       this.days(),
-      (this.data()?.spend.daily ?? []).map((x) => ({ date: x.label, value: x.requests })),
+      (this.data()?.spend.daily ?? []).map((item) => ({ date: item.label, value: item.requests })),
     ),
   );
   readonly tokensDaily = computed(() =>
     fillDays(
       this.days(),
-      (this.data()?.tokens.daily ?? []).map((x) => ({
-        date: x.date,
-        value: x.inputTokens + x.outputTokens,
+      (this.data()?.tokens.daily ?? []).map((item5) => ({
+        date: item5.date,
+        value: item5.inputTokens + item5.outputTokens,
       })),
     ),
   );
@@ -152,23 +154,25 @@ export class DashboardStore {
   );
   readonly modelRows = computed(() =>
     (this.data()?.spend.models ?? [])
-      .filter((x) => x.currency + ':' + x.kind === this.unit())
-      .sort((a, b) => b.amount - a.amount),
+      .filter((item) => item.currency + ':' + item.kind === this.unit())
+      .sort((first2, second) => second.amount - first2.amount),
   );
   readonly users = computed(() =>
-    (this.data()?.spend.users ?? []).filter((x) => x.currency + ':' + x.kind === this.unit()),
+    (this.data()?.spend.users ?? []).filter(
+      (item) => item.currency + ':' + item.kind === this.unit(),
+    ),
   );
-  /** AI replies being generated plus queued or running background jobs. */
+  /** 正在產生的 AI 回覆，加上排隊或執行中的背景工作。 */
   readonly activeWork = computed(
     () => (this.metric('chat', 'generating') ?? 0) + (this.metric('tasks', 'active') ?? 0),
   );
-  readonly attention = computed(() => this.sections().filter((x) => x.state === 'attention'));
-  /** Every section's recent items, newest first: the viewer's own work across features. */
+  readonly attention = computed(() => this.sections().filter((item) => item.state === 'attention'));
+  /** 每個區段的最近項目，最新的在前：檢視者在各功能的工作。 */
   readonly recent = computed(() =>
     this.sections()
-      .filter((x) => x.id !== 'notifications')
+      .filter((item) => item.id !== 'notifications')
       .flatMap((section) => section.items.map((item) => ({ ...item, section })))
-      .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? '')),
+      .sort((first3, second2) => (second2.at ?? '').localeCompare(first3.at ?? '')),
   );
 
   private settle = 0;
@@ -176,7 +180,7 @@ export class DashboardStore {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.settle));
   }
 
-  /** Reads the chosen period; `force` reads again even when nothing changed (refresh, retry). */
+  /** 讀取所選期間；`force` 即使沒有變更也會再讀一次（重新整理、重試）。 */
   load(force = true) {
     clearTimeout(this.settle);
     this.exportError.set('');
@@ -195,7 +199,7 @@ export class DashboardStore {
       if (force) this.resource.reload();
     } else this.query.set(query);
   }
-  /** A typed or picked date; an empty value is an unfinished or out-of-range entry and waits. */
+  /** 輸入或選取的日期；空值代表未完成或超出範圍的輸入，會等待。 */
   setDate(which: 'from' | 'through', value: string) {
     (which === 'from' ? this.from : this.through).set(value);
     this.range.set('custom');
@@ -229,8 +233,8 @@ export class DashboardStore {
       );
       const blob = await response.blob();
       if (valid()) downloadBlob(blob, 'ai-nexus-spend', 'csv');
-    } catch (e) {
-      if (valid()) this.exportError.set(this.view.message(e));
+    } catch (error2) {
+      if (valid()) this.exportError.set(this.view.message(error2));
     } finally {
       if (valid()) this.exporting.set(false);
     }

@@ -36,7 +36,7 @@ describe('QueryState', () => {
     expect(state.dirty()).toBe(false);
     expect(state.applied().text).toBe('timeout');
     expect(state.chips().map((chip) => chip.label)).toEqual(['文字：timeout']);
-    // Applying the same conditions reads again.
+    // 套用相同的條件會重新讀取。
     state.apply();
     expect(state.applied()).not.toBe(before);
   });
@@ -74,7 +74,7 @@ describe('QueryState', () => {
     await TestBed.inject(Router).navigated;
     await new Promise((resolve) => setTimeout(resolve));
     expect(router.url).toBe('/?q=next&tag=a&tag=b');
-    // A navigation elsewhere on the page applies its parameters.
+    // 頁面其他地方的導覽會套用它的參數。
     await router.navigateByUrl('/?q=other');
     expect(state.applied()).toEqual({ text: 'other', tags: [] });
     expect(state.draft()).toEqual({ text: 'other', tags: [] });

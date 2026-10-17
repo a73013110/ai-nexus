@@ -12,9 +12,9 @@ import { Icon } from './icon';
 import { HISTORY_LIMIT, ToastService, toastIcon, type ToastRecord } from './toast-service';
 
 /**
- * This tab's settled toasts, newest first, so one that left before it was read can be found again.
- * Memory only: it empties on reload and on an account switch. An action runs once, from here or
- * from the toast; `activated` lets the host close itself before the action takes the person away.
+ * 此分頁已結束的提示，最新的在前，讓在讀到之前就消失的提示還能找回。
+ * 只存在記憶體中：重新整理或切換帳號時會清空。動作只會執行一次，可從此處或提示本身執行；
+ * `activated` 讓宿主在動作把使用者帶走之前先關閉自己。
  */
 @Component({
   selector: 'nx-toast-history',
@@ -72,7 +72,7 @@ export class ToastHistory {
   time(at: string) {
     return formatDateTimeInput(new Date(at)).slice(11, 16);
   }
-  /** The spent button leaves; unless the host moved focus (a closing dialog), its row keeps it. */
+  /** 用掉的按鈕會離開；除非宿主移動了焦點（例如關閉中的對話框），否則該列保留焦點。 */
   run(record: ToastRecord, event: Event) {
     const row = (event.currentTarget as HTMLElement).closest('li');
     this.activated.emit();

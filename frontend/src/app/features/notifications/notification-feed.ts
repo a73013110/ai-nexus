@@ -99,7 +99,7 @@ export class NotificationFeed {
   readonly date = formatDate;
   readonly url = notificationUrl;
   readonly ignore = () => {};
-  /** Clicks on the row's own controls and text selection keep their behavior. */
+  /** 點擊列自己的控制項與文字選取，保留其原本行為。 */
   open(event: MouseEvent, item: NotificationDto) {
     if (
       !this.url(item.target, item.version) ||

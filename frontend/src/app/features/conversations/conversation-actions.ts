@@ -17,7 +17,7 @@ export type ConversationAction =
   | 'spend'
   | 'project';
 
-/** Menu items for one conversation; `compact` is the shorter list used by sidebar rows. */
+/** 單一對話的選單項目；`compact` 是側邊欄列所用的較短清單。 */
 export function conversationMenu(
   conversation: ConversationDto,
   { busy = false, compact = false, sharing = false } = {},
@@ -84,7 +84,7 @@ export class ConversationActions {
   readonly conversation = input.required<ConversationDto>();
   readonly busy = input(false);
   readonly sharing = input(false);
-  /** Phones keep only the menu: find, the project link and the cost (`spend` label) join it. */
+  /** 手機只保留選單：搜尋、專案連結與花費（`spend` 標籤）會併入其中。 */
   readonly compact = input(false);
   readonly spend = input<string | null>(null);
   readonly action = output<ConversationAction>();
@@ -95,7 +95,7 @@ export class ConversationActions {
     });
     if (!this.compact()) return items;
     const spend = this.spend();
-    const at = items.findIndex((x) => x.id === 'favorite') + 1;
+    const at = items.findIndex((item) => item.id === 'favorite') + 1;
     return [
       ...items.slice(0, at),
       { id: 'find', label: '搜尋目前對話訊息', icon: 'search' },

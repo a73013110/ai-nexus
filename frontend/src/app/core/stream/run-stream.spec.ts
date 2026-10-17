@@ -67,15 +67,15 @@ describe('run stream', () => {
       );
     const settled = run({ status: 'completed', content: 'Hello', lastSequence: 3 });
     const fetchRun = vi.fn().mockResolvedValue(settled);
-    const f = setup({ events, run: fetchRun });
+    const items = setup({ events, run: fetchRun });
 
-    const result = await f.stream.follow(run(), new AbortController().signal, f.observer);
+    const result = await items.stream.follow(run(), new AbortController().signal, items.observer);
 
     expect(result).toBe(settled);
     expect(events).toHaveBeenCalledOnce();
     expect(events.mock.calls[0].slice(0, 2)).toEqual(['r1', 0]);
-    expect(f.content.at(-1)).toBe('Hello');
-    expect(f.content.join('|')).not.toContain('重複');
+    expect(items.content.at(-1)).toBe('Hello');
+    expect(items.content.join('|')).not.toContain('重複');
   });
 
   it('resumes from the server state after the stream ends early', async () => {
@@ -89,34 +89,36 @@ describe('run stream', () => {
       .fn()
       .mockResolvedValueOnce(run({ content: 'A', lastSequence: 1 }))
       .mockResolvedValueOnce(run({ status: 'completed', content: 'AB', lastSequence: 3 }));
-    const f = setup({ events, run: fetchRun });
+    const items2 = setup({ events, run: fetchRun });
 
-    const result = await f.stream.follow(run(), new AbortController().signal, f.observer);
+    const result = await items2.stream.follow(run(), new AbortController().signal, items2.observer);
 
     expect(result.content).toBe('AB');
     expect(events.mock.calls.map((call) => call[1])).toEqual([0, 1]);
-    expect(f.connection).toEqual(['connected', 'reconnecting', 'connected']);
-    expect(f.content.at(-1)).toBe('AB');
+    expect(items2.connection).toEqual(['connected', 'reconnecting', 'connected']);
+    expect(items2.content.at(-1)).toBe('AB');
   });
 
   it('stops on a permanent client error without polling the run again', async () => {
     const events = vi.fn().mockRejectedValue(new ApiError(404, 'run_not_found'));
     const fetchRun = vi.fn();
-    const f = setup({ events, run: fetchRun });
+    const items3 = setup({ events, run: fetchRun });
 
     await expect(
-      f.stream.follow(run(), new AbortController().signal, f.observer),
+      items3.stream.follow(run(), new AbortController().signal, items3.observer),
     ).rejects.toBeInstanceOf(ApiError);
     expect(fetchRun).not.toHaveBeenCalled();
   });
 
   it('returns a run that is already settled without opening the event stream', async () => {
     const events = vi.fn();
-    const f = setup({ events, run: vi.fn() });
+    const items4 = setup({ events, run: vi.fn() });
     const done = run({ status: 'completed', content: '完成' });
 
-    expect(await f.stream.follow(done, new AbortController().signal, f.observer)).toBe(done);
+    expect(await items4.stream.follow(done, new AbortController().signal, items4.observer)).toBe(
+      done,
+    );
     expect(events).not.toHaveBeenCalled();
-    expect(f.content).toEqual(['完成']);
+    expect(items4.content).toEqual(['完成']);
   });
 });

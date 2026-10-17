@@ -209,7 +209,8 @@ export class ActivityAuditPage {
   /** 分類切換立即套用；已選的動作不屬於新分類時一併清除，避免查出空結果。 */
   changeCategory(category: string) {
     const action = this.draft().action;
-    const keep = !action || actionsFor(this.actions(), category).some((x) => x.value === action);
+    const keep =
+      !action || actionsFor(this.actions(), category).some((item) => item.value === action);
     this.query.commit({ category, ...(keep ? {} : { action: '' }) });
   }
   changePage(direction: -1 | 1) {

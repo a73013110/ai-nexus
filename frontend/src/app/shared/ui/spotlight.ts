@@ -1,9 +1,9 @@
 import { DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 
 /**
- * Follows the pointer over a surface: writes `--spot-x`/`--spot-y` (pixels) and `data-spot` so
- * the surface can paint a light under the cursor. The styles belong to the host; this only
- * measures, once per frame. Touch leaves the surface unlit.
+ * 追蹤表面上的指標：寫入 `--spot-x`／`--spot-y`（像素）與 `data-spot`，讓表面能在游標下繪製光線。
+ * 樣式屬於宿主；這裡只
+ * 每幀量測一次。觸控時表面不亮起。
  */
 @Directive({ selector: '[nxSpotlight]' })
 export class Spotlight {
@@ -37,10 +37,10 @@ export class Spotlight {
     const event = this.point;
     if (!event) return;
     const box = this.element.getBoundingClientRect();
-    const x = event.clientX - box.left,
-      y = event.clientY - box.top;
+    const pointX = event.clientX - box.left,
+      pointY = event.clientY - box.top;
     this.element.dataset['spot'] = '';
-    this.element.style.setProperty('--spot-x', `${x}px`);
-    this.element.style.setProperty('--spot-y', `${y}px`);
+    this.element.style.setProperty('--spot-x', `${pointX}px`);
+    this.element.style.setProperty('--spot-y', `${pointY}px`);
   }
 }

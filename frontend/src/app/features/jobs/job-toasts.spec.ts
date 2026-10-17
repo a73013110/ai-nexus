@@ -68,13 +68,13 @@ function setup() {
       provideRouter([]),
       { provide: NotificationStore, useValue: { items } },
       { provide: KnowledgeApi, useValue: knowledge },
-      { provide: ToastService, useValue: { show: (x: ToastOptions) => shown.push(x) } },
+      { provide: ToastService, useValue: { show: (item: ToastOptions) => shown.push(item) } },
       { provide: WorkspaceSession, useValue: { auth: { generation }, has: () => true } },
     ],
   });
   const toasts = TestBed.inject(JobToasts);
   const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-  /** One poll of the notification inbox. */
+  /** 通知收件匣的一次輪詢。 */
   const poll = async (...next: NotificationDto[]) => {
     items.set(next);
     TestBed.tick();

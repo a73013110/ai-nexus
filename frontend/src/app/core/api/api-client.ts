@@ -5,7 +5,7 @@ import { BrowserSession } from '../monitoring/browser-session';
 import { ApiError } from '../errors/safe-errors';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
-/** Every contract path that defines the given method. */
+/** 定義了指定方法的所有契約路徑。 */
 export type ApiPath<M extends Method> = {
   [P in keyof paths]: paths[P][M] extends undefined ? never : P;
 }[keyof paths];
@@ -26,14 +26,14 @@ type Fields<O> = ([PathParameters<O>] extends [never] ? object : { path: PathPar
       ? { query?: QueryParameters<O> }
       : { query: QueryParameters<O> }) &
   ([JsonBody<O>] extends [never] ? object : { body: JsonBody<O> });
-/** Path, query and body exactly as the contract declares them, plus transport options. */
+/** 路徑、查詢與請求主體依契約原樣保留，另加傳輸選項。 */
 export type ApiRequest<O> = Fields<O> & { headers?: Record<string, string>; signal?: AbortSignal };
 type Arguments<O> = object extends Fields<O> ? [request?: ApiRequest<O>] : [request: ApiRequest<O>];
 type Success<O> = O extends { responses: infer R } ? R[keyof R & (200 | 201 | 202 | 204)] : never;
 type Content<R> = R extends { content: { 'application/json': infer V } } ? V : undefined;
-/** The query parameters an operation accepts. */
+/** 操作接受的查詢參數。 */
 export type ApiQuery<P extends keyof paths, M extends Method> = QueryParameters<Operation<P, M>>;
-/** The JSON body of an operation's success response; `undefined` for 204. */
+/** 操作成功回應的 JSON 主體；204 時為 `undefined`。 */
 export type ApiResponse<P extends keyof paths, M extends Method> = Content<
   Success<Operation<P, M>>
 >;
@@ -49,11 +49,11 @@ interface Untyped {
 const REFERENCE_MAX_AGE_MS = 30_000;
 const parse = <T>(body: string): T => (body ? JSON.parse(body) : undefined) as T;
 const isAuthPath = (url: string) => url.startsWith('/api/v1/auth/');
-/** `Retry-After` in delta seconds, the only form the server sends. */
+/** 以秒為單位的 `Retry-After`；伺服器只會送這種格式。 */
 const retryAfterSeconds = (value: string | null) =>
   value && /^\d{1,5}$/.test(value) ? Number(value) : undefined;
 
-/** Fill `{name}` segments and append the query, skipping absent values and repeating arrays. */
+/** 填入 `{name}` 片段並附加查詢；略過不存在的值，陣列則重複附加。 */
 export function apiUrl(path: string, request: Untyped = {}): string {
   const url = path.replace(/\{(\w+)\}/g, (_, name: string) => {
     const value = request.path?.[name];
@@ -68,7 +68,7 @@ export function apiUrl(path: string, request: Untyped = {}): string {
   return search ? `${url}?${search}` : url;
 }
 
-/** A typed link for the browser itself to load (`<a href>`, `<img src>`), e.g. file content. */
+/** 給瀏覽器自己載入的型別化連結（`<a href>`、`<img src>`），例如檔案內容。 */
 export function apiHref<P extends ApiPath<'get'>>(
   path: P,
   ...[request]: Arguments<Operation<P, 'get'>>
@@ -77,9 +77,9 @@ export function apiHref<P extends ApiPath<'get'>>(
 }
 
 /**
- * The only way the app calls the API. Paths, parameters, bodies and responses are typed from the
- * generated contract (schema.ts), so a changed DTO fails the frontend build instead of production.
- * It also owns the session headers, CSRF token, identity checks and short-lived read caches.
+ * 應用程式呼叫 API 的唯一途徑。路徑、參數、主體與回應都由產生的契約（schema.ts）決定型別，
+ * 因此 DTO 變更會讓前端建置失敗，而不是等到正式環境才出錯。
+ * 此處也負責工作階段標頭、CSRF token、身分檢查與短期讀取快取。
  */
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
@@ -120,8 +120,8 @@ export class ApiClient {
   }
 
   /**
-   * Slow-changing reference data (model catalog, policies) is reused for a short time. It is
-   * dropped when the identity changes or after any change request from this browser.
+   * 變動緩慢的參考資料（模型目錄、政策）會短暫重用，
+   * 身分改變，或此瀏覽器送出任何變更請求之後，就會丟棄。
    */
   async reference<P extends ApiPath<'get'>>(
     path: P,
@@ -139,7 +139,7 @@ export class ApiClient {
     return parse(await body);
   }
 
-  /** Multipart upload; the contract does not describe form bodies, only the JSON response. */
+  /** 多部分上傳；契約不描述表單主體，只描述 JSON 回應。 */
   async upload<P extends ApiPath<'post'>>(
     path: P,
     form: FormData,
@@ -150,7 +150,7 @@ export class ApiClient {
     return (await response.json()) as ApiResponse<P, 'post'>;
   }
 
-  /** The raw response for event streams and file downloads, after the same checks as JSON calls. */
+  /** 事件串流與檔案下載的原始回應，經過與 JSON 呼叫相同的檢查。 */
   open<P extends ApiPath<'get'>>(path: P, ...[request]: Arguments<Operation<P, 'get'>>) {
     const untyped = request as Untyped | undefined;
     return this.send('GET', apiUrl(path, untyped), undefined, untyped);
@@ -159,7 +159,7 @@ export class ApiClient {
   private async json<T>(method: string, path: string, request?: unknown): Promise<T> {
     const untyped = (request ?? {}) as Untyped;
     const url = apiUrl(path, untyped);
-    // Identical reads in flight share one request; every caller parses its own copy.
+    // 進行中的相同讀取共用一次請求；每個呼叫端各自解析自己的副本。
     if (method === 'GET' && !untyped.headers && !untyped.signal) {
       let read = this.reads.get(url);
       if (!read) {
@@ -240,8 +240,8 @@ export class ApiClient {
         retryAfterSeconds(response.headers.get('Retry-After')),
       );
     }
-    // Any change made from this browser may affect reference data, so it is read again. A read
-    // still in flight may predate the change, so a read after it never joins that request.
+    // 此瀏覽器的任何變更都可能影響參考資料，所以之後會重新讀取。進行中的讀取
+    // 可能早於變更，因此變更之後的讀取絕不加入那次請求。
     if (method !== 'GET') {
       this.references.clear();
       this.reads.clear();

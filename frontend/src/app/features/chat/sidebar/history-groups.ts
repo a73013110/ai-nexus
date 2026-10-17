@@ -1,7 +1,7 @@
 import type { ConversationDto } from '@core/api/schema';
 import { calendarDaysBetween } from '@shared/browser/calendar-day';
 
-/** Groups the already-sorted history by favourite, then by local calendar age relative to `today`. */
+/** 把已排序的歷史依我的最愛分組，再依相對於 `today` 的本地日曆天數分組。 */
 export function historyGroups(conversations: readonly ConversationDto[], today: number) {
   const groups = new Map<string, ConversationDto[]>();
   for (const conversation of conversations) {

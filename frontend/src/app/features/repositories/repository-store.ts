@@ -9,8 +9,8 @@ export const isSha = (value: string) => /^(?:[\da-f]{40}|[\da-f]{64})$/i.test(va
 export const shortSha = (sha: string) => sha.slice(0, 7);
 
 /**
- * The open repository, shared by its views: what it is, which ref is selected and the commit every
- * read pins to, so moving between folders and files never mixes in a newer push.
+ * 已開啟的儲存庫，由其視圖共用：它是什麼、選取了哪個 ref，以及每次讀取所釘住的提交，
+ * 因此在資料夾與檔案之間移動時，不會混入較新的推送。
  */
 @Injectable()
 export class RepositoryStore {
@@ -18,7 +18,7 @@ export class RepositoryStore {
   private readonly router = inject(Router);
   private readonly transfer = inject(ConversationDraftTransfer);
   readonly key = signal<RepositoryKey | null>(null);
-  /** The `ref` query: a branch, a tag or a commit; empty means the default branch. */
+  /** `ref` 查詢參數：分支、標籤或提交；空白代表預設分支。 */
   readonly ref = signal('');
   readonly fullName = computed(() => {
     const key = this.key();
@@ -42,9 +42,9 @@ export class RepositoryStore {
     if (!detail) return '';
     if (!ref) return detail.commit ?? '';
     if (isSha(ref)) return ref.toLowerCase();
-    return [...detail.branches, ...detail.tags].find((x) => x.name === ref)?.commit ?? '';
+    return [...detail.branches, ...detail.tags].find((item) => item.name === ref)?.commit ?? '';
   });
-  /** A ref in the URL that the repository does not have (deleted branch, typo). */
+  /** 網址中的 ref 不存在於此儲存庫（分支已刪除或打錯字）。 */
   readonly refMissing = computed(() => !!this.detail() && !!this.ref() && !this.commit());
 
   reload() {
@@ -57,14 +57,14 @@ export class RepositoryStore {
         : read,
     );
   }
-  /** Router commands for a view of this repository. */
+  /** 此儲存庫視圖的路由指令。 */
   link(...segments: (string | number)[]) {
     const key = this.key();
     return key
       ? ['/repositories', key.owner, key.name, ...segments.map(String)]
       : ['/repositories'];
   }
-  /** Bundles the source into one attachment of a new conversation and opens it with a draft. */
+  /** 把原始碼打包成新對話的一個附件，並以草稿開啟。 */
   async chat(body: StartRepositoryChatRequest, valid: () => boolean) {
     const key = this.key();
     if (!key) return null;

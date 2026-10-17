@@ -38,19 +38,19 @@ const emptyPrice = (): PriceRequest => ({
   effectiveAt: '',
   note: '',
 });
-const samePrice = (a: PriceRequest, b: PriceRequest) =>
-  (Object.keys(a) as (keyof PriceRequest)[]).every((key) => a[key] === b[key]);
+const samePrice = (first: PriceRequest, second: PriceRequest) =>
+  (Object.keys(first) as (keyof PriceRequest)[]).every((key) => first[key] === second[key]);
 type RateKey = 'inputPerMillion' | 'cachedInputPerMillion' | 'outputPerMillion' | 'perRequest';
-/** Where a draft starts: nothing, a model's current price, a model without one, or an old version. */
+/** 草稿的起點：空白、模型目前的價格、尚未定價的模型，或舊版本。 */
 export type PriceSeed =
   | { from: 'blank' }
   | { from: 'current' | 'history'; price: PriceDto }
   | { from: 'target'; provider: string; modelId: string };
 
 /**
- * Adds a price version. Versions are never changed: starting from an existing one copies its fields
+ * 新增一個價格版本。版本不會被修改：從既有版本開始，會複製其欄位，
  * into a new draft. The footer reads 「說明｜還原｜儲存」 and both buttons stay disabled until the
- * draft differs from where it started; closing with changes asks first.
+ * 草稿與起點不同時，關閉前會詢問。
  */
 @Component({
   selector: 'nx-price-version-dialog',
@@ -81,7 +81,7 @@ export class PriceVersionDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild(DateTimePicker);
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  /** The form is built on first open and kept, so the closing dialog does not empty. */
+  /** 表單在首次開啟時建立並保留，讓關閉中的對話框不會被清空。 */
   readonly opened = signal(false);
   readonly seed = signal<PriceSeed>({ from: 'blank' });
   private readonly baseline = signal(emptyPrice());
@@ -133,13 +133,13 @@ export class PriceVersionDialog {
     { key: 'outputPerMillion', label: '輸出 / 百萬 tokens' },
     { key: 'perRequest', label: '每次呼叫固定費用' },
   ];
-  /** The provider's models and tools by display name: configured targets and priced ones. */
+  /** 供應商的模型與工具，依顯示名稱排列：已設定的目標與已定價的。 */
   readonly modelChoices = computed(() => {
     const provider = this.draft().provider,
       choices = new Map<string, string>();
-    for (const price of this.prices().filter((x) => x.provider === provider))
+    for (const price of this.prices().filter((item) => item.provider === provider))
       choices.set(price.modelId, formatModelDisplayName(price));
-    for (const target of this.targets().filter((x) => x.provider === provider))
+    for (const target of this.targets().filter((item) => item.provider === provider))
       choices.set(target.modelId, target.displayName);
     return [...choices].map(([value, label]) => ({ value, label }));
   });
@@ -153,7 +153,7 @@ export class PriceVersionDialog {
     else draft = emptyPrice();
     this.seed.set(seed);
     this.draft.set(draft);
-    if (!draft.modelId) this.draft.update((x) => ({ ...x, modelId: this.firstChoice() }));
+    if (!draft.modelId) this.draft.update((item2) => ({ ...item2, modelId: this.firstChoice() }));
     this.baseline.set(this.draft());
     this.effective.set('');
     this.resetPicker();
@@ -162,17 +162,17 @@ export class PriceVersionDialog {
     this.dialog().nativeElement.showModal();
   }
   field<K extends keyof PriceRequest>(key: K, value: PriceRequest[K]) {
-    this.draft.update((x) => ({ ...x, [key]: value }));
+    this.draft.update((item3) => ({ ...item3, [key]: value }));
   }
   setProvider(provider: string) {
-    this.draft.update((x) => ({ ...x, provider, modelId: '' }));
+    this.draft.update((item4) => ({ ...item4, provider, modelId: '' }));
     this.field('modelId', this.firstChoice());
   }
   setKind(kind: string) {
     this.field('kind', kind);
     if (kind === 'free')
-      this.draft.update((x) => ({
-        ...x,
+      this.draft.update((item5) => ({
+        ...item5,
         inputPerMillion: 0,
         cachedInputPerMillion: 0,
         outputPerMillion: 0,
@@ -189,7 +189,7 @@ export class PriceVersionDialog {
     this.resetPicker();
     this.error.set('');
   }
-  /** Escape, the close button and the sheet's swipe arrive here; unsaved changes are confirmed. */
+  /** Escape、關閉鈕與抽屜的滑動都會到這裡；未儲存的變更會先確認。 */
   async cancel(event: Event) {
     event.preventDefault();
     if (this.saving()) return;
@@ -224,8 +224,8 @@ export class PriceVersionDialog {
       this.dialog().nativeElement.close();
       this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
       this.saved.emit();
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.error.set(this.scope.message(error2));
     } finally {
       if (valid()) this.saving.set(false);
     }
@@ -233,7 +233,7 @@ export class PriceVersionDialog {
   private firstChoice() {
     return this.modelChoices()[0]?.value ?? '';
   }
-  /** Typed text the picker could not read stays in the field until it is cleared here. */
+  /** 選擇器無法讀取的輸入文字，會留在欄位中，直到在此清除。 */
   private resetPicker() {
     const picker = this.picker();
     picker?.text.set(null);

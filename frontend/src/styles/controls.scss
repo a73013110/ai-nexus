@@ -142,7 +142,8 @@ kbd {
     outline: 1px solid CanvasText;
   }
 }
-// An on/off switch: `<button role="switch" class="switch" [attr.aria-checked]><span></span></button>`.
+// An on/off switch:
+// `<button role="switch" class="switch" [attr.aria-checked]><span></span></button>`.
 .switch {
   position: relative;
   width: 48px;

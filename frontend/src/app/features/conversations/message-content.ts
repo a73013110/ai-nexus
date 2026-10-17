@@ -12,7 +12,7 @@ export type MessageDisplay = Pick<
   MessageDto,
   'role' | 'content' | 'status' | 'attachments' | 'sources' | 'webSources' | 'timing' | 'errorCode'
 > & { issueCode?: string | null };
-/** The same settled answer, citations and attachments in chat and read-only snapshots. */
+/** 同一份已定案的回答、引用與附件，在聊天與唯讀快照中呈現相同。 */
 @Component({
   selector: 'nx-message-content',
   imports: [Notice, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],

@@ -30,8 +30,8 @@ import { RepositoryList } from './repository-list';
 import { RepositoryStore } from './repository-store';
 
 /**
- * Hosts the repository list and one repository's views on a single route. It owns the Gitea
- * connection, the selected repository and ref, and turns old `?review=` links into review routes.
+ * 在單一路由上承載儲存庫列表與一個儲存庫的各檢視。負責 Gitea 連線、已選取的儲存庫與 ref，並把舊的
+ * `?review=` 連結轉成審查路由。
  */
 @Component({
   selector: 'nx-repositories-page',
@@ -161,7 +161,7 @@ export class RepositoriesPage {
       return '用你的 Gitea 權限閱讀程式、提交紀錄、議題與 Pull Request，再帶入對話或交給 AI 初檢。';
     return this.store.detail()?.repository.description || key.owner;
   });
-  /** The list's tour or the open repository's, once connected; the connect screen explains itself. */
+  /** 連線後，顯示列表或已開啟儲存庫的導覽；連線畫面自己會說明。 */
   readonly tour = computed(() => {
     if (!this.status()?.connected || this.reconnecting()) return null;
     const features = { chat: this.session.has('chat'), knowledge: this.session.has('knowledge') };
@@ -170,7 +170,7 @@ export class RepositoriesPage {
     return repositoryTour({
       ...features,
       section,
-      // A file opens through the query; every other section's item is in the path.
+      // 檔案透過查詢參數開啟；其他區段的項目都在路徑中。
       item: section === 'code' ? !!this.query().get('file') : !!this.item(),
       empty: !!this.store.detail()?.repository.empty,
     });
@@ -194,7 +194,7 @@ export class RepositoriesPage {
       });
     });
     effect(() => this.store.ref.set(this.query().get('ref') ?? ''));
-    // Notifications and tasks only know the review id; its repository comes from the review.
+    // 通知與工作只知道審查的 id；其儲存庫由審查本身決定。
     effect(() => {
       const review = this.query().get('review');
       if (review && this.status()?.connected) untracked(() => void this.openReview(review));
@@ -231,10 +231,12 @@ export class RepositoriesPage {
     try {
       await this.api.disconnect();
       if (!valid()) return;
-      this.statusRead.value.update((x) => (x ? { ...x, connected: false, login: null } : x));
+      this.statusRead.value.update((item2) =>
+        item2 ? { ...item2, connected: false, login: null } : item2,
+      );
       void this.router.navigate(['/repositories']);
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -252,10 +254,10 @@ export class RepositoriesPage {
       else await this.api.pin(key);
       if (valid())
         this.toast.show({ title: pinned ? '已取消釘選' : '已釘選到列表上方', duration: 2400 });
-    } catch (e) {
+    } catch (error3) {
       if (!valid()) return;
       this.store.setPinned(!!pinned);
-      this.actionError.set(this.scope.message(e));
+      this.actionError.set(this.scope.message(error3));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -270,8 +272,8 @@ export class RepositoriesPage {
       await this.router.navigate(['/repositories', owner, name, 'reviews', id], {
         replaceUrl: true,
       });
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error4) {
+      if (valid()) this.actionError.set(this.scope.message(error4));
     }
   }
 }

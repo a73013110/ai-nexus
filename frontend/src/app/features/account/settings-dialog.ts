@@ -24,7 +24,7 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
       #dialog
       class="platform-dialog settings-dialog"
       aria-label="個人設定"
-      (cancel)="$event.preventDefault(); requestClose()"
+      (cancel)="onCancel($event)"
       (close)="overlay.close()"
     >
       @defer (when overlay.opened()) {
@@ -67,6 +67,10 @@ export class SettingsDialog {
         this.overlay.close();
       }
     });
+  }
+  onCancel(event: Event) {
+    event.preventDefault();
+    this.requestClose();
   }
   async requestClose() {
     if (this.state().saving) return;

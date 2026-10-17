@@ -4,7 +4,7 @@ import { AuthService } from '@core/auth/auth-service';
 import type { CollectionDto } from '@core/api/schema';
 import { KnowledgeApi } from '../knowledge-api';
 
-/** Conversation selection is account-scoped and persists before a generation begins. */
+/** 對話的選取範圍屬於帳號，且在生成開始前就會保存。 */
 @Injectable({ providedIn: 'root' })
 export class KnowledgeSelection {
   private readonly api = inject(KnowledgeApi);
@@ -17,7 +17,7 @@ export class KnowledgeSelection {
   readonly revision = signal(0);
   private conversation: string | null = null;
   private version = 0;
-  /** True until the account changes or a newer load or reset replaces this selection. */
+  /** 直到帳號改變，或較新的載入／重設取代此選取前都為 true。 */
   private guard() {
     const version = this.version,
       session = this.auth.guard();
@@ -31,7 +31,7 @@ export class KnowledgeSelection {
     this.saving.set(false);
     this.loadFailed.set(false);
     this.error.set('');
-    this.revision.update((x) => x + 1);
+    this.revision.update((item) => item + 1);
   }
   async initialize() {
     const current = this.guard();
@@ -63,7 +63,7 @@ export class KnowledgeSelection {
     } finally {
       if (current()) {
         this.saving.set(false);
-        this.revision.update((x) => x + 1);
+        this.revision.update((item) => item + 1);
       }
     }
   }
@@ -74,7 +74,7 @@ export class KnowledgeSelection {
   async toggle(id: string, checked: boolean) {
     if (this.saving() || this.loadFailed()) return;
     const before = this.ids(),
-      next = checked ? [...new Set([...before, id])] : before.filter((x) => x !== id);
+      next = checked ? [...new Set([...before, id])] : before.filter((item) => item !== id);
     if (next.length > 3) return;
     const current = this.guard();
     this.ids.set(next);
@@ -90,7 +90,7 @@ export class KnowledgeSelection {
     } finally {
       if (current()) {
         this.saving.set(false);
-        this.revision.update((x) => x + 1);
+        this.revision.update((item) => item + 1);
       }
     }
   }
@@ -99,7 +99,7 @@ export class KnowledgeSelection {
     if (this.ids().length) await this.api.select(conversation, this.ids());
     if (current()) {
       this.conversation = conversation;
-      this.revision.update((x) => x + 1);
+      this.revision.update((item) => item + 1);
     }
   }
 }

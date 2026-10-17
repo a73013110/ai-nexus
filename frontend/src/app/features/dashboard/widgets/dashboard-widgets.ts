@@ -11,7 +11,7 @@ import { SpendWidget } from './spend-widget';
 import { TokensWidget } from './tokens-widget';
 import { UsersWidget } from './users-widget';
 
-/** Column spans on the 12-column board: small 3, medium 4, large 6, wide 8, full 12. */
+/** 12 欄看板上的欄跨度：小 3、中 4、大 6、寬 8、全寬 12。 */
 export type TileSize = 's' | 'm' | 'l' | 'w' | 'xl';
 export const TILE_SIZES: readonly { value: TileSize; label: string }[] = [
   { value: 's', label: '小' },
@@ -21,14 +21,14 @@ export const TILE_SIZES: readonly { value: TileSize; label: string }[] = [
   { value: 'xl', label: '滿版' },
 ];
 export function isTileSize(value: unknown): value is TileSize {
-  return TILE_SIZES.some((x) => x.value === value);
+  return TILE_SIZES.some((item) => item.value === value);
 }
 
-/** One kind of tile the overview can show. */
+/** 總覽可以顯示的一種磚塊。 */
 export interface DashboardWidget {
   id: string;
   title: string;
-  /** What the tile shows, in the customize list. */
+  /** 磚塊顯示的內容，於自訂列表中呈現。 */
   description: string;
   icon: string;
   size: TileSize;
@@ -43,8 +43,7 @@ export interface WidgetContext {
 }
 
 /**
- * Default order, the same for everyone; the user table only exists in the platform scope. Section
- * tiles of new features follow in the order the backend sends them.
+ * 預設順序，所有人相同；使用者表格只存在於平台範圍。新功能的區段磚塊依後端送來的順序排在其後。
  */
 const ORDER: readonly string[] = [
   'overview',
@@ -68,7 +67,7 @@ const ORDER: readonly string[] = [
   'section:repositories',
 ];
 
-/** Default sizes chosen so the default order fills whole rows. */
+/** 預設大小的選擇，讓預設順序剛好填滿整列。 */
 const SECTION_SIZES: Record<string, TileSize> = {
   files: 's',
   projects: 's',
@@ -80,8 +79,8 @@ const SECTION_SIZES: Record<string, TileSize> = {
 };
 
 /**
- * Every tile available for the current read, in default order. Composite tiles combine several
- * sections; each section also has its own tile, so a new backend section shows up automatically.
+ * 目前讀取可用的所有磚塊，依預設順序排列。組合磚塊會合併多個區段；
+ * 每個區段也有自己的磚塊，因此後端新增區段時會自動出現。
  */
 export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
   const widgets: DashboardWidget[] = [
@@ -146,7 +145,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       title: section.title,
       description: section.metrics
         .slice(0, 3)
-        .map((x) => x.label)
+        .map((item) => item.label)
         .join('、'),
       icon: sectionIcon(section.id),
       size: SECTION_SIZES[section.id] ?? 'm',
@@ -167,6 +166,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     const index = ORDER.indexOf(id);
     return index < 0 ? ORDER.length : index;
   };
-  // Array sort is stable, so unknown sections keep the backend's order after the known ones.
-  return widgets.sort((a, b) => rank(a.id) - rank(b.id));
+  // 陣列排序是穩定的，所以未知區段會排在已知區段之後，並保留後端的順序。
+  return widgets.sort((first, second) => rank(first.id) - rank(second.id));
 }

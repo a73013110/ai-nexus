@@ -5,20 +5,20 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { AdministrationApi } from './administration-api';
 import { ToastService } from '@shared/ui/toast-service';
 
-/** The catalog and user list shared by the management tabs and editors of one admin page. */
+/** 單一管理頁的各管理分頁與編輯器共用的目錄與使用者列表。 */
 @Injectable()
 export class AdministrationStore {
   private readonly api = inject(AdministrationApi);
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
-  /** The account is read fresh: this page changes what it may do. */
+  /** 帳號會重新讀取：此頁面會改變它可做的事。 */
   private readonly catalogRead = apiResource({
     feature: 'admin',
     freshAccount: true,
     loader: () => this.api.catalog(),
   });
   readonly catalog = computed(() => this.catalogRead.value() ?? null);
-  /** Every menu group, empty ones included: the editor arranges them, the summaries group by them. */
+  /** 每個選單群組，包括空的：編輯器用來排列，摘要則依群組分類。 */
   readonly navigationGroups = computed(() => this.catalog()?.navigationGroups ?? []);
   private readonly ready = computed(() => !!this.catalog());
   readonly search = signal('');
@@ -60,27 +60,27 @@ export class AdministrationStore {
       'admin-users-search',
     );
   }
-  /** Show the user page at `offset`, reading it again when it is already shown. */
+  /** 在 `offset` 顯示使用者頁面；若已顯示，則重新讀取。 */
   readUsers(offset = this.offset()) {
     if (offset === this.offset()) this.usersRead.reload();
     else this.offset.set(offset);
   }
-  /** Authorization changed: read the catalog, the shown users and this account's grants again. */
+  /** 授權已改變：重新讀取目錄、顯示中的使用者與此帳號的授權。 */
   saved(title: string, description?: string) {
     this.toast.success(title, description);
     this.catalogRead.reload();
     this.usersRead.reload();
     void this.session.load(true);
   }
-  /** Features or menu groups moved: read the catalog and this account's navigation (sidebar) again. */
+  /** 功能或選單群組已移動：重新讀取目錄與此帳號的導覽（側邊欄）。 */
   reordered() {
     this.catalogRead.reload();
     void this.session.load(true);
   }
   roleNames(ids: string[]) {
-    return ids.map((id) => this.catalog()?.roles.find((x) => x.id === id)?.name || id);
+    return ids.map((id) => this.catalog()?.roles.find((item) => item.id === id)?.name || id);
   }
   groupNames(ids: string[]) {
-    return ids.map((id) => this.catalog()?.groups.find((x) => x.id === id)?.name || id);
+    return ids.map((id) => this.catalog()?.groups.find((item) => item.id === id)?.name || id);
   }
 }

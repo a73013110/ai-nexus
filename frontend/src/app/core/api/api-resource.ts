@@ -12,45 +12,43 @@ import { WorkspaceSession } from '../auth/workspace-session';
 import { ClientValidationError, isCancellation, safeMessage } from '../errors/safe-errors';
 
 export interface ApiResourceOptions<T, P> {
-  /** Feature the signed-in account must have; omit for reads every account may make. */
+  /** 已登入帳號必須具備的功能；所有帳號都能讀取的資料則省略。 */
   feature?: string;
-  /** Read the account again instead of reusing it, for pages that show its permissions. */
+  /** 重新讀取帳號而不沿用快取，供顯示權限的頁面使用。 */
   freshAccount?: boolean;
-  /** Reactive request; `undefined` keeps the resource idle. Omit for one read per sign-in. */
+  /** 響應式請求；`undefined` 讓資源保持閒置。省略時每次登入只讀一次。 */
   params?: () => P | undefined;
-  /** `signal` aborts when the request changes or the view is destroyed. */
+  /** 請求改變或檢視被銷毀時，`signal` 會中止請求。 */
   loader: (params: P, signal: AbortSignal) => Promise<T>;
-  /** Milliseconds until the next re-read, or `null` to stop; a hidden tab waits until shown. */
+  /** 距離下次重新讀取的毫秒數；`null` 代表停止。分頁隱藏時會等到可見才讀。 */
   poll?: (value: T | undefined) => number | null;
 }
 
-/** A read owned by a view or store: one shape for loading, failure and retry across the app. */
+/** 由檢視或 store 持有的讀取：載入、失敗與重試在整個應用中有同一種形狀。 */
 export interface ApiResource<T> {
   /**
-   * The latest value read for this sign-in. It stays while a new request or re-read loads, so
-   * lists do not flicker; it is dropped when a read fails (access may have been revoked), the
-   * identity changes or the request becomes idle. Set it locally when a write returns the saved
-   * value.
+   * 此次登入讀到的最新值。重新請求或重讀時保留，列表才不會閃爍；
+   * 讀取失敗（權限可能已被撤銷）、身分改變或請求閒置時會被清掉。寫入回傳儲存後的值時，
+   * 在本地直接設定。
    */
   readonly value: WritableSignal<T | undefined>;
-  /** A new request is in flight: the first read, or the request changed. */
+  /** 新請求正在進行：第一次讀取，或請求改變。 */
   readonly loading: Signal<boolean>;
-  /** Any read is in flight, including `reload()` and polling. */
+  /** 任何讀取正在進行中，包含 `reload()` 與輪詢。 */
   readonly refreshing: Signal<boolean>;
-  /** Reviewed message for the last failed read; empty while the last read succeeded. */
+  /** 上次失敗讀取的審閱過訊息；上次成功時為空字串。 */
   readonly error: Signal<string>;
   /**
-   * Read again with the current request. Called while a new request is still loading (which may
-   * predate a write), it reads once more after that load settles instead of being ignored.
+   * 以目前的請求再讀一次。新請求仍在載入時呼叫（那次載入可能早於某次寫入），
+   * 會等該次載入結束後再讀一次，而不是忽略此呼叫。
    */
   reload(): void;
 }
 
 /**
- * Wraps Angular's `resource()` with what every authenticated read needs: wait for the account,
- * check the feature grant, start over (discarding late responses) when the identity changes, and
- * turn failures into reviewed messages. Writes stay explicit methods that update `value` or call
- * `reload()`.
+ * 包裝 Angular 的 `resource()`，補上所有需要登入的讀取都需要的行為：等待帳號、檢查功能授權、
+ * 身分改變時重來（丟棄遲到的回應），並把失敗轉成審閱過的訊息。寫入則維持明確的方法，
+ * 更新 `value` 或呼叫 `reload()`。
  */
 export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): ApiResource<T> {
   const session = inject(WorkspaceSession);
@@ -102,8 +100,8 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
       onCleanup(() => clearTimeout(timer));
     });
   }
-  // Angular ignores reload() while a new request loads; a write that lands meanwhile would then
-  // show the read that started before it, so the reload waits for that load instead.
+  // Angular 在新請求載入時會忽略 reload()；若期間有寫入，會顯示寫入前開始的那次讀取結果，
+  // 所以這裡讓 reload 等該次載入結束。
   let pendingReload = false;
   effect(() => {
     const status = ref.status();

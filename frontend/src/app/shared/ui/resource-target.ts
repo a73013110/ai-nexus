@@ -1,6 +1,6 @@
 import { afterRenderEffect, Directive, ElementRef, inject, input } from '@angular/core';
 
-/** Reveal an explicitly linked resource once; polling must preserve the reader's position. */
+/** 明確連結的資源只定位一次；輪詢時必須保留閱讀者的位置。 */
 @Directive({
   selector: '[nxResourceTarget]',
   host: { tabindex: '-1' },

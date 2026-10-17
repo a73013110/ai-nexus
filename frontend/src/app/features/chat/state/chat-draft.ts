@@ -4,7 +4,7 @@ import { DraftRepository } from '@core/preferences/draft-repository';
 import { UserSettingsService } from '@core/preferences/user-settings';
 import { DraftAttachments } from '@features/attachments/draft-attachments';
 
-/** The composer's text, the prompt being edited, and their per-conversation local drafts. */
+/** 輸入框的文字、正在編輯的提問，以及每個對話的本地草稿。 */
 @Injectable({ providedIn: 'root' })
 export class ChatDraft {
   readonly repository = inject(DraftRepository);
@@ -14,7 +14,7 @@ export class ChatDraft {
   readonly editing = signal<MessageDto | null>(null);
   private restoring = false;
 
-  /** Edits are never saved as drafts; they start a branch from an existing prompt. */
+  /** 編輯永遠不會存成草稿；它們會從既有的提問開一個分支。 */
   save(user: string, conversation: string | null) {
     if (this.editing() || !this.settings.value().saveLocalDrafts || this.restoring) return;
     this.repository.save(

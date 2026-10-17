@@ -66,7 +66,7 @@ describe('api client reads', () => {
     await expect(after).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledTimes(3);
 
-    // The earlier read settling must not end the sharing of the read that replaced it.
+    // 較早的讀取結束，不可以結束取代它的那次讀取的共享。
     fetch.mockImplementationOnce(() => new Promise<Response>((done) => (finish = done)));
     const first = api.get('/api/v1/projects');
     const second = api.get('/api/v1/projects');

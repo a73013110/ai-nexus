@@ -11,7 +11,7 @@ import type {
   UserAccountRequest,
 } from '@core/api/schema';
 
-/** Access management, user administration, platform usage and retrieval administration; prices are in `BillingApi`. */
+/** 權限管理、使用者管理、平台用量與檢索管理；價格在 `BillingApi` 中。 */
 @Injectable({ providedIn: 'root' })
 export class AdministrationApi {
   private readonly api = inject(ApiClient);

@@ -13,7 +13,7 @@ const localValidationHints = {
   retrievalEvaluationFormat: '驗收集需為含 1 至 20 題的 JSON 陣列。',
   reviewRepository: '這份 review 屬於其他程式庫。',
 } as const;
-/** Local validation uses fixed reviewed text, never arbitrary exception messages. */
+/** 本地驗證使用固定、經過審閱的文字，絕不使用任意的例外訊息。 */
 export class ClientValidationError extends Error {
   constructor(readonly code: keyof typeof localValidationHints) {
     super(
@@ -43,19 +43,19 @@ export function systemProblem(issueCode?: string | null): string {
     ? `操作未完成，請聯絡管理員。查證代碼：${issueCode}`
     : `操作未完成，請確認連線或聯絡管理員。本機問題代碼：${localPattern.test(issueCode ?? '') ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
 }
-/** An exception in the page itself: no request failed, so it suggests a reload before an administrator. */
+/** 頁面本身的例外：沒有請求失敗，因此建議先重新整理，再聯絡管理員。 */
 export function pageProblem(issueCode: string): string {
   return validIssueCode(issueCode)
     ? `頁面發生非預期錯誤，若畫面異常請重新整理；反覆發生再聯絡管理員。查證代碼：${issueCode}`
     : `頁面發生非預期錯誤，若畫面異常請重新整理。本機問題代碼：${localPattern.test(issueCode) ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
 }
-/** A recorded failure without an HTTP status (a background job): a reviewed hint when the code has one. */
+/** 沒有 HTTP 狀態的已記錄失敗（背景工作）：代碼有對應時，提供經過審閱的提示。 */
 export function recordedProblem(code: string | null | undefined, issueCode: string): string {
   return code && Object.hasOwn(publicErrorHints, code) && validIssueCode(issueCode)
     ? `${publicErrorHints[code]} 查證代碼：${issueCode}`
     : systemProblem(issueCode);
 }
-/** Only reviewed operation hints or opaque issue codes enter general UI surfaces. */
+/** 只有經過審閱的操作提示或不透明的問題代碼，才會進入一般的 UI。 */
 export class ApiError extends Error {
   readonly issueCode: string;
   readonly traceId?: string;
@@ -64,7 +64,7 @@ export class ApiError extends Error {
     readonly code: string,
     _untrustedMessage?: string,
     issueCode?: string,
-    /** Seconds from a 429's `Retry-After`, when the server sent one. */
+    /** 429 的 `Retry-After` 秒數（若伺服器有送出）。 */
     readonly retryAfter?: number,
   ) {
     const issue = validIssueCode(issueCode) ? issueCode : newLocalIssue();

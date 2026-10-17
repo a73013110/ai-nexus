@@ -23,7 +23,7 @@ function render(withGroups: boolean) {
   return [...fixture.nativeElement.querySelectorAll('.feature-summary-group')].map(
     (section: HTMLElement) => ({
       label: section.querySelector('.feature-category-label')?.textContent ?? null,
-      names: [...section.querySelectorAll('.resource-badges span')].map((x) => x.textContent),
+      names: [...section.querySelectorAll('.resource-badges span')].map((item) => item.textContent),
     }),
   );
 }

@@ -26,14 +26,14 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { BillingApi, chargeKind, providerName } from './billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 
-/** One priceable model or tool and the version that applies to it now. */
+/** 一個可定價的模型或工具，以及目前適用的版本。 */
 export interface CurrentPrice {
   key: string;
   provider: string;
   modelId: string;
   name: string;
   current: PriceDto | null;
-  /** The earliest version scheduled after now. */
+  /** 排在現在之後、最早的一個版本。 */
   next: PriceDto | null;
 }
 export interface PriceVersion {
@@ -42,26 +42,26 @@ export interface PriceVersion {
   state: { label: string; tone: BadgeTone };
 }
 const providerOrder = ['google', 'ollama', 'searxng', 'brave'];
-const keyOf = (x: { provider: string; modelId: string }) => `${x.provider}\n${x.modelId}`;
+const keyOf = (item2: { provider: string; modelId: string }) =>
+  `${item2.provider}\n${item2.modelId}`;
 /** 伺服器只回傳最新的這麼多個版本；達到時提示歷史不完整。 */
 const HISTORY_LIMIT = 500;
 const rateFormat = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 8 });
 
 /**
- * For each configured or priced model and tool, the version in effect now (its latest version not
- * after `now`) and the next scheduled one; and the history, newest first, each version with its
- * state. The server returns the latest 500 versions.
+ * 對每個已設定或已定價的模型與工具，回傳目前生效的版本（不晚於 `now` 的最新版本）與下一個排程版本；
+ * 以及歷史紀錄（最新在前），每個版本都附上狀態。伺服器最多回傳最新 500 個版本。
  */
 export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now = Date.now()) {
-  const names = new Map(targets.map((x) => [keyOf(x), x.displayName]));
+  const names = new Map(targets.map((item) => [keyOf(item), item.displayName]));
   const rows = new Map<string, CurrentPrice>();
-  const row = (x: { provider: string; modelId: string }, name: string) => {
-    const key = keyOf(x);
+  const row = (item3: { provider: string; modelId: string }, name: string) => {
+    const key = keyOf(item3);
     if (!rows.has(key))
       rows.set(key, {
         key,
-        provider: x.provider,
-        modelId: x.modelId,
+        provider: item3.provider,
+        modelId: item3.modelId,
         name,
         current: null,
         next: null,
@@ -69,14 +69,18 @@ export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now 
     return rows.get(key)!;
   };
   for (const target of targets) row(target, target.displayName);
-  const sorted = [...prices].sort((a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt));
+  const sorted = [...prices].sort(
+    (first, second) => Date.parse(second.effectiveAt) - Date.parse(first.effectiveAt),
+  );
   for (const price of sorted) {
     const entry = row(price, names.get(keyOf(price)) ?? formatModelDisplayName(price));
     if (Date.parse(price.effectiveAt) > now) entry.next = price;
     else entry.current ??= price;
   }
   const current = [...rows.values()].sort(
-    (a, b) => rank(a.provider) - rank(b.provider) || a.name.localeCompare(b.name, 'zh-Hant'),
+    (first2, second2) =>
+      rank(first2.provider) - rank(second2.provider) ||
+      first2.name.localeCompare(second2.name, 'zh-Hant'),
   );
   const history: PriceVersion[] = sorted.map((price) => {
     const entry = rows.get(keyOf(price))!;
@@ -99,8 +103,8 @@ function rank(provider: string) {
 }
 
 /**
- * Model and tool prices: what applies now and the version history, one view at a time. Versions are
- * never changed, so every edit opens the dialog that adds the next one.
+ * 模型與工具的價格：一次看一個視圖，包括目前適用的價格與版本歷史。版本不會被修改，
+ * 因此每次編輯都會開啟對話框，新增下一個版本。
  */
 @Component({
   selector: 'nx-price-book',
@@ -123,7 +127,7 @@ function rank(provider: string) {
 export class PriceBook {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(BillingApi);
-  /** Read each time the tab is shown: the price history and the models that can be priced. */
+  /** 每次顯示分頁時都會讀取：價格歷史與可定價的模型。 */
   readonly catalogRead = apiResource({
     feature: 'operations',
     loader: async () => {
@@ -141,12 +145,12 @@ export class PriceBook {
   ];
   readonly search = signal('');
   readonly current = computed(() =>
-    this.catalog().current.filter((x) => this.matches(x.name, x.provider)),
+    this.catalog().current.filter((item) => this.matches(item.name, item.provider)),
   );
   readonly history = computed(() =>
-    this.catalog().history.filter((x) => this.matches(x.name, x.price.provider)),
+    this.catalog().history.filter((item) => this.matches(item.name, item.price.provider)),
   );
-  readonly unpriced = computed(() => this.catalog().current.filter((x) => !x.current).length);
+  readonly unpriced = computed(() => this.catalog().current.filter((item) => !item.current).length);
   readonly historyColumns: TableColumn[] = [
     { id: 'effective', label: '生效時間', hideable: false },
     { id: 'model', label: '模型或工具', hideable: false },

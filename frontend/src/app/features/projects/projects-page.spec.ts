@@ -26,18 +26,18 @@ const project = (id: string) =>
 
 async function setup(url: string, rows: ProjectDto[]) {
   const generation = signal(1);
-  // The server's list; writes below change it like the backend would.
+  // 伺服器的列表；下方的寫入會像後端一樣改變它。
   let server = [...rows];
   const api = {
     list: vi.fn(async () => [...server]),
-    get: vi.fn(async (id: string) => server.find((x) => x.resource.id === id) ?? project(id)),
+    get: vi.fn(async (id: string) => server.find((item) => item.resource.id === id) ?? project(id)),
     save: vi.fn(async (id: string | null, name: string) => {
       const saved = project(id ?? name);
-      server = [saved, ...server.filter((x) => x.resource.id !== saved.resource.id)];
+      server = [saved, ...server.filter((item) => item.resource.id !== saved.resource.id)];
       return saved;
     }),
     remove: vi.fn(async (id: string) => {
-      server = server.filter((x) => x.resource.id !== id);
+      server = server.filter((item) => item.resource.id !== id);
     }),
     files: vi.fn(async () => []),
     templates: vi.fn(async () => []),
@@ -62,17 +62,17 @@ async function setup(url: string, rows: ProjectDto[]) {
       { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });
-  // The list and write logic is under test; the full template needs layout APIs jsdom lacks.
+  // 測試的是列表與寫入邏輯；完整的範本需要 jsdom 沒有的版面 API。
   TestBed.overrideComponent(ProjectsPage, {
     set: { template: '<dialog #dialog></dialog>', imports: [] },
   });
   const harness = await RouterTestingHarness.create();
   const page = await harness.navigateByUrl(url, ProjectsPage);
-  // Deleting asks first; the confirmation itself is covered elsewhere.
+  // 刪除會先詢問；確認本身在別處有測試。
   Object.assign(page, { confirm: () => ({ ask: async () => true }) });
   const settle = () => TestBed.inject(ApplicationRef).whenStable();
   await settle();
-  const ids = () => page.projects().map((x) => x.resource.id);
+  const ids = () => page.projects().map((item) => item.resource.id);
   return { api, harness, page, settle, ids };
 }
 

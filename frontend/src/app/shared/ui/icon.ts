@@ -84,8 +84,8 @@ import {
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
-// Semantic names keep business templates independent of the icon vendor.
-// Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
+// 語意名稱讓業務範本不依賴圖示供應商。
+// 匯入精選的 SVG 資料；單一 Angular renderer 可避免保留每個圖示的元件中繼資料。
 const icons: Record<string, IconNode> = {
   activity: Activity,
   apps: LayoutGrid,
@@ -163,11 +163,11 @@ const icons: Record<string, IconNode> = {
   first: ChevronsLeft,
   clock: Clock,
 };
-/** Names `nx-icon` draws without a feature bundle; menu icons from the API fall back when unknown. */
+/** `nx-icon` 不需功能套件即可繪製的名稱；API 的選單圖示不認得時會退回備用。 */
 export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(icons));
-/** Optional feature icons stay in their lazy feature bundle. */
+/** 選用的功能圖示留在它們的延遲載入功能套件中。 */
 export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
-/** Callers size it with `--icon-size` (the `--icon-*` tokens), not width and height. */
+/** 呼叫端以 `--icon-size`（`--icon-*` token）決定大小，而非 width 與 height。 */
 @Component({
   selector: 'nx-icon',
   imports: [LucideDynamicIcon],

@@ -12,12 +12,12 @@ export class ThemeService {
   private readonly dark = mediaQuery('(prefers-color-scheme: dark)');
   private readonly systemReduced = mediaQuery('(prefers-reduced-motion: reduce)');
   readonly reducedMotion = computed(() => this.preferences().reducedMotion || this.systemReduced());
-  /** For `scrollTo` and `scrollIntoView`: jumps instead of gliding under reduced motion. */
+  /** 用於 `scrollTo` 與 `scrollIntoView`：減少動態效果時直接跳轉，而不是滑動。 */
   readonly scrollBehavior = computed<ScrollBehavior>(() =>
     this.reducedMotion() ? 'instant' : 'smooth',
   );
   constructor() {
-    // Follows the system scheme; preference changes render synchronously through apply().
+    // 跟隨系統配色；偏好變更會透過 apply() 同步渲染。
     effect(() => {
       this.dark();
       untracked(() => this.render());
@@ -33,7 +33,7 @@ export class ThemeService {
           defaultModelId: null,
         });
     } catch {
-      /* Appearance is optional; storage can be disabled by policy. */
+      /* 外觀是選用的；儲存可能被政策停用。 */
     }
     this.render();
   }

@@ -4,7 +4,7 @@ import { ClientValidationError } from '@core/errors/safe-errors';
 
 type FileFilters = ApiQuery<'/api/v1/files', 'get'>;
 
-/** Uploaded originals: draft attachments, the upload quota and the file library. */
+/** 已上傳的原始檔：草稿附件、上傳配額與檔案庫。 */
 @Injectable({ providedIn: 'root' })
 export class AttachmentsApi {
   private readonly api = inject(ApiClient);

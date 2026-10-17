@@ -15,7 +15,7 @@ import { Icon } from './icon';
 
 let sequence = 0;
 
-/** Native scrolling with stable width and position-aware, operable overflow cues. */
+/** 原生捲動，寬度穩定，並提供能依位置操作的溢出提示。 */
 @Component({
   selector: 'nx-scroll-area',
   imports: [Icon],
@@ -93,10 +93,10 @@ export class ScrollArea {
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       const viewport = this.viewport().nativeElement;
-      // Layout height, not scrollHeight: a transformed child (e.g. an entrance slide) adds scrollable
-      // overflow while it moves, and its end resizes nothing, so the cue would outlive it.
+      // 使用版面高度而非 scrollHeight：有變形的子元素（例如進場滑入）在移動時會增加可捲動的溢出，
+      // 但它結束時不會改變任何大小，提示就會比它還留得久。
       const maximum = this.content().nativeElement.offsetHeight - viewport.clientHeight;
-      // A zero-height viewport has no usable scroll range; ignore fractional pixel rounding.
+      // 高度為零的視口沒有可用的捲動範圍；忽略小數像素的捨入。
       const visible = viewport.clientHeight > 0;
       this.above.set(visible && maximum > 1 && viewport.scrollTop > 1);
       this.below.set(visible && maximum > 1 && viewport.scrollTop < maximum - 1);

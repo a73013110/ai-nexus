@@ -38,9 +38,9 @@ export class UserSettingsService {
         });
     });
   }
-  /** `owner` may still be loading, so the account and its settings are fetched together. */
+  /** `owner` 可能仍在載入，因此帳號與其設定一起取得。 */
   async load(owner: string | Promise<string>, refresh = false) {
-    // Within one sign-in generation the owner cannot change.
+    // 同一次登入世代內，owner 不會改變。
     if (!refresh && this.owner && this.generation === this.auth.generation()) {
       if ((await owner) === this.owner) return this.value();
     }

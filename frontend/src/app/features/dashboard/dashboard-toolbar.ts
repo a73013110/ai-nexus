@@ -8,8 +8,8 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { DashboardStore } from './dashboard-store';
 
 /**
- * The period and currency the overview reads, in one quiet row. Every choice applies itself
- * (typed dates once the viewer pauses), so there is no query button; refresh lives in the header.
+ * 總覽讀取的期間與幣別，放在一列安靜的工具列中。每個選擇都會自行套用
+ * （輸入的日期在檢視者停止輸入後套用），因此沒有查詢按鈕；重新整理在標題列。
  */
 @Component({
   selector: 'nx-dashboard-toolbar',
@@ -75,6 +75,6 @@ import { DashboardStore } from './dashboard-store';
 })
 export class DashboardToolbar {
   readonly store = inject(DashboardStore);
-  /** On a phone the period choices share the full width, as a segmented control does on iOS. */
+  /** 在手機上期間選項平分整個寬度，就像 iOS 的分段控制一樣。 */
   readonly phone = mediaQuery(below('phone'));
 }

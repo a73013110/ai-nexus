@@ -17,10 +17,10 @@ export interface ViewOption {
 }
 
 /**
- * A group of mutually exclusive filters/views; one indicator slides to the pressed option.
- * `line` underlines (page-level views), `segment` raises a chip in a track (compact filters,
- * `fill` makes the options share the width), icon-only raises a chip without the track.
- * Tabs remain for linked tabpanels.
+ * 一組互斥的篩選／檢視；一個指示器會滑到被按下的選項上。
+ * `line` 為底線（頁面層級的檢視），`segment` 在軌道中抬起一個晶片（精簡篩選），
+ * `fill` 讓選項平分寬度，icon-only 則抬起晶片但不顯示軌道。
+ * 連結到 tabpanel 的情況仍使用 Tabs。
  */
 @Component({
   selector: 'nx-view-switch',

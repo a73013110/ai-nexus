@@ -13,9 +13,9 @@ export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
 let sequence = 0;
 
 /**
- * Shared density and accessible naming; native dialog owns focus and dismissal. Every such dialog
- * is a `FrameMotion`: switching tabs (`nxViewMotion` panels), `size` or `maximized` moves the frame
- * to the new content's size instead of jumping. `maximized` (edge to edge, `data-maximized`) is
+ * 共用的密度與無障礙命名；原生 dialog 負責焦點與關閉。每個這樣的對話框都是 `FrameMotion`：
+ * 切換分頁（`nxViewMotion` 面板）、`size` 或 `maximized` 時，框架會過渡到新內容的大小，而非直接跳動。
+ * `maximized`（邊到邊，`data-maximized`）是
  * toggled by the header's 放大視窗 button and resets on every open.
  */
 @Directive({
@@ -31,7 +31,7 @@ let sequence = 0;
 })
 export class CompactDialog {
   readonly compact = input(true, { alias: 'nxCompactDialog', transform: booleanAttribute });
-  /** Width and density: sm and md are borderless, lg and full add dividers (dialogs.scss). */
+  /** 寬度與密度：sm 與 md 沒有邊框，lg 與 full 會加上分隔線（dialogs.scss）。 */
   readonly size = input<DialogSize>('md');
   readonly opened = signal(false);
   readonly maximized = signal(false);

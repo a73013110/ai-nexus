@@ -33,7 +33,7 @@
       multiple
       hidden
       [accept]="accept()"
-      (change)="upload(fileInput.files!); fileInput.value = ''"
+      (change)="chooseFiles(fileInput)"
     />
   </div>
   @if (error()) {

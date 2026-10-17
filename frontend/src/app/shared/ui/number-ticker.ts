@@ -14,9 +14,8 @@ import { formatNumber } from '../browser/format';
 const DURATION = 900;
 
 /**
- * A number that rolls from its previous value to the new one, easing out like a counter
- * settling. Screen readers and reduced motion get the final value at once; an unknown value
- * shows `unknown` instead of zero.
+ * 數字從前一個值滾動到新值，結束時緩和減速，像計數器慢慢停下。
+ * 螢幕閱讀器與減少動態效果會立即顯示最終值；未知的值會顯示 `unknown`，而不是零。
  */
 @Component({
   selector: 'nx-number-ticker',
@@ -33,9 +32,9 @@ const DURATION = 900;
 })
 export class NumberTicker {
   readonly value = input<number | null | undefined>(null);
-  /** Turns the in-between and final numbers into text; defaults to grouped digits. */
+  /** 把中間值與最終值轉成文字；預設為分組數字。 */
   readonly format = input<(value: number) => string>(formatNumber);
-  /** Shown when the value is unknown; never rendered as zero. */
+  /** 值未知時顯示；絕不渲染為零。 */
   readonly unknown = input('—');
   private readonly theme = inject(ThemeService);
   readonly text = signal('');
@@ -72,15 +71,15 @@ export class NumberTicker {
       return;
     }
     const start = performance.now();
-    // Integers stay integers while rolling so counts never show fractions.
+    // 滾動時整數保持為整數，讓計數不會出現小數。
     const whole = Number.isInteger(value) && Number.isInteger(from);
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / DURATION);
-      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      const time = Math.min(1, (now - start) / DURATION);
+      const eased = time === 1 ? 1 : 1 - Math.pow(2, -10 * time);
       const current = from + (value - from) * eased;
-      this.shown = t === 1 ? value : whole ? Math.round(current) : current;
+      this.shown = time === 1 ? value : whole ? Math.round(current) : current;
       this.text.set(format(this.shown));
-      if (t < 1) this.frame = requestAnimationFrame(step);
+      if (time < 1) this.frame = requestAnimationFrame(step);
     };
     this.frame = requestAnimationFrame(step);
   }

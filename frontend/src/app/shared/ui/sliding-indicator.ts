@@ -1,18 +1,19 @@
 import { afterNextRender, DestroyRef, Directive, ElementRef, inject, input } from '@angular/core';
 
 /**
- * Measures the selected item of a group and publishes its box as `--indicator-x/-y/-w/-h` on the
- * host, so one chip or underline (the host's `::before`) slides between items of any width. It
- * watches the selection attribute and sizes itself, so it never runs on unrelated renders.
- * `data-indicator` marks that something is selected; `data-indicator-ready` turns the slide on
- * after a placement, so the chip does not fly in from the corner. A group that disappears (a
- * closed dialog, a hidden panel) drops both, and its next placement is again instant: the box it
- * last measured is stale. Offsets are layout values, so a dialog's open/close scale never skews
- * them; the ResizeObserver re-measures once the group has a box again.
+ * 量測群組中被選取項目的盒子，並以 `--indicator-x/-y/-w/-h` 發布到宿主上，
+ * 讓同一個晶片或底線（宿主的 `::before`）能在任意寬度的項目之間滑動。它會監看選取屬性並自行調整大小，
+ * 因此不會在無關的渲染時執行。
+ * `data-indicator` 標示有選取項目；放好位置後才設定 `data-indicator-ready` 開啟滑動，
+ * 避免晶片從角落飛入。
+ * 群組消失時（對話框關閉、面板隱藏）兩者都會被移除；下一次放置會立即完成，
+ * 因為上次量測的盒子已經過時。
+ * 偏移量是版面數值，所以對話框的開啟／關閉縮放不會影響它們；群組重新有盒子時，ResizeObserver
+ * 會重新量測。
  */
 @Directive({ selector: '[nxSlidingIndicator]' })
 export class SlidingIndicator {
-  /** Selector for the selected item; the default covers toggle groups, tabs and nav links. */
+  /** 選取項目的選擇器；預設涵蓋切換群組、分頁與導覽連結。 */
   readonly nxSlidingIndicator = input(
     '[aria-pressed="true"], [aria-selected="true"], [aria-current="page"]',
   );
@@ -37,7 +38,7 @@ export class SlidingIndicator {
       host.style.setProperty('--indicator-w', `${active.offsetWidth}px`);
       host.style.setProperty('--indicator-h', `${active.offsetHeight}px`);
       host.setAttribute('data-indicator', '');
-      // The slide starts a frame after the first placement has painted.
+      // 滑動在第一次放置完成繪製之後，才從下一幀開始。
       if (!host.hasAttribute('data-indicator-ready'))
         ready ||= requestAnimationFrame(() => {
           ready = 0;

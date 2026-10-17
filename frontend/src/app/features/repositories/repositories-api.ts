@@ -6,7 +6,7 @@ import type {
   StartRepositoryChatRequest,
 } from '@core/api/schema';
 
-/** A repository as the routes name it: `owner/name` split in two. */
+/** 路由所用的儲存庫形式：`owner/name` 拆成兩部分。 */
 export interface RepositoryKey {
   owner: string;
   name: string;
@@ -19,7 +19,8 @@ export class RepositoriesApi {
   connect = (token: string) =>
     this.api.post('/api/v1/repositories/connection', { body: { token } });
   disconnect = () => this.api.delete('/api/v1/repositories/connection');
-  list = (q: string, page: number) => this.api.get('/api/v1/repositories', { query: { q, page } });
+  list = (text: string, page: number) =>
+    this.api.get('/api/v1/repositories', { query: { q: text, page } });
   review = (id: string) => this.api.get('/api/v1/repositories/reviews/{id}', { path: { id } });
   reviewJob = (id: string, retry: boolean) =>
     retry
@@ -48,10 +49,10 @@ export class RepositoriesApi {
       path,
       query: base ? { head, base } : { head },
     });
-  issues = (path: RepositoryKey, state: string, page: number, q = '') =>
+  issues = (path: RepositoryKey, state: string, page: number, text2 = '') =>
     this.api.get('/api/v1/repositories/{owner}/{name}/issues', {
       path,
-      query: q ? { state, page, q } : { state, page },
+      query: text2 ? { state, page, q: text2 } : { state, page },
     });
   issue = (path: RepositoryKey, number: number) =>
     this.api.get('/api/v1/repositories/{owner}/{name}/issues/{number}', {

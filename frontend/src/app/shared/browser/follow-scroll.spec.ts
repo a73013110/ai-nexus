@@ -32,7 +32,7 @@ describe('followScroll', () => {
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
   });
-  /** A viewport 100px tall over 1000px of content, starting at the bottom. */
+  /** 高 100px 的視口，內容 1000px，從底部開始。 */
   const setup = () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
@@ -42,7 +42,7 @@ describe('followScroll', () => {
     Object.defineProperty(view, 'clientHeight', { configurable: true, value: 100 });
     Object.defineProperty(view, 'scrollTop', { configurable: true, writable: true, value: 900 });
     view.scrollTo = vi.fn();
-    // Mocked after the first render, so only this helper's frames are queued.
+    // 第一次渲染後才被 mock，因此只會排入這個 helper 的幀。
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => frames.push(frame));
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
       if (id) frames.splice(id - 1, 1, () => undefined);

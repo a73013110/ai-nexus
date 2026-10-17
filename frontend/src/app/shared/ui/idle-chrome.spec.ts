@@ -68,8 +68,8 @@ describe('IdleChrome', () => {
   it('ignores reading movement and clicks over the content, but reveals near the chrome', () => {
     const { content, idle, state } = setup();
     expect(idle()).toBe('hidden');
-    for (const y of [200, 220, 240, 400])
-      content.dispatchEvent(pointer('pointermove', { x: 300, y }));
+    for (const pointY of [200, 220, 240, 400])
+      content.dispatchEvent(pointer('pointermove', { x: 300, y: pointY }));
     content.dispatchEvent(pointer('pointerdown', { x: 300, y: 300 }));
     content.dispatchEvent(pointer('click', { x: 300, y: 300 }));
     expect(state()).toBe('hidden');

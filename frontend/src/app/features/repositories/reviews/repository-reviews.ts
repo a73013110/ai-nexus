@@ -13,7 +13,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
 
 export const purposeName = (purpose: string) => (purpose === 'summary' ? '變更摘要' : '快速檢閱');
 
-/** What a review read, in a few words. */
+/** 一次審查讀取的內容，用幾個字說明。 */
 export function reviewScope(review: RepositoryReviewDto) {
   if (review.pullRequest) return `Pull Request #${review.pullRequest}`;
   return review.baseCommit
@@ -21,7 +21,7 @@ export function reviewScope(review: RepositoryReviewDto) {
     : `提交 ${shortSha(review.commit)}`;
 }
 
-/** The repository's AI reviews, newest first. */
+/** 儲存庫的 AI 審查，最新的在前。 */
 @Component({
   selector: 'nx-repository-reviews',
   imports: [RouterLink, Icon, Notice, StatusBadge, RepositoryReviewDialog],
