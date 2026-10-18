@@ -28,7 +28,7 @@
 
 `ChunkEmbeddings768`／`ChunkEmbeddings1024` 以 int identity clustered PK 預留 ANN 映射，真正保存 `VECTOR(n)`；每個 `(ProfileId, ChunkId)` 唯一，片段刪除 cascade 向量。同一片段可持有 active 與 building 向量，但一次查詢只排名 active profile。SQLite 使用 blob converter 與測試用 cosine／詞頻，正式環境沒有 portable 或舊索引查詢。
 
-啟動無 active 時建立目標為 active，將 migration 標記的文件排入索引；設定變更則建立 building，預設等待管理員「開始重建」。`embedding-reindex` 逐文件／逐批補齊，重試跳過已完成向量，使用文件擁有者授權與配額。新增／編輯資料填入 active 及所有 building；active 完成即可 ready，building 失敗可續跑。編輯前先取得 hash 快取，未變片段沿用 ID／向量；單一布局不保存舊切段版本。
+啟動無 active 時建立目標為 active，將標記為待索引的文件排入索引；設定變更則建立 building，預設等待管理員「開始重建」。`embedding-reindex` 逐文件／逐批補齊，重試跳過已完成向量，使用文件擁有者授權與配額。新增／編輯資料填入 active 及所有 building；active 完成即可 ready，building 失敗可續跑。編輯前先取得 hash 快取，未變片段沿用 ID／向量；單一布局不保存舊切段版本。
 
 啟用需所有文件 ready 且片段覆蓋率 100%，在 serializable transaction 內將舊 active 改 retired、building 改 active。`AutoActivate=true` 會排重建並完成後自動切換，需已有管理員；預設 false。退役向量可由管理員清除，或每小時清理超過 `RetiredRetentionDays=7` 的資料；保留 profile 與原文。操作有權限檢查及稽核。這支援往後模型版本管理，不提供舊版 JSON 索引兼容。
 
@@ -50,7 +50,7 @@ score = VectorWeight / (RrfK + vectorRank) + FtsWeight / (RrfK + ftsRank)
 
 ## 全文與維度擴充
 
-SQL Setup 對既有 instance 加入「Full-Text and Semantic Extractions for Search」。migration 在交易外建立 catalog 及 Chunks(Text, HeadingPath) 的 LANGUAGE 1028 index，key 為 SearchId 唯一索引、CHANGE_TRACKING AUTO；缺少全文不阻擋 migration，但有 warning。全文填入非同步，新文件可能暫無 keyword 命中。[Microsoft 新增功能](https://learn.microsoft.com/en-us/sql/database-engine/install-windows/add-features-to-an-instance-of-sql-server-setup?view=sql-server-ver17)
+SQL Setup 對既有 instance 加入「Full-Text and Semantic Extractions for Search」。`database/App/FullText/` 的腳本在交易外建立 catalog 及 Chunks(Text, HeadingPath) 的 LANGUAGE 1028 index，key 為 SearchId 唯一索引、CHANGE_TRACKING AUTO；缺少全文元件時跳過，不阻擋部署。全文填入非同步，新文件可能暫無 keyword 命中。[Microsoft 新增功能](https://learn.microsoft.com/en-us/sql/database-engine/install-windows/add-features-to-an-instance-of-sql-server-setup?view=sql-server-ver17)
 
 ```sql
 SELECT SERVERPROPERTY('ProductMajorVersion'), SERVERPROPERTY('IsFullTextInstalled');
@@ -58,8 +58,8 @@ SELECT * FROM sys.fulltext_languages WHERE lcid = 1028;
 SELECT * FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks');
 ```
 
-執行 `scripts/Test-Environment.ps1 -SqlOnly` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 依 migration 的全文 DDL 建立 catalog/index，勿改 migration history。已登記的 migration 不會因重跑 idempotent script 而再執行。
+執行 `scripts/Test-Environment.ps1 -SqlOnly` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 執行 `database/App/FullText/` 的目錄與索引腳本。
 
-新增維度：新增 vector entity（仿 `ChunkEmbedding1024` 繼承 `ChunkEmbeddingConfiguration<T>`）及對應表 migration；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊實體的 `[Comment]` 與真實 SQL 測試，再生成 migration SQL、契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
+新增維度：在開發庫建立向量表並匯出，新增 vector entity（仿 `ChunkEmbedding1024` 繼承 `ChunkEmbeddingConfiguration<T>`）；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊資料表說明與真實 SQL 測試，重產契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
 
 目前採精確 cosine，未啟用 VECTOR_SEARCH／CREATE VECTOR INDEX preview；int clustered PK 與 SearchId 已保留接縫。資料量、p95、Recall@K 確認成為瓶頸後，再評估正式支援的 ANN，必須保留授權候選邊界並驗證召回與撤權。不使用其他向量資料庫。四模式驗收與操作見 [品質評測](../features/quality.md)、[模型與重排](embedding-models.md)。

@@ -16,7 +16,7 @@
 - 未知值傳 `null`，不要傳 0；錯誤內容比照原功能遮罩（例：失敗通知只顯示查證訊息）。
 - 標題留空時用該功能在 `accesscontrol.Features` 的名稱與路由；不屬於任何頁面的區塊（通知）傳空字串路由。
 - 帶 `Danger` 且大於 0 的指標會讓區塊進入 attention 狀態；`ActiveWhen` 標出進行中的工作，主視覺據此呈現。
-- 來源共用同一個請求的 `NexusDbContext`，依序執行；每個來源維持少量彙總查詢，不要載入整張表。
+- 來源共用同一個請求的 `AppDbContext`，依序執行；每個來源維持少量彙總查詢，不要載入整張表。
 
 `IDashboardSource` 放在 `backend/src/AiNexus.Platform/Dashboard`：它和 `IFeatureModule` 一樣是組合各模組的擴充點，各層模組都要實作，放進任何業務模組都會造成依賴循環。
 

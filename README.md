@@ -9,7 +9,6 @@
 ```powershell
 ./scripts/Restore.ps1
 ./scripts/Configure-Local.ps1      # 建立 .local 設定，遮蔽輸入 SQL／AD 密碼與 Google key
-./scripts/Initialize-Database.ps1  # 只在資料庫不存在時建庫，再套用 migration
 dotnet dev-certs https --trust     # 開發機首次
 ./scripts/Start-Local.ps1          # 一個程序同時提供前端與 API
 ```
@@ -20,15 +19,16 @@ dotnet dev-certs https --trust     # 開發機首次
 
 | 項目 | 用途 |
 | --- | --- |
-| `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有單元、整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
+| `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、資料表對應 `AiNexus.Data`、共用基礎 `AiNexus.Platform`，`tests/` 有單元、整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
 | `frontend/` | Angular 前端，唯一的 npm 根目錄（Node 版本寫在 `package.json` 的 `engines`）；`src/app` 分為 `core`、`shared`、`features`，`e2e/` 是對發布後網站執行的 Playwright 測試 |
+| `database/` | 資料庫結構：`App/` 是開發庫以 `Export-Database.ps1` 匯出的物件檔（不手改），建成 dacpac；另有不進 dacpac 的 `FullText/`（全文目錄與索引）與手寫的 `Seed/`（見 [資料庫](docs/architecture/database.md)） |
 | `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對） |
 | `deploy/` | 部署素材：`sql/` 是交給外部來源 DBA 的授權 view 範本；部署步驟在 `docs/operations/` |
 | `docs/` | 長期文件，依讀者分子資料夾（見下方文件地圖） |
 | `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本與文件檢查在 `tests/` |
 | `tooling/` | 非建置必需的工具：`embeddings/` 比較 embedding 模型與實測本地 Ollama |
 | `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
-| `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
+| `.config/dotnet-tools.json` | 固定 SqlPackage 版本（`dotnet tool restore`） |
 | `global.json` | 固定 .NET SDK 版本與測試執行器 |
 | `.editorconfig`、`.gitattributes`、`.gitignore` | 縮排與分析器規則、換行正規化、不進 Git 的檔案 |
 | `CLAUDE.md` | 給 AI 程式助手的規則、指令與「改什麼讀哪份」索引 |

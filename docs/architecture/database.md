@@ -1,22 +1,31 @@
 # 資料庫
 
-- 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫，由單一 `NexusDbContext` 對應；跨模組外鍵與同一交易可直接使用。
-- **每個模組一個 schema**，名稱＝模組資料夾名小寫。`DatabaseModelTests` 強制這條規則；唯一例外是 `Persistence/AuditEvent.cs`（`NexusDbContext` 為所有模組寫入並遮罩稽核紀錄），它的表在 `audit`。
-- **說明跟著實體走**：資料表與欄位說明寫在實體類別與屬性上的 `[Comment]`（shadow 屬性用 `HasComment`），EF 會產生 SQL Server 的 `MS_Description`。漏寫時 `DatabaseModelTests` 失敗。索引、約束與 schema 不另寫說明。
-- **migration 基線**：2026-10-09 重建為單一 `InitialCreate`，之後一律追加具名 migration，不再重置基線。
+- 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫。**結構以開發庫為準**：DBA 在 SSMS 修改，匯出到 `database/App/` 建成 dacpac；EF Core 只做對應，沒有 migration（[ADR 0010](../decisions/0010-database-first-schema.md)～[0014](../decisions/0014-procedure-audit.md)）。
+- 對應在 `backend/src/AiNexus.Data/App/`，由單一 `AppDbContext` 載入；跨模組外鍵與同一交易可直接使用。
+- **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名；唯一例外 `WebSearches` → `WebSearchRecord`，因為 `WebSearch` 與模組命名空間同名會無法引用。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
+- 欄位用到的列舉、狀態常數與值型別（`RunStates`、`UserPreferences`）跟著實體放在 `AiNexus.Data`；`AiNexus.Data` 只依賴 Platform，不能引用模組型別。
+
+## 改結構
+
+1. DBA 在開發庫修改（命名、外鍵、說明依 [ADR 0012](../decisions/0012-database-naming-and-foreign-keys.md)）。
+2. `scripts/Export-Database.ps1` 匯出，只 stage 與本次有關的檔案；`dotnet build database/App` 要通過。
+3. 同一個 PR 更新 `AiNexus.Data` 的實體與組態。
+
+- **組態只寫對應需要的內容**：表、主鍵、長度、精度、型別、關聯與刪除行為、owned type、query filter、值產生器、並行控制欄位。索引、約束、預設值與說明只存在資料庫，不在 EF 重複宣告。
+- 刪除行為要與資料庫外鍵一致：重要業務外鍵 `Restrict`，純附屬資料才 `Cascade`；EF 依它決定是否連帶刪除已追蹤的子列。
+- 時間戳以 `CreationTime`（`AppDbContext.Clock`）產生，測試才能控制時間。
+- 基礎資料（內建角色、群組、功能、選單分群）寫在 `database/App/Seed/`，不用 `HasData`。
 
 ## Schema 與模組
 
-`accesscontrol`、`administration`、`artifacts`、`attachments`、`audit`、`billing`、`collaboration`、`conversations`、`diagnostics`、`identity`、`inference`、`integrations`、`jobs`、`knowledge`、`library`、`notifications`、`projects`、`quality`、`repositories`、`sharing`、`websearch`；`dbo` 只有 `__EFMigrationsHistory`。
-
-欄位、型別與說明以實體及其 `IEntityTypeConfiguration` 為準；兩端分屬不同模組的外鍵集中在 `Persistence/CrossModuleRelationships.cs`。
+一個業務模組一個 schema，名稱＝模組名小寫（`accesscontrol`、`identity`、`knowledge`…）；`audit.AuditEvents` 由 `AppDbContext` 為所有模組遮罩並寫入，稽核攔截器在 `AiNexus.Data/App/AuditEventInterceptor.cs`。
 
 ## 欄位規則
 
 - 能界定長度的字串一律 `HasMaxLength`，上限最好與 validator 共用常數（例如 `PromptTemplate.ContentMaxLength`）；超過 4000 字元的上限在 SQL Server 會是 `nvarchar(max)`，但上限仍由程式檢查。
 - 時間用 `DateTimeOffset`（UTC）；金額 `decimal(20,8)`，未知費用保持 null。
 - 原始附件不進資料庫，只保存站外儲存識別與 metadata（見 [附件保存](../features/attachment-storage.md)）。
-- 只有 `Conversation`、`WorkspaceResource` 套用具名 query filter `SoftDelete`；其他刪除是實體刪除。
+- 只有 `Conversation`、`Resource` 套用具名 query filter `SoftDelete`；其他刪除是實體刪除。
 
 ## 授權關聯
 
@@ -24,45 +33,34 @@
 
 ## 重要約束與索引（為什麼存在）
 
-- `GenerationRuns`：`OwnerId`＋`IdempotencyKey` 唯一索引防重複送出；`ActiveOwnerId` 非空的 filtered unique index 限制每人一個進行中的生成；`ActiveOwnerId`＋`LeaseExpiresAt` 索引供租約復原。它與 `ModelInvocations`的 `CreatedAt` 覆蓋索引供全平台用量報表依日期讀取。
+定義在 `database/App/`；程式依賴以下保證：
+
+- `GenerationRuns`：`OwnerId`＋`IdempotencyKey` 唯一索引防重複送出；`ActiveOwnerId` 非空的 filtered unique index 限制每人一個進行中的生成；`ActiveOwnerId`＋`LeaseExpiresAt` 索引供租約復原。它與 `ModelInvocations` 的 `CreatedAt` 覆蓋索引供全平台用量報表依日期讀取。
 - `RunEvents.CreatedAt` 供保留清理分批刪除（每批自動提交，避免鎖升級與長交易）；`Resources` 的 `Kind`＋`UpdatedAt`（INCLUDE `OwnerId`、`ParentId`、`IsDeleted`）供 `ResourceAccess` 依種類列出可讀資源。
 - `Messages.ParentId` 形成訊息樹，`Conversations.ActiveLeafId` 決定目前分支；編輯與重新生成都新增訊息，不覆寫。
 - `ArtifactRevisions` 以 `ArtifactId`＋`Version` 為主鍵；expected version 不符時不覆蓋他人的修改。
 - `BackgroundJobs.ActiveKey` 唯一，避免同一業務重複排程；`LeaseToken` 做 fencing，過期 worker 不能提交。
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
 - `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
-- 重要業務外鍵採 `Restrict`，刪使用者或專案不會連鎖刪除歷史；純附屬資料才 `Cascade`。
-- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺全文元件或斷詞器時跳過並警示，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
+- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞），腳本在 `database/App/FullText/`：`CREATE FULLTEXT` 不能在交易內執行，也不進 dacpac，部署時在結構更新後執行；缺全文元件或斷詞器時跳過，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
 
 ## 讀取隔離（RCSI）
 
-資料庫開啟 `READ_COMMITTED_SNAPSHOT`：一般讀取取最後已提交版本，不等寫入。所以防併發只能靠會加鎖的做法：`Serializable`、`UPDLOCK`／`HOLDLOCK`、唯一索引、條件式 `ExecuteUpdate`，或先以無害 UPDATE 鎖擁有者列再查詢（查詢開始時才取快照）。既有庫的切換步驟與代價見 [資料庫建置與權限](../operations/database-setup.md)。
-
-## Migration
-
-```powershell
-dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
-```
-
-- 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 SQL 不進版控，由 `Publish-IIS.ps1` 發布時產生（`migrations.sql`；加 `-FromMigration` 另有[拆檔的 `database/`](../operations/iis-deployment.md#給-dba-的拆檔-sql)與[結構驗證](../operations/database-verification.md)）。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
-- **改資料的手寫 SQL 必須用 `migrationBuilder.DataSql(sql, "schema.Table")`**：拆檔只把它與 `HasData` 放進 `data/`，`Sql` 一律算結構。它以 `EXEC` 執行，才能引用同一個 migration 新增的欄位，所以只能是單一批次（不含 `GO`）。
-- 不可有在 SQL Server 重建資料表的操作（既有表的叢集鍵／索引、IDENTITY 等），拆檔會失敗並列出原因。
-- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止。`Persistence:ApplyMigrationsOnStartup` 預設 false，只做唯讀檢查。
-- 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/testing.md#真實-sql-server)。
-
-## 初始化與權限
-
-建庫、`migrations.sql`、SQL 帳號權限與 RCSI 切換見 [資料庫建置與權限](../operations/database-setup.md)。
+資料庫開啟 `READ_COMMITTED_SNAPSHOT`：一般讀取取最後已提交版本，不等寫入。所以防併發只能靠會加鎖的做法：`Serializable`、`UPDLOCK`／`HOLDLOCK`、唯一索引、條件式 `ExecuteUpdate`，或先以無害 UPDATE 鎖擁有者列再查詢（查詢開始時才取快照）。啟動時只檢查並警告（`DatabaseSchema`）；既有庫的切換步驟與代價見 [資料庫建置與權限](../operations/database-setup.md)。
 
 ## 手寫 SQL
 
-EF Core 負責 mapping、migration 與業務寫入；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步）。值用參數，物件名稱只取程式固定清單。
+EF Core 與 Dapper 的分工見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步）。值用參數，物件名稱只取程式固定清單。
 
-- `ISqlDatabase<NexusDbContext>`：主資料庫，共用 `NexusDbContext` 的連線與目前交易，與 EF 寫入一起提交或回復。
-- `ISqlDatabase<NexusMasterDatabase>`：初始化建庫用，以 `Databases:Nexus` 連 `master`。
+- `ISqlDatabase<AppDbContext>`：主資料庫，共用 `AppDbContext` 的連線與目前交易，與 EF 寫入一起提交或回復。
+- `ISqlDatabase<MasterDatabase>`：建庫用，以 `Databases:Nexus` 連 `master`。
 - `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次呼叫自開連線；設定須 `ReadOnly=true`，不取代 SQL 端 view-only 權限。
 
-連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增資料庫＝在擁有它的模組加一個 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。schema 名稱要與上表一致。
+連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增唯讀來源＝在擁有它的模組加一個 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。
+
+## 測試
+
+整合測試用 SQLite 依 EF 模型建庫：模型差異（向量、時間排序）在 `backend/tests/AiNexus.IntegrationTests/Support/SqliteModel.cs`，基礎資料在同資料夾的 `BaselineSeed.cs`。SQLite 沒有資料庫端的索引與約束，唯一性等保證要在真實 SQL Server 驗證（見 [測試](../development/testing.md#真實-sql-server)）。
 
 ## 保存與備份
 

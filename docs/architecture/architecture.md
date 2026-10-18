@@ -1,7 +1,7 @@
 # 架構總覽
 
 - ASP.NET Core 模組化單體＋Angular 功能路由，部署在單一 IIS 執行個體。
-- 模組各自管理端點、實體與服務，共用一個 scoped `NexusDbContext`，跨模組異動在同一個交易完成。
+- 模組各自管理端點與服務；資料表的對應集中在 `AiNexus.Data`，共用一個 scoped `AppDbContext`，跨模組異動在同一個交易完成。
 - 不拆每模組一個專案、不引入 MediatR 或分層專案，原因見 [ADR 0002](../decisions/0002-vertical-slice-single-features-project.md)。
 - 細節：[模組邊界](module-boundaries.md)、[後端撰寫慣例](backend-conventions.md)、[生成與背景任務](generation.md)、[資料庫](database.md)、[身分與授權](access-control.md)、[診斷日誌](diagnostics.md)。
 
@@ -10,7 +10,7 @@ flowchart LR
     UI[Angular 功能頁面] --> API[同源 API／SSE]
     API --> Gates[AD 身分／功能政策／資源 ACL]
     Gates --> Modules[聊天／專案／知識／成果／分享／評測]
-    Modules --> EF[EF Core NexusDbContext]
+    Modules --> EF[EF Core AppDbContext]
     EF --> SQL[(AiNexus SQL Server)]
     Modules --> Storage[IAttachmentStorage／opaque key]
     Storage --> Files[(站外原檔目錄)]
@@ -29,7 +29,8 @@ flowchart LR
 | 專案 | 責任 |
 | --- | --- |
 | `AiNexus.Host` | 設定載入、middleware 管線、模組組裝（`Program.cs`）與維運子命令（`db init`、`verify …`） |
-| `AiNexus.Features` | 業務模組，每個模組一個資料夾，以 `<Module>Module`（`IFeatureModule`）註冊服務、設定、授權政策、rate limit 與端點；`FeatureModules` 是唯一的模組清單。`Persistence` 放共用 context 與 migration |
+| `AiNexus.Features` | 業務模組，每個模組一個資料夾，以 `<Module>Module`（`IFeatureModule`）註冊服務、設定、授權政策、rate limit 與端點；`FeatureModules` 是唯一的模組清單 |
+| `AiNexus.Data` | 資料表的 EF 對應：`App/<Module>/<Entity>.cs` 一表一檔、`AppDbContext` 與只屬於主資料庫的元件；只依賴 Platform |
 | `AiNexus.Platform` | 不認識業務的共用基礎：錯誤與 `Result<T>`、安全、設定註冊、診斷、HTTP 限制、domain event 分派、手寫 SQL（`Data/Sql`）、程序內鎖 |
 
 端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。模組間只用明確的 `public` 服務，不新增能繞過 owner、ACL 或模型核准的資料入口；「A 發生後 B 跟著處理」用同交易的 domain event（見 [模組邊界](module-boundaries.md#直接呼叫或-domain-event)）。
@@ -74,8 +75,8 @@ flowchart LR
 
 ## 資料層
 
-EF Core 負責 mapping、migration、關聯與跨模組交易。EF 表達不了的 SQL（全文、原生向量、伺服器狀態）用 `ISqlDatabase<NexusDbContext>`，走同一條連線並加入目前的交易；來源 adapter 只用固定 SQL 與參數。原檔不進資料庫，由 `IAttachmentStorage` 存在站外目錄。
+結構以 `database/App/` 為準，EF Core 只負責 mapping、關聯與跨模組交易（見 [資料庫](database.md)）。EF 表達不了的 SQL（全文、原生向量、伺服器狀態）用 `ISqlDatabase<AppDbContext>`，走同一條連線並加入目前的交易；來源 adapter 只用固定 SQL 與參數。原檔不進資料庫，由 `IAttachmentStorage` 存在站外目錄。
 
 ## 新增功能
 
-建立模組資料夾與 `<Module>Module.cs`、實體與組態、授權規則（需要時宣告 `FeatureSeed`）、migration、前端 lazy route，再重產 OpenAPI 與前端型別並補邊界測試。不是每個操作都要新的授權功能，工具可沿用所屬功能的政策。新增模組與授權的步驟見 [身分與授權](access-control.md#擴充功能)。
+建立模組資料夾與 `<Module>Module.cs`、在開發庫建表並匯出、`AiNexus.Data` 的實體與組態、授權規則（需要時在 `database/App/Seed/` 加功能列）、前端 lazy route，再重產 OpenAPI 與前端型別並補邊界測試。不是每個操作都要新的授權功能，工具可沿用所屬功能的政策。新增模組與授權的步驟見 [身分與授權](access-control.md#擴充功能)。

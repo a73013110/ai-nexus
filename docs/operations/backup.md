@@ -11,7 +11,7 @@ SQL 只保存附件 metadata、StorageKey、引用、權限及衍生搜尋資料
 
 目前採停機一致性備份；先完成維運窗口，等待生成／索引工作結束並停止所有共用此 DB／附件目錄的 app，包括 IIS、本機與其他主機。停止服務同時停止草稿回收及刪檔工作，確認沒有檔案寫入後再進行。只停止 IIS HTTP 流量而讓背景工作繼續運行不足以保證一致性。
 
-1. 保存版本 commit、migration history、備份時間、設定版本及實際附件路徑。每個備份組使用新的空目錄與相同識別碼。
+1. 保存版本 commit、資料庫結構版本（發布套件的 `App.dacpac`）、備份時間、設定版本及實際附件路徑。每個備份組使用新的空目錄與相同識別碼。
 2. DBA 在 SQL Server 執行完整備份，開啟 checksum；臨時全備份可用 `COPY_ONLY` 避免打斷原差異備份基線。範例路徑是 **SQL Server 主機**的磁碟，不是 IIS 主機：
 
    ```sql
@@ -40,9 +40,9 @@ Recovery model 與完整／差異／log 排程由 DBA 維護。若需要在線�
 
 ## 還原與驗證
 
-先在隔離環境演練，使用同一 app 版本與相同 migration 基線；正式還原由維運／DBA 執行，停止所有相關 host。還原到新的空附件目錄，避免與失敗環境中的其他檔案混合；由 DBA 還原同一備份組的 SQL，不使用空庫初始化取代資料還原。
+先在隔離環境演練，使用同一 app 版本與相同結構版本；正式還原由維運／DBA 執行，停止所有相關 host。還原到新的空附件目錄，避免與失敗環境中的其他檔案混合；由 DBA 還原同一備份組的 SQL，不使用空庫初始化取代資料還原。
 
-1. 設定 `Attachments.StoragePath` 指向還原的站外目錄，恢復外部設定並核對 web.config 的環境變數覆寫。設定與 `__EFMigrationsHistory` 須來自同一版本。
+1. 設定 `Attachments.StoragePath` 指向還原的站外目錄，恢復外部設定並核對 web.config 的環境變數覆寫。設定與資料庫結構須來自同一版本。
 2. 恢復目錄 ACL：app／config 只讀，原檔目錄須讓固定 IIS 集區身分讀／寫／刪除。磁碟預留足夠空間；不要讓 Users／Everyone 取得原檔讀取權或將目錄掛為 IIS 虛擬目錄。
 3. 還原 keys 需同時具備其 DPAPI 保護身分；換主機／身分不能只複製 XML 就假設可解密。若無法恢復保護身分，依維運政策重建 key ring、重新登入與重新連線 Gitea，保留既有業務資料。
 4. 在啟動 workers 前執行主機指令 `verify deployment`：核對 schema／snapshot、provider 設定及站外原檔讀寫刪 probe。用 SQL 查核 ready 檔案的清單：

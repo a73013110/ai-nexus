@@ -15,7 +15,7 @@
 - 每次讀取有自己的 DI scope，不帶觀看者的 trace 與身分，並在 `MonitoringSuppression` 內執行，來源自己的 SQL 不計入依賴指標。
 - 逾時 5 秒；例外或逾時顯示為 `unobserved`、摘要「無法讀取」，記一次 `monitoring.source_unavailable`（3006）。
 - 應用程式停止時不再開始讀取，並等待進行中的讀取結束。
-- 來源要便宜：記憶體狀態、設定或走索引的彙總查詢。系統範圍沒有 `ICurrentUser`；`KnowledgeDocument` 沒有 query filter，要自行排除已刪除列。
+- 來源要便宜：記憶體狀態、設定或走索引的彙總查詢。系統範圍沒有 `ICurrentUser`；`Document` 沒有 query filter，要自行排除已刪除列。
 - 來源觸發的共用背景工作若本來就該計入指標（例：`ModelCatalog` 的探測），以 `ExecutionContext.SuppressFlow()` 啟動，避免 suppression 隨 AsyncLocal 流入。
 
 ## 目前的來源

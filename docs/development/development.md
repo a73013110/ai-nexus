@@ -17,7 +17,7 @@ dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 https://localhost:5080/ 。初始化需要有 DDL 權限的 SQL 登入；`Initialize-Database.ps1` 只在資料庫不存在時建庫，再套用未完成的 migration，不刪除既有資料（見 [資料庫建置與權限](../operations/database-setup.md#初始化)）。
+開啟 https://localhost:5080/ 。平常連 DBA 維護的開發庫；要自建空庫時，`Initialize-Database.ps1` 只在資料庫不存在時建庫（需要建庫權限），結構再以 `database/App` 的 dacpac 部署（見 [資料庫](../architecture/database.md)）。
 
 ## 兩種運行方式
 
@@ -72,7 +72,7 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 
 ## 資料結構
 
-先改實體與組態，再產生 migration 並提交 source、designer 與 snapshot，命令與規則見 [資料庫](../architecture/database.md#migration)。給 DBA 的 SQL 由 `Publish-IIS.ps1` 在發布時產生，不進版控。不要用正式資料測 `EnsureCreated`、migration rollback 或測試身分。
+結構在開發庫修改後以 `Export-Database.ps1` 匯出，同一個 PR 更新 `AiNexus.Data` 的對應，流程見 [資料庫](../architecture/database.md#改結構)。不要用正式資料測 `EnsureCreated` 或測試身分。
 
 ## 程式碼放哪裡
 
@@ -81,5 +81,5 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 ## 提交前
 
 - `.local/`（本機設定、秘密、日誌、個人筆記）與 `artifacts/`（建置與測試輸出）都不進 Git。
-- 看 `git status`／`git diff --cached`，只提交 source、公開預設值與範本、lockfile、產生的合約與 migration、長期文件。不要用 `git add -f` 強制加入本機資料。
+- 看 `git status`／`git diff --cached`，只提交 source、公開預設值與範本、lockfile、產生的合約與 `database/` 匯出檔、長期文件。不要用 `git add -f` 強制加入本機資料。
 - stage 後執行 `./scripts/Test-Repository.ps1`（或 `-WorkingTree` 不動 index）：檢查本機與產物路徑、公開設定的秘密欄位、常見 live key、本機秘密值與 whitespace，只輸出檔名與結果。它不能取代審閱 diff 或組織的秘密掃描。

@@ -6,7 +6,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 ## 預設授權
 
-每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。各模組以 `FeatureSeed` 宣告自己的功能與預設群組：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit、design 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit、design 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策與配額](../features/model-policy.md)。
 
@@ -32,13 +32,13 @@ AD login → Users（SID）→ UserRoles → Roles
 結論：側欄怎麼分群是**資料**，由管理員在[存取管理](../features/administration.md#選單分群與順序)調整；程式碼資料夾跟著後端模組走（[前端邊界](../frontend/frontend-boundaries.md#功能資料夾對應後端模組)）。兩者刻意互不相關：重排選單不搬程式，拆模組也不改選單（原因見 [ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
 
 - `accesscontrol.NavigationGroups` 是可巢狀的選單分群（`ParentId`），只決定排列、不授予任何功能；`Features.GroupId` 為 null 時位於最上層，`Features.Icon` 是前端圖示名稱（未知名稱改用預設圖示）。分群刪除前必須清空，外鍵都是 Restrict。
-- 排序規則：每一層先列直屬的功能、再列子分群，各自依 `SortOrder`、再依 ID。內建分群 `work`（AI 工作台）、`collaboration`（協作）、`system`（系統管理）由 AccessControl 的 `NavigationGroupConfiguration` 種入；`dashboard` 在最上層。
+- 排序規則：每一層先列直屬的功能、再列子分群，各自依 `SortOrder`、再依 ID。內建分群 `work`（AI 工作台）、`collaboration`（協作）、`system`（系統管理）由同一份 Seed 腳本寫入；`dashboard` 在最上層。
 - `/me` 與管理端的存取預覽只回傳含有可見功能（已授權、啟用、有 route）的分群及其上層，由 `NavigationTree.VisibleGroups` 計算；只授權不顯示的功能（route 為空，如 `logs.export`）不會讓分群出現。一般授權檢查（`AccessService.ForUserAsync`）不讀分群。
-- 種子只決定預設值：已存在的資料庫由 migration 的 `UpdateData` 更新，管理員之後的調整不會被覆蓋，除非種子值本身再改。
+- 種子只決定預設值：Seed 腳本只新增缺少的列，管理員之後的調整不會被覆蓋。要改既有環境的值，另寫一次性的資料腳本。
 
 ## 擴充功能
 
-1. 新增 `Features/Reports` 與 `ReportsModule.cs`，宣告 `FeatureSeed` 子類別，列出穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`BuiltInAccess.WorkNavigation` 等，或 null 放最上層）、圖示名稱與是否只給管理員，再產生 migration。需要新分群的模組在 `FeatureSeed` 覆寫 `NavigationGroups` 種入自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
+1. 新增 `Features/Reports` 與 `ReportsModule.cs`；在 `database/App/Seed/accesscontrol.sql` 加功能列與預設授權：穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`work` 等，或 NULL 放最上層）、圖示名稱，以及授權給 `workspace` 或 `administrators`。需要新分群的模組在同一份腳本加自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
 2. 在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy("reports")`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口，沒有授權時頁面顯示 `FeatureAccessNotice`（錯誤代碼見 [錯誤回應](error-contract.md#錯誤回應)）；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。重產 OpenAPI 並更新文件。

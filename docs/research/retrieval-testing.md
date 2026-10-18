@@ -11,7 +11,7 @@
 - 按「驗證檢索模型」。bge-m3 須回傳成功、每筆 1024 維；這會呼叫真實模型並計入配額。
 - 模型端點來自 `Knowledge.Embedding.Endpoint`，未指定時使用 `Inference.Providers.Ollama.Endpoint`。確認此網址是部署的 Ollama 設備。
 
-若升級後 host 無法啟動，依啟動訊息套用待完成 migration，詳見 [資料庫](../architecture/database.md)。已經套用的 migration 不需重跑或清空資料。
+若升級後 host 無法啟動，依啟動訊息確認資料庫結構已部署到這一版，詳見 [資料庫](../architecture/database.md)。
 
 ## 2. 準備可核對的測試文件
 
