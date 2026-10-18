@@ -9,10 +9,10 @@ import {
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { UnhandledIssue } from '@core/errors/unhandled-issue';
 import { RouterOutlet } from '@angular/router';
-import { SettingsDialog } from '@features/account/settings-dialog';
+import { SettingsDialog } from '@features/platform/account/settings-dialog';
 import { IdentityBanner } from '@core/auth/identity-banner';
-import { ReaderDialog } from '@features/knowledge/documents/reader-dialog';
-import { NotificationCenter } from '@features/notifications/notification-center';
+import { ReaderDialog } from '@features/work/knowledge/documents/reader-dialog';
+import { NotificationCenter } from '@features/platform/notifications/notification-center';
 import { trackKeyboardInset } from '@core/layout/keyboard-inset';
 import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
 
