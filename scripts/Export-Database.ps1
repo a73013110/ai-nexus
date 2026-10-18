@@ -10,7 +10,8 @@ DB-first 版控的唯一入口：結構的修改來源是開發庫（DBA 在 SSM
 
 匯出內容只有應用程式結構：不含資料、登入、使用者、角色與權限。SqlPackage Extract 沒有「排除資料表」參數，
 也排除不了全文索引，所以匯出後再處理（AiNexus 模組的 Invoke-RepoExtractPostProcess）：
-- 移除 -ExcludeTable 符合的資料表（暫存表、備份表）與使用者、角色；移除清單會印出來，避免悄悄漏掉物件。
+- 移除排除清單（database/App/export-exclusions.txt 與 -ExcludeTable）列出的資料表，以及使用者、角色；移除清單會印出來，
+  避免悄悄漏掉物件。不依名稱猜測暫存表或備份表：Orders_temp、temp_Imports 這類名稱也可能是正式的業務表。
 - 全文目錄與索引移到 FullText/Catalogs、FullText/Indexes（由發版腳本在有全文元件時執行，不進 dacpac）。
 - 主物件之後的索引與欄位說明語句排序，檔案統一為 UTF-8 無 BOM、LF；同一個庫連續匯出兩次必須沒有 diff。
 
@@ -25,17 +26,23 @@ Seed/、Data/、bin/obj 與 sqlproj 保留。匯出後比對資料庫的 collati
 來源資料庫名稱，預設 AiNexus。
 
 .PARAMETER Credential
-SQL 登入（需要 VIEW DEFINITION）；省略時以目前 Windows 身分連線。
+SQL 登入（需要 VIEW DEFINITION）；省略時執行中詢問帳密。
 
-.PARAMETER TrustServerCertificate
-SQL Server 使用自簽憑證時略過憑證鏈驗證；連線仍加密。
+.PARAMETER IntegratedSecurity
+以目前 Windows 身分連線，不詢問帳密。LocalDB 沒有傳 -Credential 時自動使用 Windows 身分。
+
+.PARAMETER ValidateServerCertificate
+驗證 SQL Server 憑證鏈。預設不驗證，因為內部 SQL Server 多半是自簽憑證；連線仍加密。
 
 .PARAMETER OutputPath
 輸出資料夾，預設 repo 的 database/App。
 
+.PARAMETER ExclusionFile
+排除清單，一行一個 schema.name（可用萬用字元 -like），# 之後是註解；預設 database/App/export-exclusions.txt。
+清單裡沒有對應任何資料表的項目會警告，表刪掉後記得移除該行。
+
 .PARAMETER ExcludeTable
-匯出後要移除的資料表，格式 schema.name，可用萬用字元（-like）。預設排除備份表（*_bak、*_bak20261018、*_backup）
-與暫存表（tmp_*、temp_*）。傳入時會取代預設清單。
+這次額外排除的資料表，格式同排除清單，與清單合併。要長期排除的表寫進清單，才會經過 code review。
 
 .PARAMETER SkipExtractVerification
 不驗證匯出的模型（VerifyExtraction=False）。來源有跨資料庫參照（例如 view 讀取 [Gdweb].dbo.x）時，Extract 解析不到
@@ -45,10 +52,10 @@ SQL Server 使用自簽憑證時略過憑證鏈驗證；連線仍加密。
 SqlPackage 執行檔或 .dll；省略時在 repo 根目錄執行 dotnet tool run sqlpackage（版本由 .config/dotnet-tools.json 固定）。
 
 .EXAMPLE
-./scripts/Export-Database.ps1 -Server localhost
+./scripts/Export-Database.ps1 -Server sql-dev.company.internal
 
 .EXAMPLE
-./scripts/Export-Database.ps1 -Server sql-dev.company.internal -Credential (Get-Credential) -TrustServerCertificate
+./scripts/Export-Database.ps1 -Server localhost -IntegratedSecurity
 
 .EXAMPLE
 ./scripts/Export-Database.ps1 -Server '(localdb)\MSSQLLocalDB' -Database AiNexus_Sandbox -OutputPath .local/export
@@ -58,9 +65,11 @@ param(
     [Parameter(Mandatory)][string]$Server,
     [ValidateNotNullOrEmpty()][string]$Database = 'AiNexus',
     [pscredential]$Credential,
-    [switch]$TrustServerCertificate,
+    [switch]$IntegratedSecurity,
+    [switch]$ValidateServerCertificate,
     [string]$OutputPath,
-    [string[]]$ExcludeTable = @('*.*_bak', '*.*_bak[0-9_]*', '*.*_backup', '*.tmp_*', '*.temp_*'),
+    [string]$ExclusionFile,
+    [string[]]$ExcludeTable = @(),
     [switch]$SkipExtractVerification,
     [string]$SqlPackagePath
 )
@@ -70,6 +79,17 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $root = Get-RepoRoot
 $output = if ($OutputPath) { [IO.Path]::GetFullPath($OutputPath, $root) } else { Join-Path $root 'database/App' }
+$exclusionPath = if ($ExclusionFile) { [IO.Path]::GetFullPath($ExclusionFile, $root) } else { Join-Path $root 'database/App/export-exclusions.txt' }
+if ($ExclusionFile -and !(Test-Path -LiteralPath $exclusionPath -PathType Leaf)) { throw "找不到排除清單：$exclusionPath" }
+$exclusions = @(@(Read-RepoExclusionList $exclusionPath) + $ExcludeTable | Select-Object -Unique)
+
+if ($Credential -and $IntegratedSecurity) { throw '-Credential 與 -IntegratedSecurity 只能擇一。' }
+# LocalDB 只接受 Windows 身分；其他伺服器預設用 SQL 登入，沒有傳 -Credential 就詢問，密碼不會出現在指令歷史。
+$integrated = $IntegratedSecurity -or (!$Credential -and $Server -like '(localdb)*')
+if (!$integrated -and !$Credential) {
+    $Credential = Get-Credential -Message "登入 $Server 的 SQL 帳號（需要 VIEW DEFINITION）"
+    if (!$Credential) { throw '沒有輸入 SQL 帳密；要以 Windows 身分連線請加 -IntegratedSecurity。' }
+}
 
 # Extract 參數與原因：
 # - ExtractTarget=SchemaObjectType：每物件一檔、依 schema／物件類型分資料夾，diff 與 code review 才看得出改了哪個物件。
@@ -121,11 +141,11 @@ $connection = [Data.Common.DbConnectionStringBuilder]::new()
 $connection['Server'] = $Server
 $connection['Database'] = $Database
 $connection['Encrypt'] = 'True'
-$connection['TrustServerCertificate'] = [string][bool]$TrustServerCertificate
+$connection['TrustServerCertificate'] = [string](!$ValidateServerCertificate)
 $connection['Persist Security Info'] = 'False'
 # 只讀取；Extract 不需要寫入權限，ApplicationIntent=ReadOnly 讓 AG 讀取副本也能用。
 $connection['ApplicationIntent'] = 'ReadOnly'
-if ($Credential) {
+if (!$integrated) {
     $connection['User ID'] = $Credential.UserName
     $connection['Password'] = $Credential.GetNetworkCredential().Password
 } else { $connection['Integrated Security'] = 'True' }
@@ -147,11 +167,12 @@ try {
     [IO.File]::Delete($response)
     # SqlPackage 連線失敗時結束碼仍可能是 0；沒有產出就停在這裡，否則下一步會用空資料夾取代整份匯出。
     if (!(Test-Path -LiteralPath $extracted -PathType Container) -or !(Get-ChildItem -LiteralPath $extracted -Filter '*.sql' -Recurse | Select-Object -First 1)) {
-        throw 'SqlPackage Extract 沒有產生任何檔案，未更動輸出資料夾；原因見上方輸出（例如自簽憑證要加 -TrustServerCertificate）。'
+        throw 'SqlPackage Extract 沒有產生任何檔案，未更動輸出資料夾；原因見上方輸出（例如帳密錯誤、伺服器無法連線，或加了 -ValidateServerCertificate 但憑證不受信任）。'
     }
     Write-Verbose "Extract 花費 $($watch.Elapsed)"
 
-    $removed = Invoke-RepoExtractPostProcess $extracted $ExcludeTable
+    $removed = Invoke-RepoExtractPostProcess $extracted $exclusions
+    foreach ($pattern in @(Get-RepoUnusedExclusion $exclusions $removed)) { $warnings.Add("排除清單的 $pattern 沒有對應任何資料表；表已刪除就從 $exclusionPath 移除這一行。") }
     Update-RepoDatabaseProject $extracted $output
 
     $count = @(Get-ChildItem -LiteralPath $extracted -Filter '*.sql' -Recurse).Count

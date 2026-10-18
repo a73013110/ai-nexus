@@ -270,6 +270,27 @@ function Invoke-RepoExtractPostProcess {
     , $removed.ToArray()
 }
 
+function Read-RepoExclusionList {
+    <#
+    .SYNOPSIS Table patterns (schema.name, wildcards allowed) listed in an export exclusion file; empty when the file is missing.
+    .DESCRIPTION 一行一個，# 之後是註解，空行略過。沒有清單就什麼都不排除：不依名稱猜測暫存表或備份表。
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+    if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+    [IO.File]::ReadAllLines($Path) | ForEach-Object { ($_ -replace '#.*$', '').Trim() } | Where-Object { $_ }
+}
+
+function Get-RepoUnusedExclusion {
+    <#
+    .SYNOPSIS Exclusion patterns that matched none of the removed tables (relative paths as Invoke-RepoExtractPostProcess returns them).
+    .DESCRIPTION 表刪掉後留在清單裡的項目，之後可能意外排除同名的新表，所以由呼叫端警告。
+    #>
+    param([AllowEmptyCollection()][string[]]$Pattern = @(), [AllowEmptyCollection()][string[]]$Removed = @())
+    $tables = @($Removed | Where-Object { $_ -match '^[^/]+/Tables/[^/]+\.sql$' } | ForEach-Object {
+        $parts = $_.Split('/'); "$($parts[0]).$([IO.Path]::GetFileNameWithoutExtension($parts[2]))" })
+    $Pattern | Where-Object { $item = $_; !@($tables | Where-Object { $_ -like $item }).Count }
+}
+
 function Remove-RepoEmptyFolder {
     <# .SYNOPSIS Removes the empty folders under Path, deepest first; Path itself stays. #>
     param([Parameter(Mandatory)][string]$Path, [string[]]$Keep = @())
