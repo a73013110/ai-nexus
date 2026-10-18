@@ -1,6 +1,7 @@
 # 0005 測試用 SQLite，SQL Server 測試為選用
 
 - **狀態**：採用（2026-10）
+- **修訂**：[ADR 0010](0010-database-first-schema.md) 改為測試以 dacpac 建立的 SQL Server 資料庫執行；導入完成後由新 ADR 取代本文。
 - **決定**：整合測試每個 host 用自己的 SQLite 檔；向量、全文與交易行為的 SQL Server 測試只在設定 `AINEXUS_SQLSERVER_TEST` 時執行，由開發者在本機 LocalDB／SQL Server 跑。不用 Testcontainers。
 
 ## 原因

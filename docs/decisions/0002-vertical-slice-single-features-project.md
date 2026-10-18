@@ -1,6 +1,7 @@
 # 0002 Vertical slice 與單一 Features 專案
 
 - **狀態**：採用（2026-10）
+- **修訂**：[ADR 0013](0013-data-project-and-template-naming.md) 改為四個專案（Host → Features → Data → Platform），資料表移到 `AiNexus.Data`。
 - **決定**：後端維持三個專案（Host → Features → Platform）。業務模組都在 `AiNexus.Features`，一個 use case 一個檔案（Minimal API 端點＋handler＋validator）。不拆每模組一個 csproj，不引入 MediatR／Controllers，不做 Clean Architecture 的 Domain／Application／Infrastructure 分層，也不拆微服務。
 
 ## 原因
