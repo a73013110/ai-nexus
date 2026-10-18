@@ -1,10 +1,10 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import { navigationOrder, navigationTree } from './navigation-tree';
+import { navigationTree } from './navigation-tree';
 
 export const PIN_LIMIT = 5;
 export type NavigationDisplay = 'icons' | 'list';
-const DEFAULT_PINS = ['dashboard', 'chat', 'knowledge', 'projects'];
+const DEFAULT_PINS = ['chat', 'files', 'knowledge'];
 
 /**
  * 側邊欄如何列出此帳號的功能：哪幾個釘在最上方，以及功能要顯示為圖示還是每行一個。
@@ -33,10 +33,8 @@ export class NavigationPreferences {
   );
   readonly ids = computed(() => {
     const visible = new Set(this.features().map((feature) => feature.id));
-    // 沒有儲存的選擇時，釘選帳號能開啟的前四個：先依固定偏好，再依選單順序。
-    const menu = navigationOrder(this.tree()).map((feature) => feature.id);
-    const ids = this.saved() ?? [...new Set([...DEFAULT_PINS, ...menu])];
-    return ids.filter((id) => visible.has(id)).slice(0, this.saved() ? PIN_LIMIT : 4);
+    // 沒有儲存的選擇時，只釘選帳號能開啟的預設功能，不從選單補滿；其他功能從啟動器開啟。
+    return (this.saved() ?? DEFAULT_PINS).filter((id) => visible.has(id)).slice(0, PIN_LIMIT);
   });
   readonly pinned = computed(() => {
     const features = new Map(this.features().map((feature) => [feature.id, feature]));

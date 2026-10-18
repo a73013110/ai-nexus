@@ -53,14 +53,16 @@ describe('navigation preferences', () => {
       ['system', ['admin']],
     ]);
   });
-  it('pins the first four available features in preference order', () => {
+  it('pins only the default features the account can open', () => {
     const { preferences } = setup(['admin', 'files', 'tasks', 'chat', 'shared', 'dashboard']);
-    expect(preferences.ids()).toEqual(['dashboard', 'chat', 'files', 'shared']);
+    expect(preferences.ids()).toEqual(['chat', 'files']);
     expect(preferences.display()).toBe('icons');
   });
   it('saves per account, stops at five and keeps pins the account cannot open', () => {
     const { preferences, me } = setup(['chat', 'files', 'tasks', 'shared', 'admin', 'audit']);
-    expect(preferences.ids()).toEqual(['chat', 'files', 'shared', 'tasks']);
+    expect(preferences.ids()).toEqual(['chat', 'files']);
+    preferences.toggle('shared');
+    preferences.toggle('tasks');
     preferences.toggle('admin');
     expect(preferences.ids()).toEqual(['chat', 'files', 'shared', 'tasks', 'admin']);
     expect(preferences.full()).toBe(true);

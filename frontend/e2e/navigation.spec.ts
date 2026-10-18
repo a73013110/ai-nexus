@@ -28,12 +28,7 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   const launcher = tools.getByRole("button", { name: "全部功能", exact: true });
   const pinned = tools.getByRole("list", { name: "釘選功能", exact: true });
   await expect(launcher).toHaveAttribute("aria-expanded", "false");
-  await expect(pinned.getByRole("link")).toHaveText([
-    "對話",
-    "專案",
-    "檔案庫",
-    "背景任務",
-  ]);
+  await expect(pinned.getByRole("link")).toHaveText(["對話", "檔案庫"]);
   await expect(tools.getByRole("region", { name: "系統管理" })).toHaveCount(0);
   await launcher.click();
   // The launcher lists every feature in the shared groups; pinned ones keep their place with a
@@ -45,38 +40,26 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await expect(
     work.getByRole("link", { name: "對話", exact: true }),
   ).not.toHaveClass(/current/);
-  await expect(work.locator(".pin-mark")).toHaveCount(3);
+  await expect(work.locator(".pin-mark")).toHaveCount(2);
   await expect(tools.locator('[aria-current="page"]')).toHaveCount(1);
   await tools.getByRole("button", { name: "自訂釘選", exact: true }).click();
-  await expect(tools.getByRole("status")).toContainText("已釘選 4／5 項");
-  await tools
-    .getByRole("button", { name: "釘選背景任務", exact: true })
-    .click();
+  await expect(tools.getByRole("status")).toContainText("已釘選 2／5 項");
+  await tools.getByRole("button", { name: "釘選檔案庫", exact: true }).click();
   await expect(
-    tools.getByRole("button", { name: "釘選背景任務", exact: true }),
+    tools.getByRole("button", { name: "釘選檔案庫", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
   await tools
     .getByRole("button", { name: "釘選存取管理", exact: true })
     .click();
   await tools.getByRole("button", { name: "完成", exact: true }).click();
-  await expect(pinned.getByRole("link")).toHaveText([
-    "對話",
-    "專案",
-    "檔案庫",
-    "存取管理",
-  ]);
+  await expect(pinned.getByRole("link")).toHaveText(["對話", "存取管理"]);
   await expect(
     tools
       .getByRole("region", { name: "協作", exact: true })
       .getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(pinned.getByRole("link")).toHaveText([
-    "對話",
-    "專案",
-    "檔案庫",
-    "存取管理",
-  ]);
+  await expect(pinned.getByRole("link")).toHaveText(["對話", "存取管理"]);
   await expect(
     tools.getByRole("link", { name: "設定", exact: true }),
   ).toHaveCount(0);
@@ -869,10 +852,10 @@ test("the icon rail keeps pins, opens every other feature beside it and still sc
   await expect(viewport).toHaveCSS("scrollbar-width", "none");
   await expect(
     sidebar.getByRole("list", { name: "釘選功能" }).getByRole("link"),
-  ).toHaveCount(4);
+  ).toHaveCount(3);
   await expect(down).not.toBeVisible();
   const center = (await sidebar
-    .getByRole("link", { name: "總覽", exact: true })
+    .getByRole("link", { name: "對話", exact: true })
     .boundingBox())!;
   expect(Math.abs(center.x + center.width / 2 - 26)).toBeLessThan(1);
   const trigger = sidebar.getByRole("button", {
@@ -886,7 +869,7 @@ test("the icon rail keeps pins, opens every other feature beside it and still sc
   // Every feature keeps its group; pinned ones carry a pin mark instead of disappearing.
   await expect(
     flyout
-      .getByRole("link", { name: "總覽", exact: true })
+      .getByRole("link", { name: "對話", exact: true })
       .locator(".pin-mark"),
   ).toHaveCount(1);
   await expect
