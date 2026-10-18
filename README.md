@@ -39,7 +39,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 資料夾 | 讀者與內容 |
 | --- | --- |
 | [`docs/architecture/`](docs/architecture/architecture.md) | 改後端的人：架構總覽、模組邊界、撰寫慣例、資料庫、授權、安全、錯誤與日誌、生成與背景任務、SSE |
-| [`docs/development/`](docs/development/development.md) | 開發者：啟動與驗證、設定與秘密、測試、本機資料夾 |
+| [`docs/development/`](docs/development/development.md) | 開發者：啟動與驗證、設定與秘密、測試、本機資料夾、fork 新產品 |
 | [`docs/operations/`](docs/operations/iis-deployment.md) | 維運：IIS 部署、設定、驗收、更新、備份還原、診斷日誌 |
 | `docs/features/` | 使用者與管理員：各功能的操作與規則（見下方功能表） |
 | `docs/decisions/` | 長期有效的架構決定與原因（ADR），例如 [單一 IIS 與程序內鎖](docs/decisions/0001-single-iis-in-process-locks.md)、[vertical slice 與單一 Features 專案](docs/decisions/0002-vertical-slice-single-features-project.md) |

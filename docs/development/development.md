@@ -3,7 +3,7 @@
 - 版本固定：Node 26.5.0、npm 11.6.1（`frontend/package.json` 的 `engines`，CI 也讀這裡）、.NET SDK 10.0.401（`global.json`）、PowerShell 7.4 以上；依賴以 lockfile 還原。
 - 日常只需要 `./scripts/Start-Local.ps1`（整合預覽）或 `./scripts/Start-Dev.ps1`（熱更新）；送 PR 前必跑 `./scripts/Verify.ps1`。
 - 每支入口腳本都有說明：`Get-Help ./scripts/<名稱>.ps1 -Detailed`。共用函式在 `scripts/AiNexus/AiNexus.psm1`，腳本測試（Pester 5）在 `scripts/tests`。
-- 設定見 [設定與秘密](configuration.md)，測試見 [測試](testing.md)，本機產生的資料夾見 [LOCAL_FOLDERS](local-folders.md)。
+- fork 成新產品見 [fork](fork.md)；設定見 [設定與秘密](configuration.md)，測試見 [測試](testing.md)，本機產生的資料夾見 [LOCAL_FOLDERS](local-folders.md)。
 
 ## 第一次啟動
 
@@ -47,7 +47,7 @@ dotnet dev-certs https --trust
 ./scripts/Test-Environment.ps1                               # 真實 SQL／AD／模型，與自動化測試分開
 ```
 
-- `Verify.ps1` 依序跑腳本測試、`schema.ts` 與 `openapi.json` 一致性、前端 Prettier 格式（`src`、`e2e`）、build（輸出到 `artifacts/verification`，不覆寫執行中的 publish）、後端 build、`has-pending-model-changes`、後端測試、前端 lint 與單元測試。
+- `Verify.ps1` 依序跑腳本測試、`schema.ts` 與 `openapi.json` 一致性、前端 Prettier 格式（`src`、`e2e`）、build（輸出到 `artifacts/verification`，不覆寫執行中的 publish）、後端 build、後端測試、前端 lint 與單元測試。
 - 改到日誌、安全錯誤或監控時加 `-Browser -Performance`。
 - 前端格式以 `frontend/.prettierrc` 為準，`npm --prefix frontend run format` 修正；`e2e/` 沿用 Prettier 預設（雙引號、80 欄），已寫在 override，不要對它套用全域設定。
 - GitHub Actions 只能手動觸發（Actions 頁面的 Run workflow），在 Windows 上跑 `Restore.ps1`＋`Verify.ps1`，和本機是同一組步驟。
@@ -75,7 +75,7 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 
 ## 程式碼放哪裡
 
-頂層資料夾見 README 的 [資料夾地圖](../../README.md#資料夾地圖)；後端三個專案的責任見 [架構總覽](../architecture/architecture.md#三個專案)，模組內的檔案配置見 [後端撰寫慣例](../architecture/backend-conventions.md)。
+頂層資料夾見 README 的 [資料夾地圖](../../README.md#資料夾地圖)；後端四個專案的責任見 [架構總覽](../architecture/architecture.md#四個專案)，模組內的檔案配置見 [後端撰寫慣例](../architecture/backend-conventions.md)。
 
 ## 提交前
 
