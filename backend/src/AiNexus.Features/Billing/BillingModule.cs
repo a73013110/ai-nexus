@@ -26,6 +26,7 @@ public sealed class BillingModule : IFeatureModule
         ReportSpend.MapPersonal(api);
         var admin = api.MapGroup("/admin/billing").RequireAuthorization(Policies.Operations).WithTags("Billing");
         ManagePrices.Map(admin);
+        CreateModelPrice.Map(admin);
         ReportSpend.MapAdministrative(admin);
     }
 }

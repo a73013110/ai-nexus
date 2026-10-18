@@ -1,11 +1,9 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Platform.Data;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Users;
 
@@ -15,8 +13,8 @@ public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, D
 
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 
-/// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附角色、用量、對話數與儲存空間。</summary>
-internal sealed class ListAdminUsers(AppDbContext db, UsageReports reports, AttachmentQuota quota)
+/// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附角色、用量、對話數與儲存空間。查詢在 <c>administration.usp_ListAdminUsers</c>。</summary>
+internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users", async (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) => (await handler.HandleAsync(search, offset ?? 0, ct)).ToHttpResult())
@@ -25,36 +23,36 @@ internal sealed class ListAdminUsers(AppDbContext db, UsageReports reports, Atta
     public async Task<Result<AdminUsersDto>> HandleAsync(string? search, int offset, CancellationToken ct)
     {
         if (search?.Length > 120 || offset < 0) return AdministrationErrors.InvalidSearch;
-        var query = db.Users.AsNoTracking().Where(x => x.DeletedAt == null);
-        // 搜尋同時比對顯示帳號、顯示名稱、本機帳號與 AD 帳號。
-        if (!string.IsNullOrWhiteSpace(search))
+        // 用量期間與預設儲存上限由程式決定（TimeProvider、設定），procedure 只負責查詢。
+        var arguments = new
         {
-            query = query.Where(x => x.Account.Contains(search)
-                || x.DisplayName.Contains(search)
-                || (x.LocalAccount != null && x.LocalAccount.Contains(search))
-                || (x.AdAccount != null && x.AdAccount.Contains(search)));
-        }
-        var total = await query.CountAsync(ct);
-        var rows = await query.OrderBy(x => x.Account).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
-        var ids = rows.Select(x => x.Id).ToArray();
-        var roles = await db.Set<UserRole>().AsNoTracking().Where(x => ids.Contains(x.UserId)).ToListAsync(ct);
-        var usage = (await reports.ByOwnersAsync(ids, ct)).ToDictionary(x => x.OwnerId, x => x.Usage);
-        var conversations = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter])
-            .Where(x => ids.Contains(x.OwnerId))
-            .GroupBy(x => x.OwnerId)
-            .Select(g => new { OwnerId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.OwnerId, x => x.Count, ct);
-        var storage = await quota.ForOwnersAsync(ids, ct);
-        var users = rows.Select(x => new AdminUserDto(
-            x.Id,
-            x.Account,
-            x.DisplayName,
-            x.LastSeenAt,
-            roles.Where(y => y.UserId == x.Id).Select(y => y.RoleId).ToArray(),
-            new(usage.GetValueOrDefault(x.Id) ?? new(0, 0, 0, 0, 0, 0, 0), conversations.GetValueOrDefault(x.Id)),
-            x.Enabled,
-            UserAccounts.Authentication(x),
-            storage[x.Id])).ToArray();
-        return new AdminUsersDto(users, total, offset);
+            Search = string.IsNullOrWhiteSpace(search) ? null : search,
+            Offset = offset,
+            reports.Since,
+            DefaultAttachmentLimitBytes = quota.DefaultLimitBytes,
+        };
+        return await sql.QueryProcedureAsync("administration.usp_ListAdminUsers", arguments, async results =>
+        {
+            var total = await results.ReadSingleAsync<int>();
+            var rows = await results.ReadAsync<Row>();
+            var roles = (await results.ReadAsync<RoleRow>()).ToLookup(x => x.UserId, x => x.RoleId);
+            return new AdminUsersDto([.. rows.Select(x => x.ToDto([.. roles[x.Id]]))], total, offset);
+        }, cancellationToken: ct);
     }
+
+    /// <summary>procedure 第二個結果集的一列；欄位名稱與 procedure 的輸出一致，只在執行時對應（整合測試涵蓋）。</summary>
+    private sealed record Row(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, bool Enabled,
+        bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, bool HasLocalPassword,
+        int Requests, int Completed, int Failed, int Cancelled, long InputTokens, long OutputTokens, int RequestsWithUsage,
+        long TotalDurationMilliseconds, int TimedRequests, int Conversations,
+        long UsedBytes, long LimitBytes, long RemainingBytes, long? PersonalLimitBytes, long? GroupLimitBytes, long DefaultLimitBytes, string LimitSource)
+    {
+        public AdminUserDto ToDto(IReadOnlyList<string> roleIds) => new(Id, Account, DisplayName, LastSeenAt, roleIds,
+            new(new(Requests, Completed, Failed, Cancelled, InputTokens, OutputTokens, RequestsWithUsage, TotalDurationMilliseconds, TimedRequests), Conversations),
+            Enabled,
+            new(AdEnabled, LocalEnabled, AdAccount, LocalAccount, HasLocalPassword),
+            new(UsedBytes, LimitBytes, RemainingBytes, PersonalLimitBytes, GroupLimitBytes, DefaultLimitBytes, LimitSource));
+    }
+
+    private sealed record RoleRow(Guid UserId, string RoleId);
 }

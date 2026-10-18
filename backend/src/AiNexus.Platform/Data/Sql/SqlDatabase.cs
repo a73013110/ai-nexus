@@ -1,11 +1,12 @@
 using System.Data.Common;
+using AiNexus.Platform.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Data.Sql;
 
 /// <summary>非 EF Core 管理的獨立資料庫執行器。每次呼叫都從連線池取得連線，呼叫結束即釋放回連線池。</summary>
-public sealed class SqlDatabase<TDatabase>(IOptions<DatabasesOptions> databases) : DapperSqlDatabase<TDatabase> where TDatabase : ISqlDatabaseDefinition
+public sealed class SqlDatabase<TDatabase>(IOptions<DatabasesOptions> databases, AuditContextSource audit) : DapperSqlDatabase<TDatabase>(audit) where TDatabase : ISqlDatabaseDefinition
 {
     protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)
     {

@@ -18,6 +18,9 @@ public sealed class AttachmentQuota(AppDbContext db, AccessService access, IOpti
     // 個人覆寫刻意優先於繼承的上限（包含群組上限）。
     public static long Effective(long? personal, long? group, long baseline) => personal ?? group ?? baseline;
 
+    /// <summary>沒有個人與群組上限時的預設儲存上限（設定）。</summary>
+    public long DefaultLimitBytes => options.Value.DefaultOwnerLimitBytes;
+
     public async Task<AttachmentStorageDto> ForAsync(Guid owner, CancellationToken ct) => (await ForOwnersAsync([owner], ct))[owner];
 
     public async Task<IReadOnlyDictionary<Guid, AttachmentStorageDto>> ForOwnersAsync(IReadOnlyList<Guid> owners, CancellationToken ct)

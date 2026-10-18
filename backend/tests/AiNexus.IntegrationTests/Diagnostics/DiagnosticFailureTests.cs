@@ -79,6 +79,9 @@ public sealed class DiagnosticFailureTests
                 : Task.FromResult<IReadOnlyList<T>>([]);
         public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
         public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
+        public Task<IReadOnlyList<T>> QueryProcedureAsync<T>(string procedure, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
+        public Task<TResult> QueryProcedureAsync<TResult>(string procedure, object? parameters, Func<SqlResults, Task<TResult>> read, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
+        public Task<IReadOnlyList<T>> ExecuteProcedureAsync<T>(string procedure, object? parameters = null, Guid? auditOwner = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
     }
 
     private static SqlException SqlFailure()
