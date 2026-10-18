@@ -20,7 +20,7 @@ Describe 'scripts/ entry list' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
-            'Build', 'Configure-Local', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
+            'Build', 'Configure-Local', 'Deploy-Database', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
             'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
     }
 }
@@ -80,12 +80,12 @@ Describe 'Host commands called by scripts' {
         }
     }
 
-    It 'ships the database project dacpac and Verify-Database.ps1 with every IIS package' {
+    It 'ships the dacpac, the release scripts and the database scripts with every IIS package' {
         @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' }) | Should -BeNullOrEmpty
         $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
         $text | Should -Match 'dotnet build database/App'
         $text | Should -Match 'App\.dacpac'
-        $text | Should -Match 'Verify-Database\.ps1'
+        foreach ($name in 'Deploy-Database\.ps1', 'Verify-Database\.ps1', "'FullText', 'Seed', 'Data'") { $text | Should -Match $name }
         $text | Should -Not -Match 'migrations'
     }
 }
@@ -131,5 +131,63 @@ Describe 'Verify-Database.ps1' {
 
     It 'fails clearly without the expected dacpac' {
         { & $script -Server 'sql.invalid' -DacpacPath (Join-Path $TestDrive 'none.dacpac') } | Should -Throw '*App.dacpac*'
+    }
+}
+
+Describe 'Deploy-Database.ps1' {
+    BeforeAll {
+        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+        $script = Join-Path $root 'scripts/Deploy-Database.ps1'
+        $text = [IO.File]::ReadAllText($script)
+        # 腳本頂層會連線，只載入要測的函式。
+        $ast = [Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$null)
+        foreach ($function in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -in 'Get-SqlBatch' }, $true)) {
+            . ([scriptblock]::Create($function.Extent.Text))
+        }
+    }
+
+    It 'runs on its own, because it is copied into the release package' {
+        $text | Should -Not -Match 'Import-Module'
+    }
+
+    It 'names the SqlPackage version the tool manifest pins' {
+        $manifest = [IO.File]::ReadAllText((Join-Path $root '.config/dotnet-tools.json')) | ConvertFrom-Json -AsHashtable
+        $text | Should -Match ([regex]::Escape("`$sqlPackageVersion = '$($manifest['tools']['microsoft.sqlpackage']['version'])'"))
+    }
+
+    It 'uses the release parameters of ADR 0010' {
+        foreach ($property in 'BlockOnPossibleDataLoss=$(!$AllowDataLoss)', 'DropObjectsNotInSource=False', 'GenerateSmartDefaults=False', 'IgnoreColumnOrder=True', 'IgnorePermissions=True', 'ScriptDatabaseOptions=$NewDatabase') {
+            $text | Should -Match ([regex]::Escape($property))
+        }
+        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'") { $text | Should -Match ([regex]::Escape($type)) }
+    }
+
+    It 'runs the hand-written scripts in release order' {
+        $post = $text.Substring($text.IndexOf('function Invoke-Post'))
+        $post.IndexOf('FullText/Catalogs') | Should -BeLessThan $post.IndexOf('FullText/Indexes')
+        $post.IndexOf('FullText/Indexes') | Should -BeLessThan $post.IndexOf("Get-DataScript 'post'")
+        $post.IndexOf("Get-DataScript 'post'") | Should -BeLessThan $post.IndexOf("'Seed'")
+    }
+
+    It 'splits batches on GO and refuses SQLCMD directives' {
+        $file = Join-Path $TestDrive 'batches.sql'
+        [IO.File]::WriteAllText($file, "SELECT 1;`nGO`n`n  go  `nSELECT N'GO';`n")
+        Get-SqlBatch $file | ForEach-Object Trim | Should -Be @('SELECT 1;', "SELECT N'GO';")
+        [IO.File]::WriteAllText($file, ":setvar Name x`nSELECT 1;")
+        { Get-SqlBatch $file } | Should -Throw '*SQLCMD*'
+    }
+
+    It 'fails clearly without the dacpac' {
+        { & $script -Server 'sql.invalid' -Path (Join-Path $TestDrive 'empty') } | Should -Throw '*App.dacpac*'
+    }
+
+    It 'fails with installation steps before connecting when SqlPackage is missing' {
+        $folder = Join-Path $TestDrive 'package'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'App.dacpac') -Value 'x'
+        $output = pwsh -NoProfile -Command "`$env:PATH = ''; `$env:ProgramFiles = '$TestDrive'; & '$script' -Server sql.invalid -Path '$folder'" 2>&1 | Out-String
+        $LASTEXITCODE | Should -Not -Be 0
+        $output | Should -Match 'microsoft\.sqlpackage'
+        $output | Should -Match 'sqlpackage-download'
     }
 }

@@ -1,4 +1,3 @@
-using System.Data.Common;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Data.Sql;
@@ -9,7 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace AiNexus.IntegrationTests.Data;
 
-public sealed class DatabaseInitializerTests
+/// <summary>啟動時對主資料庫的唯讀檢查：RCSI 與 EF 模型對實際結構的比對。</summary>
+public sealed class DatabaseSchemaTests
 {
     [Fact]
     public async Task CreatedDatabaseReadsLastCommittedVersionWithoutWaitingForWriters()
@@ -18,7 +18,7 @@ public sealed class DatabaseInitializerTests
             var sql = new DbContextSqlDatabase<AppDbContext>(db);
             Assert.True(await sql.QuerySingleAsync<bool>("SELECT [is_read_committed_snapshot_on] FROM sys.databases WHERE [database_id] = DB_ID()"));
             var logs = new Warnings();
-            Assert.True(await new DatabaseSchema(sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
+            Assert.True(await new DatabaseSchema(db, sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Empty(logs.EventIds);
 
             var user = new User { Sid = "rcsi-fixture", Account = "rcsi", DisplayName = "已提交" };
@@ -48,37 +48,36 @@ public sealed class DatabaseInitializerTests
                 await master.ExecuteAsync($"ALTER DATABASE [{name}] SET READ_COMMITTED_SNAPSHOT OFF WITH ROLLBACK IMMEDIATE");
             }
             var logs = new Warnings();
-            Assert.False(await new DatabaseSchema(new DbContextSqlDatabase<AppDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
+            Assert.False(await new DatabaseSchema(db, new DbContextSqlDatabase<AppDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Equal(5003, Assert.Single(logs.EventIds));
         });
     }
 
     [Fact]
-    public async Task InitializerCreatesDatabaseWithReadCommittedSnapshot()
+    public async Task StartupComparisonPassesOnTheDeployedSchema()
     {
-        var name = $"AINexus_Test_{Guid.NewGuid():N}";
-        var master = new SqlConnectionStringBuilder { DataSource = TestDatabase.Server, InitialCatalog = "master", IntegratedSecurity = true, TrustServerCertificate = true }.ConnectionString;
-        await using var connection = new SqlConnection(master);
-        try
-        {
-            await DatabaseInitializer.CreateAsync(new MasterConnection(master), name, CancellationToken.None);
-            Assert.True(await connection.QuerySingleAsync<bool>("SELECT [is_read_committed_snapshot_on] FROM sys.databases WHERE [name] = @Name", new { Name = name }));
-        }
-        finally
-        {
-            await connection.ExecuteAsync($"IF DB_ID(@Name) IS NOT NULL BEGIN ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}] END", new { Name = name });
-        }
+        await TestDatabase.WithContextAsync(async db => {
+            var logs = new Warnings();
+            var differences = await new DatabaseSchema(db, new DbContextSqlDatabase<AppDbContext>(db), logs).CompareModelAsync(CancellationToken.None);
+            Assert.DoesNotContain(differences, x => x.Blocking);
+            Assert.DoesNotContain(5004, logs.EventIds);
+        });
     }
 
-    /// <summary>測試伺服器的 master，連線字串直接給定，不走 <c>Databases</c> 設定。</summary>
-    private sealed class MasterConnection(string connectionString) : DapperSqlDatabase<MasterDatabase>
+    [Fact]
+    public async Task StartupComparisonReportsBlockingDifferencesSeparatelyFromWarnings()
     {
-        protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)
-        {
-            await using var connection = new SqlConnection(connectionString);
-            await connection.OpenAsync(cancellationToken);
-            return await command(connection, null);
-        }
+        await TestDatabase.WithContextAsync(async db => {
+            await db.Database.GetDbConnection().ExecuteAsync("""
+                ALTER TABLE [notifications].[Notifications] DROP COLUMN [Title];
+                ALTER TABLE [notifications].[Notifications] ADD [Extra] int NULL;
+                """);
+            var logs = new Warnings();
+            var differences = await new DatabaseSchema(db, new DbContextSqlDatabase<AppDbContext>(db), logs).CompareModelAsync(CancellationToken.None);
+            Assert.Equal("notifications.Notifications.Title", Assert.Single(differences, x => x.Blocking).Target);
+            Assert.Contains(differences, x => !x.Blocking && x.Target == "notifications.Notifications.Extra");
+            Assert.Equal([5004, 5005], logs.EventIds.Order());
+        });
     }
 
     private sealed class Warnings : ILogger<DatabaseSchema>
@@ -88,7 +87,7 @@ public sealed class DatabaseInitializerTests
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (logLevel == LogLevel.Warning) EventIds.Add(eventId.Id);
+            if (logLevel >= LogLevel.Warning) EventIds.Add(eventId.Id);
         }
     }
 }

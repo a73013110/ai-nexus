@@ -22,9 +22,9 @@ public static class DatabaseStartup
     });
 
     /// <summary>
-    /// 在背景服務與 API 請求開始前檢查資料庫。結構由 DBA 以 <c>database/App</c> 部署，這裡不建立也不修改結構。
+    /// 在背景服務與 API 請求開始前檢查資料庫：RCSI 與 EF 模型對實際結構的唯讀比對。結構由 DBA 以 <c>database/App</c> 部署，這裡不建立也不修改結構。
     /// </summary>
-    /// <returns>若資料庫無法使用則回傳 <see langword="false"/>，呼叫端應立即停止 Host 啟動。</returns>
+    /// <returns>若資料庫無法使用或結構與 EF 模型不一致則回傳 <see langword="false"/>，呼叫端應立即停止 Host 啟動。</returns>
     public static async Task<bool> EnsureDatabaseReadyAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
@@ -36,9 +36,27 @@ public static class DatabaseStartup
 
         try
         {
+            var schema = scope.ServiceProvider.GetRequiredService<DatabaseSchema>();
             // RCSI 只檢查並記錄警告，不在此切換：切換需要排他鎖，必須由 DBA 於維護期間手動執行。
-            await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().ReadCommittedSnapshotAsync(CancellationToken.None);
-            return true;
+            // 連不上時回傳 null：照常啟動，由健康檢查回報，讓網站能在 SQL 恢復後自行就緒。
+            if (await schema.ReadCommittedSnapshotAsync(CancellationToken.None) is null)
+            {
+                return true;
+            }
+
+            var blocking = (await schema.CompareModelAsync(CancellationToken.None)).Where(x => x.Blocking).ToList();
+            if (blocking.Count == 0)
+            {
+                return true;
+            }
+
+            Console.Error.WriteLine($"資料庫結構與這一版程式的 EF 對應不一致（{blocking.Count} 項），停止啟動：");
+            foreach (var difference in blocking)
+            {
+                Console.Error.WriteLine("  " + difference);
+            }
+            Console.Error.WriteLine("請以發布套件的 Deploy-Database.ps1 部署這一版的結構，或確認網站與資料庫是同一版；完整差異以 Verify-Database.ps1 查看。");
+            return false;
         }
         catch (Exception ex)
         {

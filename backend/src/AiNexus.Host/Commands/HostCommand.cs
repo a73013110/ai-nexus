@@ -6,7 +6,7 @@ namespace AiNexus.Host.Commands;
 
 /// <summary>
 /// 主機命令列指令處理器。
-/// 不帶指令時啟動 HTTP 伺服器；帶指令（<c>db init</c>、<c>verify …</c>）時，
+/// 不帶指令時啟動 HTTP 伺服器；帶指令（<c>verify …</c>）時，
 /// 會對完整建好的主機執行一次該作業，設定結束碼後退出。
 /// 指令在建立 Web 主機之前就先解析，因此未知指令或 <c>--help</c> 不會意外啟動網站。
 /// </summary>
@@ -25,15 +25,6 @@ public sealed class HostCommand
 
     private static readonly Definition[] Definitions =
     [
-        new("db init", "建立空資料庫（不存在時）並開啟 RCSI；結構由 database/App 的 dacpac 部署", [], (app, _) => InScopeAsync(app, async services =>
-        {
-            var snapshot = await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
-            Console.WriteLine("AiNexus 資料庫已建立；接著以 database/App 的 dacpac 部署結構。");
-            if (!snapshot)
-            {
-                Console.WriteLine("注意：既有資料庫尚未開啟 READ_COMMITTED_SNAPSHOT，請 DBA 依 docs/architecture/database.md 在維護時段開啟。");
-            }
-        })),
         new("verify deployment", "唯讀檢查 SQL、設定、模型清單、embedding／rerank 與站外目錄寫入，不產生 AI 回答", [],
             (app, _) => DeploymentVerifier.VerifyAsync(app.Services, app.Configuration, app.Environment, CancellationToken.None)),
         new("verify connections", "以合成資料實測 SQL 讀寫、AD、模型串流、附件辨識與檢索模型（會使用模型配額）", [Report], async (app, command) =>
@@ -94,7 +85,7 @@ public sealed class HostCommand
         if (args.Any(x => x is "--help" or "-h" or "-?" or "/?")) return new(null, [], null, help: true, error: null);
 
         // 斷詞規則必須與命令列組態提供者一致："--key value" 成對、"--key=value" 為單一詞。
-        // 其餘詞彙才是指令名稱，所以 "--contentRoot app db init" 仍會解析為 db init，而不是直接啟動網站。
+        // 其餘詞彙才是指令名稱，所以 "--contentRoot app verify sql" 仍會解析為 verify sql，而不是直接啟動網站。
         var words = new List<string>();
         var options = new List<string>();
         for (var i = 0; i < args.Length; i++)

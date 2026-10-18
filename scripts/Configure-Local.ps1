@@ -49,4 +49,4 @@ Save-NexusJson $local.Settings $settings
 Save-NexusJson $local.Secrets $secrets
 Protect-NexusSecrets $local.Secrets
 $value = $secrets = $null
-Write-Output '設定已保存。連線到 DBA 維護的開發庫時直接重新啟動專案；要建立新的空庫，執行 scripts/Initialize-Database.ps1 後再部署 database/App 的 dacpac。'
+Write-Output '設定已保存。連線到 DBA 維護的開發庫時直接重新啟動專案；要建立新庫，執行 scripts/Initialize-Database.ps1。'

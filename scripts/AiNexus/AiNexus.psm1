@@ -135,7 +135,7 @@ function Assert-NexusHttpsCertificate {
 
 function Invoke-NexusHostCommand {
     <#
-    .SYNOPSIS Runs a host command (db init, verify …) in Development with the machine settings under .local/.
+    .SYNOPSIS Runs a host command (verify …) in Development with the machine settings under .local/.
     .OUTPUTS The host's exit code.
     #>
     param([Parameter(Mandatory)][string[]]$Command)
@@ -321,6 +321,33 @@ function Compare-NexusDatabaseSetting {
         if ([string]::IsNullOrEmpty($Project[$key])) { "sqlproj 沒有設定 $property（資料庫為 $($Database[$key])）。" }
         elseif ("$($Database[$key])" -ne "$($Project[$key])") { "$property 不一致：資料庫為 $($Database[$key])，sqlproj 為 $($Project[$key])。" }
     }
+}
+
+function Test-NexusDatabaseExists {
+    <#
+    .SYNOPSIS True when the server already has the database (queried through master).
+    .DESCRIPTION PowerShell 內附的 System.Data.SqlClient 不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。
+    #>
+    param([Parameter(Mandatory)][string]$Server, [Parameter(Mandatory)][string]$Database, [pscredential]$Credential, [switch]$TrustServerCertificate)
+    $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new()
+    $builder['Data Source'] = $Server
+    $builder['Initial Catalog'] = 'master'
+    $builder['Encrypt'] = $Server -notlike '(localdb)*'
+    $builder['TrustServerCertificate'] = [bool]$TrustServerCertificate
+    $credential = $null
+    if ($Credential) {
+        $password = $Credential.Password.Copy()
+        $password.MakeReadOnly()
+        $credential = [Data.SqlClient.SqlCredential]::new($Credential.UserName, $password)
+    } else { $builder['Integrated Security'] = $true }
+    $connection = [Data.SqlClient.SqlConnection]::new($builder.ConnectionString, $credential)
+    try {
+        $connection.Open()
+        $command = $connection.CreateCommand()
+        $command.CommandText = 'SELECT DB_ID(@Name)'
+        [void]$command.Parameters.AddWithValue('@Name', $Database)
+        $command.ExecuteScalar() -isnot [DBNull]
+    } finally { $connection.Dispose() }
 }
 
 Export-ModuleMember -Function *-Nexus*
