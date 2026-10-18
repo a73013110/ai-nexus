@@ -1,9 +1,15 @@
+using System.Reflection;
+
 namespace AiNexus.Features.AccessControl;
 
-/// <summary>平台功能 id，與角色／群組授權表中儲存的值相同。</summary>
+/// <summary>
+/// 平台功能 id 的唯一來源，與 <c>accesscontrol.Features</c> 的資料列相同；模組自己的功能常數也引用這裡。
+/// 新增或改名功能時同時改 <c>database/App/Seed/accesscontrol.sql</c>，<c>BuiltInAccessSeedTests</c> 會雙向比對；
+/// OpenAPI 以 <see cref="All"/> 輸出 <c>FeatureId</c> 列舉，前端的功能 id 型別由此產生。
+/// </summary>
 public static class FeatureIds
 {
-    public const string Chat = BuiltInAccess.ChatFeature;
+    public const string Chat = "chat";
     public const string Projects = "projects";
     public const string Artifacts = "artifacts";
     public const string Shared = "shared";
@@ -16,7 +22,16 @@ public static class FeatureIds
     public const string Repositories = "repositories";
     public const string Admin = "admin";
     public const string Operations = "operations";
+    public const string Monitoring = "monitoring";
+    public const string Audit = "audit";
+    public const string LogsQuery = "logs.query";
+    /// <summary>只是授權、不出現在選單（Seed 的 route 為空）。</summary>
+    public const string LogsDetail = "logs.detail", LogsExport = "logs.export";
     public const string Design = "design";
+
+    /// <summary>上面所有常數，依序數排序。</summary>
+    public static IReadOnlyList<string> All { get; } = [.. typeof(FeatureIds).GetFields(BindingFlags.Public | BindingFlags.Static)
+        .Where(field => field.IsLiteral).Select(field => (string)field.GetRawConstantValue()!).Order(StringComparer.Ordinal)];
 }
 
 /// <summary>
@@ -25,7 +40,7 @@ public static class FeatureIds
 public static class Policies
 {
     public const string Prefix = "feature:";
-    public const string Chat = BuiltInAccess.ChatPolicy;
+    public const string Chat = Prefix + FeatureIds.Chat;
     public const string Projects = Prefix + FeatureIds.Projects;
     public const string Artifacts = Prefix + FeatureIds.Artifacts;
     public const string Shared = Prefix + FeatureIds.Shared;
