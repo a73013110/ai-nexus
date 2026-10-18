@@ -4,7 +4,7 @@
 
 維運窗口先等待背景任務結束，停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
 
-更新前先完成 [SQL＋原檔一致性備份](backup.md) 並停止全部 host，再由 DBA 以套件的 `database\App.dacpac` 產生升級 SQL 審閱後執行（見 [資料庫建置與權限](database-setup.md#初始化)），完成後以 `Verify-Database.ps1` 驗證；沒有結構變更時省略。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
+更新前先完成 [SQL＋原檔一致性備份](backup.md) 並停止全部 host，再以套件的 `Deploy-Database.ps1` 部署資料庫（產生升級 SQL → DBA 審核執行 → 全文、資料修正與種子資料，見 [資料庫建置與權限](database-setup.md#部署)），完成後以 `Verify-Database.ps1` 驗證。網站啟動時會比對 EF 對應的表與欄位，結構沒更新就不會啟動。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 
 失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。app 版本必須與資料庫結構相符，不可只回退 DLL 再指向較新的資料庫；也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](backup.md)。keys 保留原位置與保護身分。
 

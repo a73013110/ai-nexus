@@ -2,7 +2,7 @@
 
 - 正式環境是單一 Windows IIS 網站、in-process、**一個 worker**，環境固定 Production；前後端在同一個套件，主機不需要 Node.js。
 - 設定、金鑰與資料都放在 app 之外，更新時只替換 `app`。路徑以 `D:\CoreProject\AiNexus` 為例。
-- 首次部署順序：確認空資料庫 → [外部設定](iis-configuration.md) → 複製新 app → [站外目錄、ACL 與集區](iis-site.md) → [初始化資料庫](iis-site.md#空資料庫初始化) → [部署驗收](iis-verification.md) → 啟動網站。日後更新見 [更新與回復](iis-upgrade.md)。
+- 首次部署順序：[部署資料庫](database-setup.md#部署) → [外部設定](iis-configuration.md) → 複製新 app → [站外目錄、ACL 與集區](iis-site.md) → [部署驗收](iis-verification.md) → 啟動網站。日後更新見 [更新與回復](iis-upgrade.md)。
 - 相關維運文件：[備份與還原](backup.md)、[診斷日誌維運](diagnostics.md)。
 
 ## 部署目錄與各檔用途
@@ -42,6 +42,6 @@ pwsh -NoProfile -File scripts/Verify.ps1
 pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
 ```
 
-套件放 `artifacts/iis/<時間>/`，只含部署需要的東西：app／config 範本／空 keys／logs、`Verify-IIS.ps1`、`Verify-Database.ps1`，以及 `database\App.dacpac`（這一版預期的資料庫結構，與 app 出自同一份原始碼；部署方式見 [資料庫建置與權限](database-setup.md#初始化)），不預設攜帶秘密。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Attachments.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
+套件放 `artifacts/iis/<時間>/`，只含部署需要的東西：app／config 範本／空 keys／logs、`Verify-IIS.ps1`、`Deploy-Database.ps1`、`Verify-Database.ps1`，以及 `database\`（`App.dacpac`＝這一版預期的資料庫結構，與 app 出自同一份原始碼；`FullText\`、`Seed\`、`Data\` 為發版時執行的手寫腳本；部署方式見 [資料庫建置與權限](database-setup.md#部署)），不預設攜帶秘密。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Attachments.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
 
 若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。`-DestinationPath` 指**全新且空的套件 app 目錄**，不是正在運行的網站；腳本拒絕覆蓋非空目錄。既有 config／keys 也不會被這個封裝流程覆蓋。

@@ -56,20 +56,8 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 應用 SQL 帳號需專用資料庫的資料讀寫（各功能會 Insert／Update／Delete），不要只給 Users 表讀取權，也不要常態 db_owner。DDL／建庫用 DBA 部署帳號或維運階段的暫時權限。外部公文／校務來源只能給核准 view 的 SELECT，`ApplicationIntent=ReadOnly` 本身不能取代 SQL 權限。
 
-## 空資料庫初始化
+## 資料庫
 
-先停止所有共用此 DB 的 host。`db init` 只在 AiNexus 不存在時建立空庫並開啟 RCSI；使用有建庫權限的維運身分，在主機 PowerShell 7 執行：
-
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = 'Production'
-dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
-  --contentRoot 'D:\CoreProject\AiNexus\app' `
-  --LocalConfigPath '..\config\appsettings.Production.json' `
-  --SecretsConfigPath '..\config\appsettings.Secrets.json' `
-  db init
-if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
-```
-
-重跑不會重建。結構接著以套件的 `database\App.dacpac` 部署，步驟見 [資料庫建置與權限](database-setup.md#初始化)；完成後移除 runtime 身分的 DDL 權限。既有庫的 RCSI 一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
+結構、全文與種子資料以套件的 `Deploy-Database.ps1` 部署（新庫也是同一套步驟），見 [資料庫建置與權限](database-setup.md#部署)；部署帳號與 runtime 帳號分開，runtime 不給 DDL。既有庫的 RCSI 一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
 
 runtime 需要所有業務 schema（每模組一個，見 [資料庫](../architecture/database.md)）的 DML。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
