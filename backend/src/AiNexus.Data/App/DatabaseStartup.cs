@@ -1,7 +1,6 @@
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Data.App;
 
@@ -24,15 +23,13 @@ public static class DatabaseStartup
 
     /// <summary>
     /// 在背景服務與 API 請求開始前檢查資料庫。結構由 DBA 以 <c>database/App</c> 部署，這裡不建立也不修改結構。
-    /// 測試的 SQLite 資料庫不走這條路徑。
     /// </summary>
     /// <returns>若資料庫無法使用則回傳 <see langword="false"/>，呼叫端應立即停止 Host 啟動。</returns>
     public static async Task<bool> EnsureDatabaseReadyAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<StorageReadiness>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (!storage.Configured || !db.Database.IsSqlServer())
+        if (!storage.Configured)
         {
             return true;
         }

@@ -6,7 +6,7 @@
   - repo 的 `database/<資料庫>/` 只放 `scripts/Export-Database.ps1` 的匯出結果（SqlPackage Extract，每物件一檔），沒有人手改；一個 SDK-style SQL 專案 glob 這些檔案，`dotnet build` 產出 `.dacpac`。沒有人需要打開這個專案。
   - **不再使用 EF migration**：移除 `Migrations/`、`__EFMigrationsHistory` 與 migration 產生的發布腳本。EF Core 只做對應（[ADR 0011](0011-data-access-ef-dapper-procedures.md)）。
   - 發版以 dacpac 對目標庫產生差異報告與升級 SQL，DBA 審核後執行；種子資料、一次性資料修正、全文索引另有手寫腳本，由發版腳本在結構更新後執行。
-- **修訂**：[ADR 0005](0005-sqlite-tests-sqlserver-opt-in.md)（測試改用從 dacpac 建立的 SQL Server，procedure 無法在 SQLite 執行）。
+- **修訂**：[ADR 0005](0005-sqlite-tests-sqlserver-opt-in.md)（測試改用從 dacpac 建立的 SQL Server，procedure 無法在 SQLite 執行；已由 [ADR 0015](0015-integration-tests-on-localdb.md) 取代）。
 
 ## 原因
 

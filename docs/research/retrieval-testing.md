@@ -90,9 +90,9 @@ PDF 可在上述測試通過後另測：確認擷取文字、頁碼與原檔一�
 dotnet test --solution backend/AiNexus.slnx --filter 'FullyQualifiedName~.Knowledge.|FullyQualifiedName~.Quality.|FullyQualifiedName~JobLifecycleTests'
 ```
 
-`RetrievalDependencyTests` 驗證正式 SQL 檢索服務所需依賴，並啟用 DI scope validation，確認實際改寫器與全部背景處理器可正確建立。其餘測試使用 SQLite 與替代模型，驗證工作續跑、profile、ACL、快取與評測流程；不代表真實 Ollama 或 SQL 原生向量已通過。
+`RetrievalDependencyTests` 驗證正式 SQL 檢索服務所需依賴，並啟用 DI scope validation，確認實際改寫器與全部背景處理器可正確建立。其餘測試使用 LocalDB 與替代模型，驗證工作續跑、profile、ACL、快取與評測流程；不代表真實 Ollama 已通過。
 
-真實 SQL Server 的 768／1024 向量、交易及中文全文測試需設定測試 instance 的 `AINEXUS_SQLSERVER_TEST`，詳見 [資料庫整合測試](../architecture/database.md)。每項建立及清理自己的暫時資料庫；未設定連線時會明確略過。
+768／1024 向量與交易測試在 LocalDB 上執行；中文全文測試在沒有全文元件時略過，詳見 [測試資料庫](../development/test-database.md)。
 
 若全文元件顯示已安裝，但 `FREETEXTTABLE` 實際回傳 SQL 30053，仍須由 SQL 管理員檢查斷詞器、Filter Daemon Launcher／FDHost 與服務帳號。[Microsoft 全文錯誤說明](https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/mssqlserver-30053-database-engine-error?view=sql-server-ver17)。應用程式對已知全文執行錯誤會讓 hybrid 明確降為 vector，30 秒後重新檢查；keyword 則回報 `fulltext_unavailable`。SQL 2025 部分全文錯誤也與索引版本及未註冊的 stemmer 有關，應依實際版本確認，不能僅由錯誤代碼判定根因。[SQL Server 2025 已知問題](https://learn.microsoft.com/en-us/sql/sql-server/sql-server-2025-known-issues?view=sql-server-ver17#full-text-search)。
 
@@ -100,6 +100,6 @@ dotnet test --solution backend/AiNexus.slnx --filter 'FullyQualifiedName~.Knowle
 
 若日誌只有 `InvalidOperationException, job_processing_failed`，不能單靠例外類型判斷是模型或 SQL 問題。本次可重現兩個服務註冊問題：正式 `SqlServerRetrievalStore` 所需的 `IMemoryCache` 未註冊；`IQueryRewriter` 原先註冊為 Singleton，卻使用 Scoped 的 `ModelTaskService`，Development 的 scope validation 會拒絕從 root provider 解析它。
 
-背景 worker 在執行任務前會解析所有 `IBackgroundJobHandler`；檢索評測處理器使用 SQL 檢索服務與改寫器，因此也會使 document-ingest／document-embedding 在第一個 checkpoint 前失敗。原先 SQLite host 沒有走 SQL 檢索服務，Testing host 也沒有強制 scope validation，才漏掉這些錯誤。修正後註冊 memory cache，並讓改寫器與模型工作服務使用相同 scope。
+背景 worker 在執行任務前會解析所有 `IBackgroundJobHandler`；檢索評測處理器使用 SQL 檢索服務與改寫器，因此也會使 document-ingest／document-embedding 在第一個 checkpoint 前失敗。當時測試 host 沒有走 SQL 檢索服務，也沒有強制 scope validation，才漏掉這些錯誤。修正後註冊 memory cache，並讓改寫器與模型工作服務使用相同 scope。
 
 完成修正版建置並重新啟動本機服務後，到「背景任務 → 需要處理」重試失敗的文件任務。重試保留原檔與已保存的 `DocumentPages`，索引工作會繼續建立片段及向量。確認任務完成後再測搜尋；沒有超過六次嘗試上限時，不需重新上傳原檔。

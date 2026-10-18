@@ -249,7 +249,7 @@ function capabilityRows(value: RetrievalCapabilitiesDto | null): Capability[] {
     key,
     name,
     tone: (sql ? (ok ? 'success' : 'warning') : 'neutral') as BadgeTone,
-    status: sql ? (ok ? '可用' : missing) : value.testStore ? '不適用' : '無法確認',
+    status: sql ? (ok ? '可用' : missing) : '無法確認',
     detail: '',
     endpoint: '',
   });
@@ -265,8 +265,8 @@ function capabilityRows(value: RetrievalCapabilitiesDto | null): Capability[] {
     {
       key: 'vector',
       name: 'SQL 原生向量',
-      tone: sql?.nativeVector ? 'success' : value.testStore ? 'info' : 'danger',
-      status: sql?.nativeVector ? '可用' : value.testStore ? 'SQLite 測試儲存' : '無法使用',
+      tone: sql?.nativeVector ? 'success' : 'danger',
+      status: sql?.nativeVector ? '可用' : '無法使用',
       detail: sql ? `SQL Server ${sql.version} ${sql.edition}`.trim() : '',
       endpoint: '',
     },

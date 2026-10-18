@@ -16,7 +16,6 @@ using AiNexus.Features.Knowledge.Embeddings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,7 +24,7 @@ using Microsoft.Extensions.Hosting;
 namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
-/// 每個測試一個應用程式 host，使用從 schema 範本複製出的獨立 SQLite 檔。只執行生成工作者；
+/// 每個測試一個應用程式 host，使用從範本複製出的獨立 LocalDB 資料庫（<see cref="TestDatabase"/>）。只執行生成工作者；
 /// 其他 hosted worker 需透過 <c>workers</c> 選擇加入，測試則直接呼叫來驅動週期性工作。
 /// 這些替換只存在於測試組件中，正式環境沒有假使用者 header。
 /// </summary>
@@ -33,7 +32,6 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
 {
     /// <summary>遠低於正式環境的工作量，讓密碼相關測試不會把時間花在雜湊運算上。</summary>
     public static readonly Argon2Cost PasswordCost = new(1024, 1);
-    private static readonly Lazy<string> Template = new(CreateTemplate);
     private readonly bool ldap;
     private readonly Action<InferenceOptions>? configureInference;
     private readonly Action<AttachmentOptions>? configureAttachments;
@@ -42,7 +40,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly TimeProvider? clock;
     private readonly Action<IServiceCollection>? configureServices;
     private readonly string? webRoot;
-    private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
+    private readonly TestDatabase database;
+    // 附件與日誌檔放在 host 自己的暫存資料夾，釋放時一起刪除。
+    private readonly string files = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
     public NexusFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
@@ -56,8 +56,8 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         this.clock = clock;
         configureServices = services;
         this.webRoot = webRoot;
-        File.Copy(Template.Value, databasePath);
-        using var db = new AppDbContext(DatabaseOptions(databasePath));
+        database = TestDatabase.Create();
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(database.ConnectionString).Options);
         seed?.Invoke(db);
         foreach (var user in db.Users.AsNoTracking().ToList())
             if (!db.Set<UserRole>().Any(x => x.UserId == user.Id)) db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
@@ -72,7 +72,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<AppDbContext>>();
-            services.AddDbContext<AppDbContext>((scope, options) => options.UseTestSqlite(ConnectionString(databasePath)).AddAppInterceptors(scope));
+            services.AddDbContext<AppDbContext>((scope, options) => options.UseSqlServer(database.ConnectionString).AddAppInterceptors(scope));
             services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Test", _ => { });
             services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; options.DefaultChallengeScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; });
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
@@ -102,8 +102,8 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                 foreach (var model in options.Models)
                     if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
             });
-            services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = databasePath + ".attachments"; configureAttachments?.Invoke(options); });
-            services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = databasePath + ".logs"; options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
+            services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = Path.Combine(files, "attachments"); configureAttachments?.Invoke(options); });
+            services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = Path.Combine(files, "logs"); options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
             services.PostConfigure<AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
             configureServices?.Invoke(services);
         });
@@ -128,35 +128,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         return client;
     }
 
-    private static string ConnectionString(string path) => $"Data Source={path};Default Timeout=10";
-    private static DbContextOptions<AppDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<AppDbContext>().UseTestSqlite(ConnectionString(path)).Options;
-
-    /// <summary>
-    /// 關閉某個檔案的連線池連線，以便複製或刪除。<c>ClearAllPools</c> 是程序範圍的操作，
-    /// 會釋放仍在平行測試中執行之其他 host 的原生控制代碼，導致它們以 503 失敗，因此不使用它。
-    /// </summary>
-    private static void ReleaseFile(string path)
-    {
-        using var connection = new SqliteConnection(ConnectionString(path));
-        SqliteConnection.ClearPool(connection);
-    }
-
-    private static string CreateTemplate()
-    {
-        var path = Path.Combine(Path.GetTempPath(), $"nexus-template-{Guid.NewGuid():N}.db");
-        using (var db = new AppDbContext(DatabaseOptions(path)))
-        {
-            db.Database.EnsureCreated();
-            BaselineSeed.Apply(db);
-        }
-        ReleaseFile(path);
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => File.Delete(path);
-        return path;
-    }
-
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) { ReleaseFile(databasePath); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); if (Directory.Exists(databasePath + ".logs")) Directory.Delete(databasePath + ".logs", recursive: true); }
+        if (disposing) { database.Dispose(); if (Directory.Exists(files)) Directory.Delete(files, recursive: true); }
     }
 }

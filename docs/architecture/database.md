@@ -60,7 +60,7 @@ EF Core 與 Dapper 的分工見 [ADR 0011](../decisions/0011-data-access-ef-dapp
 
 ## 測試
 
-整合測試用 SQLite 依 EF 模型建庫：模型差異（向量、時間排序）在 `backend/tests/AiNexus.IntegrationTests/Support/SqliteModel.cs`，基礎資料在同資料夾的 `BaselineSeed.cs`。SQLite 沒有資料庫端的索引與約束，唯一性等保證要在真實 SQL Server 驗證（見 [測試](../development/testing.md#真實-sql-server)）。
+整合測試在 LocalDB 上以 dacpac 與 `Seed/` 建庫，EF 對應、資料表說明與唯一索引都對這個庫檢查；見 [測試資料庫](../development/test-database.md)。
 
 ## 保存與備份
 

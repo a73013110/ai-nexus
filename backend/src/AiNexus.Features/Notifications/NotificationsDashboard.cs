@@ -17,7 +17,7 @@ internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
         var mine = db.Set<Notification>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.DismissedAt == null);
         var unread = mine.Where(x => x.ReadAt == null);
         var counts = await unread.GroupBy(x => 1).Select(g => new { All = g.Count(), Errors = g.Count(x => x.Severity == "error") }).SingleOrDefaultAsync(ct);
-        var daily = await DashboardDays.CountAsync(db, mine.Select(x => x.CreatedAt), scope, ct);
+        var daily = await DashboardDays.CountAsync(mine.Select(x => x.CreatedAt), scope, ct);
         var errors = counts?.Errors ?? 0;
         var section = new DashboardSection("notifications", Feature, "通知", "")
             .Count("unread", "未讀通知", counts?.All ?? 0, "則", (counts?.All ?? 0) > 0 ? DashboardTones.Info : DashboardTones.Neutral)

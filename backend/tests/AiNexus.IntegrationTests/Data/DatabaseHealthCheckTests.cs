@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using System.Net;
 using AiNexus.Platform.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -24,8 +25,9 @@ public sealed class DatabaseHealthCheckTests
     [Fact]
     public async Task ReadinessFailsWhenTheDatabaseCannotBeOpenedOrIsNotConfigured()
     {
-        var missing = Path.Combine(Path.GetTempPath(), $"nexus-missing-{Guid.NewGuid():N}", "nexus.db");
-        await using var services = new ServiceCollection().AddDbContext<AppDbContext>(x => x.UseSqlite($"Data Source={missing};Mode=ReadOnly")).BuildServiceProvider();
+        // 不存在的資料庫：伺服器拒絕登入，CanConnect 回傳 false。
+        var missing = new SqlConnectionStringBuilder { DataSource = TestDatabase.Server, InitialCatalog = $"AINexus_Missing_{Guid.NewGuid():N}", IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeout = 5 };
+        await using var services = new ServiceCollection().AddDbContext<AppDbContext>(x => x.UseSqlServer(missing.ConnectionString)).BuildServiceProvider();
         var scopes = services.GetRequiredService<IServiceScopeFactory>();
         var configured = new StorageReadiness(Options.Create(new DatabasesOptions()), new HostingEnvironment { EnvironmentName = "Testing" });
         Assert.Equal(HealthStatus.Unhealthy, (await new DatabaseHealthCheck(scopes, configured, TimeProvider.System).CheckHealthAsync(new())).Status);

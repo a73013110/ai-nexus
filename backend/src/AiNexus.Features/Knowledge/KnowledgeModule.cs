@@ -1,4 +1,3 @@
-using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Inference.Models;
@@ -13,7 +12,6 @@ using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Monitoring;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge;
@@ -46,9 +44,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<RetrievalModelProbe>();
         services.AddScoped<IBackgroundJobHandler, EmbeddingReindexHandler>();
         services.AddHostedService<EmbeddingBootstrapWorker>();
-        // SQL Server 使用原生向量與全文檢索；SQLite 測試環境改用記憶體內的排序實作，結果排序細節可能與正式環境不同。
-        services.AddScoped<IRetrievalStore>(s => s.GetRequiredService<AppDbContext>().Database.IsSqlServer()
-            ? ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(s) : ActivatorUtilities.CreateInstance<InMemoryRetrievalStore>(s));
+        services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
         services.AddScoped<KnowledgeRetrieval>();
         services.AddScoped<RetrievalAuthorization>();
         services.AddScoped<RetrievalPipeline>();

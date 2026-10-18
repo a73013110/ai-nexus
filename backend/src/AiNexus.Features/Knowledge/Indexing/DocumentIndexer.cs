@@ -34,7 +34,6 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
         try
         {
             var existing = await db.Set<Chunk>().Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
-            var nextSearch = db.Database.IsSqlServer() ? 0 : (await db.Set<Chunk>().Select(x => (int?)x.SearchId).MaxAsync(ct) ?? 0) + 1;
             var chunks = new List<Chunk>();
             for (var i = 0; i < pieces.Count; i++)
             {
@@ -47,7 +46,7 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
                     chunks.Add(old);
                     continue;
                 }
-                chunks.Add(new() { DocumentId = document.Id, Ordinal = i, SearchId = nextSearch == 0 ? 0 : nextSearch++,
+                chunks.Add(new() { DocumentId = document.Id, Ordinal = i,
                     StartPage = piece.StartPage, EndPage = piece.EndPage, HeadingPath = piece.HeadingPath, Text = piece.Text, ContentHash = hashes[i], TokenEstimate = piece.TokenEstimate });
             }
             var retained = chunks.Select(x => x.Id).ToArray(); document.ChunkCount = chunks.Count; document.Status = "indexing";

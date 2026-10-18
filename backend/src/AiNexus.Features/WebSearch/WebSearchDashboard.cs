@@ -17,7 +17,7 @@ internal sealed class WebSearchDashboard(AppDbContext db) : IDashboardSource
         var searches = db.Set<WebSearchRecord>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var period = searches.Where(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until);
         var failed = await period.CountAsync(x => x.Status == "failed", ct);
-        var daily = await DashboardDays.CountAsync(db, searches.Select(x => x.CreatedAt), scope, ct);
+        var daily = await DashboardDays.CountAsync(searches.Select(x => x.CreatedAt), scope, ct);
         var all = daily.Sum(x => x.Value);
         return new DashboardSection("web-search", Feature, "網路搜尋", "/chat")
             .Period("searches", "期間搜尋", all, "次")

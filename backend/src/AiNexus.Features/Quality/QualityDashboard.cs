@@ -18,7 +18,7 @@ internal sealed class QualityDashboard(AppDbContext db) : IDashboardSource
         var feedback = db.Set<MessageFeedback>().AsNoTracking()
             .Where(x => (owner == null || x.OwnerId == owner) && x.Rating != 0 && x.UpdatedAt >= scope.From && x.UpdatedAt < scope.Until);
         var ratings = await feedback.GroupBy(x => 1).Select(g => new { Up = g.Count(x => x.Rating > 0), Down = g.Count(x => x.Rating < 0) }).SingleOrDefaultAsync(ct);
-        var daily = await DashboardDays.CountAsync(db, feedback.Select(x => x.UpdatedAt), scope, ct);
+        var daily = await DashboardDays.CountAsync(feedback.Select(x => x.UpdatedAt), scope, ct);
         var runs = db.Set<EvaluationRun>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var retrieval = db.Set<RetrievalEvaluation>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var evaluations = await runs.CountAsync(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until, ct);

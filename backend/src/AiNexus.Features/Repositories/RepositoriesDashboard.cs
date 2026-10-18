@@ -26,7 +26,7 @@ internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptio
             .Select(r => jobs.Where(j => j.Id == r.JobId).Select(j => j.Status).FirstOrDefault() ?? "completed")
             .GroupBy(x => x).Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
         var active = await reviews.CountAsync(r => jobs.Any(j => j.Id == r.JobId && (j.Status == "queued" || j.Status == "running")), ct);
-        var daily = await DashboardDays.CountAsync(db, reviews.Select(x => x.CreatedAt), scope, ct);
+        var daily = await DashboardDays.CountAsync(reviews.Select(x => x.CreatedAt), scope, ct);
         var failed = status.Where(x => x.Status == "failed").Sum(x => x.Count);
         var connections = await db.Set<RepositoryConnection>().AsNoTracking().CountAsync(x => owner == null || x.OwnerId == owner, ct);
         var section = new DashboardSection("repositories", Feature)

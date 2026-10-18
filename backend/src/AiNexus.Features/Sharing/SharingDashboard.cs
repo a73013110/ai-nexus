@@ -24,7 +24,7 @@ internal sealed class SharingDashboard(AppDbContext db, TimeProvider clock) : ID
         var sent = db.Set<ShareLink>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var open = sent.Where(x => !x.IsRevoked && x.ExpiresAt > now);
         var counts = await open.GroupBy(x => 1).Select(g => new { Open = g.Count(), Expiring = g.Count(x => x.ExpiresAt <= soon) }).SingleOrDefaultAsync(ct);
-        var created = await DashboardDays.CountAsync(db, sent.Select(x => x.CreatedAt), scope, ct);
+        var created = await DashboardDays.CountAsync(sent.Select(x => x.CreatedAt), scope, ct);
         var kinds = await open.GroupBy(x => x.Kind).Select(g => new { Kind = g.Key, Count = g.Count() }).ToListAsync(ct);
         var expiring = counts?.Expiring ?? 0;
         var section = new DashboardSection("shared", Feature)

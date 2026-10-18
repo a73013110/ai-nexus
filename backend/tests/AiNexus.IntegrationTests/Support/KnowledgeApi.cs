@@ -11,6 +11,9 @@ namespace AiNexus.IntegrationTests.Support;
 
 internal static class KnowledgeApi
 {
+    /// <summary>hybrid 檢索實際的模式：沒有全文元件時正式程式降為 vector（LocalDB 即是如此）。</summary>
+    internal static string HybridMode => TestDatabase.FullTextInstalled ? "hybrid" : "vector";
+
     internal static async Task<CollectionDto> CreateCollection(HttpClient client)
     {
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("公司作業規範", "受控測試來源")); response.EnsureSuccessStatusCode();

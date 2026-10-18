@@ -41,7 +41,7 @@ internal sealed class ChatDashboard(AppDbContext db, ModelPresentation presentat
             .Where(m => m.Role == "user" && conversations.Any(c => c.Id == m.ConversationId))
             .Select(m => m.CreatedAt);
 
-        var daily = await DashboardDays.CountAsync(db, questions, scope, ct);
+        var daily = await DashboardDays.CountAsync(questions, scope, ct);
 
         var runs = db.Runs
             .AsNoTracking()
