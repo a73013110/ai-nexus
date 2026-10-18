@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "AI Nexus",
+  "classifications": ["Web", "Platform", "Angular"],
+  "identity": "AiNexus.Template",
+  "name": "AI Nexus 公版",
+  "description": "fork AI Nexus 公版成新產品：替換專案名、namespace 與產品識別。步驟見 docs/development/fork.md。",
+  "shortName": "ainexus",
+  "sourceName": "AiNexus",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "forms": {
+    "kebabCase": { "identifier": "kebabCase" },
+    "upperCase": { "identifier": "upperCase" }
+  },
+  "symbols": {
+    "displayName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "",
+      "description": "畫面與文件上的產品名稱（取代 AI Nexus），省略時用 -n 的名稱。"
+    },
+    "displayNameValue": {
+      "type": "generated",
+      "generator": "coalesce",
+      "parameters": {
+        "sourceVariableName": "displayName",
+        "fallbackVariableName": "name"
+      },
+      "replaces": "AI Nexus"
+    },
+    "displayNameUpper": {
+      "type": "derived",
+      "valueSource": "displayNameValue",
+      "valueTransform": "upperCase",
+      "replaces": "AI NEXUS"
+    },
+    "kebabName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "kebabCase",
+      "replaces": "ai-nexus"
+    },
+    "upperName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "upperCase",
+      "replaces": "AINEXUS"
+    }
+  },
+  "sources": [
+    {
+      "exclude": [
+        ".template.config/**",
+        ".git/**",
+        ".vs/**",
+        ".local/**",
+        "artifacts/**",
+        "poc/**",
+        "TestResults/**",
+        "**/TestResults/**",
+        "**/node_modules/**",
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        "frontend/.angular/**",
+        "frontend/dist/**",
+        "frontend/coverage/**",
+        "frontend/test-results/**",
+        "frontend/playwright-report/**",
+        "**/*.user",
+        "**/appsettings.*.Local.json",
+        "**/appsettings.Local.json",
+        "**/appsettings.Secrets.json",
+        "**/appsettings.Production.json",
+        ".claude/*.json",
+        ".claude/*.lock",
+        ".claude/worktrees/**"
+      ],
+      "copyOnly": ["docs/development/fork.md", "**/*.ico", "**/*.png", "**/*.jpg", "**/*.woff2"]
+    }
+  ]
+}

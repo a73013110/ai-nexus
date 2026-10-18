@@ -13,12 +13,12 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
   <!--
-    XML docs are generated for the build's unused-using check, not for the API: they are written for maintainers and must
-    not become OpenAPI descriptions, so the OpenAPI XML-comment generator is removed.
+    XML 文件只為了 build 的 unused-using 檢查而產生，是寫給維護者的，不能變成 OpenAPI 說明，所以移除 OpenAPI 的 XML 註解產生器。
+    不用 Condition 屬性：dotnet new 範本會把 csproj 的 Condition 當成範本條件評估，fork 時整行被刪掉。
   -->
   <Target Name="ExcludeXmlDocsFromOpenApi" BeforeTargets="CoreCompile">
     <ItemGroup>
-      <Analyzer Remove="@(Analyzer)" Condition="'%(Filename)' == 'Microsoft.AspNetCore.OpenApi.SourceGenerators'" />
+      <Analyzer Remove="@(Analyzer->WithMetadataValue('Filename', 'Microsoft.AspNetCore.OpenApi.SourceGenerators'))" />
     </ItemGroup>
   </Target>
   <ItemGroup>
