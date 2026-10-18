@@ -12,12 +12,11 @@
 ```powershell
 ./scripts/Restore.ps1
 ./scripts/Configure-Local.ps1
-./scripts/Initialize-Database.ps1
 dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 https://localhost:5080/ 。平常連 DBA 維護的開發庫；要自建空庫時，`Initialize-Database.ps1` 只在資料庫不存在時建庫（需要建庫權限），結構再以 `database/App` 的 dacpac 部署（見 [資料庫](../architecture/database.md)）。
+開啟 https://localhost:5080/ 。平常連 DBA 維護的開發庫；要自建新庫時，`Initialize-Database.ps1` 以 `database/App` 的 dacpac、全文與種子資料建出完整的庫（需要建庫權限；`-Server '(localdb)\MSSQLLocalDB'` 建在 LocalDB），資料庫已存在時拒絕執行，不會改動開發庫。
 
 ## 兩種運行方式
 

@@ -28,7 +28,7 @@ flowchart LR
 
 | 專案 | 責任 |
 | --- | --- |
-| `AiNexus.Host` | 設定載入、middleware 管線、模組組裝（`Program.cs`）與維運子命令（`db init`、`verify …`） |
+| `AiNexus.Host` | 設定載入、middleware 管線、模組組裝（`Program.cs`）與維運子命令（`verify …`） |
 | `AiNexus.Features` | 業務模組，每個模組一個資料夾，以 `<Module>Module`（`IFeatureModule`）註冊服務、設定、授權政策、rate limit 與端點；`FeatureModules` 是唯一的模組清單 |
 | `AiNexus.Data` | 資料表的 EF 對應：`App/<Module>/<Entity>.cs` 一表一檔、`AppDbContext` 與只屬於主資料庫的元件；只依賴 Platform |
 | `AiNexus.Platform` | 不認識業務的共用基礎：錯誤與 `Result<T>`、安全、設定註冊、診斷、HTTP 限制、domain event 分派、手寫 SQL（`Data/Sql`）、程序內鎖 |
