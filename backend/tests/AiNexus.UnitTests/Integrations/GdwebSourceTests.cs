@@ -30,4 +30,7 @@ public sealed class QueryProbe : ISqlDatabase<GdwebDatabase>
     }
     public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<IReadOnlyList<T>> QueryProcedureAsync<T>(string procedure, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<TResult> QueryProcedureAsync<TResult>(string procedure, object? parameters, Func<SqlResults, Task<TResult>> read, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<IReadOnlyList<T>> ExecuteProcedureAsync<T>(string procedure, object? parameters = null, Guid? auditOwner = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }

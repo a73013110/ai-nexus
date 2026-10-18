@@ -1,5 +1,6 @@
 using AiNexus.Data.App.Audit;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,6 @@ public static class AppDbContextOptions
             options.AddInterceptors(new DomainEventInterceptor(events));
         }
 
-        return options.AddInterceptors(new AuditEventInterceptor(services.GetService<IHttpContextAccessor>()));
+        return options.AddInterceptors(new AuditEventInterceptor(services.GetRequiredService<AuditContextSource>()));
     }
 }
