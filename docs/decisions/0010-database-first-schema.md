@@ -22,7 +22,7 @@
   → Export-Database.ps1 匯出到 database/App/（PR 作者執行，只 stage 與本次有關的檔案）
   → dotnet build database/App → App.dacpac（引用錯誤在 build 時失敗）
   → 發版：DeployReport（差異清單）＋ Script（升級 SQL）→ DBA 審核 → 執行
-  → 執行 FullText/、Data/<版本>/、Seed/ 手寫腳本
+  → 執行 FullText/、Data/<版本>/、Seed/ 腳本
 ```
 
 - 環境：開發庫＋PROD；大專案加 UAT。所有環境都用同一個 dacpac 比對，不會出現兩份不同的升級腳本。
@@ -36,13 +36,13 @@ database/
   App/                 主資料庫（名稱依角色，fork 後不必改）
     App.sqlproj        設定 DSP、collation、RCSI；匯出不含資料庫層級選項
     <schema>/Tables|Views|Stored Procedures|Functions|Synonyms/…   匯出產生
-    FullText/          手寫：全文目錄與索引，偵測不到全文元件時跳過
+    FullText/          全文目錄與索引：匯出腳本移入 Catalogs/、Indexes/，其餘手寫；偵測不到全文元件時跳過
     Seed/              手寫：基礎資料，可重複執行的 MERGE
     Data/<版本>/       手寫：一次性資料修正（pre-／post- 前綴決定在結構更新前或後執行）
   References/          外部資料庫的 dacpac（view 透過 synonym 引用外部庫時 build 需要）
 ```
 
-匯出腳本只替換它產生的檔案，保留 `FullText/`、`Seed/`、`Data/` 與 sqlproj。
+匯出腳本只替換它產生的檔案，保留 `FullText/` 的手寫檔、`Seed/`、`Data/` 與 sqlproj；這三個資料夾不進 dacpac，schema 也不能取這些名稱。
 
 ## 發版參數
 

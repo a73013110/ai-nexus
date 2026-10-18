@@ -5,7 +5,7 @@
 還原所有鎖定版本的相依套件。
 
 .DESCRIPTION
-依 lockfile 還原 npm（frontend，含 Playwright）、NuGet 與 dotnet 本機工具（dotnet-ef、SqlPackage），
+依 lockfile 還原 npm（frontend，含 Playwright）、NuGet、資料庫專案（database/App）與 dotnet 本機工具（dotnet-ef、SqlPackage），
 並在缺少時為目前使用者安裝 Verify.ps1 需要的 Pester。
 
 .EXAMPLE
@@ -25,6 +25,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '前端 npm 相依套件還原失敗。' }
     dotnet restore backend/AiNexus.slnx --locked-mode
     if ($LASTEXITCODE -ne 0) { throw '後端相依套件還原失敗。' }
+    # 資料庫專案只有 Microsoft.Build.Sql SDK（版本寫在 sqlproj），沒有套件參照，所以不需要 lockfile。
+    dotnet restore database/App
+    if ($LASTEXITCODE -ne 0) { throw '資料庫專案還原失敗。' }
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw '.NET 本機工具還原失敗。' }
     Install-NexusPester

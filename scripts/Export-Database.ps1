@@ -8,11 +8,15 @@
 DB-first 版控的唯一入口：結構的修改來源是開發庫（DBA 在 SSMS 直接改），repo 的 database/App/ 只放這支腳本的輸出，
 沒有人手改。只讀取來源資料庫（Extract 不會修改它）。
 
-匯出內容只有應用程式結構：不含資料、登入、使用者、角色、權限與 EF 的 __EFMigrationsHistory。SqlPackage Extract 沒有
-「排除物件類型／排除資料表」參數，所以 IgnorePermissions、IgnoreUserLoginMappings 之外的排除在匯出後刪檔完成；
-刪掉的清單會印出來，避免悄悄漏掉物件。
+匯出內容只有應用程式結構：不含資料、登入、使用者、角色與權限。SqlPackage Extract 沒有「排除資料表」參數，
+也排除不了全文索引，所以匯出後再處理（AiNexus 模組的 Invoke-NexusExtractPostProcess）：
+- 移除 -ExcludeTable 符合的資料表（EF 紀錄表、暫存表、備份表）與使用者、角色；移除清單會印出來，避免悄悄漏掉物件。
+- 全文目錄與索引移到 FullText/Catalogs、FullText/Indexes（由發版腳本在有全文元件時執行，不進 dacpac）。
+- 主物件之後的索引與欄位說明語句排序，檔案統一為 UTF-8 無 BOM、LF；同一個庫連續匯出兩次必須沒有 diff。
 
-輸出資料夾內既有的 *.sql 會先全部刪除再寫入新匯出（物件被刪除時檔案也要跟著消失），其他檔案（App.sqlproj 等）保留。
+上一次匯出的檔案會先刪除再寫入（物件被刪除時檔案也要跟著消失）；手寫的 FullText/（Catalogs、Indexes 以外）、
+Seed/、Data/、bin/obj 與 sqlproj 保留。匯出後比對資料庫的 collation、相容層級、RCSI 與 sqlproj，不一致時只警告：
+這些選項不在匯出檔裡，sqlproj 寫錯會讓 dacpac 建出和開發庫不同的庫。
 
 .PARAMETER Server
 來源 SQL Server，例如 localhost、(localdb)\MSSQLLocalDB 或 sql-dev.company.internal,1433。
@@ -30,7 +34,8 @@ SQL Server 使用自簽憑證時略過憑證鏈驗證；連線仍加密。
 輸出資料夾，預設 repo 的 database/App。
 
 .PARAMETER ExcludeTable
-匯出後要移除的資料表（schema.name），預設只有 dbo.__EFMigrationsHistory。
+匯出後要移除的資料表，格式 schema.name，可用萬用字元（-like）。預設排除 EF 的 dbo.__EFMigrationsHistory、
+備份表（*_bak、*_bak20261018、*_backup）與暫存表（tmp_*、temp_*）。傳入時會取代預設清單。
 
 .PARAMETER SkipExtractVerification
 不驗證匯出的模型（VerifyExtraction=False）。來源有跨資料庫參照（例如 view 讀取 [Gdweb].dbo.x）時，Extract 解析不到
@@ -43,7 +48,10 @@ SqlPackage 執行檔或 .dll；省略時在 repo 根目錄執行 dotnet tool run
 ./scripts/Export-Database.ps1 -Server localhost
 
 .EXAMPLE
-./scripts/Export-Database.ps1 -Server '(localdb)\MSSQLLocalDB' -Database AiNexus_PocSource -TrustServerCertificate
+./scripts/Export-Database.ps1 -Server sql-dev.company.internal -Credential (Get-Credential) -TrustServerCertificate
+
+.EXAMPLE
+./scripts/Export-Database.ps1 -Server '(localdb)\MSSQLLocalDB' -Database AiNexus_Sandbox -OutputPath .local/export
 #>
 [CmdletBinding()]
 param(
@@ -52,14 +60,15 @@ param(
     [pscredential]$Credential,
     [switch]$TrustServerCertificate,
     [string]$OutputPath,
-    [string[]]$ExcludeTable = @('dbo.__EFMigrationsHistory'),
+    [string[]]$ExcludeTable = @('dbo.__EFMigrationsHistory', '*.*_bak', '*.*_bak[0-9_]*', '*.*_backup', '*.tmp_*', '*.temp_*'),
     [switch]$SkipExtractVerification,
     [string]$SqlPackagePath
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$root = Get-NexusRoot
 $output = if ($OutputPath) { [IO.Path]::GetFullPath($OutputPath, $root) } else { Join-Path $root 'database/App' }
 
 # Extract 參數與原因：
@@ -68,7 +77,7 @@ $output = if ($OutputPath) { [IO.Path]::GetFullPath($OutputPath, $root) } else {
 # - ExtractApplicationScopedObjectsOnly=True：只取資料庫內的應用物件，不含登入等伺服器層級物件。
 # - ExtractReferencedServerScopedElements=False：使用者參照的登入不要一起帶出。
 # - IgnoreUserLoginMappings=True、IgnorePermissions=True：GRANT／使用者對應是環境差異，各環境由 DBA 管理。
-# - IgnoreExtendedProperties=False：欄位說明（EF HasComment 產生的 MS_Description）要進版控。
+# - IgnoreExtendedProperties=False：欄位說明（MS_Description）要進版控。
 # - VerifyExtraction=True：匯出後驗證模型可以編譯，壞掉的物件（例如參照不存在的表）在這裡就會失敗；跨庫參照見 -SkipExtractVerification。
 $properties = @(
     'ExtractTarget=SchemaObjectType', 'ExtractAllTableData=False', 'ExtractApplicationScopedObjectsOnly=True',
@@ -92,6 +101,22 @@ function Invoke-SqlPackage([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "SqlPackage Extract 失敗（結束碼 $LASTEXITCODE）；原因見上方輸出。找不到工具時先在 repo 根目錄執行 dotnet tool restore。" }
 }
 
+# 資料庫層級選項不在每物件一檔的匯出裡，另外查詢。用 PowerShell 內附的 System.Data.SqlClient，省得另外安裝模組；
+# 它不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。讀不到只警告，不影響匯出。
+function Get-DatabaseSetting([string]$ConnectionString) {
+    $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new($ConnectionString)
+    if ($Server -like '(localdb)*') { $builder.Encrypt = $false }
+    $connection = [Data.SqlClient.SqlConnection]::new($builder.ConnectionString)
+    try {
+        $connection.Open()
+        $command = $connection.CreateCommand()
+        $command.CommandText = 'SELECT collation_name, compatibility_level, is_read_committed_snapshot_on FROM sys.databases WHERE database_id = DB_ID();'
+        $reader = $command.ExecuteReader()
+        if (!$reader.Read()) { throw '查不到目前資料庫。' }
+        @{ Collation = $reader.GetString(0); CompatibilityLevel = [int]$reader.GetByte(1); ReadCommittedSnapshot = $reader.GetBoolean(2) }
+    } finally { $connection.Dispose() }
+}
+
 $connection = [Data.Common.DbConnectionStringBuilder]::new()
 $connection['Server'] = $Server
 $connection['Database'] = $Database
@@ -109,6 +134,10 @@ if ($Credential) {
 $work = Join-Path ([IO.Path]::GetTempPath()) ('AiNexus-export-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
+    $warnings = [Collections.Generic.List[string]]::new()
+    try { $databaseSettings = Get-DatabaseSetting $connection.ConnectionString }
+    catch { $databaseSettings = $null; $warnings.Add("讀不到資料庫設定，未比對 sqlproj：$($_.Exception.Message)") }
+
     $response = Join-Path $work 'connection.rsp'
     [IO.File]::WriteAllText($response, (Format-ResponseArgument 'SourceConnectionString' $connection.ConnectionString))
     $connection = $null
@@ -118,45 +147,17 @@ try {
     [IO.File]::Delete($response)
     Write-Verbose "Extract 花費 $($watch.Elapsed)"
 
-    # 匯出後排除：EF 的 migration 紀錄表，以及使用者、角色、角色成員（Extract 沒有對應的排除參數）。
-    # schema 也放在 Security/，只能依內容判斷，不能整個資料夾刪掉。
-    $removed = [Collections.Generic.List[string]]::new()
-    foreach ($table in $ExcludeTable) {
-        $schema, $name = $table.Split('.', 2)
-        if (!$name) { throw "-ExcludeTable 必須是 schema.name：$table" }
-        $file = Join-Path $extracted "$schema/Tables/$name.sql"
-        if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file; $removed.Add("$schema/Tables/$name.sql") }
-    }
-    $security = Join-Path $extracted 'Security'
-    if (Test-Path -LiteralPath $security) {
-        foreach ($file in Get-ChildItem -LiteralPath $security -Filter '*.sql' -Recurse) {
-            $text = [IO.File]::ReadAllText($file.FullName)
-            if ($text -match '(?im)^\s*CREATE\s+(USER|ROLE|APPLICATION\s+ROLE)\b|^\s*ALTER\s+ROLE\b|sp_addrolemember') {
-                Remove-Item -LiteralPath $file.FullName
-                $removed.Add([IO.Path]::GetRelativePath($extracted, $file.FullName))
-            }
-        }
-    }
-    # 刪除排除物件後留下的空資料夾。
-    Get-ChildItem -LiteralPath $extracted -Directory -Recurse | Sort-Object { $_.FullName.Length } -Descending |
-        Where-Object { !(Get-ChildItem -LiteralPath $_.FullName -Force) } | Remove-Item
+    $removed = Invoke-NexusExtractPostProcess $extracted $ExcludeTable
+    Update-NexusDatabaseProject $extracted $output
 
-    New-Item -ItemType Directory -Path $output -Force | Out-Null
-    # bin/obj 是 dotnet build 的產物，不能誤刪其中的檔案以外的東西；只清掉上一次匯出的 *.sql。
-    Get-ChildItem -LiteralPath $output -Filter '*.sql' -Recurse |
-        Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } | Remove-Item
-    Get-ChildItem -LiteralPath $output -Directory -Recurse | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)([\\/]|$)' } |
-        Sort-Object { $_.FullName.Length } -Descending | Where-Object { !(Get-ChildItem -LiteralPath $_.FullName -Force) } | Remove-Item
-    Copy-Item -Path (Join-Path $extracted '*') -Destination $output -Recurse -Force
-
-    # SqlPackage 以 UTF-8 BOM 寫檔、行尾 CRLF；統一成 UTF-8 無 BOM，避免 .gitattributes／編輯器造成無意義的 diff。
-    foreach ($file in Get-ChildItem -LiteralPath $output -Filter '*.sql' -Recurse | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }) {
-        [IO.File]::WriteAllText($file.FullName, [IO.File]::ReadAllText($file.FullName), [Text.UTF8Encoding]::new($false))
-    }
-
-    $count = @(Get-ChildItem -LiteralPath $output -Filter '*.sql' -Recurse | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }).Count
+    $count = @(Get-ChildItem -LiteralPath $extracted -Filter '*.sql' -Recurse).Count
     Write-Output "已匯出 $Database 到 $output（$count 個 .sql，花費 $($watch.Elapsed.ToString('mm\:ss'))）。"
     if ($removed.Count) { Write-Output "已排除：$($removed -join '、')" }
+
+    $project = @(Get-ChildItem -LiteralPath $output -Filter '*.sqlproj')
+    if ($project.Count -ne 1) { $warnings.Add("$output 應該剛好有一個 .sqlproj，找到 $($project.Count) 個；未比對資料庫設定。") }
+    elseif ($databaseSettings) { foreach ($message in Compare-NexusDatabaseSetting $databaseSettings (Get-NexusSqlProjectSetting $project[0].FullName)) { $warnings.Add($message) } }
+    foreach ($message in $warnings) { Write-Warning $message }
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
