@@ -1,18 +1,18 @@
 # 後端撰寫慣例
 
-本文件說明 `AiNexus.Features` 內一個 use case（slice）的寫法。範本：`Library`（最小）、`Notifications`、`Integrations`（含授權閘道）、`Billing`（validator 注入服務）。
+本文件說明 `AiNexus.Features/<Area>/<Module>/` 內一個 use case（slice）的寫法。範本：`Prompts`（最小）、`Notifications`、`Integrations`（含授權閘道）、`Billing`（validator 注入服務）。
 
 ## 檔案與命名
 
 - 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseSources.cs`）。
 - 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。
 - 檔名＝檔內主要型別名，namespace＝資料夾（`SourceLayoutTests` 檢查）。
-- 實體與組態不在 Features：一表一檔放在 `AiNexus.Data/App/<Module>/`，見 [資料庫](database.md)。模組端的查詢擴充方法（`<Entity>Queries`）與 DTO 對應（`ToDto` 擴充方法）放在模組內。
+- 實體與組態不在 Features：一表一檔放在 `AiNexus.Data/App/<Module>/`（不分區），見 [資料庫](database.md)。模組端的查詢擴充方法（`<Entity>Queries`）與 DTO 對應（`ToDto` 擴充方法）放在模組內。
 - DTO 只有一個 use case 用就寫在該 use case 檔的開頭；多個檔案共用才獨立成 `<Dto>.cs`。
 - 模組的預期失敗集中在根目錄的 `<Module>Errors.cs`（`ModuleBoundaryTests` 檢查）。
 - 模組超過 15 個檔案就依能力分一層子資料夾（`SourceLayoutTests` 檢查）：
   - 根目錄只留橫跨模組的：`<Module>Module`、`<Module>Errors`、options、對外合約服務、總覽來源、write lock、多個能力共用的 entity。
-  - 其餘放進擁有它的能力，如 `Inference/Runs`、`Attachments/Storage`；模組本身資源的 CRUD 放 `Management/`。
+  - 其餘放進擁有它的能力，如 `Inference/Runs`、`Files/Storage`；模組本身資源的 CRUD 放 `Management/`。
   - 名稱用 PascalCase 名詞，不取其他模組的名字（如 `Chat/Transcripts`）。測試只依模組分資料夾。
 - slice 類別預設 `internal`；只有其他模組要用的服務（如 `NotificationService.PublishAsync`）才是 `public`，這就是模組的對外合約；跨模組只透過它，且不可形成循環，見 [模組邊界](module-boundaries.md)。
 

@@ -29,7 +29,7 @@
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
 | 5003 / 5004 / 5005 | `database.read_committed_snapshot_off` / `database.schema_mismatch` / `database.schema_drift` | `AiNexus.Data/App/DatabaseSchema.cs` |
-| 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Attachments/Storage/AttachmentLifecycle.cs` |
+| 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
 
 `service.startup.failed` 不經 logger，由 `DiagnosticStartup` 直接寫入 journal。

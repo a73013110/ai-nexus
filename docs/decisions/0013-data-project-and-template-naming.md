@@ -20,7 +20,7 @@ backend/src/
       Conversations/Conversation.cs
     Erp/                        另一個讀寫資料庫
       ErpDbContext.cs
-  AiNexus.Features/Administration/Users/ListAdminUsers.cs   ← 引用 AppDbContext 與 User
+  AiNexus.Features/Admin/Operations/ListAdminUsers.cs       ← 引用 AppDbContext 與 User
 database/App/identity/Tables/Users.sql                      ← 與 Data/App/Identity/User.cs 一一對應
 ```
 

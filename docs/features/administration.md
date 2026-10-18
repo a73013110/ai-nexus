@@ -10,13 +10,13 @@
 
 ```json
 {
-  "Administration": {
-    "BootstrapAdministrators": ["it.admin"]
+  "Identity": {
+    "Bootstrap": { "Administrators": ["it.admin"] }
   }
 }
 ```
 
-填 AD 短帳號（不含密碼、DN 或網域前綴）後重啟。該帳號下一次通過 AD 驗證時取得 `administrator` 角色，並在 `administration.AdministratorBootstraps` 留下唯一標記與稽核。移除角色後不會因再次登入而補回；正式上線後可清空清單，改由管理後台授權。
+填 AD 短帳號（不含密碼、DN 或網域前綴）後重啟。該帳號下一次通過 AD 驗證時取得 `administrator` 角色，並在 `identity.AdministratorBootstraps` 留下唯一標記與稽核。移除角色後不會因再次登入而補回；正式上線後可清空清單，改由管理後台授權。
 
 ## 使用者
 
@@ -45,7 +45,7 @@
 - 分群：「新增選單分群」填識別碼、名稱與上層分群；分群列的「⋯」可重新命名或改上層、在同層分群間上移／下移、刪除。分群仍有功能或子分群時刪除會被拒絕（`navigation_group_not_empty`），不能移到自己或自己的子分群底下（`navigation_group_cycle`）。空分群不會出現在側欄。
 - 功能換分群或圖示：開啟功能（或列的「⋯」→「移到其他分群或編輯…」）選擇選單分群與圖示，儲存後排到新分群的最後。
 - 分群內的移動方式：拖曳把手；聚焦把手按 ↑↓、Home、End；或列的「⋯」選單（手機卡片只有選單）。新位置由 live region 播報。
-- 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/administration/roles/feature-order.ts`。
+- 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/admin/access-control/roles/feature-order.ts`。
 - 儲存中不能再移動。失敗時先還原已寫入的項目，畫面回到原順序並顯示錯誤；成功後重新讀取目錄與 `/me`，側欄跟著更新。重編時的多筆寫入各自成交易與稽核，不是原子操作。分群異動稽核為 `admin.navigation_group`／`admin.navigation_group_delete`。
 
 ## 使用者用量與對話

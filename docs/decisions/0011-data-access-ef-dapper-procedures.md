@@ -15,7 +15,7 @@
 | 授權（誰能看、能改什麼） | 程式（`ICurrentUser`、資源 ACL）；procedure 只接收 `@UserId` 等參數並據此過濾 |
 
 - 不在 C# 字串裡寫長 SQL。只有一兩行的簡單 SQL 可內嵌；其餘放 `<UseCase>.sql`，與 use case 同名、同資料夾。
-- procedure 名稱＝`usp_`＋use case 名稱，放在擁有該 use case 的模組 schema，例如 `ListAdminUsers` → `administration.usp_ListAdminUsers`。從程式搜尋名稱即可找到兩端。
+- procedure 名稱＝`usp_`＋use case 名稱，放在擁有該 use case 的模組 schema，例如 `ListAdminUsers` → `operations.usp_ListAdminUsers`。從程式搜尋名稱即可找到兩端。
 - .NET 10 的 `LeftJoin`／`RightJoin` 由 EF Core 10 直接翻成 `LEFT JOIN`／`RIGHT JOIN`，不必再寫 `GroupJoin`＋`SelectMany`＋`DefaultIfEmpty`。是否仍是一句 SQL，用 `ToQueryString()` 看一次。
 - 規則選不出來時，選讀起來最短的那個。
 

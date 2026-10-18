@@ -34,7 +34,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 健康判定
 
-`health.status`：有嚴重問題為 `critical`，只有警告為 `attention`，沒有問題為 `healthy`；停用監控或尚無任何觀測為 `unobserved`。門檻是 [`MonitoringHealth`](../../backend/src/AiNexus.Features/Monitoring/Snapshots/MonitoringHealth.cs) 的常數：
+`health.status`：有嚴重問題為 `critical`，只有警告為 `attention`，沒有問題為 `healthy`；停用監控或尚無任何觀測為 `unobserved`。門檻是 [`MonitoringHealth`](../../backend/src/AiNexus.Features/Admin/Monitoring/Snapshots/MonitoringHealth.cs) 的常數：
 
 | 代碼 | 等級 | 條件 |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 共用架構與上限
 
-`AiNexus.Features/Monitoring` 分離契約（`MonitoringSnapshot` version 2）、固定詞彙、聚合、健康判定、採集與 endpoints。讀取、匯出與 SSE 都經 `MonitoringSnapshots`，同一窗口一秒內共用同一份快照；建構快照不查資料庫，子系統讀取在背景進行。RuntimeTrafficMiddleware 包住既有診斷／安全層，沿用身分、錯誤與稽核。TrafficCountingStream 量測實際 IO；TrafficHttpHandler 用 factory defaults 覆蓋所有模組；RuntimeSampler 在 SqlClient 共用邊界觀測。DependencyCatalog 依核准 host／port 或 SQL server／database 分類，只輸出服務名稱。
+`AiNexus.Features/Admin/Monitoring` 分離契約（`MonitoringSnapshot` version 2）、固定詞彙、聚合、健康判定、採集與 endpoints。讀取、匯出與 SSE 都經 `MonitoringSnapshots`，同一窗口一秒內共用同一份快照；建構快照不查資料庫，子系統讀取在背景進行。RuntimeTrafficMiddleware 包住既有診斷／安全層，沿用身分、錯誤與稽核。TrafficCountingStream 量測實際 IO；TrafficHttpHandler 用 factory defaults 覆蓋所有模組；RuntimeSampler 在 SqlClient 共用邊界觀測。DependencyCatalog 依核准 host／port 或 SQL server／database 分類，只輸出服務名稱。
 
 保留 15 分鐘，最多 91 個 10 秒 buckets、每 bucket 128 個 API aggregates、32 項依賴、120 筆事件，預設 2000 個工作階段。快照回傳最近 200 個並揭露略過數量；滿額拒收新工作階段，既有記錄繼續更新。SQL 執行中追蹤最多 1024 筆，十分鐘清理缺少 terminal event 的記錄。Heartbeat／採集不寫資料庫；特權快照、訂閱與匯出留下持久稽核。
 

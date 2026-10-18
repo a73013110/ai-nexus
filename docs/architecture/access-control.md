@@ -40,7 +40,7 @@ AD login → Users（SID）→ UserRoles → Roles
 
 ## 擴充功能
 
-1. 新增 `Features/Reports` 與 `ReportsModule.cs`，在 `FeatureIds` 加 `Reports = "reports"`；在 `database/App/Seed/accesscontrol.sql` 加功能列與預設授權：穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`work` 等，或 NULL 放最上層）、圖示名稱，以及授權給 `workspace` 或 `administrators`。需要新分群的模組在同一份腳本加自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
+1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`，在 `FeatureIds` 加 `Reports = "reports"`；在 `database/App/Seed/accesscontrol.sql` 加功能列與預設授權：穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`work` 等，或 NULL 放最上層）、圖示名稱，以及授權給 `workspace` 或 `administrators`。需要新分群的模組在同一份腳本加自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
 2. 在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy(FeatureIds.Reports)`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口，沒有授權時頁面顯示 `FeatureAccessNotice`（錯誤代碼見 [錯誤回應](error-contract.md#錯誤回應)）；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。重產 OpenAPI（前端 `FeatureId` 隨之更新，`FEATURE_NAMES` 補預設名稱）並更新文件。

@@ -4,7 +4,7 @@
 
 通知中心另有「本次工作階段」tab，列出這個分頁的 toast，不經伺服器、不計入未讀（[規則](../frontend/motion.md#本次工作階段紀錄)）。
 
-通知中心（[`notification-center.ts`](../../frontend/src/app/features/notifications/notification-center.ts)）在 640px 以上是鈴鐺下方的非 modal popover（圖示欄時開在側欄旁），頁面仍可操作；再按鈴鐺、點外部或 Esc 關閉，焦點回到鈴鐺，Tab 從鈴鐺接續進出面板。640px 以下是 modal 底部 sheet。
+通知中心（[`notification-center.ts`](../../frontend/src/app/features/platform/notifications/notification-center.ts)）在 640px 以上是鈴鐺下方的非 modal popover（圖示欄時開在側欄旁），頁面仍可操作；再按鈴鐺、點外部或 Esc 關閉，焦點回到鈴鐺，Tab 從鈴鐺接續進出面板。640px 以下是 modal 底部 sheet。
 
 所有側欄只有 heading 的鈴鐺入口，位於 sidebar-toggle 左側；未讀使用共用 CountBadge 的 info 色與 overlay，0 隱藏，超過 99 顯示 99+。按鈕保留「通知」名稱並描述完整數量，單一 atomic status 播報更新。未讀數來自 API 的全通知匣 `unread`，不從最近 50 筆估算嚴重性；事件的 info／success／error 在通知中心分別使用 info／success／danger 語意色。
 
@@ -62,7 +62,7 @@
 
 ## 本分頁的任務 toast
 
-本分頁剛發起或重試的背景任務結束時，另以 toast 回饋（[`job-toasts.ts`](../../frontend/src/app/features/jobs/job-toasts.ts)）；通知匣與任務頁仍是留存的來源。
+本分頁剛發起或重試的背景任務結束時，另以 toast 回饋（[`job-toasts.ts`](../../frontend/src/app/features/work/jobs/job-toasts.ts)）；通知匣與任務頁仍是留存的來源。
 
 - 只認發起處登記的 job：上傳、加入、重新索引或儲存文字來源，重建檢索索引，評測，程式碼 review，以及各頁的重試。其他分頁、重新整理前或伺服器排的 job 不推送，因此多分頁與重新整理都不會重複；換頁不影響，換帳號清空登記。
 - 不新增請求：結果來自既有的通知輪詢（`task.*`，target 為 task 或 repository-review），任務頁、知識庫與閱讀器本來就在輪詢時則提早得知；同一 job 只推送一次。通知時間早於重試時間的屬於上一次 attempt，略過。

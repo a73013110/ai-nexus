@@ -23,7 +23,7 @@
 
 ## 限制與設定
 
-`Attachments` 區段的鍵與預設值在 `backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs` 與 `appsettings.json`，主要預設：
+`Files` 區段的鍵與預設值在 `backend/src/AiNexus.Features/Work/Files/FilesOptions.cs` 與 `appsettings.json`，主要預設：
 
 | 項目 | 預設 |
 | --- | --- |

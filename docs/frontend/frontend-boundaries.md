@@ -1,6 +1,6 @@
 # 前端共用邊界
 
-結論：業務 UI、store 與 `*-api.ts` 放 `features/<模組>`，資料夾與後端模組同名；全站單例放 `core`；沒有業務狀態的通用程式放 `shared`。依賴方向由 ESLint 檢查，所有請求經過型別安全的 `ApiClient`，讀取一律用 `apiResource()`。
+結論：業務 UI、store 與 `*-api.ts` 放 `features/<區>/<模組>`，與後端區、模組同名；全站單例放 `core`；沒有業務狀態的通用程式放 `shared`。依賴方向由 ESLint 檢查，所有請求經過型別安全的 `ApiClient`，讀取一律用 `apiResource()`。
 
 ## 資料夾責任
 
@@ -14,7 +14,7 @@
 | `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、選單樹、導覽與釘選偏好、快捷指令、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
 | `core/preferences` | 主題、帳號設定、本機草稿、跨頁新對話草稿交接 |
 | `core/monitoring`、`core/stream` | 瀏覽器在線狀態；SSE 解析與生成串流 |
-| `features/*` | 按路由載入的頁面、該模組的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件留在擁有它的模組（例：`features/conversations` 的 `ConversationActions`） |
+| `features/*` | 按路由載入的頁面、該模組的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件留在擁有它的模組（例：`work/conversations` 的 `ConversationActions`） |
 | `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu／MenuPanel、CommandPalette、ConfirmDialog、Notice…） |
 | `shared/markdown` | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色 |
 | `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式與本地日期（`currentDay`）、popover 定位、跟隨底部捲動（`followScroll`）、未儲存提示 |
@@ -23,11 +23,11 @@
 
 ## 功能資料夾對應後端模組
 
-- `features/<module>` 對應 `backend/src/AiNexus.Features/<Module>`，名稱轉成 kebab-case（`AccessControl` → `access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址與功能 ID（`/files`、`tasks`）不跟著改名。
-- 唯一例外是 `features/design`：開發用的設計系統樣本頁，沒有後端模組。
+- `features/<area>/<module>` 對應 `backend/src/AiNexus.Features/<Area>/<Module>`，名稱轉成 kebab-case（`Admin/AccessControl` → `admin/access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址與功能 ID（`/files`、`tasks`）不跟著改名。
+- 唯一例外是 `features/admin/design`：開發用的設計系統樣本頁，沒有後端模組。
 - 登入、帳號、模型與對話生成的端點在 `core/api/workspace-api.ts`（`core` 的 session 與串流要用）。
-- 超過約 15 個檔案時依能力分子資料夾：後端已有子資料夾就用同名 kebab-case（`knowledge/documents`、`administration/users`），沒有才用 UI 分組（`chat/composer`）。頁面、store 與 `<module>-api.ts` 留在模組根目錄。
-- 跨進 `core`、`shared` 或其他模組用別名 `@core/`、`@shared/`、`@features/`；同一區內用相對路徑。跨區的相對路徑由 ESLint 擋下。
+- 超過約 15 個檔案時依能力分子資料夾：後端已有子資料夾就用同名 kebab-case（`work/knowledge/documents`、`admin/identity/users`），沒有才用 UI 分組（`chat/composer`）。頁面、store 與 `<module>-api.ts` 留在模組根目錄。
+- 跨進 `core`、`shared` 或其他模組（含同區）用別名 `@core/`、`@shared/`、`@features/<area>/<module>/`；只有模組內用相對路徑，離開模組的相對路徑由 ESLint 擋下。
 
 ## 依賴方向
 

@@ -17,7 +17,7 @@
 
 ## 測試怎麼放、怎麼命名
 
-- 單元與整合測試放 `<Module>/<UseCase>Tests.cs`，模組名＝`AiNexus.Features` 的資料夾；跨模組的 host 行為放 `Host/`，`AiNexus.Platform` 的放 `Platform/`；共用 helper 放 `Support/`（`ChatApi`、`IdentityApi` 等以 `using static` 引用）。namespace＝資料夾。
+- 單元與整合測試放 `<Module>/<UseCase>Tests.cs`，模組名＝`AiNexus.Features` 的模組資料夾，不加區；跨模組的 host 行為放 `Host/`，`AiNexus.Platform` 的放 `Platform/`；共用 helper 放 `Support/`（`ChatApi`、`IdentityApi` 等以 `using static` 引用）。namespace＝資料夾。
 - 能不啟動 host 就放單元測試；需要 HTTP、授權或資料庫才放整合測試。
 - 方法名是 PascalCase 的完整句子，描述行為，不加底線、`Test` 或 `Async`：`DeletingCollectionPurgesIndexAndUnlinksSourcesButRetainsLibraryOriginal`。
 - 以上由 `SourceLayoutTests` 檢查。

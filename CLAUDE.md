@@ -49,8 +49,8 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 ## 必須遵守
 
 - 資料庫優先：結構由開發庫匯出到 `database/App/`，EF 只做對應，不用 migration。實體與組態一表一檔放 `AiNexus.Data/App/<Module>/<Entity>.cs`（資料夾＝schema、實體＝表單數名），Features 只引用；組態不寫索引、約束、預設值與說明。
-- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
-- 前端 `features/<module-kebab>/` 與後端模組同名（能力子資料夾也同名，唯一例外 `design/`）；選單分群是資料（`accesscontrol.NavigationGroups`），不反映在目錄。跨區引用用 `@core`／`@shared`／`@features` 別名。
+- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Area>/<Module>/`（區見 ADR 0016，只是資料夾、不是依賴邊界；模組名全域唯一）；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
+- 前端 `features/<area>/<module-kebab>/` 與後端區、模組同名（能力子資料夾也同名，唯一例外 `admin/design/`）；選單分群是資料（`accesscontrol.NavigationGroups`），不反映在目錄。跨模組引用用 `@core`／`@shared`／`@features` 別名。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 設定用 `AddSettings<T, TValidator>(區段)` 註冊（`[OptionsValidator]` 驗證、啟動即檢查），區段名＝模組名；預設值寫進 `appsettings.json`。
@@ -79,7 +79,8 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | 資料表、欄位 | PascalCase，表名複數 | `GenerationRuns.OwnerId` |
 | 實體 | 資料表單數名 | `identity.Users` → `User` |
 | 資料庫物件、約束 | ADR 0012：`usp_`、`vw_`、`pk_`、`fk_`、`ix_`、`ux_`、`ck_`、`df_` | `ix_Users_LastSeenAt` |
-| Angular 功能資料夾 | 後端模組名的 kebab-case | `AccessControl` → `features/access-control` |
+| 區 | 後端 PascalCase、前端小寫：`Work`、`Admin`、`Platform` | `Features/Admin/` → `features/admin/` |
+| Angular 功能資料夾 | 區＋後端模組名的 kebab-case | `AccessControl` → `features/admin/access-control` |
 | Angular 檔名 | 小寫 kebab-case，不加 `.component` | `chat-workspace.ts` |
 | Angular 類別、signal | PascalCase 類別；signal 用名詞，不加 `$` | `ChatStore`、`messages` |
 | CSS class | kebab-case | `message-row` |

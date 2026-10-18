@@ -30,7 +30,7 @@
 
 ## 附件容量
 
-- 有效上限＝個人覆寫 → 有效群組的最低非空上限 → 網站預設 `Attachments.DefaultOwnerLimitBytes`（5 GB）。個人覆寫可以超過群組與預設；0 禁止新上傳，降低上限不刪既有檔案。
+- 有效上限＝個人覆寫 → 有效群組的最低非空上限 → 網站預設 `Files.DefaultOwnerLimitBytes`（5 GB）。個人覆寫可以超過群組與預設；0 禁止新上傳，降低上限不刪既有檔案。
 - 用量包含草稿、pending 預約與 deleting 重試中的原檔；多處引用只計一次，實體刪檔成功才釋放。
 - `PUT /api/v1/admin/users/{id}/storage` 接收整數 `limitBytes`（0–1,000,000,000,000,000），null 恢復繼承；介面輸入十進位 GB。變更保存 `admin.user_storage` 前後快照。細節見 [附件保存](attachment-storage.md)。
 

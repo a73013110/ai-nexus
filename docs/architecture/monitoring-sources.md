@@ -7,7 +7,7 @@
 1. 在模組根目錄新增 `<Module>Monitoring.cs`（`internal sealed class`），實作 [`IMonitoringSource`](../../backend/src/AiNexus.Platform/Monitoring/IMonitoringSource.cs)：`Id`（穩定、kebab-case）、`Name`（繁體中文）、`Order`、`Refresh` 與 `ReadAsync`。
 2. 回傳 [`SubsystemReading`](../../backend/src/AiNexus.Platform/Monitoring/SubsystemReading.cs)：狀態用 `SubsystemStates`，數字用 `SubsystemFact.Count`／`Bytes`／`Percent`／`Seconds`／`Tokens`，文字用 `Words`；未知值傳 `null`。
 3. 狀態語意：`failing` 功能無法運作、`degraded` 部分受影響、`healthy` 正常運作中、`idle` 未使用或未啟用、`unobserved` 只表示讀不到。不要用 `unobserved` 表示「未啟用」，健康摘要會把讀取後的 `unobserved` 當成讀取失敗。
-4. 範例：[`JobsMonitoring`](../../backend/src/AiNexus.Features/Jobs/JobsMonitoring.cs)。在 `MonitoringSnapshotTests` 確認來源讀得到。
+4. 範例：[`JobsMonitoring`](../../backend/src/AiNexus.Features/Work/Jobs/JobsMonitoring.cs)。在 `MonitoringSnapshotTests` 確認來源讀得到。
 
 ## 讀取規則
 
@@ -28,7 +28,7 @@
 | `log-pipeline` | Diagnostics | 5 秒 | `DiagnosticHealth` 記憶體計數，日誌管線的完整指標（日誌頁只取 `Degraded`） | 有寫入失敗、遺失、損毀或待補寫 degraded |
 | `knowledge-index` | Knowledge | 30 秒 | 文件狀態索引，只數未完成與失敗 | 有失敗文件 degraded |
 | `usage-today` | Billing | 60 秒 | `UsageReports`，伺服器本地日，走 `CreatedAt` 覆蓋索引 | 失敗 ≥ 5 次且 > 20% degraded |
-| `storage` | Attachments | 5 分鐘 | 檔案數與大小、附件磁碟可用空間 | 可用 < 10% degraded、< 3% failing |
+| `storage` | Files | 5 分鐘 | 檔案數與大小、附件磁碟可用空間 | 可用 < 10% degraded、< 3% failing |
 | `integrations` | Integrations | 60 秒 | 只讀設定，不連線 | 已啟用但設定不完整 degraded |
 
 ## 成本

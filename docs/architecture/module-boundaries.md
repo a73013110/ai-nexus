@@ -2,6 +2,7 @@
 
 - 模組之間可以互相依賴，但**不可形成循環**。目標是能由下往上讀懂、測試與修改，不是零依賴。
 - `ModuleBoundaryTests.ModuleDependenciesHaveNoCycles` 以 NetArchTest 計算 `AiNexus.Features` 各模組命名空間之間的依賴；出現循環時列出最短路徑，以及每一段由哪些型別造成。
+- 模組以命名空間的「區.模組」辨識（`AiNexus.Features.Admin.AccessControl`）。區（Work、Admin、Platform）只是資料夾，不是依賴邊界：依賴規則不分區，跨區照樣依下表使用（[ADR 0016](../decisions/0016-areas-urls-and-navigation.md)）。
 - 資料表不屬於任何模組的程式碼：實體、組態與 `AppDbContext` 在 `AiNexus.Data`（只依賴 Platform），所以跨模組外鍵直接寫在子表的組態，不會形成模組循環。寫入仍只由擁有該 schema 的模組執行（[ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)）。設定的 Options 類別（`InferenceOptions` 等）放在擁有該設定的模組。
 - 每個模組資料夾的根目錄有 `<Module>Module.cs`（唯一的註冊點）；有預期失敗時也有 `<Module>Errors.cs`。兩者都由 `ModuleBoundaryTests` 檢查。
 
@@ -12,15 +13,17 @@
 | 層 | 模組 | 說明 |
 | --- | --- | --- |
 | 身分 | AccessControl、Identity | 授權資料與登入；不依賴其他業務模組 |
-| 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Library | 模型、通知、監控；Inference 只依賴身分與授權 |
+| 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Prompts | 模型、通知、監控；Inference 只依賴身分與授權 |
 | 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
-| 資料延伸 | Attachments、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
+| 資料延伸 | Files、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
 | 內容 | Knowledge、Projects、Quality、Repositories、Integrations | 組合上述資料的功能 |
-| 組合 | Chat、Sharing、Account、Administration、Dashboard | 一次用到多個模組的工作流程與管理介面 |
+| 組合 | Chat、Sharing、Account、Operations、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 
 `Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除；這些端點沿用 `Inference`、`Conversations` 的 OpenAPI tag。
 
-整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Attachments、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、標籤、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
+整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Files、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、標籤、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
+
+`Operations` 是管理端的組合層：使用者清單、使用者洞察、管理目錄、群組儲存與平台用量的回應內嵌 Inference、Billing、Files、Account 的 DTO，放進 AccessControl 或 Identity 會成環，而 API 合約不能改。管理端點仍用 OpenAPI tag `Administration`；Knowledge、Conversations、Files、Inference 的管理端點由各自的 `MapAdministration` 在 `FeatureModules` 原本 Administration 的位置集中掛載，維持已發布合約的 tag 順序。
 
 ## 新增依賴造成循環時
 
@@ -29,9 +32,9 @@
 1. **型別放錯模組**：把型別移到真正擁有該行為的模組。例：模型政策屬於 Inference、個人設定屬於 Account、檔案庫清單需要知識文件而放在 Knowledge。
 2. **下層定義介面、上層實作**：下層需要上層的資料或動作，但不需要知道是誰。例：
    - `IActiveUsers`（AccessControl 讀啟用中的使用者，Identity 實作）
-   - `ISignInGrant`（Identity 登入時套用授權，Administration 的首次管理員實作）
+   - `IRequestActor`（AccessControl 的管理端點取得執行者，Identity 的 `CurrentUser` 實作）
    - `IModelCallMeter`（Inference 的模型任務計費，Billing 實作）
-   - `IPrivateReaders`（Attachments 清理草稿時辨識私人閱讀文件，Knowledge 實作）
+   - `IPrivateReaders`（Files 清理草稿時辨識私人閱讀文件，Knowledge 實作）
    - `ServiceModel`（Knowledge 登記向量模型，Inference／Billing 用來顯示名稱與價格目標）
 3. **domain event**：「A 發生後 B 跟著處理」，A 不需要結果。例：`UserSignedOut` 由 Monitoring 移除線上連線；`ContainerDeleted` 由 Conversations、Artifacts 解除專案連結。寫法見 [後端撰寫慣例](backend-conventions.md)。
 4. **只是參數**：下層方法不要收上層的 request 型別，改收自己定義的參數。例：`ConversationTurn` 取代 `CreateRunRequest`。
@@ -39,7 +42,8 @@
 另外三個固定做法：
 
 - 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、即時監控的 `IMonitoringSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring 屬基礎能力層，只透過 `IMonitoringSource` 讀上層模組的狀態，不引用它們。
-- 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，`AdministrationConfiguration` 引用它。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
+- 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，其他模組的管理端點直接引用。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
+- 管理寫入的 `AdministrativeAudit.MutateAsync` 在 AccessControl，由呼叫端傳入 actor 與前後快照的委派；快照由擁有資料的 slice 提供，AccessControl 因此不必認得各模組的資料形狀。
 
 ## 直接呼叫或 domain event
 
