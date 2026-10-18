@@ -1,7 +1,6 @@
 -- 內建選單分群、角色、群組、功能與預設授權。可重複執行：只新增缺少的列，不覆寫管理員之後的調整；
 -- 要改既有環境的值，另寫 Data/<版本>/ 的一次性腳本。
--- 由原本 EF HasData 的內容轉寫；整合測試的 SQLite 範本以 backend/tests/AiNexus.IntegrationTests/Support/BaselineSeed.cs 寫入同一份資料，兩邊一起改。
--- 部署順序與執行方式見 docs/development/database-first-rollout.md 第 4 節（草稿，尚待納入部署腳本）。
+-- 由 scripts/Deploy-Database.ps1 在結構與全文之後執行（docs/operations/database-setup.md）；整合測試的範本資料庫也執行這一份。
 SET XACT_ABORT ON;
 SET NOCOUNT ON;
 BEGIN TRANSACTION;

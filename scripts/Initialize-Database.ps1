@@ -2,20 +2,59 @@
 
 <#
 .SYNOPSIS
-以 .local/ 的設定建立空的 AiNexus 資料庫（不存在時）並開啟 RCSI。
+以 .local/ 的連線設定建立一個新的 AiNexus 資料庫：結構、全文物件與種子資料。
 
 .DESCRIPTION
-執行主機的 db init 指令。只在資料庫不存在時建庫，不會刪除或清空既有資料；需要有建庫權限的 SQL 登入。
-資料表等結構不在這裡建立，由 database/App 的 dacpac 部署（見 docs/architecture/database.md）。
-正式環境改用主機指令，見 docs/operations/iis-deployment.md。
+先 build database/App，再以 Deploy-Database.ps1 -Action Publish 部署。只建立新庫：資料庫已存在時停止，
+不會改動 DBA 維護的開發庫；既有庫的升級走 Deploy-Database.ps1 -Action Script（見 docs/operations/database-setup.md）。
+需要有建庫權限的 SQL 登入。
+
+.PARAMETER Server
+建在另一台 SQL Server（例如 (localdb)\MSSQLLocalDB），以目前 Windows 身分連線；省略時用設定的 Databases.Nexus 與秘密檔的帳密。
+
+.PARAMETER Database
+要建立的資料庫，省略時用設定的 Databases.Nexus.Name；例如另建一個沙盒庫。
 
 .EXAMPLE
 ./scripts/Initialize-Database.ps1
+
+.EXAMPLE
+./scripts/Initialize-Database.ps1 -Server '(localdb)\MSSQLLocalDB' -Database AiNexus_Sandbox
 #>
 [CmdletBinding()]
-param()
+param([string]$Server, [string]$Database)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-if ((Invoke-NexusHostCommand 'db', 'init') -ne 0) { throw '資料庫初始化未完成。請確認 SQL 連線、憑證與建庫權限。' }
+$root = Get-NexusRoot
+$paths = Initialize-NexusLocalSettings
+$defaults = Read-NexusJson (Join-Path $root 'backend/src/AiNexus.Host/appsettings.json')
+$local = Read-NexusJson $paths.Settings
+$secrets = Read-NexusJson $paths.Secrets
+function Get-DatabaseSetting([string]$Key) {
+    foreach ($settings in $secrets, $local, $defaults) {
+        $value = Get-NexusSetting $settings "Databases.Nexus.$Key"
+        if ($null -ne $value -and "$value" -ne '') { return $value }
+    }
+}
+if (!$Database) { $Database = Get-DatabaseSetting 'Name' }
+$connection = if ($Server) { @{ Server = $Server; Database = $Database } } else {
+    @{ Server = (Get-DatabaseSetting 'Server'); Database = $Database; TrustServerCertificate = [bool](Get-DatabaseSetting 'TrustServerCertificate') }
+}
+if (!$connection.Server -or !$Database) { throw '請先以 scripts/Configure-Local.ps1 設定 SQL server 與資料庫名稱。' }
+$user = Get-DatabaseSetting 'User'
+if (!$Server -and !(Get-DatabaseSetting 'IntegratedSecurity') -and $user) {
+    $connection.Credential = [pscredential]::new($user, (ConvertTo-SecureString (Get-DatabaseSetting 'Password') -AsPlainText -Force))
+}
+$secrets = $null
+
+if (Test-NexusDatabaseExists @connection) {
+    throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。升級既有庫用 scripts/Deploy-Database.ps1（見 docs/operations/database-setup.md）。"
+}
+Push-Location -LiteralPath $root
+try {
+    dotnet build database/App -c Release --nologo -v q
+    if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗；請先執行 scripts/Restore.ps1。' }
+} finally { Pop-Location }
+& (Join-Path $PSScriptRoot 'Deploy-Database.ps1') @connection -Action Publish

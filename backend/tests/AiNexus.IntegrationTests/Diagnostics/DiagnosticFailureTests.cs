@@ -46,7 +46,7 @@ public sealed class DiagnosticFailureTests
     {
         await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => {
             services.RemoveAll<IRetrievalStore>(); services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
-            services.RemoveAll<ISqlDatabase<AppDbContext>>(); services.AddSingleton<ISqlDatabase<AppDbContext>>(new FullTextFailure());
+            services.RemoveAll<ISqlDatabase<AppDbContext>>(); services.AddScoped<ISqlDatabase<AppDbContext>, FullTextFailure>();
         });
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
@@ -67,13 +67,16 @@ public sealed class DiagnosticFailureTests
         Assert.True(completed);
     }
 
-    // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支。
-    private sealed class FullTextFailure : ISqlDatabase<AppDbContext>
+    // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支；只有啟動時的結構比對（sys.columns）查真的資料庫。
+    private sealed class FullTextFailure(AppDbContext db) : ISqlDatabase<AppDbContext>
     {
+        private readonly DbContextSqlDatabase<AppDbContext> inner = new(db);
         public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
             => typeof(T) == typeof(bool) ? Task.FromResult((T)(object)true) : throw new InvalidOperationException("Unexpected SQL: " + sql);
         public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
-            => sql.Contains("FREETEXTTABLE", StringComparison.Ordinal) ? throw SqlFailure() : Task.FromResult<IReadOnlyList<T>>([]);
+            => sql.Contains("FREETEXTTABLE", StringComparison.Ordinal) ? throw SqlFailure()
+                : sql.Contains("sys.columns", StringComparison.Ordinal) ? inner.QueryAsync<T>(sql, parameters, commandTimeout, cancellationToken)
+                : Task.FromResult<IReadOnlyList<T>>([]);
         public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
         public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
     }

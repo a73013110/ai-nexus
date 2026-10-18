@@ -10,7 +10,7 @@ DB-first 版控的唯一入口：結構的修改來源是開發庫（DBA 在 SSM
 
 匯出內容只有應用程式結構：不含資料、登入、使用者、角色與權限。SqlPackage Extract 沒有「排除資料表」參數，
 也排除不了全文索引，所以匯出後再處理（AiNexus 模組的 Invoke-NexusExtractPostProcess）：
-- 移除 -ExcludeTable 符合的資料表（EF 紀錄表、暫存表、備份表）與使用者、角色；移除清單會印出來，避免悄悄漏掉物件。
+- 移除 -ExcludeTable 符合的資料表（暫存表、備份表）與使用者、角色；移除清單會印出來，避免悄悄漏掉物件。
 - 全文目錄與索引移到 FullText/Catalogs、FullText/Indexes（由發版腳本在有全文元件時執行，不進 dacpac）。
 - 主物件之後的索引與欄位說明語句排序，檔案統一為 UTF-8 無 BOM、LF；同一個庫連續匯出兩次必須沒有 diff。
 
@@ -34,8 +34,8 @@ SQL Server 使用自簽憑證時略過憑證鏈驗證；連線仍加密。
 輸出資料夾，預設 repo 的 database/App。
 
 .PARAMETER ExcludeTable
-匯出後要移除的資料表，格式 schema.name，可用萬用字元（-like）。預設排除 EF 的 dbo.__EFMigrationsHistory、
-備份表（*_bak、*_bak20261018、*_backup）與暫存表（tmp_*、temp_*）。傳入時會取代預設清單。
+匯出後要移除的資料表，格式 schema.name，可用萬用字元（-like）。預設排除備份表（*_bak、*_bak20261018、*_backup）
+與暫存表（tmp_*、temp_*）。傳入時會取代預設清單。
 
 .PARAMETER SkipExtractVerification
 不驗證匯出的模型（VerifyExtraction=False）。來源有跨資料庫參照（例如 view 讀取 [Gdweb].dbo.x）時，Extract 解析不到
@@ -60,7 +60,7 @@ param(
     [pscredential]$Credential,
     [switch]$TrustServerCertificate,
     [string]$OutputPath,
-    [string[]]$ExcludeTable = @('dbo.__EFMigrationsHistory', '*.*_bak', '*.*_bak[0-9_]*', '*.*_backup', '*.tmp_*', '*.temp_*'),
+    [string[]]$ExcludeTable = @('*.*_bak', '*.*_bak[0-9_]*', '*.*_backup', '*.tmp_*', '*.temp_*'),
     [switch]$SkipExtractVerification,
     [string]$SqlPackagePath
 )

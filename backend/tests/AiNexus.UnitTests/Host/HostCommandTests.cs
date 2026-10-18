@@ -15,7 +15,6 @@ public sealed class HostCommandTests
     }
 
     [Theory]
-    [InlineData("db init")]
     [InlineData("verify deployment")]
     [InlineData("verify connections")]
     [InlineData("verify sql")]
@@ -31,8 +30,8 @@ public sealed class HostCommandTests
     [Fact]
     public void CommandMayFollowOptions()
     {
-        var command = HostCommand.Parse(["--contentRoot", "app", "--LocalConfigPath=a.json", "db", "init"]);
-        Assert.Equal("db init", command.Name);
+        var command = HostCommand.Parse(["--contentRoot", "app", "--LocalConfigPath=a.json", "verify", "sql"]);
+        Assert.Equal("verify sql", command.Name);
         Assert.Equal(["--contentRoot", "app", "--LocalConfigPath=a.json"], command.HostArguments);
     }
 
@@ -48,6 +47,7 @@ public sealed class HostCommandTests
 
     [Theory]
     [InlineData("db")]
+    [InlineData("db init")]
     [InlineData("db migrate")]
     [InlineData("db script")]
     [InlineData("db diff")]
@@ -63,13 +63,13 @@ public sealed class HostCommandTests
     [Fact]
     public void StrayWordAfterOptionsIsAUsageError()
     {
-        var command = HostCommand.Parse(["--urls", "http://localhost", "db", "init", "extra"]);
+        var command = HostCommand.Parse(["--urls", "http://localhost", "verify", "sql", "extra"]);
         Assert.Null(command.Name);
-        Assert.Contains("db init extra", command.Error);
+        Assert.Contains("verify sql extra", command.Error);
     }
 
     [Theory]
-    [InlineData("db", "init", "--output", "x.json")]
+    [InlineData("verify", "deployment", "--output", "x.json")]
     [InlineData("verify", "connections", "--output")]
     [InlineData("verify", "connections", "--output", "--urls")]
     public void InvalidOutputIsAUsageError(params string[] args)
@@ -81,7 +81,7 @@ public sealed class HostCommandTests
 
     [Theory]
     [InlineData("--help")]
-    [InlineData("db", "init", "-h")]
+    [InlineData("verify", "sql", "-h")]
     public void HelpNeverStartsTheHost(params string[] args)
     {
         var command = HostCommand.Parse(args);

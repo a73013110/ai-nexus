@@ -23,8 +23,6 @@ public sealed class AppDatabaseModule : IFeatureModule
             .AddAppInterceptors(scope));
 
         services.AddDbContextSqlDatabase<AppDbContext>();
-        services.AddSqlDatabase<MasterDatabase>();
-        services.AddScoped<DatabaseInitializer>();
         services.AddScoped<DatabaseSchema>();
         services.AddScoped<SqlVectorCapabilities>();
         services.AddSingleton<StorageReadiness>();

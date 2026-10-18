@@ -2,13 +2,14 @@
 
 <#
 .SYNOPSIS
-產生新的 IIS 發布套件（app、config 範本、keys、logs、database/App.dacpac、Verify-IIS.ps1 與 Verify-Database.ps1）。
+產生新的 IIS 發布套件（app、config 範本、keys、logs、database/、Verify-IIS.ps1、Deploy-Database.ps1 與 Verify-Database.ps1）。
 
 .DESCRIPTION
 預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
-database/App.dacpac 由 database/App 建置，是這一版預期的資料庫結構；DBA 以它產生升級 SQL，部署後以 Verify-Database.ps1 比對實際結構。
+database/ 帶 App.dacpac（由 database/App 建置，這一版預期的資料庫結構）與發版時執行的手寫腳本 FullText/、Seed/、Data/；
+DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Verify-Database.ps1 比對實際結構。
 套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/iis-deployment.md。
 
 .PARAMETER DataRoot
@@ -91,6 +92,11 @@ try {
 $database = Join-Path $package 'database'
 New-Item -ItemType Directory -Path $database -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'database/App/bin/Release/App.dacpac') -Destination $database
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Verify-Database.ps1') -Destination $package
+# 手寫腳本不進 dacpac，由 Deploy-Database.ps1 在結構之前（Data/<版本>/pre-*）或之後執行；這一版沒有的資料夾就不帶。
+foreach ($folder in 'FullText', 'Seed', 'Data') {
+    $source = Join-Path $root "database/App/$folder"
+    if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $database -Recurse }
+}
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Deploy-Database.ps1'), (Join-Path $PSScriptRoot 'Verify-Database.ps1') -Destination $package
 Write-Output "IIS 發布套件：$package"
 Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 docs/operations/iis-deployment.md。套件的 logs/ 只給 ANCM stdout 使用。"
