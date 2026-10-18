@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Artifacts.Export;
 using AiNexus.Features.Artifacts.Management;
@@ -15,7 +16,7 @@ namespace AiNexus.Features.Artifacts;
 public sealed class ArtifactsModule : IFeatureModule
 {
     /// <summary>所有成果端點接受的內文字元數上限。</summary>
-    public const int MaxContentCharacters = 64000;
+    public const int MaxContentCharacters = Artifact.ContentMaxLength;
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
@@ -50,5 +51,3 @@ public sealed class ArtifactsModule : IFeatureModule
         TransformText.Map(api);
     }
 }
-
-internal sealed class ArtifactsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Artifacts, "成果文件", "/artifacts", 40, BuiltInAccess.WorkNavigation, "document"));

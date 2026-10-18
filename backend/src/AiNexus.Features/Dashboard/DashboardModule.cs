@@ -13,5 +13,3 @@ public sealed class DashboardModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api) => GetDashboard.Map(api);
 }
-
-internal sealed class DashboardFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Dashboard, "總覽", "/dashboard", 5, GroupId: null, "dashboard"));

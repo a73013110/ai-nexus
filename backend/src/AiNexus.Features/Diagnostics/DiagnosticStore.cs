@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using System.Globalization;
 using System.Data;
 using System.Reflection;
@@ -8,7 +9,6 @@ using System.Text;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Diagnostics;
@@ -23,7 +23,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         if (events.Count == 0) return;
         using var suppress = DiagnosticSuppression.Enter();
         using var ambient = new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
-        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (!db.Database.IsSqlServer())
         {
             var ids = events.Select(x => x.LogId).Distinct().ToArray();
@@ -71,7 +71,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
     {
         using var suppress = DiagnosticSuppression.Enter();
         using var ambient = new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
-        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
         if (!configurationRecorded)
         {

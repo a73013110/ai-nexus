@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;

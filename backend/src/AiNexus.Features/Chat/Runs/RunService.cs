@@ -1,9 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
@@ -16,7 +18,7 @@ namespace AiNexus.Features.Chat.Runs;
 /// 提供生成紀錄查詢、結算終止狀態與生成事件累加功能，供端點、串流與背景 Worker 共用。
 /// </summary>
 public sealed partial class RunService(
-    NexusDbContext db,
+    AppDbContext db,
     RunSignals signals,
     ConversationService conversations,
     BillingService billing,
@@ -146,7 +148,7 @@ public sealed partial class RunService(
     /// <summary>
     /// 為生成記錄遞增序號並寫入一筆有序的重播事件。
     /// </summary>
-    public static void AddEvent(NexusDbContext db, GenerationRun run, string type, string? delta = null)
+    public static void AddEvent(AppDbContext db, GenerationRun run, string type, string? delta = null)
     {
         run.LastSequence++;
         db.RunEvents.Add(new RunEvent

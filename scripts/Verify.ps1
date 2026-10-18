@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 依序執行：腳本測試（Pester，scripts/tests）、前端 schema.ts 與 openapi.json 一致性、前端 Prettier 格式、Build.ps1（輸出到 artifacts/verification，不覆寫正在執行的 publish）、
-後端 build、資料庫專案 build（database/App → dacpac）、EF 模型與 migration 一致性、後端單元／整合／架構測試、前端 lint 與單元測試。
+後端 build、資料庫專案 build（database/App → dacpac）、後端單元／整合／架構測試、前端 lint 與單元測試。
 真實瀏覽器、SQL Server 與效能測試需另外加參數。
 TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows/ci.yml 也是 Restore.ps1 加上這支腳本。
 
@@ -67,8 +67,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '後端 build 失敗。' }
     dotnet build database/App --no-restore -c Release
     if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗：匯出的物件有引用錯誤，或 database/App/App.sqlproj 設定有誤。' }
-    dotnet ef migrations has-pending-model-changes --no-build --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
-    if ($LASTEXITCODE -ne 0) { throw 'EF 模型有尚未產生的 migration。' }
     Invoke-BackendTests 'Category!=Performance&Category!=Browser&Category!=SqlServer' 'backend.trx'
     npm --prefix frontend run lint
     if ($LASTEXITCODE -ne 0) { throw '前端 lint 失敗。' }

@@ -1,5 +1,5 @@
+using AiNexus.Data.App;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,7 +19,7 @@ public sealed class CurrentUserTests
 
         // 需要更新最後上線時間的使用者，仍要先通過閘門，之後才會被更新。
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, DateTimeOffset.UtcNow.AddHours(-1)));
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, DateTimeOffset.UtcNow.AddHours(-1)));
         await gate.WaitAsync();
         Task<HttpResponseMessage> pending;
         try
@@ -31,6 +31,6 @@ public sealed class CurrentUserTests
         finally { gate.Release(); }
         (await pending).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
-            Assert.True((await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.SingleAsync(x => x.Account == "TEST\\alice")).LastSeenAt > DateTimeOffset.UtcNow.AddMinutes(-1));
+            Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Account == "TEST\\alice")).LastSeenAt > DateTimeOffset.UtcNow.AddMinutes(-1));
     }
 }

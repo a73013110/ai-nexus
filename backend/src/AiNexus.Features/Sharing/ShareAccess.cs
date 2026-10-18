@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Sharing;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Sharing;
 /// 誰能看見分享。分享綁定帳號，且獨立於來源本身的 ACL 檢查：分享必須仍有效並寄給該讀者、
 /// 來源必須仍存在，且擁有者仍具備來源所屬的功能。
 /// </summary>
-internal sealed class ShareAccess(NexusDbContext db, AccessService features, TimeProvider clock)
+internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeProvider clock)
 {
     public async Task<Result<ShareLink>> RequireAsync(Guid actor, Guid id, CancellationToken ct)
     {
@@ -24,7 +25,7 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
 
     public async Task<bool> SourceExistsAsync(ShareLink row, CancellationToken ct) => row.Kind == "conversation"
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
-        : await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
+        : await db.Set<Resource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
 
     /// <summary><paramref name="rows"/> 中來源仍存在的列（見 <see cref="SourceExistsAsync"/>），維持原順序，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
@@ -35,7 +36,7 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
         if (conversations.Length > 0)
             owners.UnionWith((await db.Conversations.Where(x => conversations.Contains(x.Id)).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         if (artifacts.Length > 0)
-            owners.UnionWith((await db.Set<WorkspaceResource>().Where(x => artifacts.Contains(x.Id) && x.Kind == "artifact").Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
+            owners.UnionWith((await db.Set<Resource>().Where(x => artifacts.Contains(x.Id) && x.Kind == "artifact").Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         return rows.Where(x => owners.Contains((x.SourceId, x.OwnerId))).ToArray();
     }
 

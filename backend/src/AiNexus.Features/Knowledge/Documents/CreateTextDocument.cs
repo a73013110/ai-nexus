@@ -1,9 +1,9 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
-using AiNexus.Features.Knowledge.Collections;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
@@ -17,7 +17,7 @@ internal sealed class CreateTextDocument(ResourceAccess access, AttachmentServic
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid collection, TextDocumentRequest request, CancellationToken ct)
     {
-        var allowed = await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write: true);
+        var allowed = await access.RequireAsync(actor, collection, Collection.Kind, ct, write: true);
         if (!allowed.IsSuccess) return allowed.Error;
         var source = TextDocuments.Clean(request);
         if (!source.IsSuccess) return source.Error;

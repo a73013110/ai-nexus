@@ -6,14 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AiNexus.Platform/AiNexus.Platform.csproj" />
+    <ProjectReference Include="../AiNexus.Data/AiNexus.Data.csproj" />
     <ProjectReference Include="../AiNexus.Features/AiNexus.Features.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <!--
     XML docs are generated for the build's unused-using check, not for the API: they are written for maintainers and must

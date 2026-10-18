@@ -1,40 +1,10 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Platform.Diagnostics;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>系統日誌功能與其權限政策名稱；功能由 <c>HasData</c> 植入資料庫。</summary>
-public sealed class DiagnosticConfiguration() : FeatureSeed(
-    new PlatformFeature(Query, "系統日誌", "/admin/logs", 94, BuiltInAccess.SystemNavigation, "logs", AdministratorsOnly: true),
-    new PlatformFeature(Detail, "日誌診斷詳情", "", 95, BuiltInAccess.SystemNavigation, "search", AdministratorsOnly: true),
-    new PlatformFeature(Export, "日誌匯出", "", 96, BuiltInAccess.SystemNavigation, "download", AdministratorsOnly: true))
+/// <summary>系統日誌的功能與 policy 名稱；功能列由 <c>database/App/Seed</c> 寫入。</summary>
+public static class DiagnosticConfiguration
 {
     public const string Query = "logs.query", Detail = "logs.detail", Export = "logs.export";
     public const string QueryPolicy = Policies.Prefix + Query, DetailPolicy = Policies.Prefix + Detail, ExportPolicy = Policies.Prefix + Export;
-}
-
-internal sealed class DiagnosticEventConfiguration : IEntityTypeConfiguration<DiagnosticEvent>
-{
-    public void Configure(EntityTypeBuilder<DiagnosticEvent> log)
-    {
-        log.ToTable("DiagnosticEvents", "diagnostics"); log.HasKey(x => x.LogId).IsClustered(false);
-        log.Property(x => x.Category).HasMaxLength(180); log.Property(x => x.EventName).HasMaxLength(100);
-        log.Property(x => x.MessageTemplate).HasMaxLength(2048); log.Property(x => x.PropertiesJson).HasMaxLength(8192);
-        log.Property(x => x.Service).HasMaxLength(80); log.Property(x => x.Environment).HasMaxLength(32);
-        log.Property(x => x.Version).HasMaxLength(80); log.Property(x => x.Instance).HasMaxLength(100);
-        log.Property(x => x.IssueCode).HasMaxLength(40); log.Property(x => x.TraceId).HasMaxLength(32);
-        log.Property(x => x.SpanId).HasMaxLength(16); log.Property(x => x.RequestId).HasMaxLength(40);
-        log.Property(x => x.Method).HasMaxLength(10); log.Property(x => x.Route).HasMaxLength(240);
-        log.Property(x => x.ExternalService).HasMaxLength(32); log.Property(x => x.ErrorCode).HasMaxLength(80);
-        log.Property(x => x.ExceptionType).HasMaxLength(180); log.Property(x => x.ExceptionDetail).HasMaxLength(12000);
-        log.HasIndex(x => new { x.At, x.LogId }).IsDescending(true, true).IsClustered();
-        log.HasIndex(x => new { x.Level, x.At, x.LogId });
-        log.HasIndex(x => new { x.Category, x.At, x.LogId });
-        log.HasIndex(x => new { x.EventId, x.At, x.LogId });
-        log.HasIndex(x => new { x.EventName, x.At, x.LogId });
-        foreach (var field in new[] { nameof(DiagnosticEvent.IssueCode), nameof(DiagnosticEvent.TraceId), nameof(DiagnosticEvent.JobId), nameof(DiagnosticEvent.RunId), nameof(DiagnosticEvent.OperationId), nameof(DiagnosticEvent.ErrorCode), nameof(DiagnosticEvent.Instance) })
-            log.HasIndex(field, nameof(DiagnosticEvent.At), nameof(DiagnosticEvent.LogId)).HasFilter("[" + field + "] IS NOT NULL");
-    }
 }

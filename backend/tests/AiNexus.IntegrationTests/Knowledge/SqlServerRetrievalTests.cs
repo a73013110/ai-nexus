@@ -1,16 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Identity;
+using AiNexus.Data.App.Knowledge;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Embeddings;
-using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +42,7 @@ public sealed class SqlServerRetrievalTests
         });
     }
 
-    private sealed class FullTextFailure(ISqlDatabase<NexusDbContext> inner) : ISqlDatabase<NexusDbContext>
+    private sealed class FullTextFailure(ISqlDatabase<AppDbContext> inner) : ISqlDatabase<AppDbContext>
     {
         public int Failures { get; private set; }
         public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
@@ -115,21 +113,21 @@ public sealed class SqlServerRetrievalTests
         });
     }
 
-    private static async Task<(Guid Collection, KnowledgeChunk[] Chunks)> Seed(NexusDbContext db)
+    private static async Task<(Guid Collection, Chunk[] Chunks)> Seed(AppDbContext db)
     {
-        var actor = new NexusUser { Sid = "sql-retrieval-fixture", Account = "fixture", DisplayName = "測試使用者" }; db.Add(actor);
-        var allowed = new WorkspaceResource { OwnerId = actor.Id, Kind = "knowledge", Name = "授權知識庫" }; var denied = new WorkspaceResource { OwnerId = actor.Id, Kind = "knowledge", Name = "範圍外知識庫" };
-        db.AddRange(allowed, denied); db.AddRange(new KnowledgeCollection { Id = allowed.Id }, new KnowledgeCollection { Id = denied.Id });
-        var docs = new[] { new WorkspaceResource { OwnerId = actor.Id, Kind = "document", Name = "授權文件", ParentId = allowed.Id }, new WorkspaceResource { OwnerId = actor.Id, Kind = "document", Name = "範圍外文件", ParentId = denied.Id } };
+        var actor = new User { Sid = "sql-retrieval-fixture", Account = "fixture", DisplayName = "測試使用者" }; db.Add(actor);
+        var allowed = new Resource { OwnerId = actor.Id, Kind = "knowledge", Name = "授權知識庫" }; var denied = new Resource { OwnerId = actor.Id, Kind = "knowledge", Name = "範圍外知識庫" };
+        db.AddRange(allowed, denied); db.AddRange(new Collection { Id = allowed.Id }, new Collection { Id = denied.Id });
+        var docs = new[] { new Resource { OwnerId = actor.Id, Kind = "document", Name = "授權文件", ParentId = allowed.Id }, new Resource { OwnerId = actor.Id, Kind = "document", Name = "範圍外文件", ParentId = denied.Id } };
         db.AddRange(docs);
-        for (var i = 0; i < docs.Length; i++) db.Add(new KnowledgeDocument { Id = docs[i].Id, CollectionId = i == 0 ? allowed.Id : denied.Id, FileName = docs[i].Name, ContentType = "text/plain", Status = "ready", PageCount = 1, ChunkCount = i == 0 ? 2 : 50 });
-        var chunks = Enumerable.Range(0, 52).Select(i => new KnowledgeChunk { DocumentId = i < 2 ? docs[0].Id : docs[1].Id, Ordinal = i < 2 ? i : i - 2, StartPage = 1, EndPage = 1, HeadingPath = "第三章 › 採購核准", Text = i < 2 ? "採購核准後，由主管簽署再付款。" : string.Join('。', Enumerable.Repeat("採購核准採購核准", 15)), ContentHash = SHA256.HashData(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), TokenEstimate = 30 }).ToArray();
+        for (var i = 0; i < docs.Length; i++) db.Add(new Document { Id = docs[i].Id, CollectionId = i == 0 ? allowed.Id : denied.Id, FileName = docs[i].Name, ContentType = "text/plain", Status = "ready", PageCount = 1, ChunkCount = i == 0 ? 2 : 50 });
+        var chunks = Enumerable.Range(0, 52).Select(i => new Chunk { DocumentId = i < 2 ? docs[0].Id : docs[1].Id, Ordinal = i < 2 ? i : i - 2, StartPage = 1, EndPage = 1, HeadingPath = "第三章 › 採購核准", Text = i < 2 ? "採購核准後，由主管簽署再付款。" : string.Join('。', Enumerable.Repeat("採購核准採購核准", 15)), ContentHash = SHA256.HashData(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), TokenEstimate = 30 }).ToArray();
         db.AddRange(chunks); await db.SaveChangesAsync(); return (allowed.Id, chunks);
     }
 
-    private static Task WithDatabase(Func<NexusDbContext, ISqlDatabase<NexusDbContext>, SqlServerRetrievalStore, Task> test) =>
+    private static Task WithDatabase(Func<AppDbContext, ISqlDatabase<AppDbContext>, SqlServerRetrievalStore, Task> test) =>
         SqlServerDatabase.WithDatabase(async db => {
-            var sql = new DbContextSqlDatabase<NexusDbContext>(db); using var cache = new MemoryCache(new MemoryCacheOptions());
+            var sql = new DbContextSqlDatabase<AppDbContext>(db); using var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new SqlServerRetrievalStore(sql, Options.Create(new KnowledgeOptions { Retrieval = new() { VectorCandidates = 1, FtsCandidates = 1, RerankCandidates = 1, TopK = 1 } }), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             await test(db, sql, store);
         });

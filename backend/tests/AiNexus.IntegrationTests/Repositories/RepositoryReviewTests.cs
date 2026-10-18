@@ -1,3 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Repositories;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -7,7 +10,6 @@ using System.Text.RegularExpressions;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.Repositories.Connections;
 using AiNexus.Features.Repositories.Reviews;
@@ -125,7 +127,7 @@ public sealed class RepositoryReviewTests
         var review = await Create(client); var summary = await Create(client, "summary");
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.Equal(["review", "summary"], await db.Set<RepositoryReview>().OrderBy(x => x.CreatedAt).Select(x => x.Purpose).ToListAsync());
             // 清單會讀取 purpose 欄位；若快照無法讀取，所有審查都會被顯示為 "review"。
             await db.Set<RepositoryReview>().ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, "{}"));
@@ -141,7 +143,7 @@ public sealed class RepositoryReviewTests
         var provider = new ReviewProvider(); await using var factory = Factory(new(), provider); using var client = await factory.SignedInAsync();
         var response = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString(), "typos"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode); Assert.Empty(provider.Calls);
-        using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RepositoryReview>().ToListAsync());
+        using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RepositoryReview>().ToListAsync());
     }
 
     [Theory]
@@ -177,7 +179,7 @@ public sealed class RepositoryReviewTests
     {
         await using var factory = new NexusFactory(inference: o => o.Models[0].MaxOutputTokens = 7000);
         using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
-        var owner = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.Select(x => x.Id).SingleAsync();
+        var owner = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Select(x => x.Id).SingleAsync();
         var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);
         Assert.False(result.Value!.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
     }
@@ -266,7 +268,7 @@ public sealed class RepositoryReviewTests
         Assert.Contains(source.Requests, x => x.EndsWith("/compare/" + request.BaseCommit + ".." + request.Commit + "?output=diff", StringComparison.Ordinal));
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsJsonAsync(Reviews, request with { Note = "不同重點" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);
-        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(new RepositoryReviewResult { ReviewId = review.Id, Ordinal = 0, Output = "已完成區段" });
             await db.Set<BackgroundJob>().Where(x => x.Id == review.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "failed").SetProperty(x => x.ActiveKey, (string?)null)); await db.SaveChangesAsync(); }
         (await owner.PostAsync($"/api/v1/repositories/reviews/{review.Id}/retry", null)).EnsureSuccessStatusCode(); await Process(factory);

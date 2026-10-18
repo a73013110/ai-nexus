@@ -1,6 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -30,7 +32,7 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 }
 
 /// <summary>建立個人專案（最多 100 個），或儲存使用者可編輯的專案的新版本。</summary>
-internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
+internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult());
@@ -41,8 +43,8 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
         if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
-        var resource = new WorkspaceResource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
+        if (await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
+        var resource = new Resource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
         db.Add(resource);
         db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });

@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Inference.Models;
@@ -41,7 +41,7 @@ public sealed class ModelVisibilityTests
         var cancelled = await client.PostAsync($"/api/v1/runs/{run.Id}/cancel", null);
         Assert.DoesNotContain("test-model", await cancelled.Content.ReadAsStringAsync());
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal("test-model", (await db.Runs.SingleAsync()).ModelId);
     }
 
@@ -55,6 +55,6 @@ public sealed class ModelVisibilityTests
         Assert.Equal("model-1", (await saved.Content.ReadFromJsonAsync<PreferencesDto>())!.DefaultModelId);
         Assert.DoesNotContain("test-model", await client.GetStringAsync("/api/v1/me"));
         using var scope = factory.Services.CreateScope();
-        Assert.Equal("test-model", (await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.SingleAsync()).Preferences.DefaultModelId);
+        Assert.Equal("test-model", (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync()).Preferences.DefaultModelId);
     }
 }

@@ -1,6 +1,4 @@
-using System.Data.Common;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Persistence.ReleaseScripts;
+using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 
@@ -8,7 +6,7 @@ namespace AiNexus.Host.Commands;
 
 /// <summary>
 /// 主機命令列指令處理器。
-/// 不帶指令時啟動 HTTP 伺服器；帶指令（<c>db init</c>、<c>db script</c>、<c>db diff</c>、<c>verify …</c>）時，
+/// 不帶指令時啟動 HTTP 伺服器；帶指令（<c>db init</c>、<c>verify …</c>）時，
 /// 會對完整建好的主機執行一次該作業，設定結束碼後退出。
 /// 指令在建立 Web 主機之前就先解析，因此未知指令或 <c>--help</c> 不會意外啟動網站。
 /// </summary>
@@ -27,30 +25,15 @@ public sealed class HostCommand
 
     private static readonly Definition[] Definitions =
     [
-        new("db init", "建立資料庫（不存在時）並套用 migration；不刪除或清空既有資料", [], (app, _) => InScopeAsync(app, async services =>
+        new("db init", "建立空資料庫（不存在時）並開啟 RCSI；結構由 database/App 的 dacpac 部署", [], (app, _) => InScopeAsync(app, async services =>
         {
             var snapshot = await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
-            Console.WriteLine("AiNexus 資料庫與 migrations 初始化完成。");
+            Console.WriteLine("AiNexus 資料庫已建立；接著以 database/App 的 dacpac 部署結構。");
             if (!snapshot)
             {
                 Console.WriteLine("注意：既有資料庫尚未開啟 READ_COMMITTED_SNAPSHOT，請 DBA 依 docs/architecture/database.md 在維護時段開啟。");
             }
         })),
-        new("db script", "不連線資料庫，產生發布用 SQL：依物件拆成 schema／data 編號檔與 manifest.md",
-            [
-                new("--from", "migration", true, "正式機目前最後一個 migration，0 代表空庫"),
-                new("--to", "migration", false, "最後要套用的 migration，預設最新"),
-                new("--output", "目錄", true, "輸出目錄，必須不存在或是空的"),
-            ],
-            (_, command) => Task.FromResult(WriteReleaseScript(command.Option("--from")!, command.Option("--to"), command.Output!))),
-        new("db diff", "在 Databases:Nexus 的伺服器建暫存庫並套用 migration，以 SqlPackage 產生每個物件的差異（diff/）與部署後驗證用的 expected.dacpac；結束一定刪除暫存庫",
-            [
-                new("--from", "migration", true, "正式機目前最後一個 migration，0 代表空庫"),
-                new("--to", "migration", false, "發布的最後一個 migration，預設最新"),
-                new("--output", "目錄", true, "輸出目錄，其中不能已有 diff/ 或 expected.dacpac"),
-                new("--sqlpackage", "檔案", false, "SqlPackage 執行檔或 .dll，預設在目前目錄執行 dotnet tool run sqlpackage"),
-            ],
-            (app, command) => WriteSchemaDiffAsync(app, command)),
         new("verify deployment", "唯讀檢查 SQL、設定、模型清單、embedding／rerank 與站外目錄寫入，不產生 AI 回答", [],
             (app, _) => DeploymentVerifier.VerifyAsync(app.Services, app.Configuration, app.Environment, CancellationToken.None)),
         new("verify connections", "以合成資料實測 SQL 讀寫、AD、模型串流、附件辨識與檢索模型（會使用模型配額）", [Report], async (app, command) =>
@@ -85,14 +68,14 @@ public sealed class HostCommand
     /// <summary>留給 Web 主機組態設定的引數（例如 <c>--LocalConfigPath</c>、<c>--urls</c> 等）。</summary>
     public string[] HostArguments { get; }
 
-    /// <summary><c>verify</c> 指令的報告輸出檔，或 <c>db script</c> 與 <c>db diff</c> 的輸出目錄（由 <c>--output</c> 指定）。</summary>
+    /// <summary><c>verify</c> 指令的報告輸出檔（由 <c>--output</c> 指定）。</summary>
     public string? Output => Option("--output");
 
     public bool Help { get; }
 
     public string? Error { get; }
 
-    /// <summary>取得指令特定選項之值（例如 <c>--from</c>）；未提供時傳回 <see langword="null"/>。</summary>
+    /// <summary>取得指令特定選項之值（例如 <c>--output</c>）；未提供時傳回 <see langword="null"/>。</summary>
     public string? Option(string name) => options.GetValueOrDefault(name);
 
     public static string Usage { get; } = $"""
@@ -161,58 +144,6 @@ public sealed class HostCommand
         return passed ? 0 : 1;
     }
 
-    private static bool WriteReleaseScript(string from, string? to, string output)
-    {
-        try
-        {
-            // 設計時期 DbContext 只用來產生 SQL，不帶連線認證，因此不會對外開啟真實資料庫連線。
-            var factory = new DesignTimeDbContextFactory();
-            var script = new ReleaseScriptGenerator(() => factory.CreateDbContext([])).Generate(from, to);
-            script.WriteTo(output);
-            Console.WriteLine($"已產生 {script.Migrations.Count} 個 migration 的 {script.Files.Count} 個 SQL 檔：{Path.GetFullPath(output)}；依 {ReleaseScript.ManifestFileName} 的編號執行。");
-            return true;
-        }
-        catch (ReleaseScriptException ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return false;
-        }
-    }
-
-    private static async Task<bool> WriteSchemaDiffAsync(WebApplication app, HostCommand command)
-    {
-        // 攔截 Ctrl+C 改為取消作業，而不是直接中斷處理程序，讓暫存資料庫仍能執行 Drop 清理。
-        using var cancel = new CancellationTokenSource();
-        void Stop(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cancel.Cancel(); }
-        Console.CancelKeyPress += Stop;
-        try
-        {
-            using var scope = app.Services.CreateScope();
-            var diff = await scope.ServiceProvider.GetRequiredService<SchemaDiffGenerator>().GenerateAsync(
-                command.Option("--from")!, command.Option("--to"), command.Output!, new SqlPackage(command.Option("--sqlpackage")), cancel.Token);
-            var output = Path.GetFullPath(command.Output!);
-            Console.WriteLine($"已產生 {diff.Changes.Count} 個物件的差異：{Path.Combine(output, SchemaDiffGenerator.DiffDirectoryName, SchemaDiff.ManifestFileName)}；部署後驗證用 {Path.Combine(output, SchemaDiffGenerator.ExpectedDacpacFileName)}。");
-            if (!diff.FullTextAvailable) Console.WriteLine("注意：參考伺服器缺全文元件或繁中斷詞器，結構不含 KnowledgeSearch 全文索引。");
-            return true;
-        }
-        catch (OperationCanceledException)
-        {
-            Console.Error.WriteLine("已取消。");
-            return false;
-        }
-        catch (ReleaseScriptException ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return false;
-        }
-        catch (Exception ex) when (ex is DbException or InvalidOperationException)
-        {
-            Console.Error.WriteLine(DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
-            return false;
-        }
-        finally { Console.CancelKeyPress -= Stop; }
-    }
-
     private static async Task<bool> InScopeAsync(WebApplication app, Func<IServiceProvider, Task> work)
     {
         try
@@ -223,7 +154,7 @@ public sealed class HostCommand
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName));
             return false;
         }
     }

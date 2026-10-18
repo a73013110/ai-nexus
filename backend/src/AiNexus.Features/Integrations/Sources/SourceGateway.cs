@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
 using System.Data.Common;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +12,7 @@ namespace AiNexus.Features.Integrations.Sources;
 /// <summary>
 /// 讀取舊系統唯讀來源的唯一入口。每次查詢前後都檢查授權，查詢期間被撤銷的授權不會讓資料外流；每次讀取都寫入稽核。
 /// </summary>
-internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
+internal sealed class SourceGateway(AppDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
     IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
 {
     private static readonly (string Id, string Name, string Description, string[] Kinds, string Database)[] Catalog = [

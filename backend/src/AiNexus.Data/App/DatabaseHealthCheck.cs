@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace AiNexus.Features.Persistence;
+namespace AiNexus.Data.App;
 
 /// <summary>
 /// 資料庫就緒性探針（Readiness Health Check）。
@@ -54,7 +54,7 @@ public sealed class DatabaseHealthCheck(
             using var timeout = new CancellationTokenSource(Timeout, clock);
             await using var scope = scopes.CreateAsyncScope();
             var connected = await scope.ServiceProvider
-                .GetRequiredService<NexusDbContext>()
+                .GetRequiredService<AppDbContext>()
                 .Database.CanConnectAsync(timeout.Token);
 
             return connected

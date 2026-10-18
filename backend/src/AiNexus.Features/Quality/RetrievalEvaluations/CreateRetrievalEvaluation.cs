@@ -1,15 +1,17 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
@@ -32,7 +34,7 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
 }
 
 /// <summary>凍結檢索驗收題組並附上索引與設定的指紋，然後排入背景工作。</summary>
-internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
+internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
     ResourceWriteLock writes, JobService jobs, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -44,7 +46,7 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
         if (!AnnotationsValid(request.Cases)) return QualityErrors.CorpusInvalid;
         if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } denied) return denied.Error;
         var ids = request.Cases.SelectMany(x => x.Relevant).Select(x => x.DocumentId).Distinct().ToArray();
-        var documents = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null && request.CollectionIds.Contains(x.CollectionId.Value)).Select(x => x.Id).ToListAsync(ct);
+        var documents = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null && request.CollectionIds.Contains(x.CollectionId.Value)).Select(x => x.Id).ToListAsync(ct);
         if (documents.Count != ids.Length) return QualityErrors.CorpusInvalid;
         var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => ids.Contains(x.DocumentId)).Select(x => new { x.DocumentId, x.PageNumber }).ToListAsync(ct);
         if (request.Cases.SelectMany(x => x.Relevant).Any(x => x.Pages.Any(p => !pages.Any(page => page.DocumentId == x.DocumentId && page.PageNumber == p)))) return QualityErrors.PagesInvalid;

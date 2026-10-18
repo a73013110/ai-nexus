@@ -1,5 +1,5 @@
+using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity;
 
@@ -10,7 +10,7 @@ namespace AiNexus.Features.Identity;
 public interface ICurrentUser
 {
     Guid Id { get; }
-    NexusUser User { get; }
+    User User { get; }
 }
 
 public static class CurrentUserResolution

@@ -1,16 +1,18 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Quality;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Retrieval;
 
@@ -20,7 +22,7 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 /// 檢索評測各切片與 <see cref="RetrievalEvaluationHandler"/> 共用的存取與可比較性檢查。
 /// 每個工作步驟之間都會重新檢查；失敗時以其代碼讓工作失敗。
 /// </summary>
-public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAuthorization authorization, AccessService features,
+public sealed class RetrievalEvaluationService(AppDbContext db, RetrievalAuthorization authorization, AccessService features,
     EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -45,7 +47,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
-        var documents = await (from d in db.Set<KnowledgeDocument>().AsNoTracking() join r in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
+        var documents = await (from d in db.Set<Document>().AsNoTracking() join r in db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
             where !d.IsDeleted && d.CollectionId != null && collections.Contains(d.CollectionId.Value) orderby d.Id select new { d.Id, d.TextVersion, r.UpdatedAt, d.Status }).ToArrayAsync(ct);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new { profile.Key, Settings = options.Value, Ollama = inference.Value.Providers.Ollama.Endpoint, Documents = documents }, Json);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

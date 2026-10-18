@@ -1,6 +1,6 @@
-using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +11,7 @@ namespace AiNexus.Features.Administration.Users;
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 
 /// <summary>整批取代使用者的角色。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
-internal sealed class SetUserRoles(NexusDbContext db, AdministrativeAudit audit)
+internal sealed class SetUserRoles(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/roles", async (Guid id, UserRolesRequest body, SetUserRoles handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())

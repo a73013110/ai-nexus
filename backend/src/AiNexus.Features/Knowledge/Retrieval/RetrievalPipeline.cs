@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using System.Diagnostics;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 
-public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization authorization, EmbeddingProfiles profiles, QueryVectorCache cache,
+public sealed class RetrievalPipeline(AppDbContext db, RetrievalAuthorization authorization, EmbeddingProfiles profiles, QueryVectorCache cache,
     IRetrievalStore store, IQueryRewriter rewriter, RerankService reranker, IOptions<KnowledgeOptions> options, ILogger<RetrievalPipeline> logger)
 {
     public async Task<Result<KnowledgeSearchDto>> SearchAsync(Guid actor, KnowledgeSearchRequest request, CancellationToken ct,

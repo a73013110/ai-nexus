@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>使用者可讀取文件的每一頁擷取文字，並標示 AI 辨識結果是否需要人工審閱。</summary>
-internal sealed class ListDocumentPages(NexusDbContext db, DocumentAccess documents)
+internal sealed class ListDocumentPages(AppDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())

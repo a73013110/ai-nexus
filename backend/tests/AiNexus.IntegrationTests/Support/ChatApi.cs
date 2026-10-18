@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Inference;
 using System.Net.Http.Json;
 using AiNexus.Features.Chat.Runs;
 using AiNexus.Features.Conversations;

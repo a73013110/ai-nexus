@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Billing;
 using AiNexus.Features.Billing.Charges;
 
 namespace AiNexus.UnitTests.Billing;

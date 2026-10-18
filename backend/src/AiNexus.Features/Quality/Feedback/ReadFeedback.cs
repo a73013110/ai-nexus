@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Quality;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality.Feedback;
 
 /// <summary>使用者自己的評分：單則回答的評分（尚未評分時回 200 空內容），以及跨對話最近 100 筆。</summary>
-internal sealed class ReadFeedback(NexusDbContext db)
+internal sealed class ReadFeedback(AppDbContext db)
 {
     public static RouteHandlerBuilder MapForMessage(RouteGroupBuilder api) => api
         .MapGet("/messages/{id:guid}/feedback", (Guid id, ICurrentUser user, ReadFeedback handler, CancellationToken ct) =>

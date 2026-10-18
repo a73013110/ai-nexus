@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Templates;
 
 /// <summary>刪除可編輯的有效專案中的範本；刪除不存在的範本也視為成功。</summary>
-internal sealed class DeleteProjectTemplate(NexusDbContext db, ResourceAccess access)
+internal sealed class DeleteProjectTemplate(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}/templates/{key:guid}", async (Guid id, Guid key, ICurrentUser user, DeleteProjectTemplate handler, CancellationToken ct) =>

@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,7 +61,7 @@ public sealed partial class DiagnosticBrowserTests
         await page.SetViewportSizeAsync(375, 900);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "admin-mobile.png"), FullPage = true });
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= window.innerWidth"), "Only the data table may scroll horizontally on a narrow viewport.");
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "logs.detail"));
         await page.GetByRole(AriaRole.Button, new() { Name = "關閉診斷詳情", Exact = true }).ClickAsync();
         await page.SetViewportSizeAsync(1440, 1000);

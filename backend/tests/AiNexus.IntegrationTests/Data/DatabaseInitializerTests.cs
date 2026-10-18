@@ -1,12 +1,12 @@
-using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Data.Sql;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AiNexus.IntegrationTests.Persistence;
+namespace AiNexus.IntegrationTests.Data;
 
 [Trait("Category", "SqlServer")]
 public sealed class DatabaseInitializerTests
@@ -15,13 +15,13 @@ public sealed class DatabaseInitializerTests
     public async Task CreatedDatabaseReadsLastCommittedVersionWithoutWaitingForWriters()
     {
         await SqlServerDatabase.WithDatabase(async db => {
-            var sql = new DbContextSqlDatabase<NexusDbContext>(db);
+            var sql = new DbContextSqlDatabase<AppDbContext>(db);
             Assert.True(await sql.QuerySingleAsync<bool>("SELECT [is_read_committed_snapshot_on] FROM sys.databases WHERE [database_id] = DB_ID()"));
             var logs = new Warnings();
             Assert.True(await new DatabaseSchema(db, sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Empty(logs.EventIds);
 
-            var user = new NexusUser { Sid = "rcsi-fixture", Account = "rcsi", DisplayName = "已提交" };
+            var user = new User { Sid = "rcsi-fixture", Account = "rcsi", DisplayName = "已提交" };
             db.Add(user); await db.SaveChangesAsync();
             var connection = db.Database.GetConnectionString()!;
             await using var writer = new SqlConnection(connection); await writer.OpenAsync();
@@ -47,7 +47,7 @@ public sealed class DatabaseInitializerTests
                 await master.ExecuteAsync($"ALTER DATABASE [{name}] SET READ_COMMITTED_SNAPSHOT OFF WITH ROLLBACK IMMEDIATE");
             }
             var logs = new Warnings();
-            Assert.False(await new DatabaseSchema(db, new DbContextSqlDatabase<NexusDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
+            Assert.False(await new DatabaseSchema(db, new DbContextSqlDatabase<AppDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Equal(5003, Assert.Single(logs.EventIds));
         });
     }

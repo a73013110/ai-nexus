@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Inference.Runs;
+namespace AiNexus.Data.App.Inference;
 
 /// <summary>
 /// 生成任務狀態常數定義與有效性輔助工具。

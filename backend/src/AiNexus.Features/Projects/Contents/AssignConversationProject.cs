@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
@@ -5,7 +6,6 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,7 @@ public sealed record ConversationProjectRequest(Guid? ProjectId);
 /// <summary>
 /// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答互相競爭。
 /// </summary>
-internal sealed class AssignConversationProject(NexusDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
+internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>

@@ -1,8 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +17,7 @@ namespace AiNexus.Features.Chat.Runs;
 /// 每個生成仍在所屬對話鎖下結算，避免與本機沖刷或取消互相競態。
 /// </summary>
 public sealed class RunLeaseRecovery(
-    NexusDbContext db,
+    AppDbContext db,
     GenerationScheduler scheduler,
     RunSignals signals,
     ConversationService conversations,

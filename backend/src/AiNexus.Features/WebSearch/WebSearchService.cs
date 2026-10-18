@@ -1,8 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.WebSearch;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Billing;
-using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.WebSearch;
 
 /// <summary>聊天網路搜尋的服務：負責配額、計費、稽核，並把結果組成提示詞。</summary>
-public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
+public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
 {
     /// <summary>為搜尋摘要保留的提示詞預算（UTF-8 位元組）。</summary>
     public const int ReservedTokens = 3600;

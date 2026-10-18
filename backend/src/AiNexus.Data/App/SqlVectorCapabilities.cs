@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AiNexus.Platform.Data.Sql;
 
-namespace AiNexus.Features.Persistence;
+namespace AiNexus.Data.App;
 
 /// <summary>SQL Server 向量與全文檢索能力的檢測結果。</summary>
 public sealed record SqlVectorCapabilitiesDto(
@@ -25,7 +25,7 @@ public sealed record SqlVectorCapabilitiesDto(
 /// 3. 繁體中文斷詞器：檢查系統是否包含 LCID 1028 (繁體中文) 之全文斷詞器，確保知識庫檢索斷詞精準度。
 /// 4. 知識庫全文索引：檢查 <c>knowledge.Chunks</c> 資料表之全文索引是否已建立並處於啟用狀態。
 /// </remarks>
-public sealed class SqlVectorCapabilities(ISqlDatabase<NexusDbContext> sql)
+public sealed class SqlVectorCapabilities(ISqlDatabase<AppDbContext> sql)
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 

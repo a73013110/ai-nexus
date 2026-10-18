@@ -9,7 +9,7 @@ namespace AiNexus.ArchitectureTests;
 public sealed class SourceLayoutTests
 {
     public static TheoryData<string> Projects =>
-        ["AiNexus.Host", "AiNexus.Features", "AiNexus.Platform", "AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests"];
+        ["AiNexus.Host", "AiNexus.Features", "AiNexus.Data", "AiNexus.Platform", "AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests"];
 
     public static TheoryData<string> TestProjects => ["AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests"];
 
@@ -43,7 +43,7 @@ public sealed class SourceLayoutTests
     public void LargeModulesAreSplitIntoCapabilityFolders()
     {
         var paths = SourceTree.Files("AiNexus.Features").Select(SourceTree.Relative).Select(path => path.Split('/'))
-            .Where(parts => parts.Length > 2 && parts[1] != "Persistence").ToList();
+            .Where(parts => parts.Length > 2).ToList();
         var crowded = paths.Where(parts => parts.Length == 3).GroupBy(parts => parts[1])
             .Where(module => module.Count() > MaxModuleRootFiles).Select(module => $"{module.Key}: {module.Count()} files at the root");
         var nested = paths.Where(parts => parts.Length > 4).Select(parts => string.Join('/', parts));
@@ -72,7 +72,7 @@ public sealed class SourceLayoutTests
     [MemberData(nameof(ModuleTestProjects))]
     public void TestsAreFiledByModule(string project)
     {
-        var folders = SourceTree.Modules().Union(["Host", "Platform", "Support"]).ToHashSet(StringComparer.Ordinal);
+        var folders = SourceTree.Modules().Union(["Host", "Data", "Platform", "Support"]).ToHashSet(StringComparer.Ordinal);
         // Support 底下的共用輔助檔不需要 Tests.cs 結尾；其他檔案必須是模組或 Host/Platform 底下的測試。
         bool IsMisplaced(string[] parts)
         {
@@ -88,7 +88,7 @@ public sealed class SourceLayoutTests
         var misplaced = SourceTree.Files(project).Select(SourceTree.Relative).Select(path => path.Split('/'))
             .Where(IsMisplaced)
             .Select(parts => string.Join('/', parts)).Order(StringComparer.Ordinal).ToList();
-        Assert.True(misplaced.Count == 0, "Put tests in <Module>/<UseCase>Tests.cs (or Host, Platform) and shared helpers in Support:\n" + string.Join("\n", misplaced));
+        Assert.True(misplaced.Count == 0, "Put tests in <Module>/<UseCase>Tests.cs (or Host, Data, Platform) and shared helpers in Support:\n" + string.Join("\n", misplaced));
     }
 
     /// <summary>測試方法名稱以 PascalCase 句子描述行為；類別名稱已指出 use case，方法名不必重複。</summary>

@@ -1,7 +1,7 @@
-using AiNexus.Features.Attachments;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +12,7 @@ public sealed record AdminUsageDto(int Users, int Requests, int Completed, long 
     IReadOnlyList<ProviderStatusDto> Providers, WebSearchStatusDto WebSearch, DateTimeOffset Since, DateTimeOffset Until);
 
 /// <summary>自 <see cref="UsageReports.Since"/> 起的平台用量、儲存空間、模型供應商健康度與網路搜尋狀態。</summary>
-internal sealed class GetAdminUsage(NexusDbContext db, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
+internal sealed class GetAdminUsage(AppDbContext db, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/usage", async (GetAdminUsage handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))

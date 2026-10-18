@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Attachments.Files;
 
 /// <summary>把呼叫者的一個附件保留到檔案庫；對已在檔案庫的檔案重複保留不會有任何變更。</summary>
-internal sealed class RetainLibraryFile(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota)
+internal sealed class RetainLibraryFile(AppDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retain", async (Guid id, ICurrentUser user, RetainLibraryFile handler, CancellationToken ct) =>

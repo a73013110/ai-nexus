@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments.Storage;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Attachments;
 /// 檔案庫總覽：已儲存的原始檔（同一檔案被多處重複使用也只計一次）、依類型的大小、每日上傳量，
 /// 以及單一擁有者的儲存配額使用量。
 /// </summary>
-internal sealed class FilesDashboard(NexusDbContext db, AttachmentQuota quota) : IDashboardSource
+internal sealed class FilesDashboard(AppDbContext db, AttachmentQuota quota) : IDashboardSource
 {
     public string Feature => FeatureIds.Files;
 

@@ -1,3 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.Knowledge;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -10,7 +13,6 @@ using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.Providers;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
@@ -47,7 +49,7 @@ public sealed partial class GenerationWorker(
         try
         {
             using var startup = scopes.CreateScope();
-            var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = startup.ServiceProvider.GetRequiredService<AppDbContext>();
             if (!await db.Database.CanConnectAsync(stoppingToken))
             {
                 LogStorageUnavailable(logger);
@@ -57,17 +59,17 @@ public sealed partial class GenerationWorker(
             // 先復原上一個程序遺留的孤兒 Run，再同步設定；兩者都完成後才標記就緒，避免接收新生成
             await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(clock.GetUtcNow(), stoppingToken);
 
-            foreach (var profile in options.Value.Models)
+            var profiles = db.Set<ModelProfile>();
+            foreach (var model in options.Value.Models)
             {
-                var existing = await db.ModelProfiles.FindAsync([profile.Id], stoppingToken);
-                if (existing is null)
+                var profile = await profiles.FindAsync([model.Id], stoppingToken);
+                if (profile is null)
                 {
-                    db.ModelProfiles.Add(profile);
+                    profiles.Add(profile = new ModelProfile { Id = model.Id });
                 }
-                else
-                {
-                    db.Entry(existing).CurrentValues.SetValues(profile);
-                }
+
+                // 依屬性名稱複製資料表有的欄位；推理強度、圖片能力等只存在設定檔。
+                db.Entry(profile).CurrentValues.SetValues(model);
             }
 
             await db.SaveChangesAsync(stoppingToken);
@@ -124,7 +126,7 @@ public sealed partial class GenerationWorker(
                     using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
                     {
                         using var scope = scopes.CreateScope();
-                        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                         var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
                         if (RunStates.IsActive(run.Status))
                         {
@@ -162,7 +164,7 @@ public sealed partial class GenerationWorker(
         using (await scheduler.LockConversationAsync(job.ConversationId, stoppingToken))
         {
             using var scope = scopes.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
 
             if (!RunStates.IsActive(run.Status) || run.ExecutorId != scheduler.InstanceId) return;
@@ -266,7 +268,7 @@ public sealed partial class GenerationWorker(
         using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
         {
             using var scope = scopes.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
             if (RunStates.IsActive(run.Status))
             {
@@ -279,7 +281,7 @@ public sealed partial class GenerationWorker(
     /// <summary>
     /// 在開始生成前二次驗證權限與引用項目（權限、模型原則、知識庫、專案上下文）。
     /// </summary>
-    private static async Task<Result> RecheckAsync(IServiceProvider services, NexusDbContext db, GenerationRun run, CancellationToken ct)
+    private static async Task<Result> RecheckAsync(IServiceProvider services, AppDbContext db, GenerationRun run, CancellationToken ct)
     {
         var grants = await services.GetRequiredService<AccessService>().ForUserAsync(run.OwnerId, ct);
         if (!grants.Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
@@ -352,7 +354,7 @@ public sealed partial class GenerationWorker(
         using (await scheduler.LockConversationAsync(job.ConversationId, ct))
         {
             using var scope = scopes.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.AutoSavepointsEnabled = false;
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
@@ -403,7 +405,7 @@ public sealed partial class GenerationWorker(
     }
 
     private static Task<int> AppendRunAsync(
-        NexusDbContext db,
+        AppDbContext db,
         Guid id,
         long expected,
         string delta,

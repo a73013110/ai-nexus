@@ -1,11 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing.Management;
 
 /// <summary>使用者寄出的分享，或寄給使用者且來源仍存在的有效分享。</summary>
-internal sealed class ListShares(NexusDbContext db, ShareAccess shares, TimeProvider clock)
+internal sealed class ListShares(AppDbContext db, ShareAccess shares, TimeProvider clock)
 {
     private const int PageSize = 100;
 

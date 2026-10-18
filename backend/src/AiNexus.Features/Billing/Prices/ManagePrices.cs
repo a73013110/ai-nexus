@@ -1,5 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Billing;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -35,7 +37,7 @@ internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
 }
 
 /// <summary>管理用價格表：可計價的模型、既有價格版本，以及新增版本。</summary>
-internal sealed class ManagePrices(NexusDbContext db, BillingService billing)
+internal sealed class ManagePrices(AppDbContext db, BillingService billing)
 {
     public static void Map(RouteGroupBuilder admin)
     {

@@ -1,3 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using System.Diagnostics;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
@@ -5,7 +8,6 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -22,7 +24,7 @@ public static class EvaluationMetrics
     }
 }
 
-public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, AccessService features, ModelTaskService model, ModelPresentation presentation, ModelCatalog catalog, IOptions<InferenceOptions> inference) : IBackgroundJobHandler
+public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, AccessService features, ModelTaskService model, ModelPresentation presentation, ModelCatalog catalog, IOptions<InferenceOptions> inference) : IBackgroundJobHandler
 {
     public string Kind => "evaluation";
     private async Task<Result<EvaluationRun>> RequireAsync(BackgroundJob job, CancellationToken ct)

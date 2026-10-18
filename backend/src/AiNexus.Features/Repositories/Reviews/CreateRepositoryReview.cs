@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AiNexus.Features.Identity;
@@ -6,7 +8,6 @@ using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories.Browsing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -37,7 +38,7 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 /// 凍結 diff、提示詞與模型設定，然後把持久化工作排入佇列。pull request 會在此時解析為 head 與 merge base，
 /// 之後的 push 不會改變這次 review。request key 讓同一請求的重試回傳同一個 review；同一個 key 用於不同請求則為衝突。
 /// </summary>
-internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
+internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
     RepositoryWriteLock writes, ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository

@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using System.Diagnostics;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Jobs;
 
 /// <summary>其他模組使用背景工作的入口：以業務對象排入工作、取得描述、取消與重試。</summary>
-public sealed class JobService(NexusDbContext db, IServiceProvider services)
+public sealed class JobService(AppDbContext db, IServiceProvider services)
 {
     public static JobDto Describe(BackgroundJob x) => new(
         x.Id,

@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Jobs;
 using System.Text.Json;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 public sealed record RetrievalReportDto(RetrievalEvaluationDto Run, IReadOnlyList<RetrievalSummaryDto> Summary, IReadOnlyList<RetrievalMetricDto> Results, string RefusalDefinition = "無答案題未提供任何來源的比例；不評斷生成回答內容。", string LatencyDefinition = "依 vector、keyword、hybrid、hybrid+rerank 順序執行；共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。");
 
 /// <summary>檢索評測的指標與各模式摘要，供顯示或下載；瀏覽器不得快取。</summary>
-internal sealed class GetRetrievalReport(NexusDbContext db, RetrievalEvaluationService evaluations)
+internal sealed class GetRetrievalReport(AppDbContext db, RetrievalEvaluationService evaluations)
 {
     public static void Map(RouteGroupBuilder routes)
     {

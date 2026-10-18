@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -59,7 +59,7 @@ public sealed class MonitoringStreams
 /// 整個檢視只稽核一次。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態，
 /// 所以權限被撤銷後，串流會以錯誤事件結束，不會一直沿用舊的授權。
 /// </summary>
-internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
+internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AppDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
@@ -94,12 +94,12 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
                         return AccessControlErrors.FeatureForbidden;
                     if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId))
                     {
-                        var actor = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
+                        var actor = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
                         if (actor is null || !SessionIdentity.Allows(actor, http.User.FindFirstValue(SessionIdentity.ActorMethod)) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)))
                             return MonitoringErrors.SessionRevoked;
                         if (!long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds() ||
                             !Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId) ||
-                            await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", ct) ||
+                            await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", ct) ||
                             !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureIds.Admin))
                             return MonitoringErrors.SessionRevoked;
                     }

@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,7 +55,7 @@ public sealed class TokenBudgetTests
         (await bob.PostAsync($"/api/v1/runs/{run.Id}/cancel", null)).EnsureSuccessStatusCode();
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.UsedTokens);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Runs.Where(x => x.Id == run.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, UtcDay.Start(DateTimeOffset.UtcNow).AddDays(-1)));
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(0, budget.ReservedTokens); Assert.Equal(500, budget.RemainingTokens);
@@ -67,7 +68,7 @@ public sealed class TokenBudgetTests
         using var admin = await factory.SignedInAsync(); var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AddRange(new ModelInvocation { OwnerId = owner, ModelId = "test-model", Kind = "transform", Status = "completed", InputTokens = 300, OutputTokens = 40, ReservedTokens = 1500 },
                 new ModelInvocation { OwnerId = owner, ModelId = "test-model", Kind = "embedding", Status = "completed", InputTokens = 90000, OutputTokens = 0 },
                 new ModelInvocation { OwnerId = owner, ModelId = "web-search", Kind = "web-search", Status = "completed" });
@@ -89,7 +90,7 @@ public sealed class TokenBudgetTests
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(DailyTokenLimits: new Dictionary<string, long> { ["test-model"] = 500 }))).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AddRange(
                 new ModelInvocation { OwnerId = owner, ModelId = "test-model", Kind = "transform", Status = "completed", CreatedAt = day.AddTicks(-1), InputTokens = 300, OutputTokens = 40 },
                 new ModelInvocation { OwnerId = owner, ModelId = "test-model", Kind = "transform", Status = "running", CreatedAt = day.AddTicks(-1), ReservedTokens = 1500 },

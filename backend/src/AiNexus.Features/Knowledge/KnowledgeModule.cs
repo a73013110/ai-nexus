@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Inference.Models;
@@ -7,7 +8,6 @@ using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Http;
@@ -47,7 +47,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<IBackgroundJobHandler, EmbeddingReindexHandler>();
         services.AddHostedService<EmbeddingBootstrapWorker>();
         // SQL Server 使用原生向量與全文檢索；SQLite 測試環境改用記憶體內的排序實作，結果排序細節可能與正式環境不同。
-        services.AddScoped<IRetrievalStore>(s => s.GetRequiredService<NexusDbContext>().Database.IsSqlServer()
+        services.AddScoped<IRetrievalStore>(s => s.GetRequiredService<AppDbContext>().Database.IsSqlServer()
             ? ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(s) : ActivatorUtilities.CreateInstance<InMemoryRetrievalStore>(s));
         services.AddScoped<KnowledgeRetrieval>();
         services.AddScoped<RetrievalAuthorization>();
@@ -108,5 +108,3 @@ public sealed class KnowledgeModule : IFeatureModule
         ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
     }
 }
-
-internal sealed class KnowledgeFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Knowledge, "知識庫", "/knowledge", 30, BuiltInAccess.WorkNavigation, "library"));

@@ -1,8 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Diagnostics;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +16,7 @@ public sealed class QuerySystemLogsTests
     public async Task QueryDetailExportPermissionsAreIndependentAndReadsAreAudited()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var code = Issues.NewCode();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var code = Issues.NewCode();
         var row = new DiagnosticEvent { IssueCode = code, Level = LogLevel.Error, ExceptionType = "InvalidOperationException", ExceptionDetail = "[message omitted]", Category = "=HYPERLINK(\"evil\")", At = DateTimeOffset.UtcNow.AddMinutes(-1) }; db.Add(row); await db.SaveChangesAsync();
         var range = Range(); var page = await alice.GetFromJsonAsync<DiagnosticPage>("/api/v1/admin/logs?" + range + "&issueCode=" + code); Assert.Single(page!.Events);
         var json = await (await alice.GetAsync("/api/v1/admin/logs?" + range)).Content.ReadAsStringAsync(); Assert.DoesNotContain("exceptionDetail", json); Assert.DoesNotContain("ExceptionDetail", json);
@@ -34,7 +34,7 @@ public sealed class QuerySystemLogsTests
     public async Task CursorIsBoundToActorFiltersAndTimeWindowAndHasNoDuplicates()
     {
         await using var factory = new NexusFactory(administrators: ["alice", "bob"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
-        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-1); db.AddRange(Enumerable.Range(0, 7).Select(i => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i), Level = LogLevel.Error })); await db.SaveChangesAsync();
         var query = "/api/v1/admin/logs?" + Range() + "&issueCode=" + code + "&take=3";
         var first = await alice.GetFromJsonAsync<DiagnosticPage>(query); var second = await alice.GetFromJsonAsync<DiagnosticPage>(query + "&cursor=" + Uri.EscapeDataString(first!.NextCursor!));
@@ -48,7 +48,7 @@ public sealed class QuerySystemLogsTests
     public async Task LevelsAreMultiSelectAndTheirOrderDoesNotInvalidateTheCursor()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
-        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-2);
         db.AddRange(new[] { LogLevel.Error, LogLevel.Warning, LogLevel.Information, LogLevel.Error, LogLevel.Warning }.Select((level, i) => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i), Level = level }));
         await db.SaveChangesAsync();
@@ -70,7 +70,7 @@ public sealed class QuerySystemLogsTests
     public async Task CursorSortAndPageSizeAreBoundAndTimestampTiesHaveNoGaps(string direction)
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
-        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-2);
         db.AddRange(Enumerable.Range(0, 8).Select(i => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i / 2), Level = LogLevel.Error }));
         await db.SaveChangesAsync();

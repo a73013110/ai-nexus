@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using System.Security.Claims;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
+using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Sessions;
 
@@ -13,7 +14,7 @@ public static class SessionIdentity
     public const string UserId = "nexus_user_id";
     public const string Version = "nexus_security_version";
     public const string Method = "nexus_method";
-    public const string ActorId = "nexus_actor_id";
+    public const string ActorId = RequestClaims.ActorId;
     public const string ActorVersion = "nexus_actor_version";
     public const string ActorMethod = "nexus_actor_method";
     public const string TestExpires = "nexus_test_expires";
@@ -23,9 +24,9 @@ public static class SessionIdentity
     private const string Validated = "Nexus.ValidatedUser";
 
     /// <summary>此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。</summary>
-    internal static NexusUser? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is NexusUser user && user.Id == id ? user : null;
+    internal static User? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is User user && user.Id == id ? user : null;
 
-    public static ClaimsPrincipal Principal(NexusUser user, string method, NexusUser? actor = null, string? actorMethod = null, DateTimeOffset? testExpires = null, Guid? testId = null)
+    public static ClaimsPrincipal Principal(User user, string method, User? actor = null, string? actorMethod = null, DateTimeOffset? testExpires = null, Guid? testId = null)
     {
         var claims = new List<Claim>
         {
@@ -42,18 +43,18 @@ public static class SessionIdentity
         return new(new ClaimsIdentity(claims, AuthEndpoints.CookieScheme));
     }
 
-    public static bool Available(NexusUser user) => user.Enabled && user.DeletedAt is null;
-    public static bool Allows(NexusUser user, string? method) => Available(user) && (method switch
+    public static bool Available(User user) => user.Enabled && user.DeletedAt is null;
+    public static bool Allows(User user, string? method) => Available(user) && (method switch
     {
         "local" => user.LocalEnabled && user.PasswordHash is not null,
         "ad" or "windows" => user.AdEnabled,
         _ => false
     });
-    public static bool MatchesVersion(NexusUser user, string? version) => int.TryParse(version, out var value) && value == user.SecurityVersion;
+    public static bool MatchesVersion(User user, string? version) => int.TryParse(version, out var value) && value == user.SecurityVersion;
 
     public static async Task ValidateAsync(CookieValidatePrincipalContext context)
     {
-        var db = context.HttpContext.RequestServices.GetRequiredService<NexusDbContext>();
+        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
         var principal = context.Principal!;
         if (!Guid.TryParse(principal.FindFirstValue(UserId), out var id))
         {

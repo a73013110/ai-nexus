@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Conversations;
 /// <summary>
 /// 已刪除專案的對話仍歸原擁有者，只在刪除交易中清除專案關聯。軟刪除的對話也會被計入：其中任一仍在生成的回答都會阻擋專案刪除。
 /// </summary>
-internal sealed class DetachDeletedProjectConversations(NexusDbContext db) : IDomainEventHandler<ContainerDeleted>, IContainerDeletionCheck
+internal sealed class DetachDeletedProjectConversations(AppDbContext db) : IDomainEventHandler<ContainerDeleted>, IContainerDeletionCheck
 {
     public async Task<Result> CheckAsync(string kind, Guid containerId, CancellationToken ct)
     {

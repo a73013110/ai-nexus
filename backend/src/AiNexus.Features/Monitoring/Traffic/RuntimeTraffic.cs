@@ -1,6 +1,6 @@
+using AiNexus.Data.App.Identity;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Monitoring.Presence;
 using AiNexus.Features.Monitoring.Snapshots;
 using Microsoft.Extensions.Options;
@@ -46,7 +46,7 @@ public sealed class RuntimeTraffic : IDisposable
     public bool Enabled => options.Value.Enabled;
 
     public static string SessionKey(Guid user, Guid session) => user.ToString("N") + ":" + session.ToString("N");
-    public void Presence(NexusUser user, PresenceRequest request, string address, string browser, string device, string authentication, bool testing)
+    public void Presence(User user, PresenceRequest request, string address, string browser, string device, string authentication, bool testing)
     {
         if (!Enabled) return;
         lock (gate)

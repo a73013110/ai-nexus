@@ -1,7 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -41,7 +43,7 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>
-internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
+internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/sets", async (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, null, body, ct)).ToHttpResult())
@@ -57,7 +59,7 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
         // 更新只鎖該題組；建立則改鎖擁有者，讓上限計數在並行建立時仍然準確。
         using (await (id is Guid key ? writes.AcquireAsync(key, ct) : writes.AcquireAsync("evaluation-sets", actor, ct)))
         {
-            await using var tx = await db.Database.BeginTransactionAsync(ct); WorkspaceResource resource;
+            await using var tx = await db.Database.BeginTransactionAsync(ct); Resource resource;
             if (id is Guid existing)
             {
                 var allowed = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
@@ -69,7 +71,7 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
             }
             else
             {
-                if (await db.Set<WorkspaceResource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
+                if (await db.Set<Resource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
                 resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }

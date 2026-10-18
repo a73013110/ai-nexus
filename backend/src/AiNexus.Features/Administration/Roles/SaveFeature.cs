@@ -1,6 +1,6 @@
-using AiNexus.Features.AccessControl;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Administration.Navigation;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 
@@ -13,7 +13,7 @@ public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabl
 /// <summary>
 /// 更名、調整排序、換群組、換圖示、啟用或停用既有功能。會稽核；若會移除執行者自己的管理員權限則拒絕。
 /// </summary>
-internal sealed class SaveFeature(NexusDbContext db, AdministrativeAudit audit)
+internal sealed class SaveFeature(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/features/{id}", async (string id, FeatureUpdateRequest body, SaveFeature handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())

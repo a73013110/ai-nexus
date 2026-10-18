@@ -1,14 +1,15 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Attachments.Storage;
 
 /// <summary>刪除是持久化的 outbox 狀態：中繼資料與配額要保留到實體檔案真的刪除為止。</summary>
-public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
+public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
 {
     private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
-        !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id));
+        !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<ResourceAttachment>().Any(l => l.AttachmentId == x.Id));
 
     public async Task<int> MarkUnusedAsync(IEnumerable<Guid> ids, CancellationToken ct)
     {
@@ -33,7 +34,7 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
         return db.Set<Attachment>().Where(x => !x.InLibrary &&
             (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
             !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
-            !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id && !readers.All.Any(r => r.Id == l.ResourceId && r.OwnerId == x.OwnerId)));
+            !db.Set<ResourceAttachment>().Any(l => l.AttachmentId == x.Id && !readers.All.Any(r => r.Id == l.ResourceId && r.OwnerId == x.OwnerId)));
     }
 
     public async Task AbortUploadAsync(Attachment upload, CancellationToken ct)

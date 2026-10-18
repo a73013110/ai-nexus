@@ -1,5 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -20,7 +22,7 @@ internal sealed class ConnectRepositoryRequestValidator : RequestValidator<Conne
 }
 
 /// <summary>向 Gitea 驗證個人存取 token，然後以加密形式存給此使用者與主機。</summary>
-internal sealed class ConnectRepository(NexusDbContext db, RepositoryService gitea, IGiteaClient client, RepositoryWriteLock writes, TimeProvider clock)
+internal sealed class ConnectRepository(AppDbContext db, RepositoryService gitea, IGiteaClient client, RepositoryWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/connection", async (ConnectRepositoryRequest body, ICurrentUser user, ConnectRepository handler, CancellationToken ct) =>

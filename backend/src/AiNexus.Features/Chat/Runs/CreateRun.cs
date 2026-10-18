@@ -1,3 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.WebSearch;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,7 +18,6 @@ using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Errors;
@@ -65,7 +69,7 @@ internal sealed class CreateRunRequestValidator : RequestValidator<CreateRunRequ
 /// 進鎖後再重驗，因為鎖外到鎖內之間選取範圍或權限可能已變動。
 /// </summary>
 internal sealed class CreateRun(
-    NexusDbContext db,
+    AppDbContext db,
     ConversationService conversations,
     AttachmentService attachments,
     AttachmentWriteLock attachmentWrites,
@@ -373,7 +377,7 @@ internal sealed class CreateRun(
     private async Task<PreparedContext?> PrepareAsync(
         Guid owner,
         CreateRunRequest request,
-        ModelProfile profile,
+        ModelDefinition profile,
         IReadOnlyList<KnowledgeHitDto> sources,
         WebSearchRecord? search,
         CancellationToken ct)

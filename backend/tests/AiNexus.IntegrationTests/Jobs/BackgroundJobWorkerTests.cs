@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,7 @@ public sealed class BackgroundJobWorkerTests
         using (var scope = factory.Services.CreateScope())
         {
             var job = scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(me.Id, null, Guid.NewGuid(), "unfinished-test", "未完成的修改");
-            id = job.Id; await scope.ServiceProvider.GetRequiredService<NexusDbContext>().SaveChangesAsync();
+            id = job.Id; await scope.ServiceProvider.GetRequiredService<AppDbContext>().SaveChangesAsync();
         }
         await Process(factory);
         Assert.Equal(me.DisplayName, (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.DisplayName);

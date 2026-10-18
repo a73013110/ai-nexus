@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Administration;
@@ -8,7 +8,7 @@ namespace AiNexus.Features.Administration;
 /// <summary>
 /// 管理者唯讀存取使用者資料的稽核關卡。它不放寬對話擁有者檢查，且稽核寫入成功後才會回傳資料。
 /// </summary>
-internal sealed class AdministrativeReadAudit(NexusDbContext db, AccessService access)
+internal sealed class AdministrativeReadAudit(AppDbContext db, AccessService access)
 {
     public async Task<bool> AllowedAsync(Guid actor, CancellationToken ct)
         => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature);

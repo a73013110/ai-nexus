@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Sharing;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Sharing;
 /// 分享總覽：仍有效的唯讀快照（已寄出與已收到）以及即將到期的分享。分享不等於協作；
 /// 開放給協作者的資源由各自的功能統計。
 /// </summary>
-internal sealed class SharingDashboard(NexusDbContext db, TimeProvider clock) : IDashboardSource
+internal sealed class SharingDashboard(AppDbContext db, TimeProvider clock) : IDashboardSource
 {
     private static readonly TimeSpan Soon = TimeSpan.FromDays(7);
 

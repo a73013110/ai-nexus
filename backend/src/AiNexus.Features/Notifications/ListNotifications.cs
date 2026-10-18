@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ public sealed record NotificationDto(Guid Id, int Version, string Type, string S
 
 public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
 
-internal sealed class ListNotifications(NexusDbContext db)
+internal sealed class ListNotifications(AppDbContext db)
 {
     private const int PageSize = 50;
 
@@ -23,7 +24,7 @@ internal sealed class ListNotifications(NexusDbContext db)
 
     public async Task<Result<NotificationPageDto>> HandleAsync(Guid owner, bool unread, Guid? before, CancellationToken ct)
     {
-        var inbox = db.Set<WorkspaceNotification>().AsNoTracking().Inbox(owner);
+        var inbox = db.Set<Notification>().AsNoTracking().Inbox(owner);
         var count = await inbox.CountAsync(x => x.ReadAt == null, ct);
         var query = inbox.Where(x => !unread || x.ReadAt == null);
         if (before is { } cursor)

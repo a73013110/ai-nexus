@@ -1,11 +1,12 @@
-using AiNexus.Features.Attachments;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,7 @@ namespace AiNexus.Features.Chat.Transcripts;
 /// 分支結構因此完整保留。附件只複製連結，不複製實體檔案。
 /// </remarks>
 internal sealed class DuplicateConversation(
-    NexusDbContext db,
+    AppDbContext db,
     GenerationScheduler scheduler,
     AttachmentQuota quota,
     TimeProvider clock)

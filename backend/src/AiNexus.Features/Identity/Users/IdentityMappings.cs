@@ -1,3 +1,5 @@
+using AiNexus.Data.App.Identity;
+
 namespace AiNexus.Features.Identity.Users;
 
 public static class IdentityMappings

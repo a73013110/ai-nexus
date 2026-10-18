@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,7 +15,7 @@ internal static class PlatformGrants
     internal static async Task SplitOperationsAsync(NexusFactory factory, Guid operatorId)
     {
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Remove(await db.Set<RoleGroupFeature>().SingleAsync(x => x.GroupId == BuiltInAccess.AdministratorsGroup && x.FeatureId == FeatureIds.Operations));
         db.Set<Role>().Add(new() { Id = "operator", Name = "營運人員" });
         db.Set<RoleGroup>().Add(new() { Id = "operations-team", Name = "營運小組" });

@@ -1,5 +1,5 @@
+using AiNexus.Data.App.Audit;
 using System.Linq.Expressions;
-using AiNexus.Features.Persistence;
 
 namespace AiNexus.Features.Audit;
 

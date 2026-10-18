@@ -1,10 +1,8 @@
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
-using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +15,7 @@ public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds =
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 
 /// <summary>建立或更新群組、其功能與模型策略。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
-internal sealed class SaveRoleGroup(NexusDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
+internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/groups/{id}", async (string id, GroupUpdateRequest body, SaveRoleGroup handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())

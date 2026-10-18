@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Text;
 using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Providers;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -55,7 +56,7 @@ public sealed class ModelTaskService(
         bool allowEmpty = false)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
         var billing = scope.ServiceProvider.GetRequiredService<IModelCallMeter>();
 

@@ -1,4 +1,4 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +12,8 @@ public sealed class SqlDatabaseTests
     {
         await using var factory = new NexusFactory();
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<NexusDbContext>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>();
         Assert.Equal("'; DROP TABLE Users;--", await sql.QuerySingleAsync<string>("SELECT @Value", new { Value = "'; DROP TABLE Users;--" }));
         await sql.ExecuteAsync("CREATE TABLE SqlProbe (Value TEXT NOT NULL)");
         await using (var transaction = await db.Database.BeginTransactionAsync())

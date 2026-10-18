@@ -1,9 +1,10 @@
-using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -30,7 +31,7 @@ internal sealed class UserAccountRequestValidator : RequestValidator<UserAccount
 }
 
 /// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeAudit"/> 稽核。</summary>
-internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, TimeProvider clock)
+internal sealed class ManageUserAccounts(AppDbContext db, CurrentUser current, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, TimeProvider clock)
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/users", (UserAccountRequest body, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
@@ -64,7 +65,7 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
         var key = id ?? Guid.NewGuid();
         var saved = await audit.MutateAsync("admin.user", key, key.ToString(), async () =>
         {
-            var user = id is null ? new NexusUser { Id = key, Sid = "managed:" + key, ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
+            var user = id is null ? new User { Id = key, Sid = "managed:" + key, ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
                 await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
             if (user is null) return AdministrationErrors.UserNotFound;
             if (request.LocalEnabled && hash is null && user.PasswordHash is null)

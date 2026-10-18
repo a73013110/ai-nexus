@@ -1,11 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Collections;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
@@ -14,23 +15,23 @@ namespace AiNexus.Features.Knowledge.Documents;
 /// 若屬於專案則再加上專案的 ACL。找不到文件或功能未開通時一律回傳 <see cref="KnowledgeErrors.DocumentNotFound"/>，
 /// 不區分兩者，以免洩漏文件是否存在；ACL 失敗則回傳 <see cref="ResourceAccess"/> 的錯誤。
 /// </summary>
-internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, AccessService features)
+internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>以追蹤模式載入文件並完成權限檢查，供呼叫端修改。</summary>
-    public async Task<Result<KnowledgeDocument>> FindAsync(Guid actor, Guid id, CancellationToken ct, bool write = false)
+    public async Task<Result<Document>> FindAsync(Guid actor, Guid id, CancellationToken ct, bool write = false)
     {
-        var doc = await db.Set<KnowledgeDocument>().SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
+        var doc = await db.Set<Document>().SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
         if (doc is null) return KnowledgeErrors.DocumentNotFound;
         if (doc.CollectionId is Guid collection)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) return KnowledgeErrors.DocumentNotFound;
-            var granted = await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write);
+            var granted = await access.RequireAsync(actor, collection, Collection.Kind, ct, write);
             if (!granted.IsSuccess) return granted.Error;
         }
         else
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id is "chat" or "knowledge" or "projects")) return KnowledgeErrors.DocumentNotFound;
-            var resource = await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct, write);
+            var resource = await access.RequireAsync(actor, doc.Id, Document.Kind, ct, write);
             if (!resource.IsSuccess) return resource.Error;
             if (resource.Value.ParentId is Guid parent)
             {
@@ -56,19 +57,19 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
     public async Task<Result<IReadOnlyList<DocumentDto>>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct)
     {
         if (ids.Count == 0) return Array.Empty<DocumentDto>();
-        var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
+        var docs = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
         var granted = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         var collections = docs.Values.Where(x => x.CollectionId != null).Select(x => x.CollectionId!.Value).Distinct().ToArray();
         var standalone = docs.Values.Where(x => x.CollectionId == null).Select(x => x.Id).ToArray();
         // DescribeAsync 回報權限所依據的資源：知識庫文件看所屬知識庫，獨立文件看它自己。
-        var readable = new Dictionary<Guid, WorkspaceResource>();
+        var readable = new Dictionary<Guid, Resource>();
         if (collections.Length > 0)
-            foreach (var item in await (await access.QueryAsync(actor, KnowledgeCollection.Kind, ct)).AsNoTracking().Where(x => collections.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
+            foreach (var item in await (await access.QueryAsync(actor, Collection.Kind, ct)).AsNoTracking().Where(x => collections.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
         if (standalone.Length > 0)
-            foreach (var item in await (await access.QueryAsync(actor, KnowledgeDocument.Kind, ct)).AsNoTracking().Where(x => standalone.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
-        var parents = readable.Values.Where(x => x.Kind == KnowledgeDocument.Kind && x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
+            foreach (var item in await (await access.QueryAsync(actor, Document.Kind, ct)).AsNoTracking().Where(x => standalone.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
+        var parents = readable.Values.Where(x => x.Kind == Document.Kind && x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
         var projects = parents.Length == 0 ? [] : await (await access.QueryAsync(actor, "project", ct)).Where(x => parents.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
-        var resources = new List<WorkspaceResource>(ids.Count);
+        var resources = new List<Resource>(ids.Count);
         foreach (var id in ids)
         {
             if (!docs.TryGetValue(id, out var doc)) return KnowledgeErrors.DocumentNotFound;
@@ -107,9 +108,9 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         return file;
     }
 
-    public async Task<Result<DocumentDto>> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
+    public async Task<Result<DocumentDto>> DescribeAsync(Guid actor, Document doc, CancellationToken ct)
     {
-        var resource = await access.RequireAsync(actor, doc.CollectionId ?? doc.Id, doc.CollectionId is null ? KnowledgeDocument.Kind : KnowledgeCollection.Kind, ct);
+        var resource = await access.RequireAsync(actor, doc.CollectionId ?? doc.Id, doc.CollectionId is null ? Document.Kind : Collection.Kind, ct);
         if (!resource.IsSuccess) return resource.Error;
         var editable = (await access.DescribeAsync(actor, resource.Value, ct)).CanEdit;
         var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
@@ -117,5 +118,5 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
     }
 
     /// <summary>已就緒的文件一律顯示為就緒；否則以目前工作的狀態為準，覆蓋儲存的狀態。</summary>
-    public static DocumentDto Describe(KnowledgeDocument x, bool edit, string? jobStatus = null) => new(x.Id, x.CollectionId, x.FileName, x.ContentType, x.Status == "ready" ? "ready" : jobStatus ?? x.Status, x.PageCount, x.ChunkCount, x.Warning, x.JobId, edit, x.AttachmentId != null, x.TextVersion);
+    public static DocumentDto Describe(Document x, bool edit, string? jobStatus = null) => new(x.Id, x.CollectionId, x.FileName, x.ContentType, x.Status == "ready" ? "ready" : jobStatus ?? x.Status, x.PageCount, x.ChunkCount, x.Warning, x.JobId, edit, x.AttachmentId != null, x.TextVersion);
 }

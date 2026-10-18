@@ -1,5 +1,5 @@
+using AiNexus.Data.App;
 using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Extensions.Options;
 
@@ -20,7 +20,7 @@ public sealed record StatusDto(
 /// </summary>
 internal sealed class GetStatus(
     GenerationScheduler scheduler,
-    ISqlDatabase<NexusDbContext> db,
+    ISqlDatabase<AppDbContext> db,
     IOptions<AdAuthenticationOptions> auth)
 {
     public static void Map(RouteGroupBuilder api) => api

@@ -1,15 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Audit;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Projects.Management;
 using AiNexus.Features.Billing.Prices;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 
 namespace AiNexus.IntegrationTests.Identity;
@@ -33,7 +33,7 @@ public sealed class TestIdentityTests
         await Csrf(admin); Assert.Equal(actor.Id, (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit"))!;
         Assert.Contains(audit, x => x.Action == "project.created" && x.Actor == "alice@fixture.test" && x.ActingAs == "TESTER");
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var entry = await db.AuditEvents.SingleAsync(x => x.Action == "project.created");
         Assert.Equal(actor.Id, entry.ActorId); Assert.Equal(id, entry.OwnerId);
         Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "identity.test_start"));
@@ -65,7 +65,7 @@ public sealed class TestIdentityTests
     {
         await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var me = await Login(admin, "alice"); var id = await CreateUser(admin, LocalAccount());
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var actor = await db.Users.SingleAsync(x => x.Id == me.Id); var target = await db.Users.SingleAsync(x => x.Id == id);
         var principal = SessionIdentity.Principal(target, "test", actor, "ad", DateTimeOffset.UtcNow.AddMinutes(expired ? -1 : 15));
         if (!expired) { target.SecurityVersion++; await db.SaveChangesAsync(); }
@@ -85,7 +85,7 @@ public sealed class TestIdentityTests
     {
         await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var me = await Login(admin, "alice"); var id = await CreateUser(admin, LocalAccount());
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var actor = await db.Users.SingleAsync(x => x.Id == me.Id); var target = await db.Users.SingleAsync(x => x.Id == id);
         using var expired = CookieClient(f, SessionIdentity.Principal(target, "test", actor, "ad", DateTimeOffset.UtcNow.AddMinutes(-1)));
         var response = await expired.PostAsJsonAsync("/api/v1/conversations", new { title = "此操作不可遷移至管理者" });
@@ -105,7 +105,7 @@ public sealed class TestIdentityTests
         replay.DefaultRequestHeaders.Add("Cookie", cookie);
         Assert.Equal(HttpStatusCode.Conflict, (await replay.GetAsync("/api/v1/me")).StatusCode);
         using var scope = f.Services.CreateScope();
-        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.test_end"));
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.test_end"));
     }
 
     [Theory]
@@ -121,7 +121,7 @@ public sealed class TestIdentityTests
         using var replay = f.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { HandleCookies = false });
         replay.DefaultRequestHeaders.Add("Cookie", cookie);
         Assert.Equal(HttpStatusCode.Conflict, (await replay.GetAsync("/api/v1/me")).StatusCode);
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var ended = await db.AuditEvents.SingleAsync(x => x.Action == "identity.test_end");
         Assert.Equal("revoked", ended.Result);
         Assert.Contains(logout ? "signed_out" : "signed_in", ended.DetailsJson);
@@ -135,7 +135,7 @@ public sealed class TestIdentityTests
         await Begin(admin, id);
         using (var scope = f.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == actor.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         Assert.False((await admin.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);

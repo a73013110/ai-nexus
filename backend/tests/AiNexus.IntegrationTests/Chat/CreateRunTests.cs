@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Inference.Runs;
@@ -36,7 +36,7 @@ public sealed class CreateRunTests
         Assert.Equal("high", factory.Provider.LastParameters!.ReasoningEffort);
         Assert.Equal("google-level", factory.Provider.LastParameters.ReasoningControl);
         using var scope = factory.Services.CreateScope();
-        var json = (await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Runs.SingleAsync()).ParametersJson;
+        var json = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Runs.SingleAsync()).ParametersJson;
         Assert.Equal("high", JsonSerializer.Deserialize<GenerationParameters>(json)!.ReasoningEffort);
     }
 
@@ -112,7 +112,7 @@ public sealed class CreateRunTests
         await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}"), HttpStatusCode.NotFound, "conversation_not_found");
         await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}/events"), HttpStatusCode.NotFound, "conversation_not_found");
         using var scope = factory.Services.CreateScope();
-        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Runs.CountAsync());
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().Runs.CountAsync());
     }
 
     private static async Task AssertError(HttpResponseMessage response, HttpStatusCode status, string code)

@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.WebSearch;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.WebSearch;
 
 /// <summary>聊天中網路搜尋的總覽區塊；是否已設定由管理頁面顯示，不在這裡重複。</summary>
-internal sealed class WebSearchDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class WebSearchDashboard(AppDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Chat;
 

@@ -1,12 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Platform.Data;
 using Microsoft.Data.Sqlite;
@@ -17,7 +19,7 @@ using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Projects.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
-namespace AiNexus.IntegrationTests.Persistence;
+namespace AiNexus.IntegrationTests.Data;
 
 public sealed class SoftDeleteFilterTests
 {
@@ -26,10 +28,10 @@ public sealed class SoftDeleteFilterTests
     {
         using var connection = new SqliteConnection("Data Source=:memory:"); connection.Open();
         // 獨立的 options 會自行建立並驗證模型，因此必填導覽屬性的警告在此會拋出例外。
-        using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(connection)
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseTestSqlite(connection)
             .ConfigureWarnings(w => w.Throw(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)).Options);
         var filtered = db.Model.GetEntityTypes().Where(x => x.GetDeclaredQueryFilters().Count > 0).Select(x => x.ClrType).OrderBy(x => x.Name).ToArray();
-        Assert.Equal([typeof(Conversation), typeof(WorkspaceResource)], filtered);
+        Assert.Equal([typeof(Conversation), typeof(Resource)], filtered);
         Assert.All(filtered, type => Assert.Equal(SoftDelete.Filter, Assert.Single(db.Model.FindEntityType(type)!.GetDeclaredQueryFilters()).Key));
         db.Database.EnsureCreated();
     }
@@ -45,7 +47,7 @@ public sealed class SoftDeleteFilterTests
 
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.Equal([kept.Id], await db.Conversations.Where(x => x.OwnerId == user.Id).Select(x => x.Id).ToListAsync());
             Assert.Null(await db.Conversations.FirstOrDefaultAsync(x => x.Id == deleted.Id));
             var row = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deleted.Id);
@@ -75,15 +77,15 @@ public sealed class SoftDeleteFilterTests
         var artifact = (await (await owner.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("gone", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/artifacts/{artifact.Resource.Id}")).StatusCode);
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!.Resource.Id;
-        var deletedChild = new WorkspaceResource { OwnerId = me.Id, Kind = KnowledgeDocument.Kind, Name = "deleted file", ParentId = project, IsDeleted = true };
+        var deletedChild = new Resource { OwnerId = me.Id, Kind = Document.Kind, Name = "deleted file", ParentId = project, IsDeleted = true };
         var deletedConversation = new Conversation { OwnerId = me.Id, ProjectId = project, Title = "deleted chat", IsDeleted = true };
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(deletedChild); db.Add(deletedConversation); await db.SaveChangesAsync();
-            Assert.False(await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == artifact.Resource.Id));
-            Assert.Equal([project], await db.Set<WorkspaceResource>().Where(x => x.OwnerId == me.Id).Select(x => x.Id).ToListAsync());
-            Assert.True((await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == artifact.Resource.Id)).IsDeleted);
+            Assert.False(await db.Set<Resource>().AnyAsync(x => x.Id == artifact.Resource.Id));
+            Assert.Equal([project], await db.Set<Resource>().Where(x => x.OwnerId == me.Id).Select(x => x.Id).ToListAsync());
+            Assert.True((await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == artifact.Resource.Id)).IsDeleted);
         }
         Assert.Empty((await owner.GetFromJsonAsync<ArtifactSummaryDto[]>("/api/v1/artifacts"))!);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/artifacts/{artifact.Resource.Id}")).StatusCode);
@@ -93,10 +95,10 @@ public sealed class SoftDeleteFilterTests
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/projects/{project}")).StatusCode);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-            Assert.Null((await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedChild.Id)).ParentId);
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Null((await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedChild.Id)).ParentId);
             Assert.Null((await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedConversation.Id)).ProjectId);
-            Assert.Empty(await db.Set<WorkspaceResource>().Where(x => x.OwnerId == me.Id).ToListAsync());
+            Assert.Empty(await db.Set<Resource>().Where(x => x.OwnerId == me.Id).ToListAsync());
         }
     }
 }

@@ -1,13 +1,13 @@
+using AiNexus.Data.App;
 using System.Text.Json;
 using AiNexus.Features.Diagnostics;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>以 JSON 檔案下載即時監控快照，受匯出速率限制；釋出前會先寫入稽核紀錄。</summary>
-internal sealed class ExportMonitoringSnapshot(MonitoringSnapshots snapshots, NexusDbContext db)
+internal sealed class ExportMonitoringSnapshot(MonitoringSnapshots snapshots, AppDbContext db)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/export", (int? minutes, ICurrentUser user, HttpContext http, ExportMonitoringSnapshot handler, CancellationToken ct) =>

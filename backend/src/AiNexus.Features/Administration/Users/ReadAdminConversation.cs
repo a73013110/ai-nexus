@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, strin
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, IReadOnlyList<AdminMessageDto> Messages, int Offset, int Total);
 
 /// <summary>任一對話的訊息，每頁 100 筆，附附件與執行耗時；讀取會稽核。</summary>
-internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeReadAudit reads, ModelPresentation models)
+internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadAudit reads, ModelPresentation models)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/conversations/{id:guid}", async (Guid id, int? offset, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, offset ?? 0, ct)).ToHttpResult())

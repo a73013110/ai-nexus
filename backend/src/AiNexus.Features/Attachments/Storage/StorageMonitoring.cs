@@ -1,4 +1,5 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Attachments.Storage;
 /// 執行期監控儲存的檔案：每位擁有者就緒檔案的數量與位元組，以及儲存磁碟的可用空間。
 /// 可用比例低於 <see cref="LowFreePercent"/> 為降級，低於 <see cref="CriticalFreePercent"/> 為失敗。
 /// </summary>
-internal sealed class StorageMonitoring(NexusDbContext db, IOptions<AttachmentOptions> options) : IMonitoringSource
+internal sealed class StorageMonitoring(AppDbContext db, IOptions<AttachmentOptions> options) : IMonitoringSource
 {
     public const double LowFreePercent = 10, CriticalFreePercent = 3;
 

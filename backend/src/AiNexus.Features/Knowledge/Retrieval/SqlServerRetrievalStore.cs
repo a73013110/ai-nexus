@@ -1,15 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using System.Text.Json;
-using AiNexus.Features.Persistence;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Data.SqlClient;
-using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 
-public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IOptions<KnowledgeOptions> options, IMemoryCache cache, ILogger<SqlServerRetrievalStore> logger) : IRetrievalStore
+public sealed class SqlServerRetrievalStore(ISqlDatabase<AppDbContext> sql, IOptions<KnowledgeOptions> options, IMemoryCache cache, ILogger<SqlServerRetrievalStore> logger) : IRetrievalStore
 {
     public async Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, EmbeddingProfile profile, string query, float[]? vector, string mode, CancellationToken ct)
     {

@@ -1,7 +1,7 @@
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace AiNexus.Features.Persistence;
+namespace AiNexus.Platform.Data;
 
 /// <summary>
 /// 領域事件分發攔截器。
@@ -11,7 +11,7 @@ namespace AiNexus.Features.Persistence;
 /// 把 SaveChanges 與事件分發包在一起，確保同進同退。
 /// 同步的 SaveChanges 無法執行非同步分發，因此有待處理事件時直接拋出例外，而不是靜默漏掉副作用。
 /// </remarks>
-internal sealed class DomainEventInterceptor(DomainEvents events) : SaveChangesInterceptor
+public sealed class DomainEventInterceptor(DomainEvents events) : SaveChangesInterceptor
 {
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,

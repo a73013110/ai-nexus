@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
 /// <summary>擁有者最近的檢索評測；若某筆所用的知識庫已無法讀取，則略過該筆。</summary>
-internal sealed class ListRetrievalEvaluations(NexusDbContext db, RetrievalEvaluationService evaluations)
+internal sealed class ListRetrievalEvaluations(AppDbContext db, RetrievalEvaluationService evaluations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/retrieval-evals", async (ICurrentUser user, ListRetrievalEvaluations handler, HttpContext http, CancellationToken ct) =>

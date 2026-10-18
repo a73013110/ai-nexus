@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Globalization;
-using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +16,7 @@ public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, 
 public sealed record TokenUsageDto(DateTimeOffset From, DateTimeOffset Until, int TimezoneOffsetMinutes, IReadOnlyList<TokenDayDto> Daily);
 
 /// <summary>個人與授權管理員報表共用的會計查詢；授權檢查由呼叫端負責。</summary>
-public sealed class UsageReports(NexusDbContext db, ModelPresentation presentation, TimeProvider clock)
+public sealed class UsageReports(AppDbContext db, ModelPresentation presentation, TimeProvider clock)
 {
     /// <summary>近 30 天的起點（含今日，以 UTC 日界切分），沒有指定期間時的預設起點。</summary>
     public DateTimeOffset Since => UtcDay.Start(clock.GetUtcNow()).AddDays(-29);

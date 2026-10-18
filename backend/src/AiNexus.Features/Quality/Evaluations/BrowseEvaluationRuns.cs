@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string
 public sealed record EvaluationDetailDto(EvaluationRunDto Run, IReadOnlyList<EvaluationCase> Cases, IReadOnlyList<EvaluationVariant> Variants, IReadOnlyList<EvaluationResultDto> Results, bool CanReview);
 
 /// <summary>某題組最近 100 筆執行紀錄；單筆執行另含凍結的題目、變體與結果。兩者都需要該題組的讀取權限。</summary>
-internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess access, ModelPresentation presentation)
+internal sealed class BrowseEvaluationRuns(AppDbContext db, ResourceAccess access, ModelPresentation presentation)
 {
     public static void Map(RouteGroupBuilder routes)
     {

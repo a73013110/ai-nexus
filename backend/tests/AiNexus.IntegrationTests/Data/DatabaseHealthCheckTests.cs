@@ -1,5 +1,5 @@
+using AiNexus.Data.App;
 using System.Net;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.IntegrationTests.Persistence;
+namespace AiNexus.IntegrationTests.Data;
 
 public sealed class DatabaseHealthCheckTests
 {
@@ -25,7 +25,7 @@ public sealed class DatabaseHealthCheckTests
     public async Task ReadinessFailsWhenTheDatabaseCannotBeOpenedOrIsNotConfigured()
     {
         var missing = Path.Combine(Path.GetTempPath(), $"nexus-missing-{Guid.NewGuid():N}", "nexus.db");
-        await using var services = new ServiceCollection().AddDbContext<NexusDbContext>(x => x.UseSqlite($"Data Source={missing};Mode=ReadOnly")).BuildServiceProvider();
+        await using var services = new ServiceCollection().AddDbContext<AppDbContext>(x => x.UseSqlite($"Data Source={missing};Mode=ReadOnly")).BuildServiceProvider();
         var scopes = services.GetRequiredService<IServiceScopeFactory>();
         var configured = new StorageReadiness(Options.Create(new DatabasesOptions()), new HostingEnvironment { EnvironmentName = "Testing" });
         Assert.Equal(HealthStatus.Unhealthy, (await new DatabaseHealthCheck(scopes, configured, TimeProvider.System).CheckHealthAsync(new())).Status);

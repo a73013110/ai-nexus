@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.Quality;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -26,7 +27,7 @@ internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackReques
 }
 
 /// <summary>為使用者擁有之對話中已完成的 AI 回答評分；不複製回答內容。</summary>
-internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock writes, TimeProvider clock)
+internal sealed class SaveMessageFeedback(AppDbContext db, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>

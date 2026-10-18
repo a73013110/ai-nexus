@@ -60,5 +60,3 @@ public sealed class RepositoriesModule : IFeatureModule
         CreateRepositoryReview.Map(repository);
     }
 }
-
-internal sealed class RepositoriesFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Repositories, "程式庫", "/repositories", 60, BuiltInAccess.CollaborationNavigation, "git"));

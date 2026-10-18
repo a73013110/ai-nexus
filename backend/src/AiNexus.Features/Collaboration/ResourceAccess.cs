@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Collaboration;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Threading;
 using Microsoft.EntityFrameworkCore;
@@ -22,30 +23,30 @@ public sealed class ResourceWriteLock
 }
 
 /// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
-public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes, TimeProvider clock)
+public sealed class ResourceAccess(AppDbContext db, AccessService access, ResourceWriteLock writes, TimeProvider clock)
 {
-    public async Task<IQueryable<WorkspaceResource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
+    public async Task<IQueryable<Resource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
     {
         var effective = await access.ForUserAsync(actor, ct);
         var groups = effective.Groups.Select(x => x.Id).ToArray();
         var inheritProjects = effective.Features.Any(x => x.Id == "projects");
-        var direct = db.Set<WorkspaceResource>().Where(x =>
+        var direct = db.Set<Resource>().Where(x =>
             x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId)));
-        return db.Set<WorkspaceResource>().Where(x => x.Kind == kind &&
+        return db.Set<Resource>().Where(x => x.Kind == kind &&
             (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == "project" && r.Id == x.ParentId)));
     }
-    public async Task<Result<WorkspaceResource>> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
+    public async Task<Result<Resource>> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
     {
         var resource = await (await QueryAsync(actor, kind, ct)).SingleOrDefaultAsync(x => x.Id == id, ct);
         if (resource is null) return CollaborationErrors.ResourceNotFound;
         if (write && !await CanEditAsync(actor, resource, ct)) return CollaborationErrors.ResourceReadOnly;
         return resource;
     }
-    public async Task<bool> CanEditAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => value.OwnerId == actor ||
+    public async Task<bool> CanEditAsync(Guid actor, Resource value, CancellationToken ct) => value.OwnerId == actor ||
         await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == value.Id && x.UserId == actor && x.Role == "editor", ct) ||
-        await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" &&
+        await db.Set<Resource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" &&
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
-    public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
+    public async Task<ResourceDto> DescribeAsync(Guid actor, Resource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
 
     /// <summary>與 <see cref="RequireAsync"/> 的可見性規則相同，但一次查完整批；任一筆不可見即回傳 not found。</summary>
@@ -57,7 +58,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     }
 
     /// <summary>與 <see cref="CanEditAsync"/> 判斷相同，但以至多兩次查詢批次完成，回傳可編輯的 id 集合。</summary>
-    public async Task<IReadOnlySet<Guid>> EditableAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    public async Task<IReadOnlySet<Guid>> EditableAsync(Guid actor, IReadOnlyCollection<Resource> values, CancellationToken ct)
     {
         var editable = values.Where(x => x.OwnerId == actor).Select(x => x.Id).ToHashSet();
         var rest = values.Where(x => !editable.Contains(x.Id)).ToArray();
@@ -65,7 +66,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         var ids = rest.Select(x => x.Id).Distinct().ToArray();
         var named = await db.Set<ResourceMember>().Where(x => ids.Contains(x.ResourceId) && x.UserId == actor && x.Role == "editor").Select(x => x.ResourceId).ToListAsync(ct);
         var parents = rest.Where(x => x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
-        var projects = parents.Length == 0 ? [] : await db.Set<WorkspaceResource>().Where(x => parents.Contains(x.Id) && x.Kind == "project" &&
+        var projects = parents.Length == 0 ? [] : await db.Set<Resource>().Where(x => parents.Contains(x.Id) && x.Kind == "project" &&
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor"))).Select(x => x.Id).ToListAsync(ct);
         foreach (var value in rest)
             if (named.Contains(value.Id) || value.ParentId is Guid parent && projects.Contains(parent)) editable.Add(value.Id);
@@ -73,7 +74,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     }
 
     /// <summary>批次版本的 <see cref="DescribeAsync"/>，結果保持輸入順序。</summary>
-    public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<Resource> values, CancellationToken ct)
     {
         var editable = await EditableAsync(actor, values, ct);
         return values.Select(value => new ResourceDto(value.Id, value.Name, value.Kind, editable.Contains(value.Id), value.OwnerId == actor, value.UpdatedAt)).ToArray();
@@ -115,8 +116,8 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         }
         return Result.Success;
     }
-    public async Task<Result<WorkspaceResource>> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
-        => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
+    public async Task<Result<Resource>> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
+        => await db.Set<Resource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
             ? resource : CollaborationErrors.ResourceNotFound;
 
     /// <summary>資源名稱：去除前後空白後 1 到 120 字，且不可含控制字元。</summary>

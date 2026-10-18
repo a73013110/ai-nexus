@@ -1,11 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using System.Globalization;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
@@ -21,13 +21,13 @@ public static class EmbeddingJobs
     public static int Profile(Guid subject) => int.Parse(subject.ToString("N")[..8], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 }
 
-public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors, KnowledgeWriteLock writes,
+public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors, KnowledgeWriteLock writes,
     JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
-    private IQueryable<KnowledgeDocument> Documents => db.Set<KnowledgeDocument>().Where(x => x.CollectionId != null && !x.IsDeleted);
+    private IQueryable<Document> Documents => db.Set<Document>().Where(x => x.CollectionId != null && !x.IsDeleted);
     public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct)
     {
-        var chunks = from c in db.Set<KnowledgeChunk>() join d in Documents on c.DocumentId equals d.Id select c;
+        var chunks = from c in db.Set<Chunk>() join d in Documents on c.DocumentId equals d.Id select c;
         var total = await chunks.CountAsync(ct);
         var completed = profile.Provider == "none" ? total : await (from e in vectors.Rows(profile) join c in chunks on e.ChunkId equals c.Id select e.ChunkId).CountAsync(ct);
         return new(completed, total, await Documents.CountAsync(x => x.Status != "ready", ct));

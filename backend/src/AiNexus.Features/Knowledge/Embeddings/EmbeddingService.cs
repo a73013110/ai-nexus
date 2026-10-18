@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 

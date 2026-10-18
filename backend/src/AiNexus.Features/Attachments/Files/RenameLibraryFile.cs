@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -20,7 +21,7 @@ internal sealed class RenameLibraryFileRequestValidator : RequestValidator<Renam
 }
 
 /// <summary>重新命名檔案庫中的檔案。副檔名必須保留；若別人已先改名，這次改名會失敗。</summary>
-internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService files)
+internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/name", async (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>

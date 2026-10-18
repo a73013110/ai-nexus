@@ -1,11 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Billing;
+using AiNexus.Data.App.Identity;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Billing.Charges;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Dashboard;
-using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Billing;
@@ -20,7 +20,7 @@ public sealed class ReportSpendTests
         var start = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.FromHours(8)); var end = start.AddDays(2);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             foreach (var (owner, currency, amount, at) in new[] { (a, "USD", 1m, start), (b, "TWD", 32m, start.AddDays(1)), (b, "TWD", 100m, end) })
                 db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = owner, Currency = currency, Kind = "api", Amount = amount, State = "metered", CreatedAt = at, ModelId = "test-model", Provider = "google", InputTokens = 10, OutputTokens = 5 });
             await db.SaveChangesAsync();
@@ -47,7 +47,7 @@ public sealed class ReportSpendTests
         {
             for (var i = 0; i < 250; i++)
             {
-                var user = new NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
+                var user = new User { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
                 db.Add(user); db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = user.Id, Currency = "USD", Kind = "api", Amount = 1m, State = "metered", CreatedAt = DateTimeOffset.UtcNow, ModelId = "test-model", Provider = "google" });
             }
             db.SaveChanges();
@@ -66,7 +66,7 @@ public sealed class ReportSpendTests
         var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             foreach (var model in new[] { "retired-private-model-A", "retired-private-model-B" })
                 db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = owner, ConversationId = conversation.Id, Provider = "google", ModelId = model, CreatedAt = DateTimeOffset.UtcNow, Currency = "USD", Kind = "api", Amount = 1m, State = "metered" });
             await db.SaveChangesAsync();

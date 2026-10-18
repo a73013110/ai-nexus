@@ -1,11 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Library;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Library;
 
-internal sealed class DeletePromptTemplate(NexusDbContext db)
+internal sealed class DeletePromptTemplate(AppDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeletePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())

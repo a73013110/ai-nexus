@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -22,7 +23,7 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
 }
 
 /// <summary>在可編輯的有效專案中新增範本（每個專案最多 30 個）或編輯既有範本。</summary>
-internal sealed class SaveProjectTemplate(NexusDbContext db, ResourceAccess access)
+internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/templates", async (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>

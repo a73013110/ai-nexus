@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.AccessControl.Navigation;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Audit;
@@ -14,7 +15,7 @@ public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOn
 /// 稽核頁顯示用的功能、模型與選單群組名稱，以及分類與動作篩選。所有群組都列出，因為已記錄的功能異動是依選單分群排列的。
 /// 唯讀，且不依賴帳號或政策管理功能。
 /// </summary>
-internal sealed class GetAuditCatalog(NexusDbContext db, ModelCatalog catalog, AccessService access)
+internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder audit) => audit
         .MapGet("/catalog", async (GetAuditCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))

@@ -1,4 +1,4 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +11,7 @@ public sealed record AuditDto(long Id, string Actor, string Action, Guid? Resour
 /// 符合條件的最新 25、50 或 100（預設）筆稽核紀錄，可用游標 <c>before</c> 往舊的讀。
 /// 不回傳總筆數：游標分頁省掉大表 COUNT，期間新寫入的紀錄也不會讓翻頁重複。
 /// </summary>
-internal sealed class ListActivityAudit(NexusDbContext db)
+internal sealed class ListActivityAudit(AppDbContext db)
 {
     public static readonly int[] PageSizes = [25, 50, 100];
 

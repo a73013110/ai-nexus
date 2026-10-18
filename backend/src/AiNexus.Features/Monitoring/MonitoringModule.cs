@@ -54,5 +54,3 @@ public static class RuntimeTrafficMiddlewareExtensions
     /// <summary>必須最外層註冊：才能量測每個請求，包括被診斷或安全層拒絕的請求。</summary>
     public static IApplicationBuilder UseRuntimeTraffic(this IApplicationBuilder app) => app.UseMiddleware<RuntimeTrafficMiddleware>();
 }
-
-internal sealed class MonitoringFeatures() : FeatureSeed(new PlatformFeature(MonitoringModule.Feature, "即時監控", "/admin/monitoring", 93, BuiltInAccess.SystemNavigation, "activity", AdministratorsOnly: true));

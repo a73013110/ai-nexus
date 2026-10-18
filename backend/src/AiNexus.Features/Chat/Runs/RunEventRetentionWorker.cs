@@ -1,4 +1,4 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Chat.Runs;
@@ -48,7 +48,7 @@ public sealed partial class RunEventRetentionWorker(
     public async Task<int> CleanupAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var cutoff = clock.GetUtcNow() - Retention;
 
         var expired = db.RunEvents.Where(x =>

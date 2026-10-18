@@ -1,3 +1,5 @@
+using AiNexus.Data.App.Knowledge;
+
 namespace AiNexus.Features.Knowledge.Embeddings;
 
 public sealed record EmbeddingBatchResult(IReadOnlyList<float[]> Vectors, long? InputTokens = null);

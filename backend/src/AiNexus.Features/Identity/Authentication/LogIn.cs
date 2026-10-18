@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Validation;
 using System.Security.Claims;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Authentication;
 
@@ -16,7 +16,7 @@ namespace AiNexus.Features.Identity.Authentication;
 public sealed record AdLoginRequest(string Account, string Password, string Method = "ad");
 
 /// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
-internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, NexusDbContext db, AuthenticationAudit audit, Issues issues,
+internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, AppDbContext db, AuthenticationAudit audit, Issues issues,
     IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
 {
     public static void Map(RouteGroupBuilder auth) => auth
@@ -26,7 +26,7 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
     {
         var previous = http.User;
-        Result<NexusUser> user;
+        Result<User> user;
         try { user = await AuthenticateAsync(http, body, ct); }
         catch (Exception error) when (!ct.IsCancellationRequested)
         {
@@ -50,7 +50,7 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
         return TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
     }
 
-    private async Task<Result<NexusUser>> AuthenticateAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
+    private async Task<Result<User>> AuthenticateAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
     {
         // 空白或超長的帳密與帳號密碼錯誤走同一個回應與稽核，避免從回應差異推測輸入格式。
         if (string.IsNullOrWhiteSpace(body.Account) || body.Account.Length > 256

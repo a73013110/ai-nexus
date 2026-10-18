@@ -80,17 +80,13 @@ Describe 'Host commands called by scripts' {
         }
     }
 
-    It 'splits the release SQL and diffs the schema in Publish-IIS.ps1 only when -FromMigration is given' {
-        $publish = @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' })
-        $publish.Count | Should -Be 2
-        $publish[0].Words | Should -Be @('db', 'script', '--from', '--output')
-        $publish[1].Words | Should -Be @('db', 'diff', '--from', '--output')
+    It 'ships the database project dacpac and Verify-Database.ps1 with every IIS package' {
+        @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' }) | Should -BeNullOrEmpty
         $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
-        $text | Should -Match "PSBoundParameters\.ContainsKey\('FromMigration'\)"
-        $text | Should -Match 'migrations script --idempotent'
-        # db diff runs the SqlPackage pinned by the tool manifest, which needs a restore from the repository root.
-        $text | Should -Match 'dotnet tool restore'
-        $text | Should -Match "Verify-Database\.ps1"
+        $text | Should -Match 'dotnet build database/App'
+        $text | Should -Match 'App\.dacpac'
+        $text | Should -Match 'Verify-Database\.ps1'
+        $text | Should -Not -Match 'migrations'
     }
 }
 
@@ -124,7 +120,7 @@ Describe 'Verify-Database.ps1' {
     }
 
     It 'fails with installation steps instead of skipping when SqlPackage is missing' {
-        $dacpac = Join-Path $TestDrive 'expected.dacpac'
+        $dacpac = Join-Path $TestDrive 'App.dacpac'
         Set-Content -LiteralPath $dacpac -Value 'x'
         { & $script -Server 'sql.invalid' -DacpacPath $dacpac -SqlPackagePath (Join-Path $TestDrive 'missing/SqlPackage.exe') } | Should -Throw '*SqlPackagePath*'
         $output = pwsh -NoProfile -Command "`$env:PATH = ''; `$env:ProgramFiles = '$TestDrive'; & '$script' -Server sql.invalid -DacpacPath '$dacpac'" 2>&1 | Out-String
@@ -134,6 +130,6 @@ Describe 'Verify-Database.ps1' {
     }
 
     It 'fails clearly without the expected dacpac' {
-        { & $script -Server 'sql.invalid' -DacpacPath (Join-Path $TestDrive 'none.dacpac') } | Should -Throw '*expected.dacpac*'
+        { & $script -Server 'sql.invalid' -DacpacPath (Join-Path $TestDrive 'none.dacpac') } | Should -Throw '*App.dacpac*'
     }
 }

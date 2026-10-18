@@ -1,13 +1,14 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
 // 每個已保存的檢查點都與當前租約（fencing token）在同一交易中比對；租約已失效或已要求取消時拒絕寫入。
-public sealed class JobExecution(NexusDbContext db, BackgroundJob job, Guid lease)
+public sealed class JobExecution(AppDbContext db, BackgroundJob job, Guid lease)
 {
     public BackgroundJob Job => job;
-    public NexusDbContext Database => db;
+    public AppDbContext Database => db;
     public async Task CheckpointAsync(
         string stage,
         int completed,

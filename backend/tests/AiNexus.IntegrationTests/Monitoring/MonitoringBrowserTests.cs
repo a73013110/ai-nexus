@@ -1,4 +1,5 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
@@ -44,7 +45,7 @@ public sealed class MonitoringBrowserTests
         var evidence = Path.Combine(root, "artifacts", "monitoring-acceptance"); Directory.CreateDirectory(evidence);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-browser-live-monitor.png") });
         using var scope = factory.Services.CreateScope();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AnyAsync(x => x.Action == "monitoring.view"));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "monitoring.view"));
         Assert.Empty(errors);
     }
 }

@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Text.Json;
 using AiNexus.Features.Billing;
-using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +49,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
 {
     public async Task<T> RunAsync<T>(Guid owner, string kind, string provider, string model, Func<Task<(T Value, long? Tokens)>> action, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var billing = scope.ServiceProvider.GetRequiredService<BillingService>();
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model, CreatedAt = clock.GetUtcNow() };
         // 交易中最先取得的擁有者列鎖負責序列化配額預留；交易在呼叫供應商之前就結束，避免鎖在外部呼叫期間被持有。

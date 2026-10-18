@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -17,7 +18,7 @@ internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 }
 
 /// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>
-internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation models)
+internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation models)
 {
     public const int MaxModelIdLength = 160;
 
@@ -26,7 +27,7 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
         .WithName("UpdatePreferences");
 
-    public async Task<Result<PreferencesDto>> HandleAsync(NexusUser user, PreferencesDto value, CancellationToken ct)
+    public async Task<Result<PreferencesDto>> HandleAsync(User user, PreferencesDto value, CancellationToken ct)
     {
         var applied = Apply(user, value, models);
         if (!applied.IsSuccess) return applied.Error;
@@ -37,7 +38,7 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
     public static bool ValidTheme(string? theme) => theme is "light" or "dark" or "system";
 
     /// <summary>檢查並把 <paramref name="value"/> 套用到已追蹤的使用者，但不儲存；失敗時不改動任何值。</summary>
-    public static Result<PreferencesDto> Apply(NexusUser user, PreferencesDto value, ModelPresentation models)
+    public static Result<PreferencesDto> Apply(User user, PreferencesDto value, ModelPresentation models)
     {
         if (!ValidTheme(value.Theme)) return AccountErrors.InvalidTheme;
         if (value.DefaultModelId?.Length > MaxModelIdLength) return AccountErrors.InvalidModel;

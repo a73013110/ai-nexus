@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -24,7 +25,7 @@ internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
 }
 
 /// <summary>對執行中單一案例與變體給予人工分數；需要題組的編輯權限。</summary>
-internal sealed class ReviewEvaluationResult(NexusDbContext db, ResourceAccess access)
+internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/runs/{id:guid}/results/{caseIndex:int}/{variantIndex:int}/review", async (Guid id, int caseIndex, int variantIndex, ReviewRequest body, ICurrentUser user, ReviewEvaluationResult handler, CancellationToken ct) =>

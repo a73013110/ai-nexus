@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -33,7 +33,7 @@ internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdenti
 /// <summary>
 /// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
 /// </summary>
-internal sealed class StartTestIdentity(CurrentUser current, NexusDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock)
+internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock)
 {
     public const int MinReasonLength = 4, MaxReasonLength = 240;
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);

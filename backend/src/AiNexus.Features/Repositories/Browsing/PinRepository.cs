@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Browsing;
 
 /// <summary>把使用者可讀取的程式庫釘在清單頂端，並同步為 Gitea 目前的名稱與說明。</summary>
-internal sealed class PinRepository(NexusDbContext db, RepositoryService gitea, RepositoryWriteLock writes)
+internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPut("/pin", (string owner, string name, ICurrentUser user, PinRepository handler, CancellationToken ct) =>

@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Inference;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
-using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
@@ -46,7 +46,7 @@ public sealed record EffectiveModelPolicyDto(
 /// 統一負責對話（Chat）、文件 OCR、文字轉換與評估等所有推論任務的權限校驗與配額扣減。
 /// </summary>
 public sealed class ModelPolicyService(
-    NexusDbContext db,
+    AppDbContext db,
     AccessService access,
     ModelPresentation presentation,
     IOptions<InferenceOptions> inference,

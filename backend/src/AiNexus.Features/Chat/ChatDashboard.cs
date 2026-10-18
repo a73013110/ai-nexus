@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +11,7 @@ namespace AiNexus.Features.Chat;
 /// 對話與 AI 生成模組的儀表板資料來源。
 /// 彙整使用者的對話數量、提問量趨勢、生成成功/失敗/取消統計、平均回應時間以及使用模型分佈。
 /// </summary>
-internal sealed class ChatDashboard(NexusDbContext db, ModelPresentation presentation) : IDashboardSource
+internal sealed class ChatDashboard(AppDbContext db, ModelPresentation presentation) : IDashboardSource
 {
     private const int ModelShares = 6;
 

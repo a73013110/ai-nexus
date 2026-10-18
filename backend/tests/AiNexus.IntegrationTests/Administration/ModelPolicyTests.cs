@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
@@ -5,16 +7,13 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Audit;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Chat.Context;
-using AiNexus.Features.AccessControl.ModelPolicies;
 using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Administration;
@@ -76,7 +75,7 @@ public sealed class ModelPolicyTests
         (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 1 })))).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AddRange(new RoleGroup { Id = "specialists", Name = "專業工作區" },
                 new RoleGroupRole { RoleId = BuiltInAccess.MemberRole, GroupId = "specialists" },
                 new GroupModelPolicy { GroupId = "specialists", AllowedModelsJson = "[\"test-model\",\"not-approved\"]", DailyTokenLimitsJson = "{\"test-model\":2000,\"not-approved\":3000}" });
@@ -90,7 +89,7 @@ public sealed class ModelPolicyTests
         (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "準備", "not-approved"))).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             (await db.Set<RoleGroup>().SingleAsync(x => x.Id == "specialists")).Enabled = false;
             await db.SaveChangesAsync();
         }

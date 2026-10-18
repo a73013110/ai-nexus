@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.Repositories.Browsing;
 using AiNexus.Features.Repositories.Connections;
@@ -36,7 +37,7 @@ public sealed class RepositoryConnectionTests
         var status = (await response.Content.ReadFromJsonAsync<RepositoryStatusDto>())!; Assert.True(status.Connected); Assert.Equal("fixture-user", status.Login);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var connection = await db.Set<RepositoryConnection>().SingleAsync(); Assert.DoesNotContain(Token, connection.ProtectedToken);
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var connection = await db.Set<RepositoryConnection>().SingleAsync(); Assert.DoesNotContain(Token, connection.ProtectedToken);
             var wrong = scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>().CreateProtector("AiNexus.Gitea.UserToken.v1", Guid.NewGuid().ToString("N"), connection.BaseUrl);
             Assert.Throws<CryptographicException>(() => wrong.Unprotect(connection.ProtectedToken));
         }
@@ -45,7 +46,7 @@ public sealed class RepositoryConnectionTests
         Assert.All(source.Requests, x => Assert.StartsWith("api/v1/", x));
         (await alice.DeleteAsync("/api/v1/repositories/connection")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Conflict, (await alice.GetAsync("/api/v1/repositories")).StatusCode);
-        using var finalScope = factory.Services.CreateScope(); Assert.Empty(await finalScope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RepositoryConnection>().ToListAsync());
+        using var finalScope = factory.Services.CreateScope(); Assert.Empty(await finalScope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RepositoryConnection>().ToListAsync());
     }
 
     [Fact]

@@ -28,7 +28,7 @@ public static class RepositoryReviewPlan
         _ => "目的是快速的整體程式碼檢閱。只找變更直接引入、有證據的重大缺陷與跨檔案不一致；依 P1/P2 排序。忽略格式、命名偏好、一般最佳實踐、假設性的風險與缺少上下文才能確認的問題。",
     };
 
-    public static Result<ReviewSnapshot> Create(string diff, ModelProfile model, string repository, string head, string? basis, string note, string purpose)
+    public static Result<ReviewSnapshot> Create(string diff, ModelDefinition model, string repository, string head, string? basis, string note, string purpose)
     {
         if (!IsPurpose(purpose)) return RepositoriesErrors.ReviewPurposeInvalid;
         var focus = Focus(purpose);

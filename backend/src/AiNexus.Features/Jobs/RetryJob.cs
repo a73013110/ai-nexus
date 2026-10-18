@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Jobs;
 /// 把使用者的失敗或已取消工作重新排入佇列。全部嘗試上限為 6 次；且工作種類仍有處理器、處理器接受重試，
 /// 同一業務對象沒有其他進行中的工作。更新以讀到的狀態作為條件（fencing），避免覆寫併發的狀態變更。
 /// </summary>
-internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, TimeProvider clock)
+internal sealed class RetryJob(AppDbContext db, IServiceProvider services, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>

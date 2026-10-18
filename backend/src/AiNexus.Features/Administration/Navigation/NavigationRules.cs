@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Text.RegularExpressions;
-using AiNexus.Features.AccessControl.Navigation;
 using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +20,6 @@ internal static class NavigationRules
         => Regex.IsMatch(icon, "^[a-z][a-z0-9-]{0,39}$", RegexOptions.CultureInvariant) ? null : AdministrationErrors.InvalidFeatureIcon;
 
     /// <summary>null 代表頂層；其他值必須指向既有群組。</summary>
-    public static async Task<Error?> ExistingGroupAsync(NexusDbContext db, string? id, CancellationToken ct)
+    public static async Task<Error?> ExistingGroupAsync(AppDbContext db, string? id, CancellationToken ct)
         => id is null || await db.Set<NavigationGroup>().AnyAsync(x => x.Id == id, ct) ? null : AdministrationErrors.NavigationGroupNotFound;
 }

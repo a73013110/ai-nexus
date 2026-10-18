@@ -1,16 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Quality.Evaluations;
-using AiNexus.Features.Quality.Feedback;
-using AiNexus.Features.Quality.RetrievalEvaluations;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality;
 
 /// <summary>回答品質總覽：期間內的有幫助／沒幫助評分數與發起的評測次數；只計入評分，理由與備註仍只對作者可見。</summary>
-internal sealed class QualityDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class QualityDashboard(AppDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Quality;
 

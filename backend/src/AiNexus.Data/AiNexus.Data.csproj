@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 資料庫的 EF 對應：依「資料庫 → 模組（schema）→ 資料表」放實體、組態與 DbContext，只依賴 AiNexus.Platform。見 docs/decisions/0013。 -->
+  <PropertyGroup>
+    <RootNamespace>AiNexus.Data</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../AiNexus.Platform/AiNexus.Platform.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+</Project>

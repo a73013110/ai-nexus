@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Chat.Runs;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ChatApi;
@@ -23,7 +23,7 @@ public sealed class RunEventRetentionWorkerTests
         var backlog = RunEventRetentionWorker.BatchSize * 2 + 7;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var owner = await db.Runs.Where(x => x.Id == active.Id).Select(x => x.OwnerId).SingleAsync();
             await db.Runs.Where(x => x.Id == active.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ActiveOwnerId, owner));
             await db.RunEvents.Where(x => x.RunId == finished.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow));
@@ -45,6 +45,6 @@ public sealed class RunEventRetentionWorkerTests
     private static async Task<int> CountAsync(NexusFactory factory, Guid run, System.Linq.Expressions.Expression<Func<RunEvent, bool>> where)
     {
         using var scope = factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<NexusDbContext>().RunEvents.Where(x => x.RunId == run).Where(where).CountAsync();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().RunEvents.Where(x => x.RunId == run).Where(where).CountAsync();
     }
 }

@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -18,7 +19,7 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
 }
 
 /// <summary>建立使用者自己的空對話。其他模組經由 <see cref="ConversationService.CreateAsync"/> 建立。</summary>
-internal sealed class CreateConversation(NexusDbContext db, TimeProvider clock)
+internal sealed class CreateConversation(AppDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", (CreateConversationRequest body, ICurrentUser user, CreateConversation handler, CancellationToken ct) =>

@@ -1,5 +1,5 @@
-using AiNexus.Features.AccessControl.Roles;
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +10,7 @@ namespace AiNexus.Features.Administration.Roles;
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
 
 /// <summary>建立或更新角色與其所屬群組。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
-internal sealed class SaveRole(NexusDbContext db, AdministrativeAudit audit)
+internal sealed class SaveRole(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/roles/{id}", async (string id, RoleUpdateRequest body, SaveRole handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())

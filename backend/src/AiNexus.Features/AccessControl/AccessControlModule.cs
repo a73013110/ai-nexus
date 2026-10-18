@@ -10,9 +10,6 @@ public sealed class AccessControlModule : IFeatureModule
     }
 }
 
-/// <summary>對話功能的種子資料；預設授權給基本工作區群組，所以一般使用者都能使用。</summary>
-internal sealed class AccessControlFeatures() : FeatureSeed(new PlatformFeature(BuiltInAccess.ChatFeature, "對話", "/chat", 10, BuiltInAccess.WorkNavigation, "chat"));
-
 public static class FeaturePolicies
 {
     /// <summary>已登入且持有任一指定功能的使用者；每個請求都依當下的授權判斷。</summary>

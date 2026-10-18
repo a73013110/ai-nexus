@@ -1,4 +1,4 @@
-using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Data.App.Knowledge;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 

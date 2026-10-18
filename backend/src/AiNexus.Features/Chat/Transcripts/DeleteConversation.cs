@@ -1,9 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +24,7 @@ public sealed record ConversationDeleted(Guid ConversationId, Guid OwnerId) : ID
 /// 實體檔案的刪除放在交易與所有鎖釋放之後，避免磁碟 I/O 拖長交易。
 /// </remarks>
 internal sealed class DeleteConversation(
-    NexusDbContext db,
+    AppDbContext db,
     GenerationScheduler scheduler,
     AttachmentWriteLock attachmentWrites,
     DomainEvents events,

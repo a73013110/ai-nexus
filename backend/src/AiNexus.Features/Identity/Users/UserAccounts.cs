@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Identity;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -22,5 +23,5 @@ public static class UserAccounts
 
     private static bool Matches(string value) => Regex.IsMatch(value, @"^[\p{L}\p{N}][\p{L}\p{N}._-]{0,63}$");
 
-    public static UserAuthenticationDto Authentication(NexusUser user) => new(user.AdEnabled, user.LocalEnabled, user.AdAccount, user.LocalAccount, user.PasswordHash is not null);
+    public static UserAuthenticationDto Authentication(User user) => new(user.AdEnabled, user.LocalEnabled, user.AdAccount, user.LocalAccount, user.PasswordHash is not null);
 }

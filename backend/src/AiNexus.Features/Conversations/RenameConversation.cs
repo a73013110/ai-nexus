@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -16,7 +17,7 @@ internal sealed class RenameConversationRequestValidator : RequestValidator<Rena
 }
 
 /// <summary>重新命名使用者自己的對話。</summary>
-internal sealed class RenameConversation(NexusDbContext db, TimeProvider clock)
+internal sealed class RenameConversation(AppDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}", async (

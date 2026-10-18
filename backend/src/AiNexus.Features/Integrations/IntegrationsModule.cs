@@ -31,5 +31,3 @@ public sealed class IntegrationsModule : IFeatureModule
         StartSourceChat.Map(routes);
     }
 }
-
-internal sealed class IntegrationsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Integrations, "資料來源", "/integrations", 92, BuiltInAccess.SystemNavigation, "integrations", AdministratorsOnly: true));

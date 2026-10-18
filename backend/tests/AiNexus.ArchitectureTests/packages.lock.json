@@ -570,9 +570,17 @@
           "xunit.v3.runner.common": "[4.0.1]"
         }
       },
+      "ainexus.data": {
+        "type": "Project",
+        "dependencies": {
+          "AiNexus.Platform": "[1.0.0, )",
+          "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )"
+        }
+      },
       "ainexus.features": {
         "type": "Project",
         "dependencies": {
+          "AiNexus.Data": "[1.0.0, )",
           "AiNexus.Platform": "[1.0.0, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
@@ -589,6 +597,7 @@
       "ainexus.host": {
         "type": "Project",
         "dependencies": {
+          "AiNexus.Data": "[1.0.0, )",
           "AiNexus.Features": "[1.0.0, )",
           "AiNexus.Platform": "[1.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.13, )"

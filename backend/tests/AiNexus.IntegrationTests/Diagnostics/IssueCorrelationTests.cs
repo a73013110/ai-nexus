@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +33,7 @@ public sealed class IssueCorrelationTests
         var stream = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events"); Assert.Contains(terminal.IssueCode!, stream); Assert.DoesNotContain("fixture failure", stream); Assert.DoesNotContain(Secret, stream);
         var notifications = await client.GetStringAsync("/api/v1/notifications"); Assert.Contains(terminal.IssueCode!, notifications); Assert.DoesNotContain("fixture failure", notifications);
         var item = await WaitForIssue(factory, terminal.IssueCode!); Assert.Equal(run.Id, item.RunId); Assert.Equal(run.Id, item.OperationId); Assert.NotNull(item.TraceId); Assert.DoesNotContain("fixture failure", item.ExceptionDetail ?? "");
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var persisted = await db.Runs.FindAsync(run.Id); Assert.Equal(persisted!.TraceId, item.TraceId);
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var persisted = await db.Runs.FindAsync(run.Id); Assert.Equal(persisted!.TraceId, item.TraceId);
         Assert.True(await db.Set<DiagnosticEvent>().AnyAsync(x => x.TraceId == item.TraceId && x.RequestId != null));
         Assert.Equal(1, await CountIssue(factory, terminal.IssueCode!));
     }
@@ -42,7 +43,7 @@ public sealed class IssueCorrelationTests
     {
         await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], services: services => services.AddScoped<IBackgroundJobHandler, FailingJob>());
         using var client = await factory.SignedInAsync(); var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; Guid jobId;
-        using (var scope = factory.Services.CreateScope()) { using var trace = DiagnosticTrace.Start("test.enqueue"); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var job = scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, Guid.NewGuid(), "diagnostic-fixture", "safe task"); jobId = job.Id; await db.SaveChangesAsync(); }
+        using (var scope = factory.Services.CreateScope()) { using var trace = DiagnosticTrace.Start("test.enqueue"); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var job = scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, Guid.NewGuid(), "diagnostic-fixture", "safe task"); jobId = job.Id; await db.SaveChangesAsync(); }
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services); Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
         var first = await client.GetFromJsonAsync<JobDto>("/api/v1/jobs/" + jobId); Assert.True(Issues.ValidCode(first!.IssueCode)); Assert.DoesNotContain(Secret, first.ErrorMessage!);
         (await client.PostAsync("/api/v1/jobs/" + jobId + "/retry", null)).EnsureSuccessStatusCode(); Assert.True(await worker.ProcessNextAsync(CancellationToken.None));

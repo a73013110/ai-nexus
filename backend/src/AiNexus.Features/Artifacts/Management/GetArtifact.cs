@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
 
 /// <summary>使用者可讀取的成果之單一版本，預設為目前版本。</summary>
-internal sealed class GetArtifact(NexusDbContext db, ResourceAccess access)
+internal sealed class GetArtifact(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", async (Guid id, int? version, ICurrentUser user, GetArtifact handler, CancellationToken ct) =>

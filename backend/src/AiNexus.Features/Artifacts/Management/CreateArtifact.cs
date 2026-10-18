@@ -1,8 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
+using AiNexus.Data.App.Collaboration;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -28,7 +30,7 @@ internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateAr
 /// 其他模組會經由 <see cref="ArtifactService"/> 直接呼叫、不經請求過濾器，因此這裡自己檢查內文。
 /// </summary>
 internal sealed class CreateArtifact(
-    NexusDbContext db,
+    AppDbContext db,
     ResourceAccess access,
     ConversationService conversations,
     AccessService features,
@@ -51,7 +53,7 @@ internal sealed class CreateArtifact(
             var owned = await conversations.RequireOwnedAsync(actor, conversation.Value, ct);
             if (!owned.IsSuccess) return owned.Error;
         }
-        var count = await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct);
+        var count = await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct);
         if (count >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
@@ -60,7 +62,7 @@ internal sealed class CreateArtifact(
             if (!editable.IsSuccess) return editable.Error;
         }
         var now = clock.GetUtcNow();
-        var resource = new WorkspaceResource
+        var resource = new Resource
         {
             OwnerId = actor,
             ParentId = request.ProjectId,

@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -5,7 +6,6 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
@@ -58,7 +58,7 @@ public sealed class SessionTests
     {
         await using var f = new NexusFactory(ldap: true);
         using var modern = f.CreateClient(); var me = await Login(modern, "alice");
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync(x => x.Id == me.Id);
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([
             new(System.Security.Claims.ClaimTypes.PrimarySid, user.Sid), new(System.Security.Claims.ClaimTypes.Name, user.Account)

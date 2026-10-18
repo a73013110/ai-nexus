@@ -1,3 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Repositories;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
@@ -5,7 +9,6 @@ using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +18,7 @@ namespace AiNexus.Features.Repositories.Handoff;
 /// 逐檔匯入資料夾快照。每個檔案都在固定 commit 上重新讀取，並檢查使用者目前的 Gitea、功能與知識庫權限；
 /// 先前已匯入的檔案（不論是否為本工作匯入）直接沿用，因此重試可以接續進行。
 /// </summary>
-internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryService gitea, AccessService features, ResourceAccess access,
+internal sealed class RepositoryImportHandler(AppDbContext db, RepositoryService gitea, AccessService features, ResourceAccess access,
     AttachmentService attachments, DocumentService documents) : IBackgroundJobHandler
 {
     public const string JobKind = "repository-import";
@@ -49,7 +52,7 @@ internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryServi
     {
         var reused = await db.Set<RepositoryImport>().AsNoTracking()
             .Where(x => x.OwnerId == row.OwnerId && x.CollectionId == row.CollectionId && x.BaseUrl == row.BaseUrl && x.Repository == row.Repository && x.Commit == row.Commit && x.Path == path)
-            .Join(db.Set<KnowledgeDocument>().Where(x => !x.IsDeleted), x => x.DocumentId, d => d.Id, (x, d) => x.DocumentId).AnyAsync(ct);
+            .Join(db.Set<Document>().Where(x => !x.IsDeleted), x => x.DocumentId, d => d.Id, (x, d) => x.DocumentId).AnyAsync(ct);
         if (reused) return true;
         var read = await gitea.FileAsync(row.OwnerId, row.Repository, row.Commit, path, ct);
         if (read.Error == RepositoriesErrors.NotText || read.Error == RepositoriesErrors.FileLimit) return false;

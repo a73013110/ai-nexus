@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts.Export;
 using AiNexus.Features.Attachments;
@@ -8,7 +9,6 @@ using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Integrations;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Data;
@@ -61,23 +61,16 @@ public static class DeploymentVerifier
             _ = scope.ServiceProvider.GetRequiredService<IOptions<IntegrationsOptions>>().Value;
             var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchOptions>>().Value;
             var gitea = scope.ServiceProvider.GetRequiredService<IOptions<GiteaOptions>>().Value;
-            var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(NexusDbContext.DatabaseName));
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(AppDbContext.DatabaseName));
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var connected = await db.Database.CanConnectAsync(ct);
-            if (connected)
-            {
-                await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
-            }
-
-            var pending = connected ? await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().PendingMigrationsAsync(ct) : null;
             var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.Providers.Google.ApiKey);
             var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
             await scope.ServiceProvider.GetRequiredService<IAttachmentStorage>().VerifyAsync(ct);
 
             var retrieval = await scope.ServiceProvider.GetRequiredService<RetrievalModelProbe>().CheckAsync(null, ct);
             var ready = connected
-                && pending?.Count == 0
                 && catalog.ProviderAvailable
                 && catalog.Models.Count > 0
                 && providerConfigured
@@ -89,8 +82,6 @@ public static class DeploymentVerifier
             {
                 environment = environment.EnvironmentName,
                 sqlConnected = connected,
-                pendingMigrations = pending?.Count ?? -1,
-                pendingMigrationIds = pending,
                 sqlEncrypted = sql.Encrypt != SqlConnectionEncryptOption.Optional,
                 trustsSqlCertificate = sql.TrustServerCertificate,
                 authMode = ad.Mode,
@@ -128,7 +119,7 @@ public static class DeploymentVerifier
                 ? external.Message
                 : ex is Microsoft.Extensions.Options.OptionsValidationException
                     ? "部署組態驗證失敗。請檢查資料庫、模型、身分驗證、外部工具、連線器與配額設定。"
-                    : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
+                    : DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName));
             return false;
         }
     }

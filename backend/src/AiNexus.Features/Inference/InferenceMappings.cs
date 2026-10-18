@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
 namespace AiNexus.Features.Inference;
@@ -35,7 +36,7 @@ public static class InferenceMappings
         x.ErrorCode,
         x.IssueCode);
 
-    public static ModelDto ToDto(this ModelProfile x) => new(
+    public static ModelDto ToDto(this ModelDefinition x) => new(
         x.Id,
         x.DisplayName,
         x.ContextTokens,

@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Billing;
+using AiNexus.Data.App.Inference;
 using System.Globalization;
 using System.Text;
-using AiNexus.Features.Billing.Charges;
-using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +23,7 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
     }
 }
 
-public sealed class SpendReports(NexusDbContext db, ModelPresentation presentation)
+public sealed class SpendReports(AppDbContext db, ModelPresentation presentation)
 {
     public async Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)
     {
@@ -62,7 +62,8 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
             output = rows.Sum(x => x.OutputTokens ?? 0);
             if (administrator)
             {
-                var identities = await db.Users.AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
+                var owners = rows.Select(x => x.OwnerId).Distinct().ToArray();
+                var identities = await db.Users.AsNoTracking().Where(x => owners.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
                 users = rows
                     .GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
                     .Select(g => new SpendUserDto(

@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,7 +41,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         {
             services.RemoveAllKeyed<IInferenceProvider>("google");
             services.AddKeyedSingleton<IInferenceProvider>("google", provider);
-            services.ConfigureDbContext<NexusDbContext>(options => options.AddInterceptors(commands));
+            services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(commands));
         });
         var clients = new List<HttpClient>();
         var conversations = new List<Guid>();
