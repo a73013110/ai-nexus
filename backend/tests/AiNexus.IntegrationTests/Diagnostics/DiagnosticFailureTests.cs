@@ -21,7 +21,7 @@ public sealed class DiagnosticFailureTests
     public async Task JournalPermissionOrDiskFailureDoesNotRecurseOrBlockBusiness(bool permission)
     {
         var journal = new FailedJournal(permission);
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => { services.RemoveAll<IDiagnosticJournal>(); services.AddSingleton<IDiagnosticJournal>(journal); });
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], services: services => { services.RemoveAll<IDiagnosticJournal>(); services.AddSingleton<IDiagnosticJournal>(journal); });
         using var client = await factory.SignedInAsync(); var watch = Stopwatch.StartNew();
         for (var i = 0; i < 20; i++) (await client.GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10));
@@ -44,7 +44,7 @@ public sealed class DiagnosticFailureTests
     [Fact]
     public async Task Sql30053HybridReturns200AndPersistsCorrelatedDegradationWarning()
     {
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => {
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], services: services => {
             services.RemoveAll<IRetrievalStore>(); services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
             services.RemoveAll<ISqlDatabase<AppDbContext>>(); services.AddScoped<ISqlDatabase<AppDbContext>, FullTextFailure>();
         });

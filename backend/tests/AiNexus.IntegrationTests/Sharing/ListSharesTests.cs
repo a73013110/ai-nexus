@@ -18,7 +18,7 @@ public sealed class ListSharesTests
     [Fact]
     public async Task ShareListsKeepSenderRecipientAndMissingSourceRules()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         using var carol = await factory.SignedInAsync("carol");

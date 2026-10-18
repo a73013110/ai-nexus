@@ -25,7 +25,7 @@
 
 - `features/<module>` 對應 `backend/src/AiNexus.Features/<Module>`，名稱轉成 kebab-case（`AccessControl` → `access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址與功能 ID（`/files`、`tasks`）不跟著改名。
 - 唯一例外是 `features/design`：開發用的設計系統樣本頁，沒有後端模組。
-- 登入、帳號、模型與對話生成的端點在 `core/api/nexus-api.ts`（`core` 的 session 與串流要用）。
+- 登入、帳號、模型與對話生成的端點在 `core/api/workspace-api.ts`（`core` 的 session 與串流要用）。
 - 超過約 15 個檔案時依能力分子資料夾：後端已有子資料夾就用同名 kebab-case（`knowledge/documents`、`administration/users`），沒有才用 UI 分組（`chat/composer`）。頁面、store 與 `<module>-api.ts` 留在模組根目錄。
 - 跨進 `core`、`shared` 或其他模組用別名 `@core/`、`@shared/`、`@features/`；同一區內用相對路徑。跨區的相對路徑由 ESLint 擋下。
 

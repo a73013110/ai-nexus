@@ -11,10 +11,10 @@ namespace AiNexus.Features.Identity;
 /// </summary>
 public static class AuthEndpoints
 {
-    public const string CookieScheme = "NexusCookie";
+    public const string CookieScheme = "SessionCookie";
 
     /// <summary>端點註冊順序即 OpenAPI 發布順序。</summary>
-    public static void MapNexusAuthentication(this IEndpointRouteBuilder app)
+    public static void MapAuthenticationEndpoints(this IEndpointRouteBuilder app)
     {
         var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithRequestValidation();
         GetAuthSession.Map(auth);

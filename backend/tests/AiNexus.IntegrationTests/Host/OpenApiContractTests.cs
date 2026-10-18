@@ -9,7 +9,7 @@ public sealed class OpenApiContractTests
     [Fact]
     public async Task OpenApiMatchesPublishedContract()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = factory.CreateClient();
         var actual = JsonNode.Parse(await client.GetStringAsync("/openapi/v1.json"));
         var path = Path.Combine(RepositoryRoot(), "contracts", "openapi.json");
@@ -32,15 +32,15 @@ public sealed class OpenApiContractTests
     [Fact]
     public async Task OpenApiContainsDiagnosticContractsAndCanBeExportedWithoutMachineSecrets()
     {
-        await using var factory = new NexusFactory(); using var client = factory.CreateClient(); var contract = await client.GetStringAsync("/openapi/v1.json");
+        await using var factory = new AppFactory(); using var client = factory.CreateClient(); var contract = await client.GetStringAsync("/openapi/v1.json");
         Assert.Contains("QuerySystemLogs", contract); Assert.Contains("DiagnosticPage", contract); Assert.Contains("issueCode", contract);
-        if (Environment.GetEnvironmentVariable("NEXUS_OPENAPI_OUTPUT") is { Length: > 0 } path) await File.WriteAllTextAsync(path, contract);
+        if (Environment.GetEnvironmentVariable("AINEXUS_OPENAPI_OUTPUT") is { Length: > 0 } path) await File.WriteAllTextAsync(path, contract);
     }
 
     [Fact]
     public async Task OpenApiIncludesRetrievalContracts()
     {
-        await using var factory = new NexusFactory(); using var client = factory.CreateClient();
+        await using var factory = new AppFactory(); using var client = factory.CreateClient();
         using var result = await client.GetAsync("/openapi/v1.json"); result.EnsureSuccessStatusCode();
         var json = await result.Content.ReadAsStringAsync(); Assert.Contains("EmbeddingProfileDto", json); Assert.Contains("rewriteMs", json);
     }

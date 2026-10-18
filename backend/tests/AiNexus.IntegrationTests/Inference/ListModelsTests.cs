@@ -13,7 +13,7 @@ public sealed class ListModelsTests
     [InlineData(false)]
     public async Task EmptyCatalogDistinguishesUnavailableProfilesFromGroupRestrictions(bool profileInstalled)
     {
-        await using var factory = new NexusFactory(
+        await using var factory = new AppFactory(
             seed: db => { db.Set<GroupModelPolicy>().Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
             inference: options => { if (!profileInstalled) { options.Models[0].Id = "not-installed"; options.DefaultModelId = "not-installed"; } });
         using var client = await factory.SignedInAsync();
@@ -29,7 +29,7 @@ public sealed class ListModelsTests
     [Fact]
     public async Task MissingLockedDefaultNeverFallsBackToAnotherModel()
     {
-        await using var factory = new NexusFactory(inference: options =>
+        await using var factory = new AppFactory(inference: options =>
         {
             options.AllowModelSelection = false;
             options.DefaultModelId = "missing";
@@ -45,7 +45,7 @@ public sealed class ListModelsTests
     [Fact]
     public async Task CatalogOnlyContainsInstalledApprovedModels()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var catalog = await client.GetFromJsonAsync<ModelsDto>("/api/v1/models");
         Assert.Equal("test-model", Assert.Single(catalog!.Models).Id);

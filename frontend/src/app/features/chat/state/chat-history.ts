@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type { ConversationDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { ConversationsApi } from '@features/conversations/conversations-api';
@@ -12,7 +12,7 @@ const listOrder = (first: ConversationDto, second: ConversationDto) =>
 /** 側邊欄的對話列表，含搜尋、檢視與標籤篩選。 */
 @Injectable({ providedIn: 'root' })
 export class ChatHistory {
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly conversationsApi = inject(ConversationsApi);
   private readonly auth = inject(AuthService);
   readonly conversations = signal<ConversationDto[]>([]);

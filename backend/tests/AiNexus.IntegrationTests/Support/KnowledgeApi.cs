@@ -27,7 +27,7 @@ internal static class KnowledgeApi
         return (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
     }
 
-    internal static async Task<(Guid Collection, Guid Actor, DocumentDto Document)> SeedAsync(NexusFactory factory, HttpClient client)
+    internal static async Task<(Guid Collection, Guid Actor, DocumentDto Document)> SeedAsync(AppFactory factory, HttpClient client)
     {
         using var created = await client.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("採購規範", "測試")); created.EnsureSuccessStatusCode();
         var collection = (await created.Content.ReadFromJsonAsync<CollectionDto>())!.Resource.Id;

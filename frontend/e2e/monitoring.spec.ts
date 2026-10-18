@@ -36,7 +36,7 @@ function snapshot(): MonitoringSnapshot {
   return {
     version: 2,
     enabled: true,
-    instance: "NEXUS-APP-01 / 4280",
+    instance: "WEB-APP-01 / 4280",
     startedAt: new Date(Date.now() - 86400000).toISOString(),
     at: now,
     windowMinutes: 5,
@@ -142,7 +142,7 @@ function snapshot(): MonitoringSnapshot {
     })),
     dependencies: [
       {
-        id: "sql.nexus",
+        id: "sql.app",
         name: "主資料庫",
         kind: "database",
         status: "healthy",

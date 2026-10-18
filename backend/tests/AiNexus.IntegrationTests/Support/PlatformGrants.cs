@@ -12,7 +12,7 @@ internal static class PlatformGrants
     /// 將平台營運與存取管理分開：administrators 群組只保留存取管理，而
     /// <paramref name="operatorId"/> 則透過自己的角色與群組，只取得平台營運權限。
     /// </summary>
-    internal static async Task SplitOperationsAsync(NexusFactory factory, Guid operatorId)
+    internal static async Task SplitOperationsAsync(AppFactory factory, Guid operatorId)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

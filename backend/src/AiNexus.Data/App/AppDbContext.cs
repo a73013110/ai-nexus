@@ -14,7 +14,7 @@ namespace AiNexus.Data.App;
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider? clock = null) : DbContext(options)
 {
     /// <summary>設定檔 <c>Databases</c> 節點中的連線名稱。</summary>
-    public const string DatabaseName = "Nexus";
+    public const string DatabaseName = "App";
 
     public TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 

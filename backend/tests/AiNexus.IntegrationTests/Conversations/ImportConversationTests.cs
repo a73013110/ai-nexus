@@ -11,7 +11,7 @@ public sealed class ImportConversationTests
     [Fact]
     public async Task JsonBackupRecreatesTheTreeWithoutProviderIds()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var original = await CreateConversation(client);
         await WaitForTerminal(client, (await CreateRun(client, original.Id, "backup prompt")).Id);
@@ -29,7 +29,7 @@ public sealed class ImportConversationTests
     [Fact]
     public async Task ImportRejectsCyclicAndCrossTreeParents()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var first = Guid.NewGuid(); var second = Guid.NewGuid();
         var backup = new ConversationBackup(1, "bad", "", [], second, [new(first, second, "user", "x", "completed", DateTimeOffset.UtcNow, []), new(second, first, "assistant", "y", "completed", DateTimeOffset.UtcNow, [])]);

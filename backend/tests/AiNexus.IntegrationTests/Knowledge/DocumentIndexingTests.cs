@@ -23,7 +23,7 @@ public sealed class DocumentIndexingTests
     [Fact]
     public async Task FailedIndexResumesPersistedPagesAndExpiredLeaseCannotDoubleProcess()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync(); var collection = await CreateCollection(client);
         var document = await AddDocument(client, collection.Resource.Id, new string('文', 1300));
         factory.Embeddings.Fail = true; await Process(factory);
@@ -50,7 +50,7 @@ public sealed class DocumentIndexingTests
     [Fact]
     public async Task ScannedPdfUsesVisionOcrBeforeItCanEnterChatContext()
     {
-        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        await using var factory = new AppFactory(inference: x => x.Models[0].SupportsImages = true);
         using var client = await factory.SignedInAsync();
         var builder = new PdfDocumentBuilder(); builder.AddPage(300, 400).AddPng(Png, new PdfRectangle(0, 0, 300, 400));
         var file = await Upload(client, "scan.pdf", builder.Build()); Assert.Equal("ocr-required", file.AnalysisMode);
@@ -68,7 +68,7 @@ public sealed class DocumentIndexingTests
     [Fact]
     public async Task ImageWithoutTextCompletesAndStaysVisionInput()
     {
-        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        await using var factory = new AppFactory(inference: x => x.Models[0].SupportsImages = true);
         using var client = await factory.SignedInAsync(); factory.Provider.Empty = true;
         var file = await Upload(client, "cat.png", Png);
         var response = await client.PostAsync($"/api/v1/attachments/{file.Id}/document", null); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
@@ -82,7 +82,7 @@ public sealed class DocumentIndexingTests
     [Fact]
     public async Task ScanWithoutTextFailsWithItsReviewedHintInsteadOfContactingAnAdministrator()
     {
-        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        await using var factory = new AppFactory(inference: x => x.Models[0].SupportsImages = true);
         using var client = await factory.SignedInAsync(); factory.Provider.Empty = true;
         var builder = new PdfDocumentBuilder(); builder.AddPage(300, 400).AddPng(Png, new PdfRectangle(0, 0, 300, 400));
         var file = await Upload(client, "blank-scan.pdf", builder.Build());

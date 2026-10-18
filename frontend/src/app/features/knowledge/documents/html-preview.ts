@@ -26,8 +26,8 @@ import { DomSanitizer } from '@angular/platform-browser';
         <section class="html-gate" aria-labelledby="html-gate-title">
           <h3 id="html-gate-title">這份 HTML 含有指令碼</h3>
           <p>
-            指令碼會在隔離環境執行：讀不到你的登入狀態、無法呼叫 AI
-            Nexus，也無法連到外部網站。只執行你信任的檔案。
+            指令碼會在隔離環境執行：讀不到你的登入狀態、無法呼叫本系統的
+            API，也無法連到外部網站。只執行你信任的檔案。
           </p>
           <div class="html-gate-actions">
             <button type="button" class="quiet-button" (click)="viewSource.emit()">

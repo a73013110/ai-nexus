@@ -346,7 +346,7 @@ test("draft text and attachment ids restore after refresh and stay per conversat
       page.evaluate(
         () =>
           Object.keys(localStorage).filter((key) =>
-            key.startsWith("nexus.draft."),
+            key.startsWith("ai-nexus.draft."),
           ).length,
       ),
     )

@@ -36,12 +36,12 @@ public sealed class RuntimeTraffic : IDisposable
     public RuntimeTraffic(IOptions<MonitoringOptions> options, TimeProvider clock)
     {
         this.options = options; this.clock = clock; started = clock.GetUtcNow();
-        requestCounter = meter.CreateCounter<long>("nexus.api.requests", "{request}");
-        receivedCounter = meter.CreateCounter<long>("nexus.api.body.received", "By");
-        sentCounter = meter.CreateCounter<long>("nexus.api.body.sent", "By");
-        requestDuration = meter.CreateHistogram<double>("nexus.api.duration", "ms");
-        meter.CreateObservableGauge("nexus.presence.sessions", () => { lock (gate) { Prune(clock.GetUtcNow()); return sessions.Count; } }, "{session}");
-        meter.CreateObservableGauge("nexus.api.in_flight", () => Math.Max(0, Volatile.Read(ref inFlight)), "{request}");
+        requestCounter = meter.CreateCounter<long>("ainexus.api.requests", "{request}");
+        receivedCounter = meter.CreateCounter<long>("ainexus.api.body.received", "By");
+        sentCounter = meter.CreateCounter<long>("ainexus.api.body.sent", "By");
+        requestDuration = meter.CreateHistogram<double>("ainexus.api.duration", "ms");
+        meter.CreateObservableGauge("ainexus.presence.sessions", () => { lock (gate) { Prune(clock.GetUtcNow()); return sessions.Count; } }, "{session}");
+        meter.CreateObservableGauge("ainexus.api.in_flight", () => Math.Max(0, Volatile.Read(ref inFlight)), "{request}");
     }
     public bool Enabled => options.Value.Enabled;
 

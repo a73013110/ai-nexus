@@ -11,7 +11,7 @@ public sealed class ProblemDetailsTests
     [Fact]
     public async Task FrameworkFailuresUseTheSafeFormatWhateverTheClientAccepts()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var anonymous = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/conversations");
         request.Headers.Accept.ParseAdd("text/html");
@@ -28,7 +28,7 @@ public sealed class ProblemDetailsTests
     [Fact]
     public async Task UnknownApiPathsReturnProblemsInsteadOfTheApplicationShell()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         using var response = await client.GetAsync("/api/v1/does-not-exist");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -40,7 +40,7 @@ public sealed class ProblemDetailsTests
     [Fact]
     public async Task InvalidRequestsNameTheFieldsWithoutEchoingInput()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         using var response = await client.PostAsJsonAsync("/api/v1/prompt-templates", new SavePromptRequest("   ", "fixture-secret-content"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

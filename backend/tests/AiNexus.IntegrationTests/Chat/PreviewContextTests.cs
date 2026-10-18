@@ -12,7 +12,7 @@ public sealed class PreviewContextTests
     [Fact]
     public async Task ContextPreviewEnforcesOwnershipAndPreservesHistoryWhileTrimming()
     {
-        await using var factory = new NexusFactory(inference: options =>
+        await using var factory = new AppFactory(inference: options =>
         {
             options.Models[0].ContextTokens = 1024;
             options.Models[0].MaxOutputTokens = 256;
@@ -42,7 +42,7 @@ public sealed class PreviewContextTests
     [Fact]
     public async Task LongHistorySendsOnlyTheNewestCompleteRoundsThatFit()
     {
-        await using var factory = new NexusFactory(inference: options => { options.Models[0].ContextTokens = 1024; options.Models[0].MaxOutputTokens = 256; });
+        await using var factory = new AppFactory(inference: options => { options.Models[0].ContextTokens = 1024; options.Models[0].MaxOutputTokens = 256; });
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         Guid? parent = null;
@@ -61,7 +61,7 @@ public sealed class PreviewContextTests
     [Fact]
     public async Task BrowserReceivesTheConfiguredPromptCharacterLimit()
     {
-        await using var factory = new NexusFactory(inference: x => x.MaxInputCharacters = 18000);
+        await using var factory = new AppFactory(inference: x => x.MaxInputCharacters = 18000);
         using var client = await factory.SignedInAsync();
         var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;
         Assert.Equal(18000, catalog.Policy.MaxInputCharacters);

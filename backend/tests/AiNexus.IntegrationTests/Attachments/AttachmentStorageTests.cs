@@ -30,7 +30,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task RawBytesAreOutsideDatabaseAndDownloadsRequireOwnership()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var response = await Upload(alice); response.EnsureSuccessStatusCode();
         var file = (await response.Content.ReadFromJsonAsync<AttachmentDto>())!;
@@ -53,7 +53,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task HtmlRendersInSandboxedFrameWhileOtherFilesAndStrangersAreRefused()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         using var body = new MultipartFormDataContent();
         body.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("<script>1</script>")), "file", "page.html");
@@ -78,7 +78,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task PersonalOverrideExceedsBothGroupAndDefaultCapsAndCanRestoreInheritance()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var member = await factory.SignedInAsync("bob");
         var owner = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())
@@ -103,7 +103,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task DatabaseReservationPreventsConcurrentUploadsAcrossIndependentProcessGates()
     {
-        await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; }, services: services =>
+        await using var factory = new AppFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; }, services: services =>
         {
             // 每個服務 scope 各自使用獨立的 semaphore，模擬彼此獨立的應用程式程序。
             services.RemoveAll<AttachmentWriteLock>(); services.AddScoped<AttachmentWriteLock>();
@@ -119,7 +119,7 @@ public sealed class AttachmentStorageTests
     public async Task WriteAndDeleteFailuresRetainDurableCleanupAndReleaseQuotaAfterRetry()
     {
         FaultStorage? fault = null;
-        await using var factory = new NexusFactory(services: services =>
+        await using var factory = new AppFactory(services: services =>
         {
             services.RemoveAll<IAttachmentStorage>();
             services.AddSingleton<IAttachmentStorage>(sp => fault = new FaultStorage(new FileAttachmentStorage(sp.GetRequiredService<IOptions<AttachmentOptions>>(), sp.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>())));
@@ -151,7 +151,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task ScheduledCleanupReclaimsReaderDraftsAndInterruptedUploadsWithoutNewRequests()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var first = await Upload(client); first.EnsureSuccessStatusCode(); var draft = (await first.Content.ReadFromJsonAsync<AttachmentDto>())!;
         var readerResponse = await client.PostAsync($"/api/v1/attachments/{draft.Id}/document", null);
@@ -173,7 +173,7 @@ public sealed class AttachmentStorageTests
     public async Task LateWriterCannotLeaveUntrackedBytesAfterItsReservationHasBeenReclaimed()
     {
         FaultStorage? fault = null;
-        await using var factory = new NexusFactory(services: services =>
+        await using var factory = new AppFactory(services: services =>
         {
             services.RemoveAll<IAttachmentStorage>();
             services.AddSingleton<IAttachmentStorage>(sp => fault = new FaultStorage(new FileAttachmentStorage(sp.GetRequiredService<IOptions<AttachmentOptions>>(), sp.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>())));
@@ -208,7 +208,7 @@ public sealed class AttachmentStorageTests
     public async Task OrphanRecoveryPreservesTrackedAndRecentWritesAndRetriesFailedDeletion()
     {
         FaultStorage? fault = null;
-        await using var factory = new NexusFactory(services: services =>
+        await using var factory = new AppFactory(services: services =>
         {
             services.RemoveAll<IAttachmentStorage>();
             services.AddSingleton<IAttachmentStorage>(sp => fault = new FaultStorage(new FileAttachmentStorage(sp.GetRequiredService<IOptions<AttachmentOptions>>(), sp.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>())));

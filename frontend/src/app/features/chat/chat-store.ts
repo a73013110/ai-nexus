@@ -2,7 +2,7 @@ import { ApiError, safeMessage } from '@core/errors/safe-errors';
 import { NotificationStore } from '@features/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type {
   ContextPreviewRequest,
   AttachmentDto,
@@ -35,7 +35,7 @@ import { ChatRun } from './state/chat-run';
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly notifications = inject(NotificationStore);
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
   private readonly morph = inject(ViewMorph);

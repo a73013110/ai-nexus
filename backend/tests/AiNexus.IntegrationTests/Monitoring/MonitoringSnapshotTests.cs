@@ -18,11 +18,11 @@ public sealed class MonitoringSnapshotTests
     public async Task SharedPipelineCountsRealPayloadAndExcludesMonitoringTraffic()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero));
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => {
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
         });
         using var alice = await factory.SignedInAsync();
-        var tab = Guid.NewGuid(); alice.DefaultRequestHeaders.Add("X-Nexus-Session", tab.ToString());
+        var tab = Guid.NewGuid(); alice.DefaultRequestHeaders.Add("X-Browser-Session", tab.ToString());
         await alice.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(tab, "chat", "active"));
         var response = await alice.PostAsJsonAsync("/api/v1/conversations", new { }); response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadAsByteArrayAsync();
@@ -39,7 +39,7 @@ public sealed class MonitoringSnapshotTests
     public async Task SnapshotReportsHealthAndEveryModulesSubsystemAfterABackgroundRead()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
-        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock);
+        await using var factory = new AppFactory(administrators: ["alice"], clock: clock);
         using var alice = await factory.SignedInAsync();
         using (var scope = factory.Services.CreateScope())
         {
@@ -71,7 +71,7 @@ public sealed class MonitoringSnapshotTests
     [Fact]
     public async Task ExportIsAuditedAndDisabledTelemetryRemainsEmpty()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
         using var alice = await factory.SignedInAsync();
         await alice.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(Guid.NewGuid(), "chat", "active"));
         var export = await alice.GetAsync("/api/v1/admin/monitoring/export?minutes=15"); export.EnsureSuccessStatusCode();
@@ -84,7 +84,7 @@ public sealed class MonitoringSnapshotTests
     [Fact]
     public async Task NewStreamSupersedesTheOldestInsteadOfBeingRefused()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancel.CancelAfter(TimeSpan.FromSeconds(20));
         var responses = new List<HttpResponseMessage>(); var readers = new List<StreamReader>();
@@ -110,7 +110,7 @@ public sealed class MonitoringSnapshotTests
     public async Task RevokedGrantTerminatesExistingStream()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
-        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock);
+        await using var factory = new AppFactory(administrators: ["alice"], clock: clock);
         using var alice = await factory.SignedInAsync(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancel.CancelAfter(TimeSpan.FromSeconds(10));
         using var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);

@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { NotificationStore } from '@features/notifications/notification-store';
@@ -65,7 +65,7 @@ function setup(features = ['chat']) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: NexusApi, useValue: api },
+      { provide: WorkspaceApi, useValue: api },
       { provide: WorkspaceSession, useValue: session },
       {
         provide: AuthService,

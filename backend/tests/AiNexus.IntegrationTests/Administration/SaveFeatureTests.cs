@@ -11,7 +11,7 @@ public sealed class SaveFeatureTests
     [Fact]
     public async Task AdministratorMovesAFeatureToAnotherGroupWithANewIcon()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PutAsJsonAsync("/api/v1/admin/features/tasks", new FeatureUpdateRequest("背景任務", 70, true, "work", "workspace"))).EnsureSuccessStatusCode();
         var feature = Assert.Single((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == "tasks");
         Assert.Equal(("work", "workspace", 70), (feature.GroupId, feature.Icon, feature.SortOrder));
@@ -23,7 +23,7 @@ public sealed class SaveFeatureTests
     [Fact]
     public async Task UnknownGroupsAndMalformedIconsAreRejected()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/features/tasks", new FeatureUpdateRequest("背景任務", 55, true, "missing", "tasks")), HttpStatusCode.NotFound, "navigation_group_not_found");
         await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/features/tasks", new FeatureUpdateRequest("背景任務", 55, true, "collaboration", "<svg>")), HttpStatusCode.BadRequest, "invalid_feature_icon");
         var feature = Assert.Single((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == "tasks");

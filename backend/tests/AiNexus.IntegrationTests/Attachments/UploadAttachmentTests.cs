@@ -16,7 +16,7 @@ public sealed class UploadAttachmentTests
     [Fact]
     public async Task NewUploadsReclaimExpiredDraftsAndNeverRemoveLinkedHistory()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var draft = await Upload(client, "abandoned.txt", Encoding.UTF8.GetBytes("old draft"));
         var history = await Upload(client, "retained.txt", Encoding.UTF8.GetBytes("retained history"));
@@ -37,7 +37,7 @@ public sealed class UploadAttachmentTests
     [Fact]
     public async Task AttachmentOwnershipProtectsMetadataDownloadDeletionAndGeneration()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var file = await Upload(alice, "private.txt", Encoding.UTF8.GetBytes("private"));
@@ -55,7 +55,7 @@ public sealed class UploadAttachmentTests
     [InlineData("empty.txt", " ")]
     public async Task InvalidFilesAreRejected(string name, string content)
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         Assert.Equal(HttpStatusCode.BadRequest, (await UploadResponse(client, name, Encoding.UTF8.GetBytes(content))).StatusCode);
     }
@@ -63,10 +63,10 @@ public sealed class UploadAttachmentTests
     [Fact]
     public async Task UploadRequiresCsrfAndRejectsOversizedFiles()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await UploadResponse(client, "large.txt", new byte[4 * 1024 * 1024 + 1])).StatusCode);
-        client.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        client.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await UploadResponse(client, "private.txt", Encoding.UTF8.GetBytes("private"))).StatusCode);
     }
 }

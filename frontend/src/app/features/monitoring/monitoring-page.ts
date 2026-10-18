@@ -176,7 +176,7 @@ export class MonitoringPage {
     this.actionError.set('');
     try {
       const response = await this.store.export();
-      downloadBlob(await response.blob(), 'AI-Nexus-即時監控', 'json');
+      downloadBlob(await response.blob(), 'ai-nexus-即時監控', 'json');
     } catch (error) {
       this.actionError.set(safeMessage(error));
     } finally {

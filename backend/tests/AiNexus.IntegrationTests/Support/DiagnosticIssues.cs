@@ -7,9 +7,9 @@ namespace AiNexus.IntegrationTests.Support;
 
 internal static class DiagnosticIssues
 {
-    internal static async Task<int> CountIssue(NexusFactory factory, string code) { using var scope = factory.Services.CreateScope(); return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().CountAsync(x => x.IssueCode == code); }
+    internal static async Task<int> CountIssue(AppFactory factory, string code) { using var scope = factory.Services.CreateScope(); return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().CountAsync(x => x.IssueCode == code); }
 
-    internal static async Task<DiagnosticEvent> WaitForIssue(NexusFactory factory, string code)
+    internal static async Task<DiagnosticEvent> WaitForIssue(AppFactory factory, string code)
     {
         for (var attempt = 0; attempt < 200; attempt++) {
             using var scope = factory.Services.CreateScope(); var item = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.IssueCode == code);

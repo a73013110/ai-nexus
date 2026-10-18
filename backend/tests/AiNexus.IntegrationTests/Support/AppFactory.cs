@@ -28,7 +28,7 @@ namespace AiNexus.IntegrationTests.Support;
 /// 其他 hosted worker 需透過 <c>workers</c> 選擇加入，測試則直接呼叫來驅動週期性工作。
 /// 這些替換只存在於測試組件中，正式環境沒有假使用者 header。
 /// </summary>
-public sealed class NexusFactory : WebApplicationFactory<Program>
+public sealed class AppFactory : WebApplicationFactory<Program>
 {
     /// <summary>遠低於正式環境的工作量，讓密碼相關測試不會把時間花在雜湊運算上。</summary>
     public static readonly Argon2Cost PasswordCost = new(1024, 1);
@@ -42,10 +42,10 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly string? webRoot;
     private readonly TestDatabase database;
     // 附件與日誌檔放在 host 自己的暫存資料夾，釋放時一起刪除。
-    private readonly string files = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}");
+    private readonly string files = Path.Combine(Path.GetTempPath(), $"ainexus-test-{Guid.NewGuid():N}");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public NexusFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
+    public AppFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
         Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
         this.ldap = ldap;
@@ -123,7 +123,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         var response = await client.GetAsync("/api/v1/me");
         response.EnsureSuccessStatusCode();
         var me = await response.Content.ReadFromJsonAsync<MeDto>();
-        client.DefaultRequestHeaders.Add("X-Nexus-CSRF", me!.CsrfToken);
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", me!.CsrfToken);
         await Services.GetRequiredService<GenerationScheduler>().WhenFirstReady.WaitAsync(TimeSpan.FromSeconds(10));
         return client;
     }

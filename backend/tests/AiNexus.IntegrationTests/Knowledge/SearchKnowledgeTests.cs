@@ -23,7 +23,7 @@ public sealed class SearchKnowledgeTests
     [Fact]
     public async Task CollectionAclPrefiltersSearchAndOriginalsAndRevocationStopsLaterRetrieval()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var collection = await CreateCollection(alice); var document = await AddDocument(alice, collection.Resource.Id, "Only approved staff may view this company policy."); await Process(factory);
         var request = new KnowledgeSearchRequest("company policy", [collection.Resource.Id]);
@@ -52,7 +52,7 @@ public sealed class SearchKnowledgeTests
     [Fact]
     public async Task SearchReadsCollectionAccessOnceBeforeRemoteWorkAndOnceBeforeReturning()
     {
-        await using var factory = new NexusFactory(services: RequestQueries.Register);
+        await using var factory = new AppFactory(services: RequestQueries.Register);
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
         var queries = factory.Services.GetRequiredService<RequestQueries>(); queries.Clear();
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
@@ -67,7 +67,7 @@ public sealed class SearchKnowledgeTests
     public async Task HybridUsesBothRanksAndQueryCacheAvoidsDuplicateInvocation()
     {
         Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText);
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         var before = factory.Embeddings.Calls;
         foreach (var query in new[] { "  採購   核准  ", "採購 核准" })
         {
@@ -83,7 +83,7 @@ public sealed class SearchKnowledgeTests
     [InlineData("fail", HttpStatusCode.ServiceUnavailable, null)]
     public async Task RerankFailurePolicyIsExplicit(string policy, HttpStatusCode status, string? mode)
     {
-        await using var factory = new NexusFactory(services: services => {
+        await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", FailurePolicy = policy });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(new FixtureReranker { Fail = true });
         });
@@ -97,7 +97,7 @@ public sealed class SearchKnowledgeTests
     public async Task FailedRewriteUsesOriginalAndSuccessfulRerankAppliesRefusalThreshold()
     {
         var rerank = new FixtureReranker();
-        await using var factory = new NexusFactory(services: services => {
+        await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", MinScore = .9 });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
             services.RemoveAll<IQueryRewriter>(); services.AddSingleton<IQueryRewriter>(new FixtureRewriter { Fail = true });
@@ -112,7 +112,7 @@ public sealed class SearchKnowledgeTests
     public async Task AclRevokedDuringRerankCannotReturnSourceText()
     {
         var rerank = new FixtureReranker();
-        await using var factory = new NexusFactory(services: services => {
+        await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture" });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
         });

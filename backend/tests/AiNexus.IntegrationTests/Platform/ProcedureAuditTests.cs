@@ -16,7 +16,7 @@ public sealed class ProcedureAuditTests
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var audits = new ProcedureAudits();
-        await using var factory = new NexusFactory(clock: clock, services: audits.Register);
+        await using var factory = new AppFactory(clock: clock, services: audits.Register);
         var owner = Guid.NewGuid(); var resource = Guid.NewGuid();
         using (var activity = new Activity("procedure-audit").Start())
         using (var scope = factory.Services.CreateScope())
@@ -31,7 +31,7 @@ public sealed class ProcedureAuditTests
     [Fact]
     public async Task ContextIsResetOnEveryCallSoAWriteWithoutOwnerFailsOnTheSameConnection()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>();
@@ -45,7 +45,7 @@ public sealed class ProcedureAuditTests
     [Fact]
     public async Task MalformedDetailsAndUnsafeNamesAreRejected()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var scope = factory.Services.CreateScope();
         var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>();
         var malformed = await Assert.ThrowsAsync<SqlException>(() => sql.ExecuteProcedureAsync<int>(Procedure, new { Action = "admin.probe", Result = "saved", DetailsJson = "{" }, auditOwner: Guid.NewGuid()));

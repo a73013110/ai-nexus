@@ -23,7 +23,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task DatabaseAllowsOneActiveGenerationPerOwnerAndOneRunPerIdempotencyKey()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         await WaitForTerminal(client, (await CreateRun(client, conversation.Id, "first")).Id);
@@ -45,7 +45,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task ReasoningIsValidatedAndSnapshottedForTheWorker()
     {
-        await using var factory = new NexusFactory(inference: options =>
+        await using var factory = new AppFactory(inference: options =>
         {
             options.Models[0].ReasoningControl = "google-level";
             options.Models[0].ReasoningEfforts = ["minimal", "high"];
@@ -70,7 +70,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task IdempotencyDoesNotCreateAnotherMessageOrGeneration()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         factory.Provider.DelayMs = 100;
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
@@ -91,7 +91,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task MultiturnContextComesFromTheSelectedBranchAndEditsPreserveHistory()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var first = await CreateRun(client, conversation.Id, "原始提問");
@@ -116,7 +116,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task OnlyTheOwnerOfAKeptConversationCanSendReplayOrReadItsRuns()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var conversation = await CreateConversation(alice);
@@ -154,7 +154,7 @@ public sealed class CreateRunTests
     [Fact]
     public async Task CrossConversationParentAndOversizedContextAreRejectedAtomically()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var first = await CreateConversation(client);
         var second = await CreateConversation(client);

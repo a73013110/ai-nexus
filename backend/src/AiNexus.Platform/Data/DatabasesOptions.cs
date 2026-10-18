@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Data;
 
 /// <summary>
-/// 應用程式所有 SQL Server 連線設定的集合，以資料庫名稱為鍵（如 <c>Databases:Nexus</c>）。
+/// 應用程式所有 SQL Server 連線設定的集合，以資料庫名稱為鍵（如 <c>Databases:App</c>）。
 /// 模組必須用 <see cref="Sql.SqlDatabaseServices.AddDatabase"/> 宣告自己用到的資料庫；
 /// 沒有被宣告的設定項目會讓啟動驗證失敗，避免鍵名拼錯時資料庫被悄悄略過。
 /// </summary>

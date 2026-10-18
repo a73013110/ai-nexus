@@ -28,11 +28,11 @@ describe('Personal draft persistence', () => {
 
   it('ignores corrupt storage without mistaking it for unavailable storage', () => {
     const drafts = new DraftRepository();
-    localStorage.setItem('nexus.draft.alice.new', '{broken');
+    localStorage.setItem('ai-nexus.draft.alice.new', '{broken');
     expect(drafts.load('alice', null)).toBeNull();
     expect(drafts.available()).toBe(true);
     localStorage.setItem(
-      'nexus.draft.alice.new',
+      'ai-nexus.draft.alice.new',
       JSON.stringify({ text: 'x', attachmentIds: [42], updatedAt: 1 }),
     );
     expect(drafts.load('alice', null)).toBeNull();
@@ -43,7 +43,7 @@ describe('Personal draft persistence', () => {
     let time = 0;
     vi.spyOn(Date, 'now').mockImplementation(() => ++time);
     drafts.save('bob', 'keep', '其他人的草稿', []);
-    localStorage.setItem('nexus.draft.alice.broken', '{broken');
+    localStorage.setItem('ai-nexus.draft.alice.broken', '{broken');
     for (let index = 0; index < 42; index++)
       drafts.save('alice', String(index), `提問 ${index}`, []);
     expect(drafts.load('alice', '0')).toBeNull();
@@ -52,7 +52,7 @@ describe('Personal draft persistence', () => {
     expect(drafts.load('alice', '41')?.text).toBe('提問 41');
     expect(drafts.load('bob', 'keep')?.text).toBe('其他人的草稿');
     expect(
-      Object.keys(localStorage).filter((key) => key.startsWith('nexus.draft.alice.')),
+      Object.keys(localStorage).filter((key) => key.startsWith('ai-nexus.draft.alice.')),
     ).toHaveLength(40);
   });
 

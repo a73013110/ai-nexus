@@ -10,10 +10,10 @@
 需要有建庫權限的 SQL 登入。
 
 .PARAMETER Server
-建在另一台 SQL Server（例如 (localdb)\MSSQLLocalDB），以目前 Windows 身分連線；省略時用設定的 Databases.Nexus 與秘密檔的帳密。
+建在另一台 SQL Server（例如 (localdb)\MSSQLLocalDB），以目前 Windows 身分連線；省略時用設定的 Databases.App 與秘密檔的帳密。
 
 .PARAMETER Database
-要建立的資料庫，省略時用設定的 Databases.Nexus.Name；例如另建一個沙盒庫。
+要建立的資料庫，省略時用設定的 Databases.App.Name；例如另建一個沙盒庫。
 
 .EXAMPLE
 ./scripts/Initialize-Database.ps1
@@ -27,14 +27,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
-$paths = Initialize-NexusLocalSettings
-$defaults = Read-NexusJson (Join-Path $root 'backend/src/AiNexus.Host/appsettings.json')
-$local = Read-NexusJson $paths.Settings
-$secrets = Read-NexusJson $paths.Secrets
+$root = Get-RepoRoot
+$paths = Initialize-RepoLocalSettings
+$defaults = Read-RepoJson (Join-Path $root 'backend/src/AiNexus.Host/appsettings.json')
+$local = Read-RepoJson $paths.Settings
+$secrets = Read-RepoJson $paths.Secrets
 function Get-DatabaseSetting([string]$Key) {
     foreach ($settings in $secrets, $local, $defaults) {
-        $value = Get-NexusSetting $settings "Databases.Nexus.$Key"
+        $value = Get-RepoSetting $settings "Databases.App.$Key"
         if ($null -ne $value -and "$value" -ne '') { return $value }
     }
 }
@@ -49,7 +49,7 @@ if (!$Server -and !(Get-DatabaseSetting 'IntegratedSecurity') -and $user) {
 }
 $secrets = $null
 
-if (Test-NexusDatabaseExists @connection) {
+if (Test-RepoDatabaseExists @connection) {
     throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。升級既有庫用 scripts/Deploy-Database.ps1（見 docs/operations/database-setup.md）。"
 }
 Push-Location -LiteralPath $root

@@ -37,7 +37,7 @@ internal static class AuthSession
         if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId)
             && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId)
             && long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var seconds))
-            testing = new(actorId, http.User.FindFirstValue("nexus_actor_name") ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));
+            testing = new(actorId, http.User.FindFirstValue("actor_name") ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));
         var methods = new List<string> { "local" };
         if (options.Mode == "Windows") methods.Insert(0, "windows"); else if (options.Configured) methods.Insert(0, "ad");
         var identities = Identities(http.User);

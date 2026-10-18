@@ -10,7 +10,7 @@ public sealed class RetrievalDependencyTests
     [Fact]
     public async Task SqlServerRetrievalStoreResolvesWithProductionDependencies()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var scope = factory.Services.CreateScope();
         Assert.IsType<SqlServerRetrievalStore>(scope.ServiceProvider.GetRequiredService<IRetrievalStore>());
     }
@@ -18,7 +18,7 @@ public sealed class RetrievalDependencyTests
     [Fact]
     public async Task QueryRewriterAndBackgroundHandlersResolveWithScopeValidation()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         await using var app = factory.WithWebHostBuilder(builder => builder.UseDefaultServiceProvider(options => {
             options.ValidateScopes = true;
             options.ValidateOnBuild = true;

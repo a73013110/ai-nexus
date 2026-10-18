@@ -54,7 +54,7 @@
 分工見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（Dapper），值用參數。
 
 - `ISqlDatabase<AppDbContext>`：主資料庫，共用 `AppDbContext` 的連線與目前交易。
-- `ISqlDatabase<MasterDatabase>`：建庫用，以 `Databases:Nexus` 連 `master`。
+- `ISqlDatabase<MasterDatabase>`：建庫用，以 `Databases:App` 連 `master`。
 - `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次自開連線；設定須 `ReadOnly=true`，不取代 SQL 端唯讀權限。
 
 連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增唯讀來源＝在擁有它的模組加 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。

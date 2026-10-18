@@ -23,7 +23,7 @@ namespace AiNexus.IntegrationTests.Support;
 public sealed class TestDatabase : IDisposable
 {
     public const string Server = @"(localdb)\MSSQLLocalDB";
-    private const string HostPrefix = "AINexus_Test_", TemplatePrefix = "AINexus_Template_";
+    private const string HostPrefix = "AiNexus_Test_", TemplatePrefix = "AiNexus_Template_";
     private static readonly Lazy<Template> Shared = new(Template.Create);
     private static readonly string Cache = Path.Combine(Path.GetTempPath(), "ainexus-test-db");
     private static readonly List<Task> Drops = [];
@@ -152,7 +152,7 @@ public sealed class TestDatabase : IDisposable
             if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
             Directory.CreateDirectory(folder);
             // 自己建庫才能指定檔案位置；collation 與 dacpac 相同，SqlPackage 再套用 RCSI 等資料庫選項。
-            Master($"CREATE DATABASE {Quote(name)} ON (NAME = N'AINexus', FILENAME = {Literal(Data)}) LOG ON (NAME = N'AINexus_log', FILENAME = {Literal(Log)}) COLLATE Chinese_Taiwan_Stroke_CI_AS");
+            Master($"CREATE DATABASE {Quote(name)} ON (NAME = N'AiNexus', FILENAME = {Literal(Data)}) LOG ON (NAME = N'AiNexus_log', FILENAME = {Literal(Log)}) COLLATE Chinese_Taiwan_Stroke_CI_AS");
             var connection = Connection(name);
             Publish(root, dacpac, connection);
             using (var db = new SqlConnection(connection))

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { NexusApi } from '../api/nexus-api';
+import { WorkspaceApi } from '../api/workspace-api';
 import { ApiError, validIssueCode } from '../errors/safe-errors';
 import type { RunDto, RunEventDto } from '../api/schema';
 import { isActive } from '../api/generation-status';
@@ -16,7 +16,7 @@ export interface StreamObserver {
 
 @Injectable({ providedIn: 'root' })
 export class RunStream {
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
 
   async follow(initial: RunDto, signal: AbortSignal, observer: StreamObserver): Promise<RunDto> {
     const content = new FramePublisher((value) => {

@@ -10,7 +10,7 @@ public sealed class SqlDatabaseTests
     [Fact]
     public async Task SqlBindsParametersAndJoinsTheEfTransaction()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>();

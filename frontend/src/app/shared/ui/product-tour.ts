@@ -122,7 +122,7 @@ export class ProductTour {
     this.active.set(false);
     this.loading.set(false);
   }
-  // driver.js 的樣式與 Nexus 的覆寫只在導覽開始時載入；覆寫會接在 driver.css 之後，
+  // driver.js 的樣式與本專案的覆寫只在導覽開始時載入；覆寫會接在 driver.css 之後，
   // 因此在相同特異性下會勝出。
   private loadStyles() {
     return (this.stylesheet ??= Promise.all(

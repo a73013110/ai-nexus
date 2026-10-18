@@ -15,7 +15,7 @@ public sealed class QuerySystemLogsTests
     [Fact]
     public async Task QueryDetailExportPermissionsAreIndependentAndReadsAreAudited()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var code = Issues.NewCode();
         var row = new DiagnosticEvent { IssueCode = code, Level = LogLevel.Error, ExceptionType = "InvalidOperationException", ExceptionDetail = "[message omitted]", Category = "=HYPERLINK(\"evil\")", At = DateTimeOffset.UtcNow.AddMinutes(-1) }; db.Add(row); await db.SaveChangesAsync();
         var range = Range(); var page = await alice.GetFromJsonAsync<DiagnosticPage>("/api/v1/admin/logs?" + range + "&issueCode=" + code); Assert.Single(page!.Events);
@@ -33,7 +33,7 @@ public sealed class QuerySystemLogsTests
     [Fact]
     public async Task CursorIsBoundToActorFiltersAndTimeWindowAndHasNoDuplicates()
     {
-        await using var factory = new NexusFactory(administrators: ["alice", "bob"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(administrators: ["alice", "bob"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-1); db.AddRange(Enumerable.Range(0, 7).Select(i => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i), Level = LogLevel.Error })); await db.SaveChangesAsync();
         var query = "/api/v1/admin/logs?" + Range() + "&issueCode=" + code + "&take=3";
@@ -47,7 +47,7 @@ public sealed class QuerySystemLogsTests
     [Fact]
     public async Task LevelsAreMultiSelectAndTheirOrderDoesNotInvalidateTheCursor()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-2);
         db.AddRange(new[] { LogLevel.Error, LogLevel.Warning, LogLevel.Information, LogLevel.Error, LogLevel.Warning }.Select((level, i) => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i), Level = level }));
@@ -69,7 +69,7 @@ public sealed class QuerySystemLogsTests
     [InlineData("desc")]
     public async Task CursorSortAndPageSizeAreBoundAndTimestampTiesHaveNoGaps(string direction)
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var at = DateTimeOffset.UtcNow.AddMinutes(-2);
         db.AddRange(Enumerable.Range(0, 8).Select(i => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i / 2), Level = LogLevel.Error }));

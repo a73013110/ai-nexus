@@ -21,7 +21,7 @@ public sealed class SourceGatewayTests
     private static async Task<HttpClient> SignIn(WebApplicationFactory<Program> f, string name)
     {
         var client = f.CreateClient(); client.DefaultRequestHeaders.Add("X-Test-User", name);
-        var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!; client.DefaultRequestHeaders.Add("X-Nexus-CSRF", me.CsrfToken); return client;
+        var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!; client.DefaultRequestHeaders.Add("X-CSRF-Token", me.CsrfToken); return client;
     }
 
     private static readonly Dictionary<string, string?> GdwebConnection = new()
@@ -32,7 +32,7 @@ public sealed class SourceGatewayTests
     [Fact]
     public async Task ServerIdentityAndSourceAclProtectQueriesAndImportedSnapshotsStayPrivate()
     {
-        await using var baseFactory = new NexusFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" }));
+        await using var baseFactory = new AppFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" }));
         var adapter = new FixtureSource();
         await using var f = baseFactory.WithWebHostBuilder(b => {
             b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(GdwebConnection));
@@ -54,7 +54,7 @@ public sealed class SourceGatewayTests
     [Fact]
     public async Task UnconfirmedAclAndMissingSourceGroupsNeverInvokeTheAdapter()
     {
-        await using var baseFactory = new NexusFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" })); var adapter = new FixtureSource();
+        await using var baseFactory = new AppFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" })); var adapter = new FixtureSource();
         await using var f = baseFactory.WithWebHostBuilder(b => { b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(GdwebConnection)); b.ConfigureServices(s => { s.RemoveAll<IControlledSourceAdapter>(); s.AddSingleton<IControlledSourceAdapter>(adapter); s.PostConfigure<IntegrationsOptions>(o => { o.Gdweb.Enabled = true; o.Gdweb.AclContractConfirmed = true; o.Gdweb.AllowedGroupIds = []; }); }); });
         using var owner = await SignIn(f, "alice"); Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync("/api/v1/integrations/gdweb/records?query=通知")).StatusCode); Assert.Equal(0, adapter.Calls);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await owner.GetAsync("/api/v1/integrations/meiho/records?query=規範")).StatusCode);

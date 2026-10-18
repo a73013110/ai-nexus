@@ -21,7 +21,7 @@ public sealed class ConversationKnowledgeTests
     [Fact]
     public async Task RetrievedSourceIsSnapshottedWithPageCitationForGeneration()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var collection = await CreateCollection(client); var document = await AddDocument(client, collection.Resource.Id, "Travel budget approval requires manager signature."); await Process(factory);
         var conversation = await CreateConversation(client);
@@ -37,7 +37,7 @@ public sealed class ConversationKnowledgeTests
     public async Task RewriteHistoryFollowsTheBranchOldestFirstAndSkipsEmptyAndUnfinishedAnswersUpToTheTurnLimit()
     {
         var rewriter = new CapturingRewriter();
-        await using var factory = new NexusFactory(services: services =>
+        await using var factory = new AppFactory(services: services =>
         {
             services.PostConfigure<KnowledgeOptions>(x => x.QueryRewrite.MaxTurns = 2);
             services.RemoveAll<IQueryRewriter>(); services.AddSingleton<IQueryRewriter>(rewriter);
@@ -63,7 +63,7 @@ public sealed class ConversationKnowledgeTests
     [Fact]
     public async Task RewriteHistoryRejectsACycleAParentOutsideTheConversationAndAnotherUsersConversation()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         using var bob = await factory.SignedInAsync("bob");
         var conversation = await CreateConversation(client);
@@ -80,14 +80,14 @@ public sealed class ConversationKnowledgeTests
         Assert.Equal("conversation_not_found", (await ForRunAsync(factory, bobId, new(conversation.Id, "採購", null, null), seed.Collection)).Error!.Code);
     }
 
-    private static async Task<AiNexus.Platform.Errors.Result<IReadOnlyList<KnowledgeHitDto>>> ForRunAsync(NexusFactory factory, Guid actor, ConversationTurn turn, Guid collection)
+    private static async Task<AiNexus.Platform.Errors.Result<IReadOnlyList<KnowledgeHitDto>>> ForRunAsync(AppFactory factory, Guid actor, ConversationTurn turn, Guid collection)
     {
         using var scope = factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<KnowledgeRetrieval>().ForRunAsync(actor, turn, CancellationToken.None, [collection]);
     }
 
     /// <summary>在 <paramref name="parent"/> 之下建立一串訊息（由舊到新），並依相同順序回傳它們的 id。</summary>
-    private static async Task<Guid[]> AddMessagesAsync(NexusFactory factory, Guid conversation, Guid? parent, params (string Role, string Content, string Status)[] chain)
+    private static async Task<Guid[]> AddMessagesAsync(AppFactory factory, Guid conversation, Guid? parent, params (string Role, string Content, string Status)[] chain)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

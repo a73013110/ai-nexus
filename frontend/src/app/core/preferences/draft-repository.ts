@@ -29,7 +29,7 @@ function decodeDraft(raw: string | null): Draft | null {
 export class DraftRepository {
   readonly available = signal(true);
   private key(user: string, conversation: string | null) {
-    return `nexus.draft.${user}.${conversation ?? 'new'}`;
+    return `ai-nexus.draft.${user}.${conversation ?? 'new'}`;
   }
   load(user: string, conversation: string | null): Draft | null {
     try {
@@ -55,7 +55,7 @@ export class DraftRepository {
           JSON.stringify({ text, attachmentIds, updatedAt: Date.now() } satisfies Draft),
         );
       // 依帳號限制儲存空間；草稿刻意只存在於此瀏覽器中。
-      const prefix = `nexus.draft.${user}.`;
+      const prefix = `ai-nexus.draft.${user}.`;
       const keys = Object.keys(localStorage).filter((key) => key.startsWith(prefix));
       if (keys.length > 40)
         keys
@@ -77,7 +77,7 @@ export class DraftRepository {
   clearAccount(user: string) {
     try {
       Object.keys(localStorage)
-        .filter((key) => key.startsWith(`nexus.draft.${user}.`))
+        .filter((key) => key.startsWith(`ai-nexus.draft.${user}.`))
         .forEach((key) => localStorage.removeItem(key));
       this.available.set(true);
       return true;

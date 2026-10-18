@@ -7,12 +7,12 @@ Set-StrictMode -Version Latest
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 
-function Get-NexusRoot {
+function Get-RepoRoot {
     <# .SYNOPSIS Repository root directory. #>
     $root
 }
 
-function Get-NexusLocalPaths {
+function Get-RepoLocalPaths {
     <# .SYNOPSIS Machine settings and secrets files under .local/. #>
     @{
         Root = $root
@@ -21,7 +21,7 @@ function Get-NexusLocalPaths {
     }
 }
 
-function Resolve-NexusArtifactPath {
+function Resolve-RepoArtifactPath {
     <# .SYNOPSIS Absolute path of an output directory; throws unless it is inside the repository artifacts/. #>
     param([Parameter(Mandatory)][string]$Path)
     $full = [IO.Path]::GetFullPath($Path, $root)
@@ -30,7 +30,7 @@ function Resolve-NexusArtifactPath {
     $full
 }
 
-function Get-NexusSetting {
+function Get-RepoSetting {
     <# .SYNOPSIS Value at a dotted path (Section.Key) of a settings hashtable, or $null. #>
     param([Parameter(Mandatory)][Collections.IDictionary]$Settings, [Parameter(Mandatory)][string]$Path)
     $node = $Settings
@@ -41,7 +41,7 @@ function Get-NexusSetting {
     $node
 }
 
-function Set-NexusSetting {
+function Set-RepoSetting {
     <# .SYNOPSIS Sets a dotted path (Section.Key) of a settings hashtable, creating missing sections. #>
     param([Parameter(Mandatory)][Collections.IDictionary]$Settings, [Parameter(Mandatory)][string]$Path, [AllowNull()]$Value)
     $keys = $Path.Split('.')
@@ -54,13 +54,13 @@ function Set-NexusSetting {
     $node[$keys[-1]] = $Value
 }
 
-function Read-NexusJson {
+function Read-RepoJson {
     <# .SYNOPSIS Reads a JSON settings file as a hashtable. #>
     param([Parameter(Mandatory)][string]$Path)
     [IO.File]::ReadAllText($Path) | ConvertFrom-Json -AsHashtable
 }
 
-function Save-NexusJson {
+function Save-RepoJson {
     <#
     .SYNOPSIS Writes UTF-8 JSON through a temporary file.
     .DESCRIPTION The temporary file gets the target's permissions first, so a secrets file is never briefly readable by others.
@@ -83,18 +83,18 @@ function Save-NexusJson {
     }
 }
 
-function Get-NexusSecretValues {
+function Get-RepoSecretValues {
     <# .SYNOPSIS Non-empty credential values: passwords and keys; with -IncludeUser also SQL logins. #>
     param([Parameter(Mandatory)][Collections.IDictionary]$Settings, [switch]$IncludeUser, [string]$Path = '')
     foreach ($key in $Settings.Keys) {
         $value = $Settings[$key]
         $next = if ($Path) { "$Path.$key" } else { $key }
-        if ($value -is [Collections.IDictionary]) { Get-NexusSecretValues $value -IncludeUser:$IncludeUser -Path $next }
+        if ($value -is [Collections.IDictionary]) { Get-RepoSecretValues $value -IncludeUser:$IncludeUser -Path $next }
         elseif ($value -is [string] -and $value.Length -gt 0 -and ($key -match '^(Password|BindPassword|ApiKey)$' -or ($IncludeUser -and $key -eq 'User'))) { $value }
     }
 }
 
-function Protect-NexusSecrets {
+function Protect-RepoSecrets {
     <# .SYNOPSIS Restricts a secrets file to the current user (Windows: also SYSTEM and Administrators). #>
     param([Parameter(Mandatory)][string]$Path)
     if (!$IsWindows) {
@@ -113,9 +113,9 @@ function Protect-NexusSecrets {
     [IO.FileSystemAclExtensions]::SetAccessControl([IO.FileInfo]::new($Path), $acl)
 }
 
-function Initialize-NexusLocalSettings {
+function Initialize-RepoLocalSettings {
     <# .SYNOPSIS Copies the settings templates into .local/ on first use; existing machine files are never rewritten. #>
-    $paths = Get-NexusLocalPaths
+    $paths = Get-RepoLocalPaths
     foreach ($file in @(
         @{ Path = $paths.Settings; Template = 'appsettings.Local.example.json' },
         @{ Path = $paths.Secrets; Template = 'appsettings.Secrets.example.json' }
@@ -123,23 +123,23 @@ function Initialize-NexusLocalSettings {
         New-Item -ItemType Directory -Path (Split-Path $file.Path) -Force | Out-Null
         if (!(Test-Path -LiteralPath $file.Path)) { Copy-Item -LiteralPath (Join-Path $root "backend/src/AiNexus.Host/$($file.Template)") -Destination $file.Path }
     }
-    Protect-NexusSecrets $paths.Secrets
+    Protect-RepoSecrets $paths.Secrets
     $paths
 }
 
-function Assert-NexusHttpsCertificate {
+function Assert-RepoHttpsCertificate {
     <# .SYNOPSIS Throws unless the .NET SDK development HTTPS certificate exists. #>
     dotnet dev-certs https --check --quiet
     if ($LASTEXITCODE -ne 0) { throw '找不到本機 HTTPS 憑證。請先執行 dotnet dev-certs https --trust，再重新啟動。純 HTTP 測試可明確使用 -Http（僅限 localhost）。' }
 }
 
-function Invoke-NexusHostCommand {
+function Invoke-RepoHostCommand {
     <#
     .SYNOPSIS Runs a host command (verify …) in Development with the machine settings under .local/.
     .OUTPUTS The host's exit code.
     #>
     param([Parameter(Mandatory)][string[]]$Command)
-    $paths = Initialize-NexusLocalSettings
+    $paths = Initialize-RepoLocalSettings
     $previous = $env:ASPNETCORE_ENVIRONMENT
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     try {
@@ -151,20 +151,20 @@ function Invoke-NexusHostCommand {
 # Pester runs the tests of these scripts (scripts/tests); Windows ships Pester 3, which is too old.
 $pesterVersion = [version]'5.7.1'
 
-function Install-NexusPester {
+function Install-RepoPester {
     <# .SYNOPSIS Installs the pinned Pester for the current user when no compatible version is present. #>
     if (Get-Module -ListAvailable Pester | Where-Object Version -GE $pesterVersion) { return }
     # The built-in Pester 3 is signed by another publisher, so the upgrade has to skip the publisher check.
     Install-Module Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
 }
 
-function Import-NexusPester {
+function Import-RepoPester {
     <# .SYNOPSIS Imports a compatible Pester or explains how to install it. #>
     if (!(Get-Module -ListAvailable Pester | Where-Object Version -GE $pesterVersion)) { throw "需要 Pester $pesterVersion 以上；請執行 ./scripts/Restore.ps1。" }
     Import-Module Pester -MinimumVersion $pesterVersion
 }
 
-function Test-NexusForbiddenPath {
+function Test-RepoForbiddenPath {
     <# .SYNOPSIS True for a repository-relative path that must never be committed (machine settings, secrets, generated output). #>
     param([Parameter(Mandatory)][string]$Path)
     # artifacts/ is the root output folder; feature source folders may also be named Artifacts.
@@ -178,13 +178,13 @@ $fullTextFolders = @{ Catalogs = 'FullText/Catalogs'; Indexes = 'FullText/Indexe
 # 資料庫專案內手寫或建置產出的頂層資料夾，匯出時不可刪除。schema 不能取這些名稱。
 $keptProjectFolders = @('FullText', 'Seed', 'Data', 'bin', 'obj')
 
-function Split-NexusSqlBatch {
+function Split-RepoSqlBatch {
     <# .SYNOPSIS Batches of a SqlPackage-generated script, split on lines that contain only GO. #>
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
     , [string[]]@($Text -split '(?im)^[ \t]*GO[ \t]*\r?$' | ForEach-Object Trim | Where-Object { $_ })
 }
 
-function Join-NexusSqlBatch {
+function Join-RepoSqlBatch {
     <# .SYNOPSIS Script text in the layout SqlPackage writes (LF line endings): each batch followed by a GO line. #>
     param([Parameter(Mandatory)][AllowEmptyCollection()][string[]]$Batch)
     -join @($Batch | ForEach-Object { $_.Replace("`r`n", "`n") + "`n`n`nGO`n`n" })
@@ -198,7 +198,7 @@ function Get-BatchSortKey([string]$Batch) {
     (@('1') + @('level0type', 'level0name', 'level1type', 'level1name', 'level2type', 'level2name', 'name' | ForEach-Object { [string]$values[$_] }) + $Batch) -join "`u{1}"
 }
 
-function Format-NexusSqlBatchOrder {
+function Format-RepoSqlBatchOrder {
     <#
     .SYNOPSIS Batches of one object file in a stable order: the object itself first, then indexes and other batches, then descriptions.
     .DESCRIPTION
@@ -214,13 +214,13 @@ function Format-NexusSqlBatchOrder {
     , (@($Batch[0]) + $rest)
 }
 
-function Test-NexusFullTextBatch {
+function Test-RepoFullTextBatch {
     <# .SYNOPSIS True for a batch that needs the full-text component: catalogs, stoplists, search property lists and full-text indexes. #>
     param([Parameter(Mandatory)][string]$Batch)
     $Batch -match '^(CREATE|ALTER)\s+(FULLTEXT\s+(CATALOG|STOPLIST|INDEX)|SEARCH\s+PROPERTY\s+LIST)\b'
 }
 
-function Invoke-NexusExtractPostProcess {
+function Invoke-RepoExtractPostProcess {
     <#
     .SYNOPSIS Turns a SqlPackage SchemaObjectType extract folder into the committed layout; returns the removed files.
     .DESCRIPTION
@@ -251,26 +251,26 @@ function Invoke-NexusExtractPostProcess {
             continue
         }
 
-        $batches = Split-NexusSqlBatch ([IO.File]::ReadAllText($file.FullName))
-        $fullText = @($batches | Where-Object { Test-NexusFullTextBatch $_ })
-        $rest = Format-NexusSqlBatchOrder @($batches | Where-Object { !(Test-NexusFullTextBatch $_) })
+        $batches = Split-RepoSqlBatch ([IO.File]::ReadAllText($file.FullName))
+        $fullText = @($batches | Where-Object { Test-RepoFullTextBatch $_ })
+        $rest = Format-RepoSqlBatchOrder @($batches | Where-Object { !(Test-RepoFullTextBatch $_) })
         foreach ($group in @($fullText | Group-Object { if ($_ -match '^\S+\s+FULLTEXT\s+INDEX\b') { 'Indexes' } else { 'Catalogs' } })) {
             $name = if ($group.Name -eq 'Indexes') { "$($parts[0]).$($file.BaseName).sql" } else { $file.Name }
             $target = Join-Path $Path "$($fullTextFolders[$group.Name])/$name"
             if (Test-Path -LiteralPath $target) { throw "全文物件的目標檔已存在：$target" }
             New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
-            [IO.File]::WriteAllText($target, (Join-NexusSqlBatch $group.Group), $encoding)
+            [IO.File]::WriteAllText($target, (Join-RepoSqlBatch $group.Group), $encoding)
         }
         if (!$rest.Count) { Remove-Item -LiteralPath $file.FullName; continue }
-        $text = if ($fullText.Count -or ($rest -join "`0") -ne ($batches -join "`0")) { Join-NexusSqlBatch $rest } else { [IO.File]::ReadAllText($file.FullName).Replace("`r`n", "`n") }
+        $text = if ($fullText.Count -or ($rest -join "`0") -ne ($batches -join "`0")) { Join-RepoSqlBatch $rest } else { [IO.File]::ReadAllText($file.FullName).Replace("`r`n", "`n") }
         [IO.File]::WriteAllText($file.FullName, $text, $encoding)
     }
 
-    Remove-NexusEmptyFolder $Path
+    Remove-RepoEmptyFolder $Path
     , $removed.ToArray()
 }
 
-function Remove-NexusEmptyFolder {
+function Remove-RepoEmptyFolder {
     <# .SYNOPSIS Removes the empty folders under Path, deepest first; Path itself stays. #>
     param([Parameter(Mandatory)][string]$Path, [string[]]$Keep = @())
     Get-ChildItem -LiteralPath $Path -Directory -Recurse | Sort-Object { $_.FullName.Length } -Descending |
@@ -278,7 +278,7 @@ function Remove-NexusEmptyFolder {
         Where-Object { !(Get-ChildItem -LiteralPath $_.FullName -Force) } | Remove-Item
 }
 
-function Update-NexusDatabaseProject {
+function Update-RepoDatabaseProject {
     <#
     .SYNOPSIS Replaces the exported *.sql of a database project folder with a processed extract.
     .DESCRIPTION 物件被刪除時檔案也要跟著消失，所以先刪掉上一次匯出的檔案再複製；手寫資料夾、bin／obj 與 *.sql 以外的檔案（sqlproj）保留。
@@ -290,7 +290,7 @@ function Update-NexusDatabaseProject {
         $generated = $relative.Split('/')[0] -notin $keptProjectFolders -or @($fullTextFolders.Values | Where-Object { $relative.StartsWith("$_/") }).Count
         if ($generated) { Remove-Item -LiteralPath $file.FullName }
     }
-    Remove-NexusEmptyFolder $Destination -Keep $keptProjectFolders
+    Remove-RepoEmptyFolder $Destination -Keep $keptProjectFolders
     foreach ($file in @(Get-ChildItem -LiteralPath $Source -Filter '*.sql' -Recurse)) {
         $target = Join-Path $Destination ([IO.Path]::GetRelativePath($Source, $file.FullName))
         New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
@@ -301,7 +301,7 @@ function Update-NexusDatabaseProject {
 # 資料庫層級選項與 SQL 專案屬性的對應；每物件一檔的匯出不含這些選項，只能寫在 sqlproj。
 $databaseSettings = [ordered]@{ Collation = 'DefaultCollation'; CompatibilityLevel = 'CompatibilityMode'; ReadCommittedSnapshot = 'ReadCommittedSnapshot' }
 
-function Get-NexusSqlProjectSetting {
+function Get-RepoSqlProjectSetting {
     <# .SYNOPSIS Collation, compatibility level and RCSI an SDK-style SQL project writes into its dacpac ($null when not set). #>
     param([Parameter(Mandatory)][string]$Path)
     $xml = [xml][IO.File]::ReadAllText($Path)
@@ -313,7 +313,7 @@ function Get-NexusSqlProjectSetting {
     $settings
 }
 
-function Compare-NexusDatabaseSetting {
+function Compare-RepoDatabaseSetting {
     <# .SYNOPSIS Messages for each database option that differs from the SQL project; nothing when they agree. #>
     param([Parameter(Mandatory)][Collections.IDictionary]$Database, [Parameter(Mandatory)][Collections.IDictionary]$Project)
     foreach ($key in $databaseSettings.Keys) {
@@ -323,7 +323,7 @@ function Compare-NexusDatabaseSetting {
     }
 }
 
-function Test-NexusDatabaseExists {
+function Test-RepoDatabaseExists {
     <#
     .SYNOPSIS True when the server already has the database (queried through master).
     .DESCRIPTION PowerShell 內附的 System.Data.SqlClient 不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。
@@ -350,4 +350,4 @@ function Test-NexusDatabaseExists {
     } finally { $connection.Dispose() }
 }
 
-Export-ModuleMember -Function *-Nexus*
+Export-ModuleMember -Function *-Repo*

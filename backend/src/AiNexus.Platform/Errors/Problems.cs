@@ -96,11 +96,11 @@ public static class Problems
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
             .WriteAsync(new() { HttpContext = http, Exception = exception, ProblemDetails = new() }).AsTask();
 
-    public static IServiceCollection AddNexusProblemDetails(this IServiceCollection services)
+    public static IServiceCollection AddPlatformProblemDetails(this IServiceCollection services)
     {
-        // 以 NexusProblemWriter 取代框架預設的寫入器。框架預設會拒絕非 application/json 的 Accept 標頭，
+        // 以 ProblemWriter 取代框架預設的寫入器。框架預設會拒絕非 application/json 的 Accept 標頭，
         // 而且可能把內部追蹤識別碼寫進公開回應。
-        services.AddSingleton<IProblemDetailsWriter, NexusProblemWriter>();
+        services.AddSingleton<IProblemDetailsWriter, ProblemWriter>();
         return services.AddProblemDetails();
     }
 
@@ -112,7 +112,7 @@ public static class Problems
     }
 }
 
-internal sealed class NexusProblemWriter(Issues issues) : IProblemDetailsWriter
+internal sealed class ProblemWriter(Issues issues) : IProblemDetailsWriter
 {
     public bool CanWrite(ProblemDetailsContext context) => true;
 

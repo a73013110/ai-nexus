@@ -12,7 +12,7 @@ public sealed class ConversationHistoryTests
     [Fact]
     public async Task PersonalHistoryMessagesRunsAndEventsAreIsolated()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var conversation = await CreateConversation(alice, "私人對話");
@@ -28,7 +28,7 @@ public sealed class ConversationHistoryTests
     [Fact]
     public async Task HistorySearchRenameDeleteAndPreferencesRoundTrip()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client, "初始標題");
         (await client.PatchAsJsonAsync($"/api/v1/conversations/{conversation.Id}", new RenameConversationRequest("會議紀錄"))).EnsureSuccessStatusCode();

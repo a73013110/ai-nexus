@@ -15,7 +15,7 @@ public sealed class DiagnosticExporterTests
         using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0); listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
         var options = Options.Create(new DiagnosticOptions { OtlpEnabled = true, OtlpEndpoint = "http://127.0.0.1:" + port });
         using var exporter = new DiagnosticExporter(options, health);
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-otlp-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-otlp-" + Guid.NewGuid().ToString("N"));
         try {
             var fileOptions = Options.Create(new DiagnosticOptions { Directory = directory }); using var journal = new DiagnosticJournal(fileOptions, health, new EnvironmentFixture());
             using var trace = DiagnosticTrace.Start("export.fixture"); var row = new DiagnosticEvent { IssueCode = Issues.NewCode(), TraceId = trace.TraceId.ToHexString(), SpanId = trace.SpanId.ToHexString(), Level = LogLevel.Error, MessageTemplate = "Safe exporter fixture." };

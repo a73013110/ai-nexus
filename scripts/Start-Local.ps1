@@ -17,7 +17,7 @@
 網站埠號。
 
 .PARAMETER PublishDirectory
-發布目錄，必須在 artifacts/ 內；未指定時讀環境變數 NEXUS_E2E_PUBLISH_DIRECTORY，再預設 artifacts/publish。
+發布目錄，必須在 artifacts/ 內；未指定時讀環境變數 AINEXUS_E2E_PUBLISH_DIRECTORY，再預設 artifacts/publish。
 
 .EXAMPLE
 ./scripts/Start-Local.ps1
@@ -30,15 +30,15 @@ param(
     [switch]$SkipBuild,
     [switch]$Http,
     [ValidateRange(1024, 65535)][int]$Port = 5080,
-    [string]$PublishDirectory = $(if ($env:NEXUS_E2E_PUBLISH_DIRECTORY) { $env:NEXUS_E2E_PUBLISH_DIRECTORY } else { 'artifacts/publish' })
+    [string]$PublishDirectory = $(if ($env:AINEXUS_E2E_PUBLISH_DIRECTORY) { $env:AINEXUS_E2E_PUBLISH_DIRECTORY } else { 'artifacts/publish' })
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-if (!$Http) { Assert-NexusHttpsCertificate }
-$local = Initialize-NexusLocalSettings
-$publish = Resolve-NexusArtifactPath $PublishDirectory
+if (!$Http) { Assert-RepoHttpsCertificate }
+$local = Initialize-RepoLocalSettings
+$publish = Resolve-RepoArtifactPath $PublishDirectory
 if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $publish }
 $dll = Join-Path $publish 'AiNexus.Host.dll'
 if (!(Test-Path -LiteralPath $dll)) { throw '找不到發布產物；請先執行 scripts/Build.ps1。' }

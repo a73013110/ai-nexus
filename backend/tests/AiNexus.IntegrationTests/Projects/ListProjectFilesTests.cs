@@ -12,7 +12,7 @@ public sealed class ListProjectFilesTests
     [Fact]
     public async Task ProjectFilesMatchEachDocumentDetailForOwnerViewerAndEditorInFixedQueries()
     {
-        await using var factory = new NexusFactory(services: RequestQueries.Register);
+        await using var factory = new AppFactory(services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;

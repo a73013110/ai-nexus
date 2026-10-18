@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AuthService } from './auth-service';
-import { NexusApi } from '../api/nexus-api';
+import { WorkspaceApi } from '../api/workspace-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
 import { FEATURE_NAMES } from './feature-names';
@@ -13,7 +13,7 @@ export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定
 export class WorkspaceSession {
   readonly auth = inject(AuthService);
   readonly me = signal<MeDto | null>(null);
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   readonly settings = inject(UserSettingsService);
   private generation = -1;
   /** 管理員正以其他身分操作；期間管理寫入會被拒絕。 */

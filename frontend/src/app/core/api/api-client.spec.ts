@@ -116,7 +116,7 @@ describe('api client reads', () => {
     const [url, init] = fetch.mock.calls[0];
     expect(url).toBe('/api/v1/conversations/c1/branch');
     expect(init.method).toBe('PATCH');
-    expect(init.headers['X-Nexus-CSRF']).toBe('csrf');
+    expect(init.headers['X-CSRF-Token']).toBe('csrf');
     expect(JSON.parse(init.body)).toEqual({ leafId: 'm1' });
   });
 });

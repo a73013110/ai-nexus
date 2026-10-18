@@ -7,7 +7,7 @@ public sealed class FileAttachmentStorageTests
     [Fact]
     public void StorageRejectsWebsitePathsAndRelativePaths()
     {
-        var root = Path.Combine(Path.GetTempPath(), "nexus-storage-root");
+        var root = Path.Combine(Path.GetTempPath(), "ainexus-storage-root");
         var site = Path.Combine(root, "site");
         var attachments = Path.Combine(root, "data", "attachments");
         Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot("data", site));

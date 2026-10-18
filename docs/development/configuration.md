@@ -14,9 +14,9 @@
 | 密碼與 key | `.local/secrets/appsettings.Secrets.json` | `config/appsettings.Secrets.json` | `appsettings.Secrets.example.json` |
 | 登入 cookie 加密金鑰 | `.local/keys` | `keys`（保留，不隨發版覆蓋） | — |
 
-後面的來源優先：`appsettings.json` → 一般設定 → 秘密 → 環境變數 → 命令列。環境變數用 `__` 表示階層，例如 `Databases__Nexus__Password`、`Inference__Providers__Google__ApiKey`。密碼不可放在命令列或前端。
+後面的來源優先：`appsettings.json` → 一般設定 → 秘密 → 環境變數 → 命令列。環境變數用 `__` 表示階層，例如 `Databases__App__Password`、`Inference__Providers__Google__ApiKey`。密碼不可放在命令列或前端。
 
-Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗，避免悄悄用錯環境。載入邏輯在 [`NexusConfiguration`](../../backend/src/AiNexus.Platform/Configuration/NexusConfiguration.cs)。
+Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗，避免悄悄用錯環境。載入邏輯在 [`AppConfiguration`](../../backend/src/AiNexus.Platform/Configuration/AppConfiguration.cs)。
 
 ## 區段與模組
 
@@ -24,7 +24,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
-| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`Nexus`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
+| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Audit/AuditOptions.cs) | — |
 | `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |

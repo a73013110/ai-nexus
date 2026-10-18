@@ -26,8 +26,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
-$publish = Resolve-NexusArtifactPath $OutputDirectory
+$root = Get-RepoRoot
+$publish = Resolve-RepoArtifactPath $OutputDirectory
 $env:NG_CLI_ANALYTICS = 'false'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 Push-Location -LiteralPath $root

@@ -17,7 +17,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task AuditorsCanInvestigateWithoutManagingAccountsAndRevocationAppliesImmediately()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         using var auditor = await factory.SignedInAsync("bob");
         var target = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
@@ -49,7 +49,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task CategoriesCoverHistoricalActionsAndTraceFiltersKeepPagingAndAuthorization()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var member = await factory.SignedInAsync("bob");
         var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         const string trace = "1234567890abcdef1234567890abcdef";
@@ -83,7 +83,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task AuditFailureFilterExcludesAcceptedLifecycleAndLegacyOperations()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
@@ -108,7 +108,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task PageSizeIsOneOfTheOfferedSizes()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
@@ -130,7 +130,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task CatalogOffersServerClassifiedActionsAndCategories()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var catalog = (await admin.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
         Assert.Equal(AuditCategories.Values, catalog.Categories.Select(x => x.Value));
@@ -147,7 +147,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task ExportHoldsTheWholeQueryIsAuditedAndRefusesMoreThanTheLimit()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.Configure<AuditOptions>(x => x.MaxExportRows = 3));
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => services.Configure<AuditOptions>(x => x.MaxExportRows = 3));
         using var admin = await factory.SignedInAsync(); using var member = await factory.SignedInAsync("bob");
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
@@ -194,7 +194,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task ExportCombinesResultGroupsWithAnActionPrefix()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
@@ -220,7 +220,7 @@ public sealed class ListActivityAuditTests
     [Fact]
     public async Task ExportIsRateLimitedPerUser()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 3; i++) statuses.Add((await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.none")).StatusCode);

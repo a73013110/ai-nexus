@@ -28,7 +28,7 @@ public sealed class BackgroundJobWorkerTests
     [Fact]
     public async Task TerminalNotificationDoesNotCommitUncheckpointedHandlerChanges()
     {
-        await using var factory = new NexusFactory(services: services => services.AddScoped<IBackgroundJobHandler, UnfinishedHandler>());
+        await using var factory = new AppFactory(services: services => services.AddScoped<IBackgroundJobHandler, UnfinishedHandler>());
         using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Guid id;

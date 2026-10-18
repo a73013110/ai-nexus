@@ -24,7 +24,7 @@ public static class PlatformServices
     /// </summary>
     public static WebApplicationBuilder AddPlatform(this WebApplicationBuilder builder)
     {
-        builder.AddNexusDiagnostics();
+        builder.AddPlatformDiagnostics();
         builder.AddKeyRing();
         var services = builder.Services;
 
@@ -38,7 +38,7 @@ public static class PlatformServices
         services.AddAuthorization(options =>
             options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-        services.AddNexusProblemDetails();
+        services.AddPlatformProblemDetails();
         services.AddHealthChecks();
         services.AddRateLimiter(options => options.OnRejected = (context, _) =>
         {

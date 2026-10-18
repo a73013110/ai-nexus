@@ -23,15 +23,15 @@ public sealed class IdentityModule : IFeatureModule
         var services = builder.Services;
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
-        services.AddAuthentication("NexusSession")
+        services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
-            .AddPolicyScheme("NexusSession", null, options => options.ForwardDefaultSelector = http =>
-                http.Request.Cookies.ContainsKey("Nexus.Session") || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
+            .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
+                http.Request.Cookies.ContainsKey("AiNexus.Session") || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
                     ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)
             .AddNegotiate()
             .AddCookie(AuthEndpoints.CookieScheme, options =>
             {
-                options.Cookie.Name = "Nexus.Session";
+                options.Cookie.Name = "AiNexus.Session";
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
@@ -58,7 +58,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<AuthenticationAudit>();
     }
 
-    public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapNexusAuthentication();
+    public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapAuthenticationEndpoints();
 
     private static Task Problem(HttpContext http, int status, string code)
         => Problems.WriteAsync(http, status, code);

@@ -17,7 +17,7 @@ public sealed class DeleteArtifactTests
     [Fact]
     public async Task DeletingAnArtifactRevokesItsSharesInTheSameTransaction()
     {
-        await using var f = new NexusFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
+        await using var f = new AppFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var source = (await (await alice.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("成果", "內容"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         var share = (await (await alice.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("artifact", source.Resource.Id, [bobId]))).Content.ReadFromJsonAsync<ShareDto>())!;

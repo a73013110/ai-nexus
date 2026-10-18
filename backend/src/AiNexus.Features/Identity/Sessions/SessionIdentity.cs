@@ -11,17 +11,17 @@ namespace AiNexus.Features.Identity.Sessions;
 
 public static class SessionIdentity
 {
-    public const string UserId = "nexus_user_id";
-    public const string Version = "nexus_security_version";
-    public const string Method = "nexus_method";
+    public const string UserId = "user_id";
+    public const string Version = "security_version";
+    public const string Method = "auth_method";
     public const string ActorId = RequestClaims.ActorId;
-    public const string ActorVersion = "nexus_actor_version";
-    public const string ActorMethod = "nexus_actor_method";
-    public const string TestExpires = "nexus_test_expires";
-    public const string TestId = "nexus_test_id";
-    public const string ActiveIdentity = "nexus_identity";
-    public const string Restored = "Nexus.IdentityRestored";
-    private const string Validated = "Nexus.ValidatedUser";
+    public const string ActorVersion = "actor_version";
+    public const string ActorMethod = "actor_method";
+    public const string TestExpires = "test_expires";
+    public const string TestId = "test_id";
+    public const string ActiveIdentity = "active_identity";
+    public const string Restored = "Identity.Restored";
+    private const string Validated = "Identity.ValidatedUser";
 
     /// <summary>此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。</summary>
     internal static User? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is User user && user.Id == id ? user : null;
@@ -37,7 +37,7 @@ public static class SessionIdentity
         {
             claims.Add(new(ActorId, actor.Id.ToString())); claims.Add(new(ActorVersion, actor.SecurityVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             claims.Add(new(ActorMethod, actorMethod!)); claims.Add(new(TestExpires, testExpires!.Value.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
-            claims.Add(new("nexus_actor_name", actor.DisplayName));
+            claims.Add(new("actor_name", actor.DisplayName));
             claims.Add(new(TestId, (testId ?? Guid.NewGuid()).ToString()));
         }
         return new(new ClaimsIdentity(claims, AuthEndpoints.CookieScheme));

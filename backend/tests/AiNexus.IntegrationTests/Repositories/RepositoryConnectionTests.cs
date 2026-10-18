@@ -17,7 +17,7 @@ public sealed class RepositoryConnectionTests
 {
     internal const string Token = "fixtureOnlyReadTokenForGitea00001";
 
-    internal static NexusFactory Factory(FixtureGitea source, Action<IServiceCollection>? more = null) => new(services: services =>
+    internal static AppFactory Factory(FixtureGitea source, Action<IServiceCollection>? more = null) => new(services: services =>
     {
         services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true);
         more?.Invoke(services);

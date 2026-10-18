@@ -12,7 +12,7 @@ public sealed class CancelRunTests
     [Fact]
     public async Task CancelPreservesPartialOutputAndReplayHasIncreasingSequences()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         factory.Provider.DelayMs = 150;
         factory.Provider.NeverFinish = true;
         using var client = await factory.SignedInAsync();
@@ -36,7 +36,7 @@ public sealed class CancelRunTests
     [Fact]
     public async Task CancellingQueuedWorkPreventsItsProviderRequest()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         factory.Provider.DelayMs = 200; factory.Provider.NeverFinish = true;
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var a = await ChatApi.CreateConversation(alice); var b = await ChatApi.CreateConversation(bob);

@@ -24,15 +24,15 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$artifacts = Join-Path (Get-NexusRoot) 'artifacts'
+$artifacts = Join-Path (Get-RepoRoot) 'artifacts'
 New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
 $sqlReport = Join-Path $artifacts 'sql-capabilities.json'
-if ((Invoke-NexusHostCommand 'verify', 'sql', '--output', $sqlReport) -ne 0) { throw 'SQL 能力檢查失敗；未輸出任何帳密。' }
-$capabilities = Read-NexusJson $sqlReport
+if ((Invoke-RepoHostCommand 'verify', 'sql', '--output', $sqlReport) -ne 0) { throw 'SQL 能力檢查失敗；未輸出任何帳密。' }
+$capabilities = Read-RepoJson $sqlReport
 if (!$capabilities['FullTextInstalled'] -or !$capabilities['TraditionalChineseWordBreaker']) {
     Write-Warning 'SQL 全文元件或繁中 1028 斷詞器不可用；混合檢索會改用 vector 模式。'
 }
 if ($SqlOnly) { return }
-if ((Invoke-NexusHostCommand 'verify', 'connections', '--output', (Join-Path $artifacts 'connection-checks.json')) -ne 0) {
+if ((Invoke-RepoHostCommand 'verify', 'connections', '--output', (Join-Path $artifacts 'connection-checks.json')) -ne 0) {
     throw '連線檢查未全部通過；請查看 artifacts/connection-checks.json 的安全診斷。'
 }

@@ -13,7 +13,7 @@ public sealed class DuplicateConversationTests
     [Fact]
     public async Task DuplicateKeepsBranchesAndAttachmentReferencesWithNewIds()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var original = await CreateConversation(client);
         var file = await Upload(client, "notes.txt", Encoding.UTF8.GetBytes("clone attachment"));

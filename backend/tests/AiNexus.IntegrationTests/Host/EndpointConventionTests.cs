@@ -13,7 +13,7 @@ public sealed class EndpointConventionTests
     [Fact]
     public async Task EveryEndpointDeclaresAuthorizationOrAnonymousAccess()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         _ = factory.CreateClient();
         var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToList();
         Assert.NotEmpty(endpoints);
@@ -27,7 +27,7 @@ public sealed class EndpointConventionTests
     [Fact]
     public async Task EveryReferencedPolicyIsRegistered()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         _ = factory.CreateClient();
         var provider = factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
         var names = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
@@ -39,7 +39,7 @@ public sealed class EndpointConventionTests
     [Fact]
     public async Task OperationIdsAreUnique()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         _ = factory.CreateClient();
         var names = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .Select(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName).OfType<string>().ToList();
@@ -50,7 +50,7 @@ public sealed class EndpointConventionTests
     [Fact]
     public async Task EveryRequestBodyHasAValidatorOrAStatedReason()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         _ = factory.CreateClient();
         var registered = factory.Services.GetRequiredService<IServiceProviderIsService>();
         var bodies = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints

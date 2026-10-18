@@ -104,7 +104,7 @@ public sealed class DiagnosticLoggerProvider(
 
             // 只信任本程式自己的 Activity 來源，或明確標記為可信的 Activity。
             // 其他 Span（例如主機層）可能帶著呼叫端送來的 traceparent，直接沿用會讓外部請求偽造追蹤關聯，所以這裡寧可不附上。
-            var activity = Activity.Current?.Source.Name == DiagnosticTrace.SourceName || Activity.Current?.GetTagItem("nexus.trusted") is true
+            var activity = Activity.Current?.Source.Name == DiagnosticTrace.SourceName || Activity.Current?.GetTagItem("diagnostic.trusted") is true
                 ? Activity.Current
                 : null;
 
@@ -149,7 +149,7 @@ public sealed class DiagnosticLoggerProvider(
                 UntrustedClient = StringOf("UntrustedClient") == "True"
             });
 
-            foreach (var receipt in values.Where(x => x.Key == "NexusDelivery").Select(x => x.Value).OfType<DiagnosticDelivery>())
+            foreach (var receipt in values.Where(x => x.Key == "DeliveryReceipt").Select(x => x.Value).OfType<DiagnosticDelivery>())
             {
                 receipt.Accepted = accepted;
             }

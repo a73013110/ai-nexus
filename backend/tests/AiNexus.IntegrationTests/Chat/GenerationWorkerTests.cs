@@ -9,7 +9,7 @@ public sealed class GenerationWorkerTests
     public async Task ProviderFailureAndTimeoutBecomeTerminalAndAllowRetry()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
-        await using var factory = new NexusFactory(clock: clock);
+        await using var factory = new AppFactory(clock: clock);
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         factory.Provider.Fail = true;

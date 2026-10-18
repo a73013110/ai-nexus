@@ -39,15 +39,15 @@ public sealed class DiagnosticHealth : IDisposable
 
     public DiagnosticHealth()
     {
-        meter.CreateObservableGauge("nexus.logs.queue.depth", () => Interlocked.Read(ref QueueDepth));
-        meter.CreateObservableCounter("nexus.logs.lost", () => Interlocked.Read(ref Lost));
-        meter.CreateObservableCounter("nexus.logs.write.failures", () => Interlocked.Read(ref WriteFailures));
-        meter.CreateObservableCounter("nexus.logs.sampled", () => Interlocked.Read(ref Sampled));
-        meter.CreateObservableCounter("nexus.logs.replayed", () => Interlocked.Read(ref Replayed));
-        meter.CreateObservableCounter("nexus.logs.export.failures", () => Interlocked.Read(ref ExportFailures));
-        meter.CreateObservableGauge("nexus.logs.disk.bytes", () => Interlocked.Read(ref DiskBytes));
-        meter.CreateObservableGauge("nexus.logs.pending.bytes", () => Interlocked.Read(ref PendingBytes));
-        meter.CreateObservableGauge("nexus.logs.sql.rows", () => Interlocked.Read(ref EstimatedSqlRows));
+        meter.CreateObservableGauge("ainexus.logs.queue.depth", () => Interlocked.Read(ref QueueDepth));
+        meter.CreateObservableCounter("ainexus.logs.lost", () => Interlocked.Read(ref Lost));
+        meter.CreateObservableCounter("ainexus.logs.write.failures", () => Interlocked.Read(ref WriteFailures));
+        meter.CreateObservableCounter("ainexus.logs.sampled", () => Interlocked.Read(ref Sampled));
+        meter.CreateObservableCounter("ainexus.logs.replayed", () => Interlocked.Read(ref Replayed));
+        meter.CreateObservableCounter("ainexus.logs.export.failures", () => Interlocked.Read(ref ExportFailures));
+        meter.CreateObservableGauge("ainexus.logs.disk.bytes", () => Interlocked.Read(ref DiskBytes));
+        meter.CreateObservableGauge("ainexus.logs.pending.bytes", () => Interlocked.Read(ref PendingBytes));
+        meter.CreateObservableGauge("ainexus.logs.sql.rows", () => Interlocked.Read(ref EstimatedSqlRows));
     }
 
     /// <summary>

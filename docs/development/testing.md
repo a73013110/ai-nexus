@@ -9,7 +9,7 @@
 | 位置 | 內容 |
 | --- | --- |
 | `backend/tests/AiNexus.UnitTests` | 不啟動 host、不碰資料庫：純邏輯、遮罩、排序、設定綁定；整個專案幾秒內跑完 |
-| `backend/tests/AiNexus.IntegrationTests` | 啟動 host（`NexusFactory`）走 HTTP 與 LocalDB：每個 use case 的行為、OpenAPI 合約、端點慣例；EF 對應與資料庫一致（`Data/ModelSchemaTests`）、資料表說明、唯一索引 |
+| `backend/tests/AiNexus.IntegrationTests` | 啟動 host（`AppFactory`）走 HTTP 與 LocalDB：每個 use case 的行為、OpenAPI 合約、端點慣例；EF 對應與資料庫一致（`Data/ModelSchemaTests`）、資料表說明、唯一索引 |
 | `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向、模組無循環、slice 形狀、資料庫模型、檔名＝型別名、測試的資料夾與命名、EventId 唯一 |
 | `scripts/tests` | 腳本慣例、共用模組函式、文件連結與長度（`Docs.Tests.ps1`） |
 | `frontend/src/**/*.spec.ts` | 前端單元測試（Vitest，`npm --prefix frontend test`） |
@@ -41,12 +41,12 @@ dotnet test --project backend/tests/AiNexus.IntegrationTests --filter "FullyQual
 - 監控與診斷頁的瀏覽器測試放在 `BrowserCollection`，最後單獨執行，避免和其他 host 搶 CPU 而超過時間預算。
 - 每個執行緒第一次建 host 要 5–7 秒（EF 模型與端點初始化）；整合測試的總時間大多是這段暖機，加執行緒效益很小。
 
-## `NexusFactory` 的取捨
+## `AppFactory` 的取捨
 
-- **資料庫**：範本、略過規則與 LocalDB 排除步驟見 [測試資料庫](test-database.md)。測試裡不要呼叫 `EnsureCreated`，結構只來自 dacpac。換 DbContext 註冊時要像 `NexusFactory` 一樣呼叫 `AddAppInterceptors(scope)`，否則 domain event 不會分派、稽核列不會補值。只清自己的連線池（`SqlConnection.ClearPool`）；`ClearAllPools` 會關掉平行測試正在用的連線，讓它們偶發 503。
+- **資料庫**：範本、略過規則與 LocalDB 排除步驟見 [測試資料庫](test-database.md)。測試裡不要呼叫 `EnsureCreated`，結構只來自 dacpac。換 DbContext 註冊時要像 `AppFactory` 一樣呼叫 `AddAppInterceptors(scope)`，否則 domain event 不會分派、稽核列不會補值。只清自己的連線池（`SqlConnection.ClearPool`）；`ClearAllPools` 會關掉平行測試正在用的連線，讓它們偶發 503。
 - **背景工作**：只有生成 worker 會跑。其他 hosted worker 用 `workers: [typeof(DiagnosticWorker)]` 選用；週期性工作由測試直接呼叫，例如 `ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services).ProcessNextAsync(...)`。原因：背景工作和測試同時寫同一個資料庫，結果取決於時序，會造成偶發失敗。
 - **時間**：需要逾時或週期的測試傳 `clock: new FakeTimeProvider(DateTimeOffset.UtcNow)` 再 `Advance`；正式程式碼的計時器與 `CancellationTokenSource` 逾時都要吃 `TimeProvider` 才能這樣測。
-- **密碼**：Argon2 用 `NexusFactory.PasswordCost`（1 MiB、1 次）；正式環境固定 `Argon2Cost.Recommended`。
+- **密碼**：Argon2 用 `AppFactory.PasswordCost`（1 MiB、1 次）；正式環境固定 `Argon2Cost.Recommended`。
 - 測試替身只存在 `backend/tests` 與 `frontend/e2e`，正式程式不接受測試身分 header。
 
 ## 等待非同步結果
@@ -72,5 +72,5 @@ Minimal API 的端點委派由 Request Delegate Generator 在編譯期產生（`
 - 測試平行執行，固定 2 個 worker（再加 worker 只是搶 CPU，開發機也會變卡）。斷言會受 CPU 競爭影響的測試（CPU 降速、串流中途、動畫中途）標 `{ tag: "@serial" }`，等平行測試跑完後由 `serial` 專案以 1 個 worker 單獨執行。它設為 teardown 而不是 dependency，因為 dependency 失敗時整組會被略過。
 - 平行時偶發失敗多半是真的競態（在畫面還在載入時操作），先等待畫面就緒；只有斷言本身依賴時間時才標 `@serial`。
 - 開發中只跑相關的 spec：`npm --prefix frontend run test:e2e -- chat composer`，或加 `--only-changed`、`--last-failed`；全套留給 `Verify.ps1 -Browser`。
-- `Verify.ps1 -Browser` 設定 `NEXUS_E2E_PUBLISH_DIRECTORY=artifacts/verification`；單獨執行 npm 測試預設用 `artifacts/publish`。
+- `Verify.ps1 -Browser` 設定 `AINEXUS_E2E_PUBLISH_DIRECTORY=artifacts/verification`；單獨執行 npm 測試預設用 `artifacts/publish`。
 - 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、字體與窄螢幕；失敗時的截圖、trace 與報告在 `artifacts/`；測試內不另外留存畫面，需要畫面比對時才用 `toHaveScreenshot`。API fixture 回歸刻意不配置資料庫，不能當成 SQL Server 的功能或效能驗證。

@@ -11,7 +11,7 @@ public sealed class MenuNavigationTests
     [Fact]
     public async Task MembersReceiveOnlyTheGroupsTheirFeaturesNeed()
     {
-        await using var factory = new NexusFactory(); using var member = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var access = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
         // quality 是成員唯一持有的系統功能，因此系統群組會一併帶出。
         Assert.Equal(["work", "collaboration", "system"], access.NavigationGroups.Select(x => x.Id));
@@ -22,7 +22,7 @@ public sealed class MenuNavigationTests
     [Fact]
     public async Task GroupsHoldingOnlyGrantOnlyFeaturesOrNothingAreHiddenAndAncestorsAreKept()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("diagnosis", "診斷", "system", 50))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("empty", "空分群", null, 40))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("permissions", "權限", null, 50))).EnsureSuccessStatusCode();
@@ -46,7 +46,7 @@ public sealed class MenuNavigationTests
     [Fact]
     public async Task AccessPreviewCarriesTheSameMenuGroups()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var me = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var preview = (await admin.GetFromJsonAsync<AccessDto>($"/api/v1/admin/users/{me.Id}/access"))!;

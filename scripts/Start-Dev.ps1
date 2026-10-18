@@ -37,10 +37,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
+$root = Get-RepoRoot
 if ($BackendPort -eq $FrontendPort) { throw 'FrontendPort 與 BackendPort 不可相同。' }
-if (!$Http) { Assert-NexusHttpsCertificate }
-$local = Initialize-NexusLocalSettings
+if (!$Http) { Assert-RepoHttpsCertificate }
+$local = Initialize-RepoLocalSettings
 if ($Restore) { & (Join-Path $PSScriptRoot 'Restore.ps1') }
 $listeners = [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
 foreach ($port in @($BackendPort, $FrontendPort)) {
@@ -54,16 +54,16 @@ if (!(Test-Path -LiteralPath $ng)) { throw '找不到 Angular CLI；請先執行
 $scheme = if ($Http) { 'http' } else { 'https' }
 $proxy = Join-Path $root '.local/config/dev-proxy.json'
 $backend = @{ target = "${scheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false }
-Save-NexusJson $proxy @{ '/api' = $backend; '/health' = $backend }
+Save-RepoJson $proxy @{ '/api' = $backend; '/health' = $backend }
 $certificate = $null
 $sslArguments = @()
 if (!$Http) {
     $certificates = Join-Path $root '.local/certs'
     New-Item -ItemType Directory -Path $certificates -Force | Out-Null
-    $certificate = Join-Path $certificates 'nexus-dev.pem'
+    $certificate = Join-Path $certificates 'dev-cert.pem'
     dotnet dev-certs https --export-path $certificate --format PEM --no-password --quiet
     if ($LASTEXITCODE -ne 0) { throw '匯出本機 HTTPS 憑證失敗。' }
-    $sslArguments = @('--ssl', '--ssl-cert', $certificate, '--ssl-key', (Join-Path $certificates 'nexus-dev.key'))
+    $sslArguments = @('--ssl', '--ssl-cert', $certificate, '--ssl-key', (Join-Path $certificates 'dev-cert.key'))
 }
 $logs = Join-Path $root '.local/logs'
 New-Item -ItemType Directory -Path $logs -Force | Out-Null

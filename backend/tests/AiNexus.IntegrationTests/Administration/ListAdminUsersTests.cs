@@ -23,7 +23,7 @@ public sealed class ListAdminUsersTests
     public async Task ProcedureListMatchesTheServicesItReplacesForRolesUsageConversationsAndStorage()
     {
         var audits = new ProcedureAudits();
-        await using var factory = new NexusFactory(administrators: ["alice"], services: audits.Register);
+        await using var factory = new AppFactory(administrators: ["alice"], services: audits.Register);
         using var admin = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob"); using var carol = await factory.SignedInAsync("carol"); using var dave = await factory.SignedInAsync("dave");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;

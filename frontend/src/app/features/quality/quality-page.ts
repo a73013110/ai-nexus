@@ -22,7 +22,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type {
   EvaluationCase,
   EvaluationDetailDto,
@@ -97,7 +97,7 @@ export class QualityPage {
   readonly modelName = formatModelDisplayName;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(QualityApi);
-  private readonly nexus = inject(NexusApi);
+  private readonly workspaceApi = inject(WorkspaceApi);
   private readonly jobs = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   private readonly route = inject(ActivatedRoute);
@@ -434,7 +434,7 @@ export class QualityPage {
     this.busy.set(true);
     this.actionError.set('');
     try {
-      const catalog = await this.nexus.models();
+      const catalog = await this.workspaceApi.models();
       if (!valid()) return;
       if (!catalog.providerAvailable || !catalog.models.length)
         throw new ApiError(

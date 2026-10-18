@@ -20,7 +20,7 @@ public sealed class LoginAuditTests
     [Fact]
     public async Task WindowsHandshakeChallengesAreNotLoginFailuresButExplicitLoginAndWorkspaceDenialAreAudited()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var anonymous = factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/v1/auth/windows")).StatusCode);
         using var client = await factory.SignedInAsync();
@@ -43,7 +43,7 @@ public sealed class LoginAuditTests
     [Fact]
     public async Task MissingDurableLoginAuditPreventsAnAuthenticatedCookie()
     {
-        await using var factory = new NexusFactory(ldap: true, services: services =>
+        await using var factory = new AppFactory(ldap: true, services: services =>
             services.AddDbContext<AppDbContext>(options => options.AddInterceptors(new RejectLoginAudit())));
         using var client = factory.CreateClient(); await Csrf(client);
         Assert.Equal(HttpStatusCode.ServiceUnavailable,
@@ -65,7 +65,7 @@ public sealed class LoginAuditTests
     [Fact]
     public async Task LoginFailuresStayUnverifiedAndCorrelateWithThePublicProblemWithoutRecordingPasswords()
     {
-        await using var factory = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
         using var client = factory.CreateClient();
         await Login(client, "alice");
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
@@ -99,7 +99,7 @@ public sealed class LoginAuditTests
     [Fact]
     public async Task LocalLockoutUpdatesAndRejectedLoginAuditAreBothDurable()
     {
-        await using var factory = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = factory.CreateClient(); await Login(admin, "alice");
         var created = await admin.PostAsJsonAsync("/api/v1/admin/users", new UserAccountRequest("本地同事", true, false, true, null, "audit-local", ["member"], "Fixture-local-password-123!"));
         created.EnsureSuccessStatusCode();

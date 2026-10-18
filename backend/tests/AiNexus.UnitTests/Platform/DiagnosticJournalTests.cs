@@ -10,7 +10,7 @@ public sealed class DiagnosticJournalTests
     [Fact]
     public async Task DisposedJournalCannotReopenItsCapacityOrOwnerHandles()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-disposed-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth();
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-disposed-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth();
         var journal = new DiagnosticJournal(Options.Create(new DiagnosticOptions { Directory = directory }), health, new EnvironmentFixture());
         try { await journal.AppendAsync([new DiagnosticEvent()], CancellationToken.None); journal.Dispose();
             using (var lease = new FileStream(Path.Combine(directory, "capacity.lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None)) Assert.True(lease.CanWrite);
@@ -21,7 +21,7 @@ public sealed class DiagnosticJournalTests
     [Fact]
     public async Task RotationBoundsUnicodeRecordsAndSharedCapacityAcrossLiveInstances()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-unicode-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth(); using var otherHealth = new DiagnosticHealth();
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-unicode-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth(); using var otherHealth = new DiagnosticHealth();
         var options = Options.Create(new DiagnosticOptions { Directory = directory, FileSizeBytes = 65536, MaxDiskBytes = 180000 });
         try {
             using var first = new DiagnosticJournal(options, health, new EnvironmentFixture()); using var second = new DiagnosticJournal(options, otherHealth, new EnvironmentFixture());
@@ -39,7 +39,7 @@ public sealed class DiagnosticJournalTests
     [Fact]
     public async Task JournalSurvivesStoreOutageAndRestartAndDoesNotDuplicateAfterLostCheckpoint()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-diagnostics-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-diagnostics-" + Guid.NewGuid().ToString("N"));
         using var health = new DiagnosticHealth(); var options = Options.Create(new DiagnosticOptions { Directory = directory, BatchSize = 2 });
         var store = new MemoryStore { Offline = true }; var records = Enumerable.Range(0, 5).Select(_ => new DiagnosticEvent { Level = LogLevel.Error, IssueCode = Issues.NewCode() }).ToArray();
         try
@@ -61,7 +61,7 @@ public sealed class DiagnosticJournalTests
     [Fact]
     public async Task CorruptAndTruncatedJournalRecordsAreCountedAndValidDataContinues()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-corrupt-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-corrupt-" + Guid.NewGuid().ToString("N"));
         using var health = new DiagnosticHealth(); var options = Options.Create(new DiagnosticOptions { Directory = directory }); var store = new MemoryStore();
         try {
             using (var journal = new DiagnosticJournal(options, health, new EnvironmentFixture())) { await journal.AppendAsync([new() { Level = LogLevel.Error }], CancellationToken.None); }
@@ -74,7 +74,7 @@ public sealed class DiagnosticJournalTests
     [Fact]
     public async Task RetentionPreservesUnacknowledgedFilesButRemovesOldCommittedSegments()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-retention-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth();
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-retention-" + Guid.NewGuid().ToString("N")); using var health = new DiagnosticHealth();
         var options = Options.Create(new DiagnosticOptions { Directory = directory, FileRetentionDays = 1 }); var store = new MemoryStore();
         try {
             using (var journal = new DiagnosticJournal(options, health, new EnvironmentFixture())) { await journal.AppendAsync([new() { Level = LogLevel.Error }], CancellationToken.None); }
@@ -90,10 +90,10 @@ public sealed class DiagnosticJournalTests
         using var health = new DiagnosticHealth(); var environment = new EnvironmentFixture();
         Assert.Throws<InvalidOperationException>(() => DiagnosticJournal.Resolve("relative/logs", environment));
         Assert.Throws<InvalidOperationException>(() => DiagnosticJournal.Resolve(environment.ContentRootPath, environment));
-        var path = Path.Combine(Path.GetTempPath(), "nexus-no-directory-" + Guid.NewGuid().ToString("N")); await File.WriteAllTextAsync(path, "locked path");
+        var path = Path.Combine(Path.GetTempPath(), "ainexus-no-directory-" + Guid.NewGuid().ToString("N")); await File.WriteAllTextAsync(path, "locked path");
         try { using var journal = new DiagnosticJournal(Options.Create(new DiagnosticOptions { Directory = path }), health, environment); await Assert.ThrowsAnyAsync<IOException>(() => journal.AppendAsync([new() { Level = LogLevel.Error }], CancellationToken.None)); }
         finally { File.Delete(path); }
-        var directory = Path.Combine(Path.GetTempPath(), "nexus-capacity-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "ainexus-capacity-" + Guid.NewGuid().ToString("N"));
         try { using var journal = new DiagnosticJournal(Options.Create(new DiagnosticOptions { Directory = directory, MaxDiskBytes = 1 }), health, environment); await Assert.ThrowsAnyAsync<IOException>(() => journal.AppendAsync([new() { Level = LogLevel.Error }], CancellationToken.None)); }
         finally { Directory.Delete(directory, true); }
     }

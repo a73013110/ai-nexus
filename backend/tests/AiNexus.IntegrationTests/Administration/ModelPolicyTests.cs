@@ -23,7 +23,7 @@ public sealed class ModelPolicyTests
     [Fact]
     public async Task ModelDenialAppliesToCatalogContextAndRunAndHiddenNamesStayHidden()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.ShowModelNames = false);
+        await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.ShowModelNames = false);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new([])))).EnsureSuccessStatusCode();
         Assert.Empty((await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models);
@@ -38,7 +38,7 @@ public sealed class ModelPolicyTests
     [InlineData(true)]
     public async Task UnrestrictedGroupsGrantAllModelsAndBudgetsAcrossCatalogContextChatAndTasks(bool savedPolicy)
     {
-        await using var factory = new NexusFactory(administrators: ["alice"],
+        await using var factory = new AppFactory(administrators: ["alice"],
             seed: db =>
             {
                 db.Add(new GroupModelPolicy { GroupId = BuiltInAccess.WorkspaceGroup, AllowedModelsJson = "[\"test-model\"]", DailyTokenLimitsJson = "{\"test-model\":0}" });
@@ -69,7 +69,7 @@ public sealed class ModelPolicyTests
     [Fact]
     public async Task RestrictedGroupsAccumulateAndRevocationRemovesOnlyThatGroupsModelsAndBudgets()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", DisplayName = "另一模型" }));
+        await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", DisplayName = "另一模型" }));
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 1 })))).EnsureSuccessStatusCode();
@@ -105,7 +105,7 @@ public sealed class ModelPolicyTests
     [Fact]
     public async Task PersonalBudgetsOverrideGroupsAndPersonalModelsNarrowGroupGrants()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", Provider = "google", ProviderModelId = "not-approved", DisplayName = "另一模型" }));
+        await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", Provider = "google", ProviderModelId = "not-approved", DisplayName = "另一模型" }));
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 500 })))).EnsureSuccessStatusCode();

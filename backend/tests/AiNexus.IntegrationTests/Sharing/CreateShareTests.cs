@@ -23,7 +23,7 @@ public sealed class CreateShareTests
     [Fact]
     public async Task AttachmentGrantIsExplicitBranchBoundAndRemovedOnRevoke()
     {
-        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
         var user = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using var body = new MultipartFormDataContent(); body.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("測試附件")), "file", "notes.txt");
         var upload = await owner.PostAsync("/api/v1/attachments", body); upload.EnsureSuccessStatusCode(); var file = (await upload.Content.ReadFromJsonAsync<AttachmentDto>())!;
@@ -46,7 +46,7 @@ public sealed class CreateShareTests
     [Fact]
     public async Task AccountBoundArtifactSnapshotsDoNotFollowLaterEditsAndRevokeImmediately()
     {
-        await using var f = new NexusFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob"); using var carol = await f.SignedInAsync("carol");
+        await using var f = new AppFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob"); using var carol = await f.SignedInAsync("carol");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var source = (await (await alice.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("成果", "分享當下的內容"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         var response = await alice.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("artifact", source.Resource.Id, [bobId])); response.EnsureSuccessStatusCode(); var share = (await response.Content.ReadFromJsonAsync<ShareDto>())!;
@@ -61,7 +61,7 @@ public sealed class CreateShareTests
     [Fact]
     public async Task ExpiryAndSourceDeletionInvalidateSharingAndPurgeSnapshotText()
     {
-        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader"); var user = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader"); var user = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "測試對話"); await WaitForTerminal(owner, run.Id);
         var share = (await (await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user], 1))).Content.ReadFromJsonAsync<ShareDto>())!;
         Assert.Equal(2, (await reader.GetFromJsonAsync<SharedContentDto>($"/api/v1/shares/{share.Id}"))!.Snapshot.Messages.Count);

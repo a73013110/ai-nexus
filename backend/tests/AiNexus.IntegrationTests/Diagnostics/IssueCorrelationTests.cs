@@ -26,7 +26,7 @@ public sealed class IssueCorrelationTests
     [Fact]
     public async Task GenerationFailureProducesSafeSseNotificationAndQueryableCorrelatedIssue()
     {
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"]); factory.Provider.Fail = true;
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"]); factory.Provider.Fail = true;
         using var client = await factory.SignedInAsync(); var conversation = await CreateConversation(client);
         using var response = await PostRun(client, new CreateRunRequest(conversation.Id, "test-model", Secret, null, null), Guid.NewGuid().ToString()); response.EnsureSuccessStatusCode();
         var run = (await response.Content.ReadFromJsonAsync<RunDto>())!; var terminal = await WaitForTerminal(client, run.Id); Assert.Equal("failed", terminal.Status); Assert.True(Issues.ValidCode(terminal.IssueCode));
@@ -41,7 +41,7 @@ public sealed class IssueCorrelationTests
     [Fact]
     public async Task BackgroundRetryKeepsTraceAndJobButGetsDistinctIssueAndAttempt()
     {
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], services: services => services.AddScoped<IBackgroundJobHandler, FailingJob>());
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], services: services => services.AddScoped<IBackgroundJobHandler, FailingJob>());
         using var client = await factory.SignedInAsync(); var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; Guid jobId;
         using (var scope = factory.Services.CreateScope()) { using var trace = DiagnosticTrace.Start("test.enqueue"); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var job = scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, Guid.NewGuid(), "diagnostic-fixture", "safe task"); jobId = job.Id; await db.SaveChangesAsync(); }
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services); Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
@@ -61,7 +61,7 @@ public sealed class IssueCorrelationTests
     [Fact]
     public async Task ApiFrameworkFailureDoesNotReflectClientDataAndUsesServerGeneratedCorrelation()
     {
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)]); using var client = await factory.SignedInAsync();
         client.DefaultRequestHeaders.Add("traceparent", "00-" + new string('a', 32) + "-" + new string('b', 16) + "-01");
         client.DefaultRequestHeaders.Add("X-Issue-Code", "NX-" + new string('A', 32));
         var response = await client.PostAsync("/api/v1/conversations", new StringContent("{malformed " + Secret, Encoding.UTF8, "application/json"));

@@ -17,7 +17,7 @@ public sealed class RunRecoveryTests
     public async Task RestartMarksInterruptedWorkFailedWithoutReissuingInference()
     {
         var interruptedId = Guid.NewGuid();
-        await using var factory = new NexusFactory(db =>
+        await using var factory = new AppFactory(db =>
         {
             var owner = new User { Sid = "S-1-5-21-test-alice", Account = "TEST\\alice", DisplayName = "alice", LastSeenAt = DateTimeOffset.UtcNow };
             var conversation = new Conversation { OwnerId = owner.Id };
@@ -37,7 +37,7 @@ public sealed class RunRecoveryTests
     [Fact]
     public async Task RecoveryPreservesAnotherServersLiveRunAndOnlyClaimsExpiredLease()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await ChatApi.CreateConversation(client);
         var created = await ChatApi.CreateRun(client, conversation.Id, "lease fixture");

@@ -27,7 +27,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task LibraryUnifiesOwnedChatAndKnowledgeFilesWithoutLeakingOtherUsersOrDuplicatingOriginals()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var privateFile = await Upload(alice, "私人筆記.txt", "Private library original");
         (await alice.PostAsync($"/api/v1/files/{privateFile.Id}/retain", null)).EnsureSuccessStatusCode();
@@ -62,7 +62,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task ReusingACompletedReaderCopiesPagesAndRemovingIndexLeavesTheLibraryOriginal()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var file = await Upload(client, "report.txt", "An immutable source with searchable text.");
         (await client.PostAsync($"/api/v1/files/{file.Id}/retain", null)).EnsureSuccessStatusCode();
@@ -82,9 +82,9 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task LibraryMutationsRequireCsrfAndPaginationIsBounded()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var file = await Upload(client, "safe.txt", "Untrusted upload");
-        client.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        client.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync($"/api/v1/files/{file.Id}/retain", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.DeleteAsync($"/api/v1/files/{file.Id}")).StatusCode);
         foreach (var query in new[] { "limit=10000", "offset=-1", "source=invalid", "type=svg" })
@@ -94,7 +94,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task RenamePreservesOriginalBytesAndFrozenShareNamesAndRequiresExpectedName()
     {
-        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
         var file = await Upload(owner, "原始.txt", Encoding.UTF8.GetBytes("附件原始文字")); var conversation = await CreateConversation(owner);
         var runResponse = await PostRun(owner, new(conversation.Id, "test-model", "閱讀", null, null, AttachmentIds: [file.Id])); runResponse.EnsureSuccessStatusCode(); await WaitForTerminal(owner, (await runResponse.Content.ReadFromJsonAsync<RunDto>())!.Id);
         var readerId = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
@@ -117,7 +117,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task DeletingConversationRetainsLibraryFileUntilOwnerExplicitlyReclaimsQuota()
     {
-        await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; });
+        await using var factory = new AppFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; });
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var content = Encoding.UTF8.GetBytes(new string('x', 600));

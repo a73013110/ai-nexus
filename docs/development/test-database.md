@@ -10,7 +10,7 @@
   dotnet build database/App
   ```
 
-- 每個 host 複製範本檔再 attach 成 `AINexus_Test_<guid>`，釋放時在背景刪除；中途結束留下的資料庫與檔案，6 小時後由下一次測試清掉。
+- 每個 host 複製範本檔再 attach 成 `AiNexus_Test_<guid>`，釋放時在背景刪除；中途結束留下的資料庫與檔案，6 小時後由下一次測試清掉。
 - 不需要 host 的資料庫測試用 `TestDatabase.WithContextAsync`。
 - LocalDB 沒有全文元件。完全依賴全文的測試開頭寫 `Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText)`；其他測試不得略過。hybrid 在沒有全文時降為 vector，斷言用 `KnowledgeApi.HybridMode`。
 - EF 組態不宣告索引與約束，唯一性、filtered index 這類保證要對資料庫測（例如 `CreateRunTests`、`JobLifecycleTests` 的唯一索引測試）。

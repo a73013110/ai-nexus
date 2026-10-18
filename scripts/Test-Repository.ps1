@@ -24,7 +24,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
+$root = Get-RepoRoot
 $localSecrets = @()
 $content = $null
 Push-Location -LiteralPath $root
@@ -33,13 +33,13 @@ try {
         @(git -c core.quotepath=false ls-files --cached --others --exclude-standard | Where-Object { Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf } | Select-Object -Unique)
     } else { @(git -c core.quotepath=false ls-files --cached) }
     if ($LASTEXITCODE -ne 0 -or !$files.Count) { throw '請先 stage 要提交的檔案。' }
-    if (@($files | Where-Object { Test-NexusForbiddenPath $_ }).Count) { throw 'Git index 含有本機、產物或秘密路徑；提交前請先 unstage。' }
+    if (@($files | Where-Object { Test-RepoForbiddenPath $_ }).Count) { throw 'Git index 含有本機、產物或秘密路徑；提交前請先 unstage。' }
 
-    $secretsPath = (Get-NexusLocalPaths).Secrets
+    $secretsPath = (Get-RepoLocalPaths).Secrets
     if (Test-Path -LiteralPath $secretsPath) {
-        try { $secrets = Read-NexusJson $secretsPath }
+        try { $secrets = Read-RepoJson $secretsPath }
         catch { throw '本機秘密 JSON 格式錯誤；請用編輯器修正（未輸出任何值）。' }
-        $localSecrets = @(Get-NexusSecretValues $secrets | Where-Object { $_.Length -ge 6 })
+        $localSecrets = @(Get-RepoSecretValues $secrets | Where-Object { $_.Length -ge 6 })
         $secrets = $null
     }
     foreach ($file in $files) {
@@ -55,7 +55,7 @@ try {
         if ($file -match '(^|/)appsettings[^/]*\.json$') {
             try { $json = $content | ConvertFrom-Json -AsHashtable }
             catch { throw "公開設定 JSON 格式錯誤：$file" }
-            if (@(Get-NexusSecretValues $json -IncludeUser).Count) { throw "公開設定的秘密欄位必須留空：$file" }
+            if (@(Get-RepoSecretValues $json -IncludeUser).Count) { throw "公開設定的秘密欄位必須留空：$file" }
         }
     }
     if ($WorkingTree) { git -c core.whitespace=-blank-at-eof diff --check }

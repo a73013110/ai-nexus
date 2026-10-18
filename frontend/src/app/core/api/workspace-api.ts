@@ -9,7 +9,7 @@ import type {
 
 /** 登入、對話列表與聊天工作區使用的執行生命週期。 */
 @Injectable({ providedIn: 'root' })
-export class NexusApi {
+export class WorkspaceApi {
   private readonly api = inject(ApiClient);
   private async remember(request: Promise<AuthSessionDto>) {
     const session = await request;

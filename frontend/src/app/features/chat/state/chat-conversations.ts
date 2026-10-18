@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type {
   ConversationBackup,
   ConversationDto,
@@ -20,7 +20,7 @@ import { ChatStore } from '../chat-store';
 @Injectable({ providedIn: 'root' })
 export class ChatConversations {
   private readonly store = inject(ChatStore);
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly conversations = inject(ConversationsApi);
   private readonly chat = inject(ChatApi);
   private readonly projectsApi = inject(ProjectsApi);

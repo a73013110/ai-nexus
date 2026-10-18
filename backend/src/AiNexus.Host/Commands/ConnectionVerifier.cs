@@ -124,7 +124,7 @@ public static class ConnectionVerifier
             var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             // 只送合成內容，不含任何個人檔案、對話紀錄或身分憑證。
-            var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: NEXUSCHECK42"), ct).Value.Text;
+            var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: PROBECHECK42"), ct).Value.Text;
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
             var prompt = "Read the attached document and reply with its project verification code." + (images.Length > 0 ? " Also identify the dominant color in the attached image using one English color word." : "") + "\n<document>\n" + document + "\n</document>";
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -139,7 +139,7 @@ public static class ConnectionVerifier
             }
 
             var answer = text.ToString();
-            if (!done || !answer.Contains("NEXUSCHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !answer.Contains("red", StringComparison.OrdinalIgnoreCase)))
+            if (!done || !answer.Contains("PROBECHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !answer.Contains("red", StringComparison.OrdinalIgnoreCase)))
                 throw new ExternalServiceException(Error.Unavailable("attachment_probe_failed"), "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });

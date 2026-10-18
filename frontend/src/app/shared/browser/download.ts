@@ -13,7 +13,7 @@ export function downloadBlob(content: Blob, title: string, extension: string) {
   link.href = url;
   link.download =
     // eslint-disable-next-line no-control-regex -- control characters are not valid in file names
-    (title.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80) || 'AI-Nexus') + '.' + extension;
+    (title.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80) || 'ai-nexus') + '.' + extension;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

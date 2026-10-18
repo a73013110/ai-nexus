@@ -12,7 +12,7 @@ public sealed class TransformTextTests
     [Fact]
     public async Task SourceMessagesRequireOwnershipAndTextTransformsUseApprovedModelAndRecordedUsage()
     {
-        await using var factory = new NexusFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var conversation = await CreateConversation(alice); var run = await CreateRun(alice, conversation.Id, "Source answer"); await WaitForTerminal(alice, run.Id);
         Assert.Equal(HttpStatusCode.NotFound, (await bob.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("別人來源", Content, run.AssistantMessageId))).StatusCode);
         await CreateArtifact(alice, run.AssistantMessageId);
@@ -25,7 +25,7 @@ public sealed class TransformTextTests
     [Fact]
     public async Task ExplainUsesTheApprovedModelAndPreservesTheTextTransformBoundary()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var result = await client.PostAsJsonAsync("/api/v1/text/transform", new TransformTextRequest("API 與 RPA 的關係", "explain"));
         result.EnsureSuccessStatusCode(); Assert.NotEmpty((await result.Content.ReadFromJsonAsync<TransformTextDto>())!.Text);
         Assert.Contains("解釋原文的意思", factory.Provider.LastParameters!.SystemPrompt);

@@ -17,7 +17,7 @@ public sealed class ListNotificationsTests
     [Fact]
     public async Task NotificationPagingHandlesEqualTimestampsAndReadThroughNeverCrossesAccountsOrNewEvents()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var other = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
@@ -40,14 +40,14 @@ public sealed class ListNotificationsTests
         (await alice.PostAsJsonAsync("/api/v1/notifications/read", new ReadNotificationsRequest(now))).EnsureSuccessStatusCode();
         Assert.Equal(1, (await alice.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications?unread=true"))!.Unread);
         Assert.Equal(1, (await bob.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Unread);
-        alice.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        alice.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsJsonAsync("/api/v1/notifications/read", new ReadNotificationsRequest(now))).StatusCode);
     }
 
     [Fact]
     public async Task CompletedGenerationsAndSharesPublishDurableDeduplicatedTypedNotifications()
     {
-        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
         var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "回答完成後通知"); await WaitForTerminal(owner, run.Id);
         var notifications = (await owner.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!;
         var completion = Assert.Single(notifications.Items); Assert.Equal("conversation.completed", completion.Type); Assert.Equal(new("conversation", conversation.Id), completion.Target);

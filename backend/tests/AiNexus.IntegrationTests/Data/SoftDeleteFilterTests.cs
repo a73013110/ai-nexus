@@ -36,7 +36,7 @@ public sealed class SoftDeleteFilterTests
     [Fact]
     public async Task DeletedConversationIsHiddenByDefaultButStillVisibleToAdministrativeReads()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var kept = await CreateConversation(bob, "kept"); var deleted = await CreateConversation(bob, "deleted");
@@ -68,7 +68,7 @@ public sealed class SoftDeleteFilterTests
     [Fact]
     public async Task DeletedResourceIsHiddenByDefaultAndProjectDeletionStillDetachesDeletedRows()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var owner = await factory.SignedInAsync();
         var me = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var artifact = (await (await owner.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("gone", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;

@@ -22,7 +22,7 @@ DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Veri
 以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）。
 
 .PARAMETER AllowUntrustedSql
-設定 Databases.Nexus.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
+設定 Databases.App.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
 
 .PARAMETER SkipBuild
 使用 PublishDirectory 既有的發布產物。
@@ -51,8 +51,8 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 # Windows paths are checked on any OS, because the package is built for a Windows IIS host.
 if ($DataRoot -notmatch '^[A-Za-z]:\\') { throw 'DataRoot 必須是正式主機上的絕對路徑，例如 D:\AiNexus\data。' }
-$root = Get-NexusRoot
-$publish = Resolve-NexusArtifactPath $PublishDirectory
+$root = Get-RepoRoot
+$publish = Resolve-RepoArtifactPath $PublishDirectory
 if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $publish }
 if (!(Test-Path -LiteralPath (Join-Path $publish 'AiNexus.Host.dll'))) { throw '找不到發布產物；請先執行 scripts/Build.ps1。' }
 if (!$DestinationPath) { $DestinationPath = Join-Path $root ('artifacts/iis/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '/app') }
@@ -69,16 +69,16 @@ Get-ChildItem -LiteralPath $publish | Where-Object { $_.Name -notin @('logs', 'A
 $settingsPath = Join-Path $package 'config/appsettings.Production.json'
 $secretsPath = Join-Path $package 'config/appsettings.Secrets.json'
 $templates = Join-Path $root 'backend/src/AiNexus.Host'
-$sources = if ($IncludeLocalConfig) { Initialize-NexusLocalSettings } else {
+$sources = if ($IncludeLocalConfig) { Initialize-RepoLocalSettings } else {
     @{ Settings = Join-Path $templates 'appsettings.Production.example.json'; Secrets = Join-Path $templates 'appsettings.Secrets.example.json' }
 }
 if (!(Test-Path -LiteralPath $settingsPath)) { Copy-Item -LiteralPath $sources.Settings -Destination $settingsPath }
-if (!(Test-Path -LiteralPath $secretsPath)) { Copy-Item -LiteralPath $sources.Secrets -Destination $secretsPath; Protect-NexusSecrets $secretsPath }
-$settings = Read-NexusJson $settingsPath
-Set-NexusSetting $settings 'Attachments.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
-Set-NexusSetting $settings 'Diagnostics.Directory' ($DataRoot.TrimEnd('\') + '\diagnostics')
-if ($AllowUntrustedSql) { Set-NexusSetting $settings 'Databases.Nexus.TrustServerCertificate' $true }
-Save-NexusJson $settingsPath $settings
+if (!(Test-Path -LiteralPath $secretsPath)) { Copy-Item -LiteralPath $sources.Secrets -Destination $secretsPath; Protect-RepoSecrets $secretsPath }
+$settings = Read-RepoJson $settingsPath
+Set-RepoSetting $settings 'Attachments.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
+Set-RepoSetting $settings 'Diagnostics.Directory' ($DataRoot.TrimEnd('\') + '\diagnostics')
+if ($AllowUntrustedSql) { Set-RepoSetting $settings 'Databases.App.TrustServerCertificate' $true }
+Save-RepoJson $settingsPath $settings
 $settings = $null
 
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Verify-IIS.ps1') -Destination $package
