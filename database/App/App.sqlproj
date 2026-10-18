@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.Build.Sql/2.3.0">
+  <!--
+    把 scripts/Export-Database.ps1 匯出的 *.sql 建成 App.dacpac；物件檔沒有人手改。決策見 docs/decisions/0010-database-first-schema.md。
+    SDK-style 預設 glob 整個資料夾的 **/*.sql，物件增刪不必改這個檔。刻意不加入 backend/AiNexus.slnx。
+  -->
+  <PropertyGroup>
+    <Name>App</Name>
+    <!-- 目標是 SQL Server 2025；2025 新語法（VECTOR 等）與發布時的版本檢查以 Sql170 為準。 -->
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>
+    <TreatTSqlWarningsAsErrors>False</TreatTSqlWarningsAsErrors>
+    <!--
+      每物件一檔的匯出不含資料庫層級選項，這裡寫的才會進 dacpac；匯出腳本會比對開發庫，不一致時警告。
+      ModelCollation 的 1028 是 Chinese_Taiwan 的 LCID，build 時用它解析識別碼大小寫。RCSI 原因見 docs/operations/database-setup.md。
+    -->
+    <DefaultCollation>Chinese_Taiwan_Stroke_CI_AS</DefaultCollation>
+    <ModelCollation>1028, CI</ModelCollation>
+    <CompatibilityMode>170</CompatibilityMode>
+    <ReadCommittedSnapshot>True</ReadCommittedSnapshot>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      手寫腳本由發版腳本在結構更新後另外執行，不進 dacpac：全文物件需要目標有全文元件（LocalDB 沒有），
+      種子資料與一次性資料修正不是結構。
+    -->
+    <Build Remove="FullText/**;Seed/**;Data/**" />
+  </ItemGroup>
+</Project>
