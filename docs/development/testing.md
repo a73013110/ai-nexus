@@ -44,7 +44,7 @@ dotnet test --project backend/tests/AiNexus.IntegrationTests --filter "FullyQual
 
 ## `NexusFactory` 的取捨
 
-- **資料庫**：schema 每個測試程序只建一次範本檔，每個 host 複製一份。不要在測試裡呼叫 `EnsureCreated`。釋放檔案只清自己連線字串的 pool（`SqliteConnection.ClearPool`）；`ClearAllPools` 會關掉平行測試正在用的連線，讓它們偶發 503。換 provider 時要像 `NexusFactory` 一樣呼叫 `AddNexusInterceptors(scope)`，否則 domain event 不會分派、稽核列不會補值。
+- **資料庫**：schema 每個測試程序只建一次範本檔，每個 host 複製一份；SQLite 的差異見 [資料庫](../architecture/database.md#測試)。不要在測試裡呼叫 `EnsureCreated`。釋放檔案只清自己連線字串的 pool（`SqliteConnection.ClearPool`）；`ClearAllPools` 會關掉平行測試正在用的連線，讓它們偶發 503。換 provider 時要像 `NexusFactory` 一樣呼叫 `UseTestSqlite` 與 `AddAppInterceptors(scope)`，否則 domain event 不會分派、稽核列不會補值。
 - **背景工作**：只有生成 worker 會跑。其他 hosted worker 用 `workers: [typeof(DiagnosticWorker)]` 選用；週期性工作由測試直接呼叫，例如 `ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services).ProcessNextAsync(...)`。原因：背景工作和測試搶同一個 SQLite 檔的寫入鎖，會造成偶發失敗。
 - **時間**：需要逾時或週期的測試傳 `clock: new FakeTimeProvider(DateTimeOffset.UtcNow)` 再 `Advance`；正式程式碼的計時器與 `CancellationTokenSource` 逾時都要吃 `TimeProvider` 才能這樣測。
 - **密碼**：Argon2 用 `NexusFactory.PasswordCost`（1 MiB、1 次）；正式環境固定 `Argon2Cost.Recommended`。
@@ -68,7 +68,7 @@ Minimal API 的端點委派由 Request Delegate Generator 在編譯期產生（`
 
 ## 真實 SQL Server
 
-向量、全文與交易行為只能在真實 SQL Server 驗證；容器內不能跑 Docker，所以這組測試由開發者在本機 LocalDB／SQL Server 執行（[ADR 0005](../decisions/0005-sqlite-tests-sqlserver-opt-in.md)）。登入要能建立與刪除資料庫和全文 catalog；每項測試由 `SqlServerDatabase` 建立並清理自己的 `AINexus_Test_` 資料庫。
+向量、全文與交易行為只能在真實 SQL Server 驗證；容器內不能跑 Docker，所以這組測試由開發者在本機 LocalDB／SQL Server 執行（[ADR 0005](../decisions/0005-sqlite-tests-sqlserver-opt-in.md)）。登入要能建立與刪除資料庫和全文 catalog；每項測試由 `SqlServerDatabase` 建立並清理自己的 `AINexus_Test_` 資料庫（先 `dotnet build database/App`，以 dacpac 建結構）。
 
 ```powershell
 $env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true'

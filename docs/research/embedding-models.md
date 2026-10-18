@@ -6,7 +6,7 @@ Google provider 保留 batch embedding API，使用 Inference 的 Google key；n
 
 ## 重建與測量
 
-先套用 [資料庫 migrations](../architecture/database.md)，重新上傳資料建立新索引。往後模型設定變更產生 building profile；管理 → 知識檢索開始重建，覆蓋率 100% 後啟用，舊 profile 退役。共用一套切段布局，不提供舊 JSON 或舊 SQL 版本查詢。重建利用保存頁面及 hash 快取，無須重做 OCR。
+先部署新版的[資料庫結構](../architecture/database.md)，重新上傳資料建立新索引。往後模型設定變更產生 building profile；管理 → 知識檢索開始重建，覆蓋率 100% 後啟用，舊 profile 退役。共用一套切段布局，不提供舊 JSON 或舊 SQL 版本查詢。重建利用保存頁面及 hash 快取，無須重做 OCR。
 
 從品質 → 檢索評測選最多三個授權知識庫、匯入 1–20 題驗收集，四模式執行 vector／keyword／hybrid／hybrid+rerank，計算 Recall@K、MRR、分級 nDCG@K、無來源拒答率與各階段 p50／p95。範例格式與報告定義見 [QUALITY](../features/quality.md)。應涵蓋文號、日期、單位、中文條文、同義詞、跨頁與無答案；以固定文件與設定比較，分開記錄冷啟動／快取效應。未啟用重排或降級的結果有明確模式，不能當成完整四方案比較。
 

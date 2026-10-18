@@ -36,7 +36,7 @@
 
 - 根字級沿用瀏覽器預設，讓使用者縮放生效；UI 與程式碼用系統字型，不發外部字型請求。
 - 個人閱讀偏好只調 `--text-body`／`--line-reading`（對話、Markdown、文件正文、評測答案），不影響操作尺度。
-- 閱讀預設值同時存在前端 tokens、[`UserPreferences`](../../backend/src/AiNexus.Features/Identity/Users/UserPreferences.cs) 常數與資料庫 default constraint；改預設要一起改，migration 不動已保存的偏好。
+- 閱讀預設值同時存在前端 tokens、[`UserPreferences`](../../backend/src/AiNexus.Data/App/Identity/UserPreferences.cs) 常數與資料庫 default constraint；改預設要一起改，migration 不動已保存的偏好。
 - 緊湊 scope（`.ui-density-compact`、`FeaturePage` 預設）要同時設定 tokens 與實際字級／行高；共用控制項用 `--density-text-size`／`--density-caption-size`。
 - 操作面積：桌面 34px，觸控與窄螢幕 44px，見 [共用介面模式](ui-patterns.md#手機)。
 

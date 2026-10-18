@@ -58,9 +58,7 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 ## 空資料庫初始化
 
-migration 基線是單一 `InitialCreate`（2026-10-09 重建），包含全部 schema、種子、索引與資料表／欄位說明。2026-10-09 以前建立的資料庫無法升級，必須刪除後重新初始化；初始化不會 DROP、清空資料或重寫 history。日後新增 migration 延續此基線，細節見 [資料庫](../architecture/database.md)。
-
-先停止所有共用此 DB 的 host，確認 DBA 準備的 AiNexus 是空庫或不存在。使用有建庫／DDL 權限的維運身分，在主機 PowerShell 7 執行：
+先停止所有共用此 DB 的 host。`db init` 只在 AiNexus 不存在時建立空庫並開啟 RCSI；使用有建庫權限的維運身分，在主機 PowerShell 7 執行：
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
@@ -72,6 +70,6 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
 ```
 
-工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用套件的 `migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。新建的庫會開啟 RCSI；既有庫的一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
+重跑不會重建。結構接著以套件的 `database\App.dacpac` 部署，步驟見 [資料庫建置與權限](database-setup.md#初始化)；完成後移除 runtime 身分的 DDL 權限。既有庫的 RCSI 一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
 
-runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../architecture/database.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
+runtime 需要所有業務 schema（每模組一個，見 [資料庫](../architecture/database.md)）的 DML。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。

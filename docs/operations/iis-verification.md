@@ -12,7 +12,7 @@ pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-IIS.ps1' `
 
 它檢查必要檔案、Production、外部設定位置、金鑰及站外原檔目錄、Host、集區與 HTTPS session；不會顯示秘密，也不聲稱讀得到檔案就代表集區身分可讀。
 
-DBA 逐檔執行拆檔 SQL 後，先以套件的 `Verify-Database.ps1` 比對正式庫的實際結構，見[結構差異與部署後驗證](database-verification.md#部署後驗證)。
+結構部署後，先以套件的 `Verify-Database.ps1` 比對正式庫的實際結構，見[部署後結構驗證](database-verification.md)。
 
 再做 **SQL／設定與原檔 IO 驗證**，不啟動背景 workers、不登入 AD、不產生 AI 回答（僅讀取模型清單）：
 
@@ -25,7 +25,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
   verify deployment
 ```
 
-輸出應有 `environment=Production`、`sqlConnected=true`、`pendingMigrations=0`、`providerAvailable=true`、`availableModelCount>0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、各 providers 狀態、模型數、keyRingPath、正確 attachmentStoragePath 與 attachmentStorageWritable=true、`ready=true`。SQL 版本落後或其他基線會輸出原因並退出，模型服務或指定模型不可用會列出 `modelNotice`。檢查會讀取各 provider 模型清單，不產生回答，並寫入／讀取／刪除一個短暫合成原檔 probe；`ready` 是平台狀態，個別群組仍需模型授權。切換 provider 或模型後，於管理頁確認各群組允許的模型，既有白名單不會自動清空或放寬。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
+輸出應有 `environment=Production`、`sqlConnected=true`、`providerAvailable=true`、`availableModelCount>0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、各 providers 狀態、模型數、keyRingPath、正確 attachmentStoragePath 與 attachmentStorageWritable=true、`ready=true`。模型服務或指定模型不可用會列出 `modelNotice`。檢查會讀取各 provider 模型清單，不產生回答，並寫入／讀取／刪除一個短暫合成原檔 probe；`ready` 是平台狀態，個別群組仍需模型授權。切換 provider 或模型後，於管理頁確認各群組允許的模型，既有白名單不會自動清空或放寬。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
 
 輸出也顯示 embedding provider／維度、webSearchEnabled 與 giteaEnabled，並驗證這些 optional tools 的參數範圍。`ready=true` 只表示核心設定、SQL 與原檔 probe 通過，不代表 Gitea token、搜尋 API 或 embedding 品質已實測通過。
 

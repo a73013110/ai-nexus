@@ -25,7 +25,6 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
 | `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`Nexus`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
-| `Persistence` | [`PersistenceOptions`](../../backend/src/AiNexus.Features/Persistence/PersistenceOptions.cs) | — |
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Audit/AuditOptions.cs) | — |
 | `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |
@@ -58,7 +57,6 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 - **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（外部來源必須設）。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以 application pool／gMSA 身分登入、帳密留空）才算已設定，否則視為停用。
 - **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用，不需把 IIS 設成 Development。[SqlClient 說明](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
-- **Migration**：`Persistence.ApplyMigrationsOnStartup` 預設 false；啟動仍檢查 migration 版本，未升級就停止。正式環境以部署步驟套用。
 - **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不會出現在模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不在同一台時，`Inference.Providers.Ollama.Endpoint` 的 localhost 指的是 IIS 主機，要改成 GPU 主機位址。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。

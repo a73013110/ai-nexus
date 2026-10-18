@@ -43,12 +43,12 @@ if (-not [Diagnostics.EventLog]::SourceExists('AiNexus.Diagnostics')) {
 | 現象 | 查證順序 |
 | --- | --- |
 | NX 暫時查不到 | 時區與範圍 → 待補送 bytes／最後 SQL 寫入 → 實際的 Directory → 檔案內是否有同代碼 → SQL 匯入失敗或容量 |
-| `sql_import_failed_*` | 保留 journal 與 cursor；查 SQL 服務、TLS、帳號、migration、空間。恢復後看待補送下降。不要刪 cursor（會重播，SQL 去重） |
+| `sql_import_failed_*` | 保留 journal 與 cursor；查 SQL 服務、TLS、帳號、結構版本、空間。恢復後看待補送下降。不要刪 cursor（會重播，SQL 去重） |
 | `journal_access_denied` | 以真正的 app pool 身分確認目錄與父目錄的 Modify ACL |
 | `journal_disk_full`／`journal_capacity_exhausted` | 看磁碟剩餘、`MaxDiskBytes`、未補送大小；修 SQL 或核准擴容，不刪未確認的檔案 |
 | `important_queue_full`、Lost 增加 | 查 IO／SQL 積壓與峰值；可對低等級採樣，重要事件不得採樣 |
 | `journal_corrupt_record` | 保留原檔供鑑識；補送會繼續處理有效資料 |
-| IIS 500.30／啟動失敗 | Windows Application／ANCM 事件 → 啟動 Critical 的檔案記錄 → 外部設定、ACL、migration、options |
+| IIS 500.30／啟動失敗 | Windows Application／ANCM 事件 → 啟動 Critical 的檔案記錄 → 外部設定、ACL、資料庫結構、options |
 | 500.31／500.19／502.5／崩潰 | Hosting Bundle、runtime、web.config／ANCM、WAS、.NET Runtime、Application Error、必要時 crash dump |
 
 應用程式收不到 managed 入口之前的失敗與 native crash。IIS access log、WAS、ANCM stdout、SQL Server ERRORLOG 與 Extended Events 都要另查；stdout 只在啟動診斷時短期開啟。
