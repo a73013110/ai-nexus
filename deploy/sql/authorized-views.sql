@@ -1,4 +1,4 @@
--- Run only in a DBA-selected SOURCE database, never through AI Nexus migrations.
+-- 只在 DBA 選定的來源資料庫手動執行；不屬於 database/App，不經過 Deploy-Database.ps1。
 -- This scaffold intentionally returns no rows. Replace both WHERE 1=0 views with
 -- source-authoritative row ACLs after validating full AD SID/account mappings.
 -- A menu/function grant alone is not a document/student-row grant.

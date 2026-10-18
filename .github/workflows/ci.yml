@@ -34,6 +34,20 @@ jobs:
           node-version-file: frontend/package.json
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      # runner 只有 Visual Studio 附的 2022 版 LocalDB，不支援 dacpac 的相容層級 170；整合測試需要 2025 版。
+      - name: Install SQL Server 2025 LocalDB
+        run: |
+          $msi = Join-Path $env:RUNNER_TEMP 'SqlLocalDB.msi'
+          Invoke-WebRequest 'https://download.microsoft.com/download/dea8c210-c44a-4a9d-9d80-0c81578860c5/ENU/SqlLocalDB.msi' -OutFile $msi
+          $install = Start-Process msiexec -ArgumentList '/i', $msi, '/qn', '/norestart', 'IACCEPTSQLLOCALDBLICENSETERMS=YES' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "LocalDB 安裝失敗，msiexec 結束碼 $($install.ExitCode)" }
+          # 預設執行個體可能已由舊版建立；用 170 版的工具重建成 17.0。
+          $localdb = 'C:\Program Files\Microsoft SQL Server\170\Tools\Binn\SqlLocalDB.exe'
+          & $localdb stop MSSQLLocalDB -k 2>$null
+          & $localdb delete MSSQLLocalDB 2>$null
+          & $localdb create MSSQLLocalDB 17.0 -s
+          if ($LASTEXITCODE -ne 0) { throw 'LocalDB 執行個體建立失敗' }
+          & $localdb info MSSQLLocalDB
       - name: Restore
         run: ./scripts/Restore.ps1
       - name: Verify

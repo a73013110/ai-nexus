@@ -23,6 +23,6 @@
 1. 先看是否已經在跑：`sqllocaldb info MSSQLLocalDB` 顯示「執行中」就直接重跑測試。在沙箱化的終端機（例如 AI 助手的 Bash）啟動常會失敗，改在一般 PowerShell 執行 `sqllocaldb start MSSQLLocalDB`。
 2. 重新啟動執行個體：`sqllocaldb stop MSSQLLocalDB -k`，再 `sqllocaldb start MSSQLLocalDB`。
 3. 看 `%LOCALAPPDATA%\Microsoft\Microsoft SQL Server Local DB\Instances\MSSQLLocalDB\error.log` 最後幾行；常見是磁碟空間不足或系統資料庫檔被鎖住。
-4. 重建執行個體：先確認上面沒有自己的開發庫（有的話之後要重新 attach，檔案不會被刪），再`sqllocaldb stop MSSQLLocalDB -k`、`sqllocaldb delete MSSQLLocalDB`、`sqllocaldb create MSSQLLocalDB -s`，再刪除 `%TEMP%\ainexus-test-db` 讓範本重建。
-5. 仍失敗就重新安裝 SQL Server 2025 Express 的 LocalDB；`sqllocaldb versions` 要列出 17.x。
+4. 重建執行個體：先確認上面沒有自己的開發庫（有的話之後要重新 attach，檔案不會被刪），再`sqllocaldb stop MSSQLLocalDB -k`、`sqllocaldb delete MSSQLLocalDB`、`sqllocaldb create MSSQLLocalDB 17.0 -s`（指定 17.0：同時裝了舊版 LocalDB 時，不指定會用 PATH 上那一版建立），再刪除 `%TEMP%\ainexus-test-db` 讓範本重建。
+5. 測試回報「需要 2025（17.x）」或 `sqllocaldb versions` 沒有 17.x：安裝 SQL Server 2025 Express 的 LocalDB，再做第 4 步。
 

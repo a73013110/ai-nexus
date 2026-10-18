@@ -18,7 +18,7 @@ namespace AiNexus.IntegrationTests.Support;
 /// 複製檔案再 attach 約 0.15 秒（平行測試時約 0.25 秒），比每次以 SqlPackage 部署（約 20 秒）或 RESTORE（約 0.3 秒）快。
 /// 範本檔依 dacpac 的 model.xml 與手寫腳本內容快取在暫存資料夾，內容不變時下次測試直接沿用；
 /// dacpac 需先建置（<c>dotnet build database/App</c>，<c>scripts/Verify.ps1</c> 會先做）。
-/// LocalDB 無法啟動時的排除步驟見 <c>docs/development/testing.md</c>。
+/// LocalDB 無法啟動時的排除步驟見 <c>docs/development/test-database.md</c>。
 /// </remarks>
 public sealed class TestDatabase : IDisposable
 {
@@ -209,11 +209,16 @@ public sealed class TestDatabase : IDisposable
             try
             {
                 using var connection = new SqlConnection(Connection("master"));
-                return connection.QuerySingle<int>("SELECT CONVERT(int, SERVERPROPERTY('IsFullTextInstalled'))") == 1;
+                var server = connection.QuerySingle<(int Major, int FullText)>(
+                    "SELECT CONVERT(int, SERVERPROPERTY('ProductMajorVersion')), CONVERT(int, SERVERPROPERTY('IsFullTextInstalled'))");
+                // dacpac 的相容層級 170 只有 SQL Server 2025 支援；舊版 LocalDB（例如 Visual Studio 附的 2022 版）部署時只會給出難懂的錯誤。
+                if (server.Major < 17)
+                    throw new InvalidOperationException($"{Server} 是 SQL Server {server.Major} 版，需要 2025（17.x）。依 docs/development/test-database.md 的「LocalDB 無法啟動」重建執行個體。");
+                return server.FullText == 1;
             }
             catch (SqlException error)
             {
-                throw new InvalidOperationException($"無法連線 {Server}。依 docs/development/testing.md 的「LocalDB 無法啟動」排除後再執行測試。", error);
+                throw new InvalidOperationException($"無法連線 {Server}。依 docs/development/test-database.md 的「LocalDB 無法啟動」排除後再執行測試。", error);
             }
         }
 

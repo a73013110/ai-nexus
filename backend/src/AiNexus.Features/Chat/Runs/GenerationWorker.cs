@@ -430,7 +430,7 @@ public sealed partial class GenerationWorker(
     [LoggerMessage(EventId = 3103, EventName = "generation.storage_unavailable", Level = LogLevel.Warning, Message = "Generation disabled: storage is unavailable.")]
     private static partial void LogStorageUnavailable(ILogger logger);
 
-    [LoggerMessage(EventId = 3104, EventName = "generation.startup_failed", Level = LogLevel.Warning, Message = "Generation disabled during startup ({ErrorType}). Check storage and migrations.")]
+    [LoggerMessage(EventId = 3104, EventName = "generation.startup_failed", Level = LogLevel.Warning, Message = "Generation disabled during startup ({ErrorType}). Check storage and the database schema.")]
     private static partial void LogStartupFailed(ILogger logger, string errorType);
 
     [LoggerMessage(EventId = 3105, EventName = "generation.recovery_pending", Level = LogLevel.Warning, Message = "Run {RunId} awaits orphan recovery ({ErrorType}).")]

@@ -20,7 +20,7 @@
 | admin | 存取管理 | `/admin` | 帳號、角色、功能群組、模型政策與功能目錄 |
 | operations | 平台營運 | `/admin/operations` | 全平台用量、知識檢索索引、模型與工具價格 |
 
-功能名稱由 `accesscontrol.Features.Name` 維護，側欄、授權清單、頁面標題與總覽入口共用此名稱。管理員自訂名稱會沿用；前端載入前使用 `FEATURE_NAMES` 的預設值。變更預設名稱須同步 seed、增量 migration、前端預設及本表。`介面元件` 是系統管理選單的最後一項（功能 `design`）；`個人設定` 是帳號設定入口。
+功能名稱由 `accesscontrol.Features.Name` 維護，側欄、授權清單、頁面標題與總覽入口共用此名稱。管理員自訂名稱會沿用；前端載入前使用 `FEATURE_NAMES` 的預設值。變更預設名稱須同步 `database/App/Seed/`、前端預設及本表。`介面元件` 是系統管理選單的最後一項（功能 `design`）；`個人設定` 是帳號設定入口。
 
 ## 資源與處理
 
