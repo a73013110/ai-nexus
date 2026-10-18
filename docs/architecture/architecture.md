@@ -22,9 +22,9 @@ flowchart LR
     Dapper --> Legacy[(獨立公文／校務授權 view)]
 ```
 
-## 三個專案
+## 四個專案
 
-依賴方向固定為 Host → Features → Platform，由 `AiNexus.ArchitectureTests` 檢查。
+依賴方向固定為 Host → Features → Data → Platform，由 `AiNexus.ArchitectureTests` 檢查。
 
 | 專案 | 責任 |
 | --- | --- |
