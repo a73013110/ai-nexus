@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  descendantIds,
-  featureIcon,
-  navigationOrder,
-  navigationSections,
-  navigationTree,
-} from './navigation-tree';
+import { descendantIds, featureIcon, navigationSections, navigationTree } from './navigation-tree';
 
 const groups = [
   { id: 'system', parentId: null, name: '系統管理', sortOrder: 30 },
@@ -38,7 +32,7 @@ describe('navigation tree', () => {
     expect(system.groups.map((node) => [node.group.id, ids(node.features)])).toEqual([
       ['diagnosis', ['logs']],
     ]);
-    expect(ids(navigationOrder(tree))).toEqual([
+    expect(ids(navigationSections(tree).flatMap((section) => section.features))).toEqual([
       'dashboard',
       'extra',
       'chat',

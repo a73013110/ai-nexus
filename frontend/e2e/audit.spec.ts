@@ -7,6 +7,11 @@ test("audit-only access keeps deep-link filters and same-page links without requ
   const fixture = new ApiFixture();
   fixture.auditAccess = true;
   await fixture.attach(page);
+  // 預設釘選不含稽核；釘上它才測得到「點目前頁面的側邊欄連結」會清掉篩選。
+  await page.addInitScript(
+    (key) => localStorage.setItem(key, JSON.stringify(["chat", "audit"])),
+    `ai-nexus.pins.${fixture.userId}`,
+  );
   const queries: URL[] = [];
   const managementRequests: string[] = [];
   const traceId = "a".repeat(32);

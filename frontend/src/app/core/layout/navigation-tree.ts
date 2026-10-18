@@ -104,11 +104,6 @@ export function navigationSections<T>(
   return sections;
 }
 
-/** 依選單順序列出樹中的每個功能。 */
-export function navigationOrder<T>(tree: NavigationTree<T>): T[] {
-  return navigationSections(tree).flatMap((section) => section.features);
-}
-
 /** 群組與其所有子孫的 id；群組不能移到其中任何一個之下。 */
 export function descendantIds(groups: readonly NavigationGroupDto[], id: string): Set<string> {
   const ids = new Set([id]);
