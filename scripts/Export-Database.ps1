@@ -145,6 +145,10 @@ try {
     $watch = [Diagnostics.Stopwatch]::StartNew()
     Invoke-SqlPackage (@('/Action:Extract', "@$response", "/TargetFile:$extracted") + @($properties | ForEach-Object { "/p:$_" }))
     [IO.File]::Delete($response)
+    # SqlPackage 連線失敗時結束碼仍可能是 0；沒有產出就停在這裡，否則下一步會用空資料夾取代整份匯出。
+    if (!(Test-Path -LiteralPath $extracted -PathType Container) -or !(Get-ChildItem -LiteralPath $extracted -Filter '*.sql' -Recurse | Select-Object -First 1)) {
+        throw 'SqlPackage Extract 沒有產生任何檔案，未更動輸出資料夾；原因見上方輸出（例如自簽憑證要加 -TrustServerCertificate）。'
+    }
     Write-Verbose "Extract 花費 $($watch.Elapsed)"
 
     $removed = Invoke-NexusExtractPostProcess $extracted $ExcludeTable
