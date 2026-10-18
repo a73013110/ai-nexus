@@ -1,12 +1,10 @@
 using System.Data.Common;
 using AiNexus.Platform.Data.Sql;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Data.App;
 
 /// <summary>主資料庫的結構與設定檢查。</summary>
 public sealed partial class DatabaseSchema(
-    AppDbContext db,
     ISqlDatabase<AppDbContext> sql,
     ILogger<DatabaseSchema> logger)
 {
@@ -18,14 +16,9 @@ public sealed partial class DatabaseSchema(
     /// 若檢測到關閉僅記錄警告日誌而不會中斷 Host 啟動，因為既有資料庫開啟 RCSI 需要排他鎖（Exclusive Lock），
     /// 必須由 DBA 在維護期間執行，不可由應用程式啟動時自動切換。
     /// </remarks>
-    /// <returns>若非 SQL Server 或無法連線查詢則回傳 <see langword="null"/>；其餘回傳是否啟用。</returns>
+    /// <returns>無法連線查詢時回傳 <see langword="null"/>；其餘回傳是否啟用。</returns>
     public async Task<bool?> ReadCommittedSnapshotAsync(CancellationToken ct)
     {
-        if (!db.Database.IsSqlServer())
-        {
-            return null;
-        }
-
         bool enabled;
         try
         {

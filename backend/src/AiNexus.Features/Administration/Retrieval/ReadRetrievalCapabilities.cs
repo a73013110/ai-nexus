@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Identity;
-using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Administration.Retrieval;
@@ -8,7 +7,7 @@ namespace AiNexus.Features.Administration.Retrieval;
 /// <summary>
 /// SQL Server 向量能力與 embedding／rerank 模型狀態。<c>ReadAsync</c> 只回傳上次的探測結果，<c>ProbeAsync</c> 才會即時呼叫模型。
 /// </summary>
-internal sealed class ReadRetrievalCapabilities(AppDbContext db, SqlVectorCapabilities sql, RetrievalModelProbe probe)
+internal sealed class ReadRetrievalCapabilities(SqlVectorCapabilities sql, RetrievalModelProbe probe)
 {
     public static void MapGet(RouteGroupBuilder routes) => routes
         .MapGet("/capabilities", async (ReadRetrievalCapabilities handler, CancellationToken ct) => TypedResults.Ok(await handler.ReadAsync(ct)))
@@ -27,5 +26,5 @@ internal sealed class ReadRetrievalCapabilities(AppDbContext db, SqlVectorCapabi
     }
 
     private async Task<RetrievalCapabilitiesDto> DescribeAsync(RetrievalConnectionDto embedding, RetrievalConnectionDto rerank, CancellationToken ct)
-        => new(db.Database.IsSqlServer() ? await sql.ReadAsync(ct) : null, !db.Database.IsSqlServer(), embedding, rerank);
+        => new(await sql.ReadAsync(ct), embedding, rerank);
 }

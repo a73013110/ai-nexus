@@ -17,11 +17,11 @@ public sealed class DiagnosticPerformanceTests
     [Fact, Trait("Category", "Performance")]
     public async Task MeasureRequestThroughputLatencyAndMemoryWithBoundedPersistence()
     {
-        // TestServer + SQLite 只能隔離應用程式與日誌本身的成本，無法代表 IIS 網路或正式環境 SQL 的效能。
+        // TestServer + LocalDB 只能隔離應用程式與日誌本身的成本，無法代表 IIS 網路或正式環境 SQL 的效能。
         var baseline = await MeasureAsync(false); var logging = await MeasureAsync(true);
         var report = new {
             measuredAtUtc = DateTimeOffset.UtcNow, environment = new { os = RuntimeInformation.OSDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(), dotnet = Environment.Version.ToString(), processors = Environment.ProcessorCount, gcAvailableBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes, optimized = typeof(DiagnosticPerformanceTests).Assembly.GetCustomAttributes(typeof(DebuggableAttribute), false).OfType<DebuggableAttribute>().All(x => !x.IsJITOptimizerDisabled) },
-            workload = new { requests = 4000, concurrency = 8, warmup = 200, endpoint = "GET /health/live", transport = "ASP.NET TestServer in process", queryStore = "SQLite per-test database", otlp = false, sampling = 1, flushIntervalMs = 10, batchSize = 200, normalQueue = 8192, importantQueue = 2048 },
+            workload = new { requests = 4000, concurrency = 8, warmup = 200, endpoint = "GET /health/live", transport = "ASP.NET TestServer in process", queryStore = "LocalDB per-test database", otlp = false, sampling = 1, flushIntervalMs = 10, batchSize = 200, normalQueue = 8192, importantQueue = 2048 },
             baselineProviderDisabled = baseline, diagnostics = logging,
             limitations = "Single process local development measurement. Baseline disables the provider on the same code path. Does not establish IIS/SQL Server network or production capacity."
         };

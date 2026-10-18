@@ -23,7 +23,7 @@ public sealed class GenerationRun
 
     /// <summary>
     /// 當前仍在執行的擁有者。
-    /// 資料庫的 filtered unique index 限制同一擁有者同時只能有一個執行中的生成（不為 null 的列）；SQLite 測試沒有這個保證。
+    /// 資料庫的 filtered unique index 限制同一擁有者同時只能有一個執行中的生成（不為 null 的列）。
     /// </summary>
     public Guid? ActiveOwnerId { get; set; }
 

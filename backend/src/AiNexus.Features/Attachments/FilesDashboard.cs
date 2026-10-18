@@ -21,7 +21,7 @@ internal sealed class FilesDashboard(AppDbContext db, AttachmentQuota quota) : I
         var library = db.Set<Attachment>().AsNoTracking()
             .Where(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner));
         var types = await library.GroupBy(x => x.ContentType).Select(g => new { Type = g.Key, Count = g.Count(), Bytes = g.Sum(x => x.Size) }).ToListAsync(ct);
-        var uploads = await DashboardDays.CountAsync(db, library.Select(x => x.CreatedAt), scope, ct);
+        var uploads = await DashboardDays.CountAsync(library.Select(x => x.CreatedAt), scope, ct);
         var section = new DashboardSection("files", Feature)
             .Count("files", "已保存原檔", types.Sum(x => x.Count), "個")
             .Size("size", "原檔大小", types.Sum(x => x.Bytes))

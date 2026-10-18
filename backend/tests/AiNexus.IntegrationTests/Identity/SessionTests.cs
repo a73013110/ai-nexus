@@ -82,7 +82,7 @@ public sealed class SessionTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("alice", me.Account.Split('@')[0]);
         // Cookie 驗證已讀取該筆 session；目前使用者重用這個結果，而不是再單獨讀一次。
-        Assert.Equal(1, queries.Count("/api/v1/me", "FROM \"Users\" AS", "LIMIT 2"));
+        Assert.Equal(1, queries.Count("/api/v1/me", "FROM [identity].[Users] AS", "TOP(2)"));
     }
 
     [Fact]

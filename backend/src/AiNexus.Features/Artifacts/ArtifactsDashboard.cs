@@ -21,7 +21,7 @@ internal sealed class ArtifactsDashboard(AppDbContext db) : IDashboardSource
             .SingleOrDefaultAsync(ct);
         // 版本數依作者計算：協作者的編輯算在協作者名下，而不是成果擁有者。
         var revisions = db.Set<ArtifactRevision>().AsNoTracking().Where(x => owner == null || x.AuthorId == owner);
-        var saved = await DashboardDays.CountAsync(db, revisions.Select(x => x.CreatedAt), scope, ct);
+        var saved = await DashboardDays.CountAsync(revisions.Select(x => x.CreatedAt), scope, ct);
         var all = counts?.All ?? 0;
         var projects = counts?.InProjects ?? 0;
         var section = new DashboardSection("artifacts", Feature)

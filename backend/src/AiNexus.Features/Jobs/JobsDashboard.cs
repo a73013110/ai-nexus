@@ -40,7 +40,7 @@ internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
             .Select(g => new { Kind = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .ToListAsync(ct);
-        var daily = await DashboardDays.CountAsync(db, jobs.Select(x => x.CreatedAt), scope, ct);
+        var daily = await DashboardDays.CountAsync(jobs.Select(x => x.CreatedAt), scope, ct);
         var active = (current?.Queued ?? 0) + (current?.Running ?? 0);
         var failed = current?.Failed ?? 0;
         var section = new DashboardSection("tasks", Feature)

@@ -133,6 +133,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task NoneEmbeddingForcesKeywordAndModelProbeChecksRealBatchShape()
     {
+        Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText);
         await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.Embedding.Provider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
         using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();

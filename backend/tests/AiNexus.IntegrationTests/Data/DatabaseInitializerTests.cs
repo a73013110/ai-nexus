@@ -1,3 +1,4 @@
+using System.Data.Common;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Data.Sql;
@@ -8,17 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace AiNexus.IntegrationTests.Data;
 
-[Trait("Category", "SqlServer")]
 public sealed class DatabaseInitializerTests
 {
     [Fact]
     public async Task CreatedDatabaseReadsLastCommittedVersionWithoutWaitingForWriters()
     {
-        await SqlServerDatabase.WithDatabase(async db => {
+        await TestDatabase.WithContextAsync(async db => {
             var sql = new DbContextSqlDatabase<AppDbContext>(db);
             Assert.True(await sql.QuerySingleAsync<bool>("SELECT [is_read_committed_snapshot_on] FROM sys.databases WHERE [database_id] = DB_ID()"));
             var logs = new Warnings();
-            Assert.True(await new DatabaseSchema(db, sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
+            Assert.True(await new DatabaseSchema(sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Empty(logs.EventIds);
 
             var user = new User { Sid = "rcsi-fixture", Account = "rcsi", DisplayName = "已提交" };
@@ -37,19 +37,48 @@ public sealed class DatabaseInitializerTests
     [Fact]
     public async Task SchemaCheckWarnsWhenAnExistingDatabaseLacksReadCommittedSnapshot()
     {
-        await SqlServerDatabase.WithDatabase(async db => {
+        await TestDatabase.WithContextAsync(async db => {
             var database = new SqlConnectionStringBuilder(db.Database.GetConnectionString());
             var name = database.InitialCatalog; database.InitialCatalog = "master";
-            SqlConnection.ClearAllPools();
+            // 只清這個資料庫的連線池；ClearAllPools 會關掉平行測試正在用的連線。
+            await using (var own = new SqlConnection(db.Database.GetConnectionString())) SqlConnection.ClearPool(own);
             await using (var master = new SqlConnection(database.ConnectionString))
             {
                 await master.OpenAsync();
                 await master.ExecuteAsync($"ALTER DATABASE [{name}] SET READ_COMMITTED_SNAPSHOT OFF WITH ROLLBACK IMMEDIATE");
             }
             var logs = new Warnings();
-            Assert.False(await new DatabaseSchema(db, new DbContextSqlDatabase<AppDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
+            Assert.False(await new DatabaseSchema(new DbContextSqlDatabase<AppDbContext>(db), logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Equal(5003, Assert.Single(logs.EventIds));
         });
+    }
+
+    [Fact]
+    public async Task InitializerCreatesDatabaseWithReadCommittedSnapshot()
+    {
+        var name = $"AINexus_Test_{Guid.NewGuid():N}";
+        var master = new SqlConnectionStringBuilder { DataSource = TestDatabase.Server, InitialCatalog = "master", IntegratedSecurity = true, TrustServerCertificate = true }.ConnectionString;
+        await using var connection = new SqlConnection(master);
+        try
+        {
+            await DatabaseInitializer.CreateAsync(new MasterConnection(master), name, CancellationToken.None);
+            Assert.True(await connection.QuerySingleAsync<bool>("SELECT [is_read_committed_snapshot_on] FROM sys.databases WHERE [name] = @Name", new { Name = name }));
+        }
+        finally
+        {
+            await connection.ExecuteAsync($"IF DB_ID(@Name) IS NOT NULL BEGIN ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}] END", new { Name = name });
+        }
+    }
+
+    /// <summary>測試伺服器的 master，連線字串直接給定，不走 <c>Databases</c> 設定。</summary>
+    private sealed class MasterConnection(string connectionString) : DapperSqlDatabase<MasterDatabase>
+    {
+        protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)
+        {
+            await using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync(cancellationToken);
+            return await command(connection, null);
+        }
     }
 
     private sealed class Warnings : ILogger<DatabaseSchema>

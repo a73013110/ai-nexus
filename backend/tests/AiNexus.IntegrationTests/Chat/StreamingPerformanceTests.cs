@@ -19,8 +19,8 @@ namespace AiNexus.IntegrationTests.Chat;
 
 /// <summary>
 /// 多位使用者同時串流長回答。每次 flush 只能寫入增量（不得整段重寫），
-/// 不同對話的 run 之間也不能互相等待。使用 TestServer + SQLite 時，數字反映的是應用程式自身的
-/// 寫入量與鎖定，不代表正式環境 SQL Server 的延遲（SQLite 同一時間只允許一個寫入者）。
+/// 不同對話的 run 之間也不能互相等待。使用 TestServer + LocalDB 時，數字反映的是應用程式自身的
+/// 寫入量與鎖定，不代表正式環境 SQL Server 的延遲。
 /// </summary>
 public sealed class StreamingPerformanceTests(ITestOutputHelper output)
 {
@@ -79,7 +79,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         output.WriteLine($"writes={writes.Commands} writesPerFlush={(double)writes.Commands / flushes:F2} writtenChars={writes.Characters} writtenCharsPerFlush={writes.Characters / flushes} largestWriteChars={writes.Largest}");
         output.WriteLine($"workerCommands={writes.WorkerCommands} workerCommandsPerFlush={(double)writes.WorkerCommands / flushes:F2}");
         // 每個增量只會寫入固定次數（事件列、run、訊息）：寫入量隨回答長度線性成長，而非平方成長。
-        // （SQLite 也會把 id 與時間戳以文字送出；若每次 flush 都重寫整段回答，寫入量約為 Chunks 倍。）
+        // （若每次 flush 都重寫整段回答，寫入量約為 Chunks 倍。）
         Assert.True(writes.Largest < 4 * ChunkSize, $"A single write carried {writes.Largest} characters; flushes must not resend the whole answer.");
         Assert.True(writes.Characters < 12L * Users * expected.Length, $"Wrote {writes.Characters} characters for {Users * expected.Length} characters of answers.");
         // flush 不會重新讀取或重寫 run、charge、訊息與對話，只執行少數集合式（set-based）陳述式。

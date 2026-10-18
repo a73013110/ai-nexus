@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Inference.Runs;
@@ -15,6 +16,32 @@ namespace AiNexus.IntegrationTests.Chat;
 
 public sealed class CreateRunTests
 {
+    /// <summary>
+    /// 程式以帳號列鎖把同一人的送出串行化；資料庫的唯一索引是最後一道保證：每人最多一個進行中的生成、同一冪等鍵只有一筆。
+    /// EF 組態不宣告索引，所以只有對真實資料庫才驗證得到。
+    /// </summary>
+    [Fact]
+    public async Task DatabaseAllowsOneActiveGenerationPerOwnerAndOneRunPerIdempotencyKey()
+    {
+        await using var factory = new NexusFactory();
+        using var client = await factory.SignedInAsync();
+        var conversation = await CreateConversation(client);
+        await WaitForTerminal(client, (await CreateRun(client, conversation.Id, "first")).Id);
+        await WaitForTerminal(client, (await CreateRun(client, conversation.Id, "second")).Id);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var runs = await db.Runs.OrderBy(x => x.CreatedAt).ToListAsync();
+        Assert.Equal(2, runs.Count);
+        runs[0].ActiveOwnerId = runs[0].OwnerId; await db.SaveChangesAsync();
+
+        runs[1].ActiveOwnerId = runs[1].OwnerId;
+        Assert.Equal(2601, Assert.IsType<SqlException>((await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync())).InnerException).Number);
+        db.ChangeTracker.Clear();
+        var second = await db.Runs.SingleAsync(x => x.Id == runs[1].Id);
+        second.IdempotencyKey = runs[0].IdempotencyKey;
+        Assert.Equal(2601, Assert.IsType<SqlException>((await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync())).InnerException).Number);
+    }
+
     [Fact]
     public async Task ReasoningIsValidatedAndSnapshottedForTheWorker()
     {

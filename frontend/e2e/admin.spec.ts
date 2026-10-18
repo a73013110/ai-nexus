@@ -103,7 +103,6 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     }
     if (path.includes("/capabilities"))
       return json({
-        testStore: false,
         sql: {
           version: "17.0",
           edition: "Developer",

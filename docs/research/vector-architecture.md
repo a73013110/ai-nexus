@@ -1,6 +1,6 @@
 # 知識檢索架構
 
-正式環境固定 SQL Server 2025（17.x），預設 Ollama `bge-m3`、1024 維。本次移除舊片段與 JSON 向量查詢，保留原始檔及 `DocumentPages`；可重新上傳資料，也可由保存的頁面重建，無須重做 OCR。SQLite 僅供測試。
+正式環境固定 SQL Server 2025（17.x），預設 Ollama `bge-m3`、1024 維。本次移除舊片段與 JSON 向量查詢，保留原始檔及 `DocumentPages`；可重新上傳資料，也可由保存的頁面重建，無須重做 OCR。
 
 ## 元件與資料流
 
@@ -26,7 +26,7 @@
 
 `EmbeddingProfiles` 保存 provider、model、dimensions、input format、query instruction、revision。chunker 版本及參數只進 Key 的 hash，不另存快照：切段布局由所有 profile 共用，一律依目前設定，無法讓各 profile 各自凍結切段。Key 的 hash 防止向量空間混用；filtered unique index 強制最多一個 active。`Chunks` 使用一套切段布局，保留 Guid 引用鍵、唯一 int identity SearchId、文件序號、頁碼範圍、HeadingPath、ContentHash 與 TokenEstimate。
 
-`ChunkEmbeddings768`／`ChunkEmbeddings1024` 以 int identity clustered PK 預留 ANN 映射，真正保存 `VECTOR(n)`；每個 `(ProfileId, ChunkId)` 唯一，片段刪除 cascade 向量。同一片段可持有 active 與 building 向量，但一次查詢只排名 active profile。SQLite 使用 blob converter 與測試用 cosine／詞頻，正式環境沒有 portable 或舊索引查詢。
+`ChunkEmbeddings768`／`ChunkEmbeddings1024` 以 int identity clustered PK 預留 ANN 映射，真正保存 `VECTOR(n)`；每個 `(ProfileId, ChunkId)` 唯一，片段刪除 cascade 向量。同一片段可持有 active 與 building 向量，但一次查詢只排名 active profile。正式環境沒有 portable 或舊索引查詢。
 
 啟動無 active 時建立目標為 active，將標記為待索引的文件排入索引；設定變更則建立 building，預設等待管理員「開始重建」。`embedding-reindex` 逐文件／逐批補齊，重試跳過已完成向量，使用文件擁有者授權與配額。新增／編輯資料填入 active 及所有 building；active 完成即可 ready，building 失敗可續跑。編輯前先取得 hash 快取，未變片段沿用 ID／向量；單一布局不保存舊切段版本。
 
@@ -60,6 +60,6 @@ SELECT * FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks
 
 執行 `scripts/Test-Environment.ps1 -SqlOnly` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 執行 `database/App/FullText/` 的目錄與索引腳本。
 
-新增維度：在開發庫建立向量表並匯出，新增 vector entity（仿 `ChunkEmbedding1024` 繼承 `ChunkEmbeddingConfiguration<T>`）；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊資料表說明與真實 SQL 測試，重產契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
+新增維度：在開發庫建立向量表並匯出，新增 vector entity（仿 `ChunkEmbedding1024` 繼承 `ChunkEmbeddingConfiguration<T>`）；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage 與設定驗證／腳本。補齊資料表說明與真實 SQL 測試，重產契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
 
 目前採精確 cosine，未啟用 VECTOR_SEARCH／CREATE VECTOR INDEX preview；int clustered PK 與 SearchId 已保留接縫。資料量、p95、Recall@K 確認成為瓶頸後，再評估正式支援的 ANN，必須保留授權候選邊界並驗證召回與撤權。不使用其他向量資料庫。四模式驗收與操作見 [品質評測](../features/quality.md)、[模型與重排](embedding-models.md)。

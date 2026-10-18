@@ -11,7 +11,6 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Projects;
 using AiNexus.Platform.Data;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,14 +25,12 @@ public sealed class SoftDeleteFilterTests
     [Fact]
     public void OnlySoftDeletedEntitiesDeclareTheNamedFilterAndTheModelBuildsWithoutFilterWarnings()
     {
-        using var connection = new SqliteConnection("Data Source=:memory:"); connection.Open();
-        // 獨立的 options 會自行建立並驗證模型，因此必填導覽屬性的警告在此會拋出例外。
-        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseTestSqlite(connection)
+        // 獨立的 options 會自行建立並驗證模型，因此必填導覽屬性的警告在此會拋出例外；只建模型，不連線。
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer("Server=.;Database=AiNexus")
             .ConfigureWarnings(w => w.Throw(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)).Options);
         var filtered = db.Model.GetEntityTypes().Where(x => x.GetDeclaredQueryFilters().Count > 0).Select(x => x.ClrType).OrderBy(x => x.Name).ToArray();
         Assert.Equal([typeof(Conversation), typeof(Resource)], filtered);
         Assert.All(filtered, type => Assert.Equal(SoftDelete.Filter, Assert.Single(db.Model.FindEntityType(type)!.GetDeclaredQueryFilters()).Key));
-        db.Database.EnsureCreated();
     }
 
     [Fact]

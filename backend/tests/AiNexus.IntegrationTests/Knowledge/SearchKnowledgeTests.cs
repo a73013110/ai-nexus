@@ -59,13 +59,14 @@ public sealed class SearchKnowledgeTests
         response.EnsureSuccessStatusCode();
         Assert.Single((await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Hits);
         // 集合 ACL 會檢查兩次：開始時一次，結果送出前再以最新授權檢查一次。
-        Assert.Equal(2, queries.Count("/api/v1/knowledge/search", "\"ResourceGroups\""));
+        Assert.Equal(2, queries.Count("/api/v1/knowledge/search", "[ResourceGroups]"));
         Assert.Equal(2, queries.Count("/api/v1/knowledge/search", GrantRead));
     }
 
     [Fact]
     public async Task HybridUsesBothRanksAndQueryCacheAvoidsDuplicateInvocation()
     {
+        Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText);
         await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         var before = factory.Embeddings.Calls;
         foreach (var query in new[] { "  採購   核准  ", "採購 核准" })
@@ -78,7 +79,7 @@ public sealed class SearchKnowledgeTests
     }
 
     [Theory]
-    [InlineData("skip", HttpStatusCode.OK, "hybrid(rerank-skipped)")]
+    [InlineData("skip", HttpStatusCode.OK, "(rerank-skipped)")]
     [InlineData("fail", HttpStatusCode.ServiceUnavailable, null)]
     public async Task RerankFailurePolicyIsExplicit(string policy, HttpStatusCode status, string? mode)
     {
@@ -89,7 +90,7 @@ public sealed class SearchKnowledgeTests
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         Assert.Equal(status, response.StatusCode);
-        if (mode is not null) Assert.Equal(mode, (await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode);
+        if (mode is not null) Assert.Equal(HybridMode + mode, (await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode);
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public sealed class SearchKnowledgeTests
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         using var scope = factory.Services.CreateScope();
         var result = (await scope.ServiceProvider.GetRequiredService<RetrievalPipeline>().SearchAsync(seed.Actor, new("採購", [seed.Collection]), CancellationToken.None, [new("user", "請查採購規範")])).Value!;
-        Assert.Equal("hybrid+rerank(rewrite-skipped)", result.Mode); Assert.Empty(result.Hits); Assert.Equal("採購", rerank.Query);
+        Assert.Equal(HybridMode + "+rerank(rewrite-skipped)", result.Mode); Assert.Empty(result.Hits); Assert.Equal("採購", rerank.Query);
     }
 
     [Fact]

@@ -39,27 +39,16 @@ public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbCont
     public async Task WriteBatchAsync(EmbeddingProfile profile, IReadOnlyList<EmbeddingWrite> values, CancellationToken ct)
     {
         if (values.Count == 0) return;
-        if (db.Database.IsSqlServer())
+        var parameters = new DynamicParameters(); parameters.Add("Profile", profile.Id);
+        var rows = new List<string>();
+        for (var i = 0; i < values.Count; i++)
         {
-            var parameters = new DynamicParameters(); parameters.Add("Profile", profile.Id);
-            var rows = new List<string>();
-            for (var i = 0; i < values.Count; i++)
-            {
-                parameters.Add("Chunk" + i, values[i].ChunkId); parameters.Add("Hash" + i, values[i].ContentHash);
-                parameters.Add("Vector" + i, JsonSerializer.Serialize(values[i].Vector));
-                rows.Add($"(@Chunk{i}, @Hash{i}, CAST(@Vector{i} AS VECTOR({profile.Dimensions})))");
-            }
-            var table = VectorDimensions.Table(profile.Dimensions);
-            var command = $"INSERT INTO {table} ([ChunkId], [ProfileId], [ContentHash], [Vector]) SELECT v.[ChunkId], @Profile, v.[Hash], v.[Vector] FROM (VALUES {string.Join(',', rows)}) v([ChunkId], [Hash], [Vector]) WHERE NOT EXISTS (SELECT 1 FROM {table} e WITH (UPDLOCK, HOLDLOCK) WHERE e.[ProfileId] = @Profile AND e.[ChunkId] = v.[ChunkId])";
-            await sql.ExecuteAsync(command, parameters, commandTimeout: 30, cancellationToken: ct);
+            parameters.Add("Chunk" + i, values[i].ChunkId); parameters.Add("Hash" + i, values[i].ContentHash);
+            parameters.Add("Vector" + i, JsonSerializer.Serialize(values[i].Vector));
+            rows.Add($"(@Chunk{i}, @Hash{i}, CAST(@Vector{i} AS VECTOR({profile.Dimensions})))");
         }
-        else
-        {
-            var ids = values.Select(x => x.ChunkId).ToArray(); var existing = await Rows(profile).Where(x => ids.Contains(x.ChunkId)).Select(x => x.ChunkId).ToListAsync(ct);
-            foreach (var value in values.Where(x => !existing.Contains(x.ChunkId)))
-                if (profile.Dimensions == 768) db.Add(new ChunkEmbedding768 { ChunkId = value.ChunkId, ProfileId = profile.Id, ContentHash = value.ContentHash, Vector = new(value.Vector) });
-                else db.Add(new ChunkEmbedding1024 { ChunkId = value.ChunkId, ProfileId = profile.Id, ContentHash = value.ContentHash, Vector = new(value.Vector) });
-            await db.SaveChangesAsync(ct);
-        }
+        var table = VectorDimensions.Table(profile.Dimensions);
+        var command = $"INSERT INTO {table} ([ChunkId], [ProfileId], [ContentHash], [Vector]) SELECT v.[ChunkId], @Profile, v.[Hash], v.[Vector] FROM (VALUES {string.Join(',', rows)}) v([ChunkId], [Hash], [Vector]) WHERE NOT EXISTS (SELECT 1 FROM {table} e WITH (UPDLOCK, HOLDLOCK) WHERE e.[ProfileId] = @Profile AND e.[ChunkId] = v.[ChunkId])";
+        await sql.ExecuteAsync(command, parameters, commandTimeout: 30, cancellationToken: ct);
     }
 }

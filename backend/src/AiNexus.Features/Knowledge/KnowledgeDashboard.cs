@@ -28,7 +28,7 @@ internal sealed class KnowledgeDashboard(AppDbContext db) : IDashboardSource
             Pages = g.Sum(x => x.PageCount),
         }).SingleOrDefaultAsync(ct);
         var chunks = await db.Set<Chunk>().AsNoTracking().CountAsync(x => documents.Any(d => d.Id == x.DocumentId), ct);
-        var added = await DashboardDays.CountAsync(db,
+        var added = await DashboardDays.CountAsync(
             resources.Where(x => x.Kind == "document" && documents.Any(d => d.Id == x.Id)).Select(x => x.CreatedAt), scope, ct);
         var all = status?.All ?? 0; var ready = status?.Ready ?? 0; var failed = status?.Failed ?? 0;
         var processing = all - ready - failed;

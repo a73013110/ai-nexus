@@ -94,7 +94,7 @@ public sealed partial class DiagnosticBrowserTests
             measuredAtUtc = DateTimeOffset.UtcNow, issueCode = issue, logId = row.LogId, traceId = row.TraceId, runId = row.RunId,
             copied = true, masked = true, emptyState = true, loadingState = true, queryFailureSafe = true, healthDegradedState = true, xssSafe = true, csvFormulaSafe = true,
             browser = browser.Version, viewport = "1440x1000;375x900", pageErrors = errors,
-            environment = "Loopback Kestrel + real built Angular + isolated SQLite + test-only identity/model provider; no production credentials or deployment."
+            environment = "Loopback Kestrel + real built Angular + isolated LocalDB database + test-only identity/model provider; no production credentials or deployment."
         }, Indented));
         Assert.Empty(errors);
     }

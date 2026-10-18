@@ -18,7 +18,6 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.IntegrationTests.Knowledge;
 
-[Trait("Category", "SqlServer")]
 public sealed class SqlServerRetrievalTests
 {
     [Fact]
@@ -36,9 +35,11 @@ public sealed class SqlServerRetrievalTests
             var store = new SqlServerRetrievalStore(failing, Options.Create(new KnowledgeOptions()), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             var result = await store.SearchAsync([seed.Collection], profile, "採購核准", vector, "hybrid", CancellationToken.None);
             Assert.Equal("vector", result.Mode); Assert.Equal(seed.Chunks[0].Id, Assert.Single(result.Hits).ChunkId);
-            Assert.Equal(1, failing.Failures);
+            // 沒有全文元件時一開始就判定未就緒，不會送出全文查詢；有的話第一次查詢失敗後改判未就緒。
+            var failures = TestDatabase.FullTextInstalled ? 1 : 0;
+            Assert.Equal(failures, failing.Failures);
             var error = await Assert.ThrowsAsync<ExternalServiceException>(() => store.SearchAsync([seed.Collection], profile, "採購核准", null, "keyword", CancellationToken.None));
-            Assert.Equal("fulltext_unavailable", error.Error.Code); Assert.Equal(1, failing.Failures);
+            Assert.Equal("fulltext_unavailable", error.Error.Code); Assert.Equal(failures, failing.Failures);
         });
     }
 
@@ -96,6 +97,7 @@ public sealed class SqlServerRetrievalTests
     [Fact]
     public async Task TraditionalChineseFullTextPopulationAndAclBeforeTop()
     {
+        Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText);
         await WithDatabase(async (db, sql, store) => {
             var seed = await Seed(db); var profile = new EmbeddingProfile { Key = "fixture:fts", Provider = "none", Dimensions = 1024, Model = "fixture", Status = "active" }; db.Add(profile); await db.SaveChangesAsync();
             Assert.True(await sql.QuerySingleAsync<bool>("SELECT CAST(SERVERPROPERTY('IsFullTextInstalled') AS bit)"));
@@ -126,7 +128,7 @@ public sealed class SqlServerRetrievalTests
     }
 
     private static Task WithDatabase(Func<AppDbContext, ISqlDatabase<AppDbContext>, SqlServerRetrievalStore, Task> test) =>
-        SqlServerDatabase.WithDatabase(async db => {
+        TestDatabase.WithContextAsync(async db => {
             var sql = new DbContextSqlDatabase<AppDbContext>(db); using var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new SqlServerRetrievalStore(sql, Options.Create(new KnowledgeOptions { Retrieval = new() { VectorCandidates = 1, FtsCandidates = 1, RerankCandidates = 1, TopK = 1 } }), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             await test(db, sql, store);

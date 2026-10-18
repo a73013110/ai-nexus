@@ -10554,7 +10554,6 @@ export interface components {
         };
         RetrievalCapabilitiesDto: {
             sql: null | components["schemas"]["SqlVectorCapabilitiesDto"];
-            testStore: boolean;
             embedding: components["schemas"]["RetrievalConnectionDto"];
             rerank: components["schemas"]["RetrievalConnectionDto"];
         };

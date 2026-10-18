@@ -30,145 +30,102 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
         var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);
         if (owner is Guid id) query = query.Where(x => x.OwnerId == id);
 
-        // 彙總盡量在 SQL 完成；SQLite 只用於隔離的測試主機，那裡才改為記憶體內計算。
-        var groups = query.GroupBy(x => new { x.Currency, x.Kind }).Select(g => new MoneyTotalDto(
+        IReadOnlyList<SpendUserDto> users = [];
+        var requests = await query.CountAsync(ct);
+        var pending = await query.CountAsync(x => x.State == "pending", ct);
+        var totals = await query.GroupBy(x => new { x.Currency, x.Kind }).Select(g => new MoneyTotalDto(
             g.Key.Currency,
             g.Key.Kind,
             g.Sum(x => x.Amount ?? 0),
             g.Count(x => x.Amount != null),
-            g.Count(x => x.Amount == null && x.State != "pending")));
-        IReadOnlyList<MoneyTotalDto> totals;
-        IReadOnlyList<SpendBucketDto> daily, models;
-        IReadOnlyList<SpendUserDto> users = [];
-        var requests = await query.CountAsync(ct);
-        var pending = await query.CountAsync(x => x.State == "pending", ct);
-        long input = 0, output = 0;
-        if (!db.Database.IsSqlServer())
-        {
-            var rows = await query.ToListAsync(ct);
-            totals = Totals(rows);
-            daily = rows
-                .GroupBy(x => new
+            g.Count(x => x.Amount == null && x.State != "pending"))).ToListAsync(ct);
+        var daily = (await query
+                .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(p.Offset).Date, x.Currency, x.Kind })
+                .Select(g => new
                 {
-                    Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(p.Offset)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    x.Currency,
-                    x.Kind,
+                    g.Key.Day,
+                    g.Key.Currency,
+                    g.Key.Kind,
+                    Amount = g.Sum(x => x.Amount ?? 0),
+                    Requests = g.Count(),
+                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
+                    Input = g.Sum(x => x.InputTokens ?? 0),
+                    Output = g.Sum(x => x.OutputTokens ?? 0),
                 })
-                .OrderBy(g => g.Key.Day)
-                .Select(g => Bucket(g.Key.Day, g))
-                .ToArray();
-            models = ModelBuckets(rows, administrator);
-            input = rows.Sum(x => x.InputTokens ?? 0);
-            output = rows.Sum(x => x.OutputTokens ?? 0);
-            if (administrator)
-            {
-                var owners = rows.Select(x => x.OwnerId).Distinct().ToArray();
-                var identities = await db.Users.AsNoTracking().Where(x => owners.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-                users = rows
-                    .GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
-                    .Select(g => new SpendUserDto(
-                        g.Key.OwnerId,
-                        identities[g.Key.OwnerId].DisplayName,
-                        identities[g.Key.OwnerId].Account,
-                        g.Key.Currency,
-                        g.Key.Kind,
-                        g.Sum(x => x.Amount ?? 0),
-                        g.Count(),
-                        g.Count(x => x.Amount == null && x.State != "pending")))
-                    .ToArray();
-            }
-        }
-        else
+                .OrderBy(x => x.Day)
+                .ToListAsync(ct))
+            .Select(x => new SpendBucketDto(
+                x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                x.Currency,
+                x.Kind,
+                x.Amount,
+                x.Requests,
+                x.Unknown,
+                x.Input,
+                x.Output))
+            .ToArray();
+        var models = (await query
+                .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
+                .Select(g => new
+                {
+                    g.Key.Provider,
+                    g.Key.ModelId,
+                    g.Key.Currency,
+                    g.Key.Kind,
+                    Amount = g.Sum(x => x.Amount ?? 0),
+                    Requests = g.Count(),
+                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
+                    Input = g.Sum(x => x.InputTokens ?? 0),
+                    Output = g.Sum(x => x.OutputTokens ?? 0),
+                })
+                .OrderByDescending(x => x.Requests)
+                .ToListAsync(ct))
+            .Select(x => new SpendBucketDto(
+                Label(x.Provider, x.ModelId, administrator),
+                x.Currency,
+                x.Kind,
+                x.Amount,
+                x.Requests,
+                x.Unknown,
+                x.Input,
+                x.Output))
+            .ToArray();
+        var input = await query.SumAsync(x => x.InputTokens ?? 0, ct);
+        var output = await query.SumAsync(x => x.OutputTokens ?? 0, ct);
+        if (administrator)
         {
-            totals = await groups.ToListAsync(ct);
-            daily = (await query
-                    .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(p.Offset).Date, x.Currency, x.Kind })
-                    .Select(g => new
+            users = await (from g in query.GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
+                    select new
                     {
-                        g.Key.Day,
+                        g.Key.OwnerId,
                         g.Key.Currency,
                         g.Key.Kind,
                         Amount = g.Sum(x => x.Amount ?? 0),
                         Requests = g.Count(),
                         Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                        Input = g.Sum(x => x.InputTokens ?? 0),
-                        Output = g.Sum(x => x.OutputTokens ?? 0),
                     })
-                    .OrderBy(x => x.Day)
-                    .ToListAsync(ct))
-                .Select(x => new SpendBucketDto(
-                    x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                .Join(db.Users, x => x.OwnerId, u => u.Id, (x, u) => new
+                {
+                    u.Id,
+                    u.DisplayName,
+                    u.Account,
                     x.Currency,
                     x.Kind,
                     x.Amount,
                     x.Requests,
                     x.Unknown,
-                    x.Input,
-                    x.Output))
-                .ToArray();
-            models = (await query
-                    .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
-                    .Select(g => new
-                    {
-                        g.Key.Provider,
-                        g.Key.ModelId,
-                        g.Key.Currency,
-                        g.Key.Kind,
-                        Amount = g.Sum(x => x.Amount ?? 0),
-                        Requests = g.Count(),
-                        Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                        Input = g.Sum(x => x.InputTokens ?? 0),
-                        Output = g.Sum(x => x.OutputTokens ?? 0),
-                    })
-                    .OrderByDescending(x => x.Requests)
-                    .ToListAsync(ct))
-                .Select(x => new SpendBucketDto(
-                    Label(x.Provider, x.ModelId, administrator),
+                })
+                .OrderByDescending(x => x.Requests)
+                .Select(x => new SpendUserDto(
+                    x.Id,
+                    x.DisplayName,
+                    x.Account,
                     x.Currency,
                     x.Kind,
                     x.Amount,
                     x.Requests,
-                    x.Unknown,
-                    x.Input,
-                    x.Output))
-                .ToArray();
-            input = await query.SumAsync(x => x.InputTokens ?? 0, ct);
-            output = await query.SumAsync(x => x.OutputTokens ?? 0, ct);
-            if (administrator)
-            {
-                users = await (from g in query.GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
-                        select new
-                        {
-                            g.Key.OwnerId,
-                            g.Key.Currency,
-                            g.Key.Kind,
-                            Amount = g.Sum(x => x.Amount ?? 0),
-                            Requests = g.Count(),
-                            Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                        })
-                    .Join(db.Users, x => x.OwnerId, u => u.Id, (x, u) => new
-                    {
-                        u.Id,
-                        u.DisplayName,
-                        u.Account,
-                        x.Currency,
-                        x.Kind,
-                        x.Amount,
-                        x.Requests,
-                        x.Unknown,
-                    })
-                    .OrderByDescending(x => x.Requests)
-                    .Select(x => new SpendUserDto(
-                        x.Id,
-                        x.DisplayName,
-                        x.Account,
-                        x.Currency,
-                        x.Kind,
-                        x.Amount,
-                        x.Requests,
-                        x.Unknown))
-                    .ToListAsync(ct);
-            }
+                    x.Unknown))
+                .ToListAsync(ct);
         }
 
         // 舊版執行紀錄沒有費用紀錄，只計入呼叫次數，費用保持未知。
@@ -188,70 +145,44 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
         var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
         var count = await calls.CountAsync(ct);
         var pending = await calls.CountAsync(x => x.State == "pending", ct);
-        IReadOnlyList<MoneyTotalDto> totals;
-        IReadOnlyList<SpendBucketDto> models;
-        if (!db.Database.IsSqlServer())
-        {
-            var rows = await calls.ToListAsync(ct);
-            totals = Totals(rows);
-            models = ModelBuckets(rows, false);
-        }
-        else
-        {
-            totals = await calls
-                .GroupBy(x => new { x.Currency, x.Kind })
-                .Select(g => new MoneyTotalDto(
+        var totals = await calls
+            .GroupBy(x => new { x.Currency, x.Kind })
+            .Select(g => new MoneyTotalDto(
+                g.Key.Currency,
+                g.Key.Kind,
+                g.Sum(x => x.Amount ?? 0),
+                g.Count(x => x.Amount != null),
+                g.Count(x => x.Amount == null && x.State != "pending")))
+            .ToListAsync(ct);
+        var models = (await calls
+                .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
+                .Select(g => new
+                {
+                    g.Key.Provider,
+                    g.Key.ModelId,
                     g.Key.Currency,
                     g.Key.Kind,
-                    g.Sum(x => x.Amount ?? 0),
-                    g.Count(x => x.Amount != null),
-                    g.Count(x => x.Amount == null && x.State != "pending")))
-                .ToListAsync(ct);
-            models = (await calls
-                    .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
-                    .Select(g => new
-                    {
-                        g.Key.Provider,
-                        g.Key.ModelId,
-                        g.Key.Currency,
-                        g.Key.Kind,
-                        Amount = g.Sum(x => x.Amount ?? 0),
-                        Requests = g.Count(),
-                        Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                        Input = g.Sum(x => x.InputTokens ?? 0),
-                        Output = g.Sum(x => x.OutputTokens ?? 0),
-                    })
-                    .ToListAsync(ct))
-                .Select(x => new SpendBucketDto(
-                    Label(x.Provider, x.ModelId, false),
-                    x.Currency,
-                    x.Kind,
-                    x.Amount,
-                    x.Requests,
-                    x.Unknown,
-                    x.Input,
-                    x.Output))
-                .ToArray();
-        }
+                    Amount = g.Sum(x => x.Amount ?? 0),
+                    Requests = g.Count(),
+                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
+                    Input = g.Sum(x => x.InputTokens ?? 0),
+                    Output = g.Sum(x => x.OutputTokens ?? 0),
+                })
+                .ToListAsync(ct))
+            .Select(x => new SpendBucketDto(
+                Label(x.Provider, x.ModelId, false),
+                x.Currency,
+                x.Kind,
+                x.Amount,
+                x.Requests,
+                x.Unknown,
+                x.Input,
+                x.Output))
+            .ToArray();
         return new ConversationSpendDto(count + legacy, pending, legacy, totals, MergePresentedModels(models));
     }
 
     private string Label(string provider, string model, bool administrator) => presentation.DisplayName(model, administrator, provider)!;
-
-    private static SpendBucketDto Bucket(string label, IEnumerable<ModelCharge> calls) => new(
-        label,
-        calls.First().Currency,
-        calls.First().Kind,
-        calls.Sum(x => x.Amount ?? 0),
-        calls.Count(),
-        calls.Count(x => x.Amount == null && x.State != "pending"),
-        calls.Sum(x => x.InputTokens ?? 0),
-        calls.Sum(x => x.OutputTokens ?? 0));
-
-    private IReadOnlyList<SpendBucketDto> ModelBuckets(IEnumerable<ModelCharge> calls, bool administrator) => calls
-        .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
-        .Select(g => Bucket(Label(g.Key.Provider, g.Key.ModelId, administrator), g))
-        .ToArray();
 
     // 隱藏的模型名稱可能對應多個真實模型，它們會被合併到同一個公開標籤。
     private static IReadOnlyList<SpendBucketDto> MergePresentedModels(IEnumerable<SpendBucketDto> rows) => rows
@@ -266,16 +197,6 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
             g.Sum(x => x.InputTokens),
             g.Sum(x => x.OutputTokens)))
         .OrderByDescending(x => x.Requests)
-        .ToArray();
-
-    private static IReadOnlyList<MoneyTotalDto> Totals(IEnumerable<ModelCharge> calls) => calls
-        .GroupBy(x => new { x.Currency, x.Kind })
-        .Select(g => new MoneyTotalDto(
-            g.Key.Currency,
-            g.Key.Kind,
-            g.Sum(x => x.Amount ?? 0),
-            g.Count(x => x.Amount != null),
-            g.Count(x => x.Amount == null && x.State != "pending")))
         .ToArray();
 
     public static byte[] Csv(SpendReportDto report)

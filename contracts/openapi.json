@@ -39796,7 +39796,6 @@
       "RetrievalCapabilitiesDto": {
         "required": [
           "sql",
-          "testStore",
           "embedding",
           "rerank"
         ],
@@ -39811,9 +39810,6 @@
                 "$ref": "#/components/schemas/SqlVectorCapabilitiesDto"
               }
             ]
-          },
-          "testStore": {
-            "type": "boolean"
           },
           "embedding": {
             "$ref": "#/components/schemas/RetrievalConnectionDto"

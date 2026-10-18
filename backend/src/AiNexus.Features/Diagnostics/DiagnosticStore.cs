@@ -24,15 +24,6 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         using var suppress = DiagnosticSuppression.Enter();
         using var ambient = new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (!db.Database.IsSqlServer())
-        {
-            var ids = events.Select(x => x.LogId).Distinct().ToArray();
-            var existing = await db.Set<DiagnosticEvent>().Where(x => ids.Contains(x.LogId)).Select(x => x.LogId).ToArrayAsync(ct);
-            var count = await db.Set<DiagnosticEvent>().LongCountAsync(ct); Interlocked.Exchange(ref health.EstimatedSqlRows, count);
-            if (ids.Length > existing.Length && count + ids.Length - existing.Length > options.Value.MaxSqlRows) throw new DiagnosticCapacityException();
-            db.AddRange(events.DistinctBy(x => x.LogId).Where(x => !existing.Contains(x.LogId)));
-            await db.SaveChangesAsync(ct); return;
-        }
         var settings = options.Value;
         var connectionString = new SqlConnectionStringBuilder(db.Database.GetConnectionString()) { Enlist = false, ConnectTimeout = settings.SqlTimeoutSeconds }.ConnectionString;
         await using var connection = new SqlConnection(connectionString); await connection.OpenAsync(ct);

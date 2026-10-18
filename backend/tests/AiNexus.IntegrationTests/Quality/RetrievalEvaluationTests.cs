@@ -29,10 +29,11 @@ public sealed class RetrievalEvaluationTests
         var run = await Create(client, Request(seed.Collection, seed.Document.Id)); await Drain(factory);
         var report = (await client.GetFromJsonAsync<RetrievalReportDto>($"/api/v1/quality/retrieval-evals/{run.Id}"))!;
         Assert.Equal("completed", report.Run.Job.Status); Assert.Equal(8, report.Results.Count); Assert.Equal(4, report.Summary.Count);
-        Assert.Equal(1, report.Summary.Single(x => x.Mode == "keyword").RefusalRate);
-        Assert.True(report.Summary.Single(x => x.Mode == "hybrid").Comparable);
+        if (TestDatabase.FullTextInstalled) Assert.Equal(1, report.Summary.Single(x => x.Mode == "keyword").RefusalRate);
+        // 降級的模式（沒有全文時 hybrid 實際跑 vector）不能和其他模式比較。
+        Assert.Equal(TestDatabase.FullTextInstalled, report.Summary.Single(x => x.Mode == "hybrid").Comparable);
         Assert.False(report.Summary.Single(x => x.Mode == "hybrid+rerank").Comparable);
-        Assert.All(report.Results.Where(x => x.Mode == "hybrid+rerank"), x => Assert.Equal("hybrid(rerank-skipped)", x.ActualMode));
+        Assert.All(report.Results.Where(x => x.Mode == "hybrid+rerank"), x => Assert.Equal(KnowledgeApi.HybridMode + "(rerank-skipped)", x.ActualMode));
         var json = await client.GetStringAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report");
         Assert.DoesNotContain("採購如何核准", json); Assert.DoesNotContain("主管簽署", json); Assert.DoesNotContain(seed.Document.Id.ToString(), json);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

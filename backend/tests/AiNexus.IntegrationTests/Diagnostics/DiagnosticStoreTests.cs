@@ -28,7 +28,7 @@ public sealed class DiagnosticStoreTests
         var actor = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var legacy = new AuditEvent { OwnerId = actor, Action = "fixture.legacy", Result = "saved" }; db.Add(legacy); await db.SaveChangesAsync();
         var raw = JsonSerializer.Serialize(new { password = Secret, before = new { token = Secret, enabled = true }, reason = Secret });
-        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE AuditEvents SET DetailsJson={raw} WHERE Id={legacy.Id}");
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [audit].[AuditEvents] SET [DetailsJson] = {raw} WHERE [Id] = {legacy.Id}");
         var response = await client.GetStringAsync("/api/v1/admin/audit?action=fixture.legacy"); Assert.DoesNotContain(Secret, response);
         await factory.Services.GetRequiredService<IDiagnosticStore>().CleanupAsync(CancellationToken.None);
         var system = await client.GetStringAsync("/api/v1/admin/audit?action=system.diagnostics.configuration"); Assert.Contains("system", system); Assert.Contains("fingerprint", system);
@@ -51,10 +51,10 @@ public sealed class DiagnosticStoreTests
         Assert.False(await db.AuditEvents.AnyAsync(x => x.Id == expired.Id)); await store.WriteAsync([new DiagnosticEvent()], CancellationToken.None);
     }
 
-    [Fact, Trait("Category", "SqlServer")]
+    [Fact]
     public async Task SqlServerBulkImportIsIdempotentIndependentAndRetentionIsBounded()
     {
-        await SqlServerDatabase.WithDatabase(async db => {
+        await TestDatabase.WithContextAsync(async db => {
             var services = new ServiceCollection();
             services.AddDbContext<AppDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
             using var provider = services.BuildServiceProvider(); using var health = new DiagnosticHealth();

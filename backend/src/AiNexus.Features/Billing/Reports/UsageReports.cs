@@ -122,71 +122,40 @@ public sealed class UsageReports(AppDbContext db, ModelPresentation presentation
 
     public async Task<IReadOnlyList<UsageDayDto>> DailyAsync(Guid owner, CancellationToken ct)
     {
-        var query = Entries().Where(x => x.OwnerId == owner);
-        // SQL 負責依日期彙總；SQLite 的時區轉換只用於測試，無法在資料庫端分組，所以改在記憶體中分組。
-        if (db.Database.IsSqlServer())
-        {
-            return await query
-                .GroupBy(x => x.CreatedAt.Date)
-                .OrderBy(g => g.Key)
-                .Select(g => new UsageDayDto(
-                    DateOnly.FromDateTime(g.Key),
-                    g.Count(),
-                    g.Sum(x => x.InputTokens ?? 0),
-                    g.Sum(x => x.OutputTokens ?? 0)))
-                .ToListAsync(ct);
-        }
-        return (await query.ToListAsync(ct))
-            .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime))
+        return await Entries().Where(x => x.OwnerId == owner)
+            .GroupBy(x => x.CreatedAt.Date)
             .OrderBy(g => g.Key)
-            .Select(g => new UsageDayDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0)))
-            .ToArray();
+            .Select(g => new UsageDayDto(
+                DateOnly.FromDateTime(g.Key),
+                g.Count(),
+                g.Sum(x => x.InputTokens ?? 0),
+                g.Sum(x => x.OutputTokens ?? 0)))
+            .ToListAsync(ct);
     }
 
     public async Task<TokenUsageDto> TokensAsync(Guid? owner, SpendPeriod period, bool administrator, CancellationToken ct)
     {
         var query = Entries(period.From, period.Until).Where(x => owner == null || x.OwnerId == owner);
-        IReadOnlyList<TokenDayDto> rows;
-        if (db.Database.IsSqlServer())
-        {
-            rows = (await query
-                    .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(period.Offset).Date, x.ModelId })
-                    .Select(g => new
-                    {
-                        g.Key.Day,
-                        g.Key.ModelId,
-                        Requests = g.Count(),
-                        Known = g.Count(x => x.InputTokens != null && x.OutputTokens != null),
-                        Input = g.Sum(x => x.InputTokens ?? 0),
-                        Output = g.Sum(x => x.OutputTokens ?? 0),
-                    })
-                    .ToListAsync(ct))
-                .Select(x => new TokenDayDto(
-                    x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    x.ModelId,
-                    x.Requests,
-                    x.Known,
-                    x.Input,
-                    x.Output))
-                .ToArray();
-        }
-        else
-        {
-            rows = (await query.ToListAsync(ct))
-                .GroupBy(x => new
+        var rows = (await query
+                .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(period.Offset).Date, x.ModelId })
+                .Select(g => new
                 {
-                    Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(period.Offset)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    x.ModelId,
-                })
-                .Select(g => new TokenDayDto(
                     g.Key.Day,
                     g.Key.ModelId,
-                    g.Count(),
-                    g.Count(x => x.InputTokens != null && x.OutputTokens != null),
-                    g.Sum(x => x.InputTokens ?? 0),
-                    g.Sum(x => x.OutputTokens ?? 0)))
-                .ToArray();
-        }
+                    Requests = g.Count(),
+                    Known = g.Count(x => x.InputTokens != null && x.OutputTokens != null),
+                    Input = g.Sum(x => x.InputTokens ?? 0),
+                    Output = g.Sum(x => x.OutputTokens ?? 0),
+                })
+                .ToListAsync(ct))
+            .Select(x => new TokenDayDto(
+                x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                x.ModelId,
+                x.Requests,
+                x.Known,
+                x.Input,
+                x.Output))
+            .ToArray();
 
         // 先做呈現再合併別名，避免隱藏的模型識別碼進入個人報表。
         var presented = rows
