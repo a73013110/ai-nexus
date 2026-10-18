@@ -49,4 +49,12 @@ public sealed class ConversationsModule : IFeatureModule
         UpdateConversationSettings.Map(routes);
         SelectBranch.Map(routes);
     }
+
+    /// <summary>管理端稽核式讀取任一使用者的對話。由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。</summary>
+    public static void MapAdministration(RouteGroupBuilder api)
+    {
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
+        ListAdminUserConversations.Map(admin);
+        ReadAdminConversation.Map(admin);
+    }
 }

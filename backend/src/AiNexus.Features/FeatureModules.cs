@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Audit;
@@ -19,6 +18,7 @@ using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Notifications;
+using AiNexus.Features.Operations;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
 using AiNexus.Features.Repositories;
@@ -51,7 +51,7 @@ public static class FeatureModules
         Add<WebSearchModule>(builder);
         Add<RepositoriesModule>(builder);
         Add<DashboardModule>(builder);
-        Add<AdministrationModule>(builder);
+        Add<OperationsModule>(builder);
         Add<QualityModule>(builder);
         Add<IntegrationsModule>(builder);
         Add<CollaborationModule>(builder);
@@ -104,7 +104,15 @@ public static class FeatureModules
         Map<NotificationsModule>(api);
         Map<QualityModule>(api);
         Map<IntegrationsModule>(api);
-        Map<AdministrationModule>(api);
+        // 管理端點分屬多個模組，但都沿用 "Administration" tag。OpenAPI 文件的 tags 依首次出現的順序排列（已發布的合約），
+        // 所以這些端點集中在原本的位置掛載，不放進各模組的 MapEndpoints；放進去會讓這個 tag 提前出現。
+        KnowledgeModule.MapAdministration(api);
+        Map<OperationsModule>(api);
+        Map<IdentityModule>(api);
+        ConversationsModule.MapAdministration(api);
+        AttachmentsModule.MapAdministration(api);
+        InferenceModule.MapAdministration(api);
+        Map<AccessControlModule>(api);
         Map<BillingModule>(api);
         Map<RepositoriesModule>(api);
         Map<DashboardModule>(api);

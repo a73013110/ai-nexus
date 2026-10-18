@@ -3,7 +3,6 @@ using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Audit;
 using AiNexus.Features.Identity.Sessions;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Projects.Management;
 using AiNexus.Features.Billing.Prices;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
+using AiNexus.Features.AccessControl.Management;
 
 namespace AiNexus.IntegrationTests.Identity;
 

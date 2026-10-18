@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts.Export;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Attachments.Storage;
@@ -37,7 +36,7 @@ public static class DeploymentVerifier
         {
             var inference = scope.ServiceProvider.GetRequiredService<IOptions<InferenceOptions>>().Value;
             var ad = scope.ServiceProvider.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value;
-            _ = scope.ServiceProvider.GetRequiredService<IOptions<AdministrationOptions>>().Value;
+            _ = scope.ServiceProvider.GetRequiredService<IOptions<AdminBootstrapOptions>>().Value;
             var knowledge = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
             var attachments = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value;
             var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<AiNexus.Platform.Diagnostics.DiagnosticOptions>>().Value;

@@ -63,6 +63,10 @@ public sealed class AttachmentsModule : IFeatureModule
         RemoveAttachment.MapDraft(routes);
     }
 
+    /// <summary>管理端設定使用者的附件容量上限。由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。</summary>
+    public static void MapAdministration(RouteGroupBuilder api)
+        => SetUserAttachmentStorage.Map(api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration"));
+
     /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>
     public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
 }

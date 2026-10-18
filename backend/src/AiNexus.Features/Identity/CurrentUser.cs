@@ -20,12 +20,13 @@ namespace AiNexus.Features.Identity;
 /// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="User"/>（必要時建立、綁定或更新），結果在同一請求內快取。
 /// </summary>
 public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
-    DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
+    DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
     private User? resolved;
     public Guid? ResolvedId => resolved?.Id;
     Guid ICurrentUser.Id => ((ICurrentUser)this).User.Id;
+    Guid IRequestActor.Id => ((ICurrentUser)this).User.Id;
     User ICurrentUser.User => resolved ?? throw new InvalidOperationException("ICurrentUser is resolved by the /api/v1 endpoint filter; declare it as a handler parameter.");
 
     public async Task<Result<User>> GetAsync(CancellationToken ct = default)

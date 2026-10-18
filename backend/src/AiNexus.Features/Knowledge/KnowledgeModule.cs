@@ -103,4 +103,20 @@ public sealed class KnowledgeModule : IFeatureModule
 
         ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
     }
+
+    /// <summary>
+    /// 管理端的 embedding profile 與檢索測試，屬於「平台營運」（<see cref="Policies.Operations"/>）。
+    /// 由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。
+    /// </summary>
+    public static void MapAdministration(RouteGroupBuilder api)
+    {
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Operations).WithTags("Administration").MapGroup("/knowledge");
+        ManageEmbeddingProfiles.MapList(admin);
+        ManageEmbeddingProfiles.MapRebuild(admin);
+        ManageEmbeddingProfiles.MapActivate(admin);
+        ManageEmbeddingProfiles.MapClear(admin);
+        ReadRetrievalCapabilities.MapGet(admin);
+        ReadRetrievalCapabilities.MapProbe(admin);
+        TestAdminRetrieval.Map(admin);
+    }
 }

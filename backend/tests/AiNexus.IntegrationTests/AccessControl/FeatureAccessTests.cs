@@ -4,13 +4,14 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Roles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Chat.Context;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.ProjectApi;
+using AiNexus.Features.AccessControl.Management;
+using AiNexus.Features.Identity.Management;
+using AiNexus.Features.Operations;
 
 namespace AiNexus.IntegrationTests.AccessControl;
 

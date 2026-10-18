@@ -13,7 +13,6 @@ using AiNexus.Features.Knowledge.Retrieval;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Administration.Retrieval;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Knowledge;

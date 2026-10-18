@@ -3,12 +3,13 @@ using AiNexus.Data.App.Audit;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Navigation;
-using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.AccessControl.Management;
+using AiNexus.Features.AccessControl.Navigation;
+using AiNexus.Features.Identity.Management;
+using AiNexus.Features.Operations;
 
 namespace AiNexus.IntegrationTests.Audit;
 

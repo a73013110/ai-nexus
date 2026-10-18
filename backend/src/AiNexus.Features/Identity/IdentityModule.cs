@@ -7,13 +7,14 @@ using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Management;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Identity;
 
-/// <summary>身分模組：Cookie 與 Negotiate 驗證、登入速率限制，以及帳密登入服務的註冊。</summary>
+/// <summary>身分模組：Cookie 與 Negotiate 驗證、登入速率限制、帳密登入服務的註冊，以及管理端的帳號管理與首次管理員。</summary>
 public sealed class IdentityModule : IFeatureModule
 {
     public const string LoginRateLimit = "ad-login";
@@ -22,6 +23,7 @@ public sealed class IdentityModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
+        services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
         services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
@@ -49,6 +51,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
+        services.AddScoped<IRequestActor>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, ErrorAuthorizationResultHandler>();
         services.AddScoped<IActiveUsers, ActiveUsers>();
@@ -56,6 +59,17 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSingleton<Argon2Passwords>();
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<AuthenticationAudit>();
+        services.AddScoped<ISignInGrant, AdminBootstrap>();
+    }
+
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
+        ManageUserAccounts.MapCreate(admin);
+        ManageUserAccounts.MapUpdate(admin);
+        ManageUserAccounts.MapDelete(admin);
+        SetUserRoles.Map(admin);
+        PreviewUserAccess.Map(admin);
     }
 
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapAuthenticationEndpoints();

@@ -15,6 +15,8 @@ internal static class ConversationsErrors
     public static readonly Error RegenerateWithPrompt = Error.Invalid("invalid_request");
     public static readonly Error PromptRequired = Error.Invalid("prompt_required");
     public static readonly Error InvalidParent = Error.Invalid("invalid_parent");
+    public static readonly Error InvalidSearch = Error.Invalid("invalid_search");
+    public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
 
     public const string InvalidTitleCode = "invalid_title";
     public const string InstructionTooLongCode = "instruction_too_long";
