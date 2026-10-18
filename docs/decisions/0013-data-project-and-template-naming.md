@@ -1,6 +1,6 @@
 # 0013 資料存取專案與範本命名
 
-- **狀態**：提議（2026-10-18）
+- **狀態**：採用（2026-10-18）
 - **決定**：
   - 新增 `AiNexus.Data` 專案，依「資料庫 → 模組（schema）→ 資料表」放實體、組態與 DbContext；use case 仍依模組放在 `AiNexus.Features`，只引用、不定義資料表。
   - 型別名稱不帶產品名；產品名只以 `AiNexus` 出現在專案名與 namespace，由 `dotnet new` 範本在 fork 時替換。

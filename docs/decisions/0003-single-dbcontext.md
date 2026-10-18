@@ -1,6 +1,7 @@
 # 0003 單一 DbContext
 
 - **狀態**：採用（2026-10）
+- **修訂**：[ADR 0011](0011-data-access-ef-dapper-procedures.md) 改為每個讀寫資料庫一個 DbContext；主資料庫內仍只有一個。
 - **決定**：所有模組共用一個 `NexusDbContext` 與一個 SQL Server 資料庫；每個模組一個 schema（名稱＝模組資料夾小寫）。不拆多個 DbContext 或多個資料庫。
 
 ## 原因

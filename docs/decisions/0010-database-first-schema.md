@@ -1,6 +1,6 @@
 # 0010 資料庫優先：結構以開發庫為準
 
-- **狀態**：提議（2026-10-18）
+- **狀態**：採用（2026-10-18）
 - **決定**：
   - 資料庫結構的唯一修改入口是**開發庫**：DBA 照舊在 SSMS 物件總管直接改表、procedure、view。
   - repo 的 `database/<資料庫>/` 只放 `scripts/Export-Database.ps1` 的匯出結果（SqlPackage Extract，每物件一檔），沒有人手改；一個 SDK-style SQL 專案 glob 這些檔案，`dotnet build` 產出 `.dacpac`。沒有人需要打開這個專案。
