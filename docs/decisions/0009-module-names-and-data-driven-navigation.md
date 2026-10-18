@@ -15,7 +15,7 @@
 
 ## 擴充方式
 
-新系統（例：打卡、請假）開一個後端模組（例：`Workforce`，底下分 `Attendance/`、`Leave/`），前端對應 `features/workforce/`；模組的 `FeatureSeed` 宣告自己的選單群組（`workforce`「員工服務」）、圖示與功能。
+新系統（例：打卡、請假）開一個後端模組（例：`Workforce`，底下分 `Attendance/`、`Leave/`），前端對應 `features/workforce/`；模組在 `database/App/Seed/accesscontrol.sql` 宣告自己的選單群組（`workforce`「員工服務」）、圖示與功能。
 
 ## 何時重新評估
 

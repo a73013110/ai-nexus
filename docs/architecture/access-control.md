@@ -8,6 +8,8 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit、design 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
+程式依賴的 ID 各只定義一次：角色、群組、選單分群與預設關聯在 `BuiltInAccess`，功能在 `FeatureIds`（模組的常數引用它）。`BuiltInAccessSeedTests` 在範本資料庫上雙向比對 Seed：程式要的列都在、Seed 的功能程式都認得。OpenAPI 以 `FeatureIds.All` 輸出 `FeatureId` 列舉，前端 `session.has()`、`FEATURE_NAMES` 以它為型別，打錯字無法編譯。
+
 模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策與配額](../features/model-policy.md)。
 
 ```text
@@ -38,10 +40,10 @@ AD login → Users（SID）→ UserRoles → Roles
 
 ## 擴充功能
 
-1. 新增 `Features/Reports` 與 `ReportsModule.cs`；在 `database/App/Seed/accesscontrol.sql` 加功能列與預設授權：穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`work` 等，或 NULL 放最上層）、圖示名稱，以及授權給 `workspace` 或 `administrators`。需要新分群的模組在同一份腳本加自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
-2. 在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy("reports")`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
+1. 新增 `Features/Reports` 與 `ReportsModule.cs`，在 `FeatureIds` 加 `Reports = "reports"`；在 `database/App/Seed/accesscontrol.sql` 加功能列與預設授權：穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder、預設選單分群（`work` 等，或 NULL 放最上層）、圖示名稱，以及授權給 `workspace` 或 `administrators`。需要新分群的模組在同一份腳本加自己的分群；例如之後的 Workforce 模組（打卡、請假）會種入 `workforce`「員工服務」，在那之前不預先建立空分群（[ADR 0009](../decisions/0009-module-names-and-data-driven-navigation.md)）。
+2. 在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy(FeatureIds.Reports)`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口，沒有授權時頁面顯示 `FeatureAccessNotice`（錯誤代碼見 [錯誤回應](error-contract.md#錯誤回應)）；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
-4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。重產 OpenAPI 並更新文件。
+4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。重產 OpenAPI（前端 `FeatureId` 隨之更新，`FEATURE_NAMES` 補預設名稱）並更新文件。
 
 角色、群組、使用者分派與功能啟用由 [管理工作區](../features/administration.md) 維護。`administrator → administrators → admin` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。
 

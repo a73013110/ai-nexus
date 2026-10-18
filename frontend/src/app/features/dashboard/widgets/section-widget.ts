@@ -7,6 +7,7 @@ import { Sparkline } from '@shared/ui/sparkline';
 import { DashboardStore } from '../dashboard-store';
 import { metricFormatter, metricText, relativeTime } from '@shared/browser/format';
 import { fillDays, tone, TONE_COLORS, workspaceLink } from '../dashboard-format';
+import { isFeatureId } from '@core/auth/feature-names';
 
 /**
  * 後端送來的任何總覽區段：數字、第一個每日數列、分布，以及檢視者最近的項目。
@@ -127,6 +128,8 @@ export class SectionWidget {
   );
   readonly route = computed(() => {
     const section = this.section();
-    return section && this.store.session.has(section.feature) ? workspaceLink(section.route) : null;
+    return section && isFeatureId(section.feature) && this.store.session.has(section.feature)
+      ? workspaceLink(section.route)
+      : null;
   });
 }

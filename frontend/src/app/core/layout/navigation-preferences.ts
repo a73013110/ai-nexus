@@ -1,10 +1,11 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { navigationTree } from './navigation-tree';
+import type { FeatureId } from '../auth/feature-names';
 
 export const PIN_LIMIT = 5;
 export type NavigationDisplay = 'icons' | 'list';
-const DEFAULT_PINS = ['chat', 'files', 'knowledge'];
+const DEFAULT_PINS: readonly FeatureId[] = ['chat', 'files', 'knowledge'];
 
 /**
  * 側邊欄如何列出此帳號的功能：哪幾個釘在最上方，以及功能要顯示為圖示還是每行一個。
