@@ -19,15 +19,15 @@ const relativeAreaImports = {
   regex: '^\\.{1,2}/(\\.\\./)*(core|shared|features)/',
   message: aliasMessage,
 };
-// A file `depth` folders below its feature root leaves the feature with one more `../` than that.
+// 模組根目錄下 `depth` 層的檔案，多一個 `../` 就離開模組；跨模組（含跨區）一律改用 @features 別名。
 const crossFeatureImports = (depth) => ({
-  regex: `^(\\.\\./){${depth + 1}}[^.]`,
+  regex: `^(\\.\\./){${depth + 1},}[^.]`,
   message: aliasMessage,
 });
-// Feature files at the root, in a capability folder, or one level below that.
+// features/<區>/<模組>/ 下：模組根目錄、能力子資料夾，或再下一層。
 const featureDepths = [0, 1, 2].map((depth) => ({
   depth,
-  files: [`src/app/features/*/${'*/'.repeat(depth)}*.ts`],
+  files: [`src/app/features/*/*/${'*/'.repeat(depth)}*.ts`],
 }));
 
 module.exports = tseslint.config(

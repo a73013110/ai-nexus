@@ -176,7 +176,7 @@
     translate: 110% 0;
   }
 }
-// Sign-in (features/identity). Shake twice-named so a second rejection restarts it.
+// 登入頁（features/admin/identity）。抖動動畫定義兩份，第二次被拒時切換名稱才會重播。
 @keyframes login-shake-a {
   15%,
   55% {
