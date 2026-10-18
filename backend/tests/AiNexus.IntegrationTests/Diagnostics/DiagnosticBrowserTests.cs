@@ -45,7 +45,7 @@ public sealed partial class DiagnosticBrowserTests
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "chat-safe-error.png"), FullPage = true });
         var row = await DiagnosticIssues.WaitForIssue(factory, issue);
         await page.GotoAsync("/admin/logs");
-        await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(issue);
+        await page.GetByRole(AriaRole.Searchbox, new() { Name = "搜尋", Exact = true }).FillAsync(issue);
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.Locator(".log-table")).ToContainTextAsync(issue);
         await page.Locator(".log-table [data-row-action]").First.ClickAsync();
@@ -66,12 +66,12 @@ public sealed partial class DiagnosticBrowserTests
         await page.GetByRole(AriaRole.Button, new() { Name = "關閉診斷詳情", Exact = true }).ClickAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         var noIssue = Issues.NewCode();
-        await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(noIssue);
+        await page.GetByRole(AriaRole.Searchbox, new() { Name = "搜尋", Exact = true }).FillAsync(noIssue);
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "此範圍沒有日誌" })).ToBeVisibleAsync();
         var injection = new DiagnosticEvent { At = factory.Services.GetRequiredService<TimeProvider>().GetUtcNow(), IssueCode = Issues.NewCode(), Level = Microsoft.Extensions.Logging.LogLevel.Warning, MessageTemplate = "<img src=x onerror=\"globalThis.__logInjected=true\">", Category = "=HYPERLINK(\"evil\")", EventName = "fixture.injection" };
         db.Add(injection); await db.SaveChangesAsync(); // 刻意繞過產生端的遮罩，以測試 UI 與 CSV 的邊界。
-        await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(injection.IssueCode!);
+        await page.GetByRole(AriaRole.Searchbox, new() { Name = "搜尋", Exact = true }).FillAsync(injection.IssueCode!);
         await page.RouteAsync("**/api/v1/admin/logs?*", async route => { await Task.Delay(300); await route.ContinueAsync(); });
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status, new() { Name = "", Exact = true }).Filter(new() { HasText = "正在載入日誌" })).ToBeVisibleAsync();

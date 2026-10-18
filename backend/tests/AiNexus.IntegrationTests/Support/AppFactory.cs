@@ -131,6 +131,16 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) { database.Dispose(); if (Directory.Exists(files)) Directory.Delete(files, recursive: true); }
+        if (disposing) { database.Dispose(); DeleteFiles(); }
+    }
+
+    // UseKestrel 時另一個 host 的日誌 flush 可能在 Dispose 後才放開 .jsonl；Windows 上刪除會短暫失敗，重試到 2 秒仍失敗才拋出。
+    private void DeleteFiles()
+    {
+        for (var attempt = 1; Directory.Exists(files); attempt++)
+        {
+            try { Directory.Delete(files, recursive: true); }
+            catch (IOException) when (attempt < 20) { Thread.Sleep(100); }
+        }
     }
 }
