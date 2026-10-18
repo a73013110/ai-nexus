@@ -1,10 +1,10 @@
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Projects;
-using AiNexus.Features.Projects.Management;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Work.Knowledge.Documents;
+using AiNexus.Features.Work.Projects;
+using AiNexus.Features.Work.Projects.Management;
 using Microsoft.AspNetCore.Http;
 
 namespace AiNexus.IntegrationTests.Support;

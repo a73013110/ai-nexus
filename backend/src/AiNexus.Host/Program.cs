@@ -2,14 +2,14 @@ using AiNexus.Data.App;
 using AiNexus.Host;
 using AiNexus.Host.Commands;
 using AiNexus.Features;
-using AiNexus.Features.Monitoring;
+using AiNexus.Features.Admin.Monitoring;
 using AiNexus.Platform;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Health;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
-using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Admin.Identity.Sessions;
 
 var command = HostCommand.Parse(args);
 if (command.Help || command.Error is not null)

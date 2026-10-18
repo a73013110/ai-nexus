@@ -2,11 +2,11 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Sharing;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Artifacts.Management;
-using AiNexus.Features.Sharing;
-using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Artifacts.Management;
+using AiNexus.Features.Work.Sharing;
+using AiNexus.Features.Work.Sharing.Management;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

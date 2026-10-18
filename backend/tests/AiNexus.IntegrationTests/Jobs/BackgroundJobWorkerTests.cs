@@ -1,9 +1,9 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Notifications;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

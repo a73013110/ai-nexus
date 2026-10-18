@@ -2,7 +2,7 @@ using AiNexus.Data.App;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Platform.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Chat;

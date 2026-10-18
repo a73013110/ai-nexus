@@ -1,6 +1,6 @@
 using System.Text;
-using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.Repositories.Reviews;
+using AiNexus.Features.Platform.Inference.ModelTasks;
+using AiNexus.Features.Work.Repositories.Reviews;
 
 namespace AiNexus.UnitTests.Repositories;
 

@@ -1,6 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Features.Chat.Runs;
+using AiNexus.Features.Work.Chat.Runs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ChatApi;

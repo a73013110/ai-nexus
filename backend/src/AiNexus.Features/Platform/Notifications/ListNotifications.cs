@@ -1,0 +1,43 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Notifications;
+using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
+
+namespace AiNexus.Features.Platform.Notifications;
+
+public sealed record NotificationTargetDto(string Kind, Guid Id);
+
+public sealed record NotificationDto(Guid Id, int Version, string Type, string Severity, string Title, string Body,
+    NotificationTargetDto Target, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt, string? IssueCode = null);
+
+public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
+
+internal sealed class ListNotifications(AppDbContext db)
+{
+    private const int PageSize = 50;
+
+    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+        .MapGet("", (bool? unread, Guid? before, ICurrentUser user, ListNotifications handler, CancellationToken ct) => handler.HandleAsync(user.Id, unread ?? false, before, ct).ToHttpResultAsync())
+        .WithName("ListNotifications");
+
+    public async Task<Result<NotificationPageDto>> HandleAsync(Guid owner, bool unread, Guid? before, CancellationToken ct)
+    {
+        var inbox = db.Set<Notification>().AsNoTracking().Inbox(owner);
+        var count = await inbox.CountAsync(x => x.ReadAt == null, ct);
+        var query = inbox.Where(x => !unread || x.ReadAt == null);
+        if (before is { } cursor)
+        {
+            var previous = await inbox.SingleOrDefaultAsync(x => x.Id == cursor, ct);
+            if (previous is null) return NotificationsErrors.CursorInvalid;
+            query = query.Where(x => x.CreatedAt < previous.CreatedAt || (x.CreatedAt == previous.CreatedAt && x.Id.CompareTo(cursor) < 0));
+        }
+        // 失敗通知不顯示儲存的原始文字，只用固定訊息與問題代碼，避免把原始錯誤直接給使用者看。
+        var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Take(PageSize + 1)
+            .Select(x => new NotificationDto(x.Id, x.Version, x.Type, x.Severity, x.Severity == "error" ? "操作未完成" : x.Title,
+                x.Severity == "error" ? Issues.Message(x.IssueCode) : x.Body, new(x.TargetKind, x.TargetId), x.CreatedAt, x.ReadAt, x.IssueCode))
+            .ToListAsync(ct);
+        return new NotificationPageDto(rows.Take(PageSize).ToArray(), count, rows.Count > PageSize);
+    }
+}

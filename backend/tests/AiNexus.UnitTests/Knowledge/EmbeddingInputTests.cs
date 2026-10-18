@@ -1,5 +1,5 @@
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Knowledge.Embeddings;
 
 namespace AiNexus.UnitTests.Knowledge;
 

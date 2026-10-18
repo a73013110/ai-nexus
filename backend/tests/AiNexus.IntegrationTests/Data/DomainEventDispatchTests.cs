@@ -2,7 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
+using AiNexus.Features.Platform.Account;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

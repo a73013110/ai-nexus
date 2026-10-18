@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Artifacts.Management;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Projects;
-using AiNexus.Features.Projects.Contents;
-using AiNexus.Features.Projects.Management;
-using AiNexus.Features.Projects.Templates;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Artifacts.Management;
+using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Projects;
+using AiNexus.Features.Work.Projects.Contents;
+using AiNexus.Features.Work.Projects.Management;
+using AiNexus.Features.Work.Projects.Templates;
 
 namespace AiNexus.IntegrationTests.Projects;
 

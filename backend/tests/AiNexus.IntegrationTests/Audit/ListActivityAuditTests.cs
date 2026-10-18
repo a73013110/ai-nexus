@@ -2,14 +2,14 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Audit;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Audit;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.AccessControl.Management;
-using AiNexus.Features.AccessControl.Navigation;
-using AiNexus.Features.Identity.Management;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Admin.AccessControl.Management;
+using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Audit;
 

@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Diagnostics;
+using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using static AiNexus.IntegrationTests.Support.DiagnosticIssues;

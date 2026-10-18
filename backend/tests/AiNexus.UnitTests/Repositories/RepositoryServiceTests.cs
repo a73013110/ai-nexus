@@ -1,4 +1,4 @@
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Work.Repositories;
 
 namespace AiNexus.UnitTests.Repositories;
 

@@ -1,5 +1,5 @@
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Features.AccessControl;
+using AiNexus.Features.Admin.AccessControl;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.IntegrationTests.AccessControl;
@@ -11,8 +11,8 @@ namespace AiNexus.IntegrationTests.AccessControl;
 public sealed class BuiltInAccessSeedTests
 {
     private const string Seed = "database/App/Seed/accesscontrol.sql";
-    private const string Constants = "backend/src/AiNexus.Features/AccessControl/BuiltInAccess.cs";
-    private const string Features = "backend/src/AiNexus.Features/AccessControl/Policies.cs（FeatureIds）";
+    private const string Constants = "backend/src/AiNexus.Features/Admin/AccessControl/BuiltInAccess.cs";
+    private const string Features = "backend/src/AiNexus.Features/Admin/AccessControl/Policies.cs（FeatureIds）";
 
     [Fact]
     public async Task SeedContainsEveryIdAndRelationTheCodeDependsOn()

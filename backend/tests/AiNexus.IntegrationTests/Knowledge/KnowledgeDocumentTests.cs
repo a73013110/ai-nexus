@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Documents;
+using AiNexus.Features.Platform.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 using static AiNexus.IntegrationTests.Support.ChatApi;

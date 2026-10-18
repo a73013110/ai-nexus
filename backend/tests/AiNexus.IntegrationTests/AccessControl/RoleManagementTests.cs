@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Audit;
-using AiNexus.Features.AccessControl.Management;
-using AiNexus.Features.Identity.Management;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Audit;
+using AiNexus.Features.Admin.AccessControl.Management;
+using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.AccessControl;
 

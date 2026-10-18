@@ -4,19 +4,19 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Projects;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Knowledge.Documents;
+using AiNexus.Features.Work.Projects;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Artifacts.Management;
-using AiNexus.Features.Projects.Management;
+using AiNexus.Features.Work.Artifacts.Management;
+using AiNexus.Features.Work.Projects.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Data;
 

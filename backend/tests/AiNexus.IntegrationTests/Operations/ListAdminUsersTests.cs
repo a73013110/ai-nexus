@@ -1,23 +1,23 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Attachments.Storage;
-using AiNexus.Features.Billing.Reports;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Files.Storage;
+using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Operations;
 
 public sealed class ListAdminUsersTests
 {
-    private const string Procedure = "administration.usp_ListAdminUsers";
+    private const string Procedure = "operations.usp_ListAdminUsers";
 
     [Fact]
     public async Task ProcedureListMatchesTheServicesItReplacesForRolesUsageConversationsAndStorage()

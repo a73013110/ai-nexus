@@ -6,8 +6,8 @@ using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
 using UglyToad.PdfPig.Writer;
-using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Chat.Context;
+using AiNexus.Features.Work.Chat.Transcripts;
+using AiNexus.Features.Work.Chat.Context;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

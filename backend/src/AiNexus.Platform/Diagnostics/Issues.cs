@@ -124,7 +124,8 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
                 .Select(frame => frame.GetMethod()?.DeclaringType?.FullName)
                 .FirstOrDefault(name => name?.StartsWith("AiNexus.Features.", StringComparison.Ordinal) == true);
 
-            var category = origin is null ? null : string.Join('.', origin.Split('.').Take(3));
+            // 分類取到模組為止（AiNexus.Features.<區>.<模組>），同一模組的失敗歸在同一個 logger 分類。
+            var category = origin is null ? null : string.Join('.', origin.Split('.').Take(4));
             var target = category is null ? logger : factory?.CreateLogger(category) ?? logger;
 
             using var scope = target.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });

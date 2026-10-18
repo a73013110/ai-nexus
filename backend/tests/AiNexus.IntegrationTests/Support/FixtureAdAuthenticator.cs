@@ -1,4 +1,4 @@
-using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.IntegrationTests.Support;

@@ -1,0 +1,18 @@
+using AiNexus.Platform.Errors;
+
+namespace AiNexus.Features.Work.Projects;
+
+internal static class ProjectsErrors
+{
+    public static readonly Error InvalidName = Error.Invalid("invalid_resource_name");
+    public static readonly Error Limit = Error.Conflict("project_limit");
+    public static readonly Error Conflict = Error.Conflict("project_conflict");
+    public static readonly Error Archived = Error.Conflict("project_archived");
+    public static readonly Error FileLimit = Error.Conflict("project_file_limit");
+    public static readonly Error TemplateMissing = Error.NotFound("template_missing");
+    public static readonly Error TemplateLimit = Error.Conflict("template_limit");
+    public static readonly Error ConversationMissing = Error.NotFound("conversation_missing");
+    public static readonly Error GenerationActive = Error.Conflict("generation_active");
+    public static readonly Error FilesPending = Error.Conflict("project_files_pending");
+    public static readonly Error ContextLimit = Error.Conflict("project_context_limit");
+}

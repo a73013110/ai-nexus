@@ -1,5 +1,5 @@
-using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Quality.RetrievalEvaluations;
+using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Features.Admin.Quality.RetrievalEvaluations;
 
 namespace AiNexus.UnitTests.Quality;
 

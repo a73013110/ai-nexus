@@ -1,6 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Features.AccessControl;
+using AiNexus.Features.Admin.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

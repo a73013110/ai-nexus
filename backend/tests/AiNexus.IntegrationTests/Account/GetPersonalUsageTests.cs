@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
+using AiNexus.Features.Platform.Account;
 
 namespace AiNexus.IntegrationTests.Account;
 

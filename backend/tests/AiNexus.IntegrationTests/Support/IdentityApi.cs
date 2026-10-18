@@ -1,13 +1,13 @@
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Identity.Management;
+using AiNexus.Features.Admin.Identity.Management;
 
 namespace AiNexus.IntegrationTests.Support;
 

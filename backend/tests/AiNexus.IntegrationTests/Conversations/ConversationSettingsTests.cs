@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Conversations;
+using AiNexus.Features.Work.Conversations;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Conversations;

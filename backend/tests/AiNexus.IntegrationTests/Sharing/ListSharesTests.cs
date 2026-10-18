@@ -1,14 +1,14 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Collaboration;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Sharing;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Sharing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Artifacts.Management;
-using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Work.Artifacts.Management;
+using AiNexus.Features.Work.Sharing.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Sharing;

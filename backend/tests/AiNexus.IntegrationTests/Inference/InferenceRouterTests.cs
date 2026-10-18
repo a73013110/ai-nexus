@@ -2,17 +2,17 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Platform.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using AiNexus.Features.Account;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Billing.Reports;
-using AiNexus.Features.Chat.Transcripts;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Features.Admin.Billing.Reports;
+using AiNexus.Features.Work.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Conversations;
+using AiNexus.Features.Work.Conversations;
 
 namespace AiNexus.IntegrationTests.Inference;
 

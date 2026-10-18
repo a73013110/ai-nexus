@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Knowledge.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ProjectApi;
 

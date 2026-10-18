@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Chat;
 
 namespace AiNexus.IntegrationTests.Identity;
 
@@ -14,7 +14,7 @@ public sealed class UserRateLimitsTests
 
     [Fact]
     public async Task UploadingIsLimitedPerUserWithRetryAfter()
-        => await AssertPerUserLimitAsync("/api/v1/attachments", AttachmentsModule.UploadsPerMinute, client => client.PostAsync("/api/v1/attachments", new StringContent("")));
+        => await AssertPerUserLimitAsync("/api/v1/attachments", FilesModule.UploadsPerMinute, client => client.PostAsync("/api/v1/attachments", new StringContent("")));
 
     // 限流器在模型綁定之前執行，因此之後被 endpoint 拒絕的請求仍會計入。
     private static async Task AssertPerUserLimitAsync(string path, int permits, Func<HttpClient, Task<HttpResponseMessage>> send)

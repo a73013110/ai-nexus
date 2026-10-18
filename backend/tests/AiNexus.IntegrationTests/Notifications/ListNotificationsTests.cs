@@ -2,12 +2,12 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Notifications;
-using AiNexus.Features.Sharing;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Platform.Notifications;
+using AiNexus.Features.Work.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Work.Sharing.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Notifications;

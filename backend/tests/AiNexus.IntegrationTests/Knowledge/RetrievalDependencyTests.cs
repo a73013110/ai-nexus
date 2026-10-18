@@ -1,5 +1,5 @@
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Retrieval;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 

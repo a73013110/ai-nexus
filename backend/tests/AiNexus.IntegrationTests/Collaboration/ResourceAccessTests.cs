@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Projects;
-using AiNexus.Features.Quality.Evaluations;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Projects;
+using AiNexus.Features.Admin.Quality.Evaluations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ProjectApi;

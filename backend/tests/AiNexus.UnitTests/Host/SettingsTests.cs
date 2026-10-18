@@ -1,9 +1,9 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using AiNexus.Features;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Repositories;
 using AiNexus.Platform;
 using AiNexus.Platform.Data;
 using Microsoft.AspNetCore.Builder;
@@ -118,7 +118,7 @@ public sealed class SettingsTests
         var settings = new ConfigurationManager();
         settings.AddJsonFile(Path.Combine(Host, "appsettings.json")).AddJsonFile(Path.Combine(Host, template));
         // 範本中的 Windows 磁碟路徑在 Linux 測試機上不是有效根路徑，因此這裡改用暫存目錄覆寫。
-        settings["Attachments:StoragePath"] = Path.GetTempPath();
+        settings["Files:StoragePath"] = Path.GetTempPath();
         using var services = Services(settings);
         foreach (var root in Roots)
         {
@@ -161,7 +161,7 @@ public sealed class SettingsTests
     {
         var settings = new ConfigurationManager();
         settings.AddInMemoryCollection(values);
-        settings["Attachments:StoragePath"] = Path.GetTempPath();
+        settings["Files:StoragePath"] = Path.GetTempPath();
         return Services(settings);
     }
 

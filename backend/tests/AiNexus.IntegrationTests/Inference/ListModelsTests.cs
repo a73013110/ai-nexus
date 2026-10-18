@@ -1,7 +1,7 @@
 using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Platform.Inference.Models;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Inference;

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.Library;
+using AiNexus.Features.Work.Prompts;
 using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.IntegrationTests.Platform;

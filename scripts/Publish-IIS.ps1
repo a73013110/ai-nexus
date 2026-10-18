@@ -7,7 +7,7 @@
 .DESCRIPTION
 預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
-並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
+並把 Files.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
 database/ 帶 App.dacpac（由 database/App 建置，這一版預期的資料庫結構）與發版時執行的手寫腳本 FullText/、Seed/、Data/；
 DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Verify-Database.ps1 比對實際結構。
 套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/iis-deployment.md。
@@ -75,7 +75,7 @@ $sources = if ($IncludeLocalConfig) { Initialize-RepoLocalSettings } else {
 if (!(Test-Path -LiteralPath $settingsPath)) { Copy-Item -LiteralPath $sources.Settings -Destination $settingsPath }
 if (!(Test-Path -LiteralPath $secretsPath)) { Copy-Item -LiteralPath $sources.Secrets -Destination $secretsPath; Protect-RepoSecrets $secretsPath }
 $settings = Read-RepoJson $settingsPath
-Set-RepoSetting $settings 'Attachments.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
+Set-RepoSetting $settings 'Files.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
 Set-RepoSetting $settings 'Diagnostics.Directory' ($DataRoot.TrimEnd('\') + '\diagnostics')
 if ($AllowUntrustedSql) { Set-RepoSetting $settings 'Databases.App.TrustServerCertificate' $true }
 Save-RepoJson $settingsPath $settings

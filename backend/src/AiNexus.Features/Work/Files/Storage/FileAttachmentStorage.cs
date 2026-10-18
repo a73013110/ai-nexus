@@ -1,0 +1,104 @@
+using System.Runtime.CompilerServices;
+using AiNexus.Platform.Errors;
+using Microsoft.Extensions.Options;
+
+namespace AiNexus.Features.Work.Files.Storage;
+
+public sealed class FileAttachmentStorage : IAttachmentStorage
+{
+    private readonly string root;
+    public FileAttachmentStorage(IOptions<FilesOptions> options, IHostEnvironment environment)
+    {
+        root = ValidateRoot(options.Value.StoragePath, environment.ContentRootPath);
+    }
+
+    public static string ValidateRoot(string path, string contentRoot)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
+            throw new InvalidOperationException("Files:StoragePath must be an absolute path outside the website directory.");
+        var resolved = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        var website = Path.TrimEndingDirectorySeparator(Path.GetFullPath(contentRoot));
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (resolved.Equals(website, comparison) || resolved.StartsWith(website + Path.DirectorySeparatorChar, comparison))
+            throw new InvalidOperationException("Files:StoragePath must be outside the website directory.");
+        return resolved;
+    }
+
+    private string PathFor(string key)
+    {
+        if (!ValidKey(key))
+            throw new InvalidDataException("Invalid attachment storage key.");
+        return Path.Combine(root, key[..2], key.Substring(2, 2), key + ".blob");
+    }
+
+    private static bool ValidKey(string key) => key.Length == 32 && key.All(c => char.IsAsciiHexDigit(c) && !char.IsAsciiLetterUpper(c));
+
+    public async IAsyncEnumerable<string> StaleKeysAsync(DateTimeOffset before, [EnumeratorCancellation] CancellationToken ct)
+    {
+        if (!Directory.Exists(root)) yield break;
+        var entries = Directory.EnumerateFiles(root, "*.blob*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false });
+        var count = 0;
+        foreach (var path in entries)
+        {
+            ct.ThrowIfCancellationRequested();
+            // 即使每一筆都是近期的也要定期讓出執行緒，確保大量掃描仍可被取消。
+            if (++count % 100 == 0) await Task.Yield();
+            var name = Path.GetFileName(path);
+            var suffix = name.EndsWith(".blob.upload", StringComparison.Ordinal) ? ".blob.upload" : name.EndsWith(".blob", StringComparison.Ordinal) ? ".blob" : null;
+            if (suffix is null) continue;
+            var key = name[..^suffix.Length];
+            if (!ValidKey(key) || !path.Equals(PathFor(key) + (suffix == ".blob.upload" ? ".upload" : ""), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
+            if (File.GetLastWriteTimeUtc(path) < before.UtcDateTime) yield return key;
+        }
+    }
+
+    public async Task WriteAsync(string key, ReadOnlyMemory<byte> bytes, CancellationToken ct)
+    {
+        var path = PathFor(key);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await using (var stream = new FileStream(path + ".upload", FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous | FileOptions.WriteThrough))
+        {
+            await stream.WriteAsync(bytes, ct);
+            await stream.FlushAsync(ct);
+        }
+        ct.ThrowIfCancellationRequested();
+        File.Move(path + ".upload", path, overwrite: false);
+    }
+
+    public Task<Stream> OpenReadAsync(string key, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        try { return Task.FromResult<Stream>(new FileStream(PathFor(key), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 65536, FileOptions.Asynchronous | FileOptions.SequentialScan)); }
+        catch (FileNotFoundException) { throw new ExternalServiceException(FilesErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
+        catch (DirectoryNotFoundException) { throw new ExternalServiceException(FilesErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
+    }
+
+    public Task DeleteAsync(string key, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var path = PathFor(key);
+        DeleteFile(path);
+        DeleteFile(path + ".upload");
+        return Task.CompletedTask;
+    }
+
+    private static void DeleteFile(string path)
+    {
+        try { File.Delete(path); }
+        catch (DirectoryNotFoundException) { } // 分片目錄不存在，代表檔案早已被刪除。
+    }
+
+    public async Task VerifyAsync(CancellationToken ct)
+    {
+        var key = Guid.NewGuid().ToString("N");
+        try
+        {
+            await WriteAsync(key, new byte[] { 42 }, ct);
+            await using var read = await OpenReadAsync(key, ct);
+        }
+        finally
+        {
+            await DeleteAsync(key, CancellationToken.None);
+        }
+    }
+}

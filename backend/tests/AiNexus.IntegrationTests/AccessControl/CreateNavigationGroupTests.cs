@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.Audit;
-using AiNexus.Features.AccessControl.Navigation;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Admin.Audit;
+using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.AccessControl;
 

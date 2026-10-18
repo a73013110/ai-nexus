@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Chat.Context;
-using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Work.Chat.Context;
+using AiNexus.Features.Work.Chat.Transcripts;
+using AiNexus.Features.Platform.Inference.Models;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Chat;

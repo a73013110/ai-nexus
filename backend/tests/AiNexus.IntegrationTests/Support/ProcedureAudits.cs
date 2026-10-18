@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Text.Json.Nodes;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Audit;
-using AiNexus.Features.Audit;
+using AiNexus.Features.Admin.Audit;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;

@@ -2,11 +2,11 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Inference;
 using System.Net.Http.Json;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Knowledge.Collections;
+using AiNexus.Features.Work.Chat.Transcripts;
+using AiNexus.Features.Work.Knowledge.Retrieval;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -76,7 +76,7 @@ public sealed class ConversationKnowledgeTests
 
         Assert.Equal("invalid_history", (await ForRunAsync(factory, seed.Actor, new(conversation.Id, "採購", cycle[1], null), seed.Collection)).Error!.Code);
         Assert.Equal("invalid_history", (await ForRunAsync(factory, seed.Actor, new(conversation.Id, "採購", stray[0], null), seed.Collection)).Error!.Code);
-        var bobId = (await bob.GetFromJsonAsync<AiNexus.Features.Account.MeDto>("/api/v1/me"))!.Id;
+        var bobId = (await bob.GetFromJsonAsync<AiNexus.Features.Platform.Account.MeDto>("/api/v1/me"))!.Id;
         Assert.Equal("conversation_not_found", (await ForRunAsync(factory, bobId, new(conversation.Id, "採購", null, null), seed.Collection)).Error!.Code);
     }
 

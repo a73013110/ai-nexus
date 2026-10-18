@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Platform.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Support;
