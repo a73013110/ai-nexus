@@ -3,7 +3,7 @@ import { AuthService } from './auth-service';
 import { WorkspaceApi } from '../api/workspace-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
-import { FEATURE_NAMES } from './feature-names';
+import { FEATURE_NAMES, isFeatureId, type FeatureId } from './feature-names';
 
 /** 管理寫入因帳號正在測試其他身分而被拒絕時顯示。 */
 export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
@@ -46,12 +46,15 @@ export class WorkspaceSession {
     this.adopt(me);
     return me;
   }
-  has(id: string) {
+  has(id: FeatureId) {
     return this.me()?.access.features?.some((item) => item.id === id) ?? false;
   }
+  /** `id` 可以是 API 給的任意字串（例如監控區域）；不認得時原樣顯示。 */
   featureName(id: string) {
     return (
-      this.me()?.access.features?.find((item) => item.id === id)?.name || FEATURE_NAMES[id] || id
+      this.me()?.access.features?.find((item) => item.id === id)?.name ||
+      (isFeatureId(id) && FEATURE_NAMES[id]) ||
+      id
     );
   }
 }

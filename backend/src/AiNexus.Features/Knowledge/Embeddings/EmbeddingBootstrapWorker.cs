@@ -3,6 +3,7 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Features.AccessControl;
 using AiNexus.Features.Jobs;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes
                     var settings = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
                     if (settings.Embedding.AutoActivate && target.Status == "building")
                     {
-                        var actor = await db.Set<UserRole>().Where(x => x.RoleId == "administrator").Select(x => (Guid?)x.UserId).FirstOrDefaultAsync(stoppingToken);
+                        var actor = await db.Set<UserRole>().Where(x => x.RoleId == BuiltInAccess.AdministratorRole).Select(x => (Guid?)x.UserId).FirstOrDefaultAsync(stoppingToken);
                         var subject = EmbeddingJobs.Subject(target.Id);
                         if (actor is Guid owner && !await db.Set<BackgroundJob>().AnyAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject, stoppingToken)) jobs.Enqueue(owner, null, subject, "embedding-reindex", $"重建 {target.Model} 檢索索引");
                     }

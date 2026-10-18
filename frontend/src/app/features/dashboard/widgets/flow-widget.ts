@@ -6,6 +6,7 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { DashboardStore } from '../dashboard-store';
 import { metricText } from '@shared/browser/format';
 import { workspaceLink } from '../dashboard-format';
+import { isFeatureId } from '@core/auth/feature-names';
 
 interface Stage {
   section: string;
@@ -121,7 +122,10 @@ export class FlowWidget {
         meta: stage.meta(this.store),
         live,
         flowing: live || this.store.activeWork() > 0,
-        link: this.store.session.has(section.feature) ? workspaceLink(section.route) : null,
+        link:
+          isFeatureId(section.feature) && this.store.session.has(section.feature)
+            ? workspaceLink(section.route)
+            : null,
       };
     }),
   );

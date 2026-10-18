@@ -9709,6 +9709,8 @@ export interface components {
             /** Format: int32 */
             sortOrder: number;
         };
+        /** @enum {string} */
+        FeatureId: "admin" | "artifacts" | "audit" | "chat" | "dashboard" | "design" | "files" | "integrations" | "knowledge" | "logs.detail" | "logs.export" | "logs.query" | "monitoring" | "operations" | "projects" | "quality" | "repositories" | "shared" | "tasks";
         FeatureUpdateRequest: {
             name: string;
             /** Format: int32 */
@@ -11299,6 +11301,7 @@ export type EvaluationSetRequest = components['schemas']['EvaluationSetRequest']
 export type EvaluationVariant = components['schemas']['EvaluationVariant'];
 export type EvaluationVariantRequest = components['schemas']['EvaluationVariantRequest'];
 export type FeatureDto = components['schemas']['FeatureDto'];
+export type FeatureId = components['schemas']['FeatureId'];
 export type FeatureUpdateRequest = components['schemas']['FeatureUpdateRequest'];
 export type FeedbackDto = components['schemas']['FeedbackDto'];
 export type FeedbackRequest = components['schemas']['FeedbackRequest'];

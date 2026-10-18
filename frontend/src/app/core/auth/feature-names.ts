@@ -1,9 +1,13 @@
+import type { FeatureId } from '../api/schema';
+
+export type { FeatureId };
+
 /**
- * 預設的種子名稱（每個模組的 `FeatureSeed`），用於 `/me` 無法提供名稱的情況：載入前，
- * 以及此帳號未被授予的功能
- * （存取提示、監控）。管理員定義的、來自 `/me` 的名稱永遠優先。
+ * `database/App/Seed/accesscontrol.sql` 的預設功能名稱，用於 `/me` 無法提供名稱的情況：載入前，
+ * 以及此帳號未被授予的功能（存取提示、稽核）。管理員定義的、來自 `/me` 的名稱永遠優先。
+ * 鍵是後端 `FeatureIds` 經 OpenAPI 產生的 `FeatureId`，後端增減功能而這裡沒跟上就無法編譯。
  */
-export const FEATURE_NAMES: Readonly<Record<string, string>> = {
+export const FEATURE_NAMES: Readonly<Record<FeatureId, string>> = {
   dashboard: '總覽',
   chat: '對話',
   files: '檔案庫',
@@ -24,3 +28,8 @@ export const FEATURE_NAMES: Readonly<Record<string, string>> = {
   'logs.export': '日誌匯出',
   design: '介面元件',
 };
+
+/** 來自 API 的任意字串（稽核目錄、管理清單）是否為程式已知的功能 id。 */
+export function isFeatureId(id: string): id is FeatureId {
+  return Object.hasOwn(FEATURE_NAMES, id);
+}

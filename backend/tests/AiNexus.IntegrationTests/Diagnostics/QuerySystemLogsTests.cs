@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.AccessControl;
 using AiNexus.Features.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ public sealed class QuerySystemLogsTests
         var json = await (await alice.GetAsync("/api/v1/admin/logs?" + range)).Content.ReadAsStringAsync(); Assert.DoesNotContain("exceptionDetail", json); Assert.DoesNotContain("ExceptionDetail", json);
         var detail = await alice.GetFromJsonAsync<DiagnosticDetail>("/api/v1/admin/logs/" + row.LogId); Assert.Equal(row.ExceptionDetail, detail!.ExceptionDetail);
         var exported = await alice.GetAsync("/api/v1/admin/logs/export?" + range); exported.EnsureSuccessStatusCode(); Assert.Contains("'=HYPERLINK", await exported.Content.ReadAsStringAsync());
-        db.RemoveRange(await db.Set<RoleGroupFeature>().Where(x => x.GroupId == "administrators" && (x.FeatureId == DiagnosticConfiguration.Detail || x.FeatureId == DiagnosticConfiguration.Export)).ToListAsync()); await db.SaveChangesAsync();
+        db.RemoveRange(await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup && (x.FeatureId == DiagnosticConfiguration.Detail || x.FeatureId == DiagnosticConfiguration.Export)).ToListAsync()); await db.SaveChangesAsync();
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/logs/" + row.LogId)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/logs/export?" + range)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await alice.GetAsync("/api/v1/admin/logs?" + range)).StatusCode);
