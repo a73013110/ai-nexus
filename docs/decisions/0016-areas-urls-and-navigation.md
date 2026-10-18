@@ -1,7 +1,7 @@
 # 0016 區、網址、頁面目錄與選單
 
 - **狀態**：採用（2026-10-18），取代 [ADR 0009](0009-module-names-and-data-driven-navigation.md)。
-- **實作**：尚未開始。現行程式與其他文件仍是 0009 的做法；每一步落地時同步更新對應文件。
+- **實作**：第一步（區資料夾、模組搬移與改名）已完成；網址、頁面目錄與選單尚未開始，這些部分現行程式仍是 0009 的做法。每一步落地時同步更新對應文件。
 - **決定**：
   - 程式與網址共用「區 → 模組 → 頁面」三層；權限 ID 與 API 不帶區。
   - 頁面與動作的目錄只定義在程式碼；資料庫只存授權與選單。
@@ -47,6 +47,8 @@
 | Library | Prompts | 只放提示範本，Library 看不出內容 |
 | Administration | 拆散 | 「管理」是區，不是模組：Users → Identity，Roles、Navigation → AccessControl，ModelPolicies → Inference，Retrieval → Knowledge，Usage 與營運設定 → Operations，管理端讀對話 → Conversations |
 | （新增） | Organization | 部門樹，見 ADR 0017 |
+
+例外：使用者清單與洞察、管理目錄、群組儲存與平台用量放 Operations，而不是 Identity 或 AccessControl。這些回應內嵌 Inference、Billing、Files、Account 的 DTO，放進下層模組會成環，而已發布的 API 合約不改。
 
 保留原名：Jobs（背景工作；Tasks 留給日後的待辦）、Diagnostics（日誌之外還有前端問題回報與管線監控）。
 

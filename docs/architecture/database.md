@@ -19,7 +19,7 @@
 
 ## Schema 與模組
 
-一個業務模組一個 schema，名稱＝模組名小寫（`accesscontrol`、`identity`、`knowledge`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值，procedure 見[新增一支 procedure](#新增一支-procedure)。
+一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值，procedure 見[新增一支 procedure](#新增一支-procedure)。
 
 ## 欄位規則
 
@@ -66,7 +66,7 @@
 3. 預期內的失敗：`THROW 50000, N'<error_code>', 1;`（`ProcedureError`）。
 4. 測試用 `ProcedureAudits`。
 
-範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Administration/Users/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Billing/Prices/CreateModelPrice.cs)。
+範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Admin/Operations/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Admin/Billing/Prices/CreateModelPrice.cs)。
 
 ## 測試
 

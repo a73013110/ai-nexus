@@ -16,7 +16,7 @@
 
 API 為 `POST /knowledge/collections/{id}/text`、`GET /documents/{id}/text`、`PUT /documents/{id}/text`，前綴 `/api/v1`；body `{ title, text, expectedVersion }`，更新必須提供目前版本。TextVersion 為 concurrency token，transaction 再讀取版本／ACL、更新頁面並原子建立新索引任務；切段時先讀取 hash 快取，再替換改變的片段。舊 original 保留檔案庫，既有分享仍讀當時原檔；新文字完成索引前不使用舊向量回答。
 
-1. 原檔保存於 `attachments.Attachments`，文件以 `ResourceAttachments` 保留引用，避免草稿清理回收來源。
+1. 原檔保存於 `files.Attachments`，文件以 `ResourceAttachments` 保留引用，避免草稿清理回收來源。
 2. PDF 原生文字以 PdfPig 逐頁擷取。沒有足夠可讀文字的掃描頁，以及上傳圖片，由核准的圖片模型辨識；輸出截斷會報錯，不將不完整頁面當成成功。
 3. 每頁完成即保存 checkpoint。OCR 文字標記為需要核對，原檔始終是確認依據。無法取得頁面圖片時，請改上傳頁面圖片；本版不會臆造缺失文字。
 4. StructuredChunker 按標題、條文、段落與句界切段，可跨頁並保留完整表格列。預設目標 450／上限 700／最小 80 tokens、重疊 12%；批次 16 送 embedding，active 向量完成才 ready，building 可獨立續跑。
@@ -31,7 +31,7 @@ API 為 `POST /knowledge/collections/{id}/text`、`GET /documents/{id}/text`、`
 
 一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.Providers.Google.ApiKey`，只由後端使用。聊天與向量模型各自選擇 provider；完全本地運行請參閱 [本地 AI 與向量化](../research/local-ai.md)。
 
-預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。設定鍵、預設值與範圍見 [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)，設定檔規則見 [CONFIGURATION](../development/configuration.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
+預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。設定鍵、預設值與範圍見 [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs)，設定檔規則見 [CONFIGURATION](../development/configuration.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
 
 從模型探測、測試文件、三種召回模式到聊天引用、ACL 及固定題庫評測，依 [向量檢索測試與異常復原](../research/retrieval-testing.md) 操作。
 

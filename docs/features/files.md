@@ -16,7 +16,7 @@
 
 ## 實作邊界
 
-`attachments.Attachments.InLibrary` 區分已保存與未送出草稿；MessageAttachments／ResourceAttachments 分別連接歷史與知識／專案。原始檔只存一份，索引、頁面及 ACL 屬於各來源。新增來源可重用同一擁有者、同一不可變原檔的完成頁面；向量索引與授權不會跨來源共用。未完成的擷取各自以 durable job 處理。
+`files.Attachments.InLibrary` 區分已保存與未送出草稿；MessageAttachments／ResourceAttachments 分別連接歷史與知識／專案。原始檔只存一份，索引、頁面及 ACL 屬於各來源。新增來源可重用同一擁有者、同一不可變原檔的完成頁面；向量索引與授權不會跨來源共用。未完成的擷取各自以 durable job 處理。
 
 `GET /api/v1/files` 是 metadata-only、伺服器篩選與分頁；不讀原檔／擷取全文。回應的 `storage` 包含所有原檔、草稿與待刪容量，列表篩選不影響容量統計。關聯名稱採固定批次查詢並限制筆數；只顯示登入者仍可讀的來源。`POST /files/{id}/retain` 保存獨立上傳；`DELETE /files/{id}` 在使用者 SQL row lock 與 transaction 內檢查所有引用並清理私有閱讀器，再於 commit 後實體刪檔。所有端點檢查 owner 及 chat／knowledge／projects 其中一項功能 grant。
 
@@ -26,6 +26,6 @@ FileLibraryStore 共用於頁面與選取器，搜尋去抖、取消舊請求並
 
 ## 儲存與初始化
 
-原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。詳見 [附件生命週期](attachment-storage.md)、[SQL 初始化](../operations/database-setup.md) 與 [SQL／原檔備份](../operations/backup.md)。
+原檔位於站外 `Files.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。詳見 [附件生命週期](attachment-storage.md)、[SQL 初始化](../operations/database-setup.md) 與 [SQL／原檔備份](../operations/backup.md)。
 - HTML 以沙盒預覽：無指令碼直接顯示，有指令碼需確認後執行，外部資源一律封鎖。
 - 檢視器對 Markdown 與 HTML 預設顯示預覽，可切換原始碼或並排（並排僅平板以上）；搜尋只作用於原始碼，HTML 預覽中停用。

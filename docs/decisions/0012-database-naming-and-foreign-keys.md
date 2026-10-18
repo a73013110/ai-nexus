@@ -18,7 +18,7 @@
 |---|---|---|
 | 資料表 | PascalCase 複數，無前綴 | `identity.Users` |
 | 欄位 | PascalCase | `LastSeenAt` |
-| 預存程序 | `usp_<動詞><名詞>`，與 use case 同名 | `administration.usp_ListAdminUsers` |
+| 預存程序 | `usp_<動詞><名詞>`，與 use case 同名 | `operations.usp_ListAdminUsers` |
 | 函式 | `udf_` | `dbo.udf_SplitIds` |
 | 使用者定義型別／資料表值參數 | `udt_`／`tvp_` | `dbo.tvp_IdList` |
 | 觸發程序 | `tr_<表>_<時機>` | `tr_Users_AfterUpdate` |

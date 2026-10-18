@@ -6,7 +6,7 @@
 
 - 使用 `audit` 功能授權，初始授予 administrators 群組。持有 `admin` 不隱含 `audit`；可以只給稽核人員 `audit` 而不給帳號管理權。每個 request 重新驗證 grant。
 - 查詢由 `Audit` 模組的 `ListActivityAudit` 負責（`GET /api/v1/admin/audit`）。`GET /api/v1/admin/audit/catalog` 只提供解讀異動所需的功能、模型名稱與全部選單分群（功能異動依選單分群排列，與存取管理相同），以及分類與動作篩選清單，不回傳角色、權限群組或帳號清單。
-- 前端在 `features/audit`，依路由延後載入，不依賴管理頁。
+- 前端在 `features/admin/audit`，依路由延後載入，不依賴管理頁。
 
 ## 記錄什麼
 
@@ -20,8 +20,8 @@
 
 ## 查詢與匯出
 
-- 分類（登入與身分、管理異動、查閱與匯出、功能操作）由同一個後端 expression（[`AuditCategories`](../../backend/src/AiNexus.Features/Audit/AuditCategories.cs)）決定，同時用於 SQL 篩選、DTO 與匯出。
-- 動作篩選清單在 [`AuditActions`](../../backend/src/AiNexus.Features/Audit/AuditActions.cs)，經 catalog 提供；每項的 `categories` 由同一個 expression 推得，前綴涵蓋的管理讀取（如 `admin.` 下的對話檢視）也列入「查閱與匯出」。新增動作前綴改這份清單，不改前端。
+- 分類（登入與身分、管理異動、查閱與匯出、功能操作）由同一個後端 expression（[`AuditCategories`](../../backend/src/AiNexus.Features/Admin/Audit/AuditCategories.cs)）決定，同時用於 SQL 篩選、DTO 與匯出。
+- 動作篩選清單在 [`AuditActions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditActions.cs)，經 catalog 提供；每項的 `categories` 由同一個 expression 推得，前綴涵蓋的管理讀取（如 `admin.` 下的對話檢視）也列入「查閱與匯出」。新增動作前綴改這份清單，不改前端。
 - 分類、動作（前綴）、結果（可多選；`success`／`failed` 代表全部受理／其餘結果）、帳號／資源／Trace ID／查證代碼搜尋與台北日期可組合；每頁 25／50／100 筆（預設 100），以 ID 游標分頁，新事件不會造成重複；不算總數。
 - 詳情顯示欄位前後差異與原始 metadata；DTO 帶 TraceId／OperationId／IssueCode。「查證相關日誌」帶入同一 trace（缺少時用查證代碼）與前後五分鐘。
 - `GET /api/v1/admin/audit/export` 匯出整個查詢（與列表同一組篩選，不分頁）：新到舊、UTF-8 BOM、正確引號與公式前綴防護；時間為 UTC，結果為原始代碼，異動資訊為遮罩後的 metadata JSON。筆數超過 `Audit.MaxExportRows`（預設 10000）就拒絕（`audit_export_limit`），不截斷。每人每分鐘 2 次；與日誌匯出相同，先寫 `audit.export` 讀取稽核（搜尋、動作、結果、分類、期間與 Trace）再讀資料，稽核失敗就不匯出，超過上限被拒或逾時（`Audit.ExportTimeoutSeconds`）的嘗試也留有紀錄。

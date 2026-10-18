@@ -13,8 +13,8 @@
 | `Databases.App.TrustServerCertificate` | true（依目前內部 SQL 自簽憑證需求） |
 | `Identity.ActiveDirectory.Domain` | `hanglong.com.tw` |
 | `Identity.ActiveDirectory.BindUser` | `hanglong`（服務帳號名稱，自動補 `@Domain`；也可填 UPN、`網域\帳號` 或 DN） |
-| `Administration.BootstrapAdministrators` | `["a73013110"]`，一般帳號不會自動取得管理員 |
-| `Attachments.StoragePath` | `D:\CoreProject\AiNexus\data\attachments`，必須在 app 外 |
+| `Identity.Bootstrap.Administrators` | `["a73013110"]`，一般帳號不會自動取得管理員 |
+| `Files.StoragePath` | `D:\CoreProject\AiNexus\data\attachments`，必須在 app 外 |
 | `Diagnostics.Directory` | `D:\CoreProject\AiNexus\data\diagnostics`，實體本機目錄、app 外、不可映射為網站 URL |
 | `Inference.Providers.<provider>.Enabled`、`Inference.DefaultModelId` | Google／Ollama 可同時啟用；DefaultModelId 使用完整 `provider/model` 路由 |
 | `Knowledge.Embedding.Provider` | 與對話分開設定；離線使用 ollama 或暫用 none |
@@ -37,9 +37,9 @@
     <environmentVariable name="SecretsConfigPath" value="..\config\appsettings.Secrets.json" />
     <environmentVariable name="DataProtection__KeyRingPath" value="..\keys" />
     <!-- 選用：需要覆寫外部 JSON 路徑時才加入這個變數 -->
-    <!-- <environmentVariable name="Attachments__StoragePath" value="D:\CoreProject\AiNexus\data\attachments" /> -->
+    <!-- <environmentVariable name="Files__StoragePath" value="D:\CoreProject\AiNexus\data\attachments" /> -->
   </environmentVariables>
 </aspNetCore>
 ```
 
-外部設定與 keys 的相對位置由 app content root 解析；Attachments.StoragePath 必須為絕對路徑，Attachments\_\_StoragePath 有較高優先權，無需改程式。相對位置由 app content root 解析，不依 shell 的工作目錄。明確指定的設定檔缺失、JSON 錯誤或無讀取權限會讓啟動失敗；修檔後回收集區。ASP.NET Core 不會自動把 app 外的同名 Production 檔當作環境檔，這裡由 AI Nexus 的外部設定載入器處理。不要同時保留 app 內另一份帶秘密的環境檔或在集區設重複環境變數。
+外部設定與 keys 的相對位置由 app content root 解析，不依 shell 的工作目錄；`Files.StoragePath` 必須為絕對路徑，`Files__StoragePath` 環境變數優先。明確指定的設定檔缺失、JSON 錯誤或無讀取權限會讓啟動失敗；修檔後回收集區。ASP.NET Core 不會自動把 app 外的同名 Production 檔當作環境檔，這裡由 AI Nexus 的外部設定載入器處理。不要同時保留 app 內另一份帶秘密的環境檔或在集區設重複環境變數。

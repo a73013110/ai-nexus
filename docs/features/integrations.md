@@ -43,7 +43,7 @@
 }
 ```
 
-其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs)。
+其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs)。
 
 兩個來源的連線一律加密並帶唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
 

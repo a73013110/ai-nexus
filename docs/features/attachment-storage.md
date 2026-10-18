@@ -6,8 +6,8 @@
 
 ## 資料與儲存
 
-- `attachments.Attachments` 保存 owner、metadata、StorageKey、StorageState、抽取文字與引用所需資料，不存原始 bytes。`MessageAttachments`／`ResourceAttachments` 連接提問、知識庫、專案與分享。重新上傳相同內容仍是新的原檔，不依 hash 跨使用者共用。
-- `IAttachmentStorage` 把 domain 與實體儲存分開。`Attachments.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`，IIS 可用 `Attachments__StoragePath` 覆寫。啟動時拒絕相對路徑或網站目錄內的路徑。
+- `files.Attachments` 保存 owner、metadata、StorageKey、StorageState、抽取文字與引用所需資料，不存原始 bytes。`MessageAttachments`／`ResourceAttachments` 連接提問、知識庫、專案與分享。重新上傳相同內容仍是新的原檔，不依 hash 跨使用者共用。
+- `IAttachmentStorage` 把 domain 與實體儲存分開。`Files.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`，IIS 可用 `Files__StoragePath` 覆寫。啟動時拒絕相對路徑或網站目錄內的路徑。
 - 原檔以不可猜測的 32 字元 StorageKey 保存為 `<前2碼>/<次2碼>/<StorageKey>.blob`，原始檔名只是 metadata。目錄不映射 IIS 虛擬目錄、沒有靜態 URL。
 - 下載要通過 owner、知識／專案 ACL 或有效的具名分享，才以 stream 回傳。圖片仍檢查格式標記，不接受 SVG。
 
@@ -34,7 +34,7 @@
 
 ## 背景清理
 
-`AttachmentCleanupWorker` 在啟動時與每 `Attachments.CleanupIntervalMinutes`（預設 60 分鐘）執行：
+`AttachmentCleanupWorker` 在啟動時與每 `Files.CleanupIntervalMinutes`（預設 60 分鐘）執行：
 
 - 未保存且沒有 durable 引用的 `ready` 草稿超過 `DraftRetentionDays`（預設 14 天）回收，私人閱讀器的衍生頁面一併移除；中斷的 `pending` 一小時後回收；每批最多 100 筆。
 - 上傳時只先回收上傳者本人的過期草稿，避免占用即將檢查的容量。

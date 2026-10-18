@@ -25,17 +25,17 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
 | `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
-| `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
-| `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Audit/AuditOptions.cs) | — |
-| `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |
-| `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
-| `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs) | — |
-| `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
-| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs)（連線在 `Databases`） | — |
-| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
-| `Attachments` | [`AttachmentOptions`](../../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs) | — |
-| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/Export/ArtifactExport.cs) | — |
-| `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs) | — |
+| `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
+| `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditOptions.cs) | — |
+| `Identity.Bootstrap` | [`AdminBootstrapOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdminBootstrapOptions.cs) | — |
+| `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Platform/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
+| `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
+| `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
+| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs)（連線在 `Databases`） | — |
+| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
+| `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
+| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
+| `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Admin/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
 | `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取 | — |
 
@@ -43,7 +43,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 每個 Options 類別以 `AddSettings<T, TValidator>(區段)`（[`SettingsRegistration`](../../backend/src/AiNexus.Platform/Configuration/SettingsRegistration.cs)）註冊：`BindConfiguration` 綁定、`[OptionsValidator]` source generator 產生的驗證器檢查，`ValidateOnStart` 讓錯誤在接受任何請求前出現。
 
-- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... the following properties were not found on the instance of AiNexus.Features.Inference.InferenceOptions: 'Execution'`。
+- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... the following properties were not found on the instance of AiNexus.Features.Platform.Inference.InferenceOptions: 'Execution'`。
 - **不合法的值**：訊息含類別與屬性，例如 `KnowledgeOptions.Retrieval.TopK` 超出範圍，或 `Model 'ollama/qwen3:8b': ContextTokens must be ...`。
 - `SettingsTests` 確保每個區段都有產生的驗證器、`appsettings.json` 加上三份範本都能綁定通過，且公開檔案的秘密欄位為空。
 
@@ -62,5 +62,5 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 - **主機位置**：IIS 與 GPU 不在同一台時，`Inference.Providers.Ollama.Endpoint` 的 localhost 指的是 IIS 主機，要改成 GPU 主機位址。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
 - **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（none 只用全文檢索，SQL Server 需安裝全文元件）。
 - **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](../research/vector-architecture.md)。
-- **附件路徑**：`Attachments.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Attachments__StoragePath` 覆寫。
+- **附件路徑**：`Files.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Files__StoragePath` 覆寫。
 - **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.AllowInsecureLocalhost` 只由 `-Http` 開啟，Production 一律忽略。Google API 與 Brave 只連官方 HTTPS endpoint。
