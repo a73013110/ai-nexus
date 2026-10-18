@@ -13,8 +13,8 @@ public sealed class DatabasesOptionsTests
     [Fact]
     public void SqlLoginsUseTheConnectionStringBuilderAlwaysEncryptedWithoutPersistedSecrets()
     {
-        var databases = new DatabasesOptions { ["Nexus"] = new() { Server = "sql.fixture.test", Name = "AiNexus", User = "login", Password = "fixture;\"password", TrustServerCertificate = true, ConnectTimeoutSeconds = 7 } };
-        var connection = new SqlConnectionStringBuilder(databases.ConnectionString("nexus"));
+        var databases = new DatabasesOptions { ["App"] = new() { Server = "sql.fixture.test", Name = "AiNexus", User = "login", Password = "fixture;\"password", TrustServerCertificate = true, ConnectTimeoutSeconds = 7 } };
+        var connection = new SqlConnectionStringBuilder(databases.ConnectionString("app"));
         Assert.Equal("sql.fixture.test", connection.DataSource); Assert.Equal("AiNexus", connection.InitialCatalog);
         Assert.Equal("login", connection.UserID); Assert.Equal("fixture;\"password", connection.Password);
         Assert.Equal(SqlConnectionEncryptOption.Mandatory, connection.Encrypt); Assert.True(connection.TrustServerCertificate);
@@ -51,8 +51,8 @@ public sealed class DatabasesOptionsTests
     public void MissingEntryIsUnconfigured()
     {
         var databases = new DatabasesOptions();
-        Assert.False(databases.For("Nexus").Configured);
-        Assert.Empty(databases.ConnectionString("Nexus"));
+        Assert.False(databases.For("App").Configured);
+        Assert.Empty(databases.ConnectionString("App"));
     }
 
     [Fact]
@@ -60,18 +60,18 @@ public sealed class DatabasesOptionsTests
     {
         using var services = Services(new()
         {
-            ["Databases:Nexus:Server"] = "sql", ["Databases:Nexus:Name"] = "AiNexus", ["Databases:Nexus:User"] = "login", ["Databases:Nexus:Password"] = "fixture",
+            ["Databases:App:Server"] = "sql", ["Databases:App:Name"] = "AiNexus", ["Databases:App:User"] = "login", ["Databases:App:Password"] = "fixture",
             ["Databases:Source:Server"] = "sql", ["Databases:Source:Name"] = "views", ["Databases:Source:IntegratedSecurity"] = "true", ["Databases:Source:ReadOnly"] = "true"
         });
         var databases = services.GetRequiredService<IOptions<DatabasesOptions>>().Value;
-        Assert.True(databases.For("Nexus").Configured);
+        Assert.True(databases.For("App").Configured);
         Assert.Equal(ApplicationIntent.ReadOnly, new SqlConnectionStringBuilder(databases.ConnectionString(SourceDatabase.Name)).ApplicationIntent);
     }
 
     [Theory]
     [InlineData("Databases:Nexsu:Server", "sql", "Databases:Nexsu is not a database")]
-    [InlineData("Databases:Nexus:User", "login", "Databases:Nexus:Password is missing")]
-    [InlineData("Databases:Nexus:ConnectTimeoutSeconds", "0", "Databases:Nexus:ConnectTimeoutSeconds must be")]
+    [InlineData("Databases:App:User", "login", "Databases:App:Password is missing")]
+    [InlineData("Databases:App:ConnectTimeoutSeconds", "0", "Databases:App:ConnectTimeoutSeconds must be")]
     [InlineData("Databases:Source:ReadOnly", "false", "Databases:Source:ReadOnly must be true")]
     public void InvalidEntriesFailAndNameTheKey(string key, string value, string message)
     {
@@ -83,16 +83,16 @@ public sealed class DatabasesOptionsTests
     [Fact]
     public void IntegratedSecurityRejectsASqlLoginAndNeedsTheServer()
     {
-        using var services = Services(new() { ["Databases:Nexus:IntegratedSecurity"] = "true", ["Databases:Nexus:Password"] = "fixture" });
+        using var services = Services(new() { ["Databases:App:IntegratedSecurity"] = "true", ["Databases:App:Password"] = "fixture" });
         var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        Assert.Contains("Databases:Nexus:IntegratedSecurity=true", error.Message, StringComparison.Ordinal);
-        Assert.Contains("Databases:Nexus:Server is required", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:App:IntegratedSecurity=true", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:App:Server is required", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void UnknownFieldFailsBinding()
     {
-        using var services = Services(new() { ["Databases:Nexus:ConnectionString"] = "Server=x" });
+        using var services = Services(new() { ["Databases:App:ConnectionString"] = "Server=x" });
         var error = Assert.ThrowsAny<InvalidOperationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
         // 字典項目的綁定錯誤會被包裝一層，真正指出未知欄位的訊息在 InnerException。
         Assert.Contains("DatabaseOptions: 'ConnectionString'", error.InnerException?.Message, StringComparison.Ordinal);
@@ -103,7 +103,7 @@ public sealed class DatabasesOptionsTests
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(values).Build());
         services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
-        services.AddDatabase("Nexus");
+        services.AddDatabase("App");
         services.AddSqlDatabase<SourceDatabase>();
         return services.BuildServiceProvider();
     }

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { nexusPath, nexusTips } from '@shared/graphics/nexus-logo';
+import { brandPath, brandTips } from '@shared/graphics/brand-logo';
 
 /**
  * 登入訊號所描繪的外框（signal-mark.ts）。標記移入字標後仍會保留，因此品牌區保有其重量；
@@ -16,6 +16,6 @@ import { nexusPath, nexusTips } from '@shared/graphics/nexus-logo';
     }`,
 })
 export class LoginTrace {
-  readonly outline = nexusPath;
-  readonly tips = nexusTips;
+  readonly outline = brandPath;
+  readonly tips = brandTips;
 }

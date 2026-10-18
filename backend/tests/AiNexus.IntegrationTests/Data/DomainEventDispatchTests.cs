@@ -66,7 +66,7 @@ public sealed class DomainEventDispatchTests
         public async Task HandleAsync(Saving e, CancellationToken ct) => await db.SaveChangesAsync(ct);
     }
 
-    private static NexusFactory Factory(Recorder recorder) => new(services: services =>
+    private static AppFactory Factory(Recorder recorder) => new(services: services =>
     {
         services.AddSingleton(recorder);
         services.AddDomainEventHandler<Probe, ProbeHandler>();
@@ -75,13 +75,13 @@ public sealed class DomainEventDispatchTests
         services.AddDomainEventHandler<Saving, SavingHandler>();
     });
 
-    private static async Task<Guid> OwnerAsync(NexusFactory f)
+    private static async Task<Guid> OwnerAsync(AppFactory f)
     {
         using var client = await f.SignedInAsync();
         return (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
     }
 
-    private static async Task<(string Name, string[] Actions)> StateAsync(NexusFactory f, Guid owner)
+    private static async Task<(string Name, string[] Actions)> StateAsync(AppFactory f, Guid owner)
     {
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var name = await db.Users.Where(x => x.Id == owner).Select(x => x.DisplayName).SingleAsync();

@@ -19,7 +19,7 @@ public sealed class UserRateLimitsTests
     // 限流器在模型綁定之前執行，因此之後被 endpoint 拒絕的請求仍會計入。
     private static async Task AssertPerUserLimitAsync(string path, int permits, Func<HttpClient, Task<HttpResponseMessage>> send)
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         var alice = await factory.SignedInAsync();
         for (var i = 0; i < permits; i++)
         {

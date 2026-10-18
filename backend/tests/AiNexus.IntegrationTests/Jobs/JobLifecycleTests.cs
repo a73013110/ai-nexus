@@ -17,14 +17,14 @@ public sealed class JobLifecycleTests
     [Fact]
     public async Task JobsAreOwnerScopedCancellationIsDurableAndRetryRequiresCsrf()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var collection = await CreateCollection(alice); var document = await AddDocument(alice, collection.Resource.Id, "Cancellation sample document.");
         Assert.Equal(HttpStatusCode.NotFound, (await bob.PostAsync($"/api/v1/jobs/{document.JobId}/cancel", null)).StatusCode);
         (await alice.PostAsync($"/api/v1/jobs/{document.JobId}/cancel", null)).EnsureSuccessStatusCode(); await Process(factory);
         Assert.Equal("cancelled", (await alice.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!.Status);
         Assert.Equal(0, factory.Embeddings.Calls);
-        alice.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        alice.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsync($"/api/v1/jobs/{document.JobId}/retry", null)).StatusCode);
     }
 
@@ -35,7 +35,7 @@ public sealed class JobLifecycleTests
     [Fact]
     public async Task DatabaseAllowsOneActiveJobPerSubjectAndKind()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var subject = Guid.NewGuid();

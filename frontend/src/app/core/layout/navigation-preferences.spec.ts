@@ -72,7 +72,7 @@ describe('navigation preferences', () => {
     preferences.toggle('chat');
     me.set({ id: 'user-1', access: access(['chat', 'files', 'tasks', 'admin']) });
     expect(preferences.ids()).toEqual(['files', 'tasks', 'admin']);
-    expect(JSON.parse(localStorage.getItem('nexus.navigation-display.user-1')!)).toBe('list');
+    expect(JSON.parse(localStorage.getItem('ai-nexus.navigation-display.user-1')!)).toBe('list');
     me.set({ id: 'user-2', access: access(['chat']) });
     expect(preferences.ids()).toEqual(['chat']);
     expect(preferences.display()).toBe('icons');

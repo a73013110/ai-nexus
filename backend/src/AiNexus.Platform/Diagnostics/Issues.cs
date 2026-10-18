@@ -45,7 +45,7 @@ public static class DiagnosticTrace
                 .SetParentId(parent == default ? ActivityTraceId.CreateRandom() : parent.TraceId, parent == default ? ActivitySpanId.CreateRandom() : parent.SpanId, ActivityTraceFlags.Recorded)
                 .Start();
 
-        activity.SetTag("nexus.trusted", true);
+        activity.SetTag("diagnostic.trusted", true);
         return activity;
     }
 }
@@ -217,7 +217,7 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
         Activity.Current = null;
 
         using var activity = DiagnosticTrace.Start("http.request", kind: ActivityKind.Server);
-        http.Items["Nexus.TraceId"] = activity.TraceId.ToHexString();
+        http.Items["Diagnostics.TraceId"] = activity.TraceId.ToHexString();
 
         var watch = Stopwatch.StartNew();
         var operation = Guid.NewGuid();

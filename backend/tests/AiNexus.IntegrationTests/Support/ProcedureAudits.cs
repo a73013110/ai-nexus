@@ -22,7 +22,7 @@ public sealed class ProcedureAudits
 {
     private readonly ConcurrentQueue<Call> calls = new();
 
-    /// <summary>傳給 <c>NexusFactory</c> 的 <c>services</c>。</summary>
+    /// <summary>傳給 <c>AppFactory</c> 的 <c>services</c>。</summary>
     public void Register(IServiceCollection services) => services.Replace(ServiceDescriptor.Scoped<ISqlDatabase<AppDbContext>>(
         scope => new Recorder(ActivatorUtilities.CreateInstance<DbContextSqlDatabase<AppDbContext>>(scope), calls)));
 
@@ -30,7 +30,7 @@ public sealed class ProcedureAudits
     /// <paramref name="procedure"/> 至少成功呼叫過一次，且每次都寫了稽核；每一筆的有效身分、TraceId、時間與呼叫端一致，
     /// 明細經 <see cref="AuditRedactor.Sanitize"/> 後內容不變，動作歸在 <paramref name="category"/>。
     /// </summary>
-    public async Task<IReadOnlyList<AuditEvent>> AssertWrittenAsync(NexusFactory factory, string procedure, Guid owner, DateTimeOffset at, string category)
+    public async Task<IReadOnlyList<AuditEvent>> AssertWrittenAsync(AppFactory factory, string procedure, Guid owner, DateTimeOffset at, string category)
     {
         var succeeded = Calls(procedure).Where(x => x.Succeeded).ToArray();
         Assert.NotEmpty(succeeded);

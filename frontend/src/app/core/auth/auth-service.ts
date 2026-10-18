@@ -1,6 +1,6 @@
 import { DestroyRef, effect, Injectable, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { NexusApi } from '../api/nexus-api';
+import { WorkspaceApi } from '../api/workspace-api';
 import type { AuthSessionDto } from '../api/schema';
 import { ApiClient } from '../api/api-client';
 import { ViewMorph } from '../layout/view-morph';
@@ -9,7 +9,7 @@ const RECENT_SESSION_MS = 5000;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly router = inject(Router);
   private readonly morph = inject(ViewMorph);
   readonly session = signal<AuthSessionDto | null>(null);
@@ -17,7 +17,7 @@ export class AuthService {
   private pending: Promise<AuthSessionDto> | null = null;
   private confirmedAt = 0;
   private readonly channel =
-    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('nexus-identity');
+    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('ai-nexus-identity');
   constructor() {
     const transport = inject(ApiClient);
     if (this.channel) this.channel.onmessage = () => window.location.reload();

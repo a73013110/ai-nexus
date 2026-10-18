@@ -17,7 +17,7 @@ public sealed class DeleteKnowledgeCollectionTests
     [Fact]
     public async Task DeletingCollectionPurgesIndexAndUnlinksSourcesButRetainsLibraryOriginal()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync(); var collection = await CreateCollection(client);
         var doc = await AddDocument(client, collection.Resource.Id, "Content removed with the collection."); await Process(factory);
         var conversation = await CreateConversation(client);

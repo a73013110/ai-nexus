@@ -15,7 +15,7 @@ public sealed class UserAccountTests
     [Fact]
     public async Task ManualLocalCrudHashesPasswordAndRevokesSessionsWithoutDeletingContent()
     {
-        await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); await Login(admin, "alice");
         var id = await CreateUser(admin, LocalAccount());
         using var local = f.CreateClient(); var me = await Login(local, "TeStEr", "local");
@@ -26,7 +26,7 @@ public sealed class UserAccountTests
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.StartsWith($"$argon2id$v=19$m={NexusFactory.PasswordCost.MemoryKiB},t={NexusFactory.PasswordCost.Iterations},p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
+            Assert.StartsWith($"$argon2id$v=19$m={AppFactory.PasswordCost.MemoryKiB},t={AppFactory.PasswordCost.Iterations},p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
             Assert.DoesNotContain(Password, (await db.AuditEvents.SingleAsync(x => x.Action == "admin.user")).DetailsJson);
         }
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount() with { DisplayName = "更新姓名", Password = "a replacement password 99!" })).EnsureSuccessStatusCode();
@@ -43,7 +43,7 @@ public sealed class UserAccountTests
     [Fact]
     public async Task PreProvisionedUserCanUseAdAndLocalOnTheSameIdentityAndAdCanBeRevoked()
     {
-        await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); await Login(admin, "alice");
         var request = LocalAccount("local-bob") with { AdEnabled = true, AdAccount = "bob" };
         var id = await CreateUser(admin, request);
@@ -62,13 +62,13 @@ public sealed class UserAccountTests
     [Fact]
     public async Task AccountPolicyRejectsMissingPasswordInvalidRoleSelfDisableAndMissingCsrf()
     {
-        await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var actor = await Login(admin, "alice");
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount() with { Password = null })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount() with { RoleIds = ["missing"] })).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}", LocalAccount("alice") with { Enabled = false, AdEnabled = true, AdAccount = "alice", RoleIds = ["administrator"] })).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync($"/api/v1/admin/users/{actor.Id}")).StatusCode);
-        admin.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        admin.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount())).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "檢查權限"))).StatusCode);
     }

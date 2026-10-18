@@ -9,7 +9,7 @@ public sealed class PromptTemplateTests
     [Fact]
     public async Task PromptLibraryIsPersonalAndSupportsCrud()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var response = await alice.PostAsJsonAsync("/api/v1/prompt-templates", new SavePromptRequest("摘要", "請歸納以下內容"));

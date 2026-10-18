@@ -17,7 +17,7 @@ public sealed class ShareProjectTests
     [Fact]
     public async Task ProjectMembershipScopesTemplatesFilesAndArtifactsWhileConversationsStayPrivate()
     {
-        await using var f = new NexusFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
+        await using var f = new AppFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
         var project = (await (await alice.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("專案一", "工作背景", "回答要核對來源"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var id = project.Resource.Id; var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/projects/{id}")).StatusCode);

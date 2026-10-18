@@ -27,7 +27,7 @@
   translate: calc(-1 * var(--brand-affix-shift, 0)) 0;
 }
 // The N is set like a capital: its serifs sit on the cap line and the baseline of the words and
-// only the stem tips overshoot. The serifs span 1.44 of the mark's 2-unit box (nexus-logo.ts).
+// only the stem tips overshoot. The serifs span 1.44 of the mark's 2-unit box (brand-logo.ts).
 .brand-symbol {
   --cap: 0.7em;
   display: inline-flex;

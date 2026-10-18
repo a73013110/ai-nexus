@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NexusApi } from '../api/nexus-api';
+import { WorkspaceApi } from '../api/workspace-api';
 import { ApiError } from '../errors/safe-errors';
 import type { RunDto } from '../api/schema';
 import { RunStream } from './run-stream';
@@ -38,7 +38,7 @@ function sse(...events: object[]) {
 }
 
 function setup(api: Partial<Record<'events' | 'run', ReturnType<typeof vi.fn>>>) {
-  TestBed.configureTestingModule({ providers: [{ provide: NexusApi, useValue: api }] });
+  TestBed.configureTestingModule({ providers: [{ provide: WorkspaceApi, useValue: api }] });
   const stream = TestBed.inject(RunStream);
   const content: string[] = [];
   const connection: string[] = [];

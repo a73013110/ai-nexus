@@ -134,7 +134,7 @@ const reusedPage = (from: ActivatedRouteSnapshot, to: ActivatedRouteSnapshot) =>
  * 減少動態效果、`ViewMorph` 執行中，或頁面元件被重用（`/chat` ↔ `/chat/:id`）時會略過，
  * 由頁面自己的狀態變化決定要 morph 什麼。
  */
-export const withNexusViewTransitions = () =>
+export const withMorphTransitions = () =>
   withViewTransitions({
     skipInitialTransition: true,
     onViewTransitionCreated: ({ transition, from, to }: ViewTransitionInfo) => {

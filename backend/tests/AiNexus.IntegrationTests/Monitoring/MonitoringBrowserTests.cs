@@ -15,8 +15,8 @@ public sealed class MonitoringBrowserTests
     {
         TestBrowser.SkipUnlessConfigured();
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
-        var webRoot = Environment.GetEnvironmentVariable("NEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
-        await using var factory = new NexusFactory(administrators: ["alice"], webRoot: webRoot);
+        var webRoot = Environment.GetEnvironmentVariable("AINEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
+        await using var factory = new AppFactory(administrators: ["alice"], webRoot: webRoot);
         factory.UseKestrel(0); using var client = await factory.SignedInAsync();
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(TestBrowser.LaunchOptions());

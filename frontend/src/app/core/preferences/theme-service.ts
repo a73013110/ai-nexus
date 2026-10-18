@@ -24,7 +24,7 @@ export class ThemeService {
     });
     try {
       const local = JSON.parse(
-        localStorage.getItem('nexus.appearance') ?? 'null',
+        localStorage.getItem('ai-nexus.appearance') ?? 'null',
       ) as PreferencesDto | null;
       if (local && ['system', 'light', 'dark'].includes(local.theme))
         this.preferences.set({
@@ -42,7 +42,7 @@ export class ThemeService {
     this.render();
     try {
       localStorage.setItem(
-        'nexus.appearance',
+        'ai-nexus.appearance',
         JSON.stringify({ theme: value.theme, reducedMotion: value.reducedMotion }),
       );
     } catch {}

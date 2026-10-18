@@ -23,30 +23,30 @@ function Read-Secret([string]$Prompt) {
     finally { $secure.Dispose() }
 }
 
-$local = Initialize-NexusLocalSettings
-$settings = Read-NexusJson $local.Settings
-$secrets = Read-NexusJson $local.Secrets
+$local = Initialize-RepoLocalSettings
+$settings = Read-RepoJson $local.Settings
+$secrets = Read-RepoJson $local.Secrets
 Write-Output 'Enter 保留現有值。密碼與 key 以遮蔽輸入，儲存於 .local/secrets。'
 foreach ($field in @(
-    @{ Path = 'Databases.Nexus.Server'; Prompt = 'SQL server／instance' },
-    @{ Path = 'Databases.Nexus.Name'; Prompt = '專用資料庫名稱' },
+    @{ Path = 'Databases.App.Server'; Prompt = 'SQL server／instance' },
+    @{ Path = 'Databases.App.Name'; Prompt = '專用資料庫名稱' },
     @{ Path = 'Identity.ActiveDirectory.Domain'; Prompt = 'AD 網域，例如 company.internal' },
     @{ Path = 'Identity.ActiveDirectory.BindUser'; Prompt = 'AD 服務帳號名稱' }
 )) {
     $value = Read-Host "$($field.Prompt)（Enter 保留）"
-    if ($value) { Set-NexusSetting $settings $field.Path $value.Trim() }
+    if ($value) { Set-RepoSetting $settings $field.Path $value.Trim() }
 }
 foreach ($field in @(
-    @{ Path = 'Databases.Nexus.User'; Prompt = '既有 SQL 登入帳號' },
-    @{ Path = 'Databases.Nexus.Password'; Prompt = 'SQL 密碼' },
+    @{ Path = 'Databases.App.User'; Prompt = '既有 SQL 登入帳號' },
+    @{ Path = 'Databases.App.Password'; Prompt = 'SQL 密碼' },
     @{ Path = 'Identity.ActiveDirectory.BindPassword'; Prompt = 'AD 服務帳號密碼' },
     @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' }
 )) {
     $value = Read-Secret "$($field.Prompt)（遮蔽輸入，Enter 保留）"
-    if ($value) { Set-NexusSetting $secrets $field.Path $value }
+    if ($value) { Set-RepoSetting $secrets $field.Path $value }
 }
-Save-NexusJson $local.Settings $settings
-Save-NexusJson $local.Secrets $secrets
-Protect-NexusSecrets $local.Secrets
+Save-RepoJson $local.Settings $settings
+Save-RepoJson $local.Secrets $secrets
+Protect-RepoSecrets $local.Secrets
 $value = $secrets = $null
 Write-Output '設定已保存。連線到 DBA 維護的開發庫時直接重新啟動專案；要建立新庫，執行 scripts/Initialize-Database.ps1。'

@@ -89,7 +89,7 @@ public sealed class SettingsTests
     {
         using var services = Settings(new() { ["Databases:LegacyGdweb:Server"] = "sql", ["Databases:Gdweb:ReadOnly"] = "false" });
         var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        Assert.Contains("Databases:LegacyGdweb is not a database of this application. Known: Gdweb, Meiho, Nexus.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:LegacyGdweb is not a database of this application. Known: App, Gdweb, Meiho.", error.Message, StringComparison.Ordinal);
         Assert.Contains("Databases:Gdweb:ReadOnly must be true", error.Message, StringComparison.Ordinal);
     }
 

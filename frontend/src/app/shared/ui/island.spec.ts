@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it } from 'vitest';
-import { NexusIsland } from './island';
+import { Island } from './island';
 import { IslandService, type IslandItem } from './island-service';
 
 const item = (id: string, priority: number, extra: Partial<IslandItem> = {}): IslandItem => ({
@@ -14,7 +14,7 @@ const item = (id: string, priority: number, extra: Partial<IslandItem> = {}): Is
   ...extra,
 });
 
-@Component({ selector: 'nx-island-host', imports: [NexusIsland], template: '<nx-island />' })
+@Component({ selector: 'nx-island-host', imports: [Island], template: '<nx-island />' })
 class Host {
   readonly items = signal<IslandItem[]>([]);
   constructor() {
@@ -22,13 +22,13 @@ class Host {
   }
 }
 
-describe('NexusIsland', () => {
+describe('Island', () => {
   afterEach(() => TestBed.resetTestingModule());
   const setup = () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    const island = fixture.debugElement.children[0].componentInstance as NexusIsland;
+    const island = fixture.debugElement.children[0].componentInstance as Island;
     return { fixture, host: fixture.componentInstance, island };
   };
 

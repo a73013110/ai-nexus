@@ -22,7 +22,7 @@ function snapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapsh
   return {
     version: 2,
     enabled: true,
-    instance: 'NEXUS-01',
+    instance: 'WEB-01',
     startedAt: at(0),
     at: at(30),
     windowMinutes: 5,

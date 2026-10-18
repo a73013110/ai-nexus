@@ -17,7 +17,7 @@ public sealed class UserInspectionTests
     [Fact]
     public async Task AdministrativeReadIsExplicitAuditedAndDoesNotWeakenOwnerEndpoints()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var conversation = await CreateConversation(bob);
@@ -41,7 +41,7 @@ public sealed class UserInspectionTests
     [Fact]
     public async Task AllVersionsAndDeletedConversationsArePaginatedAndSearchRemainsMetadataOnlyInAudit()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var conversation = await CreateConversation(bob);
@@ -67,7 +67,7 @@ public sealed class UserInspectionTests
     [Fact]
     public async Task ReportsIncludeOtherAiTasksAndIgnoreOtherOwnersAndOldUsage()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var actor = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!; var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
@@ -89,7 +89,7 @@ public sealed class UserInspectionTests
     [Fact]
     public async Task RevokedAdministratorCannotReadEvenWithAnExistingSession()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         var me = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

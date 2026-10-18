@@ -5,13 +5,13 @@ namespace AiNexus.Platform.Security;
 /// <summary>標頭權杖（Header-token）CSRF 防護機制，涵蓋所有變更狀態之 API 請求（包含登入端點）。</summary>
 public static class Csrf
 {
-    public const string HeaderName = "X-Nexus-CSRF";
+    public const string HeaderName = "X-CSRF-Token";
 
     public static IServiceCollection AddCsrfProtection(this IServiceCollection services, IHostEnvironment environment, IConfiguration configuration)
         => services.AddAntiforgery(options =>
         {
             options.HeaderName = HeaderName;
-            options.Cookie.Name = "Nexus.Antiforgery";
+            options.Cookie.Name = "AiNexus.Antiforgery";
             options.Cookie.HttpOnly = true;
             options.Cookie.SameSite = SameSiteMode.Strict;
             options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(environment, configuration);

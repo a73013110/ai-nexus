@@ -8,7 +8,7 @@ public sealed class GetPersonalUsageTests
     [Fact]
     public async Task UsageCountsOnlyOwnProviderReportedTokens()
     {
-        await using var factory = new NexusFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var convo = await ChatApi.CreateConversation(alice);
         var run = await ChatApi.CreateRun(alice, convo.Id, "統計");
         await ChatApi.WaitForTerminal(alice, run.Id);

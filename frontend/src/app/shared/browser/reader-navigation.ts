@@ -24,9 +24,9 @@ export function readerReturnUrl(value: unknown): string | null {
     /[\u0000-\u001f\u007f]/.test(value)
   )
     return null;
-  const url = new URL(value, 'https://nexus.invalid');
+  const url = new URL(value, 'https://app.invalid');
   if (
-    url.origin !== 'https://nexus.invalid' ||
+    url.origin !== 'https://app.invalid' ||
     !/^\/(?:dashboard|chat|files|knowledge|projects|artifacts|repositories|quality|shared|tasks|integrations|admin|settings)(?:\/[a-z0-9-]+)?$/i.test(
       url.pathname,
     )

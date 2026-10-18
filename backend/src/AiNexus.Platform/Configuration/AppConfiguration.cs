@@ -1,7 +1,7 @@
 namespace AiNexus.Platform.Configuration;
 
 /// <summary>統一的組態來源載入器，取代主機預設的組態來源，整合分層 JSON、環境變數與命令列參數。</summary>
-public static class NexusConfiguration
+public static class AppConfiguration
 {
     /// <param name="builder">要替換組態來源的主機建置器。</param>
     /// <param name="args">命令列參數，優先權高於所有其他來源。</param>
@@ -11,7 +11,7 @@ public static class NexusConfiguration
         // 測試主機絕不載入實體機密檔；正式環境則使用明確指定的路徑或環境變數。
         if (!builder.Environment.IsEnvironment("Testing"))
         {
-            resolved = NexusConfigResolver.Resolve(
+            resolved = AppConfigResolver.Resolve(
                 builder.Environment.ContentRootPath,
                 builder.Environment.EnvironmentName,
                 builder.Configuration["LocalConfigPath"],
@@ -34,7 +34,7 @@ public static class NexusConfiguration
         {
             var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
             builder.Configuration["DataProtection:KeyRingPath"] = string.IsNullOrWhiteSpace(keyRing)
-                ? resolved.KeyRingPath : NexusConfigResolver.Absolute(builder.Environment.ContentRootPath, keyRing);
+                ? resolved.KeyRingPath : AppConfigResolver.Absolute(builder.Environment.ContentRootPath, keyRing);
         }
     }
 }

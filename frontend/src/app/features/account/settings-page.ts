@@ -27,7 +27,7 @@ import type {
 } from '@core/api/schema';
 import { UserSettingsService, defaultSettings } from '@core/preferences/user-settings';
 import { DraftRepository } from '@core/preferences/draft-repository';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import { Select } from '@shared/ui/select';
 import { Icon } from '@shared/ui/icon';
 import { WorkspaceNavigation } from '@core/layout/workspace-navigation';
@@ -66,7 +66,7 @@ export class SettingsPage {
   readonly stateChange = output<{ changed: boolean; saving: boolean }>();
   readonly session = inject(WorkspaceSession);
   readonly service = inject(UserSettingsService);
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly drafts = inject(DraftRepository);
   /** 設定與帳號一起重新讀取，絕不使用其他裝置的快取。 */
   private readonly settingsRead = apiResource({

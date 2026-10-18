@@ -20,7 +20,7 @@ public sealed class RunAttachmentTests
     [Fact]
     public async Task TextAttachmentReachesTheProviderAndSurvivesRegeneration()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var file = await Upload(client, "notes.md", Encoding.UTF8.GetBytes("測試文件的重要內容"));
@@ -37,7 +37,7 @@ public sealed class RunAttachmentTests
     [Fact]
     public async Task ImageDataIsHydratedOnlyForGenerationAndIncludedInBudget()
     {
-        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        await using var factory = new AppFactory(inference: x => x.Models[0].SupportsImages = true);
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var file = await Upload(client, "image.png", Png);
@@ -52,7 +52,7 @@ public sealed class RunAttachmentTests
     [Fact]
     public async Task TextOnlyModelRejectsImagesWithoutCreatingAUserMessage()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var file = await Upload(client, "image.png", Png);
@@ -63,7 +63,7 @@ public sealed class RunAttachmentTests
     [Fact]
     public async Task DocumentsOverBudgetCannotCreateAnOrphanMessageOrRun()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var file = await Upload(client, "long.txt", Encoding.UTF8.GetBytes(new string('文', 4000)));
@@ -76,7 +76,7 @@ public sealed class RunAttachmentTests
     [Fact]
     public async Task PdfAndWordContentAreExtractedBeforeInference()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var pdf = new PdfDocumentBuilder();

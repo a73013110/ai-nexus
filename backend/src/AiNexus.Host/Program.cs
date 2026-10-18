@@ -23,7 +23,7 @@ var builder = WebApplication.CreateBuilder(command.HostArguments);
 WebApplication app;
 try
 {
-    NexusConfiguration.Load(builder, command.HostArguments);
+    AppConfiguration.Load(builder, command.HostArguments);
     builder.AddPlatform();
     builder.AddFeatures();
     builder.Services.AddOpenApiContract();

@@ -33,9 +33,9 @@ public sealed class RuntimeTrafficMiddleware(RequestDelegate next)
             var principal = http.User;
             Guid? user = http.RequestServices.GetService<CurrentUser>()?.ResolvedId ??
                 (principal.Identity?.IsAuthenticated == true && Guid.TryParse(principal.FindFirst(SessionIdentity.UserId)?.Value, out var id) ? id : null);
-            Guid? session = Guid.TryParse(http.Request.Headers["X-Nexus-Session"], out var sid) ? sid : null;
+            Guid? session = Guid.TryParse(http.Request.Headers["X-Browser-Session"], out var sid) ? sid : null;
             traffic.RequestFinished(user, session, http.Request.Method, route, http.Response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                request.ReadBytes, response.WrittenBytes, stream, http.RequestAborted.IsCancellationRequested, http.Items["Nexus.TraceId"] as string);
+                request.ReadBytes, response.WrittenBytes, stream, http.RequestAborted.IsCancellationRequested, http.Items["Diagnostics.TraceId"] as string);
         }
     }
 }

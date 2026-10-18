@@ -13,7 +13,7 @@ public sealed class ResourceAccessTests
     [Fact]
     public async Task ProjectAndEvaluationSetListsMatchEachItemAndMarkOnlyEditableItems()
     {
-        await using var factory = new NexusFactory(services: RequestQueries.Register);
+        await using var factory = new AppFactory(services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         using var carol = await factory.SignedInAsync("carol");

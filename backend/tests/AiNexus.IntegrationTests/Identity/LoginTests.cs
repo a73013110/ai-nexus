@@ -17,7 +17,7 @@ public sealed class LoginTests
     [Fact]
     public async Task LdapCookieLoginRequiresCsrfMapsSidAndLogoutInvalidatesSession()
     {
-        await using var factory = new NexusFactory(ldap: true);
+        await using var factory = new AppFactory(ldap: true);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/me")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"))).StatusCode);
@@ -26,10 +26,10 @@ public sealed class LoginTests
     [Fact]
     public async Task InvalidAdPasswordDoesNotIssueAnAuthenticatedCookie()
     {
-        await using var factory = new NexusFactory(ldap: true);
+        await using var factory = new AppFactory(ldap: true);
         using var client = factory.CreateClient();
         var session = (await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!;
-        client.DefaultRequestHeaders.Add("X-Nexus-CSRF", session.CsrfToken);
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", session.CsrfToken);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "wrong"))).StatusCode);
         Assert.False((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
     }
@@ -37,7 +37,7 @@ public sealed class LoginTests
     [Fact]
     public async Task LoginLocksAfterRepeatedFailuresAndPasswordResetClearsTheLock()
     {
-        await using var f = new NexusFactory(ldap: true, administrators: ["alice"]);
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); await Login(admin, "alice"); var id = await CreateUser(admin, LocalAccount());
         using var local = f.CreateClient(); await Csrf(local);
         for (var i = 0; i < 5; i++) Assert.Equal(HttpStatusCode.Unauthorized, (await local.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("tester", "wrong password!", "local"))).StatusCode);
@@ -50,8 +50,8 @@ public sealed class LoginTests
     [Fact]
     public async Task WindowsLoginRequiresWindowsIdentityEvenWhenALocalCookieExists()
     {
-        await using var f = new NexusFactory(administrators: ["alice"], services: services =>
-            services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = "NexusSession"; options.DefaultChallengeScheme = "NexusSession"; }));
+        await using var f = new AppFactory(administrators: ["alice"], services: services =>
+            services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = "Session"; options.DefaultChallengeScheme = "Session"; }));
         using var admin = await f.SignedInAsync(); await CreateUser(admin, LocalAccount());
         using var local = f.CreateClient(); await Login(local, "tester", "local");
         Assert.Equal(HttpStatusCode.Unauthorized, (await local.GetAsync("/api/v1/auth/windows")).StatusCode);
@@ -62,7 +62,7 @@ public sealed class LoginTests
     public async Task AStaleLoginOrHashUpgradeCannotOverwriteAConcurrentPasswordReset()
     {
         var id = Guid.NewGuid();
-        await using var factory = new NexusFactory(seed: db => db.Users.Add(new User {
+        await using var factory = new AppFactory(seed: db => db.Users.Add(new User {
             Id = id, Sid = "managed:" + id, Account = "tester", DisplayName = "tester", LocalAccount = "TESTER",
             LocalEnabled = true, AdEnabled = false, PasswordHash = "old-format-hash", SecurityVersion = 1
         }));

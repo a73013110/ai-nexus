@@ -4,7 +4,7 @@ namespace AiNexus.IntegrationTests.Host;
 
 public sealed class SpaFallbackTests : IDisposable
 {
-    private readonly string webRoot = Directory.CreateTempSubdirectory("nexus-webroot-").FullName;
+    private readonly string webRoot = Directory.CreateTempSubdirectory("ainexus-webroot-").FullName;
 
     public SpaFallbackTests() => File.WriteAllText(Path.Combine(webRoot, "index.html"), "<!doctype html><title>shell</title>");
 
@@ -17,7 +17,7 @@ public sealed class SpaFallbackTests : IDisposable
     [InlineData("/chat")]
     public async Task DeepLinksOpenTheApplicationShellEvenWhenTheirLastSegmentHasADot(string path)
     {
-        await using var factory = new NexusFactory(webRoot: webRoot);
+        await using var factory = new AppFactory(webRoot: webRoot);
         using var client = await factory.SignedInAsync();
         using var response = await client.GetAsync(path);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -29,7 +29,7 @@ public sealed class SpaFallbackTests : IDisposable
     [Fact]
     public async Task MissingStaticFilesStayNotFound()
     {
-        await using var factory = new NexusFactory(webRoot: webRoot);
+        await using var factory = new AppFactory(webRoot: webRoot);
         using var client = await factory.SignedInAsync();
         using var response = await client.GetAsync("/chunk-missing.js");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

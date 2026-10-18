@@ -23,13 +23,13 @@ export class NavigationPreferences {
   );
   private readonly user = computed(() => this.session.me()?.id ?? '');
   private readonly saved = linkedSignal(() => {
-    const value = read(`nexus.pins.${this.user()}`);
+    const value = read(`ai-nexus.pins.${this.user()}`);
     return Array.isArray(value) && value.every((id) => typeof id === 'string')
       ? value.slice(0, 20)
       : null;
   });
   readonly display = linkedSignal<NavigationDisplay>(() =>
-    read(`nexus.navigation-display.${this.user()}`) === 'list' ? 'list' : 'icons',
+    read(`ai-nexus.navigation-display.${this.user()}`) === 'list' ? 'list' : 'icons',
   );
   readonly ids = computed(() => {
     const visible = new Set(this.features().map((feature) => feature.id));
@@ -54,11 +54,11 @@ export class NavigationPreferences {
         ? base
         : [...base.filter((item) => item !== id), id];
     this.saved.set(ids);
-    write(`nexus.pins.${this.user()}`, ids);
+    write(`ai-nexus.pins.${this.user()}`, ids);
   }
   setDisplay(display: NavigationDisplay) {
     this.display.set(display);
-    write(`nexus.navigation-display.${this.user()}`, display);
+    write(`ai-nexus.navigation-display.${this.user()}`, display);
   }
 }
 

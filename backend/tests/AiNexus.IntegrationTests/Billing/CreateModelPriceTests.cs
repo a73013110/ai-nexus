@@ -21,7 +21,7 @@ public sealed class CreateModelPriceTests
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var audits = new ProcedureAudits(); var events = new PriceEvents();
-        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock, services: services => { audits.Register(services); events.Register(services); });
+        await using var factory = new AppFactory(administrators: ["alice"], clock: clock, services: services => { audits.Register(services); events.Register(services); });
         using var alice = await factory.SignedInAsync();
         var aliceId = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var request = new PriceRequest("google", "test-model", "USD", "api", 1, .5m, 2, 0, "completed", clock.GetUtcNow().AddDays(1), "  fixture  ");
@@ -45,7 +45,7 @@ public sealed class CreateModelPriceTests
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var audits = new ProcedureAudits();
-        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock, services: audits.Register);
+        await using var factory = new AppFactory(administrators: ["alice"], clock: clock, services: audits.Register);
         using var alice = await factory.SignedInAsync();
         var aliceId = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var request = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", clock.GetUtcNow(), "fixture");
@@ -66,7 +66,7 @@ public sealed class CreateModelPriceTests
     public async Task EventHandlerFailureRollsBackTheProcedureWriteAndItsAudit()
     {
         var events = new PriceEvents { Fail = true };
-        await using var factory = new NexusFactory(administrators: ["alice"], services: events.Register);
+        await using var factory = new AppFactory(administrators: ["alice"], services: events.Register);
         using var alice = await factory.SignedInAsync();
         var request = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", DateTimeOffset.UtcNow, "fixture");
 

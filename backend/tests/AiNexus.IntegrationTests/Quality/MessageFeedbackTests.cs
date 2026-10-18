@@ -11,7 +11,7 @@ public sealed class MessageFeedbackTests
     [Fact]
     public async Task FeedbackIsOwnedTerminalAndPersistsInConversationWithoutPublishingText()
     {
-        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var other = await f.SignedInAsync("other");
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var other = await f.SignedInAsync("other");
         var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "問題"); await WaitForTerminal(owner, run.Id);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback", new FeedbackRequest(1))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.PutAsJsonAsync($"/api/v1/messages/{run.UserMessageId}/feedback", new FeedbackRequest(1))).StatusCode);

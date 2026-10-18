@@ -25,7 +25,7 @@ public sealed class RepositoryReviewTests
 {
     private const string Reviews = "/api/v1/repositories/hanglong/nexus/reviews";
 
-    private static NexusFactory Factory(FixtureGitea source, ReviewProvider provider) => new(services: services =>
+    private static AppFactory Factory(FixtureGitea source, ReviewProvider provider) => new(services: services =>
     {
         services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source);
         services.PostConfigure<GiteaOptions>(o => o.Enabled = true);
@@ -39,7 +39,7 @@ public sealed class RepositoryReviewTests
         response.EnsureSuccessStatusCode(); return (await response.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
     }
 
-    private static async Task ProcessOne(NexusFactory factory)
+    private static async Task ProcessOne(AppFactory factory)
     {
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
         Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
@@ -177,7 +177,7 @@ public sealed class RepositoryReviewTests
     [Fact]
     public async Task BoundedModelTasksReserveTheRequestedOutputInsteadOfTheFullModelLimit()
     {
-        await using var factory = new NexusFactory(inference: o => o.Models[0].MaxOutputTokens = 7000);
+        await using var factory = new AppFactory(inference: o => o.Models[0].MaxOutputTokens = 7000);
         using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
         var owner = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Select(x => x.Id).SingleAsync();
         var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);
@@ -258,7 +258,7 @@ public sealed class RepositoryReviewTests
     public async Task ReviewRangesArePinnedIdempotentAndCheckpointRetriesOnlyUnfinishedSections()
     {
         var source = new FixtureGitea { Diff = "diff --git a/a.cs b/a.cs\n@@ -1 +1 @@\n-a\n+" + new string('x', 6000) + "\ndiff --git a/b.cs b/b.cs\n@@ -1 +1 @@\n-c\n+d\n" };
-        await using var factory = new NexusFactory(services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
+        await using var factory = new AppFactory(services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
         using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         (await owner.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
         var request = new CreateRepositoryReviewRequest(new string('a', 40), new string('b', 40), null, "test-model", "權限", Guid.NewGuid().ToString());

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -130,7 +130,7 @@ const purposes = {
 })
 export class RepositoryReviewDialog {
   private readonly api = inject(RepositoriesApi);
-  private readonly nexus = inject(NexusApi);
+  private readonly workspaceApi = inject(WorkspaceApi);
   private readonly store = inject(RepositoryStore);
   private readonly scope = inject(ViewScope);
   private readonly jobs = inject(JobToasts);
@@ -147,7 +147,7 @@ export class RepositoryReviewDialog {
   private readonly modelsRead = apiResource({
     feature: 'repositories',
     params: () => this.opened() || undefined,
-    loader: () => this.nexus.models(),
+    loader: () => this.workspaceApi.models(),
   });
   readonly models = computed(() => this.modelsRead.value() ?? null);
   readonly choices = computed(

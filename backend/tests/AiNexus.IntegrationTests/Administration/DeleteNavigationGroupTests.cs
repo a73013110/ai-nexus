@@ -12,7 +12,7 @@ public sealed class DeleteNavigationGroupTests
     [Fact]
     public async Task GroupsWithSubgroupsOrFeaturesStayUntilEmptied()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", null, 40))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("monthly", "月報", "reports", 10))).EnsureSuccessStatusCode();
         (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, true, "monthly", "files"))).EnsureSuccessStatusCode();
@@ -31,7 +31,7 @@ public sealed class DeleteNavigationGroupTests
     [Fact]
     public async Task MembersCannotDeleteGroups()
     {
-        await using var factory = new NexusFactory(); using var member = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         await AssertCodeAsync(await member.DeleteAsync("/api/v1/admin/navigation-groups/work"), HttpStatusCode.Forbidden, "feature_forbidden");
     }
 }

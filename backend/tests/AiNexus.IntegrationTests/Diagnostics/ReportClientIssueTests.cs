@@ -14,7 +14,7 @@ public sealed class ReportClientIssueTests
     [Fact]
     public async Task ClientReportIsUntrustedBoundedDeduplicatedAndPrivate()
     {
-        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var body = new ClientIssueRequest("exception", new string('A', 64));
         var first = await alice.PostAsJsonAsync("/api/v1/client-issues", body); first.EnsureSuccessStatusCode(); var code = (await first.Content.ReadFromJsonAsync<ClientIssueResponse>())!.IssueCode;
         var again = await alice.PostAsJsonAsync("/api/v1/client-issues", body); Assert.Equal(code, (await again.Content.ReadFromJsonAsync<ClientIssueResponse>())!.IssueCode);

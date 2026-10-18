@@ -12,7 +12,7 @@ public sealed class ExportArtifactTests
     [Fact]
     public async Task WordExportIsValidOpenXmlAndPreservesChineseTablesAndCode()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var artifact = await CreateArtifact(client);
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync(); var artifact = await CreateArtifact(client);
         var response = await client.GetAsync($"/api/v1/artifacts/{artifact.Resource.Id}/export/docx"); response.EnsureSuccessStatusCode();
         using var stream = new MemoryStream(await response.Content.ReadAsByteArrayAsync()); using var word = WordprocessingDocument.Open(stream, false);
         var main = word.MainDocumentPart!.Document!;

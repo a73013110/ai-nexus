@@ -12,7 +12,7 @@ public sealed class StreamRunEventsTests
     [Fact]
     public async Task ExpiredReplayEventsRecoverWithAnAuthoritativeSnapshot()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var run = await CreateRun(client, conversation.Id, "快照");
@@ -29,7 +29,7 @@ public sealed class StreamRunEventsTests
     [Fact]
     public async Task APartiallyExpiredReplayIsRecoveredAsAFullSnapshot()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync(); var conversation = await ChatApi.CreateConversation(client);
         var run = await ChatApi.CreateRun(client, conversation.Id, "保留缺口"); var complete = await ChatApi.WaitForTerminal(client, run.Id);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

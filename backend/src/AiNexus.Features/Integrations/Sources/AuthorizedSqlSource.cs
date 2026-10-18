@@ -22,7 +22,7 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
     public abstract string Id { get; }
     private const string SearchSql = """
         SELECT TOP (@Take) RecordId, RecordKind, Title, Status, Revision, ModifiedAt
-        FROM nexus.AuthorizedRecords
+        FROM ainexus.AuthorizedRecords
         WHERE ActorSid = @ActorSid AND ActorAccount = @ActorAccount
           AND (@Kind = 'all' OR RecordKind = @Kind)
           AND (Title LIKE @Pattern ESCAPE '~' OR RecordId LIKE @Pattern ESCAPE '~')
@@ -31,12 +31,12 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
     private const string ReadSql = """
         SELECT RecordId, RecordKind, Title, Status, Revision, ModifiedAt,
           CASE WHEN DATALENGTH(Body) <= 32000 THEN Body ELSE NULL END AS Body
-        FROM nexus.AuthorizedRecords
+        FROM ainexus.AuthorizedRecords
         WHERE ActorSid = @ActorSid AND ActorAccount = @ActorAccount AND RecordId = @RecordId
         """;
     private const string HistorySql = """
         SELECT TOP (101) At, Kind, Actor, Description, Revision
-        FROM nexus.AuthorizedRecordHistory
+        FROM ainexus.AuthorizedRecordHistory
         WHERE ActorSid = @ActorSid AND ActorAccount = @ActorAccount AND RecordId = @RecordId
         ORDER BY At DESC, EventId DESC
         """;

@@ -135,7 +135,7 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
       }
     </ng-template>`,
 })
-export class NexusIsland {
+export class Island {
   private readonly island = inject(IslandService);
   readonly items = this.island.items;
   readonly primary = computed<IslandItem | null>(() => this.items()[0] ?? null);

@@ -16,15 +16,15 @@ public sealed class WebSecurityTests
     public async Task SensitiveResponsesHaveConsistentHeadersAndTokenGenerationNeverLogsCacheOverrides()
     {
         var logs = new Logs();
-        await using var factory = new NexusFactory(ldap: true, services: services => services.AddSingleton<ILoggerProvider>(logs));
+        await using var factory = new AppFactory(ldap: true, services: services => services.AddSingleton<ILoggerProvider>(logs));
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         using var bootstrap = await client.GetAsync("/api/v1/auth/session");
         AssertNoStore(bootstrap);
         Assert.Contains(bootstrap.Headers.GetValues("Set-Cookie"), value => value.Contains("secure", StringComparison.OrdinalIgnoreCase) && value.Contains("httponly", StringComparison.OrdinalIgnoreCase) && value.Contains("samesite=strict", StringComparison.OrdinalIgnoreCase));
-        client.DefaultRequestHeaders.Add("X-Nexus-CSRF", (await bootstrap.Content.ReadFromJsonAsync<AuthSessionDto>())!.CsrfToken);
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", (await bootstrap.Content.ReadFromJsonAsync<AuthSessionDto>())!.CsrfToken);
         using var login = await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"));
         login.EnsureSuccessStatusCode(); AssertNoStore(login);
-        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value => value.StartsWith("Nexus.Session=", StringComparison.Ordinal) && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value => value.StartsWith("AiNexus.Session=", StringComparison.Ordinal) && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
         using var me = await client.GetAsync("/api/v1/me"); me.EnsureSuccessStatusCode(); AssertNoStore(me);
         Assert.Equal("DENY", me.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", me.Headers.GetValues("X-Content-Type-Options").Single());

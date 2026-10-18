@@ -14,12 +14,12 @@ import {
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
 import {
-  nexusHalfPaths,
-  nexusHalves,
-  nexusPath,
-  nexusTips,
+  brandHalfPaths,
+  brandHalves,
+  brandPath,
+  brandTips,
   pointAlong,
-} from '@shared/graphics/nexus-logo';
+} from '@shared/graphics/brand-logo';
 import { Icon } from '@shared/ui/icon';
 
 /** 兩條訊號從主幹尖端射出，沿著外框走，直到在另一端相遇。 */
@@ -29,7 +29,7 @@ const MEET = 1950;
 /** 接著標記落到字標的 N 上。 */
 const LAND = 2900;
 const TAIL = 0.16;
-const playedKey = 'nexus.login-mark-played';
+const playedKey = 'ai-nexus.login-mark-played';
 
 const clamp = (count: number) => Math.min(1, Math.max(0, count));
 const inOut = (count2: number) => (count2 < 0.5 ? 4 * count2 ** 3 : 1 - (-2 * count2 + 2) ** 3 / 2);
@@ -112,9 +112,9 @@ export class SignalMark {
   readonly finishedChange = output<boolean>();
   readonly themes = inject(ThemeService);
   readonly complete = signal(false);
-  readonly outline = nexusPath;
-  readonly halves = nexusHalfPaths;
-  readonly tips = nexusTips;
+  readonly outline = brandPath;
+  readonly halves = brandHalfPaths;
+  readonly tips = brandTips;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly stage = viewChild.required<ElementRef<SVGSVGElement>>('stage');
   private readonly floods = viewChildren<ElementRef<SVGCircleElement>>('flood');
@@ -223,7 +223,7 @@ export class SignalMark {
       path.style.opacity = `${1 - met}`;
     });
     this.heads().forEach(({ nativeElement: head }, index) => {
-      const at = pointAlong(nexusHalves[index], drawn);
+      const at = pointAlong(brandHalves[index], drawn);
       head.setAttribute('transform', `translate(${at.x} ${at.y})`);
       head.style.opacity = `${clamp(elapsed / 200) * (1 - met)}`;
       head.children[0].setAttribute('r', `${9 * px}`);

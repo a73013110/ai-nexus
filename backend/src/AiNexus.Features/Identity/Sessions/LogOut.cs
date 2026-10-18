@@ -23,7 +23,7 @@ internal sealed class LogOut(AppDbContext db, CurrentUser current, Authenticatio
         await AuthSession.EndExistingTestAsync(http.User, db, "signed_out", ct);
         await audit.WriteAsync("identity.logout", user.Value.Id, user.Value.Account, http.User.FindFirstValue(SessionIdentity.Method) ?? "windows", "completed", ct);
         await http.SignOutAsync(AuthEndpoints.CookieScheme);
-        if (Guid.TryParse(http.Request.Headers["X-Nexus-Session"], out var sessionId))
+        if (Guid.TryParse(http.Request.Headers["X-Browser-Session"], out var sessionId))
         {
             events.Raise(new UserSignedOut(user.Value.Id, sessionId));
             await db.SaveChangesAsync(ct);

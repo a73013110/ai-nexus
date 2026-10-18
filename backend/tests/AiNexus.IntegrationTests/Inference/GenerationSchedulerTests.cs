@@ -8,7 +8,7 @@ public sealed class GenerationSchedulerTests
     [Fact]
     public async Task QueueIsBoundedAndOnlyOneProviderCallRunsAtATime()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         factory.Provider.Hold();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");

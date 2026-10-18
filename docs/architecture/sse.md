@@ -1,6 +1,6 @@
 # AI Nexus 串流契約 v1
 
-`POST /api/v1/runs` 建立背景工作，回傳 202 與 RunDto；必須提供 `Idempotency-Key`（16–80 個 ASCII 英數／連字號／底線字元）與 `X-Nexus-CSRF`。同一使用者、同一鍵、同一內容回傳同一 run；同鍵不同內容回傳 409。查核冪等紀錄先於 provider 探查，所以斷線重送不依賴模型當下可用性。
+`POST /api/v1/runs` 建立背景工作，回傳 202 與 RunDto；必須提供 `Idempotency-Key`（16–80 個 ASCII 英數／連字號／底線字元）與 `X-CSRF-Token`。同一使用者、同一鍵、同一內容回傳同一 run；同鍵不同內容回傳 409。查核冪等紀錄先於 provider 探查，所以斷線重送不依賴模型當下可用性。
 
 `GET /api/v1/runs/{id}/events?after={sequence}` 使用 AD cookie 或 Windows 驗證訂閱 SSE；`Last-Event-ID` 優先於 query cursor。每個訂閱必須屬於該 run 的擁有者。讀取、取消與對話路由皆再次確認擁有者及未刪除狀態。
 

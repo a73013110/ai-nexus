@@ -14,7 +14,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
-| 後端測試、`NexusFactory` | `docs/development/testing.md` |
+| 後端測試、`AppFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
 | 資料表、EF 對應、結構變更 | `docs/architecture/database.md` |
@@ -83,7 +83,8 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | Angular 檔名 | 小寫 kebab-case，不加 `.component` | `chat-workspace.ts` |
 | Angular 類別、signal | PascalCase 類別；signal 用名詞，不加 `$` | `ChatStore`、`messages` |
 | CSS class | kebab-case | `message-row` |
-| PowerShell 腳本 | `scripts/` 只放入口，動詞-名詞或單一動詞；共用函式放 `scripts/AiNexus` 模組，名稱含 `-Nexus` | `Start-Local.ps1`、`Build.ps1`、`Get-NexusLocalPaths` |
+| PowerShell 腳本 | `scripts/` 只放入口，動詞-名詞或單一動詞；共用函式放 `scripts/AiNexus` 模組，名詞加 `Repo` 前綴 | `Start-Local.ps1`、`Build.ps1`、`Get-RepoLocalPaths` |
+| 產品識別 | 只寫成 `AiNexus`、`ainexus`、`AINEXUS`、`ai-nexus`、`AI Nexus`（fork 時由範本替換）；型別、函式、設定鍵不帶產品名 | cookie `AiNexus.Session`、`ai-nexus.appearance` |
 | 文件 | `docs/<讀者>/` 下小寫 kebab-case.md；ADR 為 `docs/decisions/<四位編號>-kebab-case.md`；根目錄 `README.md`、`CLAUDE.md` 固定大寫 | `architecture/backend-conventions.md` |
 | commit | Conventional Commits，說明用繁體中文 | `perf(inference): 串流只寫入增量` |
 

@@ -18,7 +18,7 @@ public sealed class ManagePricesTests
     [Fact]
     public async Task MalformedPriceFieldsAreRejectedWithoutWritingARecord()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var client = await factory.SignedInAsync();
         var valid = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", DateTimeOffset.UtcNow, "fixture");
         foreach (var invalid in new[] { valid with { ModelId = null! }, valid with { Currency = null! }, valid with { Note = null! },
@@ -30,7 +30,7 @@ public sealed class ManagePricesTests
     [Fact]
     public async Task PricesBelongToPlatformOperationsAndAreAudited()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         await PlatformGrants.SplitOperationsAsync(factory, bobId);
@@ -47,7 +47,7 @@ public sealed class ManagePricesTests
     [Fact]
     public async Task PricesAreSnapshottedAndRetriesDoNotDoubleCharge()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var first = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, .1m, "completed", DateTimeOffset.UtcNow, "fixture");
         (await alice.PostAsJsonAsync("/api/v1/admin/billing/prices", first)).EnsureSuccessStatusCode();

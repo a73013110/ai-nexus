@@ -6,7 +6,7 @@ namespace AiNexus.Data.App;
 
 /// <summary>主資料庫的連線是否已設定。</summary>
 /// <remarks>
-/// Testing 環境一律視為已設定；其他環境必須在設定檔中提供 <c>Databases:Nexus</c> 連線資訊。
+/// Testing 環境一律視為已設定；其他環境必須在設定檔中提供 <c>Databases:App</c> 連線資訊。
 /// </remarks>
 public sealed class StorageReadiness(IOptions<DatabasesOptions> databases, IHostEnvironment environment)
 {

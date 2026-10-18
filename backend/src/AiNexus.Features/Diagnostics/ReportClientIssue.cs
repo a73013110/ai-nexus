@@ -36,7 +36,7 @@ internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, 
     private static bool Log(ILogger logger, Guid user, ClientIssueRequest request, string code)
     {
         var receipt = new DiagnosticDelivery();
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["NexusDelivery"] = receipt, ["IssueCode"] = code, ["UserId"] = user, ["UntrustedClient"] = true, ["ClientKind"] = request.Kind, ["ClientFingerprint"] = request.Fingerprint });
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["DeliveryReceipt"] = receipt, ["IssueCode"] = code, ["UserId"] = user, ["UntrustedClient"] = true, ["ClientKind"] = request.Kind, ["ClientFingerprint"] = request.Fingerprint });
         LogClientIssue(logger, request.Kind, request.Fingerprint);
         // 佇列接受不等於同步落盤；這裡回傳的 receipt 只反映進入佇列與否。
         return receipt.Accepted;

@@ -32,7 +32,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
+$root = Get-RepoRoot
 $verification = 'artifacts/verification'
 $results = 'artifacts/test-results'
 
@@ -42,10 +42,10 @@ function Invoke-BackendTests([string]$Filter, [string]$Report) {
     if ($LASTEXITCODE -ne 0) { throw "後端測試失敗：$Filter" }
 }
 
-$previous = @{ Browser = $env:AINEXUS_TEST_BROWSER; WebRoot = $env:NEXUS_DIAGNOSTIC_WEBROOT; Publish = $env:NEXUS_E2E_PUBLISH_DIRECTORY }
+$previous = @{ Browser = $env:AINEXUS_TEST_BROWSER; WebRoot = $env:AINEXUS_DIAGNOSTIC_WEBROOT; Publish = $env:AINEXUS_E2E_PUBLISH_DIRECTORY }
 Push-Location -LiteralPath $root
 try {
-    Import-NexusPester
+    Import-RepoPester
     $pester = New-PesterConfiguration
     $pester.Run.Path = Join-Path $PSScriptRoot 'tests'
     $pester.Run.PassThru = $true
@@ -69,9 +69,9 @@ try {
 
     if ($Browser) {
         $env:AINEXUS_TEST_BROWSER = $BrowserTarget
-        $env:NEXUS_DIAGNOSTIC_WEBROOT = Join-Path $root "$verification/wwwroot"
+        $env:AINEXUS_DIAGNOSTIC_WEBROOT = Join-Path $root "$verification/wwwroot"
         Invoke-BackendTests 'Category=Browser' 'diagnostic-browser.trx'
-        $env:NEXUS_E2E_PUBLISH_DIRECTORY = $verification
+        $env:AINEXUS_E2E_PUBLISH_DIRECTORY = $verification
         npm --prefix frontend run test:e2e
         if ($LASTEXITCODE -ne 0) { throw 'e2e 測試失敗。' }
     }
@@ -79,7 +79,7 @@ try {
     Write-Output '驗證通過。'
 } finally {
     $env:AINEXUS_TEST_BROWSER = $previous.Browser
-    $env:NEXUS_DIAGNOSTIC_WEBROOT = $previous.WebRoot
-    $env:NEXUS_E2E_PUBLISH_DIRECTORY = $previous.Publish
+    $env:AINEXUS_DIAGNOSTIC_WEBROOT = $previous.WebRoot
+    $env:AINEXUS_E2E_PUBLISH_DIRECTORY = $previous.Publish
     Pop-Location
 }

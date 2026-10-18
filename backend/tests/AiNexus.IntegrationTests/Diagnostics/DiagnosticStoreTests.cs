@@ -23,7 +23,7 @@ public sealed class DiagnosticStoreTests
         Assert.Throws<InvalidOperationException>(() => AuditRedactor.Sanitize("{"));
         var safe = AuditRedactor.Sanitize(JsonSerializer.Serialize(new { password = Secret, after = new { enabled = true, token = Secret }, reason = Secret }));
         Assert.DoesNotContain(Secret, safe); Assert.Contains("enabled", safe); Assert.Contains("OMITTED", safe);
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var actor = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var legacy = new AuditEvent { OwnerId = actor, Action = "fixture.legacy", Result = "saved" }; db.Add(legacy); await db.SaveChangesAsync();
@@ -32,13 +32,13 @@ public sealed class DiagnosticStoreTests
         var response = await client.GetStringAsync("/api/v1/admin/audit?action=fixture.legacy"); Assert.DoesNotContain(Secret, response);
         await factory.Services.GetRequiredService<IDiagnosticStore>().CleanupAsync(CancellationToken.None);
         var system = await client.GetStringAsync("/api/v1/admin/audit?action=system.diagnostics.configuration"); Assert.Contains("system", system); Assert.Contains("fingerprint", system);
-        Assert.DoesNotContain("nexus-test-", system); Assert.DoesNotContain("localhost:4318", system);
+        Assert.DoesNotContain("ainexus-test-", system); Assert.DoesNotContain("localhost:4318", system);
     }
 
     [Fact]
     public async Task SqlCapacityAllowsDuplicateReplayAndRetentionKeepsDistinctAuditPolicy()
     {
-        await using var factory = new NexusFactory(services: services => services.PostConfigure<DiagnosticOptions>(x => { x.MaxSqlRows = 1000; x.CleanupBatchSize = 10; }));
+        await using var factory = new AppFactory(services: services => services.PostConfigure<DiagnosticOptions>(x => { x.MaxSqlRows = 1000; x.CleanupBatchSize = 10; }));
         using var client = factory.CreateClient(); (await client.GetAsync("/health/live")).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var old = Enumerable.Range(0, 1000).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31), Level = LogLevel.Information }).ToArray();

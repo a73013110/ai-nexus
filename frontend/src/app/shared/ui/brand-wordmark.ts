@@ -6,7 +6,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { nexusPath } from '../graphics/nexus-logo';
+import { brandPath } from '../graphics/brand-logo';
 
 @Component({
   selector: 'nx-brand-wordmark',
@@ -27,7 +27,7 @@ import { nexusPath } from '../graphics/nexus-logo';
 export class BrandWordmark {
   readonly compact = input(false);
   readonly markVisible = input(true);
-  readonly path = nexusPath;
+  readonly path = brandPath;
   private readonly mark = viewChild<ElementRef<HTMLElement>>('mark');
   readonly markElement = computed(() => this.mark()?.nativeElement ?? null);
 }

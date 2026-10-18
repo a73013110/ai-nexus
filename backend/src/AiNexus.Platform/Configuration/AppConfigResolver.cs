@@ -4,7 +4,7 @@ namespace AiNexus.Platform.Configuration;
 public sealed record ResolvedConfigPaths(string WorkspaceRoot, string? LocalConfigPath, string? SecretsConfigPath, string KeyRingPath);
 
 /// <summary>組態路徑解析器：依環境（開發、測試、正式）決定各設定檔與機密檔的位置。</summary>
-public static class NexusConfigResolver
+public static class AppConfigResolver
 {
     public static string Absolute(string root, string path) => Path.GetFullPath(path, root);
 

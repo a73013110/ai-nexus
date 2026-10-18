@@ -13,7 +13,7 @@ public sealed class RoleManagementTests
     [Fact]
     public async Task MembersCannotReadAdministrationOrGrantThemselvesRoles()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/admin/catalog")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["administrator"]))).StatusCode);
@@ -22,7 +22,7 @@ public sealed class RoleManagementTests
     [Fact]
     public async Task RoleChangesAreAuditedAndPreventSelfLockoutWithoutPartiallySaving()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var actor = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!; var target = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         (await alice.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "administrator"]))).EnsureSuccessStatusCode();
         (await bob.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
@@ -35,17 +35,17 @@ public sealed class RoleManagementTests
     [Fact]
     public async Task UnknownGrantsAreRejectedAndMissingCsrfCannotMutateAdministration()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/broken", new RoleUpdateRequest("無效", true, ["missing"]))).StatusCode);
         var catalog = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!; Assert.DoesNotContain(catalog.Roles, x => x.Id == "broken");
-        admin.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        admin.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", 10, true, "work", "chat"))).StatusCode);
     }
 
     [Fact]
     public async Task FailedMutationsAreRolledBackAuditedAndFiltersKeepAStableCursor()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("分析人員", true, ["workspace"]))).EnsureSuccessStatusCode();
         (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("資深分析人員", true, ["workspace"]))).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("不可儲存的名稱", true, ["missing"]))).StatusCode);

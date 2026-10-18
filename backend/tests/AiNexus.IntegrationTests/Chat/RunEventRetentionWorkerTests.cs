@@ -12,7 +12,7 @@ public sealed class RunEventRetentionWorkerTests
     [Fact]
     public async Task CleanupDeletesEveryExpiredEventOfFinishedRunsInBatchesAndKeepsActiveRunsAndRecentEvents()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var finished = await CreateRun(client, (await CreateConversation(client)).Id, "已結束");
         await WaitForTerminal(client, finished.Id);
@@ -42,7 +42,7 @@ public sealed class RunEventRetentionWorkerTests
         Assert.Equal(activeEvents, await CountAsync(factory, active.Id, _ => true));
     }
 
-    private static async Task<int> CountAsync(NexusFactory factory, Guid run, System.Linq.Expressions.Expression<Func<RunEvent, bool>> where)
+    private static async Task<int> CountAsync(AppFactory factory, Guid run, System.Linq.Expressions.Expression<Func<RunEvent, bool>> where)
     {
         using var scope = factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().RunEvents.Where(x => x.RunId == run).Where(where).CountAsync();

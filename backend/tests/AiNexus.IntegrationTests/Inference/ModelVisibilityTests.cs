@@ -15,7 +15,7 @@ public sealed class ModelVisibilityTests
     [Fact]
     public async Task LockedHiddenModelCannotBeChangedOrDisclosedInResponses()
     {
-        await using var factory = new NexusFactory(inference: options =>
+        await using var factory = new AppFactory(inference: options =>
         {
             options.AllowModelSelection = false;
             options.ShowModelNames = false;
@@ -48,7 +48,7 @@ public sealed class ModelVisibilityTests
     [Fact]
     public async Task HiddenSelectableModelPreferenceStoresProviderIdAndReturnsAlias()
     {
-        await using var factory = new NexusFactory(inference: options => options.ShowModelNames = false);
+        await using var factory = new AppFactory(inference: options => options.ShowModelNames = false);
         using var client = await factory.SignedInAsync();
         var saved = await client.PutAsJsonAsync("/api/v1/preferences", new PreferencesDto("dark", true, "model-1"));
         saved.EnsureSuccessStatusCode();

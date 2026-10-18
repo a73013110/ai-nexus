@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type { ModelDto, ModelPolicyDto, ModelsDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 
@@ -8,7 +8,7 @@ const CHECKING_SEARCH = { available: false, notice: '正在確認網路搜尋設
 /** ModelDto 目錄、所選的模型與強度，以及請求是否可加入網路搜尋。 */
 @Injectable({ providedIn: 'root' })
 export class ChatModels {
-  private readonly api = inject(NexusApi);
+  private readonly api = inject(WorkspaceApi);
   private readonly auth = inject(AuthService);
   readonly models = signal<ModelDto[]>([]);
   readonly modelId = signal('');

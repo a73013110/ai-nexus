@@ -16,7 +16,7 @@ public sealed class KnowledgeDocumentTests
     [Fact]
     public async Task RemovingDraftAlsoRemovesItsPrivateReaderButRetainsCollectionReferences()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var attachment = await Upload(client, "draft.txt", Encoding.UTF8.GetBytes("Private draft to discard."));
         var reader = (await (await client.PostAsync($"/api/v1/attachments/{attachment.Id}/document", null)).Content.ReadFromJsonAsync<DocumentDto>())!;
@@ -34,7 +34,7 @@ public sealed class KnowledgeDocumentTests
     [Fact]
     public async Task ReaderPinsOriginalAfterConversationDeletionAndOwnerDeleteReclaimsIt()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var file = await Upload(client, "retained.txt", Encoding.UTF8.GetBytes("A document retained independently of chat history."));
         var response = await client.PostAsync($"/api/v1/attachments/{file.Id}/document", null); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type { ConversationDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { ConversationsApi } from '@features/conversations/conversations-api';
@@ -14,7 +14,7 @@ function setup(api: object, workspace: object = {}) {
   const generation = signal(1);
   TestBed.configureTestingModule({
     providers: [
-      { provide: NexusApi, useValue: api },
+      { provide: WorkspaceApi, useValue: api },
       { provide: ConversationsApi, useValue: workspace },
       { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],

@@ -226,7 +226,7 @@ public static class DiagnosticRegistration
     /// <summary>
     /// 向 WebApplicationBuilder 註冊診斷緩衝、日誌提供者、期刊持久化、OTLP 匯出器與監控計量。
     /// </summary>
-    public static void AddNexusDiagnostics(this WebApplicationBuilder builder)
+    public static void AddPlatformDiagnostics(this WebApplicationBuilder builder)
     {
         builder.Services.AddSettings<DiagnosticOptions, DiagnosticOptionsValidator>(DiagnosticOptions.Section);
         builder.Services.AddSingleton<DiagnosticHealth>();

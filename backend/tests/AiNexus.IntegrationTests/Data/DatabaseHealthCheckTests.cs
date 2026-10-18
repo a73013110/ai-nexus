@@ -15,7 +15,7 @@ public sealed class DatabaseHealthCheckTests
     [Fact]
     public async Task ReadinessAnswersAnonymouslyWithoutNamingChecks()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = factory.CreateClient();
         using var response = await client.GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -26,7 +26,7 @@ public sealed class DatabaseHealthCheckTests
     public async Task ReadinessFailsWhenTheDatabaseCannotBeOpenedOrIsNotConfigured()
     {
         // 不存在的資料庫：伺服器拒絕登入，CanConnect 回傳 false。
-        var missing = new SqlConnectionStringBuilder { DataSource = TestDatabase.Server, InitialCatalog = $"AINexus_Missing_{Guid.NewGuid():N}", IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeout = 5 };
+        var missing = new SqlConnectionStringBuilder { DataSource = TestDatabase.Server, InitialCatalog = $"AiNexus_Missing_{Guid.NewGuid():N}", IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeout = 5 };
         await using var services = new ServiceCollection().AddDbContext<AppDbContext>(x => x.UseSqlServer(missing.ConnectionString)).BuildServiceProvider();
         var scopes = services.GetRequiredService<IServiceScopeFactory>();
         var configured = new StorageReadiness(Options.Create(new DatabasesOptions()), new HostingEnvironment { EnvironmentName = "Testing" });

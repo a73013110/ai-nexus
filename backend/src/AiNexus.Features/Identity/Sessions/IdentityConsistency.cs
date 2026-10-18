@@ -5,7 +5,7 @@ namespace AiNexus.Features.Identity.Sessions;
 public static class IdentityConsistency
 {
     /// <summary>
-    /// 在每個 <c>/api/v1</c> 回應加上 <c>X-Nexus-Identity</c> 標頭，告知實際服務的身分；若請求是在測試身分被切回管理者的途中送出，則拒絕執行。
+    /// 在每個 <c>/api/v1</c> 回應加上 <c>X-Active-Identity</c> 標頭，告知實際服務的身分；若請求是在測試身分被切回管理者的途中送出，則拒絕執行。
     /// </summary>
     public static IApplicationBuilder UseIdentityConsistency(this IApplicationBuilder app) => app.Use(async (http, next) =>
     {
@@ -14,7 +14,7 @@ public static class IdentityConsistency
             if (http.Request.Path.StartsWithSegments("/api/v1") && http.User.Identity?.IsAuthenticated == true)
             {
                 var id = http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.RequestServices.GetRequiredService<CurrentUser>().ResolvedId?.ToString();
-                if (id is not null) http.Response.Headers["X-Nexus-Identity"] = id + ":" + http.User.FindFirst(SessionIdentity.ActorId)?.Value;
+                if (id is not null) http.Response.Headers["X-Active-Identity"] = id + ":" + http.User.FindFirst(SessionIdentity.ActorId)?.Value;
             }
             return Task.CompletedTask;
         });

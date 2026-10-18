@@ -17,7 +17,7 @@ public sealed class SessionTests
     [Fact]
     public async Task LdapSessionAndCsrfAreIsolatedBetweenAccountsAndSupportLogout()
     {
-        await using var factory = new NexusFactory(ldap: true);
+        await using var factory = new AppFactory(ldap: true);
         using var alice = factory.CreateClient(); using var bob = factory.CreateClient();
         await Login(alice, "alice"); await Login(bob, "bob");
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
@@ -32,7 +32,7 @@ public sealed class SessionTests
     [Fact]
     public async Task AnonymousAndUntrustedIdentityHeaderAreRejected()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-User", "administrator");
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/me")).StatusCode);
@@ -42,21 +42,21 @@ public sealed class SessionTests
     [Fact]
     public async Task WritesRequireCsrfBoundToTheSignedInUser()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
-        var token = alice.DefaultRequestHeaders.GetValues("X-Nexus-CSRF").Single();
-        bob.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
-        bob.DefaultRequestHeaders.Add("X-Nexus-CSRF", token);
+        var token = alice.DefaultRequestHeaders.GetValues("X-CSRF-Token").Single();
+        bob.DefaultRequestHeaders.Remove("X-CSRF-Token");
+        bob.DefaultRequestHeaders.Add("X-CSRF-Token", token);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsJsonAsync("/api/v1/conversations", new CreateConversationRequest())).StatusCode);
-        alice.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
+        alice.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsJsonAsync("/api/v1/conversations", new CreateConversationRequest())).StatusCode);
     }
 
     [Fact]
     public async Task LegacyAdCookiesKeepTheirLoginMethodAndAreRevokedByPolicyChanges()
     {
-        await using var f = new NexusFactory(ldap: true);
+        await using var f = new AppFactory(ldap: true);
         using var modern = f.CreateClient(); var me = await Login(modern, "alice");
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync(x => x.Id == me.Id);
@@ -73,10 +73,10 @@ public sealed class SessionTests
     [Fact]
     public async Task CookieRequestsReadTheSignedInUserOnce()
     {
-        await using var factory = new NexusFactory(ldap: true, services: RequestQueries.Register);
+        await using var factory = new AppFactory(ldap: true, services: RequestQueries.Register);
         using var client = factory.CreateClient();
         var session = (await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!;
-        client.DefaultRequestHeaders.Add("X-Nexus-CSRF", session.CsrfToken);
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", session.CsrfToken);
         (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"))).EnsureSuccessStatusCode();
         var queries = factory.Services.GetRequiredService<RequestQueries>(); queries.Clear();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
@@ -88,7 +88,7 @@ public sealed class SessionTests
     [Fact]
     public async Task SignedInSessionsOfferThePersonalIdentityAndSwitchOnlyToOfferedOnes()
     {
-        await using var factory = new NexusFactory(ldap: true);
+        await using var factory = new AppFactory(ldap: true);
         using var client = factory.CreateClient();
         Assert.Empty((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Identities!);
         await Login(client, "alice");
@@ -104,7 +104,7 @@ public sealed class SessionTests
         var switched = (await selected.Content.ReadFromJsonAsync<AuthSessionDto>())!;
         Assert.Equal(("personal", session.UserId), (switched.Identity, switched.UserId));
         // 切換身分會換發新的 CSRF token，之後的寫入必須改用它，否則會被拒絕。
-        client.DefaultRequestHeaders.Remove("X-Nexus-CSRF"); client.DefaultRequestHeaders.Add("X-Nexus-CSRF", switched.CsrfToken);
+        client.DefaultRequestHeaders.Remove("X-CSRF-Token"); client.DefaultRequestHeaders.Add("X-CSRF-Token", switched.CsrfToken);
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/auth/logout", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("personal"))).StatusCode);
     }

@@ -105,7 +105,7 @@ function write(key: string, value: unknown) {
 
 /**
  * 此瀏覽器如何為已登入的帳號顯示總覽：依範圍決定哪些磚塊以什麼順序與大小出現。
- * 只影響呈現，不影響讀取的內容。（舊版以 `nexus.dashboard.style.*` 儲存的視覺樣式已不再讀取。）
+ * 只影響呈現，不影響讀取的內容。
  */
 @Injectable()
 export class DashboardLayout {
@@ -119,7 +119,7 @@ export class DashboardLayout {
       : [],
   );
   private readonly key = computed(
-    () => `nexus.dashboard.layout.${this.user()}.${this.store.scope()}`,
+    () => `ai-nexus.dashboard.layout.${this.user()}.${this.store.scope()}`,
   );
   private readonly saved = linkedSignal(() => parseTiles(read(this.key())));
   readonly tiles = computed(() => mergeTiles(this.widgets(), this.saved()));

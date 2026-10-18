@@ -13,7 +13,7 @@ public sealed class RuntimeSamplerTests
     public async Task FactoryClientsShareDependencyObservationAndSuppressObserverCalls()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero));
-        await using var factory = new NexusFactory(services: services => {
+        await using var factory = new AppFactory(services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
             services.AddHttpClient("monitoring-probe").ConfigurePrimaryHttpMessageHandler(() => new ProbeHandler());
         });

@@ -195,9 +195,9 @@ export class ApiClient {
         signal: request.signal,
         headers: {
           Accept: 'application/json',
-          'X-Nexus-Session': this.browserSession.id,
+          'X-Browser-Session': this.browserSession.id,
           ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
-          ...(method !== 'GET' ? { 'X-Nexus-CSRF': this.csrf } : {}),
+          ...(method !== 'GET' ? { 'X-CSRF-Token': this.csrf } : {}),
           ...request.headers,
         },
         ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
@@ -206,7 +206,7 @@ export class ApiClient {
       if (request.signal?.aborted) throw error;
       throw new ApiError(0, 'network_error', '連線中斷，請確認區網連線後重試。');
     }
-    const identity = response.headers.get('X-Nexus-Identity');
+    const identity = response.headers.get('X-Active-Identity');
     if (identity) {
       if (this.identity && identity !== this.identity && !isAuthPath(url)) {
         this.csrf = '';

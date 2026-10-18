@@ -16,16 +16,16 @@ public sealed class RuntimeSamplerTests
     public void SqlObserverReadsOnlyConnectionClassificationAndTracksFailures()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); var traffic = Traffic(clock);
-        var databases = new DatabasesOptions { ["Nexus"] = new() { Server = "fixture", Name = "fixture-db", IntegratedSecurity = true } };
+        var databases = new DatabasesOptions { ["App"] = new() { Server = "fixture", Name = "fixture-db", IntegratedSecurity = true } };
         var catalog = new DependencyCatalog(new ConfigurationBuilder().Build(), Options.Create(databases), traffic);
         var observer = new RuntimeSampler(traffic, catalog, clock);
-        using var connection = new SqlConnection(databases.ConnectionString("Nexus"));
+        using var connection = new SqlConnection(databases.ConnectionString("App"));
         using var command = new SqlCommand("SELECT 'private-password-prompt'", connection);
         var operation = Guid.NewGuid();
         observer.OnNext(new KeyValuePair<string, object?>("Microsoft.Data.SqlClient.WriteCommandBefore", new { OperationId = operation, Command = command }));
-        Assert.Equal(1, traffic.Snapshot(1).Dependencies.Single(x => x.Id == "sql.nexus").InFlight);
+        Assert.Equal(1, traffic.Snapshot(1).Dependencies.Single(x => x.Id == "sql.app").InFlight);
         observer.OnNext(new KeyValuePair<string, object?>("Microsoft.Data.SqlClient.WriteCommandError", new { OperationId = operation, Exception = new Exception("private") }));
-        clock.Advance(TimeSpan.FromSeconds(10)); var dep = traffic.Snapshot(1).Dependencies.Single(x => x.Id == "sql.nexus");
+        clock.Advance(TimeSpan.FromSeconds(10)); var dep = traffic.Snapshot(1).Dependencies.Single(x => x.Id == "sql.app");
         Assert.Equal("failing", dep.Status); Assert.Equal(1, dep.Metrics.Errors); Assert.Equal(0, dep.InFlight);
         Assert.DoesNotContain("private", System.Text.Json.JsonSerializer.Serialize(traffic.Snapshot(1)));
     }

@@ -20,7 +20,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
+$root = Get-RepoRoot
 Invoke-WebRequest -Uri "$($BaseUrl.TrimEnd('/'))/openapi/v1.json" -OutFile (Join-Path $root 'contracts/openapi.json') -TimeoutSec 10
 npm --prefix (Join-Path $root 'frontend') run contracts
 if ($LASTEXITCODE -ne 0) { throw '前端型別產生失敗。' }

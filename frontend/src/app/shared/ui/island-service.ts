@@ -28,7 +28,7 @@ export interface IslandItem {
 }
 
 /**
- * `NexusIsland` 背後的優先佇列。功能會註冊由其狀態推導出的通知 signal；島永遠反映目前的集合，
+ * `Island` 背後的優先佇列。功能會註冊由其狀態推導出的通知 signal；島永遠反映目前的集合，
  * 因此不需要手動顯示或隱藏任何東西。
  */
 @Injectable({ providedIn: 'root' })

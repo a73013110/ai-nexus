@@ -13,7 +13,7 @@ public sealed class SaveArtifactTests
     [Fact]
     public async Task ImmutableVersionsConflictRatherThanOverwritingAndReadonlyMembersCannotEdit()
     {
-        await using var factory = new NexusFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var artifact = await CreateArtifact(alice); var id = artifact.Resource.Id;
         Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/artifacts/{id}")).StatusCode);
         (await alice.PutAsJsonAsync($"/api/v1/artifacts/{id}", new SaveArtifactRequest("修改後標題", "新版本內容", 1))).EnsureSuccessStatusCode();

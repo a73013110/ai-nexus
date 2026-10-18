@@ -31,7 +31,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
     {
         var commands = new WriteCounter();
         var provider = new LongAnswerProvider();
-        await using var factory = new NexusFactory(inference: options =>
+        await using var factory = new AppFactory(inference: options =>
         {
             options.ProviderConcurrency = new() { ["google"] = Users };
             options.QueueCapacity = Users;
@@ -91,7 +91,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
     public async Task OtherConversationsKeepStreamingWhileOneConversationIsBusy()
     {
         var provider = new LongAnswerProvider(chunks: 5);
-        await using var factory = new NexusFactory(inference: options => { options.ProviderConcurrency = new() { ["google"] = Users }; options.QueueCapacity = Users; options.MaxOutputCharacters = 200_000; options.TimeoutSeconds = 60; },
+        await using var factory = new AppFactory(inference: options => { options.ProviderConcurrency = new() { ["google"] = Users }; options.QueueCapacity = Users; options.MaxOutputCharacters = 200_000; options.TimeoutSeconds = 60; },
             services: services => { services.RemoveAllKeyed<IInferenceProvider>("google"); services.AddKeyedSingleton<IInferenceProvider>("google", provider); });
         var clients = new List<HttpClient>();
         var conversations = new List<Guid>();

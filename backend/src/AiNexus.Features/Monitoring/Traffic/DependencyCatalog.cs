@@ -11,7 +11,7 @@ public sealed class DependencyCatalog
     /// <summary>已知 <c>Databases</c> 項目的顯示名稱；其餘已設定的項目以原名列出。</summary>
     private static readonly Dictionary<string, string> DatabaseLabels = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Nexus"] = "主資料庫", ["Gdweb"] = "公文資料庫", ["Meiho"] = "校務資料庫"
+        ["App"] = "主資料庫", ["Gdweb"] = "公文資料庫", ["Meiho"] = "校務資料庫"
     };
 
     public DependencyCatalog(IConfiguration config, IOptions<DatabasesOptions> databases, RuntimeTraffic traffic)

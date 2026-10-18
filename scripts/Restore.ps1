@@ -19,7 +19,7 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $env:NG_CLI_ANALYTICS = 'false'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-Push-Location -LiteralPath (Get-NexusRoot)
+Push-Location -LiteralPath (Get-RepoRoot)
 try {
     npm --prefix frontend ci --no-fund --no-audit
     if ($LASTEXITCODE -ne 0) { throw '前端 npm 相依套件還原失敗。' }
@@ -30,6 +30,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '資料庫專案還原失敗。' }
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw '.NET 本機工具還原失敗。' }
-    Install-NexusPester
+    Install-RepoPester
     Write-Output '已還原鎖定版本的相依套件、EF 工具、SqlPackage 與 Pester。'
 } finally { Pop-Location }

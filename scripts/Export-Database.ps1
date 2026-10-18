@@ -9,7 +9,7 @@ DB-first 版控的唯一入口：結構的修改來源是開發庫（DBA 在 SSM
 沒有人手改。只讀取來源資料庫（Extract 不會修改它）。
 
 匯出內容只有應用程式結構：不含資料、登入、使用者、角色與權限。SqlPackage Extract 沒有「排除資料表」參數，
-也排除不了全文索引，所以匯出後再處理（AiNexus 模組的 Invoke-NexusExtractPostProcess）：
+也排除不了全文索引，所以匯出後再處理（AiNexus 模組的 Invoke-RepoExtractPostProcess）：
 - 移除 -ExcludeTable 符合的資料表（暫存表、備份表）與使用者、角色；移除清單會印出來，避免悄悄漏掉物件。
 - 全文目錄與索引移到 FullText/Catalogs、FullText/Indexes（由發版腳本在有全文元件時執行，不進 dacpac）。
 - 主物件之後的索引與欄位說明語句排序，檔案統一為 UTF-8 無 BOM、LF；同一個庫連續匯出兩次必須沒有 diff。
@@ -68,7 +68,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$root = Get-NexusRoot
+$root = Get-RepoRoot
 $output = if ($OutputPath) { [IO.Path]::GetFullPath($OutputPath, $root) } else { Join-Path $root 'database/App' }
 
 # Extract 參數與原因：
@@ -151,8 +151,8 @@ try {
     }
     Write-Verbose "Extract 花費 $($watch.Elapsed)"
 
-    $removed = Invoke-NexusExtractPostProcess $extracted $ExcludeTable
-    Update-NexusDatabaseProject $extracted $output
+    $removed = Invoke-RepoExtractPostProcess $extracted $ExcludeTable
+    Update-RepoDatabaseProject $extracted $output
 
     $count = @(Get-ChildItem -LiteralPath $extracted -Filter '*.sql' -Recurse).Count
     Write-Output "已匯出 $Database 到 $output（$count 個 .sql，花費 $($watch.Elapsed.ToString('mm\:ss'))）。"
@@ -160,7 +160,7 @@ try {
 
     $project = @(Get-ChildItem -LiteralPath $output -Filter '*.sqlproj')
     if ($project.Count -ne 1) { $warnings.Add("$output 應該剛好有一個 .sqlproj，找到 $($project.Count) 個；未比對資料庫設定。") }
-    elseif ($databaseSettings) { foreach ($message in Compare-NexusDatabaseSetting $databaseSettings (Get-NexusSqlProjectSetting $project[0].FullName)) { $warnings.Add($message) } }
+    elseif ($databaseSettings) { foreach ($message in Compare-RepoDatabaseSetting $databaseSettings (Get-RepoSqlProjectSetting $project[0].FullName)) { $warnings.Add($message) } }
     foreach ($message in $warnings) { Write-Warning $message }
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue

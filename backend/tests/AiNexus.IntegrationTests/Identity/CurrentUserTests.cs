@@ -10,7 +10,7 @@ public sealed class CurrentUserTests
     [Fact]
     public async Task ExistingWindowsUsersAreResolvedWithoutTheIdentityWriteGate()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var gate = factory.Services.GetRequiredService<IdentityWriteLock>().Gate;
         await gate.WaitAsync();

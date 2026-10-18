@@ -25,7 +25,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task SavedOriginalsAreSeparateFromKnowledgeDocumentsAndRespectOwnerScope()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var a = await Me(alice); var b = await Me(bob);
@@ -68,7 +68,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task SectionsFollowFeatureGrantsAndAreTheSameInEveryScope()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var personal = await Read(alice, Period);
@@ -91,7 +91,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task PlatformScopeFollowsPlatformOperationsNotAccessManagement()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var b = await Me(bob);
@@ -106,7 +106,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task QuestionsAreBucketedByTheViewersDayAndRecentTitlesAreAlwaysTheViewers()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var a = await Me(alice); var b = await Me(bob);
@@ -135,7 +135,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task FailedNotificationsShowTheReviewedMessageInsteadOfStoredText()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var alice = await factory.SignedInAsync();
         var a = await Me(alice);
         using (var scope = factory.Services.CreateScope())
@@ -158,7 +158,7 @@ public sealed class GetDashboardTests
     [Fact]
     public async Task TokenReportsIncludeLegacyAndBackgroundUsagePerModelAndRespectTimezoneAndOwner()
     {
-        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         var id = await Me(owner); var otherId = await Me(other);
         var at = DateTimeOffset.Parse("2026-09-30T18:00:00Z", CultureInfo.InvariantCulture);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

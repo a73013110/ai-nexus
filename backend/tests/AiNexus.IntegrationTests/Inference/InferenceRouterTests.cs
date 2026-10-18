@@ -32,7 +32,7 @@ public sealed class InferenceRouterTests
     public async Task SameNativeModelRoutesToIndependentProvidersAndRunsSimultaneously()
     {
         var local = new TestProvider();
-        await using var factory = new NexusFactory(inference: Configure, services: services =>
+        await using var factory = new AppFactory(inference: Configure, services: services =>
         {
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("ollama", local);
@@ -64,7 +64,7 @@ public sealed class InferenceRouterTests
     public async Task OneProviderOutageKeepsOtherModelsUsableAndDoesNotFallbackSilently()
     {
         var local = new TestProvider { DiscoveryFail = true };
-        await using var factory = new NexusFactory(inference: Configure, services: services =>
+        await using var factory = new AppFactory(inference: Configure, services: services =>
         {
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("ollama", local);
@@ -85,7 +85,7 @@ public sealed class InferenceRouterTests
     [Fact]
     public async Task CompletedAndCancelledRunsPersistTimingsWithTheirTokens()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var client = await factory.SignedInAsync(); var conversation = await CreateConversation(client);
         var completed = await WaitForTerminal(client, (await CreateRun(client, conversation.Id, "timing")).Id);
         var timing = Assert.IsType<RunTimingDto>(completed.Timing);

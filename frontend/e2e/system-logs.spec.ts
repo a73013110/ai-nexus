@@ -63,7 +63,7 @@ class LogFixture {
       durationMs: 48 + index * 12,
       externalService: null,
       errorCode: index % 8 === 0 ? "provider_failed" : null,
-      instance: "nexus-api-01",
+      instance: "web-01",
       untrustedClient: false,
     }),
   );
@@ -238,7 +238,7 @@ test("詳情保持捲動位置，桌面列表可切換事件，窄螢幕改為�
     .evaluate((element) => element.scrollTop);
   await opener.click();
   const drawer = page.getByRole("dialog", { name: "診斷詳情", exact: true });
-  await expect(drawer.getByText("nexus-api-01", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("web-01", { exact: true })).toBeVisible();
   expect(await drawer.evaluate((element) => element.matches(":modal"))).toBe(
     false,
   );
@@ -358,7 +358,7 @@ test("關聯失敗不阻擋詳情，關閉後延遲回應不會重新開啟", as
     .first()
     .click();
   const drawer = page.getByRole("dialog", { name: "診斷詳情", exact: true });
-  await expect(drawer.getByText("nexus-api-01", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("web-01", { exact: true })).toBeVisible();
   await drawer.getByRole("tab", { name: "關聯流程", exact: true }).click();
   await expect(drawer.getByRole("alert")).toBeVisible();
   await expect(drawer).not.toContainText("fixture-private");

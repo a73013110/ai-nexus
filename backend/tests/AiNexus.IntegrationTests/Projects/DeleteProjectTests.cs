@@ -23,7 +23,7 @@ public sealed class DeleteProjectTests
     [Fact]
     public async Task DeletingAProjectDetachesItsArtifacts()
     {
-        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync();
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync();
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{project.Resource.Id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using (var scope = f.Services.CreateScope())
@@ -37,7 +37,7 @@ public sealed class DeleteProjectTests
     [Fact]
     public async Task DeletingProjectIsOwnerOnlyAndPreservesPrivateWorkWithoutInheritedGrants()
     {
-        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var editor = await f.SignedInAsync("bob");
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var editor = await f.SignedInAsync("bob");
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var id = project.Resource.Id;
         var bob = (await editor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;

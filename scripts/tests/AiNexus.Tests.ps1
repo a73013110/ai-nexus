@@ -3,112 +3,112 @@ BeforeAll {
     Import-Module (Join-Path $PSScriptRoot '../AiNexus') -Force
 }
 
-Describe 'Get-NexusRoot' {
+Describe 'Get-RepoRoot' {
     It 'is the repository root' {
-        Test-Path -LiteralPath (Join-Path (Get-NexusRoot) 'backend/AiNexus.slnx') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path (Get-RepoRoot) 'backend/AiNexus.slnx') | Should -BeTrue
     }
 }
 
-Describe 'Resolve-NexusArtifactPath' {
+Describe 'Resolve-RepoArtifactPath' {
     It 'resolves a path inside artifacts/ against the repository root' {
-        Resolve-NexusArtifactPath 'artifacts/publish' | Should -Be ([IO.Path]::GetFullPath((Join-Path (Get-NexusRoot) 'artifacts/publish')))
+        Resolve-RepoArtifactPath 'artifacts/publish' | Should -Be ([IO.Path]::GetFullPath((Join-Path (Get-RepoRoot) 'artifacts/publish')))
     }
 
     It 'rejects <Path>' -ForEach @(@{ Path = 'artifacts' }, @{ Path = 'artifacts-old/publish' }, @{ Path = 'artifacts/../frontend' }, @{ Path = 'frontend/dist' }) {
-        { Resolve-NexusArtifactPath $Path } | Should -Throw '*artifacts/*'
+        { Resolve-RepoArtifactPath $Path } | Should -Throw '*artifacts/*'
     }
 }
 
-Describe 'Get-NexusSetting and Set-NexusSetting' {
+Describe 'Get-RepoSetting and Set-RepoSetting' {
     It 'creates missing sections and replaces non-section values' {
         $settings = [ordered]@{ Databases = 'invalid' }
-        Set-NexusSetting $settings 'Databases.Nexus.Server' 'sql'
-        Set-NexusSetting $settings 'Inference.Providers.Google.ApiKey' 'key'
-        Set-NexusSetting $settings 'AllowedHosts' 'host'
-        Get-NexusSetting $settings 'Databases.Nexus.Server' | Should -Be 'sql'
-        Get-NexusSetting $settings 'Inference.Providers.Google.ApiKey' | Should -Be 'key'
-        Get-NexusSetting $settings 'AllowedHosts' | Should -Be 'host'
+        Set-RepoSetting $settings 'Databases.App.Server' 'sql'
+        Set-RepoSetting $settings 'Inference.Providers.Google.ApiKey' 'key'
+        Set-RepoSetting $settings 'AllowedHosts' 'host'
+        Get-RepoSetting $settings 'Databases.App.Server' | Should -Be 'sql'
+        Get-RepoSetting $settings 'Inference.Providers.Google.ApiKey' | Should -Be 'key'
+        Get-RepoSetting $settings 'AllowedHosts' | Should -Be 'host'
     }
 
     It 'returns $null for a missing path in strict mode' {
         Set-StrictMode -Version Latest
         $settings = @{ Attachments = @{} }
-        Get-NexusSetting $settings 'Attachments.StoragePath' | Should -BeNullOrEmpty
-        Get-NexusSetting $settings 'Diagnostics.Directory' | Should -BeNullOrEmpty
-        Get-NexusSetting $settings 'Attachments.StoragePath.Deeper' | Should -BeNullOrEmpty
+        Get-RepoSetting $settings 'Attachments.StoragePath' | Should -BeNullOrEmpty
+        Get-RepoSetting $settings 'Diagnostics.Directory' | Should -BeNullOrEmpty
+        Get-RepoSetting $settings 'Attachments.StoragePath.Deeper' | Should -BeNullOrEmpty
     }
 }
 
-Describe 'Save-NexusJson' {
+Describe 'Save-RepoJson' {
     It 'writes UTF-8 without BOM, replaces the file and leaves no temporary file' {
         $path = Join-Path $TestDrive 'settings.json'
-        Save-NexusJson $path ([ordered]@{ Name = '舊' })
-        Save-NexusJson $path ([ordered]@{ Name = '新'; Nested = [ordered]@{ Value = 1 } })
+        Save-RepoJson $path ([ordered]@{ Name = '舊' })
+        Save-RepoJson $path ([ordered]@{ Name = '新'; Nested = [ordered]@{ Value = 1 } })
         $bytes = [IO.File]::ReadAllBytes($path)
         $bytes[0] | Should -Not -Be 0xEF
-        (Read-NexusJson $path)['Nested']['Value'] | Should -Be 1
-        (Read-NexusJson $path)['Name'] | Should -Be '新'
+        (Read-RepoJson $path)['Nested']['Value'] | Should -Be 1
+        (Read-RepoJson $path)['Name'] | Should -Be '新'
         @(Get-ChildItem -LiteralPath $TestDrive -Filter '*.tmp').Count | Should -Be 0
     }
 
     It 'keeps the permissions of an existing secrets file' -Skip:$IsWindows {
         $path = Join-Path $TestDrive 'secrets.json'
-        Save-NexusJson $path @{}
-        Protect-NexusSecrets $path
-        Save-NexusJson $path @{ Databases = @{ Nexus = @{ Password = 'changed' } } }
+        Save-RepoJson $path @{}
+        Protect-RepoSecrets $path
+        Save-RepoJson $path @{ Databases = @{ App = @{ Password = 'changed' } } }
         [IO.File]::GetUnixFileMode($path) | Should -Be ([IO.UnixFileMode]'UserRead, UserWrite')
     }
 }
 
-Describe 'Get-NexusSecretValues' {
+Describe 'Get-RepoSecretValues' {
     BeforeAll {
         $settings = [ordered]@{
-            Databases = [ordered]@{ Nexus = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }; Gdweb = [ordered]@{ Server = 'sql'; Password = 'secret-0' } }
+            Databases = [ordered]@{ App = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }; Gdweb = [ordered]@{ Server = 'sql'; Password = 'secret-0' } }
             Identity = [ordered]@{ ActiveDirectory = [ordered]@{ BindUser = 'reader'; BindPassword = 'secret-2' } }
             Inference = [ordered]@{ Providers = [ordered]@{ Google = [ordered]@{ ApiKey = 'secret-3' }; Ollama = [ordered]@{ ApiKey = '' } } }
         }
     }
 
     It 'returns non-empty passwords and keys' {
-        @(Get-NexusSecretValues $settings) | Should -Be @('secret-1', 'secret-0', 'secret-2', 'secret-3')
+        @(Get-RepoSecretValues $settings) | Should -Be @('secret-1', 'secret-0', 'secret-2', 'secret-3')
     }
 
     It 'adds SQL logins with -IncludeUser' {
-        @(Get-NexusSecretValues $settings -IncludeUser) | Should -Contain 'login'
+        @(Get-RepoSecretValues $settings -IncludeUser) | Should -Contain 'login'
     }
 }
 
-Describe 'Test-NexusForbiddenPath' {
+Describe 'Test-RepoForbiddenPath' {
     It 'forbids <Path>' -ForEach @(
         @{ Path = 'artifacts/publish/AiNexus.Host.dll' }, @{ Path = '.local/secrets/appsettings.Secrets.json' },
         @{ Path = 'frontend/node_modules/x/index.js' }, @{ Path = 'backend/src/AiNexus.Host/bin/Debug/a.dll' },
         @{ Path = 'backend/src/AiNexus.Host/appsettings.Local.json' }, @{ Path = 'config/appsettings.Production.json' },
         @{ Path = '.env' }, @{ Path = 'tooling/.env.local' }) {
-        Test-NexusForbiddenPath $Path | Should -BeTrue
+        Test-RepoForbiddenPath $Path | Should -BeTrue
     }
 
     It 'allows <Path>' -ForEach @(
         @{ Path = 'backend/src/AiNexus.Features/Artifacts/ExportArtifact.cs' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.json' },
         @{ Path = 'backend/src/AiNexus.Host/appsettings.Local.example.json' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.Production.example.json' },
         @{ Path = '.env.example' }, @{ Path = 'docs/development/local-folders.md' }) {
-        Test-NexusForbiddenPath $Path | Should -BeFalse
+        Test-RepoForbiddenPath $Path | Should -BeFalse
     }
 }
 
-Describe 'Split-NexusSqlBatch and Join-NexusSqlBatch' {
+Describe 'Split-RepoSqlBatch and Join-RepoSqlBatch' {
     It 'splits on GO lines only and writes the SqlPackage layout with LF' {
         $text = "CREATE TABLE [a].[T] ([GOAL] INT);`r`n`r`n`r`nGO`r`nPRINT 'GO';`r`n go `r`n"
-        $batches = Split-NexusSqlBatch $text
+        $batches = Split-RepoSqlBatch $text
         $batches | Should -Be @('CREATE TABLE [a].[T] ([GOAL] INT);', "PRINT 'GO';")
-        Join-NexusSqlBatch $batches | Should -Be "CREATE TABLE [a].[T] ([GOAL] INT);`n`n`nGO`n`nPRINT 'GO';`n`n`nGO`n`n"
+        Join-RepoSqlBatch $batches | Should -Be "CREATE TABLE [a].[T] ([GOAL] INT);`n`n`nGO`n`nPRINT 'GO';`n`n`nGO`n`n"
     }
 
     It 'returns an array for a single batch' {
-        , (Split-NexusSqlBatch "SELECT 1;`r`nGO") | Should -BeOfType [string[]]
+        , (Split-RepoSqlBatch "SELECT 1;`r`nGO") | Should -BeOfType [string[]]
     }
 }
 
-Describe 'Format-NexusSqlBatchOrder' {
+Describe 'Format-RepoSqlBatchOrder' {
     BeforeAll {
         function Get-Property([string]$Column, [string]$Value = 'x') {
             $level2 = if ($Column) { ", @level2type = N'COLUMN', @level2name = N'$Column'" } else { '' }
@@ -118,19 +118,19 @@ Describe 'Format-NexusSqlBatchOrder' {
 
     It 'keeps the object first, then sorts indexes, then the table and column descriptions' {
         $batches = @('CREATE TABLE [k].[T] ([B] INT, [A] INT);', (Get-Property 'B'), 'CREATE INDEX [ix_T_B] ON [k].[T]([B]);', (Get-Property ''), (Get-Property 'A'), 'CREATE INDEX [ix_T_A] ON [k].[T]([A]);')
-        $sorted = Format-NexusSqlBatchOrder $batches
+        $sorted = Format-RepoSqlBatchOrder $batches
         $sorted | Should -Be @('CREATE TABLE [k].[T] ([B] INT, [A] INT);', 'CREATE INDEX [ix_T_A] ON [k].[T]([A]);', 'CREATE INDEX [ix_T_B] ON [k].[T]([B]);', (Get-Property ''), (Get-Property 'A'), (Get-Property 'B'))
     }
 
     It 'gives the same order whatever order the database returned' {
         $one = @('CREATE TABLE [k].[T] ([Id] INT);', (Get-Property 'Id' '主鍵'), (Get-Property 'Name' '名稱'), (Get-Property '' '表'), (Get-Property 'name' '小寫'), 'CREATE INDEX [ix] ON [k].[T]([Id]);')
         $two = @($one[0], $one[5], $one[4], $one[2], $one[1], $one[3])
-        $sorted = Format-NexusSqlBatchOrder $two
-        $sorted | Should -Be (Format-NexusSqlBatchOrder $one)
+        $sorted = Format-RepoSqlBatchOrder $two
+        $sorted | Should -Be (Format-RepoSqlBatchOrder $one)
     }
 }
 
-Describe 'Invoke-NexusExtractPostProcess' {
+Describe 'Invoke-RepoExtractPostProcess' {
     BeforeAll {
         function Write-Sql([string]$Path, [string[]]$Batch) {
             $file = Join-Path $extract $Path
@@ -164,7 +164,7 @@ Describe 'Invoke-NexusExtractPostProcess' {
     }
 
     It 'moves full-text catalogs and indexes to FullText/ and removes the emptied files' {
-        Invoke-NexusExtractPostProcess $extract $exclude | Out-Null
+        Invoke-RepoExtractPostProcess $extract $exclude | Out-Null
         Test-Path -LiteralPath (Join-Path $extract 'Storage') | Should -BeFalse
         Read-Sql 'FullText/Catalogs/KnowledgeSearch.sql' | Should -Be "CREATE FULLTEXT CATALOG [KnowledgeSearch]`n    WITH ACCENT_SENSITIVITY = ON`n    AUTHORIZATION [dbo];`n`n`nGO`n`n"
         Read-Sql 'FullText/Indexes/knowledge.Chunks.sql' | Should -Match '^CREATE FULLTEXT INDEX ON \[knowledge\]\.\[Chunks\]'
@@ -172,7 +172,7 @@ Describe 'Invoke-NexusExtractPostProcess' {
     }
 
     It 'sorts column descriptions and writes UTF-8 without BOM and LF' {
-        Invoke-NexusExtractPostProcess $extract $exclude | Out-Null
+        Invoke-RepoExtractPostProcess $extract $exclude | Out-Null
         $text = Read-Sql 'knowledge/Tables/Chunks.sql'
         $text.IndexOf("N'Id'") | Should -BeLessThan $text.IndexOf("N'Text'")
         $text | Should -Not -Match "`r"
@@ -181,7 +181,7 @@ Describe 'Invoke-NexusExtractPostProcess' {
     }
 
     It 'removes excluded tables, users and role memberships but keeps schemas, and reports them' {
-        $removed = Invoke-NexusExtractPostProcess $extract $exclude
+        $removed = Invoke-RepoExtractPostProcess $extract $exclude
         $removed | Sort-Object | Should -Be (@('dbo/Tables/__EFMigrationsHistory.sql', 'identity/Tables/Users_bak.sql', 'identity/Tables/Users_bak20261018.sql', 'Security/app_user.sql', 'Security/RoleMemberships.sql') | Sort-Object)
         Test-Path -LiteralPath (Join-Path $extract 'dbo') | Should -BeFalse
         Read-Sql 'Security/identity.sql' | Should -Match 'CREATE SCHEMA \[identity\]'
@@ -192,8 +192,8 @@ Describe 'Invoke-NexusExtractPostProcess' {
         $first = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
         Copy-Item -LiteralPath $extract -Destination $first -Recurse
         Write-Chunks 'Id', 'Text'
-        Invoke-NexusExtractPostProcess $first $exclude | Out-Null
-        Invoke-NexusExtractPostProcess $extract $exclude | Out-Null
+        Invoke-RepoExtractPostProcess $first $exclude | Out-Null
+        Invoke-RepoExtractPostProcess $extract $exclude | Out-Null
         $files = @(Get-ChildItem -LiteralPath $first -Filter '*.sql' -Recurse)
         $files.Count | Should -Be @(Get-ChildItem -LiteralPath $extract -Filter '*.sql' -Recurse).Count
         foreach ($file in $files) {
@@ -203,16 +203,16 @@ Describe 'Invoke-NexusExtractPostProcess' {
     }
 
     It 'rejects a table pattern without a schema' {
-        { Invoke-NexusExtractPostProcess $extract @('*_bak') } | Should -Throw '*schema.name*'
+        { Invoke-RepoExtractPostProcess $extract @('*_bak') } | Should -Throw '*schema.name*'
     }
 
     It 'rejects a schema named like a hand-written folder' {
         Write-Sql 'Seed/Tables/Values.sql' 'CREATE TABLE [Seed].[Values] ([Id] INT NOT NULL);'
-        { Invoke-NexusExtractPostProcess $extract $exclude } | Should -Throw '*Seed*'
+        { Invoke-RepoExtractPostProcess $extract $exclude } | Should -Throw '*Seed*'
     }
 }
 
-Describe 'Update-NexusDatabaseProject' {
+Describe 'Update-RepoDatabaseProject' {
     It 'replaces exported files and keeps the project file, hand-written folders and build output' {
         $project = Join-Path $TestDrive 'App'
         $extract = Join-Path $TestDrive 'extract'
@@ -228,7 +228,7 @@ Describe 'Update-NexusDatabaseProject' {
             New-Item -ItemType Directory -Path (Split-Path (Join-Path $extract $name)) -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $extract $name) -Value 'new' -NoNewline
         }
-        Update-NexusDatabaseProject $extract $project
+        Update-RepoDatabaseProject $extract $project
         $left = @(Get-ChildItem -LiteralPath $project -File -Recurse | ForEach-Object { [IO.Path]::GetRelativePath($project, $_.FullName).Replace('\', '/') }) | Sort-Object
         $left | Should -Be (@('App.sqlproj', 'bin/Debug/App.sql', 'Data/1.2.0/pre-move.sql', 'FullText/Catalogs/KnowledgeSearch.sql', 'FullText/README.sql', 'identity/Tables/Users.sql', 'Seed/identity.Roles.sql') | Sort-Object)
         Get-Content -LiteralPath (Join-Path $project 'identity/Tables/Users.sql') -Raw | Should -Be 'new'
@@ -236,7 +236,7 @@ Describe 'Update-NexusDatabaseProject' {
     }
 }
 
-Describe 'Get-NexusSqlProjectSetting and Compare-NexusDatabaseSetting' {
+Describe 'Get-RepoSqlProjectSetting and Compare-RepoDatabaseSetting' {
     BeforeAll {
         $projectFile = Join-Path $TestDrive 'App.sqlproj'
         Set-Content -LiteralPath $projectFile -Value @'
@@ -250,7 +250,7 @@ Describe 'Get-NexusSqlProjectSetting and Compare-NexusDatabaseSetting' {
     }
 
     It 'reads the database options of the project and leaves missing ones empty' {
-        $settings = Get-NexusSqlProjectSetting $projectFile
+        $settings = Get-RepoSqlProjectSetting $projectFile
         $settings['Collation'] | Should -Be 'Chinese_Taiwan_Stroke_CI_AS'
         $settings['CompatibilityLevel'] | Should -Be '170'
         $settings['ReadCommittedSnapshot'] | Should -BeNullOrEmpty
@@ -258,11 +258,11 @@ Describe 'Get-NexusSqlProjectSetting and Compare-NexusDatabaseSetting' {
 
     It 'reports nothing when the database agrees with the project' {
         $project = @{ Collation = 'Chinese_Taiwan_Stroke_CI_AS'; CompatibilityLevel = '170'; ReadCommittedSnapshot = 'True' }
-        @(Compare-NexusDatabaseSetting @{ Collation = 'Chinese_Taiwan_Stroke_CI_AS'; CompatibilityLevel = 170; ReadCommittedSnapshot = $true } $project).Count | Should -Be 0
+        @(Compare-RepoDatabaseSetting @{ Collation = 'Chinese_Taiwan_Stroke_CI_AS'; CompatibilityLevel = 170; ReadCommittedSnapshot = $true } $project).Count | Should -Be 0
     }
 
     It 'reports each differing or missing option' {
-        $messages = @(Compare-NexusDatabaseSetting @{ Collation = 'SQL_Latin1_General_CP1_CI_AS'; CompatibilityLevel = 160; ReadCommittedSnapshot = $true } (Get-NexusSqlProjectSetting $projectFile))
+        $messages = @(Compare-RepoDatabaseSetting @{ Collation = 'SQL_Latin1_General_CP1_CI_AS'; CompatibilityLevel = 160; ReadCommittedSnapshot = $true } (Get-RepoSqlProjectSetting $projectFile))
         $messages.Count | Should -Be 3
         $messages[0] | Should -Match 'DefaultCollation.*SQL_Latin1_General_CP1_CI_AS.*Chinese_Taiwan_Stroke_CI_AS'
         $messages[1] | Should -Match 'CompatibilityMode.*160.*170'

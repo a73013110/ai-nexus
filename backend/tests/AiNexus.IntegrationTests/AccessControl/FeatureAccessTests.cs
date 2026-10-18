@@ -19,7 +19,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task FirstLoginCreatesMemberAndResolvesGroupFeatures()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("member", Assert.Single(me.Access.Roles).Id);
@@ -36,7 +36,7 @@ public sealed class FeatureAccessTests
     [InlineData("membership")]
     public async Task RevocationAppliesOnNextRequestAndLoginDoesNotRegrant(string target)
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         using (var scope = factory.Services.CreateScope())
@@ -64,7 +64,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task MultipleRolesAndGroupsProduceUniqueFeatures()
     {
-        await using var factory = new NexusFactory();
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
@@ -87,7 +87,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task FileLibraryIsRegisteredAndRevocationBlocksItsApi()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         Assert.Contains((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == "files" && x.Name == "檔案庫");
         (await admin.GetAsync("/api/v1/files")).EnsureSuccessStatusCode();
@@ -99,7 +99,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task OperationsAndAccessManagementAreSeparateGrants()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var features = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
@@ -140,7 +140,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task GrantsAreReadOncePerRequestAndRevocationAppliesOnTheNextRequest()
     {
-        await using var factory = new NexusFactory(services: RequestQueries.Register);
+        await using var factory = new AppFactory(services: RequestQueries.Register);
         using var client = await factory.SignedInAsync();
         var project = await CreateProject(client, "授權快取");
         await AddProjectFile(client, project.Resource.Id, "a.txt");
@@ -160,7 +160,7 @@ public sealed class FeatureAccessTests
     [Fact]
     public async Task AdministrativeChangeInTheSameRequestReadsGrantsAgain()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], services: RequestQueries.Register);
+        await using var factory = new AppFactory(administrators: ["alice"], services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         // 請求原本以管理員授權通過；寫入後撤銷這些授權，仍必須被偵測到。

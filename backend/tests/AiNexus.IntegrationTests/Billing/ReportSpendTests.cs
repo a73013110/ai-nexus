@@ -15,7 +15,7 @@ public sealed class ReportSpendTests
     [Fact]
     public async Task ReportsKeepCurrenciesOwnersAndExclusiveBoundariesSeparate()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var a = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; var b = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var start = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.FromHours(8)); var end = start.AddDays(2);
         using (var scope = factory.Services.CreateScope())
@@ -43,7 +43,7 @@ public sealed class ReportSpendTests
     [Fact]
     public async Task AdministrativeExportIncludesEveryUserBeyondTwoHundred()
     {
-        await using var factory = new NexusFactory(db =>
+        await using var factory = new AppFactory(db =>
         {
             for (var i = 0; i < 250; i++)
             {
@@ -61,7 +61,7 @@ public sealed class ReportSpendTests
     [Fact]
     public async Task HiddenModelNamesAreMergedWithoutLeakingRealIds()
     {
-        await using var factory = new NexusFactory(inference: o => o.ShowModelNames = false);
+        await using var factory = new AppFactory(inference: o => o.ShowModelNames = false);
         using var client = await factory.SignedInAsync(); var conversation = await ChatApi.CreateConversation(client);
         var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())

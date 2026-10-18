@@ -25,7 +25,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task BuildingRebuildActivateAndRetiredCleanupAreFencedAuditedAndProfileIsolated()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/knowledge/profiles")).StatusCode);
         var seed = await KnowledgeApi.SeedAsync(factory, client);
@@ -51,7 +51,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task PlatformOperationsAloneManagesProfilesAndItsRevocationStopsTheRebuild()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob"); var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         await PlatformGrants.SplitOperationsAsync(factory, bobId);
         await KnowledgeApi.SeedAsync(factory, bob);
@@ -74,7 +74,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task EditingIdenticalContentReusesVectorsAcrossDurableJobs()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var seed = await KnowledgeApi.SeedAsync(factory, client); var calls = factory.Embeddings.Calls;
         var edited = await client.PutAsJsonAsync($"/api/v1/documents/{seed.Document.Id}/text", new TextDocumentRequest("採購規範", "採購應先核准。主管簽署後才可付款。", 1)); edited.EnsureSuccessStatusCode();
         await Drain(factory); Assert.Equal(calls, factory.Embeddings.Calls);
@@ -84,7 +84,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task ActiveIndexCanBecomeReadyWhileBuildingIndexFailsAndRetryResumes()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         await Profiles(client); factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Revision = "next";
         var target = (await Profiles(client)).Single(x => x.Status == "building"); factory.Embeddings.FailProfileId = target.Id;
         var seed = await KnowledgeApi.SeedAsync(factory, client);
@@ -97,7 +97,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task ChunkSettingChangeRebuildsOneSharedLayoutForActiveAndBuildingProfiles()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         var seed = await KnowledgeApi.SeedAsync(factory, client);
         var text = new string('甲', 90) + "。\n\n" + new string('乙', 90) + "。\n\n" + new string('丙', 90) + "。";
         (await client.PutAsJsonAsync($"/api/v1/documents/{seed.Document.Id}/text", new TextDocumentRequest("採購規範", text, 1))).EnsureSuccessStatusCode(); await Drain(factory);
@@ -115,7 +115,7 @@ public sealed class EmbeddingProfileTests
     [Fact]
     public async Task PartialReindexResumesCompletedBatchesWithoutRepeatingEmbedding()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
             x.Embedding.BatchSize = 1; x.Indexing.ChunkTargetTokens = 80; x.Indexing.ChunkMaxTokens = 100; x.Indexing.ChunkMinTokens = 20; x.Indexing.ChunkOverlapRatio = 0;
         }));
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
@@ -134,7 +134,7 @@ public sealed class EmbeddingProfileTests
     public async Task NoneEmbeddingForcesKeywordAndModelProbeChecksRealBatchShape()
     {
         Assert.SkipUnless(TestDatabase.FullTextInstalled, TestDatabase.NoFullText);
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.Embedding.Provider = "none"));
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.Embedding.Provider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
         using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
         Assert.Equal("keyword", (await search.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode); Assert.Equal(0, factory.Embeddings.Calls);

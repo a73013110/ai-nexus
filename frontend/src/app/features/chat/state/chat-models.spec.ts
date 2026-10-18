@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NexusApi } from '@core/api/nexus-api';
+import { WorkspaceApi } from '@core/api/workspace-api';
 import type { ModelsDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { ChatModels } from './chat-models';
@@ -23,7 +23,7 @@ function setup(webSearchStatus = vi.fn()) {
   const generation = vi.fn(() => 1);
   TestBed.configureTestingModule({
     providers: [
-      { provide: NexusApi, useValue: { webSearchStatus } },
+      { provide: WorkspaceApi, useValue: { webSearchStatus } },
       { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });

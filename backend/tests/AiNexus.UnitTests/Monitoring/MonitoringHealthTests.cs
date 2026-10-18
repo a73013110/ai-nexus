@@ -20,7 +20,7 @@ public sealed class MonitoringHealthTests
             resources ?? Resources(), points ?? [Point(), Point(), Point()], recent ?? Metrics(), recent ?? Metrics(), [], [], [], dependencies ?? [], [], subsystems ?? []);
 
     private static DependencyTraffic Dependency(string status, long requests, long errors) =>
-        new("sql.nexus", "主資料庫", "database", status, 0, Now, Metrics(requests, errors));
+        new("sql.app", "主資料庫", "database", status, 0, Now, Metrics(requests, errors));
 
     private static MonitoredSubsystem Subsystem(string status, DateTimeOffset? observed = null) =>
         new("jobs", "背景工作", status, "摘要", [], observed ?? Now);
@@ -87,7 +87,7 @@ public sealed class MonitoringHealthTests
         Assert.Equal(MonitoringHealth.Critical, health.Status);
         Assert.Equal(["dependency_failing", "subsystem_failing", "dependency_degraded", "subsystem_degraded", "subsystem_unreadable", "sessions_dropped"],
             health.Issues.Select(x => x.Code));
-        Assert.Equal("sql.nexus", health.Issues[0].Subject);
+        Assert.Equal("sql.app", health.Issues[0].Subject);
         Assert.Equal(MonitoringHealth.Warning, MonitoringHealth.Evaluate(Snapshot(dependencies: [Dependency("failing", 1, 1)])).Issues.Single().Severity);
         Assert.Equal(MonitoringHealth.Attention, MonitoringHealth.Evaluate(Snapshot(dropped: 1)).Status);
     }

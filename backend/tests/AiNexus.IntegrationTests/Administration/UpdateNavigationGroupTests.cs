@@ -11,7 +11,7 @@ public sealed class UpdateNavigationGroupTests
     [Fact]
     public async Task AdministratorRenamesMovesAndReordersAGroup()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PutAsJsonAsync("/api/v1/admin/navigation-groups/collaboration", new NavigationGroupUpdateRequest("團隊協作", "work", 5))).EnsureSuccessStatusCode();
         var group = Assert.Single((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.NavigationGroups, x => x.Id == "collaboration");
         Assert.Equal(("團隊協作", "work", 5), (group.Name, group.ParentId, group.SortOrder));
@@ -22,7 +22,7 @@ public sealed class UpdateNavigationGroupTests
     [Fact]
     public async Task CyclesAndUnknownGroupsAreRejected()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", "system", 40))).EnsureSuccessStatusCode();
         await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/navigation-groups/system", new NavigationGroupUpdateRequest("系統管理", "reports", 30)), HttpStatusCode.BadRequest, "navigation_group_cycle");
         await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/navigation-groups/system", new NavigationGroupUpdateRequest("系統管理", "system", 30)), HttpStatusCode.BadRequest, "navigation_group_cycle");
@@ -34,7 +34,7 @@ public sealed class UpdateNavigationGroupTests
     [Fact]
     public async Task MembersCannotUpdateGroups()
     {
-        await using var factory = new NexusFactory(); using var member = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         await AssertCodeAsync(await member.PutAsJsonAsync("/api/v1/admin/navigation-groups/work", new NavigationGroupUpdateRequest("我的", null, 10)), HttpStatusCode.Forbidden, "feature_forbidden");
     }
 }

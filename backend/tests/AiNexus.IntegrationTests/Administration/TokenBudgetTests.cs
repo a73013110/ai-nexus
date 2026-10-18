@@ -23,7 +23,7 @@ public sealed class TokenBudgetTests
     [Fact]
     public async Task TokenQuotaRejectsNewRequestsButKeepsIdempotentReplayAndOtherAccountsIndependent()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 2200 })))).EnsureSuccessStatusCode();
         var conversation = await CreateConversation(bob); var body = new CreateRunRequest(conversation.Id, "test-model", "唯一一次", null, null); var key = Guid.NewGuid().ToString();
         var first = await PostRun(bob, body, key); first.EnsureSuccessStatusCode(); var run = (await first.Content.ReadFromJsonAsync<RunDto>())!; await WaitForTerminal(bob, run.Id);
@@ -38,7 +38,7 @@ public sealed class TokenBudgetTests
     [Fact]
     public async Task ActiveAndUnreportedRequestsReserveTokensAcrossChatAndModelTasks()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(DailyTokenLimits: new Dictionary<string, long> { ["test-model"] = 500 }))).EnsureSuccessStatusCode();
@@ -64,7 +64,7 @@ public sealed class TokenBudgetTests
     [Fact]
     public async Task EachModelCountsReportedUsageAndIgnoresEmbeddingAndWebSearch()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())
         {
@@ -84,7 +84,7 @@ public sealed class TokenBudgetTests
     [Fact]
     public async Task TokenAndUsageWindowsUseUtcBoundariesOnEveryServerTimeZone()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"]);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var day = UtcDay.Start(DateTimeOffset.UtcNow);
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(DailyTokenLimits: new Dictionary<string, long> { ["test-model"] = 500 }))).EnsureSuccessStatusCode();

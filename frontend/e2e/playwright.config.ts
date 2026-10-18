@@ -73,9 +73,9 @@ export default defineConfig({
     timeout: 30000,
     reuseExistingServer: false,
     env: {
-      Databases__Nexus__User: "",
-      Databases__Nexus__Password: "",
-      Databases__Nexus__IntegratedSecurity: "false",
+      Databases__App__User: "",
+      Databases__App__Password: "",
+      Databases__App__IntegratedSecurity: "false",
       Identity__ActiveDirectory__Mode: "Windows",
     },
   },

@@ -13,7 +13,7 @@ public sealed class TextDocumentTests
     [Fact]
     public async Task TextBodyLimitAcceptsEscapedChineseAndValidatesTheActualCharacterLimit()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var collection = (await (await client.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("長篇筆記", ""))).Content.ReadFromJsonAsync<CollectionDto>())!;
         var text = new string('字', 20000);
         var response = await client.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection.Resource.Id}/text", new TextDocumentRequest("長篇文字", text)); response.EnsureSuccessStatusCode();
@@ -25,7 +25,7 @@ public sealed class TextDocumentTests
     [Fact]
     public async Task EditableTextUsesCollectionAclVersionChecksAndRebuildsIndexWithANewOriginal()
     {
-        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
+        await using var factory = new AppFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
         var created = await owner.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("文字來源", "")); created.EnsureSuccessStatusCode(); var collection = (await created.Content.ReadFromJsonAsync<CollectionDto>())!;
         var response = await owner.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection.Resource.Id}/text", new TextDocumentRequest("文字筆記", "版本一的原始文字")); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
         Assert.Equal(1, document.TextVersion);

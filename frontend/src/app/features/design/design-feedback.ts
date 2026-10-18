@@ -6,7 +6,7 @@ import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
 import { InferenceSignal } from '@shared/ui/inference-signal';
 import { InfoPopover } from '@shared/ui/info-popover';
-import { NexusIsland } from '@shared/ui/island';
+import { Island } from '@shared/ui/island';
 import { IslandService, type IslandItem } from '@shared/ui/island-service';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
@@ -35,7 +35,7 @@ type IslandSample = 'live' | 'warning' | 'info';
     InfoPopover,
     JobProgress,
     LiveDot,
-    NexusIsland,
+    Island,
     Notice,
     Select,
     StatusBadge,
