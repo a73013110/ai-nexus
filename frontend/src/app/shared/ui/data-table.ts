@@ -337,7 +337,8 @@ export class DataTableRow {
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    role: 'status',
+    // 讀取失敗要立即讀出，與 nx-notice 的 danger 相同；載入中與空狀態只是狀態更新。
+    '[attr.role]': 'error() ? "alert" : "status"',
     '[hidden]': '!visible()',
   },
   styles: `
