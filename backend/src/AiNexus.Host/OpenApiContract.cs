@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
+using AiNexus.Features.AccessControl;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.OpenApi;
@@ -19,6 +21,14 @@ internal static class OpenApiContract
         options.AddDocumentTransformer((document, _, _) =>
         {
             document.Servers = [new() { Url = "/" }];
+            // 沒有端點直接引用：功能 id 在 DTO 裡仍是字串（資料庫可能有程式不認得的列），這份列舉只給前端產生 FeatureId 型別。
+            document.Components ??= new();
+            document.Components.Schemas ??= new Dictionary<string, IOpenApiSchema>();
+            document.Components.Schemas["FeatureId"] = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String,
+                Enum = [.. FeatureIds.All.Select(id => (JsonNode)JsonValue.Create(id))],
+            };
             return Task.CompletedTask;
         });
 

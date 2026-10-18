@@ -11,7 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { AuditDto, FeatureDto, ModelDto, NavigationGroupDto } from '@core/api/schema';
-import { FEATURE_NAMES } from '@core/auth/feature-names';
+import { FEATURE_NAMES, isFeatureId } from '@core/auth/feature-names';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
@@ -279,7 +279,7 @@ export class ActivityAuditPage {
       (id) =>
         catalog.get(id) ?? {
           id,
-          name: FEATURE_NAMES[id] || id,
+          name: (isFeatureId(id) && FEATURE_NAMES[id]) || id,
           route: '',
           groupId: null,
           icon: '',

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
+import type { FeatureId } from '../auth/feature-names';
 import { Notice } from '@shared/ui/notice';
 
 /**
@@ -17,7 +18,7 @@ import { Notice } from '@shared/ui/notice';
 export class FeatureAccessNotice {
   private readonly session = inject(WorkspaceSession);
   /** 頁面需要的功能 ID，即 `/me` 中授予的那個。 */
-  readonly feature = input.required<string>();
+  readonly feature = input.required<FeatureId>();
   readonly message = computed(
     () => `需要「${this.session.featureName(this.feature())}」權限，請聯絡管理員。`,
   );
