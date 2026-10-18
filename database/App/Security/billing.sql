@@ -1,0 +1,6 @@
+CREATE SCHEMA [billing]
+    AUTHORIZATION [dbo];
+
+
+GO
+
