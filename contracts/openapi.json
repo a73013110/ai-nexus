@@ -36753,6 +36753,30 @@
           }
         }
       },
+      "FeatureId": {
+        "enum": [
+          "admin",
+          "artifacts",
+          "audit",
+          "chat",
+          "dashboard",
+          "design",
+          "files",
+          "integrations",
+          "knowledge",
+          "logs.detail",
+          "logs.export",
+          "logs.query",
+          "monitoring",
+          "operations",
+          "projects",
+          "quality",
+          "repositories",
+          "shared",
+          "tasks"
+        ],
+        "type": "string"
+      },
       "FeatureUpdateRequest": {
         "required": [
           "name",

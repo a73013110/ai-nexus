@@ -9,11 +9,12 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
+import type { FeatureId } from '../auth/feature-names';
 import { ClientValidationError, isCancellation, safeMessage } from '../errors/safe-errors';
 
 export interface ApiResourceOptions<T, P> {
   /** 已登入帳號必須具備的功能；所有帳號都能讀取的資料則省略。 */
-  feature?: string;
+  feature?: FeatureId;
   /** 重新讀取帳號而不沿用快取，供顯示權限的頁面使用。 */
   freshAccount?: boolean;
   /** 響應式請求；`undefined` 讓資源保持閒置。省略時每次登入只讀一次。 */
