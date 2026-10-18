@@ -19,7 +19,7 @@
 
 ## Schema 與模組
 
-一個業務模組一個 schema，名稱＝模組名小寫（`accesscontrol`、`identity`、`knowledge`…）；`audit.AuditEvents` 由 `AppDbContext` 為所有模組遮罩並寫入，稽核攔截器在 `AiNexus.Data/App/AuditEventInterceptor.cs`。
+一個業務模組一個 schema，名稱＝模組名小寫（`accesscontrol`、`identity`、`knowledge`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值，procedure 見[新增一支 procedure](#新增一支-procedure)。
 
 ## 欄位規則
 
@@ -51,13 +51,22 @@
 
 ## 手寫 SQL
 
-EF Core 與 Dapper 的分工見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步）。值用參數，物件名稱只取程式固定清單。
+分工見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（Dapper），值用參數。
 
-- `ISqlDatabase<AppDbContext>`：主資料庫，共用 `AppDbContext` 的連線與目前交易，與 EF 寫入一起提交或回復。
+- `ISqlDatabase<AppDbContext>`：主資料庫，共用 `AppDbContext` 的連線與目前交易。
 - `ISqlDatabase<MasterDatabase>`：建庫用，以 `Databases:Nexus` 連 `master`。
-- `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次呼叫自開連線；設定須 `ReadOnly=true`，不取代 SQL 端 view-only 權限。
+- `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次自開連線；設定須 `ReadOnly=true`，不取代 SQL 端唯讀權限。
 
-連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增唯讀來源＝在擁有它的模組加一個 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。
+連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增唯讀來源＝在擁有它的模組加 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。
+
+### 新增一支 procedure
+
+1. 依[改結構](#改結構)建立 `<schema>.usp_<UseCase>`；交易見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md#交易)，稽核見 [ADR 0014](../decisions/0014-procedure-audit.md)。
+2. 讀取用 `QueryProcedureAsync`，寫入用 `ExecuteProcedureAsync`（同批次帶稽核情境）；record 欄位名稱、順序、型別與 `SELECT` 一致。
+3. 預期內的失敗：`THROW 50000, N'<error_code>', 1;`（`ProcedureError`）。
+4. 測試用 `ProcedureAudits`。
+
+範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Administration/Users/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Billing/Prices/CreateModelPrice.cs)。
 
 ## 測試
 
