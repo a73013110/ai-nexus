@@ -1,0 +1,133 @@
+CREATE TABLE [identity].[Users] (
+    [Id]                   UNIQUEIDENTIFIER   NOT NULL,
+    [Sid]                  NVARCHAR (184)     NOT NULL,
+    [Account]              NVARCHAR (256)     NOT NULL,
+    [DisplayName]          NVARCHAR (256)     NOT NULL,
+    [Enabled]              BIT                DEFAULT (CONVERT([bit],(1))) NOT NULL,
+    [AttachmentLimitBytes] BIGINT             NULL,
+    [DeletedAt]            DATETIMEOFFSET (7) NULL,
+    [AdEnabled]            BIT                DEFAULT (CONVERT([bit],(1))) NOT NULL,
+    [LocalEnabled]         BIT                NOT NULL,
+    [AdAccount]            NVARCHAR (64)      NULL,
+    [LocalAccount]         NVARCHAR (64)      NULL,
+    [PasswordHash]         NVARCHAR (512)     NULL,
+    [SecurityVersion]      INT                NOT NULL,
+    [ProfileManaged]       BIT                NOT NULL,
+    [FailedLogins]         INT                NOT NULL,
+    [LockedUntil]          DATETIMEOFFSET (7) NULL,
+    [LastSeenAt]           DATETIMEOFFSET (7) NOT NULL,
+    CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.))
+);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_AdAccount]
+    ON [identity].[Users]([AdAccount] ASC) WHERE ([AdAccount] IS NOT NULL);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_LocalAccount]
+    ON [identity].[Users]([LocalAccount] ASC) WHERE ([LocalAccount] IS NOT NULL);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_Sid]
+    ON [identity].[Users]([Sid] ASC);
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者身分、AD SID 綁定、可用登入方式與工作階段撤銷版本；不保存 AD 密碼。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入身分顯示帳號；AD 連結後保存目錄提供的帳號。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Account';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'預先配置的 AD 帳號正規化值；唯一、不含網域，驗證成功後以 SID 固定綁定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdAccount';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否允許使用 AD／Windows 整合驗證登入。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdEnabled';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'管理者設定的個人容量上限 bytes；優先於群組，空值使用群組或預設 5 GB。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AttachmentLimitBytes';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入身分刪除時間；保留關聯與歷史資料。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'DeletedAt';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者的介面顯示名稱。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'DisplayName';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否啟用；停用不刪除歷史資料。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Enabled';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地登入連續失敗次數，用於暫時鎖定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'FailedLogins';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'資料的主鍵識別碼。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Id';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者最近登入／活動時間，採 UTC offset。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LastSeenAt';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地登入帳號正規化值；唯一且不區分大小寫。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LocalAccount';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否允許本地密碼登入；與 AD 驗證獨立。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LocalEnabled';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地帳號暫時鎖定的到期時間；空值表示未鎖定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LockedUntil';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地密碼的 Argon2id PHC 雜湊，含版本、成本、隨機 salt 與衍生值；不可還原。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'PasswordHash';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'姓名是否由管理者維護；開啟後 AD 目錄不覆寫姓名。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'ProfileManaged';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入政策或密碼變更時遞增，立即撤銷舊工作階段。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'SecurityVersion';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'AD 的不可變 SID；尚未綁定 AD 的手動帳號使用 managed: 識別碼。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Sid';
+
+
+GO
+
