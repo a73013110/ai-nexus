@@ -1,4 +1,4 @@
-using AiNexus.Features.Identity.Users;
+using AiNexus.Data.App.Identity;
 
 namespace AiNexus.Features.Identity.Authentication;
 
@@ -8,8 +8,8 @@ namespace AiNexus.Features.Identity.Authentication;
 public interface ISignInGrant
 {
     /// <summary>回報 <see cref="ApplyAsync"/> 是否會實際授權；為 true 時登入必須先取得 identity 寫入鎖。</summary>
-    Task<bool> PendingAsync(NexusUser user, CancellationToken ct);
+    Task<bool> PendingAsync(User user, CancellationToken ct);
 
     /// <summary>在 identity 寫入鎖內呼叫。</summary>
-    Task ApplyAsync(NexusUser user, CancellationToken ct);
+    Task ApplyAsync(User user, CancellationToken ct);
 }

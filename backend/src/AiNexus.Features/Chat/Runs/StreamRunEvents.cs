@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using System.Text.Json;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ namespace AiNexus.Features.Chat.Runs;
 /// </summary>
 internal sealed class StreamRunEvents(
     RunService runs,
-    NexusDbContext db,
+    AppDbContext db,
     SubscriptionLimits limits,
     RunSignals signals,
     TimeProvider clock)

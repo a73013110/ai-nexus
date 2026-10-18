@@ -1,3 +1,5 @@
+using AiNexus.Data.App.Billing;
+
 namespace AiNexus.Features.Billing.Charges;
 
 public static class ChargeCalculator

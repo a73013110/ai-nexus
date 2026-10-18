@@ -1,3 +1,5 @@
+using AiNexus.Data.App.Conversations;
+
 namespace AiNexus.Features.Conversations;
 
 /// <summary>對外的對話資料；標籤依名稱排序。</summary>

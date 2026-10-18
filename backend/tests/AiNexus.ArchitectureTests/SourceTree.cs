@@ -7,10 +7,10 @@ internal static partial class SourceTree
 {
     public static readonly string Root = FindRoot();
 
-    /// <summary>手寫的原始碼檔；排除產生的 Migrations，以及 Host 的頂層 Program.cs。</summary>
+    /// <summary>原始碼檔；排除 Host 的頂層 Program.cs。</summary>
     public static IEnumerable<string> Files(string project) => Directory
         .EnumerateFiles(Path.Combine(Root, "backend", Area(project), project), "*.cs", SearchOption.AllDirectories)
-        .Where(path => !Relative(path).Split('/').Any(part => part is "bin" or "obj" or "Migrations"))
+        .Where(path => !Relative(path).Split('/').Any(part => part is "bin" or "obj"))
         .Where(path => !(project == "AiNexus.Host" && Path.GetFileName(path) == "Program.cs"));
 
     /// <summary>相對於 backend/src 或 backend/tests 的路徑，使用正斜線，開頭為專案資料夾名稱。</summary>

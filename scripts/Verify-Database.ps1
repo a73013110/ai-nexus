@@ -2,10 +2,10 @@
 
 <#
 .SYNOPSIS
-部署後比對正式庫的實際結構與發布套件的 expected.dacpac；有任何結構差異就列出物件並以結束碼 1 失敗。
+部署後比對正式庫的實際結構與發布套件的 App.dacpac；有任何結構差異就列出物件並以結束碼 1 失敗。
 
 .DESCRIPTION
-DBA 逐檔執行拆檔 SQL 時可能漏檔，而 __EFMigrationsHistory 照樣寫入，網站啟動只檢查 history。這個腳本以 SqlPackage
+DBA 依 dacpac 產生的升級 SQL 可能漏跑或被改過，正式機也可能有未提交的熱修。這個腳本以 SqlPackage
 DeployReport 比對實際結構（唯讀，不修改資料庫）：忽略欄位順序，排除使用者、登入、角色、權限、檔案群組、資料庫選項等
 環境差異；正式庫缺少或多出的物件都算差異。全文目錄與全文索引不比對，因為參考庫與正式機是否安裝全文元件可能不同；
 全文索引改用主機指令 verify sql 檢查。隨發布套件複製到主機，不依賴 repo；需要 SqlPackage，找不到時會說明安裝方式。
@@ -17,7 +17,7 @@ DeployReport 比對實際結構（唯讀，不修改資料庫）：忽略欄位�
 要驗證的資料庫，預設 AiNexus。
 
 .PARAMETER DacpacPath
-發布套件的 database\expected.dacpac（Publish-IIS.ps1 -FromMigration 產生）。
+發布套件的 database\App.dacpac（Publish-IIS.ps1 產生）。
 
 .PARAMETER Credential
 SQL 登入（需要 VIEW DEFINITION，例如部署帳號）；省略時以目前 Windows 身分連線。
@@ -32,10 +32,10 @@ SqlPackage 執行檔或 .dll；省略時依序找 PATH 上的 sqlpackage 與 Dac
 保留 DeployReport XML 的位置；省略時只輸出摘要。
 
 .EXAMPLE
-./Verify-Database.ps1 -Server sql.company.internal -DacpacPath .\database\expected.dacpac
+./Verify-Database.ps1 -Server sql.company.internal -DacpacPath .\database\App.dacpac
 
 .EXAMPLE
-./Verify-Database.ps1 -Server 192.0.2.10 -DacpacPath .\database\expected.dacpac -Credential (Get-Credential) -TrustServerCertificate -ReportPath .\logs\deploy-report.xml
+./Verify-Database.ps1 -Server 192.0.2.10 -DacpacPath .\database\App.dacpac -Credential (Get-Credential) -TrustServerCertificate -ReportPath .\logs\deploy-report.xml
 #>
 [CmdletBinding()]
 param(
@@ -91,8 +91,8 @@ function Find-SqlPackage {
 "@
 }
 
-# SqlPackage reads \" as a quote in a response file and prints any argument it cannot parse, so the connection string
-# is quoted carefully and never ends in a backslash; see SqlPackage.ResponseFileArgument in the backend.
+# SqlPackage 在 response file 中把 \" 當成引號，無法解析的引數會原樣印出；
+# 所以連線字串要小心加引號，且結尾不可是反斜線。
 function Format-ResponseArgument([string]$Name, [string]$Value) {
     if ($Value -match '[\r\n]') { throw "$Name 不能含換行。" }
     if ($Value.EndsWith('\')) { $Value += ';' }
@@ -100,7 +100,7 @@ function Format-ResponseArgument([string]$Name, [string]$Value) {
 }
 
 $dacpac = (Resolve-Path -LiteralPath $DacpacPath -ErrorAction SilentlyContinue)?.Path
-if (!$dacpac -or !(Test-Path -LiteralPath $dacpac -PathType Leaf)) { throw "找不到 expected.dacpac：$DacpacPath。它在 Publish-IIS.ps1 -FromMigration 產生的套件 database\ 內。" }
+if (!$dacpac -or !(Test-Path -LiteralPath $dacpac -PathType Leaf)) { throw "找不到 App.dacpac：$DacpacPath。它在 Publish-IIS.ps1 產生的套件 database\ 內。" }
 $sqlPackage = Find-SqlPackage
 
 $connection = [Data.Common.DbConnectionStringBuilder]::new()
@@ -145,12 +145,12 @@ try {
         $fullText | Format-Table -AutoSize | Out-String -Width 200 | ForEach-Object TrimEnd | Write-Output
     }
     if ($differences.Count) {
-        Write-Output "$Database 的結構與 expected.dacpac 不同（$($differences.Count) 項）。Operation 是要讓正式庫符合預期所需的動作；通常是漏執行的拆檔 SQL："
+        Write-Output "$Database 的結構與 App.dacpac 不同（$($differences.Count) 項）。Operation 是要讓正式庫符合預期所需的動作；通常是漏執行的升級 SQL 或未提交的熱修："
         $differences | Format-Table -AutoSize | Out-String -Width 200 | ForEach-Object TrimEnd | Write-Output
         if ($alerts.Count) { $alerts | Format-Table -AutoSize -Wrap | Out-String -Width 200 | ForEach-Object TrimEnd | Write-Output }
         exit 1
     }
-    Write-Output "$Database 的結構符合 expected.dacpac（忽略欄位順序與環境差異；全文物件不比對）。"
+    Write-Output "$Database 的結構符合 App.dacpac（忽略欄位順序與環境差異；全文物件不比對）。"
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }

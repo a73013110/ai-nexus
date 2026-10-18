@@ -73,7 +73,6 @@ export default defineConfig({
     timeout: 30000,
     reuseExistingServer: false,
     env: {
-      Persistence__ApplyMigrationsOnStartup: "false",
       Databases__Nexus__User: "",
       Databases__Nexus__Password: "",
       Databases__Nexus__IntegratedSecurity: "false",

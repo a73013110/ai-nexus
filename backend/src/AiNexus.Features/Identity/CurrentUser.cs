@@ -1,13 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Identity;
 using System.DirectoryServices.AccountManagement;
 using System.Runtime.Versioning;
 using System.Security.Claims;
 using System.Security.Principal;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
@@ -15,18 +17,18 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Identity;
 
 /// <summary>
-/// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="NexusUser"/>（必要時建立、綁定或更新），結果在同一請求內快取。
+/// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="User"/>（必要時建立、綁定或更新），結果在同一請求內快取。
 /// </summary>
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
+public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
     DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
-    private NexusUser? resolved;
+    private User? resolved;
     public Guid? ResolvedId => resolved?.Id;
     Guid ICurrentUser.Id => ((ICurrentUser)this).User.Id;
-    NexusUser ICurrentUser.User => resolved ?? throw new InvalidOperationException("ICurrentUser is resolved by the /api/v1 endpoint filter; declare it as a handler parameter.");
+    User ICurrentUser.User => resolved ?? throw new InvalidOperationException("ICurrentUser is resolved by the /api/v1 endpoint filter; declare it as a handler parameter.");
 
-    public async Task<Result<NexusUser>> GetAsync(CancellationToken ct = default)
+    public async Task<Result<User>> GetAsync(CancellationToken ct = default)
     {
         if (resolved is not null) return resolved;
         storage.RequireConfigured();
@@ -71,7 +73,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
             if (user is null)
             {
-                user = new NexusUser { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = clock.GetUtcNow() };
+                user = new User { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = clock.GetUtcNow() };
                 db.Users.Add(user);
                 db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
@@ -90,21 +92,21 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         finally { writeLock.Gate.Release(); }
     }
 
-    private async Task<bool> PendingGrantAsync(NexusUser user, CancellationToken ct)
+    private async Task<bool> PendingGrantAsync(User user, CancellationToken ct)
     {
         foreach (var grant in grants)
             if (await grant.PendingAsync(user, ct)) return true;
         return false;
     }
 
-    private bool Stale(NexusUser user, string displayName)
+    private bool Stale(User user, string displayName)
         => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || (!user.ProfileManaged && user.DisplayName != displayName);
 
     /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
-    private NexusUser? Track(NexusUser? user)
+    private User? Track(User? user)
     {
         if (user is null) return null;
-        var tracked = db.ChangeTracker.Entries<NexusUser>().FirstOrDefault(x => x.Entity.Id == user.Id);
+        var tracked = db.ChangeTracker.Entries<User>().FirstOrDefault(x => x.Entity.Id == user.Id);
         if (tracked is not null) return tracked.Entity;
         db.Attach(user);
         return user;

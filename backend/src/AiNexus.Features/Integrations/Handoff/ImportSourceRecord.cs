@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Integrations;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Integrations.Sources;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -23,7 +24,7 @@ internal sealed class SourceImportRequestValidator : RequestValidator<SourceImpo
 
 /// <summary>把紀錄複製成一份私人成果。快照不授予任何人存取即時來源的權限。</summary>
 internal sealed class ImportSourceRecord(
-    NexusDbContext db,
+    AppDbContext db,
     AccessService access,
     SourceGateway gateway,
     ArtifactService artifacts,
@@ -59,7 +60,7 @@ internal sealed class ImportSourceRecord(
         var created = await artifacts.CreateAsync(actor, new(detail.Record.Title, body), ct);
         if (!created.IsSuccess) return created.Error;
         var artifact = created.Value;
-        db.Add(new ImportedSourceReference
+        db.Add(new SourceReference
         {
             ArtifactId = artifact.Resource.Id,
             SourceId = source,

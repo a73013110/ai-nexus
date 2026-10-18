@@ -1,5 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -23,7 +25,7 @@ internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValid
 /// 本模組唯一的 Gitea 寫入：以使用者自己的 token（需要 <c>write:issue</c> 權限）把已完成的 pull request review 貼成一則留言。
 /// 送出前會先重新檢查來源；每份 review 最多貼一次，並寫入稽核紀錄。
 /// </summary>
-internal sealed class PostRepositoryReviewComment(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews, RepositoryWriteLock writes, TimeProvider clock)
+internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, RepositoryWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/reviews/{id:guid}/comment", (Guid id, PostRepositoryReviewCommentRequest body, ICurrentUser user, PostRepositoryReviewComment handler, CancellationToken ct) =>

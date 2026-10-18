@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
 /// <summary>review 與其來源區段及已存的各區段結果；只有使用者仍能讀取來源時才可讀取。</summary>
-internal sealed class ReadRepositoryReview(NexusDbContext db, RepositoryReviewService reviews)
+internal sealed class ReadRepositoryReview(AppDbContext db, RepositoryReviewService reviews)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/reviews/{id:guid}", async (Guid id, ICurrentUser user, ReadRepositoryReview handler, CancellationToken ct) =>

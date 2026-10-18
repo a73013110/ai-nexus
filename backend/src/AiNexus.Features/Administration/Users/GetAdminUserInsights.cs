@@ -1,10 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Account;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,7 @@ namespace AiNexus.Features.Administration.Users;
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 
 /// <summary>單一使用者的帳號、角色、用量與儲存空間；讀取會稽核。</summary>
-internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeReadAudit reads, UsageReports usage, PersonalUsage personal)
+internal sealed class GetAdminUserInsights(AppDbContext db, AdministrativeReadAudit reads, UsageReports usage, PersonalUsage personal)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/insights", async (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())

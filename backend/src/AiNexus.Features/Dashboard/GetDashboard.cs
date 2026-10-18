@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Errors;
 
@@ -17,7 +17,7 @@ public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset Ge
     TokenUsageDto Tokens, IReadOnlyList<DashboardSectionDto> Sections);
 
 /// <summary>個人總覽；平台營運權限者可看全平台總覽，且每次查看都會留稽核。</summary>
-internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access,
+internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageReports usage, AccessService access,
     IEnumerable<IDashboardSource> sources, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api

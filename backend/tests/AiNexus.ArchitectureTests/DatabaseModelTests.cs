@@ -1,54 +1,63 @@
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.ArchitectureTests;
 
-/// <summary>SQL Server 模型的規則；migrations 是由這個模型產生的。</summary>
+/// <summary>
+/// 資料表只在 <c>AiNexus.Data</c> 定義，且依「資料庫 → 模組（schema）→ 資料表」放置（ADR 0013）：
+/// 知道 <c>identity.Users</c> 就知道檔案是 <c>AiNexus.Data/App/Identity/User.cs</c>。
+/// </summary>
 public sealed class DatabaseModelTests
 {
+    private const string AppNamespace = "AiNexus.Data.App.";
+
+    /// <summary>use case 只引用資料表；在 Features 或 Host 宣告組態會讓同一張表出現兩個對應位置。</summary>
     [Fact]
-    public void EveryTableAndColumnHasDescription()
+    public void OnlyTheDataProjectConfiguresTables()
     {
-        var missing = EntityTypes()
-            .SelectMany(entity => entity.GetProperties().Where(p => string.IsNullOrWhiteSpace(p.GetComment())).Select(p => $"{entity.GetTableName()}.{p.Name}")
-                .Prepend(string.IsNullOrWhiteSpace(entity.GetComment()) ? entity.GetTableName() : null))
-            .OfType<string>().ToArray();
-        Assert.True(missing.Length == 0, "Add [Comment] (or HasComment for shadow properties) to: " + string.Join(", ", missing));
+        var offending = Assemblies.Features.GetTypes().Concat(Assemblies.Host.GetTypes())
+            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)))
+            .Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
+        Assert.True(offending.Count == 0, "Move these configurations to AiNexus.Data/App/<Module>/<Entity>.cs:\n" + string.Join("\n", offending));
     }
 
+    /// <summary>實體與其組態所在的資料夾（namespace）就是資料表的 schema。</summary>
     [Fact]
-    public void SchemaMatchesOwningModule()
+    public void FoldersMatchTableSchemas()
     {
-        var mismatched = EntityTypes()
-            .Where(entity => entity.GetSchema() != ExpectedSchema(entity.ClrType))
-            .Select(entity => $"{entity.ClrType.Name} → {entity.GetSchema()}.{entity.GetTableName()} (expected {ExpectedSchema(entity.ClrType)})")
-            .ToArray();
-        Assert.True(mismatched.Length == 0, string.Join(", ", mismatched));
+        var configurations = Assemblies.Data.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false })
+            .SelectMany(t => t.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
+                .Select(i => (Entity: i.GetGenericArguments()[0], Configuration: t)))
+            .ToLookup(x => x.Entity, x => x.Configuration);
+        var mismatched = EntityTypes().SelectMany(entity =>
+        {
+            var schema = entity.GetSchema() ?? "dbo";
+            // 實體型別可能來自 Platform（日誌管線的 DiagnosticEvent），那時只檢查組態的位置。
+            var types = configurations[entity.ClrType].Append(entity.ClrType).Where(t => t.Assembly == Assemblies.Data);
+            return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{entity.GetTableName()}");
+        }).Distinct().Order(StringComparer.Ordinal).ToList();
+        Assert.True(mismatched.Count == 0, "Put each entity and its configuration in AiNexus.Data/App/<Module>/ whose lowercase name is the schema:\n" + string.Join("\n", mismatched));
     }
 
-    // AuditEvent 實際放在 Persistence（NexusDbContext 會替所有模組遮罩並寫入它），
-    // 但資料表屬於 audit 結構描述，所以不能照資料夾名稱對應，這裡特別處理。
-    private static string ExpectedSchema(Type type)
-        => type == typeof(AuditEvent) ? "audit" : type.Namespace!.Split('.')[2].ToLowerInvariant();
-
-    private static IEnumerable<IEntityType> EntityTypes()
+    /// <summary>每個由 Data 組態對應的實體都要有組態類別，否則它是靠慣例被發現、沒有人看得到它的對應。</summary>
+    [Fact]
+    public void EveryEntityHasAConfiguration()
     {
-        using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlServer("Server=.;Database=AiNexus").Options);
-        // [Comment] 只存在於設計期模型，執行期模型會丟棄，所以必須改用 IDesignTimeModel 才讀得到。
-        return db.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
+        var configured = Assemblies.Data.GetTypes()
+            .SelectMany(t => t.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)))
+            .Select(i => i.GetGenericArguments()[0]).ToHashSet();
+        var missing = EntityTypes().Where(e => !e.IsOwned() && !configured.Contains(e.ClrType)).Select(e => e.ClrType.FullName).Order(StringComparer.Ordinal).ToList();
+        Assert.True(missing.Count == 0, "Add an IEntityTypeConfiguration for:\n" + string.Join("\n", missing));
     }
 
-    [Fact]
-    public void SqlServerModelMatchesMigrationsAndEnforcesOwnerRunUniqueness()
+    private static string? Folder(Type type)
+        => type.Namespace is { } ns && ns.StartsWith(AppNamespace, StringComparison.Ordinal) ? ns[AppNamespace.Length..].Split('.')[0].ToLowerInvariant() : null;
+
+    private static IReadOnlyList<IEntityType> EntityTypes()
     {
-        using var db = new DesignTimeDbContextFactory().CreateDbContext([]);
-        Assert.False(db.Database.HasPendingModelChanges());
-        var run = db.Model.FindEntityType(typeof(GenerationRun))!;
-        Assert.Contains(run.GetIndexes(), x => x.IsUnique && x.Properties.Count == 1 && x.Properties[0].Name == "ActiveOwnerId");
-        Assert.Contains(run.GetIndexes(), x => x.IsUnique && x.Properties.Select(p => p.Name).SequenceEqual(new[] { "OwnerId", "IdempotencyKey" }));
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer("Server=.;Database=AiNexus").Options);
+        return [.. db.Model.GetEntityTypes()];
     }
 }

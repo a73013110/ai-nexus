@@ -1,19 +1,18 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using System.Text.RegularExpressions;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 
-public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingVectorStore vectors, IOptions<KnowledgeOptions> options) : IRetrievalStore
+public sealed partial class InMemoryRetrievalStore(AppDbContext db, EmbeddingVectorStore vectors, IOptions<KnowledgeOptions> options) : IRetrievalStore
 {
     public async Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, EmbeddingProfile profile, string query, float[]? vector, string mode, CancellationToken ct)
     {
         if (db.Database.IsSqlServer()) throw new InvalidOperationException("測試檢索儲存只供 SQLite 使用。");
-        var rows = await (from c in db.Set<KnowledgeChunk>().AsNoTracking() join d in db.Set<KnowledgeDocument>() on c.DocumentId equals d.Id
+        var rows = await (from c in db.Set<Chunk>().AsNoTracking() join d in db.Set<Document>() on c.DocumentId equals d.Id
             where d.CollectionId != null && collections.Contains(d.CollectionId.Value) && d.Status == "ready" && !d.IsDeleted
             select new RetrievalRow { ChunkId = c.Id, DocumentId = c.DocumentId, Title = d.FileName, PageNumber = c.StartPage, EndPage = c.EndPage, Ordinal = c.Ordinal, Text = c.Text, HeadingPath = c.HeadingPath }).ToListAsync(ct);
         var ids = rows.Select(x => x.ChunkId).ToArray();

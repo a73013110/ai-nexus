@@ -1,22 +1,20 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Knowledge;
 using System.Data;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
-using AiNexus.Features.AccessControl.Navigation;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Knowledge.Embeddings;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
 
 /// <summary>所有行政變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。</summary>
-public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
+public sealed class AdministrativeAudit(AppDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

@@ -1,5 +1,5 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using Microsoft.AspNetCore.Antiforgery;
@@ -10,7 +10,7 @@ using AiNexus.Features.Identity.Authentication;
 namespace AiNexus.Features.Identity.Sessions;
 
 /// <summary>結束任何測試身分、寫入登出稽核、清除 cookie，並發出 <see cref="UserSignedOut"/> 事件，通知該瀏覽器 session 已結束。</summary>
-internal sealed class LogOut(NexusDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, DomainEvents events)
+internal sealed class LogOut(AppDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, DomainEvents events)
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/logout", (HttpContext http, LogOut handler, CancellationToken ct) => handler.HandleAsync(http, ct).ToHttpResultAsync())

@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.WebSearch;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Chat.Context;
 using AiNexus.Features.Chat.Runs;
 using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,7 +62,7 @@ public sealed class WebSearchRunTests
         using var client = await factory.SignedInAsync(); var conversation = await ChatApi.CreateConversation(client);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/runs") { Content = JsonContent.Create(new CreateRunRequest(conversation.Id, "test-model", new string('文', 601), null, null, WebSearch: true)) }; request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
         Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(request)).StatusCode); Assert.Empty(search.Queries);
-        using var scope = factory.Services.CreateScope(); Assert.Empty(await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<WebSearchRecord>()));
+        using var scope = factory.Services.CreateScope(); Assert.Empty(await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<WebSearchRecord>()));
     }
 }
 

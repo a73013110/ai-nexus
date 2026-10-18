@@ -1,6 +1,6 @@
-using AiNexus.Features.AccessControl.Navigation;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 
@@ -10,7 +10,7 @@ namespace AiNexus.Features.Administration.Navigation;
 public sealed record NavigationGroupCreateRequest(string Id, string Name, string? ParentId, int SortOrder);
 
 /// <summary>新增選單群組，可放在頂層或某群組之下。會稽核。</summary>
-internal sealed class CreateNavigationGroup(NexusDbContext db, AdministrativeAudit audit)
+internal sealed class CreateNavigationGroup(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/navigation-groups", async (NavigationGroupCreateRequest body, CreateNavigationGroup handler, CancellationToken ct) => (await handler.HandleAsync(body, ct)).ToHttpResult())

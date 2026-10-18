@@ -1,11 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Browsing;
 
 /// <summary>移除釘選。不呼叫 Gitea，因此使用者已無權讀取的程式庫仍能取消釘選。</summary>
-internal sealed class UnpinRepository(NexusDbContext db, RepositoryService gitea)
+internal sealed class UnpinRepository(AppDbContext db, RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapDelete("/pin", async (string owner, string name, ICurrentUser user, UnpinRepository handler, CancellationToken ct) =>

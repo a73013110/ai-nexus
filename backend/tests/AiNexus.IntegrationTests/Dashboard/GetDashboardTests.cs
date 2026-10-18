@@ -1,18 +1,17 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Notifications;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Account;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Dashboard;
-using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,21 +31,21 @@ public sealed class GetDashboardTests
         var a = await Me(alice); var b = await Me(bob);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var original = new Attachment { Size = 10, OwnerId = a, FileName = "shared-original.txt", ContentType = "text/plain", InLibrary = true };
             db.AddRange(original, new Attachment { Size = 5, OwnerId = a, ContentType = "image/png", InLibrary = true },
                 new Attachment { Size = 1, OwnerId = a, InLibrary = false },
                 new Attachment { Size = 1, OwnerId = a, InLibrary = true, StorageState = AttachmentStates.Pending },
                 new Attachment { Size = 1, OwnerId = a, InLibrary = true, StorageState = AttachmentStates.Deleting },
                 new Attachment { Size = 1, OwnerId = b, InLibrary = true });
-            var collection = new WorkspaceResource { OwnerId = a, Kind = "knowledge", Name = "規章" };
-            db.AddRange(collection, new KnowledgeCollection { Id = collection.Id });
+            var collection = new Resource { OwnerId = a, Kind = "knowledge", Name = "規章" };
+            db.AddRange(collection, new Collection { Id = collection.Id });
             // 兩個獨立處理的來源共用同一份原始檔；只有放進知識庫集合的那一個才會成為知識文件。
             foreach (var (status, inCollection) in new[] { ("ready", true), ("failed", true), ("ready", false) })
             {
-                var resource = new WorkspaceResource { OwnerId = a, Kind = "document", Name = "processed-source" };
+                var resource = new Resource { OwnerId = a, Kind = "document", Name = "processed-source" };
                 db.Add(resource);
-                db.Add(new KnowledgeDocument { Id = resource.Id, AttachmentId = original.Id, Status = status, CollectionId = inCollection ? collection.Id : null });
+                db.Add(new Document { Id = resource.Id, AttachmentId = original.Id, Status = status, CollectionId = inCollection ? collection.Id : null });
             }
             await db.SaveChangesAsync();
         }
@@ -84,7 +83,7 @@ public sealed class GetDashboardTests
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform&" + Period)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync($"/api/v1/dashboard?ownerId={Guid.NewGuid()}&{Period}")).StatusCode);
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RoleGroupFeature>()
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>()
                 .Where(x => x.FeatureId == FeatureIds.Knowledge).ExecuteDeleteAsync();
         Assert.DoesNotContain((await Read(bob, Period)).Sections, x => x.Id == "knowledge");
     }
@@ -101,7 +100,7 @@ public sealed class GetDashboardTests
         (await alice.GetAsync("/api/v1/dashboard?" + Period)).EnsureSuccessStatusCode();
         Assert.Equal("platform", (await Read(bob, "scope=platform&" + Period)).Scope);
         using var scope = factory.Services.CreateScope();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AnyAsync(x => x.Action == "dashboard.platform.read" && x.OwnerId == b));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "dashboard.platform.read" && x.OwnerId == b));
     }
 
     [Fact]
@@ -114,7 +113,7 @@ public sealed class GetDashboardTests
         var evening = DateTimeOffset.Parse("2026-09-30T18:00:00Z", CultureInfo.InvariantCulture);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var mine = new Conversation { OwnerId = a, Title = "我的對話", UpdatedAt = evening };
             var theirs = new Conversation { OwnerId = b, Title = "別人的對話", UpdatedAt = evening.AddHours(1) };
             db.AddRange(mine, theirs,
@@ -141,10 +140,10 @@ public sealed class GetDashboardTests
         var a = await Me(alice);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AddRange(
-                new WorkspaceNotification { OwnerId = a, EventKey = "e1", Type = "job", Severity = "error", Title = "內部細節", Body = "secret", IssueCode = "AB12CD34", TargetKind = "task", TargetId = Guid.NewGuid() },
-                new WorkspaceNotification { OwnerId = a, EventKey = "e2", Type = "share", Severity = "info", Title = "收到分享", Body = "內容", TargetKind = "share", TargetId = Guid.NewGuid(), ReadAt = DateTimeOffset.UnixEpoch });
+                new Notification { OwnerId = a, EventKey = "e1", Type = "job", Severity = "error", Title = "內部細節", Body = "secret", IssueCode = "AB12CD34", TargetKind = "task", TargetId = Guid.NewGuid() },
+                new Notification { OwnerId = a, EventKey = "e2", Type = "share", Severity = "info", Title = "收到分享", Body = "內容", TargetKind = "share", TargetId = Guid.NewGuid(), ReadAt = DateTimeOffset.UnixEpoch });
             await db.SaveChangesAsync();
         }
         var section = Section(await Read(alice, Period), "notifications");
@@ -162,7 +161,7 @@ public sealed class GetDashboardTests
         await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         var id = await Me(owner); var otherId = await Me(other);
         var at = DateTimeOffset.Parse("2026-09-30T18:00:00Z", CultureInfo.InvariantCulture);
-        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AddRange(new ModelInvocation { OwnerId = id, Kind = "repository-review", ModelId = "test-model", Status = "completed", InputTokens = 120, OutputTokens = 30, CreatedAt = at }, new ModelInvocation { OwnerId = id, Kind = "ocr", ModelId = "another", Status = "failed", CreatedAt = at }, new ModelInvocation { OwnerId = otherId, ModelId = "test-model", InputTokens = 999, OutputTokens = 999, CreatedAt = at }); await db.SaveChangesAsync(); }
         var dashboard = await Read(owner, "scope=personal&from=2026-09-30T00:00:00Z&until=2026-10-02T00:00:00Z&offsetMinutes=480");
         Assert.Equal(480, dashboard.Period.OffsetMinutes);

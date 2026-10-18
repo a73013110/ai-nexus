@@ -1,8 +1,8 @@
-using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +16,7 @@ public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, D
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 
 /// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附角色、用量、對話數與儲存空間。</summary>
-internal sealed class ListAdminUsers(NexusDbContext db, UsageReports reports, AttachmentQuota quota)
+internal sealed class ListAdminUsers(AppDbContext db, UsageReports reports, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users", async (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) => (await handler.HandleAsync(search, offset ?? 0, ct)).ToHttpResult())

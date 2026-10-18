@@ -1,13 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using System.Diagnostics;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
-public sealed class RetrievalEvaluationHandler(NexusDbContext db, RetrievalEvaluationService evaluations, RetrievalPipeline pipeline) : IBackgroundJobHandler
+public sealed class RetrievalEvaluationHandler(AppDbContext db, RetrievalEvaluationService evaluations, RetrievalPipeline pipeline) : IBackgroundJobHandler
 {
     public string Kind => "retrieval-eval";
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct)

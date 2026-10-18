@@ -1,9 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects.Templates;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -17,7 +19,7 @@ public sealed record ProjectConversationRequest(string? Title = null, Guid? Temp
 public sealed record ProjectConversationDto(ConversationDto Conversation, string Prompt);
 
 /// <summary>在可讀取的有效專案中開啟使用者自己的對話；需要聊天功能。</summary>
-internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess access, AccessService features)
+internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess access, AccessService features)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/conversations", async (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>

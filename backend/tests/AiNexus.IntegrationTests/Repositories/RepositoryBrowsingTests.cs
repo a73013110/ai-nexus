@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Repositories;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Attachments;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories.Browsing;
 using AiNexus.Features.Repositories.Handoff;
 using Microsoft.EntityFrameworkCore;
@@ -70,7 +71,7 @@ public sealed class RepositoryBrowsingTests
         Assert.EndsWith(".md", chat.Attachment.FileName); Assert.Equal(["docs/logo.png"], chat.Skipped); Assert.Contains("勿執行", chat.Prompt);
         using (var scope = factory.Services.CreateScope())
         {
-            var text = (await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<Attachment>().SingleAsync(x => x.Id == chat.Attachment.Id)).ExtractedText!;
+            var text = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Attachment>().SingleAsync(x => x.Id == chat.Attachment.Id)).ExtractedText!;
             Assert.Contains("## README.md", text); Assert.Contains("````md\n# 指南", text); Assert.Contains(FixtureGitea.Head, text);
         }
         Assert.Equal(0, factory.Provider.Calls);
@@ -93,8 +94,8 @@ public sealed class RepositoryBrowsingTests
         var job = (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{queued.Job.Id}"))!; Assert.Equal("completed", job.Status);
         var again = (await (await client.PostAsJsonAsync($"{Repo}/imports", request)).Content.ReadFromJsonAsync<RepositoryFolderImportDto>())!;
         await BackgroundJobs.Drain(factory);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        Assert.Equal(1, await db.Set<KnowledgeDocument>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted));
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.Set<Document>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted));
         Assert.Equal(1, (await db.Set<RepositoryFolderImport>().SingleAsync(x => x.Id == again.Id)).Imported);
         var other = await client.PostAsJsonAsync($"{Repo}/imports", request with { CollectionId = Guid.NewGuid() });
         Assert.Equal(HttpStatusCode.NotFound, other.StatusCode);

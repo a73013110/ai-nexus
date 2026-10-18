@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Notifications;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,9 +24,9 @@ public sealed class ListNotificationsTests
         var now = DateTimeOffset.UtcNow.AddMinutes(-1);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-            for (var i = 0; i < 55; i++) db.Add(new WorkspaceNotification { OwnerId = owner, EventKey = "test:" + i, Type = "task.completed", Title = "完成", TargetKind = "task", TargetId = Guid.NewGuid(), CreatedAt = now });
-            db.Add(new WorkspaceNotification { OwnerId = other, EventKey = "private", Title = "私人", CreatedAt = now }); await db.SaveChangesAsync();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            for (var i = 0; i < 55; i++) db.Add(new Notification { OwnerId = owner, EventKey = "test:" + i, Type = "task.completed", Title = "完成", TargetKind = "task", TargetId = Guid.NewGuid(), CreatedAt = now });
+            db.Add(new Notification { OwnerId = other, EventKey = "private", Title = "私人", CreatedAt = now }); await db.SaveChangesAsync();
         }
         var page = (await alice.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!;
         Assert.Equal(50, page.Items.Count); Assert.Equal(55, page.Unread); Assert.True(page.HasMore);
@@ -35,7 +36,7 @@ public sealed class ListNotificationsTests
         (await bob.PostAsync($"/api/v1/notifications/{page.Items[0].Id}/read", null)).EnsureSuccessStatusCode();
         (await bob.DeleteAsync($"/api/v1/notifications/{page.Items[0].Id}")).EnsureSuccessStatusCode();
         Assert.Equal(55, (await alice.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Unread);
-        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); db.Add(new WorkspaceNotification { OwnerId = owner, EventKey = "newer", Title = "新通知", CreatedAt = DateTimeOffset.UtcNow }); await db.SaveChangesAsync(); }
+        using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); db.Add(new Notification { OwnerId = owner, EventKey = "newer", Title = "新通知", CreatedAt = DateTimeOffset.UtcNow }); await db.SaveChangesAsync(); }
         (await alice.PostAsJsonAsync("/api/v1/notifications/read", new ReadNotificationsRequest(now))).EnsureSuccessStatusCode();
         Assert.Equal(1, (await alice.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications?unread=true"))!.Unread);
         Assert.Equal(1, (await bob.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Unread);
@@ -55,10 +56,10 @@ public sealed class ListNotificationsTests
         var share = (await response.Content.ReadFromJsonAsync<ShareDto>())!;
         var received = Assert.Single((await reader.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Items);
         Assert.Equal(new("share", share.Id), received.Target);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.ChangeTracker.Clear();
-        var row = await db.Set<WorkspaceNotification>().SingleAsync(x => x.Id == completion.Id);
+        var row = await db.Set<Notification>().SingleAsync(x => x.Id == completion.Id);
         await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(row.OwnerId, row.EventKey, row.Type, row.Severity, row.Title, row.Body, row.TargetKind, row.TargetId, CancellationToken.None);
-        await db.SaveChangesAsync(); Assert.Equal(2, await db.Set<WorkspaceNotification>().CountAsync());
+        await db.SaveChangesAsync(); Assert.Equal(2, await db.Set<Notification>().CountAsync());
     }
 }

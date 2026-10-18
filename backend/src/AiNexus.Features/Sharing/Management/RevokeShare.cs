@@ -1,13 +1,14 @@
-using AiNexus.Features.Attachments;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing.Management;
 
 /// <summary>擁有者撤銷分享：收件人立即失去存取權與檔案授權，快照文字也會被清除。</summary>
-internal sealed class RevokeShare(NexusDbContext db, ShareWriteLock writes)
+internal sealed class RevokeShare(AppDbContext db, ShareWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RevokeShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
@@ -22,7 +23,7 @@ internal sealed class RevokeShare(NexusDbContext db, ShareWriteLock writes)
             if (row is null) return SharingErrors.Unavailable;
             row.IsRevoked = true;
             row.SnapshotJson = "";
-            await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+            await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, Action = "share.revoked", ResourceId = id, Result = "revoked" });
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);

@@ -1,4 +1,5 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Inference.Runs;
@@ -23,7 +24,7 @@ public static class RunTiming
     /// 批次讀取多筆生成的耗時指標元資料（不加載訊息文字內容，降低記憶體開銷）。
     /// </summary>
     public static async Task<Dictionary<Guid, RunTimingDto>> ReadAsync(
-        NexusDbContext db,
+        AppDbContext db,
         IReadOnlyList<Guid> ids,
         CancellationToken ct)
     {

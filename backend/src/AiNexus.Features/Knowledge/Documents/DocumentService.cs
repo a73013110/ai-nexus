@@ -1,4 +1,5 @@
-using AiNexus.Features.Attachments;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Documents;
@@ -18,7 +19,7 @@ public sealed class DocumentService
         => add.HandleAsync(actor, collection, attachment, ct, project, text);
 
     /// <summary>以與文件端點相同的權限檢查取得追蹤中的文件。</summary>
-    public Task<Result<KnowledgeDocument>> RequireAsync(Guid actor, Guid id, CancellationToken ct, bool write = false) => documents.FindAsync(actor, id, ct, write);
+    public Task<Result<Document>> RequireAsync(Guid actor, Guid id, CancellationToken ct, bool write = false) => documents.FindAsync(actor, id, ct, write);
 
     public Task<Result<DocumentDto>> DetailAsync(Guid actor, Guid id, CancellationToken ct) => documents.DetailAsync(actor, id, ct);
 

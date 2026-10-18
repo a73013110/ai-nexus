@@ -1,9 +1,10 @@
-using AiNexus.Features.Identity.Sessions;
+using AiNexus.Data.App.Audit;
+using AiNexus.Platform.Security;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace AiNexus.Features.Persistence;
+namespace AiNexus.Data.App;
 
 /// <summary>在稽核事件寫入前完成脫敏、長度截斷與追蹤資訊補齊。</summary>
 /// <remarks>
@@ -40,7 +41,7 @@ internal sealed class AuditEventInterceptor(IHttpContextAccessor? http) : SaveCh
             return;
         }
 
-        var actor = Guid.TryParse(http?.HttpContext?.User.FindFirst(SessionIdentity.ActorId)?.Value, out var id)
+        var actor = Guid.TryParse(http?.HttpContext?.User.FindFirst(RequestClaims.ActorId)?.Value, out var id)
             ? id
             : (Guid?)null;
 

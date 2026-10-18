@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
 using System.Text.Json;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.Identity.Sessions;
 
@@ -20,7 +20,7 @@ public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContex
         if (action == "identity.logout" && Guid.TryParse(http?.User.FindFirstValue(SessionIdentity.ActorId), out var administrator))
             actor = administrator;
         await using var scope = scopes.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.AuditEvents.Add(new()
         {
             OwnerId = userId ?? Guid.Empty,

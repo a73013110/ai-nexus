@@ -1,8 +1,8 @@
+using AiNexus.Data.App;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
@@ -44,7 +44,7 @@ public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, str
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
 /// <summary>經過驗證並留有稽核的日誌讀取；列表、詳情與匯出都會先寫稽核，寫不進去就失敗。</summary>
-public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
+public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
 {
     private readonly IDataProtector cursorProtector = protection.CreateProtector("AiNexus.Diagnostics.Cursor.v1");
     private sealed record CursorData(DateTimeOffset At, Guid LogId, string Fingerprint, Guid UserId);

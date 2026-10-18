@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Attachments;
@@ -12,7 +13,6 @@ using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Embeddings;
-using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -45,7 +45,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
+    public NexusFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
         Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
         this.ldap = ldap;
@@ -57,7 +57,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         configureServices = services;
         this.webRoot = webRoot;
         File.Copy(Template.Value, databasePath);
-        using var db = new NexusDbContext(DatabaseOptions(databasePath));
+        using var db = new AppDbContext(DatabaseOptions(databasePath));
         seed?.Invoke(db);
         foreach (var user in db.Users.AsNoTracking().ToList())
             if (!db.Set<UserRole>().Any(x => x.UserId == user.Id)) db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
@@ -70,9 +70,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         if (webRoot is not null) builder.UseWebRoot(webRoot);
         builder.ConfigureServices(services =>
         {
-            services.RemoveAll<DbContextOptions<NexusDbContext>>();
-            services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<NexusDbContext>>();
-            services.AddDbContext<NexusDbContext>((scope, options) => options.UseSqlite(ConnectionString(databasePath)).AddNexusInterceptors(scope));
+            services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<AppDbContext>>();
+            services.AddDbContext<AppDbContext>((scope, options) => options.UseTestSqlite(ConnectionString(databasePath)).AddAppInterceptors(scope));
             services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Test", _ => { });
             services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; options.DefaultChallengeScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; });
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
@@ -97,7 +97,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                 options.DefaultModelId = null; options.AllowModelSelection = true; options.ShowModelNames = true;
                 options.TimeoutSeconds = 5;
                 options.SystemPrompt = "請用繁體中文回答。";
-                options.Models = [new ModelProfile { Id = "test-model", DisplayName = "測試模型", ContextTokens = 8192, MaxOutputTokens = 512 }];
+                options.Models = [new ModelDefinition { Id = "test-model", DisplayName = "測試模型", ContextTokens = 8192, MaxOutputTokens = 512 }];
                 configureInference?.Invoke(options);
                 foreach (var model in options.Models)
                     if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
@@ -129,7 +129,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     }
 
     private static string ConnectionString(string path) => $"Data Source={path};Default Timeout=10";
-    private static DbContextOptions<NexusDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(ConnectionString(path)).Options;
+    private static DbContextOptions<AppDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<AppDbContext>().UseTestSqlite(ConnectionString(path)).Options;
 
     /// <summary>
     /// 關閉某個檔案的連線池連線，以便複製或刪除。<c>ClearAllPools</c> 是程序範圍的操作，
@@ -144,7 +144,11 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private static string CreateTemplate()
     {
         var path = Path.Combine(Path.GetTempPath(), $"nexus-template-{Guid.NewGuid():N}.db");
-        using (var db = new NexusDbContext(DatabaseOptions(path))) db.Database.EnsureCreated();
+        using (var db = new AppDbContext(DatabaseOptions(path)))
+        {
+            db.Database.EnsureCreated();
+            BaselineSeed.Apply(db);
+        }
         ReleaseFile(path);
         AppDomain.CurrentDomain.ProcessExit += (_, _) => File.Delete(path);
         return path;

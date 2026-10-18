@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using UglyToad.PdfPig.Core;
@@ -34,7 +35,7 @@ public sealed class DocumentIndexingTests
         (await client.PostAsync($"/api/v1/jobs/{document.JobId}/retry", null)).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var job = await db.Set<BackgroundJob>().SingleAsync(x => x.Id == document.JobId); job.Status = "running"; job.LeaseToken = Guid.NewGuid(); job.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
         }
         using var first = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);

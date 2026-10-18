@@ -1,11 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Inference;
 using System.Net.Http.Json;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -69,7 +70,7 @@ public sealed class ConversationKnowledgeTests
         var other = await CreateConversation(client);
         var cycle = await AddMessagesAsync(factory, conversation.Id, null, ("user", "問", RunStates.Completed), ("assistant", "答", RunStates.Completed));
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Messages.Where(x => x.Id == cycle[0]).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, cycle[1]));
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Messages.Where(x => x.Id == cycle[0]).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, cycle[1]));
         var foreign = await AddMessagesAsync(factory, other.Id, null, ("user", "別的對話", RunStates.Completed));
         var stray = await AddMessagesAsync(factory, conversation.Id, foreign[0], ("assistant", "掛錯父訊息", RunStates.Completed));
 
@@ -89,7 +90,7 @@ public sealed class ConversationKnowledgeTests
     private static async Task<Guid[]> AddMessagesAsync(NexusFactory factory, Guid conversation, Guid? parent, params (string Role, string Content, string Status)[] chain)
     {
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var ids = new List<Guid>();
         foreach (var (role, content, status) in chain)
         {

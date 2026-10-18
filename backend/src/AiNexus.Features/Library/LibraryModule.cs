@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Library;
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
@@ -7,7 +8,7 @@ namespace AiNexus.Features.Library;
 /// <summary>使用者個人的提示詞範本。</summary>
 public sealed class LibraryModule : IFeatureModule
 {
-    public const int MaxTemplateCharacters = 12000;
+    public const int MaxTemplateCharacters = PromptTemplate.ContentMaxLength;
 
     public static void AddServices(IHostApplicationBuilder builder) { }
 

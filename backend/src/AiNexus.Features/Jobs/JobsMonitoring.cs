@@ -1,4 +1,5 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace AiNexus.Features.Jobs;
 /// 持久化背景工作的執行期監控，涵蓋所有擁有者。執行中工作的租約已過期（worker 停止續租）或最近 1 小時內有工作失敗，即為 degraded。
 /// 查詢會走 (Status, LeaseUntil, CreatedAt) 索引。
 /// </summary>
-internal sealed class JobsMonitoring(NexusDbContext db, TimeProvider clock) : IMonitoringSource
+internal sealed class JobsMonitoring(AppDbContext db, TimeProvider clock) : IMonitoringSource
 {
     public string Id => "jobs";
     public string Name => "背景工作";

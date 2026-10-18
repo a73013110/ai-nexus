@@ -1,11 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Connections;
 
 /// <summary>刪除已儲存的 token。已匯入的快照與 review 會保留；要再讀取其來源，必須重新連線。</summary>
-internal sealed class DisconnectRepository(NexusDbContext db, RepositoryWriteLock writes)
+internal sealed class DisconnectRepository(AppDbContext db, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/connection", async (ICurrentUser user, DisconnectRepository handler, CancellationToken ct) =>

@@ -1,14 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Billing.Prices;
 using AiNexus.Features.Chat.Runs;
 using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Billing.Reports;
-using AiNexus.Features.Billing.Charges;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Billing;
@@ -40,7 +40,7 @@ public sealed class ManagePricesTests
         var created = await bob.PostAsJsonAsync("/api/v1/admin/billing/prices", price); created.EnsureSuccessStatusCode();
         var id = (await created.Content.ReadFromJsonAsync<PriceDto>())!.Id;
         Assert.Single((await bob.GetFromJsonAsync<PriceDto[]>("/api/v1/admin/billing/prices"))!);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(bobId, (await db.AuditEvents.SingleAsync(x => x.Action == "billing.price.created" && x.ResourceId == id)).OwnerId);
     }
 
@@ -69,7 +69,7 @@ public sealed class ManagePricesTests
         Assert.Equal(2, spend.Requests); Assert.Equal(9.100270m, Assert.Single(spend.Totals).Amount);
         Assert.Equal("測試模型", Assert.Single(spend.Models).Label);
         Assert.Equal(HttpStatusCode.NotFound, (await alice.GetAsync($"/api/v1/conversations/{conversation.Id}/spend")).StatusCode);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(2, await db.Set<ModelCharge>().CountAsync(x => x.ConversationId == conversation.Id));
     }
 }

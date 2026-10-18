@@ -12,9 +12,6 @@ public sealed class ModuleBoundaryTests
 {
     private const string Root = "AiNexus.Features.";
 
-    // Features 組件中的共用基礎設施，不是業務模組。
-    private static readonly HashSet<string> Infrastructure = ["Persistence"];
-
     [Fact]
     public void ModuleDependenciesHaveNoCycles()
     {
@@ -29,7 +26,7 @@ public sealed class ModuleBoundaryTests
     {
         var folders = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features"))
             .Select(Path.GetFileName).OfType<string>()
-            .Where(x => x is not ("bin" or "obj") && !Infrastructure.Contains(x)).ToList();
+            .Where(x => x is not ("bin" or "obj")).ToList();
         Assert.NotEmpty(folders);
         var missing = folders.Where(module => Assemblies.Features.GetType(Root + module + "." + module + "Module") is null
             || !File.Exists(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features", module, module + "Module.cs"))).ToList();
@@ -57,7 +54,7 @@ public sealed class ModuleBoundaryTests
     {
         var modules = Assemblies.Features.GetTypes()
             .Select(t => t.Namespace).OfType<string>().Where(ns => ns.StartsWith(Root, StringComparison.Ordinal))
-            .Select(ns => ns[Root.Length..].Split('.')[0]).Where(m => !Infrastructure.Contains(m)).ToHashSet(StringComparer.Ordinal);
+            .Select(ns => ns[Root.Length..].Split('.')[0]).ToHashSet(StringComparer.Ordinal);
         var edges = new Dictionary<(string, string), IReadOnlyList<string>>();
         // 組件只讀一次；之後每組配對查詢都篩同一份型別清單，避免對每個配對重掃組件。
         var types = Types.InAssembly(Assemblies.Features);

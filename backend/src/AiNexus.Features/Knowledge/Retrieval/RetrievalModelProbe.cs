@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Inference;
 using AiNexus.Platform.Diagnostics;

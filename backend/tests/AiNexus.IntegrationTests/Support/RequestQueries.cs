@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
 using System.Collections.Concurrent;
 using System.Data.Common;
-using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +15,7 @@ public sealed class RequestQueries(IHttpContextAccessor http) : DbCommandInterce
     public static void Register(IServiceCollection services)
     {
         services.AddSingleton<RequestQueries>();
-        services.ConfigureDbContext<NexusDbContext>((provider, options) => options.AddInterceptors(provider.GetRequiredService<RequestQueries>()));
+        services.ConfigureDbContext<AppDbContext>((provider, options) => options.AddInterceptors(provider.GetRequiredService<RequestQueries>()));
     }
 
     public void Clear() => commands.Clear();

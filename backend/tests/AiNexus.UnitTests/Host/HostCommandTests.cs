@@ -49,6 +49,8 @@ public sealed class HostCommandTests
     [Theory]
     [InlineData("db")]
     [InlineData("db migrate")]
+    [InlineData("db script")]
+    [InlineData("db diff")]
     [InlineData("serve")]
     [InlineData("verify")]
     public void UnknownCommandIsAUsageError(string name)
@@ -75,59 +77,6 @@ public sealed class HostCommandTests
         var command = HostCommand.Parse(args);
         Assert.Null(command.Name);
         Assert.NotNull(command.Error);
-    }
-
-    [Theory]
-    [InlineData("--to=20261015031630_RemoveEmbeddingProfileChunkerConfiguration")]
-    [InlineData("--to", "20261015031630_RemoveEmbeddingProfileChunkerConfiguration")]
-    public void ReleaseScriptOptionsAreNotConfiguration(params string[] to)
-    {
-        var command = HostCommand.Parse(["db", "script", "--from", "0", .. to, "--output=release/database", "--LocalConfigPath", "a.json"]);
-        Assert.Null(command.Error);
-        Assert.Equal("db script", command.Name);
-        Assert.Equal("0", command.Option("--from"));
-        Assert.Equal("20261015031630_RemoveEmbeddingProfileChunkerConfiguration", command.Option("--to"));
-        Assert.Equal("release/database", command.Output);
-        Assert.Equal(["--LocalConfigPath", "a.json"], command.HostArguments);
-        Assert.Contains("--from <migration>", HostCommand.Usage);
-    }
-
-    [Theory]
-    [InlineData("--from", "db", "script", "--output", "out")]
-    [InlineData("--output", "db", "script", "--from", "0")]
-    [InlineData("--from", "db", "script", "--output", "out", "--from")]
-    [InlineData("--from", "db", "init", "--from", "0")]
-    [InlineData("--to", "verify", "sql", "--to", "x")]
-    public void ReleaseScriptOptionErrorsNameTheOption(string option, params string[] args)
-    {
-        var command = HostCommand.Parse(args);
-        Assert.Null(command.Name);
-        Assert.Contains(option, command.Error);
-    }
-
-    [Fact]
-    public void SchemaDiffOptionsAreNotConfiguration()
-    {
-        var command = HostCommand.Parse(["db", "diff", "--from", "20261014140318_NavigationGroups", "--output", "package/database", "--sqlpackage", @"C:\tools\SqlPackage.exe", "--LocalConfigPath", "a.json"]);
-        Assert.Null(command.Error);
-        Assert.Equal("db diff", command.Name);
-        Assert.Equal("20261014140318_NavigationGroups", command.Option("--from"));
-        Assert.Null(command.Option("--to"));
-        Assert.Equal("package/database", command.Output);
-        Assert.Equal(@"C:\tools\SqlPackage.exe", command.Option("--sqlpackage"));
-        Assert.Equal(["--LocalConfigPath", "a.json"], command.HostArguments);
-        Assert.Contains("--sqlpackage <檔案>", HostCommand.Usage);
-    }
-
-    [Theory]
-    [InlineData("--output", "db", "diff", "--from", "0")]
-    [InlineData("--from", "db", "diff", "--output", "out")]
-    [InlineData("--sqlpackage", "db", "script", "--from", "0", "--output", "out", "--sqlpackage", "x")]
-    public void SchemaDiffOptionErrorsNameTheOption(string option, params string[] args)
-    {
-        var command = HostCommand.Parse(args);
-        Assert.Null(command.Name);
-        Assert.Contains(option, command.Error);
     }
 
     [Theory]

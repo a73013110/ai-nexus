@@ -1,10 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Jobs;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl.Roles;
-using AiNexus.Features.Jobs;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Monitoring.Presence;
 using AiNexus.Features.Monitoring.Snapshots;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,7 +43,7 @@ public sealed class MonitoringSnapshotTests
         using var alice = await factory.SignedInAsync();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Set<BackgroundJob>().Add(new() { OwnerId = db.Users.Select(x => x.Id).First(), Kind = "document-ingest", Status = "running", LeaseToken = Guid.NewGuid(),
                 LeaseUntil = clock.GetUtcNow().AddMinutes(-1), OperationId = Guid.NewGuid(), SubjectId = Guid.NewGuid() });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -78,7 +78,7 @@ public sealed class MonitoringSnapshotTests
         var snapshot = (await export.Content.ReadFromJsonAsync<MonitoringSnapshot>())!;
         Assert.False(snapshot.Enabled); Assert.Empty(snapshot.Sessions); Assert.Equal(0, snapshot.Traffic.Requests);
         using var scope = factory.Services.CreateScope();
-        Assert.Contains(scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents, x => x.Action == "monitoring.export");
+        Assert.Contains(scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents, x => x.Action == "monitoring.export");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public sealed class MonitoringSnapshotTests
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancel.Token));
         Assert.Equal("event: snapshot", await reader.ReadLineAsync(cancel.Token));
         using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators")); await db.SaveChangesAsync(cancel.Token);
         }
         // 串流期間每 15 秒重新檢查一次授權。

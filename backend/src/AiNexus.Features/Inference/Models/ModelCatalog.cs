@@ -39,7 +39,7 @@ public sealed class ModelCatalog(
     private sealed record Snapshot(
         IReadOnlyList<ProviderStatusDto> Providers,
         IReadOnlySet<string> Installed,
-        IReadOnlyDictionary<string, ModelProfile> Profiles,
+        IReadOnlyDictionary<string, ModelDefinition> Profiles,
         DateTimeOffset CheckedAt);
 
     private async Task<Snapshot> SnapshotAsync(CancellationToken ct)
@@ -119,7 +119,7 @@ public sealed class ModelCatalog(
         }
     }
 
-    private async Task<ModelProfile> ResolveAsync(ModelProfile profile, IReadOnlySet<string> installed, CancellationToken ct)
+    private async Task<ModelDefinition> ResolveAsync(ModelDefinition profile, IReadOnlySet<string> installed, CancellationToken ct)
     {
         var images = profile.SupportsImages;
         if (profile.Provider == "ollama" && installed.Contains(profile.Id))
@@ -140,7 +140,7 @@ public sealed class ModelCatalog(
         return Copy(profile, images);
     }
 
-    private static ModelProfile Copy(ModelProfile profile, bool images) => new ModelProfile
+    private static ModelDefinition Copy(ModelDefinition profile, bool images) => new ModelDefinition
     {
         Id = profile.Id,
         Provider = profile.Provider,
@@ -157,7 +157,7 @@ public sealed class ModelCatalog(
         DefaultReasoningEffort = profile.DefaultReasoningEffort
     };
 
-    private static ModelProfile Current(ModelProfile profile, Snapshot snapshot) =>
+    private static ModelDefinition Current(ModelDefinition profile, Snapshot snapshot) =>
         Copy(profile, profile.Provider == "ollama"
             ? profile.ImageCapabilityOverride != false && (snapshot.Profiles.GetValueOrDefault(profile.Id)?.SupportsImages ?? false)
             : profile.SupportsImages);
@@ -165,7 +165,7 @@ public sealed class ModelCatalog(
     /// <summary>
     /// 取得目前系統組態中已設定的模型清單（包含動態更新後的功能特性）。
     /// </summary>
-    public async Task<IReadOnlyList<ModelProfile>> ProfilesAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<ModelDefinition>> ProfilesAsync(CancellationToken ct)
     {
         var snapshot = await SnapshotAsync(ct);
         return options.Value.Models.Select(x => Current(x, snapshot)).ToArray();
@@ -226,7 +226,7 @@ public sealed class ModelCatalog(
     /// 驗證並取得請求呼叫的模型規格。
     /// 若請求未指定則選用系統預設模型；同時驗證模型是否在允許清單內且其供應商目前正常連線。
     /// </summary>
-    public async Task<Result<ModelProfile>> RequireAsync(string? id, CancellationToken ct)
+    public async Task<Result<ModelDefinition>> RequireAsync(string? id, CancellationToken ct)
     {
         var requested = id ?? presentation.Policy.DefaultModelId;
 
@@ -261,7 +261,7 @@ public sealed class ModelCatalog(
     /// <summary>
     /// 檢查並決定模型推論時使用的思考/推理強度（Reasoning Effort）。
     /// </summary>
-    public static Result<string> RequireReasoning(ModelProfile model, string? effort)
+    public static Result<string> RequireReasoning(ModelDefinition model, string? effort)
     {
         var value = effort ?? model.DefaultReasoningEffort;
         return value == "auto" || model.ReasoningEfforts.Contains(value, StringComparer.Ordinal)

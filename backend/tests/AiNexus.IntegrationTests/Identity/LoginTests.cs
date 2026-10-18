@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +42,7 @@ public sealed class LoginTests
         using var local = f.CreateClient(); await Csrf(local);
         for (var i = 0; i < 5; i++) Assert.Equal(HttpStatusCode.Unauthorized, (await local.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("tester", "wrong password!", "local"))).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await local.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("tester", Password, "local"))).StatusCode);
-        using (var scope = f.Services.CreateScope()) Assert.True((await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.SingleAsync(x => x.Id == id)).LockedUntil > DateTimeOffset.UtcNow);
+        using (var scope = f.Services.CreateScope()) Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Id == id)).LockedUntil > DateTimeOffset.UtcNow);
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount())).EnsureSuccessStatusCode();
         Assert.Equal(id, (await Login(local, "tester", "local")).Id);
     }
@@ -62,13 +62,13 @@ public sealed class LoginTests
     public async Task AStaleLoginOrHashUpgradeCannotOverwriteAConcurrentPasswordReset()
     {
         var id = Guid.NewGuid();
-        await using var factory = new NexusFactory(seed: db => db.Users.Add(new NexusUser {
+        await using var factory = new NexusFactory(seed: db => db.Users.Add(new User {
             Id = id, Sid = "managed:" + id, Account = "tester", DisplayName = "tester", LocalAccount = "TESTER",
             LocalEnabled = true, AdEnabled = false, PasswordHash = "old-format-hash", SecurityVersion = 1
         }));
         using var loginScope = factory.Services.CreateScope(); using var resetScope = factory.Services.CreateScope();
-        var loginDb = loginScope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var resetDb = resetScope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var loginDb = loginScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var resetDb = resetScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stale = await loginDb.Users.SingleAsync(x => x.Id == id);
         var reset = await resetDb.Users.SingleAsync(x => x.Id == id);
         reset.PasswordHash = "new-password-hash"; reset.SecurityVersion++;

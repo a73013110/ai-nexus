@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Identity;
+using AiNexus.Data.App.Inference;
 using System.Net.Http.Json;
 using AiNexus.Features.Chat.Runs;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,7 +19,7 @@ public sealed class RunRecoveryTests
         var interruptedId = Guid.NewGuid();
         await using var factory = new NexusFactory(db =>
         {
-            var owner = new NexusUser { Sid = "S-1-5-21-test-alice", Account = "TEST\\alice", DisplayName = "alice", LastSeenAt = DateTimeOffset.UtcNow };
+            var owner = new User { Sid = "S-1-5-21-test-alice", Account = "TEST\\alice", DisplayName = "alice", LastSeenAt = DateTimeOffset.UtcNow };
             var conversation = new Conversation { OwnerId = owner.Id };
             var user = new Message { ConversationId = conversation.Id, Content = "原始訊息" };
             var answer = new Message { ConversationId = conversation.Id, ParentId = user.Id, Role = "assistant", Status = RunStates.Running, Content = "既有部分回答", RunId = interruptedId };
@@ -42,7 +43,7 @@ public sealed class RunRecoveryTests
         var created = await ChatApi.CreateRun(client, conversation.Id, "lease fixture");
         await ChatApi.WaitForTerminal(client, created.Id);
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var run = await db.Runs.SingleAsync(x => x.Id == created.Id);
         run.Status = RunStates.Running; run.ActiveOwnerId = run.OwnerId; run.ExecutorId = Guid.NewGuid();
         run.LeaseExpiresAt = DateTimeOffset.UtcNow.AddMinutes(2); run.Content = "partial answer";

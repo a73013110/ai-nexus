@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace AiNexus.Features.Jobs;
 /// <summary>
 /// 持久化背景工作總覽。「處理中」指 queued 或 running；「失敗」只計 <c>failed</c>，不含其他未完成的工作。期間內各種類的數量形成分布。
 /// </summary>
-internal sealed class JobsDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
 {
     private static readonly Dictionary<string, string> Kinds = new(StringComparer.Ordinal)
     {

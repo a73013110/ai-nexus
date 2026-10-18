@@ -1,9 +1,9 @@
+using AiNexus.Data.App;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.Data.SqlClient;
@@ -46,14 +46,14 @@ public sealed class DiagnosticFailureTests
     {
         await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => {
             services.RemoveAll<IRetrievalStore>(); services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
-            services.RemoveAll<ISqlDatabase<NexusDbContext>>(); services.AddSingleton<ISqlDatabase<NexusDbContext>>(new FullTextFailure());
+            services.RemoveAll<ISqlDatabase<AppDbContext>>(); services.AddSingleton<ISqlDatabase<AppDbContext>>(new FullTextFailure());
         });
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode); var result = await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>(); Assert.Equal("vector", result!.Mode);
         DiagnosticEvent? warning = null;
         for (var i = 0; i < 200; i++) {
-            using var scope = factory.Services.CreateScope(); warning = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<DiagnosticEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.EventId == DiagnosticEvents.Degraded);
+            using var scope = factory.Services.CreateScope(); warning = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.EventId == DiagnosticEvents.Degraded);
             if (warning is not null) break; await Task.Delay(25);
         }
         Assert.NotNull(warning); Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, warning.Level); Assert.True(Issues.ValidCode(warning.IssueCode));
@@ -61,14 +61,14 @@ public sealed class DiagnosticFailureTests
         Assert.NotNull(warning.RequestId); Assert.NotNull(warning.TraceId); Assert.DoesNotContain("fixture-secret", warning.ExceptionDetail!);
         var completed = false;
         for (var i = 0; i < 200 && !completed; i++) {
-            using var check = factory.Services.CreateScope(); completed = await check.ServiceProvider.GetRequiredService<NexusDbContext>().Set<DiagnosticEvent>().AnyAsync(x => x.TraceId == warning.TraceId && x.StatusCode == 200);
+            using var check = factory.Services.CreateScope(); completed = await check.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().AnyAsync(x => x.TraceId == warning.TraceId && x.StatusCode == 200);
             if (!completed) await Task.Delay(25);
         }
         Assert.True(completed);
     }
 
     // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支。
-    private sealed class FullTextFailure : ISqlDatabase<NexusDbContext>
+    private sealed class FullTextFailure : ISqlDatabase<AppDbContext>
     {
         public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
             => typeof(T) == typeof(bool) ? Task.FromResult((T)(object)true) : throw new InvalidOperationException("Unexpected SQL: " + sql);

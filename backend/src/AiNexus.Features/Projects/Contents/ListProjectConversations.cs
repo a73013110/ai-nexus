@@ -1,15 +1,16 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
 /// <summary>使用者可讀取的專案中，使用者自己最新的 100 個對話；對話只對擁有者可見。</summary>
-internal sealed class ListProjectConversations(NexusDbContext db, ResourceAccess access)
+internal sealed class ListProjectConversations(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/conversations", (Guid id, ICurrentUser user, ListProjectConversations handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());

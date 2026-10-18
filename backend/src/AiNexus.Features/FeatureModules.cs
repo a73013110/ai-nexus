@@ -1,3 +1,4 @@
+using AiNexus.Data.App;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
@@ -18,7 +19,6 @@ using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
 using AiNexus.Features.Repositories;
@@ -42,7 +42,7 @@ public static class FeatureModules
     /// </summary>
     public static IHostApplicationBuilder AddFeatures(this IHostApplicationBuilder builder)
     {
-        Add<PersistenceModule>(builder);
+        Add<AppDatabaseModule>(builder);
         Add<AccessControlModule>(builder);
         Add<IdentityModule>(builder);
         Add<AccountModule>(builder);

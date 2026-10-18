@@ -1,13 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Administration;
@@ -46,7 +46,7 @@ public sealed class UserInspectionTests
         var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var conversation = await CreateConversation(bob);
         using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var value = await db.Conversations.FindAsync(conversation.Id); value!.IsDeleted = true; value.IsArchived = true;
             for (var i = 0; i < 51; i++) db.Conversations.Add(new() { OwnerId = user.Id, Title = "其他對話" + i });
             for (var i = 0; i < 101; i++) db.Messages.Add(new() { ConversationId = conversation.Id, Content = "敏感搜尋字" + i, CreatedAt = DateTimeOffset.UtcNow.AddSeconds(i) });
@@ -61,7 +61,7 @@ public sealed class UserInspectionTests
         Assert.Equal(100, (await admin.GetFromJsonAsync<AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!.Messages.Count);
         Assert.Single((await admin.GetFromJsonAsync<AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}?offset=100"))!.Messages);
         using var check = factory.Services.CreateScope();
-        Assert.All(await check.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.Where(x => x.Action.StartsWith("admin.conversation")).ToListAsync(), x => Assert.DoesNotContain("敏感搜尋字", x.DetailsJson));
+        Assert.All(await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action.StartsWith("admin.conversation")).ToListAsync(), x => Assert.DoesNotContain("敏感搜尋字", x.DetailsJson));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class UserInspectionTests
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var actor = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!; var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Set<ModelInvocation>().AddRange(
                 new() { OwnerId = user.Id, Kind = "evaluation", ModelId = "test-model", Status = "completed", InputTokens = 600, OutputTokens = 200 },
                 new() { OwnerId = user.Id, Kind = "ocr", ModelId = "test-model", Status = "failed" },
@@ -92,7 +92,7 @@ public sealed class UserInspectionTests
         await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         var me = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync($"/api/v1/admin/users/{me.Id}/insights")).StatusCode);

@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Attachments.Extraction;
 using AiNexus.Features.Attachments.Storage;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,7 @@ namespace AiNexus.Features.Attachments;
 /// 附件模組對其他模組的契約：上傳、擁有者查詢、配額鎖定與讀取儲存位元組。
 /// 儲存的檔案若遺失或與記錄不符，屬於基礎設施錯誤，會直接拋出例外。
 /// </summary>
-public sealed class AttachmentService(DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
+public sealed class AttachmentService(DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), file.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(file.ExtractedText) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
 
@@ -93,7 +94,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
     {
         var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct);
         if (file is null) return AttachmentsErrors.NotFound;
-        if (!file.InLibrary && !await db.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id, ct) && await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
+        if (!file.InLibrary && !await db.Set<ResourceAttachment>().AnyAsync(x => x.AttachmentId == id, ct) && await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
             !await (from link in db.Set<MessageAttachment>() join message in db.Set<Message>() on link.MessageId equals message.Id join conversation in db.Set<Conversation>() on message.ConversationId equals conversation.Id where link.AttachmentId == id && conversation.OwnerId == owner select link).AnyAsync(ct))
             return AttachmentsErrors.NotFound;
         return file;

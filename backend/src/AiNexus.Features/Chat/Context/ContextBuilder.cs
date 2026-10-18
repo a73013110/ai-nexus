@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Inference;
 using System.Text;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelTasks;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,7 @@ namespace AiNexus.Features.Chat.Context;
 /// （見 <see cref="WithImagesAsync"/>），排隊中的生成不持有圖片資料。
 /// </summary>
 public sealed class ContextBuilder(
-    NexusDbContext db,
+    AppDbContext db,
     IOptions<AttachmentOptions> attachments,
     AttachmentService storage)
 {

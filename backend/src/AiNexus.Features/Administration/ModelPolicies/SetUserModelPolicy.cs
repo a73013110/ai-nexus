@@ -1,6 +1,6 @@
-using AiNexus.Features.AccessControl.ModelPolicies;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +10,7 @@ namespace AiNexus.Features.Administration.ModelPolicies;
 /// 儲存使用者的個人模型白名單與 Token 上限；策略為空時刪除該列。會稽核。策略規則在稽核交易內檢查（不走 request validator），
 /// 讓被拒絕的變更同樣留下稽核紀錄。
 /// </summary>
-internal sealed class SetUserModelPolicy(NexusDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
+internal sealed class SetUserModelPolicy(AppDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/model-policy", async (Guid id, ModelPolicyRequest body, SetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())

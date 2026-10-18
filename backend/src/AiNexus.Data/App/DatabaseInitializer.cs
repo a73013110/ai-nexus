@@ -1,27 +1,25 @@
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data.Sql;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Persistence;
+namespace AiNexus.Data.App;
 
 /// <summary>
-/// 資料庫初始化執行器，負責在全新 SQL Server 實例上建立 <c>AiNexus</c> 專用資料庫並開啟 RCSI。
+/// 在 SQL Server 上建立 <c>AiNexus</c> 專用的空資料庫並開啟 RCSI；資料表等結構由 <c>database/App</c> 的 dacpac 部署。
 /// </summary>
 public sealed class DatabaseInitializer(
     IOptions<DatabasesOptions> databases,
-    ISqlDatabase<NexusMasterDatabase> master,
-    NexusDbContext db,
+    ISqlDatabase<MasterDatabase> master,
     DatabaseSchema schema)
 {
     /// <summary>
-    /// 執行初始化流程：建立資料庫實體、套用所有 EF Core 遷移，並驗證 RCSI 快照隔離級別狀態。
+    /// 資料庫不存在時建立它，並回報 RCSI 狀態；不建立或修改任何結構。
     /// </summary>
     /// <returns>若 READ_COMMITTED_SNAPSHOT 已開啟回傳 <see langword="true"/>；否則回傳 <see langword="false"/>。</returns>
     public async Task<bool> InitializeAsync(CancellationToken ct)
     {
-        var nexus = databases.Value.For(NexusDbContext.DatabaseName);
+        var nexus = databases.Value.For(AppDbContext.DatabaseName);
         if (!nexus.Configured)
         {
             throw new ExternalServiceException(
@@ -50,8 +48,6 @@ public sealed class DatabaseInitializer(
             await CreateAsync(master, target, ct);
         }
 
-        await db.Database.MigrateAsync(ct);
-        await schema.RequireCurrentAsync(ct);
         return await schema.ReadCommittedSnapshotAsync(ct) ?? false;
     }
 
@@ -64,7 +60,7 @@ public sealed class DatabaseInitializer(
     /// 全新剛建立的資料庫沒有任何外部連線，是唯一能保證 100% 成功無衝突切換的時間點。
     /// 若為已運行的生產資料庫，絕不可自動執行，需由 DBA 在維護窗口操作。
     /// </remarks>
-    public static async Task CreateAsync(ISqlDatabase<NexusMasterDatabase> master, string name, CancellationToken ct)
+    public static async Task CreateAsync(ISqlDatabase<MasterDatabase> master, string name, CancellationToken ct)
     {
         var quoted = "[" + name.Replace("]", "]]", StringComparison.Ordinal) + "]";
         await master.ExecuteAsync("CREATE DATABASE " + quoted, commandTimeout: 30, cancellationToken: ct);

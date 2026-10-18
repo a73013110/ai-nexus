@@ -1,11 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 
 namespace AiNexus.IntegrationTests.Administration;
@@ -20,11 +20,11 @@ public sealed class AdministratorBootstrapTests
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Contains(me.Access.Features, x => x.Id == "admin"); Assert.DoesNotContain((await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "admin");
         using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         using var again = await factory.SignedInAsync(); Assert.Equal(HttpStatusCode.Forbidden, (await again.GetAsync("/api/v1/admin/catalog")).StatusCode);
-        using var check = factory.Services.CreateScope(); Assert.Equal(1, await check.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.bootstrap"));
+        using var check = factory.Services.CreateScope(); Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.bootstrap"));
     }
 
     [Fact]

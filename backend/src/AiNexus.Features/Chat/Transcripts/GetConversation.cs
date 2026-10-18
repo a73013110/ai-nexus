@@ -1,3 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Billing;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Quality;
+using AiNexus.Data.App.WebSearch;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Billing.Charges;
 using AiNexus.Features.Conversations;
@@ -7,8 +15,6 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Quality.Feedback;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +36,7 @@ public sealed record ConversationDetailDto(
 /// 每種關聯各用一次批次查詢取回，再在記憶體中組裝，避免逐則訊息查詢（N+1）。
 /// 模型 ID 經 <see cref="ModelPresentation"/> 脫敏後才輸出給前端。
 /// </remarks>
-internal sealed class GetConversation(NexusDbContext db, ModelPresentation presentation)
+internal sealed class GetConversation(AppDbContext db, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", async (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) =>

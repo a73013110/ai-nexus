@@ -1,6 +1,6 @@
-using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Collaboration;
@@ -9,7 +9,7 @@ namespace AiNexus.Features.Collaboration;
 /// 登入者分享資源時可指定的人員與已啟用群組。端點參數中的 <see cref="ICurrentUser"/> 不可省略：
 /// 請求篩選靠它先解析並放行呼叫者，之後才會讀取資料。
 /// </summary>
-internal sealed class SearchDirectory(NexusDbContext db)
+internal sealed class SearchDirectory(AppDbContext db)
 {
     public static RouteHandlerBuilder MapUsers(RouteGroupBuilder api) => api
         .MapGet("/directory", async (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.UsersAsync(search, ct)))

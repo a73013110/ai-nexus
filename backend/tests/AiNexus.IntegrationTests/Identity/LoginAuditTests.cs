@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -5,7 +7,6 @@ using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -26,7 +27,7 @@ public sealed class LoginAuditTests
         (await client.GetAsync("/api/v1/auth/windows")).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.SingleAsync();
             var success = await db.AuditEvents.SingleAsync(x => x.Action == "identity.login");
             Assert.Equal(user.Id, success.ActorId); Assert.Equal("success", success.Result);
@@ -35,7 +36,7 @@ public sealed class LoginAuditTests
         }
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/auth/windows")).StatusCode);
         using var check = factory.Services.CreateScope();
-        var rows = await check.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.Where(x => x.Action == "identity.login").ToListAsync();
+        var rows = await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action == "identity.login").ToListAsync();
         Assert.Equal(2, rows.Count); Assert.Single(rows, row => row.Result == "failed" && row.IssueCode != null);
     }
 
@@ -43,7 +44,7 @@ public sealed class LoginAuditTests
     public async Task MissingDurableLoginAuditPreventsAnAuthenticatedCookie()
     {
         await using var factory = new NexusFactory(ldap: true, services: services =>
-            services.AddDbContext<NexusDbContext>(options => options.AddInterceptors(new RejectLoginAudit())));
+            services.AddDbContext<AppDbContext>(options => options.AddInterceptors(new RejectLoginAudit())));
         using var client = factory.CreateClient(); await Csrf(client);
         Assert.Equal(HttpStatusCode.ServiceUnavailable,
             (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"))).StatusCode);
@@ -90,7 +91,7 @@ public sealed class LoginAuditTests
         Assert.Equal(2, refreshed.Length);
         (await client.PostAsync("/api/v1/auth/logout", null)).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope();
-        var logout = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.SingleAsync(x => x.Action == "identity.logout");
+        var logout = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.SingleAsync(x => x.Action == "identity.logout");
         Assert.Equal(me.Id, logout.ActorId); Assert.Equal("completed", logout.Result);
         Assert.False((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
     }
@@ -105,7 +106,7 @@ public sealed class LoginAuditTests
         var id = (await created.Content.ReadFromJsonAsync<CreatedUserDto>())!.Id;
         using var client = factory.CreateClient(); await Csrf(client);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("audit-local", "incorrect-password", "local"))).StatusCode);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(1, (await db.Users.SingleAsync(x => x.Id == id)).FailedLogins);
         var failure = await db.AuditEvents.SingleAsync(x => x.Action == "identity.login" && x.Result == "failed");
         Assert.Equal(Guid.Empty, failure.ActorId); Assert.Equal(Guid.Empty, failure.OwnerId);

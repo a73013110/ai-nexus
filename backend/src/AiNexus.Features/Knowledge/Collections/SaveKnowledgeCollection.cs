@@ -1,7 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,7 +14,7 @@ namespace AiNexus.Features.Knowledge.Collections;
 public sealed record CollectionRequest(string Name, string Description);
 
 /// <summary>建立個人知識庫（數量受設定上限限制），或修改使用者可編輯的知識庫名稱與描述。</summary>
-internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock)
+internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/collections", async (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
@@ -28,12 +30,12 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
     {
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
-        if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind, ct) >= options.Value.Indexing.MaxCollections)
+        if (request.Description.Length > Collection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
+        if (await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Collection.Kind, ct) >= options.Value.Indexing.MaxCollections)
             return KnowledgeErrors.CollectionLimit;
         var now = clock.GetUtcNow();
-        var resource = new WorkspaceResource { OwnerId = actor, Kind = KnowledgeCollection.Kind, Name = name.Value, CreatedAt = now, UpdatedAt = now };
-        db.Add(resource); db.Add(new KnowledgeCollection { Id = resource.Id, Description = request.Description.Trim() });
+        var resource = new Resource { OwnerId = actor, Kind = Collection.Kind, Name = name.Value, CreatedAt = now, UpdatedAt = now };
+        db.Add(resource); db.Add(new Collection { Id = resource.Id, Description = request.Description.Trim() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "knowledge.created", Result = "created" });
         await db.SaveChangesAsync(ct);
         return new CollectionDto(await access.DescribeAsync(actor, resource, ct), request.Description.Trim(), 0, 0);
@@ -41,14 +43,14 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
 
     public async Task<Result> UpdateAsync(Guid actor, Guid id, CollectionRequest request, CancellationToken ct)
     {
-        var found = await access.RequireAsync(actor, id, KnowledgeCollection.Kind, ct, write: true);
+        var found = await access.RequireAsync(actor, id, Collection.Kind, ct, write: true);
         if (!found.IsSuccess) return found.Error;
         var resource = found.Value;
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
         resource.Name = name.Value;
-        if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        (await db.Set<KnowledgeCollection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
+        if (request.Description.Length > Collection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
+        (await db.Set<Collection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.updated", Result = "saved" });
         await db.SaveChangesAsync(ct);
         return Result.Success;

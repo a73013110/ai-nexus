@@ -1,11 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
 using AiNexus.Features.AccessControl.Navigation;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Roles;
@@ -19,7 +18,7 @@ public sealed record AdminFeatureDto(string Id, string Name, string Route, int S
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models, IReadOnlyList<NavigationGroupDto> NavigationGroups);
 
 /// <summary>所有角色、群組（含模型策略）、功能與選單群組，以及已設定的模型。</summary>
-internal sealed class GetAdminCatalog(NexusDbContext db, ModelCatalog catalog, AccessService access)
+internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))

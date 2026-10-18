@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ namespace AiNexus.Features.Conversations;
 public sealed record SelectBranchRequest(Guid LeafId);
 
 /// <summary>切換到使用者自己對話的另一個分支（指定葉節點訊息）。只允許閒置對話，並在對話的生成鎖內執行。</summary>
-internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler scheduler, TimeProvider clock)
+internal sealed class SelectBranch(AppDbContext db, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}/branch", async (

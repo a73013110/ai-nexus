@@ -1,6 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
+using AiNexus.Data.App.Collaboration;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
@@ -8,7 +10,7 @@ namespace AiNexus.Features.Artifacts.Management;
 public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
 
 /// <summary>使用者可讀取、依更新時間排序的前 200 份成果，並標示每份是否可編輯。</summary>
-internal sealed class ListArtifacts(NexusDbContext db, ResourceAccess access)
+internal sealed class ListArtifacts(AppDbContext db, ResourceAccess access)
 {
     private const int PageSize = 200;
 
@@ -28,7 +30,7 @@ internal sealed class ListArtifacts(NexusDbContext db, ResourceAccess access)
                     new(resource.Id, resource.Name, resource.Kind,
                         resource.OwnerId == actor
                         || db.Set<ResourceMember>().Any(m => m.ResourceId == item.Id && m.UserId == actor && m.Role == "editor")
-                        || db.Set<WorkspaceResource>().Any(p => p.Id == resource.ParentId
+                        || db.Set<Resource>().Any(p => p.Id == resource.ParentId
                             && (p.OwnerId == actor
                                 || db.Set<ResourceMember>().Any(m => m.ResourceId == p.Id && m.UserId == actor && m.Role == "editor"))),
                         resource.OwnerId == actor,

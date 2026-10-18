@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,7 +10,6 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Billing.Charges;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
@@ -52,7 +52,7 @@ public sealed class InferenceRouterTests
         Assert.Equal("completed", completed.Status);
         Assert.Equal("running", (await alice.GetFromJsonAsync<RunDto>($"/api/v1/runs/{remote.Id}"))!.Status);
         Assert.Equal("test-model", factory.Provider.LastModel); Assert.Equal("test-model", local.LastModel);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var charge = await db.Set<ModelCharge>().SingleAsync(x => x.Id == queued.Id);
         Assert.Equal("ollama", charge.Provider); Assert.Equal("test-model", charge.ModelId);
         var spend = (await bob.GetFromJsonAsync<ConversationSpendDto>($"/api/v1/conversations/{b.Id}/spend"))!;

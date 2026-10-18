@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
 using System.Text.Json;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,7 @@ public sealed record RepositoryEntryDto(string Name, string Path, string Kind, l
 public sealed record RepositoryTreeDto(string Commit, string Path, IReadOnlyList<RepositoryEntryDto> Entries, RepositoryFileDto? Readme);
 
 /// <summary>以使用者自己的 token 唯讀瀏覽：程式庫清單、單一程式庫（含分支與標籤）、資料夾與檔案。</summary>
-internal sealed class BrowseRepositories(NexusDbContext db, RepositoryService gitea)
+internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gitea)
 {
     private const int PageSize = 20;
 

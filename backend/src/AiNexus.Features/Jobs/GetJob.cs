@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
 /// <summary>使用者的單一背景工作。</summary>
-internal sealed class GetJob(NexusDbContext db)
+internal sealed class GetJob(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetJob handler, CancellationToken ct) =>

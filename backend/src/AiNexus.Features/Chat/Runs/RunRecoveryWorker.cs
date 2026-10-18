@@ -1,5 +1,5 @@
+using AiNexus.Data.App;
 using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Chat.Runs;
@@ -27,7 +27,7 @@ public sealed partial class RunRecoveryWorker(
                 try
                 {
                     using var scope = scopes.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     var now = clock.GetUtcNow();
                     var tracked = scheduler.TrackedRuns;
 

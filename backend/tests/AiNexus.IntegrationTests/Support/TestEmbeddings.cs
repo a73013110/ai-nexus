@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Platform.Errors;
 

@@ -28,7 +28,7 @@ public static class ModelTaskConfiguration
     /// <summary>
     /// 擷取當前模型與服務組態的不可變快照與指紋。
     /// </summary>
-    public static ModelTaskSnapshot Capture(ModelProfile profile, InferenceOptions options)
+    public static ModelTaskSnapshot Capture(ModelDefinition profile, InferenceOptions options)
     {
         var provider = profile.Provider;
         var serialized = JsonSerializer.SerializeToUtf8Bytes(new
@@ -58,7 +58,7 @@ public static class ModelTaskConfiguration
     /// 驗證排隊任務的模型組態是否與建立當下完全一致。
     /// 若管理員在此期間修改了端點或模型參數，則拒絕執行以防評測結果失真。
     /// </summary>
-    public static Result Require(ModelProfile profile, InferenceOptions options, string? expected) =>
+    public static Result Require(ModelDefinition profile, InferenceOptions options, string? expected) =>
         expected is not null && StringComparer.Ordinal.Equals(expected, Capture(profile, options).Fingerprint)
             ? Result.Success
             : InferenceErrors.ConfigurationChanged;

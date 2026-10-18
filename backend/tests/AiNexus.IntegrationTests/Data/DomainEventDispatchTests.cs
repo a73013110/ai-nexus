@@ -1,13 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AiNexus.IntegrationTests.Persistence;
+namespace AiNexus.IntegrationTests.Data;
 
 public sealed class DomainEventDispatchTests
 {
@@ -29,7 +29,7 @@ public sealed class DomainEventDispatchTests
     }
 
     // 新增一筆稽核紀錄、以批次更新改名擁有者，並發出後續事件。
-    private sealed class ProbeHandler(NexusDbContext db, DomainEvents events, Recorder recorder) : IDomainEventHandler<Probe>
+    private sealed class ProbeHandler(AppDbContext db, DomainEvents events, Recorder recorder) : IDomainEventHandler<Probe>
     {
         public async Task HandleAsync(Probe e, CancellationToken ct)
         {
@@ -41,7 +41,7 @@ public sealed class DomainEventDispatchTests
         }
     }
 
-    private sealed class EchoHandler(NexusDbContext db, Recorder recorder) : IDomainEventHandler<Echo>
+    private sealed class EchoHandler(AppDbContext db, Recorder recorder) : IDomainEventHandler<Echo>
     {
         public Task HandleAsync(Echo e, CancellationToken ct)
         {
@@ -61,7 +61,7 @@ public sealed class DomainEventDispatchTests
         }
     }
 
-    private sealed class SavingHandler(NexusDbContext db) : IDomainEventHandler<Saving>
+    private sealed class SavingHandler(AppDbContext db) : IDomainEventHandler<Saving>
     {
         public async Task HandleAsync(Saving e, CancellationToken ct) => await db.SaveChangesAsync(ct);
     }
@@ -83,7 +83,7 @@ public sealed class DomainEventDispatchTests
 
     private static async Task<(string Name, string[] Actions)> StateAsync(NexusFactory f, Guid owner)
     {
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var name = await db.Users.Where(x => x.Id == owner).Select(x => x.DisplayName).SingleAsync();
         var actions = await db.AuditEvents.Where(x => x.OwnerId == owner && (x.Result == "committed" || x.Result == "rolled-back" || x.Result == "failed" || x.Result == "plain"))
             .OrderBy(x => x.Id).Select(x => x.Action).ToArrayAsync();
@@ -98,7 +98,7 @@ public sealed class DomainEventDispatchTests
         var original = (await StateAsync(f, owner)).Name;
         using (var scope = f.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await using var transaction = await db.Database.BeginTransactionAsync();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "rolled-back"));
             db.AuditEvents.Add(new() { OwnerId = owner, Action = "publisher.saved", Result = "rolled-back" });
@@ -110,7 +110,7 @@ public sealed class DomainEventDispatchTests
 
         using (var scope = f.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await using var transaction = await db.Database.BeginTransactionAsync();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "committed"));
             db.AuditEvents.Add(new() { OwnerId = owner, Action = "publisher.saved", Result = "committed" });
@@ -134,10 +134,10 @@ public sealed class DomainEventDispatchTests
         var original = (await StateAsync(f, owner)).Name;
         using (var scope = f.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "failed"));
             // 發布者自己的寫入在 handler 的批次更新已執行後才失敗。
-            db.Users.Add(new NexusUser { Id = owner, Sid = "S-1-5-21-duplicate", Account = "duplicate", DisplayName = "duplicate" });
+            db.Users.Add(new User { Id = owner, Sid = "S-1-5-21-duplicate", Account = "duplicate", DisplayName = "duplicate" });
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
             Assert.NotNull(Assert.Single(recorder.Transactions));
             Assert.Null(db.Database.CurrentTransaction);
@@ -152,7 +152,7 @@ public sealed class DomainEventDispatchTests
         await using var f = Factory(recorder); var owner = await OwnerAsync(f);
         using (var scope = f.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var events = scope.ServiceProvider.GetRequiredService<DomainEvents>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var events = scope.ServiceProvider.GetRequiredService<DomainEvents>();
             events.Raise(new Unhandled(owner));
             db.AuditEvents.Add(new() { OwnerId = owner, Action = "plain.saved", Result = "plain" });
             await db.SaveChangesAsync();
@@ -177,7 +177,7 @@ public sealed class DomainEventDispatchTests
         var recorder = new Recorder();
         await using var f = Factory(recorder); var owner = await OwnerAsync(f);
         using var scope = f.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var events = scope.ServiceProvider.GetRequiredService<DomainEvents>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var events = scope.ServiceProvider.GetRequiredService<DomainEvents>();
         events.Raise(new Saving(owner));
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
         events.Raise(new Probe(owner, "sync"));

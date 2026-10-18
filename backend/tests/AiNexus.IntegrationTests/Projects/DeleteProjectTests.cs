@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -8,7 +10,6 @@ using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Projects.Contents;
 using AiNexus.Features.Projects.Management;
@@ -26,10 +27,10 @@ public sealed class DeleteProjectTests
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{project.Resource.Id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using (var scope = f.Services.CreateScope())
-            Assert.Equal(project.Resource.Id, (await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
+            Assert.Equal(project.Resource.Id, (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/projects/{project.Resource.Id}")).StatusCode);
         using (var scope = f.Services.CreateScope())
-            Assert.Null((await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
+            Assert.Null((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
         Assert.Equal("body", (await owner.GetFromJsonAsync<ArtifactDto>($"/api/v1/artifacts/{artifact.Resource.Id}"))!.Content);
     }
 
@@ -58,7 +59,7 @@ public sealed class DeleteProjectTests
         Assert.Equal(attachment.Id, Assert.Single((await owner.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!.Items).File.Id);
         Assert.Empty((await editor.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!.Items);
         Assert.Equal(HttpStatusCode.NotFound, (await editor.GetAsync($"/api/v1/documents/{document.Id}")).StatusCode);
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == id && x.Action == "project.deleted").ToArrayAsync());
     }
 }

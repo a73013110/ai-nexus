@@ -1,6 +1,6 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
 using System.Text.Json;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +49,7 @@ internal static class AuthSession
     }
 
     /// <summary>記錄 <paramref name="previous"/> 攜帶的測試身分已結束；若已記錄過就不重複寫入。</summary>
-    public static async Task EndExistingTestAsync(ClaimsPrincipal previous, NexusDbContext db, string reason, CancellationToken ct)
+    public static async Task EndExistingTestAsync(ClaimsPrincipal previous, AppDbContext db, string reason, CancellationToken ct)
     {
         if (!Guid.TryParse(previous.FindFirstValue(SessionIdentity.ActorId), out var actorId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.TestId), out var testId) ||

@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,14 +25,14 @@ internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 }
 
 /// <summary>一次儲存外觀偏好，以及閱讀、版面與輸入框設定。</summary>
-internal sealed class SaveUserSettings(NexusDbContext db, ModelPresentation models)
+internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/settings", async (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
         .WithName("SaveUserSettings");
 
-    public async Task<Result<UserSettingsDto>> HandleAsync(NexusUser user, UserSettingsDto value, CancellationToken ct)
+    public async Task<Result<UserSettingsDto>> HandleAsync(User user, UserSettingsDto value, CancellationToken ct)
     {
         // 先驗證整個請求，再改動任何已追蹤的值，避免失敗時留下只改了一半的設定。
         var appearance = UpdatePreferences.Apply(user, value.Appearance, models);

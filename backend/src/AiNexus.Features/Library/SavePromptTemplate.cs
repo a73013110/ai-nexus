@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Library;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -21,7 +22,7 @@ internal sealed class SavePromptRequestValidator : RequestValidator<SavePromptRe
 }
 
 /// <summary>建立範本，或編輯使用者自己擁有的範本。</summary>
-internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
+internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)
     {

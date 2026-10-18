@@ -1,10 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using System.Text.Json;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using Dapper;
 using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
@@ -15,7 +15,7 @@ public sealed class EmbeddingRow
     public SqlVector<float> Vector { get; set; }
 }
 
-public sealed class EmbeddingVectorStore(NexusDbContext db, ISqlDatabase<NexusDbContext> sql)
+public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbContext> sql)
 {
     public IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile) => profile.Dimensions switch
     {
@@ -24,7 +24,7 @@ public sealed class EmbeddingVectorStore(NexusDbContext db, ISqlDatabase<NexusDb
         _ => throw new ArgumentOutOfRangeException(nameof(profile))
     };
     public async Task<IReadOnlyList<Guid>> ExistingAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) =>
-        await Rows(profile).Where(e => db.Set<KnowledgeChunk>().Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
+        await Rows(profile).Where(e => db.Set<Chunk>().Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
     public async Task<Dictionary<string, float[]>> CachedAsync(EmbeddingProfile profile, IReadOnlyList<byte[]> hashes, CancellationToken ct)
     {
         if (hashes.Count == 0) return new(StringComparer.Ordinal);

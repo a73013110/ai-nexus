@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Notifications;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -7,13 +8,13 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Notifications;
 
 /// <summary>檢視者自己的未讀通知。通知是個人資料，因此不套用 scope 的 owner 條件。</summary>
-internal sealed class NotificationsDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Dashboard;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
-        var mine = db.Set<WorkspaceNotification>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.DismissedAt == null);
+        var mine = db.Set<Notification>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.DismissedAt == null);
         var unread = mine.Where(x => x.ReadAt == null);
         var counts = await unread.GroupBy(x => 1).Select(g => new { All = g.Count(), Errors = g.Count(x => x.Severity == "error") }).SingleOrDefaultAsync(ct);
         var daily = await DashboardDays.CountAsync(db, mine.Select(x => x.CreatedAt), scope, ct);

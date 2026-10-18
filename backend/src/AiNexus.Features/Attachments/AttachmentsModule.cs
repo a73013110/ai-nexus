@@ -66,5 +66,3 @@ public sealed class AttachmentsModule : IFeatureModule
     /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>
     public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
 }
-
-internal sealed class AttachmentsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Files, "檔案庫", "/files", 20, BuiltInAccess.WorkNavigation, "files"));

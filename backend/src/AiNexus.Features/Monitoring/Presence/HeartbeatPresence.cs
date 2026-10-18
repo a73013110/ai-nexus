@@ -1,7 +1,7 @@
+using AiNexus.Data.App.Identity;
 using System.Security.Claims;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Monitoring.Traffic;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Validation;
@@ -34,7 +34,7 @@ internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
         .MapPost("/presence", (PresenceRequest request, HttpContext http, ICurrentUser user, HeartbeatPresence handler) => TypedResults.Ok(handler.Handle(http, user.User, request)))
         .RequireRateLimiting(MonitoringModule.PresenceRateLimit).WithMetadata(new SuppressSuccessfulRequestLog()).WithName("HeartbeatPresence");
 
-    public PresenceReceipt Handle(HttpContext http, NexusUser user, PresenceRequest request)
+    public PresenceReceipt Handle(HttpContext http, User user, PresenceRequest request)
     {
         var ua = http.Request.Headers.UserAgent.ToString();
         var browser = ua.Contains("Edg/", StringComparison.Ordinal) ? "Edge" : ua.Contains("Firefox/", StringComparison.Ordinal) ? "Firefox" : ua.Contains("Chrome/", StringComparison.Ordinal) ? "Chrome" : ua.Contains("Safari/", StringComparison.Ordinal) ? "Safari" : "其他瀏覽器";

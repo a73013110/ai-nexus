@@ -1,10 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Sharing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +40,7 @@ public sealed class CreateShareTests
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{withFiles.Id}/files/{Guid.NewGuid()}")).StatusCode);
         (await owner.DeleteAsync($"/api/v1/shares/{withFiles.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{withFiles.Id}/files/{file.Id}")).StatusCode);
-        using var scope = f.Services.CreateScope(); Assert.False(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<AttachmentReference>().AnyAsync(x => x.ResourceId == withFiles.Id));
+        using var scope = f.Services.CreateScope(); Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<ResourceAttachment>().AnyAsync(x => x.ResourceId == withFiles.Id));
     }
 
     [Fact]
@@ -63,11 +65,11 @@ public sealed class CreateShareTests
         var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "測試對話"); await WaitForTerminal(owner, run.Id);
         var share = (await (await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user], 1))).Content.ReadFromJsonAsync<ShareDto>())!;
         Assert.Equal(2, (await reader.GetFromJsonAsync<SharedContentDto>($"/api/v1/shares/{share.Id}"))!.Snapshot.Messages.Count);
-        using (var scope = f.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); await db.Set<ShareLink>().Where(x => x.Id == share.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ExpiresAt, DateTimeOffset.UtcNow.AddMinutes(-1))); }
+        using (var scope = f.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); await db.Set<ShareLink>().Where(x => x.Id == share.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ExpiresAt, DateTimeOffset.UtcNow.AddMinutes(-1))); }
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{share.Id}")).StatusCode);
         var second = (await (await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user]))).Content.ReadFromJsonAsync<ShareDto>())!;
         (await owner.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{second.Id}")).StatusCode);
-        using var verify = f.Services.CreateScope(); var deleted = await verify.ServiceProvider.GetRequiredService<NexusDbContext>().Set<ShareLink>().FindAsync(second.Id); Assert.Equal("", deleted!.SnapshotJson); Assert.True(deleted.IsRevoked);
+        using var verify = f.Services.CreateScope(); var deleted = await verify.ServiceProvider.GetRequiredService<AppDbContext>().Set<ShareLink>().FindAsync(second.Id); Assert.Equal("", deleted!.SnapshotJson); Assert.True(deleted.IsRevoked);
     }
 }

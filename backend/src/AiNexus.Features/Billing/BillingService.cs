@@ -1,16 +1,17 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Billing;
 using AiNexus.Features.Billing.Charges;
 using AiNexus.Features.Billing.Prices;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Billing;
 
 public sealed class BillingService(
-    NexusDbContext db,
+    AppDbContext db,
     ModelPresentation presentation,
     IOptions<InferenceOptions> inference,
     IEnumerable<ServiceModel> services,

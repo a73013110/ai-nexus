@@ -1,15 +1,17 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Repositories;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
 /// <summary>review 端點與 <see cref="RepositoryReviewHandler"/> 共用的擁有權檢查、來源檢查與呈現。</summary>
-public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService repositories, ModelPresentation presentation)
+public sealed class RepositoryReviewService(AppDbContext db, RepositoryService repositories, ModelPresentation presentation)
 {
     public async Task<Result<RepositoryReview>> FindAsync(Guid owner, Guid id, CancellationToken ct)
         => await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } row

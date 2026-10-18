@@ -1,3 +1,5 @@
+using AiNexus.Data.App.Identity;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.Runs;
 using Microsoft.Extensions.Options;
@@ -68,7 +70,7 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IEnume
         options.Value.MaxInputCharacters);
 
     /// <summary>將模型組態轉換為前端展示 DTO。</summary>
-    public ModelDto Model(ModelProfile model) => model.ToDto() with
+    public ModelDto Model(ModelDefinition model) => model.ToDto() with
     {
         Id = PublicId(model.Id),
         DisplayName = DisplayName(model.Id)!,

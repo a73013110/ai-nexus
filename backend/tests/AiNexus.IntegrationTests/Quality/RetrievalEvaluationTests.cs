@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Quality;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Knowledge;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Quality.RetrievalEvaluations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Quality;
@@ -34,7 +35,7 @@ public sealed class RetrievalEvaluationTests
         Assert.All(report.Results.Where(x => x.Mode == "hybrid+rerank"), x => Assert.Equal("hybrid(rerank-skipped)", x.ActualMode));
         var json = await client.GetStringAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report");
         Assert.DoesNotContain("採購如何核准", json); Assert.DoesNotContain("主管簽署", json); Assert.DoesNotContain(seed.Document.Id.ToString(), json);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.DoesNotContain("採購應先核准", JsonSerializer.Serialize(await db.Set<RetrievalEvaluationResult>().ToListAsync()));
         using var bob = await factory.SignedInAsync("bob"); Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}")).StatusCode);
         db.Remove(await db.Set<RoleGroupFeature>().SingleAsync(x => x.FeatureId == "knowledge")); await db.SaveChangesAsync();

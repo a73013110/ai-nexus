@@ -1,14 +1,19 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Sharing;
+using AiNexus.Data.App.WebSearch;
 using System.Text.Json;
-using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Retrieval;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -39,7 +44,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 }
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
-internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
+internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -75,7 +80,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
                     if (!snapshot.IsSuccess) return snapshot.Error;
                     var (title, content, files) = snapshot.Value;
 
-                    var resource = new WorkspaceResource { OwnerId = actor, Kind = "share", Name = title };
+                    var resource = new Resource { OwnerId = actor, Kind = "share", Name = title };
                     var share = new ShareLink
                     {
                         Id = resource.Id,
@@ -91,7 +96,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
                     db.Add(resource);
                     db.Add(share);
                     db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
-                    db.AddRange(files.Select(file => new AttachmentReference { ResourceId = share.Id, AttachmentId = file }));
+                    db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
                     db.AuditEvents.Add(new()
                     {
                         OwnerId = actor,

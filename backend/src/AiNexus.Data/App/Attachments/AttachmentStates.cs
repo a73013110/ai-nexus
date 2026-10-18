@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Attachments;
+namespace AiNexus.Data.App.Attachments;
 
 public static class AttachmentStates
 {

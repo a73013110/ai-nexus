@@ -1,20 +1,21 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
+using AiNexus.Data.App.Collaboration;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts;
 
 /// <summary>成果文件總覽：目前數量，以及期間內保存的不可變版本數。</summary>
-internal sealed class ArtifactsDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class ArtifactsDashboard(AppDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Artifacts;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
         var owner = scope.Owner;
-        var resources = db.Set<WorkspaceResource>().AsNoTracking().Where(x => x.Kind == Artifact.Kind && (owner == null || x.OwnerId == owner));
+        var resources = db.Set<Resource>().AsNoTracking().Where(x => x.Kind == Artifact.Kind && (owner == null || x.OwnerId == owner));
         var counts = await db.Set<Artifact>().AsNoTracking().Where(a => resources.Any(r => r.Id == a.Id)).GroupBy(x => 1)
             .Select(g => new { All = g.Count(), InProjects = g.Count(x => x.ProjectId != null), FromChat = g.Count(x => x.SourceMessageId != null) })
             .SingleOrDefaultAsync(ct);
@@ -29,7 +30,7 @@ internal sealed class ArtifactsDashboard(NexusDbContext db) : IDashboardSource
             .Daily("versions", "每日保存版本", "版", saved)
             .Share("projects", "屬於專案", projects, DashboardTones.Info)
             .Share("personal", "個人", all - projects);
-        var recent = await db.Set<WorkspaceResource>().AsNoTracking().Where(x => x.Kind == Artifact.Kind && x.OwnerId == scope.Actor)
+        var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.Kind == Artifact.Kind && x.OwnerId == scope.Actor)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
         foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/artifacts/" + item.Id);
         return section.Build();

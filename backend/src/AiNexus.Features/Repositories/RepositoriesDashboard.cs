@@ -1,8 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Repositories.Connections;
-using AiNexus.Features.Repositories.Reviews;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,7 +12,7 @@ namespace AiNexus.Features.Repositories;
 /// Gitea 使用概況：已連線帳號、期間內啟動的 AI review，以及仍在執行中的數量。
 /// 未設定 Gitea 時沒有可統計的內容，因此不顯示此區塊。
 /// </summary>
-internal sealed class RepositoriesDashboard(NexusDbContext db, IOptions<GiteaOptions> gitea) : IDashboardSource
+internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptions> gitea) : IDashboardSource
 {
     public string Feature => FeatureIds.Repositories;
 

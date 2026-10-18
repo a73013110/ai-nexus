@@ -1,14 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Audit;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Attachments.Extraction;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Providers;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
@@ -48,7 +49,7 @@ public static class ConnectionVerifier
                 var detail = ex is ExternalServiceException external
                     ? external.Message
                     : name == "SQL"
-                        ? DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName)
+                        ? DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName)
                         : $"連線未通過（{ex.GetType().Name}）。";
                 results.Add(new { name, passed = false, detail });
                 Console.WriteLine($"{name}: FAIL · {detail}");
@@ -57,10 +58,9 @@ public static class ConnectionVerifier
 
         await Check("SQL", async () =>
         {
-            await services.GetRequiredService<ISqlDatabase<NexusDbContext>>().QuerySingleAsync<int>("SELECT 1", commandTimeout: 5, cancellationToken: ct);
-            await services.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
+            await services.GetRequiredService<ISqlDatabase<AppDbContext>>().QuerySingleAsync<int>("SELECT 1", commandTimeout: 5, cancellationToken: ct);
             await VerifyPersistenceAsync(services, ct);
-            var db = services.GetRequiredService<NexusDbContext>();
+            var db = services.GetRequiredService<AppDbContext>();
 
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
                 || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == BuiltInAccess.ChatFeature, ct))
@@ -69,7 +69,7 @@ public static class ConnectionVerifier
             }
 
             var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
-            return $"SQL migrations、EF Core／Dapper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
+            return $"SQL EF Core／Dapper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
         });
 
         await Check("AD", async () =>
@@ -154,8 +154,8 @@ public static class ConnectionVerifier
 
     private static async Task VerifyPersistenceAsync(IServiceProvider services, CancellationToken ct)
     {
-        var db = services.GetRequiredService<NexusDbContext>();
-        var sql = services.GetRequiredService<ISqlDatabase<NexusDbContext>>();
+        var db = services.GetRequiredService<AppDbContext>();
+        var sql = services.GetRequiredService<ISqlDatabase<AppDbContext>>();
         var probe = new AuditEvent { OwnerId = Guid.Empty, ResourceId = Guid.NewGuid(), Action = "connection_check", Result = "ef_insert" };
         var removed = true;
         try

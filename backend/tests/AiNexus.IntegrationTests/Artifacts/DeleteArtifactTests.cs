@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Sharing;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Artifacts.Management;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using AiNexus.Features.Sharing.Management;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,7 @@ public sealed class DeleteArtifactTests
         Assert.Equal(HttpStatusCode.OK, (await bob.GetAsync($"/api/v1/shares/{share.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await alice.DeleteAsync($"/api/v1/artifacts/{source.Resource.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/shares/{share.Id}")).StatusCode);
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.Set<ShareLink>().SingleAsync(x => x.Id == share.Id);
         Assert.True(link.IsRevoked); Assert.Equal("", link.SnapshotJson);
         Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == source.Resource.Id && x.Action == "artifact.deleted").ToArrayAsync());

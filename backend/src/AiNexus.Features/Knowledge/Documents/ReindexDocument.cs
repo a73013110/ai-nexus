@@ -1,6 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
@@ -10,7 +12,7 @@ namespace AiNexus.Features.Knowledge.Documents;
 /// <summary>
 /// 把使用者可編輯的知識庫文件重新排入索引：頁面已擷取過就只重做嵌入，否則完整重跑匯入。仍在處理中的文件回傳衝突。
 /// </summary>
-internal sealed class ReindexDocument(NexusDbContext db, DocumentAccess documents, AttachmentWriteLock writes, JobService jobs)
+internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, AttachmentWriteLock writes, JobService jobs)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/reindex", async (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>

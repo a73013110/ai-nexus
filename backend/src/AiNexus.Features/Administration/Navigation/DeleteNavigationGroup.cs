@@ -1,13 +1,12 @@
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Navigation;
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Navigation;
 
 /// <summary>刪除選單群組。仍有子群組或功能掛在其下時拒絕，不會級聯刪除。會稽核。</summary>
-internal sealed class DeleteNavigationGroup(NexusDbContext db, AdministrativeAudit audit)
+internal sealed class DeleteNavigationGroup(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/navigation-groups/{id}", async (string id, DeleteNavigationGroup handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())

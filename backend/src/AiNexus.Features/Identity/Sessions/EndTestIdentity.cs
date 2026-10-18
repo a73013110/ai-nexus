@@ -1,7 +1,7 @@
+using AiNexus.Data.App;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
@@ -15,7 +15,7 @@ namespace AiNexus.Features.Identity.Sessions;
 /// 從測試身分切回原本的管理者；只有在該管理者的登入方式、安全版本與管理權限仍有效時才切回，否則回 <c>test_source_revoked</c>。
 /// 不在測試身分中時，只回傳目前 session 的描述。
 /// </summary>
-internal sealed class EndTestIdentity(NexusDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
+internal sealed class EndTestIdentity(AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity/end", (HttpContext http, EndTestIdentity handler, CancellationToken ct) => handler.HandleAsync(http, ct).ToHttpResultAsync())

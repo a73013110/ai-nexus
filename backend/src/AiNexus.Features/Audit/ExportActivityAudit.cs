@@ -1,8 +1,8 @@
+using AiNexus.Data.App;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,7 @@ namespace AiNexus.Features.Audit;
 /// 匯出符合條件的全部紀錄為 CSV（新到舊），有獨立的 rate limit。
 /// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料。
 /// </summary>
-internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptions> options)
+internal sealed class ExportActivityAudit(AppDbContext db, IOptions<AuditOptions> options)
 {
     public const string Action = "audit.export";
     private static readonly string[] Header = ["紀錄 ID", "時間（UTC）", "操作者", "測試身分", "動作", "資源 ID", "資源識別碼", "結果", "異動資訊", "分類", "Trace ID", "Operation ID", "查證代碼"];

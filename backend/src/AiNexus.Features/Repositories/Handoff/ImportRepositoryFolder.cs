@@ -1,9 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Repositories;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 
@@ -17,7 +19,7 @@ public sealed record RepositoryFolderImportDto(Guid Id, int Files, JobDto Job);
 /// 列出固定 commit 上某資料夾底下的文字檔，並把匯入排入知識庫的佇列。
 /// 檔案清單在此時固定，因此工作重試時匯入的仍是同一份快照。
 /// </summary>
-internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes)
+internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes)
 {
     // 值得當成文字建立索引的副檔名；其他多半是二進位或產生的檔案，直接略過。
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)

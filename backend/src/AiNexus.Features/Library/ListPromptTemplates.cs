@@ -1,10 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Library;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Library;
 
-internal sealed class ListPromptTemplates(NexusDbContext db)
+internal sealed class ListPromptTemplates(AppDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", async (ICurrentUser user, ListPromptTemplates handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))

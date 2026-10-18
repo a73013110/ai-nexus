@@ -23,7 +23,7 @@ public sealed class InferenceOptions : IValidatableObject
     [ValidateObjectMembers] public InferenceProviders Providers { get; set; } = new();
 
     /// <summary>已啟用的供應商所提供之經核准模型清單，路由識別碼格式為 <c>provider/native-id</c>；於組態繫結後自 <see cref="Providers"/> 推導而得。</summary>
-    public List<ModelProfile> Models { get; set; } = [];
+    public List<ModelDefinition> Models { get; set; } = [];
 
     /// <summary>每個已啟用供應商的並行呼叫數限制；於組態繫結後自 <see cref="Providers"/> 推導而得。</summary>
     public Dictionary<string, int> ProviderConcurrency { get; set; } = new(StringComparer.Ordinal) { ["google"] = 1 };
@@ -75,7 +75,7 @@ public abstract class ProviderOptions
     [Range(1, 8)] public int MaxConcurrency { get; set; } = 1;
 
     /// <summary>經核准的模型別名字典（例如 <c>default</c>、<c>secondary</c>）；各組態來源依別名進行合併覆寫。</summary>
-    public Dictionary<string, ModelProfile> Models { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, ModelDefinition> Models { get; set; } = new(StringComparer.Ordinal);
 }
 
 public sealed class GoogleProviderOptions : ProviderOptions

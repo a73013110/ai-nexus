@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/AiNexus.Host/AiNexus.Host.csproj" />
     <Project Path="src/AiNexus.Features/AiNexus.Features.csproj" />
+    <Project Path="src/AiNexus.Data/AiNexus.Data.csproj" />
     <Project Path="src/AiNexus.Platform/AiNexus.Platform.csproj" />
   </Folder>
   <Folder Name="/tests/">

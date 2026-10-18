@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Identity.Sessions;
-using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Authentication;
 
@@ -21,7 +21,7 @@ internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IA
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, CancellationToken ct)
     {
         if (options.Value.Mode != "Windows") return IdentityErrors.AuthenticationModeUnsupported.ToProblem();
-        Result<NexusUser> user;
+        Result<User> user;
         try { user = await current.GetAsync(ct); }
         catch (Exception error) when (!ct.IsCancellationRequested)
         {

@@ -1,13 +1,14 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
 /// <summary>使用者在目前 Gitea 主機上，某個程式庫最近 50 筆 review。</summary>
-internal sealed class ListRepositoryReviews(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews)
+internal sealed class ListRepositoryReviews(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapGet("/reviews", (string owner, string name, ICurrentUser user, ListRepositoryReviews handler, CancellationToken ct) =>

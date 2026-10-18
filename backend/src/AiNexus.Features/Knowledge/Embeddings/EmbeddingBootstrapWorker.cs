@@ -1,8 +1,9 @@
-using AiNexus.Features.AccessControl.Roles;
-using AiNexus.Features.Collaboration;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -21,10 +22,10 @@ public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes
             {
                 if (readiness.Configured)
                 {
-                    using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                    using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     var target = await scope.ServiceProvider.GetRequiredService<EmbeddingProfiles>().TargetAsync(stoppingToken);
                     var jobs = scope.ServiceProvider.GetRequiredService<JobService>();
-                    var pending = await (from d in db.Set<KnowledgeDocument>() join r in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]) on d.Id equals r.Id
+                    var pending = await (from d in db.Set<Document>() join r in db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]) on d.Id equals r.Id
                         where !d.IsDeleted && d.CollectionId != null && d.Status == "reindex" && !db.Set<BackgroundJob>().Any(j => j.SubjectId == d.Id && j.ActiveKey != null)
                         select new { Document = d, r.OwnerId }).ToListAsync(stoppingToken);
                     foreach (var item in pending) { item.Document.Status = "indexing"; item.Document.JobId = jobs.Enqueue(item.OwnerId, item.Document.Id, item.Document.Id, "document-embedding", item.Document.FileName).Id; }

@@ -1,9 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Identity;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Diagnostics;
-using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ public sealed class DiagnosticStoreTests
         var safe = AuditRedactor.Sanitize(JsonSerializer.Serialize(new { password = Secret, after = new { enabled = true, token = Secret }, reason = Secret }));
         Assert.DoesNotContain(Secret, safe); Assert.Contains("enabled", safe); Assert.Contains("OMITTED", safe);
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var actor = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var legacy = new AuditEvent { OwnerId = actor, Action = "fixture.legacy", Result = "saved" }; db.Add(legacy); await db.SaveChangesAsync();
         var raw = JsonSerializer.Serialize(new { password = Secret, before = new { token = Secret, enabled = true }, reason = Secret });
@@ -39,7 +40,7 @@ public sealed class DiagnosticStoreTests
     {
         await using var factory = new NexusFactory(services: services => services.PostConfigure<DiagnosticOptions>(x => { x.MaxSqlRows = 1000; x.CleanupBatchSize = 10; }));
         using var client = factory.CreateClient(); (await client.GetAsync("/health/live")).EnsureSuccessStatusCode();
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var old = Enumerable.Range(0, 1000).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31), Level = LogLevel.Information }).ToArray();
         db.AddRange(old); var retained = new AuditEvent { Action = "fixture.retained", At = DateTimeOffset.UtcNow.AddDays(-31) }; var expired = new AuditEvent { Action = "fixture.expired", At = DateTimeOffset.UtcNow.AddDays(-366) };
         db.AddRange(retained, expired); await db.SaveChangesAsync(); var store = factory.Services.GetRequiredService<IDiagnosticStore>();
@@ -55,13 +56,13 @@ public sealed class DiagnosticStoreTests
     {
         await SqlServerDatabase.WithDatabase(async db => {
             var services = new ServiceCollection();
-            services.AddDbContext<NexusDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
+            services.AddDbContext<AppDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
             using var provider = services.BuildServiceProvider(); using var health = new DiagnosticHealth();
             var options = Options.Create(new DiagnosticOptions { CleanupBatchSize = 2 });
             var store = new DiagnosticStore(provider.GetRequiredService<IServiceScopeFactory>(), options, health, TimeProvider.System);
             var code = Issues.NewCode();
             var row = new DiagnosticEvent { IssueCode = code, Level = LogLevel.Error, At = DateTimeOffset.UtcNow, TraceId = new string('a', 32) };
-            var user = new NexusUser { Sid = "diagnostic-rollback", Account = "rollback", DisplayName = "fixture" };
+            var user = new User { Sid = "diagnostic-rollback", Account = "rollback", DisplayName = "fixture" };
             await using (var transaction = await db.Database.BeginTransactionAsync()) {
                 db.Add(user); await db.SaveChangesAsync(); await store.WriteAsync([row, row], CancellationToken.None); await transaction.RollbackAsync();
             }

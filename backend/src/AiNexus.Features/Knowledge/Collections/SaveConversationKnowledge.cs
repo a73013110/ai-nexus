@@ -1,8 +1,9 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,7 @@ namespace AiNexus.Features.Knowledge.Collections;
 /// 取代使用者自己的閒置對話所用的知識庫（最多三個，且須為使用者可讀取者）。
 /// 在對話的生成鎖內執行，避免正在啟動的回答讀到修改到一半的選取。
 /// </summary>
-internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
+internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("", async (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
@@ -31,9 +32,9 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
             var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
             if (!allowed.IsSuccess) return allowed.Error;
             if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
-            var existing = await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
+            var existing = await db.Set<ConversationCollection>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
             db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));
-            db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationKnowledge { ConversationId = conversation, CollectionId = x }));
+            db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationCollection { ConversationId = conversation, CollectionId = x }));
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return Result.Success;
         }

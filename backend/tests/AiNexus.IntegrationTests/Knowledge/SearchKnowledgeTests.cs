@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -6,13 +8,11 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 using static AiNexus.IntegrationTests.Support.KnowledgeApi;
 
@@ -116,7 +116,7 @@ public sealed class SearchKnowledgeTests
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
-        rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<NexusDbContext>();
+        rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Set<UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         var body = await response.Content.ReadAsStringAsync();

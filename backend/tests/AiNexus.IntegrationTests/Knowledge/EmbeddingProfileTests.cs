@@ -1,3 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -6,12 +10,10 @@ using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Administration.Retrieval;
-using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Knowledge;
@@ -39,7 +41,7 @@ public sealed class EmbeddingProfileTests
         (await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]))).EnsureSuccessStatusCode();
         Assert.Equal(target.Id, factory.Embeddings.LastProfileId);
         (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode();
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Empty(await db.Set<ChunkEmbedding768>().ToListAsync()); Assert.NotEmpty(await db.Set<ChunkEmbedding1024>().ToListAsync()); Assert.NotEmpty(await db.Set<DocumentPage>().ToListAsync());
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "saved");
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "profile_incomplete");
@@ -59,7 +61,7 @@ public sealed class EmbeddingProfileTests
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).StatusCode);
         using var response = await bob.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null); response.EnsureSuccessStatusCode();
         var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_rebuild" && x.Result == "saved" && x.OwnerId == bobId);
         // 重新索引以擁有者身分執行：撤銷平台營運權限後，排入佇列的重建會被拒絕。
         db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();

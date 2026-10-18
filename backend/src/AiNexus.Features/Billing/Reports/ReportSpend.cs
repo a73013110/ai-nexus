@@ -1,12 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Billing.Reports;
 
 /// <summary>花費報表：個人、單一對話，以及全平台（平台營運用，每次讀取與匯出都會稽核）。</summary>
-internal sealed class ReportSpend(NexusDbContext db, SpendReports reports, TimeProvider clock)
+internal sealed class ReportSpend(AppDbContext db, SpendReports reports, TimeProvider clock)
 {
     public static void MapPersonal(RouteGroupBuilder api)
     {

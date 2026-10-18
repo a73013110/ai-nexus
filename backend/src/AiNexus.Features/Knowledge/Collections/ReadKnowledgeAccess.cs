@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
@@ -11,5 +12,5 @@ internal sealed class ReadKnowledgeAccess(ResourceAccess access)
         .MapGet("/collections/{id:guid}/access", (Guid id, ICurrentUser user, ReadKnowledgeAccess handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .WithName("GetKnowledgeAccess");
 
-    public Task<Result<ResourceAclDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, KnowledgeCollection.Kind, ct);
+    public Task<Result<ResourceAclDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, Collection.Kind, ct);
 }

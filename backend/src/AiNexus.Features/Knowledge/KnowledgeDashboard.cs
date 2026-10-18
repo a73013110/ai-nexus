@@ -1,9 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Knowledge.Indexing;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,16 +10,16 @@ namespace AiNexus.Features.Knowledge;
 /// <summary>
 /// 知識庫總覽：來源文件依處理狀態統計，並列出索引分段。只計入加入知識庫的文件；私人讀取與專案文件不算知識庫文件。
 /// </summary>
-internal sealed class KnowledgeDashboard(NexusDbContext db) : IDashboardSource
+internal sealed class KnowledgeDashboard(AppDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Knowledge;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
         var owner = scope.Owner;
-        var resources = db.Set<WorkspaceResource>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
-        var collections = await resources.CountAsync(x => x.Kind == KnowledgeCollection.Kind, ct);
-        var documents = db.Set<KnowledgeDocument>().AsNoTracking().Where(d => !d.IsDeleted && d.CollectionId != null && resources.Any(x => x.Id == d.Id));
+        var resources = db.Set<Resource>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
+        var collections = await resources.CountAsync(x => x.Kind == Collection.Kind, ct);
+        var documents = db.Set<Document>().AsNoTracking().Where(d => !d.IsDeleted && d.CollectionId != null && resources.Any(x => x.Id == d.Id));
         var status = await documents.GroupBy(x => 1).Select(g => new
         {
             All = g.Count(),
@@ -29,7 +27,7 @@ internal sealed class KnowledgeDashboard(NexusDbContext db) : IDashboardSource
             Failed = g.Count(x => x.Status == "failed"),
             Pages = g.Sum(x => x.PageCount),
         }).SingleOrDefaultAsync(ct);
-        var chunks = await db.Set<KnowledgeChunk>().AsNoTracking().CountAsync(x => documents.Any(d => d.Id == x.DocumentId), ct);
+        var chunks = await db.Set<Chunk>().AsNoTracking().CountAsync(x => documents.Any(d => d.Id == x.DocumentId), ct);
         var added = await DashboardDays.CountAsync(db,
             resources.Where(x => x.Kind == "document" && documents.Any(d => d.Id == x.Id)).Select(x => x.CreatedAt), scope, ct);
         var all = status?.All ?? 0; var ready = status?.Ready ?? 0; var failed = status?.Failed ?? 0;
@@ -46,7 +44,7 @@ internal sealed class KnowledgeDashboard(NexusDbContext db) : IDashboardSource
             .Share("processing", "處理中", processing, DashboardTones.Info)
             .Share("failed", "處理失敗", failed, DashboardTones.Danger)
             .ActiveWhen(processing);
-        var recent = await db.Set<WorkspaceResource>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.Kind == KnowledgeCollection.Kind)
+        var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.Kind == Collection.Kind)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
         foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/knowledge/" + item.Id);
         return section.Build();

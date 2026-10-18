@@ -1,5 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Knowledge.Documents;
 public sealed record DocumentJobDto(JobDto Job, bool CanControl);
 
 /// <summary>使用者可讀取文件的目前處理工作；只有工作擁有者且仍具編輯權的人，才能控制（例如取消）此工作。</summary>
-internal sealed class GetDocumentJob(NexusDbContext db, DocumentAccess documents)
+internal sealed class GetDocumentJob(AppDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/job", (Guid id, ICurrentUser user, GetDocumentJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())

@@ -1,15 +1,16 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycle lifecycle, DocumentIndexer indexer,
+public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle lifecycle, DocumentIndexer indexer,
     AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes) : IBackgroundJobHandler
 {
     public string Kind => "embedding-reindex";
@@ -29,14 +30,14 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
         var found = await ProfileAsync(execution.Job, ct);
         if (!found.IsSuccess) return found.Error;
         var profile = found.Value;
-        var ids = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.CollectionId != null && !x.IsDeleted).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
+        var ids = await db.Set<Document>().AsNoTracking().Where(x => x.CollectionId != null && !x.IsDeleted).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
         var done = 0;
         foreach (var id in ids)
         {
             if (await ValidateRetryAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
             // 匯入或嵌入工作正在改寫這份文件，由它們自己的檢查點填入此向量模型，這裡直接略過。
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) continue;
-            var doc = await db.Set<KnowledgeDocument>().SingleAsync(x => x.Id == id, ct);
+            var doc = await db.Set<Document>().SingleAsync(x => x.Id == id, ct);
             if (!await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct)) return KnowledgeErrors.DocumentPagesMissing;
             var indexed = await VectorsCompleteAsync(doc, profile, ct);
             if (!indexed && await indexer.IndexAsync(execution, doc, profile, ct) is { IsSuccess: false } failed) return failed;
@@ -60,15 +61,15 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
         }
         return Result.Success;
     }
-    private async Task<bool> VectorsCompleteAsync(KnowledgeDocument doc, EmbeddingProfile profile, CancellationToken ct)
+    private async Task<bool> VectorsCompleteAsync(Document doc, EmbeddingProfile profile, CancellationToken ct)
     {
         if (doc.Status != "ready") return false;
-        var chunks = await db.Set<KnowledgeChunk>().CountAsync(x => x.DocumentId == doc.Id, ct);
+        var chunks = await db.Set<Chunk>().CountAsync(x => x.DocumentId == doc.Id, ct);
         if (chunks == 0) return false;
         if (profile.Provider == "none") return true;
         var embeddings = profile.Dimensions == 768
-            ? await (from e in db.Set<ChunkEmbedding768>() join c in db.Set<KnowledgeChunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct)
-            : await (from e in db.Set<ChunkEmbedding1024>() join c in db.Set<KnowledgeChunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct);
+            ? await (from e in db.Set<ChunkEmbedding768>() join c in db.Set<Chunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct)
+            : await (from e in db.Set<ChunkEmbedding1024>() join c in db.Set<Chunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct);
         return chunks == embeddings;
     }
 }

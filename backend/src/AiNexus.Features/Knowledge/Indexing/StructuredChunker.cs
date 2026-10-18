@@ -1,8 +1,8 @@
+using AiNexus.Data.App.Knowledge;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 using System.Data;
-using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Indexing;
 

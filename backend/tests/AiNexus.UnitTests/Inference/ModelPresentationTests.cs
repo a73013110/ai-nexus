@@ -1,5 +1,5 @@
+using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Knowledge;

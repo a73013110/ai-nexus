@@ -1,5 +1,5 @@
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.Models;
 
 namespace AiNexus.Features.Account;
@@ -10,5 +10,5 @@ internal sealed class GetUserSettings(ModelPresentation models)
         .MapGet("/settings", (ICurrentUser user, GetUserSettings handler) => TypedResults.Ok(handler.Handle(user.User)))
         .WithName("GetUserSettings");
 
-    public UserSettingsDto Handle(NexusUser user) => user.Preferences.ToSettingsDto(models);
+    public UserSettingsDto Handle(User user) => user.Preferences.ToSettingsDto(models);
 }

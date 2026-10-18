@@ -10,7 +10,7 @@ namespace AiNexus.Features.Audit;
 /// </summary>
 public sealed class AuditModule : IFeatureModule
 {
-    /// <summary>功能代碼；<c>NexusDbContext</c> 以此植入功能資料。</summary>
+    /// <summary>功能代碼；<c>AppDbContext</c> 以此植入功能資料。</summary>
     public const string Feature = "audit", Policy = Policies.Prefix + Feature;
     public const string ExportRateLimit = "audit-export";
 
@@ -30,5 +30,3 @@ public sealed class AuditModule : IFeatureModule
         ExportActivityAudit.Map(audit);
     }
 }
-
-internal sealed class AuditFeatures() : FeatureSeed(new PlatformFeature(AuditModule.Feature, "活動稽核", "/admin/audit", 97, BuiltInAccess.SystemNavigation, "audit", AdministratorsOnly: true));

@@ -1,13 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Roles;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Administration.Users;
-using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Chat.Context;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.ProjectApi;
@@ -41,7 +41,7 @@ public sealed class FeatureAccessTests
         var conversation = await CreateConversation(client);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             switch (target)
             {
                 case "role": (await db.Set<Role>().SingleAsync(x => x.Id == "member")).Enabled = false; break;
@@ -69,7 +69,7 @@ public sealed class FeatureAccessTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Set<Role>().Add(new() { Id = "reviewer", Name = "覆核人員" });
             db.Set<RoleGroup>().Add(new() { Id = "review", Name = "覆核工作區" });
             db.Set<UserRole>().Add(new() { UserId = me.Id, RoleId = "reviewer" });
@@ -153,7 +153,7 @@ public sealed class FeatureAccessTests
         (await client.GetAsync(path)).EnsureSuccessStatusCode();
         Assert.Equal(2, queries.Count(path, GrantRead));
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RoleGroupFeature>().Where(x => x.FeatureId == FeatureIds.Projects).ExecuteDeleteAsync();
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>().Where(x => x.FeatureId == FeatureIds.Projects).ExecuteDeleteAsync();
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync(path)).StatusCode);
     }
 

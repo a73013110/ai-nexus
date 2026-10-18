@@ -1,13 +1,15 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
 using AiNexus.Features.Account;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +34,7 @@ public sealed class AttachmentStorageTests
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var response = await Upload(alice); response.EnsureSuccessStatusCode();
         var file = (await response.Content.ReadFromJsonAsync<AttachmentDto>())!;
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var metadata = await db.Set<Attachment>().SingleAsync();
         Assert.Null(db.Model.FindEntityType(typeof(Attachment))!.FindProperty("Data"));
         Assert.Equal("original.txt", metadata.FileName); Assert.Equal(32, metadata.StorageKey.Length);
@@ -81,7 +83,7 @@ public sealed class AttachmentStorageTests
         var owner = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(new GroupModelPolicy { GroupId = BuiltInAccess.WorkspaceGroup, StoredAttachmentLimitBytes = 1000 }); await db.SaveChangesAsync();
         }
         (await Upload(member)).EnsureSuccessStatusCode();
@@ -95,7 +97,7 @@ public sealed class AttachmentStorageTests
         capacity = (await member.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!;
         Assert.Equal(1000, capacity.LimitBytes); Assert.Equal(0, capacity.RemainingBytes); Assert.Equal("group", capacity.LimitSource);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await Upload(member, 1)).StatusCode);
-        using var audit = factory.Services.CreateScope(); Assert.Equal(2, await audit.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.user_storage" && x.Result == "saved"));
+        using var audit = factory.Services.CreateScope(); Assert.Equal(2, await audit.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.user_storage" && x.Result == "saved"));
     }
 
     [Fact]
@@ -127,7 +129,7 @@ public sealed class AttachmentStorageTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Upload(client)).StatusCode);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.Equal(AttachmentStates.Deleting, (await db.Set<Attachment>().SingleAsync()).StorageState);
             Assert.Equal(600, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
             fault.FailDelete = false;
@@ -155,12 +157,12 @@ public sealed class AttachmentStorageTests
         var readerResponse = await client.PostAsync($"/api/v1/attachments/{draft.Id}/document", null);
         readerResponse.EnsureSuccessStatusCode(); var reader = (await readerResponse.Content.ReadFromJsonAsync<DocumentDto>())!;
         var second = await Upload(client); second.EnsureSuccessStatusCode(); var interrupted = (await second.Content.ReadFromJsonAsync<AttachmentDto>())!;
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Set<Attachment>().Where(x => x.Id == draft.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddDays(-15)));
         await db.Set<Attachment>().Where(x => x.Id == interrupted.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Pending).SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
         Assert.Empty(await db.Set<Attachment>().ToListAsync());
-        var document = await db.Set<KnowledgeDocument>().SingleAsync(x => x.Id == reader.Id);
+        var document = await db.Set<Document>().SingleAsync(x => x.Id == reader.Id);
         Assert.True(document.IsDeleted); Assert.Null(document.AttachmentId);
         Assert.Equal(0, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
         var root = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value.StoragePath;
@@ -180,7 +182,7 @@ public sealed class AttachmentStorageTests
         fault!.BlockWrite = true;
         var uploading = Upload(client);
         await fault.WriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var reservation = await db.Set<Attachment>().AsNoTracking().SingleAsync();
         await db.Set<Attachment>().Where(x => x.Id == reservation.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
@@ -214,7 +216,7 @@ public sealed class AttachmentStorageTests
         using var client = await factory.SignedInAsync();
         (await Upload(client)).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var original = await db.Set<Attachment>().SingleAsync();
         var root = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value.StoragePath;
         string PathFor(string key) => Path.Combine(root, key[..2], key.Substring(2, 2), key + ".blob");

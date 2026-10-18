@@ -1,3 +1,5 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -5,7 +7,6 @@ using AiNexus.Features.Administration.Navigation;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,7 +57,7 @@ public sealed class ListActivityAuditTests
             "logs.query", "admin.conversation_read", "billing.report.export", "dashboard.platform.read", "integration.record.read", "conversation.created"];
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AuditEvents.AddRange(actions.Select(action => new AuditEvent { OwnerId = owner, Action = action, TraceId = trace, Result = action == "billing.report.export" ? "csv" : "saved" }));
             await db.SaveChangesAsync();
         }
@@ -87,7 +88,7 @@ public sealed class ListActivityAuditTests
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             foreach (var result in new[] { "created", "deleted", "soft_deleted", "queued", "read-only", "cancelled", "executor_lost" })
                 db.AuditEvents.Add(new() { OwnerId = user.Id, Action = "fixture.lifecycle", Result = result });
             await db.SaveChangesAsync();
@@ -112,7 +113,7 @@ public sealed class ListActivityAuditTests
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AuditEvents.AddRange(Enumerable.Range(0, 60).Select(_ => new AuditEvent { OwnerId = user.Id, Action = "fixture.page", Result = "saved" }));
             await db.SaveChangesAsync();
         }
@@ -151,7 +152,7 @@ public sealed class ListActivityAuditTests
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AuditEvents.AddRange(
                 new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "saved", DetailsJson = """{"resourceKey":"=HYPERLINK(\"evil\")"}""" },
                 new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "failed" },
@@ -175,7 +176,7 @@ public sealed class ListActivityAuditTests
         Assert.Contains("\"'=HYPERLINK(\"\"evil\"\")\"", lines[2]);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var record = Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == "audit.export"));
             Assert.Equal(user.Id, record.OwnerId); Assert.Equal("read", record.Result);
             Assert.Contains("\"action\":\"fixture.export\"", record.DetailsJson); Assert.Contains("\"results\":[\"saved\",\"failed\"]", record.DetailsJson);
@@ -184,7 +185,7 @@ public sealed class ListActivityAuditTests
         using (var scope = factory.Services.CreateScope())
         {
             // 超過上限被拒的嘗試同樣留有紀錄。
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == "audit.export" && x.DetailsJson!.Contains("fixture.overflow")));
         }
         Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/v1/admin/audit/export?action=fixture.export")).StatusCode);
@@ -198,7 +199,7 @@ public sealed class ListActivityAuditTests
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.AuditEvents.AddRange(
                 new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.saved", Result = "saved" },
                 new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.failed", Result = "failed" },

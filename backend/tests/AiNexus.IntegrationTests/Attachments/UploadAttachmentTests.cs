@@ -1,8 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Chat.Transcripts;
@@ -24,7 +24,7 @@ public sealed class UploadAttachmentTests
         await RunWithAttachment(client, conversation.Id, history.Id);
         using (var scope = factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var files = await db.Set<Attachment>().ToListAsync();
             foreach (var file in files) file.CreatedAt = DateTimeOffset.UtcNow.AddDays(-15);
             await db.SaveChangesAsync();

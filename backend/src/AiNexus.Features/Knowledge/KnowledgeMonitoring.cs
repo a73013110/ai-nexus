@@ -1,6 +1,6 @@
-using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Knowledge.Embeddings;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +9,7 @@ namespace AiNexus.Features.Knowledge;
 /// <summary>
 /// 文件索引的執行期監控，涵蓋知識庫、專案與私人讀取文件。只統計未完成與失敗的文件（靠狀態索引），已就緒的不計入；只要有任一文件失敗即判為降級。
 /// </summary>
-internal sealed class KnowledgeMonitoring(NexusDbContext db, EmbeddingService embedding) : IMonitoringSource
+internal sealed class KnowledgeMonitoring(AppDbContext db, EmbeddingService embedding) : IMonitoringSource
 {
     public string Id => "knowledge-index";
     public string Name => "知識索引";
@@ -18,8 +18,8 @@ internal sealed class KnowledgeMonitoring(NexusDbContext db, EmbeddingService em
 
     public async Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
-        // KnowledgeDocument 沒有軟刪除的全域過濾，已刪除的文件必須在這裡明確排除。
-        var counts = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => !x.IsDeleted && x.Status != "ready")
+        // Document 沒有軟刪除的全域過濾，已刪除的文件必須在這裡明確排除。
+        var counts = await db.Set<Document>().AsNoTracking().Where(x => !x.IsDeleted && x.Status != "ready")
             .GroupBy(x => x.Status).Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
         var pending = counts.Where(x => x.Status == "queued").Sum(x => x.Count);
         var failed = counts.Where(x => x.Status == "failed").Sum(x => x.Count);

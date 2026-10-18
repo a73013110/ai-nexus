@@ -1,3 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
@@ -6,7 +9,6 @@ using AiNexus.Features.Inference.ModelPolicies;
 using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -39,7 +41,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
-internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPolicyService policy,
+internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPolicyService policy,
     IOptions<InferenceOptions> inference, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

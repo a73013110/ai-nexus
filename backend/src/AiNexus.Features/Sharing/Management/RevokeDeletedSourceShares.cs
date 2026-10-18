@@ -1,4 +1,4 @@
-using AiNexus.Features.Artifacts;
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Platform.Events;

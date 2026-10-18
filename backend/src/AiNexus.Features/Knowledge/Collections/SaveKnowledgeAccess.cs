@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
@@ -12,5 +13,5 @@ internal sealed class SaveKnowledgeAccess(ResourceAccess access)
             handler.HandleAsync(user.Id, id, request, ct).ToHttpResultAsync())
         .WithName("SaveKnowledgeAccess");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, ResourceAclRequest request, CancellationToken ct) => access.SetAclAsync(actor, id, KnowledgeCollection.Kind, request, ct);
+    public Task<Result> HandleAsync(Guid actor, Guid id, ResourceAclRequest request, CancellationToken ct) => access.SetAclAsync(actor, id, Collection.Kind, request, ct);
 }

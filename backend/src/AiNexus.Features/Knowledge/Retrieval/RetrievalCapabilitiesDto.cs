@@ -1,4 +1,4 @@
-using AiNexus.Features.Persistence;
+using AiNexus.Data.App;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 

@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Inference;
 using Microsoft.Extensions.Options;
 

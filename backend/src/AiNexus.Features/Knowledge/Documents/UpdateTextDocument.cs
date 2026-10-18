@@ -1,9 +1,12 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Attachments.Storage;
-using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -15,7 +18,7 @@ namespace AiNexus.Features.Knowledge.Documents;
 /// 取代使用者可編輯的純文字來源內容並重新索引。編輯需附上所依據的版本號；若已有更新的儲存版本，
 /// 或來源仍在處理中，即為衝突。
 /// </summary>
-internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentQuota quota, JobService jobs, TimeProvider clock)
+internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentQuota quota, JobService jobs, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
@@ -48,11 +51,11 @@ internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess docum
             document.TextContent = source.Text; document.TextVersion++; document.FileName = source.Title + ".txt";
             document.AttachmentId = uploaded.Id; document.Status = "queued"; document.PageCount = 0; document.ChunkCount = 0;
             document.Warning = null;
-            await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
-            db.Add(new AttachmentReference { ResourceId = id, AttachmentId = uploaded.Id });
+            await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+            db.Add(new ResourceAttachment { ResourceId = id, AttachmentId = uploaded.Id });
             await db.Set<Attachment>().Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            var resource = await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
+            var resource = await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
             document.JobId = jobs.Enqueue(actor, id, id, "document-ingest", document.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.text.updated", Result = "reindexing" });

@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
 using System.Diagnostics;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ public sealed partial class BackgroundJobWorker(
     public async Task<bool> ProcessNextAsync(CancellationToken stop)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = clock.GetUtcNow();
         var candidate = await db.Set<BackgroundJob>().AsNoTracking()
             .Where(x => x.Status == "queued" || (x.Status == "running" && x.LeaseUntil < now))
@@ -188,7 +189,7 @@ public sealed partial class BackgroundJobWorker(
             {
                 await Task.Delay(2000, ct);
                 using var scope = scopes.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var count = await db.Set<BackgroundJob>()
                     .Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running" && !x.CancelRequested)
                     .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddSeconds(60)), ct);

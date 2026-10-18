@@ -1,6 +1,7 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Attachments;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.ModelPolicies;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace AiNexus.Features.Attachments.Storage;
 [ValidatedInHandler("The limit is checked inside the audited administrative transaction (SetUserAttachmentStorage).")]
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
 
-public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOptions<AttachmentOptions> options)
+public sealed class AttachmentQuota(AppDbContext db, AccessService access, IOptions<AttachmentOptions> options)
 {
     // 個人覆寫刻意優先於繼承的上限（包含群組上限）。
     public static long Effective(long? personal, long? group, long baseline) => personal ?? group ?? baseline;

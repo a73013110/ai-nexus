@@ -5,7 +5,7 @@
 還原所有鎖定版本的相依套件。
 
 .DESCRIPTION
-依 lockfile 還原 npm（frontend，含 Playwright）、NuGet、資料庫專案（database/App）與 dotnet 本機工具（dotnet-ef、SqlPackage），
+依 lockfile 還原 npm（frontend，含 Playwright）、NuGet、資料庫專案（database/App）與 dotnet 本機工具（SqlPackage），
 並在缺少時為目前使用者安裝 Verify.ps1 需要的 Pester。
 
 .EXAMPLE

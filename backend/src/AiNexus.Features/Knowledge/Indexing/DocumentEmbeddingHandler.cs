@@ -1,3 +1,4 @@
+using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Platform.Errors;

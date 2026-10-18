@@ -1,7 +1,8 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
 using System.Text.Json;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,7 +26,7 @@ internal sealed class SaveArtifactRequestValidator : RequestValidator<SaveArtifa
 
 /// <summary>對使用者可編輯的成果新增一筆不可變的版本；不會覆寫其他人在此期間保存的版本。</summary>
 internal sealed class SaveArtifact(
-    NexusDbContext db,
+    AppDbContext db,
     ResourceAccess access,
     ResourceWriteLock writes,
     GetArtifact reader,

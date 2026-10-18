@@ -1,13 +1,13 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 
-public sealed class RetrievalAuthorization(NexusDbContext db, ResourceAccess access, AccessService features)
+public sealed class RetrievalAuthorization(AppDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>
     /// 確認呼叫者可使用這些知識庫。<paramref name="fresh"/> 會重新讀取本次請求已讀過的授權，用於遠端呼叫之後的再次檢查，
@@ -29,7 +29,7 @@ public sealed class RetrievalAuthorization(NexusDbContext db, ResourceAccess acc
     {
         if (hits.Count == 0) return Result.Success;
         var ids = hits.Select(x => x.DocumentId).Distinct().ToArray();
-        var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null)
+        var docs = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null)
             .Select(x => new { x.Id, Collection = x.CollectionId!.Value }).ToListAsync(ct);
         if (docs.Count != ids.Length) return KnowledgeErrors.SourceChanged;
         var collections = docs.Select(x => x.Collection).Distinct().ToArray();

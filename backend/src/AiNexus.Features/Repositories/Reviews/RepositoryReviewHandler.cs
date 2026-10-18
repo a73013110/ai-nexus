@@ -1,3 +1,6 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Repositories;
 using System.Diagnostics;
 using System.Text;
 using AiNexus.Features.AccessControl;
@@ -5,7 +8,6 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,7 +15,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Repositories.Reviews;
 
 /// <summary>執行凍結的 review 快照。每次模型呼叫前都會重新檢查權限與來源，結果依序號存檢查點。</summary>
-public sealed partial class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewService reviews, AccessService features, ModelTaskService model,
+public sealed partial class RepositoryReviewHandler(AppDbContext db, RepositoryReviewService reviews, AccessService features, ModelTaskService model,
     ModelCatalog catalog, ModelPresentation presentation, IOptions<InferenceOptions> inference, ILogger<RepositoryReviewHandler> logger) : IBackgroundJobHandler
 {
     public string Kind => "repository-review";

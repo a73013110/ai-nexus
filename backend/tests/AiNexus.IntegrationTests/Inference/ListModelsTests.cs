@@ -1,6 +1,6 @@
+using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl.ModelPolicies;
 using AiNexus.Features.Inference.Models;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

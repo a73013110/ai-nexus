@@ -1,10 +1,10 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
+using AiNexus.Data.App.Knowledge;
 using System.Text;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
-using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -15,7 +15,7 @@ namespace AiNexus.Features.Knowledge.Retrieval;
 /// 本模組提供給生成流程的檢索契約：對話所選的知識庫、單次執行經權限檢查的來源、預留的上下文與引用。
 /// 模組自己的端點是本檔旁邊的各個 slice。
 /// </summary>
-public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options)
+public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options)
 {
     public Task<Result<KnowledgeSelectionDto>> SelectionAsync(Guid actor, Guid conversation, CancellationToken ct) => new GetConversationKnowledge(db, conversations).HandleAsync(actor, conversation, ct);
     public async Task<Result<int>> ReservedContextAsync(Guid actor, Guid conversation, CancellationToken ct)
@@ -26,7 +26,7 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
         var allowed = await authorization.CollectionsAsync(actor, selection.CollectionIds, ct);
         if (!allowed.IsSuccess) return allowed.Error;
         if (selection.CollectionIds.Count == 0) return 0;
-        var count = await (from chunk in db.Set<KnowledgeChunk>() join doc in db.Set<KnowledgeDocument>() on chunk.DocumentId equals doc.Id
+        var count = await (from chunk in db.Set<Chunk>() join doc in db.Set<Document>() on chunk.DocumentId equals doc.Id
             where doc.CollectionId != null && selection.CollectionIds.Contains(doc.CollectionId.Value) && doc.Status == "ready" && !doc.IsDeleted
             select chunk.Id).CountAsync(ct);
         return count == 0 ? 0 : Math.Min(options.Value.Retrieval.ContextTokens, Math.Min(count, options.Value.Retrieval.TopK) * (options.Value.Indexing.ChunkMaxTokens + 100)) + TokenEstimator.Estimate(Prompt([new(Guid.Empty, "參考資料", 1, "", 0, Guid.Empty)]));
