@@ -1,0 +1,4 @@
+# scripts/Export-Database.ps1 匯出時移除、不進版控的資料表：一行一個 schema.name，可用萬用字元（* ?），# 之後是註解。
+# 不依名稱猜測暫存表或備份表（Orders_temp、temp_Imports 也可能是正式的業務表），所以只列確定要排除的表，並寫明原因。
+# 列在這裡的表若被 view 或 procedure 引用，dotnet build database/App 會失敗。
+

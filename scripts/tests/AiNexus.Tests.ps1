@@ -147,7 +147,7 @@ Describe 'Invoke-RepoExtractPostProcess' {
                 'CREATE TABLE [knowledge].[Chunks] ([Id] INT NOT NULL, [Text] NVARCHAR (4000) NOT NULL, CONSTRAINT [pk_Chunks] PRIMARY KEY ([Id]));',
                 "CREATE FULLTEXT INDEX ON [knowledge].[Chunks]`r`n    ([Text] LANGUAGE 1028)`r`n    KEY INDEX [pk_Chunks]`r`n    ON [KnowledgeSearch];") + @($Columns | ForEach-Object { Get-Description $_ }))
         }
-        $exclude = @('dbo.__EFMigrationsHistory', '*.*_bak', '*.*_bak[0-9_]*')
+        $exclude = @('dbo.__EFMigrationsHistory', 'identity.Users_bak', 'identity.Users_bak2026*')
     }
 
     BeforeEach {
@@ -209,6 +209,25 @@ Describe 'Invoke-RepoExtractPostProcess' {
     It 'rejects a schema named like a hand-written folder' {
         Write-Sql 'Seed/Tables/Values.sql' 'CREATE TABLE [Seed].[Values] ([Id] INT NOT NULL);'
         { Invoke-RepoExtractPostProcess $extract $exclude } | Should -Throw '*Seed*'
+    }
+}
+
+Describe 'Read-RepoExclusionList' {
+    It 'reads one pattern per line, dropping comments and blank lines' {
+        $file = Join-Path $TestDrive 'export-exclusions.txt'
+        [IO.File]::WriteAllText($file, "# 說明`n`ndbo.__EFMigrationsHistory   # migration 殘留`r`n  sales.Orders_bak*  `n")
+        Read-RepoExclusionList $file | Should -Be @('dbo.__EFMigrationsHistory', 'sales.Orders_bak*')
+    }
+
+    It 'excludes nothing when the file is missing' {
+        @(Read-RepoExclusionList (Join-Path $TestDrive 'missing.txt')).Count | Should -Be 0
+    }
+}
+
+Describe 'Get-RepoUnusedExclusion' {
+    It 'returns the patterns that removed no table' {
+        $removed = @('identity/Tables/Users_bak.sql', 'Security/app_user.sql')
+        Get-RepoUnusedExclusion @('identity.Users_bak', 'identity.*_old', 'Security.app_user') $removed | Should -Be @('identity.*_old', 'Security.app_user')
     }
 }
 
