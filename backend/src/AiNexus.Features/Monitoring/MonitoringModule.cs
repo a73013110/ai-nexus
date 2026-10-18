@@ -15,7 +15,7 @@ namespace AiNexus.Features.Monitoring;
 /// <summary>本實例的即時在線、請求流量與相依服務健康度。每個用例各自一個檔案。</summary>
 public sealed class MonitoringModule : IFeatureModule
 {
-    public const string Feature = "monitoring", Policy = Policies.Prefix + Feature;
+    public const string Feature = FeatureIds.Monitoring, Policy = Policies.Prefix + Feature;
     public const string PresenceRateLimit = "presence";
 
     public static void AddServices(IHostApplicationBuilder builder)
