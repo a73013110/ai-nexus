@@ -36,4 +36,6 @@ internal static class AttachmentsErrors
     public static readonly Error SpreadsheetCellLimit = Error.Invalid("spreadsheet_cell_limit");
     public static readonly Error ContentInvalid = Error.Unavailable("attachment_content_invalid");
     public static readonly Error ContentMissing = Error.Unavailable("attachment_content_missing");
+    public static readonly Error InvalidStorageLimit = Error.Invalid("invalid_storage_limit");
+    public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
 }

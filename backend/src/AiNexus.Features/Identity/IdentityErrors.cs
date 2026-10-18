@@ -24,4 +24,13 @@ internal static class IdentityErrors
     public static readonly Error TestSourceRevoked = Error.Unauthenticated("test_source_revoked");
     public static readonly Error IdentityNotFound = Error.NotFound("identity_not_found");
     public static readonly Error TestSessionInvalid = Error.Unauthenticated("test_session_invalid");
+    public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
+    public static readonly Error InvalidUser = Error.Invalid("invalid_user");
+    public static readonly Error InvalidLoginMethods = Error.Invalid("invalid_login_methods");
+    public static readonly Error InvalidPassword = Error.Invalid("invalid_password");
+    public static readonly Error LocalPasswordRequired = Error.Invalid("local_password_required");
+    public static readonly Error InvalidRoles = Error.Invalid("invalid_roles");
+    public static readonly Error UserNotFound = Error.NotFound("user_not_found");
+    public static readonly Error AccountExists = Error.Conflict("account_exists");
+    public static readonly Error AdBindingImmutable = Error.Conflict("ad_binding_immutable");
 }

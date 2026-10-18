@@ -1,12 +1,33 @@
+using AiNexus.Features.AccessControl.Management;
+using AiNexus.Features.AccessControl.Navigation;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.AccessControl;
 
+/// <summary>
+/// 授權資料與存取管理：角色、功能、選單群組的編輯，以及所有模組的行政變更共用的稽核（<see cref="AdministrativeAudit"/>）。
+/// 不依賴任何其他業務模組。
+/// </summary>
 public sealed class AccessControlModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<AccessService>();
+        var services = builder.Services;
+        services.AddScoped<AccessService>();
+        services.AddScoped<AdministrativeAudit>();
+        services.AddScoped<AdministrativeReadAudit>();
+        services.AddSingleton<AdministrativeWriteLock>();
+        services.AddFeaturePolicy(FeatureIds.Admin);
+    }
+
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
+        SaveRole.Map(admin);
+        SaveFeature.Map(admin);
+        CreateNavigationGroup.Map(admin);
+        UpdateNavigationGroup.Map(admin);
+        DeleteNavigationGroup.Map(admin);
     }
 }
 

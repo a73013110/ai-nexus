@@ -7,12 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
+using AiNexus.Features.Conversations;
 
 namespace AiNexus.IntegrationTests.Inference;
 

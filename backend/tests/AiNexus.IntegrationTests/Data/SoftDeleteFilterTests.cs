@@ -5,7 +5,6 @@ using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Knowledge.Documents;
@@ -17,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Projects.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
+using AiNexus.Features.Operations;
 
 namespace AiNexus.IntegrationTests.Data;
 

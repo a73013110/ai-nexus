@@ -3,7 +3,6 @@ using AiNexus.Data.App.AccessControl;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Chat.Runs;
 using AiNexus.Features.Identity;
@@ -104,7 +103,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             });
             services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = Path.Combine(files, "attachments"); configureAttachments?.Invoke(options); });
             services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = Path.Combine(files, "logs"); options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
-            services.PostConfigure<AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
+            services.PostConfigure<AdminBootstrapOptions>(options => options.Administrators = bootstrapAdministrators);
             configureServices?.Invoke(services);
         });
     }

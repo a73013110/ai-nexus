@@ -26,4 +26,5 @@ internal static class InferenceErrors
     public static readonly Error ProviderUnavailable = Error.Unavailable("provider_unavailable");
     public static readonly Error ModelNotAllowed = Error.Invalid("model_not_allowed");
     public static readonly Error ReasoningNotSupported = Error.Invalid("reasoning_not_supported");
+    public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
 }

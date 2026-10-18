@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Management;
 
 namespace AiNexus.IntegrationTests.Support;
 
