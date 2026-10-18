@@ -1,11 +1,11 @@
 using AiNexus.Data.App;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.IdentityApi;

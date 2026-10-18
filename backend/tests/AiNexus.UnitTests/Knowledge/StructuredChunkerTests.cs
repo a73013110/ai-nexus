@@ -1,6 +1,6 @@
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Embeddings;
-using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Knowledge.Embeddings;
+using AiNexus.Features.Work.Knowledge.Indexing;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.UnitTests.Knowledge;

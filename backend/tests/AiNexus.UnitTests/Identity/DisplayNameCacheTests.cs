@@ -1,4 +1,4 @@
-using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.UnitTests.Identity;
 

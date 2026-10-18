@@ -1,29 +1,29 @@
 using AiNexus.Data.App;
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Audit;
-using AiNexus.Features.Billing;
-using AiNexus.Features.Chat;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Dashboard;
-using AiNexus.Features.Diagnostics;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Integrations;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Library;
-using AiNexus.Features.Monitoring;
-using AiNexus.Features.Notifications;
-using AiNexus.Features.Operations;
-using AiNexus.Features.Projects;
-using AiNexus.Features.Quality;
-using AiNexus.Features.Repositories;
-using AiNexus.Features.Sharing;
-using AiNexus.Features.WebSearch;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Admin.Audit;
+using AiNexus.Features.Admin.Billing;
+using AiNexus.Features.Work.Chat;
+using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Dashboard;
+using AiNexus.Features.Admin.Diagnostics;
+using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Admin.Integrations;
+using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Prompts;
+using AiNexus.Features.Admin.Monitoring;
+using AiNexus.Features.Platform.Notifications;
+using AiNexus.Features.Admin.Operations;
+using AiNexus.Features.Work.Projects;
+using AiNexus.Features.Admin.Quality;
+using AiNexus.Features.Work.Repositories;
+using AiNexus.Features.Work.Sharing;
+using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
@@ -63,8 +63,8 @@ public static class FeatureModules
         Add<JobsModule>(builder);
         Add<AuditModule>(builder);
         Add<ConversationsModule>(builder);
-        Add<LibraryModule>(builder);
-        Add<AttachmentsModule>(builder);
+        Add<PromptsModule>(builder);
+        Add<FilesModule>(builder);
         Add<InferenceModule>(builder);
         Add<ChatModule>(builder);
         Add<MonitoringModule>(builder);
@@ -92,8 +92,8 @@ public static class FeatureModules
         Map<ConversationsModule>(api);
         Map<InferenceModule>(api);
         Map<ChatModule>(api);
-        Map<AttachmentsModule>(api);
-        Map<LibraryModule>(api);
+        Map<FilesModule>(api);
+        Map<PromptsModule>(api);
         Map<AuditModule>(api);
         Map<JobsModule>(api);
         Map<KnowledgeModule>(api);
@@ -110,7 +110,7 @@ public static class FeatureModules
         Map<OperationsModule>(api);
         Map<IdentityModule>(api);
         ConversationsModule.MapAdministration(api);
-        AttachmentsModule.MapAdministration(api);
+        FilesModule.MapAdministration(api);
         InferenceModule.MapAdministration(api);
         Map<AccessControlModule>(api);
         Map<BillingModule>(api);
@@ -126,7 +126,7 @@ public static class FeatureModules
     /// <summary>
     /// 啟動時檢查功能模組依賴的外部環境（目前是附件儲存目錄）。環境不健全時要在對外服務前中止，而不是等到第一次請求才失敗。
     /// </summary>
-    public static void VerifyStartup(IServiceProvider services) => AttachmentsModule.VerifyStorage(services);
+    public static void VerifyStartup(IServiceProvider services) => FilesModule.VerifyStorage(services);
 
     private static void Add<TModule>(IHostApplicationBuilder builder) where TModule : IFeatureModule => TModule.AddServices(builder);
     private static void Map<TModule>(RouteGroupBuilder api) where TModule : IFeatureModule => TModule.MapEndpoints(api);

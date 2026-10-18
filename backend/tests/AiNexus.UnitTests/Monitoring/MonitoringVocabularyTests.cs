@@ -1,4 +1,4 @@
-using AiNexus.Features.Monitoring;
+using AiNexus.Features.Admin.Monitoring;
 
 namespace AiNexus.UnitTests.Monitoring;
 

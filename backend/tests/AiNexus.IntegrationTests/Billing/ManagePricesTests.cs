@@ -2,13 +2,13 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
+using AiNexus.Features.Platform.Account;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Billing.Prices;
-using AiNexus.Features.Chat.Runs;
-using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Billing.Reports;
+using AiNexus.Features.Admin.Billing.Prices;
+using AiNexus.Features.Work.Chat.Runs;
+using AiNexus.Features.Work.Chat.Transcripts;
+using AiNexus.Features.Admin.Billing.Reports;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Billing;

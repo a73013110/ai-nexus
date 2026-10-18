@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using AiNexus.Features.Diagnostics;
+using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.UnitTests.Support;
 using Microsoft.AspNetCore.Http;

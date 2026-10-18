@@ -1,8 +1,8 @@
 using AiNexus.Data.App.Conversations;
-using AiNexus.Features.Chat.Transcripts;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Knowledge;
+using AiNexus.Features.Work.Chat.Transcripts;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Work.Knowledge;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.UnitTests.Inference;

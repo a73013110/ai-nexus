@@ -1,15 +1,15 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Artifacts.Export;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Attachments.Storage;
-using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Integrations;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Retrieval;
-using AiNexus.Features.Repositories;
-using AiNexus.Features.WebSearch;
+using AiNexus.Features.Work.Artifacts.Export;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Files.Storage;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Admin.Integrations;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Features.Work.Repositories;
+using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.SqlClient;
@@ -38,7 +38,7 @@ public static class DeploymentVerifier
             var ad = scope.ServiceProvider.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value;
             _ = scope.ServiceProvider.GetRequiredService<IOptions<AdminBootstrapOptions>>().Value;
             var knowledge = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
-            var attachments = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value;
+            var attachments = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value;
             var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<AiNexus.Platform.Diagnostics.DiagnosticOptions>>().Value;
 
             var diagnosticPath = AiNexus.Platform.Diagnostics.DiagnosticJournal.Resolve(diagnostics.Directory, environment);

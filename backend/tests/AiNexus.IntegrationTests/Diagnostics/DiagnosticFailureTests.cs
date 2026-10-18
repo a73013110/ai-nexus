@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
-using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.Data.SqlClient;

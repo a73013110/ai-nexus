@@ -1,8 +1,0 @@
-using AiNexus.Platform.Errors;
-
-namespace AiNexus.Features.Dashboard;
-
-internal static class DashboardErrors
-{
-    public static readonly Error InvalidScope = Error.Invalid("invalid_dashboard_scope");
-}

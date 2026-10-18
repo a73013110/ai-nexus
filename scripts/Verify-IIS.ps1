@@ -53,9 +53,9 @@ foreach ($pair in @(@('LocalConfigPath', '..\config\appsettings.Production.json'
     $hosts = [string]$settings['AllowedHosts']
     Add-Check 'AllowedHosts configured' ($hosts -and $hosts -notmatch 'company\.internal') '填實際的 IIS DNS 主機名稱（不含 scheme 與 port）'
 
-    $attachments = if ($environment['Attachments__StoragePath']) { $environment['Attachments__StoragePath'] } else { [string](& $section 'Attachments')['StoragePath'] }
+    $attachments = if ($environment['Files__StoragePath']) { $environment['Files__StoragePath'] } else { [string](& $section 'Files')['StoragePath'] }
     $absolute = ![string]::IsNullOrWhiteSpace($attachments) -and [IO.Path]::IsPathFullyQualified($attachments)
-    Add-Check 'Attachment path absolute' $absolute 'web.config 的 Attachments__StoragePath 優先於外部 JSON'
+    Add-Check 'Attachment path absolute' $absolute 'web.config 的 Files__StoragePath 優先於外部 JSON'
     if ($absolute) {
         $path = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($attachments))
         Add-Check 'Attachments outside app' (Test-Outside $path) $path

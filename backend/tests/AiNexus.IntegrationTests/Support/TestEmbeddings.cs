@@ -1,5 +1,5 @@
 using AiNexus.Data.App.Knowledge;
-using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Work.Knowledge.Embeddings;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.IntegrationTests.Support;

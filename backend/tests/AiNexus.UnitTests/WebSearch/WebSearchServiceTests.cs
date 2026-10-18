@@ -1,6 +1,6 @@
 using AiNexus.Data.App.WebSearch;
 using System.Text.Json;
-using AiNexus.Features.WebSearch;
+using AiNexus.Features.Platform.WebSearch;
 
 namespace AiNexus.UnitTests.WebSearch;
 

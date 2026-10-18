@@ -1,11 +1,11 @@
 using AiNexus.Data.App;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Platform.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Inference;

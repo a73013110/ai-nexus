@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Chat.Transcripts;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Conversations;

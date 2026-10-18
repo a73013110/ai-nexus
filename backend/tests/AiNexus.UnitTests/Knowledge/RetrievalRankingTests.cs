@@ -1,5 +1,5 @@
-using AiNexus.Features.Knowledge.Indexing;
-using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Work.Knowledge.Indexing;
+using AiNexus.Features.Work.Knowledge.Retrieval;
 
 namespace AiNexus.UnitTests.Knowledge;
 

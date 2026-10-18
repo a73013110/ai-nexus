@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Platform.Inference;
 
 namespace AiNexus.IntegrationTests.Support;
 

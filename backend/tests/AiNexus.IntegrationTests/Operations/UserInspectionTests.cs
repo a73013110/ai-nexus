@@ -3,13 +3,13 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Audit;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Operations;
 

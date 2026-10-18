@@ -1,4 +1,4 @@
-using AiNexus.Features.Integrations.Sources;
+using AiNexus.Features.Admin.Integrations.Sources;
 using AiNexus.Platform.Data.Sql;
 
 namespace AiNexus.UnitTests.Integrations;

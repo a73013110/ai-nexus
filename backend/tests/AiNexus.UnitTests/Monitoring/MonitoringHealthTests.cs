@@ -1,4 +1,4 @@
-using AiNexus.Features.Monitoring.Snapshots;
+using AiNexus.Features.Admin.Monitoring.Snapshots;
 using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.UnitTests.Monitoring;

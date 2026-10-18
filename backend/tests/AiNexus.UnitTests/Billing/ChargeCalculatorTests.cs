@@ -1,5 +1,5 @@
 using AiNexus.Data.App.Billing;
-using AiNexus.Features.Billing.Charges;
+using AiNexus.Features.Admin.Billing.Charges;
 
 namespace AiNexus.UnitTests.Billing;
 

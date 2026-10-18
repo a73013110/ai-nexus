@@ -1,7 +1,7 @@
 using AiNexus.Data.App.Identity;
-using AiNexus.Features.Monitoring;
-using AiNexus.Features.Monitoring.Snapshots;
-using AiNexus.Features.Monitoring.Traffic;
+using AiNexus.Features.Admin.Monitoring;
+using AiNexus.Features.Admin.Monitoring.Snapshots;
+using AiNexus.Features.Admin.Monitoring.Traffic;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 

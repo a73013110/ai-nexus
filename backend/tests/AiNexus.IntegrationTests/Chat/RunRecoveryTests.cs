@@ -3,9 +3,9 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Identity;
 using AiNexus.Data.App.Inference;
 using System.Net.Http.Json;
-using AiNexus.Features.Chat.Runs;
-using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Work.Chat.Runs;
+using AiNexus.Features.Platform.Inference.ModelPolicies;
+using AiNexus.Features.Platform.Inference.Runs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

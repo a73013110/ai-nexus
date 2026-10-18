@@ -3,9 +3,9 @@ using AiNexus.Data.App.Billing;
 using AiNexus.Data.App.Identity;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Billing.Reports;
-using AiNexus.Features.Dashboard;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Billing.Reports;
+using AiNexus.Features.Work.Dashboard;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Billing;

@@ -1,0 +1,36 @@
+using AiNexus.Data.App.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace AiNexus.Data.App.Files;
+
+public sealed class Attachment
+{
+    public const int FileNameMaxLength = 180;
+
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OwnerId { get; set; }
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long Size { get; set; }
+    public string StorageKey { get; set; } = Guid.NewGuid().ToString("N");
+    public string StorageState { get; set; } = AttachmentStates.Ready;
+    public string? ExtractedText { get; set; }
+    public bool InLibrary { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+internal sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachment>
+{
+    public void Configure(EntityTypeBuilder<Attachment> file)
+    {
+        file.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
+        file.ToTable("Attachments", "files");
+        file.HasKey(x => x.Id);
+        file.Property(x => x.FileName).HasMaxLength(Attachment.FileNameMaxLength);
+        file.Property(x => x.ContentType).HasMaxLength(80);
+        file.Property(x => x.StorageKey).HasMaxLength(32);
+        file.Property(x => x.StorageState).HasMaxLength(16);
+        file.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

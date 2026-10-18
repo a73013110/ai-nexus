@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

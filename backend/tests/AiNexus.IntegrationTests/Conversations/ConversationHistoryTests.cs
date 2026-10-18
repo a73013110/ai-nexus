@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Admin.Identity.Users;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Conversations;

@@ -32,10 +32,10 @@ Describe 'Get-RepoSetting and Set-RepoSetting' {
 
     It 'returns $null for a missing path in strict mode' {
         Set-StrictMode -Version Latest
-        $settings = @{ Attachments = @{} }
-        Get-RepoSetting $settings 'Attachments.StoragePath' | Should -BeNullOrEmpty
+        $settings = @{ Files = @{} }
+        Get-RepoSetting $settings 'Files.StoragePath' | Should -BeNullOrEmpty
         Get-RepoSetting $settings 'Diagnostics.Directory' | Should -BeNullOrEmpty
-        Get-RepoSetting $settings 'Attachments.StoragePath.Deeper' | Should -BeNullOrEmpty
+        Get-RepoSetting $settings 'Files.StoragePath.Deeper' | Should -BeNullOrEmpty
     }
 }
 
@@ -88,7 +88,7 @@ Describe 'Test-RepoForbiddenPath' {
     }
 
     It 'allows <Path>' -ForEach @(
-        @{ Path = 'backend/src/AiNexus.Features/Artifacts/ExportArtifact.cs' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.json' },
+        @{ Path = 'backend/src/AiNexus.Features/Work/Artifacts/ExportArtifact.cs' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.json' },
         @{ Path = 'backend/src/AiNexus.Host/appsettings.Local.example.json' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.Production.example.json' },
         @{ Path = '.env.example' }, @{ Path = 'docs/development/local-folders.md' }) {
         Test-RepoForbiddenPath $Path | Should -BeFalse

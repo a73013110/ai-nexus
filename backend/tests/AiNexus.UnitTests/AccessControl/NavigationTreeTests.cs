@@ -1,5 +1,5 @@
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.AccessControl.Navigation;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.AccessControl.Navigation;
 
 namespace AiNexus.UnitTests.AccessControl;
 

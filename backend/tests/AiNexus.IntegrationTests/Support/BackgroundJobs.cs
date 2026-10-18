@@ -1,4 +1,4 @@
-using AiNexus.Features.Jobs;
+using AiNexus.Features.Work.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Support;

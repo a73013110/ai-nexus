@@ -1,4 +1,4 @@
-using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

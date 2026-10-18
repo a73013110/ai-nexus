@@ -2,18 +2,18 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Account;
-using AiNexus.Features.Audit;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Chat.Context;
-using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Work.Chat.Context;
+using AiNexus.Features.Platform.Inference.ModelPolicies;
+using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Features.Platform.Inference.ModelTasks;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Operations;
+using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Inference;
 

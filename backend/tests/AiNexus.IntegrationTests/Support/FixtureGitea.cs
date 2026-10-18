@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Work.Repositories;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.IntegrationTests.Support;

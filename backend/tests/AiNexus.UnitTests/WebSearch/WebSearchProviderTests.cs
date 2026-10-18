@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using AiNexus.Features.WebSearch;
+using AiNexus.Features.Platform.WebSearch;
 using AiNexus.UnitTests.Support;
 using Microsoft.Extensions.Options;
 

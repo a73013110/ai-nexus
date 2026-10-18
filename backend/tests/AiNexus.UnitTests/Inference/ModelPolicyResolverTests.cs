@@ -1,4 +1,4 @@
-using AiNexus.Features.Inference.ModelPolicies;
+using AiNexus.Features.Platform.Inference.ModelPolicies;
 
 namespace AiNexus.UnitTests.Inference;
 

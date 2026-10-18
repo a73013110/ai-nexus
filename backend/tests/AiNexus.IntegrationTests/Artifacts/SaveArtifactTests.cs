@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Account;
-using AiNexus.Features.Artifacts.Management;
+using AiNexus.Features.Work.Artifacts;
+using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Artifacts.Management;
 using static AiNexus.IntegrationTests.Support.ArtifactApi;
 
 namespace AiNexus.IntegrationTests.Artifacts;

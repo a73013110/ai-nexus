@@ -1,8 +1,8 @@
 using AiNexus.Data.App.Inference;
 using System.Globalization;
 using System.Net.Http.Json;
-using AiNexus.Features.Inference.ModelPolicies;
-using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Platform.Inference.ModelPolicies;
+using AiNexus.Features.Platform.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Chat;

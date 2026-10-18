@@ -1,13 +1,13 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attachments;
+using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Repositories;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Repositories.Browsing;
-using AiNexus.Features.Repositories.Handoff;
+using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Collections;
+using AiNexus.Features.Work.Repositories.Browsing;
+using AiNexus.Features.Work.Repositories.Handoff;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Repositories.RepositoryConnectionTests;

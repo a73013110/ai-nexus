@@ -1,17 +1,17 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Account;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Chat.Runs;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Authentication;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Inference.Models;
-using AiNexus.Features.Inference.Runs;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Chat.Runs;
+using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Features.Work.Knowledge;
+using AiNexus.Features.Work.Knowledge.Embeddings;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -33,7 +33,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     public static readonly Argon2Cost PasswordCost = new(1024, 1);
     private readonly bool ldap;
     private readonly Action<InferenceOptions>? configureInference;
-    private readonly Action<AttachmentOptions>? configureAttachments;
+    private readonly Action<FilesOptions>? configureAttachments;
     private readonly string[] bootstrapAdministrators;
     private readonly Type[] workers;
     private readonly TimeProvider? clock;
@@ -44,7 +44,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     private readonly string files = Path.Combine(Path.GetTempPath(), $"ainexus-test-{Guid.NewGuid():N}");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public AppFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
+    public AppFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<FilesOptions>? attachments = null, string[]? administrators = null,
         Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
         this.ldap = ldap;
@@ -101,7 +101,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
                 foreach (var model in options.Models)
                     if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
             });
-            services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = Path.Combine(files, "attachments"); configureAttachments?.Invoke(options); });
+            services.PostConfigure<FilesOptions>(options => { options.StoragePath = Path.Combine(files, "attachments"); configureAttachments?.Invoke(options); });
             services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = Path.Combine(files, "logs"); options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
             services.PostConfigure<AdminBootstrapOptions>(options => options.Administrators = bootstrapAdministrators);
             configureServices?.Invoke(services);

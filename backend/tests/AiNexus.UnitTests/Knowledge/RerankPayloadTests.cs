@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.UnitTests.Knowledge;

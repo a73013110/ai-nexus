@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Inference.Providers;
+using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Platform.Inference.Providers;
 
 namespace AiNexus.UnitTests.Inference;
 

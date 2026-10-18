@@ -1,5 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Identity;
+using AiNexus.Features.Admin.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

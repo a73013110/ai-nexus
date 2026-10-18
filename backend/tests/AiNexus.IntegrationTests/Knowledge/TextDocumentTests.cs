@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge.Collections;
-using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Work.Knowledge.Collections;
+using AiNexus.Features.Work.Knowledge.Documents;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Knowledge;

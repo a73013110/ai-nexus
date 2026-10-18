@@ -37,16 +37,16 @@ public sealed class SourceLayoutTests
 
     /// <summary>
     /// 模組檔案數不超過 <see cref="MaxModuleRootFiles"/> 時維持扁平；超過就把 use case、實體與服務放進模組下一層的能力資料夾，
-    /// 模組根目錄只保留跨整個模組的檔案。
+    /// 模組根目錄只保留跨整個模組的檔案。路徑為 <c>AiNexus.Features/&lt;Area&gt;/&lt;Module&gt;/[&lt;能力&gt;/]檔案</c>。
     /// </summary>
     [Fact]
     public void LargeModulesAreSplitIntoCapabilityFolders()
     {
         var paths = SourceTree.Files("AiNexus.Features").Select(SourceTree.Relative).Select(path => path.Split('/'))
-            .Where(parts => parts.Length > 2).ToList();
-        var crowded = paths.Where(parts => parts.Length == 3).GroupBy(parts => parts[1])
+            .Where(parts => parts.Length > 3).ToList();
+        var crowded = paths.Where(parts => parts.Length == 4).GroupBy(parts => parts[1] + "/" + parts[2])
             .Where(module => module.Count() > MaxModuleRootFiles).Select(module => $"{module.Key}: {module.Count()} files at the root");
-        var nested = paths.Where(parts => parts.Length > 4).Select(parts => string.Join('/', parts));
+        var nested = paths.Where(parts => parts.Length > 5).Select(parts => string.Join('/', parts));
         var offending = crowded.Concat(nested).Order(StringComparer.Ordinal).ToList();
         Assert.True(offending.Count == 0, "Group a large module's files into capability folders, one level deep:\n" + string.Join("\n", offending));
     }
@@ -54,19 +54,60 @@ public sealed class SourceLayoutTests
     private const int MaxModuleRootFiles = 15;
 
     /// <summary>
-    /// 前端 feature 資料夾名稱即擁有其 API 的後端模組的 kebab-case，兩邊可以用名稱互相找到（ADR 0009）。
-    /// <c>design</c> 是設計系統展示頁，沒有對應的後端模組，因此排除。
+    /// 後端模組依區分組（ADR 0016）：Features 根目錄底下只有允許的區（PascalCase），區根目錄只放模組資料夾。
+    /// 區不是依賴邊界、schema 也不帶區，所以模組名在所有區之間必須唯一。
+    /// </summary>
+    [Fact]
+    public void BackendModulesAreGroupedIntoAreas()
+    {
+        var areas = SourceTree.Areas();
+        Assert.NotEmpty(areas);
+        var unknown = areas.Where(area => !SourceTree.AllowedAreas.Contains(area.ToLowerInvariant()) || area != Pascal(area.ToLowerInvariant()))
+            .Select(area => $"{area}: not an area ({string.Join(", ", SourceTree.AllowedAreas.Select(Pascal))})");
+        var files = areas.SelectMany(area => Directory.EnumerateFiles(Path.Combine(SourceTree.FeaturesRoot, area)))
+            .Select(path => Path.GetRelativePath(SourceTree.FeaturesRoot, path).Replace('\\', '/') + ": files belong in a module folder");
+        var duplicates = SourceTree.ModuleFolders().GroupBy(x => x.Module, StringComparer.Ordinal).Where(g => g.Count() > 1)
+            .Select(g => $"{g.Key}: module name used in {string.Join(", ", g.Select(x => x.Area))}");
+        var offending = unknown.Concat(files).Concat(duplicates).Order(StringComparer.Ordinal).ToList();
+        Assert.True(offending.Count == 0, "Put each module in AiNexus.Features/<Area>/<Module>/ with a unique module name:\n" + string.Join("\n", offending));
+    }
+
+    /// <summary>前端與後端用同樣的區：features 底下只有允許的區（小寫），區根目錄只放模組資料夾。</summary>
+    [Fact]
+    public void FrontendFeaturesAreGroupedIntoAreas()
+    {
+        var root = FrontendFeatures();
+        var areas = Directory.EnumerateDirectories(root).Select(Path.GetFileName).OfType<string>().ToList();
+        Assert.NotEmpty(areas);
+        var unknown = areas.Where(area => !SourceTree.AllowedAreas.Contains(area))
+            .Select(area => $"{area}: not an area ({string.Join(", ", SourceTree.AllowedAreas)})");
+        var files = areas.SelectMany(area => Directory.EnumerateFiles(Path.Combine(root, area)))
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/') + ": files belong in a module folder");
+        var offending = unknown.Concat(files).Order(StringComparer.Ordinal).ToList();
+        Assert.True(offending.Count == 0, "Put each frontend feature in features/<area>/<module-kebab>/:\n" + string.Join("\n", offending));
+    }
+
+    /// <summary>
+    /// 前端 <c>features/&lt;area&gt;/&lt;module-kebab&gt;</c> 對應擁有其 API 的後端 <c>Features/&lt;Area&gt;/&lt;Module&gt;</c>，兩邊可以用名稱互相找到（ADR 0016）。
+    /// 不要求每個後端模組都有前端資料夾；<c>admin/design</c> 是設計系統展示頁，沒有對應的後端模組，因此排除。
     /// </summary>
     [Fact]
     public void FrontendFeaturesAreNamedAfterBackendModules()
     {
-        var modules = SourceTree.Modules();
-        var unmatched = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "frontend", "src", "app", "features"))
-            .Select(Path.GetFileName).OfType<string>().Where(folder => folder != "design")
-            .Where(folder => !modules.Contains(string.Concat(folder.Split('-').Select(part => char.ToUpperInvariant(part[0]) + part[1..]))))
+        var modules = SourceTree.ModuleFolders().Select(x => x.Area + "/" + x.Module).ToHashSet(StringComparer.Ordinal);
+        var root = FrontendFeatures();
+        var folders = Directory.EnumerateDirectories(root).SelectMany(area => Directory.EnumerateDirectories(area))
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/')).Where(folder => folder != "admin/design").ToList();
+        Assert.NotEmpty(folders);
+        var unmatched = folders.Where(folder => !modules.Contains(string.Join('/', folder.Split('/').Select(Pascal))))
             .Order(StringComparer.Ordinal).ToList();
-        Assert.True(unmatched.Count == 0, "Name frontend feature folders after the backend module in kebab-case:\n" + string.Join("\n", unmatched));
+        Assert.True(unmatched.Count == 0, "Name frontend feature folders after the backend area and module in kebab-case:\n" + string.Join("\n", unmatched));
     }
+
+    private static string FrontendFeatures() => Path.Combine(SourceTree.Root, "frontend", "src", "app", "features");
+
+    /// <summary>kebab-case 轉 PascalCase：<c>access-control</c> → <c>AccessControl</c>、<c>work</c> → <c>Work</c>。</summary>
+    private static string Pascal(string kebab) => string.Concat(kebab.Split('-').Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
 
     [Theory]
     [MemberData(nameof(ModuleTestProjects))]

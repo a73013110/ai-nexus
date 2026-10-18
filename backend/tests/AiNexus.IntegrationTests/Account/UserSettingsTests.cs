@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
-using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.IntegrationTests.Account;
 

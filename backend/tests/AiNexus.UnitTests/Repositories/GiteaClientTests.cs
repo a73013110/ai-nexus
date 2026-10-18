@@ -1,5 +1,5 @@
 using System.Net;
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Work.Repositories;
 using AiNexus.Platform.Errors;
 using AiNexus.UnitTests.Support;
 using Microsoft.Extensions.Options;

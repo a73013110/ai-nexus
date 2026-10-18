@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AiNexus.Features.Diagnostics;
+using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.UnitTests.Diagnostics;

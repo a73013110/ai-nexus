@@ -13,7 +13,7 @@ CREATE TABLE [knowledge].[Documents] (
     [TextContent]  NVARCHAR (MAX)   NULL,
     [TextVersion]  INT              NOT NULL,
     CONSTRAINT [PK_Documents] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Documents_Attachments_AttachmentId] FOREIGN KEY ([AttachmentId]) REFERENCES [attachments].[Attachments] ([Id]),
+    CONSTRAINT [FK_Documents_Attachments_AttachmentId] FOREIGN KEY ([AttachmentId]) REFERENCES [files].[Attachments] ([Id]),
     CONSTRAINT [FK_Documents_Collections_CollectionId] FOREIGN KEY ([CollectionId]) REFERENCES [knowledge].[Collections] ([Id]),
     CONSTRAINT [FK_Documents_Resources_Id] FOREIGN KEY ([Id]) REFERENCES [collaboration].[Resources] ([Id])
 );

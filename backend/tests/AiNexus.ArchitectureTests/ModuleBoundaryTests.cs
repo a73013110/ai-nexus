@@ -20,17 +20,15 @@ public sealed class ModuleBoundaryTests
         Assert.True(cycles.Count == 0, "Module dependency cycles (each line: the types that create the dependency):\n" + string.Join("\n\n", cycles));
     }
 
-    /// <summary>模組就是 Features 專案下的一個資料夾；根目錄的 <c>&lt;Module&gt;Module.cs</c> 是唯一註冊模組的地方。</summary>
+    /// <summary>模組就是 Features 專案下 <c>&lt;Area&gt;/&lt;Module&gt;</c> 的資料夾；根目錄的 <c>&lt;Module&gt;Module.cs</c> 是唯一註冊模組的地方。</summary>
     [Fact]
     public void EveryModuleHasAModuleClassAtItsRoot()
     {
-        var folders = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features"))
-            .Select(Path.GetFileName).OfType<string>()
-            .Where(x => x is not ("bin" or "obj")).ToList();
+        var folders = SourceTree.ModuleFolders();
         Assert.NotEmpty(folders);
-        var missing = folders.Where(module => Assemblies.Features.GetType(Root + module + "." + module + "Module") is null
-            || !File.Exists(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features", module, module + "Module.cs"))).ToList();
-        Assert.True(missing.Count == 0, "Modules without <Module>/<Module>Module.cs declaring <Module>Module: " + string.Join(", ", missing));
+        var missing = folders.Where(x => Assemblies.Features.GetType(Root + x.Area + "." + x.Module + "." + x.Module + "Module") is null
+            || !File.Exists(Path.Combine(SourceTree.FeaturesRoot, x.Area, x.Module, x.Module + "Module.cs"))).Select(x => x.Area + "/" + x.Module).ToList();
+        Assert.True(missing.Count == 0, "Modules without <Area>/<Module>/<Module>Module.cs declaring <Module>Module: " + string.Join(", ", missing));
     }
 
     /// <summary>模組預期的錯誤集中定義在模組根目錄的 <c>&lt;Module&gt;Errors</c>。</summary>
@@ -42,8 +40,8 @@ public sealed class ModuleBoundaryTests
             .Where(f => f.FieldType == typeof(Error) && f.DeclaringType!.Namespace?.StartsWith(Root, StringComparison.Ordinal) == true)
             .Where(f =>
             {
-                var module = f.DeclaringType!.Namespace![Root.Length..].Split('.')[0];
-                return f.DeclaringType.FullName != Root + module + "." + module + "Errors";
+                var module = Module(f.DeclaringType!.Namespace!);
+                return f.DeclaringType.FullName != Root + module + "." + module[(module.IndexOf('.', StringComparison.Ordinal) + 1)..] + "Errors";
             })
             .Select(f => f.DeclaringType!.FullName + "." + f.Name).Order(StringComparer.Ordinal).ToList();
         Assert.True(misplaced.Count == 0, "Move these errors to <Module>Errors:\n" + string.Join("\n", misplaced));
@@ -54,7 +52,7 @@ public sealed class ModuleBoundaryTests
     {
         var modules = Assemblies.Features.GetTypes()
             .Select(t => t.Namespace).OfType<string>().Where(ns => ns.StartsWith(Root, StringComparison.Ordinal))
-            .Select(ns => ns[Root.Length..].Split('.')[0]).ToHashSet(StringComparer.Ordinal);
+            .Select(Module).ToHashSet(StringComparer.Ordinal);
         var edges = new Dictionary<(string, string), IReadOnlyList<string>>();
         // 組件只讀一次；之後每組配對查詢都篩同一份型別清單，避免對每個配對重掃組件。
         var types = Types.InAssembly(Assemblies.Features);
@@ -74,6 +72,12 @@ public sealed class ModuleBoundaryTests
         }
         return edges;
     }
+
+    /// <summary>
+    /// 模組鍵是 <c>AiNexus.Features</c> 之後的「區.模組」兩段（例如 <c>Admin.AccessControl</c>）。
+    /// 區只是資料夾、不是依賴邊界：同區模組之間的依賴與跨區依賴適用同一套無循環規則。
+    /// </summary>
+    private static string Module(string ns) => string.Join('.', ns[Root.Length..].Split('.').Take(2));
 
     // 編譯器產生的 lambda 與狀態機會以宣告它們的型別回報（巢狀型別以 '+' 分隔），這裡只取最外層的型別名。
     private static string TopLevelName(string fullName)

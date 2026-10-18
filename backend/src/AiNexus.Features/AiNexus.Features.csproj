@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- 業務模組（Features/<Module>/...）；資料表與 DbContext 在 AiNexus.Data。 -->
+  <!-- 業務模組（Features/<Area>/<Module>/...）；資料表與 DbContext 在 AiNexus.Data。 -->
   <PropertyGroup>
     <RootNamespace>AiNexus.Features</RootNamespace>
   </PropertyGroup>

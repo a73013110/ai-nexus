@@ -20,9 +20,26 @@ internal static partial class SourceTree
         return relative[(relative.IndexOf('/', StringComparison.Ordinal) + 1)..];
     }
 
-    /// <summary>AiNexus.Features 底下的模組資料夾名稱。</summary>
-    public static IReadOnlySet<string> Modules() => Directory.EnumerateDirectories(Path.Combine(Root, "backend", "src", "AiNexus.Features"))
-        .Select(Path.GetFileName).OfType<string>().Where(name => name is not ("bin" or "obj")).ToHashSet(StringComparer.Ordinal);
+    /// <summary>AiNexus.Features 的根目錄。</summary>
+    public static string FeaturesRoot => Path.Combine(Root, "backend", "src", "AiNexus.Features");
+
+    /// <summary>
+    /// 允許的區（小寫，ADR 0016）。區只是資料夾、不是依賴邊界；新增區要先修訂 ADR。
+    /// <c>staff</c> 規劃中，資料夾出現時即允許。
+    /// </summary>
+    public static readonly IReadOnlySet<string> AllowedAreas = new HashSet<string>(["work", "staff", "admin", "platform"], StringComparer.Ordinal);
+
+    /// <summary>AiNexus.Features 底下的區資料夾名稱（排除建置輸出）。</summary>
+    public static IReadOnlyList<string> Areas() => [.. Directory.EnumerateDirectories(FeaturesRoot)
+        .Select(Path.GetFileName).OfType<string>().Where(name => name is not ("bin" or "obj")).Order(StringComparer.Ordinal)];
+
+    /// <summary>AiNexus.Features/&lt;Area&gt;/&lt;Module&gt; 的區與模組資料夾名稱。</summary>
+    public static IReadOnlyList<(string Area, string Module)> ModuleFolders() => [.. Areas()
+        .SelectMany(area => Directory.EnumerateDirectories(Path.Combine(FeaturesRoot, area)).Select(Path.GetFileName).OfType<string>()
+            .Order(StringComparer.Ordinal).Select(module => (area, module)))];
+
+    /// <summary>所有區底下的模組名稱；模組名全域唯一，測試專案依模組平鋪、不分區。</summary>
+    public static IReadOnlySet<string> Modules() => ModuleFolders().Select(x => x.Module).ToHashSet(StringComparer.Ordinal);
 
     private static string Area(string project) => project.EndsWith("Tests", StringComparison.Ordinal) ? "tests" : "src";
 
