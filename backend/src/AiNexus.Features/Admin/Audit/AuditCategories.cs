@@ -8,8 +8,8 @@ public sealed record AuditCategoryDto(string Value, string Label);
 /// <summary>同一個分類運算式同時用於 SQL 篩選（轉成 CASE WHEN）與輸出時的分類，兩邊不會不一致。</summary>
 public static class AuditCategories
 {
-    public static readonly string[] Values = ["authentication", "administration", "access", "activity"];
     public static readonly IReadOnlyList<AuditCategoryDto> All = [new("authentication", "登入與身分"), new("administration", "管理異動"), new("access", "查閱與匯出"), new("activity", "功能操作")];
+    public static readonly string[] Values = [.. All.Select(x => x.Value)];
     private static readonly string[] Reads = ["admin.user_usage_read", "admin.conversations_list", "admin.conversation_read",
         "billing.report.read", "billing.report.export", "dashboard.platform.read", "integration.searched", "integration.record.read", ExportActivityAudit.Action];
     private static readonly string[] Administrative = ["billing.price.created", "system.diagnostics.configuration"];
