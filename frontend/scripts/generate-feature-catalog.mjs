@@ -15,7 +15,9 @@ const catalog = document['x-feature-catalog'];
 if (!catalog?.areas?.length || !catalog?.modules?.length || !catalog?.features?.length)
   fail('contracts/openapi.json 沒有 x-feature-catalog（areas、modules、features）。');
 
+if (!catalog.scopes?.length) fail('contracts/openapi.json 的 x-feature-catalog 沒有 scopes（資料範圍）。');
 const kinds = new Set(['page', 'action', 'reader']);
+const scopes = new Set(catalog.scopes.map((scope) => scope.id));
 const areas = new Set(catalog.areas.map((area) => area.id));
 const modules = new Set(catalog.modules.map((module) => module.id));
 for (const module of catalog.modules)
@@ -25,6 +27,8 @@ for (const feature of catalog.features) {
   if (!modules.has(feature.module)) fail(`功能 ${feature.id} 的模組 ${feature.module} 不在目錄中。`);
   if ((feature.kind === 'action') !== (feature.route == null))
     fail(`功能 ${feature.id}：只有 action 沒有網址。`);
+  for (const scope of feature.scopes ?? [])
+    if (!scopes.has(scope)) fail(`功能 ${feature.id} 的範圍 ${scope} 不在目錄中。`);
 }
 
 const pick = (items, keys) => items.map((item) => Object.fromEntries(keys.map((key) => [key, item[key] ?? null])));
@@ -38,8 +42,11 @@ export const CATALOG_AREAS = ${JSON.stringify(pick(catalog.areas, ['id', 'name']
 export const CATALOG_MODULES = ${JSON.stringify(pick(catalog.modules, ['id', 'area', 'name']))} as const;
 
 export const CATALOG_FEATURES = ${JSON.stringify(
-  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route']),
+  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route', 'scopes']),
 )} as const;
+
+/** 資料範圍（ADR 0017），由窄到寬；功能的 \`scopes\` 是它支援的子集，空的表示授權不帶範圍。 */
+export const CATALOG_SCOPES = ${JSON.stringify(pick(catalog.scopes, ['id', 'name']))} as const;
 
 export type CatalogArea = (typeof CATALOG_AREAS)[number];
 export type AreaId = CatalogArea['id'];
@@ -48,6 +55,8 @@ export type ModuleId = CatalogModule['id'];
 export type CatalogFeature = (typeof CATALOG_FEATURES)[number];
 export type CatalogId = CatalogFeature['id'];
 export type CatalogKind = CatalogFeature['kind'];
+export type CatalogScope = (typeof CATALOG_SCOPES)[number];
+export type DataScopeId = CatalogScope['id'];
 `;
 
 const options = { ...(await prettier.resolveConfig(target)), filepath: target };

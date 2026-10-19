@@ -45,6 +45,21 @@ describe('audit presentation', () => {
       after: ['chat', 'reports'],
     });
   });
+  it('shows data scope changes with feature and scope names', () => {
+    const changes = auditChanges(
+      JSON.stringify({
+        before: { scopes: [{ featureId: 'audit', scope: 'unit' }] },
+        after: { scopes: [{ featureId: 'audit', scope: 'unit-tree' }] },
+      }),
+    );
+    expect(changes).toEqual([
+      expect.objectContaining({
+        label: '資料範圍',
+        before: '活動稽核：所屬單位',
+        after: '活動稽核：所屬單位及下層',
+      }),
+    ]);
+  });
   it('does not label successful removal, scheduling or legacy read operations as rejected', () => {
     for (const result of [
       'created',

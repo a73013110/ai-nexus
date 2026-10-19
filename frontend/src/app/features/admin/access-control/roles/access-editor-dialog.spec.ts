@@ -190,8 +190,45 @@ describe('AccessEditorDialog', () => {
       name: '審閱',
       enabled: true,
       featureIds: ['repositories', 'off'],
+      scopes: {},
       policy: { allowedModelIds: null, dailyTokenLimits: {}, storedAttachmentLimitBytes: 2e9 },
     });
+  });
+
+  it('offers only the scopes a feature declares and defaults new grants to the narrowest', async () => {
+    const { dialog, api } = setup();
+    dialog.open('group', group);
+    expect(dialog.scopedGrants()).toEqual([]);
+    dialog.update('ids', ['repositories', 'audit']);
+    const [grant] = dialog.scopedGrants();
+    expect(grant.id).toBe('audit');
+    expect(grant.value).toBe('own');
+    expect(grant.options.map((option) => option.value)).toEqual([
+      'own',
+      'unit',
+      'unit-tree',
+      'all',
+    ]);
+    dialog.updateScope('audit', 'unit-tree');
+    await dialog.save(new Event('submit'));
+    expect(api.group).toHaveBeenCalledWith(
+      'review',
+      expect.objectContaining({
+        featureIds: ['repositories', 'audit'],
+        scopes: { audit: 'unit-tree' },
+      }),
+    );
+  });
+
+  it('treats a changed scope as unsaved and ignores scopes of features no longer granted', () => {
+    const { dialog } = setup();
+    const scoped = { ...group, featureIds: ['audit'], scopes: { audit: 'all' } } as AdminGroupDto;
+    dialog.open('group', scoped);
+    expect(dialog.scopedGrants()[0].value).toBe('all');
+    dialog.updateScope('audit', 'unit');
+    expect(dialog.dirty()).toBe(true);
+    dialog.updateScope('audit', 'all');
+    expect(dialog.dirty()).toBe(false);
   });
 
   it('tracks unsaved changes against the values as opened and reverts to them', async () => {

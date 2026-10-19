@@ -9072,6 +9072,9 @@ export interface components {
             enabled: boolean;
             featureIds: string[];
             policy: null | components["schemas"]["GroupPolicyRequest"];
+            scopes: {
+                [key: string]: string;
+            };
         };
         AdminMessageDto: {
             /** Format: uuid */
@@ -9872,6 +9875,9 @@ export interface components {
             enabled: boolean;
             featureIds: string[];
             policy?: null | components["schemas"]["GroupPolicyRequest"];
+            scopes?: null | {
+                [key: string]: string;
+            };
         };
         HealthIssue: {
             code: string;

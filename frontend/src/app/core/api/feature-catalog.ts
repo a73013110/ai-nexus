@@ -39,8 +39,17 @@ export const CATALOG_FEATURES = [
     name: '總覽',
     icon: 'dashboard',
     route: '/work/dashboard',
+    scopes: [],
   },
-  { id: 'chat', kind: 'page', module: 'chat', name: '對話', icon: 'chat', route: '/work/chat' },
+  {
+    id: 'chat',
+    kind: 'page',
+    module: 'chat',
+    name: '對話',
+    icon: 'chat',
+    route: '/work/chat',
+    scopes: [],
+  },
   {
     id: 'projects',
     kind: 'page',
@@ -48,6 +57,7 @@ export const CATALOG_FEATURES = [
     name: '專案',
     icon: 'projects',
     route: '/work/projects',
+    scopes: [],
   },
   {
     id: 'files',
@@ -56,6 +66,7 @@ export const CATALOG_FEATURES = [
     name: '檔案庫',
     icon: 'files',
     route: '/work/files',
+    scopes: [],
   },
   {
     id: 'files.reader',
@@ -64,6 +75,7 @@ export const CATALOG_FEATURES = [
     name: '檔案閱讀器',
     icon: 'files',
     route: '/work/files/reader',
+    scopes: [],
   },
   {
     id: 'knowledge',
@@ -72,6 +84,7 @@ export const CATALOG_FEATURES = [
     name: '知識庫',
     icon: 'library',
     route: '/work/knowledge',
+    scopes: [],
   },
   {
     id: 'knowledge.reader',
@@ -80,6 +93,7 @@ export const CATALOG_FEATURES = [
     name: '文件閱讀器',
     icon: 'document',
     route: '/work/knowledge/reader',
+    scopes: [],
   },
   {
     id: 'knowledge.retrieval',
@@ -88,6 +102,7 @@ export const CATALOG_FEATURES = [
     name: '檢索管理',
     icon: 'database',
     route: '/work/knowledge/retrieval',
+    scopes: [],
   },
   {
     id: 'artifacts',
@@ -96,6 +111,7 @@ export const CATALOG_FEATURES = [
     name: '成果文件',
     icon: 'document',
     route: '/work/artifacts',
+    scopes: [],
   },
   {
     id: 'sharing',
@@ -104,6 +120,7 @@ export const CATALOG_FEATURES = [
     name: '分享',
     icon: 'share',
     route: '/work/sharing',
+    scopes: [],
   },
   {
     id: 'sharing.reader',
@@ -112,6 +129,7 @@ export const CATALOG_FEATURES = [
     name: '分享閱讀器',
     icon: 'share',
     route: '/work/sharing/reader',
+    scopes: [],
   },
   {
     id: 'jobs',
@@ -120,6 +138,7 @@ export const CATALOG_FEATURES = [
     name: '背景任務',
     icon: 'tasks',
     route: '/work/jobs',
+    scopes: [],
   },
   {
     id: 'repositories',
@@ -128,6 +147,7 @@ export const CATALOG_FEATURES = [
     name: '程式庫',
     icon: 'git',
     route: '/work/repositories',
+    scopes: [],
   },
   {
     id: 'identity.users',
@@ -136,6 +156,7 @@ export const CATALOG_FEATURES = [
     name: '使用者',
     icon: 'user',
     route: '/admin/identity/users',
+    scopes: [],
   },
   {
     id: 'access-control.roles',
@@ -144,6 +165,7 @@ export const CATALOG_FEATURES = [
     name: '角色',
     icon: 'lock',
     route: '/admin/access-control/roles',
+    scopes: [],
   },
   {
     id: 'access-control.groups',
@@ -152,6 +174,7 @@ export const CATALOG_FEATURES = [
     name: '功能群組與模型',
     icon: 'apps',
     route: '/admin/access-control/groups',
+    scopes: [],
   },
   {
     id: 'access-control.features',
@@ -160,6 +183,7 @@ export const CATALOG_FEATURES = [
     name: '功能',
     icon: 'list',
     route: '/admin/access-control/features',
+    scopes: [],
   },
   {
     id: 'access-control.navigation',
@@ -168,6 +192,7 @@ export const CATALOG_FEATURES = [
     name: '選單',
     icon: 'sidebar',
     route: '/admin/access-control/navigation',
+    scopes: [],
   },
   {
     id: 'organization',
@@ -176,6 +201,7 @@ export const CATALOG_FEATURES = [
     name: '組織單位',
     icon: 'organization',
     route: '/admin/organization',
+    scopes: [],
   },
   {
     id: 'operations.usage',
@@ -184,6 +210,7 @@ export const CATALOG_FEATURES = [
     name: '平台用量',
     icon: 'chart',
     route: '/admin/operations/usage',
+    scopes: [],
   },
   {
     id: 'billing.prices',
@@ -192,6 +219,7 @@ export const CATALOG_FEATURES = [
     name: '模型與工具價格',
     icon: 'money',
     route: '/admin/billing/prices',
+    scopes: [],
   },
   {
     id: 'integrations',
@@ -200,6 +228,7 @@ export const CATALOG_FEATURES = [
     name: '資料來源',
     icon: 'integrations',
     route: '/admin/integrations',
+    scopes: [],
   },
   {
     id: 'monitoring',
@@ -208,6 +237,7 @@ export const CATALOG_FEATURES = [
     name: '即時監控',
     icon: 'activity',
     route: '/admin/monitoring',
+    scopes: [],
   },
   {
     id: 'audit',
@@ -216,6 +246,7 @@ export const CATALOG_FEATURES = [
     name: '活動稽核',
     icon: 'audit',
     route: '/admin/audit',
+    scopes: ['own', 'unit', 'unit-tree', 'all'],
   },
   {
     id: 'diagnostics.logs',
@@ -224,6 +255,7 @@ export const CATALOG_FEATURES = [
     name: '系統日誌',
     icon: 'logs',
     route: '/admin/diagnostics/logs',
+    scopes: [],
   },
   {
     id: 'diagnostics.logs.detail',
@@ -232,6 +264,7 @@ export const CATALOG_FEATURES = [
     name: '日誌診斷詳情',
     icon: 'search',
     route: null,
+    scopes: [],
   },
   {
     id: 'diagnostics.logs.export',
@@ -240,6 +273,7 @@ export const CATALOG_FEATURES = [
     name: '日誌匯出',
     icon: 'download',
     route: null,
+    scopes: [],
   },
   {
     id: 'quality',
@@ -248,6 +282,7 @@ export const CATALOG_FEATURES = [
     name: '品質評測',
     icon: 'shield',
     route: '/admin/quality',
+    scopes: [],
   },
   {
     id: 'quality.retrieval',
@@ -256,6 +291,7 @@ export const CATALOG_FEATURES = [
     name: '檢索評測',
     icon: 'search',
     route: '/admin/quality/retrieval',
+    scopes: [],
   },
   {
     id: 'design',
@@ -264,7 +300,17 @@ export const CATALOG_FEATURES = [
     name: '介面元件',
     icon: 'sliders',
     route: '/admin/design',
+    scopes: [],
   },
+] as const;
+
+/** 資料範圍（ADR 0017），由窄到寬；功能的 `scopes` 是它支援的子集，空的表示授權不帶範圍。 */
+export const CATALOG_SCOPES = [
+  { id: 'own', name: '本人' },
+  { id: 'assigned', name: '被指派' },
+  { id: 'unit', name: '所屬單位' },
+  { id: 'unit-tree', name: '所屬單位及下層' },
+  { id: 'all', name: '全部' },
 ] as const;
 
 export type CatalogArea = (typeof CATALOG_AREAS)[number];
@@ -274,3 +320,5 @@ export type ModuleId = CatalogModule['id'];
 export type CatalogFeature = (typeof CATALOG_FEATURES)[number];
 export type CatalogId = CatalogFeature['id'];
 export type CatalogKind = CatalogFeature['kind'];
+export type CatalogScope = (typeof CATALOG_SCOPES)[number];
+export type DataScopeId = CatalogScope['id'];

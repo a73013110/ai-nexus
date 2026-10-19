@@ -1,3 +1,6 @@
+import { catalogFeature } from '@core/api/catalog';
+import { CATALOG_SCOPES } from '@core/api/feature-catalog';
+
 const actions: Record<string, string> = {
   'conversation.created': '建立對話',
   'conversation.renamed': '重新命名對話',
@@ -156,6 +159,7 @@ const labels: Record<string, string> = {
   roleIds: '角色',
   groupIds: '功能群組',
   featureIds: '功能',
+  scopes: '資料範圍',
   sortOrder: '顯示順序',
   parentId: '上層分群',
   kind: '種類',
@@ -236,7 +240,20 @@ export function auditChanges(
     return [];
   }
 }
+/** 群組授權的資料範圍快照是 `[{ featureId, scope }]`（稽核遮罩只留白名單欄位，所以不是以功能為鍵的物件）。 */
+function displayScopes(value: unknown[]) {
+  return (
+    value
+      .map((item) => {
+        const { featureId, scope } = (item ?? {}) as { featureId?: string; scope?: string };
+        const feature = catalogFeature(String(featureId))?.name ?? String(featureId);
+        return `${feature}：${CATALOG_SCOPES.find((x) => x.id === scope)?.name ?? String(scope)}`;
+      })
+      .join('、') || '無'
+  );
+}
 function displayModelValue(key: string, value: unknown, names: Readonly<Record<string, string>>) {
+  if (key === 'scopes' && Array.isArray(value)) return displayScopes(value);
   if (/(^|\.)allowedModelIds$/i.test(key) && Array.isArray(value))
     return value.map((id) => resolveModel(id, names)).join('、') || '無';
   if (/(^|\.)(modelId|defaultModelId|providerModelId)$/i.test(key) && value != null)
