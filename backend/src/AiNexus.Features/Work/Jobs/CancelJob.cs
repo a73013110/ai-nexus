@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Errors;
@@ -16,9 +17,8 @@ internal sealed class CancelJob(AppDbContext db, TimeProvider clock)
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var job = await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct);
-        if (job is null) return JobsErrors.JobNotFound;
-        await db.Set<BackgroundJob>().Where(x => x.Id == id && (x.Status == "queued" || x.Status == "running"))
+        if (!await db.Set<BackgroundJob>().OwnedBy(owner).AnyAsync(x => x.Id == id, ct)) return JobsErrors.JobNotFound;
+        await db.Set<BackgroundJob>().Where(x => x.Id == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running))
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true).SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), ct);
         return await db.ReloadJobAsync(owner, id, ct);
     }

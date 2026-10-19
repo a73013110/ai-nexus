@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Dashboard;
@@ -28,14 +29,14 @@ internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
     {
         var owner = scope.Owner;
         var jobs = db.Set<BackgroundJob>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
-        var current = await jobs.Where(x => x.Status == "queued" || x.Status == "running" || x.Status == "failed").GroupBy(x => 1).Select(g => new
+        var current = await jobs.Where(x => x.Status == RunStates.Queued || x.Status == RunStates.Running || x.Status == RunStates.Failed).GroupBy(x => 1).Select(g => new
         {
-            Queued = g.Count(x => x.Status == "queued"),
-            Running = g.Count(x => x.Status == "running"),
-            Failed = g.Count(x => x.Status == "failed"),
+            Queued = g.Count(x => x.Status == RunStates.Queued),
+            Running = g.Count(x => x.Status == RunStates.Running),
+            Failed = g.Count(x => x.Status == RunStates.Failed),
         }).SingleOrDefaultAsync(ct);
         var period = jobs.Where(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until);
-        var completed = await period.CountAsync(x => x.Status == "completed", ct);
+        var completed = await period.CountAsync(x => x.Status == RunStates.Completed, ct);
         var kinds = await period.GroupBy(x => x.Kind)
             .Select(g => new { Kind = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
@@ -53,15 +54,15 @@ internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
             .ActiveWhen(active);
         foreach (var kind in kinds) section.Share(kind.Kind, Kinds.GetValueOrDefault(kind.Kind, kind.Kind), kind.Count);
         var mine = await db.Set<BackgroundJob>().AsNoTracking()
-            .Where(x => x.OwnerId == scope.Actor && (x.Status == "queued" || x.Status == "running" || x.Status == "failed"))
+            .Where(x => x.OwnerId == scope.Actor && (x.Status == RunStates.Queued || x.Status == RunStates.Running || x.Status == RunStates.Failed))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(6)
             .Select(x => new { x.Id, x.Label, x.Kind, x.Stage, x.Status, x.UpdatedAt })
             .ToListAsync(ct);
         foreach (var job in mine)
             section.Item(job.Id.ToString(), job.Label.Length > 0 ? job.Label : Kinds.GetValueOrDefault(job.Kind, job.Kind),
-                job.Status == "failed" ? "失敗" : job.Stage, job.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + job.Id,
-                job.Status == "failed" ? DashboardTones.Danger : DashboardTones.Info);
+                job.Status == RunStates.Failed ? "失敗" : job.Stage, job.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + job.Id,
+                job.Status == RunStates.Failed ? DashboardTones.Danger : DashboardTones.Info);
         return section.Build();
     }
 }
