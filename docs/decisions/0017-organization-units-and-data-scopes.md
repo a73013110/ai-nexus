@@ -1,7 +1,7 @@
 # 0017 組織單位與資料範圍
 
 - **狀態**：採用（2026-10-18）
-- **實作**：尚未開始；先完成 [ADR 0016](0016-areas-urls-and-navigation.md) 的頁面目錄，範圍宣告掛在目錄上。
+- **實作**：Organization 模組（部門樹、人員所屬、`OrganizationDirectory`）已完成，見 [組織](../features/organization.md)；資料範圍（`IDataScope`、授權加範圍）尚未開始，範圍宣告掛在 [ADR 0016](0016-areas-urls-and-navigation.md) 的頁面目錄上。
 - **決定**：
   - 角色決定「能做什麼」，組織單位與範圍決定「能看哪些資料」；不用角色切資料。
   - 新增 `Organization` 模組（區 `admin`），管理部門樹與人員所屬。
@@ -39,7 +39,8 @@
 
 - 資料表 `organization.Units`（樹狀、啟用、排序）與 `organization.UnitMembers`（使用者、單位、是否主要所屬、是否主管）。
 - 管理頁 `/admin/organization`，選單上放在「身分與權限」分群底下（選單是資料，模組各自獨立）。
-- 不放進 AccessControl：出勤、請假等員工服務也要讀部門與主管，放進去會讓這些模組依賴權限模組。依賴方向是 AccessControl → Organization，業務模組 → Organization 的 public 服務。
+- 不放進 AccessControl：部門是組織資料，不是授權資料；出勤、請假等員工服務讀部門與主管時，只需要 Organization 的 public 服務。
+- 依賴方向是 Organization → AccessControl（沿用授權目錄、policy 與 `AdministrativeAudit`），業務模組 → Organization。AccessControl 被所有模組引用，反過來依賴 Organization 會成環：資料範圍需要所屬單位時，由 AccessControl 定義介面、Organization 實作，同 `IRequestActor` 的做法（原本寫成 AccessControl → Organization，實作時修正）。
 - 只記錄目前所屬。「當時在哪個部門」（例如去年的出勤歸屬）由業務資料在寫入時自己存單位 ID，不靠組織歷史表。
 - 部門與所屬由管理員維護，不從 AD 同步：AD 的部門屬性不可靠，同步只會把錯誤帶進資料範圍。
 

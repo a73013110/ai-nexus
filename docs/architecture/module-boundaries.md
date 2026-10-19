@@ -12,7 +12,7 @@
 
 | 層 | 模組 | 說明 |
 | --- | --- | --- |
-| 身分 | AccessControl、Identity | 授權資料與登入；不依賴其他業務模組 |
+| 身分 | AccessControl、Identity、Organization | 授權資料與登入；Organization（部門樹）只依賴 AccessControl 的授權目錄與行政稽核 |
 | 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Prompts | 模型、通知、監控；Inference 只依賴身分與授權 |
 | 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
 | 資料延伸 | Files、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |

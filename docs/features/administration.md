@@ -2,7 +2,7 @@
 
 存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能 `/admin/access-control/features`（`access-control.features`）、選單 `/admin/access-control/navigation`（`access-control.navigation`）。一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
-平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
+部門樹與人員所屬在同一個「身分與權限」分群的 [組織](organization.md) 頁，另有授權。平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
 ## 設定第一位管理員
 

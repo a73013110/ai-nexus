@@ -1,7 +1,7 @@
 # 0016 區、網址、頁面目錄與選單
 
 - **狀態**：採用（2026-10-18），取代 [ADR 0009](0009-module-names-and-data-driven-navigation.md)。
-- **實作**：區資料夾與模組改名、頁面目錄、區式網址與選單（`NavigationItems`）已完成；剩下 Organization 與資料範圍（[ADR 0017](0017-organization-units-and-data-scopes.md)）。每一步落地時同步更新對應文件。
+- **實作**：區資料夾與模組改名、頁面目錄、區式網址、選單（`NavigationItems`）與 Organization 模組已完成；剩下資料範圍（[ADR 0017](0017-organization-units-and-data-scopes.md)）。每一步落地時同步更新對應文件。
 - **決定**：
   - 程式與網址共用「區 → 模組 → 頁面」三層；權限 ID 與 API 不帶區。
   - 頁面與動作的目錄只定義在程式碼；資料庫只存授權與選單。
