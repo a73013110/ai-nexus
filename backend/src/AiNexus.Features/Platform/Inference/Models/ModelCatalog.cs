@@ -18,11 +18,12 @@ public sealed record ProviderStatusDto(string Id, bool Available, string? Notice
 /// - 過期時啟動背景單趟更新（single-flight），後續呼叫端可立即取得過期快取；
 /// - 僅有首次無任何快取時呼叫端才需要同步等待更新完成。
 /// </summary>
-public sealed class ModelCatalog(
+public sealed partial class ModelCatalog(
     InferenceRouter router,
     IOptions<InferenceOptions> options,
     ModelPresentation presentation,
     AiNexus.Platform.Diagnostics.Issues issues,
+    ILogger<ModelCatalog> logger,
     TimeProvider? clock = null)
 {
     /// <summary>快取新鮮期（10 秒）。在此期間內不發動探測。</summary>
@@ -36,10 +37,12 @@ public sealed class ModelCatalog(
     private Snapshot? current;
     private Task<Snapshot>? refreshing;
 
+    // DiscoveryIssues：探測失敗的供應商 → 該次失敗的查證代碼，供拒絕請求時串回根因。
     private sealed record Snapshot(
         IReadOnlyList<ProviderStatusDto> Providers,
         IReadOnlySet<string> Installed,
         IReadOnlyDictionary<string, ModelDefinition> Profiles,
+        IReadOnlyDictionary<string, string> DiscoveryIssues,
         DateTimeOffset CheckedAt);
 
     private async Task<Snapshot> SnapshotAsync(CancellationToken ct)
@@ -100,6 +103,7 @@ public sealed class ModelCatalog(
                 discovered.Select(x => x.Status).ToArray(),
                 installed,
                 profiles,
+                discovered.Where(x => x.Issue is not null).ToDictionary(x => x.Status.Id, x => x.Issue!, StringComparer.Ordinal),
                 time.GetUtcNow());
 
             lock (gate)
@@ -177,17 +181,19 @@ public sealed class ModelCatalog(
     public async Task<IReadOnlyList<ProviderStatusDto>> ProviderStatusesAsync(CancellationToken ct) =>
         (await SnapshotAsync(ct)).Providers;
 
-    private async Task<(ProviderStatusDto Status, IReadOnlySet<string> Models)> DiscoverAsync(string id, CancellationToken ct)
+    private async Task<(ProviderStatusDto Status, IReadOnlySet<string> Models, string? Issue)> DiscoverAsync(string id, CancellationToken ct)
     {
         try
         {
             var models = await router.For(id).InstalledModelsAsync(ct);
-            return (new(id, true, null), models);
+            return (new(id, true, null), models, null);
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException or ExternalServiceException)
         {
+            // 逾時的例外訊息會被遮罩，沒有 Provider 就只能從堆疊猜是哪個供應商。
+            using var scope = logger.BeginScope(new Dictionary<string, object?> { ["Provider"] = id });
             var issue = issues.Report(exception, "provider_discovery_unavailable", LogLevel.Warning);
-            return (new(id, false, AiNexus.Platform.Diagnostics.Issues.Message(issue)), new HashSet<string>());
+            return (new(id, false, AiNexus.Platform.Diagnostics.Issues.Message(issue)), new HashSet<string>(), issue);
         }
     }
 
@@ -239,14 +245,12 @@ public sealed class ModelCatalog(
         var snapshot = await SnapshotAsync(ct);
         var catalog = Describe(snapshot);
 
-        if (!catalog.ProviderAvailable)
-        {
-            return InferenceErrors.ProviderUnavailable;
-        }
-
         var profile = options.Value.Models.FirstOrDefault(x => presentation.PublicId(x.Id) == requested);
-        if (profile is not null && snapshot.Providers.Any(x => x.Id == profile.Provider && !x.Available))
+        if (!catalog.ProviderAvailable || snapshot.Providers.Any(x => x.Id == profile?.Provider && !x.Available))
         {
+            // 呼叫端最後只會記下 provider_unavailable；這筆事件與它同一 Trace，串回是哪個供應商、哪次探測失敗。
+            var provider = profile?.Provider ?? (snapshot.Providers.Count > 0 ? snapshot.Providers[0].Id : "none");
+            LogProviderRefused(logger, provider, snapshot.DiscoveryIssues.GetValueOrDefault(provider, "none"));
             return InferenceErrors.ProviderUnavailable;
         }
 
@@ -268,4 +272,7 @@ public sealed class ModelCatalog(
             ? value
             : InferenceErrors.ReasoningNotSupported;
     }
+
+    [LoggerMessage(EventId = 3200, EventName = "inference.provider_refused", Level = LogLevel.Warning, Message = "Model request refused because provider {Provider} is unavailable; discovery issue {Reason}.")]
+    private static partial void LogProviderRefused(ILogger logger, string provider, string reason);
 }

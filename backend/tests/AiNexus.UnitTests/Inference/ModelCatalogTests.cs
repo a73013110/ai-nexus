@@ -3,6 +3,8 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Features.Work.Knowledge;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.UnitTests.Inference;
@@ -21,8 +23,8 @@ public sealed class ModelCatalogTests
         var provider = new CapabilityProvider(vision);
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
-        var issues = new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues);
+        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, NullLogger<ModelCatalog>.Instance);
         var dto = Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
         Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.SupportsImages);
@@ -41,8 +43,8 @@ public sealed class ModelCatalogTests
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
         var clock = new ManualClock();
-        var issues = new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, clock);
+        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, NullLogger<ModelCatalog>.Instance, clock);
         Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(1, provider.Calls);
         clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);
@@ -55,6 +57,42 @@ public sealed class ModelCatalogTests
         for (var i = 0; i < 200 && (await catalog.GetAsync(CancellationToken.None)).Models.Count > 0; i++) await Task.Delay(10);
         Assert.Empty((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(2, provider.Calls);
+    }
+
+    [Fact]
+    public async Task RefusalNamesTheProviderAndItsDiscoveryIssue()
+    {
+        var options = Options.Create(new InferenceOptions { ProviderConcurrency = new() { ["ollama"] = 1 }, ShowModelNames = false,
+            Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model" }] });
+        var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", new UnreachableProvider());
+        using var container = services.BuildServiceProvider();
+        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var logger = new CaptureLogger();
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, logger);
+
+        var refused = await catalog.RequireAsync(null, CancellationToken.None);
+
+        // 背景工作最後只記 provider_unavailable；同 Trace 的這筆事件要能指出供應商與探測失敗的查證代碼。
+        Assert.Equal("provider_unavailable", refused.Error!.Code);
+        var (id, state) = Assert.Single(logger.Events);
+        Assert.Equal(3200, id);
+        Assert.Equal("ollama", state["Provider"]);
+        Assert.True(AiNexus.Platform.Diagnostics.Issues.ValidCode(state["Reason"] as string));
+    }
+
+    private sealed class CaptureLogger : ILogger<ModelCatalog>
+    {
+        public List<(int Id, Dictionary<string, object?> State)> Events { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Events.Add((eventId.Id, ((IEnumerable<KeyValuePair<string, object?>>)state!).ToDictionary(x => x.Key, x => x.Value)));
+    }
+
+    private sealed class UnreachableProvider : IInferenceProvider
+    {
+        public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => throw new HttpRequestException("unreachable");
+        public IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, CancellationToken ct) => throw new NotSupportedException();
     }
 
     private sealed class ManualClock : TimeProvider
