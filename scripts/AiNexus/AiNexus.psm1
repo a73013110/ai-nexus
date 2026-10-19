@@ -371,4 +371,463 @@ function Test-RepoDatabaseExists {
     } finally { $connection.Dispose() }
 }
 
+# 以下是腳本選單（Show-Scripts.ps1）與步驟摘要（Invoke-RepoSteps）用的顯示寬度、腳本目錄與指令組裝。
+
+# 終端機裡中日韓文字與全形標點佔 2 格。East Asian Ambiguous 字元（─ → … ✓ ⚠ 等）依終端機與字型是 1 或 2 格，
+# 無法事先知道，這裡一律算 1 格；所以選單與摘要的排版只用 ASCII 與中文，不用這類符號。
+$wideRanges = @(
+    0x1100, 0x115F, 0x2E80, 0x303E, 0x3041, 0x33FF, 0x3400, 0x4DBF, 0x4E00, 0x9FFF, 0xA000, 0xA4CF, 0xA960, 0xA97F,
+    0xAC00, 0xD7A3, 0xF900, 0xFAFF, 0xFE10, 0xFE19, 0xFE30, 0xFE6F, 0xFF00, 0xFF60, 0xFFE0, 0xFFE6,
+    0x1F300, 0x1F64F, 0x1F900, 0x1F9FF, 0x20000, 0x3FFFD)
+
+function Get-RuneWidth([int]$Code) {
+    if ($Code -ge 0x20 -and $Code -lt 0x7F) { return 1 }
+    if ($Code -lt 0xA0) { return 0 }
+    if ($Code -lt 0x300) { return 1 }
+    if ([Globalization.CharUnicodeInfo]::GetUnicodeCategory($Code) -in 'NonSpacingMark', 'EnclosingMark', 'Format') { return 0 }
+    for ($i = 0; $i -lt $wideRanges.Count; $i += 2) {
+        if ($Code -lt $wideRanges[$i]) { return 1 }
+        if ($Code -le $wideRanges[$i + 1]) { return 2 }
+    }
+    1
+}
+
+function Get-RepoDisplayWidth {
+    <# .SYNOPSIS Terminal columns a text occupies: CJK and fullwidth characters take two, combining marks none. #>
+    param([AllowEmptyString()][AllowNull()][string]$Text)
+    $width = 0
+    # 以 rune 計算：CJK 擴充區（例如 𠀀）是一對 surrogate，用 char 會算成兩個字。
+    foreach ($rune in "$Text".EnumerateRunes()) { $width += Get-RuneWidth $rune.Value }
+    $width
+}
+
+function Format-RepoDisplayText {
+    <# .SYNOPSIS Text cut to at most Width columns (ending in .. when cut, never splitting a wide character); with -Pad filled with spaces to exactly Width. #>
+    param([AllowEmptyString()][AllowNull()][string]$Text, [Parameter(Mandatory)][int]$Width, [switch]$Pad)
+    if ($Width -le 0) { return '' }
+    $Text = "$Text"
+    $used = Get-RepoDisplayWidth $Text
+    if ($used -gt $Width) {
+        $suffix = '..'.Substring(0, [Math]::Min(2, $Width))
+        $limit = $Width - $suffix.Length
+        $builder = [Text.StringBuilder]::new()
+        $used = 0
+        foreach ($rune in $Text.EnumerateRunes()) {
+            $size = Get-RuneWidth $rune.Value
+            if ($used + $size -gt $limit) { break }
+            [void]$builder.Append($rune.ToString())
+            $used += $size
+        }
+        $Text = $builder.ToString() + $suffix
+        $used += $suffix.Length
+    }
+    if ($Pad) { $Text + (' ' * ($Width - $used)) } else { $Text }
+}
+
+# 中文排版的避頭點：這些標點不放在行首，換行時把前一個字一起帶到下一行。
+$noLineStart = '，。、；：！？）」』〉》】〕,.;:!?)]}'
+
+function Split-RepoDisplayLine {
+    <#
+    .SYNOPSIS Lines of at most Width columns, keeping existing line breaks.
+    .DESCRIPTION 優先在空白處換行（英文單字與指令參數不被切開）；行內沒有合適的空白時在任意兩字之間換行，這正是中文的換行方式。
+    #>
+    param([AllowEmptyString()][AllowNull()][string]$Text, [Parameter(Mandatory)][int]$Width)
+    foreach ($paragraph in "$Text" -split '\r?\n') {
+        $runes = [Collections.Generic.List[string]]::new()
+        $sizes = [Collections.Generic.List[int]]::new()
+        $used = 0
+        foreach ($rune in $paragraph.EnumerateRunes()) {
+            $character = $rune.ToString()
+            $size = Get-RuneWidth $rune.Value
+            if ($used + $size -gt $Width -and $runes.Count) {
+                $space = $runes.LastIndexOf(' ')
+                $cut = if ($character -eq ' ') { $runes.Count }
+                elseif ($space -gt 0 -and $space -ge $runes.Count / 3) { $space }
+                elseif ($noLineStart.Contains($character) -and $runes.Count -gt 1) { $runes.Count - 1 }
+                else { $runes.Count }
+                (-join $runes.GetRange(0, $cut)).TrimEnd()
+                $skip = if ($cut -lt $runes.Count -and $runes[$cut] -eq ' ') { 1 } else { 0 }
+                $runes.RemoveRange(0, $cut + $skip)
+                $sizes.RemoveRange(0, $cut + $skip)
+                $used = 0
+                foreach ($kept in $sizes) { $used += $kept }
+                if ($character -eq ' ' -and !$runes.Count) { continue }
+            }
+            $runes.Add($character)
+            $sizes.Add($size)
+            $used += $size
+        }
+        -join $runes
+    }
+}
+
+function Join-HelpLine([string]$Text) {
+    # help 在原始檔裡手動斷行；中文接中文不能補空白（否則顯示成「停止， 不會改動」），英文之間才補。空行分段。
+    $paragraphs = [Collections.Generic.List[string]]::new()
+    $current = ''
+    foreach ($line in "$Text" -split '\r?\n' | ForEach-Object Trim) {
+        if (!$line) {
+            if ($current) { $paragraphs.Add($current); $current = '' }
+            continue
+        }
+        # 條列項目（- 、* 、1. 開頭）各自一行。
+        $current = if ($current -and $line -match '^([-*]|\d+\.)\s') { "$current`n$line" }
+        elseif (!$current -or (Get-RuneWidth ([int]$current[-1])) -gt 1 -or (Get-RuneWidth ([int]$line[0])) -gt 1) { $current + $line }
+        else { "$current $line" }
+    }
+    if ($current) { $paragraphs.Add($current) }
+    $paragraphs -join "`n"
+}
+
+# 腳本選單的分類，取自入口腳本 help 的 .COMPONENT，依這個順序顯示；值是分類標題旁的補充說明。
+$scriptCategories = [ordered]@{
+    '開發' = '日常啟動與預覽'
+    '初次設定' = '新機器或剛 clone 時'
+    '建置與檢查' = '提交與送 PR 前'
+    '資料庫與合約' = 'API 合約、資料表結構、建新庫'
+    '發布' = '產生 IIS 發布套件'
+    'IIS 主機' = '由 Publish-IIS 帶進發布套件，在 IIS 主機或由 DBA 執行'
+}
+
+function Get-RepoScriptCategory {
+    <# .SYNOPSIS Script menu categories in display order, each with its note. #>
+    $scriptCategories
+}
+
+function Resolve-ScriptParameter([object[]]$Parameters, [string]$Name) {
+    $exact = @($Parameters | Where-Object Name -EQ $Name)
+    if ($exact.Count) { return $exact[0] }
+    $prefix = @($Parameters | Where-Object { $_.Name.StartsWith($Name, [StringComparison]::OrdinalIgnoreCase) })
+    if ($prefix.Count -eq 1) { $prefix[0] }
+}
+
+function ConvertFrom-ArgumentAst([Management.Automation.Language.Ast]$Argument) {
+    if ($Argument -is [Management.Automation.Language.ConstantExpressionAst]) { return $Argument.Value }
+    if ($Argument -is [Management.Automation.Language.ArrayLiteralAst]) { return , @($Argument.Elements | ForEach-Object { ConvertFrom-ArgumentAst $_ }) }
+    $Argument.Extent.Text
+}
+
+function ConvertTo-ScriptParameter([Management.Automation.Language.ParameterAst]$Parameter, [Management.Automation.Language.CommentHelpInfo]$Help) {
+    $name = $Parameter.Name.VariablePath.UserPath
+    $attributes = @($Parameter.Attributes | Where-Object { $_ -is [Management.Automation.Language.AttributeAst] })
+    $mandatory = @($attributes | Where-Object { $_.TypeName.Name -eq 'Parameter' } | ForEach-Object NamedArguments |
+        Where-Object { $_.ArgumentName -eq 'Mandatory' -and ($_.ExpressionOmitted -or $_.Argument.Extent.Text -eq '$true') }).Count -gt 0
+    $set = @($attributes | Where-Object { $_.TypeName.Name -eq 'ValidateSet' })
+    $choices = @(if ($set.Count) { $set[0].PositionalArguments | ForEach-Object Value })
+    $type = $Parameter.StaticType
+    $kind = if ($type -eq [switch]) { 'Switch' }
+    elseif ($choices.Count) { 'Choice' }
+    elseif ($type -in [int], [long]) { 'Number' }
+    elseif ($type -eq [string[]]) { 'List' }
+    elseif ($type -in [string], [object]) { 'Text' }
+    elseif ($type -eq [pscredential]) { 'Credential' }
+    else { 'Unsupported' }
+    $default = $Parameter.DefaultValue
+    $text = if ($Help -and $Help.Parameters.Keys -contains $name.ToUpperInvariant()) { Join-HelpLine $Help.Parameters[$name.ToUpperInvariant()] } else { '' }
+    [pscustomobject]@{
+        Name = $name
+        Kind = $kind
+        Mandatory = $mandatory
+        Choices = $choices
+        Default = if ($default -is [Management.Automation.Language.ConstantExpressionAst]) { [string]$default.Value } else { $null }
+        # 例如 Start-Local 的 PublishDirectory 依環境變數決定；選單只標示「依環境」，不在這裡執行運算式。
+        DynamicDefault = $null -ne $default -and $default -isnot [Management.Automation.Language.ConstantExpressionAst] -and $default.Extent.Text -ne '@()'
+        Help = $text
+    }
+}
+
+function ConvertFrom-ScriptExample([string]$Text, [string]$Name, [object[]]$Parameters) {
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Text, [ref]$null, [ref]$null)
+    $command = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true) |
+        Where-Object { "$($_.GetCommandName())" -like "*$Name.ps1" })
+    if (!$command.Count) { return }
+    $values = [ordered]@{}
+    $elements = $command[0].CommandElements
+    for ($i = 1; $i -lt $elements.Count; $i++) {
+        if ($elements[$i] -isnot [Management.Automation.Language.CommandParameterAst]) { continue }
+        $parameter = Resolve-ScriptParameter $Parameters $elements[$i].ParameterName
+        if (!$parameter) { continue }
+        $argument = $elements[$i].Argument
+        if (!$argument -and $parameter.Kind -ne 'Switch' -and $i + 1 -lt $elements.Count -and $elements[$i + 1] -isnot [Management.Automation.Language.CommandParameterAst]) {
+            $argument = $elements[++$i]
+        }
+        if ($parameter.Kind -eq 'Unsupported') { continue }
+        # 帳密只記「執行前要詢問」，範例裡的 (Get-Credential) 也是這個意思。
+        if ($parameter.Kind -eq 'Credential') { $values[$parameter.Name] = $true; continue }
+        $values[$parameter.Name] = if ($parameter.Kind -eq 'Switch') { !$argument -or $argument.Extent.Text -ne '$false' } else { ConvertFrom-ArgumentAst $argument }
+    }
+    [pscustomobject]@{ Text = $command[0].Extent.Text; Parameters = $values }
+}
+
+function Get-RepoScriptCatalog {
+    <#
+    .SYNOPSIS Entry scripts with their category, help, parsed examples and parameters, ordered for the script menu.
+    .DESCRIPTION 只解析原始檔（AST），不執行腳本、也不呼叫 Get-Help：說明以腳本自己的 comment-based help 為唯一來源。
+    #>
+    param([string]$Path = (Join-Path $root 'scripts'))
+    $order = @($scriptCategories.Keys)
+    $items = foreach ($file in Get-ChildItem -LiteralPath $Path -Filter '*.ps1' | Where-Object BaseName -NE 'Show-Scripts') {
+        $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$null)
+        $help = $ast.GetHelpContent()
+        $parameters = @(if ($ast.ParamBlock) { $ast.ParamBlock.Parameters | ForEach-Object { ConvertTo-ScriptParameter $_ $help } })
+        [pscustomobject]@{
+            Name = $file.BaseName
+            Path = $file.FullName
+            Category = if ($help -and $help.Component) { $help.Component.Trim() } else { '' }
+            Synopsis = if ($help) { Join-HelpLine $help.Synopsis } else { '' }
+            Description = if ($help -and $help.Description) { Join-HelpLine $help.Description } else { '' }
+            Parameters = $parameters
+            Examples = @(if ($help) { $help.Examples | ForEach-Object { ConvertFrom-ScriptExample $_ $file.BaseName $parameters } })
+        }
+    }
+    $items | Sort-Object @{ Expression = { $index = $order.IndexOf($_.Category); if ($index -lt 0) { $order.Count } else { $index } } }, Name
+}
+
+function Format-Argument($Value) {
+    if ($Value -is [int] -or $Value -is [long]) { return [string]$Value }
+    $text = [string]$Value
+    # 只有字母開頭、沒有空白與特殊字元的值才不加引號：數字開頭會被當成數字（08 變 8、1kb 變 1024），
+    # 中文輸入法的全形空白、破折號（—）與彎引號（‘’“”）在 PowerShell 分別是分隔、參數前綴與引號。
+    if ($text -match '^[\p{L}_./\\][\p{L}\p{Nd}\p{M}_./\\:=~-]*$' -and $text -notmatch '^\.\d') { return $text }
+    # 單引號字串裡，任一種單引號（含 ‘ ’ ‚ ‛）都要重複一次才是字面值。
+    "'" + ($text -replace "['\u2018\u2019\u201A\u201B]", '$0$0') + "'"
+}
+
+function Format-RepoCommandLine {
+    <#
+    .SYNOPSIS The command line that runs an entry script with these parameters, quoted so PowerShell reads back exactly the same values.
+    .DESCRIPTION 帳密一律寫成 (Get-Credential)，不論傳入的是實際帳密或 [pscredential]::Empty（代表執行前詢問），指令裡不會出現帳號或密碼。
+    #>
+    param([Parameter(Mandatory)][string]$Name, [Collections.IDictionary]$Parameters = @{})
+    $words = [Collections.Generic.List[string]]::new()
+    $words.Add("./scripts/$Name.ps1")
+    foreach ($key in $Parameters.Keys) {
+        $value = $Parameters[$key]
+        if ($null -eq $value) { continue }
+        if ($value -is [pscredential]) {
+            $words.Add("-$key (Get-Credential)")
+            continue
+        }
+        if ($value -is [bool] -or $value -is [switch]) {
+            if ($value) { $words.Add("-$key") }
+            continue
+        }
+        $words.Add("-$key")
+        $words.Add($(if ($value -is [array]) { (@($value) | ForEach-Object { Format-Argument $_ }) -join ',' } else { Format-Argument $value }))
+    }
+    $words -join ' '
+}
+
+# 選單的共用設定：網站與腳本共用 .local/config 的同一組資料庫設定；入口腳本有同名參數時由選單帶入。
+# 帳密另存在 .local/secrets（只有目前使用者可讀），見 Get-RepoSavedCredential。
+$sharedSettings = [ordered]@{
+    Server = @{ Path = 'Databases.App.Server'; Label = '資料庫伺服器' }
+    Database = @{ Path = 'Databases.App.Name'; Label = '資料庫名稱' }
+    TrustServerCertificate = @{ Path = 'Databases.App.TrustServerCertificate'; Label = '信任伺服器憑證' }
+}
+
+function Get-RepoSharedSetting {
+    <#
+    .SYNOPSIS Shared script-menu settings (database server, name, certificate trust) with the values the site uses.
+    .DESCRIPTION
+    依網站的載入順序取值：.local/config/appsettings.Local.json 有值就用它，否則用 appsettings.json 的預設。
+    回傳 Values、每個鍵的 Label，以及已儲存的 SQL 帳號（SavedUser）與是否存了密碼（HasSavedPassword）；密碼本身不回傳。
+    #>
+    param(
+        [string]$Path = (Get-RepoLocalPaths).Settings,
+        [string]$DefaultsPath = (Join-Path $root 'backend/src/AiNexus.Host/appsettings.json'),
+        [string]$SecretsPath = (Get-RepoLocalPaths).Secrets
+    )
+    $local = if (Test-Path -LiteralPath $Path -PathType Leaf) { Read-RepoJson $Path } else { @{} }
+    $defaults = if (Test-Path -LiteralPath $DefaultsPath -PathType Leaf) { Read-RepoJson $DefaultsPath } else { @{} }
+    $values = [ordered]@{}
+    $labels = [ordered]@{}
+    foreach ($key in $sharedSettings.Keys) {
+        $value = Get-RepoSetting $local $sharedSettings[$key].Path
+        if ($null -eq $value -or "$value" -eq '') { $value = Get-RepoSetting $defaults $sharedSettings[$key].Path }
+        $values[$key] = $value
+        $labels[$key] = $sharedSettings[$key].Label
+    }
+    $secrets = if (Test-Path -LiteralPath $SecretsPath -PathType Leaf) { Read-RepoJson $SecretsPath } else { @{} }
+    $user = Get-RepoSetting $secrets 'Databases.App.User'
+    $integrated = Get-RepoSetting $local 'Databases.App.IntegratedSecurity'
+    if ($null -eq $integrated) { $integrated = Get-RepoSetting $defaults 'Databases.App.IntegratedSecurity' }
+    [pscustomobject]@{
+        Values = $values
+        Labels = $labels
+        SavedUser = "$user"
+        HasSavedPassword = "$(Get-RepoSetting $secrets 'Databases.App.Password')" -ne ''
+        IntegratedSecurity = $integrated -eq $true
+    }
+}
+
+function Get-RepoSavedCredential {
+    <# .SYNOPSIS The SQL login saved in the machine secrets file (the one the site uses), or nothing when the user or password is missing. #>
+    param([string]$SecretsPath = (Get-RepoLocalPaths).Secrets)
+    if (!(Test-Path -LiteralPath $SecretsPath -PathType Leaf)) { return }
+    $secrets = Read-RepoJson $SecretsPath
+    $user = "$(Get-RepoSetting $secrets 'Databases.App.User')"
+    $password = "$(Get-RepoSetting $secrets 'Databases.App.Password')"
+    if (!$user -or !$password) { return }
+    [pscredential]::new($user, (ConvertTo-SecureString $password -AsPlainText -Force))
+}
+
+function Set-RepoSavedCredential {
+    <#
+    .SYNOPSIS Saves or clears the SQL login in the machine secrets file and restricts the file to the current user.
+    .DESCRIPTION 和 Configure-Local.ps1 寫同一個位置：網站也用這組帳密連線。Password 為 $null 時只改帳號、保留原本的密碼；-Clear 刪除帳號與密碼。
+    #>
+    # Password 不宣告型別：[string] 會把 $null 轉成空字串，「保留原密碼」就變成「清除密碼」。
+    param([string]$User, $Password = $null, [switch]$Clear, [string]$SecretsPath = (Get-RepoLocalPaths).Secrets)
+    if (!(Test-Path -LiteralPath $SecretsPath -PathType Leaf) -and $SecretsPath -eq (Get-RepoLocalPaths).Secrets) { Initialize-RepoLocalSettings | Out-Null }
+    $secrets = Read-RepoJson $SecretsPath
+    if ($Clear) {
+        Set-RepoSetting $secrets 'Databases.App.User' ''
+        Set-RepoSetting $secrets 'Databases.App.Password' ''
+    } else {
+        Set-RepoSetting $secrets 'Databases.App.User' $User
+        if ($null -ne $Password) { Set-RepoSetting $secrets 'Databases.App.Password' ([string]$Password) }
+    }
+    Save-RepoJson $SecretsPath $secrets
+    Protect-RepoSecrets $SecretsPath
+}
+
+function Set-RepoSharedSetting {
+    <# .SYNOPSIS Writes shared script-menu settings into the machine settings file; keys other than the shared ones are ignored. #>
+    param([Parameter(Mandatory)][Collections.IDictionary]$Values, [string]$Path = (Get-RepoLocalPaths).Settings)
+    # 第一次使用時與 Configure-Local.ps1 一樣由範本建立 .local 設定，不另外產生一份格式不同的檔案。
+    if (!(Test-Path -LiteralPath $Path -PathType Leaf) -and $Path -eq (Get-RepoLocalPaths).Settings) { Initialize-RepoLocalSettings | Out-Null }
+    $settings = Read-RepoJson $Path
+    foreach ($key in $Values.Keys) { if ($sharedSettings.Contains($key)) { Set-RepoSetting $settings $sharedSettings[$key].Path $Values[$key] } }
+    Save-RepoJson $Path $settings
+}
+
+function Get-RepoScriptHistory {
+    <# .SYNOPSIS Recently run entry scripts with their parameters, newest first; nothing when the file is missing or unreadable. #>
+    param([Parameter(Mandatory)][string]$Path)
+    if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+    # 歷程只是方便用的紀錄，壞掉就當作沒有，不讓選單因此打不開。
+    try { $data = Read-RepoJson $Path } catch { return }
+    if ($data -isnot [Collections.IDictionary] -or !$data.Contains('Recent')) { return }
+    foreach ($entry in @($data['Recent'])) {
+        if ($entry -isnot [Collections.IDictionary] -or !$entry['Name']) { continue }
+        $parameters = [ordered]@{}
+        if ($entry['Parameters'] -is [Collections.IDictionary]) { foreach ($key in $entry['Parameters'].Keys) { $parameters[$key] = $entry['Parameters'][$key] } }
+        [pscustomobject]@{ Name = [string]$entry['Name']; Parameters = $parameters }
+    }
+}
+
+function Add-RepoScriptHistory {
+    <# .SYNOPSIS Records a run at the top of the history, keeping only the latest run of each script; credentials are stored only as "ask before running". #>
+    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Name, [Collections.IDictionary]$Parameters = @{}, [int]$Limit = 5)
+    $recorded = [ordered]@{}
+    foreach ($key in $Parameters.Keys) { $recorded[$key] = if ($Parameters[$key] -is [pscredential]) { $true } else { $Parameters[$key] } }
+    $recent = @([ordered]@{ Name = $Name; Parameters = $recorded }) + @(Get-RepoScriptHistory $Path | Where-Object Name -NE $Name |
+            Select-Object -First ($Limit - 1) | ForEach-Object { [ordered]@{ Name = $_.Name; Parameters = $_.Parameters } })
+    New-Item -ItemType Directory -Path (Split-Path $Path) -Force | Out-Null
+    Save-RepoJson $Path ([ordered]@{ Recent = $recent })
+}
+
+# Invoke-RepoSteps 巢狀時（Verify 的一步呼叫 Build.ps1）只有最外層印摘要、改分頁標題與進度。
+# 深度記在全域變數 RepoStepDepth：每支腳本都以 Import-Module -Force 載入，模組重新載入時模組變數會歸零。
+
+function Format-StepText([string]$Text, [string]$Style) {
+    if ($PSStyle.OutputRendering -eq 'PlainText' -or $env:NO_COLOR) { return $Text }
+    $code = switch ($Style) {
+        'Heading' { $PSStyle.Bold + $PSStyle.Foreground.Cyan }
+        'Pass' { $PSStyle.Foreground.Green }
+        'Fail' { $PSStyle.Bold + $PSStyle.Foreground.Red }
+        'Dim' { $PSStyle.Dim }
+        default { '' }
+    }
+    $code + $Text + $PSStyle.Reset
+}
+
+function Format-StepElapsed([TimeSpan]$Elapsed) {
+    '{0}:{1:00}' -f [int][Math]::Floor($Elapsed.TotalMinutes), $Elapsed.Seconds
+}
+
+function Write-StepSummary([string]$Title, [object[]]$Results, [TimeSpan]$Elapsed, [bool]$Passed) {
+    $labels = @($Results | ForEach-Object { "[$($_.Number)] $($_.Name)" })
+    $width = ($labels | ForEach-Object { Get-RepoDisplayWidth $_ } | Measure-Object -Maximum).Maximum
+    Write-Host ''
+    Write-Host (Format-StepText "$Title：$(if ($Passed) { '通過' } else { '失敗' })（共 $(Format-StepElapsed $Elapsed)）" $(if ($Passed) { 'Pass' } else { 'Fail' }))
+    for ($i = 0; $i -lt $Results.Count; $i++) {
+        $result = $Results[$i]
+        $style = switch ($result.Status) { '成功' { 'Pass' } '失敗' { 'Fail' } default { 'Dim' } }
+        $time = if ($result.Elapsed) { (Format-StepElapsed $result.Elapsed).PadLeft(5) } else { '     ' }
+        $line = '  ' + (Format-RepoDisplayText $labels[$i] $width -Pad) + '  ' + (Format-StepText (Format-RepoDisplayText $result.Status 6 -Pad) $style) + '  ' + $time
+        if ($result.Detail) { $line += '  ' + $result.Detail }
+        Write-Host $line
+        if ($result.Hint) { Write-Host ((' ' * ($width + 17)) + $result.Hint) }
+    }
+}
+
+function Invoke-RepoSteps {
+    <#
+    .SYNOPSIS Runs named steps in order with [n/total] headings, then prints each step's result and time, also when one fails.
+    .DESCRIPTION
+    每一步是 @{ Name = '名稱'; Run = { ... }; Skip = '略過原因'（有值就略過）; Hint = '失敗時去哪裡看' }。
+    第一個失敗之後的步驟標為「未執行」，摘要印完才拋出原本的錯誤，結束碼不變。
+    步驟直接執行、不接管它的輸出：dotnet、npm 的輸出一旦被管線接走就會判定為重導，失去顏色與即時進度。
+    最外層在 GitHub Actions 把每一步包成可折疊的 ::group::；在 Windows Terminal 另外更新分頁標題與工作列進度（OSC 9;4）。
+    #>
+    param([Parameter(Mandatory)][string]$Title, [Parameter(Mandatory)][Collections.IDictionary[]]$Step)
+    $depth = [int](Get-Variable RepoStepDepth -Scope Global -ValueOnly -ErrorAction Ignore)
+    $outer = $depth -eq 0
+    $indent = '  ' * $depth
+    $global:RepoStepDepth = $depth + 1
+    $actions = $env:GITHUB_ACTIONS -eq 'true'
+    $terminal = $outer -and !$actions -and $env:WT_SESSION -and ![Console]::IsOutputRedirected
+    $previousTitle = $null
+    if ($terminal) { try { $previousTitle = $Host.UI.RawUI.WindowTitle } catch { $terminal = $false } }
+    $results = [Collections.Generic.List[object]]::new()
+    $failure = $null
+    $total = [Diagnostics.Stopwatch]::StartNew()
+    try {
+        for ($i = 0; $i -lt $Step.Count; $i++) {
+            $item = $Step[$i]
+            $label = "[$($i + 1)/$($Step.Count)] $($item['Name'])"
+            $result = [pscustomobject]@{ Number = $i + 1; Name = $item['Name']; Status = '未執行'; Elapsed = $null; Detail = ''; Hint = '' }
+            $results.Add($result)
+            if ($failure) { continue }
+            if ($item['Skip']) {
+                $result.Status = '略過'
+                $result.Detail = $item['Skip']
+                Write-Host (Format-StepText "$indent$label：略過（$($item['Skip'])）" 'Dim')
+                continue
+            }
+            if ($actions -and $outer) { Write-Host "::group::$label" }
+            Write-Host (Format-StepText "$indent$label" 'Heading')
+            if ($terminal) {
+                $Host.UI.RawUI.WindowTitle = "$label - $Title"
+                [Console]::Write("`e]9;4;1;$([int](100 * $i / $Step.Count))`a")
+            }
+            $watch = [Diagnostics.Stopwatch]::StartNew()
+            try {
+                & $item['Run']
+                $result.Status = '成功'
+            } catch {
+                $failure = $_
+                $result.Status = '失敗'
+                $result.Detail = @("$($_.Exception.Message)" -split '\r?\n')[0]
+                $result.Hint = "$($item['Hint'])"
+                if ($terminal) { [Console]::Write("`e]9;4;2;100`a") }
+            } finally {
+                $result.Elapsed = $watch.Elapsed
+                if ($actions -and $outer) { Write-Host '::endgroup::' }
+            }
+        }
+        if ($outer) { Write-StepSummary $Title $results $total.Elapsed ($null -eq $failure) }
+        if ($failure) { throw $failure }
+    } finally {
+        if ($outer) { Remove-Variable RepoStepDepth -Scope Global -ErrorAction Ignore } else { $global:RepoStepDepth = $depth }
+        if ($terminal) {
+            $Host.UI.RawUI.WindowTitle = $previousTitle
+            [Console]::Write("`e]9;4;0;0`a")
+        }
+    }
+}
+
 Export-ModuleMember -Function *-Repo*

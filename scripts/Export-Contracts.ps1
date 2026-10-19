@@ -11,6 +11,9 @@
 .PARAMETER BaseUrl
 執行中網站的網址。
 
+.COMPONENT
+資料庫與合約
+
 .EXAMPLE
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080
 #>

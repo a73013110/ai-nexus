@@ -3,6 +3,7 @@
 - 版本固定：Node 26.5.0、npm 11.6.1（`frontend/package.json` 的 `engines`，CI 也讀這裡）、.NET SDK 10.0.401（`global.json`）、PowerShell 7.4 以上；依賴以 lockfile 還原。
 - 日常只需要 `./scripts/Start-Local.ps1`（整合預覽）或 `./scripts/Start-Dev.ps1`（熱更新）；送 PR 前必跑 `./scripts/Verify.ps1`。
 - 每支入口腳本都有說明：`Get-Help ./scripts/<名稱>.ps1 -Detailed`。共用函式在 `scripts/AiNexus/AiNexus.psm1`，腳本測試（Pester 5）在 `scripts/tests`。
+- 不確定用哪支時跑 `./scripts/Show-Scripts.ps1`（互動選單，見[腳本選單](script-menu.md)）。
 - fork 成新產品見 [fork](fork.md)；設定見 [設定與秘密](configuration.md)，測試見 [測試](testing.md)，本機產生的資料夾見 [LOCAL_FOLDERS](local-folders.md)。
 
 ## 第一次啟動

@@ -9,11 +9,12 @@
 
 | 路徑 | 內容 | 寫入者 |
 | --- | --- | --- |
-| `config/appsettings.Local.json` | 一般參數（SQL、AD、模型路由…） | 首次執行由範本建立；`Configure-Local.ps1` 修改 |
-| `secrets/appsettings.Secrets.json` | 密碼與 API key，ACL 只開給目前使用者、SYSTEM、Administrators | `Configure-Local.ps1` |
+| `config/appsettings.Local.json` | 一般參數（SQL、AD、模型路由…） | 首次執行由範本建立；`Configure-Local.ps1`、`Show-Scripts.ps1`（F2）修改 |
+| `secrets/appsettings.Secrets.json` | 密碼與 API key，ACL 只開給目前使用者、SYSTEM、Administrators | `Configure-Local.ps1`、`Show-Scripts.ps1`（F2） |
 | `config/dev-proxy.json` | Angular dev server 的 `/api`、`/health` 代理，每次啟動重寫 | `Start-Dev.ps1` |
 | `certs/` | 匯出給 Angular dev server 的 HTTPS 憑證與私鑰 | `Start-Dev.ps1` |
 | `logs/` | 開發模式前後端的輸出與錯誤 | `Start-Dev.ps1` |
+| `script-history.json` | 腳本選單最近執行的腳本與參數，刪除只會清掉「最近使用」 | `Show-Scripts.ps1` |
 | `notes/` | 個人的排查紀錄、進度與臨時計畫 | 手動 |
 
 設定的載入順序與欄位見 [參數](configuration.md)。

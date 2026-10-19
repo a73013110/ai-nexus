@@ -17,6 +17,9 @@ application pool 名稱；指定時以 appcmd 檢查集區設定（需要系統�
 .PARAMETER BaseUrl
 網站的 HTTPS 網址；指定時檢查 /health/live 與登入設定。
 
+.COMPONENT
+IIS 主機
+
 .EXAMPLE
 ./Verify-IIS.ps1 -AppPath 'D:\AiNexus\app' -AppPool AiNexus -BaseUrl 'https://ai-nexus.example.edu'
 #>
