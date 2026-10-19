@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Threading;
@@ -29,11 +30,11 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, Resour
     {
         var effective = await access.ForUserAsync(actor, ct);
         var groups = effective.Groups.Select(x => x.Id).ToArray();
-        var inheritProjects = effective.Features.Any(x => x.Id == "projects");
+        var inheritProjects = await access.HoldsAsync(actor, "projects", ct);
         var direct = db.Set<Resource>().Where(x =>
             x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId)));
         return db.Set<Resource>().Where(x => x.Kind == kind &&
-            (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == "project" && r.Id == x.ParentId)));
+            (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == Project.Kind && r.Id == x.ParentId)));
     }
     public async Task<Result<Resource>> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
     {
@@ -43,11 +44,9 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, Resour
         return resource;
     }
     public async Task<bool> CanEditAsync(Guid actor, Resource value, CancellationToken ct) => value.OwnerId == actor ||
-        await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == value.Id && x.UserId == actor && x.Role == "editor", ct) ||
-        await db.Set<Resource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" &&
-            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
-    public async Task<ResourceDto> DescribeAsync(Guid actor, Resource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
-        await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
+        await EditorLinks(actor).AnyAsync(x => x.ResourceId == value.Id, ct) ||
+        await EditableProjects(actor).AnyAsync(x => x.Id == value.ParentId, ct);
+    public async Task<ResourceDto> DescribeAsync(Guid actor, Resource value, CancellationToken ct) => Describe(actor, value, await CanEditAsync(actor, value, ct));
 
     /// <summary>與 <see cref="RequireAsync"/> 的可見性規則相同，但一次查完整批；任一筆不可見即回傳 not found。</summary>
     public async Task<Result> RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
@@ -64,10 +63,9 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, Resour
         var rest = values.Where(x => !editable.Contains(x.Id)).ToArray();
         if (rest.Length == 0) return editable;
         var ids = rest.Select(x => x.Id).Distinct().ToArray();
-        var named = await db.Set<ResourceMember>().Where(x => ids.Contains(x.ResourceId) && x.UserId == actor && x.Role == "editor").Select(x => x.ResourceId).ToListAsync(ct);
+        var named = await EditorLinks(actor).Where(x => ids.Contains(x.ResourceId)).Select(x => x.ResourceId).ToListAsync(ct);
         var parents = rest.Where(x => x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
-        var projects = parents.Length == 0 ? [] : await db.Set<Resource>().Where(x => parents.Contains(x.Id) && x.Kind == "project" &&
-            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor"))).Select(x => x.Id).ToListAsync(ct);
+        var projects = parents.Length == 0 ? [] : await EditableProjects(actor).Where(x => parents.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
         foreach (var value in rest)
             if (named.Contains(value.Id) || value.ParentId is Guid parent && projects.Contains(parent)) editable.Add(value.Id);
         return editable;
@@ -77,7 +75,20 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, Resour
     public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<Resource> values, CancellationToken ct)
     {
         var editable = await EditableAsync(actor, values, ct);
-        return values.Select(value => new ResourceDto(value.Id, value.Name, value.Kind, editable.Contains(value.Id), value.OwnerId == actor, value.UpdatedAt)).ToArray();
+        return values.Select(value => Describe(actor, value, editable.Contains(value.Id))).ToArray();
+    }
+
+    private static ResourceDto Describe(Guid actor, Resource value, bool canEdit)
+        => new(value.Id, value.Name, value.Kind, canEdit, value.OwnerId == actor, value.UpdatedAt);
+
+    /// <summary>使用者以具名編輯者身分加入的資源連結；群組授權只給唯讀，不在此列。</summary>
+    private IQueryable<ResourceMember> EditorLinks(Guid actor) => db.Set<ResourceMember>().Where(x => x.UserId == actor && x.Role == "editor");
+
+    /// <summary>使用者可編輯的專案：專案的編輯者也能編輯其下的子資源。</summary>
+    private IQueryable<Resource> EditableProjects(Guid actor)
+    {
+        var editors = EditorLinks(actor);
+        return db.Set<Resource>().Where(x => x.Kind == Project.Kind && (x.OwnerId == actor || editors.Any(m => m.ResourceId == x.Id)));
     }
     public async Task<Result<ResourceAclDto>> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
