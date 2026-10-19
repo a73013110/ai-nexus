@@ -1,5 +1,6 @@
 import { catalogFeature } from '@core/api/catalog';
 import { CATALOG_SCOPES } from '@core/api/feature-catalog';
+import { formatNumber } from '@shared/browser/format';
 
 const actions: Record<string, string> = {
   'conversation.created': '建立對話',
@@ -98,34 +99,38 @@ export const auditResult = (result: string | null | undefined, action?: string) 
 };
 export const auditRejected = (result: string | null | undefined) =>
   !!result && !Object.hasOwn(outcomes, result);
+/** 列表與詳情共用的結果標示；新增價格版本一律以「已建立」呈現。 */
+export function auditOutcome(entry: { action: string; result?: string | null }) {
+  const result = entry.action === 'billing.price.created' ? 'created' : entry.result;
+  return { result: auditResult(result, entry.action), rejected: auditRejected(result) };
+}
 
+const authenticationMethods: Record<string, string> = {
+  local: '本地帳號',
+  ad: 'AD 驗證',
+  windows: 'Windows 整合驗證',
+  test: '測試身分',
+  unknown: '未識別',
+};
+const failureReasons: Record<string, string> = {
+  invalid_credentials: '帳號、密碼或登入方式不正確，或帳號暫時無法登入',
+  ad_invalid_credentials: 'AD 帳號或密碼不正確，或帳號無法登入',
+  login_method_disabled: '帳號已停用，或未允許此登入方式',
+  authentication_mode: '部署未支援所選登入方式',
+  service_unavailable: '登入服務暫時無法使用',
+};
 export function auditContext(json: string | null | undefined) {
   try {
     const details = JSON.parse(json || '{}');
-    const methods: Record<string, string> = {
-      local: '本地帳號',
-      ad: 'AD 驗證',
-      windows: 'Windows 整合驗證',
-      test: '測試身分',
-      unknown: '未識別',
-    };
     return [
       { label: '嘗試／登入帳號', value: details.account },
-      { label: '登入方式', value: methods[details.authentication] },
+      { label: '登入方式', value: authenticationMethods[details.authentication] },
       { label: '來源 IP', value: details.clientAddress },
       {
         label: '拒絕／失敗原因',
         value:
           typeof details.failureCode === 'string'
-            ? (
-                {
-                  invalid_credentials: '帳號、密碼或登入方式不正確，或帳號暫時無法登入',
-                  ad_invalid_credentials: 'AD 帳號或密碼不正確，或帳號無法登入',
-                  login_method_disabled: '帳號已停用，或未允許此登入方式',
-                  authentication_mode: '部署未支援所選登入方式',
-                  service_unavailable: '登入服務暫時無法使用',
-                } as Record<string, string>
-              )[details.failureCode] || details.failureCode
+            ? failureReasons[details.failureCode] || details.failureCode
             : null,
       },
     ].filter(
@@ -174,12 +179,14 @@ const labels: Record<string, string> = {
   dailyTokenLimits: '各模型每日 token 上限',
   'policy.storedAttachmentLimitBytes': '附件空間上限（bytes）',
 };
+/** 各模型每日 token 上限；舊紀錄的鍵是 PascalCase，所以不分大小寫。 */
+const TOKEN_LIMITS = /^(?:policy\.)?dailyTokenLimits$/i;
+const TOKEN_LIMIT = /^(?:policy\.)?dailyTokenLimits\./i;
+const MODEL_ID = /^(?:modelId|defaultModelId|providerModelId)$/i;
+const MODEL_IDS = /^allowedModelIds$/i;
 function flatten(value: unknown, prefix = ''): Record<string, unknown> {
-  if (
-    value == null &&
-    ['dailytokenlimits', 'policy.dailytokenlimits'].includes(prefix.toLowerCase())
-  )
-    return {};
+  // 上限整組清除（null）時不展開成一列，改由各模型的鍵顯示「繼承設定」。
+  if (value == null && TOKEN_LIMITS.test(prefix)) return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { [prefix]: value };
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, item]) =>
@@ -199,6 +206,8 @@ const display = (value: unknown) =>
         : String(value);
 const resolveModel = (id: unknown, names: Readonly<Record<string, string>>) =>
   names[String(id)] || '已停用的模型';
+const tokenLimit = (value: unknown) =>
+  value == null ? '繼承設定' : formatNumber(Number(value)) + ' tokens';
 export function auditChanges(
   json: string | null | undefined,
   modelNames: Readonly<Record<string, string>> = {},
@@ -211,21 +220,17 @@ export function auditChanges(
     return [...new Set([...Object.keys(before), ...Object.keys(after)])]
       .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
       .map((key) => {
-        const tokenPrefix = ['policy.dailyTokenLimits.', 'dailyTokenLimits.'].find((prefix) =>
-          key.toLowerCase().startsWith(prefix.toLowerCase()),
-        );
+        const tokenPrefix = TOKEN_LIMIT.exec(key)?.[0];
         const modelId = tokenPrefix ? key.slice(tokenPrefix.length) : null;
-        const tokenValue = (value: unknown) =>
-          value == null ? '繼承設定' : Number(value).toLocaleString('zh-TW') + ' tokens';
         return {
           key,
           label: modelId
             ? '每日 token 上限 · ' + resolveModel(modelId, modelNames)
             : labels[key] || key,
           before: modelId
-            ? tokenValue(before[key])
+            ? tokenLimit(before[key])
             : displayModelValue(key, before[key], modelNames),
-          after: modelId ? tokenValue(after[key]) : displayModelValue(key, after[key], modelNames),
+          after: modelId ? tokenLimit(after[key]) : displayModelValue(key, after[key], modelNames),
           ...(key === 'featureIds'
             ? {
                 featureIds: {
@@ -254,10 +259,10 @@ function displayScopes(value: unknown[]) {
 }
 function displayModelValue(key: string, value: unknown, names: Readonly<Record<string, string>>) {
   if (key === 'scopes' && Array.isArray(value)) return displayScopes(value);
-  if (/(^|\.)allowedModelIds$/i.test(key) && Array.isArray(value))
+  const field = key.slice(key.lastIndexOf('.') + 1);
+  if (MODEL_IDS.test(field) && Array.isArray(value))
     return value.map((id) => resolveModel(id, names)).join('、') || '無';
-  if (/(^|\.)(modelId|defaultModelId|providerModelId)$/i.test(key) && value != null)
-    return resolveModel(value, names);
+  if (MODEL_ID.test(field) && value != null) return resolveModel(value, names);
   return display(value);
 }
 export function auditDetails(
@@ -265,13 +270,11 @@ export function auditDetails(
   names: Readonly<Record<string, string>>,
 ): string {
   try {
-    const present = (value: unknown, key = ''): unknown => {
-      const field = key.toLowerCase();
-      if (['modelid', 'defaultmodelid', 'providermodelid'].includes(field))
-        return value == null ? value : resolveModel(value, names);
-      if (field === 'allowedmodelids' && Array.isArray(value))
+    const present = (value: unknown, field = ''): unknown => {
+      if (MODEL_ID.test(field)) return value == null ? value : resolveModel(value, names);
+      if (MODEL_IDS.test(field) && Array.isArray(value))
         return value.map((id) => resolveModel(id, names));
-      if (field === 'dailytokenlimits' && value && typeof value === 'object')
+      if (/^dailyTokenLimits$/i.test(field) && value && typeof value === 'object')
         return Object.entries(value).map(([id, limit]) => ({
           model: resolveModel(id, names),
           limit,
