@@ -40,7 +40,7 @@ internal sealed class SaveArtifact(
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, Guid id, SaveArtifactRequest request, CancellationToken ct)
     {
-        if (!Artifact.TitleIsValid(request.Title)) return ArtifactsErrors.InvalidName;
+        if (!Artifact.TitleIsValid(request.Title)) return CollaborationErrors.InvalidName;
         if (request.ExpectedVersion is < 1 or >= Artifact.MaxVersions) return ArtifactsErrors.VersionLimit;
         using (await writes.AcquireAsync(id, ct))
         {

@@ -44,7 +44,7 @@ internal sealed class CreateArtifact(
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct)
     {
-        if (!Artifact.TitleIsValid(request.Title)) return ArtifactsErrors.InvalidName;
+        if (!Artifact.TitleIsValid(request.Title)) return CollaborationErrors.InvalidName;
         if (!Artifact.ContentIsValid(request.Content)) return ArtifactsErrors.ContentInvalid;
         if (request.SourceMessageId is Guid message)
         {
@@ -57,7 +57,7 @@ internal sealed class CreateArtifact(
         if (count >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
-            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.Projects)) return AccessControlErrors.FeatureForbidden;
+            if (!await features.HoldsAsync(actor, FeatureCatalog.Projects, ct)) return AccessControlErrors.FeatureForbidden;
             var editable = await access.RequireAsync(actor, project, "project", ct, write: true);
             if (!editable.IsSuccess) return editable.Error;
         }
