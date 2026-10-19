@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization;
@@ -11,8 +12,9 @@ public sealed record UnitMembership(Guid UnitId, bool IsPrimary, bool IsManager)
 /// 其他模組讀取組織的對外合約（員工服務的部門與主管、ADR 0017 的資料範圍）。只回答「現在」：
 /// 有效單位＝自己與所有上層都啟用；停用的單位連同整棵下層都不算，帳號停用或刪除的成員也不算。
 /// 每次呼叫整表讀取單位：部門數以百計，比遞迴 CTE 簡單，也讓「上層停用」的判斷只寫一次。
+/// 也是 AccessControl 的 <see cref="IUnitMembership"/>：資料範圍的 <c>unit</c>、<c>unit-tree</c> 由這裡計算。
 /// </summary>
-public sealed class OrganizationDirectory(AppDbContext db)
+public sealed class OrganizationDirectory(AppDbContext db) : IUnitMembership
 {
     /// <summary>使用者目前所屬的有效單位；帳號停用或刪除時回空清單。</summary>
     public async Task<IReadOnlyList<UnitMembership>> MembershipsAsync(Guid userId, CancellationToken ct)
@@ -37,6 +39,21 @@ public sealed class OrganizationDirectory(AppDbContext db)
         }
         return result;
     }
+
+    /// <summary>
+    /// 指定單位目前的成員 ID（帳號啟用且未刪除），是可再組合的查詢：業務模組把它放進自己的 Where，
+    /// 讓「範圍內的人」與業務資料在同一個 SQL 裡比對。單位 ID 應來自 <see cref="IDataScope"/>（已排除無效單位），這裡不再檢查。
+    /// </summary>
+    public IQueryable<Guid> MemberIds(IReadOnlyCollection<Guid> unitIds)
+    {
+        var units = unitIds.ToArray();
+        return db.Set<UnitMember>().Where(x => units.Contains(x.UnitId))
+            .Where(x => db.Users.Any(u => u.Id == x.UserId && u.Enabled && u.DeletedAt == null))
+            .Select(x => x.UserId);
+    }
+
+    async Task<IReadOnlyList<Guid>> IUnitMembership.UnitsOfAsync(Guid userId, CancellationToken ct)
+        => [.. (await MembershipsAsync(userId, ct)).Select(x => x.UnitId)];
 
     /// <summary>單位目前的有效成員（帳號啟用且未刪除）；單位無效時回空清單。</summary>
     public async Task<IReadOnlyList<Guid>> MembersAsync(Guid unitId, bool managersOnly, CancellationToken ct)

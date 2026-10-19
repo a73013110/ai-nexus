@@ -14,10 +14,11 @@ namespace AiNexus.Features.Admin.Operations;
 
 public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null);
 
+/// <summary><c>Scopes</c>：功能 ID → 資料範圍，只放目錄有宣告範圍的功能，而且每個這類功能都要有（ADR 0017）。</summary>
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
-public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
+public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null, IReadOnlyDictionary<string, string>? Scopes = null);
 
-/// <summary>建立或更新群組、其功能與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
+/// <summary>建立或更新群組、其功能（含資料範圍）與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
 internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
@@ -26,7 +27,7 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
 
     public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlGroups, "admin.group", null, id, token => SnapshotAsync(id, token), async () =>
     {
-        if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds)) is { } invalid) return invalid;
+        if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds) ?? AccessRules.Scopes(request.FeatureIds, request.Scopes)) is { } invalid) return invalid;
         if (request.Policy is { } policy)
         {
             if (policies.Check(new(policy.AllowedModelIds, policy.DailyTokenLimits)) is { } rejected) return rejected;
@@ -37,8 +38,10 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
         if (group is null) { group = new() { Id = id }; db.Add(group); }
         group.Name = request.Name.Trim(); group.Enabled = request.Enabled;
         var old = await db.Set<RoleGroupFeature>().Where(x => x.GroupId == id).ToListAsync(ct);
+        var scopes = request.Scopes ?? new Dictionary<string, string>();
         db.RemoveRange(old.Where(x => !request.FeatureIds.Contains(x.FeatureId)));
-        db.AddRange(request.FeatureIds.Where(x => !old.Any(y => y.FeatureId == x)).Select(x => new RoleGroupFeature { GroupId = id, FeatureId = x }));
+        foreach (var kept in old.Where(x => request.FeatureIds.Contains(x.FeatureId))) kept.Scope = scopes.GetValueOrDefault(kept.FeatureId);
+        db.AddRange(request.FeatureIds.Where(x => !old.Any(y => y.FeatureId == x)).Select(x => new RoleGroupFeature { GroupId = id, FeatureId = x, Scope = scopes.GetValueOrDefault(x) }));
         var value = await db.Set<GroupModelPolicy>().FindAsync([id], ct);
         if (request.Policy is null) { if (value is not null) db.Remove(value); }
         else
@@ -59,6 +62,8 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
             value.Name,
             value.Enabled,
             featureIds = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id).OrderBy(x => x.FeatureId).Select(x => x.FeatureId).ToArrayAsync(ct),
+            // 稽核遮罩只保留白名單欄位名稱，所以範圍寫成清單而不是以功能 ID 為鍵的物件。
+            scopes = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id && x.Scope != null).OrderBy(x => x.FeatureId).Select(x => new { featureId = x.FeatureId, scope = x.Scope }).ToArrayAsync(ct),
             policy = policy is null ? null : new GroupPolicyRequest(ModelPolicyService.Allowed(policy.AllowedModelsJson), ModelPolicyService.Limits(policy.DailyTokenLimitsJson), policy.StoredAttachmentLimitBytes)
         };
     }

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 
 namespace AiNexus.UnitTests.AccessControl;
 
@@ -40,6 +41,20 @@ public sealed class FeatureCatalogTests
             .Where(x => FeatureCatalog.Find(x.Id[..x.Id.LastIndexOf('.')]) is not { Kind: FeatureKind.Page } parent || parent.Module != x.Module)
             .Select(x => x.Id).ToList();
         Assert.True(orphans.Count == 0, "動作的上層（去掉最後一段）必須是同模組的頁面：" + string.Join(", ", orphans));
+    }
+
+    [Fact]
+    public void DeclaredScopesAreKnownOrderedNarrowToWideAndOnlyOnGrants()
+    {
+        var order = DataScopes.Definitions.Select(x => x.Id).ToList();
+        Assert.Equal(order.Count, order.Distinct().Count());
+        foreach (var feature in FeatureCatalog.All.Where(x => x.Scopes.Count > 0))
+        {
+            Assert.True(feature.IsGrant, $"{feature.Id}：閱讀器不是授權，不能宣告資料範圍。");
+            Assert.All(feature.Scopes, scope => Assert.Contains(scope, order));
+            Assert.Equal(feature.Scopes.OrderBy(order.IndexOf), feature.Scopes);
+            Assert.Equal(feature.Scopes.Count, feature.Scopes.Distinct().Count());
+        }
     }
 
     [Fact]

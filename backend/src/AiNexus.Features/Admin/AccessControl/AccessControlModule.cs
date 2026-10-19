@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
@@ -15,6 +16,8 @@ public sealed class AccessControlModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<AccessService>();
+        // IUnitMembership 由 Organization 註冊（AccessControl 不依賴它）。
+        services.AddScoped<IDataScope, DataScopeService>();
         services.AddScoped<AdministrativeAudit>();
         services.AddScoped<AdministrativeReadAudit>();
         services.AddSingleton<AdministrativeWriteLock>();

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.OpenApi;
@@ -81,7 +82,9 @@ internal static class OpenApiContract
             ["name"] = feature.Name,
             ["icon"] = feature.Icon,
             ["route"] = feature.Route,
+            ["scopes"] = new JsonArray([.. feature.Scopes.Select(scope => (JsonNode)JsonValue.Create(scope))]),
         })]),
+        ["scopes"] = new JsonArray([.. DataScopes.Definitions.Select(scope => (JsonNode)new JsonObject { ["id"] = scope.Id, ["name"] = scope.Name })]),
     };
 }
 

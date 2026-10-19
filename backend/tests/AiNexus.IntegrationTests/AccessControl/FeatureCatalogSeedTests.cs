@@ -82,6 +82,18 @@ public sealed class FeatureCatalogSeedTests
     }
 
     [Fact]
+    public async Task SeedGrantsCarryAScopeExactlyWhenTheCatalogDeclaresScopes()
+    {
+        await TestDatabase.WithContextAsync(async db =>
+        {
+            var grants = await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId, x.Scope }).ToListAsync();
+            var wrong = grants.Where(x => FeatureCatalog.Find(x.FeatureId)?.Scopes is { } supported && (supported.Count == 0 ? x.Scope is not null : x.Scope is null || !supported.Contains(x.Scope)))
+                .Select(x => $"- {x.GroupId}→{x.FeatureId}：{x.Scope ?? "NULL"}").ToList();
+            Assert.True(wrong.Count == 0, $"{Seed} 的預設授權範圍要符合 {Catalog} 的宣告：有宣告範圍的功能給一個支援的範圍，其他為 NULL（ADR 0017）：\n" + string.Join("\n", wrong));
+        });
+    }
+
+    [Fact]
     public async Task SeedLeavesNamesToTheCatalog()
     {
         await TestDatabase.WithContextAsync(async db =>

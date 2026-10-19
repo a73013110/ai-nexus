@@ -10,7 +10,8 @@ namespace AiNexus.Features.Admin.Operations;
 
 public sealed record AdminRoleDto(string Id, string Name, bool Enabled, IReadOnlyList<string> GroupIds, int UserCount);
 
-public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy);
+/// <summary><c>Scopes</c>：已授予且帶資料範圍的功能 → 範圍（ADR 0017）；沒有範圍概念的功能不出現。</summary>
+public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy, IReadOnlyDictionary<string, string> Scopes);
 
 /// <summary>管理端的功能列；<c>Name</c> 是覆寫或目錄預設名稱，<c>Route</c>、<c>Icon</c> 由 <see cref="FeatureCatalog"/> 填入（同 <see cref="FeatureDto"/>）。</summary>
 public sealed record AdminFeatureDto(string Id, string Name, string Route, bool Enabled, string Icon);
@@ -45,7 +46,8 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog)
                 grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(),
                 policies.TryGetValue(x.Id, out var p)
                     ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes)
-                    : null))
+                    : null,
+                grants.Where(y => y.GroupId == x.Id && y.Scope != null).ToDictionary(y => y.FeatureId, y => y.Scope!, StringComparer.Ordinal)))
             .ToArray();
         var featureDtos = features.Select(ToDto).ToArray();
         return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray());

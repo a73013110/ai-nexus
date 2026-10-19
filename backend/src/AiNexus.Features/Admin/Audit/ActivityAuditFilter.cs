@@ -28,15 +28,16 @@ public sealed class ActivityAuditFilter
 
     /// <summary>
     /// 符合條件的紀錄，新到舊；有 <paramref name="before"/> 時只取 ID 比它小的（游標分頁）。
-    /// 每列回傳前都要經過 <see cref="Present"/>。
+    /// <paramref name="people"/> 是 <see cref="AuditDataScope"/> 的範圍（null＝全部）。每列回傳前都要經過 <see cref="Present"/>。
     /// </summary>
-    internal IQueryable<AuditDto> Query(AppDbContext db, long? before = null)
+    internal IQueryable<AuditDto> Query(AppDbContext db, IQueryable<Guid>? people, long? before = null)
     {
         // actor 是實際操作者（沒有記錄時視為擁有者本人），subject 是紀錄的擁有者。兩者不同代表代為操作，
         // 介面會以測試身分顯示，對象帳號則放進 ActingAs。
         var query = AuditCategories.Filter(db.AuditEvents.AsNoTracking(), Category)
             .LeftJoin(db.Users, entry => entry.ActorId ?? entry.OwnerId, user => user.Id, (entry, actor) => new { entry, actor })
             .LeftJoin(db.Users, x => x.entry.OwnerId, user => user.Id, (x, subject) => new { x.entry, x.actor, subject });
+        if (people is not null) query = query.Where(x => people.Contains(x.entry.OwnerId) || x.entry.ActorId != null && people.Contains(x.entry.ActorId.Value));
         if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
         if (From is { } start) query = query.Where(x => x.entry.At >= start);
         if (Until is { } end) query = query.Where(x => x.entry.At < end);
