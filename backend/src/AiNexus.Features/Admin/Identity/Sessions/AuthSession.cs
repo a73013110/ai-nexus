@@ -1,9 +1,8 @@
 using AiNexus.Data.App;
 using System.Security.Claims;
-using System.Text.Json;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
 using AiNexus.Features.Admin.Identity.Authentication;
 
 namespace AiNexus.Features.Admin.Identity.Sessions;
@@ -27,7 +26,7 @@ internal static class AuthSession
     /// 在這裡新增選項時，也必須同時決定每個身分帶有哪些權限，並稽核使用者的選擇。
     /// </summary>
     public static IReadOnlyList<SignInIdentityDto> Identities(ClaimsPrincipal user) => user.Identity?.IsAuthenticated == true
-        ? [new(PersonalIdentity, PersonalIdentity, user.FindFirstValue("display_name") ?? user.Identity.Name ?? "", user.Identity.Name)]
+        ? [new(PersonalIdentity, PersonalIdentity, user.FindFirstValue(SessionIdentity.DisplayName) ?? user.Identity.Name ?? "", user.Identity.Name)]
         : [];
 
     public static AuthSessionDto Describe(HttpContext http, AdAuthenticationOptions options, IAntiforgery csrf)
@@ -37,13 +36,13 @@ internal static class AuthSession
         if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId)
             && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId)
             && long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var seconds))
-            testing = new(actorId, http.User.FindFirstValue("actor_name") ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));
+            testing = new(actorId, http.User.FindFirstValue(SessionIdentity.ActorName) ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));
         var methods = new List<string> { "local" };
         if (options.Mode == "Windows") methods.Insert(0, "windows"); else if (options.Configured) methods.Insert(0, "ad");
         var identities = Identities(http.User);
         var chosen = http.User.FindFirstValue(SessionIdentity.ActiveIdentity);
-        return new(options.Mode, http.User.Identity?.IsAuthenticated == true, true, http.User.Identity?.Name, http.User.FindFirstValue("display_name"), csrf.GetAndStoreTokens(http).RequestToken!,
-            methods, http.User.Identity?.IsAuthenticated == true ? http.User.FindFirstValue(SessionIdentity.Method) ?? (options.Mode == "Windows" ? "windows" : "ad") : null,
+        return new(options.Mode, http.User.Identity?.IsAuthenticated == true, true, http.User.Identity?.Name, http.User.FindFirstValue(SessionIdentity.DisplayName), csrf.GetAndStoreTokens(http).RequestToken!,
+            methods, http.User.Identity?.IsAuthenticated == true ? http.User.FindFirstValue(SessionIdentity.Method) ?? options.DirectoryMethod : null,
             Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var id) ? id : null, testing,
             identities, identities.FirstOrDefault(x => x.Id == chosen)?.Id ?? (identities.Count > 0 ? identities[0].Id : null));
     }
@@ -54,16 +53,18 @@ internal static class AuthSession
         if (!Guid.TryParse(previous.FindFirstValue(SessionIdentity.ActorId), out var actorId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.TestId), out var testId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.UserId), out var targetId)) return;
-        if (await db.AuditEvents.AnyAsync(x => x.OwnerId == actorId && x.ResourceId == testId && x.Action == "identity.test_end", ct)) return;
-        db.AuditEvents.Add(new()
-        {
-            OwnerId = actorId,
-            ActorId = actorId,
-            ResourceId = testId,
-            Action = "identity.test_end",
-            Result = "revoked",
-            DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason })
-        });
+        if (await SessionIdentity.TestEndedAsync(db, actorId, testId, ct)) return;
+        var ended = SessionIdentity.TestEnded(actorId, testId, targetId, "revoked", reason);
+        ended.ActorId = actorId;
+        db.AuditEvents.Add(ended);
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>以 <paramref name="principal"/> 重新簽發 session cookie，沿用原 cookie 的到期時間，切換身分不會延長登入。</summary>
+    public static async Task ReplaceSessionAsync(HttpContext http, ClaimsPrincipal principal)
+    {
+        var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
+        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false, ExpiresUtc = previous.Properties?.ExpiresUtc, AllowRefresh = true });
+        http.User = principal;
     }
 }

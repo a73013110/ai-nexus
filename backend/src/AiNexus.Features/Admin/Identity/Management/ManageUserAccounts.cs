@@ -94,9 +94,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             user.AdAccount = ad; user.LocalAccount = local;
             if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) user.Account = local ?? ad!;
             if (hash is not null) { user.PasswordHash = hash; user.FailedLogins = 0; user.LockedUntil = null; }
-            var roles = await db.Set<UserRole>().Where(x => x.UserId == key).ToListAsync(ct);
-            db.RemoveRange(roles.Where(x => !request.RoleIds.Contains(x.RoleId)));
-            db.AddRange(request.RoleIds.Where(x => roles.All(y => y.RoleId != x)).Select(x => new UserRole { UserId = key, RoleId = x }));
+            await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
             return Result.Success;
         }, ct);
         return saved.IsSuccess ? key : saved.Error;
@@ -117,7 +115,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
     {
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null) return null;
-        var roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == id).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct);
+        var roleIds = await SetUserRoles.RoleIdsAsync(db, id, ct);
         return new
         {
             user.Account,

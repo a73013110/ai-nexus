@@ -64,7 +64,7 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
         [
             new(ClaimTypes.PrimarySid, identity.Value.Sid),
             new(ClaimTypes.Name, identity.Value.Account),
-            new("display_name", identity.Value.DisplayName),
+            new(SessionIdentity.DisplayName, identity.Value.DisplayName),
         ], AuthEndpoints.CookieScheme);
         http.User = new(claims);
         return await current.GetAsync(ct);

@@ -24,7 +24,7 @@ internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdenti
 
     public TestIdentityRequestValidator(IHttpContextAccessor accessor)
     {
-        When(_ => !StartTestIdentity.IsTestIdentity(accessor.HttpContext?.User), () =>
+        When(_ => !SessionIdentity.IsTest(accessor.HttpContext?.User), () =>
             RuleFor(x => x.Reason).Must(x => !string.IsNullOrWhiteSpace(x) && x.Trim().Length is >= StartTestIdentity.MinReasonLength and <= StartTestIdentity.MaxReasonLength)
                 .WithErrorCode("length"));
     }
@@ -43,22 +43,20 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
             => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.IdentityUsers).WithName("StartTestIdentity");
 
-    public static bool IsTestIdentity(ClaimsPrincipal? user) => user?.HasClaim(x => x.Type == SessionIdentity.ActorId) == true;
-
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, TestIdentityRequest body, CancellationToken ct)
     {
-        if (IsTestIdentity(http.User)) return IdentityErrors.TestIdentityNested;
+        if (SessionIdentity.IsTest(http.User)) return IdentityErrors.TestIdentityNested;
         var resolved = await current.GetAsync(ct);
         if (!resolved.IsSuccess) return resolved.Error;
         var actor = resolved.Value;
-        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers)) return AccessControlErrors.FeatureForbidden;
+        if (!await access.HoldsAsync(actor.Id, FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.FeatureForbidden;
         var target = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == body.UserId && x.Enabled && x.DeletedAt == null, ct);
-        if (target is null) return IdentityErrors.TestUserNotFound;
+        if (target is null) return IdentityErrors.UserNotFound;
         if (target.Id == actor.Id) return IdentityErrors.TestIdentitySame;
         var now = clock.GetUtcNow();
         var expiry = now.Add(Lifetime);
         var testId = Guid.NewGuid();
-        var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? (options.Value.Mode == "Windows" ? "windows" : "ad");
+        var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? options.Value.DirectoryMethod;
         db.AuditEvents.Add(new()
         {
             OwnerId = actor.Id,

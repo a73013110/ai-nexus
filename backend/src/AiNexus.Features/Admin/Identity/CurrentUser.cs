@@ -39,7 +39,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         {
             // Cookie 驗證剛讀過這一列，直接追蹤那份副本，避免再查一次。
             var linked = Track(SessionIdentity.ValidatedUser(accessor.HttpContext!, userId)) ?? await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
-            var testing = principal.HasClaim(x => x.Type == SessionIdentity.ActorId);
+            var testing = SessionIdentity.IsTest(principal);
             if (linked is null || !SessionIdentity.Available(linked)
                 || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version))
                 || (!testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method))))
@@ -50,7 +50,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         if (sid is null && OperatingSystem.IsWindows() && principal.Identity is WindowsIdentity windows) sid = windows.User?.Value;
         if (string.IsNullOrWhiteSpace(sid)) return IdentityErrors.WindowsSidRequired;
         if (principal.Identity.Name is not { } account) return IdentityErrors.WindowsAccountRequired;
-        var displayName = principal.FindFirstValue("display_name") ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
+        var displayName = principal.FindFirstValue(SessionIdentity.DisplayName) ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
         // 多數請求只讀既有的對應，不取全域寫入鎖；只有建立、綁定或更新使用者，或套用初始授權時才取鎖。
         // 綁定是依帳號跨 SID 進行，且本地登入寫的也是同一批資料列，所以鎖必須共用。
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);

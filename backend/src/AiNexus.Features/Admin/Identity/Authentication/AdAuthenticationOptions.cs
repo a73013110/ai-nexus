@@ -28,6 +28,8 @@ public sealed class AdAuthenticationOptions : IValidatableObject
     public string Host => Server.Length > 0 ? Server : Domain;
     public int Port => UseLdaps ? 636 : 389;
     public string Base => SearchBase.Length > 0 ? SearchBase : string.Join(',', Domain.Split('.').Select(part => "DC=" + part));
+    /// <summary>session 未記錄登入方式時（舊版 cookie、Negotiate），視為目錄登入的方式名稱。</summary>
+    public string DirectoryMethod => Mode == "Windows" ? "windows" : "ad";
     public string BindName => BindUser.IndexOfAny(['@', '\\', '=']) >= 0 ? BindUser : $"{BindUser}@{Domain}";
 
     public IEnumerable<ValidationResult> Validate(ValidationContext context)
