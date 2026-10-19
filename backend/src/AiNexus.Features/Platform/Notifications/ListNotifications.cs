@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,10 +32,9 @@ internal sealed class ListNotifications(AppDbContext db)
             if (previous is null) return NotificationsErrors.CursorInvalid;
             query = query.Where(x => x.CreatedAt < previous.CreatedAt || (x.CreatedAt == previous.CreatedAt && x.Id.CompareTo(cursor) < 0));
         }
-        // 失敗通知不顯示儲存的原始文字，只用固定訊息與問題代碼，避免把原始錯誤直接給使用者看。
         var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Take(PageSize + 1)
-            .Select(x => new NotificationDto(x.Id, x.Version, x.Type, x.Severity, x.Severity == "error" ? "操作未完成" : x.Title,
-                x.Severity == "error" ? Issues.Message(x.IssueCode) : x.Body, new(x.TargetKind, x.TargetId), x.CreatedAt, x.ReadAt, x.IssueCode))
+            .Select(x => new NotificationDto(x.Id, x.Version, x.Type, x.Severity, NotificationDisplay.Title(x.Severity, x.Title),
+                NotificationDisplay.Body(x.Severity, x.Body, x.IssueCode), new(x.TargetKind, x.TargetId), x.CreatedAt, x.ReadAt, x.IssueCode))
             .ToListAsync(ct);
         return new NotificationPageDto(rows.Take(PageSize).ToArray(), count, rows.Count > PageSize);
     }

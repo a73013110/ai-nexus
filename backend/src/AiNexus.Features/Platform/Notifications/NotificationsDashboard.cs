@@ -2,7 +2,6 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Dashboard;
-using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -14,9 +13,9 @@ internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
-        var mine = db.Set<Notification>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.DismissedAt == null);
+        var mine = db.Set<Notification>().AsNoTracking().Inbox(scope.Actor);
         var unread = mine.Where(x => x.ReadAt == null);
-        var counts = await unread.GroupBy(x => 1).Select(g => new { All = g.Count(), Errors = g.Count(x => x.Severity == "error") }).SingleOrDefaultAsync(ct);
+        var counts = await unread.GroupBy(x => 1).Select(g => new { All = g.Count(), Errors = g.Count(x => x.Severity == NotificationDisplay.Error) }).SingleOrDefaultAsync(ct);
         var daily = await DashboardDays.CountAsync(mine.Select(x => x.CreatedAt), scope, ct);
         var errors = counts?.Errors ?? 0;
         var section = new DashboardSection("notifications", Feature, "通知", "")
@@ -28,22 +27,10 @@ internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
             .Select(x => new { x.Id, x.Title, x.Body, x.Severity, x.IssueCode, x.TargetKind, x.TargetId, x.CreatedAt }).ToListAsync(ct);
         foreach (var item in recent)
         {
-            // 失敗的顯示與通知中心一致：只用審過的問題訊息，絕不顯示儲存的原始文字。
-            var error = item.Severity == "error";
-            var body = error ? Issues.Message(item.IssueCode) : item.Body;
-            section.Item(item.Id.ToString(), error ? "操作未完成" : item.Title, body.Length > 80 ? body[..80] + "…" : body, item.CreatedAt,
-                Link(item.TargetKind, item.TargetId), error ? DashboardTones.Danger : item.Severity == "warning" ? DashboardTones.Warning : DashboardTones.Info);
+            var body = NotificationDisplay.Body(item.Severity, item.Body, item.IssueCode);
+            section.Item(item.Id.ToString(), NotificationDisplay.Title(item.Severity, item.Title), body.Length > 80 ? body[..80] + "…" : body, item.CreatedAt,
+                NotificationDisplay.Link(item.TargetKind, item.TargetId), item.Severity == NotificationDisplay.Error ? DashboardTones.Danger : DashboardTones.Info);
         }
         return section.Build();
     }
-
-    /// <summary>與通知中心相同的型別化跳轉目標；網址取目錄，模組換區時跟著變。</summary>
-    private static string? Link(string kind, Guid id) => kind switch
-    {
-        "conversation" => FeatureCatalog.RouteOf(FeatureCatalog.Chat) + "/" + id,
-        "share" => FeatureCatalog.RouteOf(FeatureCatalog.Sharing) + "/" + id,
-        "task" => FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + id,
-        "repository-review" => FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "?review=" + id,
-        _ => null,
-    };
 }

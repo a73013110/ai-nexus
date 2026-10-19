@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
@@ -34,9 +35,11 @@ internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock)
         }).WithName("ReadNotification");
     }
 
-    public Task ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => Unread(owner).Where(x => x.CreatedAt <= through).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+    public Task ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => MarkReadAsync(owner, x => x.CreatedAt <= through, ct);
 
-    public Task OneAsync(Guid owner, Guid id, CancellationToken ct) => Unread(owner).Where(x => x.Id == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+    public Task OneAsync(Guid owner, Guid id, CancellationToken ct) => MarkReadAsync(owner, x => x.Id == id, ct);
 
-    private IQueryable<Notification> Unread(Guid owner) => db.Set<Notification>().Inbox(owner).Where(x => x.ReadAt == null);
+    // 只更新收件匣中仍未讀的列，已讀時間不會被重複呼叫覆寫。
+    private Task MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct) => db.Set<Notification>().Inbox(owner)
+        .Where(x => x.ReadAt == null).Where(which).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
 }
