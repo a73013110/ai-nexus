@@ -18,10 +18,12 @@ namespace AiNexus.Features.Work.Repositories.Reviews;
 public sealed partial class RepositoryReviewHandler(AppDbContext db, RepositoryReviewService reviews, AccessService features, ModelTaskService model,
     ModelCatalog catalog, ModelPresentation presentation, IOptions<InferenceOptions> inference, ILogger<RepositoryReviewHandler> logger) : IBackgroundJobHandler
 {
-    public string Kind => "repository-review";
+    public const string JobKind = "repository-review";
+    public string Kind => JobKind;
+
     private async Task<Result<RepositoryReview>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "repositories")) return AccessControlErrors.FeatureForbidden;
+        if (!await features.HoldsAsync(job.OwnerId, FeatureCatalog.Repositories, ct)) return AccessControlErrors.FeatureForbidden;
         var row = await reviews.FindAsync(job.OwnerId, job.SubjectId, ct);
         if (!row.IsSuccess) return row;
         if (await reviews.CheckSourceAsync(job.OwnerId, row.Value, ct) is { IsSuccess: false } source) return source.Error;

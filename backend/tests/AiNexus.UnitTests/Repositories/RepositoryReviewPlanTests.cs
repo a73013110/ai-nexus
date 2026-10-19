@@ -14,13 +14,13 @@ public sealed class RepositoryReviewPlanTests
     {
         var text = string.Concat(Enumerable.Repeat("+中文🙂保留整行內容\n", 300));
         var diff = "diff --git a/中文.cs b/中文.cs\n" + text;
-        var slices = RepositoryReviewService.Split(diff, 512).Value!;
+        var slices = RepositoryReviewPlan.Split(diff, 512).Value!;
         Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff)));
         var strict = new UTF8Encoding(false, true);
         Assert.All(slices, x => Assert.InRange(strict.GetByteCount(x.Diff), 1, 512));
         var batches = RepositoryReviewPlan.Batches([text], 512);
         Assert.Equal(text, string.Concat(batches)); Assert.All(batches, x => Assert.InRange(strict.GetByteCount(x), 1, 512));
-        Assert.Equal("review_segment_limit", RepositoryReviewService.Split(diff, 8).Error?.Code);
+        Assert.Equal("review_segment_limit", RepositoryReviewPlan.Split(diff, 8).Error?.Code);
     }
 
     [Fact]
@@ -46,10 +46,10 @@ public sealed class RepositoryReviewPlanTests
     public void DiffSplittingPreservesAllTextAndBoundsLargeOrBinaryChanges()
     {
         var diff = "diff --git a/long.cs b/long.cs\n@@ -1 +1 @@\n+" + new string('x', 8000) + "\n";
-        var slices = RepositoryReviewService.Split(diff, 512).Value!; Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
-        Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000).Value!).Binary);
-        Assert.Equal("review_no_changes", RepositoryReviewService.Split("", 1000).Error?.Code);
-        Assert.Equal("repository_diff_limit", RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000).Error?.Code);
+        var slices = RepositoryReviewPlan.Split(diff, 512).Value!; Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
+        Assert.True(Assert.Single(RepositoryReviewPlan.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000).Value!).Binary);
+        Assert.Equal("review_no_changes", RepositoryReviewPlan.Split("", 1000).Error?.Code);
+        Assert.Equal("repository_diff_limit", RepositoryReviewPlan.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000).Error?.Code);
     }
 
     [Fact]

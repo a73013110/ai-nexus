@@ -28,7 +28,7 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (reference is not null && !RepositoryService.IsRef(reference)) return RepositoriesErrors.InvalidRef;
-        if (page is < 1 or > 1000) return RepositoriesErrors.InvalidPage;
+        if (!RepositoryService.IsPage(page)) return RepositoriesErrors.InvalidPage;
         var query = (reference is null ? "" : "sha=" + Uri.EscapeDataString(reference) + "&") + $"page={page}&limit={PageSize}&stat=false&verification=false&files=false";
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + "/commits?" + query, ct);
         if (!read.IsSuccess) return read.Error!;
@@ -59,14 +59,14 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
 
     private async Task<Result<RepositoryCommitDto>> ReadCommitAsync(Guid owner, string repo, string sha, CancellationToken ct)
     {
-        var read = await gitea.GetAsync(owner, RepositoryService.Route(repo) + "/git/commits/" + sha + "?stat=false&files=false&verification=false", ct);
+        var read = await gitea.GetAsync(owner, RepositoryService.CommitRoute(repo, sha), ct);
         if (!read.IsSuccess) return read.Error!;
         using var json = read.Value!;
         var commit = Commit(json.RootElement);
         return RepositoryService.IsCommit(commit.Sha) ? commit : throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
     }
 
-    internal static RepositoryCommitDto Commit(JsonElement x)
+    private static RepositoryCommitDto Commit(JsonElement x)
     {
         var detail = GiteaJson.Child(x, "commit");
         var message = GiteaJson.Text(detail, "message", 4000).Replace("\r\n", "\n").TrimEnd();

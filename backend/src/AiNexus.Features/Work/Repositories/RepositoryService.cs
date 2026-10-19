@@ -64,7 +64,7 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     {
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
-        var read = await GetAsync(owner, Route(repo) + "/git/commits/" + commit + "?stat=false&files=false&verification=false", ct);
+        var read = await GetAsync(owner, CommitRoute(repo, commit), ct);
         if (!read.IsSuccess) return read.Error!;
         read.Value!.Dispose();
         return Result.Success;
@@ -96,7 +96,7 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         if (!IsFilePath(path, false)) return RepositoriesErrors.InvalidPath;
-        var read = await GetAsync(owner, Route(repo) + "/contents/" + EncodePath(path) + "?ref=" + commit, ct);
+        var read = await GetAsync(owner, ContentsRoute(repo, path, commit), ct);
         if (!read.IsSuccess) return read.Error!;
         using var json = read.Value!;
         var root = json.RootElement;
@@ -128,10 +128,17 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), BaseUrl);
 
     /// <summary>程式庫在 Gitea 主機上的頁面網址。</summary>
-    public string Link(string repo) => BaseUrl + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
+    public string Link(string repo) => BaseUrl + EncodePath(repo);
 
-    public static string Route(string repo) => "api/v1/repos/" + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
+    public static string Route(string repo) => "api/v1/repos/" + EncodePath(repo);
     public static string EncodePath(string path) => string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
+
+    /// <summary>單一 commit 的中繼資料，不含統計、檔案清單與簽章驗證。</summary>
+    public static string CommitRoute(string repo, string sha) => Route(repo) + "/git/commits/" + sha + "?stat=false&files=false&verification=false";
+
+    /// <summary>固定 commit 上的資料夾或檔案；空路徑代表根目錄。</summary>
+    public static string ContentsRoute(string repo, string path, string commit) =>
+        Route(repo) + "/contents" + (path.Length == 0 ? "" : "/" + EncodePath(path)) + "?ref=" + commit;
 
     public static bool IsRepository([NotNullWhen(true)] string? repo) => repo?.Split('/') is { Length: 2 } parts &&
         parts.All(p => p.Length is >= 1 and <= 100 && p is not ("." or "..") && p.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'));
@@ -146,4 +153,9 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
         !value.Contains('\\') && !value.Any(char.IsControl) && (value.Length == 0 || value.Split('/').All(p => p.Length > 0 && p is not ("." or "..")));
 
     public static bool IsState(string? value) => value is "open" or "closed" or "all";
+
+    public static bool IsPage(int page) => page is >= 1 and <= 1000;
+
+    /// <summary>已去除前後空白的搜尋字串；只會以跳脫後的查詢參數送到 Gitea。</summary>
+    public static bool IsSearch(string query) => query.Length <= 100 && !query.Any(char.IsControl);
 }

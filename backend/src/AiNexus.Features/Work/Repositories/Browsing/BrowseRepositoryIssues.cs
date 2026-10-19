@@ -41,7 +41,7 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
     {
         if (Check(repo, state, page) is { } invalid) return invalid;
         var q = (query ?? "").Trim();
-        if (q.Length > 100 || q.Any(char.IsControl)) return RepositoriesErrors.InvalidState;
+        if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidState;
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + $"/issues?state={state}&type=issues&page={page}&limit={PageSize}" +
             (q.Length > 0 ? "&q=" + Uri.EscapeDataString(q) : ""), ct);
         if (!read.IsSuccess) return read.Error!;
@@ -110,7 +110,7 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
     private static Error? Check(string repo, string state, int page) =>
         !RepositoryService.IsRepository(repo) ? RepositoriesErrors.InvalidRepository :
         !RepositoryService.IsState(state) ? RepositoriesErrors.InvalidState :
-        page is < 1 or > 1000 ? RepositoriesErrors.InvalidPage : null;
+        !RepositoryService.IsPage(page) ? RepositoriesErrors.InvalidPage : null;
 
     private RepositoryIssueDto Issue(string repo, JsonElement x)
     {

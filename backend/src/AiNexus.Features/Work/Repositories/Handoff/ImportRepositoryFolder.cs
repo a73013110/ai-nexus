@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Audit;
+using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Repositories;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
@@ -37,7 +38,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
 
     public async Task<Result<RepositoryFolderImportDto>> HandleAsync(Guid owner, string repo, ImportRepositoryFolderRequest request, CancellationToken ct)
     {
-        if (await access.RequireAsync(owner, request.CollectionId, "knowledge", ct, write: true) is { IsSuccess: false } denied) return denied.Error!;
+        if (await access.RequireAsync(owner, request.CollectionId, Collection.Kind, ct, write: true) is { IsSuccess: false } denied) return denied.Error!;
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!RepositoryService.IsCommit(request.Commit)) return RepositoriesErrors.InvalidCommit;
         var folder = request.Path.Trim('/');
@@ -73,8 +74,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
         if (folder.Length > 0)
         {
             var parent = folder.Contains('/') ? folder[..folder.LastIndexOf('/')] : "";
-            var contents = route + "/contents" + (parent.Length == 0 ? "" : "/" + RepositoryService.EncodePath(parent)) + "?ref=" + commit;
-            var read = await gitea.GetAsync(owner, contents, ct);
+            var read = await gitea.GetAsync(owner, RepositoryService.ContentsRoute(repo, parent, commit), ct);
             if (!read.IsSuccess) return read.Error!;
             using var listing = read.Value!;
             var name = folder[(folder.LastIndexOf('/') + 1)..];
