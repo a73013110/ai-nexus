@@ -41,7 +41,7 @@ public sealed class DomainEvents(IServiceProvider services)
     /// <summary>同步 SaveChanges 無法執行非同步的處理常式，因此這裡主動拋出例外，避免副作用被悄悄漏掉。</summary>
     public void ThrowIfPending()
     {
-        if (dispatching) throw new InvalidOperationException("Domain event handlers must not save changes; the publisher's SaveChanges persists their work.");
+        if (dispatching) throw NestedSave();
         if (pending.Count > 0)
         {
             pending.Clear();
@@ -52,7 +52,7 @@ public sealed class DomainEvents(IServiceProvider services)
     /// <summary>持續執行處理器直到沒有新事件引發為止。由 DbContext 在寫入自身變更前呼叫。</summary>
     public async Task DispatchAsync(CancellationToken ct)
     {
-        if (dispatching) throw new InvalidOperationException("Domain event handlers must not save changes; the publisher's SaveChanges persists their work.");
+        if (dispatching) throw NestedSave();
         if (pending.Count == 0) return;
         dispatching = true;
         try
@@ -74,6 +74,9 @@ public sealed class DomainEvents(IServiceProvider services)
         }
         finally { dispatching = false; }
     }
+
+    // 處理器在派送中又呼叫 SaveChanges 會重入攔截器；同步與非同步路徑都以同一訊息拒絕。
+    private static InvalidOperationException NestedSave() => new("Domain event handlers must not save changes; the publisher's SaveChanges persists their work.");
 
     private static Func<IServiceProvider, IDomainEvent, CancellationToken, Task> Create(Type type)
         => DispatchMethod.MakeGenericMethod(type).CreateDelegate<Func<IServiceProvider, IDomainEvent, CancellationToken, Task>>();

@@ -22,15 +22,7 @@ public static partial class DiagnosticMessage
                 using var document = JsonDocument.Parse(DiagnosticRedactor.RecoverProperties(item.PropertiesJson));
                 foreach (var property in document.RootElement.EnumerateObject())
                 {
-                    values[property.Name] = property.Value.ValueKind switch
-                    {
-                        JsonValueKind.String => property.Value.GetString(),
-                        JsonValueKind.True => true,
-                        JsonValueKind.False => false,
-                        JsonValueKind.Number when property.Value.TryGetInt64(out var n) => n,
-                        JsonValueKind.Number when property.Value.TryGetDouble(out var d) => d,
-                        _ => null
-                    };
+                    values[property.Name] = DiagnosticRedactor.Scalar(property.Value);
                 }
             }
             catch (JsonException)

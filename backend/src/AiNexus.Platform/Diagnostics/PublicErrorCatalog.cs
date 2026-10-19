@@ -297,5 +297,7 @@ public static class PublicErrorCatalog
         ["windows_account_required"] = "Windows 帳號資料不完整。",
         ["windows_sid_required"] = "無法取得 AD SID，請確認登入設定。",
     };
-    public static string Message(string code, int status) => Hints.GetValueOrDefault(code) ?? (status == 401 ? "請先登入工作區。" : status == 403 ? "沒有存取此資料的權限。" : "操作未完成，請確認輸入或稍後再試。");
+    /// <summary>取得代碼的核准提示；未登錄的代碼依狀態碼退回 401／403 的預設提示或通用提示。</summary>
+    public static string Message(string code, int status) => Hints.GetValueOrDefault(code)
+        ?? (status == 401 ? Hints["authentication_required"] : status == 403 ? Hints["access_denied"] : "操作未完成，請確認輸入或稍後再試。");
 }

@@ -132,16 +132,19 @@ public static partial class DiagnosticRedactor
             return "{}";
         }
 
-        return Json(Properties(document.RootElement.EnumerateObject().Take(32).Select(p => new KeyValuePair<string, object?>(p.Name, p.Value.ValueKind switch
-        {
-            JsonValueKind.String => p.Value.GetString(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Number when p.Value.TryGetInt64(out var n) => n,
-            JsonValueKind.Number when p.Value.TryGetDouble(out var d) && double.IsFinite(d) => d,
-            _ => null
-        }))));
+        return Json(Properties(document.RootElement.EnumerateObject().Take(32).Select(p => new KeyValuePair<string, object?>(p.Name, Scalar(p.Value)))));
     }
+
+    /// <summary>把 JSON 值還原成白名單允許的純量（字串、布林、整數或有限浮點數）；物件、陣列與 null 一律為 null。</summary>
+    internal static object? Scalar(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => value.GetString(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Number when value.TryGetInt64(out var n) => n,
+        JsonValueKind.Number when value.TryGetDouble(out var d) && double.IsFinite(d) => d,
+        _ => null
+    };
 
     /// <summary>
     /// 在持久化與重放的邊界再套用一次：收斂長度、正規化欄位，避免惡意內容污染 SQL 中的紀錄。
