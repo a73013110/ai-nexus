@@ -21,6 +21,7 @@ public static class AuditActions
         ("admin.role", "角色授權"),
         ("admin.group", "群組與模型政策"),
         ("admin.feature", "功能異動"),
+        ("admin.navigation_", "選單異動"),
         ("admin.conversation_read", "對話內容檢視"),
         ("admin.user_usage_read", "使用者用量檢視"),
         ("project.", "專案與範本"),

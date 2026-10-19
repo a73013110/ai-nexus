@@ -25,6 +25,7 @@ public static class Policies
     public const string AccessControlRoles = Prefix + FeatureCatalog.AccessControlRoles;
     public const string AccessControlGroups = Prefix + FeatureCatalog.AccessControlGroups;
     public const string AccessControlFeatures = Prefix + FeatureCatalog.AccessControlFeatures;
+    public const string AccessControlNavigation = Prefix + FeatureCatalog.AccessControlNavigation;
     public const string OperationsUsage = Prefix + FeatureCatalog.OperationsUsage;
     public const string BillingPrices = Prefix + FeatureCatalog.BillingPrices;
 
@@ -35,8 +36,8 @@ public static class Policies
     public const string Attachments = Prefix + "attachments";
 
     /// <summary>
-    /// 管理目錄（角色、群組、功能、選單分群與模型）：使用者頁要角色與群組名稱來編輯指派，存取控制的三頁要整份目錄來編輯，
-    /// 所以四頁任一授權都可讀。
+    /// 管理目錄（角色、群組、功能與模型）：使用者頁要角色與群組名稱來編輯指派，存取控制的各頁要整份目錄來編輯
+    /// （選單頁要功能名稱與外部連結可選的群組），所以這些頁任一授權都可讀。
     /// </summary>
     public const string AccessCatalog = Prefix + "access-catalog";
 }
@@ -50,6 +51,6 @@ public static class AdministrativeFeatures
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(
     [
         FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures,
-        FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
+        FeatureCatalog.AccessControlNavigation, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
     ], StringComparer.Ordinal);
 }

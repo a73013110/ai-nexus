@@ -8230,23 +8230,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/navigation-groups": {
+    "/api/v1/admin/navigation-items": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ListNavigationItems"];
         put?: never;
-        post: operations["CreateNavigationGroup"];
+        post: operations["CreateNavigationItem"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/navigation-groups/{id}": {
+    "/api/v1/admin/navigation-items/order": {
         parameters: {
             query?: never;
             header?: never;
@@ -8254,9 +8254,25 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["UpdateNavigationGroup"];
+        put: operations["ReorderNavigationItems"];
         post?: never;
-        delete: operations["DeleteNavigationGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/navigation-items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateNavigationItem"];
+        post?: never;
+        delete: operations["DeleteNavigationItem"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8894,7 +8910,7 @@ export interface components {
             roles: components["schemas"]["AccessItemDto"][];
             groups: components["schemas"]["AccessItemDto"][];
             features: components["schemas"]["FeatureDto"][];
-            navigationGroups: components["schemas"]["NavigationGroupDto"][];
+            navigation: components["schemas"]["NavigationNodeDto"][];
         };
         AccessItemDto: {
             id: string;
@@ -8915,7 +8931,6 @@ export interface components {
             groups: components["schemas"]["AdminGroupDto"][];
             features: components["schemas"]["AdminFeatureDto"][];
             models: components["schemas"]["ModelDto"][];
-            navigationGroups: components["schemas"]["NavigationGroupDto"][];
         };
         AdminConversationDetailDto: {
             conversation: components["schemas"]["AdminConversationDto"];
@@ -8952,10 +8967,7 @@ export interface components {
             id: string;
             name: string;
             route: string;
-            /** Format: int32 */
-            sortOrder: number;
             enabled: boolean;
-            groupId: null | string;
             icon: string;
         };
         AdminGroupDto: {
@@ -9140,7 +9152,6 @@ export interface components {
         AuditCatalogDto: {
             features: components["schemas"]["FeatureDto"][];
             models: components["schemas"]["ModelDto"][];
-            navigationGroups: components["schemas"]["NavigationGroupDto"][];
             categories: components["schemas"]["AuditCategoryDto"][];
             actions: components["schemas"]["AuditActionDto"][];
         };
@@ -9704,19 +9715,13 @@ export interface components {
             id: string;
             name: string;
             route: string;
-            groupId: null | string;
             icon: string;
-            /** Format: int32 */
-            sortOrder: number;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "identity.users" | "access-control.roles" | "access-control.groups" | "access-control.features" | "operations.usage" | "billing.prices" | "integrations" | "monitoring" | "audit" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "identity.users" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "operations.usage" | "billing.prices" | "integrations" | "monitoring" | "audit" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
-            /** Format: int32 */
-            sortOrder: number;
             enabled: boolean;
-            groupId: null | string;
         };
         FeedbackDto: {
             /** Format: uuid */
@@ -10047,25 +10052,57 @@ export interface components {
             endpoints: components["schemas"]["EndpointTraffic"][];
             subsystems: components["schemas"]["MonitoredSubsystem"][];
         };
-        NavigationGroupCreateRequest: {
+        NavigationItemCreateRequest: {
+            kind: string;
+            parentId: null | string;
+            featureId: null | string;
+            name: null | string;
+            url: null | string;
+            openInNewTab: boolean;
+            icon: null | string;
+            audienceGroupIds: null | string[];
+        };
+        NavigationItemDto: {
             id: string;
+            parentId: null | string;
+            kind: string;
+            featureId: null | string;
+            name: null | string;
+            url: null | string;
+            openInNewTab: boolean;
+            icon: null | string;
+            /** Format: int32 */
+            sortOrder: number;
+            audienceGroupIds: string[];
+        };
+        NavigationItemUpdateRequest: {
+            kind: string;
+            featureId: null | string;
+            name: null | string;
+            url: null | string;
+            openInNewTab: boolean;
+            icon: null | string;
+            audienceGroupIds: null | string[];
+        };
+        NavigationNodeDto: {
+            id: string;
+            kind: string;
             name: string;
+            icon: null | string;
+            featureId: null | string;
+            route: null | string;
+            url: null | string;
+            openInNewTab: boolean;
+            children: components["schemas"]["NavigationNodeDto"][];
+        };
+        NavigationOrderItem: {
+            id: string;
             parentId: null | string;
             /** Format: int32 */
             sortOrder: number;
         };
-        NavigationGroupDto: {
-            id: string;
-            parentId: null | string;
-            name: string;
-            /** Format: int32 */
-            sortOrder: number;
-        };
-        NavigationGroupUpdateRequest: {
-            name: string;
-            parentId: null | string;
-            /** Format: int32 */
-            sortOrder: number;
+        NavigationOrderRequest: {
+            items: components["schemas"]["NavigationOrderItem"][];
         };
         NotificationDto: {
             /** Format: uuid */
@@ -11329,9 +11366,12 @@ export type ModelTokenBudgetDto = components['schemas']['ModelTokenBudgetDto'];
 export type MoneyTotalDto = components['schemas']['MoneyTotalDto'];
 export type MonitoredSubsystem = components['schemas']['MonitoredSubsystem'];
 export type MonitoringSnapshot = components['schemas']['MonitoringSnapshot'];
-export type NavigationGroupCreateRequest = components['schemas']['NavigationGroupCreateRequest'];
-export type NavigationGroupDto = components['schemas']['NavigationGroupDto'];
-export type NavigationGroupUpdateRequest = components['schemas']['NavigationGroupUpdateRequest'];
+export type NavigationItemCreateRequest = components['schemas']['NavigationItemCreateRequest'];
+export type NavigationItemDto = components['schemas']['NavigationItemDto'];
+export type NavigationItemUpdateRequest = components['schemas']['NavigationItemUpdateRequest'];
+export type NavigationNodeDto = components['schemas']['NavigationNodeDto'];
+export type NavigationOrderItem = components['schemas']['NavigationOrderItem'];
+export type NavigationOrderRequest = components['schemas']['NavigationOrderRequest'];
 export type NotificationDto = components['schemas']['NotificationDto'];
 export type NotificationPageDto = components['schemas']['NotificationPageDto'];
 export type NotificationTargetDto = components['schemas']['NotificationTargetDto'];
@@ -27314,7 +27354,144 @@ export interface operations {
             };
         };
     };
-    CreateNavigationGroup: {
+    ListNavigationItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavigationItemDto"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateNavigationItem: {
         parameters: {
             query?: never;
             header?: never;
@@ -27323,7 +27500,148 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["NavigationGroupCreateRequest"];
+                "application/json": components["schemas"]["NavigationItemCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavigationItemDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ReorderNavigationItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NavigationOrderRequest"];
             };
         };
         responses: {
@@ -27453,7 +27771,7 @@ export interface operations {
             };
         };
     };
-    UpdateNavigationGroup: {
+    UpdateNavigationItem: {
         parameters: {
             query?: never;
             header?: never;
@@ -27464,7 +27782,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["NavigationGroupUpdateRequest"];
+                "application/json": components["schemas"]["NavigationItemUpdateRequest"];
             };
         };
         responses: {
@@ -27594,7 +27912,7 @@ export interface operations {
             };
         };
     };
-    DeleteNavigationGroup: {
+    DeleteNavigationItem: {
         parameters: {
             query?: never;
             header?: never;

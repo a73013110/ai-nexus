@@ -25,7 +25,7 @@ public sealed class FeatureAccessTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("member", Assert.Single(me.Access.Roles).Id);
         Assert.Equal("workspace", Assert.Single(me.Access.Groups).Id);
-        Assert.Contains(new FeatureDto("chat", "對話", "/work/chat", "work", "chat", 10), me.Access.Features);
+        Assert.Contains(new FeatureDto("chat", "對話", "/work/chat", "chat"), me.Access.Features);
         Assert.Equal(me.Access.Features.Count, me.Access.Features.Select(x => x.Id).Distinct().Count());
         (await client.GetAsync("/api/v1/models")).EnsureSuccessStatusCode();
     }
@@ -92,7 +92,7 @@ public sealed class FeatureAccessTests
         using var admin = await factory.SignedInAsync();
         Assert.Contains((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == "files" && x.Name == "檔案庫");
         (await admin.GetAsync("/api/v1/files")).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 15, false, "work"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false))).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/files")).StatusCode);
         Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "files");
     }
@@ -104,8 +104,8 @@ public sealed class FeatureAccessTests
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var features = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
-        Assert.Contains(new FeatureDto("identity.users", "使用者", "/admin/identity/users", "system", "user", 80), features);
-        Assert.Contains(new FeatureDto("operations.usage", "平台用量", "/admin/operations/usage", "system", "chart", 84), features);
+        Assert.Contains(new FeatureDto("identity.users", "使用者", "/admin/identity/users", "user"), features);
+        Assert.Contains(new FeatureDto("operations.usage", "平台用量", "/admin/operations/usage", "chart"), features);
         await PlatformGrants.SplitOperationsAsync(factory, (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
 
         var operations = new[] { "admin/usage", "admin/billing/prices", "admin/billing/targets", "admin/billing/spend", "admin/knowledge/profiles",
@@ -122,7 +122,7 @@ public sealed class FeatureAccessTests
             await AssertFeatureForbiddenAsync(await bob.GetAsync($"/api/v1/{route}"));
         }
         await AssertFeatureForbiddenAsync(await alice.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null));
-        await AssertFeatureForbiddenAsync(await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, false, "work")));
+        await AssertFeatureForbiddenAsync(await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false)));
         var bobFeatures = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
         Assert.Contains(bobFeatures, x => x.Id == FeatureCatalog.OperationsUsage);
         Assert.DoesNotContain(bobFeatures, x => x.Id == FeatureCatalog.IdentityUsers);

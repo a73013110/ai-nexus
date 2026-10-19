@@ -25861,17 +25861,328 @@
         }
       }
     },
-    "/api/v1/admin/navigation-groups": {
+    "/api/v1/admin/navigation-items": {
+      "get": {
+        "tags": [
+          "AccessControl"
+        ],
+        "operationId": "ListNavigationItems",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NavigationItemDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "AccessControl"
         ],
-        "operationId": "CreateNavigationGroup",
+        "operationId": "CreateNavigationItem",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NavigationGroupCreateRequest"
+                "$ref": "#/components/schemas/NavigationItemCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationItemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/navigation-items/order": {
+      "put": {
+        "tags": [
+          "AccessControl"
+        ],
+        "operationId": "ReorderNavigationItems",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationOrderRequest"
               }
             }
           },
@@ -26014,12 +26325,12 @@
         }
       }
     },
-    "/api/v1/admin/navigation-groups/{id}": {
+    "/api/v1/admin/navigation-items/{id}": {
       "put": {
         "tags": [
           "AccessControl"
         ],
-        "operationId": "UpdateNavigationGroup",
+        "operationId": "UpdateNavigationItem",
         "parameters": [
           {
             "name": "id",
@@ -26034,7 +26345,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NavigationGroupUpdateRequest"
+                "$ref": "#/components/schemas/NavigationItemUpdateRequest"
               }
             }
           },
@@ -26180,7 +26491,7 @@
         "tags": [
           "AccessControl"
         ],
-        "operationId": "DeleteNavigationGroup",
+        "operationId": "DeleteNavigationItem",
         "parameters": [
           {
             "name": "id",
@@ -33628,7 +33939,7 @@
           "roles",
           "groups",
           "features",
-          "navigationGroups"
+          "navigation"
         ],
         "type": "object",
         "properties": {
@@ -33650,10 +33961,10 @@
               "$ref": "#/components/schemas/FeatureDto"
             }
           },
-          "navigationGroups": {
+          "navigation": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/NavigationGroupDto"
+              "$ref": "#/components/schemas/NavigationNodeDto"
             }
           }
         }
@@ -33709,8 +34020,7 @@
           "roles",
           "groups",
           "features",
-          "models",
-          "navigationGroups"
+          "models"
         ],
         "type": "object",
         "properties": {
@@ -33736,12 +34046,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ModelDto"
-            }
-          },
-          "navigationGroups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NavigationGroupDto"
             }
           }
         }
@@ -33854,9 +34158,7 @@
           "id",
           "name",
           "route",
-          "sortOrder",
           "enabled",
-          "groupId",
           "icon"
         ],
         "type": "object",
@@ -33870,18 +34172,8 @@
           "route": {
             "type": "string"
           },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int32"
-          },
           "enabled": {
             "type": "boolean"
-          },
-          "groupId": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "icon": {
             "type": "string"
@@ -34555,7 +34847,6 @@
         "required": [
           "features",
           "models",
-          "navigationGroups",
           "categories",
           "actions"
         ],
@@ -34571,12 +34862,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ModelDto"
-            }
-          },
-          "navigationGroups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NavigationGroupDto"
             }
           },
           "categories": {
@@ -36723,9 +37008,7 @@
           "id",
           "name",
           "route",
-          "groupId",
-          "icon",
-          "sortOrder"
+          "icon"
         ],
         "type": "object",
         "properties": {
@@ -36738,18 +37021,8 @@
           "route": {
             "type": "string"
           },
-          "groupId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
           "icon": {
             "type": "string"
-          },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
@@ -36769,6 +37042,7 @@
           "access-control.roles",
           "access-control.groups",
           "access-control.features",
+          "access-control.navigation",
           "operations.usage",
           "billing.prices",
           "integrations",
@@ -36786,9 +37060,7 @@
       "FeatureUpdateRequest": {
         "required": [
           "name",
-          "sortOrder",
-          "enabled",
-          "groupId"
+          "enabled"
         ],
         "type": "object",
         "properties": {
@@ -36798,18 +37070,8 @@
               "string"
             ]
           },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int32"
-          },
           "enabled": {
             "type": "boolean"
-          },
-          "groupId": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -37983,19 +38245,252 @@
           }
         }
       },
-      "NavigationGroupCreateRequest": {
+      "NavigationItemCreateRequest": {
+        "required": [
+          "kind",
+          "parentId",
+          "featureId",
+          "name",
+          "url",
+          "openInNewTab",
+          "icon",
+          "audienceGroupIds"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "featureId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "openInNewTab": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audienceGroupIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NavigationItemDto": {
         "required": [
           "id",
-          "name",
           "parentId",
-          "sortOrder"
+          "kind",
+          "featureId",
+          "name",
+          "url",
+          "openInNewTab",
+          "icon",
+          "sortOrder",
+          "audienceGroupIds"
         ],
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
+          "parentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "featureId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "openInNewTab": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "audienceGroupIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NavigationItemUpdateRequest": {
+        "required": [
+          "kind",
+          "featureId",
+          "name",
+          "url",
+          "openInNewTab",
+          "icon",
+          "audienceGroupIds"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "featureId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "openInNewTab": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audienceGroupIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NavigationNodeDto": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "icon",
+          "featureId",
+          "route",
+          "url",
+          "openInNewTab",
+          "children"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "featureId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "openInNewTab": {
+            "type": "boolean"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationNodeDto"
+            }
+          }
+        }
+      },
+      "NavigationOrderItem": {
+        "required": [
+          "id",
+          "parentId",
+          "sortOrder"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "string"
           },
           "parentId": {
@@ -38010,53 +38505,17 @@
           }
         }
       },
-      "NavigationGroupDto": {
+      "NavigationOrderRequest": {
         "required": [
-          "id",
-          "parentId",
-          "name",
-          "sortOrder"
+          "items"
         ],
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "parentId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "NavigationGroupUpdateRequest": {
-        "required": [
-          "name",
-          "parentId",
-          "sortOrder"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "parentId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sortOrder": {
-            "type": "integer",
-            "format": "int32"
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationOrderItem"
+            }
           }
         }
       },
@@ -42389,9 +42848,17 @@
         "id": "access-control.features",
         "kind": "page",
         "module": "access-control",
-        "name": "功能與選單",
+        "name": "功能",
         "icon": "list",
         "route": "/admin/access-control/features"
+      },
+      {
+        "id": "access-control.navigation",
+        "kind": "page",
+        "module": "access-control",
+        "name": "選單",
+        "icon": "sidebar",
+        "route": "/admin/access-control/navigation"
       },
       {
         "id": "operations.usage",

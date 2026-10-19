@@ -7,7 +7,7 @@ using AiNexus.Features.Admin.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Admin.AccessControl.Management;
-using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Operations;
 
@@ -30,13 +30,11 @@ public sealed class ListActivityAuditTests
         var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Contains(me.Access.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
         Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "identity.users");
-        (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", "system", 40))).EnsureSuccessStatusCode();
         var catalog = (await auditor.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
-        Assert.Contains(catalog.Features, feature => feature.Id == "audit" && feature.GroupId == "system");
+        Assert.Contains(catalog.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
         Assert.NotEmpty(catalog.Models);
-        // 列出所有群組，而不只限稽核者自己選單中的群組：紀錄的變更可能指向任何功能。
-        Assert.Equal(["work", "collaboration", "system", "reports"], catalog.NavigationGroups.Select(x => x.Id));
-        Assert.Contains(catalog.NavigationGroups, group => group is { Id: "reports", ParentId: "system", Name: "報表" });
+        // 列出所有功能（而不只限稽核者自己的授權），順序是目錄的宣告順序：紀錄的變更可能指向任何功能。
+        Assert.Equal(FeatureCatalog.Grants.Select(x => x.Id), catalog.Features.Select(x => x.Id));
         var rows = (await auditor.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=administration"))!;
         Assert.Contains(rows, row => row.Action == "admin.user_roles" && row.ResourceId == target.Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/catalog")).StatusCode);

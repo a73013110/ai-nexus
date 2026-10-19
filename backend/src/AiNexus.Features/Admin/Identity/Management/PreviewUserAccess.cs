@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Management;
 
-/// <summary>使用者目前實際取得的角色、群組與功能，並附上這些功能所在的選單群組（唯讀預覽）。</summary>
+/// <summary>使用者目前實際取得的角色、群組與功能，並附上與 <c>/me</c> 相同計算的選單樹（唯讀預覽）。</summary>
 internal sealed class PreviewUserAccess(AppDbContext db, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes

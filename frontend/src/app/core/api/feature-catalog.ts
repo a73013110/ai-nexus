@@ -156,9 +156,17 @@ export const CATALOG_FEATURES = [
     id: 'access-control.features',
     kind: 'page',
     module: 'access-control',
-    name: '功能與選單',
+    name: '功能',
     icon: 'list',
     route: '/admin/access-control/features',
+  },
+  {
+    id: 'access-control.navigation',
+    kind: 'page',
+    module: 'access-control',
+    name: '選單',
+    icon: 'sidebar',
+    route: '/admin/access-control/navigation',
   },
   {
     id: 'operations.usage',

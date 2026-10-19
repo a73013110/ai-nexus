@@ -49,6 +49,7 @@ public static class FeatureCatalog
     public const string AccessControlRoles = "access-control.roles";
     public const string AccessControlGroups = "access-control.groups";
     public const string AccessControlFeatures = "access-control.features";
+    public const string AccessControlNavigation = "access-control.navigation";
     public const string OperationsUsage = "operations.usage";
     public const string BillingPrices = "billing.prices";
     public const string Integrations = "integrations";
@@ -113,7 +114,8 @@ public static class FeatureCatalog
         new(IdentityUsers, FeatureKind.Page, IdentityModule, "使用者", "user"),
         new(AccessControlRoles, FeatureKind.Page, AccessControlModule, "角色", "lock"),
         new(AccessControlGroups, FeatureKind.Page, AccessControlModule, "功能群組與模型", "apps"),
-        new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能與選單", "list"),
+        new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能", "list"),
+        new(AccessControlNavigation, FeatureKind.Page, AccessControlModule, "選單", "sidebar"),
         new(OperationsUsage, FeatureKind.Page, OperationsModule, "平台用量", "chart"),
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
         new(Integrations, FeatureKind.Page, IntegrationsModule, "資料來源", "integrations"),
@@ -132,6 +134,13 @@ public static class FeatureCatalog
     public static IReadOnlyList<FeatureDefinition> Grants { get; } = [.. All.Where(x => x.IsGrant)];
 
     private static readonly Dictionary<string, FeatureDefinition> ById = All.ToDictionary(x => x.Id, StringComparer.Ordinal);
+    private static readonly Dictionary<string, int> Positions = All.Select((x, i) => (x.Id, i)).ToDictionary(x => x.Id, x => x.i, StringComparer.Ordinal);
+
+    /// <summary>
+    /// 功能清單的排序鍵：<see cref="All"/> 的宣告順序（ADR 0016：選單位置在 NavigationItems，功能本身不再有排序欄位）。
+    /// 目錄不認得的舊列排在最後，呼叫端再依 ID 排出穩定順序。
+    /// </summary>
+    public static int Position(string id) => Positions.GetValueOrDefault(id, int.MaxValue);
 
     /// <summary>
     /// 查目錄。資料庫可能有程式不認得的功能列（舊資料或 fork 移除的功能），呼叫端拿到 null 時要照未知功能處理，不可拋例外。

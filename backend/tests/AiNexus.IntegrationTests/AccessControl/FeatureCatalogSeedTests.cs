@@ -1,5 +1,6 @@
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.AccessControl.Navigation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.IntegrationTests.AccessControl;
@@ -21,7 +22,7 @@ public sealed class FeatureCatalogSeedTests
         {
             var roles = await db.Set<Role>().Select(x => x.Id).ToListAsync();
             var groups = await db.Set<RoleGroup>().Select(x => x.Id).ToListAsync();
-            var navigation = await db.Set<NavigationGroup>().Select(x => x.Id).ToListAsync();
+            var navigation = await db.Set<NavigationItem>().Where(x => x.Kind == NavigationItem.GroupKind).Select(x => x.Id).ToListAsync();
             var features = await db.Set<Feature>().Select(x => x.Id).ToListAsync();
             var roleGroups = (await db.Set<RoleGroupRole>().Select(x => new { x.RoleId, x.GroupId }).ToListAsync()).Select(x => (x.RoleId, x.GroupId));
             var groupFeatures = (await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId }).ToListAsync()).Select(x => (x.GroupId, x.FeatureId));
@@ -30,7 +31,7 @@ public sealed class FeatureCatalogSeedTests
             [
                 .. Missing("角色", BuiltInAccess.Roles, roles, Constants),
                 .. Missing("群組", BuiltInAccess.Groups, groups, Constants),
-                .. Missing("選單分群", BuiltInAccess.NavigationGroups, navigation, Constants),
+                .. Missing("預設選單分群（NavigationItems，kind＝group）", BuiltInAccess.NavigationGroups, navigation, Constants),
                 .. Missing("功能（目錄的頁面與動作）", FeatureCatalog.Grants.Select(x => x.Id), features, Catalog),
                 .. Missing("角色→群組", BuiltInAccess.RoleGroups.Select(x => $"{x.Role}→{x.Group}"), roleGroups.Select(x => $"{x.RoleId}→{x.GroupId}"), Constants),
                 .. Missing("群組→功能", BuiltInAccess.GroupFeatures.Select(x => $"{x.Group}→{x.Feature}"), groupFeatures.Select(x => $"{x.GroupId}→{x.FeatureId}"), Constants),
@@ -49,6 +50,34 @@ public sealed class FeatureCatalogSeedTests
             Assert.True(unknown.Count == 0,
                 $"{Seed} 有目錄沒有的功能，或把閱讀器寫成了授權；在 {Catalog} 宣告頁面或動作（前端的 FeatureId 與路由目錄由 OpenAPI 產生，記得重產契約），或從 Seed 移除：\n"
                 + string.Join("\n", unknown));
+        });
+    }
+
+    [Fact]
+    public async Task EveryCatalogPageIsPlacedInTheDefaultMenuAndPageNodesPointAtPages()
+    {
+        await TestDatabase.WithContextAsync(async db =>
+        {
+            var pages = await db.Set<NavigationItem>().Where(x => x.Kind == NavigationItem.PageKind).Select(x => new { x.Id, x.FeatureId }).ToListAsync();
+            var placed = pages.Select(x => x.FeatureId!).ToHashSet(StringComparer.Ordinal);
+            var unplaced = FeatureCatalog.All.Where(x => x.Kind == FeatureKind.Page && !placed.Contains(x.Id)).Select(x => $"- {x.Id}").ToList();
+            Assert.True(unplaced.Count == 0, $"{Seed} 的預設選單樹沒有放這些頁面，新環境的使用者即使有授權也看不到入口；在 NavigationItems 補上 page 節點：\n" + string.Join("\n", unplaced));
+            var notPages = pages.Where(x => FeatureCatalog.Find(x.FeatureId!)?.Kind != FeatureKind.Page).Select(x => $"- {x.Id} → {x.FeatureId}").ToList();
+            Assert.True(notPages.Count == 0, $"{Seed} 的 page 節點必須指向 {Catalog} 的頁面（動作與閱讀器沒有選單入口）：\n" + string.Join("\n", notPages));
+        });
+    }
+
+    [Fact]
+    public async Task DefaultMenuSatisfiesTheRulesTheManagementApiEnforces()
+    {
+        await TestDatabase.WithContextAsync(async db =>
+        {
+            var items = await db.Set<NavigationItem>().ToListAsync();
+            var groups = items.Where(x => x.Kind == NavigationItem.GroupKind).Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
+            Assert.All(items, x => Assert.True(x.ParentId is null || groups.Contains(x.ParentId), $"{x.Id} 的上層不是分群"));
+            var parents = items.ToDictionary(x => x.Id, x => x.ParentId, StringComparer.Ordinal);
+            Assert.False(NavigationTree.HasCycle(parents));
+            Assert.InRange(NavigationTree.Deepest(parents), 1, NavigationTree.MaxDepth);
         });
     }
 
