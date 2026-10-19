@@ -11,9 +11,9 @@ public sealed class ShareService(AppDbContext db, TimeProvider clock)
     /// <summary>撤銷來源的所有分享並移除其檔案授權。交易由呼叫端管理。</summary>
     internal async Task RevokeSourceAsync(string kind, Guid id, CancellationToken ct)
     {
-        var ids = db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id).Select(x => x.Id);
-        await db.Set<ResourceAttachment>().Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
-        await db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsRevoked, true).SetProperty(x => x.SnapshotJson, ""), ct);
+        var rows = db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id);
+        await db.Set<ResourceAttachment>().Where(x => rows.Select(s => s.Id).Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
+        await rows.ExecuteUpdateAsync(p => p.SetProperty(x => x.IsRevoked, true).SetProperty(x => x.SnapshotJson, ""), ct);
     }
 
     /// <summary>移除已過期或已撤銷分享的檔案授權，並清空已過期分享的快照文字。</summary>

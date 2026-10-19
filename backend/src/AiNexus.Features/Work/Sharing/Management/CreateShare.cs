@@ -34,7 +34,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
     // /api/v1 群組在驗證前就已解析目前使用者。
     public CreateShareRequestValidator(ICurrentUser user)
     {
-        RuleFor(x => x.Kind).Must(x => x is "conversation" or "artifact").WithErrorCode("unknown");
+        RuleFor(x => x.Kind).Must(x => x is ShareAccess.ConversationKind or Artifact.Kind).WithErrorCode("unknown");
         RuleFor(x => x.Hours).InclusiveBetween(1, ShareLink.MaxHours);
         RuleFor(x => x.RecipientIds).Cascade(CascadeMode.Stop).NotNull()
             .Must(x => x.Count is >= 1 and <= ShareLink.MaxRecipients).WithErrorCode("count")
@@ -61,68 +61,61 @@ internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareA
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
+            using var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
+            await attachmentWrites.Gate.WaitAsync(ct);
             try
             {
-                await attachmentWrites.Gate.WaitAsync(ct);
-                try
+                await using var tx = await db.Database.BeginTransactionAsync(ct);
+                await quota.LockOwnerAsync(actor, ct);
+
+                var now = clock.GetUtcNow();
+                var activeCount = await db.Set<ShareLink>()
+                    .CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct);
+                if (activeCount >= ShareLink.MaxActivePerOwner) return SharingErrors.LimitReached;
+                if (!await shares.HasSourceFeatureAsync(actor, request.Kind, ct)) return SharingErrors.Unavailable;
+
+                var snapshot = await SnapshotAsync(actor, request, ct);
+                if (!snapshot.IsSuccess) return snapshot.Error;
+                var (title, content, files) = snapshot.Value;
+
+                var resource = new Resource { OwnerId = actor, Kind = "share", Name = title };
+                var share = new ShareLink
                 {
-                    await using var tx = await db.Database.BeginTransactionAsync(ct);
-                    await quota.LockOwnerAsync(actor, ct);
-
-                    var now = clock.GetUtcNow();
-                    var activeCount = await db.Set<ShareLink>()
-                        .CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct);
-                    if (activeCount >= ShareLink.MaxActivePerOwner) return SharingErrors.LimitReached;
-                    if (!await shares.HasSourceFeatureAsync(actor, request.Kind, ct)) return SharingErrors.Unavailable;
-
-                    var snapshot = await SnapshotAsync(actor, request, ct);
-                    if (!snapshot.IsSuccess) return snapshot.Error;
-                    var (title, content, files) = snapshot.Value;
-
-                    var resource = new Resource { OwnerId = actor, Kind = "share", Name = title };
-                    var share = new ShareLink
-                    {
-                        Id = resource.Id,
-                        OwnerId = actor,
-                        SourceId = request.SourceId,
-                        Kind = request.Kind,
-                        Title = title,
-                        IncludeAttachments = request.IncludeAttachments,
-                        CreatedAt = now,
-                        ExpiresAt = now.AddHours(request.Hours),
-                        SnapshotJson = JsonSerializer.Serialize(content),
-                    };
-                    db.Add(resource);
-                    db.Add(share);
-                    db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
-                    db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
-                    db.AuditEvents.Add(new()
-                    {
-                        OwnerId = actor,
-                        Action = "share.created",
-                        ResourceId = share.Id,
-                        Result = "created",
-                        DetailsJson = JsonSerializer.Serialize(new { request.Kind, recipients = request.RecipientIds, share.ExpiresAt, request.IncludeAttachments }),
-                    });
-
-                    foreach (var recipient in request.RecipientIds)
-                    {
-                        await notifications.PublishAsync(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id, ct);
-                    }
-
-                    await db.SaveChangesAsync(ct);
-                    await tx.CommitAsync(ct);
-                    return await shares.DescribeAsync(actor, share, ct);
-                }
-                finally
+                    Id = resource.Id,
+                    OwnerId = actor,
+                    SourceId = request.SourceId,
+                    Kind = request.Kind,
+                    Title = title,
+                    IncludeAttachments = request.IncludeAttachments,
+                    CreatedAt = now,
+                    ExpiresAt = now.AddHours(request.Hours),
+                    SnapshotJson = JsonSerializer.Serialize(content),
+                };
+                db.Add(resource);
+                db.Add(share);
+                db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
+                db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
+                db.AuditEvents.Add(new()
                 {
-                    attachmentWrites.Gate.Release();
+                    OwnerId = actor,
+                    Action = "share.created",
+                    ResourceId = share.Id,
+                    Result = "created",
+                    DetailsJson = JsonSerializer.Serialize(new { request.Kind, recipients = request.RecipientIds, share.ExpiresAt, request.IncludeAttachments }),
+                });
+
+                foreach (var recipient in request.RecipientIds)
+                {
+                    await notifications.PublishAsync(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id, ct);
                 }
+
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                return await shares.DescribeAsync(actor, share, ct);
             }
             finally
             {
-                conversationLock.Dispose();
+                attachmentWrites.Gate.Release();
             }
         }
         finally
@@ -133,9 +126,9 @@ internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareA
 
     private async Task<Result<SourceSnapshot>> SnapshotAsync(Guid actor, CreateShareRequest request, CancellationToken ct)
     {
-        if (request.Kind == "artifact")
+        if (request.Kind == Artifact.Kind)
         {
-            var source = await access.OwnerAsync(actor, request.SourceId, "artifact", ct);
+            var source = await access.OwnerAsync(actor, request.SourceId, Artifact.Kind, ct);
             if (!source.IsSuccess) return source.Error;
             var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == source.Value.Id, ct);
             var version = request.ArtifactVersion ?? item.Version;
@@ -170,32 +163,36 @@ internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareA
                 .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size })
                 .ToListAsync(ct)
             : [];
-        var citations = await db.Set<MessageCitation>().AsNoTracking().Where(x => ids.Contains(x.MessageId)).ToListAsync(ct);
+        var attachments = links.ToLookup(x => x.MessageId);
+        var citations = (await db.Set<MessageCitation>().AsNoTracking().Where(x => ids.Contains(x.MessageId)).ToListAsync(ct)).ToLookup(x => x.MessageId);
         var runs = await db.Runs.AsNoTracking().Where(x => ids.Contains(x.AssistantMessageId)).ToDictionaryAsync(x => x.AssistantMessageId, ct);
         var runIds = runs.Values.Select(x => x.Id).ToArray();
-        var searches = await db.Set<WebSearchRecord>().AsNoTracking()
+        var searches = (await db.Set<WebSearchRecord>().AsNoTracking()
             .Where(x => x.RunId != null && runIds.Contains(x.RunId.Value))
-            .ToListAsync(ct);
+            .ToListAsync(ct)).ToLookup(x => x.RunId!.Value);
 
-        var messages = branch.Select(x => new SharedMessageDto(
-            x.Role,
-            x.Content,
-            x.Status,
-            x.CreatedAt,
-            links.Where(l => l.MessageId == x.Id)
-                .Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/", StringComparison.Ordinal), "shared-file"))
-                .ToArray(),
-            x.ModelId,
-            x.ErrorCode,
-            citations.Where(c => c.MessageId == x.Id)
-                .OrderBy(c => c.Number)
-                .Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt, c.EndPage))
-                .ToArray(),
-            runs.TryGetValue(x.Id, out var run) && searches.Any(s => s.RunId == run.Id)
-                ? searches.Where(s => s.RunId == run.Id).SelectMany(WebSearchService.Sources).ToArray()
-                : null,
-            runs.TryGetValue(x.Id, out var timing) ? RunTiming.Describe(timing) : null,
-            IssueCode: x.IssueCode)).ToArray();
+        var messages = branch.Select(x =>
+        {
+            var run = runs.GetValueOrDefault(x.Id);
+            return new SharedMessageDto(
+                x.Role,
+                x.Content,
+                x.Status,
+                x.CreatedAt,
+                attachments[x.Id]
+                    .Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/", StringComparison.Ordinal), "shared-file"))
+                    .ToArray(),
+                x.ModelId,
+                x.ErrorCode,
+                citations[x.Id]
+                    .OrderBy(c => c.Number)
+                    .Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt, c.EndPage))
+                    .ToArray(),
+                // 沒有搜尋紀錄時維持 null，與「搜尋過但沒有來源」的空陣列區分。
+                run is not null && searches.Contains(run.Id) ? searches[run.Id].SelectMany(WebSearchService.Sources).ToArray() : null,
+                run is null ? null : RunTiming.Describe(run),
+                IssueCode: x.IssueCode);
+        }).ToArray();
         return new SourceSnapshot(conversation.Title, new("", null, messages), links.Select(x => x.Id).Distinct().ToArray());
     }
 }

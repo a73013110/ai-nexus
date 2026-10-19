@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Dashboard;
@@ -50,5 +51,5 @@ internal sealed class SharingDashboard(AppDbContext db, TimeProvider clock) : ID
         return section.Build();
     }
 
-    private static string Kind(string kind) => kind switch { "conversation" => "對話", "artifact" => "成果文件", _ => kind };
+    private static string Kind(string kind) => kind switch { ShareAccess.ConversationKind => "對話", Artifact.Kind => "成果文件", _ => kind };
 }

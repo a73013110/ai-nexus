@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Artifacts;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.AccessControl;
@@ -13,6 +14,9 @@ namespace AiNexus.Features.Work.Sharing;
 /// </summary>
 internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeProvider clock)
 {
+    /// <summary>對話來源的種類；成果來源沿用 <see cref="Artifact.Kind"/>。</summary>
+    public const string ConversationKind = "conversation";
+
     public async Task<Result<ShareLink>> RequireAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
@@ -23,41 +27,34 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
         return row;
     }
 
-    public async Task<bool> SourceExistsAsync(ShareLink row, CancellationToken ct) => row.Kind == "conversation"
+    public async Task<bool> SourceExistsAsync(ShareLink row, CancellationToken ct) => row.Kind == ConversationKind
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
-        : await db.Set<Resource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
+        : await db.Set<Resource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == Artifact.Kind, ct);
 
     /// <summary><paramref name="rows"/> 中來源仍存在的列（見 <see cref="SourceExistsAsync"/>），維持原順序，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
     {
-        var conversations = rows.Where(x => x.Kind == "conversation").Select(x => x.SourceId).Distinct().ToArray();
-        var artifacts = rows.Where(x => x.Kind != "conversation").Select(x => x.SourceId).Distinct().ToArray();
+        var conversations = rows.Where(x => x.Kind == ConversationKind).Select(x => x.SourceId).Distinct().ToArray();
+        var artifacts = rows.Where(x => x.Kind != ConversationKind).Select(x => x.SourceId).Distinct().ToArray();
         var owners = new HashSet<(Guid Source, Guid Owner)>();
         if (conversations.Length > 0)
             owners.UnionWith((await db.Conversations.Where(x => conversations.Contains(x.Id)).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         if (artifacts.Length > 0)
-            owners.UnionWith((await db.Set<Resource>().Where(x => artifacts.Contains(x.Id) && x.Kind == "artifact").Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
+            owners.UnionWith((await db.Set<Resource>().Where(x => artifacts.Contains(x.Id) && x.Kind == Artifact.Kind).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         return rows.Where(x => owners.Contains((x.SourceId, x.OwnerId))).ToArray();
     }
 
-    public async Task<bool> HasSourceFeatureAsync(Guid user, string kind, CancellationToken ct)
-        => (await features.ForUserAsync(user, ct)).Features.Any(x => x.Id == (kind == "conversation" ? FeatureCatalog.Chat : FeatureCatalog.Artifacts));
+    public Task<bool> HasSourceFeatureAsync(Guid user, string kind, CancellationToken ct)
+        => features.HoldsAsync(user, kind == ConversationKind ? FeatureCatalog.Chat : FeatureCatalog.Artifacts, ct);
 
-    public async Task<ShareDto> DescribeAsync(Guid actor, ShareLink x, CancellationToken ct)
-    {
-        var owner = await db.Users.Where(u => u.Id == x.OwnerId).Select(u => u.DisplayName).SingleAsync(ct);
-        // 只有寄件者能看到完整的收件人清單
-        var recipients = actor == x.OwnerId ? await (from r in db.Set<ShareRecipient>() join u in db.Users on r.UserId equals u.Id where r.ShareId == x.Id select u.DisplayName).ToListAsync(ct) : [];
-        return new(x.Id, x.Kind, x.Title, owner, x.OwnerId == actor, x.IsRevoked, x.ExpiresAt, x.CreatedAt, recipients, x.IncludeAttachments);
-    }
+    public async Task<ShareDto> DescribeAsync(Guid actor, ShareLink x, CancellationToken ct) => (await DescribeAllAsync(actor, [x], ct))[0];
 
-    /// <summary><see cref="DescribeAsync"/> 的清單版本，依原順序回傳，最多兩次查詢。</summary>
+    /// <summary>依原順序描述多筆分享，最多兩次查詢；只有寄件者看得到收件人清單。</summary>
     public async Task<IReadOnlyList<ShareDto>> DescribeAllAsync(Guid actor, IReadOnlyList<ShareLink> rows, CancellationToken ct)
     {
         if (rows.Count == 0) return [];
         var ownerIds = rows.Select(x => x.OwnerId).Distinct().ToArray();
         var owners = await db.Users.Where(u => ownerIds.Contains(u.Id)).Select(u => new { u.Id, u.DisplayName }).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
-        // 只有寄件者能看到完整的收件人清單
         var sent = rows.Where(x => x.OwnerId == actor).Select(x => x.Id).ToArray();
         var recipients = sent.Length == 0 ? [] : (await (from r in db.Set<ShareRecipient>() join u in db.Users on r.UserId equals u.Id where sent.Contains(r.ShareId) select new { r.ShareId, u.DisplayName }).ToListAsync(ct))
             .GroupBy(x => x.ShareId).ToDictionary(g => g.Key, g => g.Select(x => x.DisplayName).ToList());
