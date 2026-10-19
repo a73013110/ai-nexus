@@ -1,9 +1,30 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import type { TokenUsageDto } from '@core/api/schema';
-import { formatModelDisplayName } from '@shared/browser/format';
+import type { TokenDayDto, TokenUsageDto } from '@core/api/schema';
+import { formatModelDisplayName, formatNumber } from '@shared/browser/format';
 import { DataTable, DataTableRow } from '@shared/ui/data-table';
 import { Select } from '@shared/ui/select';
 import { TrendChart } from '@shared/ui/trend-chart';
+
+interface ModelUsage {
+  id: string;
+  modelDisplayName?: string | null;
+  input: number;
+  output: number;
+  requests: number;
+  known: number;
+}
+const DAY = 86_400_000;
+/** 圖表可切換的統計類型；第一個是預設與後備。 */
+const METRICS = [
+  {
+    value: 'total',
+    label: '合計',
+    tokens: (row: TokenDayDto) => row.inputTokens + row.outputTokens,
+  },
+  { value: 'input', label: '輸入', tokens: (row: TokenDayDto) => row.inputTokens },
+  { value: 'output', label: '輸出', tokens: (row: TokenDayDto) => row.outputTokens },
+];
+const metricOf = (value: string) => METRICS.find((metric) => metric.value === value) ?? METRICS[0];
 
 @Component({
   selector: 'nx-token-usage-chart',
@@ -27,11 +48,11 @@ import { TrendChart } from '@shared/ui/trend-chart';
       <nx-trend-chart [points]="points()" [label]="'每日 ' + metricLabel() + ' Tokens'" />
       <div class="token-totals">
         <span
-          >輸入 <strong>{{ totals().input.toLocaleString() }}</strong></span
+          >輸入 <strong>{{ number(totals().input) }}</strong></span
         ><span
-          >輸出 <strong>{{ totals().output.toLocaleString() }}</strong></span
+          >輸出 <strong>{{ number(totals().output) }}</strong></span
         ><span
-          >合計 <strong>{{ (totals().input + totals().output).toLocaleString() }}</strong></span
+          >合計 <strong>{{ number(totals().input + totals().output) }}</strong></span
         >
       </div>
       <p class="form-note">
@@ -71,13 +92,13 @@ import { TrendChart } from '@shared/ui/trend-chart';
                       </button>
                     </th>
                     <td class="ui-table-numeric" data-label="輸入">
-                      {{ row.input.toLocaleString() }}
+                      {{ number(row.input) }}
                     </td>
                     <td class="ui-table-numeric" data-label="輸出">
-                      {{ row.output.toLocaleString() }}
+                      {{ number(row.output) }}
                     </td>
                     <td class="ui-table-numeric" data-label="合計">
-                      <strong>{{ (row.input + row.output).toLocaleString() }}</strong
+                      <strong>{{ number(row.input + row.output) }}</strong
                       ><meter
                         min="0"
                         [max]="allTokens() || 1"
@@ -153,28 +174,13 @@ export class TokenUsageChart {
   readonly model = signal('all');
   readonly metric = signal('total');
   readonly modelName = formatModelDisplayName;
-  readonly metrics = [
-    { value: 'total', label: '合計 Token' },
-    { value: 'input', label: '輸入 Token' },
-    { value: 'output', label: '輸出 Token' },
-  ];
-  readonly metricLabel = computed(() =>
-    this.metric() === 'input' ? '輸入' : this.metric() === 'output' ? '輸出' : '合計',
-  );
+  readonly number = formatNumber;
+  readonly metrics = METRICS.map(({ value, label }) => ({ value, label: label + ' Token' }));
+  readonly metricLabel = computed(() => metricOf(this.metric()).label);
   readonly models = computed(() => {
-    const map = new Map<
-      string,
-      {
-        id: string;
-        modelDisplayName?: string | null;
-        input: number;
-        output: number;
-        requests: number;
-        known: number;
-      }
-    >();
+    const map = new Map<string, ModelUsage>();
     for (const day of this.usage()?.daily ?? []) {
-      const row = map.get(day.modelId) || {
+      const row = map.get(day.modelId) ?? {
         id: day.modelId,
         modelDisplayName: day.modelDisplayName,
         input: 0,
@@ -224,8 +230,11 @@ export class TokenUsageChart {
   );
   readonly offsetLabel = computed(() => {
     const minutes = this.usage()?.timezoneOffsetMinutes ?? 0;
-    return `${minutes < 0 ? '-' : '+'}${String(Math.floor(Math.abs(minutes) / 60)).padStart(2, '0')}:${String(Math.abs(minutes) % 60).padStart(2, '0')}`;
+    const abs = Math.abs(minutes);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${minutes < 0 ? '-' : '+'}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
   });
+  /** 期間內每一天都有一點（沒有用量的日子為 0）；日期依報表的時區偏移切分，不用瀏覽器時區。 */
   readonly points = computed(() => {
     const usage = this.usage();
     if (!usage) return [];
@@ -233,21 +242,14 @@ export class TokenUsageChart {
       new Date(value + usage.timezoneOffsetMinutes * 60000).toISOString().slice(0, 10);
     const start = date(Date.parse(usage.from)),
       end = date(Date.parse(usage.until) - 1);
+    const tokens = metricOf(this.metric()).tokens;
     const grouped = new Map<string, number>();
     for (const row of this.rows())
-      grouped.set(
-        row.date,
-        (grouped.get(row.date) || 0) +
-          (this.metric() === 'input'
-            ? row.inputTokens
-            : this.metric() === 'output'
-              ? row.outputTokens
-              : row.inputTokens + row.outputTokens),
-      );
+      grouped.set(row.date, (grouped.get(row.date) ?? 0) + tokens(row));
     const points = [];
-    for (let day = Date.parse(start), last = Date.parse(end); day <= last; day += 86400000) {
+    for (let day = Date.parse(start), last = Date.parse(end); day <= last; day += DAY) {
       const label = new Date(day).toISOString().slice(0, 10);
-      points.push({ label, value: grouped.get(label) || 0 });
+      points.push({ label, value: grouped.get(label) ?? 0 });
     }
     return points;
   });

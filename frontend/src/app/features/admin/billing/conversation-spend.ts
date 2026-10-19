@@ -1,4 +1,3 @@
-import { apiResource } from '@core/api/api-resource';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,6 +6,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
+import { apiResource } from '@core/api/api-resource';
 import type { ConversationSpendDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { InfoPopover } from '@shared/ui/info-popover';
@@ -18,7 +18,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
   imports: [InfoPopover, Icon],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './conversation-spend.scss',
+  styleUrls: ['./charge-label.scss', './conversation-spend.scss'],
   template: `@if (data(); as spend) {
       <nx-info-popover
         [label]="summary(spend)"
@@ -32,8 +32,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
           <p>包含所有分支、重新生成與網路搜尋，不只目前顯示的回答。</p>
           @for (total of spend.totals; track total.currency + total.kind) {
             <p>
-              {{ kind(total.kind) }} ·
-              {{ total.currency ? money(total.amount, total.currency) : '未定價' }}
+              {{ kind(total.kind) }} · {{ money(total.amount, total.currency) }}
               @if (total.unknownCalls) {
                 <span> · {{ total.unknownCalls }} 次費用未知</span>
               }
@@ -42,10 +41,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
           @for (model of spend.models; track model.label + model.currency + model.kind) {
             <div class="spend-breakdown">
               <span>{{ model.label }}</span
-              ><span
-                >{{ model.requests }} 次 ·
-                {{ model.currency ? money(model.amount, model.currency) : '未定價' }}</span
-              >
+              ><span>{{ model.requests }} 次 · {{ money(model.amount, model.currency) }}</span>
             </div>
           }
           @if (spend.pendingCalls) {
@@ -102,17 +98,17 @@ export class ConversationSpendView {
     else this.load();
   }
   summary(spend: ConversationSpendDto) {
-    const priced = spend.totals.filter((item) => !!item.currency);
+    const priced = spend.totals.filter((total) => !!total.currency);
     if (!priced.length) return spend.requests ? '費用未定價' : '全對話費用';
-    if (priced.length === 1)
-      return (
-        (priced[0].knownCalls ? money(priced[0].amount, priced[0].currency) : '費用待確認') +
-        (spend.totals.some((item2) => item2.unknownCalls > 0) ||
-        spend.legacyCalls ||
-        spend.pendingCalls
-          ? ' +'
-          : '')
-      );
-    return `${priced.length} 種計費總額`;
+    if (priced.length > 1) return `${priced.length} 種計費總額`;
+    const [only] = priced;
+    // 「+」表示還有未知、早期或待結算的呼叫沒算進金額。
+    const partial =
+      spend.totals.some((total) => total.unknownCalls > 0) ||
+      !!spend.legacyCalls ||
+      !!spend.pendingCalls;
+    return (
+      (only.knownCalls ? money(only.amount, only.currency) : '費用待確認') + (partial ? ' +' : '')
+    );
   }
 }
