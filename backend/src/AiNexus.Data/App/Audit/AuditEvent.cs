@@ -5,6 +5,10 @@ namespace AiNexus.Data.App.Audit;
 
 public sealed class AuditEvent
 {
+    // AuditEventInterceptor 依這兩個上限截斷，否則超長的值會讓整筆 SaveChanges 失敗。
+    public const int ActionMaxLength = 64;
+    public const int ResultMaxLength = 80;
+
     public long Id { get; set; }
     public Guid OwnerId { get; set; }
     public Guid? ActorId { get; set; }
@@ -26,10 +30,10 @@ internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEv
         audit.Property(x => x.At).HasValueGenerator<CreationTime>();
         audit.ToTable("AuditEvents", "audit");
         audit.HasKey(x => x.Id);
-        audit.Property(x => x.Action).HasMaxLength(64);
+        audit.Property(x => x.Action).HasMaxLength(AuditEvent.ActionMaxLength);
         audit.Property(x => x.TraceId).HasMaxLength(32);
         audit.Property(x => x.IssueCode).HasMaxLength(40);
-        audit.Property(x => x.Result).HasMaxLength(80);
+        audit.Property(x => x.Result).HasMaxLength(AuditEvent.ResultMaxLength);
         audit.Property(x => x.DetailsJson).HasMaxLength(40000);
     }
 }

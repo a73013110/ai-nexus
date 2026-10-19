@@ -1,14 +1,5 @@
-using Microsoft.Data.SqlTypes;
-
 namespace AiNexus.Data.App.Knowledge;
 
-public sealed class ChunkEmbedding1024
-{
-    public int Id { get; set; }
-    public Guid ChunkId { get; set; }
-    public int ProfileId { get; set; }
-    public byte[] ContentHash { get; set; } = [];
-    public SqlVector<float> Vector { get; set; }
-}
+public sealed class ChunkEmbedding1024 : ChunkEmbedding;
 
 internal sealed class ChunkEmbedding1024Configuration() : ChunkEmbeddingConfiguration<ChunkEmbedding1024>("ChunkEmbeddings1024", 1024);

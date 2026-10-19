@@ -45,8 +45,8 @@ internal sealed class AuditEventInterceptor(AuditContextSource source) : SaveCha
         foreach (var audit in added)
         {
             audit.DetailsJson = AuditRedactor.Sanitize(audit.DetailsJson);
-            audit.Action = DiagnosticRedactor.Text(audit.Action, 64);
-            audit.Result = audit.Result is null ? null : DiagnosticRedactor.Text(audit.Result, 80);
+            audit.Action = DiagnosticRedactor.Text(audit.Action, AuditEvent.ActionMaxLength);
+            audit.Result = audit.Result is null ? null : DiagnosticRedactor.Text(audit.Result, AuditEvent.ResultMaxLength);
             audit.TraceId ??= context.TraceId;
             audit.OperationId ??= context.OperationId;
             audit.ActorId ??= context.ActorId;
