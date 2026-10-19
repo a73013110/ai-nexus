@@ -158,6 +158,10 @@ public static class FeatureCatalog
     /// </summary>
     public static FeatureDefinition? Find(string id) => ById.GetValueOrDefault(id);
 
+    /// <summary>頁面底下的動作（ID 去掉最後一段即上層頁面），依宣告順序；選單只放頁面，動作的位置跟著上層頁面。</summary>
+    public static IEnumerable<FeatureDefinition> ActionsOf(string page)
+        => All.Where(x => x.Kind == FeatureKind.Action && x.Id.StartsWith(page + ".", StringComparison.Ordinal) && x.Id.LastIndexOf('.') == page.Length);
+
     /// <summary>
     /// 頁面或閱讀器的網址，給後端產生前端連結用；不寫死字串，模組換區時連結跟著目錄走。動作或未知 ID 是程式錯誤，直接拋出。
     /// </summary>

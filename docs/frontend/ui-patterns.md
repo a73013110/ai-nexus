@@ -12,7 +12,7 @@
 ## 導覽
 
 - 登入後的路由掛在 `WorkspaceShell` 下（側欄只建立一次，換頁保留狀態）；頁面只提供主區，側欄內容用 `<ng-template nxSidebarPanel>` 宣告，標題列放 `WorkspaceMenuButton`。
-- 列表與詳細路徑用 `optionalId` 合成一條路由；麵包屑與 `ModuleNavigation` 依網址查功能目錄。
+- 列表與詳細路徑用 `optionalId` 合成一條路由；麵包屑依網址查功能目錄。側欄一格就是一頁，頁內不放同模組其他頁的連結列。
 - `WorkspaceLayout` 分開管理桌面收合（`desktopCompact`，跨路由維持）與 `narrow` 以下的抽屜（`mobileOpen`，見 [手機](mobile.md#斷點)）。
 - 功能清單只由 `WorkspaceNavigation` 呈現（釘選＋全部功能，行為見 [個人設定](../features/settings.md#側欄)）。`Ctrl + K` 是 shell 的 `CommandPalette`，頁面用 `WorkspaceCommands.provide()` 加入動作。
 - 長清單共用一個 `MenuPanel`（不每列建 `ActionMenu`），列加 `content-visibility: auto`。

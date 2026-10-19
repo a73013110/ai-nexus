@@ -2,7 +2,7 @@ using AiNexus.Data.App.AccessControl;
 
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
-/// <summary>選單樹的純函式：使用者可見的樹（<c>/me</c> 與存取預覽共用），以及管理端移動節點時的成環與深度檢查。</summary>
+/// <summary>選單樹的純函式：使用者可見的樹（<c>/me</c> 與存取預覽共用）、功能在完整選單上的位置，以及管理端移動節點時的成環與深度檢查。</summary>
 public static class NavigationTree
 {
     /// <summary>深度上限，最上層算第 1 層。側欄與「全部功能」的版面只設計到這一層。</summary>
@@ -51,6 +51,43 @@ public static class NavigationTree
                     };
                 default:
                     return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 完整選單樹（不依使用者修剪、不攤平）上每個功能的位置，依選單順序（深度優先）：
+    /// 頁面放在它第一次出現的分群，動作接在上層頁面之後（依目錄順序），區段依第一個功能出現的順序。
+    /// 授權清單要分組的是「別人」的授權，所以不能用 <c>/me</c> 那棵依檢視者修剪過的樹。
+    /// 沒放進選單的功能不在結果中，由呼叫端另外歸組。
+    /// </summary>
+    public static IReadOnlyList<NavigationSectionDto> Sections(IReadOnlyList<NavigationItemDto> items)
+    {
+        var children = items.ToLookup(x => x.ParentId ?? "", StringComparer.Ordinal);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var placed = new HashSet<string>(StringComparer.Ordinal);
+        var sections = new List<(string Id, IReadOnlyList<string> Path, List<string> Features)>();
+        Visit("", []);
+        return [.. sections.Select(x => new NavigationSectionDto(x.Id, x.Path, x.Features))];
+
+        void Visit(string group, IReadOnlyList<string> path)
+        {
+            foreach (var item in children[group].OrderBy(x => x.SortOrder).ThenBy(x => x.Id, StringComparer.Ordinal))
+            {
+                if (!visited.Add(item.Id)) continue;
+                if (item.Kind == NavigationItem.GroupKind) Visit(item.Id, [.. path, item.Name ?? ""]);
+                else if (item.Kind == NavigationItem.PageKind && item.FeatureId is { } feature
+                    && FeatureCatalog.Find(feature) is { Kind: FeatureKind.Page } && placed.Add(feature))
+                {
+                    var section = sections.FindIndex(x => x.Id == group);
+                    if (section < 0)
+                    {
+                        sections.Add((group, path, []));
+                        section = sections.Count - 1;
+                    }
+                    sections[section].Features.Add(feature);
+                    sections[section].Features.AddRange(FeatureCatalog.ActionsOf(feature).Select(x => x.Id).Where(placed.Add));
+                }
             }
         }
     }

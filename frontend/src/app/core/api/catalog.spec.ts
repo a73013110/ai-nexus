@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { featureTrail } from '../layout/feature-trail';
-import {
-  catalogFeature,
-  catalogSections,
-  featureForUrl,
-  isFeatureId,
-  modulePages,
-  routeOf,
-} from './catalog';
+import { catalogFeature, featureForUrl, featureSections, isFeatureId, routeOf } from './catalog';
 
 describe('feature catalog helpers', () => {
   it('finds the page or reader that owns a URL by the longest whole-segment prefix', () => {
@@ -27,26 +20,50 @@ describe('feature catalog helpers', () => {
     expect(isFeatureId('admin')).toBe(false);
     expect(catalogFeature('diagnostics.logs.export')?.route).toBeNull();
     expect(routeOf('sharing.reader')).toBe('/work/sharing/reader');
-    expect(modulePages('access-control').map((page) => page.id)).toEqual([
-      'access-control.roles',
-      'access-control.groups',
-      'access-control.features',
-      'access-control.navigation',
-    ]);
   });
 
-  it('groups features by area in catalog order, unknown ids last without a heading', () => {
-    const ids = ['retired', 'diagnostics.logs.export', 'audit', 'chat', 'diagnostics.logs'];
+  it('groups features by their place in the full menu, unplaced and unknown ids last', () => {
+    const ids = [
+      'retired',
+      'diagnostics.logs.export',
+      'quality',
+      'audit',
+      'chat',
+      'diagnostics.logs',
+      'knowledge.retrieval',
+      'dashboard',
+    ];
+    const navigation = [
+      { id: '', path: [], featureIds: ['dashboard'] },
+      { id: 'work', path: ['AI 工作台'], featureIds: ['chat'] },
+      {
+        id: 'system',
+        path: ['系統管理'],
+        featureIds: [
+          'knowledge.retrieval',
+          'diagnostics.logs',
+          'diagnostics.logs.detail',
+          'diagnostics.logs.export',
+          'audit',
+        ],
+      },
+      { id: 'system.access', path: ['系統管理', '身分與權限'], featureIds: ['identity.users'] },
+    ];
     expect(
-      catalogSections(ids.map((id) => ({ id }))).map((section) => [
-        section.id,
-        section.name,
-        section.features.map((feature) => feature.id),
-      ]),
+      featureSections(
+        ids.map((id) => ({ id })),
+        navigation,
+      ).map((section) => [section.id, section.name, section.features.map((feature) => feature.id)]),
     ).toEqual([
-      ['work', 'AI 工作台', ['chat']],
-      ['admin', '系統管理', ['audit', 'diagnostics.logs', 'diagnostics.logs.export']],
-      ['', '', ['retired']],
+      ['menu', '最上層', ['dashboard']],
+      ['menu:work', 'AI 工作台', ['chat']],
+      [
+        'menu:system',
+        '系統管理',
+        ['knowledge.retrieval', 'diagnostics.logs', 'diagnostics.logs.export', 'audit'],
+      ],
+      ['unplaced', '未放入選單', ['quality']],
+      ['unknown', '其他', ['retired']],
     ]);
   });
 

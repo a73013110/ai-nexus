@@ -21,12 +21,14 @@
       <button class="primary-button quality-create" (click)="openSet()" [disabled]="busy()">
         <nx-icon name="plus" />建立評測集
       </button>
-      <nx-action-menu
-        class="quality-list-menu"
-        label="評測操作"
-        [items]="listActions()"
-        (action)="listAction($event)"
-      />
+      <button
+        type="button"
+        class="secondary-button quality-import"
+        [disabled]="busy()"
+        (click)="importInput.click()"
+      >
+        <nx-icon name="upload" />匯入題庫
+      </button>
       <input #importInput type="file" accept=".json" hidden (change)="importSet($event)" />
     }
   </div>

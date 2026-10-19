@@ -130,7 +130,10 @@
                   @if (!e.enabled) {
                     <nx-notice tone="warning" message="角色已停用，儲存後不授予任何功能。" />
                   }
-                  <nx-feature-summary [features]="proposedFeatures()" />
+                  <nx-feature-summary
+                    [features]="proposedFeatures()"
+                    [navigation]="store.catalog()?.navigationSections ?? []"
+                  />
                 </div>
               </section>
             }

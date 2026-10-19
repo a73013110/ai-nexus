@@ -117,11 +117,9 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
       body: JSON.stringify(data),
     });
   });
-  await page.goto("/admin/quality");
+  // 檢索評測是側欄上獨立的一頁，品質評測列表不另列入口。
+  await page.goto("/admin/quality/retrieval");
   await settleEntrance(page);
-  await page.getByRole("button", { name: "評測操作", exact: true }).click();
-  await page.getByRole("menuitem", { name: "檢索評測" }).click();
-  await expect(page).toHaveURL(/\/admin\/quality\/retrieval$/);
   await page.getByRole("textbox", { name: "檢索評測名稱" }).fill("採購驗收");
   await page.getByRole("checkbox", { name: "採購規範" }).check();
   const corpus = page.getByRole("textbox", { name: "檢索驗收集 JSON" });
@@ -560,7 +558,7 @@ for (const width of [1440, 375]) {
       "用名稱尋找評測集",
       "打開評測集",
       "建立評測集",
-      "匯入題庫與檢索評測",
+      "匯入題庫",
     ]);
     expect(list.last).toContain("重播導覽");
     await page.locator(".resource-card").click();

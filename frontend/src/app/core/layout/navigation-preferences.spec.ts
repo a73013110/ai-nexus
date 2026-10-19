@@ -126,4 +126,20 @@ describe('navigation preferences', () => {
     expect(preferences.ids()).toEqual(['chat']);
     expect(preferences.display()).toBe('icons');
   });
+  it('remembers collapsed groups per account and expands several at once', () => {
+    const { preferences, me } = setup(['chat', 'files', 'sharing', 'jobs']);
+    expect(preferences.isCollapsed('work')).toBe(false);
+    preferences.setCollapsed('work', true);
+    preferences.setCollapsed('collaboration', true);
+    expect(JSON.parse(localStorage.getItem('ai-nexus.navigation-collapsed.user-1')!)).toEqual([
+      'work',
+      'collaboration',
+    ]);
+    preferences.expand(['collaboration', 'system']);
+    expect([...preferences.collapsed()]).toEqual(['work']);
+    me.set({ id: 'user-2', access: access(['chat']) });
+    expect(preferences.isCollapsed('work')).toBe(false);
+    me.set({ id: 'user-1', access: access(['chat']) });
+    expect(preferences.isCollapsed('work')).toBe(true);
+  });
 });

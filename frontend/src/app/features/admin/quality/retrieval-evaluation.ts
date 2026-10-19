@@ -34,7 +34,6 @@ import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RETRIEVAL_TOUR } from './quality-tour';
-import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
@@ -57,7 +56,6 @@ import { routeOf } from '@core/api/catalog';
 })
 export class RetrievalEvaluation {
   /** 範本裡的連結由功能目錄取得網址。 */
-  readonly routeOf = routeOf;
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobs = inject(JobsApi);

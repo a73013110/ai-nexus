@@ -16,7 +16,7 @@ import type {
   AdminRoleDto,
   GroupPolicyRequest,
 } from '@core/api/schema';
-import { catalogFeature, catalogSections } from '@core/api/catalog';
+import { catalogFeature, featureSections } from '@core/api/catalog';
 import { CATALOG_SCOPES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -190,11 +190,14 @@ export class AccessEditorDialog {
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly injector = inject(Injector);
-  /** 群組授予功能，依功能目錄的區分類；授權與側欄怎麼排無關。 */
+  /** 群組授予功能，依側欄的位置分組（`featureSections`），與使用者在側欄看到的一致。 */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
-    catalogSections(this.store.catalog()?.features || []).map((section) => ({
-      id: section.id || 'other',
-      name: section.name || '其他',
+    featureSections(
+      this.store.catalog()?.features ?? [],
+      this.store.catalog()?.navigationSections ?? [],
+    ).map((section) => ({
+      id: section.id,
+      name: section.name,
       options: section.features.map((feature) => ({
         id: feature.id,
         label: feature.name + (feature.enabled ? '' : '（停用）'),

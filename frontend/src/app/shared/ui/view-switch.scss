@@ -43,8 +43,7 @@
     width var(--motion-morph) var(--ease-spring),
     opacity var(--motion-fast) var(--ease);
 }
-// `ViewLinks` 共用同一份樣式：選項是連到同模組各頁的連結，選取狀態是 `aria-current`。
-:host :is(button, a) {
+:host button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -57,14 +56,13 @@
   font-size: var(--view-switch-button-font-size, var(--text-label));
   color: var(--secondary);
   white-space: nowrap;
-  text-decoration: none;
 }
-:host :is(button:not(:disabled), a):hover {
+:host button:not(:disabled):hover {
   color: var(--ink);
 }
 // The indicator is the selection; hover must not paint over it.
-:host :is(button[aria-pressed='true'], a[aria-current='page']),
-:host :is(button[aria-pressed='true'], a[aria-current='page']):hover {
+:host button[aria-pressed='true'],
+:host button[aria-pressed='true']:hover {
   background: transparent;
   color: var(--accent);
   font-weight: 600;

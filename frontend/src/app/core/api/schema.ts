@@ -9027,6 +9027,7 @@ export interface components {
             groups: components["schemas"]["AdminGroupDto"][];
             features: components["schemas"]["AdminFeatureDto"][];
             models: components["schemas"]["ModelDto"][];
+            navigationSections: components["schemas"]["NavigationSectionDto"][];
         };
         AdminConversationDetailDto: {
             conversation: components["schemas"]["AdminConversationDto"];
@@ -9253,6 +9254,7 @@ export interface components {
             models: components["schemas"]["ModelDto"][];
             categories: components["schemas"]["AuditCategoryDto"][];
             actions: components["schemas"]["AuditActionDto"][];
+            navigationSections: components["schemas"]["NavigationSectionDto"][];
         };
         AuditCategoryDto: {
             value: string;
@@ -10205,6 +10207,11 @@ export interface components {
         };
         NavigationOrderRequest: {
             items: components["schemas"]["NavigationOrderItem"][];
+        };
+        NavigationSectionDto: {
+            id: string;
+            path: string[];
+            featureIds: string[];
         };
         NotificationDto: {
             /** Format: uuid */
@@ -11524,6 +11531,7 @@ export type NavigationItemUpdateRequest = components['schemas']['NavigationItemU
 export type NavigationNodeDto = components['schemas']['NavigationNodeDto'];
 export type NavigationOrderItem = components['schemas']['NavigationOrderItem'];
 export type NavigationOrderRequest = components['schemas']['NavigationOrderRequest'];
+export type NavigationSectionDto = components['schemas']['NavigationSectionDto'];
 export type NotificationDto = components['schemas']['NotificationDto'];
 export type NotificationPageDto = components['schemas']['NotificationPageDto'];
 export type NotificationTargetDto = components['schemas']['NotificationTargetDto'];

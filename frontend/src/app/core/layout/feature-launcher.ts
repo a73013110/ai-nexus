@@ -2,31 +2,30 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { NavigationNodeDto } from '@core/api/schema';
 import { Icon } from '@shared/ui/icon';
-import {
-  navigationEntries,
-  navigationIcon,
-  navigationNodes,
-  navigationRuns,
-  type NavigationEntry,
-} from './navigation-tree';
+import { navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
 import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
 import { WorkspaceCommands } from './workspace-commands';
+
+let sequence = 0;
 
 /**
  * 「全部功能」：伺服器依此帳號修剪過的選單樹（頁面、外部連結與巢狀分群，依管理員排的順序），
  * 呈現為三欄圖示或每行一個。釘選的頁面仍留在原位置並顯示釘選標記，因此目錄不會重新洗牌；
  * 編輯時每個頁面都會變成釘選切換。目前頁面若已釘選，只在它的釘選列上標記一次。
  * 外部連結帶外部連結標記，一律 `rel="noopener noreferrer"`，依設定決定是否開新分頁。
- * 有模組內導覽的模組，同一層的多個頁面合成一個模組入口（`navigationEntries`）。
+ * 每一格就是選單的一個節點（一個頁面＝一個網址）；分群標題是展開／收合的按鈕，收合狀態依帳號記住，
+ * 目前頁面所在的分群在換頁時自動展開。
  */
 @Component({
   selector: 'nx-feature-launcher',
@@ -69,8 +68,7 @@ import { WorkspaceCommands } from './workspace-commands';
     }
     <ng-template #entries let-nodes>
       <div class="workspace-icons" [class.is-list]="pins.display() === 'list'">
-        @for (entry of entriesOf(nodes); track entry.node.id) {
-          @let node = entry.node;
+        @for (node of asNodes(nodes); track node.id) {
           @if (node.kind === 'link') {
             <!-- 外部連結不是功能，不能釘選；編輯釘選時停用，避免看起來像漏選。 -->
             @if (editing()) {
@@ -107,14 +105,14 @@ import { WorkspaceCommands } from './workspace-commands';
           } @else {
             <a
               [routerLink]="node.route"
-              [class.current]="current(entry)"
-              [attr.aria-current]="current(entry) ? 'page' : null"
-              [attr.title]="pinned(entry) ? node.name + '（已釘選）' : node.name"
+              [class.current]="current(node)"
+              [attr.aria-current]="current(node) ? 'page' : null"
+              [attr.title]="pins.has(node.featureId!) ? node.name + '（已釘選）' : node.name"
               [attr.aria-label]="node.name"
               (click)="activated.emit()"
             >
               <nx-icon [name]="icon(node)!" /><span>{{ node.name }}</span>
-              @if (pinned(entry)) {
+              @if (pins.has(node.featureId!)) {
                 <nx-icon class="entry-mark pin-mark" name="pin" aria-hidden="true" />
               }
             </a>
@@ -139,20 +137,40 @@ import { WorkspaceCommands } from './workspace-commands';
       }
     </ng-template>
     <ng-template #section let-node let-depth="depth">
+      @let group = asNode(node);
+      @let open = !pins.isCollapsed(group.id);
       <section
         class="workspace-group"
         [class.is-nested]="depth > 0"
-        [attr.aria-label]="asNode(node).name"
+        [class.is-collapsed]="!open"
+        [attr.aria-label]="group.name"
       >
+        <ng-template #toggle>
+          <button
+            type="button"
+            class="workspace-group-toggle"
+            [attr.aria-expanded]="open"
+            [attr.aria-controls]="bodyId(group)"
+            (click)="pins.setCollapsed(group.id, open)"
+          >
+            <span>{{ group.name }}</span
+            ><nx-icon name="chevron" aria-hidden="true" />
+          </button>
+        </ng-template>
         @if (depth === 0) {
-          <h3>{{ asNode(node).name }}</h3>
+          <h3><ng-container [ngTemplateOutlet]="toggle" /></h3>
         } @else {
-          <h4>{{ asNode(node).name }}</h4>
+          <h4><ng-container [ngTemplateOutlet]="toggle" /></h4>
         }
-        <ng-container
-          [ngTemplateOutlet]="level"
-          [ngTemplateOutletContext]="{ $implicit: asNode(node).children }"
-        />
+        <!-- 收合時 inert：連結離開 Tab 順序與無障礙樹，高度收合的過渡仍看得到。 -->
+        <div class="workspace-group-body" [id]="bodyId(group)" [inert]="!open">
+          <div class="workspace-group-content">
+            <ng-container
+              [ngTemplateOutlet]="level"
+              [ngTemplateOutletContext]="{ $implicit: group.children }"
+            />
+          </div>
+        </div>
       </section>
     </ng-template>
     <div class="workspace-groups">
@@ -191,17 +209,20 @@ export class FeatureLauncher {
   );
   readonly icon = navigationIcon;
   readonly runs = navigationRuns;
-  /** 每個節點的分群深度（最上層為 0），讓子分群知道自己要內縮。 */
-  private readonly depths = computed(() => {
+  private readonly id = `nx-launcher-${++sequence}`;
+  /** 每個節點的分群深度（最上層為 0）與上層分群，給子分群樣式與「展開目前頁面所在的分群」用。 */
+  private readonly structure = computed(() => {
     const depths = new Map<string, number>();
-    const visit = (nodes: readonly NavigationNodeDto[], depth: number) => {
+    const parents = new Map<string, string>();
+    const visit = (nodes: readonly NavigationNodeDto[], depth: number, parent?: string) => {
       for (const node of nodes) {
         depths.set(node.id, depth);
-        visit(node.children, depth + 1);
+        if (parent) parents.set(node.id, parent);
+        visit(node.children, depth + 1, node.id);
       }
     };
     visit(this.pins.tree(), 0);
-    return depths;
+    return { depths, parents };
   });
   /**
    * 同一頁面可能放在多個分群；`aria-current` 只標第一次出現的那一個。
@@ -213,30 +234,39 @@ export class FeatureLauncher {
       if (node.featureId && !first.has(node.featureId)) first.set(node.featureId, node.id);
     return first;
   });
-  levelOf(node: NavigationNodeDto) {
-    return this.depths().get(node.id) ?? 0;
+  /** 目前頁面（第一次出現的位置）的所有上層分群。 */
+  private readonly currentGroups = computed(() => {
+    const { parents } = this.structure();
+    const groups: string[] = [];
+    const current = this.firstPlacement().get(this.active() ?? '');
+    for (let id = current && parents.get(current); id; id = parents.get(id)) groups.push(id);
+    return groups;
+  });
+
+  constructor() {
+    // 換頁時展開目前頁面所在的分群，側欄才看得到自己在哪；之後使用者仍可再收合它。
+    effect(() => {
+      const groups = this.currentGroups();
+      untracked(() => this.pins.expand(groups));
+    });
   }
-  /** 模組入口在它任一個頁面是目前頁面時標記；其餘規則與單一頁面相同。 */
-  current(entry: NavigationEntry) {
-    const active = this.active();
-    return entry.members.some(
-      (node) =>
-        !!node.featureId &&
-        active === node.featureId &&
-        !this.pins.has(node.featureId) &&
-        this.firstPlacement().get(node.featureId) === node.id,
+
+  levelOf(node: NavigationNodeDto) {
+    return this.structure().depths.get(node.id) ?? 0;
+  }
+  bodyId(group: NavigationNodeDto) {
+    return `${this.id}-${group.id}`;
+  }
+  current(node: NavigationNodeDto) {
+    const feature = node.featureId;
+    return (
+      !!feature &&
+      this.active() === feature &&
+      !this.pins.has(feature) &&
+      this.firstPlacement().get(feature) === node.id
     );
   }
-  pinned(entry: NavigationEntry) {
-    return entry.members.some((node) => !!node.featureId && this.pins.has(node.featureId));
-  }
-  /** 釘選以頁面為單位，所以編輯時把模組入口拆回各個頁面。 */
-  entriesOf(nodes: unknown): NavigationEntry[] {
-    const list = nodes as NavigationNodeDto[];
-    return this.editing()
-      ? list.map((node) => ({ node, members: [node] }))
-      : navigationEntries(list);
-  }
   /** 範本的脈絡沒有型別；這裡為遞迴的區段恢復型別。 */
+  asNodes = (nodes: unknown) => nodes as NavigationNodeDto[];
   asNode = (node: unknown) => node as NavigationNodeDto;
 }

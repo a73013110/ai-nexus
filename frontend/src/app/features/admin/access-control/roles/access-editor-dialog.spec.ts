@@ -26,6 +26,10 @@ const catalog = {
     { id: 'admin', name: '平台管理', enabled: true, icon: 'lock' },
   ],
   models: [],
+  navigationSections: [
+    { id: 'collaboration', path: ['協作'], featureIds: ['repositories'] },
+    { id: 'work', path: ['AI 工作台'], featureIds: ['chat'] },
+  ],
 };
 const role = catalog.roles[0] as unknown as AdminRoleDto;
 const group = { ...catalog.groups[1], policy: null } as unknown as AdminGroupDto;
@@ -104,7 +108,7 @@ describe('AccessEditorDialog', () => {
     expect(store.saved).not.toHaveBeenCalled();
   });
 
-  it('lists group features by catalog area and the groups of a role as one card', () => {
+  it('lists group features where the menu puts them and the groups of a role as one card', () => {
     const { dialog } = setup();
     dialog.open('group', group);
     expect(
@@ -112,7 +116,8 @@ describe('AccessEditorDialog', () => {
         .featureChoices()
         .map((item) => [item.name, item.options.map((option) => option.label)]),
     ).toEqual([
-      ['AI 工作台', ['對話', '程式庫']],
+      ['協作', ['程式庫']],
+      ['AI 工作台', ['對話']],
       // 不在目錄中的 ID 收在最後一張卡片。
       ['其他', ['停用功能（停用）', '平台管理']],
     ]);

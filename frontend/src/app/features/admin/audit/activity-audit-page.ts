@@ -108,6 +108,7 @@ export class ActivityAuditPage {
   private readonly catalog = computed(() => this.catalogRead.value());
   readonly features = computed<readonly FeatureDto[]>(() => this.catalog()?.features ?? []);
   readonly models = computed<readonly ModelDto[]>(() => this.catalog()?.models ?? []);
+  readonly navigation = computed(() => this.catalog()?.navigationSections ?? []);
   readonly modelNames = computed(() =>
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
   );
