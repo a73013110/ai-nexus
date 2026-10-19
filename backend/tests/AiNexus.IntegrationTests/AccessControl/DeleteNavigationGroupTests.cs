@@ -16,11 +16,11 @@ public sealed class DeleteNavigationGroupTests
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", null, 40))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("monthly", "月報", "reports", 10))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, true, "monthly", "files"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, true, "monthly"))).EnsureSuccessStatusCode();
 
         await AssertCodeAsync(await admin.DeleteAsync("/api/v1/admin/navigation-groups/reports"), HttpStatusCode.Conflict, "navigation_group_not_empty");
         await AssertCodeAsync(await admin.DeleteAsync("/api/v1/admin/navigation-groups/monthly"), HttpStatusCode.Conflict, "navigation_group_not_empty");
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, true, "work", "files"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, true, "work"))).EnsureSuccessStatusCode();
         (await admin.DeleteAsync("/api/v1/admin/navigation-groups/monthly")).EnsureSuccessStatusCode();
         (await admin.DeleteAsync("/api/v1/admin/navigation-groups/reports")).EnsureSuccessStatusCode();
 

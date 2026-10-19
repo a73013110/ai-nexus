@@ -59,11 +59,9 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
         var featureIds = db.Set<RoleGroupFeature>().Where(x => enabledGroups.Contains(x.GroupId)).Select(x => x.FeatureId);
-        var features = await db.Set<Feature>().AsNoTracking().Where(x => featureIds.Contains(x.Id) && x.Enabled)
-            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
-            .Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder))
-            .ToListAsync(ct);
-        return new(roles, groups, features, []);
+        var rows = await db.Set<Feature>().AsNoTracking().Where(x => featureIds.Contains(x.Id) && x.Enabled)
+            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id).ToListAsync(ct);
+        return new(roles, groups, [.. rows.Select(FeatureDto.From)], []);
     }
 }
 

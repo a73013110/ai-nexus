@@ -74,7 +74,7 @@ public sealed class GetDashboardTests
         var personal = await Read(alice, Period);
         Assert.Contains(personal.Sections, x => x.Id == "chat");
         // 區段標題取自功能的名稱與路由（名稱可能已被客製化）；明確指定的標題則保留不變。
-        Assert.Equal(("對話", "/chat"), (Section(personal, "chat").Title, Section(personal, "chat").Route));
+        Assert.Equal(("對話", "/work/chat"), (Section(personal, "chat").Title, Section(personal, "chat").Route));
         Assert.Equal(("通知", ""), (Section(personal, "notifications").Title, Section(personal, "notifications").Route));
         var platform = await Read(alice, "scope=platform&" + Period);
         // 總覽對所有人的區段結構都相同：平台範圍只會擴大數字，不會改變區段。
@@ -84,7 +84,7 @@ public sealed class GetDashboardTests
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync($"/api/v1/dashboard?ownerId={Guid.NewGuid()}&{Period}")).StatusCode);
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>()
-                .Where(x => x.FeatureId == FeatureIds.Knowledge).ExecuteDeleteAsync();
+                .Where(x => x.FeatureId == FeatureCatalog.Knowledge).ExecuteDeleteAsync();
         Assert.DoesNotContain((await Read(bob, Period)).Sections, x => x.Id == "knowledge");
     }
 
@@ -129,7 +129,7 @@ public sealed class GetDashboardTests
         var platform = Section(await Read(alice, "scope=platform&" + Window), "chat");
         Assert.Equal(2, platform.Metrics.Single(x => x.Key == "questions").Value);
         Assert.Equal(["我的對話"], platform.Items.Select(x => x.Title));
-        Assert.Equal("/chat/", platform.Items[0].Link![..6]);
+        Assert.StartsWith("/work/chat/", platform.Items[0].Link, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public sealed class GetDashboardTests
         var item = Assert.Single(section.Items);
         Assert.Equal("操作未完成", item.Title);
         Assert.DoesNotContain("secret", item.Detail, StringComparison.Ordinal);
-        Assert.StartsWith("/tasks?job=", item.Link, StringComparison.Ordinal);
+        Assert.StartsWith("/work/jobs?job=", item.Link, StringComparison.Ordinal);
     }
 
     [Fact]

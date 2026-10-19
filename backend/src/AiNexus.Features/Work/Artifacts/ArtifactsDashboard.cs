@@ -10,7 +10,7 @@ namespace AiNexus.Features.Work.Artifacts;
 /// <summary>成果文件總覽：目前數量，以及期間內保存的不可變版本數。</summary>
 internal sealed class ArtifactsDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Artifacts;
+    public string Feature => FeatureCatalog.Artifacts;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -32,7 +32,7 @@ internal sealed class ArtifactsDashboard(AppDbContext db) : IDashboardSource
             .Share("personal", "個人", all - projects);
         var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.Kind == Artifact.Kind && x.OwnerId == scope.Actor)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
-        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/artifacts/" + item.Id);
+        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Artifacts) + "/" + item.Id);
         return section.Build();
     }
 }

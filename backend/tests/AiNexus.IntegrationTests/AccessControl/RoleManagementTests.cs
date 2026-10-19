@@ -28,7 +28,7 @@ public sealed class RoleManagementTests
         (await alice.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "administrator"]))).EnsureSuccessStatusCode();
         (await bob.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}/roles", new UserRolesRequest(["member"]))).StatusCode);
-        Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "admin");
+        Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "identity.users");
         var audit = await alice.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit");
         Assert.Contains(audit!, x => x.Action == "admin.user_roles" && x.ResourceId == target.Id && x.DetailsJson!.Contains("administrator"));
     }
@@ -40,7 +40,7 @@ public sealed class RoleManagementTests
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/broken", new RoleUpdateRequest("無效", true, ["missing"]))).StatusCode);
         var catalog = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!; Assert.DoesNotContain(catalog.Roles, x => x.Id == "broken");
         admin.DefaultRequestHeaders.Remove("X-CSRF-Token");
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", 10, true, "work", "chat"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", 10, true, "work"))).StatusCode);
     }
 
     [Fact]

@@ -25,7 +25,7 @@ public sealed class MonitoringBrowserTests
             ExtraHTTPHeaders = new Dictionary<string, string> { ["X-Test-User"] = "alice" }
         });
         var page = await context.NewPageAsync(); var errors = new List<string>(); page.PageError += (_, error) => errors.Add(error);
-        await page.GotoAsync("/chat");
+        await page.GotoAsync("/work/chat");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "傳送訊息" }).FillAsync("即時營運監控的受控驗收");
         await page.GetByRole(AriaRole.Button, new() { Name = "送出訊息", Exact = true }).ClickAsync();
         await Expect(page.Locator("article[aria-label='AI 回覆'][aria-busy='false']").First).ToBeVisibleAsync();

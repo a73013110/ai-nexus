@@ -145,7 +145,7 @@ try {
         'watch', '--project', 'backend/src/AiNexus.Host/AiNexus.Host.csproj', 'run', '--no-launch-profile', '--',
         '--urls', "${scheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)",
         '--LocalConfigPath', $local.Settings, '--SecretsConfigPath', $local.Secrets)))
-    Write-Output "開發模式：${scheme}://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
+    Write-Output "開發模式：${scheme}://localhost:$FrontendPort/work/chat（Angular + API）。儲存原始碼後自動更新。"
     Write-Output "啟動與錯誤紀錄：$logs。Ctrl+C 同時停止兩個服務。"
     Write-Status 'backend' "編譯並啟動 API（${scheme}://localhost:$BackendPort）…"
     # 等 API 開始監聽才啟動 Angular，避免頁面先載入、代理連不到後端而刷出 ECONNREFUSED。
@@ -165,7 +165,7 @@ try {
             if ($listening -and !$ready[$name]) {
                 $elapsed = ([DateTime]::Now - $waitingSince[$name]).TotalSeconds.ToString('0')
                 Write-Status $name $(if ($name -eq 'backend') { "API 已就緒（$elapsed 秒）。" }
-                    else { "已就緒（$elapsed 秒）：${scheme}://localhost:$FrontendPort/chat" })
+                    else { "已就緒（$elapsed 秒）：${scheme}://localhost:$FrontendPort/work/chat" })
                 $waitingSince[$name] = $null
             } elseif (!$listening -and $ready[$name]) {
                 Write-Status $name $(if ($name -eq 'backend') { 'API 停止監聽，重新啟動中…' } else { 'dev server 停止監聽…' })

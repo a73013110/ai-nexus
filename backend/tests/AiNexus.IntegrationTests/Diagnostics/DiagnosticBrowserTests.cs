@@ -33,7 +33,7 @@ public sealed partial class DiagnosticBrowserTests
         });
         var page = await context.NewPageAsync(); var errors = new List<string>(); page.PageError += (_, error) => errors.Add(error);
         var evidence = Path.Combine(root, "artifacts", "diagnostic-acceptance"); Directory.CreateDirectory(evidence);
-        await page.GotoAsync("/chat");
+        await page.GotoAsync("/work/chat");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "傳送訊息" }).FillAsync("受控日誌驗收：觸發模型服務失敗");
         await page.GetByRole(AriaRole.Button, new() { Name = "送出訊息", Exact = true }).ClickAsync();
         var failure = page.Locator("article[aria-label='AI 回覆']").GetByRole(AriaRole.Alert).First;
@@ -44,7 +44,7 @@ public sealed partial class DiagnosticBrowserTests
         Assert.Equal(issue, await page.EvaluateAsync<string>("navigator.clipboard.readText()"));
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "chat-safe-error.png"), FullPage = true });
         var row = await DiagnosticIssues.WaitForIssue(factory, issue);
-        await page.GotoAsync("/admin/logs");
+        await page.GotoAsync("/admin/diagnostics/logs");
         await page.GetByRole(AriaRole.Searchbox, new() { Name = "搜尋", Exact = true }).FillAsync(issue);
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.Locator(".log-table")).ToContainTextAsync(issue);

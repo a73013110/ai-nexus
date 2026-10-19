@@ -11,10 +11,10 @@ public sealed class SpaFallbackTests : IDisposable
     public void Dispose() => Directory.Delete(webRoot, recursive: true);
 
     [Theory]
-    [InlineData("/repositories/team/nexus/compare/0a1b2c3...4d5e6f7")]
-    [InlineData("/repositories/team/my.repo")]
-    [InlineData("/repositories/team/my.repo/commits")]
-    [InlineData("/chat")]
+    [InlineData("/work/repositories/team/nexus/compare/0a1b2c3...4d5e6f7")]
+    [InlineData("/work/repositories/team/my.repo")]
+    [InlineData("/work/repositories/team/my.repo/commits")]
+    [InlineData("/work/chat")]
     public async Task DeepLinksOpenTheApplicationShellEvenWhenTheirLastSegmentHasADot(string path)
     {
         await using var factory = new AppFactory(webRoot: webRoot);

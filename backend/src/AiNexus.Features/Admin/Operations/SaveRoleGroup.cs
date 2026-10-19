@@ -17,16 +17,16 @@ public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds =
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 
-/// <summary>建立或更新群組、其功能與模型策略。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
+/// <summary>建立或更新群組、其功能與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
 internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/groups/{id}", async (string id, GroupUpdateRequest body, ICurrentUser user, SaveRoleGroup handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithName("SaveRoleGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.group", null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlGroups, "admin.group", null, id, token => SnapshotAsync(id, token), async () =>
     {
-        if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.Keys(request.FeatureIds)) is { } invalid) return invalid;
+        if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds)) is { } invalid) return invalid;
         if (request.Policy is { } policy)
         {
             if (policies.Check(new(policy.AllowedModelIds, policy.DailyTokenLimits)) is { } rejected) return rejected;

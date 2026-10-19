@@ -19,14 +19,14 @@ public sealed class SharingModule : IFeatureModule
         builder.Services.AddScoped<ShareAccess>();
         builder.Services.AddSingleton<ShareWriteLock>();
         builder.Services.AddHostedService<ShareCleanupWorker>();
-        builder.Services.AddFeaturePolicy(FeatureIds.Shared);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.Sharing);
         builder.Services.AddDomainEventHandler<ConversationDeleted, RevokeDeletedSourceShares>();
         builder.Services.AddDomainEventHandler<ArtifactDeleted, RevokeDeletedSourceShares>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/shares").RequireAuthorization(Policies.Shared).WithTags("Sharing");
+        var routes = api.MapGroup("/shares").RequireAuthorization(Policies.Sharing);
         ListShares.Map(routes);
         CreateShare.Map(routes);
         ReadShare.Map(routes);

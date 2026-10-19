@@ -22,7 +22,7 @@ internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, Acc
         .WithName("GetAuditCatalog");
 
     public async Task<AuditCatalogDto> HandleAsync(CancellationToken ct) => new(
-        await db.Set<Feature>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder)).ToArrayAsync(ct),
+        [.. (await db.Set<Feature>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).ToListAsync(ct)).Select(FeatureDto.From)],
         (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(),
         await access.NavigationGroupsAsync(ct),
         AuditCategories.All,

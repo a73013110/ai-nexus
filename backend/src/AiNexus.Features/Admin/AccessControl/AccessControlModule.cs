@@ -17,17 +17,22 @@ public sealed class AccessControlModule : IFeatureModule
         services.AddScoped<AdministrativeAudit>();
         services.AddScoped<AdministrativeReadAudit>();
         services.AddSingleton<AdministrativeWriteLock>();
-        services.AddFeaturePolicy(FeatureIds.Admin);
+        services.AddFeaturePolicy(FeatureCatalog.AccessControlRoles);
+        services.AddFeaturePolicy(FeatureCatalog.AccessControlGroups);
+        services.AddFeaturePolicy(FeatureCatalog.AccessControlFeatures);
+        services.AddFeaturePolicy(Policies.AccessCatalog, FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles,
+            FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
-        SaveRole.Map(admin);
-        SaveFeature.Map(admin);
-        CreateNavigationGroup.Map(admin);
-        UpdateNavigationGroup.Map(admin);
-        DeleteNavigationGroup.Map(admin);
+        SaveRole.Map(api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlRoles));
+        // 選單分群在功能頁編輯，與功能排序一起調整。
+        var features = api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlFeatures);
+        SaveFeature.Map(features);
+        CreateNavigationGroup.Map(features);
+        UpdateNavigationGroup.Map(features);
+        DeleteNavigationGroup.Map(features);
     }
 }
 

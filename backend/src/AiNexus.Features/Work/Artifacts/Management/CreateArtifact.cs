@@ -57,7 +57,7 @@ internal sealed class CreateArtifact(
         if (count >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
-            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return AccessControlErrors.FeatureForbidden;
+            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.Projects)) return AccessControlErrors.FeatureForbidden;
             var editable = await access.RequireAsync(actor, project, "project", ct, write: true);
             if (!editable.IsSuccess) return editable.Error;
         }

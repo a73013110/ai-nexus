@@ -29,7 +29,7 @@ public sealed class ListActivityAuditTests
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "auditor"]))).EnsureSuccessStatusCode();
         var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Contains(me.Access.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
-        Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "admin");
+        Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "identity.users");
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", "system", 40))).EnsureSuccessStatusCode();
         var catalog = (await auditor.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
         Assert.Contains(catalog.Features, feature => feature.Id == "audit" && feature.GroupId == "system");

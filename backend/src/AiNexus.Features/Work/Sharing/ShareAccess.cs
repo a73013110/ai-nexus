@@ -41,7 +41,7 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
     }
 
     public async Task<bool> HasSourceFeatureAsync(Guid user, string kind, CancellationToken ct)
-        => (await features.ForUserAsync(user, ct)).Features.Any(x => x.Id == (kind == "conversation" ? FeatureIds.Chat : FeatureIds.Artifacts));
+        => (await features.ForUserAsync(user, ct)).Features.Any(x => x.Id == (kind == "conversation" ? FeatureCatalog.Chat : FeatureCatalog.Artifacts));
 
     public async Task<ShareDto> DescribeAsync(Guid actor, ShareLink x, CancellationToken ct)
     {

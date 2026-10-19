@@ -15,34 +15,42 @@ ON t.[Id] = s.[Id]
 WHEN NOT MATCHED BY TARGET THEN
     INSERT ([Id], [ParentId], [Name], [SortOrder]) VALUES (s.[Id], s.[ParentId], s.[Name], s.[SortOrder]);
 
+-- 只放可授予的功能（頁面與動作），ID 與 backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs 一致（FeatureCatalogSeedTests 雙向比對）。
+-- 網址、預設名稱與圖示由程式目錄提供；Name 為 NULL 代表使用目錄預設名稱，只有管理員改名時才寫入覆寫。
+-- SortOrder 與 GroupId 是現行選單的預設位置。
 MERGE [accesscontrol].[Features] AS t
 USING (VALUES
-    (N'dashboard', N'總覽', N'/dashboard', 5, NULL, N'dashboard'),
-    (N'chat', N'對話', N'/chat', 10, N'work', N'chat'),
-    (N'projects', N'專案', N'/projects', 15, N'work', N'projects'),
-    (N'files', N'檔案庫', N'/files', 20, N'work', N'files'),
-    (N'knowledge', N'知識庫', N'/knowledge', 30, N'work', N'library'),
-    (N'artifacts', N'成果文件', N'/artifacts', 40, N'work', N'document'),
-    (N'shared', N'分享', N'/shared', 50, N'collaboration', N'share'),
-    (N'tasks', N'背景任務', N'/tasks', 55, N'collaboration', N'tasks'),
-    (N'repositories', N'程式庫', N'/repositories', 60, N'collaboration', N'git'),
-    (N'admin', N'存取管理', N'/admin', 90, N'system', N'lock'),
-    (N'operations', N'平台營運', N'/admin/operations', 91, N'system', N'chart'),
-    (N'integrations', N'資料來源', N'/integrations', 92, N'system', N'integrations'),
-    (N'monitoring', N'即時監控', N'/admin/monitoring', 93, N'system', N'activity'),
-    (N'logs.query', N'系統日誌', N'/admin/logs', 94, N'system', N'logs'),
-    -- route 為空：只是授權，不出現在選單。
-    (N'logs.detail', N'日誌診斷詳情', N'', 95, N'system', N'search'),
-    (N'logs.export', N'日誌匯出', N'', 96, N'system', N'download'),
-    (N'audit', N'活動稽核', N'/admin/audit', 97, N'system', N'audit'),
-    (N'quality', N'品質評測', N'/quality', 98, N'system', N'shield'),
-    -- 介面元件工作臺是純前端頁面、沒有 API；獨立成一個 grant 才能放進系統管理選單並單獨授予。
-    (N'design', N'介面元件', N'/design', 99, N'system', N'sliders')
-) AS s ([Id], [Name], [Route], [SortOrder], [GroupId], [Icon])
+    (N'dashboard', 5, NULL),
+    (N'chat', 10, N'work'),
+    (N'projects', 15, N'work'),
+    (N'files', 20, N'work'),
+    (N'knowledge', 30, N'work'),
+    (N'artifacts', 40, N'work'),
+    (N'sharing', 50, N'collaboration'),
+    (N'jobs', 55, N'collaboration'),
+    (N'repositories', 60, N'collaboration'),
+    (N'identity.users', 80, N'system'),
+    (N'access-control.roles', 81, N'system'),
+    (N'access-control.groups', 82, N'system'),
+    (N'access-control.features', 83, N'system'),
+    (N'operations.usage', 84, N'system'),
+    (N'billing.prices', 85, N'system'),
+    (N'knowledge.retrieval', 86, N'system'),
+    (N'integrations', 92, N'system'),
+    (N'monitoring', 93, N'system'),
+    (N'diagnostics.logs', 94, N'system'),
+    -- 動作：只是授權，不出現在選單。
+    (N'diagnostics.logs.detail', 95, N'system'),
+    (N'diagnostics.logs.export', 96, N'system'),
+    (N'audit', 97, N'system'),
+    (N'quality', 98, N'system'),
+    (N'quality.retrieval', 99, N'system'),
+    (N'design', 100, N'system')
+) AS s ([Id], [SortOrder], [GroupId])
 ON t.[Id] = s.[Id]
 WHEN NOT MATCHED BY TARGET THEN
-    INSERT ([Id], [Name], [Route], [SortOrder], [GroupId], [Icon], [Enabled])
-    VALUES (s.[Id], s.[Name], s.[Route], s.[SortOrder], s.[GroupId], s.[Icon], 1);
+    INSERT ([Id], [Name], [SortOrder], [GroupId], [Enabled])
+    VALUES (s.[Id], NULL, s.[SortOrder], s.[GroupId], 1);
 
 MERGE [accesscontrol].[Roles] AS t
 USING (VALUES
@@ -80,17 +88,23 @@ USING (VALUES
     (N'workspace', N'files'),
     (N'workspace', N'knowledge'),
     (N'workspace', N'artifacts'),
-    (N'workspace', N'shared'),
-    (N'workspace', N'tasks'),
+    (N'workspace', N'sharing'),
+    (N'workspace', N'jobs'),
     (N'workspace', N'repositories'),
     (N'workspace', N'quality'),
-    (N'administrators', N'admin'),
-    (N'administrators', N'operations'),
+    (N'workspace', N'quality.retrieval'),
+    (N'administrators', N'identity.users'),
+    (N'administrators', N'access-control.roles'),
+    (N'administrators', N'access-control.groups'),
+    (N'administrators', N'access-control.features'),
+    (N'administrators', N'operations.usage'),
+    (N'administrators', N'billing.prices'),
+    (N'administrators', N'knowledge.retrieval'),
     (N'administrators', N'integrations'),
     (N'administrators', N'monitoring'),
-    (N'administrators', N'logs.query'),
-    (N'administrators', N'logs.detail'),
-    (N'administrators', N'logs.export'),
+    (N'administrators', N'diagnostics.logs'),
+    (N'administrators', N'diagnostics.logs.detail'),
+    (N'administrators', N'diagnostics.logs.export'),
     (N'administrators', N'audit'),
     (N'administrators', N'design')
 ) AS s ([GroupId], [FeatureId])

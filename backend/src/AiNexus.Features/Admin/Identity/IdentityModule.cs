@@ -60,11 +60,12 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<AuthenticationAudit>();
         services.AddScoped<ISignInGrant, AdminBootstrap>();
+        services.AddFeaturePolicy(FeatureCatalog.IdentityUsers);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
         ManageUserAccounts.MapCreate(admin);
         ManageUserAccounts.MapUpdate(admin);
         ManageUserAccounts.MapDelete(admin);

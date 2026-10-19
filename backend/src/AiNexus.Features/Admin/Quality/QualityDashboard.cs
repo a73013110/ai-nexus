@@ -10,7 +10,7 @@ namespace AiNexus.Features.Admin.Quality;
 /// <summary>回答品質總覽：期間內的有幫助／沒幫助評分數與發起的評測次數；只計入評分，理由與備註仍只對作者可見。</summary>
 internal sealed class QualityDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Quality;
+    public string Feature => FeatureCatalog.Quality;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {

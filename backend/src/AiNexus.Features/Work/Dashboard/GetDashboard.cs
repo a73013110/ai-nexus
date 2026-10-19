@@ -16,7 +16,7 @@ public sealed record DashboardPeriodDto(DateTimeOffset From, DateTimeOffset Unti
 public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset GeneratedAt, DashboardPeriodDto Period, SpendReportDto Spend,
     TokenUsageDto Tokens, IReadOnlyList<DashboardSectionDto> Sections);
 
-/// <summary>個人總覽；平台營運權限者可看全平台總覽，且每次查看都會留稽核。</summary>
+/// <summary>個人總覽；有平台用量頁（<see cref="FeatureCatalog.OperationsUsage"/>）授權者可看全平台總覽，且每次查看都會留稽核。</summary>
 internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageReports usage, AccessService access,
     IEnumerable<IDashboardSource> sources, TimeProvider clock)
 {
@@ -30,7 +30,7 @@ internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageR
         if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return DashboardErrors.InvalidScope;
         var features = (await access.ForUserAsync(actor, ct)).Features.ToDictionary(x => x.Id, StringComparer.Ordinal);
         var platform = scope == "platform";
-        if (platform && !features.ContainsKey(FeatureIds.Operations)) return AccessControlErrors.FeatureForbidden;
+        if (platform && !features.ContainsKey(FeatureCatalog.OperationsUsage)) return AccessControlErrors.FeatureForbidden;
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
         if (!period.IsSuccess) return period.Error;
         Guid? owner = platform ? ownerId : actor;

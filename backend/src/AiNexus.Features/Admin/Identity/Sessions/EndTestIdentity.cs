@@ -27,7 +27,7 @@ internal sealed class EndTestIdentity(AppDbContext db, AccessService access, IOp
         var actor = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
         var method = http.User.FindFirstValue(SessionIdentity.ActorMethod);
         if (actor is null || !SessionIdentity.Allows(actor, method) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)) ||
-            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureIds.Admin))
+            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers))
             return IdentityErrors.TestSourceRevoked;
         _ = Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId)) return IdentityErrors.TestSessionInvalid;

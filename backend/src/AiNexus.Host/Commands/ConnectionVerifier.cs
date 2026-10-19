@@ -63,7 +63,7 @@ public static class ConnectionVerifier
             var db = services.GetRequiredService<AppDbContext>();
 
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
-                || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureIds.Chat, ct))
+                || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Chat, ct))
             {
                 throw new ExternalServiceException(Error.Unavailable("default_access_missing"), "預設角色、群組與 chat 功能關聯尚未完成。");
             }

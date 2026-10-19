@@ -111,7 +111,7 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
         if (item.Id is null) return IntegrationsErrors.UnknownSource;
         if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
-        if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return AccessControlErrors.FeatureForbidden;
+        if (!grants.Features.Any(x => x.Id == FeatureCatalog.Integrations)) return AccessControlErrors.FeatureForbidden;
         var value = options.Value.For(source);
         if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
         if (!value.Enabled || !value.AclContractConfirmed || !databases.Value.For(item.Database).Configured) return IntegrationsErrors.NotConfigured;

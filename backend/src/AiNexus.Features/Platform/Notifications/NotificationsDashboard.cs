@@ -10,7 +10,7 @@ namespace AiNexus.Features.Platform.Notifications;
 /// <summary>檢視者自己的未讀通知。通知是個人資料，因此不套用 scope 的 owner 條件。</summary>
 internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Dashboard;
+    public string Feature => FeatureCatalog.Dashboard;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -37,13 +37,13 @@ internal sealed class NotificationsDashboard(AppDbContext db) : IDashboardSource
         return section.Build();
     }
 
-    /// <summary>與通知中心相同的型別化跳轉目標。</summary>
+    /// <summary>與通知中心相同的型別化跳轉目標；網址取目錄，模組換區時跟著變。</summary>
     private static string? Link(string kind, Guid id) => kind switch
     {
-        "conversation" => "/chat/" + id,
-        "share" => "/shared/" + id,
-        "task" => "/tasks?job=" + id,
-        "repository-review" => "/repositories?review=" + id,
+        "conversation" => FeatureCatalog.RouteOf(FeatureCatalog.Chat) + "/" + id,
+        "share" => FeatureCatalog.RouteOf(FeatureCatalog.Sharing) + "/" + id,
+        "task" => FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + id,
+        "repository-review" => FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "?review=" + id,
         _ => null,
     };
 }

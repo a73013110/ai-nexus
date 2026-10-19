@@ -26,8 +26,7 @@ internal sealed class GetStatus(
     public static void Map(RouteGroupBuilder api) => api
         .MapGet("/status", async (GetStatus handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(ct)))
-        .WithName("GetStatus")
-        .WithTags("Operations");
+        .WithName("GetStatus");
 
     public async Task<StatusDto> HandleAsync(CancellationToken ct)
     {

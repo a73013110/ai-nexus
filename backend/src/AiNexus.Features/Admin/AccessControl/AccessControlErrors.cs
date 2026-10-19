@@ -19,7 +19,6 @@ public static class AccessControlErrors
     public static readonly Error InvalidAccessName = Error.Invalid("invalid_access_name");
     public static readonly Error UnknownAccessId = Error.Invalid("unknown_access_id");
     public static readonly Error InvalidOrder = Error.Invalid("invalid_order");
-    public static readonly Error InvalidFeatureIcon = Error.Invalid("invalid_feature_icon");
     public static readonly Error NavigationGroupNotFound = Error.NotFound("navigation_group_not_found");
     public static readonly Error NavigationGroupExists = Error.Conflict("navigation_group_exists");
     public static readonly Error NavigationGroupNotEmpty = Error.Conflict("navigation_group_not_empty");

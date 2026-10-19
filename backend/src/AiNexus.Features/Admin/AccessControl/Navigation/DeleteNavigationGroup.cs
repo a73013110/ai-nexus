@@ -12,7 +12,7 @@ internal sealed class DeleteNavigationGroup(AppDbContext db, AdministrativeAudit
         .MapDelete("/navigation-groups/{id}", async (string id, IRequestActor actor, DeleteNavigationGroup handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, ct)).ToHttpResult())
         .WithName("DeleteNavigationGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => audit.MutateAsync(actor, "admin.navigation_group_delete", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, "admin.navigation_group_delete", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
     {
         var group = await db.Set<NavigationGroup>().FindAsync([id], ct);
         if (group is null) return AccessControlErrors.NavigationGroupNotFound;

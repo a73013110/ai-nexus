@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using System.Text.RegularExpressions;
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +14,6 @@ internal static class NavigationRules
     public const int MaxSortOrder = 10000;
 
     public static Error? Order(int sortOrder) => sortOrder is < 0 or > MaxSortOrder ? AccessControlErrors.InvalidOrder : null;
-
-    public static Error? Icon(string icon)
-        => Regex.IsMatch(icon, "^[a-z][a-z0-9-]{0,39}$", RegexOptions.CultureInvariant) ? null : AccessControlErrors.InvalidFeatureIcon;
 
     /// <summary>null 代表頂層；其他值必須指向既有群組。</summary>
     public static async Task<Error?> ExistingGroupAsync(AppDbContext db, string? id, CancellationToken ct)

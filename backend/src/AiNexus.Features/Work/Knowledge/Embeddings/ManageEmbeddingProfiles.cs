@@ -12,7 +12,7 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 /// <summary>
 /// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量。
-/// 每次變更都先取得 knowledge 寫入鎖，再經 <see cref="AdministrativeAudit"/> 以「平台營運」權限執行並稽核。
+/// 每次變更都先取得 knowledge 寫入鎖，再經 <see cref="AdministrativeAudit"/> 以檢索管理頁（<see cref="FeatureCatalog.KnowledgeRetrieval"/>）的權限執行並稽核。
 /// </summary>
 internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, KnowledgeWriteLock writes, AdministrativeAudit audit)
 {
@@ -54,7 +54,7 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
     private async Task<Result> LockedAsync(Guid actor, string action, int id, Func<Task<Result>> mutation, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
-        try { return await audit.MutateAsync(actor, FeatureIds.Operations, action, null, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token), mutation, ct); }
+        try { return await audit.MutateAsync(actor, FeatureCatalog.KnowledgeRetrieval, action, null, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token), mutation, ct); }
         finally { writes.Gate.Release(); }
     }
 

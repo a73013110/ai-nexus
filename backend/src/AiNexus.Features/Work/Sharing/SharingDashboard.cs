@@ -14,7 +14,7 @@ internal sealed class SharingDashboard(AppDbContext db, TimeProvider clock) : ID
 {
     private static readonly TimeSpan Soon = TimeSpan.FromDays(7);
 
-    public string Feature => FeatureIds.Shared;
+    public string Feature => FeatureCatalog.Sharing;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -45,7 +45,7 @@ internal sealed class SharingDashboard(AppDbContext db, TimeProvider clock) : ID
                            orderby share.CreatedAt descending
                            select new { share.Id, share.Title, share.Kind, share.CreatedAt, share.ExpiresAt }).Take(5).ToListAsync(ct);
         foreach (var share in inbox)
-            section.Item(share.Id.ToString(), share.Title, Kind(share.Kind), share.CreatedAt, "/shared/" + share.Id,
+            section.Item(share.Id.ToString(), share.Title, Kind(share.Kind), share.CreatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Sharing) + "/" + share.Id,
                 share.ExpiresAt <= soon ? DashboardTones.Warning : DashboardTones.Neutral);
         return section.Build();
     }

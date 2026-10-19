@@ -60,7 +60,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             return IdentityErrors.InvalidPassword;
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
         var key = id ?? Guid.NewGuid();
-        var saved = await audit.MutateAsync(actor, "admin.user", key, key.ToString(), token => SnapshotAsync(key, token), async () =>
+        var saved = await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user", key, key.ToString(), token => SnapshotAsync(key, token), async () =>
         {
             var user = id is null ? new User { Id = key, Sid = "managed:" + key, ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
                 await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
@@ -102,7 +102,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         return saved.IsSuccess ? key : saved.Error;
     }
 
-    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, "admin.user_delete", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_delete", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
         {
             var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
             if (user is null) return IdentityErrors.UserNotFound;

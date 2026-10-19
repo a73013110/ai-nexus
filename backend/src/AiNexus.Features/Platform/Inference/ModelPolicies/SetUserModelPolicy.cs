@@ -17,7 +17,7 @@ internal sealed class SetUserModelPolicy(AppDbContext db, AdministrativeAudit au
         .MapPut("/users/{id:guid}/model-policy", async (Guid id, ModelPolicyRequest body, ICurrentUser user, SetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithName("SetUserModelPolicy");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, ModelPolicyRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.user_model_policy", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, ModelPolicyRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_model_policy", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
     {
         if (policies.Check(request) is { } invalid) return invalid;
         // 用一次不改值的 UPDATE 鎖住使用者列，讓同一使用者的策略變更互相序列化；WHERE 條件同時確認使用者未被刪除。

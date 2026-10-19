@@ -18,7 +18,7 @@ public sealed class AdministratorBootstrapTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        Assert.Contains(me.Access.Features, x => x.Id == "admin"); Assert.DoesNotContain((await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "admin");
+        Assert.Contains(me.Access.Features, x => x.Id == "identity.users"); Assert.DoesNotContain((await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "identity.users");
         using (var scope = factory.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
@@ -33,7 +33,7 @@ public sealed class AdministratorBootstrapTests
         await using var f = new AppFactory(ldap: true, administrators: ["alice", "tester"]);
         using var admin = f.CreateClient(); await Login(admin, "alice"); await CreateUser(admin, LocalAccount());
         using var local = f.CreateClient(); var me = await Login(local, "tester", "local");
-        Assert.DoesNotContain(me.Access.Features, x => x.Id == "admin");
+        Assert.DoesNotContain(me.Access.Features, x => x.Id == "identity.users");
         Assert.Equal(HttpStatusCode.Forbidden, (await local.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "檢查權限"))).StatusCode);
     }
 }

@@ -22,7 +22,7 @@ internal sealed class StartSourceChat(AccessService access, SourceGateway gatewa
 
     public async Task<Result<SourceChatDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Chat)) return AccessControlErrors.FeatureForbidden;
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.Chat)) return AccessControlErrors.FeatureForbidden;
         var read = await gateway.ReadAsync(actor, source, request.RecordId, ct);
         if (!read.IsSuccess) return read.Error;
         var detail = read.Value;

@@ -38,14 +38,14 @@ public sealed class ChatModule : IFeatureModule
     /// <summary>註冊對話相關之 HTTP 端點。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var runs = api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference");
+        var runs = api.MapGroup("").RequireAuthorization(Policies.Chat);
         PreviewContext.Map(runs);
         CreateRun.Map(runs);
         GetRun.Map(runs);
         CancelRun.Map(runs);
         StreamRunEvents.Map(runs);
 
-        var conversations = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat).WithTags("Conversations");
+        var conversations = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat);
         GetConversation.Map(conversations);
         DuplicateConversation.Map(conversations);
         ExportConversation.Map(conversations);
