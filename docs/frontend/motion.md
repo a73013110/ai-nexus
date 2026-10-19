@@ -11,7 +11,7 @@
 ## 共享元素
 
 - 在 `core/layout/view-morph.ts`：換頁時頁面交叉淡化，登入標誌與頭像移到側欄；側欄顯示即時狀態，導覽 pill 用自己的 CSS 滑動。
-- 元件沿用的路由（`/chat`↔`/chat/:id`）不跑路由過渡，改用 `ViewMorph.run()` 包住狀態變更：歷史列標題→標題列、第一則提問讓 composer 從置中移到底部。
+- 元件沿用的路由（`/work/chat`↔`/work/chat/:id`）不跑路由過渡，改用 `ViewMorph.run()` 包住狀態變更：歷史列標題→標題列、第一則提問讓 composer 從置中移到底部。
 - 名稱只在 `:root[data-morphing]` 期間生效，平時不產生 stacking context；一次性配對用 `ViewMorph.arm()`＋目標的 `data-morph`。
 
 ## 動態島

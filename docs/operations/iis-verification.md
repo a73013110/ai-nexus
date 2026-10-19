@@ -31,7 +31,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 
 最後用新的無痕瀏覽器驗收：
 
-1. 直接開 `/chat`、`/projects`：未登入會到 `/login?returnUrl=...`，沒有先出現私人工作區。
+1. 直接開 `/work/chat`、`/work/projects`：未登入會到 `/login?returnUrl=...`，沒有先出現私人工作區。
 2. AD 登入後能開對話，重新整理仍登入；登出後私人 URL 再次要求登入。
 3. 短回答與「圖解傅立葉轉換」能串流到完成；停止／重新生成都保留歷史。
 4. 上傳合成文字檔及圖片，實際模型能力正確；文字模型不應允許圖片。

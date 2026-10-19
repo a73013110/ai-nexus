@@ -8,7 +8,7 @@
 
 `tokens` 為 `{ from, until, timezoneOffsetMinutes, daily }`，daily 包含 `date, modelId, modelDisplayName, requests, requestsWithUsage, inputTokens, outputTokens`。從 Runs／ModelInvocations 聚合，含沒有價格快照的舊呼叫及 OCR／評測／review 等背景模型呼叫，不依費用是否可結算決定 Token 數。缺少回報不當成已知零值，合計只加已回報數字，完整回報比例另外呈現；無呼叫日期補零維持連續時間軸。總覽沿用所選時區／owner／區間，個人設定為最近 30 日 UTC，模型識別遵循平台顯示政策。
 
-在 [平台營運](operations.md) 的「模型與工具價格」分頁（`/admin/operations?tab=prices`）按「新增價格版本」，或從目前價格、價格歷史的列開啟同一個對話框：
+在 [平台營運](operations.md) 的「模型與工具價格」頁（`/admin/billing/prices`，功能 `billing.prices`）按「新增價格版本」，或從目前價格、價格歷史的列開啟同一個對話框：
 
 | 欄位 | 設定方式 |
 | --- | --- |
@@ -55,11 +55,11 @@ Google 的 prompt tokens 包含快取，輸出統計另有 thoughts tokens。本
 | --- | --- |
 | `GET /api/v1/billing/spend` | 已登入，只查自己 |
 | `GET /api/v1/conversations/{id}/spend` | chat 權限且為對話擁有者 |
-| `GET /api/v1/admin/billing/targets` | `operations`；已設定的模型與工具及其顯示名稱 |
-| `GET/POST /api/v1/admin/billing/prices` | `operations`；新增版本，沒有修改／刪除歷史接口 |
-| `GET /api/v1/admin/billing/spend` | `operations`，選用 ownerId、from、until、offsetMinutes |
-| `GET /api/v1/admin/billing/export` | `operations`，相同條件，完整使用者彙總 CSV |
-| `GET /api/v1/dashboard` | dashboard 功能；platform 範圍額外需要 admin |
+| `GET /api/v1/admin/billing/targets` | `billing.prices`；已設定的模型與工具及其顯示名稱 |
+| `GET/POST /api/v1/admin/billing/prices` | `billing.prices`；新增版本，沒有修改／刪除歷史接口 |
+| `GET /api/v1/admin/billing/spend` | `operations.usage`，選用 ownerId、from、until、offsetMinutes |
+| `GET /api/v1/admin/billing/export` | `operations.usage`，相同條件，完整使用者彙總 CSV |
+| `GET /api/v1/dashboard` | dashboard 功能；platform 範圍額外需要 `operations.usage` |
 
 所有網頁模型標籤只顯示 DisplayName，管理報表與價格歷史也遵循此規則。一般使用者仍依模型隱藏政策顯示「AI 助理 N」；已移除模型顯示通用標籤，完整 ID 只作為路由、統計或計費參照。平台總覽的最近對話標題仍只顯示管理員自己的工作；查看其他人的對話使用原有管理頁並留下稽核。新增價格、平台報表／總覽讀取和匯出都留稽核。CSV 對文字欄位處理公式開頭，避免開啟檔案時把帳號或名稱視為試算表公式。
 

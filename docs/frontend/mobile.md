@@ -8,7 +8,7 @@
 - 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩隨抽屜邊緣移動並淡入。
 - 640px 以下置中對話框改為底部 sheet（快捷指令例外，`--dialog-sheet: 0`）：從底緣整片升起、不回彈（回彈會讓底邊離開畫面）。
 - 頁面在 375px 寬不得出現橫向捲動；長內容在自己的區域內捲動。
-- 欄位多的表格在 `narrow` 以下加 `DataTable` 的 `stacked`，每列改為卡片（opt-in，其他表格不變）：儲存格直排，`data-stack="end"` 放右上（列選單或編輯），`data-stack="hide"` 留給詳情，`data-label` 標示需要欄名的值；可點的卡片（`nxTableRow`）整張是觸控目標，名稱連結不另撐 44px；表格最小寬度寫在 `--table-min-width`。範例見 `/design`「資料工作區」。
+- 欄位多的表格在 `narrow` 以下加 `DataTable` 的 `stacked`，每列改為卡片（opt-in，其他表格不變）：儲存格直排，`data-stack="end"` 放右上（列選單或編輯），`data-stack="hide"` 留給詳情，`data-label` 標示需要欄名的值；可點的卡片（`nxTableRow`）整張是觸控目標，名稱連結不另撐 44px；表格最小寬度寫在 `--table-min-width`。範例見 `/admin/design`「資料工作區」。
 - 頁首把畫面讓給內容：640px 以下 `nx-feature-page` 只留一列（側欄按鈕、返回、單行標題、頁面動作），說明隱藏，帶圖示的動作按鈕只顯示圖示（文字仍是可存取名稱，所以動作按鈕一律放圖示）；桌面版標題與說明同一列。只有「篩選」字樣的篩選標題在手機上同樣省略。
 
 ## 斷點

@@ -1,6 +1,6 @@
 # 共用介面模式
 
-結論：新頁面組合 `shared/ui` 與 `core/layout` 的現有元件，不自建側欄、提示、表格、抽屜或切換樣式。系統日誌是緊湊資料介面的基準頁；聊天與文件正文保留個人閱讀設定。元件用法見原始碼與 [`/design`](design-system.md#元件工作臺-design)。
+結論：新頁面組合 `shared/ui` 與 `core/layout` 的現有元件，不自建側欄、提示、表格、抽屜或切換樣式。系統日誌是緊湊資料介面的基準頁；聊天與文件正文保留個人閱讀設定。元件用法見原始碼與 [`/admin/design`](design-system.md#元件工作臺-design)。
 
 ## 頁面版面
 
@@ -12,7 +12,7 @@
 ## 導覽
 
 - 登入後的路由掛在 `WorkspaceShell` 下（側欄只建立一次，換頁保留狀態）；頁面只提供主區，側欄內容用 `<ng-template nxSidebarPanel>` 宣告，標題列放 `WorkspaceMenuButton`。
-- 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，換 id 時沿用元件。
+- 列表與詳細路徑用 `optionalId` 合成一條路由；麵包屑與 `ModuleNavigation` 依網址查功能目錄。
 - `WorkspaceLayout` 分開管理桌面收合（`desktopCompact`，跨路由維持）與 `narrow` 以下的抽屜（`mobileOpen`，見 [手機](mobile.md#斷點)）。
 - 功能清單只由 `WorkspaceNavigation` 呈現（釘選＋全部功能，行為見 [個人設定](../features/settings.md#側欄)）。`Ctrl + K` 是 shell 的 `CommandPalette`，頁面用 `WorkspaceCommands.provide()` 加入動作。
 - 長清單共用一個 `MenuPanel`（不每列建 `ActionMenu`），列加 `content-visibility: auto`。

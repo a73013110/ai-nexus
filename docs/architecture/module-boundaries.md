@@ -19,11 +19,11 @@
 | 內容 | Knowledge、Projects、Quality、Repositories、Integrations | 組合上述資料的功能 |
 | 組合 | Chat、Sharing、Account、Operations、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 
-`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除；這些端點沿用 `Inference`、`Conversations` 的 OpenAPI tag。
+`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除。OpenAPI tag 一律＝模組名，由 `FeatureModules` 掛載模組時加上，端點不自己寫 tag。
 
 整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Files、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、標籤、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
 
-`Operations` 是管理端的組合層：使用者清單、使用者洞察、管理目錄、群組儲存與平台用量的回應內嵌 Inference、Billing、Files、Account 的 DTO，放進 AccessControl 或 Identity 會成環，而 API 合約不能改。管理端點仍用 OpenAPI tag `Administration`；Knowledge、Conversations、Files、Inference 的管理端點由各自的 `MapAdministration` 在 `FeatureModules` 原本 Administration 的位置集中掛載，維持已發布合約的 tag 順序。
+`Operations` 是管理端的組合層：使用者清單、使用者洞察、管理目錄、群組儲存與平台用量的回應內嵌 Inference、Billing、Files、Account 的 DTO，放進 AccessControl 或 Identity 會成環。各模組的管理端點在自己的 `MapEndpoints` 掛載。
 
 ## 新增依賴造成循環時
 
@@ -42,7 +42,7 @@
 另外三個固定做法：
 
 - 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、即時監控的 `IMonitoringSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring 屬基礎能力層，只透過 `IMonitoringSource` 讀上層模組的狀態，不引用它們。
-- 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，其他模組的管理端點直接引用。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
+- 共用的識別字放在下層模組，例如功能 ID 的 `FeatureCatalog` 與 `Policies` 在 AccessControl，其他模組的管理端點直接引用。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
 - 管理寫入的 `AdministrativeAudit.MutateAsync` 在 AccessControl，由呼叫端傳入 actor 與前後快照的委派；快照由擁有資料的 slice 提供，AccessControl 因此不必認得各模組的資料形狀。
 
 ## 直接呼叫或 domain event

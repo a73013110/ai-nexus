@@ -1,6 +1,6 @@
 # 設計系統
 
-結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值與元件清單以程式碼和 `/design` 頁為準。
+結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值與元件清單以程式碼和 `/admin/design` 頁為準。
 
 ## 三層 token
 
@@ -19,7 +19,7 @@
 
 ## 資料視覺化與總覽的例外
 
-- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件（`StatTile`、`Sparkline`、`DonutChart` 等）見 `/design`「資料視覺化」。
+- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件（`StatTile`、`Sparkline`、`DonutChart` 等）見 `/admin/design`「資料視覺化」。
 - `meter`／`progress` 由 `controls.scss` 統一：軌道 `--line`、填色 `--meter-color`（預設 `--accent`），元件只改這個變數。
 - [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
 - 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。工具列用膠囊：segment `ViewSwitch`、`Select` 的 `pill`、`--search-field-radius`。
@@ -27,7 +27,7 @@
 
 ## 主題
 
-- `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/design` 的局部預覽靠它。
+- `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/admin/design` 的局部預覽靠它。
 - 危險按鈕用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開。
 - 個人設定只改 semantic／component tokens，不能縮小最小字級與觸控目標。
 - 一般文字對比 WCAG AA 4.5:1，focus 有 2px 可見輪廓；新的文字／背景組合要實測。
@@ -72,7 +72,7 @@
 
 ## 元件工作臺 /design
 
-- 系統管理選單的「介面元件」（功能 `design`，預設授予 `administrators`，與 `admin` 分開授權）；純前端頁面、沒有 API，所以只有選單授權、沒有 policy。正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
+- 系統管理選單的「介面元件」（功能 `design`，預設授予 `administrators`，與其他管理頁分開授權）；純前端頁面、沒有 API，所以只有選單授權、沒有 policy。正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
 - 側欄是元件索引；每個元件一個 `DesignSection`，各組分檔於 `frontend/src/app/features/admin/design`。
 - 新共用元件要放範例（含停用、錯誤、選填等狀態）。
 

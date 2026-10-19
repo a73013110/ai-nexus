@@ -51,6 +51,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 資料庫優先：結構由開發庫匯出到 `database/App/`，EF 只做對應，不用 migration。實體與組態一表一檔放 `AiNexus.Data/App/<Module>/<Entity>.cs`（資料夾＝schema、實體＝表單數名），Features 只引用；組態不寫索引、約束、預設值與說明。
 - 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Area>/<Module>/`（區見 ADR 0016，只是資料夾、不是依賴邊界；模組名全域唯一）；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
 - 前端 `features/<area>/<module-kebab>/` 與後端區、模組同名（能力子資料夾也同名，唯一例外 `admin/design/`）；選單分群是資料（`accesscontrol.NavigationGroups`），不反映在目錄。跨模組引用用 `@core`／`@shared`／`@features` 別名。
+- 頁面與動作只宣告在 `FeatureCatalog`（ID `<module>.<page>[.<action>]`，網址由它推得）；前端路由以 `data: { feature }` 指向它，後端連結用 `RouteOf`，不寫死路徑。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 設定用 `AddSettings<T, TValidator>(區段)` 註冊（`[OptionsValidator]` 驗證、啟動即檢查），區段名＝模組名；預設值寫進 `appsettings.json`。
@@ -58,7 +59,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）。
-- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Data/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
+- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`feature-catalog.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Data/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
 - PowerShell 入口腳本要有 `[CmdletBinding()]`、`Set-StrictMode -Version Latest` 與 comment-based help（`scripts/tests` 檢查）。
 - 不提交 `.local/`、`artifacts/`、秘密；不跳過或停用測試。
 

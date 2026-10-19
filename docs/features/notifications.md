@@ -28,10 +28,10 @@
 
 | 目標 | 前端位置 | 重新授權 |
 | --- | --- | --- |
-| `conversation` | `/chat/{id}` | 對話 owner 與 chat 功能 |
-| `task` | `/tasks?job={id}` | 任務 owner 與 tasks 功能；聚焦任務，即使不在最新 100 筆 |
-| `share` | `/shared/{id}` | 收件者／寄件者、來源功能、期限、撤銷狀態 |
-| `repository-review` | `/repositories?review={id}` | Review owner、repositories 功能、目前 Gitea 權限 |
+| `conversation` | `/work/chat/{id}` | 對話 owner 與 chat 功能 |
+| `task` | `/work/jobs?job={id}` | 任務 owner 與 jobs 功能；聚焦任務，即使不在最新 100 筆 |
+| `share` | `/work/sharing/{id}` | 收件者／寄件者、來源功能、期限、撤銷狀態 |
+| `repository-review` | `/work/repositories?review={id}` | Review owner、repositories 功能、目前 Gitea 權限 |
 
 `notification-target.ts` 是唯一 URL 轉換邊界，拒絕未知種類／版本及非法 ID。點整列與「查看內容」相同（列內按鈕與選取文字除外）；鍵盤走「查看內容」，「標為已讀」與移除是各自的按鈕。開啟先保存已讀，再關閉通知與手機側欄並跳轉。背景任務與 review 使用共用 `ResourceTarget` 定位與移動鍵盤焦點，僅在指定資源首次出現時執行，輪詢不重設閱讀位置。目標失效由功能頁顯示錯誤，不得回退成其他資源內容。
 
@@ -67,7 +67,7 @@
 - 只認發起處登記的 job：上傳、加入、重新索引或儲存文字來源，重建檢索索引，評測，程式碼 review，以及各頁的重試。其他分頁、重新整理前或伺服器排的 job 不推送，因此多分頁與重新整理都不會重複；換頁不影響，換帳號清空登記。
 - 不新增請求：結果來自既有的通知輪詢（`task.*`，target 為 task 或 repository-review），任務頁、知識庫與閱讀器本來就在輪詢時則提早得知；同一 job 只推送一次。通知時間早於重試時間的屬於上一次 attempt，略過。
 - 文件辨識完成後會轉交向量化 job，所以文件以文件狀態為準：`ready` 才算完成；只從通知得知時讀一次該文件。
-- toast id 是發起時的 job id（轉交與重試沿用）；完成為 success、失敗為 danger，取消不推送。「查看」：完成時開文件閱讀器或該次 review，失敗開 `/tasks?job={id}`；沒有對應功能就省略。
+- toast id 是發起時的 job id（轉交與重試沿用）；完成為 success、失敗為 danger，取消不推送。「查看」：完成時開文件閱讀器或該次 review，失敗開 `/work/jobs?job={id}`；沒有對應功能就省略。
 
 ## 瀏覽器與擴充
 
