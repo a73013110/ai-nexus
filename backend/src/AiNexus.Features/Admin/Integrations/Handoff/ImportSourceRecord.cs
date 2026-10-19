@@ -39,7 +39,7 @@ internal sealed class ImportSourceRecord(
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Artifacts))
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.Artifacts))
             return AccessControlErrors.FeatureForbidden;
         var read = await gateway.ReadAsync(actor, source, request.RecordId, ct);
         if (!read.IsSuccess) return read.Error;

@@ -13,7 +13,7 @@ namespace AiNexus.Features.Work.Files;
 /// </summary>
 internal sealed class FilesDashboard(AppDbContext db, AttachmentQuota quota) : IDashboardSource
 {
-    public string Feature => FeatureIds.Files;
+    public string Feature => FeatureCatalog.Files;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {

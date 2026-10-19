@@ -11,7 +11,7 @@ namespace AiNexus.Features.Work.Conversations;
 /// </summary>
 /// <remarks>
 /// 備份匯入的請求主體上限為 8MB（<see cref="ImportBodyLimit"/>），防止超大 JSON 耗盡伺服器記憶體。
-/// 所有對話端點都套用 <see cref="FeatureIds.Chat"/> 授權策略。
+/// 所有對話端點都套用 <see cref="FeatureCatalog.Chat"/> 授權策略。
 /// </remarks>
 public sealed class ConversationsModule : IFeatureModule
 {
@@ -31,15 +31,14 @@ public sealed class ConversationsModule : IFeatureModule
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectConversations>();
         services.AddScoped<IContainerDeletionCheck, DetachDeletedProjectConversations>();
 
-        services.AddFeaturePolicy(FeatureIds.Chat);
+        services.AddFeaturePolicy(FeatureCatalog.Chat);
     }
 
     /// <summary>註冊對話 REST 端點群組；註冊順序即 OpenAPI 發佈順序。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/conversations")
-            .RequireAuthorization(Policies.Chat)
-            .WithTags("Conversations");
+            .RequireAuthorization(Policies.Chat);
 
         ListConversations.Map(routes);
         ListConversationLabels.Map(routes);
@@ -48,12 +47,9 @@ public sealed class ConversationsModule : IFeatureModule
         RenameConversation.Map(routes);
         UpdateConversationSettings.Map(routes);
         SelectBranch.Map(routes);
-    }
 
-    /// <summary>管理端稽核式讀取任一使用者的對話。由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。</summary>
-    public static void MapAdministration(RouteGroupBuilder api)
-    {
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration");
+        // 管理端稽核式讀取任一使用者的對話，從使用者頁開啟。
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
         ListAdminUserConversations.Map(admin);
         ReadAdminConversation.Map(admin);
     }

@@ -14,12 +14,9 @@ public sealed class AdministrativeAudit(AppDbContext db, AccessService access, A
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// <summary>存取管理類變更，權限要求為 <see cref="FeatureIds.Admin"/>。</summary>
-    public Task<Result> MutateAsync(Guid actor, string action, Guid? resource, string key, Func<CancellationToken, Task<object?>> snapshot, Func<Task<Result>> mutation, CancellationToken ct)
-        => MutateAsync(actor, FeatureIds.Admin, action, resource, key, snapshot, mutation, ct);
-
     /// <summary>
     /// 在行政寫入鎖與 Serializable 交易內執行變更，並於交易內前後各檢一次 <paramref name="feature"/> 權限（不採用請求開始時的授權快取）。
+    /// <paramref name="feature"/> 是呼叫端端點所屬頁面的功能；變更後執行者不再持有它（例如撤掉自己的角色）時回滾並回 lockout。
     /// <paramref name="snapshot"/> 在變更前後各執行一次，結果寫進稽核的 <c>before</c>／<c>after</c>，JSON 形狀即稽核合約，不可任意改動。
     /// 任何失敗（回傳錯誤或 <see cref="ExternalServiceException"/>）都會回滾，並以錯誤代碼寫入稽核。
     /// </summary>

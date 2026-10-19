@@ -27,7 +27,7 @@ public sealed class DiagnosticsModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 日誌讀取有速率限制，且不進一般請求日誌（查日誌不該再產生日誌）；稽核由 DiagnosticQuery 負責。
-        var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).WithTags("System logs").RequireRateLimiting(QueryRateLimit)
+        var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).RequireRateLimiting(QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog());
         QuerySystemLogs.Map(logs);
         GetSystemLogDetail.Map(logs);

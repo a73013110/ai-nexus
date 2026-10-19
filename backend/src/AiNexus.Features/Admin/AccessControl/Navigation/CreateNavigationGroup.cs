@@ -16,7 +16,7 @@ internal sealed class CreateNavigationGroup(AppDbContext db, AdministrativeAudit
         .MapPost("/navigation-groups", async (NavigationGroupCreateRequest body, IRequestActor actor, CreateNavigationGroup handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
         .WithName("CreateNavigationGroup");
 
-    public Task<Result> HandleAsync(Guid actor, NavigationGroupCreateRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.navigation_group", null, request.Id, token => NavigationRules.SnapshotAsync(db, request.Id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, NavigationGroupCreateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, "admin.navigation_group", null, request.Id, token => NavigationRules.SnapshotAsync(db, request.Id, token), async () =>
     {
         if ((AccessRules.Key(request.Id) ?? AccessRules.Name(request.Name) ?? NavigationRules.Order(request.SortOrder)) is { } invalid) return invalid;
         if (await db.Set<NavigationGroup>().FindAsync([request.Id], ct) is not null) return AccessControlErrors.NavigationGroupExists;

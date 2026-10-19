@@ -24,7 +24,7 @@ public sealed class TestIdentityTests
         var id = await CreateUser(admin, LocalAccount()); var own = await ChatApi.CreateConversation(admin);
         await Begin(admin, id);
         var me = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        Assert.Equal(id, me.Id); Assert.DoesNotContain(me.Access.Features, x => x.Id == "admin");
+        Assert.Equal(id, me.Id); Assert.DoesNotContain(me.Access.Features, x => x.Id == "identity.users");
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/conversations/{own.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/admin/catalog")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/admin/usage")).StatusCode);
@@ -47,7 +47,7 @@ public sealed class TestIdentityTests
         using var admin = f.CreateClient(); await Login(admin, "alice");
         var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"])); await Begin(admin, id);
         (await admin.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", 10, true, "work", "chat"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", 10, true, "work"))).StatusCode);
         // 平台營運同樣屬於管理權限：測試時可讀取，但永遠不可寫入。
         (await admin.GetAsync("/api/v1/admin/billing/prices")).EnsureSuccessStatusCode();
         (await admin.GetAsync("/api/v1/admin/knowledge/profiles")).EnsureSuccessStatusCode();

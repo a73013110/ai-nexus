@@ -13,6 +13,7 @@ public sealed record AdminRoleDto(string Id, string Name, bool Enabled, IReadOnl
 
 public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy);
 
+/// <summary>管理端的功能列；<c>Name</c> 是覆寫或目錄預設名稱，<c>Route</c>、<c>Icon</c> 由 <see cref="FeatureCatalog"/> 填入（同 <see cref="FeatureDto"/>）。</summary>
 public sealed record AdminFeatureDto(string Id, string Name, string Route, int SortOrder, bool Enabled, string? GroupId, string Icon);
 
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models, IReadOnlyList<NavigationGroupDto> NavigationGroups);
@@ -48,7 +49,13 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
                     ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes)
                     : null))
             .ToArray();
-        var featureDtos = features.Select(x => new AdminFeatureDto(x.Id, x.Name, x.Route, x.SortOrder, x.Enabled, x.GroupId, x.Icon)).ToArray();
+        var featureDtos = features.Select(ToDto).ToArray();
         return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(), navigation);
+    }
+
+    private static AdminFeatureDto ToDto(Feature row)
+    {
+        var dto = FeatureDto.From(row);
+        return new(dto.Id, dto.Name, dto.Route, row.SortOrder, row.Enabled, row.GroupId, dto.Icon);
     }
 }

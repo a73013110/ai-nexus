@@ -15,7 +15,7 @@ internal sealed class ChatDashboard(AppDbContext db, ModelPresentation presentat
 {
     private const int ModelShares = 6;
 
-    public string Feature => FeatureIds.Chat;
+    public string Feature => FeatureCatalog.Chat;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -101,7 +101,7 @@ internal sealed class ChatDashboard(AppDbContext db, ModelPresentation presentat
 
         foreach (var item in recent)
         {
-            section.Item(item.Id.ToString(), item.Title, item.IsFavorite ? "收藏" : null, item.UpdatedAt, "/chat/" + item.Id);
+            section.Item(item.Id.ToString(), item.Title, item.IsFavorite ? "收藏" : null, item.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Chat) + "/" + item.Id);
         }
 
         return section.Build();

@@ -4,7 +4,8 @@ namespace AiNexus.Features.Admin.AccessControl.Navigation;
 public static class NavigationTree
 {
     /// <summary>
-    /// 含有至少一個有頁面功能（直接或透過子分群）的分群，連同這些分群的所有祖先。純授權功能（Route 為空）不會讓分群顯示。
+    /// 含有至少一個可見功能（直接或透過子分群）的分群，連同這些分群的所有祖先。<paramref name="features"/> 已是已授權且啟用的功能；
+    /// 可見還要是目錄裡的頁面：動作與目錄不認得的功能只是授權，不會讓分群顯示。
     /// </summary>
     public static IReadOnlyList<NavigationGroupDto> VisibleGroups(IReadOnlyList<NavigationGroupDto> groups, IEnumerable<FeatureDto> features)
     {
@@ -12,7 +13,7 @@ public static class NavigationTree
         var visible = new HashSet<string>(StringComparer.Ordinal);
         foreach (var feature in features)
         {
-            if (string.IsNullOrEmpty(feature.Route)) continue;
+            if (FeatureCatalog.Find(feature.Id)?.Kind != FeatureKind.Page) continue;
             // visible 集合同時作為走訪的停止條件：遇到已加入的分群就停；也避免手動改過的資料有循環時無窮迴圈。
             for (var id = feature.GroupId; id is not null && parents.ContainsKey(id) && visible.Add(id);) id = parents[id];
         }

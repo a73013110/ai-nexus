@@ -14,19 +14,21 @@ public sealed class NavigationTreeTests
         new("empty", null, "空分群", 40),
     ];
 
-    private static FeatureDto Feature(string id, string? group, string route = "/x") => new(id, id, route, group, "document", 10);
+    private static FeatureDto Feature(string id, string? group) => new(id, id, "/x", group, "document", 10);
 
     [Fact]
-    public void VisibleGroupsKeepAncestorsOfFeaturesWithPagesAndDropTheRest()
+    public void VisibleGroupsKeepAncestorsOfCatalogPagesAndDropTheRest()
     {
-        var visible = NavigationTree.VisibleGroups(Groups, [Feature("chat", "work"), Feature("logs", "deep"), Feature("export", "empty", route: "")]);
+        // 可見與否看目錄的 Kind，不看 DTO 的 route：動作與目錄不認得的功能只是授權。
+        var visible = NavigationTree.VisibleGroups(Groups,
+            [Feature(FeatureCatalog.Chat, "work"), Feature(FeatureCatalog.DiagnosticsLogs, "deep"), Feature(FeatureCatalog.DiagnosticsLogsExport, "empty"), Feature("retired", "empty")]);
         Assert.Equal(["work", "system", "diagnosis", "deep"], visible.Select(x => x.Id));
     }
 
     [Fact]
     public void FeaturesAtTheTopLevelOrInUnknownGroupsNeedNoGroup()
     {
-        Assert.Empty(NavigationTree.VisibleGroups(Groups, [Feature("dashboard", null), Feature("lost", "missing")]));
+        Assert.Empty(NavigationTree.VisibleGroups(Groups, [Feature(FeatureCatalog.Dashboard, null), Feature(FeatureCatalog.Jobs, "missing")]));
     }
 
     [Fact]

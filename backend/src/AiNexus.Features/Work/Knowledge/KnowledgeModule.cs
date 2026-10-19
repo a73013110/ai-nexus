@@ -67,13 +67,14 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddControlledHttpClient(RetrievalModelsClient);
         services.AddScoped<IBackgroundJobHandler, DocumentIngestHandler>();
         services.AddScoped<IBackgroundJobHandler, DocumentEmbeddingHandler>();
-        services.AddFeaturePolicy(FeatureIds.Knowledge);
+        services.AddFeaturePolicy(FeatureCatalog.Knowledge);
+        services.AddFeaturePolicy(FeatureCatalog.KnowledgeRetrieval);
     }
 
     // 端點註冊順序即為發布的 OpenAPI 順序；調整順序會改變 contracts/openapi.json 的內容。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge).WithTags("Knowledge");
+        var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge);
         CreateTextDocument.Map(routes);
         ListKnowledgeCollections.Map(routes);
         SaveKnowledgeCollection.MapCreate(routes);
@@ -85,11 +86,11 @@ public sealed class KnowledgeModule : IFeatureModule
         SaveKnowledgeAccess.Map(routes);
         SearchKnowledge.Map(routes);
 
-        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization(Policies.Knowledge).RequireAuthorization(Policies.Chat).WithTags("Knowledge");
+        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization(Policies.Knowledge).RequireAuthorization(Policies.Chat);
         GetConversationKnowledge.Map(selection);
         SaveConversationKnowledge.Map(selection);
 
-        var documents = api.MapGroup("/documents").WithTags("Documents");
+        var documents = api.MapGroup("/documents");
         ReadTextDocument.Map(documents);
         UpdateTextDocument.Map(documents);
         GetDocument.Map(documents);
@@ -101,16 +102,10 @@ public sealed class KnowledgeModule : IFeatureModule
 
         AddKnowledgeDocument.MapAttachment(api);
 
-        ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
-    }
+        ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files));
 
-    /// <summary>
-    /// 管理端的 embedding profile 與檢索測試，屬於「平台營運」（<see cref="Policies.Operations"/>）。
-    /// 由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。
-    /// </summary>
-    public static void MapAdministration(RouteGroupBuilder api)
-    {
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Operations).WithTags("Administration").MapGroup("/knowledge");
+        // 管理端的 embedding profile 與檢索測試，只給檢索管理頁使用。
+        var admin = api.MapGroup("/admin/knowledge").RequireAuthorization(Policies.KnowledgeRetrieval);
         ManageEmbeddingProfiles.MapList(admin);
         ManageEmbeddingProfiles.MapRebuild(admin);
         ManageEmbeddingProfiles.MapActivate(admin);

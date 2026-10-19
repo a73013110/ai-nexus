@@ -15,14 +15,14 @@ public sealed class ProjectsModule : IFeatureModule
         var services = builder.Services;
         services.AddDashboardSource<ProjectsDashboard>();
         services.AddScoped<ProjectService>();
-        services.AddFeaturePolicy(FeatureIds.Projects);
+        services.AddFeaturePolicy(FeatureCatalog.Projects);
     }
 
     // 端點順序即已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         AssignConversationProject.Map(api);
-        var routes = api.MapGroup("/projects").RequireAuthorization(Policies.Projects).WithTags("Projects");
+        var routes = api.MapGroup("/projects").RequireAuthorization(Policies.Projects);
         BrowseProjects.MapList(routes);
         SaveProject.MapCreate(routes);
         DeleteProject.Map(routes);

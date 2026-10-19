@@ -22,7 +22,7 @@ internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
         ["repository-import"] = "程式庫匯入",
     };
 
-    public string Feature => FeatureIds.Tasks;
+    public string Feature => FeatureCatalog.Jobs;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -60,7 +60,7 @@ internal sealed class JobsDashboard(AppDbContext db) : IDashboardSource
             .ToListAsync(ct);
         foreach (var job in mine)
             section.Item(job.Id.ToString(), job.Label.Length > 0 ? job.Label : Kinds.GetValueOrDefault(job.Kind, job.Kind),
-                job.Status == "failed" ? "失敗" : job.Stage, job.UpdatedAt, "/tasks?job=" + job.Id,
+                job.Status == "failed" ? "失敗" : job.Stage, job.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + job.Id,
                 job.Status == "failed" ? DashboardTones.Danger : DashboardTones.Info);
         return section.Build();
     }

@@ -17,13 +17,13 @@ public sealed class JobsModule : IFeatureModule
         builder.Services.AddMonitoringSource<JobsMonitoring>();
         builder.Services.AddScoped<JobService>();
         builder.Services.AddHostedService<BackgroundJobWorker>();
-        builder.Services.AddFeaturePolicy(FeatureIds.Tasks);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.Jobs);
     }
 
     // 端點註冊順序即 OpenAPI 發佈順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var jobs = api.MapGroup("/jobs").WithTags("Background jobs");
+        var jobs = api.MapGroup("/jobs");
         ListJobs.Map(jobs);
         GetJob.Map(jobs);
         CancelJob.Map(jobs);

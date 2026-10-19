@@ -6,11 +6,12 @@ namespace AiNexus.Features.Admin.AccessControl;
 
 /// <summary>
 /// 管理者唯讀存取使用者資料的稽核關卡。它不放寬對話擁有者檢查，且稽核寫入成功後才會回傳資料。
+/// 這些讀取都從使用者頁發起，所以權限是 <see cref="FeatureCatalog.IdentityUsers"/>。
 /// </summary>
 public sealed class AdministrativeReadAudit(AppDbContext db, AccessService access)
 {
     public async Task<bool> AllowedAsync(Guid actor, CancellationToken ct)
-        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Admin);
+        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers);
 
     public async Task<Result> RecordAsync(Guid actor, string action, Guid resource, object details, CancellationToken ct)
     {

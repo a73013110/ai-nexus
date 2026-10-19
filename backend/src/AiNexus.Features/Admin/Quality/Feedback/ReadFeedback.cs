@@ -13,7 +13,7 @@ internal sealed class ReadFeedback(AppDbContext db)
     public static RouteHandlerBuilder MapForMessage(RouteGroupBuilder api) => api
         .MapGet("/messages/{id:guid}/feedback", (Guid id, ICurrentUser user, ReadFeedback handler, CancellationToken ct) =>
             handler.ForMessageAsync(user.Id, id, ct).ToHttpResultAsync(found => TypedResults.Ok(found.Feedback)))
-        .RequireAuthorization(Policies.Chat).WithTags("Quality");
+        .RequireAuthorization(Policies.Chat);
 
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
         .MapGet("/feedback", async (ICurrentUser user, ReadFeedback handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct)));

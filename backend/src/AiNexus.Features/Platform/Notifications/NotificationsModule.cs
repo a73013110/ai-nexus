@@ -14,7 +14,7 @@ public sealed class NotificationsModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/notifications").WithTags("Notifications");
+        var routes = api.MapGroup("/notifications");
         ListNotifications.Map(routes);
         ReadNotifications.Map(routes);
         DismissNotification.Map(routes);

@@ -17,7 +17,7 @@ internal sealed class UpdateNavigationGroup(AppDbContext db, AdministrativeAudit
         .MapPut("/navigation-groups/{id}", async (string id, NavigationGroupUpdateRequest body, IRequestActor actor, UpdateNavigationGroup handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
         .WithName("UpdateNavigationGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, NavigationGroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.navigation_group", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, NavigationGroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, "admin.navigation_group", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
     {
         if ((AccessRules.Name(request.Name) ?? NavigationRules.Order(request.SortOrder)) is { } invalid) return invalid;
         var group = await db.Set<NavigationGroup>().FindAsync([id], ct);

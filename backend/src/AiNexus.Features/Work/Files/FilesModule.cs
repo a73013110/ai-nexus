@@ -41,31 +41,30 @@ public sealed class FilesModule : IFeatureModule
                 if (string.IsNullOrWhiteSpace(x.StoragePath) && environment.IsDevelopment()) x.StoragePath = Path.Combine(config["LocalWorkspaceRoot"]!, ".local", "data", "attachments");
             });
         services.AddRateLimiter(options => options.AddPerUserLimit(UploadRateLimit, UploadsPerMinute));
-        services.AddFeaturePolicy(FeatureIds.Files);
-        services.AddFeaturePolicy(Policies.Attachments, FeatureIds.Files, FeatureIds.Chat, FeatureIds.Knowledge, FeatureIds.Projects);
+        services.AddFeaturePolicy(FeatureCatalog.Files);
+        services.AddFeaturePolicy(Policies.Attachments, FeatureCatalog.Files, FeatureCatalog.Chat, FeatureCatalog.Knowledge, FeatureCatalog.Projects);
     }
 
     // 端點順序即已發布的 OpenAPI 順序：檔案庫在前、附件在後。知識庫模組也會列出檔案庫，
     // 因為一個檔案的使用處可能包含文件。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var library = api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library");
+        var library = api.MapGroup("/files").RequireAuthorization(Policies.Files);
         RenameLibraryFile.Map(library);
         RetainLibraryFile.Map(library);
         RemoveAttachment.MapLibrary(library);
 
-        var routes = api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments).WithTags("Attachments");
+        var routes = api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments);
         GetAttachmentPolicy.Map(routes);
         GetAttachmentStorage.Map(routes);
         UploadAttachment.Map(routes);
         GetAttachment.Map(routes);
         DownloadAttachment.Map(routes);
         RemoveAttachment.MapDraft(routes);
-    }
 
-    /// <summary>管理端設定使用者的附件容量上限。由 <c>FeatureModules</c> 與其他管理端點一起掛載，理由見該處註解。</summary>
-    public static void MapAdministration(RouteGroupBuilder api)
-        => SetUserAttachmentStorage.Map(api.MapGroup("/admin").RequireAuthorization(Policies.Admin).WithTags("Administration"));
+        // 管理端設定使用者的附件容量上限，在使用者頁編輯。
+        SetUserAttachmentStorage.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers));
+    }
 
     /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>
     public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();

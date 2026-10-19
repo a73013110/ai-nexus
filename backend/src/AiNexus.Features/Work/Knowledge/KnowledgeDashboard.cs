@@ -12,7 +12,7 @@ namespace AiNexus.Features.Work.Knowledge;
 /// </summary>
 internal sealed class KnowledgeDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Knowledge;
+    public string Feature => FeatureCatalog.Knowledge;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -46,7 +46,7 @@ internal sealed class KnowledgeDashboard(AppDbContext db) : IDashboardSource
             .ActiveWhen(processing);
         var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.Kind == Collection.Kind)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
-        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/knowledge/" + item.Id);
+        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Knowledge) + "/" + item.Id);
         return section.Build();
     }
 }

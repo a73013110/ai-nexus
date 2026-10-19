@@ -27,8 +27,8 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddScoped<ArtifactExport>();
         services.AddSingleton<PdfExportRenderer>();
         services.AddSettings<ExportOptions, ExportOptionsValidator>(ExportOptions.Section);
-        services.AddFeaturePolicy(FeatureIds.Artifacts);
-        services.AddFeaturePolicy(Policies.Text, FeatureIds.Chat, FeatureIds.Artifacts);
+        services.AddFeaturePolicy(FeatureCatalog.Artifacts);
+        services.AddFeaturePolicy(Policies.Text, FeatureCatalog.Chat, FeatureCatalog.Artifacts);
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
     }
 
@@ -37,7 +37,6 @@ public sealed class ArtifactsModule : IFeatureModule
     {
         var routes = api.MapGroup("/artifacts")
             .RequireAuthorization(Policies.Artifacts)
-            .WithTags("Artifacts")
             .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxContentCharacters));
         ListArtifacts.Map(routes);
         CreateArtifact.Map(routes);

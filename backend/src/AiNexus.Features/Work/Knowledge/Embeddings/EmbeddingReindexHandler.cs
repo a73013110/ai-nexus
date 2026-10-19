@@ -16,10 +16,10 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
     public string Kind => "embedding-reindex";
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await ProfileAsync(job, ct)) is { IsSuccess: false } invalid ? invalid.Error : Result.Success;
 
-    /// <summary>取得要重建的向量模型設定；擁有者仍需具備營運權限，且模型未退役。</summary>
+    /// <summary>取得要重建的向量模型設定；擁有者仍需具備檢索管理頁的授權，且模型未退役。</summary>
     private async Task<Result<EmbeddingProfile>> ProfileAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Operations)) return AccessControlErrors.FeatureForbidden;
+        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureCatalog.KnowledgeRetrieval)) return AccessControlErrors.FeatureForbidden;
         var profile = await lifecycle.RequireAsync(EmbeddingJobs.Profile(job.SubjectId), ct);
         if (profile.IsSuccess && profile.Value.Status == "retired") return KnowledgeErrors.ProfileRetired;
         return profile;

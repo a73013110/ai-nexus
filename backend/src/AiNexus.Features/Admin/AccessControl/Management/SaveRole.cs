@@ -9,14 +9,14 @@ namespace AiNexus.Features.Admin.AccessControl.Management;
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
 
-/// <summary>建立或更新角色與其所屬群組。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
+/// <summary>建立或更新角色與其所屬群組。會稽核；若會移除執行者自己的角色管理權限則拒絕。</summary>
 internal sealed class SaveRole(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/roles/{id}", async (string id, RoleUpdateRequest body, IRequestActor actor, SaveRole handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
         .WithName("SaveRole");
 
-    public Task<Result> HandleAsync(Guid actor, string id, RoleUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.role", null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, RoleUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlRoles, "admin.role", null, id, token => SnapshotAsync(id, token), async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.Keys(request.GroupIds)) is { } invalid) return invalid;
         if (await AccessRules.ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), request.GroupIds, ct) is { } unknown) return unknown;

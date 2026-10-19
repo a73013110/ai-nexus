@@ -9,7 +9,7 @@ namespace AiNexus.Features.Platform.WebSearch;
 /// <summary>聊天中網路搜尋的總覽區塊；是否已設定由管理頁面顯示，不在這裡重複。</summary>
 internal sealed class WebSearchDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Chat;
+    public string Feature => FeatureCatalog.Chat;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -19,7 +19,7 @@ internal sealed class WebSearchDashboard(AppDbContext db) : IDashboardSource
         var failed = await period.CountAsync(x => x.Status == "failed", ct);
         var daily = await DashboardDays.CountAsync(searches.Select(x => x.CreatedAt), scope, ct);
         var all = daily.Sum(x => x.Value);
-        return new DashboardSection("web-search", Feature, "網路搜尋", "/chat")
+        return new DashboardSection("web-search", Feature, "網路搜尋", FeatureCatalog.RouteOf(FeatureCatalog.Chat))
             .Period("searches", "期間搜尋", all, "次")
             .Period("failed", "搜尋失敗", failed, "次", tone: failed > 0 ? DashboardTones.Danger : DashboardTones.Neutral)
             .Daily("searches", "每日網路搜尋", "次", daily)

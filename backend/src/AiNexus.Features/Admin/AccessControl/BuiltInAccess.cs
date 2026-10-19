@@ -2,7 +2,7 @@ namespace AiNexus.Features.Admin.AccessControl;
 
 /// <summary>
 /// 程式依賴的內建角色、群組與選單分群 id，以及程式假設存在的預設關聯。資料列由手寫的 <c>database/App/Seed/accesscontrol.sql</c> 寫入；
-/// 改這裡或 Seed 任一邊都要同步另一邊，<c>BuiltInAccessSeedTests</c> 會在範本資料庫上比對。
+/// 改這裡或 Seed 任一邊都要同步另一邊，<c>FeatureCatalogSeedTests</c> 會在範本資料庫上比對。
 /// </summary>
 public static class BuiltInAccess
 {
@@ -20,9 +20,17 @@ public static class BuiltInAccess
     public static IReadOnlyList<string> Groups { get; } = [WorkspaceGroup, AdministratorsGroup];
     public static IReadOnlyList<string> NavigationGroups { get; } = [WorkNavigation, CollaborationNavigation, SystemNavigation];
 
-    /// <summary>新使用者拿到 member 後要能對話、管理員帳號要能進存取管理；少了任一條，登入後就沒有可用的功能。</summary>
+    /// <summary>
+    /// 新使用者拿到 member 後要能對話、管理員帳號要能進存取管理的四頁；少了任一條，登入後就沒有可用的功能，或管理員無法再授權。
+    /// </summary>
     public static IReadOnlyList<(string Role, string Group)> RoleGroups { get; } =
         [(MemberRole, WorkspaceGroup), (AdministratorRole, AdministratorsGroup)];
     public static IReadOnlyList<(string Group, string Feature)> GroupFeatures { get; } =
-        [(WorkspaceGroup, FeatureIds.Chat), (AdministratorsGroup, FeatureIds.Admin)];
+        [
+            (WorkspaceGroup, FeatureCatalog.Chat),
+            (AdministratorsGroup, FeatureCatalog.IdentityUsers),
+            (AdministratorsGroup, FeatureCatalog.AccessControlRoles),
+            (AdministratorsGroup, FeatureCatalog.AccessControlGroups),
+            (AdministratorsGroup, FeatureCatalog.AccessControlFeatures),
+        ];
 }

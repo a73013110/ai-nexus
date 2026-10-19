@@ -10,7 +10,7 @@ namespace AiNexus.Features.Admin.Audit;
 /// </summary>
 public sealed class AuditModule : IFeatureModule
 {
-    public const string Feature = FeatureIds.Audit, Policy = Policies.Prefix + Feature;
+    public const string Feature = FeatureCatalog.Audit, Policy = Policies.Prefix + Feature;
     public const string ExportRateLimit = "audit-export";
 
     public static void AddServices(IHostApplicationBuilder builder)
@@ -23,7 +23,7 @@ public sealed class AuditModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 保留 API 路徑不變（前端與已發布的文件依賴它），只把授權與 /admin 管理功能分開。
-        var audit = api.MapGroup("/admin/audit").RequireAuthorization(Policy).WithTags("Activity audit");
+        var audit = api.MapGroup("/admin/audit").RequireAuthorization(Policy);
         ListActivityAudit.Map(audit);
         GetAuditCatalog.Map(audit);
         ExportActivityAudit.Map(audit);

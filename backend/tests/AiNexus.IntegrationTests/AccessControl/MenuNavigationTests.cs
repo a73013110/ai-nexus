@@ -13,7 +13,7 @@ public sealed class MenuNavigationTests
     {
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var access = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
-        // quality 是成員唯一持有的系統功能，因此系統群組會一併帶出。
+        // quality 與 quality.retrieval 是成員唯一持有的系統功能，因此系統群組會一併帶出。
         Assert.Equal(["work", "collaboration", "system"], access.NavigationGroups.Select(x => x.Id));
         Assert.Contains(access.Features, x => x.Id == "dashboard" && x.GroupId == null && x.Icon == "dashboard");
         Assert.All(access.NavigationGroups, x => Assert.Null(x.ParentId));
@@ -26,8 +26,8 @@ public sealed class MenuNavigationTests
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("diagnosis", "診斷", "system", 50))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("empty", "空分群", null, 40))).EnsureSuccessStatusCode();
         (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("permissions", "權限", null, 50))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/logs.export", new FeatureUpdateRequest("日誌匯出", 96, true, "permissions", "download"))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, true, "diagnosis", "activity"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/diagnostics.logs.export", new FeatureUpdateRequest("日誌匯出", 96, true, "permissions"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, true, "diagnosis"))).EnsureSuccessStatusCode();
 
         var access = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
         var groups = access.NavigationGroups.Select(x => x.Id).ToArray();
@@ -36,10 +36,10 @@ public sealed class MenuNavigationTests
         Assert.DoesNotContain("empty", groups);
         Assert.DoesNotContain("permissions", groups);
         // 僅有授權、沒有選單入口的功能仍然有效；選單只是不列出它。
-        Assert.Contains(access.Features, x => x.Id == "logs.export" && x.Route == "");
+        Assert.Contains(access.Features, x => x.Id == FeatureCatalog.DiagnosticsLogsExport && x.Route == "");
 
         // 群組內唯一的功能若被停用，整個群組也會一併從選單消失。
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, false, "diagnosis", "activity"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, false, "diagnosis"))).EnsureSuccessStatusCode();
         Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.NavigationGroups, x => x.Id == "diagnosis");
     }
 

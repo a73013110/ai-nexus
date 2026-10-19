@@ -22,13 +22,16 @@ internal static class OpenApiContract
         {
             document.Servers = [new() { Url = "/" }];
             // 沒有端點直接引用：功能 id 在 DTO 裡仍是字串（資料庫可能有程式不認得的列），這份列舉只給前端產生 FeatureId 型別。
+            // 只列授權（頁面＋動作）；閱讀器不能授予，放進列舉會讓前端以為能檢查它。
             document.Components ??= new();
             document.Components.Schemas ??= new Dictionary<string, IOpenApiSchema>();
             document.Components.Schemas["FeatureId"] = new OpenApiSchema
             {
                 Type = JsonSchemaType.String,
-                Enum = [.. FeatureIds.All.Select(id => (JsonNode)JsonValue.Create(id))],
+                Enum = [.. FeatureCatalog.Grants.Select(feature => (JsonNode)JsonValue.Create(feature.Id))],
             };
+            document.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+            document.Extensions["x-feature-catalog"] = new JsonNodeExtension(FeatureCatalogJson());
             return Task.CompletedTask;
         });
 
@@ -59,6 +62,27 @@ internal static class OpenApiContract
 
         options.AddSchemaTransformer<ResponseSchemaRequirements>();
     });
+
+    /// <summary>
+    /// 整份頁面目錄（區、模組、功能），前端由此產生路由對照、麵包屑與名稱；順序同目錄宣告，前端產生物因此穩定。
+    /// </summary>
+    private static JsonObject FeatureCatalogJson() => new()
+    {
+        ["areas"] = new JsonArray([.. FeatureCatalog.Areas.Select(area => (JsonNode)new JsonObject { ["id"] = area.Id, ["name"] = area.Name })]),
+        ["modules"] = new JsonArray([.. FeatureCatalog.Modules.Select(module => (JsonNode)new JsonObject
+        {
+            ["id"] = module.Id, ["area"] = module.Area.Id, ["name"] = module.Name,
+        })]),
+        ["features"] = new JsonArray([.. FeatureCatalog.All.Select(feature => (JsonNode)new JsonObject
+        {
+            ["id"] = feature.Id,
+            ["kind"] = feature.Kind switch { FeatureKind.Page => "page", FeatureKind.Action => "action", _ => "reader" },
+            ["module"] = feature.Module.Id,
+            ["name"] = feature.Name,
+            ["icon"] = feature.Icon,
+            ["route"] = feature.Route,
+        })]),
+    };
 }
 
 /// <summary>

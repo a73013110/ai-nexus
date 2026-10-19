@@ -85,7 +85,7 @@ internal sealed class RepositoryImportHandler(AppDbContext db, RepositoryService
     {
         features.Invalidate();
         var granted = (await features.ForUserAsync(job.OwnerId, ct)).Features;
-        if (!granted.Any(x => x.Id == FeatureIds.Repositories) || !granted.Any(x => x.Id == FeatureIds.Knowledge)) return AccessControlErrors.FeatureForbidden;
+        if (!granted.Any(x => x.Id == FeatureCatalog.Repositories) || !granted.Any(x => x.Id == FeatureCatalog.Knowledge)) return AccessControlErrors.FeatureForbidden;
         var row = await db.Set<RepositoryFolderImport>().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
         if (row is null) return CollaborationErrors.ResourceNotFound;
         if (row.BaseUrl != gitea.BaseUrl) return RepositoriesErrors.ReviewHostChanged;

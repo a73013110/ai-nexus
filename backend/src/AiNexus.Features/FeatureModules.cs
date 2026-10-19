@@ -104,14 +104,8 @@ public static class FeatureModules
         Map<NotificationsModule>(api);
         Map<QualityModule>(api);
         Map<IntegrationsModule>(api);
-        // 管理端點分屬多個模組，但都沿用 "Administration" tag。OpenAPI 文件的 tags 依首次出現的順序排列（已發布的合約），
-        // 所以這些端點集中在原本的位置掛載，不放進各模組的 MapEndpoints；放進去會讓這個 tag 提前出現。
-        KnowledgeModule.MapAdministration(api);
         Map<OperationsModule>(api);
         Map<IdentityModule>(api);
-        ConversationsModule.MapAdministration(api);
-        FilesModule.MapAdministration(api);
-        InferenceModule.MapAdministration(api);
         Map<AccessControlModule>(api);
         Map<BillingModule>(api);
         Map<RepositoriesModule>(api);
@@ -119,7 +113,7 @@ public static class FeatureModules
         Map<WebSearchModule>(api);
         Map<MonitoringModule>(api);
 
-        IdentityModule.MapPublicEndpoints(app);
+        IdentityModule.MapPublicEndpoints(app.MapGroup("").WithTags(Tag<IdentityModule>()));
         return app;
     }
 
@@ -129,5 +123,8 @@ public static class FeatureModules
     public static void VerifyStartup(IServiceProvider services) => FilesModule.VerifyStorage(services);
 
     private static void Add<TModule>(IHostApplicationBuilder builder) where TModule : IFeatureModule => TModule.AddServices(builder);
-    private static void Map<TModule>(RouteGroupBuilder api) where TModule : IFeatureModule => TModule.MapEndpoints(api);
+    // OpenAPI tag 一律是模組名（類別名去掉 Module），端點自己不加 tag：管理端點分散在各模組，tag 跟著模組走才找得到。
+    private static void Map<TModule>(RouteGroupBuilder api) where TModule : IFeatureModule => TModule.MapEndpoints(api.MapGroup("").WithTags(Tag<TModule>()));
+
+    private static string Tag<TModule>() => typeof(TModule).Name[..^"Module".Length];
 }

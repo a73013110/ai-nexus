@@ -13,7 +13,7 @@ internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeAu
         .MapPut("/users/{id:guid}/storage", async (Guid id, AttachmentStorageLimitRequest body, ICurrentUser user, SetUserAttachmentStorage handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithName("SetUserAttachmentStorage");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => audit.MutateAsync(actor, "admin.user_storage", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_storage", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
     {
         if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
         if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;

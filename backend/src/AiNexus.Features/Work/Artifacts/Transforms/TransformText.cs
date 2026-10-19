@@ -31,7 +31,7 @@ internal sealed class TransformText(ModelTaskService models)
         .MapPost("/text/transform", async (
                 TransformTextRequest request, ICurrentUser user, TransformText handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Text).WithTags("Artifacts").WithName("TransformText");
+        .RequireAuthorization(Policies.Text).WithName("TransformText");
 
     public async Task<Result<TransformTextDto>> HandleAsync(Guid actor, TransformTextRequest request, CancellationToken ct)
     {

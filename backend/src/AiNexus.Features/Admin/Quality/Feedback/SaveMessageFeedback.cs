@@ -32,7 +32,7 @@ internal sealed class SaveMessageFeedback(AppDbContext db, ResourceWriteLock wri
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
-        .RequireAuthorization(Policies.Chat).WithTags("Quality");
+        .RequireAuthorization(Policies.Chat);
 
     public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {

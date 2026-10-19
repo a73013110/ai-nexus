@@ -10,7 +10,7 @@ namespace AiNexus.Features.Work.Projects;
 /// <summary>專案總覽：自己擁有的、已封存的、提示詞範本數，以及單一擁有者時別人分享給他的專案。</summary>
 internal sealed class ProjectsDashboard(AppDbContext db) : IDashboardSource
 {
-    public string Feature => FeatureIds.Projects;
+    public string Feature => FeatureCatalog.Projects;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -36,7 +36,7 @@ internal sealed class ProjectsDashboard(AppDbContext db) : IDashboardSource
         section.Share("active", "進行中", all - archived, DashboardTones.Info).Share("archived", "已封存", archived);
         var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.Kind == "project" && x.OwnerId == scope.Actor)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
-        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/projects/" + item.Id);
+        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Projects) + "/" + item.Id);
         return section.Build();
     }
 }

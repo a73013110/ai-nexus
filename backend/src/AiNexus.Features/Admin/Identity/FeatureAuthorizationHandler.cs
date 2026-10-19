@@ -12,8 +12,8 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, FeatureRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated != true) return;
-        // 測試身分可讀取管理 API（存取管理與平台營運），但絕不可變更。
-        var guardsAdminApi = requirement.FeatureIds.Contains(FeatureIds.Admin) || requirement.FeatureIds.Contains(FeatureIds.Operations);
+        // 測試身分可讀取管理 API（存取管理與平台營運拆出的頁面），但絕不可變更。any-of policy 只要含其中一個就擋。
+        var guardsAdminApi = requirement.FeatureIds.Any(AdministrativeFeatures.All.Contains);
         var isTestIdentity = context.User.HasClaim(x => x.Type == SessionIdentity.ActorId);
         var isMutation = http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS");
         if (guardsAdminApi && isTestIdentity && isMutation)

@@ -14,7 +14,7 @@ namespace AiNexus.Features.Work.Repositories;
 /// </summary>
 internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptions> gitea) : IDashboardSource
 {
-    public string Feature => FeatureIds.Repositories;
+    public string Feature => FeatureCatalog.Repositories;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
@@ -43,7 +43,7 @@ internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptio
         var recent = await reviews.Where(x => x.OwnerId == scope.Actor).OrderByDescending(x => x.CreatedAt).Take(5)
             .Select(x => new { x.Id, x.Repository, x.Commit, x.CreatedAt }).ToListAsync(ct);
         foreach (var review in recent)
-            section.Item(review.Id.ToString(), review.Repository, review.Commit[..Math.Min(7, review.Commit.Length)], review.CreatedAt, "/repositories/" + review.Repository + "/reviews/" + review.Id);
+            section.Item(review.Id.ToString(), review.Repository, review.Commit[..Math.Min(7, review.Commit.Length)], review.CreatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "/" + review.Repository + "/reviews/" + review.Id);
         return section.Build();
     }
 }

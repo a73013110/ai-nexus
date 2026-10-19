@@ -41,7 +41,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct)
             => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.Admin).WithName("StartTestIdentity");
+        .RequireAuthorization(Policies.IdentityUsers).WithName("StartTestIdentity");
 
     public static bool IsTestIdentity(ClaimsPrincipal? user) => user?.HasClaim(x => x.Type == SessionIdentity.ActorId) == true;
 
@@ -51,7 +51,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
         var resolved = await current.GetAsync(ct);
         if (!resolved.IsSuccess) return resolved.Error;
         var actor = resolved.Value;
-        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return AccessControlErrors.FeatureForbidden;
+        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers)) return AccessControlErrors.FeatureForbidden;
         var target = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == body.UserId && x.Enabled && x.DeletedAt == null, ct);
         if (target is null) return IdentityErrors.TestUserNotFound;
         if (target.Id == actor.Id) return IdentityErrors.TestIdentitySame;

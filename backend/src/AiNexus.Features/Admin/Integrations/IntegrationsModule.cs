@@ -20,12 +20,12 @@ public sealed class IntegrationsModule : IFeatureModule
         services.AddMonitoringSource<IntegrationsMonitoring>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
-        services.AddFeaturePolicy(FeatureIds.Integrations);
+        services.AddFeaturePolicy(FeatureCatalog.Integrations);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/integrations").RequireAuthorization(Policies.Integrations).WithTags("Integrations");
+        var routes = api.MapGroup("/integrations").RequireAuthorization(Policies.Integrations);
         BrowseSources.Map(routes);
         ImportSourceRecord.Map(routes);
         StartSourceChat.Map(routes);
