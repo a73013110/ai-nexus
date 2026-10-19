@@ -1,3 +1,5 @@
+using AiNexus.Features.Admin.AccessControl.Scopes;
+
 namespace AiNexus.Features.Admin.AccessControl;
 
 /// <summary>目錄項目的種類：頁面與動作是授權（grant），閱讀器只是路由，能不能讀由資源 ACL 決定。</summary>
@@ -21,6 +23,12 @@ public sealed record FeatureDefinition(string Id, FeatureKind Kind, ModuleDefini
 
     /// <summary>頁面與動作才會寫進 <c>accesscontrol.Features</c> 並能授予；閱讀器不是授權。</summary>
     public bool IsGrant => Kind != FeatureKind.Reader;
+
+    /// <summary>
+    /// 支援的資料範圍（<see cref="DataScopes"/>，由窄到寬）。空的表示沒有資料列概念、授權不帶範圍；
+    /// 宣告了就表示該功能的查詢經 <see cref="IDataScope"/> 套用範圍，授予時必須選其中一個（ADR 0017）。
+    /// </summary>
+    public IReadOnlyList<string> Scopes { get; init; } = [];
 }
 
 /// <summary>
@@ -123,7 +131,7 @@ public static class FeatureCatalog
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
         new(Integrations, FeatureKind.Page, IntegrationsModule, "資料來源", "integrations"),
         new(Monitoring, FeatureKind.Page, MonitoringModule, "即時監控", "activity"),
-        new(Audit, FeatureKind.Page, AuditModule, "活動稽核", "audit"),
+        new(Audit, FeatureKind.Page, AuditModule, "活動稽核", "audit") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All] },
         new(DiagnosticsLogs, FeatureKind.Page, DiagnosticsModule, "系統日誌", "logs"),
         new(DiagnosticsLogsDetail, FeatureKind.Action, DiagnosticsModule, "日誌診斷詳情", "search"),
         new(DiagnosticsLogsExport, FeatureKind.Action, DiagnosticsModule, "日誌匯出", "download"),

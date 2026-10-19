@@ -64,9 +64,17 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var groups = await db.Set<RoleGroup>().AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
-        var featureIds = db.Set<RoleGroupFeature>().Where(x => enabledGroups.Contains(x.GroupId)).Select(x => x.FeatureId);
-        var rows = await db.Set<Feature>().AsNoTracking().Where(x => featureIds.Contains(x.Id) && x.Enabled).ToListAsync(ct);
-        return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []);
+        // 一次讀出授權與範圍：同一功能可能由多個群組授予，各帶一個範圍。
+        var granted = await (from grant in db.Set<RoleGroupFeature>()
+                             join feature in db.Set<Feature>() on grant.FeatureId equals feature.Id
+                             where enabledGroups.Contains(grant.GroupId) && feature.Enabled
+                             select new { Feature = feature, grant.Scope }).AsNoTracking().ToListAsync(ct);
+        var rows = granted.Select(x => x.Feature).DistinctBy(x => x.Id);
+        // 目錄不支援的範圍（舊資料、目錄縮減後）與 null 都不算：失敗即拒絕，沒有範圍就沒有資料。
+        var scopes = granted.Where(x => x.Scope is not null && FeatureCatalog.Find(x.Feature.Id)?.Scopes.Contains(x.Scope) == true)
+            .GroupBy(x => x.Feature.Id, StringComparer.Ordinal)
+            .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope!).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
+        return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { Scopes = scopes };
     }
 }
 

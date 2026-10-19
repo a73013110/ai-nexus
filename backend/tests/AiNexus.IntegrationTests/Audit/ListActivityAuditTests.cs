@@ -24,7 +24,7 @@ public sealed class ListActivityAuditTests
         var target = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit/catalog")).StatusCode);
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, ["audit"]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, ["audit"], Scopes: new Dictionary<string, string> { ["audit"] = "all" }))).EnsureSuccessStatusCode();
         (await admin.PutAsJsonAsync("/api/v1/admin/roles/auditor", new RoleUpdateRequest("稽核人員", true, ["auditors"]))).EnsureSuccessStatusCode();
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "auditor"]))).EnsureSuccessStatusCode();
         var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;

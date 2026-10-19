@@ -70,39 +70,40 @@ WHEN NOT MATCHED BY TARGET THEN
     INSERT ([RoleId], [GroupId]) VALUES (s.[RoleId], s.[GroupId]);
 
 -- 預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。
+-- Scope 是資料範圍（ADR 0017）：目錄有宣告範圍的功能必須給一個它支援的範圍，其他功能為 NULL（FeatureCatalogSeedTests 檢查）。
 MERGE [accesscontrol].[RoleGroupFeatures] AS t
 USING (VALUES
-    (N'workspace', N'dashboard'),
-    (N'workspace', N'chat'),
-    (N'workspace', N'projects'),
-    (N'workspace', N'files'),
-    (N'workspace', N'knowledge'),
-    (N'workspace', N'artifacts'),
-    (N'workspace', N'sharing'),
-    (N'workspace', N'jobs'),
-    (N'workspace', N'repositories'),
-    (N'workspace', N'quality'),
-    (N'workspace', N'quality.retrieval'),
-    (N'administrators', N'identity.users'),
-    (N'administrators', N'access-control.roles'),
-    (N'administrators', N'access-control.groups'),
-    (N'administrators', N'access-control.features'),
-    (N'administrators', N'access-control.navigation'),
-    (N'administrators', N'organization'),
-    (N'administrators', N'operations.usage'),
-    (N'administrators', N'billing.prices'),
-    (N'administrators', N'knowledge.retrieval'),
-    (N'administrators', N'integrations'),
-    (N'administrators', N'monitoring'),
-    (N'administrators', N'diagnostics.logs'),
-    (N'administrators', N'diagnostics.logs.detail'),
-    (N'administrators', N'diagnostics.logs.export'),
-    (N'administrators', N'audit'),
-    (N'administrators', N'design')
-) AS s ([GroupId], [FeatureId])
+    (N'workspace', N'dashboard', NULL),
+    (N'workspace', N'chat', NULL),
+    (N'workspace', N'projects', NULL),
+    (N'workspace', N'files', NULL),
+    (N'workspace', N'knowledge', NULL),
+    (N'workspace', N'artifacts', NULL),
+    (N'workspace', N'sharing', NULL),
+    (N'workspace', N'jobs', NULL),
+    (N'workspace', N'repositories', NULL),
+    (N'workspace', N'quality', NULL),
+    (N'workspace', N'quality.retrieval', NULL),
+    (N'administrators', N'identity.users', NULL),
+    (N'administrators', N'access-control.roles', NULL),
+    (N'administrators', N'access-control.groups', NULL),
+    (N'administrators', N'access-control.features', NULL),
+    (N'administrators', N'access-control.navigation', NULL),
+    (N'administrators', N'organization', NULL),
+    (N'administrators', N'operations.usage', NULL),
+    (N'administrators', N'billing.prices', NULL),
+    (N'administrators', N'knowledge.retrieval', NULL),
+    (N'administrators', N'integrations', NULL),
+    (N'administrators', N'monitoring', NULL),
+    (N'administrators', N'diagnostics.logs', NULL),
+    (N'administrators', N'diagnostics.logs.detail', NULL),
+    (N'administrators', N'diagnostics.logs.export', NULL),
+    (N'administrators', N'audit', N'all'),
+    (N'administrators', N'design', NULL)
+) AS s ([GroupId], [FeatureId], [Scope])
 ON t.[GroupId] = s.[GroupId] AND t.[FeatureId] = s.[FeatureId]
 WHEN NOT MATCHED BY TARGET THEN
-    INSERT ([GroupId], [FeatureId]) VALUES (s.[GroupId], s.[FeatureId]);
+    INSERT ([GroupId], [FeatureId], [Scope]) VALUES (s.[GroupId], s.[FeatureId], s.[Scope]);
 
 -- 預設選單樹。節點 Id 是可讀代稱（<分群>.<功能 ID 的點換成連字號>），同層 SortOrder 間隔 10；page 的名稱與圖示取自程式目錄，所以 Name、Icon 為 NULL。
 -- 目錄每個 Page 至少要放一次，新頁面才不會預設看不到（FeatureCatalogSeedTests 檢查）；動作與閱讀器不放進選單。

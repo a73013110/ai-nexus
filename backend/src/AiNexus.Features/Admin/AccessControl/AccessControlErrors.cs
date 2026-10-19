@@ -19,6 +19,8 @@ public static class AccessControlErrors
     public static readonly Error InvalidAccessName = Error.Invalid("invalid_access_name");
     public static readonly Error UnknownAccessId = Error.Invalid("unknown_access_id");
     public static readonly Error InvalidOrder = Error.Invalid("invalid_order");
+    /// <summary>群組授權的資料範圍不是該功能在目錄宣告支援的，或沒有宣告範圍的功能帶了範圍（ADR 0017）。</summary>
+    public static readonly Error InvalidDataScope = Error.Invalid("invalid_data_scope");
     public static readonly Error NavigationItemNotFound = Error.NotFound("navigation_item_not_found");
     public static readonly Error NavigationItemNotEmpty = Error.Conflict("navigation_item_not_empty");
     public static readonly Error NavigationItemCycle = Error.Invalid("navigation_item_cycle");

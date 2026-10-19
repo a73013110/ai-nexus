@@ -101,6 +101,7 @@ public static class PublicErrorCatalog
         ["invalid_credentials"] = "帳號、密碼或登入方式不正確，或帳號暫時無法登入。",
         ["invalid_cursor"] = "事件序號不正確。",
         ["invalid_dashboard_scope"] = "檢視範圍不正確。",
+        ["invalid_data_scope"] = "請為每個支援資料範圍的功能選擇一個它支援的範圍；其他功能不帶範圍。",
         ["invalid_file_name"] = "檔案名稱不正確或過長。",
         ["invalid_gitea_token"] = "請輸入有效的 Gitea 個人存取權杖。",
         ["invalid_history"] = "對話分支資料不完整。",

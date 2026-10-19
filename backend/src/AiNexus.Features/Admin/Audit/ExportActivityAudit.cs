@@ -12,9 +12,9 @@ namespace AiNexus.Features.Admin.Audit;
 
 /// <summary>
 /// 匯出符合條件的全部紀錄為 CSV（新到舊），有獨立的 rate limit。
-/// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料。
+/// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料。範圍與列表相同（<see cref="AuditDataScope"/>）。
 /// </summary>
-internal sealed class ExportActivityAudit(AppDbContext db, IOptions<AuditOptions> options)
+internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope, IOptions<AuditOptions> options)
 {
     public const string Action = "audit.export";
     private static readonly string[] Header = ["紀錄 ID", "時間（UTC）", "操作者", "測試身分", "動作", "資源 ID", "資源識別碼", "結果", "異動資訊", "分類", "Trace ID", "Operation ID", "查證代碼"];
@@ -39,7 +39,7 @@ internal sealed class ExportActivityAudit(AppDbContext db, IOptions<AuditOptions
         db.Database.SetCommandTimeout(options.Value.ExportTimeoutSeconds);
         var limit = options.Value.MaxExportRows;
         // 多讀一筆只為判斷是否超過上限，不必另做 COUNT。
-        var rows = await filter.Query(db).Take(limit + 1).ToListAsync(ct);
+        var rows = await filter.Query(db, await scope.PeopleAsync(actor, ct)).Take(limit + 1).ToListAsync(ct);
         if (rows.Count > limit) return AuditErrors.ExportLimit;
         var csv = new StringBuilder("\uFEFF").Append(Line(Header));
         foreach (var row in rows.Select(ActivityAuditFilter.Present))
