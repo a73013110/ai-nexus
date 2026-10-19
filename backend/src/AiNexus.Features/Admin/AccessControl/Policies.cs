@@ -26,6 +26,7 @@ public static class Policies
     public const string AccessControlGroups = Prefix + FeatureCatalog.AccessControlGroups;
     public const string AccessControlFeatures = Prefix + FeatureCatalog.AccessControlFeatures;
     public const string AccessControlNavigation = Prefix + FeatureCatalog.AccessControlNavigation;
+    public const string Organization = Prefix + FeatureCatalog.Organization;
     public const string OperationsUsage = Prefix + FeatureCatalog.OperationsUsage;
     public const string BillingPrices = Prefix + FeatureCatalog.BillingPrices;
 
@@ -51,6 +52,6 @@ public static class AdministrativeFeatures
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(
     [
         FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures,
-        FeatureCatalog.AccessControlNavigation, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
+        FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
     ], StringComparer.Ordinal);
 }

@@ -19,6 +19,7 @@ using AiNexus.Features.Work.Prompts;
 using AiNexus.Features.Admin.Monitoring;
 using AiNexus.Features.Platform.Notifications;
 using AiNexus.Features.Admin.Operations;
+using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Admin.Quality;
 using AiNexus.Features.Work.Repositories;
@@ -45,6 +46,7 @@ public static class FeatureModules
         Add<AppDatabaseModule>(builder);
         Add<AccessControlModule>(builder);
         Add<IdentityModule>(builder);
+        Add<OrganizationModule>(builder);
         Add<AccountModule>(builder);
         Add<DiagnosticsModule>(builder);
         Add<BillingModule>(builder);
@@ -107,6 +109,7 @@ public static class FeatureModules
         Map<OperationsModule>(api);
         Map<IdentityModule>(api);
         Map<AccessControlModule>(api);
+        Map<OrganizationModule>(api);
         Map<BillingModule>(api);
         Map<RepositoriesModule>(api);
         Map<DashboardModule>(api);
