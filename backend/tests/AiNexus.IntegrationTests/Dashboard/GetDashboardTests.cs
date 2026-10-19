@@ -57,8 +57,9 @@ public sealed class GetDashboardTests
         Assert.Equal(1, Value(personal, "knowledge", "failed"));
         Assert.Equal(1, Value(personal, "knowledge", "collections"));
         Assert.Equal(["圖片", "文字"], Section(personal, "files").Shares.Select(x => x.Label).Order(StringComparer.Ordinal));
-        Assert.Equal(1, Value(await Read(bob, Period), "files", "files"));
-        Assert.Equal(0, Value(await Read(bob, Period), "knowledge", "documents"));
+        var other = await Read(bob, Period);
+        Assert.Equal(1, Value(other, "files", "files"));
+        Assert.Equal(0, Value(other, "knowledge", "documents"));
         Assert.Equal(3, Value(await Read(alice, "scope=platform&" + Period), "files", "files"));
         var selected = await Read(alice, $"scope=platform&ownerId={b}&{Period}");
         Assert.Equal(b, selected.OwnerId);
