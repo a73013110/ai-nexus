@@ -54,38 +54,32 @@ export class DesignSamples {
   }
   setState(status: string) {
     this.demoVersion++;
-    const stage = jobStates.find((item) => item.value === status)?.label ?? '處理中';
-    this.demo.update((item2) => ({
-      ...item2,
+    this.patch({
       status,
-      stage,
+      stage: jobStates.find((item) => item.value === status)?.label ?? '處理中',
       completedUnits: status === 'completed' ? 3 : 0,
       errorMessage: status === 'failed' ? '示範：來源暫時無法使用，可重新處理。' : null,
-    }));
+    });
   }
   play() {
     const version = ++this.demoVersion;
-    this.demo.update((item3) => ({
-      ...item3,
-      status: 'running',
-      stage: '讀取文件',
-      completedUnits: 0,
-      errorMessage: null,
-    }));
+    this.patch({ status: 'running', stage: '讀取文件', completedUnits: 0, errorMessage: null });
     ['整理文字', '建立索引', '處理完成'].forEach((stage, index) =>
       this.scope.later(
         () => {
           if (version !== this.demoVersion) return;
-          this.demo.update((item4) => ({
-            ...item4,
+          this.patch({
             stage,
             completedUnits: index + 1,
             status: index === 2 ? 'completed' : 'running',
-          }));
+          });
         },
         (index + 1) * 700,
         `design-stage-${index}`,
       ),
     );
+  }
+  private patch(changes: Partial<JobDto>) {
+    this.demo.update((job) => ({ ...job, ...changes }));
   }
 }

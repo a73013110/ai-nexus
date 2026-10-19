@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { localDateKey } from '@shared/browser/calendar-day';
 import { DonutChart } from '@shared/ui/donut-chart';
 import { HeatmapCalendar } from '@shared/ui/heatmap-calendar';
 import { NumberTicker } from '@shared/ui/number-ticker';
@@ -7,10 +8,8 @@ import { Spotlight } from '@shared/ui/spotlight';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { DesignExample, DesignSection } from './design-section';
 
-function day(offset: number) {
-  const date = new Date(Date.now() - offset * 86400000);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+/** `offset` 天前的本地日期。 */
+const day = (offset: number) => localDateKey(new Date(Date.now() - offset * 86_400_000));
 const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
 
 /** 總覽使用的資料視覺化：計數器、趨勢、分布與每日熱度。 */
