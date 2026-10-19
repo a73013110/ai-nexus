@@ -23,7 +23,7 @@ internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
     // 新價格只對 EffectiveAt 之後的呼叫生效，已記錄的費用不會被追溯改寫。
     public PriceRequestValidator(TimeProvider clock)
     {
-        RuleFor(x => x.Provider).Must(x => x is "google" or "ollama" or "searxng" or "brave").WithErrorCode("unknown");
+        RuleFor(x => x.Provider).Must(x => x is "google" or "ollama" || BillingService.WebSearchProviders.Contains(x)).WithErrorCode("unknown");
         RuleFor(x => x.ModelId).NotEmpty().MaximumLength(160)
             .Must(x => x.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/')).WithErrorCode("characters");
         RuleFor(x => x.Currency).Must(x => x.Length == 3 && x.All(char.IsAsciiLetterUpper)).WithErrorCode("iso_4217");

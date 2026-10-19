@@ -17,7 +17,8 @@ public sealed class BillingService(
     IEnumerable<ServiceModel> services,
     TimeProvider clock) : IModelCallMeter
 {
-    private static readonly string[] WebSearchProviders = ["searxng", "brave"];
+    /// <summary>網路搜尋供應商；它們以 <c>web-search</c> 為計價項目，價格驗證也以這份清單接受供應商。</summary>
+    internal static readonly string[] WebSearchProviders = ["searxng", "brave"];
 
     public IReadOnlyList<PriceTargetDto> Targets() => inference.Value.Models
         .Select(x => Target(x.Provider, x.NativeId))
