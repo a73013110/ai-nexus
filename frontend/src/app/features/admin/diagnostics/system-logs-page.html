@@ -41,8 +41,32 @@
           (valuesChange)="setLevels($event)"
         />
       </div>
-      <div class="ui-query-wide log-search">
-        <label class="ui-field" for="log-search">搜尋</label>
+      <div class="ui-field ui-query-wide">
+        <div class="ui-field-head">
+          <label for="log-search">搜尋</label>
+          <span id="log-search-kind" class="ui-field-hint log-search-kind">
+            @switch (searchKind()) {
+              @case ('issueCode') {
+                以查證代碼查詢
+              }
+              @case ('traceId') {
+                以 TraceId 查詢
+              }
+              @case ('guid') {
+                以<nx-select
+                  appearance="inline"
+                  label="此 ID 比對的欄位"
+                  [options]="guidOptions"
+                  [value]="draft().guid"
+                  (valueChange)="setGuid($event)"
+                />查詢
+              }
+              @case ('text') {
+                以訊息模板文字查詢（限一天內）
+              }
+            }
+          </span>
+        </div>
         <input
           nxField
           id="log-search"
@@ -55,30 +79,6 @@
           [value]="draft().search"
           (input)="query.set('search', $any($event.target).value)"
         />
-        <div id="log-search-kind" class="log-search-kind">
-          @switch (searchKind()) {
-            @case ('issueCode') {
-              <span>以查證代碼查詢</span>
-            }
-            @case ('traceId') {
-              <span>以 TraceId 查詢</span>
-            }
-            @case ('guid') {
-              <span>以</span>
-              <nx-select
-                appearance="inline"
-                label="此 ID 比對的欄位"
-                [options]="guidOptions"
-                [value]="draft().guid"
-                (valueChange)="setGuid($event)"
-              />
-              <span>查詢</span>
-            }
-            @case ('text') {
-              <span>以訊息模板文字查詢（限一天內）</span>
-            }
-          }
-        </div>
       </div>
       <div query-more class="log-more-fields">
         @for (field of moreFields; track field.key) {
