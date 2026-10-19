@@ -20,7 +20,7 @@ internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 /// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>
 internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation models)
 {
-    public const int MaxModelIdLength = 160;
+    private const int MaxModelIdLength = 160;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/preferences", async (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
