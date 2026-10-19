@@ -18,7 +18,9 @@
 
 - `shared/ui/island.ts`：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。
 - 會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。
-- 跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 ResizeObserver 量測後用彈簧過渡，不依賴 `interpolate-size`。
+- 跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 `morphSize`（`shared/ui/morph-size.ts`）量測內容後用彈簧過渡，不依賴 `interpolate-size`。
+- `IslandService` 預設是根實例（composer）；元件在 `providers` 自備一份就有獨立的島。文件檢視器以此把處理進度、失敗（含重試）與錯誤浮在內容底部，放大時也不佔版面，也不與底下 composer 的提示混在一起。
+- `FloatingToolbar` 用同一套變形：膠囊隨模式切換、展開搜尋或多出搜尋結果列彈簧變寬變高；閒置時縮小淡出，喚回時彈回。
 
 ## 通知（toast）
 

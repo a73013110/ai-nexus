@@ -1,5 +1,4 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Notice } from '@shared/ui/notice';
 import { EmptyState } from '@shared/ui/empty-state';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewSwitch } from '@shared/ui/view-switch';
@@ -30,10 +29,12 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { TextHighlight } from '@shared/ui/text-highlight';
-import { JobProgress } from '@features/work/jobs/job-progress';
 import { ViewScope } from '@shared/browser/view-scope';
 import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
+import { jobFailure } from '@features/work/jobs/job-kind';
+import { Island } from '@shared/ui/island';
+import { IslandService, type IslandItem } from '@shared/ui/island-service';
 import { KnowledgeApi } from '../knowledge-api';
 import { readerUrl, type ReaderTarget } from '@shared/browser/reader-overlay';
 import { SharingApi } from '@features/work/sharing/sharing-api';
@@ -49,7 +50,6 @@ import { richKind } from './html-scripts';
   selector: 'nx-document-viewer',
   imports: [
     NgTemplateOutlet,
-    Notice,
     EmptyState,
     SearchField,
     ViewSwitch,
@@ -58,14 +58,15 @@ import { richKind } from './html-scripts';
     Icon,
     Select,
     TextHighlight,
-    JobProgress,
+    Island,
     MarkdownView,
     HtmlPreview,
   ],
   host: { '(keydown)': 'shortcut($event)' },
   // 標題列（放大時）與浮動工具列共用同一套出現／淡出規則。
   hostDirectives: [IdleChrome],
-  providers: [ViewScope],
+  // 自備島的佇列：只顯示這份文件的狀態，不和底下對話 composer 的島互相混入。
+  providers: [ViewScope, IslandService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './document-viewer.scss',
   templateUrl: './document-viewer.html',
@@ -203,6 +204,93 @@ export class DocumentViewer {
       : apiHref('/api/v1/documents/{id}/render', { path: { id: this.document()?.id || '' } });
   });
   readonly standaloneUrl = computed(() => readerUrl(this.target(), this.page()));
+  /** 這頁沒有擷取文字時的說明；工作已失敗或停止就不說「會自動顯示」。 */
+  readonly missingText = computed(() => {
+    if (this.target().shareId) return '這份分享尚無此頁的擷取文字。可預覽原檔或下載。';
+    if (this.busy()) return '正在建立文字辨識工作…';
+    const status = this.job()?.status;
+    if (status === 'failed' || status === 'cancelled')
+      return this.canControl() ? '此頁尚無擷取文字，可從下方重新處理。' : '此頁尚無擷取文字。';
+    return '此頁尚無擷取文字。處理完成後會自動顯示。';
+  });
+  /**
+   * 處理進度、失敗與錯誤都進檢視器的動態島：浮在內容上、不佔版面（放大時也一樣），
+   * 失敗會展開並就地提供重試，不必到背景任務頁。
+   */
+  private readonly status = computed(() => {
+    const items: IslandItem[] = [];
+    const busy = this.busy();
+    const error = this.error();
+    if (error)
+      items.push({
+        id: 'error',
+        priority: 90,
+        tone: 'danger',
+        icon: 'info',
+        label: '無法完成',
+        message: error,
+        urgent: true,
+        action: { label: '重新載入', disabled: busy, run: () => void this.load(this.target()) },
+      });
+    const renderError = this.renderError();
+    if (renderError)
+      items.push({
+        id: 'render',
+        priority: 85,
+        tone: 'warning',
+        icon: this.isImage() ? 'image' : 'document',
+        label: '無法顯示原始內容',
+        message: renderError,
+        urgent: true,
+        action: this.hasText()
+          ? { label: '改看文字', run: () => void this.setMode('text') }
+          : undefined,
+      });
+    const job = this.document() ? this.job() : null;
+    if (!job || job.status === 'completed') return items;
+    const control = this.canControl();
+    if (job.status === 'queued' || job.status === 'running')
+      items.push({
+        id: 'job-active',
+        priority: 50,
+        tone: 'live',
+        icon: 'activity',
+        label: job.cancelRequested
+          ? '正在停止…'
+          : job.totalUnits
+            ? `${job.stage} · ${job.completedUnits} / ${job.totalUnits}`
+            : job.stage,
+        action: control
+          ? {
+              label: '停止處理',
+              icon: 'stop',
+              disabled: busy || job.cancelRequested,
+              run: () => void this.control(false),
+            }
+          : undefined,
+      });
+    else {
+      const failed = job.status === 'failed';
+      items.push({
+        // 每次嘗試是新的事件：重試後再失敗會重新展開。
+        id: `job-${job.status}-${job.attempt}`,
+        priority: 80,
+        tone: failed ? 'danger' : 'info',
+        icon: failed ? 'info' : 'stop',
+        label: failed ? '處理失敗' : '已停止處理',
+        message: failed
+          ? job.errorMessage
+            ? jobFailure(job)
+            : '文件處理未完成。'
+          : '文件處理已停止。',
+        urgent: failed,
+        action: control
+          ? { label: '重新處理', disabled: busy, run: () => void this.control(true) }
+          : undefined,
+      });
+    }
+    return items;
+  });
   private pdf: PDFDocumentProxy | null = null;
   private pdfLoad: PDFDocumentLoadingTask | null = null;
   private renderTask: RenderTask | null = null;
@@ -211,6 +299,7 @@ export class DocumentViewer {
   private version = 0;
   private renderVersion = 0;
   constructor() {
+    inject(IslandService).register(this.status);
     effect(() => {
       const target = this.target();
       untracked(() => {

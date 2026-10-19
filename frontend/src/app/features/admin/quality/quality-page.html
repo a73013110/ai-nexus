@@ -109,7 +109,6 @@
             @if (view.run.canControl) {
               @if (view.run.job.status === 'running' || view.run.job.status === 'queued') {
                 <button
-                  job-actions
                   class="quiet-button"
                   (click)="control(false)"
                   [disabled]="busy() || view.run.job.cancelRequested"
@@ -118,7 +117,6 @@
                 </button>
               } @else if (view.run.job.status === 'failed' || view.run.job.status === 'cancelled') {
                 <button
-                  job-actions
                   class="quiet-button"
                   (click)="control(true)"
                   [disabled]="busy() || view.run.job.attempt >= 6"

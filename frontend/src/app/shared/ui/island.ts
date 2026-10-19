@@ -4,14 +4,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
-  effect,
   ElementRef,
   inject,
   Injector,
   linkedSignal,
-  signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -19,6 +15,7 @@ import { Icon } from './icon';
 import { InferenceSignal } from './inference-signal';
 import { IslandService, type IslandItem } from './island-service';
 import { IssueCode } from './issue-code';
+import { morphSize } from './morph-size';
 
 export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
 
@@ -26,7 +23,8 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
  * `IslandService` 登記的通知所形成的單一變形膠囊。只有一則通知時是精簡膠囊；兩則以上時，
  * 其餘的會分到一個泡泡中。開啟任何一個，都會展開每則通知與其動作。緊急通知會在出現時展開，
  * 直到使用者收合。
- * 膠囊在量測過的尺寸之間做動畫，因此不需要 `interpolate-size` 也能變形。
+ * 膠囊在量測過的尺寸之間做動畫（`morphSize`）。預設接在 `IslandService` 的根實例；
+ * 元件在 `providers` 自備一份時，那個範圍內的島只顯示該元件的通知（例：文件檢視器）。
  */
 @Component({
   selector: 'nx-island',
@@ -160,26 +158,11 @@ export class Island {
     if (this.opened() || items.some((item) => item.urgent && !seen.has(item.id))) return 'expanded';
     return items.length > 1 ? 'split' : 'compact';
   });
-  readonly size = signal<{ width: number; height: number } | null>(null);
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  readonly size = morphSize(() => this.content()?.nativeElement);
   private readonly pill = viewChild<ElementRef<HTMLElement>>('pill');
   private readonly collapseButton = viewChild<ElementRef<HTMLElement>>('collapseButton');
   private readonly injector = inject(Injector);
-
-  constructor() {
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => {
-      const box = entry.borderBoxSize?.[0];
-      if (box) this.size.set({ width: box.inlineSize, height: box.blockSize });
-    });
-    effect((onCleanup) => {
-      const element = this.content()?.nativeElement;
-      if (!element) return untracked(() => this.size.set(null));
-      observer.observe(element);
-      onCleanup(() => observer.unobserve(element));
-    });
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
-  }
 
   open() {
     this.opened.set(true);
