@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   auditChanges,
   auditDetails,
+  auditOutcome,
   auditResource,
   auditResult,
   auditRejected,
@@ -77,6 +78,14 @@ describe('audit presentation', () => {
     }
     expect(auditRejected('executor_lost')).toBe(true);
     expect(auditRejected('unknown_access_id')).toBe(true);
+    expect(auditOutcome({ action: 'billing.price.created', result: 'price_exists' })).toEqual({
+      result: '已建立',
+      rejected: false,
+    });
+    expect(auditOutcome({ action: 'identity.login', result: 'failed' })).toEqual({
+      result: '登入未完成',
+      rejected: true,
+    });
   });
   it('compares nested policy changes and preserves the removal of an explicit limit', () => {
     const modelId = 'ollama/qwen3.8:27b';

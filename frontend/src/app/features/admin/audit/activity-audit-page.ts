@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
-import type { AuditDto, FeatureDto, ModelDto } from '@core/api/schema';
+import type { AuditDto, FeatureDto } from '@core/api/schema';
 import { catalogFeature, routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -46,9 +46,8 @@ import {
   auditChanges,
   auditContext,
   auditDetails,
-  auditRejected,
+  auditOutcome,
   auditResource,
-  auditResult,
 } from './audit-presentation';
 import {
   AUDIT_RANGES,
@@ -105,12 +104,15 @@ export class ActivityAuditPage {
     feature: 'audit',
     loader: () => this.api.catalog(),
   });
-  private readonly catalog = computed(() => this.catalogRead.value());
-  readonly features = computed<readonly FeatureDto[]>(() => this.catalog()?.features ?? []);
-  readonly models = computed<readonly ModelDto[]>(() => this.catalog()?.models ?? []);
+  private readonly catalog = this.catalogRead.value;
+  private readonly features = computed(
+    () => new Map((this.catalog()?.features ?? []).map((feature) => [feature.id, feature])),
+  );
   readonly navigation = computed(() => this.catalog()?.navigationSections ?? []);
-  readonly modelNames = computed(() =>
-    Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
+  private readonly modelNames = computed(() =>
+    Object.fromEntries(
+      (this.catalog()?.models ?? []).map((model) => [model.id, formatModelName(model)]),
+    ),
   );
   private readonly actions = computed(() => this.catalog()?.actions ?? []);
   readonly categories = computed<SelectOption[]>(() => [
@@ -163,6 +165,7 @@ export class ActivityAuditPage {
   readonly presentedRows = computed(() =>
     this.rows().map((entry) => ({
       entry,
+      ...auditOutcome(entry),
       date: formatDate(entry.at),
       action: auditAction(entry.action),
       category:
@@ -176,11 +179,6 @@ export class ActivityAuditPage {
         featureBefore: change.featureIds ? this.resolveFeatures(change.featureIds.before) : null,
         featureAfter: change.featureIds ? this.resolveFeatures(change.featureIds.after) : null,
       })),
-      result: auditResult(
-        entry.action === 'billing.price.created' ? 'created' : entry.result,
-        entry.action,
-      ),
-      rejected: entry.action !== 'billing.price.created' && auditRejected(entry.result),
     })),
   );
   readonly selectedIndex = computed(() =>
@@ -271,10 +269,10 @@ export class ActivityAuditPage {
     }
   }
   private resolveFeatures(ids: string[]): FeatureDto[] {
-    const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
+    const features = this.features();
     return ids.map(
       (id) =>
-        catalog.get(id) ?? {
+        features.get(id) ?? {
           id,
           // 此帳號沒有授權的功能不在 `/me`，名稱與圖示取自目錄；不認得的 ID 原樣顯示。
           name: catalogFeature(id)?.name || id,
