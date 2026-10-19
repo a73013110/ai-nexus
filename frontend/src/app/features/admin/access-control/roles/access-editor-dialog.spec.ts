@@ -1,12 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type {
-  AdminFeatureDto,
-  AdminGroupDto,
-  AdminRoleDto,
-  NavigationGroupDto,
-} from '@core/api/schema';
+import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { AccessControlApi } from '../access-control-api';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -25,33 +20,13 @@ const catalog = {
     { id: 'admin', name: '管理', enabled: true, featureIds: ['admin'] },
   ],
   features: [
-    { id: 'chat', name: '對話', enabled: true, groupId: 'work', sortOrder: 10, icon: 'chat' },
-    {
-      id: 'repositories',
-      name: '程式庫',
-      enabled: true,
-      groupId: 'team',
-      sortOrder: 60,
-      icon: 'git',
-    },
-    { id: 'off', name: '停用功能', enabled: false, groupId: null, sortOrder: 5, icon: 'x' },
-    {
-      id: 'admin',
-      name: '平台管理',
-      enabled: true,
-      groupId: 'system',
-      sortOrder: 90,
-      icon: 'lock',
-    },
+    { id: 'chat', name: '對話', enabled: true, icon: 'chat' },
+    { id: 'repositories', name: '程式庫', enabled: true, icon: 'git' },
+    { id: 'off', name: '停用功能', enabled: false, icon: 'x' },
+    { id: 'admin', name: '平台管理', enabled: true, icon: 'lock' },
   ],
   models: [],
 };
-const navigationGroups: NavigationGroupDto[] = [
-  { id: 'work', parentId: null, name: '工作台', sortOrder: 10 },
-  { id: 'system', parentId: null, name: '系統管理', sortOrder: 30 },
-  { id: 'team', parentId: 'system', name: '團隊', sortOrder: 10 },
-  { id: 'deep', parentId: 'team', name: '深層', sortOrder: 10 },
-];
 const role = catalog.roles[0] as unknown as AdminRoleDto;
 const group = { ...catalog.groups[1], policy: null } as unknown as AdminGroupDto;
 
@@ -60,14 +35,10 @@ function setup(testing = false) {
     role: vi.fn(async () => undefined),
     group: vi.fn(async () => undefined),
     feature: vi.fn(async () => undefined),
-    createNavigationGroup: vi.fn(async () => undefined),
-    updateNavigationGroup: vi.fn(async () => undefined),
   };
   const store = {
     catalog: signal(catalog),
-    navigationGroups: signal(navigationGroups),
     saved: vi.fn(),
-    reordered: vi.fn(),
     toast: { success: vi.fn() },
   };
   TestBed.configureTestingModule({
@@ -133,7 +104,7 @@ describe('AccessEditorDialog', () => {
     expect(store.saved).not.toHaveBeenCalled();
   });
 
-  it('lists group features by menu group path and the groups of a role as one card', () => {
+  it('lists group features by catalog area and module and the groups of a role as one card', () => {
     const { dialog } = setup();
     dialog.open('group', group);
     expect(
@@ -141,10 +112,10 @@ describe('AccessEditorDialog', () => {
         .featureChoices()
         .map((item) => [item.name, item.options.map((option) => option.label)]),
     ).toEqual([
-      ['最上層', ['停用功能（停用）']],
-      ['工作台', ['對話']],
-      ['系統管理', ['平台管理']],
-      ['系統管理 › 團隊', ['程式庫']],
+      ['AI 工作台 › 對話', ['對話']],
+      ['AI 工作台 › 程式庫', ['程式庫']],
+      // 不在目錄中的 ID 收在最後一張卡片。
+      ['其他', ['停用功能（停用）', '平台管理']],
     ]);
     expect(dialog.groupChoices()).toEqual([
       expect.objectContaining({ name: '全部功能群組', options: expect.any(Array) }),
@@ -156,16 +127,14 @@ describe('AccessEditorDialog', () => {
     ]);
   });
 
-  it('names a feature by id and route, leaves out a missing route and keeps its order', async () => {
+  it('names a feature by id and route, leaves out a missing route and saves name and switch only', async () => {
     const { dialog, api } = setup();
     const feature = (id: string, route: string) =>
       ({
         id,
         name: '日誌匯出',
         route,
-        sortOrder: 95,
         enabled: true,
-        groupId: 'system',
         icon: 'download',
       }) as AdminFeatureDto;
     dialog.open('feature', feature('diagnostics.logs', '/admin/diagnostics/logs'));
@@ -177,8 +146,6 @@ describe('AccessEditorDialog', () => {
     expect(api.feature).toHaveBeenCalledWith('diagnostics.logs.export', {
       name: '匯出日誌',
       enabled: true,
-      sortOrder: 95,
-      groupId: 'system',
     });
   });
 
@@ -195,60 +162,6 @@ describe('AccessEditorDialog', () => {
     dialog.update('name', '對話');
     await dialog.save(new Event('submit'));
     expect(api.feature).toHaveBeenLastCalledWith('chat', expect.objectContaining({ name: null }));
-  });
-
-  it('moves a feature to the end of another menu group, or to the top level', async () => {
-    const { dialog, api } = setup();
-    dialog.open('feature', catalog.features[0] as AdminFeatureDto);
-    expect(dialog.placements().map((item2) => item2.label)).toEqual([
-      '最上層（不分群）',
-      '工作台',
-      '系統管理',
-      '系統管理 › 團隊',
-      '系統管理 › 團隊 › 深層',
-    ]);
-    dialog.update('placement', 'system');
-    await dialog.save(new Event('submit'));
-    // 名稱與目錄預設相同，送出時不寫成覆寫。
-    expect(api.feature).toHaveBeenLastCalledWith('chat', {
-      name: null,
-      enabled: true,
-      sortOrder: 100,
-      groupId: 'system',
-    });
-    dialog.open('feature', catalog.features[0] as AdminFeatureDto);
-    dialog.update('placement', '');
-    await dialog.save(new Event('submit'));
-    expect(api.feature).toHaveBeenLastCalledWith(
-      'chat',
-      expect.objectContaining({ groupId: null, sortOrder: 15 }),
-    );
-  });
-
-  it('creates a menu group after its siblings and never under its own subgroups', async () => {
-    const { dialog, api, store } = setup();
-    dialog.open('menu');
-    dialog.update('id', 'reports');
-    dialog.update('name', '報表');
-    dialog.update('placement', 'system');
-    await dialog.save(new Event('submit'));
-    expect(api.createNavigationGroup).toHaveBeenCalledWith({
-      id: 'reports',
-      name: '報表',
-      parentId: 'system',
-      sortOrder: 20,
-    });
-    expect(store.reordered).toHaveBeenCalled();
-    expect(store.saved).not.toHaveBeenCalled();
-    dialog.open('menu', navigationGroups[1]);
-    expect(dialog.placements().map((item) => item.value)).toEqual(['', 'work']);
-    dialog.update('name', '系統');
-    await dialog.save(new Event('submit'));
-    expect(api.updateNavigationGroup).toHaveBeenCalledWith('system', {
-      name: '系統',
-      parentId: null,
-      sortOrder: 30,
-    });
   });
 
   it('saves both tabs of a group at once and opens the tab that holds an invalid value', async () => {

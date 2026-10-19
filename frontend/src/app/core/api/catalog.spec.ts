@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { featureTrail } from '../layout/feature-trail';
-import { catalogFeature, featureForUrl, isFeatureId, modulePages, routeOf } from './catalog';
+import {
+  catalogFeature,
+  catalogSections,
+  featureForUrl,
+  isFeatureId,
+  modulePages,
+  routeOf,
+} from './catalog';
 
 describe('feature catalog helpers', () => {
   it('finds the page or reader that owns a URL by the longest whole-segment prefix', () => {
@@ -24,6 +31,23 @@ describe('feature catalog helpers', () => {
       'access-control.roles',
       'access-control.groups',
       'access-control.features',
+      'access-control.navigation',
+    ]);
+  });
+
+  it('groups features by area and module in catalog order, unknown ids last without a heading', () => {
+    const ids = ['retired', 'diagnostics.logs.export', 'audit', 'chat', 'diagnostics.logs'];
+    expect(
+      catalogSections(ids.map((id) => ({ id }))).map((section) => [
+        section.id,
+        section.path,
+        section.features.map((feature) => feature.id),
+      ]),
+    ).toEqual([
+      ['chat', 'AI 工作台 › 對話', ['chat']],
+      ['audit', '系統管理 › 活動稽核', ['audit']],
+      ['diagnostics', '系統管理 › 診斷', ['diagnostics.logs', 'diagnostics.logs.export']],
+      ['', '', ['retired']],
     ]);
   });
 

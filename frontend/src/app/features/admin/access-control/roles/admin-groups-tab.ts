@@ -77,10 +77,7 @@ import { AccessStatus } from './access-status';
               </td>
               <td data-label="附件容量">{{ storage(group) }}</td>
               <td data-label="功能授權">
-                <nx-feature-summary
-                  [features]="summaries()[group.id] || []"
-                  [groups]="store.navigationGroups()"
-                />
+                <nx-feature-summary [features]="summaries()[group.id] || []" />
               </td>
             </tr>
           }

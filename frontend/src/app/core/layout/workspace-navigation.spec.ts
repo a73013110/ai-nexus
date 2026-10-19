@@ -9,6 +9,31 @@ import { WorkspaceNavigation } from './workspace-navigation';
 @Component({ template: '' })
 class Destination {}
 
+const node = {
+  icon: null,
+  featureId: null,
+  route: null,
+  url: null,
+  openInNewTab: false,
+  children: [],
+};
+const page = (id: string, name: string, route: string) => ({
+  ...node,
+  id,
+  kind: 'page',
+  name,
+  featureId: id,
+  route,
+});
+const link = (url: string, name: string) => ({
+  ...node,
+  id: 'runbook',
+  kind: 'link',
+  name,
+  url,
+  openInNewTab: true,
+});
+
 describe('workspace navigation ownership', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -31,19 +56,19 @@ describe('workspace navigation ownership', () => {
           useValue: {
             me: signal({
               access: {
-                features: [
-                  { id: 'identity.users', name: '使用者', route: '/admin/identity/users' },
-                  { id: 'operations.usage', name: '平台用量', route: '/admin/operations/usage' },
-                  { id: 'audit', name: '活動稽核', route: '/admin/audit' },
-                  { id: 'diagnostics.logs', name: '系統日誌', route: '/admin/diagnostics/logs' },
-                  { id: 'knowledge', name: '知識庫', route: '/work/knowledge' },
-                  {
-                    id: 'knowledge.retrieval',
-                    name: '檢索管理',
-                    route: '/work/knowledge/retrieval',
-                  },
-                  { id: 'projects', name: '專案', route: '/work/projects' },
-                  { id: 'chat', name: '對話', route: '/work/chat' },
+                // 伺服器已修剪的選單樹；外部連結沒有本站路由，不能成為目前頁面。
+                navigation: [
+                  link('https://wiki.example.com/admin', '維運手冊'),
+                  ...[
+                    ['identity.users', '使用者', '/admin/identity/users'],
+                    ['operations.usage', '平台用量', '/admin/operations/usage'],
+                    ['audit', '活動稽核', '/admin/audit'],
+                    ['diagnostics.logs', '系統日誌', '/admin/diagnostics/logs'],
+                    ['knowledge', '知識庫', '/work/knowledge'],
+                    ['knowledge.retrieval', '檢索管理', '/work/knowledge/retrieval'],
+                    ['projects', '專案', '/work/projects'],
+                    ['chat', '對話', '/work/chat'],
+                  ].map(([id, name, route]) => page(id, name, route)),
                 ],
               },
             }),
@@ -73,5 +98,11 @@ describe('workspace navigation ownership', () => {
     await router.navigateByUrl('/admin/identity');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('a.current').length).toBe(0);
+    const external = fixture.nativeElement.querySelector(
+      'a[href="https://wiki.example.com/admin"]',
+    );
+    expect(external.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(external.getAttribute('target')).toBe('_blank');
+    expect(external.getAttribute('aria-label')).toBe('維運手冊（外部連結，開新分頁）');
   });
 });

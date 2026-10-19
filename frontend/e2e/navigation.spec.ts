@@ -7,6 +7,7 @@ import {
   expectCompactWorkspace,
   dashboardFixture,
   touchSwipe,
+  navigationItem,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
@@ -51,10 +52,12 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await tools.getByRole("button", { name: "釘選使用者", exact: true }).click();
   await tools.getByRole("button", { name: "完成", exact: true }).click();
   await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
+  // 協作分群裡這個帳號只看得到背景任務：伺服器把只剩一項的分群換成該項，不留一個只有一項的標題。
   await expect(
-    tools
-      .getByRole("region", { name: "協作", exact: true })
-      .getByRole("link", { name: "背景任務", exact: true }),
+    tools.getByRole("region", { name: "協作", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    tools.getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
@@ -956,47 +959,88 @@ test("Ctrl+K finds every feature, the pinned pill follows the route and the disp
   await expectViewportContained(page);
 });
 
-test("nested menu groups list features before subgroups, hide empty groups and show their path in Ctrl+K", async ({
+test("the menu follows the server tree with links beside pages, nested groups and their paths in Ctrl+K", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
   fixture.auditAccess = true;
-  fixture.navigationGroups = [
-    ...fixture.navigationGroups,
-    // Subgroups sort among themselves; their small SortOrder never puts them above features.
-    { id: "diagnostics", parentId: "system", name: "診斷", sortOrder: 20 },
-    { id: "insights", parentId: "system", name: "洞察", sortOrder: 10 },
-    // Empty at every depth: none of these may show.
-    { id: "archive", parentId: "diagnostics", name: "封存", sortOrder: 5 },
-    { id: "reports", parentId: null, name: "報表", sortOrder: 15 },
-    { id: "drafts", parentId: "reports", name: "草稿", sortOrder: 10 },
-  ];
   fixture.extraFeatures = [
     { id: "dashboard", name: "總覽", route: "/work/dashboard" },
-    {
-      id: "monitoring",
-      name: "即時監控",
-      route: "/admin/monitoring",
-      groupId: "diagnostics",
-      sortOrder: 2,
-    },
+    { id: "monitoring", name: "即時監控", route: "/admin/monitoring" },
     {
       id: "diagnostics.logs",
       name: "系統日誌",
       route: "/admin/diagnostics/logs",
-      groupId: "diagnostics",
-      sortOrder: 1,
     },
-    {
-      id: "quality",
-      name: "品質評測",
-      route: "/admin/quality",
-      groupId: "insights",
-      sortOrder: 1,
-    },
+    { id: "quality", name: "品質評測", route: "/admin/quality" },
+  ];
+  const page_ = (id: string, parentId: string | null, sortOrder: number) =>
+    navigationItem({
+      id: `${parentId ?? "root"}.${id}`,
+      parentId,
+      kind: "page",
+      featureId: id,
+      sortOrder,
+    });
+  const group = (
+    id: string,
+    parentId: string | null,
+    name: string,
+    sortOrder: number,
+  ) => navigationItem({ id, parentId, kind: "group", name, sortOrder });
+  // `/me` 由測試替身依授權修剪（同後端）：頁面與連結可以夾在分群之間，順序就是管理員排的順序。
+  fixture.navigationItems = [
+    page_("dashboard", null, 10),
+    navigationItem({
+      id: "wiki",
+      kind: "link",
+      name: "維運手冊",
+      url: "https://wiki.example.com/ops",
+      openInNewTab: true,
+      sortOrder: 15,
+    }),
+    group("work", null, "AI 工作台", 20),
+    page_("chat", "work", 10),
+    page_("files", "work", 20),
+    // 沒有可見項目：不顯示。
+    group("collaboration", null, "協作", 30),
+    page_("jobs", "collaboration", 10),
+    group("system", null, "系統管理", 40),
+    page_("audit", "system", 10),
+    group("diagnostics", "system", "診斷", 20),
+    page_("diagnostics.logs", "diagnostics", 10),
+    page_("monitoring", "diagnostics", 20),
+    navigationItem({
+      id: "runbook",
+      parentId: "diagnostics",
+      kind: "link",
+      name: "處理手冊",
+      url: "https://wiki.example.com/runbook",
+      openInNewTab: false,
+      sortOrder: 30,
+    }),
+    // 只剩一項：以該項取代分群。
+    group("insights", "system", "洞察", 30),
+    page_("quality", "insights", 10),
+    page_("identity.users", "system", 40),
+    // 只給平台管理群組；這個帳號不屬於它。
+    navigationItem({
+      id: "admins",
+      parentId: "system",
+      kind: "link",
+      name: "管理員專區",
+      url: "https://wiki.example.com/admins",
+      audienceGroupIds: ["administrators"],
+      sortOrder: 50,
+    }),
   ];
   await fixture.attach(page);
+  await page
+    .context()
+    .route("https://wiki.example.com/**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<title>wiki</title>" }),
+    );
   await page.goto("/work/files");
   const launcher = page
     .getByRole("navigation", { name: "工作區功能" })
@@ -1004,78 +1048,91 @@ test("nested menu groups list features before subgroups, hide empty groups and s
   await expect(
     launcher.getByRole("link", { name: "系統日誌", exact: true }),
   ).toBeVisible();
-  // Groups in menu order, depth first; 協作 has no feature here and 報表 only an empty subgroup.
   await expect(launcher.locator(".workspace-group > :is(h3, h4)")).toHaveText([
     "AI 工作台",
     "系統管理",
-    "洞察",
     "診斷",
   ]);
-  for (const name of ["協作", "報表", "草稿", "封存"])
+  for (const name of ["協作", "洞察"])
     await expect(
       launcher.getByRole("region", { name, exact: true }),
     ).toHaveCount(0);
+  // 最上層的頁面與外部連結在分群之前，依管理員排的順序。
+  await expect(launcher.getByRole("link").first()).toHaveAccessibleName("總覽");
+  const wiki = launcher.getByRole("link", {
+    name: "維運手冊（外部連結，開新分頁）",
+  });
+  await expect(wiki).toHaveAttribute("href", "https://wiki.example.com/ops");
+  await expect(wiki).toHaveAttribute("target", "_blank");
+  await expect(wiki).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(wiki.locator(".entry-mark")).toHaveCount(1);
   const system = launcher.getByRole("region", {
     name: "系統管理",
     exact: true,
   });
-  await expect(
-    system.locator(":scope > .workspace-icons").getByRole("link"),
-  ).toHaveText([
-    "使用者",
-    "角色",
-    "功能群組與模型",
-    "功能與選單",
-    "平台用量",
-    "模型與工具價格",
-    "檢索管理",
-    "活動稽核",
-    "介面元件",
-  ]);
-  // Its subgroups nest inside it, ordered by SortOrder.
-  await expect(system.locator(":scope > section.is-nested > h4")).toHaveText([
-    "洞察",
-    "診斷",
-  ]);
-  // Inside a group, its own features come before its subgroups.
+  // 分群裡的項目與子分群照順序交錯；只剩品質評測的「洞察」直接顯示為該頁。
   await expect(system.getByRole("link")).toHaveText([
-    "使用者",
-    "角色",
-    "功能群組與模型",
-    "功能與選單",
-    "平台用量",
-    "模型與工具價格",
-    "檢索管理",
     "活動稽核",
-    "介面元件",
-    "品質評測",
     "系統日誌",
     "即時監控",
+    "處理手冊",
+    "品質評測",
+    "使用者",
   ]);
-  // The top level sits above every group.
-  await expect(launcher.getByRole("link").first()).toHaveAccessibleName("總覽");
+  const runbook = system.getByRole("link", { name: "處理手冊（外部連結）" });
+  await expect(runbook).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(runbook).not.toHaveAttribute("target", /.*/);
+  await expect(launcher.getByText("管理員專區")).toHaveCount(0);
+  // 外部連結沒有本站路由：目前頁面仍只標一項。
+  await expect(
+    page.locator(".workspace-navigation [aria-current='page']"),
+  ).toHaveCount(1);
+  // 外部連結不能釘選。
+  await launcher.getByRole("button", { name: "自訂釘選", exact: true }).click();
+  await expect(
+    launcher.getByRole("button", { name: /^維運手冊/ }),
+  ).toBeDisabled();
+  await launcher.getByRole("button", { name: "完成", exact: true }).click();
 
   await page.keyboard.press("Control+k");
   const search = page.getByRole("combobox", { name: "快捷指令" });
   await expect(search).toBeFocused();
-  // A nested group's features carry the whole path, and the path is searchable.
+  // 巢狀分群的項目帶完整路徑，路徑也可搜尋；外部連結寫明會離開本站。
   await search.fill("診斷");
   const options = page.getByRole("option");
-  await expect(options.locator("strong")).toHaveText(["系統日誌", "即時監控"]);
+  await expect(options.locator("strong")).toHaveText([
+    "系統日誌",
+    "即時監控",
+    "處理手冊",
+  ]);
   await expect(options.locator("small")).toHaveText([
     "前往功能 · 系統管理 › 診斷",
     "前往功能 · 系統管理 › 診斷",
+    "開啟外部連結 · 系統管理 › 診斷",
   ]);
   await search.fill("品質評測");
-  await expect(options.locator("small")).toHaveText([
-    "前往功能 · 系統管理 › 洞察",
-  ]);
-  // Top-level features have no group to name.
+  await expect(options.locator("small")).toHaveText(["前往功能 · 系統管理"]);
   await search.fill("總覽");
   await expect(options.locator("small")).toHaveText(["前往功能"]);
-  await search.fill("系統日誌");
+  // 開新分頁的連結：新分頁拿不到 opener，也收不到本站網址當 Referer。
+  await search.fill("維運手冊");
+  await expect(options.locator("small")).toHaveText(["開啟外部連結"]);
+  const popupOpened = page.waitForEvent("popup");
   await search.press("Enter");
-  await expect(page).toHaveURL(/\/admin\/diagnostics\/logs$/);
+  const popup = await popupOpened;
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe("https://wiki.example.com/ops");
+  expect(
+    await popup.evaluate(() => [window.opener, document.referrer]),
+  ).toEqual([null, ""]);
+  await popup.close();
+  await expect(page).toHaveURL(/\/work\/files$/);
+  // 同分頁開啟的連結直接離開本站，同樣不帶 Referer。
+  await page.keyboard.press("Control+k");
+  await search.fill("處理手冊");
+  await search.press("Enter");
+  await expect(page).toHaveURL("https://wiki.example.com/runbook");
+  expect(await page.evaluate(() => document.referrer)).toBe("");
 });
 
 test("short mobile drawers expose scrolling and preserve the focus escape route", async ({

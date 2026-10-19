@@ -1,0 +1,73 @@
+@use 'breakpoints' as bp;
+
+// 選單表自己的儲存格：層級內縮、排序把手、拖曳中的列與移入目標；表格形狀與其他管理頁共用
+// （shared/ui/management-table-page.scss）。
+.navigation-handle-column {
+  width: 2.75rem;
+}
+.navigation-name-column {
+  width: 20rem;
+}
+.navigation-kind-column {
+  width: 6.5rem;
+}
+// 圖示在左，名稱疊在祖先路徑上方；子節點依深度內縮，樹狀關係不必靠路徑也看得出來。
+.navigation-name {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--p-space-2);
+  padding-inline-start: calc(var(--depth, 0) * var(--p-space-5));
+}
+.navigation-name > nx-icon {
+  grid-row: span 2;
+  --icon-size: var(--icon-md);
+  color: var(--secondary);
+}
+.navigation-name > small {
+  grid-column: 2;
+}
+tr.is-group .admin-table-name {
+  font-weight: 600;
+}
+.admin-table-name {
+  min-width: 0;
+}
+// 等寬字在相同字級下看起來比名稱大；識別碼與網址是次要資訊。
+.navigation-detail {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.navigation-warning {
+  color: var(--warning);
+}
+.navigation-handle {
+  color: var(--secondary);
+  cursor: grab;
+  touch-action: none;
+}
+.navigation-handle[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+tr.is-dragging {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  cursor: grabbing;
+}
+tr.is-dragging .navigation-handle {
+  cursor: grabbing;
+}
+// 拖到分群列中段時，放手會移入這個分群。
+tr.is-drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+// 卡片沒有把手：手機用列的選單移動；內縮改小，避免深層項目擠成一條。
+@include bp.below(narrow) {
+  .navigation-name {
+    padding-inline-start: calc(var(--depth, 0) * var(--p-space-3));
+  }
+}

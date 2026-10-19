@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import { navigationTree } from './navigation-tree';
+import { navigationPages } from './navigation-tree';
 import type { FeatureId } from '../api/catalog';
 
 export const PIN_LIMIT = 5;
@@ -14,14 +14,13 @@ const DEFAULT_PINS: readonly FeatureId[] = ['chat', 'files', 'knowledge'];
 @Injectable({ providedIn: 'root' })
 export class NavigationPreferences {
   private readonly session = inject(WorkspaceSession);
-  /** 有頁面的功能；只授權、沒有路由的功能不會進入選單。 */
-  readonly features = computed(() =>
-    (this.session.me()?.access.features ?? []).filter((feature) => !!feature.route),
-  );
-  /** 管理員安排的選單（`navigationTree`），啟動器與 Ctrl+K 共用。 */
-  readonly tree = computed(() =>
-    navigationTree(this.features(), this.session.me()?.access.navigationGroups ?? []),
-  );
+  /** 管理員安排、伺服器已依此帳號修剪的選單樹（`/me` 的 `navigation`），啟動器與 Ctrl+K 共用。 */
+  readonly tree = computed(() => this.session.me()?.access.navigation ?? []);
+  /**
+   * 選單中的頁面（同一功能只算一次）：釘選的候選與「目前頁面」的判斷都來自這裡。
+   * 已授權但管理員沒放進選單的頁面不能釘選，與側欄看不到它一致。
+   */
+  readonly pages = computed(() => navigationPages(this.tree()));
   private readonly user = computed(() => this.session.me()?.id ?? '');
   private readonly saved = linkedSignal(() => {
     const value = read(`ai-nexus.pins.${this.user()}`);
@@ -33,13 +32,13 @@ export class NavigationPreferences {
     read(`ai-nexus.navigation-display.${this.user()}`) === 'list' ? 'list' : 'icons',
   );
   readonly ids = computed(() => {
-    const visible = new Set(this.features().map((feature) => feature.id));
+    const visible = new Set(this.pages().map((page) => page.id));
     // 沒有儲存的選擇時，只釘選帳號能開啟的預設功能，不從選單補滿；其他功能從啟動器開啟。
     return (this.saved() ?? DEFAULT_PINS).filter((id) => visible.has(id)).slice(0, PIN_LIMIT);
   });
   readonly pinned = computed(() => {
-    const features = new Map(this.features().map((feature) => [feature.id, feature]));
-    return this.ids().map((id) => features.get(id)!);
+    const pages = new Map(this.pages().map((page) => [page.id, page]));
+    return this.ids().map((id) => pages.get(id)!);
   });
   readonly full = computed(() => this.ids().length >= PIN_LIMIT);
   has(id: string) {

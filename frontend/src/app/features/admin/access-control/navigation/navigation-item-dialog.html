@@ -1,0 +1,195 @@
+<dialog
+  nxCompactDialog
+  #itemDialog
+  class="platform-dialog navigation-item-dialog"
+  [size]="editor()?.draft?.kind === 'link' ? 'lg' : 'md'"
+  (cancel)="cancel($event)"
+>
+  @if (editor(); as e) {
+    <!-- 由 save() 檢查，說明放在欄位旁；瀏覽器原生提示的文字與位置各家不同，不用它。 -->
+    <form class="dialog-form" novalidate (submit)="save($event)">
+      <nx-dialog-header
+        [heading]="e.title"
+        [detail]="e.id ? label(e.draft.kind) : ''"
+        closeLabel="關閉選單項目編輯"
+      />
+      <div #body class="dialog-body">
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
+        <div class="form-sections">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-basics'">基本資料</h3>
+              <p class="form-note">
+                @switch (e.draft.kind) {
+                  @case ('group') {
+                    分群只整理側欄，不影響授權；沒有可見項目的分群不會出現。
+                  }
+                  @case ('page') {
+                    頁面的名稱與圖示來自功能，只有授權的人看得到。
+                  }
+                  @default {
+                    外部連結的網站必須在系統允許清單內。
+                  }
+                }
+              </p>
+            </header>
+            <div class="form-section-body">
+              @if (!e.id) {
+                <nx-view-switch
+                  label="選單項目種類"
+                  appearance="segment"
+                  [options]="kinds"
+                  [value]="e.draft.kind"
+                  [disabled]="locked()"
+                  (valueChange)="update('kind', $any($event))"
+                />
+                <label class="form-field-short"
+                  >位置<nx-select
+                    label="位置"
+                    [options]="parents()"
+                    [value]="e.draft.parentId"
+                    [disabled]="locked()"
+                    (valueChange)="update('parentId', $event)"
+                /></label>
+              }
+              @if (e.draft.kind === 'page') {
+                <label class="form-field-short" data-field="featureId"
+                  >頁面<nx-select
+                    label="頁面"
+                    placeholder="選擇頁面"
+                    [searchable]="true"
+                    [options]="pages()"
+                    [value]="e.draft.featureId"
+                    [disabled]="locked()"
+                    (valueChange)="update('featureId', $event)"
+                /></label>
+              } @else {
+                <label class="form-field-short"
+                  >名稱<input
+                    nxField
+                    data-field="name"
+                    aria-label="名稱"
+                    required
+                    maxlength="120"
+                    autocomplete="off"
+                    [attr.aria-invalid]="fieldError()?.field === 'name' ? true : null"
+                    [attr.aria-describedby]="fieldError()?.field === 'name' ? id + '-error' : null"
+                    [value]="e.draft.name"
+                    [readOnly]="locked()"
+                    (input)="update('name', $any($event.target).value)"
+                /></label>
+              }
+              @if (fieldError()?.field === 'name' || fieldError()?.field === 'featureId') {
+                <p class="form-note field-error" role="alert" [id]="id + '-error'">
+                  {{ fieldError()!.message }}
+                </p>
+              }
+              @if (e.draft.kind === 'link') {
+                <label
+                  >網址<input
+                    nxField
+                    data-field="url"
+                    type="url"
+                    aria-label="網址"
+                    required
+                    maxlength="2048"
+                    autocomplete="off"
+                    placeholder="https://"
+                    [attr.aria-invalid]="fieldError()?.field === 'url' ? true : null"
+                    [attr.aria-describedby]="
+                      id + '-url-hint' + (fieldError()?.field === 'url' ? ' ' + id + '-error' : '')
+                    "
+                    [value]="e.draft.url"
+                    [readOnly]="locked()"
+                    (input)="update('url', $any($event.target).value)"
+                /></label>
+                @if (fieldError()?.field === 'url') {
+                  <p class="form-note field-error" role="alert" [id]="id + '-error'">
+                    {{ fieldError()!.message }}
+                  </p>
+                }
+                <p class="form-note" [id]="id + '-url-hint'">
+                  只接受 https:// 開頭的完整網址，不可包含帳號或密碼。
+                </p>
+                <nx-checkbox
+                  label="在新分頁開啟"
+                  description="取消勾選則在目前分頁離開本站。"
+                  [checked]="e.draft.openInNewTab"
+                  [disabled]="locked()"
+                  (checkedChange)="update('openInNewTab', $event)"
+                />
+              }
+              @if (e.draft.kind !== 'page') {
+                <label class="form-field-short"
+                  >圖示<nx-select
+                    label="圖示"
+                    [searchable]="true"
+                    [options]="icons"
+                    [value]="e.draft.icon"
+                    [disabled]="locked()"
+                    (valueChange)="update('icon', $event)"
+                /></label>
+                <p class="form-note">
+                  {{
+                    e.draft.kind === 'link'
+                      ? '不設定時顯示外部連結圖示。'
+                      : '不設定時側欄只顯示分群名稱。'
+                  }}
+                </p>
+              }
+            </div>
+          </section>
+          @if (e.draft.kind === 'link') {
+            <section class="form-section" role="group" [attr.aria-labelledby]="id + '-audience'">
+              <header class="form-section-head">
+                <h3 [id]="id + '-audience'">可見群組</h3>
+                <p class="form-note">
+                  不勾選＝所有登入者都看得到；勾選後只有屬於任一群組的人看得到。
+                </p>
+              </header>
+              <div class="form-section-body">
+                <nx-choice-groups
+                  label="可見群組"
+                  [groups]="audiences()"
+                  [selected]="e.draft.audienceGroupIds"
+                  [disabled]="locked()"
+                  (selectedChange)="update('audienceGroupIds', $event)"
+                />
+              </div>
+            </section>
+          }
+        </div>
+      </div>
+      @if (!e.id) {
+        <footer class="dialog-foot">
+          @if (session.testing()) {
+            <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
+          }
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="saving()"
+            (click)="requestClose()"
+          >
+            取消
+          </button>
+          <button type="submit" class="primary-button" [disabled]="locked()">
+            {{ saving() ? '建立中…' : '建立' + label(e.draft.kind) }}
+          </button>
+        </footer>
+      } @else {
+        <nx-dialog-save-bar
+          [label]="'儲存' + label(e.draft.kind)"
+          [dirty]="dirty()"
+          [saving]="saving()"
+          [disabled]="session.testing()"
+          [note]="session.testingNote()"
+          (revert)="revert()"
+        />
+      }
+    </form>
+  }
+</dialog>
+<nx-confirm-dialog />

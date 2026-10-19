@@ -147,13 +147,16 @@ export class WorkspaceNavigation {
   });
   readonly flyoutOpen = this.flyoutPopover.opened;
   private readonly injector = inject(Injector);
-  /** 選取最深的符合功能；它自己的細節路由仍屬於它。 */
+  /**
+   * 選取最深的符合頁面；它自己的細節路由仍屬於它。只看選單中的頁面：外部連結沒有本站路由，
+   * 不參與判斷。
+   */
   readonly activeFeature = computed(() => {
     this.navigation();
     let active: string | null = null;
     let depth = -1;
-    for (const feature of this.pins.features()) {
-      const tree = this.router.parseUrl(feature.route!);
+    for (const feature of this.pins.pages()) {
+      const tree = this.router.parseUrl(feature.route);
       if (
         !this.router.isActive(tree, {
           paths: 'subset',

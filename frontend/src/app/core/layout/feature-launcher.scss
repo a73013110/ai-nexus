@@ -113,16 +113,18 @@
     color: var(--accent);
   }
 }
-// Pinned is a property of the entry, not a selection, so it is a small mark instead of a chip.
-.workspace-icons .pin-mark {
+// 釘選與外部連結是項目的屬性、不是選取，所以用小標記而不是晶片。
+.workspace-icons .entry-mark {
   position: absolute;
   top: var(--p-space-1);
   left: calc(50% + 8px);
   --icon-size: var(--icon-xs);
   color: var(--muted);
+}
+.workspace-icons .pin-mark {
   transform: rotate(35deg);
 }
-.workspace-icons.is-list .pin-mark {
+.workspace-icons.is-list .entry-mark {
   position: static;
   margin-left: auto;
   flex: none;

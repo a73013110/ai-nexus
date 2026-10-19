@@ -51,6 +51,17 @@ describe('access control store', () => {
     expect(api.catalog).toHaveBeenCalled();
   });
 
+  it('reads the catalog for the navigation page, which only needs names', async () => {
+    const { store, api, session, settle } = setup(['access-control.navigation']);
+    await settle();
+    expect(api.catalog).toHaveBeenCalledTimes(1);
+    // 選單變更只影響側欄：重讀帳號，不重讀目錄。
+    store.navigationChanged();
+    await settle();
+    expect(session.load).toHaveBeenCalledWith(true);
+    expect(api.catalog).toHaveBeenCalledTimes(1);
+  });
+
   it('explains a missing grant without reading the catalog', async () => {
     // 平台用量是獨立的授權，不會開放存取目錄。
     const { store, api, settle } = setup(['chat', 'operations.usage']);

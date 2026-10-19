@@ -14,4 +14,8 @@ export const accessControlRoutes: Routes = [
     path: 'features',
     loadComponent: () => import('./features-page').then((module) => module.FeaturesPage),
   }),
+  catalogRoute('access-control.navigation', {
+    path: 'navigation',
+    loadComponent: () => import('./navigation-page').then((module) => module.NavigationPage),
+  }),
 ];

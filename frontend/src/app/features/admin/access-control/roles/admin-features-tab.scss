@@ -1,33 +1,5 @@
-@use 'breakpoints' as bp;
-
-// 功能表自己的儲存格：選單分群、排序把手與拖曳中的列；表格形狀與其他管理頁共用
-// （shared/ui/management-table-page.scss）。
-.feature-handle-column {
-  width: 2.75rem;
-}
-// A group heading reads as a label above its rows, apart from the column headings.
-.feature-section th {
-  padding-block: var(--p-space-2) var(--p-space-1);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--text-caption);
-  font-weight: 600;
-}
-// The group's path, its count and its menu on one line; a subgroup is set in by its depth.
-.feature-section-head {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-1);
-  min-width: 0;
-  padding-inline-start: calc(var(--depth, 0) * var(--p-space-4));
-}
-.feature-section-head nx-action-menu {
-  margin-inline-start: auto;
-}
-.feature-empty td {
-  padding-block: var(--p-space-2);
-}
-// Icon, then the name over its identifier, like the name and id of roles and groups.
+// 功能表自己的儲存格；表格形狀與其他管理頁共用（shared/ui/management-table-page.scss）。
+// 圖示在左，名稱疊在識別碼上方，與角色、功能群組的名稱與 id 相同。
 .feature-name {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -45,37 +17,8 @@
 .admin-table-name {
   min-width: 0;
 }
-// Monospace reads larger than the name at the same size; the route is secondary.
+// 等寬字在相同字級下看起來比名稱大；路由是次要資訊。
 .feature-route {
   color: var(--secondary);
   font-size: var(--p-font-xs);
-}
-.feature-handle {
-  color: var(--secondary);
-  cursor: grab;
-  touch-action: none;
-}
-.feature-handle[aria-disabled='true'] {
-  cursor: default;
-  opacity: 0.45;
-}
-tr.is-dragging {
-  position: relative;
-  z-index: 2;
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
-  cursor: grabbing;
-}
-tr.is-dragging .feature-handle {
-  cursor: grabbing;
-}
-// Cards have no handle: a phone moves features with the row menu.
-@include bp.below(narrow) {
-  tbody tr.feature-section {
-    min-height: 0;
-    padding-block: var(--p-space-2);
-  }
-  .feature-section th {
-    padding: 0;
-  }
 }

@@ -1,12 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
+import { openExternal } from '@shared/browser/external-link';
 import { bindHotkeys } from '@shared/browser/hotkeys';
 import { CommandPalette, type Command } from '@shared/ui/command-palette';
 import { ProductTour } from '@shared/ui/product-tour';
 import { Toaster } from '@shared/ui/toaster';
 import { NavigationPreferences } from './navigation-preferences';
-import { featureIcon, navigationSections } from './navigation-tree';
+import { navigationIcon, navigationNodes, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
 import { WorkspaceCommands } from './workspace-commands';
 import { WorkspaceLayout } from './workspace-layout';
@@ -43,17 +44,24 @@ export class WorkspaceShell {
   private readonly router = inject(Router);
   private readonly tours = inject(ProductTour);
   private readonly palette = viewChild.required(CommandPalette);
+  /**
+   * 選單的每個頁面與外部連結都是一個指令，依選單順序，說明帶分群路徑。ID 用節點 ID 而不是功能 ID：
+   * 同一頁面可以放在兩個分群，兩個位置都要能搜尋到。
+   */
   readonly commands = computed<Command[]>(() => {
     const source = this.workspaceCommands.source();
-    const features = navigationSections(this.pins.tree()).flatMap((section) =>
-      section.features.map((feature) => ({
-        id: 'feature:' + feature.id,
-        label: feature.name,
-        detail: section.path ? '前往功能 · ' + section.path : '前往功能',
-        icon: featureIcon(feature.icon),
-      })),
+    const entries = navigationSections(this.pins.tree()).flatMap((section) =>
+      section.entries.map((node) => {
+        const verb = node.kind === 'link' ? '開啟外部連結' : '前往功能';
+        return {
+          id: 'navigation:' + node.id,
+          label: node.name,
+          detail: section.path ? verb + ' · ' + section.path : verb,
+          icon: navigationIcon(node)!,
+        };
+      }),
     );
-    return [...(source?.actions() ?? []), ...features, ...(source?.entries?.() ?? [])];
+    return [...(source?.actions() ?? []), ...entries, ...(source?.entries?.() ?? [])];
   });
   constructor() {
     this.workspaceCommands.attach(() => this.palette().open());
@@ -65,10 +73,11 @@ export class WorkspaceShell {
   }
   run(id: string) {
     this.layout.closeMobile();
-    const feature = id.startsWith('feature:')
-      ? this.pins.features().find((item) => 'feature:' + item.id === id)
+    const node = id.startsWith('navigation:')
+      ? navigationNodes(this.pins.tree()).find((item) => 'navigation:' + item.id === id)
       : null;
-    if (feature) void this.router.navigateByUrl(feature.route!);
+    if (node?.kind === 'link' && node.url) openExternal(node.url, node.openInNewTab);
+    else if (node?.route) void this.router.navigateByUrl(node.route);
     else this.workspaceCommands.source()?.run(id);
   }
 }
