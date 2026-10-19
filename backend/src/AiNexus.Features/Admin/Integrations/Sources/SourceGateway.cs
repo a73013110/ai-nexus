@@ -15,12 +15,14 @@ namespace AiNexus.Features.Admin.Integrations.Sources;
 internal sealed class SourceGateway(AppDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
     IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
 {
-    private static readonly (string Id, string Name, string Description, string[] Kinds, string Database)[] Catalog = [
-        ("gdweb", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdwebDatabase.Name),
-        ("meiho", "校務系統", "先提供核准的規範與單位資料；學生資料須另建逐筆授權 adapter。", ["reference", "organization"], MeihoDatabase.Name)
+    private static readonly SourceEntry[] Catalog = [
+        new("gdweb", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdwebDatabase.Name),
+        new("meiho", "校務系統", "先提供核准的規範與單位資料；學生資料須另建逐筆授權 adapter。", ["reference", "organization"], MeihoDatabase.Name)
     ];
 
-    private sealed record Target(IControlledSourceAdapter Adapter, SourceOptions Options, SourceActor Actor);
+    private sealed record SourceEntry(string Id, string Name, string Description, string[] Kinds, string Database);
+
+    private sealed record Target(SourceEntry Entry, IControlledSourceAdapter Adapter, SourceOptions Options, SourceActor Actor);
 
     /// <summary>目錄中的來源與其 <c>Databases</c> 設定；不含使用者權限，僅供列舉與健康判定。</summary>
     public static IEnumerable<(string Id, string Name, string Database)> Sources => Catalog.Select(x => (x.Id, x.Name, x.Database));
@@ -43,9 +45,8 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
         {
             var option = options.Value.For(item.Id);
             var configured = databases.Value.For(item.Database).Configured;
-            var allowed = option.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id));
             var status = SetupStatus(option, configured);
-            if (status == "configured" && !allowed) status = "not-authorized";
+            if (status == "configured" && !Admits(option, grants)) status = "not-authorized";
             var message = status switch
             {
                 "disabled" => "來源尚未啟用。",
@@ -62,23 +63,22 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
 
     public async Task<Result<IReadOnlyList<SourceRecordDto>>> SearchAsync(Guid actor, string source, SourceSearchRequest request, CancellationToken ct)
     {
-        var item = Catalog.SingleOrDefault(x => x.Id == source);
-        if (item.Id is null) return IntegrationsErrors.UnknownSource;
+        if (Find(source) is not { } item) return IntegrationsErrors.UnknownSource;
         // 查詢字串與類別都是純計算，先算出來再判斷，不影響結果。
         var queryInvalid = request.Query.Trim().Length is < 2 or > 120 || request.Query.Any(char.IsControl);
         var kindInvalid = request.Kind != "all" && !item.Kinds.Contains(request.Kind);
         if (queryInvalid || kindInvalid) return IntegrationsErrors.SearchInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
-        var rows = await SafeAsync(source, () => target.Value.Adapter.SearchAsync(target.Value.Actor, request, target.Value.Options.MaxResults, target.Value.Options.CommandTimeoutSeconds, ct), ct);
-        if (rows.Count > target.Value.Options.MaxResults
+        var (_, adapter, settings, sourceActor) = target.Value;
+        var rows = await SafeAsync(source, () => adapter.SearchAsync(sourceActor, request, settings.MaxResults, settings.CommandTimeoutSeconds, ct), ct);
+        if (rows.Count > settings.MaxResults
             || rows.Any(x => !item.Kinds.Contains(x.Kind) || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 160
                 || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 120))
             return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
-        db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.searched", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, count = rows.Count }) });
-        await db.SaveChangesAsync(ct);
+        await AuditAsync(actor, "integration.searched", new { source, count = rows.Count }, ct);
         return Result<IReadOnlyList<SourceRecordDto>>.Ok(rows);
     }
 
@@ -87,7 +87,8 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
         if (!ValidRecordId(id)) return IntegrationsErrors.RecordIdInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
-        var read = await SafeAsync(source, () => target.Value.Adapter.ReadAsync(target.Value.Actor, id, target.Value.Options.CommandTimeoutSeconds, ct), ct);
+        var (entry, adapter, settings, sourceActor) = target.Value;
+        var read = await SafeAsync(source, () => adapter.ReadAsync(sourceActor, id, settings.CommandTimeoutSeconds, ct), ct);
         if (!read.IsSuccess) return read.Error;
         var row = read.Value;
         if (row.Body.Length > 16000
@@ -95,30 +96,47 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
             || row.Record.Revision.Length is < 1 or > 160
             || row.Record.Id != id
             || row.SourceId != source
-            || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
+            || !entry.Kinds.Contains(row.Record.Kind))
             return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
-        db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.record.read", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, externalId = id, row.Record.Revision }) });
-        await db.SaveChangesAsync(ct);
+        await AuditAsync(actor, "integration.record.read", new { source, externalId = id, row.Record.Revision }, ct);
         return row;
+    }
+
+    /// <summary>讀取紀錄並確認仍是使用者看到的版本；帶入對話與匯入快照都只接受畫面上確認過的那一版。</summary>
+    public async Task<Result<SourceDetailDto>> ReadAtRevisionAsync(Guid actor, string source, string id, string expectedRevision, CancellationToken ct)
+    {
+        var read = await ReadAsync(actor, source, id, ct);
+        if (!read.IsSuccess) return read.Error;
+        return read.Value.Record.Revision == expectedRevision ? read.Value : IntegrationsErrors.Changed;
+    }
+
+    private static SourceEntry? Find(string source) => Catalog.SingleOrDefault(x => x.Id == source);
+
+    // 空的允許清單不授權任何人，平台管理員也不例外。
+    private static bool Admits(SourceOptions option, AccessDto grants) => option.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id));
+
+    private async Task AuditAsync(Guid actor, string action, object details, CancellationToken ct)
+    {
+        db.AuditEvents.Add(new() { OwnerId = actor, Action = action, Result = "read-only", DetailsJson = JsonSerializer.Serialize(details) });
+        await db.SaveChangesAsync(ct);
     }
 
     // 來源查詢後的第二次授權檢查必須 fresh（捨棄快取）：本次請求稍早讀到的授權可能已在查詢期間被撤銷。
     private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct, bool fresh = false)
     {
-        var item = Catalog.SingleOrDefault(x => x.Id == source);
-        if (item.Id is null) return IntegrationsErrors.UnknownSource;
+        if (Find(source) is not { } item) return IntegrationsErrors.UnknownSource;
         if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
         if (!grants.Features.Any(x => x.Id == FeatureCatalog.Integrations)) return AccessControlErrors.FeatureForbidden;
         var value = options.Value.For(source);
         if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
         if (!value.Enabled || !value.AclContractConfirmed || !databases.Value.For(item.Database).Configured) return IntegrationsErrors.NotConfigured;
-        if (!value.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id))) return IntegrationsErrors.SourceForbidden;
+        if (!Admits(value, grants)) return IntegrationsErrors.SourceForbidden;
         var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == actor, ct);
         if (string.IsNullOrWhiteSpace(user.Sid) || string.IsNullOrWhiteSpace(user.Account)) return IntegrationsErrors.IdentityMissing;
-        return new Target(adapters.Single(x => x.Id == source), value, new(user.Sid, user.Account));
+        return new Target(item, adapters.Single(x => x.Id == source), value, new(user.Sid, user.Account));
     }
 
     // 外部系統的連線失敗屬於基礎設施故障而非預期結果，因此維持拋出例外，不轉成 Result。
