@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   Directive,
   ElementRef,
@@ -10,7 +11,6 @@ import {
 import { FrameMotion } from './view-motion';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
-let sequence = 0;
 
 /**
  * 共用的密度與無障礙命名；原生 dialog 負責焦點與關閉。每個這樣的對話框都是 `FrameMotion`：
@@ -53,7 +53,7 @@ export class CompactDialog {
     if (dialog.hasAttribute('aria-label') || dialog.hasAttribute('aria-labelledby')) return;
     const heading = dialog.querySelector('h2');
     if (!heading) return;
-    if (!heading.id) heading.id = `nx-dialog-title-${++sequence}`;
+    if (!heading.id) heading.id = uniqueId('nx-dialog-title');
     dialog.setAttribute('aria-labelledby', heading.id);
   }
 }

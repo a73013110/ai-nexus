@@ -8,6 +8,17 @@ export interface LocalDateTime {
   second: number;
 }
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+const clock = (parts: LocalDateTime) =>
+  pad(parts.hour) + ':' + pad(parts.minute) + ':' + pad(parts.second);
+/** 比對結果的月、日與選填的時、分、秒（第 2～6 組）；年份由呼叫端換算曆法後給。 */
+const matchedParts = (match: RegExpExecArray, year: number): LocalDateTime => ({
+  year,
+  month: Number(match[2]),
+  day: Number(match[3]),
+  hour: Number(match[4] ?? 0),
+  minute: Number(match[5] ?? 0),
+  second: Number(match[6] ?? 0),
+});
 
 /** 日曆運算以 UTC 作為牆上時間的容器，絕不使用瀏覽器的時區。 */
 export function calendarDate(parts: LocalDateTime) {
@@ -32,14 +43,7 @@ function validDateTime(parts: LocalDateTime) {
 export function parseLocalDateTime(value: string): LocalDateTime | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(value);
   if (!match) return null;
-  const parts: LocalDateTime = {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
-    hour: Number(match[4] ?? 0),
-    minute: Number(match[5] ?? 0),
-    second: Number(match[6] ?? 0),
-  };
+  const parts = matchedParts(match, Number(match[1]));
   return validDateTime(parts) ? parts : null;
 }
 export function serializeLocalDateTime(parts: LocalDateTime, withTime = true) {
@@ -49,7 +53,7 @@ export function serializeLocalDateTime(parts: LocalDateTime, withTime = true) {
     pad(parts.month) +
     '-' +
     pad(parts.day) +
-    (withTime ? 'T' + pad(parts.hour) + ':' + pad(parts.minute) + ':' + pad(parts.second) : '')
+    (withTime ? 'T' + clock(parts) : '')
   );
 }
 export function formatCalendarValue(
@@ -67,7 +71,7 @@ export function formatCalendarValue(
     pad(parts.month) +
     '/' +
     pad(parts.day) +
-    (withTime ? ' ' + pad(parts.hour) + ':' + pad(parts.minute) + ':' + pad(parts.second) : '')
+    (withTime ? ' ' + clock(parts) : '')
   );
 }
 export function parseCalendarText(
@@ -82,14 +86,7 @@ export function parseCalendarText(
   if (calendar === 'gregory' && match[1].length !== 4) return '';
   const year = Number(match[1]);
   if (calendar === 'roc' && year < 1) return '';
-  const parts: LocalDateTime = {
-    year: year + (calendar === 'roc' ? 1911 : 0),
-    month: Number(match[2]),
-    day: Number(match[3]),
-    hour: Number(match[4] ?? 0),
-    minute: Number(match[5] ?? 0),
-    second: Number(match[6] ?? 0),
-  };
+  const parts = matchedParts(match, year + (calendar === 'roc' ? 1911 : 0));
   return validDateTime(parts) ? serializeLocalDateTime(parts, withTime) : '';
 }
 export function shiftCalendarMonth(parts: LocalDateTime, months: number): LocalDateTime {

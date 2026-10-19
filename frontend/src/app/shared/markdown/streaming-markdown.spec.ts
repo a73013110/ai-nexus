@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { StreamingMarkdown, completeStreamingInline } from './streaming-markdown';
-import { renderMarkdown } from './markdown';
+import { renderMarkdownWithDiagrams } from './markdown';
+
+const renderMarkdown = (content: string, streaming = false) =>
+  renderMarkdownWithDiagrams(content, streaming).html;
 
 describe('progressive Markdown', () => {
   it('formats unfinished emphasis and code while keeping unsafe links inactive', () => {

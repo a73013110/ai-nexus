@@ -1,7 +1,6 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icon } from './icon';
-
-let sequence = 0;
 
 /**
  * 總覽磚塊外觀中的有標題資源表面：安靜的標題（可選圖示與數量），右側是動作，接著是功能的內容。
@@ -30,5 +29,5 @@ export class Panel {
   readonly heading = input.required<string>();
   readonly icon = input('');
   readonly count = input<number | null>(null);
-  readonly id = `nx-panel-${++sequence}`;
+  readonly id = uniqueId('nx-panel');
 }

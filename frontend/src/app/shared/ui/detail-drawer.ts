@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,8 +15,6 @@ import {
 import { below } from '../browser/breakpoints';
 import { mediaQuery } from '../browser/media-query';
 import { Icon } from './icon';
-
-let sequence = 0;
 
 /** 桌面版的非模態檢視器；窄螢幕時變成原生模態。 */
 @Component({
@@ -69,7 +68,7 @@ export class DetailDrawer {
   readonly closed = output<void>();
   readonly wide = signal(false);
   readonly modal = signal(false);
-  readonly id = `nx-drawer-${++sequence}`;
+  readonly id = uniqueId('nx-drawer');
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   /** 較窄的視口使用模態抽屜；較寬的則保留頁面可在其旁邊操作。 */

@@ -1,6 +1,5 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-
-let sequence = 0;
 
 /**
  * 字詞大小的趨勢線，使用 `currentColor`，由左至右繪出。它是裝飾：
@@ -62,7 +61,7 @@ export class Sparkline {
   readonly values = input.required<readonly number[]>();
   readonly area = input(true);
   readonly label = input('');
-  readonly id = 'nx-sparkline-' + ++sequence;
+  readonly id = uniqueId('nx-sparkline');
   readonly points = computed(() => {
     const values = this.values();
     if (!values.length) return [];

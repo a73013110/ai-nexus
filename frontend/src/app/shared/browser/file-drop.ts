@@ -1,5 +1,9 @@
 import { Directive, input, output, signal } from '@angular/core';
 
+/** 只處理拖進來的檔案；拖曳文字或連結交給瀏覽器的預設行為。 */
+const carriesFiles = (event: DragEvent): event is DragEvent & { dataTransfer: DataTransfer } =>
+  !!event.dataTransfer?.types.includes('Files');
+
 @Directive({
   selector: '[nxFileDrop]',
   host: {
@@ -17,7 +21,7 @@ export class FileDrop {
   readonly dragging = signal(false);
   private depth = 0;
   enter(event: DragEvent) {
-    if (event.dataTransfer?.types.includes('Files')) {
+    if (carriesFiles(event)) {
       event.preventDefault();
       if (this.nxFileDrop()) {
         this.depth++;
@@ -26,19 +30,19 @@ export class FileDrop {
     }
   }
   over(event: DragEvent) {
-    if (event.dataTransfer?.types.includes('Files')) {
+    if (carriesFiles(event)) {
       event.preventDefault();
       event.dataTransfer.dropEffect = this.nxFileDrop() ? 'copy' : 'none';
     }
   }
   leave(event: DragEvent) {
-    if (event.dataTransfer?.types.includes('Files') && --this.depth <= 0) {
+    if (carriesFiles(event) && --this.depth <= 0) {
       this.depth = 0;
       this.dragging.set(false);
     }
   }
   drop(event: DragEvent) {
-    if (event.dataTransfer?.types.includes('Files')) {
+    if (carriesFiles(event)) {
       event.preventDefault();
       this.depth = 0;
       this.dragging.set(false);

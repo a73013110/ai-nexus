@@ -1,6 +1,6 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Icon } from './icon';
-let sequence = 0;
 
 /**
  * 原生核取方塊的語意，搭配一致的整列指標目標。只有方框顯示勾選狀態：
@@ -31,7 +31,7 @@ let sequence = 0;
   </label>`,
 })
 export class Checkbox {
-  readonly id = `nx-checkbox-${++sequence}`;
+  readonly id = uniqueId('nx-checkbox');
   readonly label = input.required<string>();
   readonly description = input('');
   readonly checked = input(false);

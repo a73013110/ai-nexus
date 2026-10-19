@@ -1,8 +1,8 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 import { Icon } from './icon';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
-let sequence = 0;
 
 /**
  * 原生最上層中的非模態資訊面板，供精簡指標共用。觸發器預設是圖示加標籤；
@@ -91,7 +91,7 @@ export class InfoPopover {
   readonly width = input(320);
   /** 把面板對齊到此元素，而不是渲染觸發器。 */
   readonly anchor = input<HTMLElement | null>(null);
-  readonly id = 'nx-info-' + ++sequence;
+  readonly id = uniqueId('nx-info');
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
   /** 焦點回去的地方：觸發器，或開啟已錨定面板的元素。 */
   private opener: HTMLElement | null = null;

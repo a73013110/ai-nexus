@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -82,8 +83,6 @@ export function timeRangeLabel(range: TimeRange, presets: readonly TimeRangePres
   if (range.to) return `至 ${show(range.to)}`;
   return '不限時間';
 }
-
-let sequence = 0;
 
 /**
  * 預設區間與自訂區間合在一個 popover，時區只在這裡說明一次。
@@ -175,7 +174,7 @@ export class TimeRangePicker {
   readonly withTime = input(true);
   readonly required = input(true);
   readonly valueChange = output<TimeRange>();
-  readonly id = 'nx-time-range-' + ++sequence;
+  readonly id = uniqueId('nx-time-range');
   readonly timezone = APP_TIME_ZONE;
   /** 正在編輯的自訂起訖；按「套用自訂」才寫回 value。 */
   readonly from = signal('');

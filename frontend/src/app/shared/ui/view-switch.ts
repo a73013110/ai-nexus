@@ -1,3 +1,4 @@
+import { rovingIndex } from '../browser/roving-index';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -70,26 +71,11 @@ export class ViewSwitch {
     const enabled = this.options()
       .map((option, index) => (option.disabled ? -1 : index))
       .filter((index) => index >= 0);
-    const length = enabled.length;
-    if (!length || this.disabled()) return;
-    const current = enabled.indexOf(index);
-    let next: number;
-    switch (event.key) {
-      case 'ArrowRight':
-        next = (current + 1) % length;
-        break;
-      case 'ArrowLeft':
-        next = (current - 1 + length) % length;
-        break;
-      case 'Home':
-        next = 0;
-        break;
-      case 'End':
-        next = length - 1;
-        break;
-      default:
-        return;
-    }
+    if (!enabled.length || this.disabled()) return;
+    const next = rovingIndex(event.key, enabled.indexOf(index), enabled.length, {
+      orientation: 'horizontal',
+    });
+    if (next === null) return;
     event.preventDefault();
     this.valueChange.emit(this.options()[enabled[next]].value);
     const buttons = this.element.nativeElement.querySelectorAll<HTMLButtonElement>('button');

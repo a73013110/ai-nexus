@@ -1,10 +1,10 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 
 export interface TrendPoint {
   label: string;
   value: number;
 }
-let sequence = 0;
 @Component({
   selector: 'nx-trend-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,7 +96,7 @@ export class TrendChart {
   readonly currency = input('');
   readonly unit = input('');
   readonly granularity = input<'daily' | 'interval'>('daily');
-  readonly id = 'nx-trend-' + ++sequence;
+  readonly id = uniqueId('nx-trend');
   readonly Math = Math;
   readonly active = signal<number | null>(null);
   readonly max = computed(() => Math.max(1e-8, ...this.points().map((item) => item.value)));

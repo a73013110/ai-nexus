@@ -63,10 +63,13 @@ export function formatDuration(milliseconds: number) {
   const minor = Math.floor((milliseconds % size) / next);
   return minor ? `${major} ${unit} ${minor} ${nextUnit}` : `${major} ${unit}`;
 }
+/** 模型沒有顯示名稱（或只有空白）時一律稱為「AI 助理」。 */
+const modelName = (name?: string | null) => name?.trim() || 'AI 助理';
 export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>
-  model.displayName?.trim() || 'AI 助理';
+  modelName(model.displayName);
+/** 帶有 `modelDisplayName` 的紀錄（用量、價目、回饋）。 */
 export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
-  model.modelDisplayName?.trim() || 'AI 助理';
+  modelName(model.modelDisplayName);
 const relative = new Intl.RelativeTimeFormat('zh-TW', { numeric: 'auto' });
 /** "3 分鐘前", "昨天"; older than a month falls back to the date. */
 export function relativeTime(iso: string, now = Date.now()) {
@@ -95,12 +98,12 @@ export function metricText(value: number | null | undefined, format: string): st
 export function metricFormatter(format: string): (value: number) => string {
   return (value) => metricText(value, format);
 }
+const compactFormat = new Intl.NumberFormat('zh-TW', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
 /** 焦點數字的精簡格式：12.3K、4.5M。 */
-export function compactNumber(value: number) {
-  return new Intl.NumberFormat('zh-TW', { notation: 'compact', maximumFractionDigits: 1 }).format(
-    value,
-  );
-}
+export const compactNumber = (value: number) => compactFormat.format(value);
 /**
  * 以標題數字呈現的金額，能放進任何磚塊：一般金額保留到分，不足一單位的金額取到三位小數，
  * significant digits, and from ten thousand on the compact form (`USD 1.23萬`). Exact amounts stay
