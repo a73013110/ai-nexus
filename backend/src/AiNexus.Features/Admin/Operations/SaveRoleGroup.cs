@@ -12,7 +12,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
 
-public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null);
+public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null)
+{
+    /// <summary>資料列轉回請求形狀；目錄回應與稽核快照共用，兩邊才不會各自漏欄位。</summary>
+    internal static GroupPolicyRequest From(GroupModelPolicy row)
+        => new(ModelPolicyService.Allowed(row.AllowedModelsJson), ModelPolicyService.Limits(row.DailyTokenLimitsJson), row.StoredAttachmentLimitBytes);
+}
 
 /// <summary><c>Scopes</c>：功能 ID → 資料範圍，只放目錄有宣告範圍的功能，而且每個這類功能都要有（ADR 0017）。</summary>
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
@@ -56,15 +61,17 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
     private async Task<object?> SnapshotAsync(string id, CancellationToken ct)
     {
         var value = await db.Set<RoleGroup>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (value is null) return null;
         var policy = await db.Set<GroupModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.GroupId == id, ct);
-        return value is null ? null : new
+        var grants = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id).OrderBy(x => x.FeatureId).ToListAsync(ct);
+        return new
         {
             value.Name,
             value.Enabled,
-            featureIds = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id).OrderBy(x => x.FeatureId).Select(x => x.FeatureId).ToArrayAsync(ct),
+            featureIds = grants.Select(x => x.FeatureId).ToArray(),
             // 稽核遮罩只保留白名單欄位名稱，所以範圍寫成清單而不是以功能 ID 為鍵的物件。
-            scopes = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id && x.Scope != null).OrderBy(x => x.FeatureId).Select(x => new { featureId = x.FeatureId, scope = x.Scope }).ToArrayAsync(ct),
-            policy = policy is null ? null : new GroupPolicyRequest(ModelPolicyService.Allowed(policy.AllowedModelsJson), ModelPolicyService.Limits(policy.DailyTokenLimitsJson), policy.StoredAttachmentLimitBytes)
+            scopes = grants.Where(x => x.Scope != null).Select(x => new { featureId = x.FeatureId, scope = x.Scope }).ToArray(),
+            policy = policy is null ? null : GroupPolicyRequest.From(policy)
         };
     }
 }
