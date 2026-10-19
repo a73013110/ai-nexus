@@ -16,10 +16,10 @@ public sealed class DatabaseHealthCheck(
     TimeProvider clock) : IHealthCheck
 {
     /// <summary>探測結果的快取期間，期間內的健康檢查共用同一次探測。</summary>
-    public static readonly TimeSpan Reuse = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan Reuse = TimeSpan.FromSeconds(5);
 
     /// <summary>單次探測的逾時上限。</summary>
-    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     private readonly Lock gate = new();
     private Task<HealthCheckResult>? probe;
