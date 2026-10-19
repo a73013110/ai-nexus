@@ -7,20 +7,20 @@ import {
 } from "./fixtures";
 
 const features = [
-  { id: "projects", name: "專案", route: "/projects" },
-  { id: "knowledge", name: "知識庫", route: "/knowledge" },
-  { id: "artifacts", name: "成果文件", route: "/artifacts" },
-  { id: "tasks", name: "背景任務", route: "/tasks" },
-  { id: "quality", name: "品質評測", route: "/quality" },
-  { id: "shared", name: "分享", route: "/shared" },
-  { id: "integrations", name: "資料來源", route: "/integrations" },
+  { id: "projects", name: "專案", route: "/work/projects" },
+  { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+  { id: "artifacts", name: "成果文件", route: "/work/artifacts" },
+  { id: "jobs", name: "背景任務", route: "/work/jobs" },
+  { id: "quality", name: "品質評測", route: "/admin/quality" },
+  { id: "sharing", name: "分享", route: "/work/sharing" },
+  { id: "integrations", name: "資料來源", route: "/admin/integrations" },
 ];
 async function gallery(page: Page) {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
   fixture.extraFeatures = features;
   await fixture.attach(page);
-  await page.goto("/design");
+  await page.goto("/admin/design");
   await expect(
     page.getByRole("region", { name: "色彩", exact: true }),
   ).toBeVisible();
@@ -284,7 +284,8 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   await launcher.click();
   // Open replaces the page's panel, so the toggle raises the selected chip.
   await expect(launcher).not.toHaveCSS("box-shadow", "none");
-  await expect(nav.getByRole("link")).toHaveCount(15);
+  // 管理員的存取管理與平台營運各拆成多頁（使用者、角色…、用量、價格、檢索），連結比拆分前多 5 個。
+  await expect(nav.getByRole("link")).toHaveCount(20);
   await expect(
     nav.getByRole("link", { name: "檔案庫", exact: true }).last(),
   ).toBeVisible();
@@ -324,7 +325,7 @@ test("theme previews have readable contrast, full navigation and usable narrow l
 test("component workbench needs its own grant", async ({ page }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/design");
+  await page.goto("/admin/design");
   await expect(page.getByRole("alert")).toContainText("需要「介面元件」權限");
   await expect(page.locator(".design-preview")).toHaveCount(0);
 });

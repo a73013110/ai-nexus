@@ -5,7 +5,7 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { StorageUsage } from '@features/work/files/file-library/storage-usage';
 import { ModelPolicyEditor } from '@features/platform/inference/model-policies/model-policy-editor';
 import { AdminUserStore, type UserSettingsTab } from './admin-user-store';
@@ -35,7 +35,7 @@ import { UserRoleFields } from './user-role-fields';
 })
 export class AdminUserSettings {
   readonly store = inject(AdminUserStore);
-  readonly admin = inject(AdministrationStore);
+  readonly admin = inject(AccessControlStore);
   readonly session = inject(WorkspaceSession);
   readonly tab = input.required<UserSettingsTab>();
   submit(event: Event) {

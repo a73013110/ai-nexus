@@ -1,97 +1,72 @@
 import { expect, type Locator, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { CATALOG_FEATURES } from "../src/app/core/api/feature-catalog";
 export const fixtureIssueCode = "NX-" + "D".repeat(32);
 
-/** The seeded menu (each module's FeatureSeed): name, group, place and icon of every feature. */
+/** 前端產生的功能目錄（後端 FeatureCatalog）：mock 的名稱、圖示與網址都從這裡取，不另寫一份。 */
+const CATALOG = new Map<string, (typeof CATALOG_FEATURES)[number]>(
+  CATALOG_FEATURES.map((feature) => [feature.id, feature]),
+);
+/** 目錄頁面或閱讀器的網址；e2e 的 goto 與網址斷言一律由此取得。 */
+export function routeOf(id: string) {
+  const route = CATALOG.get(id)?.route;
+  if (!route) throw new Error(`目錄中沒有網址的功能：${id}`);
+  return route;
+}
+/** 目錄中的預設名稱。 */
+export function catalogName(id: string) {
+  const name = CATALOG.get(id)?.name;
+  if (!name) throw new Error(`目錄中沒有這個功能：${id}`);
+  return name;
+}
+/** `/me`、`/admin/catalog` 形狀的功能：名稱與網址預設取目錄（動作與未知 ID 的網址為空字串，同後端）。 */
+export function featureOf(id: string, name?: string) {
+  return {
+    id,
+    name: name ?? catalogName(id),
+    route: CATALOG.get(id)?.route ?? "",
+  };
+}
+
+/** 資料庫種子（database/App/Seed/accesscontrol.sql）的選單位置；名稱與圖示來自目錄。 */
+const SEEDED_MENU: Record<string, [sortOrder: number, groupId: string | null]> =
+  {
+    dashboard: [5, null],
+    chat: [10, "work"],
+    projects: [15, "work"],
+    files: [20, "work"],
+    knowledge: [30, "work"],
+    artifacts: [40, "work"],
+    sharing: [50, "collaboration"],
+    jobs: [55, "collaboration"],
+    repositories: [60, "collaboration"],
+    "identity.users": [80, "system"],
+    "access-control.roles": [81, "system"],
+    "access-control.groups": [82, "system"],
+    "access-control.features": [83, "system"],
+    "operations.usage": [84, "system"],
+    "billing.prices": [85, "system"],
+    "knowledge.retrieval": [86, "system"],
+    integrations: [92, "system"],
+    monitoring: [93, "system"],
+    "diagnostics.logs": [94, "system"],
+    "diagnostics.logs.detail": [95, "system"],
+    "diagnostics.logs.export": [96, "system"],
+    audit: [97, "system"],
+    quality: [98, "system"],
+    "quality.retrieval": [99, "system"],
+    design: [100, "system"],
+  };
+/** The seeded menu: name, group, place and icon of every grantable feature. */
 export const FIXTURE_MENU: Record<
   string,
   { name: string; groupId: string | null; sortOrder: number; icon: string }
-> = {
-  dashboard: { name: "總覽", groupId: null, sortOrder: 5, icon: "dashboard" },
-  design: {
-    name: "介面元件",
-    groupId: "system",
-    sortOrder: 99,
-    icon: "sliders",
-  },
-  chat: { name: "對話", groupId: "work", sortOrder: 10, icon: "chat" },
-  projects: { name: "專案", groupId: "work", sortOrder: 15, icon: "projects" },
-  files: { name: "檔案庫", groupId: "work", sortOrder: 20, icon: "files" },
-  knowledge: {
-    name: "知識庫",
-    groupId: "work",
-    sortOrder: 30,
-    icon: "library",
-  },
-  artifacts: {
-    name: "成果文件",
-    groupId: "work",
-    sortOrder: 40,
-    icon: "document",
-  },
-  shared: {
-    name: "分享",
-    groupId: "collaboration",
-    sortOrder: 50,
-    icon: "share",
-  },
-  tasks: {
-    name: "背景任務",
-    groupId: "collaboration",
-    sortOrder: 55,
-    icon: "tasks",
-  },
-  repositories: {
-    name: "程式庫",
-    groupId: "collaboration",
-    sortOrder: 60,
-    icon: "git",
-  },
-  admin: { name: "存取管理", groupId: "system", sortOrder: 90, icon: "lock" },
-  operations: {
-    name: "平台營運",
-    groupId: "system",
-    sortOrder: 91,
-    icon: "chart",
-  },
-  integrations: {
-    name: "資料來源",
-    groupId: "system",
-    sortOrder: 92,
-    icon: "integrations",
-  },
-  monitoring: {
-    name: "即時監控",
-    groupId: "system",
-    sortOrder: 93,
-    icon: "activity",
-  },
-  "logs.query": {
-    name: "系統日誌",
-    groupId: "system",
-    sortOrder: 94,
-    icon: "logs",
-  },
-  "logs.detail": {
-    name: "日誌診斷詳情",
-    groupId: "system",
-    sortOrder: 95,
-    icon: "search",
-  },
-  "logs.export": {
-    name: "日誌匯出",
-    groupId: "system",
-    sortOrder: 96,
-    icon: "download",
-  },
-  audit: { name: "活動稽核", groupId: "system", sortOrder: 97, icon: "audit" },
-  quality: {
-    name: "品質評測",
-    groupId: "system",
-    sortOrder: 98,
-    icon: "shield",
-  },
-};
+> = Object.fromEntries(
+  Object.entries(SEEDED_MENU).map(([id, [sortOrder, groupId]]) => [
+    id,
+    { name: catalogName(id), groupId, sortOrder, icon: CATALOG.get(id)!.icon },
+  ]),
+);
 /** The menu groups AccessControl seeds. */
 export const FIXTURE_NAVIGATION_GROUPS = [
   { id: "work", parentId: null, name: "AI 工作台", sortOrder: 10 },
@@ -103,12 +78,13 @@ export function withMenu<T extends { id: string }>(feature: T) {
   const seed = FIXTURE_MENU[feature.id] ?? {
     groupId: null,
     sortOrder: 100,
-    icon: "document",
+    icon: CATALOG.get(feature.id)?.icon ?? "document",
   };
   return {
     groupId: seed.groupId,
     sortOrder: seed.sortOrder,
     icon: seed.icon,
+    ...featureOf(feature.id),
     ...feature,
   };
 }
@@ -398,14 +374,15 @@ export class ApiFixture {
   loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
-  /** Platform operations; administrators have it unless a test sets it on its own. */
+  /** Platform operations (usage, prices, retrieval); administrators have it unless a test sets it on its own. */
   operationsAccess: boolean | null = null;
   auditAccess = false;
   /** Features beyond the switches above; a test may place one with `groupId`／`sortOrder`. */
   extraFeatures: {
     id: string;
-    name: string;
-    route: string;
+    /** 省略時用目錄預設名稱與網址（同後端）。 */
+    name?: string;
+    route?: string;
     groupId?: string | null;
     sortOrder?: number;
   }[] = [];
@@ -527,30 +504,24 @@ export class ApiFixture {
           navigationGroups: this.navigationGroups,
           features: [
             ...this.extraFeatures,
-            ...(this.chatAccess
-              ? [
-                  { id: "chat", name: "對話", route: "/chat" },
-                  { id: "files", name: "檔案庫", route: "/files" },
-                ]
-              : []),
+            ...(this.chatAccess ? [featureOf("chat"), featureOf("files")] : []),
             ...(this.adminAccess
               ? [
-                  { id: "admin", name: "存取管理", route: "/admin" },
-                  { id: "design", name: "介面元件", route: "/design" },
+                  featureOf("identity.users"),
+                  featureOf("access-control.roles"),
+                  featureOf("access-control.groups"),
+                  featureOf("access-control.features"),
+                  featureOf("design"),
                 ]
               : []),
             ...((this.operationsAccess ?? this.adminAccess)
               ? [
-                  {
-                    id: "operations",
-                    name: "平台營運",
-                    route: "/admin/operations",
-                  },
+                  featureOf("operations.usage"),
+                  featureOf("billing.prices"),
+                  featureOf("knowledge.retrieval"),
                 ]
               : []),
-            ...(this.auditAccess
-              ? [{ id: "audit", name: "活動稽核", route: "/admin/audit" }]
-              : []),
+            ...(this.auditAccess ? [featureOf("audit")] : []),
           ].map(withMenu),
         },
         activeRunId:
@@ -1270,7 +1241,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
   const calls = fixtureSeries(14, 2);
   const conversation = randomUUID();
   const sections = [
-    section("chat", "chat", "對話", "/chat", {
+    section("chat", "chat", "對話", routeOf("chat"), {
       state: "active",
       metrics: [
         metric("conversations", "對話", 12, "個", {
@@ -1311,7 +1282,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
           title: "整理期末評量規準",
           detail: "收藏",
           at: ago(12),
-          link: "/chat/" + conversation,
+          link: routeOf("chat") + "/" + conversation,
           tone: "neutral",
         },
         {
@@ -1319,12 +1290,12 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
           title: "校務會議紀錄摘要",
           detail: null,
           at: ago(240),
-          link: "/chat/" + randomUUID(),
+          link: routeOf("chat") + "/" + randomUUID(),
           tone: "neutral",
         },
       ],
     }),
-    section("web-search", "chat", "網路搜尋", "/chat", {
+    section("web-search", "chat", "網路搜尋", routeOf("chat"), {
       metrics: [
         metric("searches", "期間搜尋", 23, "次", { period: true }),
         metric("failed", "搜尋失敗", 0, "次", { period: true }),
@@ -1338,7 +1309,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         },
       ],
     }),
-    section("knowledge", "knowledge", "知識庫", "/knowledge", {
+    section("knowledge", "knowledge", "知識庫", routeOf("knowledge"), {
       state: "attention",
       metrics: [
         metric("collections", "知識庫", 2, "個"),
@@ -1363,7 +1334,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         { key: "failed", label: "處理失敗", value: 1, tone: "danger" },
       ],
     }),
-    section("files", "files", "檔案庫", "/files", {
+    section("files", "files", "檔案庫", routeOf("files"), {
       metrics: [
         metric("files", "已保存原檔", 5, "個"),
         metric("size", "原檔大小", 48_200_000, "", { format: "bytes" }),
@@ -1383,7 +1354,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         { key: "圖片", label: "圖片", value: 2, tone: "neutral" },
       ],
     }),
-    section("tasks", "tasks", "背景任務", "/tasks", {
+    section("tasks", "jobs", "背景任務", routeOf("jobs"), {
       state: "active",
       metrics: [
         metric("active", "處理中任務", 1, "件", {
@@ -1425,12 +1396,12 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
           title: "課程綱要.pdf",
           detail: "建立索引",
           at: ago(3),
-          link: "/tasks?job=" + randomUUID(),
+          link: routeOf("jobs") + "?job=" + randomUUID(),
           tone: "info",
         },
       ],
     }),
-    section("projects", "projects", "專案", "/projects", {
+    section("projects", "projects", "專案", routeOf("projects"), {
       metrics: [
         metric("projects", "專案", 3, "個"),
         metric("templates", "提問範本", 6, "個"),
@@ -1439,7 +1410,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
       ],
       shares: [{ key: "active", label: "進行中", value: 3, tone: "info" }],
     }),
-    section("artifacts", "artifacts", "成果文件", "/artifacts", {
+    section("artifacts", "artifacts", "成果文件", routeOf("artifacts"), {
       metrics: [
         metric("artifacts", "成果文件", 9, "份", { hint: "4 份由對話建立" }),
         metric("versions", "期間保存版本", 27, "版", { period: true }),
@@ -1453,7 +1424,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         },
       ],
     }),
-    section("shared", "shared", "分享", "/shared", {
+    section("shared", "sharing", "分享", routeOf("sharing"), {
       metrics: [
         metric("sent", "有效分享", 4, "個", { hint: "未撤銷且未到期" }),
         metric("expiring", "7 天內到期", 1, "個", { tone: "warning" }),
@@ -1461,7 +1432,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         metric("received", "收到的分享", 2, "個"),
       ],
     }),
-    section("quality", "quality", "品質評測", "/quality", {
+    section("quality", "quality", "品質評測", routeOf("quality"), {
       metrics: [
         metric("helpful", "回覆有幫助", 86, "", {
           period: true,
@@ -1477,7 +1448,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         { key: "down", label: "沒幫助", value: 7, tone: "danger" },
       ],
     }),
-    section("repositories", "repositories", "程式庫", "/repositories", {
+    section("repositories", "repositories", "程式庫", routeOf("repositories"), {
       metrics: [
         metric("connections", "已連線帳號", 1, "個"),
         metric("running", "Review 進行中", 0, "次"),
@@ -1497,7 +1468,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
           title: "收到分享",
           detail: "王老師分享了「期中考題」",
           at: ago(30),
-          link: "/shared/" + randomUUID(),
+          link: routeOf("sharing") + "/" + randomUUID(),
           tone: "info",
         },
       ],
@@ -1506,7 +1477,10 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
   // Like the backend: only sections of granted features, titled with their (custom) names.
   const granted = new Map<string, string>([
     ["dashboard", "總覽"],
-    ...fixture.extraFeatures.map((x): [string, string] => [x.id, x.name]),
+    ...fixture.extraFeatures.map((x): [string, string] => [
+      x.id,
+      x.name ?? catalogName(x.id),
+    ]),
     ...(fixture.chatAccess
       ? ([
           ["chat", "對話"],
@@ -1515,7 +1489,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
       : []),
     ...(fixture.adminAccess
       ? ([
-          ["admin", "存取管理"],
+          ["identity.users", "使用者"],
           ["monitoring", "即時監控"],
         ] as [string, string][])
       : []),

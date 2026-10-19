@@ -25,6 +25,7 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { InferenceSignal } from '@shared/ui/inference-signal';
 import { ArtifactsApi } from './artifacts-api';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-text-tools',
@@ -285,7 +286,7 @@ export class TextTools {
       if (valid()) {
         this.dialog().nativeElement.close();
         this.created.emit();
-        await this.router.navigate(['/artifacts', artifact.resource.id]);
+        await this.router.navigate([routeOf('artifacts'), artifact.resource.id]);
       }
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));

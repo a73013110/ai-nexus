@@ -6,7 +6,7 @@ import type { PriceDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { ToastService } from '@shared/ui/toast-service';
-import { BillingApi } from './billing-api';
+import { BillingApi } from '../billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 
 const version: PriceDto = {

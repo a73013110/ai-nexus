@@ -34,6 +34,7 @@ import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RETRIEVAL_TOUR } from './quality-tour';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
@@ -55,6 +56,8 @@ import { RETRIEVAL_TOUR } from './quality-tour';
   templateUrl: './retrieval-evaluation.html',
 })
 export class RetrievalEvaluation {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobs = inject(JobsApi);
@@ -66,7 +69,7 @@ export class RetrievalEvaluation {
     loader: () => this.knowledge.collections(),
   });
   private readonly runsRead = apiResource({
-    feature: 'knowledge',
+    feature: 'quality.retrieval',
     loader: () => this.api.retrievalEvaluations(),
   });
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
@@ -79,7 +82,7 @@ export class RetrievalEvaluation {
   });
   /** 執行中的評估每 2 秒重新讀取一次。 */
   private readonly reportRead = apiResource({
-    feature: 'knowledge',
+    feature: 'quality.retrieval',
     params: () => this.reportId() || undefined,
     loader: (id) => this.api.retrievalEvaluation(id),
     poll: (report) => (report && isActive(report.run.job.status) ? 2000 : null),

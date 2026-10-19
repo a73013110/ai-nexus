@@ -19,7 +19,7 @@
   @if (!compact() && store.selected()?.projectId; as projectId) {
     <a
       class="project-chat-link"
-      [routerLink]="['/projects', projectId]"
+      [routerLink]="[routeOf('projects'), projectId]"
       title="檢視專案指示與參考文件"
       ><nx-icon name="archive" />專案</a
     >

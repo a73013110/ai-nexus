@@ -3,7 +3,7 @@
   [description]="
     current() ? current()!.description : '共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。'
   "
-  [back]="id() ? { path: '/projects', label: '全部專案' } : null"
+  [back]="id() ? { path: routeOf('projects'), label: '全部專案' } : null"
   [tour]="tour()"
 >
   <div page-actions class="page-actions">
@@ -55,7 +55,7 @@
         <a
           nxResourceCard
           icon="projects"
-          [routerLink]="['/projects', item.resource.id]"
+          [routerLink]="[routeOf('projects'), item.resource.id]"
           [heading]="item.resource.name"
           [description]="item.description"
           ><span>{{ access(item.resource) }}</span
@@ -143,7 +143,7 @@
           >
             <nav class="project-rows" aria-label="我的專案對話">
               @for (item of conversations(); track item.id) {
-                <a class="project-row" [routerLink]="['/chat', item.id]"
+                <a class="project-row" [routerLink]="[routeOf('chat'), item.id]"
                   ><span class="row-name">{{ item.title }}</span
                   ><small>{{ when(item.updatedAt) }}</small></a
                 >
@@ -241,7 +241,7 @@
             }
             <nav class="project-rows" aria-label="專案成果">
               @for (item of outputs(); track item.resource.id) {
-                <a class="project-row" [routerLink]="['/artifacts', item.resource.id]"
+                <a class="project-row" [routerLink]="[routeOf('artifacts'), item.resource.id]"
                   ><span class="row-name">{{ item.resource.name }}</span
                   ><small>版本 {{ item.version }}</small></a
                 >

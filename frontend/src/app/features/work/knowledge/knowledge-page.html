@@ -3,7 +3,7 @@
   [description]="
     id() ? current()?.description || '' : '整理可查核的文件來源，讓 AI 回答附上依據與頁碼。'
   "
-  [back]="id() ? { path: '/knowledge', label: '全部知識庫' } : null"
+  [back]="id() ? { path: routeOf('knowledge'), label: '全部知識庫' } : null"
   [tour]="tour()"
 >
   <div page-actions class="page-actions">
@@ -57,7 +57,7 @@
         <a
           nxResourceCard
           icon="library"
-          [routerLink]="['/knowledge', item.resource.id]"
+          [routerLink]="[routeOf('knowledge'), item.resource.id]"
           [heading]="item.resource.name"
           [description]="item.description"
           ><span>{{ item.readyDocuments }} / {{ item.documents }} 份可查詢</span
@@ -202,7 +202,7 @@
       <nx-icon name="library" />
       <h2>找不到這個知識庫</h2>
       <p>它可能已被移除，或你已沒有存取權限。</p>
-      <a class="secondary-button" routerLink="/knowledge">返回全部知識庫</a>
+      <a class="secondary-button" [routerLink]="routeOf('knowledge')">返回全部知識庫</a>
     </nx-empty-state>
   }
   <nx-text-source-editor (saved)="textSaved()" />

@@ -131,7 +131,7 @@ const reusedPage = (from: ActivatedRouteSnapshot, to: ActivatedRouteSnapshot) =>
  * 路由的 view transition：頁面交叉淡入，具名元素（品牌、導覽膠囊）則 morph。
  * Angular 會在此功能啟用後延遲一個 task 才切換到新路由（略過時也一樣），
  * 所以點擊後立刻操作的程式碼與測試，要等 URL 真的變了才繼續，而不是假設已經切換。
- * 減少動態效果、`ViewMorph` 執行中，或頁面元件被重用（`/chat` ↔ `/chat/:id`）時會略過，
+ * 減少動態效果、`ViewMorph` 執行中，或頁面元件被重用（對話列表 ↔ `/:id`）時會略過，
  * 由頁面自己的狀態變化決定要 morph 什麼。
  */
 export const withMorphTransitions = () =>

@@ -10,8 +10,8 @@
     "format": "prettier --write src e2e",
     "format:check": "prettier --check src e2e",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
-    "contracts": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix",
-    "contracts:check": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix --check"
+    "contracts": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix && node scripts/generate-feature-catalog.mjs",
+    "contracts:check": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix --check && node scripts/generate-feature-catalog.mjs --check"
   },
   "private": true,
   "packageManager": "npm@11.6.1",

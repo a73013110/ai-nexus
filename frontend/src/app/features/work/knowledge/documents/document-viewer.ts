@@ -35,7 +35,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { KnowledgeApi } from '../knowledge-api';
-import type { ReaderTarget } from '@shared/browser/reader-overlay';
+import { readerUrl, type ReaderTarget } from '@shared/browser/reader-overlay';
 import { SharingApi } from '@features/work/sharing/sharing-api';
 import { FilesApi } from '@features/work/files/files-api';
 import { MarkdownView } from '@shared/markdown/markdown-view';
@@ -202,11 +202,7 @@ export class DocumentViewer {
       ? apiHref('/api/v1/attachments/{id}/render', { path: { id } })
       : apiHref('/api/v1/documents/{id}/render', { path: { id: this.document()?.id || '' } });
   });
-  readonly standaloneUrl = computed(() =>
-    this.target().shareId
-      ? `/reader/share/${encodeURIComponent(this.target().shareId!)}/${encodeURIComponent(this.target().id)}?page=${this.page()}`
-      : `${this.target().attachment ? '/reader/attachment/' : '/reader/'}${encodeURIComponent(this.target().id)}?page=${this.page()}`,
-  );
+  readonly standaloneUrl = computed(() => readerUrl(this.target(), this.page()));
   private pdf: PDFDocumentProxy | null = null;
   private pdfLoad: PDFDocumentLoadingTask | null = null;
   private renderTask: RenderTask | null = null;

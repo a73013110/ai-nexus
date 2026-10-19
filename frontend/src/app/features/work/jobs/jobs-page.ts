@@ -24,6 +24,7 @@ import { jobKindIcon, jobKindName } from './job-kind';
 import { JobToasts } from './job-toasts';
 import { apiResource } from '@core/api/api-resource';
 import { jobsTour } from './jobs-tour';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-jobs-page',
@@ -41,7 +42,7 @@ import { jobsTour } from './jobs-tour';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './jobs-page.scss',
   template: `<nx-feature-page
-    [title]="session.featureName('tasks')"
+    [title]="session.featureName('jobs')"
     description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"
     [tour]="tour()"
   >
@@ -85,13 +86,15 @@ import { jobsTour } from './jobs-tour';
             @if (opensReview(job)) {
               <a
                 class="quiet-button job-result"
-                routerLink="/repositories"
+                [routerLink]="routeOf('repositories')"
                 [queryParams]="{ review: job.subjectId }"
                 >檢視 review<nx-icon name="chevron"
               /></a>
             }
             @if (job.kind === 'document-ingest') {
-              <a class="quiet-button job-result" [routerLink]="['/reader', job.subjectId]"
+              <a
+                class="quiet-button job-result"
+                [routerLink]="[routeOf('knowledge.reader'), job.subjectId]"
                 >檢視文件<nx-icon name="chevron"
               /></a>
             }
@@ -123,7 +126,7 @@ import { jobsTour } from './jobs-tour';
           <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
           <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
           @if (session.has('knowledge')) {
-            <a class="secondary-button" routerLink="/knowledge"
+            <a class="secondary-button" [routerLink]="routeOf('knowledge')"
               >前往{{ session.featureName('knowledge') }}</a
             >
           }
@@ -133,6 +136,8 @@ import { jobsTour } from './jobs-tour';
   </nx-feature-page>`,
 })
 export class JobsPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
@@ -140,7 +145,7 @@ export class JobsPage {
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
   /** 任務每幾秒重新讀取一次；不在最近列表中的已連結任務會加入其中。 */
   readonly jobs = apiResource({
-    feature: 'tasks',
+    feature: 'jobs',
     params: () => this.target(),
     loader: async (target) => {
       const jobs = await this.api.list();

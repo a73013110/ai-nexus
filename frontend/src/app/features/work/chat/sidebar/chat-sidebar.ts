@@ -25,6 +25,7 @@ import {
 import { ChatConversations } from '../state/chat-conversations';
 import { ChatStore } from '../chat-store';
 import { historyGroups } from './history-groups';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 共用側邊欄中的聊天歷史。列是一般連結，共用同一個動作選單；瀏覽器會略過視口外列的渲染，
@@ -40,6 +41,8 @@ import { historyGroups } from './history-groups';
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly store = inject(ChatStore);
   readonly conversations = inject(ChatConversations);
   readonly notifications = inject(NotificationStore);

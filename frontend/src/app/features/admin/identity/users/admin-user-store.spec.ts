@@ -5,8 +5,8 @@ import type { AdminUserDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { IdentityApi } from '../identity-api';
+import { AdminUsersStore } from '../admin-users-store';
 import { AdminUserStore } from './admin-user-store';
 
 const user = {
@@ -40,8 +40,8 @@ function setup(testing = false) {
     providers: [
       AdminUserStore,
       ViewScope,
-      { provide: AdministrationApi, useValue: api },
-      { provide: AdministrationStore, useValue: admin },
+      { provide: IdentityApi, useValue: api },
+      { provide: AdminUsersStore, useValue: admin },
       { provide: WorkspaceSession, useValue: session },
       { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],

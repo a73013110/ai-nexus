@@ -4,10 +4,11 @@ import { Icon } from '@shared/ui/icon';
 import { ProductTourButton } from '@shared/ui/product-tour-button';
 import type { ProductTourDefinition } from '@shared/ui/product-tour';
 import { WorkspaceMenuButton } from './workspace-menu-button';
+import { FeatureTrail } from './feature-trail';
 
 @Component({
   selector: 'nx-feature-page',
-  imports: [WorkspaceMenuButton, ProductTourButton, RouterLink, Icon],
+  imports: [WorkspaceMenuButton, ProductTourButton, RouterLink, Icon, FeatureTrail],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './feature-page.scss',
   host: {
@@ -32,6 +33,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
             /></a>
           }
           <div class="feature-title">
+            <nx-feature-trail />
             <h1>{{ title() }}</h1>
             @if (description()) {
               <p>{{ description() }}</p>

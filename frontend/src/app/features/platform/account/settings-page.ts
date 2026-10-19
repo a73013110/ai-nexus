@@ -41,6 +41,7 @@ import {
   formatModelName,
   formatModelDisplayName,
 } from '@shared/browser/format';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-settings-page',
@@ -61,6 +62,8 @@ import {
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly embedded = input(false);
   readonly closeRequested = output<void>();
   readonly stateChange = output<{ changed: boolean; saving: boolean }>();

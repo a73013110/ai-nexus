@@ -4,6 +4,7 @@ import {
   chooseSelect,
   expectViewportContained,
   toasts,
+  routeOf,
 } from "./fixtures";
 
 test("price tab lists current prices, adds immutable versions in a dialog and fits a phone", async ({
@@ -36,12 +37,11 @@ test("price tab lists current prices, adds immutable versions in a dialog and fi
       ],
     }),
   );
-  await page.goto("/admin/operations");
-  await page
-    .getByRole("group", { name: "平台營運分類", exact: true })
-    .getByRole("button", { name: "模型與工具價格", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/admin\/operations\?tab=prices$/);
+  // 價格是計費模組自己的頁面，不再是平台營運的分頁。
+  await page.goto(routeOf("billing.prices"));
+  await expect(
+    page.getByRole("heading", { name: "模型與工具價格", exact: true }),
+  ).toBeVisible();
   // Every configured model and tool has a row; without a version its cost is unknown, not zero.
   const current = page.getByRole("region", { name: "目前價格", exact: true });
   await expect(current.getByRole("row")).toHaveCount(3);

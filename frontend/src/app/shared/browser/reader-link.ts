@@ -2,7 +2,7 @@ import { Directive, ElementRef, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { ReaderOverlay } from './reader-overlay';
+import { ReaderOverlay, readerCommands } from './reader-overlay';
 
 /** 原生連結支援開新分頁；同分頁導覽也會保留閱讀位置。 */
 @Directive({
@@ -27,11 +27,7 @@ export class ReaderLink {
   readonly href = computed(() =>
     this.router.serializeUrl(
       this.router.createUrlTree(
-        this.shareId()
-          ? ['/reader/share', this.shareId(), this.id()]
-          : this.attachment()
-            ? ['/reader/attachment', this.id()]
-            : ['/reader', this.id()],
+        readerCommands({ id: this.id(), attachment: this.attachment(), shareId: this.shareId() }),
         { queryParams: { page: this.page(), returnTo: this.origin() } },
       ),
     ),

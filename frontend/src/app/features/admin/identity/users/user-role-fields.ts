@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import type { AdminCatalogDto } from '@core/api/schema';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { Notice } from '@shared/ui/notice';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { FeatureSummary } from '@features/admin/access-control/roles/feature-summary';
 
 /** 使用者能開啟的功能：已啟用角色中，已啟用群組裡已啟用的功能。 */
@@ -19,10 +19,6 @@ export function userFeatures(catalog: AdminCatalogDto | null, roleIds: string[],
       .flatMap((item) => item.featureIds),
   );
   return catalog.features.filter((item) => item.enabled && features.has(item.id));
-}
-
-export function sameIds(items: readonly string[], items2: readonly string[]) {
-  return items.length === items2.length && items.every((id) => items2.includes(id));
 }
 
 let sequence = 0;
@@ -72,7 +68,7 @@ let sequence = 0;
 })
 export class UserRoleFields {
   readonly id = `nx-user-roles-${++sequence}`;
-  readonly store = inject(AdministrationStore);
+  readonly store = inject(AccessControlStore);
   readonly roleIds = input.required<string[]>();
   /** 停用的使用者保留角色，但無法開啟任何內容。 */
   readonly enabled = input(true);

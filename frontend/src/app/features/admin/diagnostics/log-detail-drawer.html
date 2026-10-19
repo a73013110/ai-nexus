@@ -138,7 +138,7 @@
           </dl>
           @if (selected.event.traceId && session.has('audit')) {
             <a
-              routerLink="/admin/audit"
+              [routerLink]="routeOf('audit')"
               [queryParams]="{ traceId: selected.event.traceId }"
               class="quiet-button"
             >

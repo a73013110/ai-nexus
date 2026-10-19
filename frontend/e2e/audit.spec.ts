@@ -115,7 +115,7 @@ test("recorded feature changes read under their menu groups like the menu", asyn
             {
               id: "chat",
               name: "對話",
-              route: "/chat",
+              route: "/work/chat",
               groupId: "work",
               icon: "chat",
               sortOrder: 10,
@@ -131,7 +131,7 @@ test("recorded feature changes read under their menu groups like the menu", asyn
             {
               id: "reports",
               name: "月報",
-              route: "/reports",
+              route: "",
               groupId: "reports",
               icon: "chart",
               sortOrder: 40,

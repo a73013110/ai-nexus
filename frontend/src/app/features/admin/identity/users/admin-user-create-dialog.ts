@@ -10,8 +10,8 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { IdentityApi } from '../identity-api';
+import { AdminUsersStore } from '../admin-users-store';
 import { UserAccountFields, userAccountDraft, userAccountRequest } from './user-account-fields';
 import { UserRoleFields } from './user-role-fields';
 
@@ -75,8 +75,8 @@ import { UserRoleFields } from './user-role-fields';
   `,
 })
 export class AdminUserCreateDialog {
-  private readonly api = inject(AdministrationApi);
-  private readonly store = inject(AdministrationStore);
+  private readonly api = inject(IdentityApi);
+  private readonly store = inject(AdminUsersStore);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   /** 表單在首次開啟時建立並保留，讓關閉中的對話框不會被清空。 */
   readonly opened = signal(false);

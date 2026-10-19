@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { catalogFeature } from '@core/api/catalog';
 import type { LibraryFileDto } from '@core/api/schema';
 import { apiHref } from '@core/api/api-client';
 import { ReaderLink } from '@shared/browser/reader-link';
@@ -15,11 +16,14 @@ import { Icon } from '@shared/ui/icon';
 import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
 import { formatBytes, formatDate } from '@shared/browser/format';
 
-const usageIcons: Record<string, string> = {
-  chat: 'chat',
-  projects: 'projects',
-  knowledge: 'library',
-};
+/**
+ * 引用處的種類（`chat`、`projects`、`knowledge`）就是功能目錄的頁面 ID；網址與圖示都由目錄取得，
+ * 不認得的種類只顯示名稱、不給連結。
+ */
+function usagePage(kind: string) {
+  const feature = catalogFeature(kind);
+  return feature?.kind === 'page' ? feature : null;
+}
 
 /** 檔案庫中的檔案以磚塊呈現：預覽、名稱與其使用處；動作共用一個選單。 */
 @Component({
@@ -52,9 +56,13 @@ const usageIcons: Record<string, string> = {
           <span class="file-meta">{{ bytes(item.file.size) }} · {{ date(item.createdAt) }}</span>
           <span class="file-usages">
             @for (usage of item.usages.slice(0, 2); track usage.kind + usage.resourceId) {
-              <a [routerLink]="['/' + usage.kind, usage.resourceId]" [title]="usage.name"
-                ><nx-icon [name]="usageIcons[usage.kind] || 'document'" />{{ usage.name }}</a
-              >
+              @if (usagePage(usage.kind); as page) {
+                <a [routerLink]="[page.route, usage.resourceId]" [title]="usage.name"
+                  ><nx-icon [name]="page.icon" />{{ usage.name }}</a
+                >
+              } @else {
+                <span [title]="usage.name"><nx-icon name="document" />{{ usage.name }}</span>
+              }
             } @empty {
               <span>尚未引用</span>
             }
@@ -87,7 +95,7 @@ export class FileBrowser {
   readonly rename = output<LibraryFileDto>();
   readonly remove = output<LibraryFileDto>();
   readonly bytes = formatBytes;
-  readonly usageIcons = usageIcons;
+  readonly usagePage = usagePage;
   readonly date = (value: string) => formatDate(value).split(' ')[0];
   private readonly menu = viewChild.required(MenuPanel);
   /** 選單開啟中的檔案；一個面板服務所有磚塊。 */

@@ -15,7 +15,7 @@ import { Notice } from '@shared/ui/notice';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { providerName } from '@features/admin/billing/billing-api';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
+import { OperationsApi } from './operations-api';
 
 const kindNames: Record<string, string> = {
   chat: '對話',
@@ -37,19 +37,19 @@ interface ServiceRow {
 }
 
 /**
- * 最近 30 天的平台使用量，每次顯示分頁時讀取：四個標題數字，接著是
+ * 最近 30 天的平台使用量，每次開啟頁面時讀取：四個標題數字，接著是
  * 模型、使用來源，以及模型與搜尋服務的狀態。
  */
 @Component({
   selector: 'nx-platform-usage',
   imports: [DataTable, Icon, Notice, StatGrid, StatTile, StatusBadge, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./operations-tabs.scss', './platform-usage.scss'],
+  styleUrls: ['../../../shared/ui/management-section-page.scss', './platform-usage.scss'],
   templateUrl: './platform-usage.html',
 })
 export class PlatformUsage {
-  private readonly api = inject(AdministrationApi);
-  readonly read = apiResource({ feature: 'operations', loader: () => this.api.usage() });
+  private readonly api = inject(OperationsApi);
+  readonly read = apiResource({ feature: 'operations.usage', loader: () => this.api.usage() });
   readonly stats = computed(() => this.read.value() ?? null);
   readonly format = formatNumber;
   readonly modelName = formatModelDisplayName;

@@ -1,7 +1,7 @@
 <div class="settings-layout ui-density-compact" [class.embedded]="embedded()">
   <aside class="settings-sidebar" aria-label="設定分類">
     @if (!embedded()) {
-      <a class="settings-back" routerLink="/chat"><nx-icon name="left" />返回工作區</a>
+      <a class="settings-back" [routerLink]="routeOf('chat')"><nx-icon name="left" />返回工作區</a>
     }
     <h2>設定</h2>
     <nx-search-field
@@ -324,7 +324,9 @@
                   <strong>對話文字備份</strong>
                   <p>開啟對話，從「對話操作」匯出 JSON 或 Markdown。</p>
                 </div>
-                <a class="quiet-button" routerLink="/chat">前往對話<nx-icon name="chevron" /></a>
+                <a class="quiet-button" [routerLink]="routeOf('chat')"
+                  >前往對話<nx-icon name="chevron"
+                /></a>
               </div>
             </section>
           }

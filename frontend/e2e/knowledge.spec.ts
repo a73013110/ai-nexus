@@ -14,7 +14,7 @@ test("knowledge upload, source query and named reader permissions are direct and
   const fixture = new KnowledgeFixture();
   fixture.seed();
   await fixture.attach(page);
-  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
+  await page.goto(`/work/knowledge/${fixture.collections[0].resource.id}`);
   await expect(
     page.getByRole("link", { name: /差旅費用申請.pdf/ }),
   ).toBeVisible();
@@ -62,7 +62,7 @@ test("PDF reader renders real pages, searches extracted text and treats text as 
   await fixture.attach(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`/reader/${doc.id}?page=2`);
+  await page.goto(`/work/knowledge/reader/${doc.id}?page=2`);
   const canvas = page.locator("nx-document-reader canvas");
   await expect(canvas).toHaveAttribute("width", /[1-9]\d+/);
   await expect(canvas).toHaveAttribute("aria-label", /第 2 頁/);
@@ -109,7 +109,7 @@ test("conversation knowledge selection saves before first send and is restored o
   const fixture = new KnowledgeFixture();
   fixture.seed();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "選取對話知識來源" }).click();
   const panel = page.getByRole("dialog", { name: "對話知識來源" });
   await panel.getByRole("checkbox", { name: /公司作業規範/ }).check();
@@ -138,7 +138,7 @@ test("background tasks show real stages and distinguish cancellation requests fr
   job.stage = "正在索引第 1 / 2 段";
   job.completedUnits = 1;
   await fixture.attach(page);
-  await page.goto("/tasks");
+  await page.goto("/work/jobs");
   await expect(page.locator("progress")).toHaveAttribute("value", "1");
   await page.getByRole("button", { name: "停止處理" }).click();
   await expect(page.getByRole("main").getByRole("status")).toContainText(
@@ -165,7 +165,7 @@ test("failed conversation source loading blocks submission until an explicit suc
   const fixture = new KnowledgeFixture();
   fixture.seed();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("查詢公司規範");
@@ -235,7 +235,7 @@ test("vector retrieval cards contain long filenames, URLs and multiline excerpts
       },
     }),
   );
-  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
+  await page.goto(`/work/knowledge/${fixture.collections[0].resource.id}`);
   await page.getByRole("textbox", { name: "知識庫查詢內容" }).fill("誤植原因");
   await page.getByRole("button", { name: "檢索來源" }).click();
   const hit = page.locator(".knowledge-hit");
@@ -316,7 +316,7 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
     if (!fixture.documents.length) fixture.documents.push(doc);
     return route.fulfill({ json: doc });
   });
-  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
+  await page.goto(`/work/knowledge/${fixture.collections[0].resource.id}`);
   await page.getByRole("button", { name: "貼上純文字", exact: true }).click();
   const dialog = page.getByRole("dialog", {
     name: "純文字來源編輯器",
@@ -415,7 +415,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, last };
     };
-    await page.goto("/knowledge");
+    await page.goto("/work/knowledge");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([

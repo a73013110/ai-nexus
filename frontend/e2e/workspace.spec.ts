@@ -11,7 +11,7 @@ test("regeneration and edited branches preserve the next question draft", async 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "第一個提問");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await input.fill("稍後要送出的下一個問題");
@@ -38,7 +38,7 @@ test("sending an existing conversation does not erase the separate new conversat
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "已建立的專案");
   const conversationUrl = page.url();
   await page
@@ -72,7 +72,7 @@ test("returning to a new draft ignores a delayed previous conversation response"
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "原有專案");
   const id = fixture.conversations[0].id;
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
@@ -81,7 +81,7 @@ test("returning to a new draft ignores a delayed previous conversation response"
     .first();
   await newConversation.click();
   // The router activates after its view transition starts, so type once the new draft is open.
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/work\/chat$/);
   await input.fill("新對話中還沒送出的想法");
   await expect
     .poll(() =>
@@ -115,7 +115,7 @@ test("returning to a new draft ignores a delayed previous conversation response"
   );
   release();
   await completed;
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/work\/chat$/);
   await expect(
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
@@ -130,7 +130,7 @@ test("logout clears private workspace state while drafts restore only for their 
   fixture.authenticated = true;
   const alice = fixture.userId;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
@@ -148,7 +148,7 @@ test("logout clears private workspace state while drafts restore only for their 
     await page.getByLabel("AD 帳號", { exact: true }).fill(account);
     await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
     await page.getByRole("button", { name: "登入工作區", exact: true }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/work\/dashboard$/);
     await page
       .getByRole("list", { name: "釘選功能", exact: true })
       .getByRole("link", { name: "對話", exact: true })
@@ -182,7 +182,7 @@ test("the composer uses the server character limit rather than a fixed local con
     updatedAt: new Date().toISOString(),
   });
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await expect(input).toHaveAttribute("maxlength", "500");
   await input.fill("a".repeat(501));
@@ -236,7 +236,7 @@ test("uploaded documents and images persist on messages and reach the run reques
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
   ).toBeEnabled();
@@ -264,7 +264,7 @@ test("clipboard image and file drop use the same validated upload flow", async (
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
   ).toBeEnabled();
@@ -312,7 +312,7 @@ test("attachment limits and model vision capability prevent invalid submission",
   const fixture = new ApiFixture();
   fixture.supportsImages = false;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
   ).toBeEnabled();
@@ -334,7 +334,7 @@ test("draft text and attachment ids restore after refresh and stay per conversat
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息" });
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
@@ -379,7 +379,7 @@ test("personal prompt library supports creating applying editing and deleting", 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "常用範本" }).click();
   await page.getByRole("textbox", { name: "範本名稱" }).fill("會議摘要");
   await page
@@ -411,7 +411,7 @@ test("conversation instruction and tags persist and allow label filtering", asyn
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page);
   await menu(page, "對話指令與標籤");
   await page
@@ -441,7 +441,7 @@ test("favorite and archive views retain the ability to restore conversations", a
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "需要保留的對話");
   await page.getByRole("button", { name: "收藏目前對話" }).click();
   await expect(
@@ -468,7 +468,7 @@ test("history search finds message content independently of its title", async ({
   const fixture = new ApiFixture();
   fixture.answer = "內容關鍵字：ROADMAP";
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("獨立標題");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(
@@ -489,7 +489,7 @@ test("duplicate and JSON text backup preserve the tree in a separate conversatio
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "可複製的內容");
   await menu(page, "建立對話副本");
   await expect(
@@ -527,7 +527,7 @@ test("message finder highlights matches and moves without auto-scrolling back", 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await send(page, "工作重點與待辦");
   await page.getByRole("button", { name: "搜尋目前對話訊息" }).click();
   await page.getByRole("searchbox", { name: "尋找訊息" }).fill("工作");
@@ -544,7 +544,7 @@ test("command palette supports keyboard selection and focus restoration", async 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息" });
   await input.focus();
   await page.keyboard.press("Control+k");
@@ -566,7 +566,7 @@ test("shared disclosures close outside and permanent authorization errors do not
   const fixture = new ApiFixture();
   fixture.eventsStatus = 403;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByLabel(/上下文用量：/).click();
   const usage = page.getByRole("dialog", { name: "上下文用量", exact: true });
   await expect(usage).toBeInViewport();
@@ -589,7 +589,7 @@ test("mobile uploads settings and palette remain usable with reduced motion", as
   fixture.preferences.theme = "dark";
   fixture.preferences.reducedMotion = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
   ).toBeHidden();

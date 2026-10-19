@@ -34,7 +34,6 @@ import { RetrievalResults } from './retrieval-results';
 import { KnowledgeApi } from '../knowledge-api';
 import { JobProgress } from '@features/work/jobs/job-progress';
 import { JobToasts } from '@features/work/jobs/job-toasts';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
 
 type ProfileAction = 'rebuild' | 'activate' | 'clear';
 interface Capability {
@@ -77,17 +76,16 @@ const BENCH_COLLECTIONS = 3;
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './retrieval-admin.html',
-  styleUrls: ['../../../admin/operations/operations-tabs.scss', './retrieval-admin.scss'],
+  styleUrls: ['../../../../shared/ui/management-section-page.scss', './retrieval-admin.scss'],
 })
 export class RetrievalAdmin {
-  private readonly api = inject(AdministrationApi);
-  private readonly knowledge = inject(KnowledgeApi);
+  private readonly api = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly jobToasts = inject(JobToasts);
   readonly session = inject(WorkspaceSession);
   readonly profilesRead = apiResource({
-    feature: 'operations',
+    feature: 'knowledge.retrieval',
     loader: () => this.api.embeddingProfiles(),
     poll: (profiles) =>
       profiles?.some((item) => item.job && ['queued', 'running'].includes(item.job.status))
@@ -95,10 +93,10 @@ export class RetrievalAdmin {
         : null,
   });
   readonly capabilitiesRead = apiResource({
-    feature: 'operations',
+    feature: 'knowledge.retrieval',
     loader: () => this.api.retrievalCapabilities(),
   });
-  private readonly collectionsRead = apiResource({ loader: () => this.knowledge.collections() });
+  private readonly collectionsRead = apiResource({ loader: () => this.api.collections() });
   readonly profiles = computed<EmbeddingProfileDto[]>(() => this.profilesRead.value() ?? []);
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
   readonly capabilities = computed(() => capabilityRows(this.capabilitiesRead.value() ?? null));

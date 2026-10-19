@@ -3,6 +3,7 @@ import { generationStatus } from '@core/api/generation-status';
 import type { IslandItem } from '@shared/ui/island-service';
 import { ChatConversations } from '../state/chat-conversations';
 import { ChatStore } from '../chat-store';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 輸入框需要告訴使用者的一切，以島的通知呈現：進行中執行的進度、
@@ -34,7 +35,7 @@ export function chatIslandItems() {
         icon: 'chat',
         label: '另有對話生成中',
         message: '另有對話正在生成。',
-        link: { label: '回到該對話', commands: ['/chat', run.conversationId] },
+        link: { label: '回到該對話', commands: [routeOf('chat'), run.conversationId] },
       });
     if (store.editing())
       items.push({

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
+import type { AdminRetrievalSearchRequest } from '@core/api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class KnowledgeApi {
@@ -51,4 +52,16 @@ export class KnowledgeApi {
       path: { id },
       body: { collectionIds },
     });
+  // 檢索管理頁（`knowledge.retrieval`）：嵌入設定檔、檢索能力與管理端試查。
+  embeddingProfiles = () => this.api.get('/api/v1/admin/knowledge/profiles');
+  rebuildProfile = (id: number) =>
+    this.api.post('/api/v1/admin/knowledge/profiles/{id}/rebuild', { path: { id } });
+  activateProfile = (id: number) =>
+    this.api.post('/api/v1/admin/knowledge/profiles/{id}/activate', { path: { id } });
+  clearProfileVectors = (id: number) =>
+    this.api.delete('/api/v1/admin/knowledge/profiles/{id}/vectors', { path: { id } });
+  retrievalCapabilities = () => this.api.get('/api/v1/admin/knowledge/capabilities');
+  probeRetrieval = () => this.api.post('/api/v1/admin/knowledge/capabilities/probe');
+  searchRetrieval = (body: AdminRetrievalSearchRequest) =>
+    this.api.post('/api/v1/admin/knowledge/search', { body });
 }

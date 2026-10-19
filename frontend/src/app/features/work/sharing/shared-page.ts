@@ -33,6 +33,7 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import type { BadgeTone } from '@shared/ui/count-badge';
 import { SharingApi } from './sharing-api';
 import { shareTour, sharesTour } from './shared-tour';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-shared-page',
@@ -57,6 +58,8 @@ import { shareTour, sharesTour } from './shared-tour';
   templateUrl: './shared-page.html',
 })
 export class SharedPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly modelName = formatModelDisplayName;
   readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -76,7 +79,7 @@ export class SharedPage {
   );
   /** 分享過期前會再檢查一次，且至少每 30 秒檢查一次。 */
   private readonly contentRead = apiResource({
-    feature: 'shared',
+    feature: 'sharing',
     params: () => this.id() || undefined,
     loader: (id) => this.api.get(id),
     poll: (value) =>
@@ -96,7 +99,7 @@ export class SharedPage {
       source.param !== null ? source.param === 'true' : (source.owner ?? previous?.value ?? false),
   });
   private readonly listRead = apiResource({
-    feature: 'shared',
+    feature: 'sharing',
     params: () => this.sent(),
     loader: (sent) => this.api.list(sent),
   });
@@ -167,7 +170,7 @@ export class SharedPage {
     if (action === 'revoke' && share) void this.revoke(share);
   }
   async switchTab(sent: boolean) {
-    await this.router.navigate(['/shared'], { queryParams: { sent } });
+    await this.router.navigate([routeOf('sharing')], { queryParams: { sent } });
   }
   async revoke(share: ShareDto) {
     if (
@@ -187,7 +190,7 @@ export class SharedPage {
       if (valid()) {
         this.contentRead.value.set(undefined);
         this.listRead.reload();
-        await this.router.navigate(['/shared'], { queryParams: { sent: this.sent() } });
+        await this.router.navigate([routeOf('sharing')], { queryParams: { sent: this.sent() } });
       }
     } catch (error2) {
       if (valid()) this.actionError.set(this.scope.message(error2));

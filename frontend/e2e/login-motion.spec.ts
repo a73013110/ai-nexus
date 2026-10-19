@@ -92,5 +92,5 @@ test("the sign-in mark keeps sign-in usable, can settle immediately and respects
     ),
   ).toBe(true);
   await page.getByRole("button", { name: "登入工作區", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
 });

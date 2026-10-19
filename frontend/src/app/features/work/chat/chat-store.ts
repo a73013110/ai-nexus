@@ -26,6 +26,7 @@ import { ChatDraft } from './state/chat-draft';
 import { ChatHistory } from './state/chat-history';
 import { ChatModels } from './state/chat-models';
 import { ChatRun } from './state/chat-run';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 協調聊天頁：啟動、選取對話與送出。有自己生命週期的狀態放在 ChatModels、ChatRun、ChatDraft 與
@@ -67,7 +68,7 @@ export class ChatStore {
   readonly hasChatAccess = computed(() => this.session.has('chat'));
   readonly hasKnowledgeAccess = computed(() => this.session.has('knowledge'));
   readonly hasArtifactsAccess = computed(() => this.session.has('artifacts'));
-  readonly hasSharing = computed(() => this.session.has('shared'));
+  readonly hasSharing = computed(() => this.session.has('sharing'));
   readonly error = signal<string | null>(null);
   readonly ready = signal(false);
   readonly loading = signal(true);
@@ -328,7 +329,7 @@ export class ChatStore {
         await this.knowledge.bindNew(conversation.id);
         if (!current()) return;
         this.selected.set(conversation);
-        await this.router.navigate(['/chat', conversation.id]);
+        await this.router.navigate([routeOf('chat'), conversation.id]);
       }
       this.pending = {
         key: crypto.randomUUID(),

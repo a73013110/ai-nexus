@@ -1,6 +1,6 @@
 @if (store.hasChatAccess()) {
   <a
-    routerLink="/chat"
+    [routerLink]="routeOf('chat')"
     class="new-chat"
     aria-label="新對話"
     title="新對話"
@@ -65,7 +65,7 @@
         @for (conversation of group.conversations; track conversation.id) {
           <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
             <a
-              [routerLink]="['/chat', conversation.id]"
+              [routerLink]="[routeOf('chat'), conversation.id]"
               (click)="open($event, rowTitle)"
               [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
               [title]="conversation.title"

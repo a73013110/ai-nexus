@@ -8,7 +8,7 @@ test("live Markdown formats partial emphasis, retains committed DOM and safely c
   fixture.hold = true;
   fixture.partialAnswer = "## 核心問題\n\n重點是 **時間";
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page

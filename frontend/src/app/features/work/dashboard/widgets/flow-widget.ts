@@ -6,7 +6,7 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { DashboardStore } from '../dashboard-store';
 import { metricText } from '@shared/browser/format';
 import { workspaceLink } from '../dashboard-format';
-import { isFeatureId } from '@core/auth/feature-names';
+import { isFeatureId } from '@core/api/catalog';
 
 interface Stage {
   section: string;

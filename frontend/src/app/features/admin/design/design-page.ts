@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { SidebarPanelContent } from '@core/layout/sidebar-panel';
 import { downloadFile } from '@shared/browser/download';
@@ -17,13 +16,13 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { Notice } from '@shared/ui/notice';
 import { SlidingIndicator } from '@shared/ui/sliding-indicator';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { DesignCharts } from './design-charts';
-import { DesignControls } from './design-controls';
-import { DesignData } from './design-data';
-import { DesignFeedback } from './design-feedback';
-import { DesignForms } from './design-forms';
-import { DesignFoundations } from './design-foundations';
-import { DesignSamples } from './design-samples';
+import { DesignCharts } from './sections/design-charts';
+import { DesignControls } from './sections/design-controls';
+import { DesignData } from './sections/design-data';
+import { DesignFeedback } from './sections/design-feedback';
+import { DesignForms } from './sections/design-forms';
+import { DesignFoundations } from './sections/design-foundations';
+import { DesignSamples } from './sections/design-samples';
 
 /** 工作台的索引；id 與 `nx-design-section` 的 id 相同。 */
 const INDEX = [
@@ -139,7 +138,6 @@ const TOKEN_NAMES = [
     DesignFeedback,
     DesignForms,
     DesignFoundations,
-    FeatureAccessNotice,
     FeaturePage,
     Notice,
     SidebarPanelContent,

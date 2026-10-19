@@ -49,8 +49,9 @@ import { RetrievalResults } from './retrieval/retrieval-results';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { documentBusy, documentStatus } from './documents/document-status';
 import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
+import { routeOf } from '@core/api/catalog';
 
-/** `/knowledge` 列出集合；`/knowledge/:id` 則是單一集合的來源與查詢。 */
+/** 模組網址列出集合；`/:id` 則是單一集合的來源與查詢。 */
 @Component({
   selector: 'nx-knowledge-page',
   imports: [
@@ -82,6 +83,8 @@ import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
   templateUrl: './knowledge-page.html',
 })
 export class KnowledgePage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   private readonly api = inject(KnowledgeApi);
   private readonly uploads = inject(FilesApi);
   private readonly scope = inject(ViewScope);
@@ -240,7 +243,7 @@ export class KnowledgePage {
       if (id) await this.api.update(id, this.editorName(), this.editorDescription());
       else {
         const created = await this.api.create(this.editorName(), this.editorDescription());
-        if (valid()) void this.router.navigate(['/knowledge', created.resource.id]);
+        if (valid()) void this.router.navigate([routeOf('knowledge'), created.resource.id]);
       }
       if (valid()) {
         this.editorDialog().nativeElement.close();
@@ -348,7 +351,7 @@ export class KnowledgePage {
       await (collection ? this.api.removeCollection(id) : this.api.remove(id));
       if (!valid()) return;
       this.toast.success('已移除來源');
-      if (collection) void this.router.navigate(['/knowledge']);
+      if (collection) void this.router.navigate([routeOf('knowledge')]);
       this.load();
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));

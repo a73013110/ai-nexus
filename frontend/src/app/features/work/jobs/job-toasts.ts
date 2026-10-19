@@ -1,5 +1,6 @@
 import { effect, inject, Injectable, untracked } from '@angular/core';
 import { Router } from '@angular/router';
+import { routeOf } from '@core/api/catalog';
 import type { DocumentDto, JobDto, NotificationDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ToastService } from '@shared/ui/toast-service';
@@ -138,13 +139,15 @@ export class JobToasts {
   }
   private announce(watched: Watched, status: string) {
     const completed = status === 'completed',
-      task = this.session.has('tasks') ? `/tasks?job=${encodeURIComponent(watched.id)}` : null,
+      task = this.session.has('jobs')
+        ? `${routeOf('jobs')}?job=${encodeURIComponent(watched.id)}`
+        : null,
       subject = encodeURIComponent(watched.subjectId),
       page =
         watched.document && this.session.has('knowledge')
-          ? `/reader/${subject}`
+          ? `${routeOf('knowledge.reader')}/${subject}`
           : watched.kind === 'repository-review' && this.session.has('repositories')
-            ? `/repositories?review=${subject}`
+            ? `${routeOf('repositories')}?review=${subject}`
             : null,
       destination = (completed ? page : task) ?? task ?? page;
     this.toasts.show({

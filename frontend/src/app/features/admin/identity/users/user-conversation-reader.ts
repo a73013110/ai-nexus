@@ -2,7 +2,7 @@ import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminConversationDetailDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
+import { IdentityApi } from '../identity-api';
 import { AdminUserStore } from './admin-user-store';
 
 interface Opened {
@@ -16,7 +16,7 @@ interface Opened {
  */
 @Injectable()
 export class UserConversationReader {
-  private readonly api = inject(AdministrationApi);
+  private readonly api = inject(IdentityApi);
   private readonly scope = inject(ViewScope);
   private readonly owner = inject(AdminUserStore);
   private readonly key = this.owner.key;

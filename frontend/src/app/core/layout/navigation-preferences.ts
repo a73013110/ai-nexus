@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { navigationTree } from './navigation-tree';
-import type { FeatureId } from '../auth/feature-names';
+import type { FeatureId } from '../api/catalog';
 
 export const PIN_LIMIT = 5;
 export type NavigationDisplay = 'icons' | 'list';

@@ -14,6 +14,7 @@ import {
 } from '@features/work/conversations/conversation-actions';
 import { ChatConversations } from './state/chat-conversations';
 import { ChatStore } from './chat-store';
+import { routeOf } from '@core/api/catalog';
 
 /** 開啟中對話的標題與動作；生成狀態則在輸入框的島中。 */
 @Component({
@@ -32,6 +33,8 @@ import { ChatStore } from './chat-store';
   templateUrl: './chat-topbar.html',
 })
 export class ChatTopbar {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly store = inject(ChatStore);
   private readonly conversations = inject(ChatConversations);
   private readonly router = inject(Router);
@@ -42,7 +45,8 @@ export class ChatTopbar {
   choose(action: ConversationAction, spend: ConversationSpendView) {
     const projectId = this.store.selected()?.projectId;
     if (action === 'spend') spend.open();
-    else if (action === 'project' && projectId) void this.router.navigate(['/projects', projectId]);
+    else if (action === 'project' && projectId)
+      void this.router.navigate([routeOf('projects'), projectId]);
     else this.action.emit(action);
   }
   readonly rename = (title: string) => {

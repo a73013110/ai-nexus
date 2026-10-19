@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
 import { authenticated } from '@core/auth/auth-guard';
-import { optionalId } from '@core/layout/optional-id';
-import { repositoryRoute } from '@features/work/repositories/repository-route';
-import { pendingChanges } from '@shared/browser/pending-changes';
 import { WORKSPACE_HOME } from '@core/layout/workspace-home';
 
+/**
+ * 根路由只放登入、個人設定、首頁轉址與各區（ADR 0016）。區路由是同層的 `<區>.routes.ts`（區資料夾只放模組），
+ * 頁面路由在各模組的 `<module>.routes.ts`；網址與目錄的對應由 `app.routes.spec.ts` 雙向檢查。
+ */
 export const routes: Routes = [
   {
     path: 'login',
@@ -21,127 +22,12 @@ export const routes: Routes = [
       import('@core/layout/workspace-shell').then((module) => module.WorkspaceShell),
     children: [
       {
-        path: 'files',
-        loadComponent: () =>
-          import('@features/work/files/files-page').then((module) => module.FilesPage),
-      },
-      {
-        path: 'dashboard',
-        loadComponent: () =>
-          import('@features/work/dashboard/dashboard-page').then((match) => match.DashboardPage),
-      },
-      {
-        matcher: repositoryRoute,
-        loadComponent: () =>
-          import('@features/work/repositories/repositories-page').then(
-            (match2) => match2.RepositoriesPage,
-          ),
-      },
-      {
-        path: 'design',
-        loadComponent: () =>
-          import('@features/admin/design/design-page').then((match3) => match3.DesignPage),
-      },
-      {
-        path: 'integrations',
-        loadComponent: () =>
-          import('@features/admin/integrations/integrations-page').then(
-            (match4) => match4.IntegrationsPage,
-          ),
-      },
-      {
-        path: 'quality/retrieval',
-        loadComponent: () =>
-          import('@features/admin/quality/retrieval-evaluation').then(
-            (match5) => match5.RetrievalEvaluation,
-          ),
-      },
-      {
-        matcher: optionalId('quality'),
-        loadComponent: () =>
-          import('@features/admin/quality/quality-page').then((match6) => match6.QualityPage),
-      },
-      {
-        matcher: optionalId('shared'),
-        loadComponent: () =>
-          import('@features/work/sharing/shared-page').then((match7) => match7.SharedPage),
-      },
-      {
-        matcher: optionalId('projects'),
-        loadComponent: () =>
-          import('@features/work/projects/projects-page').then((match8) => match8.ProjectsPage),
-      },
-      {
-        matcher: optionalId('artifacts'),
-        canDeactivate: [pendingChanges],
-        loadComponent: () =>
-          import('@features/work/artifacts/artifacts-page').then((module) => module.ArtifactsPage),
-      },
-      {
-        matcher: optionalId('knowledge'),
-        loadComponent: () =>
-          import('@features/work/knowledge/knowledge-page').then((module) => module.KnowledgePage),
-      },
-      {
-        path: 'tasks',
-        loadComponent: () =>
-          import('@features/work/jobs/jobs-page').then((module) => module.JobsPage),
-      },
-      {
-        path: 'reader/share/:shareId/:id',
-        loadComponent: () =>
-          import('@features/work/knowledge/documents/document-reader').then(
-            (module) => module.DocumentReader,
-          ),
-      },
-      {
-        path: 'reader/attachment/:id',
-        loadComponent: () =>
-          import('@features/work/knowledge/documents/document-reader').then(
-            (module) => module.DocumentReader,
-          ),
-      },
-      {
-        path: 'reader/:id',
-        loadComponent: () =>
-          import('@features/work/knowledge/documents/document-reader').then(
-            (module) => module.DocumentReader,
-          ),
-      },
-      {
-        path: 'admin/operations',
-        loadComponent: () =>
-          import('@features/admin/operations/operations-page').then(
-            (match9) => match9.OperationsPage,
-          ),
-      },
-      {
-        path: 'admin/monitoring',
-        loadComponent: () =>
-          import('@features/admin/monitoring/monitoring-page').then(
-            (match10) => match10.MonitoringPage,
-          ),
-      },
-      {
-        path: 'admin/logs',
-        loadComponent: () =>
-          import('@features/admin/diagnostics/system-logs-page').then(
-            (match11) => match11.SystemLogsPage,
-          ),
-      },
-      {
-        path: 'admin/audit',
-        loadComponent: () =>
-          import('@features/admin/audit/activity-audit-page').then(
-            (match12) => match12.ActivityAuditPage,
-          ),
+        path: 'work',
+        loadChildren: () => import('./work.routes').then((module) => module.workRoutes),
       },
       {
         path: 'admin',
-        loadComponent: () =>
-          import('@features/admin/access-control/administration-page').then(
-            (module) => module.AdministrationPage,
-          ),
+        loadChildren: () => import('./admin.routes').then((module) => module.adminRoutes),
       },
       {
         path: 'settings',
@@ -151,12 +37,10 @@ export const routes: Routes = [
           ),
       },
       {
-        // /chat 與 /chat/:id 共用同一條路由，因此開始新對話時工作區不會改變。
-        matcher: optionalId('chat'),
+        path: '**',
         loadComponent: () =>
-          import('@features/work/chat/chat-workspace').then((module) => module.ChatWorkspace),
+          import('@core/layout/unavailable-page').then((module) => module.UnavailablePage),
       },
     ],
   },
-  { path: '**', redirectTo: WORKSPACE_HOME },
 ];

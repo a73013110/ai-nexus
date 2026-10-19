@@ -3,7 +3,7 @@ import { AuthService } from './auth-service';
 import { WorkspaceApi } from '../api/workspace-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
-import { FEATURE_NAMES, isFeatureId, type FeatureId } from './feature-names';
+import { catalogFeature, type FeatureId } from '../api/catalog';
 
 /** 管理寫入因帳號正在測試其他身分而被拒絕時顯示。 */
 export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
@@ -49,11 +49,14 @@ export class WorkspaceSession {
   has(id: FeatureId) {
     return this.me()?.access.features?.some((item) => item.id === id) ?? false;
   }
-  /** `id` 可以是 API 給的任意字串（例如監控區域）；不認得時原樣顯示。 */
+  /**
+   * 管理員在 `/me` 覆寫的名稱優先，其次是目錄的預設名稱（載入前、未授予的功能、閱讀器）。
+   * `id` 可以是 API 給的任意字串（例如監控區域）；不認得時原樣顯示。
+   */
   featureName(id: string) {
     return (
       this.me()?.access.features?.find((item) => item.id === id)?.name ||
-      (isFeatureId(id) && FEATURE_NAMES[id]) ||
+      catalogFeature(id)?.name ||
       id
     );
   }

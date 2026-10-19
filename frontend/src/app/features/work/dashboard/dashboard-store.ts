@@ -31,7 +31,7 @@ export class DashboardStore {
   );
   /** 只有平台操作者能看到整個平台；其他人永遠只看到自己的工作。 */
   readonly scope = computed<'personal' | 'platform'>(() =>
-    this.requestedScope() === 'platform' && this.session.has('operations')
+    this.requestedScope() === 'platform' && this.session.has('operations.usage')
       ? 'platform'
       : 'personal',
   );

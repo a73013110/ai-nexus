@@ -132,9 +132,9 @@ class RepositoryFixture {
 
   constructor() {
     this.core.extraFeatures.push(
-      { id: "repositories", name: "程式庫", route: "/repositories" },
-      { id: "knowledge", name: "知識庫", route: "/knowledge" },
-      { id: "tasks", name: "背景任務", route: "/tasks" },
+      { id: "repositories", name: "程式庫", route: "/work/repositories" },
+      { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+      { id: "jobs", name: "背景任務", route: "/work/jobs" },
     );
   }
 
@@ -426,7 +426,7 @@ test("a rejected Gitea token says what to fix instead of a generic failure", asy
   const fixture = new RepositoryFixture();
   fixture.listFailure = { status: 403, code: "gitea_unauthorized" };
   await fixture.attach(page);
-  await page.goto("/repositories");
+  await page.goto("/work/repositories");
   await expect(
     page.getByText("Gitea 拒絕這個權杖，請確認權杖仍有效，或更新授權。"),
   ).toBeVisible();
@@ -439,7 +439,7 @@ test("a connection that is not set up shows the steps without an error", async (
   const fixture = new RepositoryFixture();
   fixture.connection = { ...fixture.connection, connected: false, login: "" };
   await fixture.attach(page);
-  await page.goto("/repositories");
+  await page.goto("/work/repositories");
   await expect(
     page.getByRole("heading", { name: "連接你的 Gitea" }),
   ).toBeVisible();
@@ -451,9 +451,9 @@ test("browsing code pins a commit, reads folders and files, and hands picked fil
 }) => {
   const fixture = new RepositoryFixture();
   await fixture.attach(page);
-  await page.goto("/repositories");
+  await page.goto("/work/repositories");
   await page.getByRole("link", { name: /team\/nexus/ }).click();
-  await expect(page).toHaveURL(/\/repositories\/team\/nexus$/);
+  await expect(page).toHaveURL(/\/work\/repositories\/team\/nexus$/);
   await expect(page.getByRole("button", { name: /ccccccc/ })).toBeVisible();
   // The folder's README is rendered under its entries.
   await expect(
@@ -486,7 +486,7 @@ test("browsing code pins a commit, reads folders and files, and hands picked fil
   const selection = page.getByRole("region", { name: "已選取的檔案" });
   await expect(selection).toContainText("2 / 20 個檔案");
   await selection.getByRole("button", { name: "帶入對話" }).click();
-  await expect(page).toHaveURL(/\/chat\/[\da-f-]{36}$/);
+  await expect(page).toHaveURL(/\/work\/chat\/[\da-f-]{36}$/);
   expect(fixture.requests.find((x) => x.path.endsWith("/chat"))?.body).toEqual({
     commit: head,
     paths: ["app.ts", "docs/guide.md"],
@@ -500,7 +500,7 @@ test("a commit range opens its diff and a summary review that reports back", asy
 }) => {
   const fixture = new RepositoryFixture();
   await fixture.attach(page);
-  await page.goto("/repositories/team/nexus/commits");
+  await page.goto("/work/repositories/team/nexus/commits");
   await expect(
     page.getByRole("heading", { name: /2026年10月12日/ }),
   ).toBeVisible();
@@ -525,7 +525,7 @@ test("a commit range opens its diff and a summary review that reports back", asy
   ).toHaveAttribute("aria-pressed", "true");
   await dialog.getByRole("button", { name: "開始" }).click();
   await expect(page).toHaveURL(
-    /\/repositories\/team\/nexus\/reviews\/[\da-f-]{36}$/,
+    /\/work\/repositories\/team\/nexus\/reviews\/[\da-f-]{36}$/,
   );
   expect(
     fixture.requests.find(
@@ -555,12 +555,12 @@ test("a pull request review can be posted back as a comment once", async ({
   const fixture = new RepositoryFixture();
   fixture.pendingReads = 0;
   await fixture.attach(page);
-  await page.goto("/repositories/team/nexus/pulls");
+  await page.goto("/work/repositories/team/nexus/pulls");
   await page.getByRole("link", { name: /登入逾時改為可設定/ }).click();
   await expect(page.getByText("把逾時改成設定值。")).toBeVisible();
   await expect(page.getByRole("link", { name: "查看變更" })).toHaveAttribute(
     "href",
-    `/repositories/team/nexus/compare/${first}...${head}`,
+    `/work/repositories/team/nexus/compare/${first}...${head}`,
   );
   await page.locator(".head").getByRole("button", { name: "AI 檢閱" }).click();
   await page
@@ -593,7 +593,7 @@ test("issues filter by state and search, and open with their discussion", async 
 }) => {
   const fixture = new RepositoryFixture();
   await fixture.attach(page);
-  await page.goto("/repositories/team/nexus/issues");
+  await page.goto("/work/repositories/team/nexus/issues");
   await page.getByRole("searchbox", { name: "搜尋議題" }).fill("登出");
   await expect(page).toHaveURL(/q=%E7%99%BB%E5%87%BA/);
   expect(
@@ -613,10 +613,12 @@ test("a repository fits a phone screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const fixture = new RepositoryFixture();
   await fixture.attach(page);
-  await page.goto("/repositories/team/nexus/compare/" + first + "..." + head);
+  await page.goto(
+    "/work/repositories/team/nexus/compare/" + first + "..." + head,
+  );
   await expect(page.getByText("2 個檔案")).toBeVisible();
   await expectViewportContained(page);
-  await page.goto("/repositories/team/nexus?file=app.ts");
+  await page.goto("/work/repositories/team/nexus?file=app.ts");
   await expect(page.locator(".code code")).toContainText("answer");
   await expectViewportContained(page);
 });
@@ -642,9 +644,9 @@ test("notification links that only know the review id open it inside its reposit
     commentUrl: null,
   });
   await fixture.attach(page);
-  await page.goto(`/repositories?review=${id}`);
+  await page.goto(`/work/repositories?review=${id}`);
   await expect(page).toHaveURL(
-    new RegExp(`/repositories/team/nexus/reviews/${id}$`),
+    new RegExp(`/work/repositories/team/nexus/reviews/${id}$`),
   );
   await expect(page.getByRole("article", { name: "整體報告" })).toContainText(
     "結論",
@@ -700,7 +702,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, descriptions };
     };
-    await page.goto("/repositories");
+    await page.goto("/work/repositories");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([
@@ -715,7 +717,7 @@ for (const width of [1440, 375]) {
     );
     expect(list.descriptions.at(-1)).toContain("重播導覽");
     if (phone) {
-      await page.goto("/repositories/team/nexus/pulls/2");
+      await page.goto("/work/repositories/team/nexus/pulls/2");
       await expect(page.getByText("把逾時改成設定值。")).toBeVisible();
     } else {
       await page.locator(".resource-card").click();

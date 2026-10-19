@@ -44,9 +44,7 @@
   @if (actionError()) {
     <nx-notice tone="danger" [message]="actionError()" />
   }
-  @if (ready() && !session.has('monitoring')) {
-    <nx-feature-access-notice feature="monitoring" />
-  } @else if (store.snapshot(); as data) {
+  @if (store.snapshot(); as data) {
     <div class="monitor-dashboard" [class.is-stale]="store.stale()">
       <nx-monitoring-hero [data]="data">
         @if (store.issueCount()) {
@@ -90,7 +88,7 @@
         class="monitor-deferred"
         [activities]="data.activities"
         [endpoints]="data.endpoints"
-        [canTrace]="session.has('logs.query')"
+        [canTrace]="session.has('diagnostics.logs')"
       />
       <details class="monitor-scope">
         <summary>

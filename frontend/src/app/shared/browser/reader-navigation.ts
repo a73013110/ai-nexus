@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { NavigationStart, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { featureForUrl } from '@core/api/catalog';
 import { WORKSPACE_HOME } from '@core/layout/workspace-home';
 
 export interface ReaderOrigin {
@@ -25,24 +26,20 @@ export function readerReturnUrl(value: unknown): string | null {
   )
     return null;
   const url = new URL(value, 'https://app.invalid');
-  if (
-    url.origin !== 'https://app.invalid' ||
-    !/^\/(?:dashboard|chat|files|knowledge|projects|artifacts|repositories|quality|shared|tasks|integrations|admin|settings)(?:\/[a-z0-9-]+)?$/i.test(
-      url.pathname,
-    )
-  )
+  if (url.origin !== 'https://app.invalid') return null;
+  // 只收目錄中的頁面（不收閱讀器，避免閱讀器互相返回），頁面網址之後最多一段 ID。
+  const feature = featureForUrl(url.pathname);
+  const rest = feature && url.pathname.slice(feature.route.length);
+  if (feature?.kind !== 'page' || rest === undefined || !/^(?:\/[a-z0-9-]+)?$/i.test(rest))
     return null;
   return url.pathname + url.search + url.hash;
 }
 
+/** 返回按鈕的文字：返回來源頁所屬的功能；首頁寫「前往總覽」，不在目錄的網址寫「返回上一頁」。 */
 export function readerReturnLabel(url: string) {
-  if (/^\/files(?:[/?#]|$)/.test(url)) return '返回檔案庫';
-  if (/^\/chat(?:[/?#]|$)/.test(url)) return '返回對話';
-  if (/^\/projects(?:[/?#]|$)/.test(url)) return '返回專案';
-  if (/^\/shared(?:[/?#]|$)/.test(url)) return '返回分享';
-  if (/^\/knowledge(?:[/?#]|$)/.test(url)) return '返回知識庫';
   if (url === WORKSPACE_HOME) return '前往總覽';
-  return '返回上一頁';
+  const feature = featureForUrl(url);
+  return feature?.kind === 'page' ? `返回${feature.name}` : '返回上一頁';
 }
 
 @Injectable({ providedIn: 'root' })

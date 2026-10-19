@@ -19,6 +19,7 @@ import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-add-to-knowledge',
@@ -47,7 +48,7 @@ import { Select } from '@shared/ui/select';
         <p role="status">正在載入可編輯的知識庫…</p>
       } @else if (!choices().length) {
         <p>目前沒有可加入的知識庫。</p>
-        <a class="secondary-button" routerLink="/knowledge" (click)="dialog.close()"
+        <a class="secondary-button" [routerLink]="routeOf('knowledge')" (click)="dialog.close()"
           >前往建立知識庫</a
         >
       } @else {
@@ -73,6 +74,8 @@ import { Select } from '@shared/ui/select';
   </dialog>`,
 })
 export class AddToKnowledge {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   private readonly api = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');

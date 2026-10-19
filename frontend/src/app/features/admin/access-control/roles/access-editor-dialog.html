@@ -49,7 +49,9 @@
               <header class="form-section-head">
                 <h3 [id]="id + '-basics'">基本資料</h3>
                 @if (e.kind === 'feature') {
-                  <p class="form-note">路由與授權由模組註冊；順序在功能列表調整。</p>
+                  <p class="form-note">
+                    網址、圖示與授權來自功能目錄；名稱留白即使用預設名稱，順序在功能列表調整。
+                  </p>
                 } @else if (e.kind === 'menu') {
                   <p class="form-note">
                     只決定側欄怎麼排列，不影響授權。{{ e.isNew ? '識別碼建立後不能修改。' : '' }}
@@ -86,12 +88,20 @@
                     nxField
                     data-field="name"
                     aria-label="名稱"
-                    required
+                    [required]="e.kind !== 'feature'"
                     maxlength="120"
+                    [placeholder]="e.defaultName"
                     [value]="e.name"
                     [readOnly]="locked()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
+                @if (e.kind === 'feature') {
+                  <p class="form-note feature-identity">
+                    <nx-icon [name]="icon(catalogIcon(e.id))" />預設名稱「{{
+                      e.defaultName || e.id
+                    }}」
+                  </p>
+                }
                 @if (e.kind !== 'menu') {
                   <nx-checkbox
                     [label]="'啟用' + label(e.kind)"
@@ -111,18 +121,6 @@
                       [disabled]="locked()"
                       (valueChange)="update('placement', $event)"
                   /></label>
-                }
-                @if (e.kind === 'feature') {
-                  <label class="form-field-short"
-                    >圖示<span class="feature-icon-field"
-                      ><nx-icon [name]="icon(e.icon)" /><nx-select
-                        label="圖示"
-                        [options]="icons"
-                        [value]="e.icon"
-                        [searchable]="true"
-                        [disabled]="locked()"
-                        (valueChange)="update('icon', $event)" /></span
-                  ></label>
                 }
               </div>
             </section>

@@ -63,7 +63,7 @@ test("content width aligns messages, drafts, attachments and hints through previ
   fixture.answer = `${richAnswer}\n\n`.repeat(8);
   await fixture.attach(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await input.fill("請整理完整的工作紀錄");
   await page.getByRole("button", { name: "送出訊息", exact: true }).click();
@@ -168,7 +168,7 @@ test("new conversations share the selected column width and narrow screens keep 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   for (const [label, width] of [
     ["專注 · 窄", 704],
     ["標準", 832],
@@ -216,7 +216,7 @@ test("compact chat keeps more history and controls visible while touch menus rem
   }
   await core.attach(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const sidebar = page.locator(".workspace-sidebar");
   const history = sidebar.getByRole("navigation", { name: "對話歷史" });
   await expect(history.locator(".history-row")).toHaveCount(30);
@@ -314,7 +314,7 @@ test("compact chat keeps more history and controls visible while touch menus rem
 async function conversation(page: import("@playwright/test").Page) {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("本週會議摘要");
@@ -464,14 +464,14 @@ test("a running conversation keeps its sidebar signal when another conversation 
       },
     });
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("先處理這份分析");
   await page.getByRole("button", { name: "送出訊息", exact: true }).click();
   await expect(page.locator(".history-state.is-running")).toBeVisible();
   await page.locator("a.new-chat").click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/work\/chat$/);
   await expect(page.locator(".history-state.is-running")).toBeVisible();
   await page
     .locator(".history-row")
@@ -514,7 +514,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   await page.setViewportSize({ width: 1280, height: 768 });
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("版面檢查");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("table")).toBeVisible();
@@ -561,7 +561,7 @@ test("history groups by local day, shares one row menu and moves with arrow keys
       projectId: null,
     });
   await core.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const history = page.getByRole("navigation", { name: "對話歷史" });
   await expect(history.locator(".history-group h2")).toHaveText([
     "今天",
@@ -596,7 +596,7 @@ test("history groups by local day, shares one row menu and moves with arrow keys
   await expect(links.nth(0)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(
-    new RegExp(`/chat/${core.conversations[0].id}$`),
+    new RegExp(`/work/chat/${core.conversations[0].id}$`),
   );
 });
 
@@ -630,7 +630,7 @@ test.describe("on-screen keyboard", () => {
     page,
   }) => {
     await new ApiFixture().attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
       "content",
       /interactive-widget=resizes-content/,
@@ -676,7 +676,7 @@ test.describe("on-screen keyboard", () => {
       };
     });
     await new ApiFixture().attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
     await input.tap();
     const keyboard = (height: number) =>

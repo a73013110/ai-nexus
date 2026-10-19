@@ -23,7 +23,7 @@ import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
 import { ToastService } from '@shared/ui/toast-service';
-import { BillingApi, chargeKind, providerName } from './billing-api';
+import { BillingApi, chargeKind, providerName } from '../billing-api';
 
 const emptyPrice = (): PriceRequest => ({
   provider: 'google',

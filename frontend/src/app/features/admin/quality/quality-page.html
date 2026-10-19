@@ -3,7 +3,7 @@
   [description]="
     current() ? summary() : id() ? '' : '用固定題目比較模型與指令，留下可重現的結果與人工判讀。'
   "
-  [back]="id() ? { path: '/quality', label: '全部評測' } : null"
+  [back]="id() ? { path: routeOf('quality'), label: '全部評測' } : null"
   [tour]="tour()"
 >
   <div page-actions class="page-actions">
@@ -24,7 +24,7 @@
       <nx-action-menu
         class="quality-list-menu"
         label="評測操作"
-        [items]="listActions"
+        [items]="listActions()"
         (action)="listAction($event)"
       />
       <input #importInput type="file" accept=".json" hidden (change)="importSet($event)" />
@@ -52,7 +52,7 @@
           <a
             nxResourceCard
             [icon]="item.rating === 1 ? 'thumb-up' : 'thumb-down'"
-            [routerLink]="['/chat', item.conversationId]"
+            [routerLink]="[routeOf('chat'), item.conversationId]"
             [heading]="item.conversationTitle"
             [description]="item.note || '已提供快速回饋'"
             ><span>{{ item.rating === 1 ? '有幫助' : '待改善' }}</span
@@ -64,7 +64,7 @@
           <a
             nxResourceCard
             icon="lines"
-            [routerLink]="['/quality', set.resource.id]"
+            [routerLink]="[routeOf('quality'), set.resource.id]"
             [heading]="set.resource.name"
             [description]="set.description"
             ><span>{{ set.cases.length }} 題 · v{{ set.version }}</span
@@ -81,7 +81,9 @@
           <nx-icon name="thumb-up" />
           <h2>回饋從回答旁開始</h2>
           <p>在 AI 回覆下方按讚或標示待改善，就會保存在這裡。</p>
-          <a routerLink="/chat" class="secondary-button">前往{{ session.featureName('chat') }}</a>
+          <a [routerLink]="routeOf('chat')" class="secondary-button"
+            >前往{{ session.featureName('chat') }}</a
+          >
         } @else {
           <nx-icon name="lines" />
           <h2>把好答案變成可重現的標準</h2>

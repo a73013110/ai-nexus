@@ -21,6 +21,7 @@ import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryStore, shortSha } from '../repository-store';
+import { routeOf } from '@core/api/catalog';
 
 /** 以釘選的提交，把資料夾下的文字檔匯入知識庫集合。 */
 @Component({
@@ -47,7 +48,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
         <p class="form-note" role="status">正在載入可編輯的知識庫…</p>
       } @else if (!choices().length) {
         <p>目前沒有可加入的知識庫。</p>
-        <a class="secondary-button" routerLink="/knowledge" (click)="dialog.close()"
+        <a class="secondary-button" [routerLink]="routeOf('knowledge')" (click)="dialog.close()"
           >前往建立知識庫</a
         >
       } @else {
@@ -82,6 +83,8 @@ import { RepositoryStore, shortSha } from '../repository-store';
   </dialog>`,
 })
 export class RepositoryImportDialog {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   private readonly api = inject(RepositoriesApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);

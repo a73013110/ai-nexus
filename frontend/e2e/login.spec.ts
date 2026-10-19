@@ -12,7 +12,7 @@ test("an authenticated Windows user can switch to local login and return to Wind
     if (path === "/api/v1/auth/logout" || path === "/api/v1/auth/windows")
       transitions.push(path);
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "登入者選單", exact: true }).click();
   await page.getByRole("menuitem", { name: "切換登入方式" }).click();
   await expect(page).toHaveURL(/\/login\?method=local$/);
@@ -20,14 +20,14 @@ test("an authenticated Windows user can switch to local login and return to Wind
   await page.getByLabel("本地帳號", { exact: true }).fill("tester");
   await page.getByLabel("本地密碼", { exact: true }).fill("fixture-password");
   await page.getByRole("button", { name: "登入工作區", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   expect(fixture.loginMethod).toBe("local");
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "登入者選單", exact: true }).click();
   await page.getByRole("menuitem", { name: "切換登入方式" }).click();
   await page.getByRole("button", { name: "Windows 身分", exact: true }).click();
   await page.getByRole("button", { name: "使用 Windows 身分登入" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   expect(transitions).toEqual(["/api/v1/auth/logout", "/api/v1/auth/windows"]);
   expect(fixture.loginMethod).toBe("windows");
 });
@@ -47,7 +47,7 @@ test("local and AD sign-in share a form, clear passwords on method change and ke
   await page.getByLabel("本地帳號", { exact: true }).fill("local-tester");
   await page.getByLabel("本地密碼", { exact: true }).fill("fixture-password");
   await page.getByRole("button", { name: "登入工作區", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   expect(fixture.loginMethod).toBe("local");
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(
     "fixture-password",
@@ -60,7 +60,7 @@ test("LDAP login rejects passwords, clears secrets and returns to chat", async (
   const fixture = new ApiFixture();
   fixture.ldap = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
   const submit = page.getByRole("button", { name: "登入工作區", exact: true });
   await expect(submit).toBeDisabled();
@@ -142,7 +142,7 @@ test("accounts with several identities choose one, then the welcome hands the br
   await expect(
     page.getByRole("status").filter({ hasText: "財務部" }),
   ).toContainText("正在開啟你的工作區");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   expect(selections).toEqual(["finance"]);
   await expect(
     page.locator(".workspace-sidebar nx-brand-wordmark"),
@@ -174,7 +174,7 @@ test("a single identity goes straight from the check to the welcome", async ({
     0,
   );
   await expect(page.locator("nx-login-welcome")).toContainText("測試使用者");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
 });
 
 test("login works at 375px and cannot redirect to an external origin", async ({
@@ -195,13 +195,13 @@ test("login works at 375px and cannot redirect to an external origin", async ({
   await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
   await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
   await page.getByRole("button", { name: "登入工作區", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
 });
 
 for (const destination of [
-  "/dashboard?scope=personal",
-  "/repositories",
-  "/files",
+  "/work/dashboard?scope=personal",
+  "/work/repositories",
+  "/work/files",
 ]) {
   test(`sign-in preserves the requested ${destination} route without loading chat data`, async ({
     page,
@@ -209,7 +209,7 @@ for (const destination of [
     const fixture = new ApiFixture();
     fixture.ldap = true;
     fixture.extraFeatures = [
-      { id: "dashboard", name: "總覽", route: "/dashboard" },
+      { id: "dashboard", name: "總覽", route: "/work/dashboard" },
     ];
     const chatRequests: string[] = [];
     page.on("request", (request) => {
@@ -315,13 +315,13 @@ test("Windows users remain at login until an explicit identity challenge succeed
       body: JSON.stringify(session()),
     });
   });
-  await page.goto("/chat");
-  await expect(page).toHaveURL(/\/login\?returnUrl=%2Fchat$/);
+  await page.goto("/work/chat");
+  await expect(page).toHaveURL(/\/login\?returnUrl=%2Fwork%2Fchat$/);
   await expect(page.locator(".workbench")).toHaveCount(0);
   await page
     .getByRole("button", { name: "使用 Windows 身分登入", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/work\/chat$/);
   await expect(
     page.getByRole("textbox", { name: "傳送訊息", exact: true }),
   ).toBeVisible();
@@ -335,11 +335,11 @@ test("real anonymous startup shows login before constructing the private workspa
   expect(response.status()).toBe(401);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  const document = await page.goto("/chat");
+  const document = await page.goto("/work/chat");
   expect(document?.headers()["content-security-policy"]).toContain(
     "script-src 'self'",
   );
-  await expect(page).toHaveURL(/\/login\?returnUrl=%2Fchat$/);
+  await expect(page).toHaveURL(/\/login\?returnUrl=%2Fwork%2Fchat$/);
   await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "使用 Windows 身分登入", exact: true }),
@@ -352,7 +352,13 @@ test("real anonymous startup shows login before constructing the private workspa
   expect(errors).toEqual([]);
 });
 
-for (const target of ["/", "/chat", "/projects", "/admin", "/quality"]) {
+for (const target of [
+  "/",
+  "/work/chat",
+  "/work/projects",
+  "/admin/identity/users",
+  "/admin/quality",
+]) {
   test(`an unavailable session never exposes the workspace at ${target}`, async ({
     page,
   }) => {
@@ -421,7 +427,7 @@ test("login focuses the account, reveals the password on request and warns about
     undefined,
     { polling: "raf" },
   );
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
 });
 
 test("the Windows hint waits for a refused challenge and the mark plays once per tab", async ({

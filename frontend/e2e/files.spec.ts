@@ -23,7 +23,7 @@ test("capacity preflight prevents an upload when the remaining space is exhauste
   fixture.seed();
   fixture.core.attachmentLimitBytes = 0;
   await fixture.attach(page);
-  await page.goto("/files");
+  await page.goto("/work/files");
   await expect(page.locator("nx-files-page nx-storage-usage")).toContainText(
     "剩餘 0 bytes",
   );
@@ -45,7 +45,7 @@ test("library files can be searched, previewed, reused in chat and added to know
   await fixture.attach(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/files");
+  await page.goto("/work/files");
   await expect(
     page.getByRole("heading", { name: "檔案庫", exact: true }),
   ).toBeVisible();
@@ -105,7 +105,7 @@ test("library files can be searched, previewed, reused in chat and added to know
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "從檔案庫加入", exact: true }).click();
   const picker = page.getByRole("dialog", {
     name: "從檔案庫選取",
@@ -140,7 +140,7 @@ test("knowledge can choose an existing library original and display its source i
   const doc = fixture.seed();
   const second = fixture.collection("新的知識庫");
   await fixture.attach(page);
-  await page.goto("/knowledge");
+  await page.goto("/work/knowledge");
   await page.getByRole("link", { name: /新的知識庫/ }).click();
   await page.getByRole("button", { name: "從檔案庫加入", exact: true }).click();
   const picker = page.getByRole("dialog", {
@@ -190,7 +190,7 @@ test("file names retain their extension and a rejected edit remains recoverable"
     file.fileName = body.fileName;
     return route.fulfill({ json: file });
   });
-  await page.goto("/files");
+  await page.goto("/work/files");
   await (await fileAction(page, file.fileName, "重新命名")).click();
   const dialog = page.getByRole("dialog", {
     name: "重新命名檔案",
@@ -213,7 +213,11 @@ test("retained project originals are discoverable through the library and explic
   page,
 }) => {
   const core = new ApiFixture();
-  core.extraFeatures.push({ id: "projects", name: "專案", route: "/projects" });
+  core.extraFeatures.push({
+    id: "projects",
+    name: "專案",
+    route: "/work/projects",
+  });
   const id = randomUUID();
   core.attachments.push({
     id,
@@ -228,7 +232,7 @@ test("retained project originals are discoverable through the library and explic
   await page.route("**/api/v1/projects", (route) =>
     route.fulfill({ contentType: "application/json", body: "[]" }),
   );
-  await page.goto("/projects");
+  await page.goto("/work/projects");
   await page.getByRole("link", { name: "檔案庫", exact: true }).last().click();
   await expect(page.locator(".file-card")).toContainText("保留的參考文件.txt");
   const search = page.getByRole("searchbox", {
@@ -270,7 +274,7 @@ test("the library and its chooser page with the shared offset pagination", async
   }
   await core.attach(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/files");
+  await page.goto("/work/files");
   const footer = page.locator(".file-footer");
   const pager = footer.locator("nx-table-pagination");
   await expect(page.locator(".file-card")).toHaveCount(40);
@@ -302,7 +306,7 @@ test("the library and its chooser page with the shared offset pagination", async
   await expect(pager).toBeVisible();
   await expectViewportContained(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("button", { name: "從檔案庫加入", exact: true }).click();
   const picker = page.getByRole("dialog", {
     name: "從檔案庫選取",
@@ -350,7 +354,7 @@ for (const width of [1440, 375]) {
     }
     const height = width === 375 ? 812 : 1000;
     await page.setViewportSize({ width, height });
-    await page.goto("/files");
+    await page.goto("/work/files");
     await expect(page.locator(".file-card")).toBeVisible();
     await expect(page.locator("nx-files-page nx-storage-usage")).toBeVisible();
     const launcher = page

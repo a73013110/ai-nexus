@@ -12,7 +12,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { GripVertical } from 'lucide';
-import type { AdminFeatureDto, NavigationGroupDto } from '@core/api/schema';
+import { catalogFeature } from '@core/api/catalog';
+import type { AdminFeatureDto, FeatureUpdateRequest, NavigationGroupDto } from '@core/api/schema';
 import { safeMessage } from '@core/errors/safe-errors';
 import {
   featureIcon,
@@ -26,9 +27,10 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { CountBadge } from '@shared/ui/count-badge';
 import { DataTable, DataTableRow } from '@shared/ui/data-table';
 import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
-import { AdministrationApi } from '../administration-api';
-import { AdministrationStore } from '../administration-store';
+import { AccessControlApi } from '../access-control-api';
+import { AccessControlStore } from '../access-control-store';
 import { AccessStatus } from './access-status';
+import { featureNameOverride } from './access-editor-dialog';
 import { orderFeatures, reorderWrites, shiftId, type OrderShift } from './feature-order';
 
 interface Drag {
@@ -45,7 +47,7 @@ const SCROLL_EDGE = 48;
 const SCROLL_SPEED = 12;
 
 /**
- * 功能由模組註冊；名稱、開關、圖示、選單群組與位置都可以編輯。
+ * 功能來自功能目錄（網址與圖示不可改）；名稱、開關、選單群組與位置可以編輯。
  * 列表順序跟著側邊欄：最上層功能，接著是每個選單群組（包括空群組），群組的子群組排在其後。
  * 群組內的位置直接在列表上調整：拖曳把手，或在把手上按 ↑↓（Home/End），也可以用列的選單。
  * 每次移動都會立即透過功能端點儲存（見 `reorderWrites`）。移到其他群組與編輯群組則走編輯對話框；
@@ -56,12 +58,12 @@ const SCROLL_SPEED = 12;
   imports: [Icon, DataTable, DataTableRow, AccessStatus, ActionMenu, CountBadge, ConfirmDialog],
   providers: [{ provide: EXTRA_ICONS, useValue: { grip: GripVertical } }],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../access-tabs.scss', './admin-features-tab.scss'],
+  styleUrls: ['../../../../shared/ui/management-table-page.scss', './admin-features-tab.scss'],
   templateUrl: './admin-features-tab.html',
 })
 export class AdminFeaturesTab {
-  readonly store = inject(AdministrationStore);
-  private readonly api = inject(AdministrationApi);
+  readonly store = inject(AccessControlStore);
+  private readonly api = inject(AccessControlApi);
   private readonly app = inject(ApplicationRef);
   private readonly theme = inject(ThemeService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -247,13 +249,7 @@ export class AdminFeaturesTab {
     try {
       for (const write of writes) {
         const feature = current.find((item) => item.id === write.id)!;
-        await this.api.feature(write.id, {
-          name: feature.name,
-          enabled: feature.enabled,
-          sortOrder: write.sortOrder,
-          groupId: feature.groupId,
-          icon: feature.icon,
-        });
+        await this.api.feature(write.id, featureUpdate(feature, write.sortOrder));
         written.push({ id: write.id, sortOrder: feature.sortOrder });
       }
       this.store.reordered();
@@ -263,13 +259,7 @@ export class AdminFeaturesTab {
       for (const write of written.reverse()) {
         const feature = current.find((item) => item.id === write.id)!;
         try {
-          await this.api.feature(write.id, {
-            name: feature.name,
-            enabled: feature.enabled,
-            sortOrder: write.sortOrder,
-            groupId: feature.groupId,
-            icon: feature.icon,
-          });
+          await this.api.feature(write.id, featureUpdate(feature, write.sortOrder));
         } catch {
           restored = false;
         }
@@ -414,6 +404,16 @@ export class AdminFeaturesTab {
   private handle(id: string) {
     return this.host.querySelector<HTMLElement>(`[data-handle="${CSS.escape(id)}"]`);
   }
+}
+
+/** 只改順序時的寫入：名稱、開關與分群照舊，名稱等於目錄預設時不寫成覆寫。 */
+function featureUpdate(feature: AdminFeatureDto, sortOrder: number): FeatureUpdateRequest {
+  return {
+    name: featureNameOverride(feature.name, catalogFeature(feature.id)?.name ?? ''),
+    enabled: feature.enabled,
+    sortOrder,
+    groupId: feature.groupId,
+  };
 }
 
 /** 落定移動列的彈簧參數，取自動效權杖。 */

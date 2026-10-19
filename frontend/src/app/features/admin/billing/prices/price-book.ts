@@ -23,7 +23,7 @@ import { Notice } from '@shared/ui/notice';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { BillingApi, chargeKind, providerName } from './billing-api';
+import { BillingApi, chargeKind, providerName } from '../billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 
 /** 一個可定價的模型或工具，以及目前適用的版本。 */
@@ -121,15 +121,15 @@ function rank(provider: string) {
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../operations/operations-tabs.scss', './price-book.scss'],
+  styleUrls: ['../../../../shared/ui/management-section-page.scss', './price-book.scss'],
   templateUrl: './price-book.html',
 })
 export class PriceBook {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(BillingApi);
-  /** 每次顯示分頁時都會讀取：價格歷史與可定價的模型。 */
+  /** 每次開啟頁面時都會讀取：價格歷史與可定價的模型。 */
   readonly catalogRead = apiResource({
-    feature: 'operations',
+    feature: 'billing.prices',
     loader: async () => {
       const [prices, targets] = await Promise.all([this.api.prices(), this.api.targets()]);
       return { prices, targets };

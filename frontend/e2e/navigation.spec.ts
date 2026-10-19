@@ -16,11 +16,11 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
   fixture.extraFeatures = [
-    { id: "projects", name: "專案", route: "/projects" },
-    { id: "tasks", name: "背景任務", route: "/tasks" },
+    { id: "projects", name: "專案", route: "/work/projects" },
+    { id: "jobs", name: "背景任務", route: "/work/jobs" },
   ];
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const tools = page.getByRole("navigation", {
     name: "工作區功能",
     exact: true,
@@ -48,18 +48,16 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await expect(
     tools.getByRole("button", { name: "釘選檔案庫", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
-  await tools
-    .getByRole("button", { name: "釘選存取管理", exact: true })
-    .click();
+  await tools.getByRole("button", { name: "釘選使用者", exact: true }).click();
   await tools.getByRole("button", { name: "完成", exact: true }).click();
-  await expect(pinned.getByRole("link")).toHaveText(["對話", "存取管理"]);
+  await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
   await expect(
     tools
       .getByRole("region", { name: "協作", exact: true })
       .getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(pinned.getByRole("link")).toHaveText(["對話", "存取管理"]);
+  await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
   await expect(
     tools.getByRole("link", { name: "設定", exact: true }),
   ).toHaveCount(0);
@@ -96,9 +94,11 @@ test("chat and feature sidebars share brand, account alignment and compact navig
 }) => {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
-  fixture.extraFeatures = [{ id: "tasks", name: "背景任務", route: "/tasks" }];
+  fixture.extraFeatures = [
+    { id: "jobs", name: "背景任務", route: "/work/jobs" },
+  ];
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.locator(".pinned-features a").first()).toBeVisible();
   await settleEntrance(page);
   const measure = () =>
@@ -118,14 +118,17 @@ test("chat and feature sidebars share brand, account alignment and compact navig
       };
     });
   const chat = await measure();
-  await expect(page.locator(".brand")).toHaveAttribute("href", "/dashboard");
+  await expect(page.locator(".brand")).toHaveAttribute(
+    "href",
+    "/work/dashboard",
+  );
   await expectViewportContained(page);
-  await page.goto("/tasks");
+  await page.goto("/work/jobs");
   await expect(page.locator(".pinned-features a").first()).toBeVisible();
   expect(await measure()).toEqual(chat);
   await expectViewportContained(page);
   await page.locator(".brand").click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
 });
 
 test("the shared wordmark has one N and the compact new-chat icon stays centered", async ({
@@ -134,7 +137,7 @@ test("the shared wordmark has one N and the compact new-chat icon stays centered
   const core = new ApiFixture();
   await core.attach(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const sidebar = page.locator(".workspace-sidebar");
   await expect(sidebar.locator(".brand-wordmark")).toHaveText("AIexus");
   await expect(sidebar.locator(".brand-symbol svg")).toHaveCount(1);
@@ -189,16 +192,16 @@ test("one header notification icon exposes the full count and workspace expansio
 }) => {
   const core = new ApiFixture();
   core.extraFeatures.push(
-    { id: "knowledge", name: "知識庫", route: "/knowledge" },
-    { id: "tasks", name: "背景任務", route: "/tasks" },
-    { id: "repositories", name: "程式庫", route: "/repositories" },
+    { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+    { id: "jobs", name: "背景任務", route: "/work/jobs" },
+    { id: "repositories", name: "程式庫", route: "/work/repositories" },
   );
   await core.attach(page);
   let unread = 125;
   await page.route("**/api/v1/notifications**", (route) =>
     route.fulfill({ json: { items: [], unread, hasMore: false } }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const sidebar = page.locator(".workspace-sidebar");
   const bell = sidebar.getByRole("button", { name: "通知", exact: true });
   await expect(bell).toHaveCount(1);
@@ -366,7 +369,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
       },
     });
   });
-  await page.goto("/files");
+  await page.goto("/work/files");
   await page.getByRole("button", { name: "收合側欄", exact: true }).click();
   const sidebar = page.locator(".workspace-sidebar");
   await expect(sidebar).toHaveCSS("width", "52px");
@@ -420,7 +423,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await expect(dialog.locator(".notification-row")).toHaveCount(1);
   // The whole row opens its target, like 「查看內容」.
   await dialog.locator(".notification-row p").click();
-  await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/work/jobs\\?job=${job.id}$`));
   await expect(page.locator(".job-card.current")).toContainText(job.label);
   await expect(page.locator(".job-card.current")).toBeFocused();
   await expect(page.locator(".job-card.current")).toHaveCSS(
@@ -483,7 +486,7 @@ test("mobile navigation uses the full viewport, traps focus and preserves deskto
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const sidebar = page.locator(".workspace-sidebar");
   await sidebar.locator(".sidebar-toggle").click();
   await expect(sidebar).toHaveCSS("width", "52px");
@@ -525,11 +528,11 @@ test("feature navigation opens from the shared header and dismisses after select
   fixture.extraFeatures.push({
     id: "knowledge",
     name: "知識庫",
-    route: "/knowledge",
+    route: "/work/knowledge",
   });
   await fixture.attach(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/files");
+  await page.goto("/work/files");
   await expect(page.locator(".feature-header h1")).toBeVisible();
   expect((await page.locator(".feature-main").boundingBox())!.width).toBe(375);
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
@@ -538,7 +541,7 @@ test("feature navigation opens from the shared header and dismisses after select
     .getByRole("link", { name: "知識庫", exact: true })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/knowledge$/);
+  await expect(page).toHaveURL(/\/work\/knowledge$/);
   await expect(sidebar).not.toBeVisible();
   await expect(page.locator(".workspace-main")).not.toHaveAttribute(
     "inert",
@@ -554,10 +557,10 @@ test("the shell keeps one sidebar while pages and conversations change", async (
   fixture.extraFeatures.push({
     id: "knowledge",
     name: "知識庫",
-    route: "/knowledge",
+    route: "/work/knowledge",
   });
   await fixture.attach(page);
-  await page.goto("/files");
+  await page.goto("/work/files");
   const sidebar = page.locator(".workspace-sidebar");
   await sidebar.evaluate(
     (element) => ((element as HTMLElement).dataset["kept"] = "1"),
@@ -566,12 +569,12 @@ test("the shell keeps one sidebar while pages and conversations change", async (
     .getByRole("link", { name: "知識庫", exact: true })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/knowledge$/);
+  await expect(page).toHaveURL(/\/work\/knowledge$/);
   await sidebar
     .getByRole("link", { name: "對話", exact: true })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/work\/chat$/);
   const workspace = page.locator(".main-workspace");
   await workspace.evaluate(
     (element) => ((element as HTMLElement).dataset["kept"] = "1"),
@@ -580,7 +583,7 @@ test("the shell keeps one sidebar while pages and conversations change", async (
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("第一句");
   await page.getByRole("button", { name: "送出訊息" }).click();
-  await expect(page).toHaveURL(/\/chat\/[^/]+$/);
+  await expect(page).toHaveURL(/\/work\/chat\/[^/]+$/);
   // The same elements survive: the shell did not rebuild the sidebar, nor the router the chat.
   await expect(sidebar).toHaveAttribute("data-kept", "1");
   await expect(workspace).toHaveAttribute("data-kept", "1");
@@ -601,7 +604,7 @@ test.describe("touch interaction", () => {
     await page.route("**/api/client-issues", (route) =>
       route.fulfill({ status: 503, body: "{}" }),
     );
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     const opener = page.locator(".workspace-menu-button");
     await opener.tap();
     const sidebar = page.locator(".workspace-sidebar");
@@ -631,7 +634,7 @@ test.describe("touch interaction", () => {
     page,
   }) => {
     await new ApiFixture().attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     const opener = page.locator(".workspace-menu-button");
     const sidebar = page.locator(".workspace-sidebar");
     await opener.tap();
@@ -681,7 +684,7 @@ test.describe("touch interaction", () => {
     page,
   }) => {
     await new ApiFixture().attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     const sidebar = page.locator(".workspace-sidebar");
     const openSheet = async () => {
       // Closing the sheet leaves the drawer it was opened from in place.
@@ -742,7 +745,7 @@ test.describe("touch interaction", () => {
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await new ApiFixture().attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     await page.locator(".workspace-menu-button").tap();
     await page
       .locator(".workspace-sidebar")
@@ -767,8 +770,8 @@ test("custom feature names stay consistent across navigation, overview links and
 }) => {
   const fixture = new ApiFixture();
   fixture.extraFeatures = [
-    { id: "dashboard", name: "總覽", route: "/dashboard" },
-    { id: "knowledge", name: "部門知識庫", route: "/knowledge" },
+    { id: "dashboard", name: "總覽", route: "/work/dashboard" },
+    { id: "knowledge", name: "部門知識庫", route: "/work/knowledge" },
   ];
   await fixture.attach(page);
   await page.route("**/api/v1/dashboard?**", (route) =>
@@ -777,7 +780,7 @@ test("custom feature names stay consistent across navigation, overview links and
   await page.route("**/api/v1/knowledge/collections", (route) =>
     route.fulfill({ json: [] }),
   );
-  await page.goto("/dashboard");
+  await page.goto("/work/dashboard");
   await expect(
     page
       .getByRole("navigation", { name: "工作區功能" })
@@ -792,11 +795,11 @@ test("custom feature names stay consistent across navigation, overview links and
   await knowledge
     .getByRole("link", { name: "前往部門知識庫", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/knowledge$/);
+  await expect(page).toHaveURL(/\/work\/knowledge$/);
   await expect(
     page.getByRole("heading", { name: "部門知識庫", exact: true }),
   ).toBeVisible();
-  await page.goto("/dashboard");
+  await page.goto("/work/dashboard");
   // Features the account cannot open have no section, so no tile or flow stage links to them.
   await expect(
     page.getByRole("region", { name: "部門知識庫", exact: true }),
@@ -804,7 +807,7 @@ test("custom feature names stay consistent across navigation, overview links and
   await expect(
     page.getByRole("region", { name: "背景任務", exact: true }),
   ).toHaveCount(0);
-  await expect(page.locator('a[href^="/tasks"]')).toHaveCount(0);
+  await expect(page.locator('a[href^="/work/jobs"]')).toHaveCount(0);
 });
 
 async function navigationWorkspace(page: Page) {
@@ -812,20 +815,24 @@ async function navigationWorkspace(page: Page) {
   fixture.adminAccess = true;
   fixture.auditAccess = true;
   fixture.extraFeatures = [
-    { id: "dashboard", name: "總覽", route: "/dashboard" },
-    { id: "projects", name: "專案", route: "/projects" },
-    { id: "knowledge", name: "知識庫", route: "/knowledge" },
-    { id: "artifacts", name: "成果文件", route: "/artifacts" },
-    { id: "shared", name: "分享", route: "/shared" },
-    { id: "quality", name: "品質評測", route: "/quality" },
-    { id: "repositories", name: "程式庫", route: "/repositories" },
-    { id: "tasks", name: "背景任務", route: "/tasks" },
-    { id: "integrations", name: "資料來源", route: "/integrations" },
+    { id: "dashboard", name: "總覽", route: "/work/dashboard" },
+    { id: "projects", name: "專案", route: "/work/projects" },
+    { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+    { id: "artifacts", name: "成果文件", route: "/work/artifacts" },
+    { id: "sharing", name: "分享", route: "/work/sharing" },
+    { id: "quality", name: "品質評測", route: "/admin/quality" },
+    { id: "repositories", name: "程式庫", route: "/work/repositories" },
+    { id: "jobs", name: "背景任務", route: "/work/jobs" },
+    { id: "integrations", name: "資料來源", route: "/admin/integrations" },
     { id: "monitoring", name: "即時監控", route: "/admin/monitoring" },
-    { id: "logs.query", name: "系統日誌", route: "/admin/logs" },
+    {
+      id: "diagnostics.logs",
+      name: "系統日誌",
+      route: "/admin/diagnostics/logs",
+    },
   ];
   await fixture.attach(page);
-  await page.goto("/files");
+  await page.goto("/work/files");
   await expect(
     page.getByRole("heading", { name: "檔案庫", exact: true }),
   ).toBeVisible();
@@ -966,7 +973,7 @@ test("nested menu groups list features before subgroups, hide empty groups and s
     { id: "drafts", parentId: "reports", name: "草稿", sortOrder: 10 },
   ];
   fixture.extraFeatures = [
-    { id: "dashboard", name: "總覽", route: "/dashboard" },
+    { id: "dashboard", name: "總覽", route: "/work/dashboard" },
     {
       id: "monitoring",
       name: "即時監控",
@@ -975,22 +982,22 @@ test("nested menu groups list features before subgroups, hide empty groups and s
       sortOrder: 2,
     },
     {
-      id: "logs.query",
+      id: "diagnostics.logs",
       name: "系統日誌",
-      route: "/admin/logs",
+      route: "/admin/diagnostics/logs",
       groupId: "diagnostics",
       sortOrder: 1,
     },
     {
       id: "quality",
       name: "品質評測",
-      route: "/quality",
+      route: "/admin/quality",
       groupId: "insights",
       sortOrder: 1,
     },
   ];
   await fixture.attach(page);
-  await page.goto("/files");
+  await page.goto("/work/files");
   const launcher = page
     .getByRole("navigation", { name: "工作區功能" })
     .locator("nx-feature-launcher");
@@ -1014,7 +1021,17 @@ test("nested menu groups list features before subgroups, hide empty groups and s
   });
   await expect(
     system.locator(":scope > .workspace-icons").getByRole("link"),
-  ).toHaveText(["存取管理", "平台營運", "活動稽核", "介面元件"]);
+  ).toHaveText([
+    "使用者",
+    "角色",
+    "功能群組與模型",
+    "功能與選單",
+    "平台用量",
+    "模型與工具價格",
+    "檢索管理",
+    "活動稽核",
+    "介面元件",
+  ]);
   // Its subgroups nest inside it, ordered by SortOrder.
   await expect(system.locator(":scope > section.is-nested > h4")).toHaveText([
     "洞察",
@@ -1022,8 +1039,13 @@ test("nested menu groups list features before subgroups, hide empty groups and s
   ]);
   // Inside a group, its own features come before its subgroups.
   await expect(system.getByRole("link")).toHaveText([
-    "存取管理",
-    "平台營運",
+    "使用者",
+    "角色",
+    "功能群組與模型",
+    "功能與選單",
+    "平台用量",
+    "模型與工具價格",
+    "檢索管理",
     "活動稽核",
     "介面元件",
     "品質評測",
@@ -1053,7 +1075,7 @@ test("nested menu groups list features before subgroups, hide empty groups and s
   await expect(options.locator("small")).toHaveText(["前往功能"]);
   await search.fill("系統日誌");
   await search.press("Enter");
-  await expect(page).toHaveURL(/\/admin\/logs$/);
+  await expect(page).toHaveURL(/\/admin\/diagnostics\/logs$/);
 });
 
 test("short mobile drawers expose scrolling and preserve the focus escape route", async ({

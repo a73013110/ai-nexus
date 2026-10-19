@@ -16,6 +16,7 @@ import { positionPopover } from '@shared/browser/popover-position';
 import { KnowledgeSelection } from './knowledge-selection';
 import { Checkbox } from '@shared/ui/checkbox';
 import { SearchField } from '@shared/ui/search-field';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-knowledge-picker',
@@ -96,12 +97,14 @@ import { SearchField } from '@shared/ui/search-field';
           移除已失效的來源<nx-icon name="close" />
         </button>
       }
-      <a routerLink="/knowledge" class="quiet-button" (click)="popover.hide()"
+      <a [routerLink]="routeOf('knowledge')" class="quiet-button" (click)="popover.hide()"
         >管理知識庫<nx-icon name="chevron"
       /></a>
     </div>`,
 })
 export class KnowledgePicker {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly selection = inject(KnowledgeSelection);
   readonly disabled = input(false);
   readonly query = signal('');

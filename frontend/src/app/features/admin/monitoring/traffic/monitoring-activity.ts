@@ -14,6 +14,7 @@ import { mediaQuery } from '@shared/browser/media-query';
 import { Icon } from '@shared/ui/icon';
 import { Panel } from '@shared/ui/panel';
 import { monitoringFeatureNames, monitoringLatency, monitoringTime } from '../monitoring-format';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 最近的變更、錯誤與取消，旁邊是最忙碌的 API 路由。第一批列渲染後，新事件會落在最上方；
@@ -28,6 +29,8 @@ import { monitoringFeatureNames, monitoringLatency, monitoringTime } from '../mo
   templateUrl: './monitoring-activity.html',
 })
 export class MonitoringActivity {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly activities = input.required<TrafficActivity[]>();
   readonly endpoints = input.required<EndpointTraffic[]>();
   readonly canTrace = input(false);

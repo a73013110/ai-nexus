@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import type { FeatureId } from '../auth/feature-names';
+import type { FeatureId } from '../api/catalog';
 import { Notice } from '@shared/ui/notice';
 
 /**
