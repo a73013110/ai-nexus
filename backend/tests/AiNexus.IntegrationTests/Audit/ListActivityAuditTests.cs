@@ -60,12 +60,7 @@ public sealed class ListActivityAuditTests
         const string trace = "1234567890abcdef1234567890abcdef";
         string[] actions = ["identity.login", "admin.user_roles", "resource.acl.updated", "system.diagnostics.configuration", "billing.price.created",
             "logs.query", "admin.conversation_read", "billing.report.export", "dashboard.platform.read", "integration.record.read", "conversation.created"];
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.AuditEvents.AddRange(actions.Select(action => new AuditEvent { OwnerId = owner, Action = action, TraceId = trace, Result = action == "billing.report.export" ? "csv" : "saved" }));
-            await db.SaveChangesAsync();
-        }
+        await SeedAsync(factory, actions.Select(action => new AuditEvent { OwnerId = owner, Action = action, TraceId = trace, Result = action == "billing.report.export" ? "csv" : "saved" }));
         foreach (var category in AuditCategories.Values)
         {
             var rows = (await admin.GetFromJsonAsync<AuditDto[]>($"/api/v1/admin/audit?category={category}&traceId={trace}&result=success"))!;
@@ -91,13 +86,8 @@ public sealed class ListActivityAuditTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            foreach (var result in new[] { "created", "deleted", "soft_deleted", "queued", "read-only", "cancelled", "executor_lost" })
-                db.AuditEvents.Add(new() { OwnerId = user.Id, Action = "fixture.lifecycle", Result = result });
-            await db.SaveChangesAsync();
-        }
+        await SeedAsync(factory, new[] { "created", "deleted", "soft_deleted", "queued", "read-only", "cancelled", "executor_lost" }
+            .Select(result => new AuditEvent { OwnerId = user.Id, Action = "fixture.lifecycle", Result = result }));
         var failures = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?result=failed"))!;
         Assert.Equal("executor_lost", Assert.Single(failures).Result);
         var accepted = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.lifecycle&result=success"))!;
@@ -116,12 +106,7 @@ public sealed class ListActivityAuditTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.AuditEvents.AddRange(Enumerable.Range(0, 60).Select(_ => new AuditEvent { OwnerId = user.Id, Action = "fixture.page", Result = "saved" }));
-            await db.SaveChangesAsync();
-        }
+        await SeedAsync(factory, Enumerable.Range(0, 60).Select(_ => new AuditEvent { OwnerId = user.Id, Action = "fixture.page", Result = "saved" }));
         Assert.Equal(25, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page&take=25"))!.Length);
         var first = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page&take=50"))!;
         Assert.Equal(50, first.Length);
@@ -155,18 +140,10 @@ public sealed class ListActivityAuditTests
         await using var factory = new AppFactory(administrators: ["alice"], services: services => services.Configure<AuditOptions>(x => x.MaxExportRows = 3));
         using var admin = await factory.SignedInAsync(); using var member = await factory.SignedInAsync("bob");
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.AuditEvents.AddRange(
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "saved", DetailsJson = """{"resourceKey":"=HYPERLINK(\"evil\")"}""" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "failed" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" });
-            await db.SaveChangesAsync();
-        }
+        await SeedAsync(factory, [
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "saved", DetailsJson = """{"resourceKey":"=HYPERLINK(\"evil\")"}""" },
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.export", Result = "failed" },
+            .. Enumerable.Range(0, 4).Select(_ => new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" })]);
         using var response = await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.export&result=saved&result=failed");
         response.EnsureSuccessStatusCode();
         Assert.Equal("text/csv", response.Content.Headers.ContentType!.MediaType);
@@ -202,16 +179,11 @@ public sealed class ListActivityAuditTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.AuditEvents.AddRange(
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.saved", Result = "saved" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.failed", Result = "failed" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.read", Result = "read" },
-                new AuditEvent { OwnerId = user.Id, Action = "fixture.other", Result = "failed" });
-            await db.SaveChangesAsync();
-        }
+        await SeedAsync(factory, [
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.saved", Result = "saved" },
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.failed", Result = "failed" },
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.read", Result = "read" },
+            new AuditEvent { OwnerId = user.Id, Action = "fixture.other", Result = "failed" }]);
         async Task<string[]> ActionsAsync(string query)
         {
             var text = (await admin.GetStringAsync("/api/v1/admin/audit/export?" + query)).TrimStart('\uFEFF');
@@ -230,5 +202,13 @@ public sealed class ListActivityAuditTests
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 3; i++) statuses.Add((await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.none")).StatusCode);
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests], statuses);
+    }
+
+    private static async Task SeedAsync(AppFactory factory, IEnumerable<AuditEvent> events)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.AuditEvents.AddRange(events);
+        await db.SaveChangesAsync();
     }
 }

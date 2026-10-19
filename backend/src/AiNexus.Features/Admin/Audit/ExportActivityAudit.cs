@@ -17,6 +17,7 @@ namespace AiNexus.Features.Admin.Audit;
 internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope, IOptions<AuditOptions> options)
 {
     public const string Action = "audit.export";
+    private static readonly string[] ResourceKeyFields = ["resourceKey", "conversationId", "userId"];
     private static readonly string[] Header = ["紀錄 ID", "時間（UTC）", "操作者", "測試身分", "動作", "資源 ID", "資源識別碼", "結果", "異動資訊", "分類", "Trace ID", "Operation ID", "查證代碼"];
 
     public static void Map(RouteGroupBuilder audit) => audit
@@ -58,7 +59,7 @@ internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope,
         {
             using var details = JsonDocument.Parse(json);
             if (details.RootElement.ValueKind != JsonValueKind.Object) return null;
-            foreach (var name in new[] { "resourceKey", "conversationId", "userId" })
+            foreach (var name in ResourceKeyFields)
                 if (details.RootElement.TryGetProperty(name, out var value) && value.ValueKind is not (JsonValueKind.Null or JsonValueKind.False) && value.ToString() is { Length: > 0 } text)
                     return text;
         }
