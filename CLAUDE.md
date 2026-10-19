@@ -19,7 +19,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
 | 資料表、EF 對應、結構變更 | `docs/architecture/database.md` |
 | 設定、秘密 | `docs/development/configuration.md` |
-| 授權、功能 grant、選單分群 | `docs/architecture/access-control.md` |
+| 授權、功能 grant、選單 | `docs/architecture/access-control.md` |
 | 腳本、建置、驗證 | `docs/development/development.md` |
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |
@@ -50,7 +50,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 - 資料庫優先：結構由開發庫匯出到 `database/App/`，EF 只做對應，不用 migration。實體與組態一表一檔放 `AiNexus.Data/App/<Module>/<Entity>.cs`（資料夾＝schema、實體＝表單數名），Features 只引用；組態不寫索引、約束、預設值與說明。
 - 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Area>/<Module>/`（區見 ADR 0016，只是資料夾、不是依賴邊界；模組名全域唯一）；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
-- 前端 `features/<area>/<module-kebab>/` 與後端區、模組同名（能力子資料夾也同名，唯一例外 `admin/design/`）；選單分群是資料（`accesscontrol.NavigationGroups`），不反映在目錄。跨模組引用用 `@core`／`@shared`／`@features` 別名。
+- 前端 `features/<area>/<module-kebab>/` 與後端區、模組同名（能力子資料夾也同名，唯一例外 `admin/design/`）；選單是資料（`accesscontrol.NavigationItems`），不反映在目錄。跨模組引用用 `@core`／`@shared`／`@features` 別名。
 - 頁面與動作只宣告在 `FeatureCatalog`（ID `<module>.<page>[.<action>]`，網址由它推得）；前端路由以 `data: { feature }` 指向它，後端連結用 `RouteOf`，不寫死路徑。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。

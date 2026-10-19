@@ -5,7 +5,7 @@
 ## 權限
 
 - 使用 `audit` 功能授權，初始授予 administrators 群組。持有 `admin` 不隱含 `audit`；可以只給稽核人員 `audit` 而不給帳號管理權。每個 request 重新驗證 grant。
-- 查詢由 `Audit` 模組的 `ListActivityAudit` 負責（`GET /api/v1/admin/audit`）。`GET /api/v1/admin/audit/catalog` 只提供解讀異動所需的功能、模型名稱與全部選單分群（功能異動依選單分群排列，與存取管理相同），以及分類與動作篩選清單，不回傳角色、權限群組或帳號清單。
+- 查詢由 `Audit` 模組的 `ListActivityAudit` 負責（`GET /api/v1/admin/audit`）。`GET /api/v1/admin/audit/catalog` 只提供解讀異動所需的功能、模型名稱，以及分類與動作篩選清單，不回傳角色、權限群組或帳號清單；功能異動依程式目錄的區 › 模組分組，與存取管理相同。
 - 前端在 `features/admin/audit`，依路由延後載入，不依賴管理頁。
 
 ## 記錄什麼

@@ -23,6 +23,16 @@
 
 秘密檔填 `Databases.App.User`、`Databases.App.Password`（application pool 以 gMSA 或網域身分登入 SQL 時改設 `Databases.App.IntegratedSecurity=true`，帳密留空）、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
 
+## 外部連結允許清單
+
+選單的外部連結只能指向一般設定 `AccessControl.NavigationLinkHosts` 列出的主機；預設空陣列＝不允許任何外部連結（失敗即拒絕）。範例見 `backend/src/AiNexus.Host/appsettings.Production.example.json`。
+
+- 每項是小寫主機名稱，不含 scheme 與路徑，最多 100 項；格式不合時網站不會啟動。國際化網域寫 punycode（`xn--…`）。
+- `*.docs.company.internal` 只比對子網域，不含 `docs.company.internal` 本身，需要時兩者都列。
+- 不帶 port 只接受 443；其他 port 寫成 `intranet.company.internal:8443`。
+- 環境變數寫成 `AccessControl__NavigationLinkHosts__0`、`__1`…。
+- 改完回收集區才生效。主機移出清單後，既有連結會從所有人的選單消失，不必刪資料。
+
 ## web.config 的完整定位
 
 以版本庫 `backend/src/AiNexus.Host/web.config` 為唯一範本，發版 SDK 會帶到 app。關鍵內容：

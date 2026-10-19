@@ -1,6 +1,6 @@
 # 存取管理
 
-存取管理是四個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能與選單 `/admin/access-control/features`（`access-control.features`）。一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
+存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能 `/admin/access-control/features`（`access-control.features`）、選單 `/admin/access-control/navigation`（`access-control.navigation`）。一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
 平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
@@ -35,18 +35,20 @@
 3. 「角色」建立工作角色並加入群組。
 4. 「使用者」搜尋帳號，在詳情的「角色與權限」勾選角色；儲存前可預覽可用功能，儲存後下一次 API 操作生效。
 
-- 主檔用穩定 ID，名稱可改。角色與群組只能停用、不刪除，保留授權歷史；功能列由 `database/App/Seed/` 寫入，管理員只調整名稱、圖示、啟用狀態、選單分群與順序。
+- 主檔用穩定 ID，名稱可改。角色與群組只能停用、不刪除，保留授權歷史；功能列由 `database/App/Seed/` 寫入，管理員在「功能」頁只調整啟用狀態與名稱覆寫（留空＝程式目錄的預設名稱）；圖示與網址來自程式目錄。
 - 異動在同一個 serializable 交易保存授權與稽核。會撤銷操作者自身管理權的變更回 409 並回滾，交由另一位管理員執行。異動 JSON 只含授權、模型識別與限制。
-- 功能清單、群組授權、存取預覽與側欄都依資料庫的選單分群排列（`frontend/src/app/core/layout/navigation-tree.ts`），名稱覆寫、排序與啟用狀態來自資料庫，預設名稱與圖示來自程式目錄。選單分群不影響授權，資料模型見 [身分與授權](../architecture/access-control.md#選單分群)。
+- 功能清單、群組授權與稽核依程式目錄的區 › 模組分組、依目錄順序排列，與選單無關。存取預覽與 `/me` 以同一套規則算出使用者看得到的選單。
 
-## 選單分群與順序
+## 選單
 
-- 「功能與選單」頁照側欄的順序列出：最上層的功能，再來每個選單分群（含空分群與子分群，以路徑「系統管理 › 診斷」標示）。不顯示也不讓人填數字。
-- 分群：「新增選單分群」填識別碼、名稱與上層分群；分群列的「⋯」可重新命名或改上層、在同層分群間上移／下移、刪除。分群仍有功能或子分群時刪除會被拒絕（`navigation_group_not_empty`），不能移到自己或自己的子分群底下（`navigation_group_cycle`）。空分群不會出現在側欄。
-- 功能換分群或改名：開啟功能（或列的「⋯」→「移到其他分群或編輯…」）選擇選單分群、覆寫名稱（留空＝程式目錄的預設名稱），儲存後排到新分群的最後。圖示與網址來自程式目錄，不能在這裡改。
-- 分群內的移動方式：拖曳把手；聚焦把手按 ↑↓、Home、End；或列的「⋯」選單（手機卡片只有選單）。新位置由 live region 播報。
-- 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/admin/access-control/roles/feature-order.ts`。
-- 儲存中不能再移動。失敗時先還原已寫入的項目，畫面回到原順序並顯示錯誤；成功後重新讀取目錄與 `/me`，側欄跟著更新。重編時的多筆寫入各自成交易與稽核，不是原子操作。分群異動稽核為 `admin.navigation_group`／`admin.navigation_group_delete`。
+「選單」頁編輯整棵側欄樹，包含空分群與使用者看不到的節點。選單只決定入口的排列，不授予功能；使用者看到的是伺服器依授權修剪過的樹（規則與資料模型見 [身分與授權](../architecture/access-control.md#選單)）。
+
+- **分群**：名稱與圖示，可巢狀，最多 4 層。仍有子節點時不能刪除（`navigation_item_not_empty`）；不能移到自己底下（`navigation_item_cycle`）或超過層數（`navigation_depth_exceeded`）。
+- **頁面**：從程式目錄的頁面挑選；同一頁面可放在多處，但同一層只能一次（`navigation_page_duplicate`）。名稱跟著功能走，改名在「功能」頁。沒有授權或已停用的頁面不會出現在使用者的選單。
+- **外部連結**：名稱、`https://` 網址、圖示、是否另開分頁與可見群組（留空＝所有登入者）。主機要在維運設定的允許清單內（`navigation_link_host_not_allowed`，見 [IIS 外部設定](../operations/iis-configuration.md#外部連結允許清單)）；清單預設是空的。可見群組只決定入口是否出現，外部系統仍自行驗證權限。
+- **排序與移動**：拖曳或鍵盤調整順序、跨層移動；整批位置一次送出，全部檢查通過才寫入，失敗時畫面回到原狀。成功後重新讀取 `/me`，側欄跟著更新。
+- 沒有可見項目的分群不顯示，只剩一項的分群攤平成該項；空分群因此可以先建好再放內容。
+- 稽核動作為 `admin.navigation_item`、`admin.navigation_item_delete`、`admin.navigation_order`，在活動稽核以「選單異動」篩選。
 
 ## 使用者用量與對話
 
