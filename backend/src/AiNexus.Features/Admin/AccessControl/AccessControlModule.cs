@@ -1,11 +1,12 @@
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.AccessControl;
 
 /// <summary>
-/// 授權資料與存取管理：角色、功能、選單群組的編輯，以及所有模組的行政變更共用的稽核（<see cref="AdministrativeAudit"/>）。
+/// 授權資料與存取管理：角色、功能、選單的編輯，以及所有模組的行政變更共用的稽核（<see cref="AdministrativeAudit"/>）。
 /// 不依賴任何其他業務模組。
 /// </summary>
 public sealed class AccessControlModule : IFeatureModule
@@ -20,19 +21,23 @@ public sealed class AccessControlModule : IFeatureModule
         services.AddFeaturePolicy(FeatureCatalog.AccessControlRoles);
         services.AddFeaturePolicy(FeatureCatalog.AccessControlGroups);
         services.AddFeaturePolicy(FeatureCatalog.AccessControlFeatures);
+        services.AddFeaturePolicy(FeatureCatalog.AccessControlNavigation);
         services.AddFeaturePolicy(Policies.AccessCatalog, FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles,
-            FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures);
+            FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures, FeatureCatalog.AccessControlNavigation);
+        services.AddSettings<AccessControlOptions, AccessControlOptionsValidator>(AccessControlOptions.Section);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         SaveRole.Map(api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlRoles));
-        // 選單分群在功能頁編輯，與功能排序一起調整。
-        var features = api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlFeatures);
-        SaveFeature.Map(features);
-        CreateNavigationGroup.Map(features);
-        UpdateNavigationGroup.Map(features);
-        DeleteNavigationGroup.Map(features);
+        SaveFeature.Map(api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlFeatures));
+        var navigation = api.MapGroup("/admin").RequireAuthorization(Policies.AccessControlNavigation);
+        ListNavigationItems.Map(navigation);
+        CreateNavigationItem.Map(navigation);
+        // 字面路徑 /order 的路由優先於 /{id}，所以兩個 PUT 不會互相攔截；伺服器產生的 Id 是 GUID、Seed 也沒有叫 order 的節點。
+        ReorderNavigationItems.Map(navigation);
+        UpdateNavigationItem.Map(navigation);
+        DeleteNavigationItem.Map(navigation);
     }
 }
 

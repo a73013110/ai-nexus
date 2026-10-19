@@ -15,7 +15,7 @@ public static class AuditRedactor
         "roleIds", "name", "policy", "featureIds", "sortOrder", "adAccount", "adEnabled", "localAccount", "localEnabled", "hasLocalPassword", "from", "to", "issueCode", "traceId", "jobId", "runId", "permission", "clientAddress",
         "fingerprint", "retentionDays", "auditRetentionDays", "fileRetentionDays", "queueCapacity", "importantQueueCapacity", "batchSize", "maxDiskBytes", "maxSqlRows", "minimumLevel", "frameworkMinimumLevel", "lowLevelSampleEvery", "otlpEnabled",
         "fileSizeBytes", "flushIntervalMs", "retrySeconds", "sqlTimeoutSeconds", "shutdownSeconds", "maxQueryDays", "maxExportDays", "maxExportRows", "serviceName", "cleanupBatchSize", "locationFingerprint",
-        "search", "action", "results", "category", "provider", "modelId", "effectiveAt"
+        "search", "action", "results", "category", "provider", "modelId", "effectiveAt", "parentId", "featureId", "openInNewTab", "icon", "audienceGroupIds"
     };
 
     /// <summary>

@@ -1,56 +1,96 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using AiNexus.Data.App;
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Platform.Account;
+using Microsoft.Extensions.DependencyInjection;
+using static AiNexus.IntegrationTests.Support.NavigationApi;
 
 namespace AiNexus.IntegrationTests.AccessControl;
 
 public sealed class MenuNavigationTests
 {
     [Fact]
-    public async Task MembersReceiveOnlyTheGroupsTheirFeaturesNeed()
+    public async Task MembersReceiveTheSeededTreePrunedToTheirPages()
     {
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
-        var access = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
-        // quality 與 quality.retrieval 是成員唯一持有的系統功能，因此系統群組會一併帶出。
-        Assert.Equal(["work", "collaboration", "system"], access.NavigationGroups.Select(x => x.Id));
-        Assert.Contains(access.Features, x => x.Id == "dashboard" && x.GroupId == null && x.Icon == "dashboard");
-        Assert.All(access.NavigationGroups, x => Assert.Null(x.ParentId));
+        var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
+        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
+        var dashboard = tree[0];
+        Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));
+        Assert.Equal(["work.chat", "work.projects", "work.files", "work.knowledge", "work.artifacts"], tree[1].Children.Select(x => x.Id));
+        Assert.Equal(("group", "AI 工作台"), (tree[1].Kind, tree[1].Name));
+        // 成員在系統管理只有兩個評測頁；「身分與權限」整個分群沒有可見頁面而被修剪。
+        Assert.Equal(["system.quality", "system.quality-retrieval"], tree[3].Children.Select(x => x.Id));
     }
 
     [Fact]
-    public async Task GroupsHoldingOnlyGrantOnlyFeaturesOrNothingAreHiddenAndAncestorsAreKept()
+    public async Task GroupsLeftWithOneVisibleChildAreReplacedByThatChild()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
-        (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("diagnosis", "診斷", "system", 50))).EnsureSuccessStatusCode();
-        (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("empty", "空分群", null, 40))).EnsureSuccessStatusCode();
-        (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("permissions", "權限", null, 50))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/diagnostics.logs.export", new FeatureUpdateRequest("日誌匯出", 96, true, "permissions"))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, true, "diagnosis"))).EnsureSuccessStatusCode();
+        using var member = await factory.SignedInAsync("bob");
+        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
+        var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
+        var quality = Assert.Single(tree, x => x.Id == "system.quality");
+        Assert.Equal(("page", FeatureCatalog.Quality), (quality.Kind, quality.FeatureId));
+        Assert.DoesNotContain(tree, x => x.Id == BuiltInAccess.SystemNavigation);
 
-        var access = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
-        var groups = access.NavigationGroups.Select(x => x.Id).ToArray();
-        Assert.Contains("diagnosis", groups);
-        Assert.Contains("system", groups);
-        Assert.DoesNotContain("empty", groups);
-        Assert.DoesNotContain("permissions", groups);
-        // 僅有授權、沒有選單入口的功能仍然有效；選單只是不列出它。
-        Assert.Contains(access.Features, x => x.Id == FeatureCatalog.DiagnosticsLogsExport && x.Route == "");
-
-        // 群組內唯一的功能若被停用，整個群組也會一併從選單消失。
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, false, "diagnosis"))).EnsureSuccessStatusCode();
-        Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.NavigationGroups, x => x.Id == "diagnosis");
+        // 改名後的有效名稱進入選單。
+        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.Quality}", new FeatureUpdateRequest("評測", true))).EnsureSuccessStatusCode();
+        Assert.Equal("評測", Assert.Single((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation, x => x.Id == "system.quality").Name);
     }
 
     [Fact]
-    public async Task AccessPreviewCarriesTheSameMenuGroups()
+    public async Task GrantOnlyFeaturesStayGrantsButNeverAppearInTheMenu()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        var access = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
+        Assert.Contains(access.Features, x => x.Id == FeatureCatalog.DiagnosticsLogsExport && x.Route == "");
+        Assert.DoesNotContain(Flatten(access.Navigation), x => x.FeatureId == FeatureCatalog.DiagnosticsLogsExport);
+        Assert.Contains(Flatten(access.Navigation), x => x.Id == "system.access.access-control-navigation" && x.Route == FeatureCatalog.RouteOf(FeatureCatalog.AccessControlNavigation));
+        // 功能清單依目錄宣告順序。
+        Assert.Equal(FeatureCatalog.Grants.Select(x => x.Id).Where(id => access.Features.Any(f => f.Id == id)), access.Features.Select(x => x.Id));
+    }
+
+    [Fact]
+    public async Task LinksFollowTheirAudiencesAndTheCurrentAllowList()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"], services: AllowLinks()); using var admin = await factory.SignedInAsync();
+        using var member = await factory.SignedInAsync("bob");
+        var everyone = await CreateAsync(admin, Link("公告", $"https://{LinkHost}/news"));
+        var admins = await CreateAsync(admin, Link("維運手冊", $"https://{LinkHost}/ops", null, BuiltInAccess.AdministratorsGroup) with { OpenInNewTab = false });
+        // 允許清單之後移除的主機：直接寫進資料庫模擬設定改掉，產生 /me 時不輸出也不報錯。
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Add(new NavigationItem { Id = "retired-link", Kind = NavigationItem.LinkKind, Name = "舊站", Url = "https://old.example.com/", SortOrder = 900 });
+            await db.SaveChangesAsync();
+        }
+
+        var adminTree = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
+        var memberTree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
+        var ops = Assert.Single(adminTree, x => x.Id == admins.Id);
+        Assert.Equal(("link", "維運手冊", $"https://{LinkHost}/ops", false, (string?)null), (ops.Kind, ops.Name, ops.Url, ops.OpenInNewTab, ops.Route));
+        Assert.Contains(adminTree, x => x.Id == everyone.Id && x.OpenInNewTab);
+        Assert.Contains(memberTree, x => x.Id == everyone.Id);
+        Assert.DoesNotContain(memberTree, x => x.Id == admins.Id);
+        Assert.DoesNotContain(adminTree, x => x.Id == "retired-link");
+    }
+
+    [Fact]
+    public async Task AccessPreviewCarriesTheSameTreeAsMe()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var me = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var preview = (await admin.GetFromJsonAsync<AccessDto>($"/api/v1/admin/users/{me.Id}/access"))!;
-        Assert.Equal(me.Access.NavigationGroups, preview.NavigationGroups);
-        Assert.NotEmpty(preview.NavigationGroups);
+        // 子節點是清單，record 的相等比較只比參考；序列化後比對整棵樹。
+        Assert.Equal(JsonSerializer.Serialize(me.Access.Navigation), JsonSerializer.Serialize(preview.Navigation));
+        Assert.NotEmpty(preview.Navigation);
     }
+
+    private static IEnumerable<NavigationNodeDto> Flatten(IEnumerable<NavigationNodeDto> nodes) => nodes.SelectMany(x => Flatten(x.Children).Prepend(x));
 }

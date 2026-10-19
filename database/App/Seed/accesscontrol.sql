@@ -1,56 +1,45 @@
--- 內建選單分群、角色、群組、功能與預設授權。可重複執行：只新增缺少的列，不覆寫管理員之後的調整；
+-- 內建角色、群組、功能、預設授權與預設選單。可重複執行：只新增缺少的列（以主鍵比對），不覆寫管理員之後的調整；
 -- 要改既有環境的值，另寫 Data/<版本>/ 的一次性腳本。
 -- 由 scripts/Deploy-Database.ps1 在結構與全文之後執行（docs/operations/database-setup.md）；整合測試的範本資料庫也執行這一份。
 SET XACT_ABORT ON;
 SET NOCOUNT ON;
 BEGIN TRANSACTION;
 
-MERGE [accesscontrol].[NavigationGroups] AS t
-USING (VALUES
-    (N'work', NULL, N'AI 工作台', 10),
-    (N'collaboration', NULL, N'協作', 20),
-    (N'system', NULL, N'系統管理', 30)
-) AS s ([Id], [ParentId], [Name], [SortOrder])
-ON t.[Id] = s.[Id]
-WHEN NOT MATCHED BY TARGET THEN
-    INSERT ([Id], [ParentId], [Name], [SortOrder]) VALUES (s.[Id], s.[ParentId], s.[Name], s.[SortOrder]);
-
 -- 只放可授予的功能（頁面與動作），ID 與 backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs 一致（FeatureCatalogSeedTests 雙向比對）。
--- 網址、預設名稱與圖示由程式目錄提供；Name 為 NULL 代表使用目錄預設名稱，只有管理員改名時才寫入覆寫。
--- SortOrder 與 GroupId 是現行選單的預設位置。
+-- 網址、預設名稱與圖示由程式目錄提供；Name 為 NULL 代表使用目錄預設名稱，只有管理員改名時才寫入覆寫。選單位置在下方的 NavigationItems。
 MERGE [accesscontrol].[Features] AS t
 USING (VALUES
-    (N'dashboard', 5, NULL),
-    (N'chat', 10, N'work'),
-    (N'projects', 15, N'work'),
-    (N'files', 20, N'work'),
-    (N'knowledge', 30, N'work'),
-    (N'artifacts', 40, N'work'),
-    (N'sharing', 50, N'collaboration'),
-    (N'jobs', 55, N'collaboration'),
-    (N'repositories', 60, N'collaboration'),
-    (N'identity.users', 80, N'system'),
-    (N'access-control.roles', 81, N'system'),
-    (N'access-control.groups', 82, N'system'),
-    (N'access-control.features', 83, N'system'),
-    (N'operations.usage', 84, N'system'),
-    (N'billing.prices', 85, N'system'),
-    (N'knowledge.retrieval', 86, N'system'),
-    (N'integrations', 92, N'system'),
-    (N'monitoring', 93, N'system'),
-    (N'diagnostics.logs', 94, N'system'),
+    (N'dashboard'),
+    (N'chat'),
+    (N'projects'),
+    (N'files'),
+    (N'knowledge'),
+    (N'knowledge.retrieval'),
+    (N'artifacts'),
+    (N'sharing'),
+    (N'jobs'),
+    (N'repositories'),
+    (N'identity.users'),
+    (N'access-control.roles'),
+    (N'access-control.groups'),
+    (N'access-control.features'),
+    (N'access-control.navigation'),
+    (N'operations.usage'),
+    (N'billing.prices'),
+    (N'integrations'),
+    (N'monitoring'),
+    (N'audit'),
+    (N'diagnostics.logs'),
     -- 動作：只是授權，不出現在選單。
-    (N'diagnostics.logs.detail', 95, N'system'),
-    (N'diagnostics.logs.export', 96, N'system'),
-    (N'audit', 97, N'system'),
-    (N'quality', 98, N'system'),
-    (N'quality.retrieval', 99, N'system'),
-    (N'design', 100, N'system')
-) AS s ([Id], [SortOrder], [GroupId])
+    (N'diagnostics.logs.detail'),
+    (N'diagnostics.logs.export'),
+    (N'quality'),
+    (N'quality.retrieval'),
+    (N'design')
+) AS s ([Id])
 ON t.[Id] = s.[Id]
 WHEN NOT MATCHED BY TARGET THEN
-    INSERT ([Id], [Name], [SortOrder], [GroupId], [Enabled])
-    VALUES (s.[Id], NULL, s.[SortOrder], s.[GroupId], 1);
+    INSERT ([Id], [Name], [Enabled]) VALUES (s.[Id], NULL, 1);
 
 MERGE [accesscontrol].[Roles] AS t
 USING (VALUES
@@ -97,6 +86,7 @@ USING (VALUES
     (N'administrators', N'access-control.roles'),
     (N'administrators', N'access-control.groups'),
     (N'administrators', N'access-control.features'),
+    (N'administrators', N'access-control.navigation'),
     (N'administrators', N'operations.usage'),
     (N'administrators', N'billing.prices'),
     (N'administrators', N'knowledge.retrieval'),
@@ -111,5 +101,67 @@ USING (VALUES
 ON t.[GroupId] = s.[GroupId] AND t.[FeatureId] = s.[FeatureId]
 WHEN NOT MATCHED BY TARGET THEN
     INSERT ([GroupId], [FeatureId]) VALUES (s.[GroupId], s.[FeatureId]);
+
+-- 預設選單樹。節點 Id 是可讀代稱（<分群>.<功能 ID 的點換成連字號>），同層 SortOrder 間隔 10；page 的名稱與圖示取自程式目錄，所以 Name、Icon 為 NULL。
+-- 目錄每個 Page 至少要放一次，新頁面才不會預設看不到（FeatureCatalogSeedTests 檢查）；動作與閱讀器不放進選單。
+DECLARE @navigation TABLE (
+    [Id]        NVARCHAR (64)  NOT NULL PRIMARY KEY,
+    [ParentId]  NVARCHAR (64)  NULL,
+    [Kind]      NVARCHAR (10)  NOT NULL,
+    [FeatureId] NVARCHAR (64)  NULL,
+    [Name]      NVARCHAR (120) NULL,
+    [SortOrder] INT            NOT NULL);
+INSERT INTO @navigation ([Id], [ParentId], [Kind], [FeatureId], [Name], [SortOrder])
+VALUES
+    (N'dashboard', NULL, N'page', N'dashboard', NULL, 10),
+    (N'work', NULL, N'group', NULL, N'AI 工作台', 20),
+    (N'work.chat', N'work', N'page', N'chat', NULL, 10),
+    (N'work.projects', N'work', N'page', N'projects', NULL, 20),
+    (N'work.files', N'work', N'page', N'files', NULL, 30),
+    (N'work.knowledge', N'work', N'page', N'knowledge', NULL, 40),
+    (N'work.artifacts', N'work', N'page', N'artifacts', NULL, 50),
+    (N'collaboration', NULL, N'group', NULL, N'協作', 30),
+    (N'collaboration.sharing', N'collaboration', N'page', N'sharing', NULL, 10),
+    (N'collaboration.jobs', N'collaboration', N'page', N'jobs', NULL, 20),
+    (N'collaboration.repositories', N'collaboration', N'page', N'repositories', NULL, 30),
+    (N'system', NULL, N'group', NULL, N'系統管理', 40),
+    (N'system.access', N'system', N'group', NULL, N'身分與權限', 10),
+    (N'system.access.identity-users', N'system.access', N'page', N'identity.users', NULL, 10),
+    (N'system.access.access-control-roles', N'system.access', N'page', N'access-control.roles', NULL, 20),
+    (N'system.access.access-control-groups', N'system.access', N'page', N'access-control.groups', NULL, 30),
+    (N'system.access.access-control-features', N'system.access', N'page', N'access-control.features', NULL, 40),
+    (N'system.access.access-control-navigation', N'system.access', N'page', N'access-control.navigation', NULL, 50),
+    (N'system.operations-usage', N'system', N'page', N'operations.usage', NULL, 20),
+    (N'system.billing-prices', N'system', N'page', N'billing.prices', NULL, 30),
+    (N'system.knowledge-retrieval', N'system', N'page', N'knowledge.retrieval', NULL, 40),
+    (N'system.integrations', N'system', N'page', N'integrations', NULL, 50),
+    (N'system.monitoring', N'system', N'page', N'monitoring', NULL, 60),
+    (N'system.diagnostics-logs', N'system', N'page', N'diagnostics.logs', NULL, 70),
+    (N'system.audit', N'system', N'page', N'audit', NULL, 80),
+    (N'system.quality', N'system', N'page', N'quality', NULL, 90),
+    (N'system.quality-retrieval', N'system', N'page', N'quality.retrieval', NULL, 100),
+    (N'system.design', N'system', N'page', N'design', NULL, 110);
+
+-- 一層一層寫入：每輪只寫父節點已存在的列，沒有新列就停（外鍵要求父節點先存在）。
+-- 既有環境的選單可能被管理員改過：上層分群已刪除，或同層已有同一頁面（唯一索引會擋），這些預設節點直接略過，Seed 不因此失敗。
+-- 移動過的預設節點以 Id 比對、保持原位；管理員刪除、而上層仍在的預設節點會再加回來（與其他表的 insert-only 慣例相同）。
+WHILE 1 = 1
+BEGIN
+    MERGE [accesscontrol].[NavigationItems] AS t
+    USING (
+        SELECT n.[Id], n.[ParentId], n.[Kind], n.[FeatureId], n.[Name], n.[SortOrder]
+        FROM @navigation AS n
+        WHERE (n.[ParentId] IS NULL OR EXISTS (SELECT 1 FROM [accesscontrol].[NavigationItems] AS p WHERE p.[Id] = n.[ParentId]))
+          AND NOT EXISTS (
+              SELECT 1 FROM [accesscontrol].[NavigationItems] AS d
+              WHERE d.[FeatureId] = n.[FeatureId]
+                AND (d.[ParentId] = n.[ParentId] OR (d.[ParentId] IS NULL AND n.[ParentId] IS NULL)))
+    ) AS s
+    ON t.[Id] = s.[Id]
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT ([Id], [ParentId], [Kind], [FeatureId], [Name], [Icon], [SortOrder])
+        VALUES (s.[Id], s.[ParentId], s.[Kind], s.[FeatureId], s.[Name], NULL, s.[SortOrder]);
+    IF @@ROWCOUNT = 0 BREAK;
+END;
 
 COMMIT;
