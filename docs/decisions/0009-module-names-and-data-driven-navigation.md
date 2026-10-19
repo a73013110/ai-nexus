@@ -1,6 +1,6 @@
 # 0009 模組同名對應與資料化選單
 
-- **狀態**：採用（2026-10-14）；已被 [ADR 0016](0016-areas-urls-and-navigation.md) 取代（2026-10-18），新規則實作完成前仍描述現行程式。
+- **狀態**：採用（2026-10-14）；已被 [ADR 0016](0016-areas-urls-and-navigation.md) 取代（2026-10-18），新規則已實作，本文只留作歷史。
 - **決定**：
   - 一個模組在各層用同一個名字：後端 `AiNexus.Features/<Module>/`、前端 `features/<module-kebab>/`、資料庫 schema `<module>`。前端唯一例外是沒有後端的 `design/`。
   - 「再往下一層」只發生在模組內：根目錄超過 15 個檔案就依能力分子資料夾，前後端子資料夾同名（`Knowledge/Documents` ↔ `knowledge/documents`）。規則見 [後端慣例](../architecture/backend-conventions.md) 與 [前端邊界](../frontend/frontend-boundaries.md)。
