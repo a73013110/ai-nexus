@@ -50,6 +50,7 @@ public static class FeatureCatalog
     public const string AccessControlGroups = "access-control.groups";
     public const string AccessControlFeatures = "access-control.features";
     public const string AccessControlNavigation = "access-control.navigation";
+    public const string Organization = "organization";
     public const string OperationsUsage = "operations.usage";
     public const string BillingPrices = "billing.prices";
     public const string Integrations = "integrations";
@@ -79,6 +80,7 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition RepositoriesModule = new(Repositories, Work, "程式庫");
     private static readonly ModuleDefinition IdentityModule = new("identity", Admin, "身分");
     private static readonly ModuleDefinition AccessControlModule = new("access-control", Admin, "存取控制");
+    private static readonly ModuleDefinition OrganizationModule = new(Organization, Admin, "組織");
     private static readonly ModuleDefinition OperationsModule = new("operations", Admin, "平台營運");
     private static readonly ModuleDefinition BillingModule = new("billing", Admin, "計費");
     private static readonly ModuleDefinition IntegrationsModule = new(Integrations, Admin, "資料來源");
@@ -91,7 +93,7 @@ public static class FeatureCatalog
     public static IReadOnlyList<ModuleDefinition> Modules { get; } =
     [
         DashboardModule, ChatModule, ProjectsModule, FilesModule, KnowledgeModule, ArtifactsModule, SharingModule, JobsModule, RepositoriesModule,
-        IdentityModule, AccessControlModule, OperationsModule, BillingModule, IntegrationsModule, MonitoringModule, AuditModule, DiagnosticsModule,
+        IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, IntegrationsModule, MonitoringModule, AuditModule, DiagnosticsModule,
         QualityModule, DesignModule,
     ];
 
@@ -116,6 +118,7 @@ public static class FeatureCatalog
         new(AccessControlGroups, FeatureKind.Page, AccessControlModule, "功能群組與模型", "apps"),
         new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能", "list"),
         new(AccessControlNavigation, FeatureKind.Page, AccessControlModule, "選單", "sidebar"),
+        new(Organization, FeatureKind.Page, OrganizationModule, "組織單位", "organization"),
         new(OperationsUsage, FeatureKind.Page, OperationsModule, "平台用量", "chart"),
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
         new(Integrations, FeatureKind.Page, IntegrationsModule, "資料來源", "integrations"),

@@ -46,6 +46,7 @@ public static class MonitoringVocabulary
         "groups" => FeatureCatalog.AccessControlGroups,
         "features" => FeatureCatalog.AccessControlFeatures,
         "navigation-items" => FeatureCatalog.AccessControlNavigation,
+        "organization-units" => FeatureCatalog.Organization,
         // 使用者、對話讀取與共用的管理目錄都從使用者頁開始。
         _ => FeatureCatalog.IdentityUsers,
     };

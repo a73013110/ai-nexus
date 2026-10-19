@@ -20,6 +20,7 @@ export const CATALOG_MODULES = [
   { id: 'repositories', area: 'work', name: '程式庫' },
   { id: 'identity', area: 'admin', name: '身分' },
   { id: 'access-control', area: 'admin', name: '存取控制' },
+  { id: 'organization', area: 'admin', name: '組織' },
   { id: 'operations', area: 'admin', name: '平台營運' },
   { id: 'billing', area: 'admin', name: '計費' },
   { id: 'integrations', area: 'admin', name: '資料來源' },
@@ -167,6 +168,14 @@ export const CATALOG_FEATURES = [
     name: '選單',
     icon: 'sidebar',
     route: '/admin/access-control/navigation',
+  },
+  {
+    id: 'organization',
+    kind: 'page',
+    module: 'organization',
+    name: '組織單位',
+    icon: 'organization',
+    route: '/admin/organization',
   },
   {
     id: 'operations.usage',
