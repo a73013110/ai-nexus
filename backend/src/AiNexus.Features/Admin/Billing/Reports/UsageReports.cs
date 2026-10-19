@@ -114,11 +114,7 @@ public sealed class UsageReports(AppDbContext db, ModelPresentation presentation
         .Select(x => x with { ModelDisplayName = presentation.DisplayName(x.ModelId, administrator: true) })
         .ToArray();
 
-    public async Task<IReadOnlyList<UsageKindDto>> PlatformKindsAsync(CancellationToken ct) => await Entries()
-        .GroupBy(x => x.Kind)
-        .OrderBy(g => g.Key)
-        .Select(g => new UsageKindDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0)))
-        .ToListAsync(ct);
+    public Task<IReadOnlyList<UsageKindDto>> PlatformKindsAsync(CancellationToken ct) => KindsAsync(Entries(), ct);
 
     public async Task<IReadOnlyList<UsageDayDto>> DailyAsync(Guid owner, CancellationToken ct)
     {
@@ -174,8 +170,10 @@ public sealed class UsageReports(AppDbContext db, ModelPresentation presentation
         return new(period.From, period.Until, period.Offset, presented);
     }
 
-    public async Task<IReadOnlyList<UsageKindDto>> KindsAsync(Guid owner, CancellationToken ct) => await Entries()
-        .Where(x => x.OwnerId == owner)
+    public Task<IReadOnlyList<UsageKindDto>> KindsAsync(Guid owner, CancellationToken ct) =>
+        KindsAsync(Entries().Where(x => x.OwnerId == owner), ct);
+
+    private static async Task<IReadOnlyList<UsageKindDto>> KindsAsync(IQueryable<Entry> entries, CancellationToken ct) => await entries
         .GroupBy(x => x.Kind)
         .OrderBy(g => g.Key)
         .Select(g => new UsageKindDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0)))

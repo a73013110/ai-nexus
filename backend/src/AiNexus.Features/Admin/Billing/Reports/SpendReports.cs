@@ -30,15 +30,9 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
         var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);
         if (owner is Guid id) query = query.Where(x => x.OwnerId == id);
 
-        IReadOnlyList<SpendUserDto> users = [];
         var requests = await query.CountAsync(ct);
         var pending = await query.CountAsync(x => x.State == "pending", ct);
-        var totals = await query.GroupBy(x => new { x.Currency, x.Kind }).Select(g => new MoneyTotalDto(
-            g.Key.Currency,
-            g.Key.Kind,
-            g.Sum(x => x.Amount ?? 0),
-            g.Count(x => x.Amount != null),
-            g.Count(x => x.Amount == null && x.State != "pending"))).ToListAsync(ct);
+        var totals = await TotalsAsync(query, ct);
         var daily = (await query
                 .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(p.Offset).Date, x.Currency, x.Kind })
                 .Select(g => new
@@ -64,7 +58,44 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
                 x.Input,
                 x.Output))
             .ToArray();
-        var models = (await query
+        var models = await ModelsAsync(query, administrator, ct);
+        var input = await query.SumAsync(x => x.InputTokens ?? 0, ct);
+        var output = await query.SumAsync(x => x.OutputTokens ?? 0, ct);
+        IReadOnlyList<SpendUserDto> users = administrator ? await UsersAsync(query, ct) : [];
+
+        // 舊版執行紀錄沒有費用紀錄，只計入呼叫次數，費用保持未知。
+        var legacy = await db.Runs
+                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
+                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct)
+            + await db.Set<ModelInvocation>()
+                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
+                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
+        return new(p.From, p.Until, p.Offset, requests + legacy, pending, legacy, input, output, totals, daily, models, users);
+    }
+
+    public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return BillingErrors.ConversationNotFound;
+        var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
+        var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
+        var count = await calls.CountAsync(ct);
+        var pending = await calls.CountAsync(x => x.State == "pending", ct);
+        return new ConversationSpendDto(count + legacy, pending, legacy, await TotalsAsync(calls, ct), await ModelsAsync(calls, false, ct));
+    }
+
+    // 各幣別／計費類型的已知金額；待結算的呼叫不算未知費用。
+    private static async Task<IReadOnlyList<MoneyTotalDto>> TotalsAsync(IQueryable<ModelCharge> calls, CancellationToken ct) => await calls
+        .GroupBy(x => new { x.Currency, x.Kind })
+        .Select(g => new MoneyTotalDto(
+            g.Key.Currency,
+            g.Key.Kind,
+            g.Sum(x => x.Amount ?? 0),
+            g.Count(x => x.Amount != null),
+            g.Count(x => x.Amount == null && x.State != "pending")))
+        .ToListAsync(ct);
+
+    private async Task<IReadOnlyList<SpendBucketDto>> ModelsAsync(IQueryable<ModelCharge> calls, bool administrator, CancellationToken ct) =>
+        MergePresentedModels((await calls
                 .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
                 .Select(g => new
                 {
@@ -88,99 +119,42 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
                 x.Requests,
                 x.Unknown,
                 x.Input,
-                x.Output))
-            .ToArray();
-        var input = await query.SumAsync(x => x.InputTokens ?? 0, ct);
-        var output = await query.SumAsync(x => x.OutputTokens ?? 0, ct);
-        if (administrator)
-        {
-            users = await (from g in query.GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
-                    select new
-                    {
-                        g.Key.OwnerId,
-                        g.Key.Currency,
-                        g.Key.Kind,
-                        Amount = g.Sum(x => x.Amount ?? 0),
-                        Requests = g.Count(),
-                        Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                    })
-                .Join(db.Users, x => x.OwnerId, u => u.Id, (x, u) => new
-                {
-                    u.Id,
-                    u.DisplayName,
-                    u.Account,
-                    x.Currency,
-                    x.Kind,
-                    x.Amount,
-                    x.Requests,
-                    x.Unknown,
-                })
-                .OrderByDescending(x => x.Requests)
-                .Select(x => new SpendUserDto(
-                    x.Id,
-                    x.DisplayName,
-                    x.Account,
-                    x.Currency,
-                    x.Kind,
-                    x.Amount,
-                    x.Requests,
-                    x.Unknown))
-                .ToListAsync(ct);
-        }
+                x.Output)));
 
-        // 舊版執行紀錄沒有費用紀錄，只計入呼叫次數，費用保持未知。
-        var legacy = await db.Runs
-                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
-                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct)
-            + await db.Set<ModelInvocation>()
-                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
-                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
-        return new(p.From, p.Until, p.Offset, requests + legacy, pending, legacy, input, output, totals, daily, MergePresentedModels(models), users);
-    }
-
-    public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
-    {
-        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return BillingErrors.ConversationNotFound;
-        var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
-        var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
-        var count = await calls.CountAsync(ct);
-        var pending = await calls.CountAsync(x => x.State == "pending", ct);
-        var totals = await calls
-            .GroupBy(x => new { x.Currency, x.Kind })
-            .Select(g => new MoneyTotalDto(
-                g.Key.Currency,
-                g.Key.Kind,
-                g.Sum(x => x.Amount ?? 0),
-                g.Count(x => x.Amount != null),
-                g.Count(x => x.Amount == null && x.State != "pending")))
-            .ToListAsync(ct);
-        var models = (await calls
-                .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
-                .Select(g => new
+    // 只有全平台報表列出各使用者；匯出 CSV 也用這份清單，所以不分頁。
+    private async Task<IReadOnlyList<SpendUserDto>> UsersAsync(IQueryable<ModelCharge> calls, CancellationToken ct) =>
+        await (from g in calls.GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
+                select new
                 {
-                    g.Key.Provider,
-                    g.Key.ModelId,
+                    g.Key.OwnerId,
                     g.Key.Currency,
                     g.Key.Kind,
                     Amount = g.Sum(x => x.Amount ?? 0),
                     Requests = g.Count(),
                     Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                    Input = g.Sum(x => x.InputTokens ?? 0),
-                    Output = g.Sum(x => x.OutputTokens ?? 0),
                 })
-                .ToListAsync(ct))
-            .Select(x => new SpendBucketDto(
-                Label(x.Provider, x.ModelId, false),
+            .Join(db.Users, x => x.OwnerId, u => u.Id, (x, u) => new
+            {
+                u.Id,
+                u.DisplayName,
+                u.Account,
                 x.Currency,
                 x.Kind,
                 x.Amount,
                 x.Requests,
                 x.Unknown,
-                x.Input,
-                x.Output))
-            .ToArray();
-        return new ConversationSpendDto(count + legacy, pending, legacy, totals, MergePresentedModels(models));
-    }
+            })
+            .OrderByDescending(x => x.Requests)
+            .Select(x => new SpendUserDto(
+                x.Id,
+                x.DisplayName,
+                x.Account,
+                x.Currency,
+                x.Kind,
+                x.Amount,
+                x.Requests,
+                x.Unknown))
+            .ToListAsync(ct);
 
     private string Label(string provider, string model, bool administrator) => presentation.DisplayName(model, administrator, provider)!;
 
