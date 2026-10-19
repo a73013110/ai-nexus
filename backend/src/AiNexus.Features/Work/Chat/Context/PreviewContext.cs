@@ -117,12 +117,7 @@ internal sealed class PreviewContext(
             + project
             + new string(' ', reserved + webReserved);
 
-        var parameters = new GenerationParameters(
-            model.Value.ContextTokens,
-            model.Value.MaxOutputTokens,
-            .6,
-            systemPromptWithReservations,
-            SupportsImages: model.Value.SupportsImages);
+        var parameters = ContextBuilder.Parameters(model.Value, systemPromptWithReservations);
 
         var usage = await context.PreviewAsync(
             body.ConversationId,
