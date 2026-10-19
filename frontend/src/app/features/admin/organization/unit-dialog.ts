@@ -1,0 +1,272 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type { UnitDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { safeMessage } from '@core/errors/safe-errors';
+import { Checkbox } from '@shared/ui/checkbox';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { Field } from '@shared/ui/field';
+import { Notice } from '@shared/ui/notice';
+import { Select, type SelectOption } from '@shared/ui/select';
+import { OrganizationApi } from './organization-api';
+import { OrganizationStore } from './organization-store';
+import { MAX_DEPTH, depthOf, heightOf, subtree, unitRows } from './unit-tree';
+
+interface Draft {
+  /** 空字串為最上層。 */
+  parentId: string;
+  name: string;
+  enabled: boolean;
+}
+interface Editor {
+  id: string | null;
+  title: string;
+  draft: Draft;
+}
+
+const sameDraft = (a: Draft, b: Draft) =>
+  a.parentId === b.parentId && a.name.trim() === b.name.trim() && a.enabled === b.enabled;
+
+let sequence = 0;
+
+/**
+ * 新增或修改一個組織單位。修改時可換上層（整棵下層跟著搬，排到新一層最後），
+ * 上層選單不列出自己與下層，也不列出搬過去會超過八層的單位；伺服器仍會再檢查一次。
+ */
+@Component({
+  selector: 'nx-unit-dialog',
+  imports: [
+    Checkbox,
+    CompactDialog,
+    ConfirmDialog,
+    DialogHeader,
+    DialogSaveBar,
+    Field,
+    Notice,
+    Select,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<dialog
+      nxCompactDialog
+      #unitDialog
+      class="platform-dialog"
+      size="md"
+      (cancel)="cancel($event)"
+    >
+      @if (editor(); as e) {
+        <form class="dialog-form" novalidate (submit)="save($event)">
+          <nx-dialog-header [heading]="e.title" closeLabel="關閉單位編輯" />
+          <div class="dialog-body">
+            @if (error()) {
+              <nx-notice tone="danger" [message]="error()" />
+            }
+            <div class="form-sections">
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-basics'">基本資料</h3>
+                  <p class="form-note">同一個上層底下名稱不可重複；組織最多八層。</p>
+                </header>
+                <div class="form-section-body">
+                  <label class="form-field-short"
+                    >名稱<input
+                      #name
+                      nxField
+                      aria-label="名稱"
+                      required
+                      maxlength="120"
+                      autocomplete="off"
+                      [attr.aria-invalid]="nameError() ? true : null"
+                      [attr.aria-describedby]="nameError() ? id + '-error' : null"
+                      [value]="e.draft.name"
+                      [readOnly]="locked()"
+                      (input)="update('name', name.value)"
+                  /></label>
+                  @if (nameError()) {
+                    <p class="form-note field-error" [id]="id + '-error'">{{ nameError() }}</p>
+                  }
+                  <label class="form-field-short"
+                    >上層單位<nx-select
+                      label="上層單位"
+                      [searchable]="true"
+                      [options]="parents()"
+                      [value]="e.draft.parentId"
+                      [disabled]="locked()"
+                      (valueChange)="update('parentId', $event)"
+                  /></label>
+                  <nx-checkbox
+                    label="啟用"
+                    description="停用的單位保留成員與歷史，但它與所有下層單位都不參與資料範圍，也不能再加入成員。"
+                    [checked]="e.draft.enabled"
+                    [disabled]="locked()"
+                    (checkedChange)="update('enabled', $event)"
+                  />
+                </div>
+              </section>
+            </div>
+          </div>
+          @if (!e.id) {
+            <footer class="dialog-foot">
+              @if (session.testing()) {
+                <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
+              }
+              <button
+                type="button"
+                class="secondary-button"
+                [disabled]="saving()"
+                (click)="requestClose()"
+              >
+                取消
+              </button>
+              <button type="submit" class="primary-button" [disabled]="locked()">
+                {{ saving() ? '建立中…' : '建立單位' }}
+              </button>
+            </footer>
+          } @else {
+            <nx-dialog-save-bar
+              label="儲存單位"
+              [dirty]="dirty()"
+              [saving]="saving()"
+              [disabled]="session.testing()"
+              [note]="session.testingNote()"
+              (revert)="revert()"
+            />
+          }
+        </form>
+      }
+    </dialog>
+    <nx-confirm-dialog />`,
+  styles: `
+    .field-error {
+      color: var(--error);
+    }
+  `,
+})
+export class UnitDialog {
+  readonly id = `nx-unit-dialog-${++sequence}`;
+  readonly session = inject(WorkspaceSession);
+  private readonly api = inject(OrganizationApi);
+  private readonly store = inject(OrganizationStore);
+  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('unitDialog');
+  private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('name');
+  private readonly confirmation = viewChild.required(ConfirmDialog);
+  readonly editor = signal<Editor | null>(null);
+  private readonly opened = signal<Draft | null>(null);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly nameError = signal('');
+  readonly locked = computed(() => this.saving() || this.session.testing());
+  readonly dirty = computed(() => {
+    const editor = this.editor(),
+      opened = this.opened();
+    return !!editor && !!opened && !sameDraft(editor.draft, opened);
+  });
+  /** 可選的上層：排除自己與下層，以及放進去後整棵子樹會超過上限的單位。 */
+  readonly parents = computed<SelectOption[]>(() => {
+    const units = this.store.units();
+    const id = this.editor()?.id;
+    const excluded = id ? subtree(units, id) : new Set<string>();
+    const height = id ? heightOf(units, id) : 1;
+    const options: SelectOption[] = [{ value: '', label: '最上層' }];
+    for (const row of unitRows(units)) {
+      if (excluded.has(row.unit.id) || depthOf(units, row.unit.id) + height > MAX_DEPTH) continue;
+      options.push({
+        value: row.unit.id,
+        label: row.path.join(' › ') + (row.unit.enabled ? '' : '（停用）'),
+      });
+    }
+    return options;
+  });
+
+  create(parent: UnitDto | null = null) {
+    this.show(null, parent ? `新增下層單位：${parent.name}` : '新增單位', {
+      parentId: parent?.id ?? '',
+      name: '',
+      enabled: true,
+    });
+  }
+  edit(unit: UnitDto) {
+    this.show(unit.id, `編輯單位：${unit.name}`, {
+      parentId: unit.parentId ?? '',
+      name: unit.name,
+      enabled: unit.enabled,
+    });
+  }
+  private show(id: string | null, title: string, draft: Draft) {
+    this.error.set('');
+    this.nameError.set('');
+    this.editor.set({ id, title, draft });
+    this.opened.set(draft);
+    this.dialog().nativeElement.showModal();
+  }
+  update<K extends keyof Draft>(key: K, value: Draft[K]) {
+    this.editor.update((editor) =>
+      editor ? { ...editor, draft: { ...editor.draft, [key]: value } } : null,
+    );
+    if (key === 'name') this.nameError.set('');
+  }
+  revert() {
+    const opened = this.opened();
+    this.editor.update((editor) => (editor && opened ? { ...editor, draft: opened } : editor));
+    this.error.set('');
+    this.nameError.set('');
+  }
+  cancel(event: Event) {
+    event.preventDefault();
+    void this.requestClose();
+  }
+  async requestClose() {
+    if (this.saving()) return;
+    const editor = this.editor();
+    if (
+      editor &&
+      this.dirty() &&
+      !(await this.confirmation().ask({
+        title: '放棄未儲存的變更？',
+        message: editor.id
+          ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
+          : '尚未建立單位，關閉後會捨棄已填寫的內容。',
+        confirm: '放棄變更',
+      }))
+    )
+      return;
+    this.dialog().nativeElement.close();
+  }
+
+  async save(event: Event) {
+    event.preventDefault();
+    const editor = this.editor();
+    if (!editor || this.locked() || (editor.id && !this.dirty())) return;
+    const draft = editor.draft;
+    const name = draft.name.trim();
+    if (!name || name.length > 120) {
+      this.nameError.set('請輸入 120 字元內的名稱。');
+      this.nameInput()?.nativeElement.focus();
+      return;
+    }
+    const body = { parentId: draft.parentId || null, name, enabled: draft.enabled };
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      if (editor.id) await this.api.updateUnit(editor.id, body);
+      else this.store.select(await this.api.createUnit(body));
+      this.opened.set(draft);
+      this.dialog().nativeElement.close();
+      this.store.toast.success(editor.id ? '已儲存' : `已新增「${name}」`);
+      this.store.changed();
+    } catch (error) {
+      this.error.set(safeMessage(error));
+    } finally {
+      this.saving.set(false);
+    }
+  }
+}

@@ -97,6 +97,8 @@ export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
     "access-control.features",
     "access-control.navigation",
   ].map((id, index) => seededPage("system.access", id, (index + 1) * 10)),
+  // 組織排在使用者之後（Seed 的 SortOrder 15）。
+  seededPage("system.access", "organization", 15),
   ...[
     "operations.usage",
     "billing.prices",

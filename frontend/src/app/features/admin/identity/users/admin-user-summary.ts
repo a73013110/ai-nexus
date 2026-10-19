@@ -3,16 +3,17 @@ import { formatBytes, formatDate, formatNumber } from '@shared/browser/format';
 import { Notice } from '@shared/ui/notice';
 import { NumberTicker } from '@shared/ui/number-ticker';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
+import { UserUnits } from '@features/admin/organization/user-units';
 import { AdminUserStore } from './admin-user-store';
 import { signInMethods } from './user-account-fields';
 
 /**
- * 使用者的登入方式、角色與最近 30 天，位於檢視器標題列與分頁之間。
- * (name, status, account) and its tabs. 投影的內容是關聯（可複製的 ID、跨功能反查）。
+ * 使用者的登入方式、角色、所屬單位與最近 30 天，位於檢視器標題列（名稱、狀態、帳號）與分頁之間。
+ * 投影的內容是關聯（可複製的 ID、跨功能反查）。
  */
 @Component({
   selector: 'nx-admin-user-summary',
-  imports: [Notice, NumberTicker],
+  imports: [Notice, NumberTicker, UserUnits],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './admin-user-summary.scss',
   template: `
@@ -29,6 +30,7 @@ import { signInMethods } from './user-account-fields';
             <small class="form-note">尚未分派角色</small>
           }
         </div>
+        <nx-user-units [userId]="user.id" />
         <div class="summary-relations"><ng-content /></div>
       </div>
       <div class="inspector-stats" role="group" aria-label="最近三十天 AI 用量">

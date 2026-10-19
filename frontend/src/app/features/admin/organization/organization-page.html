@@ -1,0 +1,230 @@
+<nx-feature-page
+  [title]="session.featureName('organization')"
+  description="維護部門樹與人員所屬，用來決定主管關係與資料範圍；功能權限仍由角色決定。"
+>
+  <button
+    page-actions
+    type="button"
+    class="primary-button"
+    [disabled]="store.locked()"
+    (click)="create()"
+  >
+    <nx-icon name="plus" />新增單位
+  </button>
+  @if (store.loading() && !store.ready()) {
+    <p role="status">正在載入組織…</p>
+  } @else if (store.error()) {
+    <nx-notice tone="danger" [message]="store.error()"
+      ><button notice-actions (click)="store.load()">重新載入</button>
+    </nx-notice>
+  }
+  @if (store.ready()) {
+    @if (!store.units().length) {
+      <nx-empty-state>
+        <h2>還沒有組織單位</h2>
+        <p>
+          從最上層（例如公司）開始建立，再逐層加入處、部、課；部門與所屬由管理員維護，不從 AD 同步。
+        </p>
+        <button type="button" class="primary-button" [disabled]="store.locked()" (click)="create()">
+          新增單位
+        </button>
+      </nx-empty-state>
+    } @else {
+      <div class="organization-layout">
+        <section nxCard class="organization-tree" aria-labelledby="organization-tree-title">
+          <header class="organization-pane-head">
+            <h2 id="organization-tree-title">
+              單位 <span class="ui-count-label">{{ store.units().length }} 個</span>
+            </h2>
+            @if (store.busy()) {
+              <span class="form-note" role="status">正在儲存…</span>
+            }
+          </header>
+          <ul class="unit-list">
+            @for (row of store.rows(); track row.unit.id) {
+              <li
+                class="unit-row"
+                [class.is-selected]="store.selectedId() === row.unit.id"
+                [class.is-inactive]="row.inactive"
+                [style.--depth]="row.depth - 1"
+              >
+                @if (row.children) {
+                  <button
+                    type="button"
+                    class="icon-button unit-toggle"
+                    [attr.aria-expanded]="!store.collapsed().has(row.unit.id)"
+                    [attr.aria-label]="
+                      (store.collapsed().has(row.unit.id) ? '展開' : '收合') +
+                      '「' +
+                      row.unit.name +
+                      '」'
+                    "
+                    (click)="store.toggle(row.unit.id)"
+                  >
+                    <nx-icon
+                      [name]="store.collapsed().has(row.unit.id) ? 'chevron' : 'chevron-down'"
+                    />
+                  </button>
+                } @else {
+                  <span class="unit-toggle" aria-hidden="true"></span>
+                }
+                <button
+                  type="button"
+                  class="unit-name"
+                  [attr.aria-current]="store.selectedId() === row.unit.id ? 'true' : null"
+                  [attr.aria-label]="row.path.join(' › ')"
+                  (click)="store.select(row.unit)"
+                >
+                  <span class="ui-truncate" [title]="row.unit.name">{{ row.unit.name }}</span>
+                  @if (!row.unit.enabled) {
+                    <nx-status-badge tone="neutral">停用</nx-status-badge>
+                  }
+                  <small>{{ row.unit.memberCount }} 人</small>
+                </button>
+                <button
+                  #trigger
+                  type="button"
+                  class="icon-button"
+                  aria-haspopup="menu"
+                  [attr.aria-label]="'單位操作：' + row.unit.name"
+                  [attr.aria-expanded]="isMenuOpen(trigger)"
+                  (click)="openMenu(row, trigger)"
+                >
+                  <nx-icon name="more" />
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+        <section nxCard class="organization-detail" aria-labelledby="organization-detail-title">
+          @if (store.selectedRow(); as row) {
+            <header class="organization-pane-head">
+              <div class="organization-title">
+                <h2 id="organization-detail-title">{{ row.unit.name }}</h2>
+                @if (row.path.length > 1) {
+                  <small>{{ row.path.slice(0, -1).join(' › ') }}</small>
+                }
+              </div>
+              <div class="organization-actions">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="store.locked()"
+                  (click)="editSelected()"
+                >
+                  <nx-icon name="edit" />編輯
+                </button>
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="store.locked() || row.depth >= maxDepth"
+                  (click)="create(true)"
+                >
+                  <nx-icon name="plus" />新增下層
+                </button>
+              </div>
+            </header>
+            @if (row.inactive) {
+              <nx-notice
+                tone="warning"
+                [message]="
+                  row.unit.enabled
+                    ? '上層單位已停用：這個單位與它的下層都不參與資料範圍。'
+                    : '單位已停用：保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。'
+                "
+              />
+            }
+            @if (store.membersError()) {
+              <nx-notice tone="danger" [message]="store.membersError()" />
+            }
+            @if (row.unit.enabled) {
+              <div class="member-search">
+                <label
+                  >加入成員<nx-search-field
+                    label="尋找要加入的使用者"
+                    placeholder="輸入至少兩個字，搜尋帳號或姓名"
+                    [value]="people.text()"
+                    [disabled]="store.locked()"
+                    (valueChange)="people.find($event)"
+                /></label>
+                @if (people.text().trim().length >= 2) {
+                  <div class="directory-results" role="region" aria-label="符合的使用者">
+                    @for (user of people.results(); track user.id) {
+                      <button
+                        type="button"
+                        class="directory-user"
+                        [disabled]="store.locked()"
+                        (click)="add(user)"
+                      >
+                        <span
+                          ><strong>{{ user.displayName }}</strong
+                          ><small>{{ user.account }}</small></span
+                        ><nx-icon name="plus" />
+                      </button>
+                    } @empty {
+                      <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            <h3 class="member-heading">
+              直屬成員 <span class="ui-count-label">{{ row.unit.memberCount }} 人</span>
+            </h3>
+            @if (store.membersLoading()) {
+              <p role="status" class="form-note">正在載入成員…</p>
+            } @else {
+              <ul class="member-list">
+                @for (member of store.members(); track member.userId) {
+                  <li class="member-row" [class.is-inactive]="!member.active">
+                    <span class="member-name"
+                      ><strong>{{ member.displayName }}</strong
+                      ><small>{{ member.account }}</small>
+                      @if (!member.active) {
+                        <nx-status-badge tone="neutral">帳號已停用</nx-status-badge>
+                      }
+                    </span>
+                    <nx-checkbox
+                      label="主要所屬"
+                      [checked]="member.isPrimary"
+                      [disabled]="store.locked()"
+                      (checkedChange)="setPrimary(member, $event)"
+                    />
+                    <nx-checkbox
+                      label="主管"
+                      [checked]="member.isManager"
+                      [disabled]="store.locked()"
+                      (checkedChange)="setManager(member, $event)"
+                    />
+                    <button
+                      type="button"
+                      class="icon-button"
+                      [attr.aria-label]="'將 ' + member.displayName + ' 移出單位'"
+                      [disabled]="store.locked()"
+                      (click)="removeMember(member)"
+                    >
+                      <nx-icon name="close" />
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="form-note">這個單位還沒有直屬成員。</li>
+                }
+              </ul>
+              <p class="form-note">
+                一人可屬多個單位，但只有一個主要所屬；在這裡設為主要所屬，會取消此人在其他單位的主要所屬。
+              </p>
+            }
+          } @else {
+            <nx-empty-state>
+              <h2 id="organization-detail-title">選擇單位</h2>
+              <p>從左側選擇單位，查看與調整它的直屬成員。</p>
+            </nx-empty-state>
+          }
+        </section>
+      </div>
+    }
+  }
+</nx-feature-page>
+<nx-menu-panel label="單位操作" [items]="actions()" (action)="act($event)" />
+<nx-unit-dialog />
+<nx-confirm-dialog />

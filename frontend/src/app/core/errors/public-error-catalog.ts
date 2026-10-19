@@ -51,6 +51,17 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   navigation_link_host_not_allowed: '外部連結的網站不在允許清單內，請聯絡系統管理員。',
   navigation_page_duplicate: '同一層已經有這個頁面。',
   navigation_parent_invalid: '上層必須是現有的選單分群。',
+  organization_depth_exceeded: '組織最多八層，請把單位放到較淺的位置。',
+  organization_member_not_found: '這位使用者已不在此單位，請重新整理。',
+  organization_order_stale: '這一層的單位已有變更，請重新整理後再排序。',
+  organization_parent_invalid: '上層必須是現有的組織單位。',
+  organization_unit_cycle: '不能把單位移到它自己或它的下層單位底下。',
+  organization_unit_disabled: '停用的單位不能加入新成員，請先啟用。',
+  organization_unit_name_duplicate: '同一層已經有相同名稱的單位。',
+  organization_unit_not_empty:
+    '單位仍有下層單位或成員，請先移出後再刪除；不再使用的單位可改為停用。',
+  organization_unit_not_found: '找不到這個組織單位，請重新整理。',
+  organization_user_not_found: '找不到這位使用者，帳號可能已刪除。',
   model_group_forbidden: '此模型不在你的個人或群組授權範圍。',
   model_token_quota:
     '此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。',
