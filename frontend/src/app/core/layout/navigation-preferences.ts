@@ -23,20 +23,20 @@ export class NavigationPreferences {
   readonly pages = computed(() => navigationPages(this.tree()));
   private readonly user = computed(() => this.session.me()?.id ?? '');
   private readonly saved = linkedSignal(() => {
-    const value = read(`ai-nexus.pins.${this.user()}`);
+    const value = read(this.key('pins'));
     return Array.isArray(value) && value.every((id) => typeof id === 'string')
       ? value.slice(0, 20)
       : null;
   });
   readonly display = linkedSignal<NavigationDisplay>(() =>
-    read(`ai-nexus.navigation-display.${this.user()}`) === 'list' ? 'list' : 'icons',
+    read(this.key('navigation-display')) === 'list' ? 'list' : 'icons',
   );
   /**
    * 收合的分群（選單節點 ID）；預設全部展開。不在目前樹上的 ID 不清掉：樹已依授權修剪，
    * 暫時看不到的分群在授權恢復後仍維持原本的收合狀態。
    */
   readonly collapsed = linkedSignal<ReadonlySet<string>>(() => {
-    const value = read(`ai-nexus.navigation-collapsed.${this.user()}`);
+    const value = read(this.key('navigation-collapsed'));
     return new Set(
       Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [],
     );
@@ -62,7 +62,7 @@ export class NavigationPreferences {
         ? base
         : [...base.filter((item) => item !== id), id];
     this.saved.set(ids);
-    write(`ai-nexus.pins.${this.user()}`, ids);
+    write(this.key('pins'), ids);
   }
   isCollapsed(group: string) {
     return this.collapsed().has(group);
@@ -82,11 +82,15 @@ export class NavigationPreferences {
   }
   private saveCollapsed(groups: ReadonlySet<string>) {
     this.collapsed.set(groups);
-    write(`ai-nexus.navigation-collapsed.${this.user()}`, [...groups]);
+    write(this.key('navigation-collapsed'), [...groups]);
   }
   setDisplay(display: NavigationDisplay) {
     this.display.set(display);
-    write(`ai-nexus.navigation-display.${this.user()}`, display);
+    write(this.key('navigation-display'), display);
+  }
+  /** 偏好依帳號分開存放；在 computed／linkedSignal 中呼叫時會一起追蹤帳號。 */
+  private key(name: 'pins' | 'navigation-display' | 'navigation-collapsed') {
+    return `ai-nexus.${name}.${this.user()}`;
   }
 }
 

@@ -7,6 +7,13 @@ import { featureForUrl } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { BrowserSession } from './browser-session';
 
+const HEARTBEAT_MS = 25_000;
+/** 導覽後最快多久再送一次心跳，連續換頁時不必每頁都送。 */
+const NAVIGATION_GAP_MS = 5000;
+/** 超過這段時間沒有操作就回報為閒置。 */
+const IDLE_MS = 120_000;
+const INTERACTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
+
 /**
  * 在線狀態只回報目前網址在功能目錄中的 ID（頁面或閱讀器），個人設定回報 `settings`；
  * 資源 ID、查詢字串與不在目錄中的網址都不送出（後端也只接受這套詞彙）。
@@ -36,35 +43,38 @@ export class BrowserPresence {
       this.lastInteraction = Date.now();
     };
     const visibility = () => this.schedule(0);
-    for (const event of ['pointerdown', 'keydown', 'wheel'])
+    for (const event of INTERACTIONS)
       document.addEventListener(event, interacted, { passive: true });
     document.addEventListener('visibilitychange', visibility);
     this.router.events
       .pipe(
-        filter((event2) => event2 instanceof NavigationEnd),
+        filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.schedule(Math.max(0, 5000 - (Date.now() - this.lastHeartbeat))));
+      .subscribe(() =>
+        this.schedule(Math.max(0, NAVIGATION_GAP_MS - (Date.now() - this.lastHeartbeat))),
+      );
     effect(() => {
       const owner = this.session.me()?.id ?? '';
       this.session.auth.generation();
       untracked(() => {
-        ++this.revision;
-        this.controller?.abort();
-        clearTimeout(this.timer);
+        this.stop();
         this.owner = owner;
         this.lastInteraction = Date.now();
         if (owner) this.schedule(0);
       });
     });
     destroy.onDestroy(() => {
-      ++this.revision;
-      clearTimeout(this.timer);
-      this.controller?.abort();
-      for (const event of ['pointerdown', 'keydown', 'wheel'])
-        document.removeEventListener(event, interacted);
+      this.stop();
+      for (const event of INTERACTIONS) document.removeEventListener(event, interacted);
       document.removeEventListener('visibilitychange', visibility);
     });
+  }
+  /** 作廢進行中與排定的心跳；晚到的回應因 `revision` 不同而不再排下一次。 */
+  private stop() {
+    ++this.revision;
+    this.controller?.abort();
+    clearTimeout(this.timer);
   }
   private schedule(delay: number) {
     clearTimeout(this.timer);
@@ -73,7 +83,7 @@ export class BrowserPresence {
   private async heartbeat() {
     const feature = presenceFeature(this.router.url);
     if (!this.owner || !feature) {
-      this.schedule(25000);
+      this.schedule(HEARTBEAT_MS);
       return;
     }
     const revision = ++this.revision;
@@ -82,7 +92,7 @@ export class BrowserPresence {
     const state =
       document.visibilityState === 'hidden'
         ? 'background'
-        : Date.now() - this.lastInteraction > 120000
+        : Date.now() - this.lastInteraction > IDLE_MS
           ? 'idle'
           : 'active';
     this.lastHeartbeat = Date.now();
@@ -96,6 +106,6 @@ export class BrowserPresence {
     } catch {
       /* 在線狀態只供參考；遙測失敗絕不中斷使用者的工作。 */
     }
-    if (revision === this.revision && enabled) this.schedule(25000);
+    if (revision === this.revision && enabled) this.schedule(HEARTBEAT_MS);
   }
 }

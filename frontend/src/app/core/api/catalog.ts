@@ -13,7 +13,6 @@ export type { CatalogFeature, CatalogId, FeatureId };
 /** 有網址的目錄項目：頁面要授權，閱讀器只需登入（能不能讀由資源 ACL 決定）。 */
 export type RoutedFeature = Extract<CatalogFeature, { kind: 'page' | 'reader' }>;
 export type RoutedId = RoutedFeature['id'];
-export type PageId = Extract<CatalogFeature, { kind: 'page' }>['id'];
 
 const features = new Map<string, CatalogFeature>(CATALOG_FEATURES.map((item) => [item.id, item]));
 const modules = new Map<string, CatalogModule>(CATALOG_MODULES.map((item) => [item.id, item]));

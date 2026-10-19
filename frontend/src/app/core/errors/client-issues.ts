@@ -37,14 +37,18 @@ export class ClientIssues implements ErrorHandler {
   private epoch: number | null = null;
   constructor() {
     effect(() => {
-      const generation = this.auth.generation();
-      if (this.epoch !== null && generation !== this.epoch) {
-        this.reported.clear();
-        this.calls = [];
-        this.notice.set('');
-      }
-      this.epoch = generation;
+      if (this.adopt(this.auth.generation())) this.notice.set('');
     });
+  }
+  /** 換帳號後，前一個帳號的節流與已回報代碼不再沿用；回傳是否換了世代。 */
+  private adopt(generation: number) {
+    const changed = this.epoch !== null && generation !== this.epoch;
+    if (changed) {
+      this.reported.clear();
+      this.calls = [];
+    }
+    this.epoch = generation;
+    return changed;
   }
   private show(message: string) {
     this.notice.set(message);
@@ -60,12 +64,7 @@ export class ClientIssues implements ErrorHandler {
     // 伺服器只接收錯誤類型；開發時只有堆疊才能找到原因。
     if (isDevMode()) console.error(error);
     const current = this.auth.guard();
-    const generation = this.auth.generation();
-    if (this.epoch !== null && generation !== this.epoch) {
-      this.reported.clear();
-      this.calls = [];
-    }
-    this.epoch = generation;
+    this.adopt(this.auth.generation());
     if (error instanceof ApiError) {
       this.notice.set(safeMessage(error));
       return;

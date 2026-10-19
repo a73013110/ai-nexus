@@ -32,3 +32,26 @@ export class SseParser {
     return frames;
   }
 }
+
+/**
+ * 逐幀讀取 SSE 回應主體，每次讀取前檢查 `signal`。消費端提前離開（`break`、`throw`）或讀完時，
+ * 都會先取消並釋放讀取器，連線才不會在背景繼續佔用。
+ */
+export async function* sseFrames(
+  body: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+): AsyncGenerator<SseFrame> {
+  const reader = body.getReader();
+  const parser = new SseParser();
+  const decoder = new TextDecoder();
+  try {
+    while (!signal.aborted) {
+      const chunk = await reader.read();
+      if (chunk.done) return;
+      yield* parser.feed(decoder.decode(chunk.value, { stream: true }));
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
+  }
+}

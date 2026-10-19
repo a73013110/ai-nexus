@@ -32,7 +32,6 @@ export interface NavigationPage {
 }
 
 export const isGroup = (node: NavigationNodeDto) => node.kind === 'group';
-export const isLink = (node: NavigationNodeDto) => node.kind === 'link';
 
 /**
  * 依選單順序（深度優先）回傳區段。`/me` 的 `navigation` 已由伺服器修剪（未授權的頁面、看不到的連結、
@@ -96,9 +95,12 @@ export function navigationPages(nodes: readonly NavigationNodeDto[]): Navigation
   return [...pages.values()];
 }
 
+/** API 給的圖示名稱前端認得時原樣使用，否則為 `null`（由呼叫端決定備用圖示）。 */
+const knownIcon = (icon: string | null | undefined) => (icon && ICON_NAMES.has(icon) ? icon : null);
+
 /** 選單能繪製的圖示名稱：已知時用 API 的值，否則用一個中性的備用圖示。 */
 export function featureIcon(icon: string | null | undefined): string {
-  return icon && ICON_NAMES.has(icon) ? icon : 'document';
+  return knownIcon(icon) ?? 'document';
 }
 
 /**
@@ -107,6 +109,6 @@ export function featureIcon(icon: string | null | undefined): string {
  */
 export function navigationIcon(node: NavigationNodeDto): string | null {
   if (node.kind === 'page') return featureIcon(node.icon);
-  const known = node.icon && ICON_NAMES.has(node.icon) ? node.icon : null;
+  const known = knownIcon(node.icon);
   return node.kind === 'link' ? (known ?? 'external') : known;
 }
