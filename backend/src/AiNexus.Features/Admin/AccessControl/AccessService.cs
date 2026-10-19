@@ -34,6 +34,10 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         return value;
     }
 
+    /// <summary>使用者目前是否持有 <paramref name="feature"/>（同 <see cref="ForUserAsync"/>，同一請求內共用讀取結果）。</summary>
+    public async Task<bool> HoldsAsync(Guid user, string feature, CancellationToken ct)
+        => (await ForUserAsync(user, ct)).Features.Any(x => x.Id == feature);
+
     /// <summary>
     /// 在 <see cref="ForUserAsync"/> 的結果上加入使用者看得到的選單樹（<see cref="NavigationTree.Build"/>），供 <c>/me</c> 與存取預覽使用；
     /// 授權檢查直接呼叫 <see cref="ForUserAsync"/>，略過選單查詢。外部連結每次都再比對允許清單：主機移出清單（設定改完、站台重新啟動）後，已存的連結就不再輸出。

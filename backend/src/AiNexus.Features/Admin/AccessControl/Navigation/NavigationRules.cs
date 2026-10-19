@@ -31,14 +31,29 @@ internal static class NavigationRules
             : null;
     }
 
+    /// <summary>新增與修改共用的內容檢查：page 看功能（<see cref="PageAsync"/>），link 看主機與可見群組（<see cref="LinkAsync"/>）。</summary>
+    public static async Task<Error?> ContentAsync(AppDbContext db, INavigationItemContent content, IReadOnlyList<string> hosts, CancellationToken ct) => content.Kind switch
+    {
+        NavigationItem.PageKind => await PageAsync(db, content.FeatureId!, ct),
+        NavigationItem.LinkKind => await LinkAsync(db, content.Url!, content.AudienceGroupIds ?? [], hosts, ct),
+        _ => null,
+    };
+
+    /// <summary>把內容欄位寫進節點（新增與修改共用）。<c>OpenInNewTab</c> 只對 link 有意義，其他種類一律存成預設值。</summary>
+    public static void Apply(NavigationItem item, INavigationItemContent content)
+    {
+        item.FeatureId = content.FeatureId; item.Name = content.Name?.Trim(); item.Url = content.Url; item.Icon = content.Icon;
+        item.OpenInNewTab = content.Kind != NavigationItem.LinkKind || content.OpenInNewTab;
+    }
+
     /// <summary>page 的功能必須是目錄的頁面且已寫進 <c>Features</c>；動作與閱讀器沒有網址，放進選單只會是死連結。</summary>
-    public static async Task<Error?> PageAsync(AppDbContext db, string featureId, CancellationToken ct)
+    private static async Task<Error?> PageAsync(AppDbContext db, string featureId, CancellationToken ct)
         => FeatureCatalog.Find(featureId) is { Kind: FeatureKind.Page } && await db.Set<Feature>().AnyAsync(x => x.Id == featureId, ct)
             ? null
             : AccessControlErrors.UnknownAccessId;
 
     /// <summary>外部連結的主機必須在允許清單內，可見群組必須存在（停用的群組可以指定，停用期間只是沒有人因它而看見）。</summary>
-    public static async Task<Error?> LinkAsync(AppDbContext db, string url, IReadOnlyList<string> audiences, IReadOnlyList<string> hosts, CancellationToken ct)
+    private static async Task<Error?> LinkAsync(AppDbContext db, string url, IReadOnlyList<string> audiences, IReadOnlyList<string> hosts, CancellationToken ct)
     {
         if (!NavigationLinks.HostAllowed(url, hosts)) return AccessControlErrors.NavigationLinkHostNotAllowed;
         return await AccessRules.ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), audiences, ct);

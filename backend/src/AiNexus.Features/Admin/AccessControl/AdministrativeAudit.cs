@@ -40,13 +40,13 @@ public sealed class AdministrativeAudit(AppDbContext db, AccessService access, A
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             // 兩次權限檢查都在交易內讀 SQL，不信任請求一開始授權時的快取結果。
             access.Invalidate();
-            if (!await HoldsAsync(actor, feature, ct)) return AccessControlErrors.FeatureForbidden;
+            if (!await access.HoldsAsync(actor, feature, ct)) return AccessControlErrors.FeatureForbidden;
             before = await snapshot(ct);
             var outcome = await mutation();
             if (!outcome.IsSuccess) return outcome.Error;
             await db.SaveChangesAsync(ct);
             access.Invalidate();
-            if (!await HoldsAsync(actor, feature, ct)) return AccessControlErrors.Lockout;
+            if (!await access.HoldsAsync(actor, feature, ct)) return AccessControlErrors.Lockout;
             var after = await snapshot(ct);
             db.AuditEvents.Add(new()
             {
@@ -76,7 +76,4 @@ public sealed class AdministrativeAudit(AppDbContext db, AccessService access, A
             await db.SaveChangesAsync(ct);
         }
     }
-
-    private async Task<bool> HoldsAsync(Guid actor, string feature, CancellationToken ct)
-        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == feature);
 }

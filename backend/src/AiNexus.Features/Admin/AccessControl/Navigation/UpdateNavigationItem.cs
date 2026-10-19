@@ -32,14 +32,11 @@ internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeAudit 
         var item = items.SingleOrDefault(x => x.Id == id);
         if (item is null) return AccessControlErrors.NavigationItemNotFound;
         if (item.Kind != request.Kind) return AccessControlErrors.NavigationKindMismatch;
-        var audiences = request.AudienceGroupIds ?? [];
-        if (request.Kind == NavigationItem.PageKind && await NavigationRules.PageAsync(db, request.FeatureId!, ct) is { } page) return page;
-        if (request.Kind == NavigationItem.LinkKind && await NavigationRules.LinkAsync(db, request.Url!, audiences, settings.Value.NavigationLinkHosts, ct) is { } link) return link;
-        item.FeatureId = request.FeatureId; item.Name = request.Name?.Trim(); item.Url = request.Url; item.Icon = request.Icon;
-        item.OpenInNewTab = request.Kind != NavigationItem.LinkKind || request.OpenInNewTab;
+        if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
+        NavigationRules.Apply(item, request);
         // 換成另一個功能可能與同層既有的頁面重複。
         if (NavigationRules.Structure(items) is { } invalid) return invalid;
-        await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
+        await NavigationRules.ReplaceAudiencesAsync(db, id, request.AudienceGroupIds ?? [], ct);
         return Result.Success;
     }, ct);
 }

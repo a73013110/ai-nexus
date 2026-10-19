@@ -25,6 +25,4 @@ public static class DataScopes
         new(UnitTree, "所屬單位及下層"),
         new(All, "全部"),
     ];
-
-    public static bool IsKnown(string? scope) => Definitions.Any(x => x.Id == scope);
 }

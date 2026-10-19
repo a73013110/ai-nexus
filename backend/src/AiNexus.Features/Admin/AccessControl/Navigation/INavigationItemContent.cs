@@ -7,6 +7,7 @@ public interface INavigationItemContent
     string? FeatureId { get; }
     string? Name { get; }
     string? Url { get; }
+    bool OpenInNewTab { get; }
     string? Icon { get; }
     IReadOnlyList<string>? AudienceGroupIds { get; }
 }
