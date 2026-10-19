@@ -254,12 +254,12 @@ public sealed partial class ModelCatalog(
             return InferenceErrors.ProviderUnavailable;
         }
 
-        if (!catalog.Models.Any(x => x.Id == requested))
+        if (profile is null || !catalog.Models.Any(x => x.Id == requested))
         {
             return InferenceErrors.ModelNotAllowed;
         }
 
-        return Current(options.Value.Models.Single(x => presentation.PublicId(x.Id) == requested), snapshot);
+        return Current(profile, snapshot);
     }
 
     /// <summary>

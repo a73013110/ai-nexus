@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,9 +16,8 @@ internal sealed class GetUserModelPolicy(AppDbContext db, ModelPolicyService pol
     public async Task<Result<AdminUserModelPolicyDto>> HandleAsync(Guid owner, CancellationToken ct)
     {
         if (!await db.Users.AnyAsync(x => x.Id == owner && x.DeletedAt == null, ct)) return InferenceErrors.AdminResourceNotFound;
-        var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
-        var personalDto = new ModelPolicyRequest(ModelPolicyService.Allowed(personal?.AllowedModelsJson), ModelPolicyService.Limits(personal?.DailyTokenLimitsJson));
+        var personal = await policies.PersonalAsync(owner, ct);
         var effective = await policies.ForAsync(owner, ct, publicIds: false);
-        return new AdminUserModelPolicyDto(personalDto, effective);
+        return new AdminUserModelPolicyDto(personal, effective);
     }
 }

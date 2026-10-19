@@ -68,7 +68,7 @@ public sealed class GenerationScheduler
     public Task WhenFirstReady => firstReady.Task;
 
     /// <summary>當前是否有生成任務正在執行。</summary>
-    public bool Generating => Volatile.Read(ref active) > 0;
+    public bool Generating => Running > 0;
 
     /// <summary>當前正在執行的生成任務數量。</summary>
     public int Running => Volatile.Read(ref active);

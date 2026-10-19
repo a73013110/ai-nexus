@@ -18,13 +18,10 @@ public sealed class ModelCatalogTests
     [InlineData(false, true, false)]
     public async Task NativeCapabilitiesDriveBothCatalogAndGeneration(bool vision, bool? configured, bool expected)
     {
-        var options = Options.Create(new InferenceOptions { ProviderConcurrency = new() { ["ollama"] = 1 }, ShowModelNames = false,
-            Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model", ImageCapabilityOverride = configured }] });
+        var options = OllamaOptions(configured);
         var provider = new CapabilityProvider(vision);
-        var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
-        using var container = services.BuildServiceProvider();
-        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, NullLogger<ModelCatalog>.Instance);
+        var (catalog, container) = Create(options, provider);
+        using var _ = container;
         var dto = Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
         Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.SupportsImages);
@@ -37,14 +34,10 @@ public sealed class ModelCatalogTests
     [Fact]
     public async Task StaleCatalogIsServedAtOnceWhileOneBackgroundRefreshRuns()
     {
-        var options = Options.Create(new InferenceOptions { ProviderConcurrency = new() { ["ollama"] = 1 }, ShowModelNames = false,
-            Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model" }] });
         var provider = new SlowDiscovery();
-        var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
-        using var container = services.BuildServiceProvider();
         var clock = new ManualClock();
-        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, NullLogger<ModelCatalog>.Instance, clock);
+        var (catalog, container) = Create(OllamaOptions(), provider, clock: clock);
+        using var _ = container;
         Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(1, provider.Calls);
         clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);
@@ -62,13 +55,9 @@ public sealed class ModelCatalogTests
     [Fact]
     public async Task RefusalNamesTheProviderAndItsDiscoveryIssue()
     {
-        var options = Options.Create(new InferenceOptions { ProviderConcurrency = new() { ["ollama"] = 1 }, ShowModelNames = false,
-            Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model" }] });
-        var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", new UnreachableProvider());
-        using var container = services.BuildServiceProvider();
-        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
         var logger = new CaptureLogger();
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, logger);
+        var (catalog, container) = Create(OllamaOptions(), new UnreachableProvider(), logger);
+        using var _ = container;
 
         var refused = await catalog.RequireAsync(null, CancellationToken.None);
 
@@ -78,6 +67,25 @@ public sealed class ModelCatalogTests
         Assert.Equal(3200, id);
         Assert.Equal("ollama", state["Provider"]);
         Assert.True(AiNexus.Platform.Diagnostics.Issues.ValidCode(state["Reason"] as string));
+    }
+
+    // 單一 Ollama 模型、隱藏模型名稱的設定。
+    private static IOptions<InferenceOptions> OllamaOptions(bool? images = null) => Options.Create(new InferenceOptions
+    {
+        ProviderConcurrency = new() { ["ollama"] = 1 },
+        ShowModelNames = false,
+        Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model", ImageCapabilityOverride = images }]
+    });
+
+    // 回傳的容器由呼叫端處置。
+    private static (ModelCatalog Catalog, ServiceProvider Container) Create(IOptions<InferenceOptions> options, IInferenceProvider provider, ILogger<ModelCatalog>? logger = null, TimeProvider? clock = null)
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton("ollama", provider);
+        var container = services.BuildServiceProvider();
+        var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var presentation = new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]);
+        return (new ModelCatalog(new InferenceRouter(container, options), options, presentation, issues, logger ?? NullLogger<ModelCatalog>.Instance, clock), container);
     }
 
     private sealed class CaptureLogger : ILogger<ModelCatalog>
