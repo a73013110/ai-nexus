@@ -16,20 +16,20 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
 {
     public async Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct)
     {
-        var o = options.Value;
+        var o = options.Value; var brave = o.UsesBrave;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(o.TimeoutSeconds));
-        var path = o.Provider == "brave" ? "https://api.search.brave.com/res/v1/web/search?q=" + Uri.EscapeDataString(query) + "&count=" + o.MaxResults
+        var path = brave ? "https://api.search.brave.com/res/v1/web/search?q=" + Uri.EscapeDataString(query) + "&count=" + o.MaxResults
             : new Uri(new Uri(o.Endpoint.TrimEnd('/') + "/"), "search").AbsoluteUri + "?format=json&categories=general&safesearch=1&language=zh-TW&q=" + Uri.EscapeDataString(query);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Accept.ParseAdd("application/json");
-        if (o.Provider == "brave") request.Headers.Add("X-Subscription-Token", o.ApiKey);
+        if (brave) request.Headers.Add("X-Subscription-Token", o.ApiKey);
         try
         {
             using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchErrors.RateLimited : WebSearchErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
             using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout.Token);
             JsonElement rows;
-            if (o.Provider == "brave") { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
+            if (brave) { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
             else if (!json.RootElement.TryGetProperty("results", out rows)) return [];
             if (rows.ValueKind != JsonValueKind.Array) throw new JsonException();
             var hits = new List<WebSourceDto>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var time = clock.GetUtcNow();
@@ -37,7 +37,7 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
             {
                 if (!row.TryGetProperty("url", out var url) || SafeUrl(url.GetString()) is not { } link || !seen.Add(link)) continue;
                 var title = Clean(row.TryGetProperty("title", out var t) ? t.GetString() : null, 180);
-                var snippet = Clean(row.TryGetProperty(o.Provider == "brave" ? "description" : "content", out var d) ? d.GetString() : null, 600);
+                var snippet = Clean(row.TryGetProperty(brave ? "description" : "content", out var d) ? d.GetString() : null, 600);
                 if (snippet.Length == 0) continue;
                 hits.Add(new(hits.Count + 1, title.Length == 0 ? new Uri(link).Host : title, link, snippet, time));
                 if (hits.Count >= o.MaxResults) break;
