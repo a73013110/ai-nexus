@@ -20,7 +20,7 @@
 
 ## 給其他模組
 
-`OrganizationDirectory`（public）只回答現況：使用者所屬的有效單位、單位與所有下層、單位的有效成員或主管。有效單位＝自己與所有上層都啟用。
+`OrganizationDirectory`（public）只回答現況：使用者所屬的有效單位、單位與所有下層、單位的有效成員或主管，以及可組合進業務查詢的成員子查詢（`MemberIds`）。有效單位＝自己與所有上層都啟用。它也實作 AccessControl 的 `IUnitMembership`，[資料範圍](../architecture/data-scopes.md)的 `unit`、`unit-tree` 由這裡計算。
 
 ## 稽核
 

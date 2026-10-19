@@ -1,7 +1,7 @@
 # 0017 組織單位與資料範圍
 
 - **狀態**：採用（2026-10-18）
-- **實作**：Organization 模組（部門樹、人員所屬、`OrganizationDirectory`）已完成，見 [組織](../features/organization.md)；資料範圍（`IDataScope`、授權加範圍）尚未開始，範圍宣告掛在 [ADR 0016](0016-areas-urls-and-navigation.md) 的頁面目錄上。
+- **實作**：已完成。Organization 模組（部門樹、人員所屬、`OrganizationDirectory`）見 [組織](../features/organization.md)；資料範圍（授權加範圍、`IDataScope`、範圍宣告掛在 [ADR 0016](0016-areas-urls-and-navigation.md) 的頁面目錄上）見 [資料範圍](../architecture/data-scopes.md)，第一個套用的功能是活動稽核。
 - **決定**：
   - 角色決定「能做什麼」，組織單位與範圍決定「能看哪些資料」；不用角色切資料。
   - 新增 `Organization` 模組（區 `admin`），管理部門樹與人員所屬。

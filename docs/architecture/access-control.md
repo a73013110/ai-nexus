@@ -1,6 +1,6 @@
 # 身分、角色、群組與功能
 
-AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。兩種登入可綁定同一個平台 UserId；停用或移除使用者會排除所有 grant。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
+AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，資料的 owner 或授權上的[資料範圍](data-scopes.md)決定「你可讀寫哪筆資料」。兩種登入可綁定同一個平台 UserId；停用或移除使用者會排除所有 grant。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
 
 具有 `identity.users` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [存取管理](../features/administration.md)。
 
@@ -23,7 +23,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 ```text
 AD login → Users（SID）→ UserRoles → Roles
                                   → RoleGroupRoles → RoleGroups
-                                                   → RoleGroupFeatures → Features
+                                                   → RoleGroupFeatures（含範圍）→ Features
 ```
 
 登入後前端自動呼叫 `/api/v1/me`，收到 `access.roles`、`access.groups`、`access.features` 與 `access.navigation`（已修剪的[選單](#選單)樹），以此顯示可用入口與帳號授權資訊。沒有 chat 的使用者仍能取得身分與偏好，聊天送出停用。
@@ -52,8 +52,9 @@ AD login → Users（SID）→ UserRoles → Roles
 1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL）、預設授權，以及預設選單樹的 page 節點。目錄與 Seed 不一致、或頁面沒放進預設樹時 `FeatureCatalogSeedTests` 失敗。
 2. 在 `Policies` 加 policy，於 `ReportsModule` 註冊 `services.AddFeaturePolicy(...)`、加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 重產合約（`FeatureId` 與 `feature-catalog.ts` 隨之更新），前端新增 `reports.routes.ts`，路由以 `data: { feature }` 指向目錄；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
-4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷，並更新文件。
+4. 有資料列、要依部門切資料的功能宣告範圍並套用（[資料範圍](data-scopes.md)）。
+5. 以至少兩個角色驗沒有 grant 的 403、資料 owner 或範圍外的 404 與停用／撤銷，並更新文件。
 
 `administrator → administrators` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。第一位管理員見 [存取管理](../features/administration.md#設定第一位管理員)。
 
-管理時使用 UserId／RoleId／GroupId／FeatureId，避免依顯示名稱相連。新增多筆授權與 audit 應同一 transaction 提交；資料庫物件說明見 [DATABASE](database.md)。
+管理時使用 ID，不依顯示名稱相連；授權與 audit 同一 transaction 提交。
