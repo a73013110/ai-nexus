@@ -3,7 +3,6 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
-using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Features.Platform.Inference.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,12 +32,12 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
         var roles = await db.Set<Role>().AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
         var groups = await db.Set<RoleGroup>().AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
         var features = FeatureDto.InCatalogOrder(await db.Set<Feature>().AsNoTracking().ToListAsync(ct));
-        var links = await db.Set<RoleGroupRole>().AsNoTracking().ToListAsync(ct);
-        var grants = await db.Set<RoleGroupFeature>().AsNoTracking().ToListAsync(ct);
+        var links = (await db.Set<RoleGroupRole>().AsNoTracking().ToListAsync(ct)).ToLookup(x => x.RoleId, x => x.GroupId);
+        var grants = (await db.Set<RoleGroupFeature>().AsNoTracking().ToListAsync(ct)).ToLookup(x => x.GroupId);
         var policies = await db.Set<GroupModelPolicy>().AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
         var counts = await db.Set<UserRole>().GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
         var roleDtos = roles
-            .Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links.Where(y => y.RoleId == x.Id).Select(y => y.GroupId).ToArray(), counts.GetValueOrDefault(x.Id)))
+            .Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links[x.Id].ToArray(), counts.GetValueOrDefault(x.Id)))
             .ToArray();
         // 沒有模型策略列時 Policy 為 null，代表該群組未設定策略。
         var groupDtos = groups
@@ -46,11 +45,9 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
                 x.Id,
                 x.Name,
                 x.Enabled,
-                grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(),
-                policies.TryGetValue(x.Id, out var p)
-                    ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes)
-                    : null,
-                grants.Where(y => y.GroupId == x.Id && y.Scope != null).ToDictionary(y => y.FeatureId, y => y.Scope!, StringComparer.Ordinal)))
+                grants[x.Id].Select(y => y.FeatureId).ToArray(),
+                policies.TryGetValue(x.Id, out var p) ? GroupPolicyRequest.From(p) : null,
+                grants[x.Id].Where(y => y.Scope != null).ToDictionary(y => y.FeatureId, y => y.Scope!, StringComparer.Ordinal)))
             .ToArray();
         var featureDtos = features.Select(ToDto).ToArray();
         return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(), await access.NavigationSectionsAsync(ct));
