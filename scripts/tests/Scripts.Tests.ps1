@@ -35,6 +35,23 @@ Describe '<Name>' -ForEach $all {
         $text | Should -Not -Match ('Core' + 'Project')
         $text | Should -Not -Match '\$task[A-Z]'
     }
+
+    # 變數不分大小寫：在函式裡指派 $credential 會蓋掉外層的 -Credential，靜默改用 Windows 驗證。
+    It 'never assigns a variable that differs from a visible parameter only by case' {
+        $ast = (Get-Ast $Path).Ast
+        $shadows = foreach ($assignment in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left -is [Management.Automation.Language.VariableExpressionAst] }, $true)) {
+            $name = $assignment.Left.VariablePath.UserPath
+            for ($scope = $assignment.Parent; $scope; $scope = $scope.Parent) {
+                $parameters = if ($scope -is [Management.Automation.Language.ScriptBlockAst] -and $scope.ParamBlock) { $scope.ParamBlock.Parameters }
+                    elseif ($scope -is [Management.Automation.Language.FunctionDefinitionAst]) { $scope.Parameters }
+                foreach ($parameter in @($parameters | Where-Object { $_ })) {
+                    $declared = $parameter.Name.VariablePath.UserPath
+                    if ($declared -ieq $name -and $declared -cne $name) { "第 $($assignment.Extent.StartLineNumber) 行 `$$name 與參數 `$$declared" }
+                }
+            }
+        }
+        @($shadows) | Should -BeNullOrEmpty
+    }
 }
 
 Describe '<Name>' -ForEach ($entries + $tools) {

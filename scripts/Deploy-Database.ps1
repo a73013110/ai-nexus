@@ -168,13 +168,14 @@ function Open-SqlConnection([string]$Catalog) {
     $builder['Encrypt'] = $Server -notlike '(localdb)*'
     $builder['TrustServerCertificate'] = [bool]$TrustServerCertificate
     $builder['Application Name'] = 'AiNexus Deploy-Database'
-    $credential = $null
+    # 不能叫 $credential：變數不分大小寫，會在這個函式裡蓋掉 -Credential，靜默改用 Windows 驗證。
+    $sqlCredential = $null
     if ($Credential) {
         $password = $Credential.Password.Copy()
         $password.MakeReadOnly()
-        $credential = [Data.SqlClient.SqlCredential]::new($Credential.UserName, $password)
+        $sqlCredential = [Data.SqlClient.SqlCredential]::new($Credential.UserName, $password)
     } else { $builder['Integrated Security'] = $true }
-    $connection = [Data.SqlClient.SqlConnection]::new($builder.ConnectionString, $credential)
+    $connection = [Data.SqlClient.SqlConnection]::new($builder.ConnectionString, $sqlCredential)
     $connection.add_InfoMessage({ param($source, $info) Write-Output "  $($info.Message)" | Out-Host })
     $connection.Open()
     $connection
