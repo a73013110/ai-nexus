@@ -1,6 +1,8 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Jobs;
+using AiNexus.Data.App.Projects;
+using AiNexus.Data.App.Quality;
 using System.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data;
@@ -20,7 +22,7 @@ public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, Re
 {
     public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
-        if (kind is not ("project" or "evaluation")) throw new InvalidOperationException("Unsupported container lifecycle.");
+        if (kind is not (Project.Kind or EvaluationSet.Kind)) throw new InvalidOperationException("Unsupported container lifecycle.");
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
@@ -33,7 +35,7 @@ public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, Re
                 return CollaborationErrors.TasksActive;
             foreach (var check in checks)
                 if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
-            if (kind == "project")
+            if (kind == Project.Kind)
             {
                 // 子資源的直接分享與擁有者保持不變；只有靠專案繼承的存取會隨專案失效，所以要清空它們的 ParentId。
                 await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
