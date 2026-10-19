@@ -7,17 +7,17 @@ describe('feature access notice', () => {
   afterEach(() => TestBed.resetTestingModule());
 
   it('names the missing feature as navigation names it', () => {
-    const names: Record<string, string> = { operations: '平台營運' };
+    const names: Record<string, string> = { 'operations.usage': '平台用量' };
     TestBed.configureTestingModule({
       providers: [
         { provide: WorkspaceSession, useValue: { featureName: (id: string) => names[id] } },
       ],
     });
     const fixture = TestBed.createComponent(FeatureAccessNotice);
-    fixture.componentRef.setInput('feature', 'operations');
+    fixture.componentRef.setInput('feature', 'operations.usage');
     fixture.detectChanges();
     const notice = fixture.nativeElement.querySelector('nx-notice');
     expect(notice.getAttribute('role')).toBe('alert');
-    expect(notice.textContent).toContain('需要「平台營運」權限，請聯絡管理員。');
+    expect(notice.textContent).toContain('需要「平台用量」權限，請聯絡管理員。');
   });
 });

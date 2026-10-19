@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { formatBytes, formatDate, formatNumber } from '@shared/browser/format';
 import { Notice } from '@shared/ui/notice';
 import { NumberTicker } from '@shared/ui/number-ticker';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AdminUserStore } from './admin-user-store';
 import { signInMethods } from './user-account-fields';
 
@@ -64,7 +64,7 @@ import { signInMethods } from './user-account-fields';
 })
 export class AdminUserSummary {
   readonly store = inject(AdminUserStore);
-  private readonly admin = inject(AdministrationStore);
+  private readonly admin = inject(AccessControlStore);
   readonly usage = computed(() => this.store.overview()?.usage ?? null);
   readonly tokens = computed(() => {
     const usage = this.usage();

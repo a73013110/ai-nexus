@@ -11,7 +11,7 @@ test("focused composer synchronizes edits and uses the same IME safe submission 
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const compact = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await compact.fill("準備長篇提問");
   await page.getByRole("button", { name: "展開訊息輸入", exact: true }).click();
@@ -63,7 +63,7 @@ test("model lists remain single line, searchable and bounded with many long name
       }),
     }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("combobox", { name: "選擇模型", exact: true }).click();
   const list = page.getByRole("listbox", { name: "選擇模型", exact: true });
   await expect(list.getByRole("option")).toHaveCount(42);
@@ -98,7 +98,7 @@ test("model selector reports loading before enabling installed models", async ({
     await loading;
     await route.fallback();
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型" });
   try {
     await expect(model).toContainText("正在載入模型…");
@@ -127,7 +127,7 @@ test("group restrictions explain an empty model list and prevent submission", as
       },
     }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型" });
   await expect(model).toContainText("沒有可用模型");
   await expect(model).toBeDisabled();
@@ -155,7 +155,7 @@ test("model list failures show a retry path and recover without losing the draft
         })
       : route.fallback(),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型" });
   await expect(model).toContainText("模型清單載入失敗");
   await expect(model).toBeDisabled();
@@ -178,7 +178,7 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   const fixture = new ApiFixture();
   fixture.hold = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型" });
   await expect(
     page.locator(".composer").getByRole("combobox", { name: "選擇模型" }),
@@ -216,7 +216,7 @@ test("narrow composers fold reasoning effort into the model panel", async ({
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型", exact: true });
   await expect(model).toContainText("本機測試模型");
   await expect(
@@ -268,7 +268,7 @@ test("locked hidden model has no selector or provider name in current or histori
     maxInputCharacters: 12000,
   };
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.getByRole("combobox", { name: "選擇模型" })).toHaveCount(0);
   await expect(page.getByText("系統指定", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("匿名模型測試");
@@ -285,10 +285,11 @@ test("chat access is resolved at login and a missing grant prevents submission",
   const fixture = new ApiFixture();
   fixture.chatAccess = false;
   await fixture.attach(page);
-  await page.goto("/chat");
-  await expect(page.getByRole("alert")).toContainText("沒有對話功能");
-  await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限測試");
-  await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
+  await page.goto("/work/chat");
+  // 頁面路由由 featureGuard 依 `/me` 擋下：不載入對話頁，改說明缺少的權限，也就沒有可送出的輸入框。
+  await expect(page.getByRole("alert")).toContainText("需要「對話」權限");
+  await expect(page.getByRole("textbox", { name: "傳送訊息" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "送出訊息" })).toHaveCount(0);
   expect(fixture.posts).toBe(0);
 });
 
@@ -297,7 +298,7 @@ test("context over budget blocks submission until the draft is shortened", async
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息" });
   await input.fill("中".repeat(2500));
   await expect(
@@ -315,7 +316,7 @@ test("200 percent text scaling keeps composer controls operable without page ove
   await page.setViewportSize({ width: 1280, height: 900 });
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
   });

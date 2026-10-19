@@ -1,7 +1,7 @@
 <nx-feature-page
   [title]="document()?.resource?.name || session.featureName('artifacts')"
   [description]="summary()"
-  [back]="id() ? { path: '/artifacts', label: '全部成果文件' } : null"
+  [back]="id() ? { path: routeOf('artifacts'), label: '全部成果文件' } : null"
   [tour]="tour()"
 >
   <div page-actions class="page-actions">
@@ -64,7 +64,7 @@
         <a
           nxResourceCard
           icon="document"
-          [routerLink]="['/artifacts', item.resource.id]"
+          [routerLink]="[routeOf('artifacts'), item.resource.id]"
           [heading]="item.resource.name"
           ><span>版本 {{ item.version }}</span
           ><span>{{ access(item.resource) }}</span
@@ -81,7 +81,9 @@
             在 AI 回答選取段落，可以改寫、摘要、解釋、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
           </p>
           @if (session.has('chat')) {
-            <a routerLink="/chat" class="secondary-button">開始對話<nx-icon name="chevron" /></a>
+            <a [routerLink]="routeOf('chat')" class="secondary-button"
+              >開始對話<nx-icon name="chevron"
+            /></a>
           }
         }
       </nx-empty-state>
@@ -181,7 +183,7 @@
   #tools
 /><nx-confirm-dialog />
 @if (document(); as doc) {
-  @if (doc.resource.isOwner && session.has('shared')) {
+  @if (doc.resource.isOwner && session.has('sharing')) {
     <nx-share-dialog
       kind="artifact"
       [sourceId]="doc.resource.id"

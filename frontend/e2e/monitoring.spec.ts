@@ -273,8 +273,12 @@ class MonitorFixture {
       ...(granted
         ? [{ id: "monitoring", name: "即時監控", route: "/admin/monitoring" }]
         : []),
-      { id: "logs.query", name: "系統日誌", route: "/admin/logs" },
-      { id: "dashboard", name: "總覽", route: "/dashboard" },
+      {
+        id: "diagnostics.logs",
+        name: "系統日誌",
+        route: "/admin/diagnostics/logs",
+      },
+      { id: "dashboard", name: "總覽", route: "/work/dashboard" },
     ];
     await this.api.attach(page);
     await page.route("**/api/v1/presence", (route) => {

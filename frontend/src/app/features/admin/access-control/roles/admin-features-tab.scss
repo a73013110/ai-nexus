@@ -1,7 +1,7 @@
 @use 'breakpoints' as bp;
 
-// The features' own cells: sidebar groups, the order handle and the row being dragged. The table
-// shape is shared with the other access tabs (access-tabs.scss).
+// 功能表自己的儲存格：選單分群、排序把手與拖曳中的列；表格形狀與其他管理頁共用
+// （shared/ui/management-table-page.scss）。
 .feature-handle-column {
   width: 2.75rem;
 }

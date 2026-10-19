@@ -9,8 +9,11 @@ describe('dashboard format', () => {
   });
 
   it('only turns workspace paths into router links', () => {
-    expect(workspaceLink('/tasks?job=abc')).toEqual({ path: '/tasks', query: { job: 'abc' } });
-    expect(workspaceLink('/chat/1')).toEqual({ path: '/chat/1', query: {} });
+    expect(workspaceLink('/work/jobs?job=abc')).toEqual({
+      path: '/work/jobs',
+      query: { job: 'abc' },
+    });
+    expect(workspaceLink('/work/chat/1')).toEqual({ path: '/work/chat/1', query: {} });
     expect(workspaceLink('//evil.example')).toBeNull();
     expect(workspaceLink('https://example.com')).toBeNull();
     expect(workspaceLink('')).toBeNull();

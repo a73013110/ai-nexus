@@ -89,10 +89,20 @@ describe('apiResource', () => {
 
   it('refuses reads for a feature the account does not have', async () => {
     const loader = vi.fn(async () => 'value');
-    const { read, settle } = setup({ feature: 'admin', loader });
+    const { read, settle } = setup({ feature: 'identity.users', loader });
     await settle();
     expect(loader).not.toHaveBeenCalled();
     expect(read.error()).toContain('沒有使用此功能的權限');
+  });
+
+  it('reads when the account has any one of several features', async () => {
+    const loader = vi.fn(async () => 'value');
+    const { read, settle } = setup(
+      { feature: ['identity.users', 'access-control.roles'], loader },
+      ['access-control.roles'],
+    );
+    await settle();
+    expect(read.value()).toBe('value');
   });
 
   it('starts over when the signed-in identity changes', async () => {

@@ -11,7 +11,7 @@ test("a source added here announces once when it becomes searchable, not in othe
   fixture.seed();
   fixture.queueUploads = true;
   await fixture.attach(page);
-  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
+  await page.goto(`/work/knowledge/${fixture.collections[0].resource.id}`);
   await page.locator("nx-knowledge-page input[type=file]").setInputFiles({
     name: "差旅補充.txt",
     mimeType: "text/plain",
@@ -23,7 +23,7 @@ test("a source added here announces once when it becomes searchable, not in othe
 
   const other = await context.newPage();
   await fixture.attach(other);
-  await other.goto("/tasks");
+  await other.goto("/work/jobs");
   await other.getByRole("button", { name: "全部", exact: true }).click();
   await expect(
     other.locator(".job-card", { hasText: "差旅補充.txt" }),
@@ -45,7 +45,9 @@ test("a source added here announces once when it becomes searchable, not in othe
   await page.bringToFront();
 
   await done.getByRole("button", { name: "查看", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/reader/${document.id}$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/work/knowledge/reader/${document.id}$`),
+  );
   await page.reload();
   await expect(page.locator("nx-document-reader")).toBeVisible();
   // A reload starts a new session of this tab; finished work stays in the inbox and task list.
@@ -64,7 +66,7 @@ test("a retried task that fails again announces it and links to the task", async
   job.errorCode = "ocr_failed";
   job.errorMessage = "文件辨識沒有完成。";
   await fixture.attach(page);
-  await page.goto("/tasks");
+  await page.goto("/work/jobs");
   await page.getByRole("button", { name: "全部", exact: true }).click();
   const card = page.locator(".job-card", { hasText: "差旅費用申請.pdf" });
   await card.getByRole("button", { name: "重試" }).click();
@@ -78,7 +80,7 @@ test("a retried task that fails again announces it and links to the task", async
   await expect(failed).toHaveCount(1);
   await expect(failed).toContainText("文件辨識與索引：差旅費用申請.pdf");
   await failed.getByRole("button", { name: "查看", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/work/jobs\\?job=${job.id}$`));
   await expect(page.locator(`#job-${job.id}`)).toContainText("處理失敗");
 });
 
@@ -139,7 +141,7 @@ for (const width of [1440, 375]) {
       return { titles, last };
     };
     const toolbar = ["耗時的處理交給背景", "依狀態篩選", "用名稱尋找任務"];
-    await page.goto("/tasks");
+    await page.goto("/work/jobs");
     if (running) {
       await expect(page.locator(".job-card")).toHaveCount(1);
       await expect(page.locator(".job-card")).toContainText("公文彙整.pdf");

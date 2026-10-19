@@ -25,6 +25,7 @@ import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { levelTone, milliseconds } from './log-display';
 import { DiagnosticsApi, emptyLogFilter, type LogFilter } from './diagnostics-api';
+import { routeOf } from '@core/api/catalog';
 
 const requestFields = [
   ['ClientAddress', '連線 IP'],
@@ -62,6 +63,8 @@ const outcomes: Record<string, string> = {
   templateUrl: './log-detail-drawer.html',
 })
 export class LogDetailDrawer {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(DiagnosticsApi);
   private readonly drawer = viewChild.required(DetailDrawer);
@@ -86,7 +89,7 @@ export class LogDetailDrawer {
     computation: () => 'overview',
   });
   private readonly detailRead = apiResource({
-    feature: 'logs.detail',
+    feature: 'diagnostics.logs.detail',
     params: () => this.current()?.logId || undefined,
     loader: async (id, signal) => ({ id, data: await this.api.detail(id, signal) }),
   });
@@ -104,7 +107,7 @@ export class LogDetailDrawer {
       : undefined;
   });
   private readonly relatedRead = apiResource({
-    feature: 'logs.query',
+    feature: 'diagnostics.logs',
     params: this.flow,
     loader: async ({ entry, from, to }, signal) => {
       const filter: LogFilter = {

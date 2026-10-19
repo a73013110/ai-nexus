@@ -4,6 +4,7 @@ import { apiResource } from '@core/api/api-resource';
 import type { RepositoryDetailDto, StartRepositoryChatRequest } from '@core/api/schema';
 import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
 import { RepositoriesApi, type RepositoryKey } from './repositories-api';
+import { routeOf } from '@core/api/catalog';
 
 export const isSha = (value: string) => /^(?:[\da-f]{40}|[\da-f]{64})$/i.test(value);
 export const shortSha = (sha: string) => sha.slice(0, 7);
@@ -61,8 +62,8 @@ export class RepositoryStore {
   link(...segments: (string | number)[]) {
     const key = this.key();
     return key
-      ? ['/repositories', key.owner, key.name, ...segments.map(String)]
-      : ['/repositories'];
+      ? [routeOf('repositories'), key.owner, key.name, ...segments.map(String)]
+      : [routeOf('repositories')];
   }
   /** 把原始碼打包成新對話的一個附件，並以草稿開啟。 */
   async chat(body: StartRepositoryChatRequest, valid: () => boolean) {
@@ -71,7 +72,7 @@ export class RepositoryStore {
     const result = await this.api.chat(key, body);
     if (!valid()) return null;
     this.transfer.put(result.conversation.id, result.prompt, [result.attachment]);
-    await this.router.navigate(['/chat', result.conversation.id]);
+    await this.router.navigate([routeOf('chat'), result.conversation.id]);
     return result;
   }
 }

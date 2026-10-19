@@ -57,6 +57,7 @@ import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { accessLabel } from '@features/work/collaboration/access-label';
 import { evaluationSetTour, qualityTour } from './quality-tour';
+import { routeOf } from '@core/api/catalog';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
 const blankCase = (): EvaluationCase => ({
@@ -94,6 +95,8 @@ const blankCase = (): EvaluationCase => ({
   templateUrl: './quality-page.html',
 })
 export class QualityPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly modelName = formatModelDisplayName;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(QualityApi);
@@ -201,10 +204,13 @@ export class QualityPage {
         })
       : qualityTour({ feedback: this.tab() === 'feedback', chat: this.session.has('chat') });
   });
-  readonly listActions: MenuAction[] = [
+  /** 檢索評測是另一個授權（`quality.retrieval`），沒有時不列入口。 */
+  readonly listActions = computed<MenuAction[]>(() => [
     { id: 'import', label: '匯入題庫', icon: 'upload' },
-    { id: 'retrieval', label: '檢索評測', icon: 'chart' },
-  ];
+    ...(this.session.has('quality.retrieval')
+      ? [{ id: 'retrieval', label: this.session.featureName('quality.retrieval'), icon: 'chart' }]
+      : []),
+  ]);
   readonly setActions = computed<MenuAction[]>(() => {
     const set = this.current();
     if (!set) return [];
@@ -277,7 +283,7 @@ export class QualityPage {
   }
   listAction(action: string) {
     if (action === 'import') this.importInput()?.nativeElement.click();
-    else if (action === 'retrieval') void this.router.navigate(['/quality/retrieval']);
+    else if (action === 'retrieval') void this.router.navigate([routeOf('quality.retrieval')]);
   }
   setAction(action: string) {
     const set = this.current();
@@ -317,7 +323,7 @@ export class QualityPage {
         all?.filter((item) => item.resource.id !== current.resource.id),
       );
       this.setsRead.reload();
-      await this.router.navigate(['/quality']);
+      await this.router.navigate([routeOf('quality')]);
     } catch (error2) {
       if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
@@ -506,7 +512,7 @@ export class QualityPage {
           value,
           ...(item5 ?? []).filter((item6) => item6.resource.id !== value.resource.id),
         ]);
-        await this.router.navigate(['/quality', value.resource.id]);
+        await this.router.navigate([routeOf('quality'), value.resource.id]);
         this.toast.success('題庫已儲存');
       } else if (this.form() === 'run' && current) {
         const run = await this.api.run(current.resource.id, this.variants());

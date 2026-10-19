@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ProjectDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { routeOf } from '@core/api/catalog';
 import { optionalId } from '@core/layout/optional-id';
 import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
 import { ToastService } from '@shared/ui/toast-service';
@@ -44,7 +45,12 @@ async function setup(url: string, rows: ProjectDto[]) {
   };
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ matcher: optionalId('projects'), component: ProjectsPage }]),
+      provideRouter([
+        {
+          path: routeOf('projects').slice(1),
+          children: [{ matcher: optionalId(), component: ProjectsPage }],
+        },
+      ]),
       { provide: ProjectsApi, useValue: api },
       { provide: FilesApi, useValue: { policy: async () => ({}) } },
       { provide: KnowledgeApi, useValue: {} },
@@ -88,20 +94,20 @@ describe('ProjectsPage', () => {
   afterEach(() => TestBed.resetTestingModule());
 
   it('lists a created project when returning to the list on the same page', async () => {
-    const { harness, page, settle, ids } = await setup('/projects', [project('old')]);
+    const { harness, page, settle, ids } = await setup(routeOf('projects'), [project('old')]);
     expect(ids()).toEqual(['old']);
     page.openProject();
     page.name.set('new');
     await page.save(new Event('submit'));
     await settle();
     expect(page.id()).toBe('new');
-    expect(await harness.navigateByUrl('/projects', ProjectsPage)).toBe(page);
+    expect(await harness.navigateByUrl(routeOf('projects'), ProjectsPage)).toBe(page);
     await settle();
     expect(ids()).toEqual(['new', 'old']);
   });
 
   it('drops a deleted project from the list it returns to', async () => {
-    const { api, page, settle, ids } = await setup('/projects/gone', [
+    const { api, page, settle, ids } = await setup(routeOf('projects') + '/gone', [
       project('gone'),
       project('kept'),
     ]);

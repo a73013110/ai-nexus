@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import type { AuthSessionDto, paths } from './schema';
 import { BrowserSession } from '../monitoring/browser-session';
 import { ApiError } from '../errors/safe-errors';
+import { WORKSPACE_HOME } from '../layout/workspace-home';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 /** 定義了指定方法的所有契約路徑。 */
@@ -211,7 +212,7 @@ export class ApiClient {
       if (this.identity && identity !== this.identity && !isAuthPath(url)) {
         this.csrf = '';
         this.expired.update((value) => value + 1);
-        window.location.assign('/dashboard');
+        window.location.assign(WORKSPACE_HOME);
         throw new ApiError(409, 'identity_changed', '登入身分已變更，正在重新載入工作區。');
       }
       this.identity = identity;

@@ -8,9 +8,9 @@ import type {
   NavigationGroupDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { AdministrationApi } from '../administration-api';
+import { AccessControlApi } from '../access-control-api';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
-import { AdministrationStore } from '../administration-store';
+import { AccessControlStore } from '../access-control-store';
 import { AccessEditorDialog } from './access-editor-dialog';
 
 const catalog = {
@@ -72,8 +72,8 @@ function setup(testing = false) {
   };
   TestBed.configureTestingModule({
     providers: [
-      { provide: AdministrationApi, useValue: api },
-      { provide: AdministrationStore, useValue: store },
+      { provide: AccessControlApi, useValue: api },
+      { provide: AccessControlStore, useValue: store },
       { provide: WorkspaceSession, useValue: { testing: signal(testing) } },
     ],
   });
@@ -158,9 +158,9 @@ describe('AccessEditorDialog', () => {
 
   it('names a feature by id and route, leaves out a missing route and keeps its order', async () => {
     const { dialog, api } = setup();
-    const feature = (route: string) =>
+    const feature = (id: string, route: string) =>
       ({
-        id: 'logs.export',
+        id,
         name: '日誌匯出',
         route,
         sortOrder: 95,
@@ -168,19 +168,33 @@ describe('AccessEditorDialog', () => {
         groupId: 'system',
         icon: 'download',
       }) as AdminFeatureDto;
-    dialog.open('feature', feature('/admin/logs'));
-    expect(dialog.editor()!.subtitle).toBe('logs.export · /admin/logs');
-    dialog.open('feature', feature(''));
-    expect(dialog.editor()!.subtitle).toBe('logs.export');
+    dialog.open('feature', feature('diagnostics.logs', '/admin/diagnostics/logs'));
+    expect(dialog.editor()!.subtitle).toBe('diagnostics.logs · /admin/diagnostics/logs');
+    dialog.open('feature', feature('diagnostics.logs.export', ''));
+    expect(dialog.editor()!.subtitle).toBe('diagnostics.logs.export');
     dialog.update('name', '匯出日誌');
     await dialog.save(new Event('submit'));
-    expect(api.feature).toHaveBeenCalledWith('logs.export', {
+    expect(api.feature).toHaveBeenCalledWith('diagnostics.logs.export', {
       name: '匯出日誌',
       enabled: true,
       sortOrder: 95,
       groupId: 'system',
-      icon: 'download',
     });
+  });
+
+  it('saves a blank feature name, or the catalog default, as no override', async () => {
+    const { dialog, api } = setup();
+    const feature = { ...catalog.features[0], name: '聊天', route: '/work/chat' };
+    dialog.open('feature', feature as AdminFeatureDto);
+    expect(dialog.editor()!.defaultName).toBe('對話');
+    dialog.update('name', ' ');
+    await dialog.save(new Event('submit'));
+    expect(dialog.editorError()).toBe('');
+    expect(api.feature).toHaveBeenLastCalledWith('chat', expect.objectContaining({ name: null }));
+    dialog.open('feature', feature as AdminFeatureDto);
+    dialog.update('name', '對話');
+    await dialog.save(new Event('submit'));
+    expect(api.feature).toHaveBeenLastCalledWith('chat', expect.objectContaining({ name: null }));
   });
 
   it('moves a feature to the end of another menu group, or to the top level', async () => {
@@ -194,14 +208,13 @@ describe('AccessEditorDialog', () => {
       '系統管理 › 團隊 › 深層',
     ]);
     dialog.update('placement', 'system');
-    dialog.update('icon', 'files');
     await dialog.save(new Event('submit'));
+    // 名稱與目錄預設相同，送出時不寫成覆寫。
     expect(api.feature).toHaveBeenLastCalledWith('chat', {
-      name: '對話',
+      name: null,
       enabled: true,
       sortOrder: 100,
       groupId: 'system',
-      icon: 'files',
     });
     dialog.open('feature', catalog.features[0] as AdminFeatureDto);
     dialog.update('placement', '');

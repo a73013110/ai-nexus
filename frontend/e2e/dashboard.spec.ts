@@ -6,16 +6,16 @@ import {
   expectViewportContained,
   settleEntrance,
   dashboardFixture,
-  FIXTURE_MENU,
+  featureOf,
 } from "./fixtures";
 
 const FEATURES = [
   "dashboard",
   "knowledge",
-  "tasks",
+  "jobs",
   "projects",
   "artifacts",
-  "shared",
+  "sharing",
   "quality",
   "repositories",
 ];
@@ -23,11 +23,7 @@ const FEATURES = [
 async function openDashboard(page: Page, admin = true) {
   const fixture = new ApiFixture();
   fixture.adminAccess = admin;
-  fixture.extraFeatures = FEATURES.map((id) => ({
-    id,
-    name: FIXTURE_MENU[id].name,
-    route: "/" + id,
-  }));
+  fixture.extraFeatures = FEATURES.map((id) => featureOf(id));
   await fixture.attach(page);
   const reads: URL[] = [];
   await page.route("**/api/v1/dashboard?**", (route) => {
@@ -54,7 +50,7 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
 }) => {
   const { fixture, reads } = await openDashboard(page);
   await page.goto("/");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   await expect(
     page.getByRole("heading", { name: "總覽", exact: true }),
   ).toBeVisible();
@@ -81,10 +77,10 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
   await expect(tile(page, "服務狀態")).toHaveCount(0);
   await expect(
     knowledge.getByRole("link", { name: "前往知識庫", exact: true }),
-  ).toHaveAttribute("href", "/knowledge");
+  ).toHaveAttribute("href", "/work/knowledge");
   await expect(
     tile(page, "繼續工作").getByRole("link", { name: /整理期末評量規準/ }),
-  ).toHaveAttribute("href", /^\/chat\/[\da-f-]{36}$/);
+  ).toHaveAttribute("href", /^\/work\/chat\/[\da-f-]{36}$/);
   await expect(
     tile(page, "通知").getByRole("link", { name: /前往/ }),
   ).toHaveCount(0);
@@ -175,7 +171,7 @@ test("the platform scope follows platform operations, not access management", as
 }) => {
   const { fixture, reads } = await openDashboard(page);
   fixture.operationsAccess = false;
-  await page.goto("/dashboard?scope=platform");
+  await page.goto("/work/dashboard?scope=platform");
   await expect(
     page.getByRole("heading", { name: "總覽", exact: true }),
   ).toBeVisible();
@@ -192,7 +188,7 @@ test("one overview style, and tiles can be moved, resized, hidden and reset", as
   page,
 }) => {
   await openDashboard(page, false);
-  await page.goto("/dashboard");
+  await page.goto("/work/dashboard");
   await expect(page.getByRole("group", { name: "總覽風格" })).toHaveCount(0);
   await expect(page.locator("nx-dashboard-page")).not.toHaveAttribute(
     "data-theme",
@@ -276,7 +272,7 @@ test("dashboard fits a phone in the dark with reduced motion", async ({
   page,
 }) => {
   await openDashboard(page);
-  await page.goto("/dashboard");
+  await page.goto("/work/dashboard");
   await expect(tile(page, "關鍵指標")).toBeVisible();
   for (const width of [1920, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -362,7 +358,7 @@ for (const width of [1440, 375]) {
     if (width === 375) fixture.operationsAccess = false;
     const height = width === 375 ? 812 : 1000;
     await page.setViewportSize({ width, height });
-    await page.goto("/dashboard");
+    await page.goto("/work/dashboard");
     await expect(tile(page, "關鍵指標")).toBeVisible();
     const launcher = page
       .locator(".feature-header")

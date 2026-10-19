@@ -4,6 +4,8 @@ import { WorkspaceApi } from '../api/workspace-api';
 import type { AuthSessionDto } from '../api/schema';
 import { ApiClient } from '../api/api-client';
 import { ViewMorph } from '../layout/view-morph';
+import { WORKSPACE_HOME } from '../layout/workspace-home';
+import { routeOf } from '../api/catalog';
 
 const RECENT_SESSION_MS = 5000;
 
@@ -104,11 +106,12 @@ export class AuthService {
     this.channel?.postMessage('changed');
   }
   async testIdentity(userId: string, reason: string) {
-    this.replaceIdentity(await this.api.testIdentity(userId, reason), '/dashboard');
+    this.replaceIdentity(await this.api.testIdentity(userId, reason), WORKSPACE_HOME);
   }
   async endTestIdentity() {
     await this.load(); // Refresh CSRF if the server has already restored an expired test.
-    this.replaceIdentity(await this.api.endTestIdentity(), '/admin');
+    // 測試身分從使用者頁開始，結束後回到那裡。
+    this.replaceIdentity(await this.api.endTestIdentity(), routeOf('identity.users'));
   }
   private replaceIdentity(session: AuthSessionDto, url: string) {
     this.session.set(session);

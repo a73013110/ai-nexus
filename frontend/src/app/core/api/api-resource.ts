@@ -9,12 +9,15 @@ import {
   type WritableSignal,
 } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import type { FeatureId } from '../auth/feature-names';
+import type { FeatureId } from './catalog';
 import { ClientValidationError, isCancellation, safeMessage } from '../errors/safe-errors';
 
 export interface ApiResourceOptions<T, P> {
-  /** 已登入帳號必須具備的功能；所有帳號都能讀取的資料則省略。 */
-  feature?: FeatureId;
+  /**
+   * 已登入帳號必須具備的功能；陣列表示具備其中任一個即可（例：存取目錄供使用者頁與存取控制各頁共用）。
+   * 所有帳號都能讀取的資料則省略。
+   */
+  feature?: FeatureId | readonly FeatureId[];
   /** 重新讀取帳號而不沿用快取，供顯示權限的頁面使用。 */
   freshAccount?: boolean;
   /** 響應式請求；`undefined` 讓資源保持閒置。省略時每次登入只讀一次。 */
@@ -63,7 +66,11 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
     loader: async ({ params, abortSignal }) => {
       if (!(await session.load(options.freshAccount)))
         throw new DOMException('Signed out', 'AbortError');
-      if (options.feature && !session.has(options.feature))
+      const required = options.feature;
+      if (
+        required &&
+        !(typeof required === 'string' ? [required] : required).some((id) => session.has(id))
+      )
         throw new ClientValidationError('featureAccess');
       return options.loader(params.params, abortSignal);
     },

@@ -48,6 +48,7 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { relativeTime } from '@shared/browser/format';
 import { accessLabel } from '@features/work/collaboration/access-label';
 import { documentBusy, documentStatus } from '@features/work/knowledge/documents/document-status';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-projects-page',
@@ -77,6 +78,8 @@ import { documentBusy, documentStatus } from '@features/work/knowledge/documents
   templateUrl: './projects-page.html',
 })
 export class ProjectsPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(ProjectsApi);
   private readonly transfer = inject(ConversationDraftTransfer);
@@ -292,7 +295,7 @@ export class ProjectsPage {
         if (!this.editingId) {
           // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
           this.projectsRead.reload();
-          await this.router.navigate(['/projects', value.resource.id]);
+          await this.router.navigate([routeOf('projects'), value.resource.id]);
           return;
         }
         this.currentRead.value.set(value);
@@ -321,7 +324,7 @@ export class ProjectsPage {
       const value = await this.api.start(current.resource.id, templateId);
       if (valid()) {
         this.transfer.put(value.conversation.id, value.prompt);
-        await this.router.navigate(['/chat', value.conversation.id]);
+        await this.router.navigate([routeOf('chat'), value.conversation.id]);
       }
     } catch (error3) {
       if (valid()) this.actionError.set(this.scope.message(error3));
@@ -383,7 +386,7 @@ export class ProjectsPage {
         all?.filter((item) => item.resource.id !== current.resource.id),
       );
       this.projectsRead.reload();
-      await this.router.navigate(['/projects']);
+      await this.router.navigate([routeOf('projects')]);
     } catch (error5) {
       if (valid()) this.actionError.set(this.scope.message(error5));
     } finally {

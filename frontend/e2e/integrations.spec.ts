@@ -13,7 +13,7 @@ test("controlled source search opens authorized status and history, then hands a
   core.extraFeatures.push({
     id: "integrations",
     name: "資料來源",
-    route: "/integrations",
+    route: "/admin/integrations",
   });
   await core.attach(page);
   const detail: SourceDetailDto = {
@@ -98,7 +98,7 @@ test("controlled source search opens authorized status and history, then hands a
     }
     return route.fulfill({ status: 404 });
   });
-  await page.goto("/integrations");
+  await page.goto("/admin/integrations");
   await page.getByPlaceholder("搜尋公文系統的標題或識別碼…").fill("通知");
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(
@@ -131,7 +131,7 @@ test("unconfigured sources disclose setup status and do not offer queries", asyn
   core.extraFeatures.push({
     id: "integrations",
     name: "資料來源",
-    route: "/integrations",
+    route: "/admin/integrations",
   });
   await core.attach(page);
   await page.route("**/api/v1/integrations", (route) =>
@@ -150,7 +150,7 @@ test("unconfigured sources disclose setup status and do not offer queries", asyn
       ]),
     }),
   );
-  await page.goto("/integrations");
+  await page.goto("/admin/integrations");
   await expect(
     page.getByRole("heading", { name: "公文系統尚未可用" }),
   ).toBeVisible();
@@ -164,8 +164,8 @@ test("Gitea token is cleared after connecting, picked files become a draft with 
 }) => {
   const fixture = new ApiFixture();
   fixture.extraFeatures = [
-    { id: "repositories", name: "程式庫", route: "/repositories" },
-    { id: "knowledge", name: "知識庫", route: "/knowledge" },
+    { id: "repositories", name: "程式庫", route: "/work/repositories" },
+    { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
   ];
   await fixture.attach(page);
   let connected = false;
@@ -267,7 +267,7 @@ test("Gitea token is cleared after connecting, picked files become a draft with 
       json: { items: [repository], pinned: [], page: 1, hasMore: false },
     });
   });
-  await page.goto("/repositories");
+  await page.goto("/work/repositories");
   await page
     .getByLabel("貼上權杖", { exact: true })
     .fill("fixtureReadOnlyToken00000000");

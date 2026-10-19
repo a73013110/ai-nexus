@@ -3,33 +3,18 @@ import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { ApiClient } from '../api/api-client';
+import { featureForUrl } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { BrowserSession } from './browser-session';
 
-const features = new Set([
-  'dashboard',
-  'chat',
-  'files',
-  'knowledge',
-  'reader',
-  'projects',
-  'artifacts',
-  'shared',
-  'quality',
-  'tasks',
-  'repositories',
-  'integrations',
-  'admin',
-  'settings',
-]);
-const systemFeatures = ['operations', 'monitoring', 'audit', 'logs'];
+/**
+ * 在線狀態只回報目前網址在功能目錄中的 ID（頁面或閱讀器），個人設定回報 `settings`；
+ * 資源 ID、查詢字串與不在目錄中的網址都不送出（後端也只接受這套詞彙）。
+ */
 export function presenceFeature(url: string): string | null {
   const path = url.split(/[?#;]/)[0];
-  for (const feature of systemFeatures) {
-    if (path === `/admin/${feature}` || path.startsWith(`/admin/${feature}/`)) return feature;
-  }
-  const feature = path.split('/')[1];
-  return features.has(feature) ? feature : null;
+  if (path === '/settings') return 'settings';
+  return featureForUrl(path)?.id ?? null;
 }
 
 /** 單一應用程式心跳，只記錄固定的頁面類別與活動狀態。 */

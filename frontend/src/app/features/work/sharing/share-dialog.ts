@@ -21,6 +21,7 @@ import { Icon } from '@shared/ui/icon';
 import { SharingApi } from './sharing-api';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { Checkbox } from '@shared/ui/checkbox';
+import { routeOf } from '@core/api/catalog';
 @Component({
   selector: 'nx-share-dialog',
   imports: [Notice, CompactDialog, DialogHeader, Field, Select, Icon, RouterLink, Checkbox],
@@ -46,7 +47,10 @@ import { Checkbox } from '@shared/ui/checkbox';
           <p>指定帳號登入後，即可從「分享」找到內容。<br />後續修改不會自動公開。</p>
           <button class="primary-button" (click)="copy.copy(link(share.id))">
             {{ copy.copied() ? '已複製連結' : '複製分享連結' }}</button
-          ><a [routerLink]="['/shared', share.id]" (click)="dialog.close()" class="secondary-button"
+          ><a
+            [routerLink]="[routeOf('sharing'), share.id]"
+            (click)="dialog.close()"
+            class="secondary-button"
             >檢視分享</a
           >
         </div>
@@ -127,6 +131,8 @@ import { Checkbox } from '@shared/ui/checkbox';
   </dialog>`,
 })
 export class ShareDialog {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly kind = input.required<string>();
   readonly sourceId = input.required<string>();
   readonly name = input('');

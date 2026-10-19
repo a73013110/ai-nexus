@@ -14,7 +14,11 @@ test("named read-only sharing is created beside a conversation and can be revoke
   page,
 }) => {
   const core = new ApiFixture();
-  core.extraFeatures.push({ id: "shared", name: "分享", route: "/shared" });
+  core.extraFeatures.push({
+    id: "sharing",
+    name: "分享",
+    route: "/work/sharing",
+  });
   const colleague = {
     id: randomUUID(),
     displayName: "林同事",
@@ -78,7 +82,7 @@ test("named read-only sharing is created beside a conversation and can be revoke
       },
     });
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("請摘要這份工作");
@@ -110,7 +114,7 @@ test("named read-only sharing is created beside a conversation and can be revoke
     .getByRole("button", { name: "撤銷分享", exact: true })
     .click();
   await expect(page.locator(".share-content")).toHaveCount(0);
-  await expect(page).toHaveURL(/\/shared\?sent=true$/);
+  await expect(page).toHaveURL(/\/work\/sharing\?sent=true$/);
   expect(share!.isRevoked).toBe(true);
 });
 
@@ -118,7 +122,11 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   page,
 }) => {
   const core = new ApiFixture();
-  core.extraFeatures.push({ id: "shared", name: "分享", route: "/shared" });
+  core.extraFeatures.push({
+    id: "sharing",
+    name: "分享",
+    route: "/work/sharing",
+  });
   await core.attach(page);
   const id = randomUUID(),
     fileId = randomUUID();
@@ -221,13 +229,13 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
       },
     });
   });
-  await page.goto("/shared");
+  await page.goto("/work/sharing");
   await page.getByRole("button", { name: "我分享的", exact: true }).click();
   const cards = page.locator("nx-resource-gallery").getByRole("link");
   await cards.click();
-  await expect(page).toHaveURL(new RegExp(`/shared/${id}\\?sent=true$`));
+  await expect(page).toHaveURL(new RegExp(`/work/sharing/${id}\\?sent=true$`));
   await page.getByRole("link", { name: "全部分享", exact: true }).click();
-  await expect(page).toHaveURL(/\/shared\?sent=true$/);
+  await expect(page).toHaveURL(/\/work\/sharing\?sent=true$/);
   await expect(cards).toHaveCount(1);
   await page.reload();
   await expect(
@@ -235,7 +243,7 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   ).toHaveAttribute("aria-pressed", "true");
   await expect(cards).toHaveCount(1);
   await cards.click();
-  await expect(page).toHaveURL(new RegExp(`/shared/${id}\\?sent=true$`));
+  await expect(page).toHaveURL(new RegExp(`/work/sharing/${id}\\?sent=true$`));
   await page.locator("nx-run-timing summary").click();
   await expect(page.locator("nx-run-timing")).toContainText("100");
   await page.locator(".shared-citation summary").click();
@@ -280,7 +288,11 @@ for (const width of [1440, 375]) {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const core = new ApiFixture();
-    core.extraFeatures.push({ id: "shared", name: "分享", route: "/shared" });
+    core.extraFeatures.push({
+      id: "sharing",
+      name: "分享",
+      route: "/work/sharing",
+    });
     // A recipient reading an artifact version has no share menu, so the tour ends on its facts.
     const recipient = width === 375;
     const createdAt = new Date().toISOString();
@@ -363,7 +375,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, last };
     };
-    await page.goto("/shared");
+    await page.goto("/work/sharing");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([

@@ -11,10 +11,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { AuditDto, FeatureDto, ModelDto, NavigationGroupDto } from '@core/api/schema';
-import { FEATURE_NAMES, isFeatureId } from '@core/auth/feature-names';
+import { catalogFeature, routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
-import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { FeatureSummary } from '@features/admin/access-control/roles/feature-summary';
 import { downloadBlob } from '@shared/browser/download';
@@ -76,7 +75,6 @@ interface AuditPageRequest {
     DataTableRow,
     DetailDrawer,
     DrawerPager,
-    FeatureAccessNotice,
     FeaturePage,
     FeatureSummary,
     Field,
@@ -98,6 +96,8 @@ interface AuditPageRequest {
   templateUrl: './activity-audit-page.html',
 })
 export class ActivityAuditPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AuditApi);
   private readonly view = inject(ViewScope);
@@ -107,7 +107,7 @@ export class ActivityAuditPage {
   });
   private readonly catalog = computed(() => this.catalogRead.value());
   readonly features = computed<readonly FeatureDto[]>(() => this.catalog()?.features ?? []);
-  /** 全部選單分群，讓功能異動依選單順序、分群顯示（與存取管理相同）。 */
+  /** 全部選單分群，讓功能異動依選單順序、分群顯示（與「功能與選單」頁相同）。 */
   readonly navigationGroups = computed<readonly NavigationGroupDto[]>(
     () => this.catalog()?.navigationGroups ?? [],
   );
@@ -279,10 +279,11 @@ export class ActivityAuditPage {
       (id) =>
         catalog.get(id) ?? {
           id,
-          name: (isFeatureId(id) && FEATURE_NAMES[id]) || id,
-          route: '',
+          // 此帳號沒有授權的功能不在 `/me`，名稱與圖示取自目錄；不認得的 ID 原樣顯示。
+          name: catalogFeature(id)?.name || id,
+          route: catalogFeature(id)?.route ?? '',
           groupId: null,
-          icon: '',
+          icon: catalogFeature(id)?.icon ?? '',
           sortOrder: 0,
         },
     );

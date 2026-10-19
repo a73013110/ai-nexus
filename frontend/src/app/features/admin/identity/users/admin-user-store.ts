@@ -6,8 +6,8 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { ToastService } from '@shared/ui/toast-service';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { IdentityApi } from '../identity-api';
+import { AdminUsersStore } from '../admin-users-store';
 import {
   modelPolicyDraft,
   modelPolicyRequest,
@@ -20,7 +20,7 @@ import {
   userAccountRequest,
   type UserAccountDraft,
 } from './user-account-fields';
-import { sameIds } from './user-role-fields';
+import { sameIds } from '@features/admin/access-control/roles/feature-order';
 
 /** 草稿在檢視器的同一次開啟（`key`）內跟隨已儲存的值。 */
 type Keyed<T> = readonly [string | undefined, T];
@@ -35,8 +35,8 @@ export type UserSettingsTab = Exclude<UserTab, 'conversations'>;
  */
 @Injectable()
 export class AdminUserStore {
-  private readonly api = inject(AdministrationApi);
-  private readonly admin = inject(AdministrationStore);
+  private readonly api = inject(IdentityApi);
+  private readonly admin = inject(AdminUsersStore);
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly session = inject(WorkspaceSession);

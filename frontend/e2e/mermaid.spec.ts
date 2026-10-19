@@ -40,10 +40,10 @@ async function answer(page: Page, text = markdown) {
   core.extraFeatures.push({
     id: "artifacts",
     name: "成果文件",
-    route: "/artifacts",
+    route: "/work/artifacts",
   });
   await core.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("請繪製流程");
@@ -458,7 +458,7 @@ test("artifact preview uses the same Mermaid reader as chat", async ({
   core.extraFeatures.push({
     id: "artifacts",
     name: "成果文件",
-    route: "/artifacts",
+    route: "/work/artifacts",
   });
   await core.attach(page);
   const id = randomUUID();
@@ -487,7 +487,7 @@ test("artifact preview uses the same Mermaid reader as chat", async ({
           : artifact,
     });
   });
-  await page.goto(`/artifacts/${id}`);
+  await page.goto(`/work/artifacts/${id}`);
   await expect(page.locator(".artifact-paper .mermaid-frame")).toHaveCount(2);
   await expect(
     page.locator(".artifact-paper .mermaid-frame").first().getByRole("img"),
@@ -612,7 +612,7 @@ test("streaming Mermaid stays source until committed, is reused on completion an
       revoke(url);
     };
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("逐步繪製");

@@ -84,7 +84,7 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
       colorScheme: "light",
       reducedMotion: "no-preference",
     });
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     await page
       .getByRole("textbox", { name: "傳送訊息", exact: true })
       .fill("準備回答");
@@ -193,7 +193,7 @@ for (const preference of ["system", "personal"] as const) {
     await page.emulateMedia({
       reducedMotion: preference === "system" ? "reduce" : "no-preference",
     });
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     await page
       .getByRole("textbox", { name: "傳送訊息", exact: true })
       .fill("減少動態效果");

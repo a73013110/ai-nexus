@@ -14,7 +14,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/settings");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   await expect(
     page.getByRole("heading", { name: "外觀與閱讀", exact: true }),
   ).toBeVisible();
@@ -171,7 +171,7 @@ test("settings stay over the current conversation, preserve scroll and draft, an
   const fixture = new ApiFixture();
   fixture.answer = "這是一段用來確認閱讀位置的長篇回覆。\n\n".repeat(60);
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await input.fill("開始閱讀");
   await page.getByRole("button", { name: "送出訊息", exact: true }).click();
@@ -214,7 +214,7 @@ test("unsaved settings can be discarded without losing the question draft", asyn
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("尚未送出的問題");

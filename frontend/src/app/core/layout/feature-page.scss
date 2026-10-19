@@ -85,7 +85,9 @@
   .feature-title {
     flex: 1 1 6rem;
   }
-  .feature-header p {
+  // 麵包屑也收起，標題才不會被擠成兩行。
+  .feature-header p,
+  nx-feature-trail {
     display: none;
   }
   .feature-header h1,

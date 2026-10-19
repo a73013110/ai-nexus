@@ -1,7 +1,7 @@
 <nx-feature-page
   title="檢索評測"
   description="以同一批標註題目比較向量、全文、混合與混合重排的召回品質。"
-  [back]="{ path: '/quality', label: '全部評測' }"
+  [back]="{ path: routeOf('quality'), label: '全部評測' }"
   [tour]="tour"
 >
   @if (error()) {

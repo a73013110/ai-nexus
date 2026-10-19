@@ -53,7 +53,7 @@ try {
     if ((Invoke-Pester -Configuration $pester).Result -ne 'Passed') { throw '腳本測試失敗。' }
 
     npm --prefix frontend run contracts:check
-    if ($LASTEXITCODE -ne 0) { throw '前端 schema.ts 與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。' }
+    if ($LASTEXITCODE -ne 0) { throw '前端 schema.ts 或 feature-catalog.ts 與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。' }
     npm --prefix frontend run format:check
     if ($LASTEXITCODE -ne 0) { throw '前端格式不符 Prettier，請執行 npm --prefix frontend run format。' }
     & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $verification

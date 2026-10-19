@@ -14,8 +14,10 @@ import type {
 test("檢索評測固定驗收集並顯示四模式指標及降級原因", async ({ page }) => {
   const core = new ApiFixture();
   core.extraFeatures.push(
-    { id: "quality", name: "品質評測", route: "/quality" },
-    { id: "knowledge", name: "知識庫", route: "/knowledge" },
+    { id: "quality", name: "品質評測", route: "/admin/quality" },
+    // 檢索評測是品質評測模組自己的頁面，要另外授權。
+    { id: "quality.retrieval" },
+    { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
   );
   await core.attach(page);
   const collection = randomUUID(),
@@ -115,11 +117,11 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
       body: JSON.stringify(data),
     });
   });
-  await page.goto("/quality");
+  await page.goto("/admin/quality");
   await settleEntrance(page);
   await page.getByRole("button", { name: "評測操作", exact: true }).click();
   await page.getByRole("menuitem", { name: "檢索評測" }).click();
-  await expect(page).toHaveURL(/\/quality\/retrieval$/);
+  await expect(page).toHaveURL(/\/admin\/quality\/retrieval$/);
   await page.getByRole("textbox", { name: "檢索評測名稱" }).fill("採購驗收");
   await page.getByRole("checkbox", { name: "採購規範" }).check();
   const corpus = page.getByRole("textbox", { name: "檢索驗收集 JSON" });
@@ -175,7 +177,7 @@ test("fixed evaluation cases compare instructions, show diagnostic results and r
   core.extraFeatures.push({
     id: "quality",
     name: "品質評測",
-    route: "/quality",
+    route: "/admin/quality",
   });
   core.modelPolicy.allowModelSelection = false;
   core.modelPolicy.showModelNames = false;
@@ -272,7 +274,7 @@ test("fixed evaluation cases compare instructions, show diagnostic results and r
     if (path.includes("/quality/runs/")) return json(detail);
     return json(set);
   });
-  await page.goto(`/quality/${set.resource.id}`);
+  await page.goto(`/admin/quality/${set.resource.id}`);
   await expect(
     page.getByRole("heading", { name: set.resource.name }),
   ).toBeVisible();
@@ -327,7 +329,7 @@ test("answer feedback is one click, can be supplemented and toggled off", async 
       body: JSON.stringify(value.rating ? { rating, note } : null),
     });
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("測試回答品質");
@@ -359,8 +361,9 @@ for (const width of [1440, 375]) {
     page.on("pageerror", (error) => errors.push(error.message));
     const core = new ApiFixture();
     core.extraFeatures.push(
-      { id: "quality", name: "品質評測", route: "/quality" },
-      { id: "knowledge", name: "知識庫", route: "/knowledge" },
+      { id: "quality", name: "品質評測", route: "/admin/quality" },
+      { id: "quality.retrieval" },
+      { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
     );
     // A reader without runs has no answers to review; the menu then offers only the export.
     const reader = width === 375;
@@ -548,7 +551,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, last };
     };
-    await page.goto("/quality");
+    await page.goto("/admin/quality");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([
@@ -581,7 +584,7 @@ for (const width of [1440, 375]) {
     expect(evaluation.last).toContain(
       reader ? "可匯出題庫 JSON。" : "可編輯題庫、匯出題庫 JSON、設定存取權限",
     );
-    await page.goto("/quality/retrieval");
+    await page.goto("/admin/quality/retrieval");
     await expect(
       page.getByRole("checkbox", { name: "採購規範" }),
     ).toBeVisible();

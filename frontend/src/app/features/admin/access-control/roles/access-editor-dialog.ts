@@ -17,6 +17,7 @@ import type {
   GroupPolicyRequest,
   NavigationGroupDto,
 } from '@core/api/schema';
+import { catalogFeature } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import {
@@ -33,16 +34,16 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
-import { ICON_NAMES, Icon } from '@shared/ui/icon';
+import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
-import { AdministrationApi } from '../administration-api';
-import { AdministrationStore } from '../administration-store';
+import { AccessControlApi } from '../access-control-api';
+import { AccessControlStore } from '../access-control-store';
 import { FeatureSummary } from './feature-summary';
-import { nextSortOrder } from './feature-order';
+import { nextSortOrder, sameIds } from './feature-order';
 import {
   ModelPolicyEditor,
   modelPolicyDraft,
@@ -50,7 +51,6 @@ import {
   sameModelPolicy,
   type ModelPolicyDraft,
 } from '@features/platform/inference/model-policies/model-policy-editor';
-import { sameIds } from '@features/admin/identity/users/user-role-fields';
 
 /**
  * 使用者在使用者檢視器中編輯、在 `AdminUserCreateDialog` 中建立。`menu` 是導覽群組：只整理選單、
@@ -74,8 +74,8 @@ interface Editor {
   order: number;
   /** 功能所屬的選單群組，或群組的上層；空字串代表最上層。 */
   placement: string;
-  /** 功能的圖示名稱。 */
-  icon: string;
+  /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
+  defaultName: string;
   isNew: boolean;
 }
 
@@ -88,9 +88,14 @@ function sameEditor(first: Editor, second: Editor) {
     sameIds(first.ids, second.ids) &&
     sameModelPolicy(first.modelPolicy, second.modelPolicy) &&
     first.storage.trim() === second.storage.trim() &&
-    first.placement === second.placement &&
-    first.icon === second.icon
+    first.placement === second.placement
   );
+}
+
+/** 送給伺服器的名稱覆寫：留白或等於目錄預設名稱時為 `null`，之後目錄改名也會跟著變。 */
+export function featureNameOverride(name: string, defaultName: string) {
+  const trimmed = name.trim();
+  return trimmed && trimmed !== defaultName ? trimmed : null;
 }
 
 let sequence = 0;
@@ -123,22 +128,19 @@ let sequence = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './access-editor-dialog.html',
   styles: `
-    .feature-icon-field {
+    .feature-identity {
       display: flex;
       align-items: center;
       gap: var(--p-space-2);
-    }
-    .feature-icon-field nx-select {
-      flex: 1;
-      min-width: 0;
+      color: var(--secondary);
     }
   `,
 })
 export class AccessEditorDialog {
   readonly id = `nx-access-editor-${++sequence}`;
-  readonly store = inject(AdministrationStore);
+  readonly store = inject(AccessControlStore);
   readonly session = inject(WorkspaceSession);
-  private readonly api = inject(AdministrationApi);
+  private readonly api = inject(AccessControlApi);
   readonly editor = signal<Editor | null>(null);
   /** 開啟時的草稿，用於還原與未儲存變更的檢查。 */
   private readonly opened = signal<Editor | null>(null);
@@ -219,11 +221,11 @@ export class AccessEditorDialog {
         .map((section) => ({ value: section.id, label: section.path })),
     ];
   });
-  readonly icons: SelectOption[] = [...ICON_NAMES].sort().map((name) => ({
-    value: name,
-    label: name,
-  }));
   readonly icon = featureIcon;
+  /** 圖示來自功能目錄，編輯器只顯示。 */
+  catalogIcon(id: string) {
+    return catalogFeature(id)?.icon ?? '';
+  }
   /** 角色儲存後會授予的內容：已啟用群組中已啟用的功能。 */
   readonly proposedFeatures = computed(() => {
     const event3 = this.editor(),
@@ -250,7 +252,7 @@ export class AccessEditorDialog {
       id: item?.id || '',
       name,
       title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
-      // 沒有頁面的功能（例如 `logs.export` 這類權限）沒有路由可顯示。
+      // 沒有頁面的功能（例如 `diagnostics.logs.export` 這類動作）沒有網址可顯示。
       subtitle: feature ? [feature.id, feature.route].filter(Boolean).join(' · ') : item?.id || '',
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: [...(role?.groupIds || group?.featureIds || [])],
@@ -261,7 +263,7 @@ export class AccessEditorDialog {
           : storageLimitGb(group.policy.storedAttachmentLimitBytes),
       order: feature?.sortOrder ?? menu?.sortOrder ?? 0,
       placement: feature?.groupId ?? menu?.parentId ?? '',
-      icon: feature?.icon ?? '',
+      defaultName: (feature && catalogFeature(feature.id)?.name) || '',
       isNew: !item,
     };
     this.editor.set(draft);
@@ -323,7 +325,8 @@ export class AccessEditorDialog {
         { injector: this.injector },
       );
     };
-    if (!event5.id || !event5.name.trim())
+    // 功能的名稱可以留白，表示沿用目錄的預設名稱；其他項目都要有名稱。
+    if (!event5.id || (event5.kind !== 'feature' && !event5.name.trim()))
       return fail('settings', '請輸入識別碼與名稱。', event5.id ? 'name' : 'id');
     let policy: GroupPolicyRequest | undefined;
     if (event5.kind === 'group') {
@@ -356,7 +359,7 @@ export class AccessEditorDialog {
         });
       if (event5.kind === 'feature')
         await this.api.feature(event5.id, {
-          name: event5.name,
+          name: featureNameOverride(event5.name, event5.defaultName),
           enabled: event5.enabled,
           // 移到其他群組的功能，放到該群組的最後。
           sortOrder: this.order(event5, () =>
@@ -365,7 +368,6 @@ export class AccessEditorDialog {
             ),
           ),
           groupId: event5.placement || null,
-          icon: event5.icon,
         });
       if (event5.kind === 'menu') {
         const body = {

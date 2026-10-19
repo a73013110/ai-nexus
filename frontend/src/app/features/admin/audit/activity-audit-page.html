@@ -4,9 +4,6 @@
   density="compact"
   layoutMode="data"
 >
-  @if (!session.has('audit') && session.me()) {
-    <nx-feature-access-notice feature="audit" />
-  }
   @if (session.has('audit')) {
     @if (catalogError()) {
       <nx-notice tone="danger" [message]="catalogError()"
@@ -314,8 +311,12 @@
                 </div>
               }
             </dl>
-            @if (row.logs && session.has('logs.query')) {
-              <a routerLink="/admin/logs" [queryParams]="row.logs" class="quiet-button">
+            @if (row.logs && session.has('diagnostics.logs')) {
+              <a
+                [routerLink]="routeOf('diagnostics.logs')"
+                [queryParams]="row.logs"
+                class="quiet-button"
+              >
                 <nx-icon name="logs" />查證相關日誌
               </a>
             }

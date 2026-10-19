@@ -39,6 +39,7 @@ import { artifactTour, artifactsTour } from './artifacts-tour';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '@features/work/sharing/share-dialog';
 import { bindHotkeys } from '@shared/browser/hotkeys';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-artifacts-page',
@@ -66,6 +67,8 @@ import { bindHotkeys } from '@shared/browser/hotkeys';
   templateUrl: './artifacts-page.html',
 })
 export class ArtifactsPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly textActions = TEXT_ACTIONS;
   private readonly api = inject(ArtifactsApi);
   private readonly scope = inject(ViewScope);
@@ -176,7 +179,7 @@ export class ArtifactsPage {
     const doc = this.document();
     if (!doc?.resource.isOwner) return [];
     return [
-      ...(this.session.has('shared')
+      ...(this.session.has('sharing')
         ? [{ id: 'share', label: '唯讀分享', icon: 'share', disabled: this.busy() || this.dirty() }]
         : []),
       { id: 'access', label: '存取權限', icon: 'lock' },
@@ -190,7 +193,7 @@ export class ArtifactsPage {
           editable: !!this.editable(),
           editing: this.mode() !== 'read' && !!this.editable(),
           manage: this.documentActions().length > 0,
-          shared: this.session.has('shared'),
+          shared: this.session.has('sharing'),
         })
       : artifactsTour({ chat: this.session.has('chat') }),
   );
@@ -385,7 +388,7 @@ export class ArtifactsPage {
         );
         this.listRead.reload();
         this.busy.set(false);
-        await this.router.navigate(['/artifacts']);
+        await this.router.navigate([routeOf('artifacts')]);
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));

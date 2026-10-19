@@ -17,6 +17,7 @@ import { Notice } from '@shared/ui/notice';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { RepositoriesApi } from './repositories-api';
+import { routeOf } from '@core/api/catalog';
 
 /** 使用者的 token 能讀取的每個儲存庫，依最近更新排序，釘選的在最上方。 */
 @Component({
@@ -164,7 +165,7 @@ export class RepositoryList {
     if (!this.loading()) this.page.update((item) => item + 1);
   }
   link(fullName: string) {
-    return ['/repositories', ...fullName.split('/')];
+    return [routeOf('repositories'), ...fullName.split('/')];
   }
   owner = (fullName: string) => fullName.split('/')[0];
   name = (fullName: string) => fullName.split('/')[1];

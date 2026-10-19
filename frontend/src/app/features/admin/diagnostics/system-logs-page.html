@@ -1,21 +1,18 @@
 <nx-feature-page
-  [title]="session.featureName('logs.query')"
+  [title]="session.featureName('diagnostics.logs')"
   description="查證錯誤、耗時與技術流程。"
   density="compact"
   layoutMode="data"
   [wide]="true"
 >
-  @if (!session.has('logs.query') && session.me()) {
-    <nx-feature-access-notice feature="logs.query" />
-  }
-  @if (session.has('logs.query')) {
+  @if (session.has('diagnostics.logs')) {
     @if (degraded()) {
       <nx-notice
         tone="warning"
         message="日誌系統降級：部分事件可能延遲寫入或遺失，查詢結果可能不完整。"
       >
         @if (session.has('monitoring')) {
-          <a notice-actions routerLink="/admin/monitoring" class="secondary-button"
+          <a notice-actions [routerLink]="routeOf('monitoring')" class="secondary-button"
             ><nx-icon name="activity" />前往監控</a
           >
         }
@@ -117,7 +114,7 @@
           <span class="sr-only" role="status">正在載入日誌…</span>
         }
       </div>
-      @if (session.has('logs.export')) {
+      @if (session.has('diagnostics.logs.export')) {
         <button
           table-actions
           type="button"
@@ -168,7 +165,7 @@
           @for (entry of events(); track entry.logId) {
             <tr
               nxTableRow
-              [rowEnabled]="session.has('logs.detail') && !loading()"
+              [rowEnabled]="session.has('diagnostics.logs.detail') && !loading()"
               (rowActivate)="inspect(entry)"
               [class.is-selected]="selectedEntry()?.logId === entry.logId"
             >
@@ -181,7 +178,7 @@
                 }}</nx-status-badge>
               </td>
               <td nxTableColumn="event">
-                @if (session.has('logs.detail')) {
+                @if (session.has('diagnostics.logs.detail')) {
                   <button
                     type="button"
                     class="ui-table-link ui-truncate"

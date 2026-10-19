@@ -8,7 +8,7 @@ import { KnowledgeFixture } from "./knowledge-fixture";
 
 // The tour picks its steps from what is visible when it starts, so start it on a loaded composer.
 async function openChat(page: Page) {
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("textbox", { name: "傳送訊息", exact: true }),
   ).toBeEditable();
@@ -111,7 +111,7 @@ test("tour respects reduced motion and cleans up overlays when its route closes"
     );
     link?.click();
   });
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   await expect(page.locator(".driver-popover, .driver-overlay")).toHaveCount(0);
   await expect(page.locator("body")).not.toHaveClass(/driver-active/);
 });
@@ -131,7 +131,7 @@ test("a pending tour never opens after navigation and can be started again", asy
   await expect(launcher).toBeDisabled();
   await expect.poll(() => Boolean(pending)).toBe(true);
   await page.locator(".workspace-sidebar .brand").click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/work\/dashboard$/);
   await pending!.continue();
   await expect
     .poll(() =>

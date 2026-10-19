@@ -1,10 +1,8 @@
 @use 'breakpoints' as bp;
 
-// Shared by the four access tabs: one table shape, fixed column widths and the toolbar above it;
-// a tab's own cells (e.g. the features' order handle) are styled in its own file.
-// The admin page is a data page: each tab passes the remaining height to its table
-// (`ui-table-fill`).
-// At `narrow` and below the tables turn into cards (`DataTable` `stacked`).
+// 使用者頁與存取控制三頁的表格共用：同一種表格形狀、固定欄寬與上方工具列；各表自己的儲存格
+// （例如功能的排序把手）在各自的檔案。這些都是資料頁，表格元件以 `ui-table-fill` 把剩餘高度交給表格。
+// `narrow` 以下表格改為卡片（`DataTable` 的 `stacked`）。
 :host {
   display: block;
 }

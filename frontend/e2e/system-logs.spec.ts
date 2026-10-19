@@ -71,20 +71,24 @@ class LogFixture {
     this.api.adminAccess = true;
     this.api.auditAccess = true;
     this.api.extraFeatures = [
-      { id: "dashboard", name: "總覽", route: "/dashboard" },
-      { id: "projects", name: "專案", route: "/projects" },
-      { id: "knowledge", name: "知識庫", route: "/knowledge" },
-      { id: "artifacts", name: "成果文件", route: "/artifacts" },
-      { id: "shared", name: "分享", route: "/shared" },
-      { id: "quality", name: "品質評測", route: "/quality" },
-      { id: "repositories", name: "程式庫", route: "/repositories" },
-      { id: "tasks", name: "背景任務", route: "/tasks" },
-      { id: "integrations", name: "資料來源", route: "/integrations" },
-      { id: "logs.query", name: "系統日誌", route: "/admin/logs" },
+      { id: "dashboard", name: "總覽", route: "/work/dashboard" },
+      { id: "projects", name: "專案", route: "/work/projects" },
+      { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+      { id: "artifacts", name: "成果文件", route: "/work/artifacts" },
+      { id: "sharing", name: "分享", route: "/work/sharing" },
+      { id: "quality", name: "品質評測", route: "/admin/quality" },
+      { id: "repositories", name: "程式庫", route: "/work/repositories" },
+      { id: "jobs", name: "背景任務", route: "/work/jobs" },
+      { id: "integrations", name: "資料來源", route: "/admin/integrations" },
+      {
+        id: "diagnostics.logs",
+        name: "系統日誌",
+        route: "/admin/diagnostics/logs",
+      },
       ...(detail
         ? [
-            { id: "logs.detail", name: "診斷詳情", route: "" },
-            { id: "logs.export", name: "匯出日誌", route: "" },
+            { id: "diagnostics.logs.detail", name: "診斷詳情", route: "" },
+            { id: "diagnostics.logs.export", name: "匯出日誌", route: "" },
           ]
         : []),
       ...this.moreFeatures,
@@ -182,7 +186,7 @@ class LogFixture {
         degraded: this.degraded,
       });
     });
-    await page.goto("/admin/logs?view=events");
+    await page.goto("/admin/diagnostics/logs?view=events");
     await expect(page.locator(".log-table tbody tr")).toHaveCount(50);
   }
 }
@@ -192,10 +196,10 @@ test("日誌導覽唯一選取，桌面密度與固定表頭", async ({ page }) 
   await fixture.attach(page);
   const current = page.locator(".workspace-navigation a.current");
   await expect(current).toHaveCount(1);
-  await expect(current).toHaveAttribute("href", "/admin/logs");
+  await expect(current).toHaveAttribute("href", "/admin/diagnostics/logs");
   await expect(current).toHaveAttribute("aria-current", "page");
   await expect(
-    page.locator('.workspace-navigation a[href="/admin"]'),
+    page.locator('.workspace-navigation a[href="/admin/identity/users"]'),
   ).not.toHaveClass(/current/);
   await expectViewportContained(page);
   const density = await page.locator(".ui-table-scroll").evaluate((scroll) => {

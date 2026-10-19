@@ -13,7 +13,7 @@ test("global problem notices are compact, preserve safe copy and release viewpor
   await page.route("**/api/client-issues", (route) =>
     route.fulfill({ status: 503, body: "{}" }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.evaluate(() => {
     setTimeout(() => {
       throw new Error("private diagnostic details must stay hidden");
@@ -64,7 +64,7 @@ test("unhandled client issues show a safe copyable code without overflowing the 
       json: { accepted: true, issueCode: fixtureIssueCode },
     });
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.getByRole("textbox", { name: "傳送訊息" })).toBeVisible();
   await page.evaluate(() =>
     window.dispatchEvent(

@@ -36,7 +36,8 @@ import { ChatTopbar } from './chat-topbar';
 import { chatTour } from './chat-tour';
 import { ConversationDialog } from './conversation-dialog';
 import { ConversationFind } from './thread/conversation-find';
-import { conversationMarkdown } from './conversation-markdown';
+import { conversationMarkdown } from './thread/conversation-markdown';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 聊天頁：開啟路由中的對話，並把指令、快捷鍵與選單動作
@@ -150,7 +151,7 @@ export class ChatWorkspace {
     });
     bindHotkeys(
       {
-        'mod+alt+n': () => void this.router.navigate(['/chat']),
+        'mod+alt+n': () => void this.router.navigate([routeOf('chat')]),
         'mod+shift+l': () => void this.library().open(),
       },
       () =>
@@ -227,8 +228,8 @@ export class ChatWorkspace {
     }
   }
   command(id: string) {
-    if (id.startsWith('conversation:')) void this.router.navigate(['/chat', id.slice(13)]);
-    else if (id === 'new') void this.router.navigate(['/chat']);
+    if (id.startsWith('conversation:')) void this.router.navigate([routeOf('chat'), id.slice(13)]);
+    else if (id === 'new') void this.router.navigate([routeOf('chat')]);
     else if (id === 'prompts') void this.library().open();
     else if (id === 'import') void this.conversations.chooseBackup();
     else if (id === 'theme')

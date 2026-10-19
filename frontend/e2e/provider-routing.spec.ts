@@ -35,7 +35,7 @@ test("same-named models remain distinct routing references while the picker only
       }),
     }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("combobox", { name: "選擇模型", exact: true }),
   ).toContainText("同名模型");

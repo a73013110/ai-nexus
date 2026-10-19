@@ -134,8 +134,8 @@ export class KnowledgeFixture {
   }
   async attach(page: Page) {
     this.core.extraFeatures = [
-      { id: "knowledge", name: "知識庫", route: "/knowledge" },
-      { id: "tasks", name: "背景任務", route: "/tasks" },
+      { id: "knowledge", name: "知識庫", route: "/work/knowledge" },
+      { id: "jobs", name: "背景任務", route: "/work/jobs" },
     ];
     await this.core.attach(page);
     await page.route("**/api/v1/**", async (route) => {

@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { apiResource } from '@core/api/api-resource';
@@ -52,6 +51,7 @@ import {
   type LogGuidField,
   type LogMoreField,
 } from './log-query';
+import { routeOf } from '@core/api/catalog';
 
 interface LogPageRequest {
   filter: LogFilter;
@@ -66,7 +66,6 @@ interface LogPageRequest {
     DataTable,
     DataTableColumn,
     DataTableRow,
-    FeatureAccessNotice,
     FeaturePage,
     Field,
     Icon,
@@ -87,6 +86,8 @@ interface LogPageRequest {
   styleUrl: './system-logs-page.scss',
 })
 export class SystemLogsPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(DiagnosticsApi);
   private readonly view = inject(ViewScope);
@@ -99,7 +100,7 @@ export class SystemLogsPage {
   /** 已套用的條件、要顯示第幾頁，以及讀那一頁的游標。 */
   private readonly request = signal<LogPageRequest | undefined>(undefined);
   private readonly pageRead = apiResource({
-    feature: 'logs.query',
+    feature: 'diagnostics.logs',
     params: this.request,
     loader: async (request, signal) => ({
       request,
@@ -209,7 +210,7 @@ export class SystemLogsPage {
     this.selectedEntry.set(null);
   }
   inspect(entry: DiagnosticSummary) {
-    if (!entry.logId || !this.session.has('logs.detail')) return;
+    if (!entry.logId || !this.session.has('diagnostics.logs.detail')) return;
     this.selectedEntry.set(entry);
     this.inspector()?.open();
   }
@@ -219,7 +220,7 @@ export class SystemLogsPage {
   }
   async export() {
     const request = this.request();
-    if (!request || this.exporting() || !this.session.has('logs.export')) return;
+    if (!request || this.exporting() || !this.session.has('diagnostics.logs.export')) return;
     // 預設區間（最近 N 小時）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filter = logFilter(this.query.applied());
     if (typeof filter === 'string') {

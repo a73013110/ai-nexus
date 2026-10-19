@@ -9,7 +9,7 @@ test("日曆月份使用共用選單，巢狀浮層支援鍵盤、取消和手�
   const api = new ApiFixture();
   api.adminAccess = true;
   await api.attach(page);
-  await page.goto("/design");
+  await page.goto("/admin/design");
   const value = page.getByLabel("西元日期時間", { exact: true });
   const original = await value.inputValue();
   await page
@@ -62,7 +62,7 @@ test("共用日曆的民國／西元值一致，閏日與取消有正確行為",
   const api = new ApiFixture();
   api.adminAccess = true;
   await api.attach(page);
-  await page.goto("/design");
+  await page.goto("/admin/design");
   const gregorian = page.getByLabel("西元日期時間", { exact: true });
   const roc = page.getByLabel("民國日期時間", { exact: true });
   await expect(gregorian).toHaveValue("2026/10/08 14:30:45");

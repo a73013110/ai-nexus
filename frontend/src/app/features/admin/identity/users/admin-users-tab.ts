@@ -23,8 +23,8 @@ import {
 } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
-import { AdministrationApi } from '@features/admin/access-control/administration-api';
-import { AdministrationStore } from '@features/admin/access-control/administration-store';
+import { IdentityApi } from '../identity-api';
+import { AdminUsersStore } from '../admin-users-store';
 import { AdminUserCreateDialog } from './admin-user-create-dialog';
 import { signInMethods } from './user-account-fields';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
@@ -47,13 +47,13 @@ import { TestIdentityDialog } from './test-identity-dialog';
     AdminUserCreateDialog,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: '../../access-control/access-tabs.scss',
+  styleUrl: '../../../../shared/ui/management-table-page.scss',
   templateUrl: './admin-users-tab.html',
 })
 export class AdminUsersTab {
   readonly session = inject(WorkspaceSession);
-  readonly store = inject(AdministrationStore);
-  private readonly api = inject(AdministrationApi);
+  readonly store = inject(AdminUsersStore);
+  private readonly api = inject(IdentityApi);
   /** 在檢視器中開啟的使用者，帳號、角色與政策都在那裡編輯。 */
   readonly selectedId = input<string | null>(null);
   readonly inspect = output<AdminUserDto>();

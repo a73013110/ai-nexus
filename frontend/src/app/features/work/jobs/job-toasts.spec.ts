@@ -103,7 +103,7 @@ describe('JobToasts', () => {
       description: '檢索索引重建：重建 bge-m3 檢索索引',
     });
     shown[0].action!.run();
-    expect(navigate).toHaveBeenCalledWith('/tasks?job=job-1');
+    expect(navigate).toHaveBeenCalledWith('/work/jobs?job=job-1');
   });
 
   it('settles from a page poll before the inbox and links failures to the task', async () => {
@@ -116,7 +116,7 @@ describe('JobToasts', () => {
     expect(shown).toHaveLength(1);
     expect(shown[0]).toMatchObject({ id: 'job-1', tone: 'danger', title: '背景任務需要重試' });
     shown[0].action!.run();
-    expect(navigate).toHaveBeenCalledWith('/tasks?job=job-1');
+    expect(navigate).toHaveBeenCalledWith('/work/jobs?job=job-1');
   });
 
   it('ignores the earlier attempt after a retry and stays quiet when stopped', async () => {
@@ -145,7 +145,7 @@ describe('JobToasts', () => {
       description: '文件辨識與索引：差旅補充.pdf',
     });
     shown[0].action!.run();
-    expect(navigate).toHaveBeenCalledWith('/reader/doc-1');
+    expect(navigate).toHaveBeenCalledWith('/work/knowledge/reader/doc-1');
   });
 
   it('reads the handoff and the result from a page that already polls the document', async () => {

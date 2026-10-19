@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { routeOf, type RoutedId } from '@core/api/catalog';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map } from 'rxjs';
 import { Icon } from '@shared/ui/icon';
@@ -10,6 +11,18 @@ import {
 } from '@shared/browser/reader-navigation';
 import { DocumentViewer } from './document-viewer';
 import { WorkspaceMenuButton } from '@core/layout/workspace-menu-button';
+
+type ReaderId = Extract<RoutedId, `${string}.reader`>;
+const READER_HOME: Record<ReaderId, RoutedId> = {
+  'files.reader': 'files',
+  'knowledge.reader': 'knowledge',
+  'sharing.reader': 'sharing',
+};
+function readerId(value: unknown): ReaderId {
+  return typeof value === 'string' && Object.hasOwn(READER_HOME, value)
+    ? (value as ReaderId)
+    : 'knowledge.reader';
+}
 
 @Component({
   selector: 'nx-document-reader',
@@ -28,6 +41,7 @@ import { WorkspaceMenuButton } from '@core/layout/workspace-menu-button';
 })
 export class DocumentReader {
   private readonly route = inject(ActivatedRoute);
+  private readonly reader = readerId(this.route.snapshot.data['feature']);
   private readonly navigation = inject(ReaderNavigation);
   readonly state = toSignal(
     combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(
@@ -35,7 +49,8 @@ export class DocumentReader {
         target: {
           id: params.get('id')!,
           shareId: params.get('shareId'),
-          attachment: this.route.snapshot.routeConfig?.path?.includes('attachment') ?? false,
+          // 三個閱讀器共用此元件；是哪一個由路由的目錄 ID 決定，不看網址字面。
+          attachment: this.reader === 'files.reader',
           page: Number(query.get('page')) || 1,
         },
         returnTo: readerReturnUrl(query.get('returnTo')),
@@ -43,7 +58,8 @@ export class DocumentReader {
     ),
     { requireSync: true },
   );
-  readonly returnTo = computed(() => this.state().returnTo ?? '/files');
+  /** 沒有可信的來源時，回到閱讀器所屬模組的頁面。 */
+  readonly returnTo = computed(() => this.state().returnTo ?? routeOf(READER_HOME[this.reader]));
   readonly returnLabel = computed(() => readerReturnLabel(this.returnTo()));
   constructor() {
     effect(() => this.navigation.enter(this.state().returnTo));

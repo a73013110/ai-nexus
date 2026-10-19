@@ -9,13 +9,18 @@ import {
   ApiFixture,
   settleEntrance,
   toasts,
+  routeOf,
 } from "./fixtures";
 
 test("project settings, shared templates and private conversations work directly on desktop and mobile", async ({
   page,
 }) => {
   const core = new ApiFixture();
-  core.extraFeatures.push({ id: "projects", name: "專案", route: "/projects" });
+  core.extraFeatures.push({
+    id: "projects",
+    name: "專案",
+    route: "/work/projects",
+  });
   const projects: ProjectDto[] = [],
     templates: ProjectTemplateDto[] = [];
   await core.attach(page);
@@ -73,7 +78,7 @@ test("project settings, shared templates and private conversations work directly
     }
     return json(projects[0]);
   });
-  await page.goto("/projects");
+  await page.goto("/work/projects");
   await page.getByRole("button", { name: "新增專案", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "項目名稱" }).fill("公司文件研究");
@@ -126,7 +131,7 @@ for (const kind of ["project", "evaluation"] as const) {
     core.extraFeatures.push({
       id: section,
       name: section,
-      route: `/${section}`,
+      route: routeOf(section),
     });
     const resource = {
       id: randomUUID(),
@@ -200,7 +205,7 @@ for (const kind of ["project", "evaluation"] as const) {
         .click();
       await page.getByRole("menuitem", { name: action, exact: true }).click();
     };
-    await page.goto(`/${section}/${resource.id}`);
+    await page.goto(`${routeOf(section)}/${resource.id}`);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await askDelete();
     const confirm = page.getByRole("dialog", { name: `刪除「${title}」？` });
@@ -217,7 +222,7 @@ for (const kind of ["project", "evaluation"] as const) {
     blocked = false;
     await askDelete();
     await confirm.getByRole("button", { name: action, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/${section}$`));
+    await expect(page).toHaveURL(new RegExp(`${routeOf(section)}$`));
     await expect(page.getByRole("heading", { name: title })).toHaveCount(0);
     expect(deleteCalls).toBe(2);
   });
@@ -233,7 +238,7 @@ for (const width of [1440, 375]) {
     core.extraFeatures.push({
       id: "projects",
       name: "專案",
-      route: "/projects",
+      route: "/work/projects",
     });
     // A reader has no project menu, so the tour ends on the files panel instead.
     const reader = width === 375;
@@ -306,7 +311,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, last };
     };
-    await page.goto("/projects");
+    await page.goto("/work/projects");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([

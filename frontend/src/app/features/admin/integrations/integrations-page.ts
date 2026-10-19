@@ -23,6 +23,7 @@ import { MarkdownView } from '@shared/markdown/markdown-view';
 import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate } from '@shared/browser/format';
 import { IntegrationsApi } from './integrations-api';
+import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-integrations-page',
@@ -151,12 +152,12 @@ export class IntegrationsPage {
     try {
       if (action === 'import') {
         const artifact = await this.api.import(source.id, detail.record.id, detail.record.revision);
-        if (valid()) await this.router.navigate(['/artifacts', artifact.resource.id]);
+        if (valid()) await this.router.navigate([routeOf('artifacts'), artifact.resource.id]);
       } else {
         const next = await this.api.chat(source.id, detail.record.id, detail.record.revision);
         if (valid()) {
           this.transfer.put(next.conversation.id, next.prompt);
-          await this.router.navigate(['/chat', next.conversation.id]);
+          await this.router.navigate([routeOf('chat'), next.conversation.id]);
         }
       }
     } catch (error2) {

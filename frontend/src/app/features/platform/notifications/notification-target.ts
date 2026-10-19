@@ -1,3 +1,4 @@
+import { routeOf } from '@core/api/catalog';
 import type { NotificationTargetDto } from '@core/api/schema';
 
 /** 通知只能開啟有型別的內部目的地。 */
@@ -10,13 +11,13 @@ export function notificationUrl(target: NotificationTargetDto, version = 1): str
   const id = encodeURIComponent(target.id);
   switch (target.kind) {
     case 'conversation':
-      return `/chat/${id}`;
+      return `${routeOf('chat')}/${id}`;
     case 'share':
-      return `/shared/${id}`;
+      return `${routeOf('sharing')}/${id}`;
     case 'task':
-      return `/tasks?job=${id}`;
+      return `${routeOf('jobs')}?job=${id}`;
     case 'repository-review':
-      return `/repositories?review=${id}`;
+      return `${routeOf('repositories')}?review=${id}`;
     default:
       return null;
   }

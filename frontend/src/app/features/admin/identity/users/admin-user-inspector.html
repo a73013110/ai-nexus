@@ -26,7 +26,7 @@
       @if (session.has('audit')) {
         <a
           class="quiet-button inspector-audit"
-          routerLink="/admin/audit"
+          [routerLink]="routeOf('audit')"
           aria-label="查閱活動稽核"
           title="查閱活動稽核"
           [queryParams]="{ search: user.id }"

@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
+import { catalogFeature } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { NavigationPreferences } from './navigation-preferences';
 
@@ -9,9 +10,9 @@ const MENU: Record<string, [string | null, number]> = {
   dashboard: [null, 5],
   chat: ['work', 10],
   files: ['work', 20],
-  shared: ['collaboration', 50],
-  tasks: ['collaboration', 55],
-  admin: ['system', 90],
+  sharing: ['collaboration', 50],
+  jobs: ['collaboration', 55],
+  'identity.users': ['system', 90],
   audit: ['system', 97],
 };
 const navigationGroups = [
@@ -22,7 +23,7 @@ const navigationGroups = [
 const feature = (id: string) => ({
   id,
   name: id,
-  route: '/' + id,
+  route: catalogFeature(id)?.route ?? '',
   groupId: MENU[id][0],
   sortOrder: MENU[id][1],
   icon: id,
@@ -43,37 +44,51 @@ describe('navigation preferences', () => {
     localStorage.clear();
   });
   it('builds the menu tree from the features with a page', () => {
-    const { preferences } = setup(['admin', 'files', 'dashboard']);
+    const { preferences } = setup(['identity.users', 'files', 'dashboard']);
     const tree = preferences.tree();
     expect(tree.features.map((item) => item.id)).toEqual(['dashboard']);
     expect(
       tree.groups.map((item2) => [item2.group.id, item2.features.map((file) => file.id)]),
     ).toEqual([
       ['work', ['files']],
-      ['system', ['admin']],
+      ['system', ['identity.users']],
     ]);
   });
   it('pins only the default features the account can open', () => {
-    const { preferences } = setup(['admin', 'files', 'tasks', 'chat', 'shared', 'dashboard']);
+    const { preferences } = setup([
+      'identity.users',
+      'files',
+      'jobs',
+      'chat',
+      'sharing',
+      'dashboard',
+    ]);
     expect(preferences.ids()).toEqual(['chat', 'files']);
     expect(preferences.display()).toBe('icons');
   });
   it('saves per account, stops at five and keeps pins the account cannot open', () => {
-    const { preferences, me } = setup(['chat', 'files', 'tasks', 'shared', 'admin', 'audit']);
+    const { preferences, me } = setup([
+      'chat',
+      'files',
+      'jobs',
+      'sharing',
+      'identity.users',
+      'audit',
+    ]);
     expect(preferences.ids()).toEqual(['chat', 'files']);
-    preferences.toggle('shared');
-    preferences.toggle('tasks');
-    preferences.toggle('admin');
-    expect(preferences.ids()).toEqual(['chat', 'files', 'shared', 'tasks', 'admin']);
+    preferences.toggle('sharing');
+    preferences.toggle('jobs');
+    preferences.toggle('identity.users');
+    expect(preferences.ids()).toEqual(['chat', 'files', 'sharing', 'jobs', 'identity.users']);
     expect(preferences.full()).toBe(true);
     preferences.toggle('audit');
     expect(preferences.has('audit')).toBe(false);
     preferences.setDisplay('list');
-    me.set({ id: 'user-1', access: access(['chat', 'tasks', 'admin']) });
-    expect(preferences.ids()).toEqual(['chat', 'tasks', 'admin']);
+    me.set({ id: 'user-1', access: access(['chat', 'jobs', 'identity.users']) });
+    expect(preferences.ids()).toEqual(['chat', 'jobs', 'identity.users']);
     preferences.toggle('chat');
-    me.set({ id: 'user-1', access: access(['chat', 'files', 'tasks', 'admin']) });
-    expect(preferences.ids()).toEqual(['files', 'tasks', 'admin']);
+    me.set({ id: 'user-1', access: access(['chat', 'files', 'jobs', 'identity.users']) });
+    expect(preferences.ids()).toEqual(['files', 'jobs', 'identity.users']);
     expect(JSON.parse(localStorage.getItem('ai-nexus.navigation-display.user-1')!)).toBe('list');
     me.set({ id: 'user-2', access: access(['chat']) });
     expect(preferences.ids()).toEqual(['chat']);

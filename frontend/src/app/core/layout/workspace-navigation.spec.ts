@@ -32,12 +32,18 @@ describe('workspace navigation ownership', () => {
             me: signal({
               access: {
                 features: [
-                  { id: 'admin', name: '存取管理', route: '/admin' },
-                  { id: 'operations', name: '平台營運', route: '/admin/operations' },
+                  { id: 'identity.users', name: '使用者', route: '/admin/identity/users' },
+                  { id: 'operations.usage', name: '平台用量', route: '/admin/operations/usage' },
                   { id: 'audit', name: '活動稽核', route: '/admin/audit' },
-                  { id: 'logs.query', name: '系統日誌', route: '/admin/logs' },
-                  { id: 'projects', name: '專案', route: '/projects' },
-                  { id: 'chat', name: '對話', route: '/chat' },
+                  { id: 'diagnostics.logs', name: '系統日誌', route: '/admin/diagnostics/logs' },
+                  { id: 'knowledge', name: '知識庫', route: '/work/knowledge' },
+                  {
+                    id: 'knowledge.retrieval',
+                    name: '檢索管理',
+                    route: '/work/knowledge/retrieval',
+                  },
+                  { id: 'projects', name: '專案', route: '/work/projects' },
+                  { id: 'chat', name: '對話', route: '/work/chat' },
                 ],
               },
             }),
@@ -48,13 +54,14 @@ describe('workspace navigation ownership', () => {
     const fixture = TestBed.createComponent(WorkspaceNavigation);
     const router = TestBed.inject(Router);
     for (const [url, route] of [
-      ['/admin/logs?level=Error#events', '/admin/logs'],
-      ['/admin/logs/details/123', '/admin/logs'],
+      ['/admin/diagnostics/logs?level=Error#events', '/admin/diagnostics/logs'],
       ['/admin/audit?traceId=abc&category=authentication', '/admin/audit'],
-      ['/admin?tab=users', '/admin'],
-      ['/admin/operations?tab=prices', '/admin/operations'],
-      ['/projects/project-123?view=members', '/projects'],
-      ['/chat/conversation-123', '/chat'],
+      ['/admin/identity/users', '/admin/identity/users'],
+      ['/admin/operations/usage', '/admin/operations/usage'],
+      ['/work/knowledge/retrieval', '/work/knowledge/retrieval'],
+      ['/work/knowledge/collection-1', '/work/knowledge'],
+      ['/work/projects/project-123?view=members', '/work/projects'],
+      ['/work/chat/conversation-123', '/work/chat'],
     ]) {
       await router.navigateByUrl(url);
       fixture.detectChanges();
@@ -63,7 +70,7 @@ describe('workspace navigation ownership', () => {
       expect(active[0].getAttribute('href')).toBe(route);
       expect(active[0].getAttribute('aria-current')).toBe('page');
     }
-    await router.navigateByUrl('/administration');
+    await router.navigateByUrl('/admin/identity');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('a.current').length).toBe(0);
   });

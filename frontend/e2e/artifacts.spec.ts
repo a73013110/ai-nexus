@@ -16,7 +16,7 @@ test("artifact versions preserve edits, restore older content and export a saved
   core.extraFeatures.push({
     id: "artifacts",
     name: "成果文件",
-    route: "/artifacts",
+    route: "/work/artifacts",
   });
   const id = randomUUID();
   const versions: ArtifactDto[] = [
@@ -92,7 +92,7 @@ test("artifact versions preserve edits, restore older content and export a saved
       versions[Number(url.searchParams.get("version") || versions.length) - 1];
     return json({ ...v, currentVersion: versions.length });
   });
-  await page.goto(`/artifacts/${id}`);
+  await page.goto(`/work/artifacts/${id}`);
   await expect(page.getByRole("table")).toBeVisible();
   await expectCompactWorkspace(page);
   const reading = page.getByRole("button", { name: "閱讀", exact: true });
@@ -159,7 +159,7 @@ for (const width of [1440, 375]) {
     core.extraFeatures.push({
       id: "artifacts",
       name: "成果文件",
-      route: "/artifacts",
+      route: "/work/artifacts",
     });
     // A reader of a single version has no version picker, editor or document menu.
     const reader = width === 375;
@@ -229,7 +229,7 @@ for (const width of [1440, 375]) {
       await expect(page.locator(".driver-overlay")).toHaveCount(0);
       return { titles, last };
     };
-    await page.goto("/artifacts");
+    await page.goto("/work/artifacts");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();
     expect(list.titles).toEqual([

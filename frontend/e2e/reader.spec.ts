@@ -50,7 +50,7 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
   await fixture.attach(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await input.fill("先閱讀這段較長的對話");
   await page.getByRole("button", { name: "送出訊息", exact: true }).click();
@@ -76,7 +76,7 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
     .locator(".conversation-viewport")
     .evaluate((element) => element.scrollTop);
   const id = fixture.core.attachments[0].id;
-  await expect(preview).toHaveAttribute("href", /returnTo=%2Fchat%2F/);
+  await expect(preview).toHaveAttribute("href", /returnTo=%2Fwork%2Fchat%2F/);
   await preview.click();
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.getByRole("heading", { name: fileName })).toBeVisible();
@@ -172,13 +172,13 @@ test("knowledge modals and direct reader links share PDF rendering and reject ex
   const fixture = new KnowledgeFixture(),
     doc = fixture.seed();
   await fixture.attach(page);
-  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
+  await page.goto(`/work/knowledge/${fixture.collections[0].resource.id}`);
   const link = page.getByRole("link", { name: /差旅費用申請.pdf/ }).first();
   const href = (await link.getAttribute("href"))!;
   await link.click();
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.locator("canvas")).toHaveAttribute("width", /[1-9]\d+/);
-  await expect(page).toHaveURL(/\/knowledge\/[^/]+$/);
+  await expect(page).toHaveURL(/\/work\/knowledge\/[^/]+$/);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   const tab = await context.newPage();
@@ -186,12 +186,13 @@ test("knowledge modals and direct reader links share PDF rendering and reject ex
   await tab.goto(href);
   await expect(tab.locator("canvas")).toHaveAttribute("width", /[1-9]\d+/);
   await tab.getByRole("link", { name: "返回知識庫", exact: true }).click();
-  await expect(tab).toHaveURL(/\/knowledge\/[^/]+$/);
+  await expect(tab).toHaveURL(/\/work\/knowledge\/[^/]+$/);
   await tab.goto(
-    `/reader/${doc.id}?returnTo=${encodeURIComponent("https://evil.invalid")}`,
+    `/work/knowledge/reader/${doc.id}?returnTo=${encodeURIComponent("https://evil.invalid")}`,
   );
+  // 外部的 returnTo 不採用，改回知識庫閱讀器自己的模組頁（不再是檔案庫）。
   await expect(
-    tab.getByRole("link", { name: "返回檔案庫", exact: true }),
-  ).toHaveAttribute("href", "/files");
+    tab.getByRole("link", { name: "返回知識庫", exact: true }),
+  ).toHaveAttribute("href", "/work/knowledge");
   await tab.close();
 });

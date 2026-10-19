@@ -12,6 +12,7 @@ import { ProjectsApi } from '@features/work/projects/projects-api';
 import { ConversationsApi } from '@features/work/conversations/conversations-api';
 import { ChatApi } from '../chat-api';
 import { ChatStore } from '../chat-store';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 整理對話：重新命名、刪除、設定、專案、副本與備份。編輯會立即顯示在開啟中的對話與歷史列表，
@@ -60,7 +61,7 @@ export class ChatConversations {
       await this.api.delete(id);
       if (!current()) return false;
       this.store.history.remove(id);
-      if (this.store.selected()?.id === id) await this.router.navigate(['/chat']);
+      if (this.store.selected()?.id === id) await this.router.navigate([routeOf('chat')]);
       return true;
     } catch (error) {
       if (current()) this.store.report(error);
@@ -109,7 +110,7 @@ export class ChatConversations {
       if (!current()) return;
       await this.store.refreshHistory();
       if (!current()) return;
-      await this.router.navigate(['/chat', copy.id]);
+      await this.router.navigate([routeOf('chat'), copy.id]);
     } catch (error) {
       if (current()) this.store.report(error);
     }
@@ -145,7 +146,7 @@ export class ChatConversations {
       await this.store.refreshHistory();
       await this.store.history.reloadLabels();
       if (!current()) return;
-      await this.router.navigate(['/chat', imported.id]);
+      await this.router.navigate([routeOf('chat'), imported.id]);
     } catch (error) {
       if (!current()) return;
       this.store.report(

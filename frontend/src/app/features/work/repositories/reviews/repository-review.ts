@@ -27,6 +27,7 @@ import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RepositoriesApi } from '../repositories-api';
 import { purposeName, reviewScope } from './repository-reviews';
 import { RepositoryStore } from '../repository-store';
+import { routeOf } from '@core/api/catalog';
 
 const commentLimit = 20_000;
 
@@ -104,8 +105,11 @@ const commentLimit = 20_000;
               <nx-icon name="lines" />貼到 PR 留言
             </button>
           }
-          @if (session.has('tasks')) {
-            <a class="quiet-button" routerLink="/tasks" [queryParams]="{ job: d.review.job.id }"
+          @if (session.has('jobs')) {
+            <a
+              class="quiet-button"
+              [routerLink]="routeOf('jobs')"
+              [queryParams]="{ job: d.review.job.id }"
               >背景任務</a
             >
           }
@@ -222,6 +226,8 @@ const commentLimit = 20_000;
     </dialog>`,
 })
 export class RepositoryReview {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly id = input.required<string>();
   readonly store = inject(RepositoryStore);
   readonly session = inject(WorkspaceSession);

@@ -20,7 +20,7 @@
           @if (a.traceId && canTrace()) {
             <a
               class="activity-trace"
-              [routerLink]="'/admin/logs'"
+              [routerLink]="routeOf('diagnostics.logs')"
               [queryParams]="{ traceId: a.traceId }"
               >追查流程 <nx-icon name="external"
             /></a>

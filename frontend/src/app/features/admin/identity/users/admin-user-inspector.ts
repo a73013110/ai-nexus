@@ -28,6 +28,7 @@ import { AdminUserSettings } from './admin-user-settings';
 import { AdminUserStore, type UserTab } from './admin-user-store';
 import { AdminUserSummary } from './admin-user-summary';
 import { UserConversationReader } from './user-conversation-reader';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 單一使用者的管理中心：他是誰，以及其最近 30 天的資料；分頁包括帳號、
@@ -59,6 +60,8 @@ import { UserConversationReader } from './user-conversation-reader';
   styleUrl: './admin-user-inspector.scss',
 })
 export class AdminUserInspector {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly user = input<AdminUserDto | null>(null);
   /** 開啟中的使用者在列表目前這一頁的位置；不在這一頁時為 -1。 */
   readonly index = input(-1);

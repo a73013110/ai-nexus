@@ -3,7 +3,7 @@ import type { AdminGroupDto } from '@core/api/schema';
 import { storageLimitGb } from '@shared/browser/storage-limit';
 import { DataTable, DataTableRow } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
-import { AdministrationStore } from '../administration-store';
+import { AccessControlStore } from '../access-control-store';
 import { FeatureSummary } from './feature-summary';
 import { AccessStatus } from './access-status';
 
@@ -12,7 +12,7 @@ import { AccessStatus } from './access-status';
   selector: 'nx-admin-groups-tab',
   imports: [Icon, DataTable, DataTableRow, AccessStatus, FeatureSummary],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: '../access-tabs.scss',
+  styleUrl: '../../../../shared/ui/management-table-page.scss',
   template: `
     <div class="page-toolbar">
       <p class="form-note">
@@ -90,7 +90,7 @@ import { AccessStatus } from './access-status';
   `,
 })
 export class AdminGroupsTab {
-  readonly store = inject(AdministrationStore);
+  readonly store = inject(AccessControlStore);
   readonly edit = output<AdminGroupDto | undefined>();
   readonly groups = computed(() => this.store.catalog()?.groups ?? []);
   /** 此群組中每日 token 有上限的模型。 */

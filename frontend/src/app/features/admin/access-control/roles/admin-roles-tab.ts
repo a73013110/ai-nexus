@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, output } from '@a
 import type { AdminRoleDto } from '@core/api/schema';
 import { DataTable, DataTableRow } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
-import { AdministrationStore } from '../administration-store';
+import { AccessControlStore } from '../access-control-store';
 import { AccessStatus } from './access-status';
 
 /** 角色組合功能群組；使用者則領取角色。 */
@@ -10,7 +10,7 @@ import { AccessStatus } from './access-status';
   selector: 'nx-admin-roles-tab',
   imports: [Icon, DataTable, DataTableRow, AccessStatus],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: '../access-tabs.scss',
+  styleUrl: '../../../../shared/ui/management-table-page.scss',
   template: `
     <div class="page-toolbar">
       <p class="form-note">使用者取得角色，角色加入功能群組。</p>
@@ -75,7 +75,7 @@ import { AccessStatus } from './access-status';
   `,
 })
 export class AdminRolesTab {
-  readonly store = inject(AdministrationStore);
+  readonly store = inject(AccessControlStore);
   readonly edit = output<AdminRoleDto | undefined>();
   readonly roles = computed(() => this.store.catalog()?.roles ?? []);
 }

@@ -1,8 +1,7 @@
 @use 'breakpoints' as bp;
 
-// Shared by the three operations tabs (usage, retrieval, prices; styleUrls): one column of sections
-// — the tab's toolbar, an optional figure strip, then tables whose header names them and counts
-// their rows. A tab's own cells are styled in its own file.
+// 平台用量、模型與工具價格、檢索管理三頁（原本是平台營運的分頁，styleUrls）共用：一欄區段——
+// 工具列、選用的數字列，再來是標題寫明名稱與筆數的表格。各頁自己的儲存格樣式在各自的檔案。
 :host {
   display: grid;
   gap: var(--section-gap);

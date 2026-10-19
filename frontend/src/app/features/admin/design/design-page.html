@@ -36,9 +36,7 @@
     <nx-notice [message]="error()"
       ><button notice-actions type="button" (click)="load()">重新載入</button>
     </nx-notice>
-  } @else if (!session.has('design')) {
-    <nx-feature-access-notice feature="design" />
-  } @else {
+  } @else if (session.has('design')) {
     <div #preview class="design-preview" [attr.data-theme]="theme()">
       <section aria-labelledby="design-foundations-title">
         <h2 id="design-foundations-title">基礎</h2>

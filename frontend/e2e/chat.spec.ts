@@ -16,7 +16,7 @@ test("對話開場沿用共用卡片與操作密度，手機及深色保留閱�
   fixture.preferences.theme = "system";
   await fixture.attach(page);
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const start = page.locator(".chat-start");
   const suggestions = page.getByRole("region", {
     name: "對話起點",
@@ -68,7 +68,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
@@ -141,7 +141,7 @@ test("Chinese composition Enter never submits, then normal Enter submits", async
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息" });
   await input.fill("中文輸入法測試");
   await input.dispatchEvent("compositionstart");
@@ -164,7 +164,7 @@ test("editing and regenerating preserve versions; history can be renamed and del
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("原始提問");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("table")).toBeVisible();
@@ -206,7 +206,7 @@ test("stop gives immediate feedback and preserves a partial answer", async ({
   const fixture = new ApiFixture();
   fixture.hold = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("停止測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
@@ -222,7 +222,7 @@ test("SSE disconnect resumes from a GET snapshot without a duplicate POST", asyn
   const fixture = new ApiFixture();
   fixture.disconnectOnce = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("重連測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("table")).toBeVisible();
@@ -239,7 +239,7 @@ test("lost POST response retries the original idempotency key and retains only o
   const fixture = new ApiFixture();
   fixture.losePostOnce = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("回應遺失測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await page.getByRole("button", { name: "重試提交" }).click();
@@ -255,7 +255,7 @@ test("unconfigured server shows an honest error and cannot submit", async ({
   const fixture = new ApiFixture();
   fixture.unavailable = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.getByRole("alert")).toContainText(
     "操作未完成，請聯絡管理員。查證代碼：NX-",
   );
@@ -269,7 +269,7 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await openSettings(page);
   await chooseSelect(page, "主題", "深色");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -315,7 +315,7 @@ test("mobile drawer supports Escape and restores visible keyboard focus", async 
   await page.setViewportSize({ width: 375, height: 812 });
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const toggle = page.getByRole("button", { name: "展開側欄" });
   await toggle.click();
   await expect(page.locator(".workspace-main")).toHaveAttribute("inert", "");
@@ -338,7 +338,7 @@ test("failed preference save retains editable changes and can be retried", async
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.getByText("測試使用者", { exact: true })).toBeVisible();
   await openSettings(page);
   await chooseSelect(page, "主題", "深色");
@@ -372,7 +372,7 @@ test("unsafe Markdown cannot execute script or request tracking images", async (
       tracking.push(request.url());
   });
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("安全測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.locator(".markdown")).toBeVisible();
@@ -393,7 +393,7 @@ test(
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     await fixture.attach(page);
-    await page.goto("/chat");
+    await page.goto("/work/chat");
     await page.getByRole("textbox", { name: "傳送訊息" }).fill("長答案測試");
     await page.getByRole("button", { name: "送出訊息" }).click();
     await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
@@ -461,7 +461,7 @@ test("chat search is opt-in and cost/source panels stay accessible without clipp
       },
     }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const search = page.getByRole("button", { name: "搜尋網路", exact: true });
   await expect(search).toHaveAttribute("aria-pressed", "false");
   await search.click();
@@ -604,7 +604,7 @@ test("deployments without web search hide it from the composer and explain it in
       },
     }),
   );
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await expect(page.locator("form.composer")).toBeVisible();
   await expect(page.locator("form.composer")).not.toContainText("搜尋網路");
   expect(fixture.lastRequest?.webSearch).not.toBe(true);
@@ -635,7 +635,7 @@ test("signal motion respects reduced motion and Markdown export follows the visi
   fixture.hold = true;
   fixture.preferences.reducedMotion = true;
   await fixture.attach(page);
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("匯出測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
@@ -675,7 +675,7 @@ test("送出的提問立即顯示，失敗時退回輸入框", async ({ page }) 
       json: { title: "伺服器錯誤", status: 500 },
     });
   });
-  await page.goto("/chat");
+  await page.goto("/work/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
   await input.fill("立即顯示的提問");
   await page.getByRole("button", { name: "送出訊息" }).click();

@@ -28,6 +28,7 @@ import { RepositoryDetail, repositorySection } from './repository-detail';
 import { repositoryIcons } from './repository-icons';
 import { RepositoryList } from './repository-list';
 import { RepositoryStore } from './repository-store';
+import { routeOf } from '@core/api/catalog';
 
 /**
  * 在單一路由上承載儲存庫列表與一個儲存庫的各檢視。負責 Gitea 連線、已選取的儲存庫與 ref，並把舊的
@@ -52,7 +53,7 @@ import { RepositoryStore } from './repository-store';
   template: `<nx-feature-page
       [title]="title()"
       [description]="description()"
-      [back]="store.key() ? { path: '/repositories', label: '全部程式庫' } : null"
+      [back]="store.key() ? { path: routeOf('repositories'), label: '全部程式庫' } : null"
       [tour]="tour()"
     >
       <div page-actions class="page-actions">
@@ -125,6 +126,8 @@ import { RepositoryStore } from './repository-store';
     <nx-confirm-dialog />`,
 })
 export class RepositoriesPage {
+  /** 範本裡的連結由功能目錄取得網址。 */
+  readonly routeOf = routeOf;
   readonly store = inject(RepositoryStore);
   private readonly session = inject(WorkspaceSession);
   private readonly api = inject(RepositoriesApi);
@@ -234,7 +237,7 @@ export class RepositoriesPage {
       this.statusRead.value.update((item2) =>
         item2 ? { ...item2, connected: false, login: null } : item2,
       );
-      void this.router.navigate(['/repositories']);
+      void this.router.navigate([routeOf('repositories')]);
     } catch (error2) {
       if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
@@ -269,7 +272,7 @@ export class RepositoriesPage {
       const detail = await this.api.review(id);
       if (!valid()) return;
       const [owner, name] = detail.review.repository.split('/');
-      await this.router.navigate(['/repositories', owner, name, 'reviews', id], {
+      await this.router.navigate([routeOf('repositories'), owner, name, 'reviews', id], {
         replaceUrl: true,
       });
     } catch (error4) {

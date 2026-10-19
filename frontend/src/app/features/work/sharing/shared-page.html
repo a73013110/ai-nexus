@@ -1,5 +1,5 @@
 <nx-feature-page
-  [title]="content()?.share?.title || session.featureName('shared')"
+  [title]="content()?.share?.title || session.featureName('sharing')"
   [description]="
     content()
       ? content()!.share.owner + ' 分享 · ' + date(content()!.share.expiresAt) + ' 到期'
@@ -7,7 +7,7 @@
         ? ''
         : '收到的內容集中閱讀，自己建立的分享可隨時撤銷。'
   "
-  [back]="id() ? { path: '/shared', label: '全部分享', query: { sent: sent() } } : null"
+  [back]="id() ? { path: routeOf('sharing'), label: '全部分享', query: { sent: sent() } } : null"
   [tour]="tour()"
 >
   <div page-actions class="page-actions">
@@ -41,7 +41,7 @@
         <a
           nxResourceCard
           [icon]="item.kind === 'artifact' ? 'document' : 'chat'"
-          [routerLink]="['/shared', item.id]"
+          [routerLink]="[routeOf('sharing'), item.id]"
           [queryParams]="{ sent: sent() }"
           [heading]="item.title"
           [description]="
