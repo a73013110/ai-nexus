@@ -23,9 +23,9 @@ internal sealed class QualityDashboard(AppDbContext db) : IDashboardSource
         var retrieval = db.Set<RetrievalEvaluation>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var evaluations = await runs.CountAsync(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until, ct);
         var retrievals = await retrieval.CountAsync(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until, ct);
-        var jobs = db.Set<BackgroundJob>().AsNoTracking();
-        var active = await runs.CountAsync(r => jobs.Any(j => j.Id == r.JobId && (j.Status == "queued" || j.Status == "running")), ct)
-            + await retrieval.CountAsync(r => jobs.Any(j => j.Id == r.JobId && (j.Status == "queued" || j.Status == "running")), ct);
+        var activeJobs = db.Set<BackgroundJob>().AsNoTracking().Where(j => j.Status == "queued" || j.Status == "running");
+        var active = await runs.CountAsync(r => activeJobs.Any(j => j.Id == r.JobId), ct)
+            + await retrieval.CountAsync(r => activeJobs.Any(j => j.Id == r.JobId), ct);
         var up = ratings?.Up ?? 0; var down = ratings?.Down ?? 0;
         double? helpful = up + down > 0 ? 100.0 * up / (up + down) : null;
         return new DashboardSection("quality", Feature)

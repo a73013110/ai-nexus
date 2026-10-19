@@ -11,25 +11,28 @@ namespace AiNexus.Features.Admin.Quality.RetrievalEvaluations;
 
 public sealed class RetrievalEvaluationHandler(AppDbContext db, RetrievalEvaluationService evaluations, RetrievalPipeline pipeline) : IBackgroundJobHandler
 {
-    public string Kind => "retrieval-eval";
+    public const string JobKind = "retrieval-eval";
+
+    public string Kind => JobKind;
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {
-        var run = await evaluations.RequireAsync(job.OwnerId, job.SubjectId, ct, unchanged: true);
+        var run = await evaluations.RequireUnchangedAsync(job.OwnerId, job.SubjectId, ct);
         return run.IsSuccess ? Result.Success : run.Error;
     }
     public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
-        var required = await evaluations.RequireAsync(execution.Job.OwnerId, execution.Job.SubjectId, ct, unchanged: true);
+        var required = await evaluations.RequireUnchangedAsync(execution.Job.OwnerId, execution.Job.SubjectId, ct);
         if (!required.IsSuccess) return required.Error;
         var run = required.Value;
         var cases = RetrievalEvaluationService.Parse<RetrievalEvaluationCase>(run.CasesJson); var collections = RetrievalEvaluationService.Parse<Guid>(run.CollectionsJson);
-        var existing = await db.Set<RetrievalEvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.Mode }).ToListAsync(ct);
-        var completed = existing.Count; var total = cases.Length * RetrievalMetrics.Modes.Count;
+        var done = (await db.Set<RetrievalEvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.Mode }).ToListAsync(ct))
+            .Select(x => (x.CaseIndex, x.Mode)).ToHashSet();
+        var completed = done.Count; var total = cases.Length * RetrievalMetrics.Modes.Count;
         for (var i = 0; i < cases.Length; i++)
             foreach (var mode in RetrievalMetrics.Modes)
             {
-                if (existing.Any(x => x.CaseIndex == i && x.Mode == mode)) continue;
-                if (await evaluations.RequireAsync(run.OwnerId, run.Id, ct, unchanged: true) is { IsSuccess: false } revoked) return revoked.Error;
+                if (done.Contains((i, mode))) continue;
+                if (await evaluations.RequireUnchangedAsync(run.OwnerId, run.Id, ct) is { IsSuccess: false } revoked) return revoked.Error;
                 await execution.CheckpointAsync($"第 {i + 1} 題 · {mode}", completed, total, ct);
                 var timer = Stopwatch.StartNew(); var result = new RetrievalEvaluationResult { RunId = run.Id, CaseIndex = i, Mode = mode };
                 try
@@ -43,7 +46,7 @@ public sealed class RetrievalEvaluationHandler(AppDbContext db, RetrievalEvaluat
                 }
                 catch (ExternalServiceException error) when (error.Error.Code is "fulltext_unavailable" or "rerank_unavailable") { result.Unavailable = error.Error.Code; result.ActualMode = "unavailable"; }
                 result.ElapsedMs = timer.ElapsedMilliseconds;
-                if (await evaluations.RequireAsync(run.OwnerId, run.Id, ct, unchanged: true) is { IsSuccess: false } changed) return changed.Error;
+                if (await evaluations.RequireUnchangedAsync(run.OwnerId, run.Id, ct) is { IsSuccess: false } changed) return changed.Error;
                 db.Add(result);
                 await execution.CheckpointAsync($"完成 {completed + 1} / {total} 次檢索", ++completed, total, ct);
             }

@@ -66,11 +66,11 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
             var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
             if (!allowed.IsSuccess) return allowed.Error;
             var resource = allowed.Value;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == "evaluation" && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
+            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == EvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
             if (await db.Set<EvaluationRun>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
             var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == setId, ct);
             var run = new EvaluationRun { SetId = setId, OwnerId = actor, SetTitle = resource.Name, SetVersion = set.Version, CasesJson = set.CasesJson, VariantsJson = JsonSerializer.Serialize(variants), CreatedAt = clock.GetUtcNow() };
-            var job = jobs.Enqueue(actor, setId, run.Id, "evaluation", "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
+            var job = jobs.Enqueue(actor, setId, run.Id, EvaluationHandler.JobKind, "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = run.Id, Action = "quality.run.queued", Result = "queued" });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return run.ToDto(job, actor);

@@ -26,13 +26,15 @@ public static class EvaluationMetrics
 
 public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, AccessService features, ModelTaskService model, ModelPresentation presentation, ModelCatalog catalog, IOptions<InferenceOptions> inference) : IBackgroundJobHandler
 {
-    public string Kind => "evaluation";
+    public const string JobKind = "evaluation";
+
+    public string Kind => JobKind;
     private async Task<Result<EvaluationRun>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "quality")) return AccessControlErrors.FeatureForbidden;
+        if (!await features.HoldsAsync(job.OwnerId, FeatureCatalog.Quality, ct)) return AccessControlErrors.FeatureForbidden;
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
         if (run is null) return QualityErrors.RunMissing;
-        if (await access.RequireAsync(job.OwnerId, run.SetId, "evaluation", ct) is { IsSuccess: false } denied) return denied.Error;
+        if (await access.RequireAsync(job.OwnerId, run.SetId, EvaluationSet.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
         return run;
     }
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
@@ -52,12 +54,13 @@ public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, Ac
         var required = await RequireAsync(execution.Job, ct);
         if (!required.IsSuccess) return required.Error;
         var run = required.Value; var cases = EvaluationJson.Parse<EvaluationCase>(run.CasesJson); var variants = EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson);
-        var existing = await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.VariantIndex }).ToListAsync(ct);
-        var completed = existing.Count; var total = cases.Length * variants.Length;
+        var done = (await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.VariantIndex }).ToListAsync(ct))
+            .Select(x => (x.CaseIndex, x.VariantIndex)).ToHashSet();
+        var completed = done.Count; var total = cases.Length * variants.Length;
         for (var c = 0; c < cases.Length; c++)
             for (var v = 0; v < variants.Length; v++)
             {
-                if (existing.Any(x => x.CaseIndex == c && x.VariantIndex == v)) continue;
+                if (done.Contains((c, v))) continue;
                 if (await RequireAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
                 await execution.CheckpointAsync($"第 {c + 1} 題 · {variants[v].Label}", completed, total, ct);
                 var timer = Stopwatch.StartNew();

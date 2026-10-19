@@ -56,13 +56,13 @@ internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvalua
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } revoked) return revoked.Error;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == "retrieval-eval" && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
+            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == RetrievalEvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
             if (await db.Set<RetrievalEvaluation>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
             var profile = await profiles.ActiveAsync(ct);
             var json = RetrievalEvaluationService.Json;
             var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),
                 TopK = options.Value.Retrieval.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
-            var job = jobs.Enqueue(actor, null, run.Id, "retrieval-eval", "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
+            var job = jobs.Enqueue(actor, null, run.Id, RetrievalEvaluationHandler.JobKind, "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = run.Id, Action = "quality.retrieval.queued", Result = "queued" });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return RetrievalEvaluationService.Describe(run, job);
