@@ -39,12 +39,11 @@ internal sealed class ImportSourceRecord(
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.Artifacts))
-            return AccessControlErrors.FeatureForbidden;
-        var read = await gateway.ReadAsync(actor, source, request.RecordId, ct);
+        if (!await access.HoldsAsync(actor, FeatureCatalog.Artifacts, ct)) return AccessControlErrors.FeatureForbidden;
+        var read = await gateway.ReadAtRevisionAsync(actor, source, request.RecordId, request.ExpectedRevision, ct);
         if (!read.IsSuccess) return read.Error;
         var detail = read.Value;
-        if (detail.Record.Revision != request.ExpectedRevision) return IntegrationsErrors.Changed;
+        var now = clock.GetUtcNow();
         var provenance = JsonSerializer.Serialize(
             new
             {
@@ -52,7 +51,7 @@ internal sealed class ImportSourceRecord(
                 id = detail.Record.Id,
                 version = detail.Record.Revision,
                 modifiedAt = detail.Record.ModifiedAt,
-                importedAt = clock.GetUtcNow(),
+                importedAt = now,
             },
             Indented);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -66,7 +65,7 @@ internal sealed class ImportSourceRecord(
             SourceId = source,
             ExternalId = detail.Record.Id,
             Revision = detail.Record.Revision,
-            ImportedAt = clock.GetUtcNow(),
+            ImportedAt = now,
         });
         db.AuditEvents.Add(new()
         {
