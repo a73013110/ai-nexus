@@ -10,8 +10,7 @@ namespace AiNexus.Features.Admin.AccessControl;
 /// </summary>
 public sealed class AdministrativeReadAudit(AppDbContext db, AccessService access)
 {
-    public async Task<bool> AllowedAsync(Guid actor, CancellationToken ct)
-        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers);
+    public Task<bool> AllowedAsync(Guid actor, CancellationToken ct) => access.HoldsAsync(actor, FeatureCatalog.IdentityUsers, ct);
 
     public async Task<Result> RecordAsync(Guid actor, string action, Guid resource, object details, CancellationToken ct)
     {

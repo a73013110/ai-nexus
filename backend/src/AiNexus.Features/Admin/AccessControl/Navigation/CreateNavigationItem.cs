@@ -37,8 +37,7 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit 
         var audiences = request.AudienceGroupIds ?? [];
         var outcome = await audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, "admin.navigation_item", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
         {
-            if (request.Kind == NavigationItem.PageKind && await NavigationRules.PageAsync(db, request.FeatureId!, ct) is { } page) return page;
-            if (request.Kind == NavigationItem.LinkKind && await NavigationRules.LinkAsync(db, request.Url!, audiences, settings.Value.NavigationLinkHosts, ct) is { } link) return link;
+            if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
             var items = await db.Set<NavigationItem>().ToListAsync(ct);
             var last = items.Where(x => x.ParentId == request.ParentId).Select(x => (int?)x.SortOrder).Max();
             var item = new NavigationItem
@@ -46,14 +45,10 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit 
                 Id = id,
                 ParentId = request.ParentId,
                 Kind = request.Kind,
-                FeatureId = request.FeatureId,
-                Name = request.Name?.Trim(),
-                Url = request.Url,
-                OpenInNewTab = request.Kind != NavigationItem.LinkKind || request.OpenInNewTab,
-                Icon = request.Icon,
                 // 排到最後；同層已排到上限時與最後一個同值，再依 Id 排，不因此拒絕新增。
                 SortOrder = Math.Min((last ?? 0) + NavigationRules.SortStep, NavigationRules.MaxSortOrder),
             };
+            NavigationRules.Apply(item, request);
             if (NavigationRules.Structure([.. items, item]) is { } invalid) return invalid;
             db.Add(item);
             await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
