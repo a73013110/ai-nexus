@@ -110,7 +110,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock)
 
             db.Set<Message>().Add(user);
 
-            if (conversation.ActiveLeafId is null && conversation.Title == "新對話")
+            if (conversation.ActiveLeafId is null && conversation.Title == CreateConversation.DefaultTitle)
             {
                 conversation.Title = string.Concat(user.Content.Replace('\n', ' ').Take(36));
             }

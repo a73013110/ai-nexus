@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
+using AiNexus.Data.App.Inference;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -60,7 +61,7 @@ internal sealed class ImportConversation(AppDbContext db, TimeProvider clock)
                 || !lookup.TryAdd(message.Id, message)
                 || message.Content.Length > 65536
                 || message.Role is not ("user" or "assistant")
-                || message.Status is not ("completed" or "failed" or "cancelled"))
+                || message.Status is not (RunStates.Completed or RunStates.Failed or RunStates.Cancelled))
             {
                 return ConversationsErrors.InvalidBackup;
             }

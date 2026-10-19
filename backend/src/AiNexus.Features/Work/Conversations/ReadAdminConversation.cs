@@ -34,8 +34,9 @@ internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadA
         var rows = await query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray();
         var timings = await RunTiming.ReadAsync(db, rows.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);
-        var attachments = await db.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Contains(x.MessageId))
-            .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size }).ToListAsync(ct);
+        var attachments = (await db.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Contains(x.MessageId))
+            .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size }).ToListAsync(ct))
+            .ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/", StringComparison.Ordinal), "reference"));
         var messages = rows.Select(x => new AdminMessageDto(
             x.Id,
             x.ParentId,
@@ -44,9 +45,7 @@ internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadA
             x.Status,
             x.CreatedAt,
             x.ModelId is { } model ? models.PublicId(model) : null,
-            attachments.Where(a => a.MessageId == x.Id)
-                .Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/", StringComparison.Ordinal), "reference"))
-                .ToArray(),
+            attachments[x.Id].ToArray(),
             x.RunId is Guid run ? timings.GetValueOrDefault(run) : null,
             models.DisplayName(x.ModelId))).ToArray();
         var audited = await reads.RecordAsync(actor, "admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
