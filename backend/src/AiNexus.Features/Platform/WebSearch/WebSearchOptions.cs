@@ -16,6 +16,10 @@ public sealed class WebSearchOptions
     [Range(2, 30)] public int TimeoutSeconds { get; set; } = 10;
     [Range(1, 8)] public int MaxResults { get; set; } = 5;
     [Range(1, 10000)] public int MaxDailyRequests { get; set; } = 100;
+
+    /// <summary>Brave 走固定的 HTTPS API 與 key，查詢長度限制也較嚴；其餘供應商一律視為 SearXNG。</summary>
+    internal bool UsesBrave => Provider == "brave";
+    internal bool MissingApiKey => UsesBrave && ApiKey.Length == 0;
 }
 
 [OptionsValidator]
