@@ -20,21 +20,25 @@ public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset Ge
 internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageReports usage, AccessService access,
     IEnumerable<IDashboardSource> sources, TimeProvider clock)
 {
+    private const string Personal = "personal", Platform = "platform";
+
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, scope ?? "personal", ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
+            (await handler.HandleAsync(user.Id, scope ?? Personal, ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
         .RequireAuthorization(Policies.Dashboard).WithName("GetDashboard");
 
     public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {
-        if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return DashboardErrors.InvalidScope;
+        // 個人總覽固定是檢視者本人，指定 ownerId 只在平台範圍有意義。
+        var platform = scope == Platform;
+        if (!platform && (scope != Personal || ownerId != null)) return DashboardErrors.InvalidScope;
         var features = (await access.ForUserAsync(actor, ct)).Features.ToDictionary(x => x.Id, StringComparer.Ordinal);
-        var platform = scope == "platform";
         if (platform && !features.ContainsKey(FeatureCatalog.OperationsUsage)) return AccessControlErrors.FeatureForbidden;
-        var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
-        if (!period.IsSuccess) return period.Error;
+        var result = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
+        if (!result.IsSuccess) return result.Error;
+        var period = result.Value;
         Guid? owner = platform ? ownerId : actor;
-        var window = new DashboardScope(actor, owner, platform, period.Value.From, period.Value.Until, period.Value.Offset);
+        var window = new DashboardScope(actor, owner, platform, period.From, period.Until, period.Offset);
         var sections = new List<DashboardSectionDto>();
         // 各來源共用同一個請求的 DbContext，不能並行，所以依序執行。
         foreach (var source in sources)
@@ -43,8 +47,8 @@ internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageR
             if (await source.ReadAsync(window, ct) is not { } section) continue;
             sections.Add(section with { Title = section.Title.Length > 0 ? section.Title : feature.Name, Route = section.Route ?? feature.Route });
         }
-        var spend = await reports.ReportAsync(owner, period.Value, platform, ct);
-        var tokens = await usage.TokensAsync(owner, period.Value, platform, ct);
+        var spend = await reports.ReportAsync(owner, period, platform, ct);
+        var tokens = await usage.TokensAsync(owner, period, platform, ct);
         if (platform)
         {
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" });
