@@ -3,6 +3,7 @@ using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Platform.Errors;
@@ -17,6 +18,9 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// </summary>
 internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, AccessService features)
 {
+    /// <summary>獨立文件（對話附件、專案文件）由這些功能任一開啟；屬於專案的另需專案功能。</summary>
+    private static readonly string[] StandaloneFeatures = [FeatureCatalog.Chat, FeatureCatalog.Knowledge, FeatureCatalog.Projects];
+
     /// <summary>以追蹤模式載入文件並完成權限檢查，供呼叫端修改。</summary>
     public async Task<Result<Document>> FindAsync(Guid actor, Guid id, CancellationToken ct, bool write = false)
     {
@@ -24,19 +28,19 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
         if (doc is null) return KnowledgeErrors.DocumentNotFound;
         if (doc.CollectionId is Guid collection)
         {
-            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) return KnowledgeErrors.DocumentNotFound;
+            if (!await features.HoldsAsync(actor, FeatureCatalog.Knowledge, ct)) return KnowledgeErrors.DocumentNotFound;
             var granted = await access.RequireAsync(actor, collection, Collection.Kind, ct, write);
             if (!granted.IsSuccess) return granted.Error;
         }
         else
         {
-            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id is "chat" or "knowledge" or "projects")) return KnowledgeErrors.DocumentNotFound;
+            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => StandaloneFeatures.Contains(x.Id))) return KnowledgeErrors.DocumentNotFound;
             var resource = await access.RequireAsync(actor, doc.Id, Document.Kind, ct, write);
             if (!resource.IsSuccess) return resource.Error;
             if (resource.Value.ParentId is Guid parent)
             {
-                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return KnowledgeErrors.DocumentNotFound;
-                var project = await access.RequireAsync(actor, parent, "project", ct, write);
+                if (!await features.HoldsAsync(actor, FeatureCatalog.Projects, ct)) return KnowledgeErrors.DocumentNotFound;
+                var project = await access.RequireAsync(actor, parent, Project.Kind, ct, write);
                 if (!project.IsSuccess) return project.Error;
             }
         }
@@ -68,24 +72,24 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
         if (standalone.Length > 0)
             foreach (var item in await (await access.QueryAsync(actor, Document.Kind, ct)).AsNoTracking().Where(x => standalone.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
         var parents = readable.Values.Where(x => x.Kind == Document.Kind && x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
-        var projects = parents.Length == 0 ? [] : await (await access.QueryAsync(actor, "project", ct)).Where(x => parents.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
+        var projects = parents.Length == 0 ? [] : await (await access.QueryAsync(actor, Project.Kind, ct)).Where(x => parents.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
         var resources = new List<Resource>(ids.Count);
         foreach (var id in ids)
         {
             if (!docs.TryGetValue(id, out var doc)) return KnowledgeErrors.DocumentNotFound;
             if (doc.CollectionId is Guid collection)
             {
-                if (!granted.Contains("knowledge")) return KnowledgeErrors.DocumentNotFound;
+                if (!granted.Contains(FeatureCatalog.Knowledge)) return KnowledgeErrors.DocumentNotFound;
                 if (readable.GetValueOrDefault(collection) is not { } readableCollection) return CollaborationErrors.ResourceNotFound;
                 resources.Add(readableCollection);
             }
             else
             {
-                if (!granted.Contains("chat") && !granted.Contains("knowledge") && !granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
+                if (!StandaloneFeatures.Any(granted.Contains)) return KnowledgeErrors.DocumentNotFound;
                 if (readable.GetValueOrDefault(doc.Id) is not { } resource) return CollaborationErrors.ResourceNotFound;
                 if (resource.ParentId is Guid parent)
                 {
-                    if (!granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
+                    if (!granted.Contains(FeatureCatalog.Projects)) return KnowledgeErrors.DocumentNotFound;
                     if (!projects.Contains(parent)) return CollaborationErrors.ResourceNotFound;
                 }
                 resources.Add(resource);

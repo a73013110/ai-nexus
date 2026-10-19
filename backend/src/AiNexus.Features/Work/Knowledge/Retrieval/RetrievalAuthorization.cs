@@ -18,8 +18,8 @@ public sealed class RetrievalAuthorization(AppDbContext db, ResourceAccess acces
         if (ids.Count > 3 || ids.Distinct().Count() != ids.Count) return KnowledgeErrors.SelectionLimit;
         if (ids.Count == 0) return Result.Success;
         if (fresh) features.Invalidate();
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) return AccessControlErrors.FeatureForbidden;
-        return await access.RequireAllAsync(actor, ids, "knowledge", ct);
+        if (!await features.HoldsAsync(actor, FeatureCatalog.Knowledge, ct)) return AccessControlErrors.FeatureForbidden;
+        return await access.RequireAllAsync(actor, ids, Collection.Kind, ct);
     }
 
     /// <summary>

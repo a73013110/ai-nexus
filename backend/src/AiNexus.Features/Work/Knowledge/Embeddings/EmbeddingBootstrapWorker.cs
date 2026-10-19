@@ -5,6 +5,7 @@ using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Indexing;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -29,13 +30,13 @@ public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes
                     var pending = await (from d in db.Set<Document>() join r in db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]) on d.Id equals r.Id
                         where !d.IsDeleted && d.CollectionId != null && d.Status == "reindex" && !db.Set<BackgroundJob>().Any(j => j.SubjectId == d.Id && j.ActiveKey != null)
                         select new { Document = d, r.OwnerId }).ToListAsync(stoppingToken);
-                    foreach (var item in pending) { item.Document.Status = "indexing"; item.Document.JobId = jobs.Enqueue(item.OwnerId, item.Document.Id, item.Document.Id, "document-embedding", item.Document.FileName).Id; }
+                    foreach (var item in pending) { item.Document.Status = "indexing"; item.Document.JobId = jobs.Enqueue(item.OwnerId, item.Document.Id, item.Document.Id, DocumentEmbeddingHandler.JobKind, item.Document.FileName).Id; }
                     var settings = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
                     if (settings.Embedding.AutoActivate && target.Status == "building")
                     {
                         var actor = await db.Set<UserRole>().Where(x => x.RoleId == BuiltInAccess.AdministratorRole).Select(x => (Guid?)x.UserId).FirstOrDefaultAsync(stoppingToken);
                         var subject = EmbeddingJobs.Subject(target.Id);
-                        if (actor is Guid owner && !await db.Set<BackgroundJob>().AnyAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject, stoppingToken)) jobs.Enqueue(owner, null, subject, "embedding-reindex", $"重建 {target.Model} 檢索索引");
+                        if (actor is Guid owner && !await db.Set<BackgroundJob>().AnyAsync(x => x.Kind == EmbeddingReindexHandler.JobKind && x.SubjectId == subject, stoppingToken)) jobs.Enqueue(owner, null, subject, EmbeddingReindexHandler.JobKind, $"重建 {target.Model} 檢索索引");
                     }
                     await db.SaveChangesAsync(stoppingToken);
                     if (clock.GetUtcNow() - cleanedAt > TimeSpan.FromHours(1)) { await scope.ServiceProvider.GetRequiredService<EmbeddingLifecycle>().CleanupExpiredAsync(stoppingToken); cleanedAt = clock.GetUtcNow(); }

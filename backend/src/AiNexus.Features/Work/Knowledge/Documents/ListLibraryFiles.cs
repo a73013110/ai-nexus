@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
@@ -34,11 +35,11 @@ internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, A
         if (search?.Length > 180 || type is not ("all" or "images" or "documents") || source is not ("all" or "chat" or "knowledge" or "projects" or "library") || offset is < 0 or > 100000 || limit is < 1 or > 60)
             return FilesErrors.FilterInvalid;
         var grants = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet();
-        var collections = grants.Contains("knowledge") ? (await access.QueryAsync(actor, "knowledge", ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
-        var projects = grants.Contains("projects") ? (await access.QueryAsync(actor, "project", ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
+        var collections = grants.Contains(FeatureCatalog.Knowledge) ? (await access.QueryAsync(actor, Collection.Kind, ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
+        var projects = grants.Contains(FeatureCatalog.Projects) ? (await access.QueryAsync(actor, Project.Kind, ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
         var chatFiles = from link in db.Set<MessageAttachment>() join message in db.Messages on link.MessageId equals message.Id
             join conversation in db.Conversations on message.ConversationId equals conversation.Id
-            where conversation.OwnerId == actor && grants.Contains("chat")
+            where conversation.OwnerId == actor && grants.Contains(FeatureCatalog.Chat)
             select new { link.AttachmentId, conversation.Id, conversation.Title };
         var resourceFiles = from doc in db.Set<Document>() join resource in db.Set<Resource>() on doc.Id equals resource.Id
             where !doc.IsDeleted && doc.AttachmentId != null
