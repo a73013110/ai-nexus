@@ -19,6 +19,30 @@ Describe 'Resolve-RepoArtifactPath' {
     }
 }
 
+Describe 'New-RepoMasterConnection' {
+    It 'uses the SQL login when a credential is given' {
+        $credential = [pscredential]::new('demo', (ConvertTo-SecureString 'pw' -AsPlainText -Force))
+        $connection = New-RepoMasterConnection -Server 'db.test' -Credential $credential -TrustServerCertificate
+        try {
+            $connection.Credential.UserId | Should -Be 'demo'
+            $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new($connection.ConnectionString)
+            $builder.IntegratedSecurity | Should -BeFalse
+            $builder.InitialCatalog | Should -Be 'master'
+            $builder.TrustServerCertificate | Should -BeTrue
+        } finally { $connection.Dispose() }
+    }
+
+    It 'uses the Windows identity without a credential' {
+        $connection = New-RepoMasterConnection -Server '(localdb)\MSSQLLocalDB'
+        try {
+            $connection.Credential | Should -BeNullOrEmpty
+            $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new($connection.ConnectionString)
+            $builder.IntegratedSecurity | Should -BeTrue
+            $builder.Encrypt | Should -BeFalse
+        } finally { $connection.Dispose() }
+    }
+}
+
 Describe 'Get-RepoSetting and Set-RepoSetting' {
     It 'creates missing sections and replaces non-section values' {
         $settings = [ordered]@{ Databases = 'invalid' }
