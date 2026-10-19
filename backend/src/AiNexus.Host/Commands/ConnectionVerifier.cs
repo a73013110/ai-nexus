@@ -10,7 +10,6 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Features.Work.Knowledge.Retrieval;
-using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -25,13 +24,13 @@ namespace AiNexus.Host.Commands;
 /// </summary>
 public static class ConnectionVerifier
 {
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
-
     /// <summary>
     /// 執行完整連線檢查並將結果寫入報告檔案。
     /// </summary>
-    public static async Task<bool> VerifyAsync(IServiceProvider services, string reportPath, CancellationToken ct)
+    public static async Task<bool> VerifyAsync(IServiceProvider root, string reportPath, CancellationToken ct)
     {
+        using var scope = root.CreateScope();
+        var services = scope.ServiceProvider;
         var results = new List<object>();
         var passed = true;
 
@@ -46,11 +45,9 @@ public static class ConnectionVerifier
             catch (Exception ex)
             {
                 passed = false;
-                var detail = ex is ExternalServiceException external
-                    ? external.Message
-                    : name == "SQL"
-                        ? DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName)
-                        : $"連線未通過（{ex.GetType().Name}）。";
+                var detail = ex is ExternalServiceException || name == "SQL"
+                    ? HostCommand.Describe(ex)
+                    : $"連線未通過（{ex.GetType().Name}）。";
                 results.Add(new { name, passed = false, detail });
                 Console.WriteLine($"{name}: FAIL · {detail}");
             }
@@ -80,12 +77,12 @@ public static class ConnectionVerifier
         await Check("Inference", async () =>
         {
             var router = services.GetRequiredService<InferenceRouter>();
-            var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
-            var profile = options.Models.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
+            var models = services.GetRequiredService<IOptions<InferenceOptions>>().Value.Models;
+            var defaultId = services.GetRequiredService<ModelPresentation>().DefaultId;
+            var profile = models.FirstOrDefault(x => x.Id == defaultId)
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             var provider = router.For(profile.Provider);
-            var models = await provider.InstalledModelsAsync(ct);
-            if (!models.Contains(profile.NativeId))
+            if (!(await provider.InstalledModelsAsync(ct)).Contains(profile.NativeId))
             {
                 throw new ExternalServiceException(Error.Unavailable("model_unavailable"), "目前的模型服務無法使用系統預設模型。");
             }
@@ -94,20 +91,12 @@ public static class ConnectionVerifier
             var counts = new List<string>();
             foreach (var effort in efforts)
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(TimeSpan.FromSeconds(60));
-                var text = new StringBuilder();
-                var done = false;
-
-                await foreach (var chunk in provider.StreamAsync(
+                var (text, done) = await StreamAsync(
+                    provider,
                     profile.NativeId,
-                    [new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。")],
+                    new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。"),
                     new(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "簡短回答。", effort, profile.ReasoningControl),
-                    timeout.Token))
-                {
-                    text.Append(chunk.Text);
-                    done |= chunk.Done;
-                }
+                    ct);
 
                 if (!done || text.Length == 0)
                 {
@@ -119,26 +108,16 @@ public static class ConnectionVerifier
         });
         await Check("AttachmentInference", async () =>
         {
-            var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
             var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
-            var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
+            var defaultId = services.GetRequiredService<ModelPresentation>().DefaultId;
+            var profile = profiles.FirstOrDefault(x => x.Id == defaultId)
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             // 只送合成內容，不含任何個人檔案、對話紀錄或身分憑證。
             var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: PROBECHECK42"), ct).Value.Text;
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
             var prompt = "Read the attached document and reply with its project verification code." + (images.Length > 0 ? " Also identify the dominant color in the attached image using one English color word." : "") + "\n<document>\n" + document + "\n</document>";
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            var text = new StringBuilder();
-            var done = false;
             var parameters = new GenerationParameters(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "Answer concisely in English.", profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
-            await foreach (var chunk in services.GetRequiredService<InferenceRouter>().For(profile.Provider).StreamAsync(profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token))
-            {
-                text.Append(chunk.Text);
-                done |= chunk.Done;
-            }
-
-            var answer = text.ToString();
+            var (answer, done) = await StreamAsync(services.GetRequiredService<InferenceRouter>().For(profile.Provider), profile.NativeId, new("user", prompt, images), parameters, ct);
             if (!done || !answer.Contains("PROBECHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !answer.Contains("red", StringComparison.OrdinalIgnoreCase)))
                 throw new ExternalServiceException(Error.Unavailable("attachment_probe_failed"), "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
@@ -148,8 +127,23 @@ public static class ConnectionVerifier
             if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(Error.Unavailable("retrieval_models_unavailable"), result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
-        await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, Indented), ct);
+        await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, HostCommand.ReportJson), ct);
         return passed;
+    }
+
+    /// <summary>送出單一訊息並收齊串流；每次呼叫各自限時 60 秒，避免模型卡住讓整個指令停在原地。</summary>
+    private static async Task<(string Text, bool Done)> StreamAsync(IInferenceProvider provider, string model, InferenceMessage message, GenerationParameters parameters, CancellationToken ct)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        var text = new StringBuilder();
+        var done = false;
+        await foreach (var chunk in provider.StreamAsync(model, [message], parameters, timeout.Token))
+        {
+            text.Append(chunk.Text);
+            done |= chunk.Done;
+        }
+        return (text.ToString(), done);
     }
 
     private static async Task VerifyPersistenceAsync(IServiceProvider services, CancellationToken ct)
