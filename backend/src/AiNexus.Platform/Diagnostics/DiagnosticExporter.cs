@@ -65,9 +65,7 @@ public sealed class DiagnosticExporter : IDisposable
         {
             o.IncludeScopes = true;
             o.IncludeFormattedMessage = true;
-            o.SetResourceBuilder(ResourceBuilder.CreateEmpty().AddService(
-                DiagnosticRedactor.Text(options.Value.ServiceName, 80),
-                serviceVersion: DiagnosticRedactor.Text(DiagnosticLoggerProvider.Version, 80)));
+            o.SetResourceBuilder(DiagnosticRegistration.Resource(options.Value));
             o.AddProcessor(new CorrelationProcessor());
             o.AddProcessor(processor);
         }));
@@ -173,12 +171,7 @@ public sealed class DiagnosticExporter : IDisposable
 
     private sealed class ObservedLogExporter(DiagnosticOptions options, DiagnosticHealth health) : BaseExporter<LogRecord>
     {
-        private readonly OtlpLogExporter inner = new(new OtlpExporterOptions
-        {
-            Endpoint = new Uri(options.OtlpEndpoint.TrimEnd('/') + "/v1/logs"),
-            Protocol = OtlpExportProtocol.HttpProtobuf,
-            TimeoutMilliseconds = 2000
-        });
+        private readonly OtlpLogExporter inner = new(DiagnosticRegistration.Otlp(new OtlpExporterOptions(), options, "logs"));
 
         public override ExportResult Export(in Batch<LogRecord> batch)
         {
@@ -246,37 +239,31 @@ public static class DiagnosticRegistration
         builder.Services.AddHostedService<DiagnosticWorker>();
 
         var configuration = DiagnosticOptions.Read(builder.Configuration);
-        ResourceBuilder Resource() => ResourceBuilder.CreateEmpty().AddService(
-            DiagnosticRedactor.Text(configuration.ServiceName, 80),
-            serviceVersion: DiagnosticRedactor.Text(DiagnosticLoggerProvider.Version, 80));
-
         var telemetry = builder.Services.AddOpenTelemetry();
         telemetry.WithTracing(t =>
         {
-            t.SetResourceBuilder(Resource()).AddSource(DiagnosticTrace.SourceName).SetSampler(new AlwaysOnSampler());
-            if (configuration.OtlpEnabled)
-            {
-                t.AddOtlpExporter(o =>
-                {
-                    o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/traces");
-                    o.Protocol = OtlpExportProtocol.HttpProtobuf;
-                    o.TimeoutMilliseconds = 2000;
-                });
-            }
+            t.SetResourceBuilder(Resource(configuration)).AddSource(DiagnosticTrace.SourceName).SetSampler(new AlwaysOnSampler());
+            if (configuration.OtlpEnabled) t.AddOtlpExporter(o => Otlp(o, configuration, "traces"));
         });
 
         telemetry.WithMetrics(m =>
         {
-            m.SetResourceBuilder(Resource()).AddMeter(Meters);
-            if (configuration.OtlpEnabled)
-            {
-                m.AddOtlpExporter(o =>
-                {
-                    o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/metrics");
-                    o.Protocol = OtlpExportProtocol.HttpProtobuf;
-                    o.TimeoutMilliseconds = 2000;
-                });
-            }
+            m.SetResourceBuilder(Resource(configuration)).AddMeter(Meters);
+            if (configuration.OtlpEnabled) m.AddOtlpExporter(o => Otlp(o, configuration, "metrics"));
         });
+    }
+
+    /// <summary>日誌、追蹤與計量共用的服務資源描述；名稱與版本先脫敏，不讓設定值原樣外送。</summary>
+    internal static ResourceBuilder Resource(DiagnosticOptions options) => ResourceBuilder.CreateEmpty().AddService(
+        DiagnosticRedactor.Text(options.ServiceName, 80),
+        serviceVersion: DiagnosticRedactor.Text(DiagnosticLoggerProvider.Version, 80));
+
+    /// <summary>三種訊號共用的 OTLP/HTTP 匯出設定：<paramref name="signal"/> 為 <c>logs</c>、<c>traces</c> 或 <c>metrics</c>，逾時固定 2 秒。</summary>
+    internal static OtlpExporterOptions Otlp(OtlpExporterOptions exporter, DiagnosticOptions options, string signal)
+    {
+        exporter.Endpoint = new Uri(options.OtlpEndpoint.TrimEnd('/') + "/v1/" + signal);
+        exporter.Protocol = OtlpExportProtocol.HttpProtobuf;
+        exporter.TimeoutMilliseconds = 2000;
+        return exporter;
     }
 }

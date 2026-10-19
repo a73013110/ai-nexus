@@ -71,9 +71,15 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
             ObjectDisposedException.ThrowIf(disposed, this);
             if (owner is not null) return;
             System.IO.Directory.CreateDirectory(SessionDirectory);
-            owner = new FileStream(Path.Combine(SessionDirectory, "owner.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            owner = OwnerLock(SessionDirectory);
         }
     }
+
+    /// <summary>以獨佔開檔當作跨處理程序的鎖：取不到時拋出 <see cref="IOException"/>，釋放檔案即解鎖。</summary>
+    private static FileStream Exclusive(string path) => new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+    /// <summary>工作目錄的擁有者鎖；存活的處理程序一直持有自己的目錄，其他程序取得它才能接手復原或清理。</summary>
+    private static FileStream OwnerLock(string directory) => Exclusive(Path.Combine(directory, "owner.lock"));
 
     private IEnumerable<string> Sessions() => System.IO.Directory.Exists(root)
         ? System.IO.Directory.EnumerateDirectories(root).Where(d => Guid.TryParseExact(Path.GetFileName(d), "N", out _))
@@ -102,7 +108,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         lock (lifetime)
         {
             ObjectDisposedException.ThrowIf(disposed, this);
-            var lease = new CapacityLease(this, new FileStream(Path.Combine(root, "capacity.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None));
+            var lease = new CapacityLease(this, Exclusive(Path.Combine(root, "capacity.lock")));
             leases.Add(lease);
             return lease;
         }
@@ -248,7 +254,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
             {
                 try
                 {
-                    recoveryLease = new FileStream(Path.Combine(directory, "owner.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                    recoveryLease = OwnerLock(directory);
                 }
                 catch (IOException)
                 {
@@ -395,7 +401,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                 {
                     try
                     {
-                        lease = new FileStream(Path.Combine(directory, "owner.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                        lease = OwnerLock(directory);
                     }
                     catch (IOException)
                     {

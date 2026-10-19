@@ -126,19 +126,7 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
 
             // 分類取到模組為止（AiNexus.Features.<區>.<模組>），同一模組的失敗歸在同一個 logger 分類。
             var category = origin is null ? null : string.Join('.', origin.Split('.').Take(4));
-            var target = category is null ? logger : factory?.CreateLogger(category) ?? logger;
-
-            using var scope = target.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
-            if (rejection)
-            {
-                LogRejection(target, level, exception, code, issue);
-            }
-            else
-            {
-                LogFailure(target, level, exception, code, issue);
-            }
-
-            Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
+            Write(category is null ? logger : factory?.CreateLogger(category) ?? logger, level, exception, code, issue, rejection);
             return issue;
         }
     }
@@ -169,18 +157,18 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     private string Record(int status, string code)
     {
         var issue = NewCode();
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
-        if (status < 500)
-        {
-            LogRejection(logger, LogLevel.Information, null, code, issue);
-        }
-        else
-        {
-            LogFailure(logger, LogLevel.Error, null, code, issue);
-        }
-
-        Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
+        var rejection = status < 500;
+        Write(logger, rejection ? LogLevel.Information : LogLevel.Error, null, code, issue, rejection);
         return issue;
+    }
+
+    /// <summary>以查證代碼與錯誤代碼為範圍寫一筆失敗或拒絕事件，並把目前的 Activity 標為錯誤。</summary>
+    private static void Write(ILogger target, LogLevel level, Exception? exception, string code, string issue, bool rejection)
+    {
+        using var scope = target.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
+        if (rejection) LogRejection(target, level, exception, code, issue);
+        else LogFailure(target, level, exception, code, issue);
+        Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
     }
 
     private static PublicProblem Public(int status, string code, string issue)

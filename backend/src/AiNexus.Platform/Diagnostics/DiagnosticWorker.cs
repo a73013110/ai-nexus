@@ -32,10 +32,8 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             {
                 try
                 {
-                    await journal.AppendAsync(pending, ct);
+                    await FlushAsync(ct);
                     health.Recovered("journal");
-                    exporter.Export(pending);
-                    pending = [];
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
                 {
@@ -62,8 +60,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             var delay = options.Value.FlushIntervalMs;
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.SqlTimeoutSeconds * 4));
+                using var timeout = SqlTimeout(ct);
                 await journal.ReplayAsync(store, timeout.Token);
                 if (health.PendingBytes == 0) health.Recovered("sql");
             }
@@ -85,8 +82,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             {
                 try
                 {
-                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.SqlTimeoutSeconds * 4));
+                    using var timeout = SqlTimeout(ct);
                     await store.CleanupAsync(timeout.Token);
                     journal.Cleanup();
                     health.Recovered("cleanup");
@@ -104,6 +100,22 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             }
             await Task.Delay(delay, ct);
         }
+    }
+
+    /// <summary>把目前這批寫入本機日誌後才交給 OTLP 匯出；寫入失敗時保留 <see cref="pending"/>，下次重試同一批。</summary>
+    private async Task FlushAsync(CancellationToken ct)
+    {
+        await journal.AppendAsync(pending, ct);
+        exporter.Export(pending);
+        pending = [];
+    }
+
+    /// <summary>SQL 回放與清理每輪的時限：單一指令逾時的四倍，避免 SQL 卡住時整個匯入迴圈停擺。</summary>
+    private CancellationTokenSource SqlTimeout(CancellationToken ct)
+    {
+        var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.SqlTimeoutSeconds * 4));
+        return timeout;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -131,9 +143,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             {
                 if (pending.Count == 0) pending = buffer.Drain();
                 if (pending.Count == 0) break;
-                await journal.AppendAsync(pending, flush.Token);
-                exporter.Export(pending);
-                pending = [];
+                await FlushAsync(flush.Token);
             }
         }
         catch (Exception)
