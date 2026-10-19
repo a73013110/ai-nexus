@@ -31,35 +31,28 @@ internal sealed class UpdateConversationSettings(AppDbContext db, GenerationSche
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, ConversationSettingsRequest request, CancellationToken ct)
     {
-        var conversationLock = await scheduler.LockConversationAsync(id, ct);
-        try
+        using var conversationLock = await scheduler.LockConversationAsync(id, ct);
+        var conversation = await db.OwnedConversationAsync(owner, id, ct);
+        if (conversation is null) return ConversationsErrors.NotFound;
+        if (request.IsArchived == true && await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
+        if (request.SystemInstruction is { } instruction) conversation.SystemInstruction = instruction.Trim();
+        if (request.IsFavorite is bool favorite) conversation.IsFavorite = favorite;
+        if (request.IsArchived is bool archived) conversation.IsArchived = archived;
+        if (request.Labels is { } requested)
         {
-            var conversation = await db.OwnedConversationAsync(owner, id, ct);
-            if (conversation is null) return ConversationsErrors.NotFound;
-            if (request.IsArchived == true && await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
-            if (request.SystemInstruction is { } instruction) conversation.SystemInstruction = instruction.Trim();
-            if (request.IsFavorite is bool favorite) conversation.IsFavorite = favorite;
-            if (request.IsArchived is bool archived) conversation.IsArchived = archived;
-            if (request.Labels is { } requested)
+            var names = ConversationLabel.Clean(requested);
+            if (names is null) return ConversationsErrors.InvalidLabels;
+            // 保留未變動的標籤實體：同一個主鍵若先移除再加回，會破壞 EF 的追蹤身分。
+            var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
+            db.Set<ConversationLabel>().RemoveRange(removed);
+            foreach (var label in removed) conversation.Labels.Remove(label);
+            foreach (var name in names.Where(name => !conversation.Labels.Any(x => x.Name == name)))
             {
-                var names = ConversationLabel.Clean(requested);
-                if (names is null) return ConversationsErrors.InvalidLabels;
-                // 保留未變動的標籤實體：同一個主鍵若先移除再加回，會破壞 EF 的追蹤身分。
-                var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
-                db.Set<ConversationLabel>().RemoveRange(removed);
-                foreach (var label in removed) conversation.Labels.Remove(label);
-                foreach (var name in names.Where(name => !conversation.Labels.Any(x => x.Name == name)))
-                {
-                    conversation.Labels.Add(new() { ConversationId = id, Name = name });
-                }
+                conversation.Labels.Add(new() { ConversationId = id, Name = name });
             }
-            db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.organized", ResourceId = id });
-            await db.SaveChangesAsync(ct);
-            return conversation.ToDto();
         }
-        finally
-        {
-            conversationLock.Dispose();
-        }
+        db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.organized", ResourceId = id });
+        await db.SaveChangesAsync(ct);
+        return conversation.ToDto();
     }
 }

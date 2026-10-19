@@ -22,21 +22,14 @@ internal sealed class SelectBranch(AppDbContext db, GenerationScheduler schedule
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, Guid leaf, CancellationToken ct)
     {
-        var conversationLock = await scheduler.LockConversationAsync(id, ct);
-        try
-        {
-            var conversation = await db.OwnedConversationAsync(owner, id, ct);
-            if (conversation is null) return ConversationsErrors.NotFound;
-            if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
-            if (!await db.Set<Message>().AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationsErrors.MessageNotFound;
-            conversation.ActiveLeafId = leaf;
-            conversation.UpdatedAt = clock.GetUtcNow();
-            await db.SaveChangesAsync(ct);
-            return Result.Success;
-        }
-        finally
-        {
-            conversationLock.Dispose();
-        }
+        using var conversationLock = await scheduler.LockConversationAsync(id, ct);
+        var conversation = await db.OwnedConversationAsync(owner, id, ct);
+        if (conversation is null) return ConversationsErrors.NotFound;
+        if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
+        if (!await db.Set<Message>().AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationsErrors.MessageNotFound;
+        conversation.ActiveLeafId = leaf;
+        conversation.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(ct);
+        return Result.Success;
     }
 }
