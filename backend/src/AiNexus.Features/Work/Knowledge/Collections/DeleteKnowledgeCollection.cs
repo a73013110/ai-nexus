@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
@@ -39,7 +40,7 @@ internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess 
             foreach (var doc in docs) { doc.IsDeleted = true; doc.AttachmentId = null; doc.Status = "deleted"; }
             resource.IsDeleted = true;
             await db.Set<Resource>().Where(x => documentIds.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
-            await db.Set<BackgroundJob>().Where(x => documentIds.Contains(x.SubjectId) && (x.Status == "queued" || x.Status == "running")).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
+            await db.Set<BackgroundJob>().Where(x => documentIds.Contains(x.SubjectId) && (x.Status == RunStates.Queued || x.Status == RunStates.Running)).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
             await db.Set<ResourceAttachment>().Where(x => documentIds.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
             await db.Set<ConversationCollection>().Where(x => x.CollectionId == id).ExecuteDeleteAsync(ct);
             await db.Set<Chunk>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);

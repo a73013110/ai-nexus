@@ -17,7 +17,8 @@ namespace AiNexus.Features.Work.Knowledge.Indexing;
 
 public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, DocumentIndexer indexer, IOptions<FilesOptions> limits, AttachmentService attachments) : IBackgroundJobHandler
 {
-    public string Kind => "document-ingest";
+    public const string JobKind = "document-ingest";
+    public string Kind => JobKind;
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true)) is { IsSuccess: false } denied ? denied.Error : Result.Success;
     public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
@@ -89,7 +90,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         if (document.CollectionId is not null) return await indexer.QueueAsync(execution, document, ct);
         document.Status = "ready";
         (await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
-        await execution.CheckpointAsync("處理完成", document.CollectionId is null ? total : document.ChunkCount, document.CollectionId is null ? total : document.ChunkCount, ct);
+        await execution.CheckpointAsync("處理完成", total, total, ct);
         return Result.Success;
     }
 }

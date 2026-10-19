@@ -70,7 +70,7 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
     {
         var prepared = await PrepareAsync(execution, document, ct);
         if (!prepared.IsSuccess) return prepared;
-        document.JobId = jobs.Enqueue(execution.Job.OwnerId, document.Id, document.Id, "document-embedding", document.FileName).Id;
+        document.JobId = jobs.Enqueue(execution.Job.OwnerId, document.Id, document.Id, DocumentEmbeddingHandler.JobKind, document.FileName).Id;
         await execution.CheckpointAsync("等待批次向量化", 0, document.ChunkCount, ct);
         return Result.Success;
     }

@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Data.App.Projects;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Files;
@@ -11,6 +12,7 @@ using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Indexing;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
@@ -74,7 +76,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
                 foreach (var page in pages) db.Add(new DocumentPage { DocumentId = document.Id, PageNumber = page.PageNumber, Text = page.Text, Extraction = page.Extraction, NeedsReview = page.NeedsReview });
                 document.Warning = extracted.Warning;
             }
-            document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, "document-ingest", file.FileName).Id;
+            document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, DocumentIngestHandler.JobKind, file.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "document.created", Result = "queued" });
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return DocumentAccess.Describe(document, true);
@@ -85,7 +87,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
     private async Task<Result> RequireContainerAsync(Guid actor, Guid? collection, Guid? project, CancellationToken ct)
     {
         if (collection is Guid collectionId && await access.RequireAsync(actor, collectionId, Collection.Kind, ct, write: true) is { IsSuccess: false } noCollection) return noCollection.Error;
-        if (project is Guid projectId && await access.RequireAsync(actor, projectId, "project", ct, write: true) is { IsSuccess: false } noProject) return noProject.Error;
+        if (project is Guid projectId && await access.RequireAsync(actor, projectId, Project.Kind, ct, write: true) is { IsSuccess: false } noProject) return noProject.Error;
         return Result.Success;
     }
 }

@@ -7,7 +7,8 @@ namespace AiNexus.Features.Work.Knowledge.Indexing;
 
 public sealed class DocumentEmbeddingHandler(DocumentService documents, DocumentIndexer indexer) : IBackgroundJobHandler
 {
-    public string Kind => "document-embedding";
+    public const string JobKind = "document-embedding";
+    public string Kind => JobKind;
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true)) is { IsSuccess: false } denied ? denied.Error : Result.Success;
     public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {

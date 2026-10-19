@@ -22,22 +22,18 @@ internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationSer
 
     public async Task<Result> HandleAsync(Guid actor, Guid conversation, KnowledgeSelectionDto request, CancellationToken ct)
     {
-        var conversationLock = await scheduler.LockConversationAsync(conversation, ct);
-        try
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await db.Users.Where(x => x.Id == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var owned = await conversations.RequireOwnedAsync(actor, conversation, ct);
-            if (!owned.IsSuccess) return owned.Error;
-            var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
-            if (!allowed.IsSuccess) return allowed.Error;
-            if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
-            var existing = await db.Set<ConversationCollection>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
-            db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));
-            db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationCollection { ConversationId = conversation, CollectionId = x }));
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-            return Result.Success;
-        }
-        finally { conversationLock.Dispose(); }
+        using var conversationLock = await scheduler.LockConversationAsync(conversation, ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await db.Users.Where(x => x.Id == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
+        var owned = await conversations.RequireOwnedAsync(actor, conversation, ct);
+        if (!owned.IsSuccess) return owned.Error;
+        var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
+        if (!allowed.IsSuccess) return allowed.Error;
+        if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
+        var existing = await db.Set<ConversationCollection>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
+        db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));
+        db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationCollection { ConversationId = conversation, CollectionId = x }));
+        await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+        return Result.Success;
     }
 }

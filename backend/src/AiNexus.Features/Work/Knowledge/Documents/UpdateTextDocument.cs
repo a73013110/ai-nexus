@@ -7,6 +7,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Indexing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -57,7 +58,7 @@ internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documen
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             var resource = await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
-            document.JobId = jobs.Enqueue(actor, id, id, "document-ingest", document.FileName).Id;
+            document.JobId = jobs.Enqueue(actor, id, id, DocumentIngestHandler.JobKind, document.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.text.updated", Result = "reindexing" });
             try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return KnowledgeErrors.TextVersionChanged; }
             await transaction.CommitAsync(ct);

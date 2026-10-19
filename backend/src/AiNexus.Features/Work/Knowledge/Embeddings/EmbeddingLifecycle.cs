@@ -36,7 +36,7 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
     {
         await profiles.TargetAsync(ct);
         var all = await db.Set<EmbeddingProfile>().AsNoTracking().OrderByDescending(x => x.Id).ToListAsync(ct);
-        var tasks = await db.Set<BackgroundJob>().AsNoTracking().Where(x => x.Kind == "embedding-reindex").OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync(ct);
+        var tasks = await db.Set<BackgroundJob>().AsNoTracking().Where(x => x.Kind == EmbeddingReindexHandler.JobKind).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync(ct);
         var result = new List<EmbeddingProfileDto>();
         foreach (var p in all) result.Add(new(p.Id, p.Key, p.Provider, p.Model, p.Dimensions, p.Status, p.CreatedAt, p.ActivatedAt, p.RetiredAt,
             await CoverageAsync(p, ct), tasks.FirstOrDefault(x => x.SubjectId == EmbeddingJobs.Subject(p.Id)) is { } job ? JobService.Describe(job) : null));
@@ -53,8 +53,8 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
         var profile = found.Value;
         if (profile.Status == "retired") return KnowledgeErrors.ProfileRetired;
         var subject = EmbeddingJobs.Subject(id);
-        return await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject && x.ActiveKey != null, ct)
-            ?? jobs.Enqueue(actor, null, subject, "embedding-reindex", $"重建 {profile.Model} 檢索索引");
+        return await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Kind == EmbeddingReindexHandler.JobKind && x.SubjectId == subject && x.ActiveKey != null, ct)
+            ?? jobs.Enqueue(actor, null, subject, EmbeddingReindexHandler.JobKind, $"重建 {profile.Model} 檢索索引");
     }
     public async Task<Result> ActivateCoreAsync(int id, CancellationToken ct)
     {
