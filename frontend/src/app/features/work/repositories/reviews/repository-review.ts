@@ -70,7 +70,6 @@ const commentLimit = 20_000;
         <nx-job-progress [job]="d.review.job">
           @if (active()) {
             <button
-              job-actions
               type="button"
               class="quiet-button"
               [disabled]="busy() || d.review.job.cancelRequested"
@@ -80,7 +79,6 @@ const commentLimit = 20_000;
             </button>
           } @else if (d.review.job.status === 'failed' || d.review.job.status === 'cancelled') {
             <button
-              job-actions
               type="button"
               class="quiet-button"
               [disabled]="busy() || d.review.job.attempt >= 6"

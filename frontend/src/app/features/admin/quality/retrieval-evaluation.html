@@ -33,18 +33,12 @@
         @if (report(); as report) {
           <nx-job-progress [job]="report.run.job">
             @if (report.run.job.status === 'queued' || report.run.job.status === 'running') {
-              <button
-                job-actions
-                class="quiet-button"
-                [disabled]="busy()"
-                (click)="control('cancel')"
-              >
+              <button class="quiet-button" [disabled]="busy()" (click)="control('cancel')">
                 取消評測
               </button>
             }
             @if (report.run.job.status === 'failed' || report.run.job.status === 'cancelled') {
               <button
-                job-actions
                 class="quiet-button"
                 [disabled]="busy() || session.testing()"
                 (click)="control('retry')"

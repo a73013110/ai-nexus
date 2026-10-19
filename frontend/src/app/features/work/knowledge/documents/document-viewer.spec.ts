@@ -33,7 +33,28 @@ const info = {
 })
 class Host {}
 
-async function setup() {
+const failedJob = {
+  id: 'j1',
+  kind: 'document-ingest',
+  subjectId: 'd1',
+  label: '報告.html',
+  status: 'failed',
+  stage: '需要重試',
+  attempt: 1,
+  completedUnits: 0,
+  totalUnits: 1,
+  cancelRequested: false,
+  errorCode: 'ocr_failed',
+  errorMessage: 'Password=secret',
+  issueCode: 'NX-' + 'B'.repeat(32),
+  createdAt: '2026-10-20T00:00:00Z',
+  updatedAt: '2026-10-20T00:00:00Z',
+};
+
+async function setup(
+  ready: (root: HTMLElement) => boolean = (root) => !!root.querySelector('.html-gate'),
+  overrides: { document?: object; job?: () => Promise<object>; jobs?: object } = {},
+) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -44,6 +65,7 @@ async function setup() {
     'ResizeObserver',
     class {
       observe() {}
+      unobserve() {}
       disconnect() {}
     },
   );
@@ -54,16 +76,17 @@ async function setup() {
       {
         provide: KnowledgeApi,
         useValue: {
-          document: async () => info,
+          document: async () => ({ ...info, ...overrides.document }),
+          job: overrides.job,
           original: async () => new Response(html),
           pages: async () => [
             { pageNumber: 1, text: html, extraction: 'native', needsReview: false },
           ],
         },
       },
-      { provide: JobToasts, useValue: { observeDocument: vi.fn() } },
+      { provide: JobToasts, useValue: { observeDocument: vi.fn(), track: vi.fn() } },
       { provide: SharingApi, useValue: {} },
-      { provide: JobsApi, useValue: {} },
+      { provide: JobsApi, useValue: overrides.jobs ?? {} },
       { provide: FilesApi, useValue: {} },
     ],
   });
@@ -71,7 +94,7 @@ async function setup() {
   const root = fixture.nativeElement as HTMLElement;
   await vi.waitFor(async () => {
     await fixture.whenStable();
-    if (!root.querySelector('.html-gate')) throw new Error('script notice not shown yet');
+    if (!ready(root)) throw new Error('viewer not ready yet');
   });
   return { fixture, root };
 }
@@ -101,5 +124,43 @@ describe('DocumentViewer', () => {
     focused.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }));
     await fixture.whenStable();
     expect(root.querySelector('.viewer-search')).not.toBeNull();
+  });
+
+  it('shows a failed job in its own island and retries it in place', async () => {
+    let job: object = failedJob;
+    const retry = vi.fn(async () => {
+      job = {
+        ...failedJob,
+        status: 'queued',
+        stage: '等待重試',
+        errorMessage: null,
+        issueCode: null,
+      };
+      return job;
+    });
+    const { fixture, root } = await setup(
+      (root) => !!root.querySelector('.viewer-status .island-item'),
+      {
+        document: { jobId: 'j1', status: 'failed' },
+        job: async () => ({ job, canControl: true }),
+        jobs: { retry },
+      },
+    );
+    const status = root.querySelector('.viewer-status')!;
+    // 失敗是緊急通知：直接展開，顯示查證代碼而非儲存的例外訊息。
+    expect(status.getAttribute('data-mode')).toBe('expanded');
+    expect(status.textContent).toContain('NX-' + 'B'.repeat(32));
+    expect(status.textContent).not.toContain('Password');
+    const button = [...status.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent?.trim() === '重新處理',
+    )!;
+    button.click();
+    await vi.waitFor(async () => {
+      await fixture.whenStable();
+      if (!status.textContent?.includes('等待重試')) throw new Error('job not refreshed yet');
+    });
+    expect(retry).toHaveBeenCalledWith('j1');
+    // 重新排入後回到精簡膠囊，顯示進度。
+    expect(status.getAttribute('data-mode')).toBe('compact');
   });
 });

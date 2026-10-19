@@ -46,7 +46,7 @@
 
 ## 提示、載入與錯誤
 
-- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 的提示收斂在動態島（見 [動效](motion.md)）。
+- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
 - 讀取的載入／錯誤／重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。形狀已知的內容用 `.skeleton` 佔位，容器保留 `role="status"` 與可讀文字。
 - 進度只顯示真實階段（`JobProgress`），未知總量用不定進度；未知金額或用量寫明未知，不顯示為零。
 - 狀態用 `StatusBadge`／`CountBadge`：文字或圓點與顏色並用。數量徽章是裝飾，脈絡由父按鈕的名稱提供，只由一個 contextual status 播報。

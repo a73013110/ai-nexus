@@ -12,6 +12,8 @@
   gap: var(--p-space-2);
   font-size: var(--p-font-data);
   line-height: var(--line-ui);
+  // 橫跨整列但只有膠囊與泡泡接點擊，疊在內容上（檢視器）時不擋住兩側。
+  pointer-events: none;
 }
 :host([data-mode='hidden']) {
   display: none;
@@ -30,6 +32,7 @@
     0 1px 2px rgb(0 0 0 / 6%),
     var(--shadow);
   backdrop-filter: blur(12px) saturate(1.4);
+  pointer-events: auto;
 }
 .island {
   box-sizing: content-box;

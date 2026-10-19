@@ -3,41 +3,67 @@
 // host 橫跨內容區頂端但不接點擊，只有工具列本身接。隱藏（data-chrome="hidden"，見
 // idle-chrome.ts）時
 // 整個外框由一層 ::after 蓋住，作為指向（或點一下）喚回的位置，點到那裡不會按到看不見的按鈕。
-// 減少動態時由全域開關（styles/motion.scss）移除 transition，只直接出現與消失，不位移。
+// 減少動態時由全域開關（styles/motion.scss）移除 transition 與進場，直接到位。
 :host {
+  --floating-toolbar-pad: var(--p-space-1);
   position: absolute;
   inset-block-start: var(--floating-toolbar-offset, var(--p-space-3));
   inset-inline: var(--p-space-3);
   z-index: 2;
+  // 內容以 100cqw 為上限換行，外框寬度由此而來，不會反過來撐開 host。
+  container-type: inline-size;
   display: flex;
   justify-content: center;
   pointer-events: none;
 }
+// 動態島外框：寬高由 morphSize 量測後寫入，以彈簧過渡；單列是膠囊，換行或多一列時是圓角卡片。
 .floating-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--p-space-1) var(--p-space-2);
   position: relative;
-  max-width: 100%;
-  padding: var(--p-space-1) var(--p-space-2);
+  box-sizing: content-box;
+  max-width: calc(100% - 2px);
+  overflow: clip;
   border: 1px solid var(--material-line);
-  border-radius: var(--dialog-radius);
+  border-radius: calc(var(--button-target) / 2 + var(--floating-toolbar-pad));
   background: var(--material-thick);
   backdrop-filter: var(--material-filter);
   box-shadow: var(--shadow-floating);
   color: var(--ink);
   pointer-events: auto;
+  animation: island-arrive var(--motion-morph) var(--ease-spring);
   transition:
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring),
     opacity var(--motion) var(--ease),
+    scale var(--motion) var(--ease-spring),
     translate var(--motion) var(--ease-spring);
 }
+.floating-toolbar-content {
+  display: grid;
+  justify-items: center;
+  gap: var(--p-space-1);
+  width: max-content;
+  max-width: calc(100cqw - 2px);
+  padding: var(--floating-toolbar-pad) calc(var(--floating-toolbar-pad) * 2);
+  box-sizing: border-box;
+}
+.floating-toolbar-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-1) var(--p-space-2);
+  max-width: 100%;
+}
+// 閒置時收成較小的膠囊淡出，像動態島收起；喚回時從同一處彈回。
 :host([data-chrome='hidden']) .floating-toolbar {
   opacity: 0;
+  scale: 0.92;
   translate: 0 -0.25rem;
   transition:
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring),
     opacity var(--motion-panel) var(--ease-exit),
+    scale var(--motion-panel) var(--ease-exit),
     translate var(--motion-panel) var(--ease-exit);
 }
 :host([data-chrome='hidden']) .floating-toolbar::after {
@@ -48,6 +74,7 @@
 // 鍵盤焦點進入淡出的工具列時立即顯示，焦點外框不會落在透明的按鈕上。
 :host([data-chrome='hidden']) .floating-toolbar:has(:focus-visible) {
   opacity: 1;
+  scale: none;
   translate: none;
 }
 @include bp.below(phone) {
@@ -55,8 +82,10 @@
     inset-inline: var(--p-space-2);
     inset-block-start: var(--floating-toolbar-offset, var(--p-space-2));
   }
-  .floating-toolbar {
+  .floating-toolbar-content {
+    padding-inline: var(--floating-toolbar-pad);
+  }
+  .floating-toolbar-tools {
     gap: var(--p-space-1);
-    padding-inline: var(--p-space-1);
   }
 }

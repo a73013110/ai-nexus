@@ -1,16 +1,14 @@
 import { Notice } from '@shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { JobDto } from '@core/api/schema';
-import {
-  newLocalIssue,
-  recordedProblem,
-  systemProblem,
-  validIssueCode,
-} from '@core/errors/safe-errors';
 import { InferenceSignal } from '@shared/ui/inference-signal';
 import { StatusBadge } from '@shared/ui/status-badge';
-import { jobStatus } from './job-kind';
+import { jobFailure, jobStatus } from './job-kind';
 
+/**
+ * 背景工作的階段、進度與失敗訊息。子內容是動作按鈕（停止、重試），放在狀態徽章旁；用預設插槽，
+ * 呼叫端以巢狀 `@if` 決定顯示哪個按鈕也能投影（具名 `select` 遇到巢狀控制流程會整段丟掉）。
+ */
 @Component({
   selector: 'nx-job-progress',
   imports: [Notice, InferenceSignal, StatusBadge],
@@ -29,7 +27,7 @@ import { jobStatus } from './job-kind';
         @if (job().totalUnits; as total) {
           <span>{{ job().completedUnits }} / {{ total }}</span>
         }
-        <ng-content select="[job-actions]" />
+        <ng-content />
       </div>
     </div>
     @if (active()) {
@@ -52,17 +50,7 @@ import { jobStatus } from './job-kind';
   </div>`,
 })
 export class JobProgress {
-  private legacyId = '';
-  private legacyCode = '';
-  readonly failure = computed(() => {
-    const job = this.job();
-    if (validIssueCode(job.issueCode)) return recordedProblem(job.errorCode, job.issueCode);
-    if (this.legacyId !== job.id || !this.legacyCode) {
-      this.legacyId = job.id;
-      this.legacyCode = newLocalIssue();
-    }
-    return systemProblem(this.legacyCode);
-  });
+  readonly failure = computed(() => jobFailure(this.job()));
   readonly job = input.required<JobDto>();
   readonly active = computed(() => ['queued', 'running'].includes(this.job().status));
   readonly status = computed(() => jobStatus(this.job().status));
