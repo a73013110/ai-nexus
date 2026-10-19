@@ -47,6 +47,7 @@ public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, s
 public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
 {
     private readonly IDataProtector cursorProtector = protection.CreateProtector("AiNexus.Diagnostics.Cursor.v1");
+    private const int DefaultTake = 50;
     private sealed record CursorData(DateTimeOffset At, Guid LogId, string Fingerprint, Guid UserId);
     public static DiagnosticSummary Describe(DiagnosticEvent x, bool detail = false) => new(x.LogId, x.At, x.Level.ToString(), x.Category, x.EventId, x.EventName, x.MessageTemplate,
         x.IssueCode, x.TraceId, x.SpanId, x.RequestId, x.OperationId, x.JobId, x.RunId, x.Attempt, x.Method, x.Route, x.StatusCode, x.DurationMs, x.ExternalService, x.ErrorCode, x.Instance, x.UntrustedClient, DiagnosticMessage.Render(x, detail));
@@ -92,36 +93,41 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         var range = Validate(filter);
         if (!range.IsSuccess) return range.Error;
         var (from, to) = range.Value;
-        await AuditAsync(actor, "logs.query", null, filter, ct);
-        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, levels = Levels(filter), filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? 50 }))));
-        var query = Filter(filter, from, to); db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
+        await BeginReadAsync(actor, "logs.query", null, filter, ct);
+        var fingerprint = Fingerprint(filter, from, to);
+        var query = Filter(filter, from, to);
         if (filter.Cursor is { Length: > 0 } token)
         {
             CursorData cursor;
             try { cursor = JsonSerializer.Deserialize<CursorData>(cursorProtector.Unprotect(token)) ?? throw new JsonException(); }
             catch (Exception e) when (e is CryptographicException or JsonException or FormatException) { return DiagnosticsErrors.CursorInvalid; }
             if (cursor.UserId != actor || cursor.Fingerprint != fingerprint) return DiagnosticsErrors.CursorInvalid;
-            query = filter.SortDirection == "asc"
+            query = Ascending(filter)
                 ? query.Where(x => x.At > cursor.At || x.At == cursor.At && x.LogId.CompareTo(cursor.LogId) > 0)
                 : query.Where(x => x.At < cursor.At || x.At == cursor.At && x.LogId.CompareTo(cursor.LogId) < 0);
         }
-        var take = filter.Take ?? 50;
+        var take = filter.Take ?? DefaultTake;
         // 只投影列表需要的欄位：堆疊與屬性可能含敏感資料，只留給詳情 API，也避免整批物件化。
-        var ordered = Order(query, filter.SortDirection);
-        var rows = await ordered.Select(x => new DiagnosticEvent {
+        var rows = await Order(query, filter).Select(x => new DiagnosticEvent {
             LogId = x.LogId, At = x.At, Level = x.Level, Category = x.Category, EventId = x.EventId, EventName = x.EventName, MessageTemplate = x.MessageTemplate,
             IssueCode = x.IssueCode, TraceId = x.TraceId, SpanId = x.SpanId, RequestId = x.RequestId, OperationId = x.OperationId, JobId = x.JobId, RunId = x.RunId, Attempt = x.Attempt,
             Method = x.Method, Route = x.Route, StatusCode = x.StatusCode, DurationMs = x.DurationMs, ExternalService = x.ExternalService, ErrorCode = x.ErrorCode, Instance = x.Instance, UntrustedClient = x.UntrustedClient
         }).Take(take + 1).ToArrayAsync(ct);
-        var last = rows.Take(take).LastOrDefault();
-        return new DiagnosticPage(rows.Take(take).Select(x => Describe(x)).ToArray(), rows.Length > take && last is not null ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(last.At, last.LogId, fingerprint, actor))) : null, from, to, health.Degraded);
+        var page = rows.Take(take).ToArray();
+        // 多取一筆只為判斷是否還有下一頁；游標指向本頁最後一筆。
+        var next = rows.Length > take ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(page[^1].At, page[^1].LogId, fingerprint, actor))) : null;
+        return new DiagnosticPage(page.Select(x => Describe(x)).ToArray(), next, from, to, health.Degraded);
     }
-    private static IOrderedQueryable<DiagnosticEvent> Order(IQueryable<DiagnosticEvent> query, string? direction) =>
-        direction == "asc" ? query.OrderBy(x => x.At).ThenBy(x => x.LogId) : query.OrderByDescending(x => x.At).ThenByDescending(x => x.LogId);
+    /// <summary>游標綁定的條件指紋；欄位與預設值變動會讓既有游標失效。</summary>
+    private static string Fingerprint(DiagnosticFilter filter, DateTimeOffset from, DateTimeOffset to) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, levels = Levels(filter), filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? DefaultTake }))));
+    private static bool Ascending(DiagnosticFilter filter) => filter.SortDirection == "asc";
+    private static IOrderedQueryable<DiagnosticEvent> Order(IQueryable<DiagnosticEvent> query, DiagnosticFilter filter) =>
+        Ascending(filter) ? query.OrderBy(x => x.At).ThenBy(x => x.LogId) : query.OrderByDescending(x => x.At).ThenByDescending(x => x.LogId);
     public async Task<Result<DiagnosticDetail>> DetailAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        using var suppress = DiagnosticSuppression.Enter(); await AuditAsync(actor, "logs.detail", id, null, ct);
-        db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
+        using var suppress = DiagnosticSuppression.Enter();
+        await BeginReadAsync(actor, "logs.detail", id, null, ct);
         var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
         if (item is null) return DiagnosticsErrors.NotFound;
         return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
@@ -133,9 +139,8 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         if (!range.IsSuccess) return range.Error;
         var (from, to) = range.Value;
         if (filter.Cursor is { Length: > 0 }) return DiagnosticsErrors.ExportCursor;
-        await AuditAsync(actor, "logs.export", null, filter, ct);
-        db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
-        var rows = await Order(Filter(filter, from, to), filter.SortDirection)
+        await BeginReadAsync(actor, "logs.export", null, filter, ct);
+        var rows = await Order(Filter(filter, from, to), filter)
             .Select(x => new { x.LogId, x.At, x.Level, x.Category, x.EventName, x.IssueCode, x.TraceId, x.JobId, x.RunId, x.ErrorCode, x.Instance })
             .Take(options.Value.MaxExportRows + 1).ToArrayAsync(ct);
         if (rows.Length > options.Value.MaxExportRows) return DiagnosticsErrors.ExportLimit;
@@ -144,10 +149,12 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         return csv.ToString();
     }
     private static string Csv(object? value) => CsvCell.Quote(DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240));
-    private async Task AuditAsync(Guid actor, string action, Guid? logId, DiagnosticFilter? filter, CancellationToken ct)
+    /// <summary>每個讀取入口的共同前置：先寫稽核，再把後續日誌查詢的逾時收斂到設定值。</summary>
+    private async Task BeginReadAsync(Guid actor, string action, Guid? logId, DiagnosticFilter? filter, CancellationToken ct)
     {
         // 特權讀取採 fail closed：稽核寫不進去就整個失敗。這與診斷事件的抽樣或佇列無關。
         db.AuditEvents.Add(new() { OwnerId = actor, Action = action, ResourceId = logId, Result = "read", DetailsJson = JsonSerializer.Serialize(new { from = filter?.From, to = filter?.To, issueCode = filter?.IssueCode, traceId = filter?.TraceId, jobId = filter?.JobId, runId = filter?.RunId }) });
         await db.SaveChangesAsync(ct);
+        db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
     }
 }

@@ -29,18 +29,21 @@ internal sealed class LogPipelineMonitoring(DiagnosticHealth health, TimeProvide
         IReadOnlyList<SubsystemFact> facts = [
             SubsystemFact.Count("queue_depth", "待寫入", state.QueueDepth),
             SubsystemFact.Count("lost", "遺失", state.Lost, state.Lost > 0 ? SubsystemTones.Danger : SubsystemTones.Neutral),
-            SubsystemFact.Count("corrupt", "損毀", state.Corrupt, state.Corrupt > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
-            SubsystemFact.Count("write_failures", "寫入失敗", state.WriteFailures, state.WriteFailures > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
-            SubsystemFact.Bytes("pending_bytes", "待補寫", state.PendingBytes, state.PendingBytes > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
+            SubsystemFact.Count("corrupt", "損毀", state.Corrupt, WarnWhenAny(state.Corrupt)),
+            SubsystemFact.Count("write_failures", "寫入失敗", state.WriteFailures, WarnWhenAny(state.WriteFailures)),
+            SubsystemFact.Bytes("pending_bytes", "待補寫", state.PendingBytes, WarnWhenAny(state.PendingBytes)),
             SubsystemFact.Count("replayed", "已補寫", state.Replayed),
             SubsystemFact.Count("sampled", "採樣略過", state.Sampled),
             SubsystemFact.Bytes("disk_bytes", "暫存大小", state.DiskBytes),
             SubsystemFact.Count("estimated_sql_rows", "SQL 筆數（估計）", state.EstimatedSqlRows),
-            SubsystemFact.Count("export_failures", "選配匯出失敗", state.ExportFailures, state.ExportFailures > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
+            SubsystemFact.Count("export_failures", "選配匯出失敗", state.ExportFailures, WarnWhenAny(state.ExportFailures)),
             SubsystemFact.Seconds("last_write", "上次寫入", age),
             SubsystemFact.Seconds("last_sql_write", "SQL 上次寫入", Age(state.LastSqlWrite)),
             SubsystemFact.Seconds("last_file_write", "檔案上次寫入", Age(state.LastFileWrite)),
         ];
         return Task.FromResult(new SubsystemReading(degraded ? SubsystemStates.Degraded : SubsystemStates.Healthy, summary, facts));
     }
+
+    /// <summary>計數一出現就該留意（但還不到危險）的事實用警告色。</summary>
+    private static string WarnWhenAny(long count) => count > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral;
 }
