@@ -1,16 +1,21 @@
+:host {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--p-space-2) var(--p-space-3);
+  min-width: 0;
+}
+// 每一區是一列：區名一欄（各列對齊），功能標籤在右側換行。
+.feature-summary-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
 .feature-category-label {
   color: var(--secondary);
   font-size: var(--text-caption);
-  font-weight: 400;
+  white-space: nowrap;
 }
-:host {
-  display: grid;
-  gap: var(--p-space-2);
-  min-width: 0;
-}
-.feature-summary-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--p-space-2);
+:host > .form-note {
+  grid-column: 1 / -1;
 }

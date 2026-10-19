@@ -1,4 +1,5 @@
 import type { NavigationNodeDto } from '@core/api/schema';
+import { catalogFeature, catalogModule } from '@core/api/catalog';
 import { ICON_NAMES } from '@shared/ui/icon';
 
 /** 選單節點的種類；與後端 `NavigationItem` 的 Kind 相同。 */
@@ -72,6 +73,48 @@ export function navigationRuns(nodes: readonly NavigationNodeDto[]): NavigationR
     else runs.push({ kind: 'entries', key: 'entries:' + node.id, nodes: [node] });
   }
   return runs;
+}
+
+/**
+ * 有自己模組內導覽的模組：存取控制有頁面間的分頁列（`ModuleNavigation`），品質評測由列表頁進入檢索評測。
+ * 只有這些模組能把多個頁面合成一個側欄入口；其他模組合併後，非第一頁就沒有入口了。
+ */
+export const SELF_NAVIGATING_MODULES: ReadonlySet<string> = new Set(['access-control', 'quality']);
+
+/** 啟動器的一格：一般頁面或連結的 `members` 只有自己；模組入口的 `members` 是被合併的頁面節點。 */
+export interface NavigationEntry {
+  node: NavigationNodeDto;
+  members: NavigationNodeDto[];
+}
+
+/**
+ * 同一層裡屬於同一個 `SELF_NAVIGATING_MODULES` 模組的頁面，合成一個以模組命名、指向第一個頁面的入口，
+ * 放在第一個頁面的位置（ADR 0016：模組內的頁面用模組內導覽，側欄不逐頁列出）。只剩一頁時照原樣顯示頁名。
+ * 只改呈現：Ctrl+K、釘選與「目前頁面」仍以各頁面為單位。
+ */
+export function navigationEntries(nodes: readonly NavigationNodeDto[]): NavigationEntry[] {
+  const entries: (NavigationEntry & { module?: string })[] = [];
+  const bundles = new Map<string, NavigationEntry>();
+  for (const node of nodes) {
+    const module = node.kind === 'page' ? catalogFeature(node.featureId ?? '')?.module : undefined;
+    const bundled = module && SELF_NAVIGATING_MODULES.has(module) ? module : undefined;
+    const bundle = bundled && bundles.get(bundled);
+    if (bundle) {
+      bundle.members.push(node);
+      continue;
+    }
+    const entry = { node, members: [node], module: bundled };
+    entries.push(entry);
+    if (bundled) bundles.set(bundled, entry);
+  }
+  return entries.map(({ node, members, module }) =>
+    module && members.length > 1
+      ? {
+          node: { ...node, id: 'module:' + module, name: catalogModule(module)?.name ?? node.name },
+          members,
+        }
+      : { node, members },
+  );
 }
 
 /** 深度優先的每個節點；Ctrl+K 執行指令時由節點 ID 找回它。 */

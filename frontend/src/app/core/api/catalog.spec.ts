@@ -35,18 +35,17 @@ describe('feature catalog helpers', () => {
     ]);
   });
 
-  it('groups features by area and module in catalog order, unknown ids last without a heading', () => {
+  it('groups features by area in catalog order, unknown ids last without a heading', () => {
     const ids = ['retired', 'diagnostics.logs.export', 'audit', 'chat', 'diagnostics.logs'];
     expect(
       catalogSections(ids.map((id) => ({ id }))).map((section) => [
         section.id,
-        section.path,
+        section.name,
         section.features.map((feature) => feature.id),
       ]),
     ).toEqual([
-      ['chat', 'AI 工作台 › 對話', ['chat']],
-      ['audit', '系統管理 › 活動稽核', ['audit']],
-      ['diagnostics', '系統管理 › 診斷', ['diagnostics.logs', 'diagnostics.logs.export']],
+      ['work', 'AI 工作台', ['chat']],
+      ['admin', '系統管理', ['audit', 'diagnostics.logs', 'diagnostics.logs.export']],
       ['', '', ['retired']],
     ]);
   });

@@ -69,11 +69,17 @@
   margin: 0 0 var(--p-space-1);
   padding-inline: var(--p-space-2);
 }
-// A subgroup sits inside its parent's section, set in by a rule so the nesting reads at a glance.
+// 子分群是父區段裡的一塊淺色托盤：與後面直接放在父層的項目分得開，又不像內縮加邊線那樣吃掉格子寬度；
+// 圖示與條列共用同一個外框，項目在托盤內與父層對齊。
 .workspace-group.is-nested {
-  margin: var(--p-space-2) 0 0 var(--p-space-2);
-  padding-inline-start: var(--p-space-1);
-  border-inline-start: 1px solid var(--line);
+  margin-block: var(--p-space-1);
+  padding: var(--p-space-1) 2px 2px;
+  border-radius: var(--p-radius-lg);
+  background: color-mix(in srgb, var(--hover) 50%, transparent);
+}
+.workspace-group.is-nested + .workspace-icons,
+.workspace-icons + .workspace-group.is-nested {
+  margin-block-start: var(--p-space-2);
 }
 .workspace-icons {
   display: grid;
@@ -94,10 +100,17 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
+// 長名稱最多兩行並平均斷行，格子高度才不會參差。
 .workspace-icons span {
+  display: -webkit-box;
   max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
   overflow-wrap: anywhere;
   text-align: center;
+  text-wrap: balance;
 }
 .workspace-icons > :not(.current):hover {
   background: var(--hover);
@@ -141,6 +154,7 @@
   font-size: var(--text-label);
 }
 .workspace-icons.is-list span {
+  -webkit-line-clamp: 1;
   text-align: left;
 }
 .workspace-icons > :disabled {

@@ -79,46 +79,40 @@ export function featureForUrl(url: string): RoutedFeature | undefined {
   return best;
 }
 
-/** 依目錄的區 › 模組分成的一組功能（`catalogSections`）；不在目錄中的 ID 那組 `id`、`path` 為空字串。 */
+/** 依目錄的區分成的一組功能（`catalogSections`）；不在目錄中的 ID 那組 `id`、`name` 為空字串。 */
 export interface CatalogSection<T> {
   id: string;
-  path: string;
+  name: string;
   features: T[];
 }
 
 /**
- * 把功能依目錄的「區 › 模組」分組（授權摘要、群組的功能勾選、稽核的功能異動共用），組與組內都依目錄的
- * 宣告順序，不論輸入順序（稽核快照的 ID 可能依字母排序）。不在目錄中的 ID（舊稽核、已移除的功能）
- * 放在最後一組沒有標題的清單，照原樣顯示。
+ * 把功能依目錄的區分組（授權摘要、群組的功能勾選共用），組與組內都依目錄的宣告順序，不論輸入順序。
+ * 只分到區：多數模組只有一頁，再依模組分會變成一堆只有一項的區塊；功能名稱本身在目錄中不重複，
+ * 模組由宣告順序排在一起。不在目錄中的 ID（舊資料、已移除的功能）放在最後一組沒有標題的清單，照原樣顯示。
  */
 export function catalogSections<T extends { id: string }>(
   features: readonly T[],
 ): CatalogSection<T>[] {
-  const sections = new Map<string, CatalogSection<T>>();
+  const sections = new Map<string, CatalogSection<T>>(
+    CATALOG_AREAS.map((area): [string, CatalogSection<T>] => [
+      area.id,
+      { id: area.id, name: area.name, features: [] },
+    ]),
+  );
   const unknown: T[] = [];
   const ordered = [...features].sort(
     (first, second) => catalogOrder(first.id) - catalogOrder(second.id),
   );
   for (const feature of ordered) {
-    const module = catalogModule(catalogFeature(feature.id)?.module ?? '');
-    if (!module) {
-      unknown.push(feature);
-      continue;
-    }
-    const section = sections.get(module.id) ?? {
-      id: module.id,
-      path: [catalogArea(module.area)?.name, module.name].filter(Boolean).join(' › '),
-      features: [],
-    };
-    section.features.push(feature);
-    sections.set(module.id, section);
+    const area = catalogModule(catalogFeature(feature.id)?.module ?? '')?.area;
+    const section = area ? sections.get(area) : undefined;
+    if (section) section.features.push(feature);
+    else unknown.push(feature);
   }
-  const moduleOrder = (id: string) => CATALOG_MODULES.findIndex((module) => module.id === id);
   return [
-    ...[...sections.values()].sort(
-      (first, second) => moduleOrder(first.id) - moduleOrder(second.id),
-    ),
-    ...(unknown.length ? [{ id: '', path: '', features: unknown }] : []),
+    ...[...sections.values()].filter((section) => section.features.length),
+    ...(unknown.length ? [{ id: '', name: '', features: unknown }] : []),
   ];
 }
 
