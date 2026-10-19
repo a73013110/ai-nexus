@@ -15,6 +15,9 @@
 .PARAMETER Database
 要建立的資料庫，省略時用設定的 Databases.App.Name；例如另建一個沙盒庫。
 
+.COMPONENT
+資料庫與合約
+
 .EXAMPLE
 ./scripts/Initialize-Database.ps1
 
@@ -49,12 +52,21 @@ if (!$Server -and !(Get-DatabaseSetting 'IntegratedSecurity') -and $user) {
 }
 $secrets = $null
 
-if (Test-RepoDatabaseExists @connection) {
-    throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。升級既有庫用 scripts/Deploy-Database.ps1（見 docs/operations/database-setup.md）。"
-}
-Push-Location -LiteralPath $root
-try {
-    dotnet build database/App -c Release --nologo -v q
-    if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗；請先執行 scripts/Restore.ps1。' }
-} finally { Pop-Location }
-& (Join-Path $PSScriptRoot 'Deploy-Database.ps1') @connection -Action Publish
+$scripts = $PSScriptRoot
+Invoke-RepoSteps "建立資料庫 $Database" @(
+    @{ Name = '確認資料庫不存在'; Run = {
+            if (Test-RepoDatabaseExists @connection) {
+                throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。升級既有庫用 scripts/Deploy-Database.ps1（見 docs/operations/database-setup.md）。"
+            }
+        }
+    }
+    @{ Name = '建置資料庫專案'; Run = {
+            Push-Location -LiteralPath $root
+            try {
+                dotnet build database/App -c Release --nologo -v q
+                if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗；請先執行 scripts/Restore.ps1。' }
+            } finally { Pop-Location }
+        }
+    }
+    @{ Name = '部署結構、全文物件與種子資料'; Run = { & (Join-Path $scripts 'Deploy-Database.ps1') @connection -Action Publish } }
+)

@@ -33,6 +33,9 @@ SqlPackage 執行檔或 .dll；省略時依序找 PATH 上的 sqlpackage、DacFx
 寫出報告的資料夾：DeployReport.xml（SqlPackage 原始報告）與 Report.md（時間、目標、dacpac 與差異清單，可直接附在通知裡）。
 省略時只輸出摘要。
 
+.COMPONENT
+IIS 主機
+
 .EXAMPLE
 ./Verify-Database.ps1 -Server sql.company.internal -DacpacPath .\database\App.dacpac
 

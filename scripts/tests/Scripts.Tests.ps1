@@ -21,7 +21,7 @@ Describe 'scripts/ entry list' {
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
             'Build', 'Configure-Local', 'Deploy-Database', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
-            'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
+            'Show-Scripts', 'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
     }
 }
 
@@ -87,6 +87,157 @@ Describe 'Host commands called by scripts' {
         $text | Should -Match 'App\.dacpac'
         foreach ($name in 'Deploy-Database\.ps1', 'Verify-Database\.ps1', "'FullText', 'Seed', 'Data'") { $text | Should -Match $name }
         $text | Should -Not -Match 'migrations'
+    }
+}
+
+Describe 'Show-Scripts.ps1' {
+    BeforeAll {
+        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+        $script = Join-Path $root 'scripts/Show-Scripts.ps1'
+        Import-Module (Join-Path $root 'scripts/AiNexus') -Force
+        # 腳本本體會進入互動選單，只載入函式，並以無色的樣式準備它們用到的變數。
+        $ast = [Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$null)
+        foreach ($function in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] }, $false)) {
+            . ([scriptblock]::Create($function.Extent.Text))
+        }
+        $catalog = @(Get-RepoScriptCatalog)
+        $categories = Get-RepoScriptCategory
+        $historyPath = Join-Path $TestDrive 'script-history.json'
+        $nameWidth = ($catalog | ForEach-Object { Get-RepoDisplayWidth $_.Name } | Measure-Object -Maximum).Maximum
+        $theme = @{ Reset = ''; Bold = ''; Dim = ''; Reverse = ''; Accent = ''; Warn = ''; Good = ''; Error = '' }
+        $serverCategory = 'IIS 主機'
+        $settingsPath = Join-Path $TestDrive 'appsettings.Local.json'
+        $secretsPath = Join-Path $TestDrive 'appsettings.Secrets.json'
+        function New-State([switch]$SavedLogin) {
+            Save-RepoJson $settingsPath ([ordered]@{ Databases = [ordered]@{ App = [ordered]@{ Server = '192.0.2.5'; Name = '開發庫' } } })
+            Save-RepoJson $secretsPath ([ordered]@{ Databases = [ordered]@{ App = [ordered]@{ User = $(if ($SavedLogin) { 'sa' } else { '' }); Password = $(if ($SavedLogin) { 'p@ss' } else { '' }) } } })
+            @{ Screen = 'List'; Filter = ''; Rows = $null; Selected = -1; Top = 0; Entry = $null; Values = @{}; Field = 0; FieldTop = 0; Example = -1; Run = $null; Command = ''
+                Back = 'List'; Message = ''; MessageStyle = ''; Shared = (Get-RepoSharedSetting -Path $settingsPath -SecretsPath $secretsPath)
+                SettingsPath = $settingsPath; SecretsPath = $secretsPath; SettingsValues = $null; SettingsField = 0 }
+        }
+        function Send-Key($State, [string]$Key, [string]$Text = '') {
+            $press = [pscustomobject]@{ Key = $Key; Ctrl = $false; Text = $Text }
+            switch ($State.Screen) {
+                'List' { Update-ListState $State $press }
+                'Parameters' { Update-ParameterState $State $press }
+                'Confirm' { Update-ConfirmState $State $press }
+                'Settings' { Update-SettingsState $State $press }
+            }
+        }
+        function Open-Script($State, [string]$Name) {
+            Set-Filter $State $Name
+            $State.Selected = @(for ($i = 0; $i -lt $State.Rows.Count; $i++) { if ($State.Rows[$i]['Item'] -and $State.Rows[$i]['Item'].Name -eq $Name) { $i } })[0]
+            Send-Key $State 'Enter' | Out-Null
+        }
+        function Send-Text($State, [string]$Text) { foreach ($character in $Text.ToCharArray()) { Send-Key $State 'A' ([string]$character) | Out-Null } }
+    }
+
+    It 'fits every screen line in <Width> columns, counting Chinese as two' -ForEach @(@{ Width = 41 }, @{ Width = 60 }, @{ Width = 119 }) {
+        $state = New-State
+        Set-Filter $state ''
+        $frames = [Collections.Generic.List[string]]::new()
+        $frames.AddRange((Get-ListFrame $state $Width 24))
+        Open-Script $state 'Deploy-Database'
+        Send-Key $state 'Tab' | Out-Null
+        $frames.AddRange((Get-ParameterFrame $state $Width 24))
+        Send-Key $state 'Enter' | Out-Null
+        $state.Screen | Should -Be 'Confirm'
+        $frames.AddRange((Get-ConfirmFrame $state $Width))
+        Send-Key $state 'Escape' | Out-Null
+        Send-Key $state 'Escape' | Out-Null
+        Send-Key $state 'F2' | Out-Null
+        $frames.AddRange((Get-SettingsFrame $state $Width))
+        foreach ($line in $frames) { Get-RepoDisplayWidth $line | Should -BeLessOrEqual $Width -Because $line }
+    }
+
+    It 'filters by Chinese text typed one character at a time and deletes whole characters' {
+        $state = New-State
+        Set-Filter $state ''
+        Send-Text $state '資料庫'
+        @($state.Rows | Where-Object { $_['Item'] } | ForEach-Object { $_['Item'].Name }) | Should -Be @('Export-Contracts', 'Export-Database', 'Initialize-Database', 'Deploy-Database', 'Verify-Database')
+        Send-Key $state 'Backspace' | Out-Null
+        $state.Filter | Should -Be '資料'
+    }
+
+    It 'turns fullwidth digits into numbers and accepts a fullwidth comma between list items' {
+        $state = New-State
+        Open-Script $state 'Start-Dev'
+        while (@($state.Entry.Parameters)[$state.Field].Name -ne 'BackendPort') { Send-Key $state 'DownArrow' | Out-Null }
+        Send-Text $state '５０８１'
+        (ConvertTo-RunParameters $state.Entry $state.Values)['BackendPort'] | Should -Be 5081
+        $export = @($catalog | Where-Object Name -EQ 'Export-Database')[0]
+        $values = New-EditorValues $export ([ordered]@{ Server = 'sql'; ExcludeTable = 'dbo.暫存，dbo.Backup, ' })
+        (ConvertTo-RunParameters $export $values)['ExcludeTable'] | Should -Be @('dbo.暫存', 'dbo.Backup')
+    }
+
+    It 'fills the shared server, database and saved login, and shows the target on every screen' {
+        $state = New-State -SavedLogin
+        Set-Filter $state ''
+        (Get-ListFrame $state 100 24) -join "`n" | Should -Match '共用設定：資料庫 192\.0\.2\.5 / 開發庫，帳號 sa（已儲存）'
+        Open-Script $state 'Deploy-Database'
+        $state.Values['Server'] | Should -Be '192.0.2.5'
+        $state.Values['Database'] | Should -Be '開發庫'
+        $state.Values['Credential'] | Should -Be 'Saved'
+        (Get-ParameterFrame $state 100 30) -join "`n" | Should -Match '操作對象：192\.0\.2\.5 / 開發庫（共用設定，帳號 sa（已儲存））'
+        Send-Key $state 'Enter' | Out-Null
+        $state.Command | Should -Match '-Credential \(Get-Credential\)'
+        $state.Command | Should -Not -Match 'p@ss'
+        (Get-ConfirmFrame $state 100) -join "`n" | Should -Match '操作對象：192\.0\.2\.5 / 開發庫'
+    }
+
+    It 'warns when the target differs from the shared settings and keeps the shared target when applying an example' {
+        $state = New-State
+        Open-Script $state 'Deploy-Database'
+        $state.Values['Credential'] | Should -Be ''
+        Send-Key $state 'Tab' | Out-Null
+        $state.Values['Server'] | Should -Be '192.0.2.5'
+        $state.Values['Server'] = 'sql-other'
+        (Get-Target $state $state.Entry $state.Values).Text | Should -Match 'sql-other / 開發庫（與共用設定不同）'
+    }
+
+    It 'leaves -Server empty for a script that reads the settings itself, and still shows its target' {
+        $state = New-State
+        Open-Script $state 'Initialize-Database'
+        $state.Values['Server'] | Should -BeNullOrEmpty
+        (Get-Target $state $state.Entry $state.Values).Text | Should -Match '192\.0\.2\.5 / 開發庫（共用設定）'
+    }
+
+    It 'saves the shared settings and login from the settings screen, masking the password' {
+        $state = New-State
+        Set-Filter $state ''
+        Send-Key $state 'F2' | Out-Null
+        Send-Key $state 'Delete' | Out-Null
+        Send-Text $state 'sql-new'
+        foreach ($step in 1..3) { Send-Key $state 'DownArrow' | Out-Null }
+        Send-Text $state 'reader'
+        Send-Key $state 'DownArrow' | Out-Null
+        Send-Text $state 's3cret'
+        $frame = (Get-SettingsFrame $state 100) -join "`n"
+        $frame | Should -Not -Match 's3cret'
+        $frame | Should -Match '\*{6}'
+        Send-Key $state 'Enter' | Out-Null
+        $state.Screen | Should -Be 'List'
+        $state.Shared.Values['Server'] | Should -Be 'sql-new'
+        $state.Shared.SavedUser | Should -Be 'reader'
+        (Get-RepoSavedCredential -SecretsPath $secretsPath).GetNetworkCredential().Password | Should -Be 's3cret'
+        $state.SettingsValues['Password'] | Should -BeNullOrEmpty
+    }
+
+    It 'asks for mandatory parameters before confirming' {
+        $state = New-State
+        Open-Script $state 'Export-Database'
+        Send-Key $state 'Delete' | Out-Null
+        Send-Key $state 'Enter' | Out-Null
+        $state.Screen | Should -Be 'Parameters'
+        $state.Message | Should -Match '-Server'
+    }
+
+    It 'prints a plain list grouped by category when not interactive' {
+        $text = pwsh -NoProfile -File $script -List | Out-String
+        $LASTEXITCODE | Should -Be 0
+        $text | Should -Match '開發（日常啟動與預覽）'
+        $text | Should -Match 'IIS 主機（由 Publish-IIS'
+        foreach ($item in $catalog) { $text | Should -Match ([regex]::Escape($item.Name)) }
     }
 }
 

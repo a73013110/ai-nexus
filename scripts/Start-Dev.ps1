@@ -20,6 +20,9 @@ API 埠號。
 .PARAMETER FrontendPort
 Angular dev server 埠號，開這個網址。
 
+.COMPONENT
+開發
+
 .EXAMPLE
 ./scripts/Start-Dev.ps1
 

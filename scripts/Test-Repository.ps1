@@ -12,6 +12,9 @@
 .PARAMETER WorkingTree
 檢查追蹤中與未忽略的新檔，而不是 staged 的內容；不會改動 Git index。
 
+.COMPONENT
+建置與檢查
+
 .EXAMPLE
 git add -A; ./scripts/Test-Repository.ps1
 

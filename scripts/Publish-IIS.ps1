@@ -30,6 +30,9 @@ DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Veri
 .PARAMETER PublishDirectory
 發布產物目錄，必須在 artifacts/ 內。
 
+.COMPONENT
+發布
+
 .EXAMPLE
 ./scripts/Publish-IIS.ps1 -DataRoot 'D:\AiNexus\data'
 

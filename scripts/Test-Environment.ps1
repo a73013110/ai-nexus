@@ -12,6 +12,9 @@
 .PARAMETER SqlOnly
 只檢查 SQL 能力，不呼叫 AD 與模型。
 
+.COMPONENT
+初次設定
+
 .EXAMPLE
 ./scripts/Test-Environment.ps1
 

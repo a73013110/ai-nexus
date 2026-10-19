@@ -14,6 +14,9 @@
 .PARAMETER OutputDirectory
 發布目錄，相對於 repo 根目錄，必須在 artifacts/ 內。
 
+.COMPONENT
+建置與檢查
+
 .EXAMPLE
 ./scripts/Build.ps1 -Restore
 
@@ -31,22 +34,34 @@ $publish = Resolve-RepoArtifactPath $OutputDirectory
 $env:NG_CLI_ANALYTICS = 'false'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 Push-Location -LiteralPath $root
+$scripts = $PSScriptRoot
 try {
-    if ($Restore) { & (Join-Path $PSScriptRoot 'Restore.ps1') }
-    npm --prefix frontend run build
-    if ($LASTEXITCODE -ne 0) { throw '前端 build 失敗。' }
-    dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -o $publish
-    if ($LASTEXITCODE -ne 0) { throw '後端 publish 失敗。' }
-    $webRoot = Join-Path $publish 'wwwroot'
-    if (Test-Path -LiteralPath $webRoot) {
-        $resolved = (Resolve-Path -LiteralPath $webRoot).ProviderPath
-        $inside = $resolved -eq [IO.Path]::GetFullPath($webRoot) -and $resolved.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
-        if (!$inside -or ((Get-Item -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-            throw '拒絕刪除此 repo 以外或經由連結的 wwwroot。'
+    Invoke-RepoSteps '建置網站' @(
+        @{ Name = '還原套件'; Skip = $(if (!$Restore) { '未加 -Restore' }); Run = { & (Join-Path $scripts 'Restore.ps1') } }
+        @{ Name = '前端 build'; Run = {
+                npm --prefix frontend run build
+                if ($LASTEXITCODE -ne 0) { throw '前端 build 失敗。' }
+            }
         }
-        Remove-Item -LiteralPath $resolved -Recurse -Force
-    }
-    New-Item -ItemType Directory -Path $webRoot -Force | Out-Null
-    Get-ChildItem -LiteralPath (Join-Path $root 'frontend/dist/ai-nexus/browser') | Copy-Item -Destination $webRoot -Recurse -Force
+        @{ Name = '後端 publish'; Run = {
+                dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -o $publish
+                if ($LASTEXITCODE -ne 0) { throw '後端 publish 失敗。' }
+            }
+        }
+        @{ Name = '放入前端產物'; Run = {
+                $webRoot = Join-Path $publish 'wwwroot'
+                if (Test-Path -LiteralPath $webRoot) {
+                    $resolved = (Resolve-Path -LiteralPath $webRoot).ProviderPath
+                    $inside = $resolved -eq [IO.Path]::GetFullPath($webRoot) -and $resolved.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+                    if (!$inside -or ((Get-Item -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                        throw '拒絕刪除此 repo 以外或經由連結的 wwwroot。'
+                    }
+                    Remove-Item -LiteralPath $resolved -Recurse -Force
+                }
+                New-Item -ItemType Directory -Path $webRoot -Force | Out-Null
+                Get-ChildItem -LiteralPath (Join-Path $root 'frontend/dist/ai-nexus/browser') | Copy-Item -Destination $webRoot -Recurse -Force
+            }
+        }
+    )
     Write-Output "發布完成：$publish"
 } finally { Pop-Location }

@@ -19,6 +19,9 @@
 .PARAMETER PublishDirectory
 發布目錄，必須在 artifacts/ 內；未指定時讀環境變數 AINEXUS_E2E_PUBLISH_DIRECTORY，再預設 artifacts/publish。
 
+.COMPONENT
+開發
+
 .EXAMPLE
 ./scripts/Start-Local.ps1
 

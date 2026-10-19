@@ -13,7 +13,7 @@ dotnet dev-certs https --trust     # 開發機首次
 ./scripts/Start-Local.ps1          # 一個程序同時提供前端與 API
 ```
 
-開啟 https://localhost:5080/ 。熱更新用 `./scripts/Start-Dev.ps1`（Angular 4200＋API 5080）；送 PR 前跑 `./scripts/Verify.ps1`。每支腳本的參數用 `Get-Help ./scripts/<名稱>.ps1 -Detailed` 查看。詳見 [開發與執行](docs/development/development.md)。
+開啟 https://localhost:5080/ 。熱更新用 `./scripts/Start-Dev.ps1`（Angular 4200＋API 5080）；送 PR 前跑 `./scripts/Verify.ps1`。不確定該跑哪支腳本時用 `./scripts/Show-Scripts.ps1`：依分類列出用途，填參數後執行。每支腳本的參數也可以用 `Get-Help ./scripts/<名稱>.ps1 -Detailed` 查看。詳見 [開發與執行](docs/development/development.md)。
 
 ## 資料夾地圖
 

@@ -50,6 +50,9 @@ SQL Server 使用自簽憑證時略過憑證鏈驗證；連線仍加密。
 .PARAMETER SqlPackagePath
 SqlPackage 執行檔或 .dll；省略時依序找 PATH 上的 sqlpackage、DacFx 的預設安裝位置，以及 repo 的 dotnet 工具。
 
+.COMPONENT
+IIS 主機
+
 .EXAMPLE
 ./Deploy-Database.ps1 -Server sql.company.internal -Release 2026.11.0
 

@@ -288,3 +288,277 @@ Describe 'Get-RepoSqlProjectSetting and Compare-RepoDatabaseSetting' {
         $messages[2] | Should -Match 'ReadCommittedSnapshot'
     }
 }
+
+Describe 'Get-RepoDisplayWidth and Format-RepoDisplayText' {
+    It 'counts <Text> as <Width> columns' -ForEach @(
+        @{ Text = 'Verify'; Width = 6 }
+        @{ Text = '資料庫'; Width = 6 }
+        @{ Text = '全形：（）、。'; Width = 14 }
+        @{ Text = "a`u{3000}b"; Width = 4 }
+        @{ Text = "e`u{301}"; Width = 1 }
+        @{ Text = "`u{20000}"; Width = 2 }
+    ) {
+        Get-RepoDisplayWidth $Text | Should -Be $Width
+    }
+
+    It 'cuts by columns without splitting a wide character and pads to the exact width' {
+        Format-RepoDisplayText '這是一段很長的中文說明' 9 | Should -Be '這是一..'
+        Format-RepoDisplayText '這是一段很長的中文說明' 9 -Pad | Should -Be '這是一.. '
+        Format-RepoDisplayText '中文' 4 | Should -Be '中文'
+        Format-RepoDisplayText 'Verify' 10 -Pad | Should -Be 'Verify    '
+    }
+}
+
+Describe 'Split-RepoDisplayLine' {
+    It 'keeps every line within the width' {
+        foreach ($line in Split-RepoDisplayLine ('以 App.dacpac 部署資料庫結構，並依序執行一次性資料修正、全文物件與種子資料。' * 3) 17) {
+            Get-RepoDisplayWidth $line | Should -BeLessOrEqual 17
+        }
+    }
+
+    It 'breaks at spaces so words and parameters stay whole' {
+        Split-RepoDisplayLine './scripts/Verify.ps1 -Browser -Performance' 24 | Should -Be @('./scripts/Verify.ps1', '-Browser -Performance')
+    }
+
+    It 'never starts a line with Chinese closing punctuation' {
+        Split-RepoDisplayLine '一二三四，五六' 8 | Should -Be @('一二三', '四，五六')
+    }
+
+    It 'keeps existing line breaks' {
+        Split-RepoDisplayLine "第一行`n第二行" 40 | Should -Be @('第一行', '第二行')
+    }
+}
+
+Describe 'Get-RepoScriptCatalog' {
+    BeforeAll {
+        $catalog = @(Get-RepoScriptCatalog)
+        $categories = @((Get-RepoScriptCategory).Keys)
+    }
+
+    It 'lists every entry script except the menu, each in a known category, ordered by category' {
+        $catalog.Name | Should -Not -Contain 'Show-Scripts'
+        $catalog.Count | Should -Be (@(Get-ChildItem -LiteralPath (Join-Path (Get-RepoRoot) 'scripts') -Filter '*.ps1').Count - 1)
+        foreach ($item in $catalog) { $categories | Should -Contain $item.Category -Because "$($item.Name).ps1 的 help 需要 .COMPONENT（分類見 Get-RepoScriptCategory）" }
+        $order = @($catalog | ForEach-Object { $categories.IndexOf($_.Category) })
+        $order | Should -Be @($order | Sort-Object)
+    }
+
+    It 'reads parameter kinds, defaults and choices from the param block' {
+        $deploy = @($catalog | Where-Object Name -EQ 'Deploy-Database')[0].Parameters
+        ($deploy | Where-Object Name -EQ 'Server').Mandatory | Should -BeTrue
+        ($deploy | Where-Object Name -EQ 'Action').Choices | Should -Be @('Script', 'Pre', 'Post', 'Publish')
+        ($deploy | Where-Object Name -EQ 'Credential').Kind | Should -Be 'Credential'
+        $port = @($catalog | Where-Object Name -EQ 'Start-Dev')[0].Parameters | Where-Object Name -EQ 'BackendPort'
+        $port.Kind | Should -Be 'Number'
+        $port.Default | Should -Be '5080'
+        (@($catalog | Where-Object Name -EQ 'Start-Local')[0].Parameters | Where-Object Name -EQ 'PublishDirectory').DynamicDefault | Should -BeTrue
+        (@($catalog | Where-Object Name -EQ 'Export-Database')[0].Parameters | Where-Object Name -EQ 'ExcludeTable').Kind | Should -Be 'List'
+    }
+
+    It 'parses examples into parameter values, reading (Get-Credential) as ask before running' {
+        $examples = @($catalog | Where-Object Name -EQ 'Start-Dev')[0].Examples
+        $examples[1].Parameters['BackendPort'] | Should -Be 5081
+        $examples[1].Parameters['FrontendPort'] | Should -Be 4201
+        $verify = @($catalog | Where-Object Name -EQ 'Verify-Database')[0].Examples[1].Parameters
+        $verify['Credential'] | Should -BeTrue
+        $verify['TrustServerCertificate'] | Should -BeTrue
+    }
+
+    It 'joins source line breaks without spaces between Chinese and keeps list items on their own lines' {
+        $folder = Join-Path $TestDrive 'scripts'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'Sample.ps1') -Value @'
+<#
+.SYNOPSIS
+第一行
+接著第二行
+
+.DESCRIPTION
+English words
+continue here.
+- 第一項
+- 第二項
+
+.COMPONENT
+開發
+
+.EXAMPLE
+./scripts/Sample.ps1
+#>
+[CmdletBinding()]
+param()
+'@
+        $sample = @(Get-RepoScriptCatalog $folder)[0]
+        $sample.Synopsis | Should -Be '第一行接著第二行'
+        $sample.Description | Should -Be "English words continue here.`n- 第一項`n- 第二項"
+        $sample.Category | Should -Be '開發'
+    }
+}
+
+Describe 'Format-RepoCommandLine' {
+    BeforeAll {
+        New-Item -ItemType Directory -Path (Join-Path $TestDrive 'scripts') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $TestDrive 'scripts/Echo.ps1') -Value 'param([string]$Text, [string[]]$Items, [int]$Port, [switch]$Flag) $PSBoundParameters'
+    }
+
+    It 'quotes <Text> so PowerShell binds the same value back' -ForEach @(
+        @{ Text = '(localdb)\MSSQLLocalDB' }
+        @{ Text = '中文資料庫' }
+        @{ Text = "王`u{2019}s 資料夾" }
+        @{ Text = "`u{2018}單引號`u{2019}與`u{201C}雙引號`u{201D}" }
+        @{ Text = "`u{2014}破折號開頭" }
+        @{ Text = "全形`u{3000}空白" }
+        @{ Text = '08' }
+        @{ Text = '1kb' }
+        @{ Text = "it's" }
+        @{ Text = '$env:PATH' }
+        @{ Text = 'a;b' }
+        @{ Text = '' }
+    ) {
+        $line = Format-RepoCommandLine 'Echo' ([ordered]@{ Text = $Text; Items = [string[]]@('a b', '中文'); Port = 5081; Flag = $true })
+        Push-Location -LiteralPath $TestDrive
+        try { $bound = Invoke-Expression $line } finally { Pop-Location }
+        $bound['Text'] | Should -BeExactly $Text
+        $bound['Items'] | Should -Be @('a b', '中文')
+        $bound['Port'] | Should -Be 5081
+        $bound['Flag'] | Should -BeTrue
+    }
+
+    It 'never writes a credential, only (Get-Credential)' {
+        $credential = [pscredential]::new('sa', (ConvertTo-SecureString 'p@ss' -AsPlainText -Force))
+        $line = Format-RepoCommandLine 'Deploy-Database' ([ordered]@{ Server = 'sql'; Credential = $credential })
+        $line | Should -Be './scripts/Deploy-Database.ps1 -Server sql -Credential (Get-Credential)'
+        Format-RepoCommandLine 'Deploy-Database' ([ordered]@{ Credential = [pscredential]::Empty }) | Should -Be './scripts/Deploy-Database.ps1 -Credential (Get-Credential)'
+    }
+
+    It 'leaves out unset values and false switches' {
+        Format-RepoCommandLine 'Verify' ([ordered]@{ Browser = $false; BrowserTarget = $null; Performance = $true }) | Should -Be './scripts/Verify.ps1 -Performance'
+    }
+}
+
+Describe 'Get-RepoScriptHistory and Add-RepoScriptHistory' {
+    It 'keeps the latest run of each script, newest first, up to the limit' {
+        $path = Join-Path $TestDrive 'local/script-history.json'
+        Add-RepoScriptHistory $path 'Verify' ([ordered]@{ Browser = $true })
+        Add-RepoScriptHistory $path 'Initialize-Database' ([ordered]@{ Database = '沙盒庫' })
+        Add-RepoScriptHistory $path 'Verify' ([ordered]@{})
+        $history = @(Get-RepoScriptHistory $path)
+        $history.Name | Should -Be @('Verify', 'Initialize-Database')
+        $history[0].Parameters.Count | Should -Be 0
+        $history[1].Parameters['Database'] | Should -Be '沙盒庫'
+        foreach ($name in 'A', 'B', 'C', 'D') { Add-RepoScriptHistory $path $name }
+        @(Get-RepoScriptHistory $path).Name | Should -Be @('D', 'C', 'B', 'A', 'Verify')
+    }
+
+    It 'stores a credential only as ask before running' {
+        $path = Join-Path $TestDrive 'credential-history.json'
+        Add-RepoScriptHistory $path 'Deploy-Database' ([ordered]@{ Server = 'sql'; Credential = [pscredential]::new('sa', (ConvertTo-SecureString 'p@ss' -AsPlainText -Force)) })
+        [IO.File]::ReadAllText($path) | Should -Not -Match 'sa"|p@ss'
+        @(Get-RepoScriptHistory $path)[0].Parameters['Credential'] | Should -BeTrue
+    }
+
+    It 'treats a missing or broken file as no history' {
+        @(Get-RepoScriptHistory (Join-Path $TestDrive 'missing.json')).Count | Should -Be 0
+        $broken = Join-Path $TestDrive 'broken.json'
+        Set-Content -LiteralPath $broken -Value '{'
+        @(Get-RepoScriptHistory $broken).Count | Should -Be 0
+    }
+}
+
+Describe 'Invoke-RepoSteps' {
+    BeforeAll {
+        # Verify.ps1 本身就在 Invoke-RepoSteps 的一步裡跑這些測試；先清掉巢狀深度，測試才看得到最外層的摘要。
+        $outerDepth = Get-Variable RepoStepDepth -Scope Global -ValueOnly -ErrorAction Ignore
+        Remove-Variable RepoStepDepth -Scope Global -ErrorAction Ignore
+    }
+
+    AfterAll {
+        if ($null -ne $outerDepth) { $global:RepoStepDepth = $outerDepth }
+    }
+
+    It 'runs steps in order, skips with a reason and summarizes' {
+        $ran = [Collections.Generic.List[string]]::new()
+        $output = Invoke-RepoSteps '測試' @(
+            @{ Name = '第一步'; Run = { $ran.Add('1') } }
+            @{ Name = '瀏覽器測試'; Skip = '未加 -Browser'; Run = { $ran.Add('skipped') } }
+            @{ Name = '第二步'; Run = { $ran.Add('2') } }
+        ) 6>&1 | Out-String
+        $ran | Should -Be @('1', '2')
+        $output | Should -Match '\[1/3\] 第一步'
+        $output | Should -Match '\[2/3\] 瀏覽器測試：略過（未加 -Browser）'
+        $output | Should -Match '測試：通過'
+    }
+
+    It 'stops at the first failure, still prints the summary, then rethrows the original error' {
+        $ran = [Collections.Generic.List[string]]::new()
+        $lines = [Collections.Generic.List[string]]::new()
+        $caught = $null
+        try {
+            Invoke-RepoSteps '測試' @(
+                @{ Name = '後端測試'; Hint = '測試報告：artifacts/test-results/backend.trx'; Run = { throw '後端測試失敗。' } }
+                @{ Name = '之後'; Run = { $ran.Add('after') } }
+            ) 6>&1 | ForEach-Object { $lines.Add("$_") }
+        } catch { $caught = $_ }
+        $caught.Exception.Message | Should -Be '後端測試失敗。'
+        $ran.Count | Should -Be 0
+        $text = ($lines -join "`n") -replace "`e\[[0-9;]*m", ''
+        $text | Should -Match '測試：失敗'
+        $text | Should -Match '失敗.*後端測試失敗。'
+        $text | Should -Match 'artifacts/test-results/backend\.trx'
+        $text | Should -Match '\[2\] 之後\s+未執行'
+    }
+
+    It 'prints a single summary when a step runs another script that re-imports the module' {
+        $module = Join-Path (Get-RepoRoot) 'scripts/AiNexus'
+        $output = Invoke-RepoSteps '外層' @(@{ Name = '內層'; Run = {
+                    Import-Module $module -Force
+                    Invoke-RepoSteps '內層腳本' @(@{ Name = '小步驟'; Run = { } })
+                }
+            }) 6>&1 | Out-String
+        $output | Should -Match '  \[1/1\] 小步驟'
+        ([regex]::Matches($output, '：通過')).Count | Should -Be 1
+        Get-Variable RepoStepDepth -Scope Global -ErrorAction Ignore | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Shared settings and the saved SQL login' {
+    BeforeEach {
+        $settings = Join-Path $TestDrive 'config.json'
+        $secrets = Join-Path $TestDrive 'secrets.json'
+        $defaults = Join-Path $TestDrive 'defaults.json'
+        Save-RepoJson $defaults ([ordered]@{ Databases = [ordered]@{ App = [ordered]@{ Server = 'sql-default'; Name = 'AiNexus'; TrustServerCertificate = $true; IntegratedSecurity = $false } } })
+        Save-RepoJson $settings ([ordered]@{ Databases = [ordered]@{ App = [ordered]@{ Server = '' } } })
+        Save-RepoJson $secrets ([ordered]@{ Databases = [ordered]@{ App = [ordered]@{ User = ''; Password = '' } } })
+    }
+
+    It 'falls back to appsettings.json for values the machine settings leave empty' {
+        $shared = Get-RepoSharedSetting -Path $settings -DefaultsPath $defaults -SecretsPath $secrets
+        $shared.Values['Server'] | Should -Be 'sql-default'
+        $shared.Values['Database'] | Should -Be 'AiNexus'
+        $shared.Values['TrustServerCertificate'] | Should -BeTrue
+        $shared.SavedUser | Should -BeNullOrEmpty
+        $shared.HasSavedPassword | Should -BeFalse
+    }
+
+    It 'writes the shared values into the machine settings and keeps other keys' {
+        Set-RepoSharedSetting ([ordered]@{ Server = '192.0.2.5'; Database = '測試庫'; Unknown = 'x' }) -Path $settings
+        $shared = Get-RepoSharedSetting -Path $settings -DefaultsPath $defaults -SecretsPath $secrets
+        $shared.Values['Server'] | Should -Be '192.0.2.5'
+        $shared.Values['Database'] | Should -Be '測試庫'
+        (Read-RepoJson $settings).Contains('Unknown') | Should -BeFalse
+    }
+
+    It 'saves, keeps and clears the SQL login without ever returning the password in the settings' {
+        Set-RepoSavedCredential -User 'sa' -Password 'p@ss' -SecretsPath $secrets
+        $shared = Get-RepoSharedSetting -Path $settings -DefaultsPath $defaults -SecretsPath $secrets
+        $shared.SavedUser | Should -Be 'sa'
+        $shared.HasSavedPassword | Should -BeTrue
+        ($shared | ConvertTo-Json -Depth 5) | Should -Not -Match 'p@ss'
+        Set-RepoSavedCredential -User 'reader' -Password $null -SecretsPath $secrets
+        $credential = Get-RepoSavedCredential -SecretsPath $secrets
+        $credential.UserName | Should -Be 'reader'
+        $credential.GetNetworkCredential().Password | Should -Be 'p@ss'
+        Set-RepoSavedCredential -Clear -SecretsPath $secrets
+        Get-RepoSavedCredential -SecretsPath $secrets | Should -BeNullOrEmpty
+    }
+}

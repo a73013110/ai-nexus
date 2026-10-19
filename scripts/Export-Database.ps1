@@ -51,6 +51,9 @@ SQL 登入（需要 VIEW DEFINITION）；省略時執行中詢問帳密。
 .PARAMETER SqlPackagePath
 SqlPackage 執行檔或 .dll；省略時在 repo 根目錄執行 dotnet tool run sqlpackage（版本由 .config/dotnet-tools.json 固定）。
 
+.COMPONENT
+資料庫與合約
+
 .EXAMPLE
 ./scripts/Export-Database.ps1 -Server sql-dev.company.internal
 
