@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
@@ -18,7 +17,7 @@ internal sealed class ListProjectFiles(AppDbContext db, ResourceAccess access, D
     public async Task<Result<IReadOnlyList<DocumentDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         if (await access.RequireAsync(actor, id, Project.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
-        var ids = await db.Set<Resource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
+        var ids = await db.ProjectFiles(id).Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
         return await documents.DetailsAsync(actor, ids, ct);
     }
 }

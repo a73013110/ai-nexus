@@ -7,14 +7,12 @@ using AiNexus.Features.Work.Artifacts;
 using AiNexus.Features.Work.Artifacts.Management;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Chat.Transcripts;
-using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge.Documents;
-using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Work.Projects.Contents;
-using AiNexus.Features.Work.Projects.Management;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using static AiNexus.IntegrationTests.Support.ProjectApi;
 
 namespace AiNexus.IntegrationTests.Projects;
 
@@ -24,7 +22,7 @@ public sealed class DeleteProjectTests
     public async Task DeletingAProjectDetachesItsArtifacts()
     {
         await using var f = new AppFactory(); using var owner = await f.SignedInAsync();
-        var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
+        var project = await CreateProject(owner, "container");
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{project.Resource.Id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using (var scope = f.Services.CreateScope())
             Assert.Equal(project.Resource.Id, (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
@@ -38,10 +36,10 @@ public sealed class DeleteProjectTests
     public async Task DeletingProjectIsOwnerOnlyAndPreservesPrivateWorkWithoutInheritedGrants()
     {
         await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var editor = await f.SignedInAsync("bob");
-        var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
+        var project = await CreateProject(owner, "container");
         var id = project.Resource.Id;
         var bob = (await editor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        (await owner.PutAsJsonAsync($"/api/v1/projects/{id}/access", new ResourceAclRequest([new(bob.Id, "editor")], []))).EnsureSuccessStatusCode();
+        await Share(owner, $"/api/v1/projects/{id}/access", (bob.Id, "editor"));
         var conversation = (await (await editor.PostAsJsonAsync($"/api/v1/projects/{id}/conversations", new ProjectConversationRequest())).Content.ReadFromJsonAsync<ProjectConversationDto>())!;
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using var upload = new MultipartFormDataContent(); upload.Add(new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("retained text")), "file", "retained.txt");

@@ -15,7 +15,7 @@ internal sealed class ProjectsDashboard(AppDbContext db) : IDashboardSource
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
         var owner = scope.Owner;
-        var resources = db.Set<Resource>().AsNoTracking().Where(x => x.Kind == "project" && (owner == null || x.OwnerId == owner));
+        var resources = db.Set<Resource>().AsNoTracking().Where(x => x.Kind == Project.Kind && (owner == null || x.OwnerId == owner));
         var projects = db.Set<Project>().AsNoTracking().Where(p => resources.Any(r => r.Id == p.Id));
         var counts = await projects.GroupBy(x => 1).Select(g => new { All = g.Count(), Archived = g.Count(x => x.IsArchived) }).SingleOrDefaultAsync(ct);
         var templates = await db.Set<ProjectTemplate>().AsNoTracking().CountAsync(t => projects.Any(p => p.Id == t.ProjectId), ct);
@@ -30,11 +30,11 @@ internal sealed class ProjectsDashboard(AppDbContext db) : IDashboardSource
         if (owner is Guid id)
         {
             var shared = await db.Set<ResourceMember>().AsNoTracking()
-                .CountAsync(m => m.UserId == id && db.Set<Resource>().Any(r => r.Id == m.ResourceId && r.Kind == "project" && r.OwnerId != id), ct);
+                .CountAsync(m => m.UserId == id && db.Set<Resource>().Any(r => r.Id == m.ResourceId && r.Kind == Project.Kind && r.OwnerId != id), ct);
             section.Count("shared", "共用給我", shared, "個");
         }
         section.Share("active", "進行中", all - archived, DashboardTones.Info).Share("archived", "已封存", archived);
-        var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.Kind == "project" && x.OwnerId == scope.Actor)
+        var recent = await db.Set<Resource>().AsNoTracking().Where(x => x.Kind == Project.Kind && x.OwnerId == scope.Actor)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
         foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, FeatureCatalog.RouteOf(FeatureCatalog.Projects) + "/" + item.Id);
         return section.Build();

@@ -29,9 +29,9 @@ internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess a
     {
         var active = await access.RequireActiveAsync(db, actor, id, write: false, ct);
         if (!active.IsSuccess) return active.Error;
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
+        if (!await features.HoldsAsync(actor, FeatureCatalog.Chat, ct)) return AccessControlErrors.FeatureForbidden;
         var prompt = "";
-        var title = request.Title ?? "新對話";
+        var title = request.Title ?? CreateConversation.DefaultTitle;
         if (request.TemplateId is Guid key)
         {
             var template = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == key && x.ProjectId == id, ct);
@@ -39,7 +39,8 @@ internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess a
             title = template.Title;
             prompt = template.Content;
         }
-        if (ResourceAccess.Name(title) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
+        var name = ResourceAccess.Name(title);
+        if (!name.IsSuccess) return name.Error;
         var row = new Conversation { OwnerId = actor, ProjectId = id, Title = name.Value };
         db.Add(row);
         await db.SaveChangesAsync(ct);

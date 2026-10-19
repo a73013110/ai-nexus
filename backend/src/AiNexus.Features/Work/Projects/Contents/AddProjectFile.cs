@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
@@ -20,7 +19,7 @@ internal sealed class AddProjectFile(AppDbContext db, ResourceAccess access, Doc
     {
         var active = await access.RequireActiveAsync(db, actor, id, write: true, ct);
         if (!active.IsSuccess) return active.Error;
-        if (await db.Set<Resource>().CountAsync(x => x.ParentId == id && x.Kind == "document", ct) >= Project.MaxFiles) return ProjectsErrors.FileLimit;
+        if (await db.ProjectFiles(id).CountAsync(ct) >= Project.MaxFiles) return ProjectsErrors.FileLimit;
         return await documents.AddAsync(actor, null, attachment, ct, id);
     }
 }

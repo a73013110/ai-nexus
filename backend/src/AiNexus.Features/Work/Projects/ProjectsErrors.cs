@@ -4,7 +4,6 @@ namespace AiNexus.Features.Work.Projects;
 
 internal static class ProjectsErrors
 {
-    public static readonly Error InvalidName = Error.Invalid("invalid_resource_name");
     public static readonly Error Limit = Error.Conflict("project_limit");
     public static readonly Error Conflict = Error.Conflict("project_conflict");
     public static readonly Error Archived = Error.Conflict("project_archived");
