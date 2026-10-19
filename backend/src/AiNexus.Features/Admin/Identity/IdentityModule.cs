@@ -18,6 +18,7 @@ namespace AiNexus.Features.Admin.Identity;
 public sealed class IdentityModule : IFeatureModule
 {
     public const string LoginRateLimit = "ad-login";
+    private const string SessionCookie = "AiNexus.Session";
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
@@ -28,20 +29,20 @@ public sealed class IdentityModule : IFeatureModule
         services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
-                http.Request.Cookies.ContainsKey("AiNexus.Session") || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
+                http.Request.Cookies.ContainsKey(SessionCookie) || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
                     ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)
             .AddNegotiate()
             .AddCookie(AuthEndpoints.CookieScheme, options =>
             {
-                options.Cookie.Name = "AiNexus.Session";
+                options.Cookie.Name = SessionCookie;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);
                 options.SlidingExpiration = true;
                 options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
-                options.Events.OnRedirectToLogin = context => Problem(context.HttpContext, 401, "authentication_required");
-                options.Events.OnRedirectToAccessDenied = context => Problem(context.HttpContext, 403, "access_denied");
+                options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext, 401, "authentication_required");
+                options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, 403, "access_denied");
             });
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.Connection.RemoteIpAddress?.ToString() ?? "local",
@@ -74,7 +75,4 @@ public sealed class IdentityModule : IFeatureModule
     }
 
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapAuthenticationEndpoints();
-
-    private static Task Problem(HttpContext http, int status, string code)
-        => Problems.WriteAsync(http, status, code);
 }

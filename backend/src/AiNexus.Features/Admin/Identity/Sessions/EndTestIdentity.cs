@@ -1,10 +1,8 @@
 using AiNexus.Data.App;
 using System.Security.Claims;
-using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
@@ -25,24 +23,12 @@ internal sealed class EndTestIdentity(AppDbContext db, AccessService access, IOp
     {
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId)) return AuthSession.Describe(http, options.Value, csrf);
         var actor = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
-        var method = http.User.FindFirstValue(SessionIdentity.ActorMethod);
-        if (actor is null || !SessionIdentity.Allows(actor, method) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)) ||
-            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers))
-            return IdentityErrors.TestSourceRevoked;
+        if (!await SessionIdentity.ActorStillValidAsync(actor, http.User, access, ct)) return IdentityErrors.TestSourceRevoked;
         _ = Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId)) return IdentityErrors.TestSessionInvalid;
-        db.AuditEvents.Add(new()
-        {
-            OwnerId = actorId,
-            ResourceId = testId,
-            Action = "identity.test_end",
-            Result = "restored",
-            DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason = "returned" })
-        });
+        db.AuditEvents.Add(SessionIdentity.TestEnded(actorId, testId, targetId, "restored", "returned"));
         await db.SaveChangesAsync(ct);
-        var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
-        var principal = SessionIdentity.Principal(actor, method!);
-        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false, ExpiresUtc = previous.Properties?.ExpiresUtc, AllowRefresh = true }); http.User = principal;
+        await AuthSession.ReplaceSessionAsync(http, SessionIdentity.Principal(actor!, http.User.FindFirstValue(SessionIdentity.ActorMethod)!));
         return AuthSession.Describe(http, options.Value, csrf);
     }
 }

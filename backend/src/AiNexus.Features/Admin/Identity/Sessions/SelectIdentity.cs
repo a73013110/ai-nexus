@@ -3,7 +3,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 
@@ -29,11 +28,9 @@ internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, SelectIdentityRequest body)
     {
         if (!AuthSession.Identities(http.User).Any(x => x.Id == body.Identity)) return IdentityErrors.IdentityNotFound;
-        var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
         var claims = http.User.Claims.Where(x => x.Type != SessionIdentity.ActiveIdentity).Append(new(SessionIdentity.ActiveIdentity, body.Identity));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthEndpoints.CookieScheme));
-        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false, ExpiresUtc = previous.Properties?.ExpiresUtc, AllowRefresh = true });
-        http.User = principal;
+        await AuthSession.ReplaceSessionAsync(http, principal);
         return AuthSession.Describe(http, options.Value, csrf);
     }
 }
