@@ -210,8 +210,7 @@ export class ApiClient {
     const identity = response.headers.get('X-Active-Identity');
     if (identity) {
       if (this.identity && identity !== this.identity && !isAuthPath(url)) {
-        this.csrf = '';
-        this.expired.update((value) => value + 1);
+        this.expire();
         window.location.assign(WORKSPACE_HOME);
         throw new ApiError(409, 'identity_changed', '登入身分已變更，正在重新載入工作區。');
       }
@@ -219,9 +218,8 @@ export class ApiClient {
     }
     if (!response.ok) {
       if (response.status === 401 && !isAuthPath(url)) {
-        this.csrf = '';
+        this.expire();
         this.references.clear();
-        this.expired.update((value) => value + 1);
         if (!this.router.url.startsWith('/login'))
           void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       }
@@ -248,5 +246,11 @@ export class ApiClient {
       this.reads.clear();
     }
     return response;
+  }
+
+  /** 工作階段已不屬於此分頁：作廢 CSRF，並通知 `AuthService` 開始新的登入世代。 */
+  private expire() {
+    this.csrf = '';
+    this.expired.update((value) => value + 1);
   }
 }

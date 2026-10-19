@@ -3,8 +3,7 @@ import { WorkspaceApi } from '../api/workspace-api';
 import { ApiError, validIssueCode } from '../errors/safe-errors';
 import type { RunDto, RunEventDto } from '../api/schema';
 import { isActive } from '../api/generation-status';
-
-import { SseParser } from './sse-parser';
+import { sseFrames } from './sse-parser';
 import { abortableDelay } from '@shared/browser/abortable-delay';
 import { FramePublisher } from './frame-publisher';
 
@@ -53,54 +52,37 @@ export class RunStream {
         const response = await this.api.events(run.id, cursor, signal);
         if (!response.body) throw new Error('事件連線失敗');
         observer.connection('connected');
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        const parser = new SseParser();
-        try {
-          while (!signal.aborted) {
-            const chunk = await reader.read();
-            if (chunk.done) break;
-            for (const frame of parser.feed(decoder.decode(chunk.value, { stream: true }))) {
-              if (frame.event === 'error') {
-                const problem = JSON.parse(frame.data) as { code?: string; issueCode?: string };
-                throw new ApiError(
-                  503,
-                  problem.code ?? 'stream_failed',
-                  undefined,
-                  problem.issueCode,
-                );
-              }
-              if (frame.event !== 'run') continue;
-              const event = JSON.parse(frame.data) as RunEventDto;
-              if (
-                event.version !== 1 ||
-                event.runId !== run.id ||
-                !Number.isSafeInteger(event.sequence) ||
-                event.sequence <= cursor
-              )
-                continue;
-              if (event.type === 'snapshot') content = event.delta ?? '';
-              else if (event.type === 'delta') content += event.delta ?? '';
-              else if (event.type !== 'status') continue;
-              cursor = event.sequence;
-              if (content.length > 65536) throw new Error('回答超過長度上限');
-              observer.content(content);
-              if (run.status !== event.status || run.errorCode !== event.errorCode) {
-                run = {
-                  ...run,
-                  status: event.status,
-                  errorCode: event.errorCode,
-                  issueCode: validIssueCode(event.issueCode) ? event.issueCode : null,
-                  content,
-                  lastSequence: cursor,
-                };
-                observer.status(run);
-              }
-            }
+        for await (const frame of sseFrames(response.body, signal)) {
+          if (frame.event === 'error') {
+            const problem = JSON.parse(frame.data) as { code?: string; issueCode?: string };
+            throw new ApiError(503, problem.code ?? 'stream_failed', undefined, problem.issueCode);
           }
-        } finally {
-          await reader.cancel().catch(() => undefined);
-          reader.releaseLock();
+          if (frame.event !== 'run') continue;
+          const event = JSON.parse(frame.data) as RunEventDto;
+          if (
+            event.version !== 1 ||
+            event.runId !== run.id ||
+            !Number.isSafeInteger(event.sequence) ||
+            event.sequence <= cursor
+          )
+            continue;
+          if (event.type === 'snapshot') content = event.delta ?? '';
+          else if (event.type === 'delta') content += event.delta ?? '';
+          else if (event.type !== 'status') continue;
+          cursor = event.sequence;
+          if (content.length > 65536) throw new Error('回答超過長度上限');
+          observer.content(content);
+          if (run.status !== event.status || run.errorCode !== event.errorCode) {
+            run = {
+              ...run,
+              status: event.status,
+              errorCode: event.errorCode,
+              issueCode: validIssueCode(event.issueCode) ? event.issueCode : null,
+              content,
+              lastSequence: cursor,
+            };
+            observer.status(run);
+          }
         }
         if (!isActive(run.status)) return this.api.run(run.id, signal);
         throw new Error('串流提前結束');

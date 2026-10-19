@@ -67,25 +67,16 @@ export class AuthService {
     return false;
   }
   async login(account: string, password: string, method = 'ad') {
-    this.session.set(await this.api.login(account, password, method));
-    this.generation.update((value) => value + 1);
-    this.channel?.postMessage('changed');
+    this.replace(await this.api.login(account, password, method));
   }
   async windowsLogin() {
-    if (this.session()?.method === 'local' || this.session()?.testing) {
-      this.session.set(await this.api.logout());
-      this.generation.update((value) => value + 1);
-      this.channel?.postMessage('changed');
-    }
-    this.session.set(await this.api.windowsLogin());
-    this.generation.update((value) => value + 1);
-    this.channel?.postMessage('changed');
+    if (this.session()?.method === 'local' || this.session()?.testing)
+      this.replace(await this.api.logout());
+    this.replace(await this.api.windowsLogin());
   }
   /** 以帳號提供的另一個身分執行；頁面會為它重新載入資料。 */
   async selectIdentity(identity: string) {
-    this.session.set(await this.api.selectIdentity(identity));
-    this.generation.update((value) => value + 1);
-    this.channel?.postMessage('changed');
+    this.replace(await this.api.selectIdentity(identity));
   }
   async logout() {
     await this.api.logout();
@@ -102,22 +93,28 @@ export class AuthService {
     );
     await this.router.navigate(['/login']);
     this.morph.discard();
-    this.generation.update((value) => value + 1);
-    this.channel?.postMessage('changed');
+    this.announce();
   }
   async testIdentity(userId: string, reason: string) {
     this.replaceIdentity(await this.api.testIdentity(userId, reason), WORKSPACE_HOME);
   }
   async endTestIdentity() {
-    await this.load(); // Refresh CSRF if the server has already restored an expired test.
+    await this.load(); // 測試已逾時、伺服器已自行還原身分時，先更新 CSRF。
     // 測試身分從使用者頁開始，結束後回到那裡。
     this.replaceIdentity(await this.api.endTestIdentity(), routeOf('identity.users'));
   }
   private replaceIdentity(session: AuthSessionDto, url: string) {
-    this.session.set(session);
-    this.generation.update((value) => value + 1);
-    this.channel?.postMessage('changed');
+    this.replace(session);
     // 罕見的身分轉換會一起清掉所有路由、提供者與進行中的檢視。
     window.location.assign(url);
+  }
+  private replace(session: AuthSessionDto) {
+    this.session.set(session);
+    this.announce();
+  }
+  /** 本分頁換了帳號：開始新的登入世代，並讓其他分頁重新載入。 */
+  private announce() {
+    this.generation.update((value) => value + 1);
+    this.channel?.postMessage('changed');
   }
 }
