@@ -63,16 +63,18 @@ public static class MonitoringHealth
     private static void Resources(MonitoringSnapshot snapshot, List<HealthIssue> issues)
     {
         var last = snapshot.ResourceTimeline.TakeLast(SustainedPoints).ToArray();
-        var full = last.Length == SustainedPoints;
-        if (full && last.All(x => x.CpuPercent > CpuWarningPercent))
+        // 區間不足時一律不判定：剛啟動的實例不會因單一取樣就被標示。
+        bool Sustained(Func<ResourcePoint, bool> exceeded) => last.Length == SustainedPoints && last.All(exceeded);
+        const int seconds = SustainedPoints * RuntimeTraffic.BucketSeconds;
+        if (Sustained(x => x.CpuPercent > CpuWarningPercent))
             issues.Add(new("cpu_high", Warning, "cpu", "CPU 使用率偏高",
-                $"最近 {SustainedPoints * RuntimeTraffic.BucketSeconds} 秒 CPU 平均 {P(last.Average(x => x.CpuPercent!.Value))}，超過 {P(CpuWarningPercent)}。"));
-        if (full && last.All(x => x.ThreadPoolQueueLength > ThreadPoolQueueWarning))
+                $"最近 {seconds} 秒 CPU 平均 {P(last.Average(x => x.CpuPercent!.Value))}，超過 {P(CpuWarningPercent)}。"));
+        if (Sustained(x => x.ThreadPoolQueueLength > ThreadPoolQueueWarning))
             issues.Add(new("thread_pool_starvation", Warning, "thread_pool", "執行緒集區排隊",
-                $"最近 {SustainedPoints * RuntimeTraffic.BucketSeconds} 秒待處理工作持續超過 {N(ThreadPoolQueueWarning)} 項，最多 {N(last.Max(x => x.ThreadPoolQueueLength!.Value))} 項。"));
-        if (full && last.All(x => x.GcPausePercent > GcPauseWarningPercent))
+                $"最近 {seconds} 秒待處理工作持續超過 {N(ThreadPoolQueueWarning)} 項，最多 {N(last.Max(x => x.ThreadPoolQueueLength!.Value))} 項。"));
+        if (Sustained(x => x.GcPausePercent > GcPauseWarningPercent))
             issues.Add(new("gc_pause_high", Warning, "gc", "GC 暫停過長",
-                $"最近 {SustainedPoints * RuntimeTraffic.BucketSeconds} 秒有 {P(last.Average(x => x.GcPausePercent!.Value))} 的時間暫停於 GC。"));
+                $"最近 {seconds} 秒有 {P(last.Average(x => x.GcPausePercent!.Value))} 的時間暫停於 GC。"));
         var resources = snapshot.Resources;
         if (resources.MemoryLimitBytes is > 0 and var limit && resources.WorkingSetBytes * 100d / limit > MemoryWarningPercent)
             issues.Add(new("memory_high", Warning, "memory", "記憶體接近上限",
@@ -82,10 +84,10 @@ public static class MonitoringHealth
     private static void Dependency(DependencyTraffic dependency, int window, List<HealthIssue> issues)
     {
         var metrics = dependency.Metrics;
-        if (dependency.Status == "failing")
+        if (dependency.Status == SubsystemStates.Failing)
             issues.Add(new("dependency_failing", metrics.Requests >= DependencyCriticalCalls ? Critical : Warning, dependency.Id, dependency.Name + "無法使用",
                 $"最近 {window} 分鐘 {N(metrics.Requests)} 次呼叫全部失敗。"));
-        else if (dependency.Status == "degraded")
+        else if (dependency.Status == SubsystemStates.Degraded)
             issues.Add(new("dependency_degraded", Warning, dependency.Id, dependency.Name + "部分失敗",
                 $"最近 {window} 分鐘 {N(metrics.Requests)} 次呼叫中有 {N(metrics.Errors)} 次失敗（{P(metrics.ErrorPercent)}）。"));
     }
@@ -104,7 +106,7 @@ public static class MonitoringHealth
     /// <summary>是否量測到任何資料：完成的請求、程序取樣、相依服務呼叫或子系統讀數。</summary>
     private static bool Observed(MonitoringSnapshot snapshot) =>
         snapshot.Traffic.Requests > 0 || snapshot.RecentTraffic.Requests > 0 || snapshot.Resources.WorkingSetBytes > 0
-        || snapshot.Dependencies.Any(x => x.Status != "unobserved") || snapshot.Subsystems.Any(x => x.ObservedAt is not null && x.Status != SubsystemStates.Unobserved);
+        || snapshot.Dependencies.Any(x => x.Status != SubsystemStates.Unobserved) || snapshot.Subsystems.Any(x => x.ObservedAt is not null && x.Status != SubsystemStates.Unobserved);
 
     private static string N(double value) => value.ToString("N0", CultureInfo.InvariantCulture);
     private static string P(double value) => value.ToString("0.#", CultureInfo.InvariantCulture) + "%";

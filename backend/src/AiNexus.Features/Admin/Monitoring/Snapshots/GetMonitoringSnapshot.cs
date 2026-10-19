@@ -9,18 +9,13 @@ internal sealed class GetMonitoringSnapshot(MonitoringSnapshots snapshots, AppDb
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("", (int? minutes, HttpContext http, ICurrentUser user, GetMonitoringSnapshot handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, minutes ?? 5, ct).ToHttpResultAsync(snapshot =>
+            handler.HandleAsync(user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToHttpResultAsync(snapshot =>
             {
                 http.Response.Headers.CacheControl = "no-store";
                 return TypedResults.Ok(snapshot);
             }))
         .WithName("GetMonitoringSnapshot");
 
-    public async Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
-    {
-        if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidWindow;
-        var snapshot = snapshots.Read(window);
-        await MonitoringReads.AuditAsync(db, user, "monitoring.snapshot", ct);
-        return snapshot;
-    }
+    public Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
+        => MonitoringReads.ReadAsync(snapshots, db, user, window, "monitoring.snapshot", ct);
 }

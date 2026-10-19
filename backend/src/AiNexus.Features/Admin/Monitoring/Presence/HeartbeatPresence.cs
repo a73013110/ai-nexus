@@ -42,7 +42,7 @@ internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
         // 雙棧監聽時 IPv4 常以 ::ffff: 對映形式出現，先還原成 IPv4 才與一般顯示一致。
         var ip = http.Connection.RemoteIpAddress; if (ip?.IsIPv4MappedToIPv6 == true) ip = ip.MapToIPv4();
         traffic.Presence(user, request, ip?.ToString() ?? "未知", browser, device,
-            http.User.FindFirstValue(SessionIdentity.Method) is "local" ? "local" : "ad", http.User.HasClaim(x => x.Type == SessionIdentity.ActorId));
+            http.User.FindFirstValue(SessionIdentity.Method) is "local" ? "local" : "ad", SessionIdentity.IsTest(http.User));
         // 心跳間隔固定 25 秒，遠小於最短的 60 秒會話逾時，單次遺失不會誤判為離線。
         return new PresenceReceipt(traffic.Enabled, 25);
     }

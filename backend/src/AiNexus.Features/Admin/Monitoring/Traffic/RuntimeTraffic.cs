@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using AiNexus.Features.Admin.Monitoring.Presence;
 using AiNexus.Features.Admin.Monitoring.Snapshots;
+using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
@@ -64,7 +65,8 @@ public sealed class RuntimeTraffic : IDisposable
         }
     }
     public void Leave(Guid user, Guid session) { lock (gate) sessions.Remove(SessionKey(user, session)); }
-    public void RequestStarted(bool stream) { if (!Enabled) return; Interlocked.Increment(ref inFlight); if (stream) Interlocked.Increment(ref openStreams); }
+    public void RequestStarted() { if (Enabled) Interlocked.Increment(ref inFlight); }
+    /// <summary>回應確定為 SSE 時呼叫（標頭送出前才知道），讓串流不計入進行中的一般請求。</summary>
     public void StreamStarted() { if (Enabled) Interlocked.Increment(ref openStreams); }
     public void Transferred(long received, long sent)
     {
@@ -86,6 +88,9 @@ public sealed class RuntimeTraffic : IDisposable
         {
             var now = clock.GetUtcNow(); Prune(now);
             var bucket = Current(now); var error = !cancelled && status >= 400;
+            // 輪詢與成功的讀取仍計入 RED 指標，但工作階段的最後動作與活動時間軸只保留有意義的操作。
+            var write = method is not ("GET" or "HEAD" or "OPTIONS");
+            var action = write || error || cancelled ? MonitoringVocabulary.Action(method, feature) : null;
             bucket.Http.Add(error, error && status >= 500, cancelled, stream ? null : duration, 0, 0);
             var endpointKey = method + " " + route;
             if (!bucket.Endpoints.TryGetValue(endpointKey, out var endpoint) && bucket.Endpoints.Count < MaxEndpoints)
@@ -98,14 +103,12 @@ public sealed class RuntimeTraffic : IDisposable
             {
                 session.Requests++; if (error) session.Errors++;
                 session.Received += received; session.Sent += sent;
-                if (method is not ("GET" or "HEAD" or "OPTIONS") || error)
-                { session.Action = MonitoringVocabulary.Action(method, feature); session.ActionAt = now; }
+                if (write || error) { session.Action = action; session.ActionAt = now; }
             }
-            // 輪詢與成功的讀取仍計入 RED 指標，但活動時間軸只保留有意義的操作。
-            if (method is not ("GET" or "HEAD" or "OPTIONS") || error || cancelled)
+            if (action is not null)
             {
                 activities.Enqueue(new(++sequence, now, user, key, session?.Name ?? (user is null ? "未驗證連線" : "已驗證使用者"),
-                    feature, MonitoringVocabulary.Action(method, feature), method, route, status, Math.Round(duration, 2), cancelled ? "cancelled" : error ? "error" : "completed", traceId));
+                    feature, action, method, route, status, Math.Round(duration, 2), cancelled ? "cancelled" : error ? "error" : "completed", traceId));
                 while (activities.Count > MaxActivities) activities.Dequeue();
             }
         }
@@ -132,7 +135,7 @@ public sealed class RuntimeTraffic : IDisposable
         lock (gate)
         {
             resources = sample;
-            var key = clock.GetUtcNow().ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
+            var key = BucketKey(clock.GetUtcNow());
             var bucket = resourceBuckets[(int)(key / BucketSeconds % ResourceBuckets)];
             if (bucket.Key != key) bucket.Reset(key);
             bucket.Add(sample);
@@ -156,8 +159,8 @@ public sealed class RuntimeTraffic : IDisposable
         {
             var now = clock.GetUtcNow(); Prune(now);
             // 只取已完成的十秒區間：數字穩定可比較，圖表點的時間也明確。
-            var end = now.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
-            var since = Math.Max(started.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds, end - minutes * 60);
+            var end = BucketKey(now);
+            var since = Math.Max(BucketKey(started), end - minutes * 60);
             var selected = buckets.Where(x => x.Key >= since && x.Key < end).Select(x => x.Value).ToArray();
             var seconds = Math.Max(BucketSeconds, end - since);
             var total = new Stats(); foreach (var bucket in selected) total.Merge(bucket.Http);
@@ -176,7 +179,8 @@ public sealed class RuntimeTraffic : IDisposable
             }
             var depTraffic = dependencies.Select(pair => {
                 var stats = new Stats(); foreach (var bucket in selected) if (bucket.Dependencies.TryGetValue(pair.Key, out var part)) stats.Merge(part);
-                var status = stats.Requests == 0 ? "unobserved" : stats.Errors == stats.Requests ? "failing" : stats.Errors > 0 ? "degraded" : "healthy";
+                var status = stats.Requests == 0 ? SubsystemStates.Unobserved : stats.Errors == stats.Requests ? SubsystemStates.Failing
+                    : stats.Errors > 0 ? SubsystemStates.Degraded : SubsystemStates.Healthy;
                 return new DependencyTraffic(pair.Key, pair.Value.Name, pair.Value.Kind, status, pair.Value.InFlight, pair.Value.LastSeen, stats.Dto(seconds));
             }).ToArray();
             var endpoints = new Dictionary<string, Endpoint>(StringComparer.Ordinal);
@@ -198,7 +202,7 @@ public sealed class RuntimeTraffic : IDisposable
     }
     private Bucket Current(DateTimeOffset now)
     {
-        var key = now.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
+        var key = BucketKey(now);
         if (!buckets.TryGetValue(key, out var bucket))
         {
             foreach (var expired in buckets.Keys.TakeWhile(x => x < key - RetentionSeconds).ToArray()) buckets.Remove(expired);
@@ -210,10 +214,12 @@ public sealed class RuntimeTraffic : IDisposable
     {
         var expiry = now.AddSeconds(-options.Value.SessionTimeoutSeconds);
         foreach (var key in sessions.Where(x => x.Value.LastSeen < expiry).Select(x => x.Key).ToArray()) sessions.Remove(key);
-        var retention = now.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds - RetentionSeconds;
+        var retention = BucketKey(now) - RetentionSeconds;
         foreach (var key in buckets.Keys.TakeWhile(x => x < retention).ToArray()) buckets.Remove(key);
         while (activities.TryPeek(out var activity) && activity.At < now.AddSeconds(-RetentionSeconds)) activities.Dequeue();
     }
+    /// <summary>時間所屬十秒區間的起點（Unix 秒）。</summary>
+    private static long BucketKey(DateTimeOffset at) => at.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
     private static double Percent(long part, long all) => all == 0 ? 0 : Math.Round(100d * part / all, 2);
     public void Dispose() => meter.Dispose();
     private sealed class Stats

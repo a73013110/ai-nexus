@@ -14,7 +14,7 @@ public sealed class RuntimeTrafficMiddleware(RequestDelegate next)
         { using var suppression = new MonitoringSuppression(); await next(http); return; }
         if (!traffic.Enabled || !path.StartsWithSegments("/api/v1")) { await next(http); return; }
         var stream = false;
-        traffic.RequestStarted(false);
+        traffic.RequestStarted();
         http.Response.OnStarting(() => {
             if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true)
             { stream = true; traffic.StreamStarted(); }
