@@ -190,11 +190,11 @@ export class AccessEditorDialog {
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly injector = inject(Injector);
-  /** 群組授予功能，依功能目錄的區 › 模組分類；授權與側欄怎麼排無關。 */
+  /** 群組授予功能，依功能目錄的區分類；授權與側欄怎麼排無關。 */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
     catalogSections(this.store.catalog()?.features || []).map((section) => ({
       id: section.id || 'other',
-      name: section.path || '其他',
+      name: section.name || '其他',
       options: section.features.map((feature) => ({
         id: feature.id,
         label: feature.name + (feature.enabled ? '' : '（停用）'),

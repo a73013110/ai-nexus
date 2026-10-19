@@ -1,5 +1,5 @@
-// Cards share the row: two columns where two 20rem cards fit (a large dialog), one otherwise.
-// Inside a card the options take as many 11rem columns as fit.
+// 小卡片共用一列：放得下兩張 20rem 時兩欄（大對話框），否則一欄；選項多的卡片（`.is-wide`）獨佔一列。
+// 卡片內的選項排成放得下的 11rem 欄數。
 :host {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
@@ -15,6 +15,9 @@
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
   background: var(--surface);
+}
+.choice-group.is-wide {
+  grid-column: 1 / -1;
 }
 // The title lines up with the checkbox labels' boxes below it.
 .choice-group-head {

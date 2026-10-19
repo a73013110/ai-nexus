@@ -8,14 +8,14 @@ function render(features: { id: string; name: string }[]) {
   fixture.detectChanges();
   return [...fixture.nativeElement.querySelectorAll('.feature-summary-group')].map(
     (section: HTMLElement) => ({
-      label: section.querySelector('.feature-category-label')?.textContent ?? null,
+      label: section.querySelector('.feature-category-label')?.textContent || null,
       names: [...section.querySelectorAll('.resource-badges span')].map((item) => item.textContent),
     }),
   );
 }
 
 describe('FeatureSummary', () => {
-  it('lists features under their catalog area and module in catalog order, unknown ids last', () => {
+  it('lists features under their catalog area in catalog order, unknown ids last', () => {
     expect(
       render([
         { id: 'chat', name: '對話' },
@@ -25,9 +25,8 @@ describe('FeatureSummary', () => {
         { id: 'diagnostics.logs', name: '系統日誌' },
       ]),
     ).toEqual([
-      { label: 'AI 工作台 › 對話', names: ['對話'] },
-      { label: '系統管理 › 活動稽核', names: ['活動稽核'] },
-      { label: '系統管理 › 診斷', names: ['系統日誌', '日誌匯出'] },
+      { label: 'AI 工作台', names: ['對話'] },
+      { label: '系統管理', names: ['活動稽核', '系統日誌', '日誌匯出'] },
       { label: null, names: ['retired'] },
     ]);
   });

@@ -15,9 +15,9 @@ export interface ChoiceGroup {
 let sequence = 0;
 
 /**
- * 依分類拆開的多選列表：每個分類是一張有框的卡片，附上名稱、已選數量，以及一個「全選／全不選」按鈕；
- * 卡片共用寬度
- * （能放下時為兩欄，窄螢幕為一欄）。沒有外層 fieldset：卡片本身就是區段。
+ * 依分類拆開的多選列表：每個分類是一張有框的卡片，附上名稱、已選數量，以及一個「全選／全不選」按鈕。
+ * 小卡片共用一列（能放下時為兩欄，窄螢幕為一欄）；選項多的卡片獨佔一列，讓選項排成多欄而不是拉成長條。
+ * 沒有外層 fieldset：卡片本身就是區段。
  * `selected` 可能含有這些群組以外的 id；變更時會保留它們，並送出完整的選取內容。
  */
 @Component({
@@ -27,7 +27,12 @@ let sequence = 0;
   styleUrl: './choice-groups.scss',
   host: { role: 'group', '[attr.aria-label]': 'label()' },
   template: `@for (group of summary(); track group.id) {
-    <section class="choice-group" role="group" [attr.aria-labelledby]="id + '-' + group.id">
+    <section
+      class="choice-group"
+      role="group"
+      [class.is-wide]="group.options.length > wideAfter"
+      [attr.aria-labelledby]="id + '-' + group.id"
+    >
       <header class="choice-group-head">
         <h3 [id]="id + '-' + group.id">{{ group.name }}</h3>
         <span class="choice-group-count" aria-hidden="true"
@@ -70,6 +75,8 @@ export class ChoiceGroups {
   /** 顯示每個群組的全選／全不選按鈕。 */
   readonly batch = input(true);
   readonly selectedChange = output<string[]>();
+  /** 超過這個數量的卡片獨佔一列：半欄寬只排得下一欄選項，再多就會比旁邊的卡片長出一截。 */
+  readonly wideAfter = 6;
   readonly chosen = computed(() => new Set(this.selected()));
   readonly summary = computed(() => {
     const chosen = this.chosen();

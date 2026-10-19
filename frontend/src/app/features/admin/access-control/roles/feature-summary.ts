@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { catalogSections } from '@core/api/catalog';
 
 /**
- * 依功能目錄的「區 › 模組」列出功能名稱，依目錄宣告順序。授權與選單位置無關，
- * 所以不依側欄分群；不在目錄中的 ID（舊稽核）放在最後一組沒有標題的清單。
+ * 依功能目錄的區列出功能名稱（一區一列，區名在左欄對齊），依目錄宣告順序。授權與選單位置無關，
+ * 所以不依側欄分群；不在目錄中的 ID（舊資料）放在最後一組沒有標題的清單。
  */
 @Component({
   selector: 'nx-feature-summary',
@@ -11,10 +11,8 @@ import { catalogSections } from '@core/api/catalog';
   styleUrl: './feature-summary.scss',
   host: { class: 'feature-summary' },
   template: `@for (section of sections(); track section.id) {
-      <div class="feature-summary-group" [attr.aria-label]="section.path || null">
-        @if (section.path) {
-          <span class="feature-category-label">{{ section.path }}</span>
-        }
+      <div class="feature-summary-group" role="group" [attr.aria-label]="section.name || '其他'">
+        <span class="feature-category-label" aria-hidden="true">{{ section.name }}</span>
         <div class="resource-badges">
           @for (feature of section.features; track feature.id) {
             <span>{{ feature.name }}</span>

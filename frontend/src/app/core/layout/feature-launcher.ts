@@ -11,7 +11,13 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { NavigationNodeDto } from '@core/api/schema';
 import { Icon } from '@shared/ui/icon';
-import { navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
+import {
+  navigationEntries,
+  navigationIcon,
+  navigationNodes,
+  navigationRuns,
+  type NavigationEntry,
+} from './navigation-tree';
 import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
 import { WorkspaceCommands } from './workspace-commands';
 
@@ -20,6 +26,7 @@ import { WorkspaceCommands } from './workspace-commands';
  * 呈現為三欄圖示或每行一個。釘選的頁面仍留在原位置並顯示釘選標記，因此目錄不會重新洗牌；
  * 編輯時每個頁面都會變成釘選切換。目前頁面若已釘選，只在它的釘選列上標記一次。
  * 外部連結帶外部連結標記，一律 `rel="noopener noreferrer"`，依設定決定是否開新分頁。
+ * 有模組內導覽的模組，同一層的多個頁面合成一個模組入口（`navigationEntries`）。
  */
 @Component({
   selector: 'nx-feature-launcher',
@@ -62,7 +69,8 @@ import { WorkspaceCommands } from './workspace-commands';
     }
     <ng-template #entries let-nodes>
       <div class="workspace-icons" [class.is-list]="pins.display() === 'list'">
-        @for (node of asNodes(nodes); track node.id) {
+        @for (entry of entriesOf(nodes); track entry.node.id) {
+          @let node = entry.node;
           @if (node.kind === 'link') {
             <!-- 外部連結不是功能，不能釘選；編輯釘選時停用，避免看起來像漏選。 -->
             @if (editing()) {
@@ -99,14 +107,14 @@ import { WorkspaceCommands } from './workspace-commands';
           } @else {
             <a
               [routerLink]="node.route"
-              [class.current]="current(node)"
-              [attr.aria-current]="current(node) ? 'page' : null"
-              [attr.title]="pins.has(node.featureId!) ? node.name + '（已釘選）' : node.name"
+              [class.current]="current(entry)"
+              [attr.aria-current]="current(entry) ? 'page' : null"
+              [attr.title]="pinned(entry) ? node.name + '（已釘選）' : node.name"
               [attr.aria-label]="node.name"
               (click)="activated.emit()"
             >
               <nx-icon [name]="icon(node)!" /><span>{{ node.name }}</span>
-              @if (pins.has(node.featureId!)) {
+              @if (pinned(entry)) {
                 <nx-icon class="entry-mark pin-mark" name="pin" aria-hidden="true" />
               }
             </a>
@@ -208,16 +216,27 @@ export class FeatureLauncher {
   levelOf(node: NavigationNodeDto) {
     return this.depths().get(node.id) ?? 0;
   }
-  current(node: NavigationNodeDto) {
-    const feature = node.featureId;
-    return (
-      !!feature &&
-      this.active() === feature &&
-      !this.pins.has(feature) &&
-      this.firstPlacement().get(feature) === node.id
+  /** 模組入口在它任一個頁面是目前頁面時標記；其餘規則與單一頁面相同。 */
+  current(entry: NavigationEntry) {
+    const active = this.active();
+    return entry.members.some(
+      (node) =>
+        !!node.featureId &&
+        active === node.featureId &&
+        !this.pins.has(node.featureId) &&
+        this.firstPlacement().get(node.featureId) === node.id,
     );
   }
+  pinned(entry: NavigationEntry) {
+    return entry.members.some((node) => !!node.featureId && this.pins.has(node.featureId));
+  }
+  /** 釘選以頁面為單位，所以編輯時把模組入口拆回各個頁面。 */
+  entriesOf(nodes: unknown): NavigationEntry[] {
+    const list = nodes as NavigationNodeDto[];
+    return this.editing()
+      ? list.map((node) => ({ node, members: [node] }))
+      : navigationEntries(list);
+  }
   /** 範本的脈絡沒有型別；這裡為遞迴的區段恢復型別。 */
-  asNodes = (nodes: unknown) => nodes as NavigationNodeDto[];
   asNode = (node: unknown) => node as NavigationNodeDto;
 }
