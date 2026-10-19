@@ -7,7 +7,6 @@ internal static class ArtifactsErrors
     public const string ContentInvalidCode = "artifact_content_invalid";
     public const string TransformInputInvalidCode = "transform_input_invalid";
 
-    public static readonly Error InvalidName = Error.Invalid("invalid_resource_name");
     public static readonly Error ContentInvalid = Error.Invalid(ContentInvalidCode);
     public static readonly Error VersionMissing = Error.NotFound("artifact_version_missing");
     public static readonly Error MessageNotFound = Error.NotFound("message_not_found");
