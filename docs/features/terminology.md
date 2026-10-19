@@ -17,7 +17,7 @@
 | repositories | 程式庫 | `/work/repositories` | 依個人 Gitea 權限閱讀程式與議題 |
 | quality | 品質評測 | `/admin/quality` | 回覆回饋、固定題庫與模型／指令比較 |
 | integrations | 資料來源 | `/admin/integrations` | 依來源權限查詢外部公文、校務資料 |
-| identity.users、access-control.* | 使用者、角色、功能群組與模型、功能與選單 | `/admin/identity/users` 等 | 見 [存取管理](administration.md) |
+| identity.users、access-control.* | 使用者、角色、功能群組與模型、功能、選單 | `/admin/identity/users` 等 | 見 [存取管理](administration.md) |
 | operations.usage、billing.prices、knowledge.retrieval | 平台用量、模型與工具價格、檢索管理 | 見 [平台營運](operations.md) | 全平台用量、價格、知識檢索索引 |
 
 完整清單與預設名稱只在程式目錄 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs)；側欄、授權清單、頁面標題、麵包屑與總覽入口共用這個名稱。管理員可在 `accesscontrol.Features.Name` 覆寫，覆寫優先；改預設名稱只改目錄與本表。`介面元件` 是系統管理選單的最後一項（功能 `design`）；`個人設定` 是帳號設定入口。

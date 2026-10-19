@@ -31,6 +31,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Platform/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
 | `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
+| `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs)（選單外部連結允許清單） | — |
 | `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs)（連線在 `Databases`） | — |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |

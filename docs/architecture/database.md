@@ -14,7 +14,7 @@
 - **組態只寫對應需要的內容**：表、主鍵、長度、精度、型別、關聯與刪除行為、owned type、query filter、值產生器、並行控制欄位。索引、約束、預設值與說明只存在資料庫，不在 EF 重複宣告。
 - 刪除行為要與資料庫外鍵一致：重要業務外鍵 `Restrict`，純附屬資料才 `Cascade`；EF 依它決定是否連帶刪除已追蹤的子列。
 - 時間戳以 `CreationTime`（`AppDbContext.Clock`）產生，測試才能控制時間。
-- 基礎資料（內建角色、群組、功能、選單分群）寫在 `database/App/Seed/`，不用 `HasData`；部署時在結構之後執行（[資料庫建置與權限](../operations/database-setup.md#部署)）。
+- 基礎資料（內建角色、群組、功能、預設選單）寫在 `database/App/Seed/`，不用 `HasData`；部署時在結構之後執行（[資料庫建置與權限](../operations/database-setup.md#部署)）。
 - 網站啟動時 `DatabaseSchema` 以 `ModelSchema` 唯讀比對 EF 模型與 `sys.columns`：會讓程式失敗的差異（缺表或欄位、型別或 nullable 不同、多出沒有預設值的 NOT NULL 欄位）停止啟動並列出差異，其餘（資料庫先加的欄位、只經 SQL 存取的表）只記警告。完整結構的比對見 [結構驗證](../operations/database-verification.md)。
 
 ## Schema 與模組

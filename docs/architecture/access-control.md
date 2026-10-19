@@ -6,19 +6,19 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 ## 預設授權
 
-每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面與品質評測，`administrators` 是系統管理的各頁與 `diagnostics.logs.*` 動作。管理頁各自一個授權（使用者、角色、群組、功能、用量、價格、檢索管理），沒有隱含其他功能的總開關（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面與品質評測，`administrators` 是系統管理的各頁與 `diagnostics.logs.*` 動作。管理頁一頁一個授權，沒有隱含其他功能的總開關。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 ## 功能目錄
 
 頁面、動作與閱讀器只定義在 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs)：ID、區、模組、預設名稱、圖示，網址由區＋ID 推得（`identity.users` → `/admin/identity/users`）。規則與原因見 [ADR 0016](../decisions/0016-areas-urls-and-navigation.md)。
 
 - **ID**：`<module>.<page>[.<action>]`，模組 kebab-case，不帶區；模組本身就是單一頁面時 ID＝模組。動作只是授權、沒有網址；閱讀器只是路由，能否讀取由資源 ACL 決定，不是授權。
-- **資料庫**：`accesscontrol.Features` 只存可授予的功能（頁面＋動作）、Enabled、名稱覆寫（null＝目錄預設），以及現行選單的 GroupId、SortOrder。`FeatureCatalogSeedTests` 在範本資料庫上雙向比對目錄與 Seed；資料庫有、目錄不認得的列仍是授權，只是不出現在選單。
+- **資料庫**：`accesscontrol.Features` 只存可授予的功能（頁面＋動作）、Enabled 與名稱覆寫（null＝目錄預設）。`FeatureCatalogSeedTests` 在範本資料庫上雙向比對目錄與 Seed；資料庫有、目錄不認得的列仍是授權，只是不出現在選單。功能清單（`/me`、管理與稽核目錄）一律依目錄的宣告順序。
 - **前端**：OpenAPI 以目錄的授權輸出 `FeatureId` 列舉，並在文件根的 `x-feature-catalog` 輸出整份目錄；`npm run contracts` 由它產生 `feature-catalog.ts`。路由、守衛、麵包屑與預設名稱都從這裡來（[前端邊界](../frontend/frontend-boundaries.md)）。
 - **後端產生的前端連結**（總覽、通知）用 `FeatureCatalog.RouteOf`，不寫死路徑。
-- 角色、群組、選單分群與預設關聯的 ID 在 `BuiltInAccess`。測試身分不可寫入的管理功能列在 `Policies.AdministrativeFeatures`。
+- 角色、群組、預設選單分群節點與預設關聯的 ID 在 `BuiltInAccess`。測試身分不可寫入的管理功能列在 `AdministrativeFeatures`（`Policies.cs`）。
 
-模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策與配額](../features/model-policy.md)。
+模型授權與逐模型額度同樣由有效群組合併，停用群組或撤銷角色後下一次請求重新計算；合併規則見 [模型政策與配額](../features/model-policy.md)。
 
 ```text
 AD login → Users（SID）→ UserRoles → Roles
@@ -26,7 +26,7 @@ AD login → Users（SID）→ UserRoles → Roles
                                                    → RoleGroupFeatures → Features
 ```
 
-登入後前端自動呼叫 `/api/v1/me`，收到 `access.roles`、`access.groups`、`access.features` 與 `access.navigationGroups`，以此顯示可用入口與帳號授權資訊。沒有 chat 的使用者仍能取得身分與偏好，聊天送出停用。
+登入後前端自動呼叫 `/api/v1/me`，收到 `access.roles`、`access.groups`、`access.features` 與 `access.navigation`（已修剪的[選單](#選單)樹），以此顯示可用入口與帳號授權資訊。沒有 chat 的使用者仍能取得身分與偏好，聊天送出停用。
 
 後端 conversations、models、context、runs、取消與 SSE 全部要求 `feature:chat` policy。AuthorizationHandler 每個 request 查 SQL 的有效 grant，同一 request 內的授權處理、資源 ACL 與模型政策共用這次讀取（管理異動與遠端呼叫後的複查會重新讀取）；撤銷在下一次 request 生效，不等待 cookie 過期。已建立的生成會按原工作生命週期完成；已開啟的 SSE 訂閱不持續重驗授權。要立即中斷既有工作／訂閱需另增加撤銷事件機制。
 
@@ -37,22 +37,23 @@ AD login → Users（SID）→ UserRoles → Roles
 - 目前每個帳號只有「個人」身分，角色是權限聯集；`AuthSessionDto.identities` 固定一筆，登入頁因此跳過身分選擇。
 - 擴充點：之後的組織、部門或代理人身分加在 `AuthSession.Identities`，選擇由 `POST /api/v1/auth/identity` 寫入 cookie（`active_identity`）。加入第二種身分時，同一個變更要決定該身分的授權範圍（`AccessService`）並寫稽核；只顯示選項而不改授權會讓使用者誤以為權限已切換。
 
-## 選單分群
+## 選單
 
-側欄怎麼分群是**資料**，由管理員在[存取管理](../features/administration.md#選單分群與順序)調整，與程式資料夾、網址互不相關。現行做法如下，將由 `NavigationItems` 取代（[ADR 0016](../decisions/0016-areas-urls-and-navigation.md#選單)）。
+側欄的樹是**資料**（`accesscontrol.NavigationItems`），由管理員在[存取管理](../features/administration.md#選單)調整；與程式資料夾、網址、麵包屑無關，也不授予任何功能（[ADR 0016](../decisions/0016-areas-urls-and-navigation.md#選單)）。
 
-- `accesscontrol.NavigationGroups` 是可巢狀的選單分群（`ParentId`），只決定排列、不授予任何功能；`Features.GroupId` 為 null 時位於最上層。圖示與網址來自目錄。分群刪除前必須清空，外鍵都是 Restrict。
-- 排序規則：每一層先列直屬的功能、再列子分群，各自依 `SortOrder`、再依 ID。內建分群 `work`（AI 工作台）、`collaboration`（協作）、`system`（系統管理）由同一份 Seed 腳本寫入；`dashboard` 在最上層。
-- `/me` 與管理端的存取預覽只回傳含有可見功能（已授權、啟用、目錄的頁面）的分群及其上層，由 `NavigationTree.VisibleGroups` 計算；只授權不顯示的功能（目錄的動作，如 `diagnostics.logs.export`）不會讓分群出現。一般授權檢查（`AccessService.ForUserAsync`）不讀分群。
-- 種子只決定預設值：Seed 腳本只新增缺少的列，管理員之後的調整不會被覆蓋。要改既有環境的值，另寫一次性的資料腳本。
+- **節點**：`group` 分群（可巢狀，名稱與圖示可改）、`page` 指向目錄的頁面（名稱取功能的名稱覆寫或目錄預設，圖示取目錄）、`link` 外部連結（名稱、網址、是否另開分頁）。同層依 `SortOrder`、再依 Id。
+- **結構規則**（`NavigationRules`，套在變更後的整棵樹上）：父節點必須是分群、不可成環、最多 4 層、同一層不可重複同一頁面（不同位置可以）；page 必須是目錄的頁面。批次移動全部通過才寫入；分群要先清空才能刪除。
+- **可見範圍**：`/me` 與存取預覽回傳伺服器修剪過的樹（`NavigationTree.Build`）。page 要已授權且啟用；link 要沒有指定可見群組，或使用者屬於其中任一有效群組（`NavigationItemAudiences`），且主機仍在允許清單；沒有可見子節點的分群不輸出，只剩一個的由該子節點取代。授權檢查（`AccessService.ForUserAsync`）不讀選單。
+- **外部連結**：網址須以 `https://` 開頭、不含使用者資訊，主機須在 `AccessControl:NavigationLinkHosts` 允許清單內（[寫法](../operations/iis-configuration.md#外部連結允許清單)；預設空＝不允許）。儲存與產生 `/me` 時各檢查一次（`NavigationLinks`），主機移出清單後連結直接不輸出、不報錯。
+- **Seed**：`database/App/Seed/accesscontrol.sql` 寫入預設樹（Id 是可讀代稱，如 `work.chat`），只新增、不覆蓋：以 Id 比對，移動過的節點留在原位；刪除的預設節點只要上層還在，下次 Seed 會再加回來；上層已刪或同層已有同一頁面時略過。`FeatureCatalogSeedTests` 要求目錄每個頁面至少放在預設樹一次。
 
 ## 擴充功能
 
-1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL、SortOrder、預設選單分群）與預設授權。目錄與 Seed 不一致時 `FeatureCatalogSeedTests` 失敗。
+1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL）、預設授權，以及預設選單樹的 page 節點。目錄與 Seed 不一致、或頁面沒放進預設樹時 `FeatureCatalogSeedTests` 失敗。
 2. 在 `Policies` 加 policy，於 `ReportsModule` 註冊 `services.AddFeaturePolicy(...)`、加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 重產合約（`FeatureId` 與 `feature-catalog.ts` 隨之更新），前端新增 `reports.routes.ts`，路由以 `data: { feature }` 指向目錄；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷，並更新文件。
 
-角色、群組、使用者分派與功能啟用由 [管理工作區](../features/administration.md) 維護。`administrator → administrators` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。
+`administrator → administrators` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。第一位管理員見 [存取管理](../features/administration.md#設定第一位管理員)。
 
-管理時使用 UserId／RoleId／GroupId／FeatureId，避免依顯示名稱相連。Bridge tables 的外鍵與複合主鍵防孤兒／重複關聯。新增多筆授權與 audit 應同一 transaction 提交；資料庫物件說明見 [DATABASE](database.md)。
+管理時使用 UserId／RoleId／GroupId／FeatureId，避免依顯示名稱相連。新增多筆授權與 audit 應同一 transaction 提交；資料庫物件說明見 [DATABASE](database.md)。

@@ -1,7 +1,7 @@
 # 0016 區、網址、頁面目錄與選單
 
 - **狀態**：採用（2026-10-18），取代 [ADR 0009](0009-module-names-and-data-driven-navigation.md)。
-- **實作**：區資料夾與模組改名、頁面目錄與區式網址已完成；選單（`NavigationItems`）尚未開始，現行側欄仍用 `NavigationGroups` 與 `Features.GroupId`。每一步落地時同步更新對應文件。
+- **實作**：區資料夾與模組改名、頁面目錄、區式網址與選單（`NavigationItems`）已完成；剩下 Organization 與資料範圍（[ADR 0017](0017-organization-units-and-data-scopes.md)）。每一步落地時同步更新對應文件。
 - **決定**：
   - 程式與網址共用「區 → 模組 → 頁面」三層；權限 ID 與 API 不帶區。
   - 頁面與動作的目錄只定義在程式碼；資料庫只存授權與選單。
@@ -61,22 +61,22 @@
 - 經 OpenAPI 輸出給前端：授權輸出成 `FeatureId` 列舉，整份目錄放在文件根的 `x-feature-catalog`，`npm run contracts` 由它產生前端的 `feature-catalog.ts`。不另開 API：路由、守衛與測試需要的是建置時就確定的資料。
 - 前端每個模組一份 `<module>.routes.ts`，路由以 `data: { feature }` 指向目錄，由同一個守衛檢查；每個區一份區路由檔掛各模組，`app.routes.ts` 每個區只有一行 `loadChildren`。
 - 測試雙向比對：目錄 ↔ Angular 路由、目錄 ↔ Seed。
-- `accesscontrol.Features` 只留 Id、Enabled 與名稱覆寫，給授權外鍵用；route、圖示已移出，分群與排序隨選單一起移出。
+- `accesscontrol.Features` 只留 Id、Enabled 與名稱覆寫，給授權外鍵用；route、圖示、分群與排序都已移出。
 - 頁面屬於模組，網址跟模組的區走：Knowledge 的檢索管理頁是 `/work/knowledge/retrieval`，選單（資料）再把它放進系統管理分群。管理頁一頁一個授權，沒有隱含其他功能的總開關。
 - 麵包屑由目錄推得（區 > 模組 > 頁面），與選單無關。
 
 ## 選單
 
-`accesscontrol.NavigationItems` 取代 `NavigationGroups` 與 `Features.GroupId`，是一棵樹，節點三種：
+`accesscontrol.NavigationItems` 是一棵樹（取代原本的 `NavigationGroups` 與 `Features.GroupId`），最多 4 層，節點三種：
 
 - `group`：分群，可巢狀。
 - `page`：指向目錄裡的頁面；沒有授權就不顯示。
-- `link`：外部系統（公文、客服），存 URL 與是否另開視窗。可指定一個只授權、沒有頁面的功能（例如 `links.document-system`）控制誰看得到；不指定則所有登入者可見。
+- `link`：外部系統（公文、客服），存 URL 與是否另開分頁。可見範圍用權限群組指定（`NavigationItemAudiences`）；不指定則所有登入者可見。
 
 規則：
 
 - 同一頁面可出現在多個位置；麵包屑跟網址走，不會有歧義。
-- 外部連結只接受 `https://`，主機須在設定的允許清單內。選單是管理員可編輯的資料，不能成為 `javascript:` 或釣魚入口；URL 不帶使用者資料。
+- 外部連結只接受 `https://`，主機須在設定的允許清單（`AccessControl:NavigationLinkHosts`）內：`*.` 只涵蓋子網域、不帶 port 只接受 443、以 punycode 比對，預設空清單＝不允許。儲存與產生選單時各檢查一次，主機移出清單後連結自動消失。選單是管理員可編輯的資料，不能成為 `javascript:` 或釣魚入口；URL 不帶使用者資料。
 - 沒有可見節點的分群不顯示；只剩一個可見節點的分群攤平。
 - 側欄預設展開兩到三層；模組內的頁面用模組內導覽。另有 Ctrl+K 搜尋（含外部連結）、我的最愛與最近使用。
 
@@ -87,6 +87,7 @@
 - 區很少換；換的代價是搬資料夾加一條轉址，權限與 API 不受影響。
 - 同一個網址原本寫在 `app.routes.ts`、Seed 與 `FeatureIds` 三處，頁面到數百個時必然不一致。
 - 0009 不加大類層的前提是模組少於約 40 個，預期規模會超過。
+- 外部連結的可見範圍用群組，不用只授權、沒有頁面的功能：功能目錄只定義在程式碼，管理員每加一個外部連結都得改程式碼、發版。
 
 ## 何時重新評估
 
