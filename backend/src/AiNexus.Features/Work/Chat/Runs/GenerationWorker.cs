@@ -123,17 +123,7 @@ public sealed partial class GenerationWorker(
                 var issue = issues.Report(ex, "generation_persistence_failed");
                 try
                 {
-                    using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
-                    {
-                        using var scope = scopes.CreateScope();
-                        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                        var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
-                        if (RunStates.IsActive(run.Status))
-                        {
-                            await scope.ServiceProvider.GetRequiredService<RunService>()
-                                .FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
-                        }
-                    }
+                    await FinishIfActiveAsync(job, RunStates.Failed, "internal_error", issue);
                 }
                 catch (Exception recovery)
                 {
@@ -264,7 +254,15 @@ public sealed partial class GenerationWorker(
 
         // 結束前寫入剩餘的文字與用量。使用 CancellationToken.None，即使已被取消，局部產出也要保存下來
         await FlushAsync(job, progress, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
+        await FinishIfActiveAsync(job, finalStatus, error, issueCode);
+    }
 
+    /// <summary>
+    /// 在對話鎖內結算仍活躍的 Run；已被取消或由別處結算的不再變更。
+    /// 一律用 <see cref="CancellationToken.None"/>：收尾發生在取消或停機之後，仍要把終止狀態寫進資料庫。
+    /// </summary>
+    private async Task FinishIfActiveAsync(GenerationJob job, string status, string? error, string? issueCode)
+    {
         using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
         {
             using var scope = scopes.CreateScope();
@@ -273,7 +271,7 @@ public sealed partial class GenerationWorker(
             if (RunStates.IsActive(run.Status))
             {
                 await scope.ServiceProvider.GetRequiredService<RunService>()
-                    .FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
+                    .FinishAsync(run, status, error, CancellationToken.None, issueCode);
             }
         }
     }
@@ -283,8 +281,10 @@ public sealed partial class GenerationWorker(
     /// </summary>
     private static async Task<Result> RecheckAsync(IServiceProvider services, AppDbContext db, GenerationRun run, CancellationToken ct)
     {
-        var grants = await services.GetRequiredService<AccessService>().ForUserAsync(run.OwnerId, ct);
-        if (!grants.Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
+        if (!await services.GetRequiredService<AccessService>().HoldsAsync(run.OwnerId, FeatureCatalog.Chat, ct))
+        {
+            return AccessControlErrors.FeatureForbidden;
+        }
 
         if (await services.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, ct, checkQuota: false) is { IsSuccess: false } refused)
         {

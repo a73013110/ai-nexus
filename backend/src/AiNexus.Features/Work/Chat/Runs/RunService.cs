@@ -115,19 +115,19 @@ public sealed partial class RunService(
 
         var notificationTone = status switch
         {
-            "failed" => "error",
-            "completed" => "success",
+            RunStates.Failed => "error",
+            RunStates.Completed => "success",
             _ => "info"
         };
 
         var notificationTitle = status switch
         {
-            "completed" => "AI 回答已完成",
-            "failed" => "AI 回答未完成",
+            RunStates.Completed => "AI 回答已完成",
+            RunStates.Failed => "AI 回答未完成",
             _ => "AI 回答已停止"
         };
 
-        var notificationMessage = status == "failed" ? Issues.Message(run.IssueCode) : title;
+        var notificationMessage = status == RunStates.Failed ? Issues.Message(run.IssueCode) : title;
 
         await notifications.PublishAsync(
             run.OwnerId,

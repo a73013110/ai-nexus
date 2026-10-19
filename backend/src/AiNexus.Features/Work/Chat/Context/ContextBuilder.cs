@@ -5,6 +5,7 @@ using System.Text;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Platform.Inference;
+using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,17 @@ public sealed class ContextBuilder(
         string.IsNullOrWhiteSpace(instruction)
             ? baseline
             : baseline + "\n\n此對話的使用者偏好：\n" + instruction;
+
+    /// <summary>
+    /// 依模型容量建立聊天生成參數（推理強度採預設）；試算、鎖外預組與正式建立共用，
+    /// 預算算法一致，鎖外預組的上下文才能在鎖內直接沿用。
+    /// </summary>
+    public static GenerationParameters Parameters(ModelDefinition model, string systemPrompt) => new(
+        model.ContextTokens,
+        model.MaxOutputTokens,
+        0.6,
+        systemPrompt,
+        SupportsImages: model.SupportsImages);
 
     /// <summary>
     /// 建置指定葉節點訊息為止的完整模型上下文（包含圖片二進位內容）。

@@ -111,17 +111,7 @@ internal sealed class CreateRun(
 
         if (previous is not null)
         {
-            if (await conversations.RequireOwnedAsync(owner, previous.ConversationId, ct) is { IsSuccess: false } denied)
-            {
-                return denied.Error;
-            }
-
-            if (previous.RequestHash != hash)
-            {
-                return InferenceErrors.IdempotencyConflict;
-            }
-
-            return presentation.Run(previous);
+            return await ReplayAsync(owner, previous, hash, ct);
         }
 
         // 以下皆在對話鎖之外執行，進鎖後會重驗
@@ -146,17 +136,17 @@ internal sealed class CreateRun(
         if (!retrieved.IsSuccess) return retrieved.Error;
         var sources = retrieved.Value;
 
+        // 網路搜尋會產生外部呼叫與費用，先確認對話歸屬
+        if (request.WebSearch && await conversations.RequireOwnedAsync(owner, request.ConversationId, ct) is { IsSuccess: false } missing)
+        {
+            return missing.Error;
+        }
+
+        if (await AdmissionAsync(owner, ct) is { } blocked) return blocked;
+
         WebSearchRecord? search = null;
         if (request.WebSearch)
         {
-            if (await conversations.RequireOwnedAsync(owner, request.ConversationId, ct) is { IsSuccess: false } missing)
-            {
-                return missing.Error;
-            }
-
-            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
-            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
-
             var query = request.RegenerateUserMessageId is Guid old
                 ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct)
                 : request.Prompt;
@@ -164,11 +154,6 @@ internal sealed class CreateRun(
             var searched = await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct);
             if (!searched.IsSuccess) return searched.Error;
             search = searched.Value;
-        }
-        else
-        {
-            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
-            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
         }
 
         var prepared = await PrepareAsync(owner, request, profile, sources, search, ct);
@@ -184,21 +169,10 @@ internal sealed class CreateRun(
             var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (existing is not null)
             {
-                if (await conversations.RequireOwnedAsync(owner, existing.ConversationId, ct) is { IsSuccess: false } denied)
-                {
-                    return denied.Error;
-                }
-
-                if (existing.RequestHash != hash)
-                {
-                    return InferenceErrors.IdempotencyConflict;
-                }
-
-                return presentation.Run(existing);
+                return await ReplayAsync(owner, existing, hash, ct);
             }
 
-            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
-            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
+            if (await AdmissionAsync(owner, ct) is { } busy) return busy;
 
             if (!(reserved = scheduler.TryReserve()))
             {
@@ -222,17 +196,7 @@ internal sealed class CreateRun(
             // 持有帳號列鎖後再檢查一次，擋下並行送出、同一 Key 的重複請求
             if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
             {
-                if (await conversations.RequireOwnedAsync(owner, raced.ConversationId, ct) is { IsSuccess: false } denied)
-                {
-                    return denied.Error;
-                }
-
-                if (raced.RequestHash != hash)
-                {
-                    return InferenceErrors.IdempotencyConflict;
-                }
-
-                return presentation.Run(raced);
+                return await ReplayAsync(owner, raced, hash, ct);
             }
 
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct))
@@ -273,19 +237,11 @@ internal sealed class CreateRun(
             var files = bound.Value;
 
             var now = clock.GetUtcNow();
-            var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction)
-                + projectContext.Value
-                + KnowledgeRetrieval.Prompt(sources)
-                + WebSearchService.Prompt(search);
-
-            var parameters = new GenerationParameters(
-                profile.ContextTokens,
-                profile.MaxOutputTokens,
-                0.6,
-                systemPrompt,
-                effort.Value,
-                profile.ReasoningControl,
-                profile.SupportsImages);
+            var parameters = ContextBuilder.Parameters(profile, SystemPrompt(conversation.SystemInstruction, projectContext.Value, sources, search)) with
+            {
+                ReasoningEffort = effort.Value,
+                ReasoningControl = profile.ReasoningControl
+            };
 
             var run = new GenerationRun
             {
@@ -372,6 +328,34 @@ internal sealed class CreateRun(
     }
 
     /// <summary>
+    /// 同一冪等鍵的重送：對話仍屬於本人且請求內容相同才回放既有 Run，內容不同視為衝突。
+    /// 鎖外、鎖內與帳號列鎖後各比對一次，三處規則必須一致。
+    /// </summary>
+    private async Task<Result<RunDto>> ReplayAsync(Guid owner, GenerationRun existing, string hash, CancellationToken ct)
+    {
+        if (await conversations.RequireOwnedAsync(owner, existing.ConversationId, ct) is { IsSuccess: false } denied)
+        {
+            return denied.Error;
+        }
+
+        return existing.RequestHash == hash ? presentation.Run(existing) : InferenceErrors.IdempotencyConflict;
+    }
+
+    /// <summary>排程器就緒且使用者沒有進行中的生成才受理；鎖外先擋一次省下檢索與搜尋，鎖內再確認。</summary>
+    private async Task<Error?> AdmissionAsync(Guid owner, CancellationToken ct)
+    {
+        if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
+        return await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct) ? InferenceErrors.GenerationActive : null;
+    }
+
+    /// <summary>系統提示詞：基底與對話偏好，再接專案、知識庫來源與網路搜尋結果；鎖外預組與鎖內建立必須組出相同字串才能沿用上下文。</summary>
+    private string SystemPrompt(string instruction, string projectContext, IReadOnlyList<KnowledgeHitDto> sources, WebSearchRecord? search) =>
+        ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction)
+            + projectContext
+            + KnowledgeRetrieval.Prompt(sources)
+            + WebSearchService.Prompt(search);
+
+    /// <summary>
     /// 在取得排他鎖前預先進行草稿上下文組裝。
     /// </summary>
     private async Task<PreparedContext?> PrepareAsync(
@@ -396,17 +380,8 @@ internal sealed class CreateRun(
         var files = await attachments.RequireAsync(owner, request.AttachmentIds, ct);
         if (!files.IsSuccess) return null;
 
-        var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction)
-            + projectContext.Value
-            + KnowledgeRetrieval.Prompt(sources)
-            + WebSearchService.Prompt(search);
-
-        var parameters = new GenerationParameters(
-            profile.ContextTokens,
-            profile.MaxOutputTokens,
-            0.6,
-            systemPrompt,
-            SupportsImages: profile.SupportsImages);
+        var systemPrompt = SystemPrompt(conversation.SystemInstruction, projectContext.Value, sources, search);
+        var parameters = ContextBuilder.Parameters(profile, systemPrompt);
 
         return new(
             conversation.ProjectId,
