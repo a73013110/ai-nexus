@@ -90,6 +90,7 @@ const INDEX = [
     ],
   },
 ];
+const FIRST_SECTION = INDEX[0].sections[0].id;
 const TOKEN_NAMES = [
   '--canvas',
   '--sidebar',
@@ -161,7 +162,7 @@ export class DesignPage {
     { value: 'dark', label: '深色' },
   ];
   /** 捲動區域中最靠近頂部的區段，在索引中標示為目前位置。 */
-  readonly current = signal(INDEX[0].sections[0].id);
+  readonly current = signal(FIRST_SECTION);
   readonly preview = viewChild<ElementRef<HTMLElement>>('preview');
 
   /** 從索引選取的區段會保持為目前位置，直到讀者自己捲動。 */
@@ -179,7 +180,7 @@ export class DesignPage {
         frame = 0;
         if (this.picked) return;
         const line = root.getBoundingClientRect().top + Math.min(root.clientHeight * 0.25, 96);
-        let current = INDEX[0].sections[0].id;
+        let current = FIRST_SECTION;
         for (const section of preview.querySelectorAll('nx-design-section'))
           if (section.getBoundingClientRect().top <= line) current = section.id;
         this.current.set(current);

@@ -8,6 +8,10 @@ function startOfDay(time: number) {
   return date.getTime();
 }
 
+/** 本地日期的 `YYYY-MM-DD`；不用 `toISOString`，因為那是 UTC 日期，跨午夜時會差一天。 */
+export const localDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 /** 從 `from` 到 `to` 的完整本地日曆日數；夏令時間的小時差由四捨五入吸收。 */
 export const calendarDaysBetween = (from: number, to: number) =>
   Math.round((startOfDay(to) - startOfDay(from)) / DAY);

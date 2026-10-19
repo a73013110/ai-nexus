@@ -1,7 +1,6 @@
 @use 'breakpoints' as bp;
 
-// Sidebar index: group captions on the sidebar's label column and one chip that slides to the
-// section in view.
+// 側欄索引：分組標題對齊側欄的標籤欄，選取 chip 只有一個，滑到目前位置的區段。
 .design-index {
   padding-bottom: var(--p-space-2);
   h2 {

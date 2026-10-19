@@ -17,7 +17,7 @@ nx-notice {
   gap: var(--p-space-1);
   font-size: var(--text-caption);
 }
-// The island sits on the canvas, as it does above the composer.
+// 島放在 canvas 底上，與它在 composer 上方時相同。
 .design-island-stage {
   display: grid;
   place-items: center;

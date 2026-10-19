@@ -93,7 +93,7 @@ code {
   border: 1px solid var(--line);
   background: var(--surface-subtle);
 }
-// Hover or focus replays the curve on a dot travelling the track.
+// 懸停或聚焦時，圓點沿軌道移動，重播該曲線。
 .design-motion {
   display: grid;
   gap: var(--p-space-1);

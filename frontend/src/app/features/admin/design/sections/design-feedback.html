@@ -88,8 +88,7 @@
     <span class="design-row">
       @for (badge of badgeTones; track badge.tone) {
         <span class="design-badge"
-          >{{ badge.label }}
-          <nx-count-badge [count]="badge.count" [tone]="badge.tone" [size]="'md'"
+          >{{ badge.label }} <nx-count-badge [count]="badge.count" [tone]="badge.tone" size="md"
         /></span>
       }
       <span class="design-badge">大量 <nx-count-badge [count]="125" /></span>
