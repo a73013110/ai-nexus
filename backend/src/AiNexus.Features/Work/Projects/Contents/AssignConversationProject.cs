@@ -28,23 +28,19 @@ internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess 
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid actor, Guid id, Guid? projectId, CancellationToken ct)
     {
-        var conversationLock = await scheduler.LockConversationAsync(id, ct);
-        try
+        using var conversationLock = await scheduler.LockConversationAsync(id, ct);
+        var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
+        if (conversation is null) return ProjectsErrors.ConversationMissing;
+        if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
+        if (projectId is Guid project)
         {
-            var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
-            if (conversation is null) return ProjectsErrors.ConversationMissing;
-            if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
-            if (projectId is Guid project)
-            {
-                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return AccessControlErrors.FeatureForbidden;
-                var active = await access.RequireActiveAsync(db, actor, project, write: false, ct);
-                if (!active.IsSuccess) return active.Error;
-            }
-            conversation.ProjectId = projectId; conversation.UpdatedAt = clock.GetUtcNow();
-            db.AuditEvents.Add(new() { OwnerId = actor, Action = "conversation.project", ResourceId = id, Result = projectId is null ? "removed" : "assigned" });
-            await db.SaveChangesAsync(ct);
-            return conversation.ToDto();
+            if (!await features.HoldsAsync(actor, FeatureCatalog.Projects, ct)) return AccessControlErrors.FeatureForbidden;
+            var active = await access.RequireActiveAsync(db, actor, project, write: false, ct);
+            if (!active.IsSuccess) return active.Error;
         }
-        finally { conversationLock.Dispose(); }
+        conversation.ProjectId = projectId; conversation.UpdatedAt = clock.GetUtcNow();
+        db.AuditEvents.Add(new() { OwnerId = actor, Action = "conversation.project", ResourceId = id, Result = projectId is null ? "removed" : "assigned" });
+        await db.SaveChangesAsync(ct);
+        return conversation.ToDto();
     }
 }

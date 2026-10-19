@@ -42,7 +42,8 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
 
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
-        if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
+        var name = ResourceAccess.Name(request.Name);
+        if (!name.IsSuccess) return name.Error;
         if (await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
         var resource = new Resource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
         db.Add(resource);
@@ -54,7 +55,8 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
 
     public async Task<Result<ProjectDto>> UpdateAsync(Guid actor, Guid id, ProjectRequest request, CancellationToken ct)
     {
-        if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
+        var name = ResourceAccess.Name(request.Name);
+        if (!name.IsSuccess) return name.Error;
         using (await writes.AcquireAsync(id, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
