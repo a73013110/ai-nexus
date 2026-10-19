@@ -64,6 +64,25 @@
   font-size: var(--field-label-size);
   color: var(--secondary);
 }
+// 欄位標題列：標籤靠左、即時說明靠右。說明若放在輸入框下方，查詢列底部對齊時該欄輸入框會被墊高；
+// 標題列固定一行高，說明裡的 inline 下拉超出也不改變列高。
+.ui-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  height: 1lh;
+  min-width: 0;
+}
+.ui-field-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  white-space: nowrap;
+}
 // Native control defaults stay below feature classes, including long-form editors.
 input:where(.ui-input),
 textarea:where(.ui-input),
