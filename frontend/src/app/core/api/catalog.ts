@@ -78,3 +78,53 @@ export function featureForUrl(url: string): RoutedFeature | undefined {
   }
   return best;
 }
+
+/** 依目錄的區 › 模組分成的一組功能（`catalogSections`）；不在目錄中的 ID 那組 `id`、`path` 為空字串。 */
+export interface CatalogSection<T> {
+  id: string;
+  path: string;
+  features: T[];
+}
+
+/**
+ * 把功能依目錄的「區 › 模組」分組（授權摘要、群組的功能勾選、稽核的功能異動共用），組與組內都依目錄的
+ * 宣告順序，不論輸入順序（稽核快照的 ID 可能依字母排序）。不在目錄中的 ID（舊稽核、已移除的功能）
+ * 放在最後一組沒有標題的清單，照原樣顯示。
+ */
+export function catalogSections<T extends { id: string }>(
+  features: readonly T[],
+): CatalogSection<T>[] {
+  const sections = new Map<string, CatalogSection<T>>();
+  const unknown: T[] = [];
+  const ordered = [...features].sort(
+    (first, second) => catalogOrder(first.id) - catalogOrder(second.id),
+  );
+  for (const feature of ordered) {
+    const module = catalogModule(catalogFeature(feature.id)?.module ?? '');
+    if (!module) {
+      unknown.push(feature);
+      continue;
+    }
+    const section = sections.get(module.id) ?? {
+      id: module.id,
+      path: [catalogArea(module.area)?.name, module.name].filter(Boolean).join(' › '),
+      features: [],
+    };
+    section.features.push(feature);
+    sections.set(module.id, section);
+  }
+  const moduleOrder = (id: string) => CATALOG_MODULES.findIndex((module) => module.id === id);
+  return [
+    ...[...sections.values()].sort(
+      (first, second) => moduleOrder(first.id) - moduleOrder(second.id),
+    ),
+    ...(unknown.length ? [{ id: '', path: '', features: unknown }] : []),
+  ];
+}
+
+const featureOrder = new Map<string, number>(
+  CATALOG_FEATURES.map((item, index) => [item.id, index]),
+);
+function catalogOrder(id: string) {
+  return featureOrder.get(id) ?? Number.MAX_SAFE_INTEGER;
+}

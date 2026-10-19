@@ -1,14 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NavigationGroupDto } from '@core/api/schema';
-import {
-  navigationSections,
-  navigationTree,
-  type NavigationEntry,
-} from '@core/layout/navigation-tree';
+import { catalogSections } from '@core/api/catalog';
 
 /**
- * 依選單順序列出功能名稱，置於其選單群組的路徑之下。沒有 `groups` 時，每個功能都
- * 位於一份沒有標題的清單中。
+ * 依功能目錄的「區 › 模組」列出功能名稱，依目錄宣告順序。授權與選單位置無關，
+ * 所以不依側欄分群；不在目錄中的 ID（舊稽核）放在最後一組沒有標題的清單。
  */
 @Component({
   selector: 'nx-feature-summary',
@@ -31,9 +26,6 @@ import {
     }`,
 })
 export class FeatureSummary {
-  readonly features = input.required<readonly (NavigationEntry & { name: string })[]>();
-  readonly groups = input<readonly NavigationGroupDto[]>([]);
-  readonly sections = computed(() =>
-    navigationSections(navigationTree(this.features(), this.groups())),
-  );
+  readonly features = input.required<readonly { id: string; name: string }[]>();
+  readonly sections = computed(() => catalogSections(this.features()));
 }

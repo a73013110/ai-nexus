@@ -284,8 +284,8 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   await launcher.click();
   // Open replaces the page's panel, so the toggle raises the selected chip.
   await expect(launcher).not.toHaveCSS("box-shadow", "none");
-  // 管理員的存取管理與平台營運各拆成多頁（使用者、角色…、用量、價格、檢索），連結比拆分前多 5 個。
-  await expect(nav.getByRole("link")).toHaveCount(20);
+  // 管理員的存取管理與平台營運各拆成多頁（使用者、角色…、選單、用量、價格、檢索），連結比拆分前多 6 個。
+  await expect(nav.getByRole("link")).toHaveCount(21);
   await expect(
     nav.getByRole("link", { name: "檔案庫", exact: true }).last(),
   ).toBeVisible();

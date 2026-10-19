@@ -20,7 +20,7 @@ import {
   userAccountRequest,
   type UserAccountDraft,
 } from './user-account-fields';
-import { sameIds } from '@features/admin/access-control/roles/feature-order';
+import { sameIds } from '@features/admin/access-control/roles/same-ids';
 
 /** 草稿在檢視器的同一次開啟（`key`）內跟隨已儲存的值。 */
 type Keyed<T> = readonly [string | undefined, T];

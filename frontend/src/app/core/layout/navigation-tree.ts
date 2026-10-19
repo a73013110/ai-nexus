@@ -1,121 +1,99 @@
-import type { NavigationGroupDto } from '@core/api/schema';
+import type { NavigationNodeDto } from '@core/api/schema';
 import { ICON_NAMES } from '@shared/ui/icon';
 
-/** 選單需要功能的哪些欄位；`/me` 的功能與管理目錄都有。 */
-export interface NavigationEntry {
+/** 選單節點的種類；與後端 `NavigationItem` 的 Kind 相同。 */
+export type NavigationKind = 'group' | 'page' | 'link';
+
+/**
+ * 一個分群（或最上層，`id` 為空字串）扁平化成一個區段，供不巢狀的列表（Ctrl+K）使用。
+ * `entries` 只有直接放在這層的頁面與外部連結；子分群是自己的區段。
+ */
+export interface NavigationSection {
   id: string;
-  groupId?: string | null;
-  sortOrder: number;
-}
-
-/** 選單群組，含其自己的功能與子群組，各自依顯示順序排列。 */
-export interface NavigationNode<T> {
-  group: NavigationGroupDto;
-  features: T[];
-  groups: NavigationNode<T>[];
-}
-
-/** 選單最上層：先是沒有群組的功能，接著是最上層群組。 */
-export interface NavigationTree<T> {
-  features: T[];
-  groups: NavigationNode<T>[];
-}
-
-/** 一個群組（或最上層，`id` 為空字串）扁平化成一個區段，供不巢狀的列表使用。 */
-export interface NavigationSection<T> {
-  id: string;
-  /** 群組名稱；最上層則為 `topName`。 */
+  /** 分群名稱；最上層則為 `topName`。 */
   name: string;
-  /** 祖先名稱加上群組自己的名稱；扁平列表仍要能分辨巢狀群組。 */
+  /** 祖先名稱加上分群自己的名稱；扁平列表仍要能分辨巢狀分群。 */
   path: string;
   depth: number;
-  features: T[];
+  entries: NavigationNodeDto[];
 }
 
-const byOrder = (
-  first: { sortOrder: number; id: string },
-  second: { sortOrder: number; id: string },
-) =>
-  first.sortOrder - second.sortOrder || (first.id < second.id ? -1 : first.id > second.id ? 1 : 0);
+/** 一層子節點依原順序切成連續的項目（頁面、連結）與分群，啟動器才能把相鄰項目排成同一格狀區塊。 */
+export type NavigationRun =
+  | { kind: 'entries'; key: string; nodes: NavigationNodeDto[] }
+  | { kind: 'group'; key: string; node: NavigationNodeDto };
 
-/**
- * 由 API 的扁平列表建立選單。每一層都是功能在前、子群組在後，
- * 各自依 `sortOrder`，再依 id 排序（與伺服器列出的順序相同）。上層未知的功能或群組放在最上層，
- * 因此不會因為過期的參照而隱藏已授權的內容；循環中的群組也以同樣方式處理。
- * 子樹中沒有功能的群組會被丟棄，除非 `keepEmpty`（管理員的編輯器會顯示所有群組）。
- */
-export function navigationTree<T extends NavigationEntry>(
-  features: readonly T[],
-  groups: readonly NavigationGroupDto[],
-  { keepEmpty = false } = {},
-): NavigationTree<T> {
-  const known = new Map(groups.map((group) => [group.id, group]));
-  const parentOf = (group: NavigationGroupDto) =>
-    group.parentId && known.has(group.parentId) && !inCycle(group, known) ? group.parentId : '';
-  const childGroups = new Map<string, NavigationGroupDto[]>();
-  for (const group of groups) push(childGroups, parentOf(group), group);
-  const childFeatures = new Map<string, T[]>();
-  for (const feature of features)
-    push(
-      childFeatures,
-      feature.groupId && known.has(feature.groupId) ? feature.groupId : '',
-      feature,
-    );
-
-  const build = (group: NavigationGroupDto): NavigationNode<T> | null => {
-    const node: NavigationNode<T> = {
-      group,
-      features: [...(childFeatures.get(group.id) ?? [])].sort(byOrder),
-      groups: nodes(group.id),
-    };
-    return keepEmpty || node.features.length || node.groups.length ? node : null;
-  };
-  const nodes = (parent: string): NavigationNode<T>[] =>
-    [...(childGroups.get(parent) ?? [])]
-      .sort(byOrder)
-      .map(build)
-      .filter((node): node is NavigationNode<T> => !!node);
-  return { features: [...(childFeatures.get('') ?? [])].sort(byOrder), groups: nodes('') };
+/** 選單中可以開啟的頁面（釘選的單位仍是功能 ID）。 */
+export interface NavigationPage {
+  id: string;
+  name: string;
+  route: string;
+  icon: string;
 }
 
+export const isGroup = (node: NavigationNodeDto) => node.kind === 'group';
+export const isLink = (node: NavigationNodeDto) => node.kind === 'link';
+
 /**
- * 依選單順序（深度優先）回傳區段樹。第一個區段是最上層，名稱為
- * `topName`；沒有功能時會省略，除非 `keepTop`。
+ * 依選單順序（深度優先）回傳區段。`/me` 的 `navigation` 已由伺服器修剪（未授權的頁面、看不到的連結、
+ * 空分群都已移除，只剩一個子節點的分群已攤平），這裡只負責排成扁平列表，不重新判斷可見性。
+ * 第一個區段是最上層，名稱為 `topName`；沒有項目時會省略，除非 `keepTop`。
  */
-export function navigationSections<T>(
-  tree: NavigationTree<T>,
+export function navigationSections(
+  nodes: readonly NavigationNodeDto[],
   { topName = '', keepTop = false } = {},
-): NavigationSection<T>[] {
-  const sections: NavigationSection<T>[] = [];
-  if (keepTop || tree.features.length)
-    sections.push({ id: '', name: topName, path: topName, depth: 0, features: tree.features });
-  const visit = (node: NavigationNode<T>, depth: number, trail: string[]) => {
-    const path = [...trail, node.group.name];
+): NavigationSection[] {
+  const sections: NavigationSection[] = [];
+  const top = nodes.filter((node) => !isGroup(node));
+  if (keepTop || top.length)
+    sections.push({ id: '', name: topName, path: topName, depth: 0, entries: top });
+  const visit = (node: NavigationNodeDto, depth: number, trail: string[]) => {
+    const path = [...trail, node.name];
     sections.push({
-      id: node.group.id,
-      name: node.group.name,
+      id: node.id,
+      name: node.name,
       path: path.join(' › '),
       depth,
-      features: node.features,
+      entries: node.children.filter((child) => !isGroup(child)),
     });
-    for (const child of node.groups) visit(child, depth + 1, path);
+    for (const child of node.children) if (isGroup(child)) visit(child, depth + 1, path);
   };
-  for (const node of tree.groups) visit(node, 0, []);
+  for (const node of nodes) if (isGroup(node)) visit(node, 0, []);
   return sections;
 }
 
-/** 群組與其所有子孫的 id；群組不能移到其中任何一個之下。 */
-export function descendantIds(groups: readonly NavigationGroupDto[], id: string): Set<string> {
-  const ids = new Set([id]);
-  for (let grown = true; grown;) {
-    grown = false;
-    for (const group of groups)
-      if (group.parentId && ids.has(group.parentId) && !ids.has(group.id)) {
-        ids.add(group.id);
-        grown = true;
-      }
+/** 把一層子節點切成連續項目與分群（見 `NavigationRun`），不改變順序。 */
+export function navigationRuns(nodes: readonly NavigationNodeDto[]): NavigationRun[] {
+  const runs: NavigationRun[] = [];
+  for (const node of nodes) {
+    const last = runs.at(-1);
+    if (isGroup(node)) runs.push({ kind: 'group', key: node.id, node });
+    else if (last?.kind === 'entries') last.nodes.push(node);
+    else runs.push({ kind: 'entries', key: 'entries:' + node.id, nodes: [node] });
   }
-  return ids;
+  return runs;
+}
+
+/** 深度優先的每個節點；Ctrl+K 執行指令時由節點 ID 找回它。 */
+export function navigationNodes(nodes: readonly NavigationNodeDto[]): NavigationNodeDto[] {
+  return nodes.flatMap((node) => [node, ...navigationNodes(node.children)]);
+}
+
+/**
+ * 選單中的頁面，同一功能只取第一次出現的位置。管理員可以把同一頁面放在不同分群，
+ * 但釘選與「目前頁面」都以功能為單位，只能對應一個項目。
+ */
+export function navigationPages(nodes: readonly NavigationNodeDto[]): NavigationPage[] {
+  const pages = new Map<string, NavigationPage>();
+  for (const node of navigationNodes(nodes))
+    if (node.kind === 'page' && node.featureId && node.route && !pages.has(node.featureId))
+      pages.set(node.featureId, {
+        id: node.featureId,
+        name: node.name,
+        route: node.route,
+        icon: node.icon ?? '',
+      });
+  return [...pages.values()];
 }
 
 /** 選單能繪製的圖示名稱：已知時用 API 的值，否則用一個中性的備用圖示。 */
@@ -123,18 +101,12 @@ export function featureIcon(icon: string | null | undefined): string {
   return icon && ICON_NAMES.has(icon) ? icon : 'document';
 }
 
-function push<K, V>(map: Map<K, V[]>, key: K, value: V) {
-  const list = map.get(key);
-  if (list) list.push(value);
-  else map.set(key, [value]);
-}
-
-function inCycle(group: NavigationGroupDto, known: ReadonlyMap<string, NavigationGroupDto>) {
-  const seen = new Set<string>();
-  for (let current: NavigationGroupDto | undefined = group; current?.parentId;) {
-    if (seen.has(current.id)) return true;
-    seen.add(current.id);
-    current = known.get(current.parentId);
-  }
-  return false;
+/**
+ * 節點的圖示：頁面用目錄圖示；外部連結沒有設定（或前端不認得）時用外部連結圖示，
+ * 讓它即使只顯示圖示也看得出會離開本站；分群沒有設定時不顯示圖示（`null`）。
+ */
+export function navigationIcon(node: NavigationNodeDto): string | null {
+  if (node.kind === 'page') return featureIcon(node.icon);
+  const known = node.icon && ICON_NAMES.has(node.icon) ? node.icon : null;
+  return node.kind === 'link' ? (known ?? 'external') : known;
 }

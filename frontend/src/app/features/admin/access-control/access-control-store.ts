@@ -5,8 +5,8 @@ import { ToastService } from '@shared/ui/toast-service';
 import { AccessControlApi } from './access-control-api';
 
 /**
- * 頁面提供（`providers`）的存取目錄：角色、功能群組、功能與選單分群。存取控制三頁與使用者頁各自提供一份，
- * 頁面內的表格與編輯器共用它。
+ * 頁面提供（`providers`）的存取目錄：角色、功能群組與功能。存取控制各頁與使用者頁各自提供一份，
+ * 頁面內的表格與編輯器共用它；選單頁用它取得功能名稱與可見群組的選項。
  */
 @Injectable()
 export class AccessControlStore {
@@ -19,13 +19,12 @@ export class AccessControlStore {
       'access-control.roles',
       'access-control.groups',
       'access-control.features',
+      'access-control.navigation',
     ],
     freshAccount: true,
     loader: () => this.api.catalog(),
   });
   readonly catalog = computed(() => this.catalogRead.value() ?? null);
-  /** 每個選單群組，包括空的：編輯器用來排列，摘要則依群組分類。 */
-  readonly navigationGroups = computed(() => this.catalog()?.navigationGroups ?? []);
   readonly loading = this.catalogRead.loading;
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.catalogRead.error());
@@ -41,9 +40,8 @@ export class AccessControlStore {
     this.catalogRead.reload();
     void this.session.load(true);
   }
-  /** 功能或選單群組已移動：重新讀取目錄與此帳號的導覽（側邊欄）。 */
-  reordered() {
-    this.catalogRead.reload();
+  /** 選單已改變：只重新讀取此帳號的導覽（側邊欄），目錄不受影響。 */
+  navigationChanged() {
     void this.session.load(true);
   }
   roleNames(ids: string[]) {

@@ -1,34 +1,56 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { NavigationNodeDto } from '@core/api/schema';
 import { catalogFeature } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { NavigationPreferences } from './navigation-preferences';
 
-// 預設的選單：每個功能的群組與位置，與 `/me` 回報的相同。
-const MENU: Record<string, [string | null, number]> = {
-  dashboard: [null, 5],
-  chat: ['work', 10],
-  files: ['work', 20],
-  sharing: ['collaboration', 50],
-  jobs: ['collaboration', 55],
-  'identity.users': ['system', 90],
-  audit: ['system', 97],
-};
-const navigationGroups = [
-  { id: 'work', parentId: null, name: 'AI 工作台', sortOrder: 10 },
-  { id: 'collaboration', parentId: null, name: '協作', sortOrder: 20 },
-  { id: 'system', parentId: null, name: '系統管理', sortOrder: 30 },
-];
-const feature = (id: string) => ({
+const page = (featureId: string, id = featureId): NavigationNodeDto => ({
   id,
-  name: id,
-  route: catalogFeature(id)?.route ?? '',
-  groupId: MENU[id][0],
-  sortOrder: MENU[id][1],
-  icon: id,
+  kind: 'page',
+  name: featureId,
+  icon: featureId,
+  featureId,
+  route: catalogFeature(featureId)?.route ?? '',
+  url: null,
+  openInNewTab: false,
+  children: [],
 });
-const access = (ids: string[]) => ({ features: ids.map(feature), navigationGroups });
+const group = (id: string, children: NavigationNodeDto[]): NavigationNodeDto => ({
+  id,
+  kind: 'group',
+  name: id,
+  icon: null,
+  featureId: null,
+  route: null,
+  url: null,
+  openInNewTab: false,
+  children,
+});
+const wiki: NavigationNodeDto = {
+  ...page('wiki'),
+  kind: 'link',
+  featureId: null,
+  route: null,
+  url: 'https://wiki.example.com/',
+};
+// 伺服器已修剪的樹：只會有帳號能開啟的頁面（見 `NavigationTree`）。
+const access = (ids: string[]) => {
+  const has = (id: string) => ids.includes(id);
+  const work = ['chat', 'files'].filter(has).map((id) => page(id));
+  const collaboration = ['sharing', 'jobs'].filter(has).map((id) => page(id));
+  const system = ['identity.users', 'audit'].filter(has).map((id) => page(id));
+  return {
+    navigation: [
+      ...(has('dashboard') ? [page('dashboard')] : []),
+      ...(work.length ? [group('work', work)] : []),
+      ...(collaboration.length ? [group('collaboration', collaboration)] : []),
+      wiki,
+      ...(system.length ? [group('system', system)] : []),
+    ],
+  };
+};
 
 function setup(ids: string[]) {
   const me = signal({ id: 'user-1', access: access(ids) });
@@ -43,16 +65,25 @@ describe('navigation preferences', () => {
     TestBed.resetTestingModule();
     localStorage.clear();
   });
-  it('builds the menu tree from the features with a page', () => {
-    const { preferences } = setup(['identity.users', 'files', 'dashboard']);
-    const tree = preferences.tree();
-    expect(tree.features.map((item) => item.id)).toEqual(['dashboard']);
-    expect(
-      tree.groups.map((item2) => [item2.group.id, item2.features.map((file) => file.id)]),
-    ).toEqual([
-      ['work', ['files']],
-      ['system', ['identity.users']],
+  it('uses the server tree and offers each page once as a pin candidate, never a link', () => {
+    const { preferences, me } = setup(['identity.users', 'files', 'dashboard']);
+    expect(preferences.tree().map((node) => node.id)).toEqual([
+      'dashboard',
+      'work',
+      'wiki',
+      'system',
     ]);
+    me.set({
+      id: 'user-1',
+      access: {
+        navigation: [page('files'), group('more', [page('files', 'more.files'), wiki])],
+      },
+    });
+    expect(preferences.pages().map((item) => [item.id, item.route])).toEqual([
+      ['files', '/work/files'],
+    ]);
+    preferences.toggle('wiki');
+    expect(preferences.has('wiki')).toBe(false);
   });
   it('pins only the default features the account can open', () => {
     const { preferences } = setup([
@@ -64,6 +95,7 @@ describe('navigation preferences', () => {
       'dashboard',
     ]);
     expect(preferences.ids()).toEqual(['chat', 'files']);
+    expect(preferences.pinned().map((item) => item.name)).toEqual(['chat', 'files']);
     expect(preferences.display()).toBe('icons');
   });
   it('saves per account, stops at five and keeps pins the account cannot open', () => {

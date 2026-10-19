@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
-import type { AuditDto, FeatureDto, ModelDto, NavigationGroupDto } from '@core/api/schema';
+import type { AuditDto, FeatureDto, ModelDto } from '@core/api/schema';
 import { catalogFeature, routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -107,10 +107,6 @@ export class ActivityAuditPage {
   });
   private readonly catalog = computed(() => this.catalogRead.value());
   readonly features = computed<readonly FeatureDto[]>(() => this.catalog()?.features ?? []);
-  /** 全部選單分群，讓功能異動依選單順序、分群顯示（與「功能與選單」頁相同）。 */
-  readonly navigationGroups = computed<readonly NavigationGroupDto[]>(
-    () => this.catalog()?.navigationGroups ?? [],
-  );
   readonly models = computed<readonly ModelDto[]>(() => this.catalog()?.models ?? []);
   readonly modelNames = computed(() =>
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
@@ -282,9 +278,7 @@ export class ActivityAuditPage {
           // 此帳號沒有授權的功能不在 `/me`，名稱與圖示取自目錄；不認得的 ID 原樣顯示。
           name: catalogFeature(id)?.name || id,
           route: catalogFeature(id)?.route ?? '',
-          groupId: null,
           icon: catalogFeature(id)?.icon ?? '',
-          sortOrder: 0,
         },
     );
   }

@@ -1,0 +1,168 @@
+<div class="page-toolbar">
+  <p class="form-note">
+    側欄依這裡的順序與層級顯示（最多四層），每個人只看到有權限的頁面與可見的外部連結；空分群不顯示，只剩一項的分群直接顯示該項。拖曳把手或在把手上按方向鍵調整位置。
+  </p>
+  <nx-action-menu
+    label="新增選單項目"
+    triggerLabel="新增"
+    icon="plus"
+    [items]="additions"
+    (action)="add($event)"
+  />
+</div>
+<nx-data-table
+  class="admin-access-table navigation-table"
+  label="選單項目列表"
+  [stacked]="true"
+  [busy]="saving()"
+>
+  <div table-toolbar class="ui-table-toolbar">
+    <h2>
+      選單 <span class="ui-count-label">{{ store.items().length }} 項</span>
+    </h2>
+    @if (saving()) {
+      <span class="form-note" role="status">正在儲存…</span>
+    }
+  </div>
+  <table>
+    <colgroup>
+      <col class="navigation-handle-column" />
+      <col class="navigation-name-column" />
+      <col class="navigation-kind-column" />
+      <col />
+      <col class="admin-row-action-column" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col"><span class="sr-only">移動</span></th>
+        <th scope="col">名稱</th>
+        <th scope="col">種類</th>
+        <th scope="col">內容</th>
+        <th scope="col"><span class="sr-only">操作</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.item.id) {
+        <tr
+          nxTableRow
+          [attr.data-item]="row.item.id"
+          [attr.data-depth]="row.depth"
+          [class.is-dragging]="dragging() === row.item.id"
+          [class.is-drop-target]="dropInto() === row.item.id"
+          [class.is-group]="row.item.kind === 'group'"
+          (rowActivate)="edit.emit(row.item)"
+        >
+          <td data-stack="hide">
+            <button
+              type="button"
+              class="icon-button navigation-handle"
+              title="拖曳或按方向鍵調整位置"
+              [attr.data-handle]="row.item.id"
+              [attr.aria-label]="
+                '移動「' + row.name + '」，上下鍵調整順序，左鍵移出分群，右鍵移入上方分群'
+              "
+              [attr.aria-disabled]="busy()"
+              (pointerdown)="grab($event, row)"
+              (keydown)="key($event, row)"
+            >
+              <nx-icon name="grip" />
+            </button>
+          </td>
+          <td>
+            <div class="navigation-name" [style.--depth]="row.depth">
+              <nx-icon [name]="icon(row.item)" />
+              <button
+                type="button"
+                class="ui-table-link admin-table-name"
+                data-row-action
+                aria-haspopup="dialog"
+                [attr.aria-label]="'編輯' + kindLabel(row.item.kind) + '：' + row.name"
+                (click)="edit.emit(row.item)"
+              >
+                <span class="ui-truncate" [title]="row.name">{{ row.name }}</span>
+              </button>
+              @if (row.path) {
+                <small class="ui-truncate" [title]="row.path">{{ row.path }}</small>
+              }
+            </div>
+          </td>
+          <td data-label="種類">
+            <nx-status-badge [tone]="row.item.kind === 'link' ? 'info' : 'neutral'">{{
+              kindLabel(row.item.kind)
+            }}</nx-status-badge>
+          </td>
+          <td data-label="內容">
+            @switch (row.item.kind) {
+              @case ('group') {
+                <span class="form-note">{{
+                  row.children ? row.children + ' 個項目' : '空分群（不會顯示）'
+                }}</span>
+              }
+              @case ('page') {
+                <span
+                  class="ui-truncate ui-table-code navigation-detail"
+                  [title]="row.item.featureId"
+                  >{{ row.item.featureId }}</span
+                >
+                @if (store.disabled(row.item)) {
+                  <small class="navigation-warning">功能已停用，不會出現在選單</small>
+                }
+              }
+              @default {
+                <span class="ui-truncate ui-table-code navigation-detail" [title]="row.item.url">{{
+                  row.item.url
+                }}</span>
+                <small class="ui-truncate" [title]="audience(row.item)"
+                  >{{ row.item.openInNewTab ? '開新分頁' : '同分頁開啟' }} · 可見：{{
+                    audience(row.item)
+                  }}</small
+                >
+              }
+            }
+          </td>
+          <td data-stack="end">
+            <button
+              #trigger
+              type="button"
+              class="icon-button"
+              aria-haspopup="menu"
+              [attr.aria-label]="'選單項目操作：' + row.name"
+              [attr.aria-expanded]="isMenuOpen(trigger)"
+              (click)="openMenu(row, trigger)"
+            >
+              <nx-icon name="more" />
+            </button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="form-note">選單還沒有任何項目，從「新增」開始。</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</nx-data-table>
+<nx-menu-panel label="選單項目操作" [items]="actions()" (action)="act($event)" />
+<p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+<dialog nxCompactDialog #moveDialog class="platform-dialog" size="sm" (close)="moving.set(null)">
+  @if (moving(); as m) {
+    <form class="dialog-form" (submit)="confirmMove($event)">
+      <nx-dialog-header [heading]="'移動：' + m.row.name" closeLabel="關閉移動" />
+      <div class="dialog-body">
+        <label
+          >移到<nx-select
+            label="移到"
+            [options]="destinations()"
+            [value]="m.parentId"
+            (valueChange)="moving.set({ row: m.row, parentId: $event })"
+        /></label>
+        <p class="form-note">放在該層的最後；分群最多四層，同一層不能重複同一頁面。</p>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="secondary-button" (click)="moveDialog.close()">取消</button>
+        <button type="submit" class="primary-button" [disabled]="busy()">移動</button>
+      </footer>
+    </form>
+  }
+</dialog>
+<nx-confirm-dialog />

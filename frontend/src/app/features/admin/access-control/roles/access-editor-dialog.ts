@@ -15,17 +15,11 @@ import type {
   AdminGroupDto,
   AdminRoleDto,
   GroupPolicyRequest,
-  NavigationGroupDto,
 } from '@core/api/schema';
-import { catalogFeature } from '@core/api/catalog';
+import { catalogFeature, catalogSections } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
-import {
-  descendantIds,
-  featureIcon,
-  navigationSections,
-  navigationTree,
-} from '@core/layout/navigation-tree';
+import { featureIcon } from '@core/layout/navigation-tree';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
@@ -37,13 +31,12 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
-import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AccessControlApi } from '../access-control-api';
 import { AccessControlStore } from '../access-control-store';
 import { FeatureSummary } from './feature-summary';
-import { nextSortOrder, sameIds } from './feature-order';
+import { sameIds } from './same-ids';
 import {
   ModelPolicyEditor,
   modelPolicyDraft,
@@ -52,12 +45,9 @@ import {
   type ModelPolicyDraft,
 } from '@features/platform/inference/model-policies/model-policy-editor';
 
-/**
- * 使用者在使用者檢視器中編輯、在 `AdminUserCreateDialog` 中建立。`menu` 是導覽群組：只整理選單、
- * 不授予任何權限。
- */
-export type AccessKind = 'role' | 'group' | 'feature' | 'menu';
-export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto | NavigationGroupDto;
+/** 使用者在使用者檢視器中編輯、在 `AdminUserCreateDialog` 中建立；側欄選單在選單頁編輯。 */
+export type AccessKind = 'role' | 'group' | 'feature';
+export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
 type GroupSection = 'settings' | 'models';
 interface Editor {
   kind: AccessKind;
@@ -70,10 +60,6 @@ interface Editor {
   ids: string[];
   modelPolicy: ModelPolicyDraft;
   storage: string;
-  /** 保留原狀：順序在功能清單上調整。 */
-  order: number;
-  /** 功能所屬的選單群組，或群組的上層；空字串代表最上層。 */
-  placement: string;
   /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
   defaultName: string;
   isNew: boolean;
@@ -87,8 +73,7 @@ function sameEditor(first: Editor, second: Editor) {
     first.enabled === second.enabled &&
     sameIds(first.ids, second.ids) &&
     sameModelPolicy(first.modelPolicy, second.modelPolicy) &&
-    first.storage.trim() === second.storage.trim() &&
-    first.placement === second.placement
+    first.storage.trim() === second.storage.trim()
   );
 }
 
@@ -121,7 +106,6 @@ let sequence = 0;
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
-    Select,
     Tabs,
     ViewMotion,
   ],
@@ -171,20 +155,16 @@ export class AccessEditorDialog {
     role: '停用後，擁有此角色的使用者不再取得它的功能群組。',
     group: '停用後不授予功能、模型或附件容量。',
     feature: '停用後任何群組都不會授予此功能。',
-    menu: '',
   };
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly injector = inject(Injector);
-  /** 群組授予功能，清單由選單的群組列出。 */
+  /** 群組授予功能，依功能目錄的區 › 模組分類；授權與側欄怎麼排無關。 */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
-    navigationSections(
-      navigationTree(this.store.catalog()?.features || [], this.store.navigationGroups()),
-      { topName: '最上層' },
-    ).map((section) => ({
-      id: section.id || 'top',
-      name: section.path,
+    catalogSections(this.store.catalog()?.features || []).map((section) => ({
+      id: section.id || 'other',
+      name: section.path || '其他',
       options: section.features.map((feature) => ({
         id: feature.id,
         label: feature.name + (feature.enabled ? '' : '（停用）'),
@@ -204,23 +184,6 @@ export class AccessEditorDialog {
       })),
     },
   ]);
-  /**
-   * 功能或選單群組可以移到的位置：最上層或任一群組，以路徑顯示。群組不能移到自己或自己的子群組之下。
-   */
-  readonly placements = computed<SelectOption[]>(() => {
-    const event2 = this.editor(),
-      groups = this.store.navigationGroups();
-    const excluded =
-      event2?.kind === 'menu' && !event2.isNew
-        ? descendantIds(groups, event2.id)
-        : new Set<string>();
-    return [
-      { value: '', label: '最上層（不分群）' },
-      ...navigationSections(navigationTree([], groups, { keepEmpty: true }))
-        .filter((section) => !excluded.has(section.id))
-        .map((section) => ({ value: section.id, label: section.path })),
-    ];
-  });
   readonly icon = featureIcon;
   /** 圖示來自功能目錄，編輯器只顯示。 */
   catalogIcon(id: string) {
@@ -244,9 +207,8 @@ export class AccessEditorDialog {
     this.editorError.set('');
     const role = kind === 'role' ? (item as AdminRoleDto) : null,
       group = kind === 'group' ? (item as AdminGroupDto) : null,
-      feature = kind === 'feature' ? (item as AdminFeatureDto) : null,
-      menu = kind === 'menu' ? (item as NavigationGroupDto) : null;
-    const name = role?.name || group?.name || feature?.name || menu?.name || '';
+      feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
+    const name = role?.name || group?.name || feature?.name || '';
     const draft: Editor = {
       kind,
       id: item?.id || '',
@@ -261,8 +223,6 @@ export class AccessEditorDialog {
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
           : storageLimitGb(group.policy.storedAttachmentLimitBytes),
-      order: feature?.sortOrder ?? menu?.sortOrder ?? 0,
-      placement: feature?.groupId ?? menu?.parentId ?? '',
       defaultName: (feature && catalogFeature(feature.id)?.name) || '',
       isNew: !item,
     };
@@ -361,53 +321,20 @@ export class AccessEditorDialog {
         await this.api.feature(event5.id, {
           name: featureNameOverride(event5.name, event5.defaultName),
           enabled: event5.enabled,
-          // 移到其他群組的功能，放到該群組的最後。
-          sortOrder: this.order(event5, () =>
-            (this.store.catalog()?.features ?? []).filter(
-              (item) => (item.groupId ?? '') === event5.placement && item.id !== event5.id,
-            ),
-          ),
-          groupId: event5.placement || null,
         });
-      if (event5.kind === 'menu') {
-        const body = {
-          name: event5.name,
-          parentId: event5.placement || null,
-          // 新的群組，或移到另一個上層之下的群組，放在新的同層兄弟之後。
-          sortOrder: this.order(event5, () =>
-            this.store
-              .navigationGroups()
-              .filter(
-                (item) => (item.parentId ?? '') === event5.placement && item.id !== event5.id,
-              ),
-          ),
-        };
-        if (event5.isNew) await this.api.createNavigationGroup({ id: event5.id, ...body });
-        else await this.api.updateNavigationGroup(event5.id, body);
-      }
       this.opened.set(event5);
       this.dialog().nativeElement.close();
-      if (event5.kind === 'menu') {
-        this.store.toast.success(event5.isNew ? '已建立選單分群' : '已儲存', '側欄選單已更新。');
-        this.store.reordered();
-      } else
-        this.store.saved(
-          event5.isNew ? '已建立' + this.label(event5.kind) : '已儲存',
-          '授權變更會在下一次操作生效。',
-        );
+      this.store.saved(
+        event5.isNew ? '已建立' + this.label(event5.kind) : '已儲存',
+        '授權變更會在下一次操作生效。',
+      );
     } catch (error) {
       this.editorError.set(safeMessage(error));
     } finally {
       this.saving.set(false);
     }
   }
-  /** 已儲存的位置；若位置有變，則是新上層清單的末尾。 */
-  private order(event6: Editor, siblings: () => readonly { sortOrder: number }[]) {
-    return !event6.isNew && event6.placement === this.opened()?.placement
-      ? event6.order
-      : nextSortOrder(siblings());
-  }
   label(kind: AccessKind) {
-    return ({ role: '角色', group: '功能群組', feature: '功能', menu: '選單分群' } as const)[kind];
+    return ({ role: '角色', group: '功能群組', feature: '功能' } as const)[kind];
   }
 }

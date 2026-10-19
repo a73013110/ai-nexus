@@ -16,8 +16,9 @@ import {
   openSettings,
   expectViewportContained,
   toasts,
-  FIXTURE_NAVIGATION_GROUPS,
-  withMenu,
+  featureDto,
+  navigationTree,
+  SEEDED_NAVIGATION,
   routeOf,
   featureOf,
   catalogName,
@@ -395,11 +396,10 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     });
   state.catalog.groups![1].enabled = false;
   state.catalog.features.push(
-    withMenu({
+    featureDto({
       id: "diagnostics.logs.export",
       name: "日誌匯出",
       route: "",
-      sortOrder: 95,
       enabled: true,
     }),
   );
@@ -427,26 +427,36 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(tabs.getByRole("link")).toHaveText([
     "角色",
     "功能群組與模型",
-    "功能與選單",
+    "功能",
+    "選單",
   ]);
   await expect(
-    tabs.getByRole("link", { name: "功能與選單", exact: true }),
+    tabs.getByRole("link", { name: "功能", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   const features = page.locator(".admin-features-table");
   await expect(
-    features.getByRole("region", { name: "功能配置列表" }),
+    features.getByRole("region", { name: "功能列表" }),
   ).toBeVisible();
   // Like roles and groups: the name over its id, then the status; the route takes the rest.
+  // 排序與分群在選單頁，這裡沒有把手或排序選單，依目錄順序列出。
+  await expect(features.locator(".ui-table-row .admin-table-name")).toHaveText([
+    "對話",
+    "檔案庫",
+    "使用者",
+    "活動稽核",
+    "日誌匯出",
+  ]);
   const chat = features.locator('tr[data-feature="chat"]');
-  await expect(chat.locator("td").nth(1)).toHaveText(/對話\s*chat/);
-  await expect(chat.locator("td").nth(2).locator("nx-status-badge")).toHaveText(
+  await expect(chat.locator("td").nth(0)).toHaveText(/對話\s*chat/);
+  await expect(chat.locator("td").nth(1).locator("nx-status-badge")).toHaveText(
     "啟用",
   );
-  await expect(chat.locator("td").nth(3)).toHaveText("/work/chat");
+  await expect(chat.locator("td").nth(2)).toHaveText("/work/chat");
+  await expect(chat.getByRole("button", { name: /^移動/ })).toHaveCount(0);
   const permission = features.locator(
     'tr[data-feature="diagnostics.logs.export"]',
   );
-  await expect(permission.locator("td").nth(3)).toHaveText("無頁面，僅權限");
+  await expect(permission.locator("td").nth(2)).toHaveText("無頁面，僅權限");
   await permission
     .getByRole("button", { name: "編輯功能：日誌匯出", exact: true })
     .click();
@@ -470,17 +480,12 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   ).toContainText("chat · /work/chat");
   await expect(editor.locator(".panel-eyebrow")).toHaveCount(0);
   expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(450);
-  // Name, switch, menu group and icon: still a short dialog.
+  // Name and switch only: still a short dialog.
   expect((await editor.boundingBox())!.height).toBeLessThan(600);
   await page.route("**/api/v1/admin/features/chat", async (route) => {
     const body = route.request().postDataJSON();
-    // The order is moved on the list; the dialog keeps it as it is.
-    expect(body).toEqual({
-      name: "AI 對話",
-      sortOrder: 10,
-      enabled: true,
-      groupId: "work",
-    });
+    // 功能只剩名稱與開關；選單位置在選單頁。
+    expect(body).toEqual({ name: "AI 對話", enabled: true });
     Object.assign(
       state.catalog.features.find((feature) => feature.id === "chat")!,
       body,
@@ -488,6 +493,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     await route.fulfill({ status: 204 });
   });
   await expect(editor.getByLabel("顯示順序", { exact: true })).toHaveCount(0);
+  await expect(editor.getByLabel("選單分群", { exact: true })).toHaveCount(0);
   await editor.getByLabel("名稱", { exact: true }).fill("AI 對話");
   await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
   await expect(editor).not.toBeVisible();
@@ -592,7 +598,11 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   ]);
   // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
-  const work = editor.getByRole("group", { name: "AI 工作台", exact: true });
+  // 功能依目錄的區 › 模組分卡，與授權摘要相同（不依側欄分群）。
+  const work = editor.getByRole("group", {
+    name: "AI 工作台 › 對話",
+    exact: true,
+  });
   await expect(work).toHaveCSS("border-left-style", "solid");
   await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
   await editor
@@ -661,7 +671,7 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
       "基本工作區",
       "編輯功能群組：基本工作區",
     ],
-    ["功能與選單", ".admin-features-table", "檔案庫", "編輯功能：檔案庫"],
+    ["功能", ".admin-features-table", "檔案庫", "編輯功能：檔案庫"],
   ] as const) {
     // 使用者是自己的頁面；存取控制的三頁以連結列切換。
     const links = page.getByRole("navigation", {
@@ -676,10 +686,11 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
     await settleEntrance(page);
     const list = page.locator(table);
     await contained(list);
+    // 功能表的第三欄（路由）在卡片中收起，點狀態欄。
     await list
       .locator(".ui-table-row", { hasText: row })
       .locator("td")
-      .nth(2)
+      .nth(table === ".admin-features-table" ? 1 : 2)
       .click();
     await expect(
       page.getByRole("dialog", { name: title, exact: true }),
@@ -700,375 +711,368 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
       .click();
     await expect(editor).not.toBeVisible();
   }
-  // Moving a feature on a phone goes through the card's menu; the drag handle is left out.
+  // 選單在手機上也是卡片；拖曳把手收起，移動走列的選單。
+  await page
+    .getByRole("navigation", { name: "存取控制頁面", exact: true })
+    .getByRole("link", { name: "選單", exact: true })
+    .click();
+  await settleEntrance(page);
+  await contained(page.locator(".navigation-table"));
   await expect(
-    page.getByRole("button", { name: "移動「對話」，用上下鍵調整順序" }),
+    page.getByRole("button", { name: /^移動「對話」/ }),
   ).toBeHidden();
   await expect(
-    page.getByRole("button", { name: "調整功能：對話", exact: true }),
+    page.getByRole("button", { name: "選單項目操作：對話", exact: true }),
   ).toBeVisible();
 });
 
-test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變動的順序並在失敗時還原", async ({
+/** 選單表中某分群（或最上層，`null`）直接的子節點名稱，依畫面順序。 */
+function menuLevel(page: Page, group: string | null) {
+  return page.locator(".navigation-table").evaluate((table, group) => {
+    const rows = [...table.querySelectorAll<HTMLElement>("tr[data-item]")];
+    const start = group
+      ? rows.findIndex((row) => row.dataset["item"] === group)
+      : -1;
+    const depth = group ? Number(rows[start].dataset["depth"]) : -1;
+    const names: string[] = [];
+    for (const row of rows.slice(start + 1)) {
+      const current = Number(row.dataset["depth"]);
+      if (current <= depth) break;
+      if (current === depth + 1)
+        names.push(row.querySelector(".admin-table-name")!.textContent!.trim());
+    }
+    return names;
+  }, group);
+}
+
+test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出並在失敗時還原", async ({
   page,
 }) => {
   const state = await administration(page);
-  // 總覽 is seeded at the top level; this test places it in the work group to move four rows.
-  state.catalog.features.push(
-    withMenu({
-      id: "dashboard",
-      name: "總覽",
-      route: "/work/dashboard",
-      sortOrder: 5,
-      enabled: true,
-      groupId: "work",
-    }),
-    withMenu({
-      id: "knowledge",
-      name: "知識庫",
-      route: "/work/knowledge",
-      sortOrder: 30,
-      enabled: true,
-    }),
-  );
-  const puts: { id: string; body: unknown }[] = [];
   let me = 0;
   page.on("request", (request) => {
-    const url = new URL(request.url());
-    if (url.pathname === "/api/v1/me") me++;
-    if (
-      request.method() === "PUT" &&
-      url.pathname.startsWith("/api/v1/admin/features/")
-    )
-      puts.push({
-        id: url.pathname.split("/").at(-1)!,
-        body: request.postDataJSON(),
-      });
+    if (new URL(request.url()).pathname === "/api/v1/me") me++;
   });
-  await page.goto(routeOf("access-control.features"));
-  const table = page.locator(".admin-features-table");
-  const work = table.locator('tbody[data-section="work"]');
-  const names = work.locator(".ui-table-row .admin-table-name");
-  const live = page.locator("nx-admin-features-tab p[aria-live]");
-  // The list follows the sidebar's order; no bare order numbers are shown or edited.
-  await expect(names).toHaveText(["總覽", "對話", "檔案庫", "知識庫"]);
-  await expect(
-    table.locator("td").filter({ hasText: /^\s*\d+\s*$/ }),
-  ).toHaveCount(0);
-  const files = page.getByRole("button", {
-    name: "移動「檔案庫」，用上下鍵調整順序",
-    exact: true,
-  });
+  const orders = () =>
+    state.navigationWrites
+      .filter((write) => write.id === "order")
+      .map((write) => write.body);
+  await page.goto(routeOf("access-control.navigation"));
+  const table = page.locator(".navigation-table");
+  const live = page.locator("nx-navigation-editor p[aria-live]");
+  // 預設樹：頁面在分群裡，子節點依層級內縮。
+  await expect
+    .poll(() => menuLevel(page, null))
+    .toEqual(["總覽", "AI 工作台", "協作", "系統管理"]);
+  await expect
+    .poll(() => menuLevel(page, "work"))
+    .toEqual(["對話", "專案", "檔案庫", "知識庫", "成果文件"]);
+  await expect(table.locator('tr[data-item="system.access"]')).toHaveAttribute(
+    "data-depth",
+    "1",
+  );
+  const files = page.getByRole("button", { name: /^移動「檔案庫」/ });
+
+  // ↑：同層上移，只送出移動的節點，取落點間隙的中間值（對話 10 … 專案 20）。
   await files.focus();
   const reads = me;
   await files.press("ArrowUp");
-  await expect(names).toHaveText(["總覽", "檔案庫", "對話", "知識庫"]);
-  await expect(files).toBeFocused();
-  await expect(live).toHaveText("檔案庫：AI 工作台第 2 個，共 4 個");
-  // One write: the moved feature takes the middle of its new gap (5 … 10).
   await expect
-    .poll(() => puts)
+    .poll(() => menuLevel(page, "work"))
+    .toEqual(["對話", "檔案庫", "專案", "知識庫", "成果文件"]);
+  await expect(files).toBeFocused();
+  await expect(live).toHaveText("檔案庫：AI 工作台第 2 個，共 5 個");
+  await expect
+    .poll(orders)
     .toEqual([
-      {
-        id: "files",
-        body: {
-          // 名稱等於目錄預設時送 null；圖示來自目錄，不再送出。
-          name: null,
-          enabled: true,
-          sortOrder: 7,
-          groupId: "work",
-        },
-      },
+      { items: [{ id: "work.files", parentId: "work", sortOrder: 15 }] },
     ]);
-  // The sidebar reads this account's features, and so their order, again.
+  // 側欄讀的是 `/me` 的選單樹，所以會重讀帳號。
   await expect.poll(() => me).toBeGreaterThan(reads);
   await expect(table).toHaveAttribute("aria-busy", "false");
-  await expect(names).toHaveText(["總覽", "檔案庫", "對話", "知識庫"]);
-  // A refused write puts the order back and says why.
-  await page.route("**/api/v1/admin/features/files", (route) =>
+
+  // ←：移出分群，排在原分群之後。
+  await files.press("ArrowLeft");
+  await expect
+    .poll(() => menuLevel(page, null))
+    .toEqual(["總覽", "AI 工作台", "檔案庫", "協作", "系統管理"]);
+  await expect
+    .poll(() => orders().at(-1))
+    .toEqual({ items: [{ id: "work.files", parentId: null, sortOrder: 25 }] });
+  await expect(table).toHaveAttribute("aria-busy", "false");
+
+  // 伺服器拒絕時還原位置，並以錯誤代碼的提示說明原因。
+  await page.route("**/api/v1/admin/navigation-items/order", (route) =>
     route.fulfill({
-      status: 500,
+      status: 400,
       contentType: "application/problem+json",
-      body: JSON.stringify({ title: "暫時無法儲存", code: "unexpected" }),
+      body: JSON.stringify({
+        title: "Bad Request",
+        code: "navigation_depth_exceeded",
+      }),
     }),
   );
-  await files.press("End");
-  await expect(page.getByRole("alert")).toBeVisible();
-  await expect(live).toHaveText("無法儲存順序，已還原");
-  await expect(names).toHaveText(["總覽", "檔案庫", "對話", "知識庫"]);
-  expect(puts.at(-1)).toEqual({
-    id: "files",
-    body: {
-      // 名稱等於目錄預設時送 null；圖示來自目錄，不再送出。
-      name: null,
-      enabled: true,
-      sortOrder: 40,
-      groupId: "work",
-    },
-  });
-  expect(state.catalog.features.find((x) => x.id === "files")!.sortOrder).toBe(
-    7,
+  await files.press("ArrowRight");
+  await expect(page.getByRole("alert")).toContainText(
+    "選單最多四層，請把項目放到較淺的分群。",
   );
-  await page.unroute("**/api/v1/admin/features/files");
-  // The row menu moves without dragging, for touch and pointer users alike.
+  await expect(live).toHaveText("無法儲存位置，已還原");
+  await expect
+    .poll(() => menuLevel(page, null))
+    .toEqual(["總覽", "AI 工作台", "檔案庫", "協作", "系統管理"]);
+  await page.unroute("**/api/v1/admin/navigation-items/order");
+
+  // 列的選單：不用拖曳也能跨層（觸控與指標都適用）。
   await page
-    .getByRole("button", { name: "調整功能：總覽", exact: true })
+    .getByRole("button", { name: "選單項目操作：檔案庫", exact: true })
     .click();
-  const menu = page.getByRole("menu", { name: "調整功能：總覽", exact: true });
+  const menu = page.getByRole("menu", { name: "選單項目操作", exact: true });
   await expect(
-    menu.getByRole("menuitem", { name: "上移", exact: true }),
+    menu.getByRole("menuitem", { name: "移出分群", exact: true }),
   ).toBeDisabled();
   await menu
-    .getByRole("menuitem", { name: "移到分群最後", exact: true })
+    .getByRole("menuitem", { name: "移入上方分群「AI 工作台」", exact: true })
     .click();
-  await expect(names).toHaveText(["檔案庫", "對話", "知識庫", "總覽"]);
   await expect
-    .poll(() => puts.at(-1))
+    .poll(() => menuLevel(page, "work"))
+    .toEqual(["對話", "專案", "知識庫", "成果文件", "檔案庫"]);
+  await expect
+    .poll(() => orders().at(-1))
     .toEqual({
-      id: "dashboard",
-      body: {
-        // 名稱等於目錄預設時送 null；圖示來自目錄，不再送出。
-        name: null,
-        enabled: true,
-        sortOrder: 40,
-        groupId: "work",
-      },
+      items: [{ id: "work.files", parentId: "work", sortOrder: 60 }],
     });
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(table).toHaveAttribute("aria-busy", "false");
-  // Dragging the handle swaps rows of the same group as the pointer passes them.
-  const handle = (await page
-    .getByRole("button", {
-      name: "移動「知識庫」，用上下鍵調整順序",
-      exact: true,
-    })
-    .boundingBox())!;
-  const top = (await work.locator('tr[data-feature="files"]').boundingBox())!;
-  await page.mouse.move(
-    handle.x + handle.width / 2,
-    handle.y + handle.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(handle.x + handle.width / 2, top.y + 4, {
-    steps: 16,
-  });
-  await page.mouse.up();
-  await expect(names).toHaveText(["知識庫", "檔案庫", "對話", "總覽"]);
-  await expect
-    .poll(() => puts.at(-1))
-    .toEqual({
-      id: "knowledge",
-      body: {
-        // 名稱等於目錄預設時送 null；圖示來自目錄，不再送出。
-        name: null,
-        enabled: true,
-        sortOrder: 0,
-        groupId: "work",
+
+  // 拖曳到某列的上半：插到它之前。
+  const drag = async (target: Locator, ratio: number) => {
+    const handle = (await files.boundingBox())!;
+    const box = (await target.boundingBox())!;
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      handle.y + handle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      box.y + box.height * ratio,
+      {
+        steps: 16,
       },
+    );
+    await page.mouse.up();
+  };
+  await drag(table.locator('tr[data-item="work.chat"]'), 0.1);
+  await expect
+    .poll(() => menuLevel(page, "work"))
+    .toEqual(["檔案庫", "對話", "專案", "知識庫", "成果文件"]);
+  await expect
+    .poll(() => orders().at(-1))
+    .toEqual({ items: [{ id: "work.files", parentId: "work", sortOrder: 0 }] });
+  await expect(table).toHaveAttribute("aria-busy", "false");
+
+  // 拖到分群列的中段：移入該分群、排在最後。
+  await drag(table.locator('tr[data-item="collaboration"]'), 0.5);
+  await expect
+    .poll(() => menuLevel(page, "collaboration"))
+    .toEqual(["分享", "背景任務", "程式庫", "檔案庫"]);
+  await expect
+    .poll(() => orders().at(-1))
+    .toEqual({
+      items: [{ id: "work.files", parentId: "collaboration", sortOrder: 40 }],
     });
-  expect(puts).toHaveLength(4);
-  // Other groups keep their order.
-  await expect(
-    table.locator(
-      'tbody[data-section="system"] .ui-table-row .admin-table-name',
-    ),
-  ).toHaveText(["使用者", "活動稽核"]);
+  expect(orders()).toHaveLength(5);
 });
 
-test("選單分群可新增、改上層、移入功能，非空分群拒絕刪除而空分群可刪除", async ({
+test("選單可新增分群、頁面與外部連結，錯誤代碼留在對話框，非空分群不能刪除", async ({
   page,
 }) => {
   const state = await administration(page);
-  const groups = FIXTURE_NAVIGATION_GROUPS.map((group) => ({ ...group }));
-  state.catalog.navigationGroups = groups;
-  const writes: { method: string; path: string; body: unknown }[] = [];
-  // Like the server: a group with features or subgroups is refused (409), never cascaded.
-  await page.route("**/api/v1/admin/navigation-groups**", async (route) => {
-    const request = route.request(),
-      method = request.method(),
-      id = decodeURIComponent(
-        new URL(request.url()).pathname.split("/navigation-groups")[1].slice(1),
-      ),
-      body = method === "DELETE" ? null : request.postDataJSON();
-    writes.push({ method, path: id, body });
-    if (method === "POST") groups.push(body);
-    if (method === "PUT")
-      Object.assign(
-        groups.find((x) => x.id === id)!,
-        body,
-      );
-    if (method === "DELETE") {
-      if (
-        groups.some((x) => x.parentId === id) ||
-        state.catalog.features.some((x) => x.groupId === id)
-      )
-        return route.fulfill({
-          status: 409,
-          contentType: "application/problem+json",
-          body: JSON.stringify({
-            title: "Conflict",
-            code: "navigation_group_not_empty",
-          }),
-        });
-      groups.splice(
-        groups.findIndex((x) => x.id === id),
-        1,
-      );
-      return route.fulfill({ status: 204 });
-    }
-    return route.fulfill({ status: 204 });
-  });
-  await page.goto(routeOf("access-control.features"));
-  const table = page.locator(".admin-features-table");
-  const sections = table.locator(".feature-section-head > span");
-  const editor = page.locator("dialog.admin-editor");
-  // No feature sits at the top level here, so the list starts with the first group.
-  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理"]);
-
-  // Create at the top level: it goes after the existing groups.
-  await page.getByRole("button", { name: "新增選單分群", exact: true }).click();
-  await expect(
-    page.getByRole("dialog", { name: "新增選單分群", exact: true }),
-  ).toBeVisible();
-  await editor.getByLabel("識別碼", { exact: true }).fill("diagnostics");
-  await editor.getByLabel("名稱", { exact: true }).fill("診斷");
-  await editor
-    .getByRole("button", { name: "建立選單分群", exact: true })
-    .click();
-  await expect(editor).not.toBeVisible();
-  expect(writes.at(-1)).toEqual({
-    method: "POST",
-    path: "",
-    body: { id: "diagnostics", name: "診斷", parentId: null, sortOrder: 40 },
-  });
-  const diagnostics = table.locator('tbody[data-section="diagnostics"]');
-  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理", "診斷"]);
-  // An empty group is listed for the administrator but says it stays out of the sidebar.
-  await expect(diagnostics.locator(".feature-empty")).toContainText(
-    "空分群不會出現在側欄",
-  );
-
-  // Set its parent: it moves under 系統管理, to the end of that group's subgroups.
-  await diagnostics
-    .getByRole("button", { name: "選單分群：診斷", exact: true })
-    .click();
-  await page
-    .getByRole("menu", { name: "選單分群：診斷", exact: true })
-    .getByRole("menuitem", { name: "重新命名或移動…", exact: true })
-    .click();
-  await expect(
-    page.getByRole("dialog", { name: "編輯選單分群：診斷", exact: true }),
-  ).toBeVisible();
-  await expect(editor.getByLabel("識別碼", { exact: true })).toHaveCount(0);
-  await chooseSelect(page, "上層分群", "系統管理");
-  await editor
-    .getByRole("button", { name: "儲存選單分群", exact: true })
-    .click();
-  await expect(editor).not.toBeVisible();
-  expect(writes.at(-1)).toEqual({
-    method: "PUT",
-    path: "diagnostics",
-    body: { name: "診斷", parentId: "system", sortOrder: 10 },
-  });
-  await expect(sections).toHaveText([
-    "AI 工作台",
-    "協作",
-    "系統管理",
-    "系統管理 › 診斷",
-  ]);
-  // A group cannot move under itself or its own subgroups.
-  await page
-    .getByRole("button", { name: "選單分群：系統管理", exact: true })
-    .click();
-  await page
-    .getByRole("menu", { name: "選單分群：系統管理", exact: true })
-    .getByRole("menuitem", { name: "重新命名或移動…", exact: true })
-    .click();
-  await page.getByRole("combobox", { name: "上層分群", exact: true }).click();
-  const parents = page.getByRole("listbox", { name: "上層分群", exact: true });
-  await expect(parents.getByRole("option")).toHaveText([
-    "最上層（不分群）",
-    "AI 工作台",
-    "協作",
-  ]);
-  await page.keyboard.press("Escape");
-  await expect(parents).toBeHidden();
-  await editor
-    .getByRole("button", { name: "關閉管理編輯", exact: true })
-    .click();
-  await expect(editor).not.toBeVisible();
-
-  // Move a feature in through the editor: it goes to the end of the new group.
-  await table
-    .getByRole("button", { name: "編輯功能：活動稽核", exact: true })
-    .click();
-  await chooseSelect(page, "選單分群", "系統管理 › 診斷");
-  await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
-  await expect(editor).not.toBeVisible();
-  const featureNames = (section: string) =>
-    table.locator(
-      `tbody[data-section="${section}"] .ui-table-row .admin-table-name`,
-    );
-  await expect(featureNames("diagnostics")).toHaveText(["活動稽核"]);
-  await expect(featureNames("system")).toHaveText(["使用者"]);
-  expect(state.catalog.features.find((x) => x.id === "audit")).toMatchObject({
-    groupId: "diagnostics",
-    sortOrder: 10,
-  });
-
-  // A group that still has a feature is refused and stays.
-  const deleteGroup = async (path: string) => {
+  // 外部連結只給平台管理群組看；這個帳號屬於它。
+  state.fixture.groupIds = ["workspace", "administrators"];
+  await page.goto(routeOf("access-control.navigation"));
+  const table = page.locator(".navigation-table");
+  const add = async (kind: string) => {
     await page
-      .getByRole("button", { name: "選單分群：" + path, exact: true })
+      .getByRole("button", { name: "新增選單項目", exact: true })
       .click();
     await page
-      .getByRole("menu", { name: "選單分群：" + path, exact: true })
-      .getByRole("menuitem", { name: "刪除分群", exact: true })
+      .getByRole("menu", { name: "新增選單項目", exact: true })
+      .getByRole("menuitem", { name: kind, exact: true })
       .click();
-    const confirm = page.getByRole("dialog", {
-      name: "刪除選單分群？",
+    const dialog = page.getByRole("dialog", {
+      name: "新增選單項目",
       exact: true,
     });
-    await expect(confirm).toContainText(`刪除「${path}」`);
-    await confirm
-      .getByRole("button", { name: "刪除分群", exact: true })
-      .click();
-    await expect(confirm).not.toBeVisible();
+    await expect(dialog).toBeVisible();
+    return dialog;
   };
-  await deleteGroup("系統管理 › 診斷");
-  await expect(page.getByRole("alert")).toContainText(
-    "選單分群仍有子分群或功能，請先移出後再刪除。",
-  );
-  expect(writes.at(-1)).toEqual({
-    method: "DELETE",
-    path: "diagnostics",
-    body: null,
-  });
-  await expect(table).toHaveAttribute("aria-busy", "false");
-  await expect(featureNames("diagnostics")).toHaveText(["活動稽核"]);
-  // So is a parent whose only content is a subgroup.
-  await deleteGroup("系統管理");
-  expect(writes.at(-1)).toMatchObject({ method: "DELETE", path: "system" });
-  await expect(sections).toContainText(["系統管理", "系統管理 › 診斷"]);
+  const posts = () =>
+    state.navigationWrites
+      .filter((write) => write.method === "POST")
+      .map((write) => write.body);
 
-  // Once emptied, the group can go.
-  await table
-    .getByRole("button", { name: "編輯功能：活動稽核", exact: true })
-    .click();
-  await chooseSelect(page, "選單分群", "系統管理");
-  await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
-  await expect(editor).not.toBeVisible();
-  await expect(featureNames("system")).toHaveText(["使用者", "活動稽核"]);
-  await expect(diagnostics.locator(".feature-empty")).toBeVisible();
-  await deleteGroup("系統管理 › 診斷");
-  await expect(diagnostics).toHaveCount(0);
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  expect(writes.at(-1)).toEqual({
-    method: "DELETE",
-    path: "diagnostics",
-    body: null,
+  // 分群：名稱與位置；新節點排在同層最後。
+  let dialog = await add("分群");
+  await expect(
+    dialog.getByRole("button", { name: "分群", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("button", { name: "建立分群", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "請輸入 120 字元內的名稱。",
+  );
+  await expect(dialog.getByLabel("名稱", { exact: true })).toBeFocused();
+  await dialog.getByLabel("名稱", { exact: true }).fill("報表");
+  await chooseSelect(page, "位置", "系統管理");
+  await dialog.getByRole("button", { name: "建立分群", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(posts().at(-1)).toEqual({
+    kind: "group",
+    parentId: "system",
+    featureId: null,
+    name: "報表",
+    url: null,
+    openInNewTab: true,
+    icon: null,
+    audienceGroupIds: null,
   });
-  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理"]);
-  expect(groups.map((x) => x.id)).toEqual(["work", "collaboration", "system"]);
+  await expect
+    .poll(async () => (await menuLevel(page, "system")).at(-1))
+    .toBe("報表");
+
+  // 頁面：同一層已有同一頁面時，伺服器的錯誤代碼顯示在對話框內並保留輸入。
+  dialog = await add("頁面");
+  await page.getByRole("combobox", { name: "頁面", exact: true }).click();
+  await page
+    .getByRole("listbox", { name: "頁面", exact: true })
+    .getByRole("option", { name: /^活動稽核/ })
+    .click();
+  await chooseSelect(page, "位置", "系統管理");
+  await dialog.getByRole("button", { name: "建立頁面", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "同一層已經有這個頁面。",
+  );
+  await expect(dialog).toBeVisible();
+  await chooseSelect(page, "位置", "系統管理 › 報表");
+  await dialog.getByRole("button", { name: "建立頁面", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(posts().at(-1)).toMatchObject({
+    kind: "page",
+    featureId: "audit",
+    name: null,
+    icon: null,
+  });
+  const reports = state.fixture.navigationItems.find(
+    (item) => item.name === "報表",
+  )!;
+  await expect.poll(() => menuLevel(page, reports.id)).toEqual(["活動稽核"]);
+
+  // 有子節點的分群不能刪除。
+  await page
+    .getByRole("button", { name: "選單項目操作：報表", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("menu", { name: "選單項目操作", exact: true })
+      .getByRole("menuitem", { name: "刪除（請先清空分群）", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+
+  // 外部連結：網址先在前端檢查，主機不在允許清單時由伺服器拒絕。
+  dialog = await add("外部連結");
+  await dialog.getByLabel("名稱", { exact: true }).fill("維運手冊");
+  await dialog
+    .getByLabel("網址", { exact: true })
+    .fill("http://wiki.example.com/ops");
+  await dialog
+    .getByRole("button", { name: "建立外部連結", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "請輸入 https:// 開頭的完整網址，不可包含帳號或密碼。",
+  );
+  await expect(dialog.getByLabel("網址", { exact: true })).toBeFocused();
+  await dialog
+    .getByLabel("網址", { exact: true })
+    .fill("https://intranet.example.com/ops");
+  await dialog
+    .getByRole("button", { name: "建立外部連結", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "外部連結的網站不在允許清單內，請聯絡系統管理員。",
+  );
+  await dialog
+    .getByLabel("網址", { exact: true })
+    .fill("https://wiki.example.com/ops");
+  await dialog.getByRole("checkbox", { name: "在新分頁開啟" }).uncheck();
+  await dialog.getByRole("checkbox", { name: /^平台管理/ }).check();
+  await dialog
+    .getByRole("button", { name: "建立外部連結", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  expect(posts().at(-1)).toEqual({
+    kind: "link",
+    parentId: null,
+    featureId: null,
+    name: "維運手冊",
+    url: "https://wiki.example.com/ops",
+    openInNewTab: false,
+    icon: null,
+    audienceGroupIds: ["administrators"],
+  });
+  const link = table.locator(".ui-table-row", { hasText: "維運手冊" });
+  await expect(link).toContainText("同分頁開啟 · 可見：平台管理");
+  // 側欄：外部連結帶外部連結標記，一律 noopener noreferrer，這筆不開新分頁。
+  const sidebarLink = page.locator(
+    'nx-feature-launcher a[href="https://wiki.example.com/ops"]',
+  );
+  if (await sidebarLink.count()) {
+    await expect(sidebarLink).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(sidebarLink).not.toHaveAttribute("target", /.*/);
+  }
+
+  // 修改內容：種類與位置不變。
+  await link
+    .getByRole("button", { name: "編輯外部連結：維運手冊", exact: true })
+    .click();
+  const editor = page.getByRole("dialog", {
+    name: "編輯外部連結：維運手冊",
+    exact: true,
+  });
+  await expect(
+    editor.getByRole("button", { name: "分群", exact: true }),
+  ).toHaveCount(0);
+  await editor.getByLabel("名稱", { exact: true }).fill("維運手冊（新版）");
+  await editor
+    .getByRole("button", { name: "儲存外部連結", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+  expect(state.navigationWrites.at(-1)).toMatchObject({
+    method: "PUT",
+    body: { kind: "link", name: "維運手冊（新版）", openInNewTab: false },
+  });
+
+  // 刪除先確認。
+  await page
+    .getByRole("button", {
+      name: "選單項目操作：維運手冊（新版）",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("menu", { name: "選單項目操作", exact: true })
+    .getByRole("menuitem", { name: "刪除", exact: true })
+    .click();
+  const confirm = page.getByRole("dialog", {
+    name: "刪除外部連結？",
+    exact: true,
+  });
+  await confirm
+    .getByRole("button", { name: "刪除外部連結", exact: true })
+    .click();
+  await expect(
+    table.locator(".ui-table-row", { hasText: "維運手冊" }),
+  ).toHaveCount(0);
+  expect(state.navigationWrites.at(-1)).toMatchObject({ method: "DELETE" });
 });
 
 async function administration(page: Page) {
@@ -1133,37 +1137,18 @@ async function administration(page: Page) {
         policy: null,
       },
     ],
+    // 伺服器依功能目錄的宣告順序列出。
     features: [
-      {
-        id: "files",
-        name: "檔案庫",
-        route: "/work/files",
-        sortOrder: 15,
-        enabled: true,
-      },
-      {
-        id: "chat",
-        name: "對話",
-        route: "/work/chat",
-        sortOrder: 10,
-        enabled: true,
-      },
+      { id: "chat", name: "對話", route: "/work/chat", enabled: true },
+      { id: "files", name: "檔案庫", route: "/work/files", enabled: true },
       {
         id: "identity.users",
         name: "使用者",
         route: "/admin/identity/users",
-        sortOrder: 80,
         enabled: true,
       },
-      {
-        id: "audit",
-        name: "活動稽核",
-        route: "/admin/audit",
-        sortOrder: 92,
-        enabled: true,
-      },
-    ].map(withMenu),
-    navigationGroups: FIXTURE_NAVIGATION_GROUPS,
+      { id: "audit", name: "活動稽核", route: "/admin/audit", enabled: true },
+    ].map(featureDto),
     models: [
       {
         id: "fixture:8b",
@@ -1184,6 +1169,7 @@ async function administration(page: Page) {
   };
   const audit: AuditDto[] = [];
   const auditExports: URL[] = [];
+  const navigationWrites: { method: string; id: string; body: unknown }[] = [];
   const conversationId = randomUUID();
   const recordRead = (action: string, resourceId: string) =>
     audit.unshift({
@@ -1206,11 +1192,95 @@ async function administration(page: Page) {
         body: JSON.stringify(data),
       });
     if (path === "/catalog") return json(catalog);
+    if (path.startsWith("/navigation-items")) {
+      // 與 `/me` 共用同一份節點，側欄跟著寫入改變；規則照伺服器：允許清單只有 wiki.example.com、
+      // 同層不可重複同一頁面、非空分群不能刪。
+      const navigation = fixture.navigationItems;
+      const body =
+        method === "GET" || method === "DELETE"
+          ? null
+          : route.request().postDataJSON();
+      const id = decodeURIComponent(path.split("/")[2] ?? "");
+      if (method !== "GET") navigationWrites.push({ method, id, body });
+      const problem = (code: string, status = 400) =>
+        route.fulfill({
+          status,
+          contentType: "application/problem+json",
+          body: JSON.stringify({ title: "Bad Request", code }),
+        });
+      const duplicate = (items: typeof navigation) =>
+        items.some((item) =>
+          items.some(
+            (other) =>
+              other !== item &&
+              !!other.featureId &&
+              other.featureId === item.featureId &&
+              (other.parentId ?? null) === (item.parentId ?? null),
+          ),
+        );
+      if (method === "GET") return json(navigation);
+      if (id === "order") {
+        const next = navigation.map((item) => {
+          const move = (
+            body.items as {
+              id: string;
+              parentId: string | null;
+              sortOrder: number;
+            }[]
+          ).find((x) => x.id === item.id);
+          return move
+            ? { ...item, parentId: move.parentId, sortOrder: move.sortOrder }
+            : item;
+        });
+        if (duplicate(next)) return problem("navigation_page_duplicate", 409);
+        navigation.splice(0, navigation.length, ...next);
+        return route.fulfill({ status: 204 });
+      }
+      if (method === "DELETE") {
+        if (navigation.some((item) => item.parentId === id))
+          return problem("navigation_item_not_empty", 409);
+        navigation.splice(
+          navigation.findIndex((item) => item.id === id),
+          1,
+        );
+        return route.fulfill({ status: 204 });
+      }
+      if (body.kind === "link" && new URL(body.url).host !== "wiki.example.com")
+        return problem("navigation_link_host_not_allowed");
+      const content = {
+        kind: body.kind,
+        featureId: body.featureId,
+        name: body.name,
+        url: body.url,
+        openInNewTab: body.openInNewTab,
+        icon: body.icon,
+        audienceGroupIds: body.audienceGroupIds ?? [],
+      };
+      if (method === "POST") {
+        const siblings = navigation.filter(
+          (item) => (item.parentId ?? null) === body.parentId,
+        );
+        const created = {
+          ...content,
+          id: randomUUID().replaceAll("-", ""),
+          parentId: body.parentId,
+          sortOrder: Math.max(0, ...siblings.map((x) => x.sortOrder)) + 10,
+        };
+        if (duplicate([...navigation, created]))
+          return problem("navigation_page_duplicate", 409);
+        navigation.push(created);
+        return json(created);
+      }
+      Object.assign(
+        navigation.find((item) => item.id === id)!,
+        content,
+      );
+      return route.fulfill({ status: 204 });
+    }
     if (path === "/audit/catalog")
       return json({
         features: catalog.features,
         models: catalog.models,
-        navigationGroups: catalog.navigationGroups,
         categories: [
           { value: "authentication", label: "登入與身分" },
           { value: "administration", label: "管理異動" },
@@ -1328,9 +1398,9 @@ async function administration(page: Page) {
         roles: [],
         groups: [],
         features: [{ id: "chat", name: "對話", route: "/work/chat" }].map(
-          withMenu,
+          featureDto,
         ),
-        navigationGroups: FIXTURE_NAVIGATION_GROUPS,
+        navigation: [],
       });
     if (path.endsWith("/insights")) {
       const user =
@@ -1560,6 +1630,7 @@ async function administration(page: Page) {
     audit,
     auditExports,
     conversationId,
+    navigationWrites,
   };
 }
 test("administrators edit roles with effective access preview and an audit trail", async ({
@@ -1745,11 +1816,14 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
         access: {
           roles: [],
           groups: [],
-          navigationGroups: FIXTURE_NAVIGATION_GROUPS,
           features: [
             { id: "chat", name: "對話", route: "/work/chat" },
             ...(!testing ? [featureOf("identity.users")] : []),
-          ].map(withMenu),
+          ].map(featureDto),
+          navigation: navigationTree(SEEDED_NAVIGATION, [
+            featureOf("chat"),
+            ...(!testing ? [featureOf("identity.users")] : []),
+          ]),
         },
       }),
     }),
@@ -1819,7 +1893,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
         await expect(
           page
             .getByRole("navigation", { name: "存取控制頁面", exact: true })
-            .getByRole("link", { name: "功能與選單", exact: true }),
+            .getByRole("link", { name: "功能", exact: true }),
         ).toHaveAttribute("aria-current", "page");
       }
       if (tab !== "活動稽核")

@@ -28,65 +28,153 @@ export function featureOf(id: string, name?: string) {
   };
 }
 
-/** 資料庫種子（database/App/Seed/accesscontrol.sql）的選單位置；名稱與圖示來自目錄。 */
-const SEEDED_MENU: Record<string, [sortOrder: number, groupId: string | null]> =
-  {
-    dashboard: [5, null],
-    chat: [10, "work"],
-    projects: [15, "work"],
-    files: [20, "work"],
-    knowledge: [30, "work"],
-    artifacts: [40, "work"],
-    sharing: [50, "collaboration"],
-    jobs: [55, "collaboration"],
-    repositories: [60, "collaboration"],
-    "identity.users": [80, "system"],
-    "access-control.roles": [81, "system"],
-    "access-control.groups": [82, "system"],
-    "access-control.features": [83, "system"],
-    "operations.usage": [84, "system"],
-    "billing.prices": [85, "system"],
-    "knowledge.retrieval": [86, "system"],
-    integrations: [92, "system"],
-    monitoring: [93, "system"],
-    "diagnostics.logs": [94, "system"],
-    "diagnostics.logs.detail": [95, "system"],
-    "diagnostics.logs.export": [96, "system"],
-    audit: [97, "system"],
-    quality: [98, "system"],
-    "quality.retrieval": [99, "system"],
-    design: [100, "system"],
-  };
-/** The seeded menu: name, group, place and icon of every grantable feature. */
-export const FIXTURE_MENU: Record<
-  string,
-  { name: string; groupId: string | null; sortOrder: number; icon: string }
-> = Object.fromEntries(
-  Object.entries(SEEDED_MENU).map(([id, [sortOrder, groupId]]) => [
-    id,
-    { name: catalogName(id), groupId, sortOrder, icon: CATALOG.get(id)!.icon },
-  ]),
-);
-/** The menu groups AccessControl seeds. */
-export const FIXTURE_NAVIGATION_GROUPS = [
-  { id: "work", parentId: null, name: "AI 工作台", sortOrder: 10 },
-  { id: "collaboration", parentId: null, name: "協作", sortOrder: 20 },
-  { id: "system", parentId: null, name: "系統管理", sortOrder: 30 },
-];
-/** A fixture feature with its seeded menu placement filled in where the test left it out. */
-export function withMenu<T extends { id: string }>(feature: T) {
-  const seed = FIXTURE_MENU[feature.id] ?? {
-    groupId: null,
-    sortOrder: 100,
-    icon: CATALOG.get(feature.id)?.icon ?? "document",
-  };
+/** `/me`、`/admin/catalog` 的功能加上目錄圖示（同後端 `FeatureDto`）；測試給的欄位優先。 */
+export function featureDto<T extends { id: string }>(feature: T) {
   return {
-    groupId: seed.groupId,
-    sortOrder: seed.sortOrder,
-    icon: seed.icon,
+    icon: CATALOG.get(feature.id)?.icon ?? "document",
     ...featureOf(feature.id),
     ...feature,
   };
+}
+
+/** 種子的節點（`<分群>.<功能 ID 的點換成連字號>`），與 `GET /admin/navigation-items` 同形。 */
+function seededPage(
+  parentId: string | null,
+  featureId: string,
+  sortOrder: number,
+) {
+  return navigationItem({
+    id: parentId
+      ? `${parentId}.${featureId.replaceAll(".", "-")}`
+      : featureId.replaceAll(".", "-"),
+    parentId,
+    kind: "page",
+    featureId,
+    sortOrder,
+  });
+}
+function seededGroup(
+  id: string,
+  parentId: string | null,
+  name: string,
+  sortOrder: number,
+) {
+  return navigationItem({ id, parentId, kind: "group", name, sortOrder });
+}
+/** 一個選單節點（`NavigationItemDto`）；省略的欄位用伺服器的預設值。 */
+export function navigationItem(
+  item: Pick<NavigationItemDto, "id" | "kind" | "sortOrder"> &
+    Partial<NavigationItemDto>,
+): NavigationItemDto {
+  return {
+    parentId: null,
+    featureId: null,
+    name: null,
+    url: null,
+    openInNewTab: true,
+    icon: null,
+    audienceGroupIds: [],
+    ...item,
+  };
+}
+/** 資料庫種子（database/App/Seed/accesscontrol.sql）的預設選單樹；頁面的名稱與圖示來自目錄。 */
+export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
+  seededPage(null, "dashboard", 10),
+  seededGroup("work", null, "AI 工作台", 20),
+  ...["chat", "projects", "files", "knowledge", "artifacts"].map((id, index) =>
+    seededPage("work", id, (index + 1) * 10),
+  ),
+  seededGroup("collaboration", null, "協作", 30),
+  ...["sharing", "jobs", "repositories"].map((id, index) =>
+    seededPage("collaboration", id, (index + 1) * 10),
+  ),
+  seededGroup("system", null, "系統管理", 40),
+  seededGroup("system.access", "system", "身分與權限", 10),
+  ...[
+    "identity.users",
+    "access-control.roles",
+    "access-control.groups",
+    "access-control.features",
+    "access-control.navigation",
+  ].map((id, index) => seededPage("system.access", id, (index + 1) * 10)),
+  ...[
+    "operations.usage",
+    "billing.prices",
+    "knowledge.retrieval",
+    "integrations",
+    "monitoring",
+    "diagnostics.logs",
+    "audit",
+    "quality",
+    "quality.retrieval",
+    "design",
+  ].map((id, index) => seededPage("system", id, (index + 2) * 10)),
+];
+
+/**
+ * 與後端 `NavigationTree` 相同的修剪：頁面要已授權（在 `features` 裡）且是目錄頁面，名稱用授權回報的名稱；
+ * 外部連結要沒有可見群組或使用者屬於其中之一；沒有可見子節點的分群不輸出，只剩一個時以該子節點取代。
+ * 同層依 `sortOrder`、再依 id 排列。
+ */
+export function navigationTree(
+  items: readonly NavigationItemDto[],
+  features: readonly { id: string; name: string; route: string }[],
+  groups: readonly string[] = ["workspace"],
+): NavigationNodeDto[] {
+  const granted = new Map(features.map((feature) => [feature.id, feature]));
+  const level = (parentId: string | null): NavigationNodeDto[] =>
+    items
+      .filter((item) => (item.parentId ?? null) === parentId)
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+      )
+      .flatMap((item): NavigationNodeDto[] => {
+        const base = {
+          id: item.id,
+          kind: item.kind,
+          featureId: null,
+          route: null,
+          url: null,
+          openInNewTab: false,
+          children: [],
+        };
+        if (item.kind === "page") {
+          const feature = granted.get(item.featureId ?? "");
+          const page = CATALOG.get(item.featureId ?? "");
+          if (!feature || page?.kind !== "page") return [];
+          return [
+            {
+              ...base,
+              name: feature.name,
+              icon: page.icon,
+              featureId: page.id,
+              route: page.route,
+            },
+          ];
+        }
+        if (item.kind === "link") {
+          if (
+            item.audienceGroupIds.length &&
+            !item.audienceGroupIds.some((id) => groups.includes(id))
+          )
+            return [];
+          return [
+            {
+              ...base,
+              name: item.name ?? "",
+              icon: item.icon,
+              url: item.url,
+              openInNewTab: item.openInNewTab,
+            },
+          ];
+        }
+        const children = level(item.id);
+        if (children.length === 0) return [];
+        if (children.length === 1) return children;
+        return [{ ...base, name: item.name ?? "", icon: item.icon, children }];
+      });
+  return level(null);
 }
 export async function chooseSelect(
   page: import("@playwright/test").Page,
@@ -231,6 +319,8 @@ import type {
   AttachmentDto,
   LibraryFileDto,
   PromptTemplateDto,
+  NavigationItemDto,
+  NavigationNodeDto,
 } from "../src/app/core/api/schema";
 
 export const richAnswer =
@@ -377,22 +467,19 @@ export class ApiFixture {
   /** Platform operations (usage, prices, retrieval); administrators have it unless a test sets it on its own. */
   operationsAccess: boolean | null = null;
   auditAccess = false;
-  /** Features beyond the switches above; a test may place one with `groupId`／`sortOrder`. */
+  /** Features beyond the switches above; the menu places them where the seeded tree has them. */
   extraFeatures: {
     id: string;
     /** 省略時用目錄預設名稱與網址（同後端）。 */
     name?: string;
     route?: string;
-    groupId?: string | null;
-    sortOrder?: number;
   }[] = [];
-  /** The menu groups `/me` returns; the seeded ones unless a test nests its own. */
-  navigationGroups: {
-    id: string;
-    parentId: string | null;
-    name: string;
-    sortOrder: number;
-  }[] = FIXTURE_NAVIGATION_GROUPS;
+  /** 選單節點；`/me` 依授權修剪成樹（同後端），測試可以加外部連結或另排。 */
+  navigationItems: NavigationItemDto[] = SEEDED_NAVIGATION.map((item) => ({
+    ...item,
+  }));
+  /** 使用者所屬的功能群組；決定外部連結的可見範圍。 */
+  groupIds = ["workspace"];
   modelPolicy: ModelPolicyDto = {
     allowModelSelection: true,
     showModelNames: true,
@@ -487,6 +574,28 @@ export class ApiFixture {
           },
           503,
         );
+      const features = [
+        ...this.extraFeatures,
+        ...(this.chatAccess ? [featureOf("chat"), featureOf("files")] : []),
+        ...(this.adminAccess
+          ? [
+              featureOf("identity.users"),
+              featureOf("access-control.roles"),
+              featureOf("access-control.groups"),
+              featureOf("access-control.features"),
+              featureOf("access-control.navigation"),
+              featureOf("design"),
+            ]
+          : []),
+        ...((this.operationsAccess ?? this.adminAccess)
+          ? [
+              featureOf("operations.usage"),
+              featureOf("billing.prices"),
+              featureOf("knowledge.retrieval"),
+            ]
+          : []),
+        ...(this.auditAccess ? [featureOf("audit")] : []),
+      ].map(featureDto);
       return json({
         id: this.userId,
         account: "TEST\\fixture",
@@ -501,28 +610,12 @@ export class ApiFixture {
               : []),
           ],
           groups: [{ id: "workspace", name: "基本工作區" }],
-          navigationGroups: this.navigationGroups,
-          features: [
-            ...this.extraFeatures,
-            ...(this.chatAccess ? [featureOf("chat"), featureOf("files")] : []),
-            ...(this.adminAccess
-              ? [
-                  featureOf("identity.users"),
-                  featureOf("access-control.roles"),
-                  featureOf("access-control.groups"),
-                  featureOf("access-control.features"),
-                  featureOf("design"),
-                ]
-              : []),
-            ...((this.operationsAccess ?? this.adminAccess)
-              ? [
-                  featureOf("operations.usage"),
-                  featureOf("billing.prices"),
-                  featureOf("knowledge.retrieval"),
-                ]
-              : []),
-            ...(this.auditAccess ? [featureOf("audit")] : []),
-          ].map(withMenu),
+          features,
+          navigation: navigationTree(
+            this.navigationItems,
+            features,
+            this.groupIds,
+          ),
         },
         activeRunId:
           this.runs.find(

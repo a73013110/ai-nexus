@@ -1,93 +1,119 @@
 import { describe, expect, it } from 'vitest';
-import { descendantIds, featureIcon, navigationSections, navigationTree } from './navigation-tree';
+import type { NavigationNodeDto } from '@core/api/schema';
+import {
+  featureIcon,
+  navigationIcon,
+  navigationNodes,
+  navigationPages,
+  navigationRuns,
+  navigationSections,
+} from './navigation-tree';
 
-const groups = [
-  { id: 'system', parentId: null, name: '系統管理', sortOrder: 30 },
-  { id: 'work', parentId: null, name: 'AI 工作台', sortOrder: 10 },
-  { id: 'diagnosis', parentId: 'system', name: '診斷', sortOrder: 10 },
-  { id: 'empty', parentId: null, name: '空分群', sortOrder: 40 },
-];
-const feature = (id: string, groupId: string | null, sortOrder: number) => ({
+const page = (featureId: string, id = featureId): NavigationNodeDto => ({
   id,
-  groupId,
-  sortOrder,
+  kind: 'page',
+  name: featureId,
+  icon: featureId,
+  featureId,
+  route: '/' + featureId,
+  url: null,
+  openInNewTab: false,
+  children: [],
 });
-const features = [
-  feature('admin', 'system', 90),
-  feature('logs', 'diagnosis', 94),
-  feature('chat', 'work', 10),
-  feature('files', 'work', 20),
-  feature('dashboard', null, 5),
-  feature('extra', null, 50),
+const link = (id: string, icon: string | null = null): NavigationNodeDto => ({
+  id,
+  kind: 'link',
+  name: id,
+  icon,
+  featureId: null,
+  route: null,
+  url: 'https://example.com/' + id,
+  openInNewTab: true,
+  children: [],
+});
+const group = (id: string, name: string, children: NavigationNodeDto[]): NavigationNodeDto => ({
+  id,
+  kind: 'group',
+  name,
+  icon: null,
+  featureId: null,
+  route: null,
+  url: null,
+  openInNewTab: false,
+  children,
+});
+// 伺服器回傳的樹：最上層的頁面與連結可以夾在分群之間，順序就是管理員排的順序。
+const tree = [
+  page('dashboard'),
+  group('work', 'AI 工作台', [page('chat'), page('files')]),
+  link('wiki', 'globe'),
+  group('system', '系統管理', [
+    page('audit'),
+    group('system.diagnostics', '診斷', [page('logs'), link('runbook')]),
+    page('chat', 'system.chat'),
+  ]),
 ];
 const ids = (list: readonly { id: string }[]) => list.map((item) => item.id);
 
 describe('navigation tree', () => {
-  it('puts top-level features first and orders every level by sortOrder, then id', () => {
-    const tree = navigationTree(features, groups);
-    expect(ids(tree.features)).toEqual(['dashboard', 'extra']);
-    expect(tree.groups.map((node) => node.group.id)).toEqual(['work', 'system']);
-    const system = tree.groups[1];
-    expect(ids(system.features)).toEqual(['admin']);
-    expect(system.groups.map((node) => [node.group.id, ids(node.features)])).toEqual([
-      ['diagnosis', ['logs']],
+  it('flattens to sections with paths and depth, the top level first when it has entries', () => {
+    const sections = navigationSections(tree, { topName: '最上層' });
+    expect(
+      sections.map((section) => [section.id, section.path, section.depth, ids(section.entries)]),
+    ).toEqual([
+      ['', '最上層', 0, ['dashboard', 'wiki']],
+      ['work', 'AI 工作台', 0, ['chat', 'files']],
+      ['system', '系統管理', 0, ['audit', 'system.chat']],
+      ['system.diagnostics', '系統管理 › 診斷', 1, ['logs', 'runbook']],
     ]);
-    expect(ids(navigationSections(tree).flatMap((section) => section.features))).toEqual([
+    expect(navigationSections([tree[1]]).map((section) => section.id)).toEqual(['work']);
+    expect(navigationSections([], { keepTop: true })).toHaveLength(1);
+  });
+
+  it('splits one level into runs of entries and groups without reordering', () => {
+    expect(navigationRuns(tree).map((run) => [run.kind, run.key])).toEqual([
+      ['entries', 'entries:dashboard'],
+      ['group', 'work'],
+      ['entries', 'entries:wiki'],
+      ['group', 'system'],
+    ]);
+    const system = navigationRuns(tree[3].children);
+    expect(system.map((run) => (run.kind === 'entries' ? ids(run.nodes) : run.node.id))).toEqual([
+      ['audit'],
+      'system.diagnostics',
+      ['system.chat'],
+    ]);
+  });
+
+  it('lists every node depth first and each page once, at its first place', () => {
+    expect(ids(navigationNodes(tree))).toEqual([
       'dashboard',
-      'extra',
+      'work',
       'chat',
       'files',
-      'admin',
+      'wiki',
+      'system',
+      'audit',
+      'system.diagnostics',
       'logs',
+      'runbook',
+      'system.chat',
+    ]);
+    expect(navigationPages(tree)).toEqual([
+      { id: 'dashboard', name: 'dashboard', route: '/dashboard', icon: 'dashboard' },
+      { id: 'chat', name: 'chat', route: '/chat', icon: 'chat' },
+      { id: 'files', name: 'files', route: '/files', icon: 'files' },
+      { id: 'audit', name: 'audit', route: '/audit', icon: 'audit' },
+      { id: 'logs', name: 'logs', route: '/logs', icon: 'logs' },
     ]);
   });
 
-  it('drops groups with nothing in their subtree unless asked to keep them', () => {
-    expect(navigationTree(features, groups).groups.map((node) => node.group.id)).not.toContain(
-      'empty',
-    );
-    const all = navigationTree([], groups, { keepEmpty: true });
-    expect(all.groups.map((node) => node.group.id)).toEqual(['work', 'system', 'empty']);
-    expect(all.groups[1].groups[0].group.id).toBe('diagnosis');
-    // 只有子群組中有功能的上層群組，仍為它保留。
-    const nested = navigationTree([feature('logs', 'diagnosis', 1)], groups);
-    expect(nested.groups.map((node) => [node.group.id, node.groups.length])).toEqual([
-      ['system', 1],
-    ]);
-  });
-
-  it('keeps features and groups with unknown or cyclic parents at the top level', () => {
-    const tree = navigationTree(
-      [feature('lost', 'missing', 1), feature('looped', 'a', 2)],
-      [
-        { id: 'a', parentId: 'b', name: 'A', sortOrder: 1 },
-        { id: 'b', parentId: 'a', name: 'B', sortOrder: 2 },
-        { id: 'orphan', parentId: 'missing', name: 'O', sortOrder: 3 },
-      ],
-      { keepEmpty: true },
-    );
-    expect(ids(tree.features)).toEqual(['lost']);
-    expect(tree.groups.map((node) => node.group.id)).toEqual(['a', 'b', 'orphan']);
-    expect(ids(tree.groups[0].features)).toEqual(['looped']);
-  });
-
-  it('flattens to sections with paths and depth, the top level first when it has features', () => {
-    const sections = navigationSections(navigationTree(features, groups), { topName: '最上層' });
-    expect(
-      sections.map((item2) => [item2.id, item2.path, item2.depth, ids(item2.features)]),
-    ).toEqual([
-      ['', '最上層', 0, ['dashboard', 'extra']],
-      ['work', 'AI 工作台', 0, ['chat', 'files']],
-      ['system', '系統管理', 0, ['admin']],
-      ['diagnosis', '系統管理 › 診斷', 1, ['logs']],
-    ]);
-    expect(navigationSections(navigationTree([], groups))).toEqual([]);
-    expect(navigationSections(navigationTree([], []), { keepTop: true })).toHaveLength(1);
-  });
-
-  it('lists a group with all its descendants', () => {
-    expect([...descendantIds(groups, 'system')].sort()).toEqual(['diagnosis', 'system']);
-    expect([...descendantIds(groups, 'work')]).toEqual(['work']);
+  it('marks links with the external icon unless they name one the menu can draw', () => {
+    expect(navigationIcon(link('wiki', 'globe'))).toBe('globe');
+    expect(navigationIcon(link('wiki'))).toBe('external');
+    expect(navigationIcon(link('wiki', 'no-such-icon'))).toBe('external');
+    expect(navigationIcon(page('no-such-icon'))).toBe('document');
+    expect(navigationIcon(group('g', 'G', []))).toBeNull();
   });
 
   it('falls back to one neutral icon for names the menu cannot draw', () => {

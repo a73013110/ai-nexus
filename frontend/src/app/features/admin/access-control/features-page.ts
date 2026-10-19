@@ -7,7 +7,7 @@ import { AccessControlStore } from './access-control-store';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
 import { AdminFeaturesTab } from './roles/admin-features-tab';
 
-/** 功能與選單：名稱、開關、選單分群與順序；網址與圖示來自功能目錄，只顯示不編輯。 */
+/** 功能：名稱與開關；網址與圖示來自功能目錄，只顯示不編輯。選單位置在選單頁。 */
 @Component({
   selector: 'nx-features-page',
   imports: [Notice, FeaturePage, ModuleNavigation, AccessEditorDialog, AdminFeaturesTab],
@@ -15,7 +15,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.features')"
-      description="調整功能名稱、開關，以及側欄選單的分群與順序。"
+      description="調整功能名稱與開關；停用的功能不授予任何人。"
       layoutMode="data"
     >
       <nx-module-navigation />
@@ -27,11 +27,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
         </nx-notice>
       }
       @if (store.catalog()) {
-        <nx-admin-features-tab
-          class="ui-table-fill"
-          (edit)="editor.open('feature', $event)"
-          (editGroup)="editor.open('menu', $event)"
-        />
+        <nx-admin-features-tab class="ui-table-fill" (edit)="editor.open('feature', $event)" />
       }
     </nx-feature-page>
     <nx-access-editor-dialog #editor />`,

@@ -61,7 +61,7 @@ let sequence = 0;
         @if (!enabled()) {
           <nx-notice tone="warning" message="使用者已停用，儲存後無法使用任何功能。" />
         }
-        <nx-feature-summary [features]="features()" [groups]="store.navigationGroups()" />
+        <nx-feature-summary [features]="features()" />
       </div>
     </section>
   `,

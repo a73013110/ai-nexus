@@ -20,9 +20,15 @@ test("audit-only access keeps deep-link filters and same-page links without requ
     if (url.pathname === "/api/v1/admin/audit/catalog")
       return route.fulfill({
         json: {
-          features: [{ id: "audit", name: "活動稽核", route: "/admin/audit" }],
+          features: [
+            {
+              id: "audit",
+              name: "活動稽核",
+              route: "/admin/audit",
+              icon: "audit",
+            },
+          ],
           models: [],
-          navigationGroups: [],
         },
       });
     if (url.pathname === "/api/v1/admin/audit") {
@@ -100,7 +106,7 @@ test("management access alone does not imply audit access or issue protected aud
   expect(requests).toEqual([]);
 });
 
-test("recorded feature changes read under their menu groups like the menu", async ({
+test("recorded feature changes read under their catalog area and module", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -111,38 +117,17 @@ test("recorded feature changes read under their menu groups like the menu", asyn
     if (url.pathname === "/api/v1/admin/audit/catalog")
       return route.fulfill({
         json: {
+          // 伺服器依功能目錄的宣告順序列出；不在清單中的 ID 由前端以目錄補上名稱。
           features: [
-            {
-              id: "chat",
-              name: "對話",
-              route: "/work/chat",
-              groupId: "work",
-              icon: "chat",
-              sortOrder: 10,
-            },
+            { id: "chat", name: "對話", route: "/work/chat", icon: "chat" },
             {
               id: "audit",
               name: "活動稽核",
               route: "/admin/audit",
-              groupId: "system",
               icon: "audit",
-              sortOrder: 97,
-            },
-            {
-              id: "reports",
-              name: "月報",
-              route: "",
-              groupId: "reports",
-              icon: "chart",
-              sortOrder: 40,
             },
           ],
           models: [],
-          navigationGroups: [
-            { id: "work", parentId: null, name: "AI 工作台", sortOrder: 10 },
-            { id: "system", parentId: null, name: "系統管理", sortOrder: 30 },
-            { id: "reports", parentId: "system", name: "報表", sortOrder: 40 },
-          ],
         },
       });
     if (url.pathname === "/api/v1/admin/audit")
@@ -150,7 +135,7 @@ test("recorded feature changes read under their menu groups like the menu", asyn
         json: [
           {
             id: 7,
-            actor: "AD\admin",
+            actor: "AD\\admin",
             action: "admin.group",
             category: "administration",
             result: "saved",
@@ -158,7 +143,15 @@ test("recorded feature changes read under their menu groups like the menu", asyn
             resourceId: "auditors",
             detailsJson: JSON.stringify({
               before: { featureIds: ["chat"] },
-              after: { featureIds: ["chat", "audit", "reports"] },
+              // 快照的順序不是目錄順序，也可能有已移除的功能。
+              after: {
+                featureIds: [
+                  "retired",
+                  "diagnostics.logs.export",
+                  "audit",
+                  "chat",
+                ],
+              },
             }),
           },
         ],
@@ -177,16 +170,17 @@ test("recorded feature changes read under their menu groups like the menu", asyn
       .locator(selector),
   );
   await expect(before.locator(".feature-category-label")).toHaveText([
-    "AI 工作台",
+    "AI 工作台 › 對話",
   ]);
   await expect(after.locator(".feature-category-label")).toHaveText([
-    "AI 工作台",
-    "系統管理",
-    "系統管理 › 報表",
+    "AI 工作台 › 對話",
+    "系統管理 › 活動稽核",
+    "系統管理 › 診斷",
   ]);
   await expect(after.locator(".resource-badges")).toHaveText([
     "對話",
     "活動稽核",
-    "月報",
+    "日誌匯出",
+    "retired",
   ]);
 });
