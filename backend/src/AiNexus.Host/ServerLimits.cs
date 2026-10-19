@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http.Features;
+
 namespace AiNexus.Host;
 
 /// <summary>
@@ -7,18 +9,21 @@ namespace AiNexus.Host;
 /// </summary>
 internal static class ServerLimits
 {
+    // Kestrel 與 IIS 必須同一個值：本機與 IIS 部署才會在同一個大小拒絕請求。
+    private const long MaxRequestBodyBytes = 10 * 1024 * 1024;
+
+    // 比請求上限小，multipart 邊界與其他欄位才有餘裕，不會在檔案剛好接近上限時被請求上限先擋下。
+    private const long MaxMultipartBodyBytes = 9 * 1024 * 1024;
+
     public static void ConfigureServerLimits(this WebApplicationBuilder builder)
     {
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.AddServerHeader = false;
-            options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
+            options.Limits.MaxRequestBodySize = MaxRequestBodyBytes;
         });
 
-        builder.Services.Configure<IISServerOptions>(options =>
-            options.MaxRequestBodySize = 10 * 1024 * 1024);
-
-        builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
-            options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
+        builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = MaxRequestBodyBytes);
+        builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MaxMultipartBodyBytes);
     }
 }

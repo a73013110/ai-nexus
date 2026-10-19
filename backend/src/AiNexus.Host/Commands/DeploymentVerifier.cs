@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AiNexus.Data.App;
 using AiNexus.Features.Work.Artifacts.Export;
 using AiNexus.Features.Work.Files;
@@ -11,7 +12,7 @@ using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Repositories;
 using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Data;
-using AiNexus.Platform.Errors;
+using AiNexus.Platform.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
@@ -24,8 +25,6 @@ namespace AiNexus.Host.Commands;
 /// </summary>
 public static class DeploymentVerifier
 {
-    private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
-
     /// <summary>
     /// 驗證部署環境之資料庫、認證、模型、附件儲存與診斷日誌是否健全。
     /// </summary>
@@ -39,9 +38,9 @@ public static class DeploymentVerifier
             _ = scope.ServiceProvider.GetRequiredService<IOptions<AdminBootstrapOptions>>().Value;
             var knowledge = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
             var attachments = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value;
-            var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<AiNexus.Platform.Diagnostics.DiagnosticOptions>>().Value;
+            var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<DiagnosticOptions>>().Value;
 
-            var diagnosticPath = AiNexus.Platform.Diagnostics.DiagnosticJournal.Resolve(diagnostics.Directory, environment);
+            var diagnosticPath = DiagnosticJournal.Resolve(diagnostics.Directory, environment);
             Directory.CreateDirectory(diagnosticPath);
             var diagnosticProbe = Path.Combine(diagnosticPath, ".verify-" + Guid.NewGuid().ToString("N"));
             try
@@ -77,7 +76,7 @@ public static class DeploymentVerifier
                 && retrieval.Embedding.Available == true
                 && retrieval.Rerank.Available == true;
 
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            Console.WriteLine(JsonSerializer.Serialize(new
             {
                 environment = environment.EnvironmentName,
                 sqlConnected = connected,
@@ -108,17 +107,15 @@ public static class DeploymentVerifier
                 diagnosticMaxSqlRows = diagnostics.MaxSqlRows,
                 diagnosticOtlpEnabled = diagnostics.OtlpEnabled,
                 ready
-            }, Indented));
+            }, HostCommand.ReportJson));
 
             return ready;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external
-                ? external.Message
-                : ex is Microsoft.Extensions.Options.OptionsValidationException
-                    ? "部署組態驗證失敗。請檢查資料庫、模型、身分驗證、外部工具、連線器與配額設定。"
-                    : DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName));
+            Console.Error.WriteLine(ex is OptionsValidationException
+                ? "部署組態驗證失敗。請檢查資料庫、模型、身分驗證、外部工具、連線器與配額設定。"
+                : HostCommand.Describe(ex));
             return false;
         }
     }

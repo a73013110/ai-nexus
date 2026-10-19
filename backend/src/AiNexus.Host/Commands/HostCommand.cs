@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
@@ -27,11 +28,8 @@ public sealed class HostCommand
     [
         new("verify deployment", "唯讀檢查 SQL、設定、模型清單、embedding／rerank 與站外目錄寫入，不產生 AI 回答", [],
             (app, _) => DeploymentVerifier.VerifyAsync(app.Services, app.Configuration, app.Environment, CancellationToken.None)),
-        new("verify connections", "以合成資料實測 SQL 讀寫、AD、模型串流、附件辨識與檢索模型（會使用模型配額）", [Report], async (app, command) =>
-        {
-            using var scope = app.Services.CreateScope();
-            return await ConnectionVerifier.VerifyAsync(scope.ServiceProvider, command.Output ?? Path.Combine(app.Environment.ContentRootPath, "connection-checks.json"), CancellationToken.None);
-        }),
+        new("verify connections", "以合成資料實測 SQL 讀寫、AD、模型串流、附件辨識與檢索模型（會使用模型配額）", [Report], (app, command) =>
+            ConnectionVerifier.VerifyAsync(app.Services, command.Output ?? Path.Combine(app.Environment.ContentRootPath, "connection-checks.json"), CancellationToken.None)),
         new("verify sql", "檢查 SQL Server 版本、原生向量與全文檢索能力", [Report], (app, command) => InScopeAsync(app, services =>
             services.GetRequiredService<SqlVectorCapabilities>().VerifyAsync(command.Output ?? "sql-capabilities.json", CancellationToken.None))),
     ];
@@ -41,6 +39,9 @@ public sealed class HostCommand
     /// 所以每個指令接受哪些選項，必須在 Definitions 中明確宣告。
     /// </summary>
     private static readonly string[] CommandOptions = [.. Definitions.SelectMany(x => x.Options).Select(x => x.Name).Distinct()];
+
+    /// <summary>指令輸出 JSON 報告的格式；報告給人讀，所以縮排。</summary>
+    internal static JsonSerializerOptions ReportJson { get; } = new() { WriteIndented = true };
 
     private readonly Dictionary<string, string> options;
 
@@ -145,8 +146,15 @@ public sealed class HostCommand
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName));
+            Console.Error.WriteLine(Describe(ex));
             return false;
         }
     }
+
+    /// <summary>
+    /// 指令失敗時給操作者看的說明：外部服務用它自己的訊息，其餘依資料庫診斷分類。
+    /// 不輸出例外內容，避免連線字串或主機名稱出現在部署紀錄。
+    /// </summary>
+    internal static string Describe(Exception ex) =>
+        ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, AppDbContext.DatabaseName);
 }
