@@ -89,7 +89,7 @@ internal sealed class RepositoryImportHandler(AppDbContext db, RepositoryService
         var row = await db.Set<RepositoryFolderImport>().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
         if (row is null) return CollaborationErrors.ResourceNotFound;
         if (row.BaseUrl != gitea.BaseUrl) return RepositoriesErrors.ReviewHostChanged;
-        if (await access.RequireAsync(job.OwnerId, row.CollectionId, "knowledge", ct, write: true) is { IsSuccess: false } denied) return denied.Error!;
+        if (await access.RequireAsync(job.OwnerId, row.CollectionId, Collection.Kind, ct, write: true) is { IsSuccess: false } denied) return denied.Error!;
         return row;
     }
 }

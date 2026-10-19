@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.AccessControl;
@@ -23,11 +24,11 @@ internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptio
         var reviews = db.Set<RepositoryReview>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var jobs = db.Set<BackgroundJob>().AsNoTracking();
         var status = await reviews.Where(r => r.CreatedAt >= scope.From && r.CreatedAt < scope.Until)
-            .Select(r => jobs.Where(j => j.Id == r.JobId).Select(j => j.Status).FirstOrDefault() ?? "completed")
+            .Select(r => jobs.Where(j => j.Id == r.JobId).Select(j => j.Status).FirstOrDefault() ?? RunStates.Completed)
             .GroupBy(x => x).Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
-        var active = await reviews.CountAsync(r => jobs.Any(j => j.Id == r.JobId && (j.Status == "queued" || j.Status == "running")), ct);
+        var active = await reviews.CountAsync(r => jobs.Any(j => j.Id == r.JobId && (j.Status == RunStates.Queued || j.Status == RunStates.Running)), ct);
         var daily = await DashboardDays.CountAsync(reviews.Select(x => x.CreatedAt), scope, ct);
-        var failed = status.Where(x => x.Status == "failed").Sum(x => x.Count);
+        var failed = status.Where(x => x.Status == RunStates.Failed).Sum(x => x.Count);
         var connections = await db.Set<RepositoryConnection>().AsNoTracking().CountAsync(x => owner == null || x.OwnerId == owner, ct);
         var section = new DashboardSection("repositories", Feature)
             .Count("connections", "已連線帳號", connections, "個")
@@ -35,10 +36,10 @@ internal sealed class RepositoriesDashboard(AppDbContext db, IOptions<GiteaOptio
             .Period("reviews", "期間 Review", daily.Sum(x => x.Value), "次")
             .Period("failed", "Review 失敗", failed, "次", tone: failed > 0 ? DashboardTones.Danger : DashboardTones.Neutral)
             .Daily("reviews", "每日 AI review", "次", daily)
-            .Share("completed", "完成", status.Where(x => x.Status == "completed").Sum(x => x.Count), DashboardTones.Success)
-            .Share("active", "進行中", status.Where(x => x.Status is "queued" or "running").Sum(x => x.Count), DashboardTones.Info)
+            .Share("completed", "完成", status.Where(x => x.Status == RunStates.Completed).Sum(x => x.Count), DashboardTones.Success)
+            .Share("active", "進行中", status.Where(x => RunStates.IsActive(x.Status)).Sum(x => x.Count), DashboardTones.Info)
             .Share("failed", "失敗", failed, DashboardTones.Danger)
-            .Share("cancelled", "已取消", status.Where(x => x.Status == "cancelled").Sum(x => x.Count))
+            .Share("cancelled", "已取消", status.Where(x => x.Status == RunStates.Cancelled).Sum(x => x.Count))
             .ActiveWhen(active);
         var recent = await reviews.Where(x => x.OwnerId == scope.Actor).OrderByDescending(x => x.CreatedAt).Take(5)
             .Select(x => new { x.Id, x.Repository, x.Commit, x.CreatedAt }).ToListAsync(ct);

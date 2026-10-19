@@ -108,7 +108,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
             var duplicate = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (duplicate is not null) return duplicate.RequestHash == hash ? await reviews.DescribeAsync(duplicate, ct) : RepositoriesErrors.IdempotencyConflict;
             var label = repo + (request.PullRequest is { } pr ? " · PR #" + pr : " · " + head[..10]);
-            row.JobId = jobs.Enqueue(owner, null, row.Id, "repository-review", label).Id;
+            row.JobId = jobs.Enqueue(owner, null, row.Id, RepositoryReviewHandler.JobKind, label).Id;
             db.Add(row);
             db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = row.Id, Action = "repository.review.created", Result = "queued" });
             await db.SaveChangesAsync(ct);

@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Repositories;
-using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Jobs;
@@ -36,27 +35,4 @@ public sealed class RepositoryReviewService(AppDbContext db, RepositoryService r
 
     public static Result<ReviewSnapshot> Snapshot(RepositoryReview row) => JsonSerializer.Deserialize<ReviewSnapshot>(row.SnapshotJson) is { Version: ReviewSnapshot.Current } snapshot
         ? snapshot : RepositoriesErrors.SnapshotUnsupported;
-
-    public static Result<ReviewSlice[]> Split(string diff, int budget)
-    {
-        if (string.IsNullOrWhiteSpace(diff)) return RepositoriesErrors.ReviewNoChanges;
-        if (Encoding.UTF8.GetByteCount(diff) > 256000) return RepositoriesErrors.DiffLimit;
-        // 以每個 "diff --git" 行首切開，讓每個檔案的 diff 獨立成段。
-        var files = System.Text.RegularExpressions.Regex
-            .Split(diff.Replace("\r\n", "\n"), "(?=^diff --git )", System.Text.RegularExpressions.RegexOptions.Multiline)
-            .Where(x => !string.IsNullOrWhiteSpace(x));
-        var slices = new List<ReviewSlice>();
-        foreach (var file in files)
-        {
-            var label = string.Concat(file.Split('\n')[0].Take(500));
-            var binary = file.Contains("GIT binary patch", StringComparison.Ordinal) || file.Contains("Binary files ", StringComparison.Ordinal);
-            var parts = RepositoryReviewPlan.Chunks(file, budget).ToArray();
-            for (var i = 0; i < parts.Length; i++)
-            {
-                slices.Add(new(label + (parts.Length > 1 ? $" · 區段 {i + 1}" : ""), parts[i], binary));
-                if (slices.Count > 60) return RepositoriesErrors.SegmentLimit;
-            }
-        }
-        return slices.ToArray();
-    }
 }

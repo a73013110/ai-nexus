@@ -39,9 +39,9 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
 
     public async Task<Result<RepositoryPageDto>> ListAsync(Guid owner, string? query, int page, CancellationToken ct)
     {
-        if (page is < 1 or > 1000) return RepositoriesErrors.InvalidPage;
+        if (!RepositoryService.IsPage(page)) return RepositoriesErrors.InvalidPage;
         var q = (query ?? "").Trim();
-        if (q.Length > 100 || q.Any(char.IsControl)) return RepositoriesErrors.InvalidRepository;
+        if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidRepository;
         var read = await gitea.GetAsync(owner, $"api/v1/repos/search?q={Uri.EscapeDataString(q)}&page={page}&limit={PageSize}&sort=updated&order=desc", ct);
         if (!read.IsSuccess) return read.Error!;
         using var json = read.Value!;
@@ -88,7 +88,7 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!RepositoryService.IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         if (!RepositoryService.IsFilePath(path, true)) return RepositoriesErrors.InvalidPath;
-        var read = await gitea.GetAsync(owner, RepositoryService.Route(repo) + "/contents" + (path.Length == 0 ? "" : "/" + RepositoryService.EncodePath(path)) + "?ref=" + commit, ct);
+        var read = await gitea.GetAsync(owner, RepositoryService.ContentsRoute(repo, path, commit), ct);
         if (!read.IsSuccess) return read.Error!;
         RepositoryEntryDto[] entries;
         using (var json = read.Value!)
@@ -111,7 +111,7 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         .Select(x => new RepositoryRefDto(GiteaJson.Text(x, "name", 250), commit(x).ToLowerInvariant()))
         .Where(x => RepositoryService.IsRef(x.Name) && RepositoryService.IsCommit(x.Commit)).ToArray();
 
-    internal RepositoryDto Describe(JsonElement x, Func<string, bool> pinned)
+    private RepositoryDto Describe(JsonElement x, Func<string, bool> pinned)
     {
         var name = GiteaJson.Text(x, "full_name", 201);
         return new(name, GiteaJson.Text(x, "description", 500), GiteaJson.Flag(x, "private"), GiteaJson.Flag(x, "archived"), GiteaJson.Flag(x, "empty"),
