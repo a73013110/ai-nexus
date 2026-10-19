@@ -14,6 +14,11 @@ export const adminRoutes: Routes = [
       (module) => module.accessControlRoutes,
     ),
   ),
+  moduleRoute('organization', () =>
+    import('@features/admin/organization/organization.routes').then(
+      (module) => module.organizationRoutes,
+    ),
+  ),
   moduleRoute('operations', () =>
     import('@features/admin/operations/operations.routes').then(
       (module) => module.operationsRoutes,

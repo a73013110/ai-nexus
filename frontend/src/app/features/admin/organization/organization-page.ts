@@ -1,0 +1,161 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type { DirectoryUserDto, UnitMemberDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { FeaturePage } from '@core/layout/feature-page';
+import { ViewScope } from '@shared/browser/view-scope';
+import { Card } from '@shared/ui/card';
+import { Checkbox } from '@shared/ui/checkbox';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
+import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
+import { Notice } from '@shared/ui/notice';
+import { SearchField } from '@shared/ui/search-field';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { directorySearch } from '@features/work/collaboration/directory-search';
+import { OrganizationStore } from './organization-store';
+import { UnitDialog } from './unit-dialog';
+import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
+
+/**
+ * 組織：部門樹與每個單位的直屬成員。單位只用來計算資料範圍與主管關係，不授予功能（ADR 0017）；
+ * 部門與所屬由管理員維護，不從 AD 同步。
+ */
+@Component({
+  selector: 'nx-organization-page',
+  imports: [
+    Card,
+    Checkbox,
+    ConfirmDialog,
+    EmptyState,
+    FeaturePage,
+    Icon,
+    MenuPanel,
+    Notice,
+    SearchField,
+    StatusBadge,
+    UnitDialog,
+  ],
+  providers: [OrganizationStore, ViewScope],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './organization-page.html',
+  styleUrl: './organization-page.scss',
+})
+export class OrganizationPage {
+  readonly session = inject(WorkspaceSession);
+  readonly store = inject(OrganizationStore);
+  readonly maxDepth = MAX_DEPTH;
+  private readonly menu = viewChild.required(MenuPanel);
+  private readonly confirmation = viewChild.required(ConfirmDialog);
+  private readonly dialog = viewChild.required(UnitDialog);
+  readonly people = directorySearch(() => (this.store.members() ?? []).map((m) => m.userId), {
+    includeSelf: true,
+  });
+  /** 開啟操作選單的那一列。 */
+  private readonly menuRow = signal<UnitRow | null>(null);
+  readonly actions = computed<MenuAction[]>(() => {
+    const row = this.menuRow();
+    if (!row) return [];
+    const units = this.store.units();
+    const locked = this.store.locked();
+    return [
+      { id: 'edit', label: '編輯', icon: 'edit', disabled: locked },
+      {
+        id: 'child',
+        label: '新增下層單位',
+        icon: 'plus',
+        disabled: locked || row.depth >= MAX_DEPTH,
+      },
+      {
+        id: 'up',
+        label: '上移',
+        icon: 'arrow',
+        disabled: locked || !moved(units, row.unit.id, -1),
+      },
+      {
+        id: 'down',
+        label: '下移',
+        icon: 'down',
+        disabled: locked || !moved(units, row.unit.id, 1),
+      },
+      { id: 'delete', label: '刪除', icon: 'trash', danger: true, disabled: locked },
+    ];
+  });
+
+  isMenuOpen(trigger: HTMLElement) {
+    return this.menu().isOpenFor(trigger);
+  }
+  openMenu(row: UnitRow, trigger: HTMLElement) {
+    if (this.menu().isOpenFor(trigger)) return this.menu().close();
+    this.menuRow.set(row);
+    this.menu().open(trigger);
+  }
+  act(action: string) {
+    const row = this.menuRow();
+    if (!row) return;
+    switch (action) {
+      case 'edit':
+        return this.dialog().edit(row.unit);
+      case 'child':
+        return this.dialog().create(row.unit);
+      case 'up':
+        return void this.store.move(row.unit, -1);
+      case 'down':
+        return void this.store.move(row.unit, 1);
+      case 'delete':
+        return void this.remove(row);
+    }
+  }
+  create(parent = false) {
+    this.dialog().create(parent ? this.store.selected() : null);
+  }
+  editSelected() {
+    const unit = this.store.selected();
+    if (unit) this.dialog().edit(unit);
+  }
+
+  private async remove(row: UnitRow) {
+    if (
+      await this.confirmation().ask({
+        title: `刪除「${row.unit.name}」？`,
+        message: '刪除後無法復原；仍有下層單位或成員時無法刪除。不再使用的單位建議改為停用。',
+        confirm: '刪除',
+        danger: true,
+      })
+    )
+      await this.store.remove(row.unit);
+  }
+
+  async add(user: DirectoryUserDto) {
+    // 還沒有主要所屬的人通常是第一次分派部門，由管理員自行勾選，不自動設定。
+    if (await this.store.saveMember(user.id, false, false, true)) this.people.clear();
+  }
+  setPrimary(member: UnitMemberDto, value: boolean) {
+    void this.store.saveMember(member.userId, value, member.isManager);
+  }
+  setManager(member: UnitMemberDto, value: boolean) {
+    void this.store.saveMember(member.userId, member.isPrimary, value);
+  }
+  async removeMember(member: UnitMemberDto) {
+    const unit = this.store.selected();
+    if (
+      unit &&
+      (await this.confirmation().ask({
+        title: `將 ${member.displayName} 移出「${unit.name}」？`,
+        message: member.isPrimary
+          ? '這是此人的主要所屬單位，移出後不會自動指定其他單位。'
+          : '移出後此人不再屬於這個單位，其他單位的所屬不受影響。',
+        confirm: '移出',
+        danger: true,
+      }))
+    )
+      await this.store.removeMember(member);
+  }
+}

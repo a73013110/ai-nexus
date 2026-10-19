@@ -81,6 +81,7 @@ import {
   ChevronsLeft,
   Clock,
   RotateCcw,
+  Network,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
@@ -150,6 +151,7 @@ const icons: Record<string, IconNode> = {
   maximize: Maximize2,
   minimize: Minimize2,
   user: User,
+  organization: Network,
   logout: LogOut,
   settings: Settings2,
   shield: ShieldCheck,
