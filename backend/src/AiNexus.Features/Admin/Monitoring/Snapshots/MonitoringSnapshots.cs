@@ -10,11 +10,12 @@ public sealed class MonitoringSnapshots(RuntimeTraffic traffic, SubsystemReading
 {
     public static readonly TimeSpan ReuseFor = TimeSpan.FromSeconds(1);
     private readonly Lock gate = new();
-    private readonly MonitoringSnapshot?[] recent = new MonitoringSnapshot?[3];
+    private readonly MonitoringSnapshot?[] recent = new MonitoringSnapshot?[MonitoringReads.Windows.Length];
 
     public MonitoringSnapshot Read(int minutes)
     {
-        var slot = minutes switch { 1 => 0, 5 => 1, 15 => 2, _ => throw new ArgumentOutOfRangeException(nameof(minutes)) };
+        var slot = Array.IndexOf(MonitoringReads.Windows, minutes);
+        ArgumentOutOfRangeException.ThrowIfNegative(slot, nameof(minutes));
         lock (gate)
         {
             var now = clock.GetUtcNow();

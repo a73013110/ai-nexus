@@ -53,7 +53,6 @@ public static class MonitoringVocabulary
 
     public static string Action(string method, string feature) => method switch
     {
-        "POST" => "執行" + Name(feature), "PUT" or "PATCH" => "更新" + Name(feature), "DELETE" => "刪除" + Name(feature),
-        _ => "讀取" + Name(feature)
-    };
+        "POST" => "執行", "PUT" or "PATCH" => "更新", "DELETE" => "刪除", _ => "讀取"
+    } + Name(feature);
 }

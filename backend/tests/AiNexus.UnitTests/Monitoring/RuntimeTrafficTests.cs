@@ -42,8 +42,8 @@ public sealed class RuntimeTrafficTests
     public void RollingMetricsExcludeOpenBucketAndStreamingLatencyButCountBodyBytes()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); var traffic = Traffic(clock);
-        traffic.RequestStarted(false); traffic.Transferred(120, 180); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", 200, 30, 120, 180, false, false, null);
-        traffic.RequestStarted(true); traffic.Transferred(0, 2000); traffic.RequestFinished(null, null, "GET", "/api/v1/runs/{id}/events", 200, 20000, 0, 2000, true, false, null);
+        traffic.RequestStarted(); traffic.Transferred(120, 180); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", 200, 30, 120, 180, false, false, null);
+        traffic.RequestStarted(); traffic.StreamStarted(); traffic.Transferred(0, 2000); traffic.RequestFinished(null, null, "GET", "/api/v1/runs/{id}/events", 200, 20000, 0, 2000, true, false, null);
         Assert.Equal(0, traffic.Snapshot(1).Traffic.Requests);
         clock.Advance(TimeSpan.FromSeconds(10)); var snapshot = traffic.Snapshot(1);
         Assert.Equal(2, snapshot.Traffic.Requests); Assert.Equal(.2, snapshot.Traffic.RequestsPerSecond);
@@ -57,7 +57,7 @@ public sealed class RuntimeTrafficTests
     public void StreamingBytesAreVisibleBeforeRequestCompletes()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); using var traffic = Traffic(clock);
-        traffic.RequestStarted(true); traffic.Transferred(0, 4096); clock.Advance(TimeSpan.FromSeconds(10));
+        traffic.RequestStarted(); traffic.StreamStarted(); traffic.Transferred(0, 4096); clock.Advance(TimeSpan.FromSeconds(10));
         var snapshot = traffic.Snapshot(1);
         Assert.Equal(4096, snapshot.Traffic.SentBytes); Assert.Equal(0, snapshot.Traffic.Requests);
         Assert.Equal(1, snapshot.OpenStreams);
@@ -69,7 +69,7 @@ public sealed class RuntimeTrafficTests
     public void TimelinePointsCarryServerErrorsAndP95AndRecentTrafficCoversOnlyTheLastMinute()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); using var traffic = Traffic(clock);
-        void Finish(int status, double ms) { traffic.RequestStarted(false); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", status, ms, 0, 0, false, false, null); }
+        void Finish(int status, double ms) { traffic.RequestStarted(); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", status, ms, 0, 0, false, false, null); }
         Finish(500, 40); Finish(200, 1200);
         clock.Advance(TimeSpan.FromSeconds(10)); Finish(200, 10);
         clock.Advance(TimeSpan.FromSeconds(10));
@@ -110,7 +110,7 @@ public sealed class RuntimeTrafficTests
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); var traffic = Traffic(clock);
         for (var i = 0; i < 500; i++) {
-            traffic.RequestStarted(false); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", 503, 10, 0, 0, false, true, null);
+            traffic.RequestStarted(); traffic.RequestFinished(null, null, "POST", "/api/v1/runs", 503, 10, 0, 0, false, true, null);
         }
         clock.Advance(TimeSpan.FromSeconds(10)); var snapshot = traffic.Snapshot(1);
         Assert.Equal(500, snapshot.Traffic.Cancelled); Assert.Equal(0, snapshot.Traffic.Errors);

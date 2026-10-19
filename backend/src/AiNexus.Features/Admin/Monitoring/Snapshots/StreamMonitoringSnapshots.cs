@@ -56,14 +56,14 @@ public sealed class MonitoringStreams
 
 /// <summary>
 /// 以 Server-Sent Events 推送快照，最長十分鐘。使用者的第四個串流會以 <c>stream_superseded</c> 結束最舊的一個。
-/// 整個檢視只稽核一次。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態，
+/// 整個檢視只稽核一次。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態（<see cref="StillAllowedAsync"/>），
 /// 所以權限被撤銷後，串流會以錯誤事件結束，不會一直沿用舊的授權。
 /// </summary>
 internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AppDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
-            handler.HandleAsync(http, user.Id, minutes ?? 5, ct).ToStreamResultAsync(http))
+            handler.HandleAsync(http, user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToStreamResultAsync(http))
         .WithName("StreamMonitoringSnapshots").Produces<MonitoringSnapshot>(200, "text/event-stream");
 
     public async Task<Result> HandleAsync(HttpContext http, Guid user, int window, CancellationToken ct)
@@ -85,24 +85,8 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             {
                 if (clock.GetUtcNow() >= nextCheck)
                 {
-                    // 每次都以新的 scope 重新讀取帳號版本與權限；長時間存活的串流必須遵守撤銷。
-                    await using var scope = scopes.CreateAsyncScope();
-                    var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
-                    if (!identity.IsSuccess) return identity.Error;
-                    var access = scope.ServiceProvider.GetRequiredService<AccessService>();
-                    if (!(await access.ForUserAsync(identity.Value.Id, ct)).Features.Any(x => x.Id == MonitoringModule.Feature))
-                        return AccessControlErrors.FeatureForbidden;
-                    if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId))
-                    {
-                        var actor = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
-                        if (actor is null || !SessionIdentity.Allows(actor, http.User.FindFirstValue(SessionIdentity.ActorMethod)) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)))
-                            return MonitoringErrors.SessionRevoked;
-                        if (!long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds() ||
-                            !Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId) ||
-                            await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", ct) ||
-                            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureCatalog.IdentityUsers))
-                            return MonitoringErrors.SessionRevoked;
-                    }
+                    var allowed = await StillAllowedAsync(http.User, ct);
+                    if (!allowed.IsSuccess) return allowed;
                     nextCheck = clock.GetUtcNow().AddSeconds(15);
                 }
                 await http.Response.WriteAsync("event: snapshot\ndata: " + JsonSerializer.Serialize(snapshots.Read(window), JsonSerializerOptions.Web) + "\n\n", ct);
@@ -114,5 +98,26 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
         {
             return MonitoringErrors.StreamSuperseded;
         }
+    }
+
+    /// <summary>
+    /// 以新的 scope 重新讀取帳號版本與權限；長時間存活的串流必須遵守撤銷。
+    /// 測試身分另外要求來源管理者仍有效（與 cookie 驗證同一判斷）、測試未逾期也未被結束。
+    /// </summary>
+    private async Task<Result> StillAllowedAsync(ClaimsPrincipal principal, CancellationToken ct)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
+        if (!identity.IsSuccess) return identity.Error;
+        var access = scope.ServiceProvider.GetRequiredService<AccessService>();
+        if (!await access.HoldsAsync(identity.Value.Id, MonitoringModule.Feature, ct)) return AccessControlErrors.FeatureForbidden;
+        if (!Guid.TryParse(principal.FindFirstValue(SessionIdentity.ActorId), out var actorId)) return Result.Success;
+        var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var actor = await scopedDb.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
+        var revoked = !await SessionIdentity.ActorStillValidAsync(actor, principal, access, ct)
+            || !long.TryParse(principal.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds()
+            || !Guid.TryParse(principal.FindFirstValue(SessionIdentity.TestId), out var testId)
+            || await SessionIdentity.TestEndedAsync(scopedDb, actorId, testId, ct);
+        return revoked ? MonitoringErrors.SessionRevoked : Result.Success;
     }
 }

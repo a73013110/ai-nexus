@@ -11,18 +11,13 @@ internal sealed class ExportMonitoringSnapshot(MonitoringSnapshots snapshots, Ap
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/export", (int? minutes, ICurrentUser user, HttpContext http, ExportMonitoringSnapshot handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, minutes ?? 5, ct).ToHttpResultAsync(snapshot =>
+            handler.HandleAsync(user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToHttpResultAsync(snapshot =>
             {
                 http.Response.Headers.CacheControl = "no-store";
                 return TypedResults.File(JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonSerializerOptions.Web), "application/json", "ai-nexus-monitoring.json");
             }))
         .RequireRateLimiting(DiagnosticsModule.ExportRateLimit).WithName("ExportMonitoringSnapshot");
 
-    public async Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
-    {
-        if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidWindow;
-        var snapshot = snapshots.Read(window);
-        await MonitoringReads.AuditAsync(db, user, "monitoring.export", ct);
-        return snapshot;
-    }
+    public Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
+        => MonitoringReads.ReadAsync(snapshots, db, user, window, "monitoring.export", ct);
 }
