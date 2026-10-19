@@ -17,6 +17,7 @@ import type {
   GroupPolicyRequest,
 } from '@core/api/schema';
 import { catalogFeature, catalogSections } from '@core/api/catalog';
+import { CATALOG_SCOPES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { featureIcon } from '@core/layout/navigation-tree';
@@ -31,6 +32,7 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
+import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AccessControlApi } from '../access-control-api';
@@ -58,11 +60,37 @@ interface Editor {
   subtitle: string;
   enabled: boolean;
   ids: string[];
+  /** 群組授權的資料範圍（功能 ID → 範圍）；未選過的功能取它支援的最窄範圍，見 `grantScopes`。 */
+  scopes: Record<string, string>;
   modelPolicy: ModelPolicyDraft;
   storage: string;
   /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
   defaultName: string;
   isNew: boolean;
+}
+
+/** 功能在目錄宣告支援的資料範圍，由窄到寬；空的表示授權不帶範圍（ADR 0017）。 */
+function supportedScopes(id: string): readonly string[] {
+  return catalogFeature(id)?.scopes ?? [];
+}
+
+/**
+ * 送給伺服器的範圍：只含已勾選、且目錄有宣告範圍的功能，每個都有一個它支援的值。
+ * 沒選過（或舊資料的值已不支援）時取最窄的範圍，授予時預設最小權限。
+ */
+export function grantScopes(ids: readonly string[], scopes: Record<string, string>) {
+  const result: Record<string, string> = {};
+  for (const id of ids) {
+    const supported = supportedScopes(id);
+    if (supported.length) result[id] = supported.includes(scopes[id]) ? scopes[id] : supported[0];
+  }
+  return result;
+}
+
+function sameScopes(first: Editor, second: Editor) {
+  const a = grantScopes(first.ids, first.scopes),
+    b = grantScopes(second.ids, second.scopes);
+  return Object.keys(a).every((id) => a[id] === b[id]);
 }
 
 /** 草稿是否與已儲存的內容相同。 */
@@ -72,6 +100,7 @@ function sameEditor(first: Editor, second: Editor) {
     first.name === second.name &&
     first.enabled === second.enabled &&
     sameIds(first.ids, second.ids) &&
+    sameScopes(first, second) &&
     sameModelPolicy(first.modelPolicy, second.modelPolicy) &&
     first.storage.trim() === second.storage.trim()
   );
@@ -106,6 +135,7 @@ let sequence = 0;
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
+    Select,
     Tabs,
     ViewMotion,
   ],
@@ -184,6 +214,23 @@ export class AccessEditorDialog {
       })),
     },
   ]);
+  /** 已勾選且有資料範圍的功能，各自的範圍選項只列目錄宣告支援的。 */
+  readonly scopedGrants = computed(() => {
+    const draft = this.editor();
+    if (!draft || draft.kind !== 'group') return [];
+    const scopes = grantScopes(draft.ids, draft.scopes);
+    const names = new Map(
+      (this.store.catalog()?.features || []).map((item) => [item.id, item.name]),
+    );
+    return Object.keys(scopes).map((id) => ({
+      id,
+      name: names.get(id) || catalogFeature(id)?.name || id,
+      value: scopes[id],
+      options: CATALOG_SCOPES.filter((scope) => supportedScopes(id).includes(scope.id)).map(
+        (scope): SelectOption => ({ value: scope.id, label: scope.name }),
+      ),
+    }));
+  });
   readonly icon = featureIcon;
   /** 圖示來自功能目錄，編輯器只顯示。 */
   catalogIcon(id: string) {
@@ -218,6 +265,7 @@ export class AccessEditorDialog {
       subtitle: feature ? [feature.id, feature.route].filter(Boolean).join(' · ') : item?.id || '',
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: [...(role?.groupIds || group?.featureIds || [])],
+      scopes: { ...group?.scopes },
       modelPolicy: modelPolicyDraft(group?.policy),
       storage:
         group?.policy?.storedAttachmentLimitBytes == null
@@ -238,6 +286,11 @@ export class AccessEditorDialog {
   }
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
     this.editor.update((old) => (old ? { ...old, [key]: value } : null));
+  }
+  updateScope(feature: string, scope: string) {
+    this.editor.update((old) =>
+      old ? { ...old, scopes: { ...old.scopes, [feature]: scope } } : null,
+    );
   }
   /** 還原為開啟時的值；分頁停留在原位。 */
   revert() {
@@ -315,6 +368,7 @@ export class AccessEditorDialog {
           name: event5.name,
           enabled: event5.enabled,
           featureIds: event5.ids,
+          scopes: grantScopes(event5.ids, event5.scopes),
           policy,
         });
       if (event5.kind === 'feature')

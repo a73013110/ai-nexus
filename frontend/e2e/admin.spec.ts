@@ -1128,6 +1128,7 @@ async function administration(page: Page) {
         enabled: true,
         featureIds: ["chat", "files"],
         policy: null,
+        scopes: {},
       },
       {
         id: "administrators",
@@ -1135,6 +1136,7 @@ async function administration(page: Page) {
         enabled: true,
         featureIds: ["identity.users", "audit"],
         policy: null,
+        scopes: { audit: "all" },
       },
     ],
     // 伺服器依功能目錄的宣告順序列出。
@@ -1945,6 +1947,26 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
   await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
+  // 有資料範圍的功能勾選後才出現範圍選擇，預設最窄，選項只有目錄宣告的範圍。
+  await expect(dialog.getByText("資料範圍", { exact: true })).toHaveCount(0);
+  await dialog.getByRole("checkbox", { name: "活動稽核", exact: true }).check();
+  const scope = dialog.getByRole("combobox", {
+    name: "活動稽核的資料範圍",
+    exact: true,
+  });
+  await expect(scope).toHaveText("本人");
+  await scope.click();
+  const scopes = page.getByRole("listbox", {
+    name: "活動稽核的資料範圍",
+    exact: true,
+  });
+  await expect(scopes.getByRole("option")).toHaveText([
+    "本人",
+    "所屬單位",
+    "所屬單位及下層",
+    "全部",
+  ]);
+  await scopes.getByRole("option", { name: "所屬單位及下層" }).click();
   await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();
@@ -1957,6 +1979,9 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     state.catalog.groups?.find((x) => x.id === "research")?.policy
       ?.dailyTokenLimits?.["fixture:8b"],
   ).toBe(50000);
+  expect(
+    state.catalog.groups?.find((x) => x.id === "research")?.scopes,
+  ).toEqual({ audit: "unit-tree" });
   await settleEntrance(page);
   await page.goto(routeOf("identity.users"));
   await page

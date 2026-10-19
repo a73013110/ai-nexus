@@ -154,6 +154,29 @@
                   />
                 </div>
               </section>
+              @if (scopedGrants().length) {
+                <section class="form-section" role="group" [attr.aria-labelledby]="id + '-scopes'">
+                  <header class="form-section-head">
+                    <h3 [id]="id + '-scopes'">資料範圍</h3>
+                    <p class="form-note">
+                      決定能看到哪些人的資料；使用者屬於多個群組時取聯集，所屬單位在組織頁維護。
+                    </p>
+                  </header>
+                  <div class="form-section-body">
+                    @for (grant of scopedGrants(); track grant.id) {
+                      <label class="form-field-short"
+                        >{{ grant.name
+                        }}<nx-select
+                          [label]="grant.name + '的資料範圍'"
+                          [options]="grant.options"
+                          [value]="grant.value"
+                          [disabled]="locked()"
+                          (valueChange)="updateScope(grant.id, $event)"
+                      /></label>
+                    }
+                  </div>
+                </section>
+              }
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-storage'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-storage'">附件容量</h3>
