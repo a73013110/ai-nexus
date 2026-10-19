@@ -1083,6 +1083,21 @@ test("the menu follows the server tree with links beside pages, nested groups an
   await expect(runbook).toHaveAttribute("rel", "noopener noreferrer");
   await expect(runbook).not.toHaveAttribute("target", /.*/);
   await expect(launcher.getByText("管理員專區")).toHaveCount(0);
+  // 分群標題是展開／收合按鈕，收合狀態依帳號記住；Ctrl+K 不受影響（下方仍搜得到系統日誌）。
+  const diagnostics = () =>
+    launcher.getByRole("button", { name: "診斷", exact: true });
+  await expect(diagnostics()).toHaveAttribute("aria-expanded", "true");
+  await diagnostics().click();
+  await expect(diagnostics()).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    launcher.getByRole("link", { name: "系統日誌", exact: true }),
+  ).toHaveCount(0);
+  await page.reload();
+  await expect(diagnostics()).toHaveAttribute("aria-expanded", "false");
+  await diagnostics().press("Enter");
+  await expect(
+    launcher.getByRole("link", { name: "系統日誌", exact: true }),
+  ).toBeVisible();
   // 外部連結沒有本站路由：目前頁面仍只標一項。
   await expect(
     page.locator(".workspace-navigation [aria-current='page']"),

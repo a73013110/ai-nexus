@@ -18,7 +18,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 - **後端產生的前端連結**（總覽、通知）用 `FeatureCatalog.RouteOf`，不寫死路徑。
 - 角色、群組、預設選單分群節點與預設關聯的 ID 在 `BuiltInAccess`。測試身分不可寫入的管理功能列在 `AdministrativeFeatures`（`Policies.cs`）。
 
-模型授權與逐模型額度同樣由有效群組合併，停用群組或撤銷角色後下一次請求重新計算；合併規則見 [模型政策與配額](../features/model-policy.md)。
+模型授權與逐模型額度也由有效群組合併，下一次請求重新計算，見 [模型政策與配額](../features/model-policy.md)。
 
 ```text
 AD login → Users（SID）→ UserRoles → Roles
@@ -43,13 +43,13 @@ AD login → Users（SID）→ UserRoles → Roles
 
 - **節點**：`group` 分群（可巢狀，名稱與圖示可改）、`page` 指向目錄的頁面（名稱取功能的名稱覆寫或目錄預設，圖示取目錄）、`link` 外部連結（名稱、網址、是否另開分頁）。同層依 `SortOrder`、再依 Id。
 - **結構規則**（`NavigationRules`，套在變更後的整棵樹上）：父節點必須是分群、不可成環、最多 4 層、同一層不可重複同一頁面（不同位置可以）；page 必須是目錄的頁面。批次移動全部通過才寫入；分群要先清空才能刪除。
-- **可見範圍**：`/me` 與存取預覽回傳伺服器修剪過的樹（`NavigationTree.Build`）。page 要已授權且啟用；link 要沒有指定可見群組，或使用者屬於其中任一有效群組（`NavigationItemAudiences`），且主機仍在允許清單；沒有可見子節點的分群不輸出，只剩一個的由該子節點取代。授權檢查（`AccessService.ForUserAsync`）不讀選單。
+- **可見範圍**：`/me` 與存取預覽回傳伺服器修剪過的樹（`NavigationTree.Build`）。page 要已授權且啟用；link 要沒有指定可見群組，或使用者屬於其中任一有效群組（`NavigationItemAudiences`），且主機仍在允許清單；沒有可見子節點的分群不輸出，只剩一個的由該子節點取代。授權檢查（`AccessService.ForUserAsync`）不讀選單。管理與稽核目錄另附未修剪樹上的功能位置（`NavigationTree.Sections`）供授權清單分組。
 - **外部連結**：網址須以 `https://` 開頭、不含使用者資訊，主機須在 `AccessControl:NavigationLinkHosts` 允許清單內（[寫法](../operations/iis-configuration.md#外部連結允許清單)；預設空＝不允許）。儲存與產生 `/me` 時各檢查一次（`NavigationLinks`），主機移出清單後連結直接不輸出、不報錯。
 - **Seed**：`database/App/Seed/accesscontrol.sql` 寫入預設樹（Id 是可讀代稱，如 `work.chat`），只新增、不覆蓋：以 Id 比對，移動過的節點留在原位；刪除的預設節點只要上層還在，下次 Seed 會再加回來；上層已刪或同層已有同一頁面時略過。`FeatureCatalogSeedTests` 要求目錄每個頁面至少放在預設樹一次。
 
 ## 擴充功能
 
-1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL）、預設授權，以及預設選單樹的 page 節點。目錄與 Seed 不一致、或頁面沒放進預設樹時 `FeatureCatalogSeedTests` 失敗。
+1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL）、預設授權，以及預設選單樹的 page 節點（`FeatureCatalogSeedTests` 檢查）。
 2. 在 `Policies` 加 policy，於 `ReportsModule` 註冊 `services.AddFeaturePolicy(...)`、加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 重產合約（`FeatureId` 與 `feature-catalog.ts` 隨之更新），前端新增 `reports.routes.ts`，路由以 `data: { feature }` 指向目錄；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 有資料列、要依部門切資料的功能宣告範圍並套用（[資料範圍](data-scopes.md)）。

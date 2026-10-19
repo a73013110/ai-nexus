@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { ModuleNavigation } from '@core/layout/module-navigation';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
@@ -10,7 +9,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
 /** 功能：名稱與開關；網址與圖示來自功能目錄，只顯示不編輯。選單位置在選單頁。 */
 @Component({
   selector: 'nx-features-page',
-  imports: [Notice, FeaturePage, ModuleNavigation, AccessEditorDialog, AdminFeaturesTab],
+  imports: [Notice, FeaturePage, AccessEditorDialog, AdminFeaturesTab],
   providers: [AccessControlStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -18,7 +17,6 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
       description="調整功能名稱與開關；停用的功能不授予任何人。"
       layoutMode="data"
     >
-      <nx-module-navigation />
       @if (store.loading()) {
         <p role="status">正在載入功能…</p>
       } @else if (store.error()) {

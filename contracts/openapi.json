@@ -35462,7 +35462,8 @@
           "roles",
           "groups",
           "features",
-          "models"
+          "models",
+          "navigationSections"
         ],
         "type": "object",
         "properties": {
@@ -35488,6 +35489,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ModelDto"
+            }
+          },
+          "navigationSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationSectionDto"
             }
           }
         }
@@ -36297,7 +36304,8 @@
           "features",
           "models",
           "categories",
-          "actions"
+          "actions",
+          "navigationSections"
         ],
         "type": "object",
         "properties": {
@@ -36323,6 +36331,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AuditActionDto"
+            }
+          },
+          "navigationSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationSectionDto"
             }
           }
         }
@@ -39974,6 +39988,31 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NavigationOrderItem"
+            }
+          }
+        }
+      },
+      "NavigationSectionDto": {
+        "required": [
+          "id",
+          "path",
+          "featureIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "featureIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

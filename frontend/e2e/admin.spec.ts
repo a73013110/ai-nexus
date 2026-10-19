@@ -411,28 +411,13 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(users).toContainText("101–106 / 106");
   await users.getByRole("button", { name: "上一頁", exact: true }).click();
   await expect(users.locator("tbody tr")).toHaveCount(100);
-  // 存取管理拆成四頁：使用者自成一頁，角色、功能群組與功能三頁以連結列互相切換。
-  await expect(
-    page.getByRole("navigation", { name: "存取控制頁面", exact: true }),
-  ).toHaveCount(0);
+  // 每一頁都是側欄的一格，頁內不再放切換同模組其他頁的連結列。
+  await expect(page.locator("nx-feature-page .ui-view-switch")).toHaveCount(0);
   // 介面元件是系統管理選單裡獨立的功能，存取管理頁首不再放工具選單。
   await expect(
     page.locator(".feature-header .page-actions button:visible"),
   ).toHaveCount(0);
   await page.goto(routeOf("access-control.features"));
-  const tabs = page.getByRole("navigation", {
-    name: "存取控制頁面",
-    exact: true,
-  });
-  await expect(tabs.getByRole("link")).toHaveText([
-    "角色",
-    "功能群組與模型",
-    "功能",
-    "選單",
-  ]);
-  await expect(
-    tabs.getByRole("link", { name: "功能", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
   const features = page.locator(".admin-features-table");
   await expect(
     features.getByRole("region", { name: "功能列表" }),
@@ -673,16 +658,16 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
     ],
     ["功能", ".admin-features-table", "檔案庫", "編輯功能：檔案庫"],
   ] as const) {
-    // 使用者是自己的頁面；存取控制的三頁以連結列切換。
-    const links = page.getByRole("navigation", {
-      name: "存取控制頁面",
-      exact: true,
-    });
-    if (tab === "角色") await page.goto(routeOf("access-control.roles"));
-    else await links.getByRole("link", { name: tab, exact: true }).click();
-    await expect(
-      links.getByRole("link", { name: tab, exact: true }),
-    ).toHaveAttribute("aria-current", "page");
+    // 各頁由網址進入；側欄的導覽另有測試。
+    await page.goto(
+      routeOf(
+        tab === "角色"
+          ? "access-control.roles"
+          : tab === "功能"
+            ? "access-control.features"
+            : "access-control.groups",
+      ),
+    );
     await settleEntrance(page);
     const list = page.locator(table);
     await contained(list);
@@ -712,10 +697,7 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
     await expect(editor).not.toBeVisible();
   }
   // 選單在手機上也是卡片；拖曳把手收起，移動走列的選單。
-  await page
-    .getByRole("navigation", { name: "存取控制頁面", exact: true })
-    .getByRole("link", { name: "選單", exact: true })
-    .click();
+  await page.goto(routeOf("access-control.navigation"));
   await settleEntrance(page);
   await contained(page.locator(".navigation-table"));
   await expect(
@@ -1892,11 +1874,6 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       else if (tab === "平台用量") await page.goto(routeOf("operations.usage"));
       else {
         await page.goto(routeOf("access-control.features"));
-        await expect(
-          page
-            .getByRole("navigation", { name: "存取控制頁面", exact: true })
-            .getByRole("link", { name: "功能", exact: true }),
-        ).toHaveAttribute("aria-current", "page");
       }
       if (tab !== "活動稽核")
         // The content arrives with a slight scale; measure where it settles.

@@ -8,8 +8,8 @@ export type NavigationDisplay = 'icons' | 'list';
 const DEFAULT_PINS: readonly FeatureId[] = ['chat', 'files', 'knowledge'];
 
 /**
- * 側邊欄如何列出此帳號的功能：哪幾個釘在最上方，以及功能要顯示為圖示還是每行一個。
- * 兩者都只是瀏覽器偏好，只影響呈現、不影響權限；帳號已無法開啟的功能，其釘選會被略過而非移除。
+ * 側邊欄如何列出此帳號的功能：哪幾個釘在最上方、功能要顯示為圖示還是每行一個，以及收合了哪些分群。
+ * 都只是瀏覽器偏好，只影響呈現、不影響權限；帳號已無法開啟的功能，其釘選會被略過而非移除。
  */
 @Injectable({ providedIn: 'root' })
 export class NavigationPreferences {
@@ -31,6 +31,16 @@ export class NavigationPreferences {
   readonly display = linkedSignal<NavigationDisplay>(() =>
     read(`ai-nexus.navigation-display.${this.user()}`) === 'list' ? 'list' : 'icons',
   );
+  /**
+   * 收合的分群（選單節點 ID）；預設全部展開。不在目前樹上的 ID 不清掉：樹已依授權修剪，
+   * 暫時看不到的分群在授權恢復後仍維持原本的收合狀態。
+   */
+  readonly collapsed = linkedSignal<ReadonlySet<string>>(() => {
+    const value = read(`ai-nexus.navigation-collapsed.${this.user()}`);
+    return new Set(
+      Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [],
+    );
+  });
   readonly ids = computed(() => {
     const visible = new Set(this.pages().map((page) => page.id));
     // 沒有儲存的選擇時，只釘選帳號能開啟的預設功能，不從選單補滿；其他功能從啟動器開啟。
@@ -53,6 +63,26 @@ export class NavigationPreferences {
         : [...base.filter((item) => item !== id), id];
     this.saved.set(ids);
     write(`ai-nexus.pins.${this.user()}`, ids);
+  }
+  isCollapsed(group: string) {
+    return this.collapsed().has(group);
+  }
+  /** 展開或收合分群；`expand` 一次展開多個（目前頁面所在的分群）。沒有變化時不寫入。 */
+  setCollapsed(group: string, collapsed: boolean) {
+    if (this.isCollapsed(group) === collapsed) return;
+    const next = new Set(this.collapsed());
+    if (collapsed) next.add(group);
+    else next.delete(group);
+    this.saveCollapsed(next);
+  }
+  expand(groups: readonly string[]) {
+    const current = this.collapsed();
+    if (!groups.some((group) => current.has(group))) return;
+    this.saveCollapsed(new Set([...current].filter((group) => !groups.includes(group))));
+  }
+  private saveCollapsed(groups: ReadonlySet<string>) {
+    this.collapsed.set(groups);
+    write(`ai-nexus.navigation-collapsed.${this.user()}`, [...groups]);
   }
   setDisplay(display: NavigationDisplay) {
     this.display.set(display);

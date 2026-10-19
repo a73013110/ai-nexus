@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Features.Platform.Inference.Models;
@@ -16,10 +17,12 @@ public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOn
 /// <summary>管理端的功能列；<c>Name</c> 是覆寫或目錄預設名稱，<c>Route</c>、<c>Icon</c> 由 <see cref="FeatureCatalog"/> 填入（同 <see cref="FeatureDto"/>）。</summary>
 public sealed record AdminFeatureDto(string Id, string Name, string Route, bool Enabled, string Icon);
 
-public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models);
+/// <summary><c>NavigationSections</c>：功能在完整選單上的位置，授權清單據此照側欄分組（持有使用者或存取控制任一頁面的人都要用，不能依賴選單管理授權）。</summary>
+public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models,
+    IReadOnlyList<NavigationSectionDto> NavigationSections);
 
-/// <summary>所有角色、群組（含模型策略）與功能（依目錄宣告順序），以及已設定的模型。選單節點另由 <c>/admin/navigation-items</c> 提供。</summary>
-internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog)
+/// <summary>所有角色、群組（含模型策略）與功能（依目錄宣告順序）、功能的選單位置，以及已設定的模型。選單節點本身另由 <c>/admin/navigation-items</c> 提供。</summary>
+internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
@@ -50,7 +53,7 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog)
                 grants.Where(y => y.GroupId == x.Id && y.Scope != null).ToDictionary(y => y.FeatureId, y => y.Scope!, StringComparer.Ordinal)))
             .ToArray();
         var featureDtos = features.Select(ToDto).ToArray();
-        return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray());
+        return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(), await access.NavigationSectionsAsync(ct));
     }
 
     private static AdminFeatureDto ToDto(Feature row)

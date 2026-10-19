@@ -4,17 +4,21 @@
   gap: var(--p-space-2) var(--p-space-3);
   min-width: 0;
 }
-// 每一區是一列：區名一欄（各列對齊），功能標籤在右側換行。
+// 每個分群一列：分群路徑一欄（各列對齊），功能標籤在右側換行。
 .feature-summary-group {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: baseline;
 }
+// 分群路徑可能很長（「系統管理 › 身分與權限」）；限制欄寬，窄表格裡才不會擠掉右側的功能。
+// keep-all 讓中文只在「›」兩側的空白斷行，不把分群名稱拆開。
 .feature-category-label {
+  max-width: 9em;
   color: var(--secondary);
   font-size: var(--text-caption);
-  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 :host > .form-note {
   grid-column: 1 / -1;

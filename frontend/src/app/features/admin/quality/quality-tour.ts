@@ -44,10 +44,9 @@ export function qualityTour(options: { feedback: boolean; chat: boolean }): Prod
         side: 'bottom',
       },
       {
-        target: 'nx-quality-page .quality-list-menu',
-        title: '匯入題庫與檢索評測',
-        description:
-          '「評測操作」可匯入先前匯出的題庫 JSON，或前往檢索評測比較知識庫的四種檢索模式。',
+        target: 'nx-quality-page .quality-import',
+        title: '匯入題庫',
+        description: '匯入先前匯出的題庫 JSON，建立一份新的評測集。',
         side: 'bottom',
       },
     ],

@@ -54,6 +54,10 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         return [.. items.Select(x => NavigationItemDto.From(x, [.. audiences[x.Id].Order(StringComparer.Ordinal)]))];
     }
 
+    /// <summary>功能在完整選單上的位置（<see cref="NavigationTree.Sections"/>），給管理與稽核目錄的授權清單照側欄分組。</summary>
+    public async Task<IReadOnlyList<NavigationSectionDto>> NavigationSectionsAsync(CancellationToken ct)
+        => NavigationTree.Sections(await NavigationItemsAsync(ct));
+
     private async Task<AccessDto> ReadAsync(Guid user, CancellationToken ct)
     {
         if (!await activeUsers.Ids.AnyAsync(x => x == user, ct)) return new([], [], [], []);

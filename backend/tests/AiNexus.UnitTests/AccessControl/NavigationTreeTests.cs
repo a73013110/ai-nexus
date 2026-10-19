@@ -115,6 +115,36 @@ public sealed class NavigationTreeTests
         Assert.Equal(4, NavigationTree.Deepest(new Dictionary<string, string?> { ["a"] = null, ["b"] = "a", ["c"] = "b", ["d"] = "c", ["e"] = null }));
     }
 
+    [Fact]
+    public void SectionsPlaceEachFeatureAtItsFirstPlaceInTheFullTreeWithActionsAfterTheirPage()
+    {
+        NavigationItemDto[] items =
+        [
+            Page("dashboard", null, FeatureCatalog.Dashboard, 10),
+            Group("work", null, 20, "工作"),
+            Page("work.chat", "work", FeatureCatalog.Chat, 10),
+            Group("system", null, 30, "系統管理"),
+            // 子分群排在同層頁面之前，區段順序跟著側欄由上而下。
+            Group("system.access", "system", 10, "身分與權限"),
+            Page("system.access.users", "system.access", FeatureCatalog.IdentityUsers, 10),
+            Page("system.logs", "system", FeatureCatalog.DiagnosticsLogs, 20),
+            Page("system.retrieval", "system", FeatureCatalog.KnowledgeRetrieval, 30),
+            // 只有一個子節點的分群不攤平；第二次出現的頁面、動作與目錄不認得的 ID 都不另佔位置。
+            Group("more", null, 40, "更多"),
+            Page("more.chat", "more", FeatureCatalog.Chat, 10),
+            Page("more.export", "more", FeatureCatalog.DiagnosticsLogsExport, 20),
+            Page("more.retired", "more", "retired", 30),
+            Link("more.wiki", "more", "https://intranet.example.com/", 40),
+            Group("empty", null, 50),
+        ];
+        var sections = NavigationTree.Sections(items);
+        Assert.Equal(["", "work", "system.access", "system"], sections.Select(x => x.Id));
+        Assert.Equal(["系統管理", "身分與權限"], sections[2].Path);
+        Assert.Empty(sections[0].Path);
+        Assert.Equal([FeatureCatalog.DiagnosticsLogs, FeatureCatalog.DiagnosticsLogsDetail, FeatureCatalog.DiagnosticsLogsExport, FeatureCatalog.KnowledgeRetrieval],
+            sections[3].FeatureIds);
+    }
+
     [Theory]
     [InlineData("https://intranet.example.com/path?q=1#top", true)]
     [InlineData("HTTPS://intranet.example.com/", true)]

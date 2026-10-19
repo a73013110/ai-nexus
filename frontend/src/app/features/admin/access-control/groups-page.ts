@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { ModuleNavigation } from '@core/layout/module-navigation';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
@@ -10,7 +9,7 @@ import { AdminGroupsTab } from './roles/admin-groups-tab';
 /** 功能群組：授予功能、AI 模型與附件容量。 */
 @Component({
   selector: 'nx-groups-page',
-  imports: [Notice, FeaturePage, ModuleNavigation, AccessEditorDialog, AdminGroupsTab],
+  imports: [Notice, FeaturePage, AccessEditorDialog, AdminGroupsTab],
   providers: [AccessControlStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -18,7 +17,6 @@ import { AdminGroupsTab } from './roles/admin-groups-tab';
       description="功能群組授予功能、AI 模型與附件容量，再由角色加入。"
       layoutMode="data"
     >
-      <nx-module-navigation />
       @if (store.loading()) {
         <p role="status">正在載入功能群組…</p>
       } @else if (store.error()) {

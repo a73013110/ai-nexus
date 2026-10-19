@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { NavigationNodeDto } from '@core/api/schema';
 import {
   featureIcon,
-  navigationEntries,
   navigationIcon,
   navigationNodes,
   navigationPages,
@@ -84,25 +83,6 @@ describe('navigation tree', () => {
       'system.diagnostics',
       ['system.chat'],
     ]);
-  });
-
-  it('bundles a self-navigating module’s pages into one entry at its first page, others stay', () => {
-    const entries = navigationEntries([
-      page('access-control.roles'),
-      page('knowledge'),
-      page('access-control.navigation'),
-      page('knowledge.retrieval'),
-      page('quality.retrieval'),
-      link('wiki'),
-    ]);
-    expect(entries.map((entry) => [entry.node.id, entry.node.name, ids(entry.members)])).toEqual([
-      ['module:access-control', '存取控制', ['access-control.roles', 'access-control.navigation']],
-      ['knowledge', 'knowledge', ['knowledge']],
-      ['knowledge.retrieval', 'knowledge.retrieval', ['knowledge.retrieval']],
-      ['quality.retrieval', 'quality.retrieval', ['quality.retrieval']],
-      ['wiki', 'wiki', ['wiki']],
-    ]);
-    expect(entries[0].node.route).toBe('/access-control.roles');
   });
 
   it('lists every node depth first and each page once, at its first place', () => {

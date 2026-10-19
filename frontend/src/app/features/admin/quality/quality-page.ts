@@ -204,13 +204,6 @@ export class QualityPage {
         })
       : qualityTour({ feedback: this.tab() === 'feedback', chat: this.session.has('chat') });
   });
-  /** 檢索評測是另一個授權（`quality.retrieval`），沒有時不列入口。 */
-  readonly listActions = computed<MenuAction[]>(() => [
-    { id: 'import', label: '匯入題庫', icon: 'upload' },
-    ...(this.session.has('quality.retrieval')
-      ? [{ id: 'retrieval', label: this.session.featureName('quality.retrieval'), icon: 'chart' }]
-      : []),
-  ]);
   readonly setActions = computed<MenuAction[]>(() => {
     const set = this.current();
     if (!set) return [];
@@ -233,7 +226,6 @@ export class QualityPage {
         : []),
     ];
   });
-  readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
   readonly access = accessLabel;
   readonly when = relativeTime;
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -280,10 +272,6 @@ export class QualityPage {
     this.feedbackRead.reload();
     this.currentRead.reload();
     this.runsRead.reload();
-  }
-  listAction(action: string) {
-    if (action === 'import') this.importInput()?.nativeElement.click();
-    else if (action === 'retrieval') void this.router.navigate([routeOf('quality.retrieval')]);
   }
   setAction(action: string) {
     const set = this.current();

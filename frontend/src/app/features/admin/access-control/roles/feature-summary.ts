@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { catalogSections } from '@core/api/catalog';
+import { featureSections } from '@core/api/catalog';
+import type { NavigationSectionDto } from '@core/api/schema';
 
 /**
- * 依功能目錄的區列出功能名稱（一區一列，區名在左欄對齊），依目錄宣告順序。授權與選單位置無關，
- * 所以不依側欄分群；不在目錄中的 ID（舊資料）放在最後一組沒有標題的清單。
+ * 依側欄的位置列出功能名稱（一個分群一列，分群路徑在左欄對齊），組內依選單順序；
+ * 分組規則見 `featureSections`。
  */
 @Component({
   selector: 'nx-feature-summary',
@@ -11,7 +12,7 @@ import { catalogSections } from '@core/api/catalog';
   styleUrl: './feature-summary.scss',
   host: { class: 'feature-summary' },
   template: `@for (section of sections(); track section.id) {
-      <div class="feature-summary-group" role="group" [attr.aria-label]="section.name || '其他'">
+      <div class="feature-summary-group" role="group" [attr.aria-label]="section.name">
         <span class="feature-category-label" aria-hidden="true">{{ section.name }}</span>
         <div class="resource-badges">
           @for (feature of section.features; track feature.id) {
@@ -25,5 +26,7 @@ import { catalogSections } from '@core/api/catalog';
 })
 export class FeatureSummary {
   readonly features = input.required<readonly { id: string; name: string }[]>();
-  readonly sections = computed(() => catalogSections(this.features()));
+  /** 功能在完整選單上的位置：管理或稽核目錄的 `navigationSections`。 */
+  readonly navigation = input.required<readonly NavigationSectionDto[]>();
+  readonly sections = computed(() => featureSections(this.features(), this.navigation()));
 }

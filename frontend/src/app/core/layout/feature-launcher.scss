@@ -63,11 +63,59 @@
   padding-bottom: var(--p-space-2);
 }
 .workspace-group :is(h3, h4) {
+  margin: 0 0 var(--p-space-1);
   font-size: var(--text-caption);
   font-weight: 500;
   color: var(--muted);
-  margin: 0 0 var(--p-space-1);
-  padding-inline: var(--p-space-2);
+}
+// 分群標題就是展開／收合按鈕：整列可點，箭頭朝下＝展開、朝右＝收合（同差異檢視的檔案列）。
+.workspace-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0 var(--p-space-2);
+  border-radius: var(--p-radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  > span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  > nx-icon {
+    flex: none;
+    --icon-size: var(--icon-xs);
+    rotate: 90deg;
+    transition: rotate var(--motion) var(--ease-spring);
+  }
+  &[aria-expanded='false'] > nx-icon {
+    rotate: 0deg;
+  }
+  &:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+}
+// 0fr↔1fr 的列高過渡讓內容收起／展開而不必量高度；收合完才隱藏（visibility 在過渡結束時才切換）。
+// 裁切留一點邊，選取中的格子外框不會被切掉。
+.workspace-group-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--motion-morph) var(--ease-spring),
+    visibility var(--motion-morph);
+}
+.workspace-group.is-collapsed > .workspace-group-body {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+}
+.workspace-group-content {
+  min-height: 0;
+  overflow: clip;
+  overflow-clip-margin: var(--p-space-1);
 }
 // 子分群是父區段裡的一塊淺色托盤：與後面直接放在父層的項目分得開，又不像內縮加邊線那樣吃掉格子寬度；
 // 圖示與條列共用同一個外框，項目在托盤內與父層對齊。
