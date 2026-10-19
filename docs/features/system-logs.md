@@ -1,14 +1,14 @@
 # 系統日誌
 
-「系統日誌」在 `/admin/logs`，回答「為什麼失敗、HTTP 狀態與耗時、例外與執行流程」。誰在何時做了什麼屬於 [活動稽核](activity-audit.md)。資料來自 `diagnostics.DiagnosticEvents`，架構見 [診斷日誌架構](../architecture/diagnostics.md)，設定與故障排除見 [維運](../operations/diagnostics.md)。
+「系統日誌」在 `/admin/diagnostics/logs`（功能 `diagnostics.logs`），回答「為什麼失敗、HTTP 狀態與耗時、例外與執行流程」。誰在何時做了什麼屬於 [活動稽核](activity-audit.md)。資料來自 `diagnostics.DiagnosticEvents`，架構見 [診斷日誌架構](../architecture/diagnostics.md)，設定與故障排除見 [維運](../operations/diagnostics.md)。
 
 ## 權限
 
 | 功能 | 伺服器要求 |
 | --- | --- |
-| `logs.query` | 查詢摘要與健康資訊；初始只授予 administrators 群組 |
-| `logs.detail` | 加上 `logs.query`，才能看受控屬性、UserId、例外型別與堆疊 |
-| `logs.export` | 加上 `logs.query`，才能匯出摘要 CSV |
+| `diagnostics.logs` | 查詢摘要與健康資訊；初始只授予 administrators 群組 |
+| `diagnostics.logs.detail` | 加上 `diagnostics.logs`，才能看受控屬性、UserId、例外型別與堆疊 |
+| `diagnostics.logs.export` | 加上 `diagnostics.logs`，才能匯出摘要 CSV |
 
 - `admin` 不隱含任何 `logs.*`；猜中查證代碼或 LogId 也不能繞過。每個 request 重新驗證 grant。
 - 查詢與詳情每人每分鐘 60 次、匯出 2 次；伺服器限制範圍、筆數與逾時。沒有修改、刪除或無上限匯出的 API。
@@ -27,9 +27,9 @@
 ## 用查證代碼追查
 
 1. 使用者從錯誤提示旁複製 **NX** 代碼。**LOCAL** 代表伺服器沒有收到，先查網路與登入。
-2. 有 `logs.query` 的人開「系統日誌」，設定發生時間（使用者時區），把代碼貼進搜尋（依格式辨識查證代碼、TraceId 或 ID）後查詢；跨午夜或數日前的問題要擴大範圍。
-3. 確認錯誤分類、模組、HTTP 狀態、Job／Run、Trace 與實例；有 `logs.detail` 才能點開詳情看遮罩後的型別、SQL 編號與 method stack。
-4. 需要移交時，由有 `logs.export` 的人縮小範圍匯出 CSV，下載檔依組織規範保存。
+2. 有 `diagnostics.logs` 的人開「系統日誌」，設定發生時間（使用者時區），把代碼貼進搜尋（依格式辨識查證代碼、TraceId 或 ID）後查詢；跨午夜或數日前的問題要擴大範圍。
+3. 確認錯誤分類、模組、HTTP 狀態、Job／Run、Trace 與實例；有 `diagnostics.logs.detail` 才能點開詳情看遮罩後的型別、SQL 編號與 method stack。
+4. 需要移交時，由有 `diagnostics.logs.export` 的人縮小範圍匯出 CSV，下載檔依組織規範保存。
 
 ## 例：全文索引不可用
 

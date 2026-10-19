@@ -6,21 +6,21 @@
 
 | 功能 ID | 預設名稱 | 入口 | 用途 |
 | --- | --- | --- | --- |
-| dashboard | 總覽 | `/dashboard` | 查詢期間費用、用量與目前工作狀態 |
-| chat | 對話 | `/chat` | 私人提問、AI 回覆與對話歷史 |
-| files | 檔案庫 | `/files` | 個人已保存原檔，可重用於不同工作 |
-| projects | 專案 | `/projects` | 共用指示、參考文件、提問範本與成果文件 |
-| knowledge | 知識庫 | `/knowledge` | 有權限控制的文件集合、檢索與引用 |
-| artifacts | 成果文件 | `/artifacts` | 可編輯、保存版本及匯出的工作成果 |
-| shared | 分享 | `/shared` | 發送與閱讀具名、限時、唯讀的固定快照 |
-| quality | 品質評測 | `/quality` | 回覆回饋、固定題庫與模型／指令比較 |
-| repositories | 程式庫 | `/repositories` | 依個人 Gitea 權限閱讀程式與議題 |
-| tasks | 背景任務 | `/tasks` | 文件文字擷取、索引與評測的持久任務 |
-| integrations | 資料來源 | `/integrations` | 依來源權限查詢外部公文、校務資料 |
-| admin | 存取管理 | `/admin` | 帳號、角色、功能群組、模型政策與功能目錄 |
-| operations | 平台營運 | `/admin/operations` | 全平台用量、知識檢索索引、模型與工具價格 |
+| dashboard | 總覽 | `/work/dashboard` | 查詢期間費用、用量與目前工作狀態 |
+| chat | 對話 | `/work/chat` | 私人提問、AI 回覆與對話歷史 |
+| files | 檔案庫 | `/work/files` | 個人已保存原檔，可重用於不同工作 |
+| projects | 專案 | `/work/projects` | 共用指示、參考文件、提問範本與成果文件 |
+| knowledge | 知識庫 | `/work/knowledge` | 有權限控制的文件集合、檢索與引用 |
+| artifacts | 成果文件 | `/work/artifacts` | 可編輯、保存版本及匯出的工作成果 |
+| sharing | 分享 | `/work/sharing` | 發送與閱讀具名、限時、唯讀的固定快照 |
+| jobs | 背景任務 | `/work/jobs` | 文件文字擷取、索引與評測的持久任務 |
+| repositories | 程式庫 | `/work/repositories` | 依個人 Gitea 權限閱讀程式與議題 |
+| quality | 品質評測 | `/admin/quality` | 回覆回饋、固定題庫與模型／指令比較 |
+| integrations | 資料來源 | `/admin/integrations` | 依來源權限查詢外部公文、校務資料 |
+| identity.users、access-control.* | 使用者、角色、功能群組與模型、功能與選單 | `/admin/identity/users` 等 | 見 [存取管理](administration.md) |
+| operations.usage、billing.prices、knowledge.retrieval | 平台用量、模型與工具價格、檢索管理 | 見 [平台營運](operations.md) | 全平台用量、價格、知識檢索索引 |
 
-功能名稱由 `accesscontrol.Features.Name` 維護，側欄、授權清單、頁面標題與總覽入口共用此名稱。管理員自訂名稱會沿用；前端載入前使用 `FEATURE_NAMES` 的預設值。變更預設名稱須同步 `database/App/Seed/`、前端預設及本表。`介面元件` 是系統管理選單的最後一項（功能 `design`）；`個人設定` 是帳號設定入口。
+完整清單與預設名稱只在程式目錄 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs)；側欄、授權清單、頁面標題、麵包屑與總覽入口共用這個名稱。管理員可在 `accesscontrol.Features.Name` 覆寫，覆寫優先；改預設名稱只改目錄與本表。`介面元件` 是系統管理選單的最後一項（功能 `design`）；`個人設定` 是帳號設定入口。
 
 ## 資源與處理
 
@@ -44,7 +44,7 @@
 - 檔案庫區塊的「已保存原檔」：目前範圍內 `InLibrary=true` 且原檔儲存完成的 attachment 數，不重複計算使用關聯，排除未保存的草稿與待刪除原檔。
 - 知識庫區塊只計加入知識庫的文件（「知識庫文件」）與其「索引分段」；私有閱讀器與專案文件不算。「處理中文件」是尚未完成也未失敗的知識庫文件，不等於需重新索引。專案數不代表知識庫數。
 - 處理中工作為 AI 回覆生成數加背景任務數，單位「件」。文件處理失敗及任務失敗分開列出。
-- 「我的工作」依擁有者統計，並非所有共用給我的資源（「共用給我」另列）；「整個平台」須平台營運（`operations`）權限，選取使用者後依該使用者統計。區塊入口仍開啟目前帳號可存取的功能頁，不會轉為全平台資源列表。
+- 「我的工作」依擁有者統計，並非所有共用給我的資源（「共用給我」另列）；「整個平台」須平台用量（`operations.usage`）權限，選取使用者後依該使用者統計。區塊入口仍開啟目前帳號可存取的功能頁，不會轉為全平台資源列表。
 - 標「期間」的數字、費用、模型與工具呼叫、Token、趨勢及費用分布依查詢期間統計；其餘數量與工作狀態呈現目前狀況，不受日期篩選。
 - 模型與工具呼叫涵蓋對話、網路搜尋、向量索引／檢索、OCR、文字工具與評測的計量紀錄。費用分布也包含工具，不只聊天模型。
 - 區間已知費用只加總可結算金額；費用未知不是免費，待結算是尚未完成結算，不等同所有處理中的工作。API 計費估算、內部成本估算與免費依價格版本區分，不同幣別／類型不相加。總覽的費用未知次數涵蓋所有類型及早期未定價呼叫。

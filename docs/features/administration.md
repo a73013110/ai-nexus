@@ -1,8 +1,8 @@
 # 存取管理
 
-存取管理在 `/admin`，分為使用者、角色、功能群組與模型、功能四個分頁（窄螢幕改為卡片列，點卡片開詳情或編輯），只有有效權限包含 `admin` 的使用者可用；一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
+存取管理是四個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能與選單 `/admin/access-control/features`（`access-control.features`）。一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
-平台用量、知識檢索與價格是另一個功能 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
+平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
 ## 設定第一位管理員
 
@@ -37,13 +37,13 @@
 
 - 主檔用穩定 ID，名稱可改。角色與群組只能停用、不刪除，保留授權歷史；功能列由 `database/App/Seed/` 寫入，管理員只調整名稱、圖示、啟用狀態、選單分群與順序。
 - 異動在同一個 serializable 交易保存授權與稽核。會撤銷操作者自身管理權的變更回 409 並回滾，交由另一位管理員執行。異動 JSON 只含授權、模型識別與限制。
-- 功能清單、群組授權、存取預覽與側欄都依資料庫的選單分群排列（`frontend/src/app/core/layout/navigation-tree.ts`），名稱、圖示、排序與啟用狀態都來自功能目錄。選單分群不影響授權，資料模型見 [身分與授權](../architecture/access-control.md#選單分群)。
+- 功能清單、群組授權、存取預覽與側欄都依資料庫的選單分群排列（`frontend/src/app/core/layout/navigation-tree.ts`），名稱覆寫、排序與啟用狀態來自資料庫，預設名稱與圖示來自程式目錄。選單分群不影響授權，資料模型見 [身分與授權](../architecture/access-control.md#選單分群)。
 
 ## 選單分群與順序
 
-- 「功能」分頁照側欄的順序列出：最上層的功能，再來每個選單分群（含空分群與子分群，以路徑「系統管理 › 診斷」標示）。不顯示也不讓人填數字。
+- 「功能與選單」頁照側欄的順序列出：最上層的功能，再來每個選單分群（含空分群與子分群，以路徑「系統管理 › 診斷」標示）。不顯示也不讓人填數字。
 - 分群：「新增選單分群」填識別碼、名稱與上層分群；分群列的「⋯」可重新命名或改上層、在同層分群間上移／下移、刪除。分群仍有功能或子分群時刪除會被拒絕（`navigation_group_not_empty`），不能移到自己或自己的子分群底下（`navigation_group_cycle`）。空分群不會出現在側欄。
-- 功能換分群或圖示：開啟功能（或列的「⋯」→「移到其他分群或編輯…」）選擇選單分群與圖示，儲存後排到新分群的最後。
+- 功能換分群或改名：開啟功能（或列的「⋯」→「移到其他分群或編輯…」）選擇選單分群、覆寫名稱（留空＝程式目錄的預設名稱），儲存後排到新分群的最後。圖示與網址來自程式目錄，不能在這裡改。
 - 分群內的移動方式：拖曳把手；聚焦把手按 ↑↓、Home、End；或列的「⋯」選單（手機卡片只有選單）。新位置由 live region 播報。
 - 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/admin/access-control/roles/feature-order.ts`。
 - 儲存中不能再移動。失敗時先還原已寫入的項目，畫面回到原順序並顯示錯誤；成功後重新讀取目錄與 `/me`，側欄跟著更新。重編時的多筆寫入各自成交易與稽核，不是原子操作。分群異動稽核為 `admin.navigation_group`／`admin.navigation_group_delete`。
@@ -54,4 +54,4 @@
 - 用量由共用的 `UsageReports` 統計 `GenerationRuns` 與 `ModelInvocations`，涵蓋聊天、OCR、文字工具、評測與耗時；期間是最近 30 個 UTC 日期，顯示用台北時區，未回報的 token 不估算。
 - 每次回答可展開總耗時、排隊、執行與輸入／輸出 tokens；執行時間包含 Context 準備與等待 provider 容量，不是供應商的純運算時間。
 - 詳情的「對話」頁籤第一次開啟時才列出對話，可搜尋標題與本文，包含封存與已軟刪除的對話；對話每頁 50 段、內容每次 100 則，顯示資料庫保存的所有分支。附件只顯示名稱與大小，不增加下載權限。
-- 唯讀 API：`GET /api/v1/admin/users/{id}/insights`、`.../users/{id}/conversations`、`/api/v1/admin/conversations/{id}`。每次重新檢查 `admin`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。
+- 唯讀 API：`GET /api/v1/admin/users/{id}/insights`、`.../users/{id}/conversations`、`/api/v1/admin/conversations/{id}`。每次重新檢查 `identity.users`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。

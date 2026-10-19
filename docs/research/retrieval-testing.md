@@ -4,7 +4,7 @@
 
 ## 1. 確認服務與資料庫
 
-以管理員登入，開啟「平台營運 → 知識檢索」（`/admin/operations?tab=retrieval`）：
+以管理員登入，開啟知識庫的「檢索管理」（`/work/knowledge/retrieval`）：
 
 - 「SQL 原生向量」須為可用；正式儲存為 SQL Server 2025。
 - 全文元件、1028 中文斷詞器及全文索引均須可用，才能比較 keyword／hybrid。全文不可用時 hybrid 會降為 vector，須看實際模式。

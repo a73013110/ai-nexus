@@ -1,7 +1,7 @@
 # 0016 區、網址、頁面目錄與選單
 
 - **狀態**：採用（2026-10-18），取代 [ADR 0009](0009-module-names-and-data-driven-navigation.md)。
-- **實作**：第一步（區資料夾、模組搬移與改名）已完成；網址、頁面目錄與選單尚未開始，這些部分現行程式仍是 0009 的做法。每一步落地時同步更新對應文件。
+- **實作**：區資料夾與模組改名、頁面目錄與區式網址已完成；選單（`NavigationItems`）尚未開始，現行側欄仍用 `NavigationGroups` 與 `Features.GroupId`。每一步落地時同步更新對應文件。
 - **決定**：
   - 程式與網址共用「區 → 模組 → 頁面」三層；權限 ID 與 API 不帶區。
   - 頁面與動作的目錄只定義在程式碼；資料庫只存授權與選單。
@@ -56,10 +56,13 @@
 
 ## 頁面目錄
 
-- 後端 `FeatureCatalog` 取代 `FeatureIds`，每個頁面與動作只宣告一次：ID、區、模組、網址、預設名稱、圖示、支援的資料範圍。經 OpenAPI 輸出給前端，型別同現在的 `FeatureId`。
-- 前端每個模組一份 `<module>.routes.ts`，路由以 `data: { feature }` 指向目錄，由同一個守衛檢查；`app.routes.ts` 每個區只有一行 `loadChildren`。
+- 後端 `FeatureCatalog` 取代 `FeatureIds`，每個頁面與動作只宣告一次：ID、區、模組、預設名稱、圖示；網址由區＋ID 推得，不另寫。支援的資料範圍隨 [ADR 0017](0017-organization-units-and-data-scopes.md) 加入。
+- 目錄有三種項目：頁面、動作（只是授權）、閱讀器（只是路由，能否讀取由資源 ACL 決定，不是授權）。閱讀器放在所屬模組下的 `reader` 頁面段，例如 `/work/knowledge/reader/:id`；分享閱讀器需要兩個 ID：`/work/sharing/reader/:shareId/:id`。
+- 經 OpenAPI 輸出給前端：授權輸出成 `FeatureId` 列舉，整份目錄放在文件根的 `x-feature-catalog`，`npm run contracts` 由它產生前端的 `feature-catalog.ts`。不另開 API：路由、守衛與測試需要的是建置時就確定的資料。
+- 前端每個模組一份 `<module>.routes.ts`，路由以 `data: { feature }` 指向目錄，由同一個守衛檢查；每個區一份區路由檔掛各模組，`app.routes.ts` 每個區只有一行 `loadChildren`。
 - 測試雙向比對：目錄 ↔ Angular 路由、目錄 ↔ Seed。
-- `accesscontrol.Features` 只留 Id、Enabled 與名稱覆寫，給授權外鍵用；route、圖示、分群移出。
+- `accesscontrol.Features` 只留 Id、Enabled 與名稱覆寫，給授權外鍵用；route、圖示已移出，分群與排序隨選單一起移出。
+- 頁面屬於模組，網址跟模組的區走：Knowledge 的檢索管理頁是 `/work/knowledge/retrieval`，選單（資料）再把它放進系統管理分群。管理頁一頁一個授權，沒有隱含其他功能的總開關。
 - 麵包屑由目錄推得（區 > 模組 > 頁面），與選單無關。
 
 ## 選單
@@ -82,7 +85,7 @@
 - 模組到數十個後，平鋪資料夾難以瀏覽；區讓每一層維持在十來個。
 - 網址跟程式走、不跟選單走：選單常調整，網址卻被書籤、通知與稽核紀錄引用。
 - 區很少換；換的代價是搬資料夾加一條轉址，權限與 API 不受影響。
-- 同一個網址目前寫在 `app.routes.ts`、Seed 與 `FeatureIds` 三處，頁面到數百個時必然不一致。
+- 同一個網址原本寫在 `app.routes.ts`、Seed 與 `FeatureIds` 三處，頁面到數百個時必然不一致。
 - 0009 不加大類層的前提是模組少於約 40 個，預期規模會超過。
 
 ## 何時重新評估

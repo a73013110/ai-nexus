@@ -4,7 +4,7 @@
 
 ## 路由
 
-- 列表與詳細用 `optionalId('<path>')` 合成一條路由（`/knowledge`、`/knowledge/{id}`），切換時沿用元件。固定子頁（`/quality/retrieval`）宣告在 matcher 之前。
+- 列表與詳細用 `optionalId` 合成一條路由（`/work/knowledge`、`/work/knowledge/{id}`），切換時沿用元件。固定子頁（`/admin/quality/retrieval`、`/work/knowledge/reader/{id}`）宣告在 matcher 之前。
 - 後端總覽的最近項目、檔案用途等連結直接指向詳細頁，不用 query 選取。
 
 ## 列表

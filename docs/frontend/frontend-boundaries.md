@@ -8,7 +8,7 @@
 
 | 位置 | 責任 |
 | --- | --- |
-| `core/api` | 產生的 OpenAPI 型別、`ApiClient`（JSON／multipart／SSE）、`apiResource()`、CSRF 與登入失效 |
+| `core/api` | 產生的 OpenAPI 型別與功能目錄、`ApiClient`（JSON／multipart／SSE）、`apiResource()`、CSRF 與登入失效 |
 | `core/auth` | 路由 guard、帳號世代與 `WorkspaceSession`（含功能名稱）、身分橫幅 |
 | `core/errors` | 安全錯誤訊息、查證代碼、前端例外回報與未處理錯誤提示 |
 | `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、選單樹、導覽與釘選偏好、快捷指令、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
@@ -23,18 +23,17 @@
 
 ## 功能資料夾對應後端模組
 
-- `features/<area>/<module>` 對應 `backend/src/AiNexus.Features/<Area>/<Module>`，名稱轉成 kebab-case（`Admin/AccessControl` → `admin/access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址與功能 ID（`/files`、`tasks`）不跟著改名。
+- `features/<area>/<module>` 對應 `backend/src/AiNexus.Features/<Area>/<Module>`，名稱轉成 kebab-case（`Admin/AccessControl` → `admin/access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址來自產生的功能目錄，連結用 `routeOf`，不寫字面值。
 - 唯一例外是 `features/admin/design`：開發用的設計系統樣本頁，沒有後端模組。
-- 登入、帳號、模型與對話生成的端點在 `core/api/workspace-api.ts`（`core` 的 session 與串流要用）。
+- 登入、帳號、模型與對話生成的端點在 `core/api/workspace-api.ts`。
 - 超過約 15 個檔案時依能力分子資料夾：後端已有子資料夾就用同名 kebab-case（`work/knowledge/documents`、`admin/identity/users`），沒有才用 UI 分組（`chat/composer`）。頁面、store 與 `<module>-api.ts` 留在模組根目錄。
 - 跨進 `core`、`shared` 或其他模組（含同區）用別名 `@core/`、`@shared/`、`@features/<area>/<module>/`；只有模組內用相對路徑，離開模組的相對路徑由 ESLint 擋下。
 
 ## 依賴方向
 
 - 由 [`frontend/eslint.config.js`](../../frontend/eslint.config.js) 檢查：`shared` 不可引用 `features`；`core` 除了 `core/layout` 不可引用 `features`；`features` 之間可以互相引用。
-- 需要登入的頁面都是 `app.routes.ts` 裡同一個 shell route 的子路由，登入檢查只宣告一次；新頁面加在 children 裡。
-- 伺服器預設把最後一段含 `.` 的路徑當成檔案，不回 `index.html`。路徑段可能含點（外部名稱、`base...head` 區間）的路由，要在 [`Program.cs`](../../backend/src/AiNexus.Host/Program.cs) 為它的前綴加 `MapFallbackToFile`（例：`/repositories`），並在 `SpaFallbackTests` 加一列。
-- 頁面使用 Signals、OnPush 與 zoneless。
+- 登入檢查只在 `app.routes.ts` 的 shell route 宣告一次；每區一份 `app/<area>.routes.ts` 掛各模組；頁面路由在 `<module>.routes.ts`，以 `catalogRoute(<目錄 ID>, …)` 掛 `featureGuard`，區與模組最後的 `**` 是 `UnavailablePage`（`app.routes.spec.ts` 比對目錄）。
+- 伺服器預設把最後一段含 `.` 的路徑當成檔案，不回 `index.html`。路徑段可能含點（外部名稱、`base...head` 區間）的路由，要在 [`Program.cs`](../../backend/src/AiNexus.Host/Program.cs) 為它的前綴加 `MapFallbackToFile`，並在 `SpaFallbackTests` 加一列。
 - 新對話草稿交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
 
 ## 呼叫 API
@@ -54,10 +53,10 @@
 - 需要輪詢的讀取用 `poll`（例：任務、知識庫處理中的文件），分頁隱藏時暫停。
 - 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`prompt-library-dialog.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-page.ts`）。
 - 寫入是元件或 store 的方法：成功後把伺服器回傳的值寫進 `value`，或呼叫 `reload()`；寫入錯誤放在自己的 signal，與讀取錯誤合成同一個 `error`。寫入仍用 ViewScope 的 guard 忽略離開頁面或換帳號後才回來的結果。`reload()` 遇到讀取進行中，會等它結束再讀一次，不會沿用寫入前發出的回應。
-- `/<功能>` 與 `/<功能>/:id` 共用一個路由（`optionalId`），切換時頁面元件被重用，列表不會因導覽重讀。在詳細頁新增、刪除或改變列表內容的寫入，要自己更新列表的 `value` 或 `reload()`（例：`projects-page.ts` 的建立與刪除）。
+- 模組網址與其 `/:id` 共用一個路由（`optionalId`，固定子路徑排在它之前），切換時頁面元件被重用，列表不會因導覽重讀。在詳細頁新增、刪除或改變列表內容的寫入，要自己更新列表的 `value` 或 `reload()`（例：`projects-page.ts` 的建立與刪除）。
 - 聊天的送出與整理對話先更新畫面再寫入：成功換成伺服器回傳值，失敗就還原，提問退回輸入框；只有網路中斷時保留提問供重試。
 - 寫入失敗時保留使用者的輸入（例：`NameDialog`、`TextSourceEditor`）；防止覆蓋他人變更靠伺服器的 conditional update／concurrency token，不靠前端判斷。
-- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdministrationStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）。
+- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AccessControlStore`（存取目錄）。
 - 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
   - 聊天：`ChatStore` 與 `ChatModels`、`ChatHistory`、`ChatRun`、`ChatDraft`、`DraftAttachments`、`KnowledgeSelection`（串流、草稿、分支與送出佇列互相牽動）。整理對話的寫入在 `ChatConversations`。
   - `NotificationStore`：輪詢後合併、保留已讀並發出瀏覽器通知；登入世代切換時清除。
