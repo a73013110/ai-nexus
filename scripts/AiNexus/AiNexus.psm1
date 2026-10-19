@@ -344,24 +344,32 @@ function Compare-RepoDatabaseSetting {
     }
 }
 
-function Test-RepoDatabaseExists {
+function New-RepoMasterConnection {
     <#
-    .SYNOPSIS True when the server already has the database (queried through master).
-    .DESCRIPTION PowerShell 內附的 System.Data.SqlClient 不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。
+    .SYNOPSIS An unopened connection to the server's master database, with the SQL login when given, else the current Windows identity.
+    .DESCRIPTION
+    PowerShell 內附的 System.Data.SqlClient 不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。
+    變數名稱不分大小寫：區域變數不能叫 $credential，否則會蓋掉 -Credential，靜默改用 Windows 驗證。
     #>
-    param([Parameter(Mandatory)][string]$Server, [Parameter(Mandatory)][string]$Database, [pscredential]$Credential, [switch]$TrustServerCertificate)
+    param([Parameter(Mandatory)][string]$Server, [pscredential]$Credential, [switch]$TrustServerCertificate)
     $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new()
     $builder['Data Source'] = $Server
     $builder['Initial Catalog'] = 'master'
     $builder['Encrypt'] = $Server -notlike '(localdb)*'
     $builder['TrustServerCertificate'] = [bool]$TrustServerCertificate
-    $credential = $null
+    $sqlCredential = $null
     if ($Credential) {
         $password = $Credential.Password.Copy()
         $password.MakeReadOnly()
-        $credential = [Data.SqlClient.SqlCredential]::new($Credential.UserName, $password)
+        $sqlCredential = [Data.SqlClient.SqlCredential]::new($Credential.UserName, $password)
     } else { $builder['Integrated Security'] = $true }
-    $connection = [Data.SqlClient.SqlConnection]::new($builder.ConnectionString, $credential)
+    [Data.SqlClient.SqlConnection]::new($builder.ConnectionString, $sqlCredential)
+}
+
+function Test-RepoDatabaseExists {
+    <# .SYNOPSIS True when the server already has the database (queried through master). #>
+    param([Parameter(Mandatory)][string]$Server, [Parameter(Mandatory)][string]$Database, [pscredential]$Credential, [switch]$TrustServerCertificate)
+    $connection = New-RepoMasterConnection -Server $Server -Credential $Credential -TrustServerCertificate:$TrustServerCertificate
     try {
         $connection.Open()
         $command = $connection.CreateCommand()
