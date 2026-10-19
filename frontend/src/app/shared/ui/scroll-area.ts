@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -12,8 +13,6 @@ import {
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
 import { Icon } from './icon';
-
-let sequence = 0;
 
 /** 原生捲動，寬度穩定，並提供能依位置操作的溢出提示。 */
 @Component({
@@ -65,7 +64,7 @@ let sequence = 0;
 })
 export class ScrollArea {
   readonly label = input.required<string>();
-  readonly viewportId = `scroll-area-${++sequence}`;
+  readonly viewportId = uniqueId('scroll-area');
   readonly above = signal(false);
   readonly below = signal(false);
   readonly overflow = computed(() => this.above() || this.below());

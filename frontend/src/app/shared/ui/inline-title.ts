@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,7 +11,6 @@ import {
 import { Icon } from './icon';
 import { Field } from './field';
 
-let sequence = 0;
 @Component({
   selector: 'nx-inline-title',
   host: { '[class.is-block]': "appearance() === 'block'" },
@@ -85,7 +85,7 @@ let sequence = 0;
     }`,
 })
 export class InlineTitle {
-  readonly id = `nx-title-${++sequence}`;
+  readonly id = uniqueId('nx-title');
   readonly value = input.required<string>();
   readonly scope = input.required<string>();
   readonly disabled = input(false);

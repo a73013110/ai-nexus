@@ -1,3 +1,4 @@
+import { rovingIndex } from '../browser/roving-index';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -314,17 +315,8 @@ export class DataTableRow {
       ).querySelectorAll<HTMLButtonElement>('[data-row-action]:not(:disabled)'),
     ];
     const current = actions.indexOf(event.target as HTMLButtonElement);
-    const index =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? actions.length - 1
-          : Math.max(
-              0,
-              Math.min(actions.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)),
-            );
     event.preventDefault();
-    actions[index]?.focus();
+    actions[rovingIndex(event.key, current, actions.length, { wrap: false })!]?.focus();
   }
 }
 

@@ -13,15 +13,22 @@ markdown.renderer.rules['link_open'] = (tokens, index, options, _env, self) => {
   token.attrSet('rel', 'noopener noreferrer');
   return self.renderToken(tokens, index, options);
 };
+/**
+ * 圍欄資訊字串的語言標籤（小寫的第一個字）；不像語言名稱的一律當成 `text`，
+ * 標籤會顯示在工具列上，也決定要不要延後上色。串流中的開啟圍欄也用同一套規則。
+ */
+export function fenceLanguage(info: string) {
+  const language = info.trim().split(/\s+/)[0].toLowerCase();
+  return /^[\w#+-]{1,24}$/.test(language) ? language : 'text';
+}
 markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
   const token = tokens[index];
-  const language = token.info.trim().split(/\s+/)[0].toLowerCase();
+  const label = fenceLanguage(token.info);
   const diagrams = env?.['diagrams'] as string[] | undefined;
-  if (language === 'mermaid' && diagrams && !env?.['streaming']) {
+  if (label === 'mermaid' && diagrams && !env?.['streaming']) {
     const index = diagrams.push(token.content) - 1;
     return `<div class="markdown-diagram-slot" data-diagram-index="${index}"></div>`;
   }
-  const label = /^[\w#+-]{1,24}$/.test(language) ? language : 'text';
   // 語法高亮稍後在視窗附近進行（code-highlighting.ts）；這裡先跳脫文字。
   const deferred =
     !env?.['streaming'] && label !== 'text' ? ` data-language="${escape(label)}"` : '';
@@ -43,11 +50,6 @@ export function markdownBlockStructure(content: string) {
   return { starts, items };
 }
 
-// 這裡是唯一的可信 HTML 邊界。解析時停用原始 HTML，接著把產生的標記縮減為一個小的 HTML 白名單。
-// 任何任意的 HTML 輸入都不被信任。
-export const renderMarkdown = (content: string, streaming = false): string =>
-  sanitizeMarkdown(markdown.render(content, { streaming }));
-
 export interface RenderedMarkdown {
   readonly html: string;
   readonly diagrams: readonly string[];
@@ -61,7 +63,10 @@ const rendered = new LruCache<string, RenderedMarkdown>({
   weigh: (value, content) => content.length + value.html.length,
 });
 
-/** 圍欄保留原本的巢狀結構；只有渲染器自有的插槽會掛載 Angular 元件。 */
+/**
+ * 這裡是唯一的可信 HTML 邊界。解析時停用原始 HTML，接著把產生的標記縮減為一個小的 HTML 白名單；
+ * 任何任意的 HTML 輸入都不被信任。圍欄保留原本的巢狀結構；只有渲染器自有的插槽會掛載 Angular 元件。
+ */
 export function renderMarkdownWithDiagrams(content: string, streaming = false): RenderedMarkdown {
   // 串流的前緣每幀都會改變，且從不重複顯示，因此不快取。
   const cached = streaming ? undefined : rendered.get(content);

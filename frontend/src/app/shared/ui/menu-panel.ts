@@ -1,3 +1,5 @@
+import { rovingIndex } from '../browser/roving-index';
+import { uniqueId } from '../browser/unique-id';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -22,7 +24,6 @@ export interface MenuAction {
   /** 讓此項目成為顯示狀態的核取方塊（menuitemcheckbox）。 */
   checked?: boolean;
 }
-let sequence = 0;
 
 /**
  * 在任何觸發元素旁開啟的最上層選單。`ActionMenu` 與自己的按鈕配對；列表則只渲染一個面板，
@@ -80,7 +81,7 @@ export class MenuPanel {
   /** 觸發元素無法顯示的脈絡，例如收合圖示欄上的帳號名稱。 */
   readonly heading = input<{ title: string; detail?: string } | null>(null);
   readonly action = output<string>();
-  readonly id = `nx-menu-${++sequence}`;
+  readonly id = uniqueId('nx-menu');
   private anchor: HTMLElement | null = null;
   private readonly injector = inject(Injector);
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
@@ -133,13 +134,7 @@ export class MenuPanel {
       const buttons = this.buttons();
       if (!buttons.length) return;
       const current = buttons.findIndex((item) => item === document.activeElement);
-      const index =
-        event.key === 'Home'
-          ? 0
-          : event.key === 'End'
-            ? buttons.length - 1
-            : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
-      buttons[index]?.focus();
+      buttons[rovingIndex(event.key, current, buttons.length)!]?.focus();
     }
   }
   private buttons() {

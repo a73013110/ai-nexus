@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown, renderMarkdownWithDiagrams } from './markdown';
+import { renderMarkdownWithDiagrams } from './markdown';
+
+const renderMarkdown = (content: string) => renderMarkdownWithDiagrams(content).html;
 describe('Markdown security', () => {
   it('never enables raw HTML, scripts or tracking images', () => {
     const html = renderMarkdown(

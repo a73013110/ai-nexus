@@ -1,3 +1,5 @@
+import { rovingIndex } from '../browser/roving-index';
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +19,6 @@ export interface TabItem {
   /** 分頁有未儲存的變更：標籤後顯示一個點，分頁名稱也會說明此事。 */
   dirty?: boolean;
 }
-let sequence = 0;
 
 /** 連結到 tabpanel 的分頁；與 ViewSwitch 共用滑動底線。 */
 @Component({
@@ -119,7 +120,7 @@ export class Tabs {
   readonly value = input.required<string>();
   readonly valueChange = output<string>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly id = `nx-tabs-${++sequence}`;
+  private readonly id = uniqueId('nx-tabs');
   /** 只有當可見標籤不是完整名稱時才需要：計數或未儲存的變更。 */
   accessibleName(item: TabItem) {
     if (!item.count && !item.dirty) return null;
@@ -136,24 +137,8 @@ export class Tabs {
     return `${this.id}-panel-${value}`;
   }
   key(event: KeyboardEvent, index: number) {
-    const length = this.items().length;
-    let next: number;
-    switch (event.key) {
-      case 'ArrowRight':
-        next = (index + 1) % length;
-        break;
-      case 'ArrowLeft':
-        next = (index - 1 + length) % length;
-        break;
-      case 'Home':
-        next = 0;
-        break;
-      case 'End':
-        next = length - 1;
-        break;
-      default:
-        return;
-    }
+    const next = rovingIndex(event.key, index, this.items().length, { orientation: 'horizontal' });
+    if (next === null) return;
     event.preventDefault();
     this.valueChange.emit(this.items()[next].value);
     this.element.nativeElement.querySelectorAll<HTMLButtonElement>('button')[next]?.focus();

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { highlightWhenVisible } from './code-highlighting';
-import { renderMarkdown } from './markdown';
+import { renderMarkdownWithDiagrams } from './markdown';
+
+const renderMarkdown = (content: string) => renderMarkdownWithDiagrams(content).html;
 
 describe('deferred code highlighting', () => {
   it('renders escaped code first, then colours known languages only', async () => {

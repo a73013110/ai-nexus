@@ -1,3 +1,5 @@
+import { rovingIndex } from '../browser/roving-index';
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,7 +22,6 @@ export interface SelectOption {
   description?: string;
   disabled?: boolean;
 }
-let sequence = 0;
 
 /**
  * 單選或多選的下拉清單。`multiple` 以核取方塊切換選項、選後不關閉，讀寫 `values`；
@@ -189,7 +190,7 @@ export class Select {
       : this.summary(),
   );
   readonly active = signal(-1);
-  readonly id = `nx-select-${++sequence}`;
+  readonly id = uniqueId('nx-select');
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   protected readonly popover = anchoredPopover({
@@ -264,14 +265,7 @@ export class Select {
         .map(({ option, index }) => (option.disabled ? -1 : index))
         .filter((item) => item >= 0);
       if (!enabled.length) return;
-      const old = enabled.indexOf(this.active());
-      this.active.set(
-        key === 'Home'
-          ? enabled[0]
-          : key === 'End'
-            ? enabled.at(-1)!
-            : enabled[(old + (key === 'ArrowDown' ? 1 : -1) + enabled.length) % enabled.length],
-      );
+      this.active.set(enabled[rovingIndex(key, enabled.indexOf(this.active()), enabled.length)!]);
       this.reveal();
       return;
     }

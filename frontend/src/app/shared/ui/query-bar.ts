@@ -1,10 +1,9 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 import { Icon } from './icon';
 import type { QueryChip, QueryState } from './query-state';
-
-let sequence = 0;
 
 /**
  * 資料頁的查詢列，搭配 `QueryState`：欄位只改草稿，按「查詢」（或在欄位按 Enter）才套用，「重設」
@@ -118,7 +117,7 @@ export class QueryBar {
   readonly more = input(false);
   /** popover 中已填的欄位數，顯示在按鈕上。 */
   readonly moreCount = input(0);
-  readonly id = 'nx-query-' + ++sequence;
+  readonly id = uniqueId('nx-query');
   private readonly form = viewChild.required<ElementRef<HTMLFormElement>>('form');
   private readonly moreTrigger = viewChild<ElementRef<HTMLButtonElement>>('moreTrigger');
   private readonly morePanel = viewChild.required<ElementRef<HTMLElement>>('morePanel');

@@ -1,4 +1,4 @@
-import { markdownBlockStructure } from './markdown';
+import { fenceLanguage, markdownBlockStructure } from './markdown';
 
 export interface StreamingBlock {
   id: number;
@@ -82,11 +82,10 @@ export class StreamingMarkdown {
     const opener = FENCE_OPEN.exec(content.slice(this.committed));
     if (!opener || (opener[1][0] === '`' && opener[2].includes('`'))) return;
     const body = this.committed + opener[0].length;
-    const language = opener[2].trim().split(/\s+/)[0].toLowerCase();
     const marker = opener[1];
     this.fence = {
       close: new RegExp(`^ {0,3}${marker[0] === '`' ? '`' : '~'}{${marker.length},}[ \\t]*$`),
-      language: /^[\w#+-]{1,24}$/.test(language) ? language : 'text',
+      language: fenceLanguage(opener[2]),
       body,
       scanned: body,
       chunked: body,

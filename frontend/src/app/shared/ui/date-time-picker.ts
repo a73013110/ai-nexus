@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,7 +27,6 @@ import {
   type CalendarSystem,
 } from '../browser/date-time';
 
-let sequence = 0;
 /** 邊界上的 ISO 公曆牆上時間值；日曆與語系只影響顯示。 */
 @Component({
   selector: 'nx-date-time-picker',
@@ -47,7 +47,7 @@ export class DateTimePicker {
   readonly min = input('');
   readonly max = input('');
   readonly valueChange = output<string>();
-  readonly id = 'nx-date-' + ++sequence;
+  readonly id = uniqueId('nx-date');
   readonly text = signal<string | null>(null);
   readonly touched = signal(false);
   readonly draft = signal(formatDateTimeInput(new Date()));

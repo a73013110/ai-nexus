@@ -1,3 +1,8 @@
+/** 面板高度上限：不超過 `maximum`，也不超出視口（上下各留 12px），但至少 80px。 */
+const limitHeight = (panel: HTMLElement, maximum: number) => {
+  panel.style.maxHeight = `${Math.max(80, Math.min(maximum, innerHeight - 24))}px`;
+};
+
 /** 由選取器與動作選單共用的固定最上層定位。 */
 export function positionPopover(
   trigger: HTMLElement,
@@ -9,7 +14,7 @@ export function positionPopover(
   const anchor = trigger.getBoundingClientRect();
   const width = Math.min(Math.max(anchor.width, minimum), innerWidth - 24);
   panel.style.width = `${width}px`;
-  panel.style.maxHeight = `${Math.max(80, Math.min(maximumHeight, innerHeight - 24))}px`;
+  limitHeight(panel, maximumHeight);
   const height = panel.getBoundingClientRect().height;
   const below = anchor.bottom + height + 8 < innerHeight;
   const left = Math.max(
@@ -41,7 +46,7 @@ export function positionBesidePopover(
   const right = edge ?? anchor.right;
   const size = Math.min(width, innerWidth - right - 20);
   panel.style.width = `${size}px`;
-  panel.style.maxHeight = `${Math.max(80, Math.min(maximumHeight, innerHeight - 24))}px`;
+  limitHeight(panel, maximumHeight);
   const height = panel.getBoundingClientRect().height;
   const top = Math.max(12, Math.min(anchor.bottom - height, innerHeight - height - 12));
   panel.style.left = `${right + 8}px`;

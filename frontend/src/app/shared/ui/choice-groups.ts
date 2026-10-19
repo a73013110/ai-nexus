@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Checkbox } from './checkbox';
 
@@ -12,7 +13,6 @@ export interface ChoiceGroup {
   name: string;
   options: readonly ChoiceOption[];
 }
-let sequence = 0;
 
 /**
  * 依分類拆開的多選列表：每個分類是一張有框的卡片，附上名稱、已選數量，以及一個「全選／全不選」按鈕。
@@ -66,7 +66,7 @@ let sequence = 0;
   }`,
 })
 export class ChoiceGroups {
-  readonly id = `nx-choice-groups-${++sequence}`;
+  readonly id = uniqueId('nx-choice-groups');
   /** Accessible name of the whole list, e.g. 「授予功能」. */
   readonly label = input.required<string>();
   readonly groups = input.required<readonly ChoiceGroup[]>();

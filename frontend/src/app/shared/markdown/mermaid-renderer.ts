@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import type { MermaidConfig } from 'mermaid';
 import { LruCache } from './lru-cache';
 import { measureDiagramBounds, sanitizeDiagramSvg } from './mermaid-svg';
@@ -21,7 +22,6 @@ interface RenderedDiagram {
 
 let library: Promise<{ default: typeof import('mermaid').default }> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
-let sequence = 0;
 // 未使用的 Blob URL 會暫留，讓串流轉最終結果，以及快速重新掛載時，
 // 顯示同一張已解碼的圖片而非空白畫面；之後才撤銷（SVG 文字仍快取）。
 const linger = 2000;
@@ -143,7 +143,7 @@ export function renderDiagram(
       container.setAttribute('aria-hidden', 'true');
       document.body.append(container);
       try {
-        const result = await mermaid.render(`nx-mermaid-${++sequence}`, source, container);
+        const result = await mermaid.render(uniqueId('nx-mermaid'), source, container);
         // 即使請求者已離開也保留：已完成的結果會讓同一張圖重新掛載。
         const entry: RenderedDiagram = {
           diagram: measureDiagramBounds(

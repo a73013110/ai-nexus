@@ -1,3 +1,4 @@
+import { uniqueId } from '../browser/unique-id';
 import { CompactDialog } from './compact-dialog';
 import {
   ChangeDetectionStrategy,
@@ -17,7 +18,6 @@ export interface Confirmation {
   confirm: string;
   danger?: boolean;
 }
-let sequence = 0;
 @Component({
   selector: 'nx-confirm-dialog',
   imports: [CompactDialog, DialogHeader],
@@ -50,7 +50,7 @@ let sequence = 0;
 })
 export class ConfirmDialog {
   readonly compact = input(true);
-  readonly id = `nx-confirm-${++sequence}`;
+  readonly id = uniqueId('nx-confirm');
   readonly value = signal<Confirmation | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private resolve?: (answer: boolean) => void;
