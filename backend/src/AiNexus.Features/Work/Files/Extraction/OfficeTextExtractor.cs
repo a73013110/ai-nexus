@@ -1,13 +1,14 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
 namespace AiNexus.Features.Work.Files.Extraction;
 
 /// <summary>有上限、被動式的 OOXML 文字抽取；不計算公式、不執行巨集，也不跟隨外部關聯。</summary>
-internal sealed class OfficeTextExtractor : IDisposable
+internal sealed partial class OfficeTextExtractor : IDisposable
 {
     private readonly ZipArchive zip;
     private readonly int maxCharacters;
@@ -48,12 +49,12 @@ internal sealed class OfficeTextExtractor : IDisposable
             foreach (var p in Read("word/document.xml").Descendants(w + "p")) Append(string.Concat(p.Descendants(w + "t").Select(x => x.Value)) + "\n");
         }
         else if (extension == ".pptx") {
-            var slides = zip.Entries.Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.FullName, @"^ppt/slides/slide\d+\.xml$"))
-                .OrderBy(x => int.Parse(System.Text.RegularExpressions.Regex.Match(x.FullName, @"\d+").Value, CultureInfo.InvariantCulture)).ToArray();
+            var slides = zip.Entries.Select(x => SlidePath().Match(x.FullName)).Where(x => x.Success)
+                .Select(x => (Path: x.Value, Number: x.Groups[1].Value)).OrderBy(x => int.Parse(x.Number, CultureInfo.InvariantCulture)).ToArray();
             if (slides.Length is < 1 or > 200) throw new DocumentRejectedException(FilesErrors.PresentationSlideLimit);
             foreach (var slide in slides) {
-                Append($"\n## 投影片 {System.Text.RegularExpressions.Regex.Match(slide.FullName, @"\d+").Value}\n");
-                foreach (var p in Read(slide.FullName).Descendants(Drawing + "p")) Append(string.Concat(p.Descendants(Drawing + "t").Select(x => x.Value)) + "\n");
+                Append($"\n## 投影片 {slide.Number}\n");
+                foreach (var p in Read(slide.Path).Descendants(Drawing + "p")) Append(string.Concat(p.Descendants(Drawing + "t").Select(x => x.Value)) + "\n");
             }
         }
         else {
@@ -91,4 +92,8 @@ internal sealed class OfficeTextExtractor : IDisposable
         return text.ToString();
     }
     public void Dispose() => zip.Dispose();
+
+    // 投影片依檔名中的編號排序並當作標題；群組 1 是編號。
+    [GeneratedRegex(@"^ppt/slides/slide(\d+)\.xml$")]
+    private static partial Regex SlidePath();
 }

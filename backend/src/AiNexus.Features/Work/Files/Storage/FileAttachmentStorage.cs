@@ -6,6 +6,9 @@ namespace AiNexus.Features.Work.Files.Storage;
 
 public sealed class FileAttachmentStorage : IAttachmentStorage
 {
+    // Windows 檔案系統不分大小寫，比較路徑（站台目錄判斷、分片位置）時要跟著作業系統。
+    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
     private readonly string root;
     public FileAttachmentStorage(IOptions<FilesOptions> options, IHostEnvironment environment)
     {
@@ -18,8 +21,7 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
             throw new InvalidOperationException("Files:StoragePath must be an absolute path outside the website directory.");
         var resolved = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         var website = Path.TrimEndingDirectorySeparator(Path.GetFullPath(contentRoot));
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (resolved.Equals(website, comparison) || resolved.StartsWith(website + Path.DirectorySeparatorChar, comparison))
+        if (resolved.Equals(website, PathComparison) || resolved.StartsWith(website + Path.DirectorySeparatorChar, PathComparison))
             throw new InvalidOperationException("Files:StoragePath must be outside the website directory.");
         return resolved;
     }
@@ -47,7 +49,7 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
             var suffix = name.EndsWith(".blob.upload", StringComparison.Ordinal) ? ".blob.upload" : name.EndsWith(".blob", StringComparison.Ordinal) ? ".blob" : null;
             if (suffix is null) continue;
             var key = name[..^suffix.Length];
-            if (!ValidKey(key) || !path.Equals(PathFor(key) + (suffix == ".blob.upload" ? ".upload" : ""), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
+            if (!ValidKey(key) || !path.Equals(PathFor(key) + (suffix == ".blob.upload" ? ".upload" : ""), PathComparison)) continue;
             if (File.GetLastWriteTimeUtc(path) < before.UtcDateTime) yield return key;
         }
     }
@@ -69,8 +71,8 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
     {
         ct.ThrowIfCancellationRequested();
         try { return Task.FromResult<Stream>(new FileStream(PathFor(key), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 65536, FileOptions.Asynchronous | FileOptions.SequentialScan)); }
-        catch (FileNotFoundException) { throw new ExternalServiceException(FilesErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
-        catch (DirectoryNotFoundException) { throw new ExternalServiceException(FilesErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        { throw new ExternalServiceException(FilesErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
     }
 
     public Task DeleteAsync(string key, CancellationToken ct)
