@@ -61,6 +61,16 @@ public sealed class ModelPolicyService(
     public static Dictionary<string, long> Limits(string? json) =>
         json is null ? [] : JsonSerializer.Deserialize<Dictionary<string, long>>(json)!;
 
+    /// <summary>將資料列保存的白名單與上限 JSON 還原成策略；群組、個人策略共用同一種保存格式。</summary>
+    public static ModelPolicyRequest Read(string? allowedJson, string? limitsJson) => new(Allowed(allowedJson), Limits(limitsJson));
+
+    /// <summary>使用者的個人策略；沒有資料列時兩項皆為「未設定」。</summary>
+    internal async Task<ModelPolicyRequest> PersonalAsync(Guid owner, CancellationToken ct)
+    {
+        var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
+        return Read(personal?.AllowedModelsJson, personal?.DailyTokenLimitsJson);
+    }
+
     public static string? SerializeAllowed(IReadOnlyList<string>? ids) =>
         ids is null ? null : JsonSerializer.Serialize(ids.Order(StringComparer.Ordinal));
 
@@ -110,18 +120,14 @@ public sealed class ModelPolicyService(
             .Where(x => groups.Contains(x.GroupId))
             .ToListAsync(ct);
 
-        var personal = await db.Set<UserModelPolicy>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.UserId == owner, ct);
-
+        var personal = await PersonalAsync(owner, ct);
         var byGroup = policies.ToDictionary(x => x.GroupId, StringComparer.Ordinal);
-        var overrides = Limits(personal?.DailyTokenLimitsJson);
 
         var effective = ModelPolicyResolver.Resolve(
             groups.Select(id => byGroup.TryGetValue(id, out var policy)
-                ? new ModelPolicyRequest(Allowed(policy.AllowedModelsJson), Limits(policy.DailyTokenLimitsJson))
+                ? Read(policy.AllowedModelsJson, policy.DailyTokenLimitsJson)
                 : new()).ToArray(),
-            new(Allowed(personal?.AllowedModelsJson), overrides));
+            personal);
 
         // 計算當日 UTC 日曆日區間（00:00:00Z ~ 隔日 00:00:00Z）
         var start = UtcDay.Start(asOf ?? clock.GetUtcNow());
@@ -174,7 +180,7 @@ public sealed class ModelPolicyService(
             var used = value?.Used ?? 0;
             var reserved = value?.Reserved ?? 0;
             var remaining = limit is long maximum ? (long?)Math.Max(0, maximum - used - reserved) : null;
-            var source = overrides.ContainsKey(model.Id) ? "personal" : limit is not null ? "group" : "unlimited";
+            var source = personal.DailyTokenLimits?.ContainsKey(model.Id) == true ? "personal" : limit is not null ? "group" : "unlimited";
 
             return new ModelTokenBudgetDto(
                 PublicIdOf(model.Id),

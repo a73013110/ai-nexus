@@ -121,7 +121,8 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                         throw Blocked();
                     }
 
-                    if (root.TryGetProperty("usageMetadata", out var usage))
+                    var hasUsage = root.TryGetProperty("usageMetadata", out var usage);
+                    if (hasUsage)
                     {
                         if (usage.TryGetProperty("promptTokenCount", out var prompt)) input = prompt.GetInt64();
                         cached = usage.TryGetProperty("cachedContentTokenCount", out var cache) ? cache.GetInt64() : 0;
@@ -146,16 +147,16 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
 
                         if (candidate.TryGetProperty("finishReason", out var finish))
                         {
-                            if (finish.GetString() is not ("STOP" or "MAX_TOKENS"))
+                            finishReason = finish.GetString();
+                            if (finishReason is not ("STOP" or "MAX_TOKENS"))
                             {
                                 throw Blocked();
                             }
-                            finishReason = finish.GetString();
                             completed = true;
                         }
                     }
 
-                    if (text.Length > 0 || root.TryGetProperty("usageMetadata", out _))
+                    if (text.Length > 0 || hasUsage)
                     {
                         yield return new InferenceChunk(text.ToString(), false, input, output, null, cached, reasoning);
                     }

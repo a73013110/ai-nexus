@@ -17,22 +17,7 @@ internal sealed class ModelProvidersMonitoring(ModelCatalog catalog) : IMonitori
 
     public async Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
-        // 監控讀取會在抑制觀察者流量的狀態下執行。
-        // 但目錄服務可能觸發的模型探測屬於正常應用程式流量，因此在乾淨的執行環境中執行以保留依賴指標。
-        Task<IReadOnlyList<ProviderStatusDto>> read;
-        if (ExecutionContext.IsFlowSuppressed())
-        {
-            read = Task.Run(() => catalog.ProviderStatusesAsync(ct), ct);
-        }
-        else
-        {
-            using (ExecutionContext.SuppressFlow())
-            {
-                read = Task.Run(() => catalog.ProviderStatusesAsync(ct), ct);
-            }
-        }
-
-        var providers = await read;
+        var providers = await ReadDetachedAsync(ct);
         var down = providers.Where(x => !x.Available).Select(x => Display(x.Id)).ToArray();
 
         var (status, summary) = providers.Count switch
@@ -51,6 +36,15 @@ internal sealed class ModelProvidersMonitoring(ModelCatalog catalog) : IMonitori
         )).ToArray();
 
         return new(status, summary, facts);
+    }
+
+    // 監控讀取會在抑制觀察者流量的狀態下執行。
+    // 但目錄服務可能觸發的模型探測屬於正常應用程式流量，因此在乾淨的執行環境中執行以保留依賴指標。
+    // SuppressFlow 必須在同一執行緒還原，所以只包住 Task.Run 的排入，不跨 await。
+    private Task<IReadOnlyList<ProviderStatusDto>> ReadDetachedAsync(CancellationToken ct)
+    {
+        if (ExecutionContext.IsFlowSuppressed()) return Task.Run(() => catalog.ProviderStatusesAsync(ct), ct);
+        using (ExecutionContext.SuppressFlow()) return Task.Run(() => catalog.ProviderStatusesAsync(ct), ct);
     }
 
     private static string Display(string provider) => provider switch

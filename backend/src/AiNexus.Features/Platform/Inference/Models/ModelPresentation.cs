@@ -32,9 +32,8 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IEnume
 
         if (index >= 0)
         {
-            // 若非管理員且系統設定隱藏真實模型名稱，統一以「AI 助理 N」呈現
-            if (!administrator && !options.Value.ShowModelNames) return $"AI 助理 {index + 1}";
-            var name = options.Value.Models[index].DisplayName?.Trim();
+            // 非管理員且系統設定隱藏真實模型名稱，或模型沒有顯示名稱時，統一以「AI 助理 N」呈現
+            var name = administrator || options.Value.ShowModelNames ? options.Value.Models[index].DisplayName?.Trim() : null;
             return !string.IsNullOrEmpty(name) ? name : $"AI 助理 {index + 1}";
         }
 
