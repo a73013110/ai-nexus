@@ -15,13 +15,16 @@ namespace AiNexus.Features.Work.Files;
 /// </summary>
 public sealed class AttachmentService(DocumentExtractor extractor, IOptions<FilesOptions> options, AttachmentWriteLock writes, AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
-    public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), file.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(file.ExtractedText) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
+    public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), NeedsOcr(file) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
+
+    // 掃描型 PDF 抽不到文字，要先 OCR 才能送進對話；顯示模式與送出檢查共用同一個判斷。
+    private static bool NeedsOcr(Attachment file) => file.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(file.ExtractedText);
 
     public async Task<Result<AttachmentDto>> UploadAsync(Guid owner, IFormFile file, CancellationToken ct)
     {
         if (file.Length is < 1 || file.Length > options.Value.MaxFileBytes) return FilesErrors.FileSizeLimit;
         var name = Path.GetFileName(file.FileName.Replace('\\', '/'));
-        if (name.Length is < 1 or > 180 || name.Any(char.IsControl)) return FilesErrors.InvalidFileName;
+        if (name.Length is < 1 or > Attachment.FileNameMaxLength || name.Any(char.IsControl)) return FilesErrors.InvalidFileName;
         using var data = new MemoryStream();
         await using (var input = file.OpenReadStream())
         {
@@ -111,7 +114,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
             if (!file.IsSuccess) return file.Error;
             files.Add(file.Value);
         }
-        if (files.Any(x => x.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(x.ExtractedText))) return FilesErrors.ProcessingRequired;
+        if (files.Any(NeedsOcr)) return FilesErrors.ProcessingRequired;
         if (files.Sum(x => x.Size) > options.Value.MaxMessageBytes) return FilesErrors.TotalLimit;
         return files;
     }
