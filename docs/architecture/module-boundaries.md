@@ -33,6 +33,7 @@
 2. **下層定義介面、上層實作**：下層需要上層的資料或動作，但不需要知道是誰。例：
    - `IActiveUsers`（AccessControl 讀啟用中的使用者，Identity 實作）
    - `IRequestActor`（AccessControl 的管理端點取得執行者，Identity 的 `CurrentUser` 實作）
+   - `IUnitMembership`（AccessControl 的資料範圍計算所屬單位，Organization 實作）
    - `IModelCallMeter`（Inference 的模型任務計費，Billing 實作）
    - `IPrivateReaders`（Files 清理草稿時辨識私人閱讀文件，Knowledge 實作）
    - `ServiceModel`（Knowledge 登記向量模型，Inference／Billing 用來顯示名稱與價格目標）
