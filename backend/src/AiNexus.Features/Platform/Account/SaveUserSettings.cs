@@ -37,12 +37,8 @@ internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models
         // 先驗證整個請求，再改動任何已追蹤的值，避免失敗時留下只改了一半的設定。
         var appearance = UpdatePreferences.Apply(user, value.Appearance, models);
         if (!appearance.IsSuccess) return appearance.Error;
-        var p = user.Preferences;
-        p.ReadingFontSize = value.ReadingFontSize; p.ReadingLineHeight = value.ReadingLineHeight;
-        p.Density = value.Density; p.SidebarWidth = value.SidebarWidth; p.ReadingWidth = value.ReadingWidth;
-        p.EnterToSend = value.EnterToSend; p.AutoFollow = value.AutoFollow; p.SaveLocalDrafts = value.SaveLocalDrafts;
-        p.NotifyOnCompletion = value.NotifyOnCompletion; p.DefaultReasoningEffort = value.DefaultReasoningEffort;
+        user.Preferences.ApplyLayout(value);
         await db.SaveChangesAsync(ct);
-        return p.ToSettingsDto(models);
+        return user.Preferences.ToSettingsDto(models);
     }
 }

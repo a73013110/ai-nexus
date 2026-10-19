@@ -3,6 +3,10 @@ using AiNexus.Features.Admin.Billing.Reports;
 
 namespace AiNexus.Features.Platform.Account;
 
+public sealed record PersonalUsageDto(int Days, int Requests, int Completed, int Failed, int Cancelled,
+    long InputTokens, long OutputTokens, int RequestsWithUsage,
+    IReadOnlyList<UsageDayDto> Daily, AttachmentStorageDto Storage, long TotalDurationMilliseconds = 0, int TimedRequests = 0, TokenUsageDto? Tokens = null);
+
 /// <summary>單一使用者最近 30 天的模型用量與附件儲存量；權限檢查由呼叫端負責。</summary>
 public sealed class PersonalUsage(UsageReports usage, AttachmentQuota quota, TimeProvider clock)
 {
