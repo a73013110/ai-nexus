@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
@@ -22,15 +23,15 @@ internal sealed class JobsMonitoring(AppDbContext db, TimeProvider clock) : IMon
         var hour = now.AddHours(-1);
         var day = now.AddDays(-1);
         var jobs = db.Set<BackgroundJob>().AsNoTracking();
-        var active = await jobs.Where(x => x.Status == "queued" || x.Status == "running").GroupBy(x => 1).Select(g => new
+        var active = await jobs.Where(x => x.Status == RunStates.Queued || x.Status == RunStates.Running).GroupBy(x => 1).Select(g => new
         {
-            Queued = g.Count(x => x.Status == "queued"),
-            Running = g.Count(x => x.Status == "running"),
-            Stuck = g.Count(x => x.Status == "running" && x.LeaseUntil < now),
+            Queued = g.Count(x => x.Status == RunStates.Queued),
+            Running = g.Count(x => x.Status == RunStates.Running),
+            Stuck = g.Count(x => x.Status == RunStates.Running && x.LeaseUntil < now),
         }).SingleOrDefaultAsync(ct);
-        var oldest = await jobs.Where(x => x.Status == "queued").OrderBy(x => x.CreatedAt).Select(x => (DateTimeOffset?)x.CreatedAt).FirstOrDefaultAsync(ct);
+        var oldest = await jobs.Where(x => x.Status == RunStates.Queued).OrderBy(x => x.CreatedAt).Select(x => (DateTimeOffset?)x.CreatedAt).FirstOrDefaultAsync(ct);
         // 失敗工作的 UpdatedAt 即為失敗時間。
-        var failed = await jobs.Where(x => x.Status == "failed" && x.UpdatedAt >= day).GroupBy(x => 1).Select(g => new
+        var failed = await jobs.Where(x => x.Status == RunStates.Failed && x.UpdatedAt >= day).GroupBy(x => 1).Select(g => new
         {
             Day = g.Count(),
             Hour = g.Count(x => x.UpdatedAt >= hour),
