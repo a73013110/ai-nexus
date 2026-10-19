@@ -29,10 +29,5 @@ internal sealed class ListUserUnits(AppDbContext db)
     }
 
     private static string[] Path(IReadOnlyDictionary<Guid, Unit> units, Guid id)
-    {
-        var path = new List<string>();
-        // 結構規則保證無環且深度有上限；這裡仍設上限，壞資料不會讓請求卡住。
-        for (Guid? at = id; at is { } current && path.Count <= UnitRules.MaxDepth; at = units[current].ParentId) path.Insert(0, units[current].Name);
-        return [.. path];
-    }
+        => [.. UnitRules.SelfAndAncestors(units, id).Reverse().Select(x => x.Name)];
 }
