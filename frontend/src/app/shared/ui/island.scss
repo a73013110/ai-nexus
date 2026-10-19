@@ -146,8 +146,9 @@
   background: var(--accent);
   opacity: 0.88;
 }
+// 與第一則通知同一列置中：上方是清單與項目各一層 --p-space-1 內距，不是收合膠囊的高度。
 .island-collapse {
-  margin: calc((var(--island-height) - var(--button-target)) / 2);
+  margin: calc(2 * var(--p-space-1)) calc((var(--island-height) - var(--button-target)) / 2);
   border-radius: 50%;
 }
 .island-bubble {
