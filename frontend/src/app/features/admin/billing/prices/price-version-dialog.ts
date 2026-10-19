@@ -12,6 +12,7 @@ import {
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { PriceDto, PriceRequest, PriceTargetDto } from '@core/api/schema';
 import { formatDate, formatModelDisplayName, parseDateTimeInput } from '@shared/browser/format';
+import { uniqueId } from '@shared/browser/unique-id';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -23,7 +24,7 @@ import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
 import { ToastService } from '@shared/ui/toast-service';
-import { BillingApi, chargeKind, providerName } from '../billing-api';
+import { BillingApi, PROVIDERS, chargeKind, providerName } from '../billing-api';
 
 const emptyPrice = (): PriceRequest => ({
   provider: 'google',
@@ -48,9 +49,8 @@ export type PriceSeed =
   | { from: 'target'; provider: string; modelId: string };
 
 /**
- * 新增一個價格版本。版本不會被修改：從既有版本開始，會複製其欄位，
- * into a new draft. The footer reads 「說明｜還原｜儲存」 and both buttons stay disabled until the
- * 草稿與起點不同時，關閉前會詢問。
+ * 新增一個價格版本。版本不會被修改：從既有版本開始時複製其欄位成新草稿。
+ * 底部為「說明｜還原｜儲存」，草稿與起點相同時兩個按鈕都停用；不同時，關閉前會詢問。
  */
 @Component({
   selector: 'nx-price-version-dialog',
@@ -81,6 +81,8 @@ export class PriceVersionDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild(DateTimePicker);
   private readonly confirmation = viewChild.required(ConfirmDialog);
+  /** 區塊標題與費率錯誤的 DOM ID 前綴（`aria-labelledby`、`aria-describedby`）。 */
+  readonly id = uniqueId('nx-price-version');
   /** 表單在首次開啟時建立並保留，讓關閉中的對話框不會被清空。 */
   readonly opened = signal(false);
   readonly seed = signal<PriceSeed>({ from: 'blank' });
@@ -98,7 +100,7 @@ export class PriceVersionDialog {
     if (seed.from === 'current') return '以目前價格為起點；儲存會建立新版本，歷史價格保持原樣。';
     return '價格只影響之後的呼叫；不同幣別分開統計。';
   });
-  /** Replaces the save bar's own 尚未變更／有未儲存的變更 while writes are refused. */
+  /** 拒絕寫入時，取代儲存列原本的「尚未變更／有未儲存的變更」。 */
   readonly note = this.session.testingNote;
   readonly rateError = computed(() =>
     this.draft().cachedInputPerMillion > this.draft().inputPerMillion
@@ -114,7 +116,7 @@ export class PriceVersionDialog {
       !this.rateError() &&
       (this.picker()?.valid() ?? true),
   );
-  readonly providers = ['google', 'ollama', 'searxng', 'brave'].map((value) => ({
+  readonly providers = PROVIDERS.map((value) => ({
     value,
     label: providerName(value),
   }));
@@ -135,12 +137,13 @@ export class PriceVersionDialog {
   ];
   /** 供應商的模型與工具，依顯示名稱排列：已設定的目標與已定價的。 */
   readonly modelChoices = computed(() => {
-    const provider = this.draft().provider,
-      choices = new Map<string, string>();
-    for (const price of this.prices().filter((item) => item.provider === provider))
-      choices.set(price.modelId, formatModelDisplayName(price));
-    for (const target of this.targets().filter((item) => item.provider === provider))
-      choices.set(target.modelId, target.displayName);
+    const provider = this.draft().provider;
+    const choices = new Map<string, string>();
+    for (const price of this.prices())
+      if (price.provider === provider) choices.set(price.modelId, formatModelDisplayName(price));
+    // 已設定目標的名稱優先於價格紀錄上的名稱。
+    for (const target of this.targets())
+      if (target.provider === provider) choices.set(target.modelId, target.displayName);
     return [...choices].map(([value, label]) => ({ value, label }));
   });
   open(seed: PriceSeed = { from: 'blank' }) {
@@ -153,7 +156,7 @@ export class PriceVersionDialog {
     else draft = emptyPrice();
     this.seed.set(seed);
     this.draft.set(draft);
-    if (!draft.modelId) this.draft.update((item2) => ({ ...item2, modelId: this.firstChoice() }));
+    if (!draft.modelId) this.field('modelId', this.firstChoice());
     this.baseline.set(this.draft());
     this.effective.set('');
     this.resetPicker();
@@ -162,17 +165,17 @@ export class PriceVersionDialog {
     this.dialog().nativeElement.showModal();
   }
   field<K extends keyof PriceRequest>(key: K, value: PriceRequest[K]) {
-    this.draft.update((item3) => ({ ...item3, [key]: value }));
+    this.draft.update((draft) => ({ ...draft, [key]: value }));
   }
   setProvider(provider: string) {
-    this.draft.update((item4) => ({ ...item4, provider, modelId: '' }));
+    this.draft.update((draft) => ({ ...draft, provider, modelId: '' }));
     this.field('modelId', this.firstChoice());
   }
   setKind(kind: string) {
     this.field('kind', kind);
     if (kind === 'free')
-      this.draft.update((item5) => ({
-        ...item5,
+      this.draft.update((draft) => ({
+        ...draft,
         inputPerMillion: 0,
         cachedInputPerMillion: 0,
         outputPerMillion: 0,
@@ -224,8 +227,8 @@ export class PriceVersionDialog {
       this.dialog().nativeElement.close();
       this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
       this.saved.emit();
-    } catch (error2) {
-      if (valid()) this.error.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.error.set(this.scope.message(error));
     } finally {
       if (valid()) this.saving.set(false);
     }

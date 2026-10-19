@@ -56,7 +56,7 @@
   display: inline;
   margin-inline-start: var(--p-space-2);
 }
-// A phone keeps the view switch and the add button on the first row and gives search the second.
+// 手機上檢視切換與新增按鈕留在第一列，搜尋換到第二列。
 @include bp.below(phone) {
   .page-toolbar.price-toolbar {
     flex-wrap: wrap;

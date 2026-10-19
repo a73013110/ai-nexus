@@ -13,9 +13,9 @@
           <nx-notice tone="danger" [message]="error()" />
         }
         <div class="form-sections">
-          <section class="form-section" role="group" aria-labelledby="price-target-title">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-target'">
             <header class="form-section-head">
-              <h3 id="price-target-title">計費對象</h3>
+              <h3 [id]="id + '-target'">計費對象</h3>
               <p class="form-note">依名稱選擇；計費以供應商與原生識別碼對應。</p>
             </header>
             <div class="form-section-body price-pair">
@@ -37,9 +37,9 @@
               /></label>
             </div>
           </section>
-          <section class="form-section" role="group" aria-labelledby="price-rates-title">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-rates'">
             <header class="form-section-head">
-              <h3 id="price-rates-title">費率</h3>
+              <h3 [id]="id + '-rates'">費率</h3>
               <nx-info-popover label="計費方式" panelLabel="費用類型與計費方式" [width]="320">
                 <ul class="form-note-list">
                   <li>API 計費估算：依對外 API 方案估算。</li>
@@ -86,7 +86,7 @@
                       "
                       [attr.aria-describedby]="
                         rate.key === 'cachedInputPerMillion' && rateError()
-                          ? 'price-rate-error'
+                          ? id + '-rate-error'
                           : null
                       "
                       [value]="draft()[rate.key]"
@@ -95,7 +95,7 @@
                 }
               </div>
               @if (rateError()) {
-                <p id="price-rate-error" class="form-note price-error" role="alert">
+                <p [id]="id + '-rate-error'" class="form-note price-error" role="alert">
                   {{ rateError() }}
                 </p>
               }
@@ -109,9 +109,9 @@
               <p class="form-note">只決定每次固定費用；token 費依有效用量計算。</p>
             </div>
           </section>
-          <section class="form-section" role="group" aria-labelledby="price-effective-title">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-effective'">
             <header class="form-section-head">
-              <h3 id="price-effective-title">生效與依據</h3>
+              <h3 [id]="id + '-effective'">生效與依據</h3>
               <p class="form-note">只影響之後的呼叫，已記錄的費用不重算。</p>
             </header>
             <div class="form-section-body">

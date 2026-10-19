@@ -1,11 +1,4 @@
-.charge-content strong {
-  font-weight: 550;
-  color: var(--ink);
-}
-.charge-content p {
-  margin: 0.6rem 0;
-  line-height: 1.7;
-}
+// `.charge-content` 的文字樣式與 nx-charge-label 共用 charge-label.scss。
 .spend-breakdown {
   display: flex;
   justify-content: space-between;

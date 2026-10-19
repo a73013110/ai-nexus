@@ -1,4 +1,4 @@
-// Two fields per row while the section body is wide enough; one on a phone.
+// 區塊夠寬時每列兩個欄位，窄到手機寬度時一列一個。
 .price-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

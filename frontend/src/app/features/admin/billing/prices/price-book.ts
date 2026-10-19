@@ -23,7 +23,7 @@ import { Notice } from '@shared/ui/notice';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { BillingApi, chargeKind, providerName } from '../billing-api';
+import { BillingApi, PROVIDERS, chargeKind, providerName } from '../billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 
 /** 一個可定價的模型或工具，以及目前適用的版本。 */
@@ -41,32 +41,37 @@ export interface PriceVersion {
   name: string;
   state: { label: string; tone: BadgeTone };
 }
-const providerOrder = ['google', 'ollama', 'searxng', 'brave'];
-const keyOf = (item2: { provider: string; modelId: string }) =>
-  `${item2.provider}\n${item2.modelId}`;
+interface PriceKey {
+  provider: string;
+  modelId: string;
+}
+const keyOf = (item: PriceKey) => `${item.provider}\n${item.modelId}`;
 /** 伺服器只回傳最新的這麼多個版本；達到時提示歷史不完整。 */
 const HISTORY_LIMIT = 500;
 const rateFormat = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 8 });
 
 /**
  * 對每個已設定或已定價的模型與工具，回傳目前生效的版本（不晚於 `now` 的最新版本）與下一個排程版本；
- * 以及歷史紀錄（最新在前），每個版本都附上狀態。伺服器最多回傳最新 500 個版本。
+ * 以及歷史紀錄（最新在前），每個版本都附上狀態。伺服器最多回傳最新 `HISTORY_LIMIT` 個版本。
  */
 export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now = Date.now()) {
   const names = new Map(targets.map((item) => [keyOf(item), item.displayName]));
   const rows = new Map<string, CurrentPrice>();
-  const row = (item3: { provider: string; modelId: string }, name: string) => {
-    const key = keyOf(item3);
-    if (!rows.has(key))
-      rows.set(key, {
+  const row = (item: PriceKey, name: string) => {
+    const key = keyOf(item);
+    let entry = rows.get(key);
+    if (!entry) {
+      entry = {
         key,
-        provider: item3.provider,
-        modelId: item3.modelId,
+        provider: item.provider,
+        modelId: item.modelId,
         name,
         current: null,
         next: null,
-      });
-    return rows.get(key)!;
+      };
+      rows.set(key, entry);
+    }
+    return entry;
   };
   for (const target of targets) row(target, target.displayName);
   const sorted = [...prices].sort(
@@ -78,9 +83,9 @@ export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now 
     else entry.current ??= price;
   }
   const current = [...rows.values()].sort(
-    (first2, second2) =>
-      rank(first2.provider) - rank(second2.provider) ||
-      first2.name.localeCompare(second2.name, 'zh-Hant'),
+    (first, second) =>
+      rank(first.provider) - rank(second.provider) ||
+      first.name.localeCompare(second.name, 'zh-Hant'),
   );
   const history: PriceVersion[] = sorted.map((price) => {
     const entry = rows.get(keyOf(price))!;
@@ -97,9 +102,10 @@ export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now 
   });
   return { current, history };
 }
+/** 未列出的供應商排在最後。 */
 function rank(provider: string) {
-  const index = providerOrder.indexOf(provider);
-  return index < 0 ? providerOrder.length : index;
+  const index = PROVIDERS.indexOf(provider);
+  return index < 0 ? PROVIDERS.length : index;
 }
 
 /**

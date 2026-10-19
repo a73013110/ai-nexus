@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { ChargeDto } from '@core/api/schema';
+import { formatNumber } from '@shared/browser/format';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { chargeKind, money } from './billing-api';
 
@@ -12,14 +13,13 @@ import { chargeKind, money } from './billing-api';
     <div class="charge-content">
       <strong>{{ kind() }}</strong>
       <p>
-        輸入 {{ charge().inputTokens?.toLocaleString() ?? '未回報' }} · 輸出
-        {{ charge().outputTokens?.toLocaleString() ?? '未回報' }} tokens
+        輸入 {{ tokens(charge().inputTokens) }} · 輸出 {{ tokens(charge().outputTokens) }} tokens
       </p>
-      @if (charge().cachedInputTokens) {
-        <p>輸入包含 {{ charge().cachedInputTokens?.toLocaleString() }} 個快取 tokens。</p>
+      @if (charge().cachedInputTokens; as cached) {
+        <p>輸入包含 {{ tokens(cached) }} 個快取 tokens。</p>
       }
-      @if (charge().reasoningTokens) {
-        <p>輸出包含 {{ charge().reasoningTokens?.toLocaleString() }} 個思考 tokens。</p>
+      @if (charge().reasoningTokens; as reasoning) {
+        <p>輸出包含 {{ tokens(reasoning) }} 個思考 tokens。</p>
       }
       <p>{{ explanation() }}</p>
     </div>
@@ -28,6 +28,10 @@ import { chargeKind, money } from './billing-api';
 export class ChargeLabel {
   readonly charge = input.required<ChargeDto>();
   readonly kind = computed(() => chargeKind(this.charge().kind));
+  /** 供應商沒回報的用量顯示「未回報」，不當成零。 */
+  tokens(value: number | null | undefined) {
+    return value == null ? '未回報' : formatNumber(value);
+  }
   readonly label = computed(() => {
     const card = this.charge();
     if (card.state === 'pending') return '費用待結算';
