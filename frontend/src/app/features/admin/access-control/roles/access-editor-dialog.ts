@@ -22,6 +22,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { featureIcon } from '@core/layout/navigation-tree';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
+import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -36,7 +37,7 @@ import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AccessControlApi } from '../access-control-api';
-import { AccessControlStore } from '../access-control-store';
+import { AccessControlStore, accessChoice } from '../access-control-store';
 import { FeatureSummary } from './feature-summary';
 import { sameIds } from './same-ids';
 import {
@@ -51,6 +52,7 @@ import {
 export type AccessKind = 'role' | 'group' | 'feature';
 export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
 type GroupSection = 'settings' | 'models';
+const LABELS: Record<AccessKind, string> = { role: '角色', group: '功能群組', feature: '功能' };
 interface Editor {
   kind: AccessKind;
   id: string;
@@ -112,8 +114,6 @@ export function featureNameOverride(name: string, defaultName: string) {
   return trimmed && trimmed !== defaultName ? trimmed : null;
 }
 
-let sequence = 0;
-
 /**
  * 在同一個對話框中建立或編輯角色、功能群組或功能，版面與使用者檢視器相同：內容放在 `.form-sections`，
  * 編輯時底部為 `DialogSaveBar`。
@@ -151,7 +151,7 @@ let sequence = 0;
   `,
 })
 export class AccessEditorDialog {
-  readonly id = `nx-access-editor-${++sequence}`;
+  readonly id = uniqueId('nx-access-editor');
   readonly store = inject(AccessControlStore);
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AccessControlApi);
@@ -198,11 +198,7 @@ export class AccessEditorDialog {
     ).map((section) => ({
       id: section.id,
       name: section.name,
-      options: section.features.map((feature) => ({
-        id: feature.id,
-        label: feature.name + (feature.enabled ? '' : '（停用）'),
-        description: feature.id,
-      })),
+      options: section.features.map(accessChoice),
     })),
   );
   /** 角色加入功能群組；群組沒有分類，所以整體顯示為一張卡片。 */
@@ -210,11 +206,7 @@ export class AccessEditorDialog {
     {
       id: 'groups',
       name: '全部功能群組',
-      options: (this.store.catalog()?.groups || []).map((group) => ({
-        id: group.id,
-        label: group.name + (group.enabled ? '' : '（停用）'),
-        description: group.id,
-      })),
+      options: (this.store.catalog()?.groups || []).map(accessChoice),
     },
   ]);
   /** 已勾選且有資料範圍的功能，各自的範圍選項只列目錄宣告支援的。 */
@@ -241,16 +233,16 @@ export class AccessEditorDialog {
   }
   /** 角色儲存後會授予的內容：已啟用群組中已啟用的功能。 */
   readonly proposedFeatures = computed(() => {
-    const event3 = this.editor(),
-      card = this.store.catalog();
-    if (!event3 || !event3.enabled || event3.kind !== 'role' || !card) return [];
-    const groups = new Set(event3.ids);
+    const draft = this.editor(),
+      catalog = this.store.catalog();
+    if (!draft || !draft.enabled || draft.kind !== 'role' || !catalog) return [];
+    const groups = new Set(draft.ids);
     const features = new Set(
-      card.groups
+      catalog.groups
         .filter((item) => item.enabled && groups.has(item.id))
         .flatMap((item) => item.featureIds),
     );
-    return card.features.filter((item) => item.enabled && features.has(item.id));
+    return catalog.features.filter((item) => item.enabled && features.has(item.id));
   });
   /** 關閉後草稿仍保留，讓對話框在退場動畫中不會被清空。 */
   open(kind: AccessKind, item?: AccessItem) {
@@ -307,15 +299,15 @@ export class AccessEditorDialog {
   }
   async requestClose() {
     if (this.saving()) return;
-    const event4 = this.editor();
+    const draft = this.editor();
     if (
-      event4 &&
+      draft &&
       this.dirty() &&
       !(await this.confirmation().ask({
         title: '放棄未儲存的變更？',
-        message: event4.isNew
-          ? `尚未建立${this.label(event4.kind)}，關閉後會捨棄已填寫的內容。`
-          : `「${event4.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`,
+        message: draft.isNew
+          ? `尚未建立${this.label(draft.kind)}，關閉後會捨棄已填寫的內容。`
+          : `「${draft.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`,
         confirm: '放棄變更',
       }))
     )
@@ -324,12 +316,12 @@ export class AccessEditorDialog {
   }
   async save(event: Event) {
     event.preventDefault();
-    const event5 = this.editor();
-    if (!event5 || this.locked() || (!event5.isNew && !this.dirty())) return;
+    const draft = this.editor();
+    if (!draft || this.locked() || (!draft.isNew && !this.dirty())) return;
     // 錯誤會打開含有該欄位的分頁並聚焦（或顯示訊息），
     // 即使欄位位於頁面較下方，修正處也能被看到。
     const fail = (section: GroupSection, message: string, field?: string) => {
-      if (event5.kind === 'group') this.selectSection(section);
+      if (draft.kind === 'group') this.selectSection(section);
       this.editorError.set(message);
       afterNextRender(
         () => {
@@ -342,17 +334,17 @@ export class AccessEditorDialog {
       );
     };
     // 功能的名稱可以留白，表示沿用目錄的預設名稱；其他項目都要有名稱。
-    if (!event5.id || (event5.kind !== 'feature' && !event5.name.trim()))
-      return fail('settings', '請輸入識別碼與名稱。', event5.id ? 'name' : 'id');
+    if (!draft.id || (draft.kind !== 'feature' && !draft.name.trim()))
+      return fail('settings', '請輸入識別碼與名稱。', draft.id ? 'name' : 'id');
     let policy: GroupPolicyRequest | undefined;
-    if (event5.kind === 'group') {
+    if (draft.kind === 'group') {
       try {
-        policy = modelPolicyRequest(event5.modelPolicy);
+        policy = modelPolicyRequest(draft.modelPolicy);
       } catch (error) {
         return fail('models', safeMessage(error));
       }
       try {
-        policy.storedAttachmentLimitBytes = parseStorageLimitGb(event5.storage);
+        policy.storedAttachmentLimitBytes = parseStorageLimitGb(draft.storage);
       } catch (error) {
         return fail('settings', safeMessage(error), 'storage');
       }
@@ -360,29 +352,29 @@ export class AccessEditorDialog {
     this.saving.set(true);
     this.editorError.set('');
     try {
-      if (event5.kind === 'role')
-        await this.api.role(event5.id, {
-          name: event5.name,
-          enabled: event5.enabled,
-          groupIds: event5.ids,
+      if (draft.kind === 'role')
+        await this.api.role(draft.id, {
+          name: draft.name,
+          enabled: draft.enabled,
+          groupIds: draft.ids,
         });
-      if (event5.kind === 'group' && policy)
-        await this.api.group(event5.id, {
-          name: event5.name,
-          enabled: event5.enabled,
-          featureIds: event5.ids,
-          scopes: grantScopes(event5.ids, event5.scopes),
+      if (draft.kind === 'group' && policy)
+        await this.api.group(draft.id, {
+          name: draft.name,
+          enabled: draft.enabled,
+          featureIds: draft.ids,
+          scopes: grantScopes(draft.ids, draft.scopes),
           policy,
         });
-      if (event5.kind === 'feature')
-        await this.api.feature(event5.id, {
-          name: featureNameOverride(event5.name, event5.defaultName),
-          enabled: event5.enabled,
+      if (draft.kind === 'feature')
+        await this.api.feature(draft.id, {
+          name: featureNameOverride(draft.name, draft.defaultName),
+          enabled: draft.enabled,
         });
-      this.opened.set(event5);
+      this.opened.set(draft);
       this.dialog().nativeElement.close();
       this.store.saved(
-        event5.isNew ? '已建立' + this.label(event5.kind) : '已儲存',
+        draft.isNew ? '已建立' + this.label(draft.kind) : '已儲存',
         '授權變更會在下一次操作生效。',
       );
     } catch (error) {
@@ -392,6 +384,6 @@ export class AccessEditorDialog {
     }
   }
   label(kind: AccessKind) {
-    return ({ role: '角色', group: '功能群組', feature: '功能' } as const)[kind];
+    return LABELS[kind];
   }
 }
