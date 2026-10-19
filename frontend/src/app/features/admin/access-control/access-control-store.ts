@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import type { ChoiceOption } from '@shared/ui/choice-groups';
 import { ToastService } from '@shared/ui/toast-service';
 import { AccessControlApi } from './access-control-api';
 
@@ -50,4 +51,9 @@ export class AccessControlStore {
   groupNames(ids: string[]) {
     return ids.map((id) => this.catalog()?.groups.find((item) => item.id === id)?.name || id);
   }
+}
+
+/** 角色、功能群組或功能做為勾選項：停用的仍列出並標示，識別碼放在第二行。 */
+export function accessChoice(item: { id: string; name: string; enabled: boolean }): ChoiceOption {
+  return { id: item.id, label: item.name + (item.enabled ? '' : '（停用）'), description: item.id };
 }

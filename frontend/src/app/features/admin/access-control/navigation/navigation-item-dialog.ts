@@ -13,6 +13,7 @@ import type { NavigationItemDto } from '@core/api/schema';
 import { CATALOG_FEATURES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
+import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -25,9 +26,10 @@ import { Notice } from '@shared/ui/notice';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AccessControlApi } from '../access-control-api';
-import { AccessControlStore } from '../access-control-store';
+import { AccessControlStore, accessChoice } from '../access-control-store';
 import { NavigationStore } from '../navigation-store';
 import { sameIds } from '../roles/same-ids';
+import { NAVIGATION_KINDS, navigationKindLabel } from './navigation-kinds';
 import { MAX_DEPTH, depthOf, editorTree, type EditorNode } from './navigation-order';
 import type { NavigationKind } from '@core/layout/navigation-tree';
 
@@ -42,17 +44,16 @@ interface Draft {
   icon: string;
   audienceGroupIds: string[];
 }
+/** 欄位旁的驗證說明；伺服器錯誤放在 `error`。 */
+interface FieldError {
+  field: 'featureId' | 'name' | 'url';
+  message: string;
+}
 interface Editor {
   id: string | null;
   title: string;
   draft: Draft;
 }
-
-const KIND_LABELS: Record<NavigationKind, string> = {
-  group: '分群',
-  page: '頁面',
-  link: '外部連結',
-};
 
 /**
  * 外部連結的網址：絕對 `https://`、不含帳號密碼，與後端 `NavigationLinks.WellFormed` 相同。
@@ -79,8 +80,6 @@ function sameDraft(first: Draft, second: Draft) {
     sameIds(first.audienceGroupIds, second.audienceGroupIds)
   );
 }
-
-let sequence = 0;
 
 /**
  * 新增或修改一個選單節點（分群、頁面或外部連結）。新增時可換種類與位置；修改時種類固定、位置不動
@@ -110,7 +109,7 @@ let sequence = 0;
   `,
 })
 export class NavigationItemDialog {
-  readonly id = `nx-navigation-item-${++sequence}`;
+  readonly id = uniqueId('nx-navigation-item');
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AccessControlApi);
   private readonly access = inject(AccessControlStore);
@@ -123,20 +122,17 @@ export class NavigationItemDialog {
   private readonly opened = signal<Draft | null>(null);
   readonly saving = signal(false);
   readonly error = signal('');
-  /** 欄位旁的驗證說明；伺服器錯誤放在 `error`。 */
-  readonly fieldError = signal<{ field: 'featureId' | 'name' | 'url'; message: string } | null>(
-    null,
-  );
+  readonly fieldError = signal<FieldError | null>(null);
   readonly locked = computed(() => this.saving() || this.session.testing());
   readonly dirty = computed(() => {
     const editor = this.editor(),
       opened = this.opened();
     return !!editor && !!opened && !sameDraft(editor.draft, opened);
   });
-  readonly kinds: ViewOption[] = (['group', 'page', 'link'] as const).map((value) => ({
-    value,
-    label: KIND_LABELS[value],
-    icon: { group: 'apps', page: 'document', link: 'external' }[value],
+  readonly kinds: ViewOption[] = NAVIGATION_KINDS.map(({ kind, label, icon }) => ({
+    value: kind,
+    label,
+    icon,
   }));
   /** 目錄中的頁面（動作與閱讀器沒有網址，不能放進選單），名稱用管理員的覆寫。 */
   readonly pages = computed<SelectOption[]>(() => {
@@ -178,16 +174,10 @@ export class NavigationItemDialog {
     {
       id: 'groups',
       name: '功能群組',
-      options: (this.access.catalog()?.groups ?? []).map((group) => ({
-        id: group.id,
-        label: group.name + (group.enabled ? '' : '（停用）'),
-        description: group.id,
-      })),
+      options: (this.access.catalog()?.groups ?? []).map(accessChoice),
     },
   ]);
-  label(kind: NavigationKind) {
-    return KIND_LABELS[kind];
-  }
+  readonly label = navigationKindLabel;
 
   /** 新增：`parentId` 為 `null` 時放在最上層。 */
   create(kind: NavigationKind, parentId: string | null = null) {
@@ -204,7 +194,7 @@ export class NavigationItemDialog {
   }
   edit(item: NavigationItemDto) {
     const kind = item.kind as NavigationKind;
-    this.show(item.id, `編輯${KIND_LABELS[kind]}：${this.store.name(item)}`, {
+    this.show(item.id, `編輯${navigationKindLabel(kind)}：${this.store.name(item)}`, {
       kind,
       parentId: item.parentId ?? '',
       featureId: item.featureId ?? '',
@@ -298,7 +288,7 @@ export class NavigationItemDialog {
       this.opened.set(draft);
       this.dialog().nativeElement.close();
       this.store.toast.success(
-        editor.id ? '已儲存' : `已新增${KIND_LABELS[draft.kind]}`,
+        editor.id ? '已儲存' : `已新增${navigationKindLabel(draft.kind)}`,
         '側欄選單已更新。',
       );
       this.store.changed();
@@ -308,7 +298,7 @@ export class NavigationItemDialog {
       this.saving.set(false);
     }
   }
-  private validate(draft: Draft): { field: 'featureId' | 'name' | 'url'; message: string } | null {
+  private validate(draft: Draft): FieldError | null {
     if (draft.kind === 'page')
       return draft.featureId ? null : { field: 'featureId', message: '請選擇要放進選單的頁面。' };
     if (!draft.name.trim()) return { field: 'name', message: '請輸入 120 字元內的名稱。' };

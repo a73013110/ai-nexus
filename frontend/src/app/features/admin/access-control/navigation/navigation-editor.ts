@@ -42,6 +42,7 @@ import {
   type OrderShift,
   type Placement,
 } from './navigation-order';
+import { NAVIGATION_KINDS, navigationKindLabel } from './navigation-kinds';
 
 /** 表格的一列：樹以深度優先攤平，`depth` 從 0 起算，`index`／`count` 是在同層的位置。 */
 export interface NavigationRow {
@@ -66,7 +67,6 @@ interface Drag {
 }
 const SCROLL_EDGE = 48;
 const SCROLL_SPEED = 12;
-const KIND_LABELS: Record<string, string> = { group: '分群', page: '頁面', link: '外部連結' };
 
 /**
  * 選單樹的編輯表：每列一個節點，依層級內縮。位置直接在表上調整：拖曳把手（放在列的上半或下半＝插到它前後，
@@ -106,11 +106,11 @@ export class NavigationEditor {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly menu = viewChild.required(MenuPanel);
   private readonly moveDialog = viewChild.required<ElementRef<HTMLDialogElement>>('moveDialog');
-  readonly additions: MenuAction[] = [
-    { id: 'group', label: '分群', icon: 'apps' },
-    { id: 'page', label: '頁面', icon: 'document' },
-    { id: 'link', label: '外部連結', icon: 'external' },
-  ];
+  readonly additions: MenuAction[] = NAVIGATION_KINDS.map(({ kind, label, icon }) => ({
+    id: kind,
+    label,
+    icon,
+  }));
   readonly saving = signal(false);
   readonly dragging = signal<string | null>(null);
   /** 拖曳中的暫定位置（只改畫面）；放手才送出。 */
@@ -152,9 +152,7 @@ export class NavigationEditor {
     inject(DestroyRef).onDestroy(() => this.end());
   }
 
-  kindLabel(kind: string) {
-    return KIND_LABELS[kind] ?? kind;
-  }
+  readonly kindLabel = navigationKindLabel;
   /** 頁面用目錄圖示；外部連結沒設定時用外部連結圖示，分群沒設定時用格狀圖示。 */
   icon(item: NavigationItemDto) {
     if (item.kind === 'page') return featureIcon(catalogFeature(item.featureId ?? '')?.icon);
