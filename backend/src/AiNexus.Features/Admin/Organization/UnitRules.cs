@@ -41,6 +41,17 @@ internal static class UnitRules
     public static int NextSortOrder(IEnumerable<Unit> units, Guid? parentId)
         => Math.Min((units.Where(x => x.ParentId == parentId).Select(x => (int?)x.SortOrder).Max() ?? 0) + SortStep, MaxSortOrder);
 
+    /// <summary>
+    /// 由 <paramref name="id"/> 往上到最上層的單位（含自己）；查無的上層視為到頂。結構規則保證無環且深度有上限，
+    /// 這裡仍最多走 <see cref="MaxDepth"/>＋1 層：壞資料不會讓請求卡住，呼叫端可用「超過 <see cref="MaxDepth"/>」辨認。
+    /// </summary>
+    public static IEnumerable<Unit> SelfAndAncestors(IReadOnlyDictionary<Guid, Unit> units, Guid id)
+    {
+        var count = 0;
+        for (var at = units.GetValueOrDefault(id); at is not null && count++ <= MaxDepth; at = at.ParentId is { } parent ? units.GetValueOrDefault(parent) : null)
+            yield return at;
+    }
+
     /// <summary>新增、修改與刪除單位共用的稽核快照（<c>admin.organization_unit*</c>）。</summary>
     public static async Task<object?> SnapshotAsync(AppDbContext db, Guid id, CancellationToken ct)
         => await db.Set<Unit>().AsNoTracking().Where(x => x.Id == id).Select(x => new { x.ParentId, x.Name, x.Enabled, x.SortOrder }).SingleOrDefaultAsync(ct);
