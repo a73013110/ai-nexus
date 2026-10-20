@@ -1,12 +1,22 @@
 import { Notice } from '@shared/ui/notice';
 import { Field } from '@shared/ui/field';
 import { ClientValidationError } from '@core/errors/safe-errors';
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import type { EffectiveModelPolicyDto, ModelDto, ModelPolicyRequest } from '@core/api/schema';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import type {
+  EffectiveModelPolicyDto,
+  ModelDto,
+  ModelPolicyRequest,
+  ModelTokenBudgetDto,
+} from '@core/api/schema';
 import { Checkbox } from '@shared/ui/checkbox';
 import { DataTable, TableState } from '@shared/ui/data-table';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { formatModelName, formatNumber } from '@shared/browser/format';
+
+/** 與後端驗證相同的每日 token 上限；輸入框的 max 也用它。 */
+const maxTokenLimit = 1_000_000_000_000;
+/** 其餘來源都是平台預設。 */
+const budgetSources: Record<string, string> = { personal: '個人設定', group: '群組設定' };
 
 export interface ModelPolicyDraft {
   restricted: boolean;
@@ -22,24 +32,28 @@ export function modelPolicyDraft(policy?: ModelPolicyRequest | null): ModelPolic
     ),
   };
 }
+/** 留白的 token 上限代表「繼承」，送出與比較都只看有填的。 */
+function filledLimits(draft: ModelPolicyDraft) {
+  return Object.entries(draft.tokenLimits)
+    .map(([id, text]) => [id, text.trim()] as const)
+    .filter(([, text]) => text !== '');
+}
 export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest {
   const limits: Record<string, number> = {};
-  for (const [id, text] of Object.entries(draft.tokenLimits)) {
-    if (text.trim() === '') continue;
+  for (const [id, text] of filledLimits(draft)) {
     const value = Number(text);
-    if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000_000_000)
+    if (!Number.isSafeInteger(value) || value < 0 || value > maxTokenLimit)
       throw new ClientValidationError('tokenLimit');
     limits[id] = value;
   }
   return { allowedModelIds: draft.restricted ? draft.modelIds : null, dailyTokenLimits: limits };
 }
-/** 留白的 token 上限代表「繼承」，因此留白與缺少上限是同一個政策。 */
+/** 留白與缺少上限是同一個政策；未限制時不比較模型清單。 */
 export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraft) {
   const ids = (draft: ModelPolicyDraft) => [...draft.modelIds].sort().join('\n');
   const limits = (draft: ModelPolicyDraft) =>
-    Object.entries(draft.tokenLimits)
-      .filter(([, value]) => value.trim() !== '')
-      .map(([id, value]) => `${id}=${value.trim()}`)
+    filledLimits(draft)
+      .map(([id, text]) => `${id}=${text}`)
       .sort()
       .join('\n');
   return (
@@ -121,7 +135,7 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
               </td>
               @if (effective(); as policy) {
                 <td data-label="目前生效">
-                  @if (budget(model.id); as current) {
+                  @if (budgets().get(model.id); as current) {
                     <span
                       >{{
                         current.dailyTokenLimit == null
@@ -129,13 +143,7 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
                           : format(current.dailyTokenLimit) + ' tokens / 日'
                       }}
                       ·
-                      {{
-                        current.source === 'personal'
-                          ? '個人設定'
-                          : current.source === 'group'
-                            ? '群組設定'
-                            : '平台預設'
-                      }}</span
+                      {{ source(current) }}</span
                     >
                     <small
                       >已回報 {{ format(current.usedTokens) }} · 預留
@@ -159,7 +167,7 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
                   nxField
                   type="number"
                   min="0"
-                  max="1000000000000"
+                  [max]="maxTokenLimit"
                   step="1"
                   [attr.aria-label]="'每日 token 上限：' + name(model)"
                   [placeholder]="personal() ? '繼承群組' : '不限制'"
@@ -206,11 +214,15 @@ export class ModelPolicyEditor {
   readonly disabled = input(false);
   readonly name = formatModelName;
   readonly format = formatNumber;
+  readonly maxTokenLimit = maxTokenLimit;
+  readonly budgets = computed(
+    () => new Map(this.effective()?.models.map((budget) => [budget.modelId, budget])),
+  );
   kind(model: ModelDto) {
     return model.supportsImages ? '文字與圖片' : '文字';
   }
-  budget(id: string) {
-    return this.effective()?.models.find((model) => model.modelId === id);
+  source(budget: ModelTokenBudgetDto) {
+    return budgetSources[budget.source] ?? '平台預設';
   }
   change(patch: Partial<ModelPolicyDraft>) {
     this.valueChange.emit({ ...this.value(), ...patch });
