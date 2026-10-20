@@ -22,6 +22,14 @@ public sealed class User
     public int FailedLogins { get; set; }
     public DateTimeOffset? LockedUntil { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
+    /// <summary>通知信箱，不是登入識別、不唯一；來源見 <see cref="EmailSource"/>。</summary>
+    public string? Email { get; set; }
+    /// <summary><see cref="EmailSources"/> 之一；決定本人能否自行修改、AD 同步能否覆寫。</summary>
+    public string? EmailSource { get; set; }
+    public DateTimeOffset? EmailVerifiedAt { get; set; }
+    /// <summary>最近一次 AD／Windows 驗證成功的時間；AD 綁定使用者的本地密碼登入要求它在期限內。</summary>
+    public DateTimeOffset? DirectoryVerifiedAt { get; set; }
+    public DateTimeOffset? PasswordChangedAt { get; set; }
     public UserPreferences Preferences { get; set; } = new();
 }
 
@@ -37,6 +45,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         user.Property(x => x.AdAccount).HasMaxLength(64);
         user.Property(x => x.LocalAccount).HasMaxLength(64);
         user.Property(x => x.PasswordHash).HasMaxLength(512);
+        user.Property(x => x.Email).HasMaxLength(EmailSources.AddressMaxLength);
+        user.Property(x => x.EmailSource).HasMaxLength(16);
         user.Property(x => x.SecurityVersion).IsConcurrencyToken();
         user.OwnsOne(x => x.Preferences, p =>
         {
