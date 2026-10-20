@@ -243,7 +243,8 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     const dialog = await openSettings(page);
     await chooseSelect(page, "主題", theme === "light" ? "淺色" : "深色");
     const save = dialog.getByRole("button", { name: "儲存變更", exact: true });
-    if (await save.count()) {
+    // 儲存列一直都在；主題沒變時儲存鈕是停用的。
+    if (await save.isEnabled()) {
       await save.click();
       await expect(dialog.getByRole("status")).toContainText("已儲存");
     }

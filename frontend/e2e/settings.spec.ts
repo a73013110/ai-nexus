@@ -19,7 +19,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
     page.getByRole("heading", { name: "外觀與閱讀", exact: true }),
   ).toBeVisible();
   await expectCompactSurfaces(page.locator(".settings-layout"));
-  await expect(page.locator(".settings-card h2").first()).toHaveCSS(
+  await expect(page.locator(".setting-group h2").first()).toHaveCSS(
     "font-size",
     "16px",
   );
@@ -32,7 +32,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
     "20px",
   );
   expect(fixture.settings.readingFontSize).toBe(15);
-  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await page.getByRole("button", { name: "還原", exact: true }).click();
   await expect(page.locator(".reading-preview p")).toHaveCSS(
     "font-size",
     "15px",
@@ -47,7 +47,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
   ).toContainText("已儲存");
   expect(fixture.settings.readingFontSize).toBe(20);
   const settings = page.getByRole("dialog", { name: "個人設定", exact: true });
-  await settings.locator(".settings-main").evaluate((element) => {
+  await settings.locator(".settings-body").evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await expect(
