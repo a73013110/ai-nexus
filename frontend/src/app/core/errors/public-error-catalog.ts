@@ -307,7 +307,8 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   web_search_pending_or_failed: '這次搜尋正在處理或未完成。請重新提交新的訊息。',
   web_search_daily_quota: '今日網路搜尋已達上限。',
   account_changed: '帳號設定已在其他地方變更，請重新整理後再試。',
-  directory_verification_required: '已有一段時間未用 AD 登入，本地密碼暫停使用；請先用 AD 帳號登入一次。',
+  directory_verification_required:
+    '已有一段時間未用 AD 登入，本地密碼暫停使用；請先用 AD 帳號登入一次。',
   email_in_use: '此信箱已由其他使用者驗證使用。',
   email_invalid: '請輸入單一 email 地址（例如 name@company.com）。',
   email_managed_by_directory: '此信箱由公司 AD 提供，請聯絡資訊管理人員修改。',
