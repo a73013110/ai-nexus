@@ -61,21 +61,19 @@ export class SharedPage {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   readonly modelName = formatModelDisplayName;
-  readonly route = inject(ActivatedRoute);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly reader = inject(ReaderOverlay);
   private readonly api = inject(SharingApi);
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
-  readonly confirm = viewChild.required(ConfirmDialog);
+  private readonly confirm = viewChild.required(ConfirmDialog);
   readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
   private readonly sentParam = toSignal(
-    this.route.queryParamMap.pipe(map((part2) => part2.get('sent'))),
-    {
-      initialValue: null,
-    },
+    this.route.queryParamMap.pipe(map((part) => part.get('sent'))),
+    { initialValue: null },
   );
   /** 分享過期前會再檢查一次，且至少每 30 秒檢查一次。 */
   private readonly contentRead = apiResource({
@@ -103,7 +101,7 @@ export class SharedPage {
     params: () => this.sent(),
     loader: (sent) => this.api.list(sent),
   });
-  readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
+  private readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
   readonly listLoading = this.listRead.loading;
   readonly contentLoading = this.contentRead.loading;
   readonly term = signal('');
@@ -136,8 +134,8 @@ export class SharedPage {
       cards: !this.listLoading() && this.visible().length > 0,
     });
   });
-  readonly busy = signal(false);
-  readonly actionError = signal('');
+  private readonly busy = signal(false);
+  private readonly actionError = signal('');
   readonly error = computed(
     () => this.actionError() || this.contentRead.error() || this.listRead.error(),
   );
@@ -172,7 +170,7 @@ export class SharedPage {
   async switchTab(sent: boolean) {
     await this.router.navigate([routeOf('sharing')], { queryParams: { sent } });
   }
-  async revoke(share: ShareDto) {
+  private async revoke(share: ShareDto) {
     if (
       this.busy() ||
       !(await this.confirm().ask({
@@ -192,8 +190,8 @@ export class SharedPage {
         this.listRead.reload();
         await this.router.navigate([routeOf('sharing')], { queryParams: { sent: this.sent() } });
       }
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }
