@@ -52,7 +52,7 @@ import { SearchField } from '@shared/ui/search-field';
               [value]="people.text()"
               (valueChange)="people.find($event)"
           /></label>
-          @if (people.text().trim().length >= 2) {
+          @if (people.searchable()) {
             <div class="directory-results" role="region" aria-label="符合的使用者">
               @for (user of people.results(); track user.id) {
                 <button class="directory-user" (click)="add(user)">
@@ -180,7 +180,7 @@ export class ResourceSharing {
   }
   role(id: string, role: string) {
     this.members.update((rows) =>
-      rows.map((item2) => (item2.userId === id ? { ...item2, role } : item2)),
+      rows.map((item) => (item.userId === id ? { ...item, role } : item)),
     );
   }
   cancel(event: Event) {

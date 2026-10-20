@@ -6,22 +6,27 @@
   overflow: auto;
   max-height: 15rem;
 }
-.directory-user {
+.directory-user,
+.acl-member {
   display: flex;
   gap: var(--p-space-3);
   align-items: center;
   padding: var(--p-space-3);
 }
-.directory-user > span {
+.directory-user > span,
+.acl-member > span {
   flex: 1;
   min-width: 0;
 }
 .directory-user strong,
-.directory-user small {
+.directory-user small,
+.acl-member strong,
+.acl-member small {
   display: block;
   overflow-wrap: anywhere;
 }
-.directory-user small {
+.directory-user small,
+.acl-member small {
   color: var(--secondary);
   font-size: var(--text-caption);
 }
@@ -33,28 +38,6 @@
 .directory-user:hover {
   background: var(--hover);
 }
-.acl-member > nx-select {
-  width: 8rem;
-}
-.acl-member {
-  display: flex;
-  gap: var(--p-space-3);
-  align-items: center;
-  padding: var(--p-space-3);
-}
-.acl-member > span {
-  flex: 1;
-  min-width: 0;
-}
-.acl-member strong,
-.acl-member small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.acl-member small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
 .acl-members {
   display: grid;
   gap: var(--p-space-2);
@@ -62,6 +45,9 @@
 .acl-member {
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
+}
+.acl-member > nx-select {
+  width: 8rem;
 }
 @include bp.below(phone) {
   .acl-member {

@@ -53,6 +53,7 @@ describe('directory search', () => {
     const context = setup();
     await type(context, '王');
     expect(context.directory).not.toHaveBeenCalled();
+    expect(context.search.searchable()).toBe(false);
     expect(context.search.results()).toEqual([]);
   });
 
@@ -60,6 +61,7 @@ describe('directory search', () => {
     const context = setup();
     await type(context, '王小');
     expect(context.directory).toHaveBeenCalledWith('王小');
+    expect(context.search.searchable()).toBe(true);
     expect(context.search.results().map((item) => item.id)).toEqual(['a', 'b']);
     context.chosen.set(['a']);
     expect(context.search.results().map((item) => item.id)).toEqual(['b']);
