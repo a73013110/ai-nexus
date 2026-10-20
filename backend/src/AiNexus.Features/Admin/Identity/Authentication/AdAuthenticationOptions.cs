@@ -24,6 +24,12 @@ public sealed class AdAuthenticationOptions : IValidatableObject
     /// <summary>與登入名稱比對的 LDAP 屬性。</summary>
     [RegularExpression("^[A-Za-z][A-Za-z0-9-]{0,63}$")] public string AccountAttribute { get; set; } = "sAMAccountName";
 
+    /// <summary>
+    /// 登入時另外接受並去掉的 <c>@後綴</c>（UPN 或 email 網域，例如 <c>company.com</c>）；<see cref="Domain"/> 一律接受。
+    /// 其他後綴原樣交給 AD 查詢，與帳密錯誤同一回應。
+    /// </summary>
+    public string[] AccountSuffixes { get; set; } = [];
+
     public bool Configured => !string.IsNullOrWhiteSpace(BindPassword);
     public string Host => Server.Length > 0 ? Server : Domain;
     public int Port => UseLdaps ? 636 : 389;
@@ -36,6 +42,8 @@ public sealed class AdAuthenticationOptions : IValidatableObject
     {
         if (Mode == "Ldap" && Configured && (Domain.Length == 0 || BindUser.Length == 0))
             yield return new("BindPassword is set, so Domain and BindUser are required.", [nameof(Domain), nameof(BindUser)]);
+        if (AccountSuffixes.Any(x => !System.Text.RegularExpressions.Regex.IsMatch(x ?? "", @"^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$")))
+            yield return new("AccountSuffixes must be DNS domains such as company.com.", [nameof(AccountSuffixes)]);
     }
 }
 

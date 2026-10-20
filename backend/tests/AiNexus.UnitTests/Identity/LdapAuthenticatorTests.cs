@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.UnitTests.Identity;
 
@@ -33,4 +34,14 @@ public sealed class LdapAuthenticatorTests
         Assert.Equal(636, options.Port);
         Assert.Equal("OU=Staff,DC=company,DC=internal", options.Base);
     }
+
+    [Theory]
+    [InlineData("chen", "chen")]
+    [InlineData(@"COMPANY\chen", "chen")]
+    [InlineData("chen@company.internal", "chen")]
+    [InlineData("chen@Company.COM", "chen")]
+    [InlineData("chen@other.com", "chen@other.com")]
+    [InlineData(@"A\B\chen", @"A\B\chen")]
+    public void DirectoryLoginNamesDropOnlyKnownDomainParts(string input, string expected)
+        => Assert.Equal(expected, UserAccounts.DirectoryLoginName(input, "company.internal", ["company.com"]));
 }

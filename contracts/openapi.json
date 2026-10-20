@@ -36812,7 +36812,10 @@
           "activity",
           "enabled",
           "authentication",
-          "storage"
+          "storage",
+          "email",
+          "emailSource",
+          "emailVerifiedAt"
         ],
         "type": "object",
         "properties": {
@@ -36869,6 +36872,25 @@
                 "$ref": "#/components/schemas/AttachmentStorageDto"
               }
             ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "emailSource": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "emailVerifiedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },

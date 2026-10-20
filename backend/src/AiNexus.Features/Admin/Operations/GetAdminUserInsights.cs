@@ -28,7 +28,7 @@ internal sealed class GetAdminUserInsights(AppDbContext db, AdministrativeReadAu
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
         var report = await personal.ForOwnerAsync(id, ct);
         var detail = new AdminUserDetailDto(
-            new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage),
+            new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage, user.Email, user.EmailSource, user.EmailVerifiedAt),
             report,
             await usage.KindsAsync(id, ct),
             await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == id, ct));

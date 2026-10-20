@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Sessions;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.Features.Admin.Identity.Authentication;
 
@@ -58,7 +59,8 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
             return IdentityErrors.InvalidCredentials;
         if (body.Method == "local") return await local.AuthenticateAsync(body.Account, body.Password, ct);
         if (body.Method != "ad" || options.Value.Mode != "Ldap") return IdentityErrors.AuthenticationModeUnsupported;
-        var identity = await directory.AuthenticateAsync(body.Account.Trim(), body.Password, ct);
+        var settings = options.Value;
+        var identity = await directory.AuthenticateAsync(UserAccounts.DirectoryLoginName(body.Account, settings.Domain, settings.AccountSuffixes), body.Password, ct);
         if (!identity.IsSuccess) return identity.Error;
         var claims = new ClaimsIdentity(
         [
@@ -66,6 +68,8 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
             new(ClaimTypes.Name, identity.Value.Account),
             new(SessionIdentity.DisplayName, identity.Value.DisplayName),
         ], AuthEndpoints.CookieScheme);
+        // 只給 CurrentUser 同步信箱用；登入成功後 cookie 以 SessionIdentity.Principal 重建，不帶這個 claim。
+        if (identity.Value.Email is { } email) claims.AddClaim(new(SessionIdentity.DirectoryEmail, email));
         http.User = new(claims);
         return await current.GetAsync(ct);
     }

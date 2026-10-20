@@ -9247,6 +9247,10 @@ export interface components {
             enabled: boolean;
             authentication: null | components["schemas"]["UserAuthenticationDto"];
             storage: null | components["schemas"]["AttachmentStorageDto"];
+            email: null | string;
+            emailSource: null | string;
+            /** Format: date-time */
+            emailVerifiedAt: null | string;
         };
         AdminUserModelPolicyDto: {
             personal: components["schemas"]["ModelPolicyRequest"];

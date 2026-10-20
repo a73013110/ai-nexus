@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { AdminCatalogDto, AdminUserDto } from '@core/api/schema';
-import { signInMethods, userAccountDraft, userAccountRequest } from './user-account-fields';
+import {
+  emailState,
+  signInMethods,
+  userAccountDraft,
+  userAccountRequest,
+} from './user-account-fields';
 import { userFeatures } from './user-role-fields';
 
 const user = {
@@ -51,6 +56,16 @@ describe('user account form', () => {
         },
       }),
     ).toBe('AD · 本地密碼');
+  });
+
+  it('labels where an email came from and whether it is verified', () => {
+    expect(emailState({ emailSource: 'directory', emailVerifiedAt: '2026-10-20T00:00:00Z' })).toBe(
+      'AD 提供',
+    );
+    expect(emailState({ emailSource: 'user', emailVerifiedAt: '2026-10-20T00:00:00Z' })).toBe(
+      '已驗證',
+    );
+    expect(emailState({ emailSource: 'admin', emailVerifiedAt: null })).toBe('未驗證');
   });
 });
 

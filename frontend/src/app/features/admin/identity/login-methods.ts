@@ -22,7 +22,7 @@ export const LOGIN_METHODS: Readonly<Record<LoginMethod, LoginMethodSpec>> = {
     credentials: {
       account: 'AD 帳號',
       placeholder: '公司帳號，例如 chen',
-      hint: '輸入帳號名稱，無需加入網域。',
+      hint: '只輸入帳號名稱，不需網域或 email。',
       password: 'AD 密碼',
     },
   },
