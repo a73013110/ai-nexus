@@ -192,6 +192,7 @@ export class SettingsPage {
     this.usageRead.reload();
     this.modelsRead.reload();
     this.policyRead.reload();
+    this.webSearchRead.reload();
   }
   update<K extends keyof UserSettingsDto>(key: K, value: UserSettingsDto[K]) {
     this.edit((current) => ({ ...current, [key]: value }));
