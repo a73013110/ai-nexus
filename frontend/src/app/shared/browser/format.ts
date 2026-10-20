@@ -63,6 +63,11 @@ export function formatDuration(milliseconds: number) {
   const minor = Math.floor((milliseconds % size) / next);
   return minor ? `${major} ${unit} ${minor} ${nextUnit}` : `${major} ${unit}`;
 }
+/** 以毫秒顯示的耗時或延遲，小數位數依呼叫端的精度；沒有值時顯示「—」，不當成 0。 */
+export const formatMilliseconds = (
+  value: number | null | undefined,
+  maximumFractionDigits: number,
+) => (value == null ? '—' : value.toLocaleString('zh-TW', { maximumFractionDigits }) + ' ms');
 /** 模型沒有顯示名稱（或只有空白）時一律稱為「AI 助理」。 */
 const modelName = (name?: string | null) => name?.trim() || 'AI 助理';
 export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>

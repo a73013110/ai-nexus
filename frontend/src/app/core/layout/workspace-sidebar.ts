@@ -19,8 +19,7 @@ import { WorkspaceLayout } from './workspace-layout';
 import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { CountBadge } from '@shared/ui/count-badge';
 import { bindSwipe, swipeSettleTime } from '@shared/browser/swipe';
-
-let sequence = 0;
+import { uniqueId } from '@shared/browser/unique-id';
 
 @Component({
   selector: 'aside[nxWorkspaceSidebar]',
@@ -103,7 +102,7 @@ export class WorkspaceSidebar {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly collapsibleNavigation = input(false);
   readonly navigationExpanded = signal(false);
-  readonly notificationStatusId = `sidebar-notification-status-${++sequence}`;
+  readonly notificationStatusId = uniqueId('sidebar-notification-status');
   readonly activated = output<void>();
   constructor() {
     afterRenderEffect((onCleanup) => {

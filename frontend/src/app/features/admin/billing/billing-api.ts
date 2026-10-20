@@ -18,9 +18,6 @@ export function datePeriod(from: string, through: string): SpendPeriod {
     offsetMinutes: -start.getTimezoneOffset(),
   };
 }
-export function localDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 export function money(amount: number, currency: string): string {
   if (!currency) return '未定價';
   return new Intl.NumberFormat('zh-TW', {
