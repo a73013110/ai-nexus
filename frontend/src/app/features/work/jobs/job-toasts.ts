@@ -7,6 +7,7 @@ import { ToastService } from '@shared/ui/toast-service';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { jobKindName } from './job-kind';
+import { JobsApi } from './jobs-api';
 
 interface Watched {
   /** 正在等待的工作；文件會接續到它的向量化工作。 */
@@ -24,10 +25,9 @@ interface Watched {
 const ACTIVE = ['queued', 'running', 'processing', 'indexing', 'building'];
 
 /**
- * 以提示通知此分頁開始的背景工作如何結束。本身不發出請求：殼層的通知輪詢會回報每個結束的工作，
+ * 以提示通知此分頁開始的背景工作如何結束。本身不輪詢：殼層的通知輪詢會回報每個結束的工作，
  * 已經在輪詢工作的頁面（工作、知識庫、閱讀器）會更早結束它。在別處開始的工作（其他分頁、
- * 重新整理前、伺服器），
- * 只會出現在收件匣與工作頁，因此同一件事不會被通知兩次。
+ * 重新整理前、伺服器）只會出現在收件匣與工作頁，因此同一件事不會被通知兩次。
  */
 @Injectable({ providedIn: 'root' })
 export class JobToasts {
@@ -35,6 +35,7 @@ export class JobToasts {
   private readonly toasts = inject(ToastService);
   private readonly router = inject(Router);
   private readonly knowledge = inject(KnowledgeApi);
+  private readonly jobs = inject(JobsApi);
   private readonly watched = new Map<string, Watched>();
 
   constructor() {
@@ -43,12 +44,19 @@ export class JobToasts {
       const items = notifications.items();
       untracked(() => items.forEach((item) => this.notified(item)));
     });
-    let generation = this.session.auth.generation();
+    let account = this.session.auth.guard();
     effect(() => {
-      if (this.session.auth.generation() === generation) return;
-      generation = this.session.auth.generation();
+      if (account()) return;
+      account = this.session.auth.guard();
       this.watched.clear();
     });
+  }
+
+  /** 停止或重試工作並回傳更新後的工作；重試會接著監看，呼叫端不必另外 `track`。 */
+  async control(id: string, retry: boolean) {
+    const job = await (retry ? this.jobs.retry(id) : this.jobs.cancel(id));
+    if (retry) this.track(job);
+    return job;
   }
 
   /** 使用者剛在此開始或重試的工作。 */
@@ -104,7 +112,8 @@ export class JobToasts {
       item.target.kind === 'task'
         ? this.watched.get(item.target.id)
         : [...this.watched.values()].find(
-            (item2) => item2.kind === item.target.kind && item2.subjectId === item.target.id,
+            (candidate) =>
+              candidate.kind === item.target.kind && candidate.subjectId === item.target.id,
           );
     if (watched && Date.parse(item.createdAt) >= watched.since)
       void this.settle(watched, item.type.slice('task.'.length));
@@ -118,11 +127,10 @@ export class JobToasts {
     if (status === 'failed' || !watched.document) return this.announce(watched, status);
     // 辨識文件時會把它交給另一個向量化工作；只有文件本身知道
     // 是否已可搜尋。
-    const generation = this.session.auth.generation();
+    const valid = this.session.auth.guard();
     try {
       const document = await this.knowledge.document(watched.subjectId);
-      if (generation === this.session.auth.generation())
-        this.documentState(watched, document, true);
+      if (valid()) this.documentState(watched, document, true);
     } catch {
       /* 文件已被刪除或不再可讀；工作頁仍有該工作。 */
     }
