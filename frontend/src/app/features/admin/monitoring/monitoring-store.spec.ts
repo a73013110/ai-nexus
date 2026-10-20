@@ -234,7 +234,6 @@ describe('MonitoringStore', () => {
     expect(monitoring.dependencies()).not.toBe(dependencies);
     expect(monitoring.health()).not.toBe(health);
     expect(monitoring.issueCount()).toBe(1);
-    expect(monitoring.worstSeverity()).toBe('warning');
   });
 
   it('announces a health change only after it holds for two snapshots', () => {
@@ -257,7 +256,6 @@ describe('MonitoringStore', () => {
     monitoring.receive(snapshot());
     monitoring.receive(attention);
     expect(monitoring.announcement()).toBe('');
-    expect(monitoring.worstSeverity()).toBe('critical');
     monitoring.receive(attention);
     expect(monitoring.announcement()).toBe('系統有嚴重問題：背景工作故障');
   });

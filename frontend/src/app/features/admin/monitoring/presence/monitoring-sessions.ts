@@ -104,7 +104,4 @@ export class MonitoringSessions {
     this[kind].set(value);
     this.page.set(0);
   }
-  showSession(session: OnlineSession) {
-    this.selected.emit(session);
-  }
 }

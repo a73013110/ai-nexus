@@ -6,7 +6,7 @@ import { Icon } from '@shared/ui/icon';
 import { Panel } from '@shared/ui/panel';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { MonitoringStore } from '../monitoring-store';
-import { factText, factTone, subsystemStatus, toneOf } from '../monitoring-format';
+import { factText, factTone, isProblem, subsystemStatus, toneOf } from '../monitoring-format';
 
 /**
  * 每個回報自身健康的模組一張卡片，依伺服器的順序排列。卡片顯示前三項事實，其餘收合；
@@ -84,27 +84,24 @@ export class MonitoringSubsystems {
   readonly selected = output<string>();
   readonly phone = mediaQuery(below('phone'));
   readonly cards = computed(() =>
-    this.store.subsystems().map((segment) => ({
-      id: segment.id,
-      name: segment.name,
-      status: segment.status,
-      tone: toneOf(segment.status),
-      statusText: subsystemStatus(segment.status),
+    this.store.subsystems().map((subsystem) => ({
+      id: subsystem.id,
+      name: subsystem.name,
+      status: subsystem.status,
+      tone: toneOf(subsystem.status),
+      statusText: subsystemStatus(subsystem.status),
       summary:
-        segment.summary || (segment.status === 'unobserved' ? '尚未取得這個子系統的狀態。' : ''),
-      facts: segment.facts.slice(0, 3).map((file) => ({
-        id: file.id,
-        label: file.label,
-        text: factText(file),
-        tone: factTone(file.tone),
+        subsystem.summary ||
+        (subsystem.status === 'unobserved' ? '尚未取得這個子系統的狀態。' : ''),
+      facts: subsystem.facts.slice(0, 3).map((fact) => ({
+        id: fact.id,
+        label: fact.label,
+        text: factText(fact),
+        tone: factTone(fact.tone),
       })),
-      more: Math.max(0, segment.facts.length - 3),
+      more: Math.max(0, subsystem.facts.length - 3),
     })),
   );
-  readonly problems = computed(() =>
-    this.cards().filter((card) => card.status === 'degraded' || card.status === 'failing'),
-  );
-  readonly calm = computed(() =>
-    this.cards().filter((card2) => card2.status !== 'degraded' && card2.status !== 'failing'),
-  );
+  readonly problems = computed(() => this.cards().filter((card) => isProblem(card.status)));
+  readonly calm = computed(() => this.cards().filter((card) => !isProblem(card.status)));
 }

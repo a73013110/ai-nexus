@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, output } from '@a
 import { Icon } from '@shared/ui/icon';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { MonitoringStore } from '../monitoring-store';
+import { severityText, severityTone } from '../monitoring-format';
 
 export interface MonitoringTarget {
   kind: 'dependency' | 'subsystem';
@@ -118,17 +119,20 @@ export class MonitoringIssues {
   private readonly store = inject(MonitoringStore);
   readonly selected = output<MonitoringTarget>();
   readonly issues = computed(() => {
-    const dependencies = new Set(this.store.dependencies().map((draft) => draft.id));
-    const subsystems = new Set(this.store.subsystems().map((segment) => segment.id));
-    return (this.store.health()?.issues ?? []).map((issue) => ({
-      ...issue,
-      tone: issue.severity === 'critical' ? ('danger' as const) : ('warning' as const),
-      severityText: issue.severity === 'critical' ? '嚴重' : '注意',
-      target: dependencies.has(issue.subject)
-        ? ({ kind: 'dependency', id: issue.subject } as MonitoringTarget)
-        : subsystems.has(issue.subject)
-          ? ({ kind: 'subsystem', id: issue.subject } as MonitoringTarget)
-          : null,
-    }));
+    const dependencies = new Set(this.store.dependencies().map((dependency) => dependency.id));
+    const subsystems = new Set(this.store.subsystems().map((subsystem) => subsystem.id));
+    return (this.store.health()?.issues ?? []).map((issue) => {
+      const tone = severityTone(issue.severity);
+      return {
+        ...issue,
+        tone,
+        severityText: severityText(tone),
+        target: dependencies.has(issue.subject)
+          ? ({ kind: 'dependency', id: issue.subject } as MonitoringTarget)
+          : subsystems.has(issue.subject)
+            ? ({ kind: 'subsystem', id: issue.subject } as MonitoringTarget)
+            : null,
+      };
+    });
   });
 }

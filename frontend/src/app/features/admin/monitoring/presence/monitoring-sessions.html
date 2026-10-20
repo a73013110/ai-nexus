@@ -43,14 +43,14 @@
     </thead>
     <tbody>
       @for (s of visible(); track s.id) {
-        <tr nxTableRow [class.is-selected]="selectedId() === s.id" (rowActivate)="showSession(s)">
+        <tr nxTableRow [class.is-selected]="selectedId() === s.id" (rowActivate)="selected.emit(s)">
           <td>
             <button
               type="button"
               class="ui-table-link"
               data-row-action
               aria-haspopup="dialog"
-              (click)="showSession(s)"
+              (click)="selected.emit(s)"
             >
               <strong>{{ s.displayName }}</strong
               ><small>{{ s.account }}{{ s.testingIdentity ? ' · 測試身分' : '' }}</small>
