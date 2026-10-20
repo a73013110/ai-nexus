@@ -16,8 +16,14 @@ CREATE TABLE [identity].[Users] (
     [FailedLogins]         INT                NOT NULL,
     [LockedUntil]          DATETIMEOFFSET (7) NULL,
     [LastSeenAt]           DATETIMEOFFSET (7) NOT NULL,
+    [Email]                NVARCHAR (254)     NULL,
+    [EmailSource]          NVARCHAR (16)      NULL,
+    [EmailVerifiedAt]      DATETIMEOFFSET (7) NULL,
+    [DirectoryVerifiedAt]  DATETIMEOFFSET (7) NULL,
+    [PasswordChangedAt]    DATETIMEOFFSET (7) NULL,
     CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.))
+    CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.)),
+    CONSTRAINT [ck_Users_EmailSource] CHECK ([Email] IS NULL AND [EmailSource] IS NULL AND [EmailVerifiedAt] IS NULL OR [Email] IS NOT NULL AND ([EmailSource]=N'admin' OR [EmailSource]=N'user' OR [EmailSource]=N'directory'))
 );
 
 
@@ -25,6 +31,12 @@ GO
 
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_AdAccount]
     ON [identity].[Users]([AdAccount] ASC) WHERE ([AdAccount] IS NOT NULL);
+
+
+GO
+
+CREATE NONCLUSTERED INDEX [ix_Users_Email]
+    ON [identity].[Users]([Email] ASC) WHERE ([Email] IS NOT NULL);
 
 
 GO
@@ -46,12 +58,12 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者�
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入身分顯示帳號；AD 連結後保存目錄提供的帳號。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Account';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'完整帳號：AD 使用者為 sam@Domain（Windows 模式為 DOMAIN\sam），本地帳號為本地帳號名；顯示、搜尋與外部來源授權用，不是 email。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Account';
 
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'預先配置的 AD 帳號正規化值；唯一、不含網域，驗證成功後以 SID 固定綁定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdAccount';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'AD 帳號正規化值（不含網域）；管理者預先配置或 AD 登入時補上，唯一，驗證成功後以 SID 固定綁定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdAccount';
 
 
 GO
@@ -71,7 +83,27 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入身�
 
 GO
 
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'最近一次 AD／Windows 驗證成功的時間；本地密碼登入的目錄新鮮度規則依此判斷。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'DirectoryVerifiedAt';
+
+
+GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者的介面顯示名稱。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'DisplayName';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'通知信箱（不是登入識別、不唯一）；寄送驗證碼與帳號安全通知用。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Email';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'信箱來源：directory（AD mail 屬性）、user（本人驗證）、admin（管理者設定）；決定本人能否自行修改。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'EmailSource';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'信箱驗證時間；directory 寫入時即設定，user 驗證成功時設定，空值表示未驗證。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'EmailVerifiedAt';
 
 
 GO
@@ -111,12 +143,17 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地帳�
 
 GO
 
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地密碼最近一次設定或變更的時間。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'PasswordChangedAt';
+
+
+GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地密碼的 Argon2id PHC 雜湊，含版本、成本、隨機 salt 與衍生值；不可還原。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'PasswordHash';
 
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'姓名是否由管理者維護；開啟後 AD 目錄不覆寫姓名。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'ProfileManaged';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'姓名與信箱是否由管理者維護；開啟後 AD 目錄不覆寫姓名與信箱。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'ProfileManaged';
 
 
 GO

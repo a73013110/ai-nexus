@@ -19,7 +19,7 @@
 
 ## Schema 與模組
 
-一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值，procedure 見[新增一支 procedure](#新增一支-procedure)。
+一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值。
 
 ## 欄位規則
 
@@ -38,10 +38,11 @@
 
 - `GenerationRuns`：`OwnerId`＋`IdempotencyKey` 唯一索引防重複送出；`ActiveOwnerId` 非空的 filtered unique index 限制每人一個進行中的生成；`ActiveOwnerId`＋`LeaseExpiresAt` 索引供租約復原。它與 `ModelInvocations` 的 `CreatedAt` 覆蓋索引供全平台用量報表依日期讀取。
 - `RunEvents.CreatedAt` 供保留清理分批刪除（每批自動提交，避免鎖升級與長交易）；`Resources` 的 `Kind`＋`UpdatedAt`（INCLUDE `OwnerId`、`ParentId`、`IsDeleted`）供 `ResourceAccess` 依種類列出可讀資源。
-- `Messages.ParentId` 形成訊息樹，`Conversations.ActiveLeafId` 決定目前分支；編輯與重新生成都新增訊息，不覆寫。
+- `Messages.ParentId` 形成訊息樹，`Conversations.ActiveLeafId` 是目前分支；編輯與重新生成只新增訊息。
 - `ArtifactRevisions` 以 `ArtifactId`＋`Version` 為主鍵；expected version 不符時不覆蓋他人的修改。
 - `BackgroundJobs.ActiveKey` 唯一，避免同一業務重複排程；`LeaseToken` 做 fencing，過期 worker 不能提交。
 - `OutboundMessages`：`IdempotencyKey` 唯一防重複，`LeaseToken` 做認領 fencing。
+- `VerificationChallenges`：未結束的 `UserId`＋`Purpose` 唯一。
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
 - `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
 - `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞），腳本在 `database/App/FullText/`：`CREATE FULLTEXT` 不能在交易內執行，也不進 dacpac，部署時在結構更新後執行；缺全文元件或斷詞器時跳過，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
