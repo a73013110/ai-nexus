@@ -29,11 +29,7 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
     >
       @defer (when overlay.opened()) {
         @if (overlay.opened()) {
-          <nx-settings-page
-            [embedded]="true"
-            (closeRequested)="requestClose()"
-            (stateChange)="state.set($event)"
-          />
+          <nx-settings-page (stateChange)="state.set($event)" />
         }
       } @placeholder {
         <div class="dialog-body">

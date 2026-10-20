@@ -10,7 +10,9 @@ import {
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { Field } from '@shared/ui/field';
 import { InlineTitle } from '@shared/ui/inline-title';
+import { KeyCombo } from '@shared/ui/key-combo';
 import { SearchField } from '@shared/ui/search-field';
+import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
@@ -24,7 +26,10 @@ import { DesignSamples } from './design-samples';
     DesignSection,
     Field,
     InlineTitle,
+    KeyCombo,
     SearchField,
+    SettingGroup,
+    SettingRow,
     TimeRangePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +43,9 @@ import { DesignSamples } from './design-samples';
     }
     nx-design-example > * {
       width: 100%;
+    }
+    .design-settings {
+      width: min(100%, 40rem);
     }
     .design-bar-frame {
       width: min(100%, 28rem);
@@ -151,6 +159,43 @@ import { DesignSamples } from './design-samples';
         [scope]="'design-' + samples.titleVersion()"
         [save]="saveTitle"
       />
+    </nx-design-section>
+    <nx-design-section
+      id="design-settings"
+      title="偏好設定列"
+      api="SettingGroup · SettingRow · KeyCombo"
+      description="個人偏好一列一項：名稱與一句說明在左、控制項在右。給 options 是下拉選單、給 checked 是開關，其他控制項直接投影；窄卡片時控制項靠上對齊。按鍵用 KeyCombo，依平台顯示 ⌘ 或 Ctrl。"
+    >
+      <nx-setting-group
+        class="design-settings"
+        heading="示範偏好"
+        description="卡片標題下最多一句說明。"
+      >
+        <nx-setting-row
+          label="主題"
+          description="下拉選單的名稱取自列名稱。"
+          [options]="themes"
+          [value]="theme()"
+          (valueChange)="theme.set($event)"
+        />
+        <nx-setting-row
+          label="減少動態效果"
+          description="開關的名稱與說明由列提供。"
+          [checked]="reduced()"
+          (checkedChange)="reduced.set($event)"
+        />
+        <nx-setting-row
+          label="停用的開關"
+          description="需要先取得權限。"
+          [checked]="false"
+          [disabled]="true"
+        >
+          <span setting-detail>說明下方可投影狀態原因。</span>
+        </nx-setting-row>
+        <nx-setting-row label="快捷指令" description="投影其他控制項。">
+          <nx-key-combo keys="mod+k" />
+        </nx-setting-row>
+      </nx-setting-group>
     </nx-design-section>`,
 })
 export class DesignForms {
@@ -170,6 +215,12 @@ export class DesignForms {
     { value: '7d', label: '最近 7 天', duration: hoursAgo(24 * 7) },
   ];
   readonly dayRange = signal<TimeRange>({ preset: 'all', from: '', to: '' });
+  readonly themes = [
+    { value: 'system', label: '跟隨系統' },
+    { value: 'dark', label: '深色' },
+  ];
+  readonly theme = signal('system');
+  readonly reduced = signal(false);
   readonly saveTitle = async (value: string) => {
     this.samples.title.set(value);
     return true;

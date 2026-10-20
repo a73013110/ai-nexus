@@ -3,13 +3,10 @@
 :host {
   display: contents;
 }
-// Two panes (categories + content) need a fixed height; the page brings its own header and close.
+// 兩欄（分類＋內容）用固定高度：換分頁時對話框不跟著內容長短縮放，儲存列也一直在底緣。
+// 標題與關閉鈕由 SettingsPage 自己提供。
 .platform-dialog.settings-dialog {
   height: min(760px, var(--dialog-max-height));
-}
-.settings-dialog nx-settings-page {
-  display: block;
-  height: 100%;
 }
 @include bp.below(phone) {
   .settings-dialog {

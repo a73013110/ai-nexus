@@ -1,264 +1,87 @@
-import { apiResource } from '@core/api/api-resource';
-import { Notice } from '@shared/ui/notice';
-import { Card } from '@shared/ui/card';
-import { ViewMotion } from '@shared/ui/view-motion';
-import { SearchField } from '@shared/ui/search-field';
-import { ViewScope } from '@shared/browser/view-scope';
-import { safeMessage } from '@core/errors/safe-errors';
+import { NgComponentOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
+  ElementRef,
   computed,
-  inject,
-  input,
-  output,
   effect,
+  inject,
+  output,
   signal,
-  linkedSignal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { WorkspaceSession } from '@core/auth/workspace-session';
-import type {
-  EffectiveModelPolicyDto,
-  ModelsDto,
-  PersonalUsageDto,
-  UserSettingsDto,
-  WebSearchStatusDto,
-} from '@core/api/schema';
-import { UserSettingsService, defaultSettings } from '@core/preferences/user-settings';
-import { DraftRepository } from '@core/preferences/draft-repository';
-import { WorkspaceApi } from '@core/api/workspace-api';
-import { Select } from '@shared/ui/select';
+import { requestDialogClose } from '@shared/browser/dialog-close';
+import { ViewScope } from '@shared/browser/view-scope';
+import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Icon } from '@shared/ui/icon';
-import { WorkspaceNavigation } from '@core/layout/workspace-navigation';
-import { downloadFile } from '@shared/browser/download';
-import { TokenUsageChart } from '@features/admin/billing/token-usage-chart';
-import { StorageUsage } from '@features/work/files/file-library/storage-usage';
-import {
-  formatDuration,
-  formatBytes,
-  formatNumber,
-  formatModelName,
-  formatModelDisplayName,
-  nameInitial,
-} from '@shared/browser/format';
-import { routeOf } from '@core/api/catalog';
+import { Notice } from '@shared/ui/notice';
+import { SearchField } from '@shared/ui/search-field';
+import { ViewMotion } from '@shared/ui/view-motion';
+import { SETTINGS_TABS } from './settings-tabs';
+import { SettingsStore } from './settings-store';
 
+/**
+ * 個人設定對話框的內容：左側分類、右側「標題｜捲動的分頁內容｜儲存列」三段。分頁清單在
+ * `SETTINGS_TABS`，草稿與儲存在 `SettingsStore`，這裡只負責切換與版面。
+ */
 @Component({
   selector: 'nx-settings-page',
-  styleUrls: ['./settings-page.scss', './settings-content.scss', './settings-page-dialog.scss'],
-  imports: [
-    Notice,
-    ViewMotion,
-    Card,
-    SearchField,
-    RouterLink,
-    Select,
-    Icon,
-    WorkspaceNavigation,
-    StorageUsage,
-    TokenUsageChart,
-  ],
+  imports: [DialogSaveBar, Icon, NgComponentOutlet, Notice, SearchField, ViewMotion],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
-  providers: [ViewScope],
+  styleUrl: './settings-page.scss',
+  providers: [ViewScope, SettingsStore],
 })
 export class SettingsPage {
-  /** 範本裡的連結由功能目錄取得網址。 */
-  readonly routeOf = routeOf;
-  readonly embedded = input(false);
-  readonly closeRequested = output<void>();
+  /** 對話框關閉前要知道有沒有未儲存的變更、是否正在儲存。 */
   readonly stateChange = output<{ changed: boolean; saving: boolean }>();
-  readonly session = inject(WorkspaceSession);
-  readonly service = inject(UserSettingsService);
-  private readonly api = inject(WorkspaceApi);
-  private readonly drafts = inject(DraftRepository);
-  private readonly scope = inject(ViewScope);
-  /** 設定與帳號一起重新讀取，絕不使用其他裝置的快取。 */
-  private readonly settingsRead = apiResource({
-    freshAccount: true,
-    loader: () => this.service.load(this.session.me()!.id, true),
-  });
-  private readonly usageRead = apiResource({ loader: () => this.service.usage() });
-  private readonly modelsRead = apiResource({
-    loader: () => (this.session.has('chat') ? this.api.models() : Promise.resolve(null)),
-  });
-  private readonly policyRead = apiResource({ loader: () => this.service.policy() });
-  /** 輸入框在網路搜尋不可用時會隱藏它，因此原因放在這裡。 */
-  private readonly webSearchRead = apiResource({
-    loader: () => (this.session.has('chat') ? this.api.webSearchStatus() : Promise.resolve(null)),
-  });
-  /** 伺服器上保存的值；草稿從它開始，並與它比較。 */
-  readonly saved = linkedSignal<UserSettingsDto>(() =>
-    structuredClone(this.settingsRead.value() ?? defaultSettings()),
-  );
-  readonly draft = linkedSignal<UserSettingsDto>(() => structuredClone(this.saved()));
-  readonly loading = this.settingsRead.loading;
-  readonly saving = signal(false);
-  readonly saveError = signal('');
-  readonly error = computed(
-    () =>
-      this.saveError() ||
-      this.settingsRead.error() ||
-      (this.usageRead.error() ? '使用統計暫時無法取得，其他偏好仍可設定。' : ''),
-  );
-  readonly notice = signal('');
+  readonly store = inject(SettingsStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly tabs = SETTINGS_TABS;
   readonly search = signal('');
-  readonly section = signal('appearance');
-  readonly usage = computed<PersonalUsageDto | null>(() => this.usageRead.value() ?? null);
-  readonly models = computed<ModelsDto | null>(() => this.modelsRead.value() ?? null);
-  readonly policy = computed<EffectiveModelPolicyDto | null>(() => this.policyRead.value() ?? null);
-  readonly webSearch = computed<WebSearchStatusDto | null>(
-    () => this.webSearchRead.value() ?? null,
+  readonly tabId = signal(SETTINGS_TABS[0].id);
+  readonly current = computed(
+    () => this.tabs.find((tab) => tab.id === this.tabId()) ?? this.tabs[0],
   );
-  readonly notificationPermission = signal(
-    'Notification' in window ? Notification.permission : 'unsupported',
+  readonly visibleTabs = computed(() => {
+    const query = this.search().trim().toLocaleLowerCase();
+    return this.tabs.filter((tab) =>
+      `${tab.name} ${tab.keywords}`.toLocaleLowerCase().includes(query),
+    );
+  });
+  /** 唯讀分頁平常沒有儲存列；在別的分頁改了還沒存時仍顯示，才不會忘了儲存。 */
+  readonly showSaveBar = computed(() => this.current().saved || this.store.changed());
+  readonly note = computed(
+    () => this.store.notice() || (this.store.changed() ? '' : '設定依帳號保存，其他裝置也會套用。'),
   );
-  readonly modelLabel = formatModelDisplayName;
-  readonly sections = [
-    {
-      id: 'appearance',
-      name: '外觀與閱讀',
-      icon: 'sliders',
-      keywords: '字級 字體 行距 主題 密度 側欄 寬度 動畫',
-    },
-    {
-      id: 'conversation',
-      name: '對話',
-      icon: 'lines',
-      keywords: '模型 思考 強度 網路搜尋 SearXNG 送出 自動捲動',
-    },
-    { id: 'notifications', name: '通知', icon: 'info', keywords: '完成 回覆 瀏覽器' },
-    { id: 'data', name: '資料與草稿', icon: 'archive', keywords: '保存 清除 匯出 備份' },
-    { id: 'account', name: '帳號與權限', icon: 'lock', keywords: 'AD 登入 角色 功能 登出' },
-    { id: 'usage', name: '使用狀況', icon: 'idea', keywords: '用量 tokens 檔案 限制 統計' },
-    { id: 'shortcuts', name: '鍵盤快捷鍵', icon: 'command', keywords: '操作 快速 指令' },
-  ];
-  readonly visibleSections = computed(() =>
-    this.sections.filter((item) => `${item.name} ${item.keywords}`.includes(this.search().trim())),
-  );
-  readonly currentSection = computed(() =>
-    this.sections.find((item) => item.id === this.section())!,
-  );
-  readonly changed = computed(() => JSON.stringify(this.draft()) !== JSON.stringify(this.saved()));
-  readonly themeOptions = [
-    { value: 'system', label: '跟隨系統' },
-    { value: 'light', label: '淺色' },
-    { value: 'dark', label: '深色' },
-  ];
-  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((size) => ({
-    value: String(size),
-    label: `${size} px`,
-  }));
-  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((ratio) => ({
-    value: String(ratio),
-    label: `${ratio} 倍`,
-  }));
-  readonly densityOptions = [
-    { value: 'comfortable', label: '舒適', description: '適合長文閱讀' },
-    { value: 'compact', label: '緊湊', description: '一次看見更多內容' },
-  ];
-  readonly widthOptions = [
-    { value: 'narrow', label: '專注 · 窄' },
-    { value: 'standard', label: '標準' },
-    { value: 'wide', label: '寬廣' },
-  ];
-  readonly sidebarOptions = [240, 264, 288, 320, 360].map((width) => ({
-    value: String(width),
-    label: `${width} px`,
-  }));
-  readonly effortOptions = [
-    { value: 'auto', label: '依模型預設' },
-    { value: 'minimal', label: '快速回應' },
-    { value: 'low', label: '輕度思考' },
-    { value: 'medium', label: '標準思考' },
-    { value: 'high', label: '深入思考' },
-  ];
-  readonly modelOptions = computed(() => [
-    { value: '', label: '依系統預設' },
-    ...(this.models()?.models || []).map((item) => ({
-      value: item.id,
-      label: formatModelName(item),
-    })),
-  ]);
+
   constructor() {
-    effect(() => this.stateChange.emit({ changed: this.changed(), saving: this.saving() }));
-    inject(DestroyRef).onDestroy(() => this.service.restore());
+    effect(() =>
+      this.stateChange.emit({ changed: this.store.changed(), saving: this.store.saving() }),
+    );
   }
-  load() {
-    this.saveError.set('');
-    this.settingsRead.reload();
-    this.usageRead.reload();
-    this.modelsRead.reload();
-    this.policyRead.reload();
-    this.webSearchRead.reload();
-  }
-  update<K extends keyof UserSettingsDto>(key: K, value: UserSettingsDto[K]) {
-    this.edit((current) => ({ ...current, [key]: value }));
-  }
-  appearance(key: 'theme' | 'defaultModelId' | 'reducedMotion', value: string | boolean | null) {
-    this.edit((current) => ({ ...current, appearance: { ...current.appearance, [key]: value } }));
-  }
-  /** 每次修改都立即預覽，並清掉上一次動作的提示。 */
-  private edit(change: (current: UserSettingsDto) => UserSettingsDto) {
-    this.draft.update(change);
-    this.service.preview(this.draft());
-    this.notice.set('');
-  }
+
   searchChanged(value: string) {
     this.search.set(value);
-    const visible = this.visibleSections();
-    if (visible[0] && !visible.some((item) => item.id === this.section()))
-      this.section.set(visible[0].id);
+    const visible = this.visibleTabs();
+    if (visible[0] && !visible.some((tab) => tab.id === this.tabId()))
+      this.tabId.set(visible[0].id);
   }
-  reset() {
-    this.draft.set(structuredClone(this.saved()));
-    this.service.restore();
-    this.notice.set('已取消尚未儲存的變更。');
+
+  close() {
+    const dialog = this.host.nativeElement.closest('dialog');
+    if (dialog) requestDialogClose(dialog);
   }
-  async save() {
-    const current = this.scope.guard();
-    this.saving.set(true);
-    this.saveError.set('');
-    try {
-      const value = await this.service.save(this.draft());
-      if (!current()) return;
-      this.saved.set(structuredClone(value));
-      this.notice.set('已儲存，會套用於此帳號的其他裝置。');
-    } catch (error) {
-      if (current()) this.saveError.set(safeMessage(error));
-    } finally {
-      if (current()) this.saving.set(false);
-    }
+
+  save(event: Event) {
+    event.preventDefault();
+    if (this.store.changed() && !this.store.saving()) void this.store.save();
   }
-  async enableNotifications() {
-    if (!('Notification' in window)) return;
-    const current = this.scope.guard();
-    const permission = await Notification.requestPermission();
-    if (!current()) return;
-    this.notificationPermission.set(permission);
-    if (permission === 'granted') this.update('notifyOnCompletion', true);
+
+  /** 還原後兩個按鈕都會停用，焦點交給目前的分類，不掉到 `<body>`。 */
+  revert() {
+    this.store.revert();
+    this.host.nativeElement
+      .querySelector<HTMLElement>('.settings-categories [aria-current]')
+      ?.focus();
   }
-  clearDrafts() {
-    const owner = this.session.me()?.id;
-    if (!owner) return;
-    this.notice.set(
-      this.drafts.clearAccount(owner)
-        ? '已清除這個瀏覽器中此帳號的草稿。'
-        : '瀏覽器阻擋儲存空間存取，草稿未清除。',
-    );
-  }
-  exportPreferences() {
-    downloadFile(
-      JSON.stringify({ version: 1, settings: this.saved() }, null, 2),
-      'ai-nexus-settings',
-      'json',
-    );
-  }
-  readonly number = Number;
-  readonly format = formatNumber;
-  readonly duration = formatDuration;
-  readonly bytes = formatBytes;
-  readonly initial = nameInitial;
 }

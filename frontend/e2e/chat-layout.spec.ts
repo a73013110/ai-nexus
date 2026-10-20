@@ -84,7 +84,7 @@ test("content width aligns messages, drafts, attachments and hints through previ
   await chooseSelect(page, "內容寬度", "專注 · 窄");
   await alignedChat(page, 704);
   expect(fixture.settings.readingWidth).toBe("standard");
-  await dialog.getByRole("button", { name: "取消", exact: true }).click();
+  await dialog.getByRole("button", { name: "還原", exact: true }).click();
   await alignedChat(page, 832);
   await dialog.getByRole("button", { name: "關閉設定", exact: true }).click();
   await expect(input).toHaveValue(draft);

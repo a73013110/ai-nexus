@@ -1,41 +1,40 @@
 @use 'breakpoints' as bp;
 @use 'scroll-pad';
 
+:host {
+  display: block;
+  height: 100%;
+}
 .settings-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: var(--settings-sidebar-width) minmax(0, 1fr);
-  height: calc(100dvh - var(--identity-banner-height, 0px) - var(--global-issue-height, 0px));
+  grid-template-columns: 14rem minmax(0, 1fr);
+  height: 100%;
   overflow: hidden;
 }
-.settings-page-header {
-  position: relative;
-}
+// 關閉鈕固定在整個對話框的右上角：桌面是標題列的右端，手機是分類列的右端。
 .settings-close {
   position: absolute;
-  right: 0;
-  top: 0;
+  top: var(--p-space-3);
+  right: var(--p-space-2);
+  z-index: 1;
 }
+
 .settings-sidebar {
-  padding: var(--p-space-6) var(--p-space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-4);
+  gap: var(--p-space-3);
+  min-height: 0;
+  padding: var(--p-space-5) var(--p-space-3);
   background: var(--sidebar);
   border-right: 1px solid var(--line);
   overflow: auto;
 }
-.settings-back {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  min-height: var(--button-target);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.settings-sidebar h2 {
-  margin: 0;
-  padding: 0 var(--p-space-2);
+.settings-title {
+  padding-inline: var(--p-space-2);
   font-size: var(--p-font-2xl);
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
 .settings-categories {
   display: flex;
@@ -47,10 +46,10 @@
   align-items: center;
   gap: var(--p-space-3);
   min-height: var(--button-target);
-  text-align: left;
   padding: var(--p-space-2) var(--p-space-3);
   border-radius: var(--p-radius-md);
   font-size: var(--text-ui);
+  text-align: left;
   white-space: nowrap;
 }
 .settings-categories button:hover {
@@ -61,68 +60,92 @@
   color: var(--accent);
   font-weight: 600;
 }
-.settings-account {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  margin-top: auto;
-  padding-top: var(--p-space-6);
-}
-.settings-account strong,
-.settings-account small {
-  display: block;
-}
-.settings-account small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
+
+// 主欄三段：標題與儲存列不捲動、永遠貼齊上下緣，只有中間的內容捲動。三段共用同一條內容欄：
+// 內容以 max-width 置中，標題與儲存列用相同的左右留白（--settings-gutter，% 取自主欄寬度），
+// 捲動區的捲軸寬度由 scroll-pad 從右側留白扣掉，所以有無捲軸左右都對齊。
 .settings-main {
+  --settings-inset: var(--p-space-6);
+  --settings-gutter: max(var(--settings-inset), (100% - var(--settings-content-width)) / 2);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding-block: clamp(24px, 5vw, 72px) 0;
-  @include scroll-pad.inline(var(--workspace-gutter), $expose: true);
-  scroll-padding-top: 32px;
-}
-.settings-page-header,
-.settings-content {
-  max-width: var(--settings-content-width);
-  margin: 0 auto;
 }
 .settings-page-header {
-  margin-bottom: var(--section-gap);
+  flex: none;
+  padding: var(--p-space-5) var(--settings-gutter) var(--p-space-4);
+  border-bottom: 1px solid var(--line);
 }
 .settings-page-header h1 {
+  margin: 0;
+  padding-right: var(--button-target);
   font-size: var(--p-font-2xl);
-  margin: var(--p-space-3) 0 var(--p-space-2);
   font-weight: 650;
   letter-spacing: -0.025em;
 }
-@include bp.below(narrow) {
+.settings-page-header p {
+  margin: var(--p-space-1) 0 0;
+  color: var(--secondary);
+  font-size: var(--text-ui);
+  line-height: 1.65;
+}
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  padding-block: var(--section-gap);
+  @include scroll-pad.inline(var(--settings-inset));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+  max-width: var(--settings-content-width);
+  margin-inline: auto;
+}
+.settings-content > p {
+  margin: 0;
+}
+.settings-savebar {
+  flex: none;
+}
+// 蓋過 lg 對話框頁尾的固定內距（dialogs.scss），與上方內容欄對齊。
+.settings-savebar nx-dialog-save-bar {
+  padding-inline: var(--settings-gutter);
+}
+
+@include bp.below(phone) {
   .settings-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
+  // 分類改成標題上方一列可橫向捲動的按鈕；右側留給關閉鈕。
   .settings-sidebar {
-    padding: var(--p-space-3) var(--p-space-4);
     gap: var(--p-space-2);
+    padding: var(--p-space-3);
+    padding-right: calc(var(--button-target) + var(--p-space-3));
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    overflow: hidden;
   }
-  .settings-sidebar > h2,
-  .settings-sidebar > .panel-eyebrow,
-  .settings-account {
+  .settings-title {
     display: none;
-  }
-  .settings-back {
-    min-height: 32px;
   }
   .settings-categories {
     flex-direction: row;
-    overflow: auto;
+    margin-right: calc(-1 * (var(--button-target) + var(--p-space-3)) + var(--p-space-3));
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .settings-main {
-    padding-top: var(--p-space-6);
+    --settings-inset: var(--p-space-4);
+  }
+  .settings-page-header {
+    padding-top: var(--p-space-4);
+  }
+  .settings-page-header h1 {
+    padding-right: 0;
   }
 }

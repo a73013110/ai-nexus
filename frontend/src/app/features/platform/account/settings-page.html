@@ -1,499 +1,58 @@
-<div class="settings-layout ui-density-compact" [class.embedded]="embedded()">
+<div class="settings-layout ui-density-compact">
   <aside class="settings-sidebar" aria-label="設定分類">
-    @if (!embedded()) {
-      <a class="settings-back" [routerLink]="routeOf('chat')"><nx-icon name="left" />返回工作區</a>
-    }
-    <h2>設定</h2>
+    <span class="settings-title" aria-hidden="true">設定</span>
     <nx-search-field
       label="搜尋設定"
       placeholder="搜尋設定"
       [value]="search()"
       (valueChange)="searchChanged($event)"
     />
-    <span class="panel-eyebrow">個人</span>
-    <nav class="settings-categories">
-      @for (item of visibleSections(); track item.id) {
+    <nav class="settings-categories" aria-label="設定分類">
+      @for (tab of visibleTabs(); track tab.id) {
         <button
           type="button"
-          [attr.aria-current]="section() === item.id ? 'page' : null"
-          (click)="section.set(item.id)"
+          [attr.aria-current]="tab.id === current().id ? 'page' : null"
+          (click)="tabId.set(tab.id)"
         >
-          <nx-icon [name]="item.icon" />{{ item.name }}
+          <nx-icon [name]="tab.icon" />{{ tab.name }}
         </button>
       } @empty {
-        <p class="secondary">沒有符合的設定</p>
+        <p class="form-note">沒有符合的設定</p>
       }
     </nav>
-    <div class="settings-account">
-      <span class="avatar">{{ initial(session.me()?.displayName) }}</span
-      ><span
-        ><strong>{{ session.me()?.displayName }}</strong
-        ><small>個人工作區</small></span
-      >
-    </div>
   </aside>
-  <main id="settings-main" class="settings-main">
+  <section class="settings-main" aria-labelledby="settings-heading">
     <header class="settings-page-header">
-      @if (embedded()) {
-        <button
-          class="icon-button settings-close"
-          aria-label="關閉設定"
-          type="button"
-          (click)="closeRequested.emit()"
-        >
-          <nx-icon name="close" />
-        </button>
-      }
-      <h1>{{ currentSection().name }}</h1>
-      <p>讓工作區符合你的閱讀與工作習慣。</p>
+      <h1 id="settings-heading">{{ current().name }}</h1>
+      <p>{{ current().description }}</p>
     </header>
-    @if (loading()) {
-      <p role="status" class="form-note">正在載入你的設定…</p>
-    }
-    @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions (click)="load()">重新載入</button>
-      </nx-notice>
-    }
-    @if (!loading() && session.me()) {
-      <div class="settings-content" [nxViewMotion]="section()">
-        @switch (section()) {
-          @case ('appearance') {
-            <section nxCard class="settings-card">
-              <h2>工作區外觀</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>主題</strong>
-                  <p>配合環境光線，或跟隨作業系統。</p>
-                </div>
-                <nx-select
-                  label="主題"
-                  [options]="themeOptions"
-                  [value]="draft().appearance.theme"
-                  (valueChange)="appearance('theme', $event)"
-                />
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>減少動態效果</strong>
-                  <p>保留狀態提示，減少進場和持續動畫。</p>
-                </div>
-                <button
-                  class="switch"
-                  role="switch"
-                  aria-label="減少動態效果"
-                  [attr.aria-checked]="draft().appearance.reducedMotion"
-                  (click)="appearance('reducedMotion', !draft().appearance.reducedMotion)"
-                >
-                  <span></span>
-                </button>
-              </div>
-            </section>
-            <section nxCard class="settings-card">
-              <h2>閱讀與版面</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>對話字級</strong>
-                  <p>正文與訊息輸入使用相同字級。</p>
-                </div>
-                <nx-select
-                  label="對話字級"
-                  [options]="fontOptions"
-                  [value]="'' + draft().readingFontSize"
-                  (valueChange)="update('readingFontSize', number($event))"
-                />
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>正文行距</strong>
-                  <p>為長篇內容保留清楚的行間空間。</p>
-                </div>
-                <nx-select
-                  label="正文行距"
-                  [options]="lineOptions"
-                  [value]="'' + draft().readingLineHeight"
-                  (valueChange)="update('readingLineHeight', number($event))"
-                />
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>內容寬度</strong>
-                  <p>對話與輸入區同步調整。窄版適合專注閱讀，寬版適合表格。</p>
-                </div>
-                <nx-select
-                  label="內容寬度"
-                  [options]="widthOptions"
-                  [value]="draft().readingWidth"
-                  (valueChange)="update('readingWidth', $event)"
-                />
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>訊息密度</strong>
-                  <p>調整段落之間的留白。</p>
-                </div>
-                <nx-select
-                  label="訊息密度"
-                  [options]="densityOptions"
-                  [value]="draft().density"
-                  (valueChange)="update('density', $event)"
-                />
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>側欄寬度</strong>
-                  <p>讓較長的對話名稱更容易瀏覽。</p>
-                </div>
-                <nx-select
-                  label="側欄寬度"
-                  [options]="sidebarOptions"
-                  [value]="'' + draft().sidebarWidth"
-                  (valueChange)="update('sidebarWidth', number($event))"
-                />
-              </div>
-            </section>
-            <section class="reading-preview" aria-label="閱讀預覽">
-              <header><strong>即時預覽</strong><span>文字與程式碼</span></header>
-              <h2>讓每一段文字，都容易閱讀。</h2>
-              <p>
-                AI Nexus
-                將想法、文件與工作成果連在一起。你可以調整閱讀節奏，保留足夠的留白，也讓重要資訊更容易被看見。
-              </p>
-              <footer><span>程式碼</span><code>const nextStep = '開始';</code></footer>
-            </section>
-          }
-          @case ('conversation') {
-            <section nxCard class="settings-card">
-              <h2>輸入與瀏覽</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>按 Enter 送出</strong>
-                  <p>
-                    {{
-                      draft().enterToSend
-                        ? 'Shift + Enter 換行，中文組字不會誤送。'
-                        : 'Enter 換行，Ctrl / ⌘ + Enter 送出。'
-                    }}
-                  </p>
-                </div>
-                <button
-                  class="switch"
-                  role="switch"
-                  aria-label="按 Enter 送出"
-                  [attr.aria-checked]="draft().enterToSend"
-                  (click)="update('enterToSend', !draft().enterToSend)"
-                >
-                  <span></span>
-                </button>
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>自動跟隨新回覆</strong>
-                  <p>閱讀較早內容時暫停跟隨；可按「回到最新」。</p>
-                </div>
-                <button
-                  class="switch"
-                  role="switch"
-                  aria-label="自動跟隨新回覆"
-                  [attr.aria-checked]="draft().autoFollow"
-                  (click)="update('autoFollow', !draft().autoFollow)"
-                >
-                  <span></span>
-                </button>
-              </div>
-            </section>
-            <section nxCard class="settings-card">
-              <h2>對話預設</h2>
-              @if (models()?.policy?.allowModelSelection) {
-                <div class="setting-row">
-                  <div>
-                    <strong>預設模型</strong>
-                    <p>只顯示管理員允許的模型。</p>
-                  </div>
-                  <nx-select
-                    label="預設模型"
-                    [options]="modelOptions()"
-                    [value]="draft().appearance.defaultModelId || ''"
-                    (valueChange)="appearance('defaultModelId', $event || null)"
-                  />
-                </div>
-              } @else {
-                <p class="policy-note"><nx-icon name="lock" />模型由系統指定。</p>
-              }
-              <div class="setting-row">
-                <div>
-                  <strong>預設思考強度</strong>
-                  <p>模型不支援此強度時，使用模型預設。</p>
-                </div>
-                <nx-select
-                  label="預設思考強度"
-                  [options]="effortOptions"
-                  [value]="draft().defaultReasoningEffort"
-                  (valueChange)="update('defaultReasoningEffort', $event)"
-                />
-              </div>
-              @if (webSearch(); as search) {
-                <div class="setting-row">
-                  <div>
-                    <strong>網路搜尋 · {{ search.available ? '已啟用' : '尚未啟用' }}</strong>
-                    @if (search.available) {
-                      <p>預設關閉；在輸入區按「搜尋網路」後，只將本次提問送往搜尋服務。</p>
-                    } @else {
-                      <p>{{ search.notice }}</p>
-                      <p>
-                        地端模型本身不會連網，所以輸入區不顯示「搜尋網路」。需要時請管理員部署公司自架的
-                        SearXNG 並啟用搜尋服務。
-                      </p>
-                    }
-                  </div>
-                </div>
-              }
-            </section>
-          }
-          @case ('notifications') {
-            <section nxCard class="settings-card">
-              <h2>回覆完成</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>瀏覽器通知</strong>
-                  <p>工作區在背景時，提醒你回覆已完成。不包含提問或回覆內容。</p>
-                </div>
-                <button
-                  class="switch"
-                  role="switch"
-                  aria-label="回覆完成通知"
-                  [disabled]="notificationPermission() !== 'granted'"
-                  [attr.aria-checked]="draft().notifyOnCompletion"
-                  (click)="update('notifyOnCompletion', !draft().notifyOnCompletion)"
-                >
-                  <span></span>
-                </button>
-              </div>
-              @if (notificationPermission() === 'default') {
-                <button class="primary-button" (click)="enableNotifications()">
-                  允許瀏覽器通知
-                </button>
-              }
-              @if (notificationPermission() === 'denied') {
-                <p class="secondary">通知已被瀏覽器封鎖。可於網址列的網站權限開啟。</p>
-              }
-              @if (notificationPermission() === 'unsupported') {
-                <p class="secondary">
-                  此環境無法使用瀏覽器通知。HTTPS 或 localhost 的支援瀏覽器才可啟用。
-                </p>
-              }
-            </section>
-          }
-          @case ('data') {
-            <section nxCard class="settings-card">
-              <h2>此瀏覽器的草稿</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>自動保存草稿</strong>
-                  <p>依帳號保存未送出的文字與附件參照，不同步到其他裝置。共用電腦可關閉。</p>
-                </div>
-                <button
-                  class="switch"
-                  role="switch"
-                  aria-label="自動保存草稿"
-                  [attr.aria-checked]="draft().saveLocalDrafts"
-                  (click)="update('saveLocalDrafts', !draft().saveLocalDrafts)"
-                >
-                  <span></span>
-                </button>
-              </div>
-              <details class="data-clear">
-                <summary>清除本機草稿</summary>
-                <p>會移除此瀏覽器中你的所有未送出草稿，已保存的對話不受影響。</p>
-                <button class="danger-button" (click)="clearDrafts()">清除此帳號的本機草稿</button>
-              </details>
-            </section>
-            <section nxCard class="settings-card">
-              <h2>匯出與備份</h2>
-              <div class="setting-row">
-                <div>
-                  <strong>匯出個人偏好</strong>
-                  <p>JSON 包含已儲存的版面與操作設定。</p>
-                </div>
-                <button class="quiet-button" (click)="exportPreferences()">
-                  <nx-icon name="download" />匯出
-                </button>
-              </div>
-              <div class="setting-row">
-                <div>
-                  <strong>對話文字備份</strong>
-                  <p>開啟對話，從「對話操作」匯出 JSON 或 Markdown。</p>
-                </div>
-                <a class="quiet-button" [routerLink]="routeOf('chat')"
-                  >前往對話<nx-icon name="chevron"
-                /></a>
-              </div>
-            </section>
-          }
-          @case ('account') {
-            <section nxCard class="settings-card">
-              <h2>公司身分</h2>
-              <div class="account-identity">
-                <span class="avatar">{{ initial(session.me()?.displayName) }}</span>
-                <div>
-                  <strong>{{ session.me()?.displayName }}</strong>
-                  <p>{{ session.me()?.account }}</p>
-                </div>
-              </div>
-              <p class="secondary">姓名與帳號由公司 AD 提供。需要異動時請聯絡資訊管理人員。</p>
-            </section>
-            <section nxCard class="settings-card">
-              <h2>角色與可用功能</h2>
-              <div class="access-summary">
-                @for (role of session.me()?.access?.roles || []; track role.id) {
-                  <span>{{ role.name }}</span>
-                }
-              </div>
-              <nx-workspace-navigation />
-              <p class="secondary">
-                權限由角色群組決定。登入後載入可用功能，操作時由伺服器再次驗證。
-              </p>
-            </section>
-            @if (session.auth.session()?.mode === 'Ldap') {
-              <button class="quiet-button" (click)="session.auth.logout()">登出工作區</button>
-            }
-          }
-          @case ('usage') {
-            @if (usage(); as stats) {
-              <p class="secondary">最近 {{ stats.days }} 天 · 依 UTC 日期統計</p>
-              @if (policy(); as limits) {
-                <section nxCard class="settings-card">
-                  <h2>各模型今日 token 預算</h2>
-                  @for (model of limits.models; track model.modelId) {
-                    <div class="setting-row">
-                      <div>
-                        <strong>{{ modelLabel(model) }}</strong>
-                        <p>
-                          已回報 {{ format(model.usedTokens) }} · 預留
-                          {{ format(model.reservedTokens) }}
-                        </p>
-                        <p>
-                          {{
-                            model.dailyTokenLimit == null
-                              ? '未設定上限'
-                              : '每日上限 ' + format(model.dailyTokenLimit) + ' tokens'
-                          }}
-                        </p>
-                      </div>
-                      <span class="feature-badge">{{
-                        model.remainingTokens == null
-                          ? '不限制'
-                          : '剩餘 ' + format(model.remainingTokens)
-                      }}</span>
-                    </div>
-                    @if (model.dailyTokenLimit != null) {
-                      <meter
-                        min="0"
-                        [max]="model.dailyTokenLimit || 1"
-                        [value]="model.usedTokens + model.reservedTokens"
-                        [attr.aria-label]="'今日 token 用量：' + modelLabel(model)"
-                      ></meter>
-                    }
-                  }
-                  <p class="form-note">
-                    輸入與輸出合計，台北時間每日 08:00 重設。未回報完整用量的請求保留預估額度。
-                  </p>
-                  @if (limits.storedAttachmentLimitBytes != null) {
-                    <p class="form-note">
-                      群組附件空間上限
-                      {{ bytes(limits.storedAttachmentLimitBytes) }}；系統上限仍適用。
-                    </p>
-                  }
-                </section>
-              }
-              <div class="usage-grid">
-                <div nxCard class="stat-card">
-                  <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
-                  ><small>{{ stats.completed }} 次完成</small>
-                </div>
-                <div nxCard class="stat-card">
-                  <span>輸入 tokens</span><strong>{{ format(stats.inputTokens) }}</strong
-                  ><small>模型回報的實際數量</small>
-                </div>
-                <div nxCard class="stat-card">
-                  <span>輸出 tokens</span><strong>{{ format(stats.outputTokens) }}</strong
-                  ><small>模型回報的實際數量</small>
-                </div>
-              </div>
-              <section nxCard class="settings-card">
-                <h2>統計涵蓋範圍</h2>
-                <p>
-                  {{ stats.requestsWithUsage }} / {{ stats.requests }} 次請求有完整 token
-                  回報；統計僅納入已回報的數量。
-                </p>
-                <p class="secondary">
-                  {{ stats.failed }} 次失敗 · {{ stats.cancelled }} 次取消 · 累計耗時
-                  {{ duration(stats.totalDurationMilliseconds) }}（{{ stats.timedRequests }}
-                  次有耗時紀錄）
-                </p>
-              </section>
-              <section nxCard class="settings-card">
-                <h2>原檔容量</h2>
-                <nx-storage-usage [storage]="stats.storage" />
-              </section>
-              <section nxCard class="settings-card">
-                <nx-token-usage-chart [usage]="stats.tokens" />
-              </section>
-            } @else {
-              <p class="secondary">
-                目前無法取得使用統計。<button class="quiet-button" (click)="load()">
-                  重新載入
-                </button>
-              </p>
-            }
-          }
-          @case ('shortcuts') {
-            <section nxCard class="settings-card">
-              <h2>更快完成日常操作</h2>
-              <dl class="shortcut-list">
-                <div>
-                  <dt>快捷指令</dt>
-                  <dd><kbd>Ctrl</kbd> + <kbd>K</kbd></dd>
-                </div>
-                <div>
-                  <dt>新對話</dt>
-                  <dd><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>N</kbd></dd>
-                </div>
-                <div>
-                  <dt>提示詞範本</dt>
-                  <dd><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd></dd>
-                </div>
-                <div>
-                  <dt>修改目前對話名稱</dt>
-                  <dd><kbd>F2</kbd> 或雙擊標題</dd>
-                </div>
-                <div>
-                  <dt>送出訊息</dt>
-                  <dd>{{ draft().enterToSend ? 'Enter' : 'Ctrl / ⌘ + Enter' }}</dd>
-                </div>
-                <div>
-                  <dt>關閉選單、取消編輯</dt>
-                  <dd><kbd>Esc</kbd></dd>
-                </div>
-              </dl>
-              <p class="secondary">
-                macOS 的 Ctrl 操作使用 ⌘。所有選單可用方向鍵、Enter 與 Escape。
-              </p>
-            </section>
-          }
+    <div class="settings-body">
+      <div class="settings-content" [nxViewMotion]="current().id">
+        @if (showSaveBar() && store.error()) {
+          <nx-notice [message]="store.error()"
+            ><button type="button" notice-actions (click)="store.reload()">重新載入</button>
+          </nx-notice>
+        }
+        @if (current().saved && store.loading()) {
+          <p role="status" class="form-note">正在載入你的設定…</p>
+        } @else {
+          <ng-container *ngComponentOutlet="current().component" />
         }
       </div>
-      <div class="settings-savebar" [class.has-changes]="changed()">
-        <span role="status">{{
-          changed() ? '變更已預覽，尚未儲存' : notice() || '設定會依帳號保存'
-        }}</span>
-        @if (changed()) {
-          <button class="quiet-button" [disabled]="saving()" (click)="reset()">取消</button
-          ><button class="primary-button" [disabled]="saving()" (click)="save()">
-            {{ saving() ? '儲存中…' : '儲存變更' }}
-          </button>
-        }
-      </div>
+    </div>
+    @if (showSaveBar()) {
+      <form class="settings-savebar" (submit)="save($event)">
+        <nx-dialog-save-bar
+          label="儲存變更"
+          [dirty]="store.changed()"
+          [saving]="store.saving()"
+          [note]="note()"
+          (revert)="revert()"
+        />
+      </form>
     }
-  </main>
+  </section>
+  <button class="icon-button settings-close" aria-label="關閉設定" type="button" (click)="close()">
+    <nx-icon name="close" />
+  </button>
 </div>
