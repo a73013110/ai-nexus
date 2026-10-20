@@ -11,6 +11,10 @@
     <ProjectReference Include="../AiNexus.Data/AiNexus.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- 常見密碼清單（來源與授權見同目錄的 common-passwords.LICENSE.txt）。 -->
+    <EmbeddedResource Include="Admin/Identity/SelfService/common-passwords.txt" LogicalName="AiNexus.Features.Admin.Identity.SelfService.common-passwords.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
