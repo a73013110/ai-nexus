@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatModelDisplayName,
+  nameInitial,
   formatModelName,
   formatDateTimeInput,
   parseDateTimeInput,
@@ -25,6 +26,14 @@ describe('model labels', () => {
     expect(formatModelDisplayName({ modelDisplayName: null })).toBe('AI 助理');
     expect(formatModelDisplayName({})).toBe('AI 助理');
     expect(formatModelName({ displayName: ' ' })).toBe('AI 助理');
+  });
+});
+
+describe('avatar initials', () => {
+  it('uses the first character and falls back when the name is missing', () => {
+    expect(nameInitial('王小明')).toBe('王');
+    expect(nameInitial('')).toBe('N');
+    expect(nameInitial(undefined)).toBe('N');
   });
 });
 
