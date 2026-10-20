@@ -58,14 +58,12 @@ export class SettingsDialog {
         dialog.showModal();
       } else if (!this.overlay.opened() && dialog.open) dialog.close();
     });
-    let generation = this.auth.generation();
+    let account = this.auth.guard();
     effect(() => {
-      const next = this.auth.generation();
-      if (next !== generation) {
-        generation = next;
-        this.discard().answer(false);
-        this.overlay.close();
-      }
+      if (account()) return;
+      account = this.auth.guard();
+      this.discard().answer(false);
+      this.overlay.close();
     });
   }
   onCancel(event: Event) {

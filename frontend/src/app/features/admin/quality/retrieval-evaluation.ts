@@ -31,7 +31,6 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { Icon } from '@shared/ui/icon';
 import { Panel } from '@shared/ui/panel';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
-import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RETRIEVAL_TOUR } from './quality-tour';
 
@@ -57,7 +56,6 @@ import { RETRIEVAL_TOUR } from './quality-tour';
 export class RetrievalEvaluation {
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
-  private readonly jobs = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
@@ -205,8 +203,7 @@ export class RetrievalEvaluation {
     this.busy.set(true);
     this.actionError.set('');
     try {
-      if (action === 'cancel') await this.jobs.cancel(report.run.job.id);
-      else this.jobToasts.track(await this.jobs.retry(report.run.job.id));
+      await this.jobToasts.control(report.run.job.id, action === 'retry');
       if (valid()) this.select(report.run.id);
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
