@@ -10,6 +10,7 @@ import {
 import type { UnitDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
+import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -20,7 +21,7 @@ import { Notice } from '@shared/ui/notice';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
-import { MAX_DEPTH, depthOf, heightOf, subtree, unitRows } from './unit-tree';
+import { MAX_DEPTH, heightOf, subtree, unitRows } from './unit-tree';
 
 interface Draft {
   /** 空字串為最上層。 */
@@ -36,8 +37,6 @@ interface Editor {
 
 const sameDraft = (a: Draft, b: Draft) =>
   a.parentId === b.parentId && a.name.trim() === b.name.trim() && a.enabled === b.enabled;
-
-let sequence = 0;
 
 /**
  * 新增或修改一個組織單位。修改時可換上層（整棵下層跟著搬，排到新一層最後），
@@ -152,7 +151,7 @@ let sequence = 0;
   `,
 })
 export class UnitDialog {
-  readonly id = `nx-unit-dialog-${++sequence}`;
+  readonly id = uniqueId('nx-unit-dialog');
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(OrganizationApi);
   private readonly store = inject(OrganizationStore);
@@ -178,7 +177,7 @@ export class UnitDialog {
     const height = id ? heightOf(units, id) : 1;
     const options: SelectOption[] = [{ value: '', label: '最上層' }];
     for (const row of unitRows(units)) {
-      if (excluded.has(row.unit.id) || depthOf(units, row.unit.id) + height > MAX_DEPTH) continue;
+      if (excluded.has(row.unit.id) || row.depth + height > MAX_DEPTH) continue;
       options.push({
         value: row.unit.id,
         label: row.path.join(' › ') + (row.unit.enabled ? '' : '（停用）'),
