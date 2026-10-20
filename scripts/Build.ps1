@@ -31,8 +31,7 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $root = Get-RepoRoot
 $publish = Resolve-RepoArtifactPath $OutputDirectory
-$env:NG_CLI_ANALYTICS = 'false'
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+Disable-RepoTelemetry
 Push-Location -LiteralPath $root
 $scripts = $PSScriptRoot
 try {

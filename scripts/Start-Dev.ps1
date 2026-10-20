@@ -45,9 +45,12 @@ if ($BackendPort -eq $FrontendPort) { throw 'FrontendPort 與 BackendPort 不可
 if (!$Http) { Assert-RepoHttpsCertificate }
 $local = Initialize-RepoLocalSettings
 if ($Restore) { & (Join-Path $PSScriptRoot 'Restore.ps1') }
-$listeners = [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+function Test-Listening([int]$Port) {
+    [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners().Port -contains $Port
+}
+
 foreach ($port in @($BackendPort, $FrontendPort)) {
-    if ($listeners.Port -contains $port) { throw "埠號 $port 已被使用；請先停止既有的預覽或改用其他埠號。" }
+    if (Test-Listening $port) { throw "埠號 $port 已被使用；請先停止既有的預覽或改用其他埠號。" }
 }
 $node = (Get-Command node -CommandType Application | Select-Object -First 1).Source
 $dotnet = (Get-Command dotnet -CommandType Application | Select-Object -First 1).Source
@@ -136,10 +139,6 @@ function Write-ChildOutput([hashtable]$Child) {
         if ($message) { Write-Status $Child.Name $message }
     }
     foreach ($line in @(Read-ChildLines $Child 'Error')) { Write-Status $Child.Name $line.Trim() }
-}
-
-function Test-Listening([int]$Port) {
-    [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners().Port -contains $Port
 }
 
 $children = [Collections.Generic.List[hashtable]]::new()
