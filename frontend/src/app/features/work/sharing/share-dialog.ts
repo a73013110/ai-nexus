@@ -28,6 +28,11 @@ type ShareKind = 'conversation' | 'artifact';
 /** 與後端 `ShareLink.MaxRecipients` 一致；超過時伺服器以驗證錯誤拒絕。 */
 const MAX_RECIPIENTS = 20;
 
+/** 收件者開啟的分享頁完整網址；路徑由功能目錄推得，模組換區時跟著走，不寫字面值。 */
+export function shareLink(id: string, base = document.baseURI) {
+  return new URL(`${routeOf('sharing')}/${id}`, base).href;
+}
+
 @Component({
   selector: 'nx-share-dialog',
   imports: [Notice, CompactDialog, DialogHeader, Field, Select, Icon, RouterLink, Checkbox],
@@ -174,7 +179,7 @@ export class ShareDialog {
     this.dialog().nativeElement.showModal();
   }
   link(id: string) {
-    return `${location.origin}/shared/${id}`;
+    return shareLink(id);
   }
   add(user: DirectoryUserDto) {
     if (!this.full() && !this.recipients().some((item) => item.id === user.id))
