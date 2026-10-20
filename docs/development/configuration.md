@@ -3,7 +3,7 @@
 - **一份預設值**：`backend/src/AiNexus.Host/appsettings.json` 列出全部鍵與預設值，隨版本更新。
 - **機器檔只寫不同的值**：一般設定與秘密各一份，放在 app 與 Git 之外；範本只列每台機器必須填的鍵。
 - **只有一個版本**：沒有版本號與遷移工具。區段寫錯或值不合法時，網站與所有 host 指令都不會啟動，錯誤訊息指出是哪個鍵。
-- 設定只在啟動時讀取，改檔後重新啟動後端或回收 IIS application pool。前端只呼叫同源 `/api/v1`，不保存 SQL、AD 密碼或 AI key。
+- 設定只在啟動時讀取，改檔後重啟後端或回收 IIS 集區。前端只呼叫同源 `/api/v1`，不保存 SQL、AD 密碼或 AI key。
 
 ## 檔案與載入順序
 
@@ -28,12 +28,13 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditOptions.cs) | — |
 | `Identity.Bootstrap` | [`AdminBootstrapOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdminBootstrapOptions.cs) | — |
+| `Identity.SelfService` | [`SelfServiceOptions`](../../backend/src/AiNexus.Features/Admin/Identity/SelfService/SelfServiceOptions.cs) | — |
 | `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Platform/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
 | `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
-| `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs)（選單外部連結允許清單） | — |
-| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs)（連線在 `Databases`） | — |
-| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
+| `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
+| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs) | — |
+| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
 | `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
@@ -57,8 +58,8 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 ## 程式碼表達不了的注意事項
 
-- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（外部來源必須設）。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以 application pool／gMSA 身分登入、帳密留空）才算已設定，否則視為停用。
-- **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用，不需把 IIS 設成 Development。[SqlClient 說明](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
+- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（外部來源必須設）。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。
+- **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用。[SqlClient 說明](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
 - **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不會出現在模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不在同一台時，`Inference.Providers.Ollama.Endpoint` 的 localhost 指的是 IIS 主機，要改成 GPU 主機位址。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。

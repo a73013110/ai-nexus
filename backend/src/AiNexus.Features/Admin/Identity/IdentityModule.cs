@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Configuration;
@@ -25,6 +26,7 @@ public sealed class IdentityModule : IFeatureModule
         var services = builder.Services;
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
+        services.AddSettings<SelfServiceOptions, SelfServiceOptionsValidator>(SelfServiceOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
         services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
@@ -61,6 +63,9 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<AuthenticationAudit>();
         services.AddScoped<ISignInGrant, AdminBootstrap>();
+        services.AddScoped<VerificationChallenges>();
+        services.AddScoped<Reauthentication>();
+        services.AddScoped<UserCredentials>();
         services.AddFeaturePolicy(FeatureCatalog.IdentityUsers);
     }
 
