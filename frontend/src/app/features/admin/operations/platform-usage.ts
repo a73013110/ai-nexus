@@ -28,6 +28,10 @@ const kindNames: Record<string, string> = {
   'web-search': '網路搜尋',
 };
 
+/** 模型與使用來源都依請求數由多到少排列。 */
+const byRequests = (first: { requests: number }, second: { requests: number }) =>
+  second.requests - first.requests;
+
 interface ServiceRow {
   id: string;
   name: string;
@@ -54,7 +58,7 @@ export class PlatformUsage {
   readonly format = formatNumber;
   readonly modelName = formatModelDisplayName;
   readonly duration = formatDuration;
-  /** 期間的天數；API 固定讀取截至現在的 30 天。 */
+  /** 起訖日期；API 固定讀取截至現在的 30 天。 */
   readonly period = computed(() => {
     const stats = this.stats();
     return stats ? `${formatDay(stats.since)} – ${formatDay(stats.until)}` : '';
@@ -95,12 +99,8 @@ export class PlatformUsage {
       },
     ];
   });
-  readonly models = computed(() =>
-    [...(this.stats()?.models ?? [])].sort((first, second) => second.requests - first.requests),
-  );
-  readonly kinds = computed(() =>
-    [...(this.stats()?.kinds ?? [])].sort((first2, second2) => second2.requests - first2.requests),
-  );
+  readonly models = computed(() => [...(this.stats()?.models ?? [])].sort(byRequests));
+  readonly kinds = computed(() => [...(this.stats()?.kinds ?? [])].sort(byRequests));
   readonly kindTotal = computed(() => this.kinds().reduce((sum, item) => sum + item.requests, 0));
   readonly services = computed<ServiceRow[]>(() => {
     const stats = this.stats();
