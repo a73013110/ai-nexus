@@ -5,8 +5,7 @@ import { Icon } from '@shared/ui/icon';
 import { NumberTicker } from '@shared/ui/number-ticker';
 import { DashboardStore } from '../dashboard-store';
 import { metricText } from '@shared/browser/format';
-import { workspaceLink } from '../dashboard-format';
-import { isFeatureId } from '@core/api/catalog';
+import { sectionLink } from '../dashboard-format';
 
 interface Stage {
   section: string;
@@ -24,7 +23,7 @@ const STAGES: Stage[] = [
     icon: 'files',
     metric: 'files',
     unit: '個原檔',
-    meta: (segment) => `期間保存 ${metricText(segment.metric('files', 'uploads'), 'count')} 個`,
+    meta: (store) => `期間保存 ${metricText(store.metric('files', 'uploads'), 'count')} 個`,
   },
   {
     section: 'tasks',
@@ -32,14 +31,14 @@ const STAGES: Stage[] = [
     metric: 'active',
     unit: '件處理中',
     live: 'active',
-    meta: (segment2) => `期間完成 ${metricText(segment2.metric('tasks', 'completed'), 'count')} 件`,
+    meta: (store) => `期間完成 ${metricText(store.metric('tasks', 'completed'), 'count')} 件`,
   },
   {
     section: 'knowledge',
     icon: 'library',
     metric: 'documents',
     unit: '份文件',
-    meta: (segment3) => `${metricText(segment3.metric('knowledge', 'chunks'), 'count')} 段索引`,
+    meta: (store) => `${metricText(store.metric('knowledge', 'chunks'), 'count')} 段索引`,
   },
   {
     section: 'chat',
@@ -47,23 +46,21 @@ const STAGES: Stage[] = [
     metric: 'replies',
     unit: '則回覆',
     live: 'generating',
-    meta: (segment4) => `${metricText(segment4.metric('chat', 'generating'), 'count')} 件生成中`,
+    meta: (store) => `${metricText(store.metric('chat', 'generating'), 'count')} 件生成中`,
   },
   {
     section: 'artifacts',
     icon: 'document',
     metric: 'versions',
     unit: '個版本',
-    meta: (segment5) =>
-      `${metricText(segment5.metric('artifacts', 'artifacts'), 'count')} 份成果文件`,
+    meta: (store) => `${metricText(store.metric('artifacts', 'artifacts'), 'count')} 份成果文件`,
   },
   {
     section: 'shared',
     icon: 'share',
     metric: 'sent',
     unit: '個有效分享',
-    meta: (segment6) =>
-      `${metricText(segment6.metric('shared', 'expiring'), 'count')} 個 7 天內到期`,
+    meta: (store) => `${metricText(store.metric('shared', 'expiring'), 'count')} 個 7 天內到期`,
   },
 ];
 
@@ -122,10 +119,7 @@ export class FlowWidget {
         meta: stage.meta(this.store),
         live,
         flowing: live || this.store.activeWork() > 0,
-        link:
-          isFeatureId(section.feature) && this.store.session.has(section.feature)
-            ? workspaceLink(section.route)
-            : null,
+        link: sectionLink(section, this.store.session),
       };
     }),
   );

@@ -1,5 +1,7 @@
-import type { DashboardMetricDto } from '@core/api/schema';
-import { metricText } from '@shared/browser/format';
+import { isFeatureId } from '@core/api/catalog';
+import type { DashboardSectionDto } from '@core/api/schema';
+import type { WorkspaceSession } from '@core/auth/workspace-session';
+import { localDateKey } from '@shared/browser/calendar-day';
 import type { BadgeTone } from '@shared/ui/count-badge';
 
 /** 後端用於指標、比例與項目的色調，同時作為徽章色調與顏色。 */
@@ -17,20 +19,13 @@ export const TONE_COLORS: Record<BadgeTone, string> = {
   danger: 'var(--danger)',
 };
 
-/** 要朗讀或以單一字串顯示的指標：數值與單位。 */
-export function metricLabel(metric: Pick<DashboardMetricDto, 'value' | 'format' | 'unit'>) {
-  const text = metricText(metric.value, metric.format);
-  return metric.unit && metric.value !== null ? `${text} ${metric.unit}` : text;
-}
 /** 從 `from` 到 `through`（含）的本地日期，格式為 `YYYY-MM-DD`。 */
 export function dayRange(from: string, through: string): string[] {
   const days: string[] = [];
   const day = new Date(from + 'T00:00:00'),
     end = new Date(through + 'T00:00:00');
   for (let index = 0; day <= end && index < 367; index++, day.setDate(day.getDate() + 1))
-    days.push(
-      `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`,
-    );
+    days.push(localDateKey(day));
   return days;
 }
 /** 沒有資料的日子以零填滿的每日數列。 */
@@ -66,4 +61,14 @@ export function workspaceLink(link: string | null | undefined) {
   if (!link || !link.startsWith('/') || link.startsWith('//')) return null;
   const [path, search = ''] = link.split('?', 2);
   return { path, query: Object.fromEntries(new URLSearchParams(search)) };
+}
+
+/** 區段的入口；只連到前端目錄認得、且目前帳號持有的功能，其他區段不是連結。 */
+export function sectionLink(
+  section: Pick<DashboardSectionDto, 'feature' | 'route'>,
+  session: WorkspaceSession,
+) {
+  return isFeatureId(section.feature) && session.has(section.feature)
+    ? workspaceLink(section.route)
+    : null;
 }

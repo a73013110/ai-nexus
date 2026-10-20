@@ -140,7 +140,6 @@ describe('dashboard tile', () => {
         widget: {
           id: 'spend',
           title: '費用趨勢',
-          description: '',
           icon: 'money',
           size: 'w',
           component: Empty,

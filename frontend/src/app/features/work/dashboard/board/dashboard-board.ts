@@ -96,9 +96,7 @@ export class DashboardBoard {
     const visible = this.layout.visible();
     const step = offset === 'first' ? -visible.length : offset === 'last' ? visible.length : offset;
     this.flip(() => this.layout.shift(id, step));
-    const position = this.layout.visible().findIndex((item) => item.id === id) + 1;
-    const title = visible.find((item) => item.id === id)?.widget.title ?? '';
-    this.announcement.set(`${title}：第 ${position} 個，共 ${visible.length} 個`);
+    this.announce(id);
     this.handle(id)?.focus();
   }
 
@@ -179,12 +177,17 @@ export class DashboardBoard {
         duration: 360,
         easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
       });
+    this.announce(drag.id);
+  };
+
+  /** 播報磚塊移動後的位置，讓螢幕閱讀器使用者知道放到哪裡。 */
+  private announce(id: string) {
     const visible = this.layout.visible();
-    const position = visible.findIndex((item) => item.id === drag.id) + 1;
+    const position = visible.findIndex((item) => item.id === id) + 1;
     this.announcement.set(
       `${visible[position - 1]?.widget.title ?? ''}：第 ${position} 個，共 ${visible.length} 個`,
     );
-  };
+  }
 
   private end() {
     const drag = this.drag;
