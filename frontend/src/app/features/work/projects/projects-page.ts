@@ -35,7 +35,7 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
 import { TextTools } from '@features/work/artifacts/text-tools';
 import { ArtifactsApi } from '@features/work/artifacts/artifacts-api';
-import { FilesApi } from '@features/work/files/files-api';
+import { acceptsFile, FilesApi } from '@features/work/files/files-api';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { PROJECTS_TOUR, projectTour } from './projects-tour';
@@ -147,7 +147,7 @@ export class ProjectsPage {
     const project = this.current();
     return !!project?.resource.canEdit && !project.isArchived;
   });
-  readonly actionError = signal('');
+  private readonly actionError = signal('');
   readonly error = computed(
     () =>
       this.actionError() ||
@@ -157,7 +157,7 @@ export class ProjectsPage {
       this.detailRead.error(),
   );
   readonly busy = signal(false);
-  readonly toast = inject(ToastService);
+  private readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly archived = signal(false);
   readonly scopes = [
@@ -202,21 +202,23 @@ export class ProjectsPage {
   );
   readonly visible = computed(() =>
     this.projects().filter(
-      (item2) =>
-        item2.isArchived === this.archived() &&
-        item2.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
+      (item) =>
+        item.isArchived === this.archived() &&
+        item.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
     ),
   );
-  readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly confirm = viewChild.required(ConfirmDialog);
-  readonly sharing = viewChild(ResourceSharing);
+  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly confirm = viewChild.required(ConfirmDialog);
+  private readonly sharing = viewChild(ResourceSharing);
   readonly tools = viewChild.required(TextTools);
-  readonly kind = signal('project');
+  readonly kind = signal<'project' | 'template'>('project');
   readonly name = signal('');
   readonly description = signal('');
   readonly instructions = signal('');
   readonly templateText = signal('');
   private editingId: string | null = null;
+  // 列表與 /:id 共用同一個元件，切換專案時元件不會銷毀，ViewScope.guard() 擋不住前一個專案晚到的寫入結果；
+  // 因此以路由世代補上導覽邊界，換路由時一併中止上傳並解除 busy。
   private revision = 0;
   private controller?: AbortController;
   constructor() {
@@ -233,7 +235,7 @@ export class ProjectsPage {
       valid = this.scope.guard();
     return () => valid() && revision === this.revision;
   }
-  refresh() {
+  private refresh() {
     this.detailRead.reload();
   }
   reload() {
@@ -308,8 +310,8 @@ export class ProjectsPage {
         this.dialog().nativeElement.close();
         this.refresh();
       }
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -326,8 +328,8 @@ export class ProjectsPage {
         this.transfer.put(value.conversation.id, value.prompt);
         await this.router.navigate([routeOf('chat'), value.conversation.id]);
       }
-    } catch (error3) {
-      if (valid()) this.actionError.set(this.scope.message(error3));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -356,8 +358,8 @@ export class ProjectsPage {
           value.isArchived ? '文件仍可閱讀。' : undefined,
         );
       }
-    } catch (error4) {
-      if (valid()) this.actionError.set(this.scope.message(error4));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -387,8 +389,8 @@ export class ProjectsPage {
       );
       this.projectsRead.reload();
       await this.router.navigate([routeOf('projects')]);
-    } catch (error5) {
-      if (valid()) this.actionError.set(this.scope.message(error5));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -404,8 +406,8 @@ export class ProjectsPage {
       valid = this.guard();
     if (!current || !current.resource.canEdit || current.isArchived || this.busy() || !policy)
       return;
-    if (files.length > 4 || files.some((file2) => file2.size > policy.maxFileBytes)) {
-      this.actionError.set('每批最多 4 份文件，單檔需符合平台容量限制。');
+    if (files.length > 4 || files.some((file) => !acceptsFile(policy, file))) {
+      this.actionError.set('每批最多 4 份文件，單檔需符合平台格式與容量限制。');
       return;
     }
     this.busy.set(true);
@@ -426,9 +428,9 @@ export class ProjectsPage {
         if (!valid()) return;
         try {
           await this.api.addFile(current.resource.id, uploaded.id);
-        } catch (error6) {
+        } catch (error) {
           await this.attachments.removeAttachment(uploaded.id).catch(() => undefined);
-          throw error6;
+          throw error;
         }
         if (!valid()) return;
       }
@@ -439,14 +441,14 @@ export class ProjectsPage {
       });
       done = true;
       this.refresh();
-    } catch (error7) {
-      if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(error7));
+    } catch (error) {
+      if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(error));
     } finally {
       if (!done) this.toast.dismiss(progress);
       if (valid()) this.busy.set(false);
     }
   }
-  async remove(kind: string, id: string) {
+  async remove(kind: 'file' | 'template', id: string) {
     const current = this.current(),
       valid = this.guard();
     if (
@@ -465,8 +467,8 @@ export class ProjectsPage {
       if (kind === 'file') await this.knowledge.remove(id);
       else await this.api.removeTemplate(current.resource.id, id);
       if (valid()) this.refresh();
-    } catch (error8) {
-      if (valid()) this.actionError.set(this.scope.message(error8));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
