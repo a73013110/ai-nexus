@@ -36,3 +36,38 @@ export function bindHotkeys(
   document.addEventListener('keydown', listener);
   inject(DestroyRef).onDestroy(() => document.removeEventListener('keydown', listener));
 }
+
+/** Apple 平台（macOS、iPadOS）的 `mod` 是 ⌘；其他平台是 Ctrl。只影響顯示，比對一律用 `hotkey()`。 */
+export function applePlatform() {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  return /mac|iphone|ipad|ipod/i.test(nav.userAgentData?.platform || nav.platform || '');
+}
+
+const MODIFIERS = {
+  apple: { mod: '⌘', alt: '⌥', shift: '⇧' },
+  other: { mod: 'Ctrl', alt: 'Alt', shift: 'Shift' },
+} as const;
+const NAMED: Record<string, string> = {
+  escape: 'Esc',
+  enter: 'Enter',
+  arrowup: '↑',
+  arrowdown: '↓',
+  arrowleft: '←',
+  arrowright: '→',
+};
+
+/**
+ * `hotkey()` 格式的組合鍵（`mod+shift+l`）拆成顯示用的鍵名：修飾鍵依平台顯示 ⌘／⌥／⇧ 或
+ * Ctrl／Alt／Shift，字母大寫，`escape` 顯示為 Esc。
+ */
+export function keyCaps(keys: string, apple = applePlatform()) {
+  const modifiers: Record<string, string> = apple ? MODIFIERS.apple : MODIFIERS.other;
+  return keys
+    .split('+')
+    .map((key) => modifiers[key] ?? NAMED[key] ?? key.charAt(0).toUpperCase() + key.slice(1));
+}
+
+/** 放在 `title` 等純文字處的組合鍵，例如「Ctrl+K」或「⌘K」。 */
+export function keyText(keys: string, apple = applePlatform()) {
+  return keyCaps(keys, apple).join(apple ? '' : '+');
+}

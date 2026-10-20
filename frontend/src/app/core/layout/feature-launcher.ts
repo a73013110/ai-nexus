@@ -12,10 +12,12 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { NavigationNodeDto } from '@core/api/schema';
+import { keyText } from '@shared/browser/hotkeys';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Icon } from '@shared/ui/icon';
 import { navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
 import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
+import { SHORTCUTS } from './keyboard-shortcuts';
 import { WorkspaceCommands } from './workspace-commands';
 
 /**
@@ -54,7 +56,7 @@ import { WorkspaceCommands } from './workspace-commands';
         type="button"
         class="icon-button"
         aria-label="搜尋全部功能"
-        title="搜尋功能 Ctrl + K"
+        [title]="'搜尋功能 ' + paletteKeys"
         (click)="commands.open()"
       >
         <nx-icon name="search" />
@@ -191,6 +193,7 @@ import { WorkspaceCommands } from './workspace-commands';
     </div>`,
 })
 export class FeatureLauncher {
+  readonly paletteKeys = keyText(SHORTCUTS.commandPalette.keys);
   readonly pins = inject(NavigationPreferences);
   readonly commands = inject(WorkspaceCommands);
   readonly active = input<string | null>(null);

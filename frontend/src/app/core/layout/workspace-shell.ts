@@ -9,6 +9,7 @@ import { Toaster } from '@shared/ui/toaster';
 import { NavigationPreferences } from './navigation-preferences';
 import { navigationIcon, navigationNodes, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
+import { SHORTCUTS } from './keyboard-shortcuts';
 import { WorkspaceCommands } from './workspace-commands';
 import { WorkspaceLayout } from './workspace-layout';
 import { WorkspaceSidebar } from './workspace-sidebar';
@@ -66,7 +67,7 @@ export class WorkspaceShell {
   constructor() {
     this.workspaceCommands.attach(() => this.palette().open());
     bindHotkeys(
-      { 'mod+k': () => this.palette().open() },
+      { [SHORTCUTS.commandPalette.keys]: () => this.palette().open() },
       () =>
         !this.tours.active() && !this.tours.loading() && !document.querySelector('dialog[open]'),
     );
