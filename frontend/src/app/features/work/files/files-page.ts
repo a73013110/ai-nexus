@@ -23,7 +23,7 @@ import { Select } from '@shared/ui/select';
 import { NameDialog } from '@shared/ui/name-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { TablePagination } from '@shared/ui/data-table';
-import { FilesApi } from './files-api';
+import { acceptsFile, FilesApi } from './files-api';
 import { apiResource } from '@core/api/api-resource';
 import { FileBrowser } from './file-library/file-browser';
 import { FileLibraryStore } from './file-library-store';
@@ -59,7 +59,7 @@ export class FilesPage {
   private readonly api = inject(FilesApi);
   private readonly scope = inject(ViewScope);
   readonly knowledge = viewChild.required(AddToKnowledge);
-  readonly names = viewChild.required(NameDialog);
+  private readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
   private readonly gallery = viewChild.required<ElementRef<HTMLElement>>('gallery');
   private readonly policyRead = apiResource({ loader: () => this.api.policy() });
@@ -70,8 +70,7 @@ export class FilesPage {
   readonly error = computed(
     () => this.actionError() || this.policyRead.error() || this.store.error(),
   );
-  readonly toast = inject(ToastService);
-  readonly bytes = formatBytes;
+  private readonly toast = inject(ToastService);
   readonly tour = computed(() => filesTour({ knowledge: this.session.has('knowledge') }));
   readonly accept = computed(() => this.policy()?.extensions.join(',') || '');
   readonly kinds = [
@@ -112,15 +111,10 @@ export class FilesPage {
     if (this.uploading() || !policy || !candidates.length) return;
     if (
       candidates.length > 10 ||
-      candidates.some(
-        (file) =>
-          !file.size ||
-          file.size > policy.maxFileBytes ||
-          !policy.extensions.includes('.' + file.name.split('.').pop()?.toLowerCase()),
-      )
+      candidates.some((file) => !file.size || !acceptsFile(policy, file))
     ) {
       this.actionError.set(
-        `每批最多十份檔案，每份最多 ${this.bytes(policy.maxFileBytes)}。支援 ${policy.extensions.join('、')}。`,
+        `每批最多十份檔案，每份最多 ${formatBytes(policy.maxFileBytes)}。支援 ${policy.extensions.join('、')}。`,
       );
       return;
     }

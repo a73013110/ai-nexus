@@ -1,7 +1,7 @@
 import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 /**
- * The library tour. The menu step names "加入知識庫" only for viewers with the knowledge feature;
+ * 檔案庫導覽。只有具知識庫功能的人，選單步驟才提到「加入知識庫」；
  * 卡片與選單步驟在沒有檔案列出時會略過，而容量步驟會結束導覽，
  * 因為列表載入後頁尾一律會顯示。
  */

@@ -1,7 +1,7 @@
 import { safeMessage, ApiError } from '@core/errors/safe-errors';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import type { AttachmentDto, AttachmentPolicyDto } from '@core/api/schema';
-import { FilesApi } from './files-api';
+import { acceptsFile, FilesApi } from './files-api';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { abortableDelay } from '@shared/browser/abortable-delay';
 
@@ -80,11 +80,7 @@ export class DraftAttachments {
       this.error.set('這次附件總大小超過上限。');
       return;
     }
-    const invalid = candidates.find(
-      (file) =>
-        file.size > policy.maxFileBytes ||
-        !policy.extensions.includes('.' + file.name.split('.').pop()?.toLowerCase()),
-    );
+    const invalid = candidates.find((file) => !acceptsFile(policy, file));
     if (invalid) {
       this.error.set(
         `「${invalid.name}」格式不支援或超過 ${Math.round(policy.maxFileBytes / 1024 / 1024)} MB。`,
@@ -115,7 +111,7 @@ export class DraftAttachments {
     const controller = activeController ?? (this.controller = new AbortController());
     this.uploading.set(true);
     try {
-      for (const file of this.files().filter((item2) => item2.analysisMode === 'ocr-required')) {
+      for (const file of this.files().filter((item) => item.analysisMode === 'ocr-required')) {
         if (version !== this.version) return;
         this.processingLabel.set(`正在辨識 ${file.fileName}`);
         let doc = await this.documents.readAttachment(file.id, controller.signal);
