@@ -29,6 +29,8 @@ public static class Policies
     public const string Organization = Prefix + FeatureCatalog.Organization;
     public const string OperationsUsage = Prefix + FeatureCatalog.OperationsUsage;
     public const string BillingPrices = Prefix + FeatureCatalog.BillingPrices;
+    public const string MailMessages = Prefix + FeatureCatalog.MailMessages;
+    public const string MailMessagesResend = Prefix + FeatureCatalog.MailMessagesResend;
 
     /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";
@@ -53,5 +55,6 @@ public static class AdministrativeFeatures
     [
         FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures,
         FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
+        FeatureCatalog.MailMessages, FeatureCatalog.MailMessagesResend,
     ], StringComparer.Ordinal);
 }

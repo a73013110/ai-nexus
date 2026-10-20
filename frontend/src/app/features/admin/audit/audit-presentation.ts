@@ -40,6 +40,8 @@ const actions: Record<string, string> = {
   'admin.user_usage_read': '檢視使用者用量',
   'admin.conversations_list': '檢視使用者對話清單',
   'admin.conversation_read': '檢視對話內容',
+  'admin.mail_resend': '重寄郵件',
+  'admin.mail_test': '寄送測試信',
   'project.created': '建立專案',
   'project.updated': '調整專案',
   'project.deleted': '刪除專案',

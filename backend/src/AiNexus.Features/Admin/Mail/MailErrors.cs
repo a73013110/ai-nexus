@@ -15,5 +15,6 @@ public static class MailErrors
     public static readonly Error ContentUnavailable = Error.Conflict("mail_content_unavailable");
     /// <summary>收件原址已依保存期限清除，不能重寄。</summary>
     public static readonly Error RecipientUnavailable = Error.Conflict("mail_recipient_unavailable");
+    public static readonly Error FilterInvalid = Error.Invalid("mail_filter_invalid");
     public static readonly Error CursorInvalid = Error.Invalid("mail_cursor_invalid");
 }

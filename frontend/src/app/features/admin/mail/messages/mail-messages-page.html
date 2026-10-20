@@ -1,0 +1,379 @@
+<nx-feature-page
+  [title]="session.featureName('mail.messages')"
+  description="查證系統信是否寄出、為什麼失敗，必要時重寄。"
+  density="compact"
+  layoutMode="data"
+>
+  <div page-actions class="page-actions">
+    @if (session.has('mail.messages')) {
+      <button type="button" class="quiet-button" [disabled]="loading()" (click)="refresh()">
+        <nx-icon name="refresh" />重新整理
+      </button>
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="!status()?.enabled || session.testing()"
+        [title]="session.testing() ? session.testingNote() : ''"
+        (click)="openTest()"
+      >
+        <nx-icon name="mail" />寄測試信
+      </button>
+    }
+  </div>
+  @if (session.has('mail.messages')) {
+    @if (status(); as current) {
+      @if (!current.enabled) {
+        <nx-notice
+          tone="warning"
+          [message]="'郵件傳輸未啟用（' + current.transport + '），信件只會入列不會寄出。'"
+        />
+      } @else if (current.pausedUntil) {
+        <nx-notice
+          tone="danger"
+          [message]="
+            '郵件伺服器無法使用（' +
+            mailError(current.pauseReason) +
+            '），暫停寄送到 ' +
+            formatDate(current.pausedUntil) +
+            '。'
+          "
+        >
+          @if (session.has('monitoring')) {
+            <a notice-actions [routerLink]="routeOf('monitoring')" class="secondary-button"
+              ><nx-icon name="activity" />前往監控</a
+            >
+          }
+        </nx-notice>
+      }
+    }
+    @if (notice()) {
+      <nx-notice
+        tone="success"
+        [message]="notice()"
+        [dismissible]="true"
+        (dismissed)="notice.set('')"
+      />
+    }
+    <nx-query-bar label="寄送紀錄查詢條件" [state]="query" [busy]="loading()">
+      <nx-view-switch
+        query-lead
+        label="寄送狀態"
+        [options]="statuses"
+        [value]="query.applied().status"
+        (valueChange)="query.commit({ status: $event })"
+      />
+      <label class="ui-field ui-query-wide"
+        >搜尋<input
+          nxField
+          type="search"
+          maxlength="254"
+          autocomplete="off"
+          placeholder="完整收件地址、訊息或批次 ID、Message-ID、主旨開頭"
+          [value]="draft().search"
+          (input)="query.set('search', $any($event.target).value)"
+      /></label>
+      <label class="ui-field"
+        >分類<input
+          nxField
+          type="search"
+          maxlength="64"
+          autocomplete="off"
+          placeholder="例：account."
+          [value]="draft().category"
+          (input)="query.set('category', $any($event.target).value)"
+      /></label>
+      <nx-time-range-picker
+        [presets]="ranges"
+        [withTime]="false"
+        [required]="false"
+        [value]="draft().range"
+        (valueChange)="query.set('range', $event)"
+      />
+    </nx-query-bar>
+    <nx-data-table
+      class="mail-table"
+      label="郵件寄送紀錄"
+      [busy]="loading()"
+      [columns]="columns"
+      preferenceKey="admin-mail-messages"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>寄送紀錄</h2>
+        @if (loading()) {
+          <span class="sr-only" role="status">正在載入寄送紀錄…</span>
+        }
+      </div>
+      <table>
+        <caption class="sr-only">
+          郵件寄送紀錄，依入列時間由新到舊排列。
+        </caption>
+        <colgroup>
+          <col nxTableColumn="time" class="mail-time-column" />
+          <col nxTableColumn="status" class="mail-status-column" />
+          <col nxTableColumn="recipient" />
+          <col nxTableColumn="subject" />
+          <col nxTableColumn="category" />
+          <col nxTableColumn="attempts" class="mail-attempts-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" nxTableColumn="time">時間</th>
+            <th scope="col" nxTableColumn="status">狀態</th>
+            <th scope="col" nxTableColumn="recipient">收件者</th>
+            <th scope="col" nxTableColumn="subject">主旨</th>
+            <th scope="col" nxTableColumn="category">分類</th>
+            <th scope="col" nxTableColumn="attempts" class="ui-table-numeric">嘗試</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of presentedRows(); track row.message.id) {
+            <tr
+              nxTableRow
+              [rowEnabled]="!loading()"
+              [class.is-selected]="selectedId() === row.message.id"
+              (rowActivate)="openDetails(row.message.id)"
+            >
+              <td nxTableColumn="time">
+                <time [attr.datetime]="row.message.createdAt">{{ row.date }}</time>
+              </td>
+              <td nxTableColumn="status">
+                <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge>
+                @if (row.error) {
+                  <small class="ui-truncate" [title]="row.error">{{ row.error }}</small>
+                }
+              </td>
+              <td nxTableColumn="recipient">
+                <span class="ui-truncate" [title]="row.message.recipient">{{
+                  row.message.recipient
+                }}</span>
+              </td>
+              <td nxTableColumn="subject">
+                <button
+                  type="button"
+                  class="ui-table-link ui-truncate"
+                  data-row-action
+                  [title]="row.message.subject"
+                  [attr.aria-label]="'檢視郵件：' + row.message.subject + '，' + row.date"
+                  [attr.aria-controls]="drawer()?.id"
+                  [attr.aria-expanded]="selectedId() === row.message.id"
+                  [disabled]="loading()"
+                  (click)="openDetails(row.message.id)"
+                >
+                  {{ row.message.subject }}
+                </button>
+              </td>
+              <td nxTableColumn="category">
+                <code class="ui-truncate" [title]="row.message.category">{{
+                  row.message.category
+                }}</code>
+              </td>
+              <td nxTableColumn="attempts" class="ui-table-numeric">{{ row.message.attempts }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        [count]="rows().length"
+        [loading]="loading()"
+        [error]="readError()"
+        loadingText="正在取得寄送紀錄"
+        errorTitle="無法取得寄送紀錄"
+        emptyTitle="沒有符合條件的信件"
+        emptyText="試著擴大時間範圍，或移除部分條件。"
+        (retry)="refresh()"
+      />
+      <div table-footer class="ui-table-footer">
+        <nx-table-pagination
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          [count]="rows().length"
+          [hasNext]="hasNext()"
+          [busy]="loading()"
+          (pageChange)="changePage($event)"
+          (pageSelect)="firstPage()"
+          (pageSizeChange)="changePageSize($event)"
+        />
+      </div>
+    </nx-data-table>
+    <nx-detail-drawer title="郵件詳情" (closed)="selectedId.set(null)">
+      <nx-drawer-pager
+        drawer-actions
+        noun="郵件"
+        [index]="selectedIndex()"
+        [count]="rows().length"
+        (move)="adjacent($event)"
+      />
+      <div drawer-summary class="ui-drawer-summary">
+        @if (selected(); as row) {
+          <div>
+            <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge
+            ><time [attr.datetime]="row.message.createdAt">{{ row.date }}</time>
+          </div>
+          <h3>{{ row.message.subject }}</h3>
+          <span class="ui-drawer-subtitle">{{ row.message.recipient }}</span>
+        }
+      </div>
+      @if (detailError()) {
+        <nx-notice tone="danger" [message]="detailError()" />
+      } @else if (detail(); as view) {
+        <section aria-label="郵件寄送資訊">
+          @if (actionError()) {
+            <nx-notice tone="danger" [message]="actionError()" />
+          }
+          @if (session.has('mail.messages.resend')) {
+            @if (view.detail.canResend) {
+              <div class="mail-actions">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="resending() || session.testing()"
+                  [title]="session.testing() ? session.testingNote() : ''"
+                  (click)="resend()"
+                >
+                  <nx-icon [name]="resending() ? 'loading' : 'repeat'" />{{
+                    resending() ? '正在重寄…' : '重寄'
+                  }}
+                </button>
+                <p class="form-note">以原內容建立一封新信，原紀錄不變。</p>
+              </div>
+            } @else if (view.blocked) {
+              <p class="form-note">{{ view.blocked }}</p>
+            }
+          }
+          <h3 class="ui-section-heading">寄送嘗試</h3>
+          @if (view.attempts.length) {
+            <ol class="mail-attempts">
+              @for (item of view.attempts; track item.attempt.attempt) {
+                <li>
+                  <div class="mail-attempt-head">
+                    <span>第 {{ item.attempt.attempt }} 次</span>
+                    <nx-status-badge [tone]="item.outcome.tone">{{
+                      item.outcome.label
+                    }}</nx-status-badge>
+                    <time [attr.datetime]="item.attempt.startedAt">{{ item.started }}</time>
+                  </div>
+                  @if (item.attempt.smtpStatus || item.attempt.enhancedStatus || item.error) {
+                    <p>
+                      @if (item.attempt.smtpStatus) {
+                        <code>{{ item.attempt.smtpStatus }}</code>
+                      }
+                      @if (item.attempt.enhancedStatus) {
+                        <code>{{ item.attempt.enhancedStatus }}</code>
+                      }
+                      {{ item.error }}
+                    </p>
+                  }
+                  @if (item.attempt.response) {
+                    <pre class="mail-response">{{ item.attempt.response }}</pre>
+                  }
+                  @if (item.attempt.issueCode) {
+                    <nx-copy-value label="查證代碼" [value]="item.attempt.issueCode" />
+                  }
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="form-note">還沒有寄送嘗試。</p>
+          }
+          <h3 class="ui-section-heading">內文</h3>
+          @if (view.detail.text) {
+            <pre class="mail-body">{{ view.detail.text }}</pre>
+          } @else {
+            <p class="form-note">
+              {{
+                view.detail.message.sensitive
+                  ? '敏感信（例如驗證碼）不保存可檢視的內文。'
+                  : '內文已依保存期限刪除。'
+              }}
+            </p>
+          }
+          <h3 class="ui-section-heading">基本資訊</h3>
+          <dl class="ui-description-list">
+            <div>
+              <dt>分類</dt>
+              <dd>
+                <code>{{ view.detail.message.category }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>優先序</dt>
+              <dd>{{ view.priority }}</dd>
+            </div>
+            <div>
+              <dt>寄件地址</dt>
+              <dd>{{ view.detail.fromAddress }}</dd>
+            </div>
+            <div>
+              <dt>傳輸</dt>
+              <dd>{{ view.detail.transport || '—' }}</dd>
+            </div>
+            <div>
+              <dt>寄出時間</dt>
+              <dd>
+                {{ view.detail.message.sentAt ? formatDate(view.detail.message.sentAt) : '—' }}
+              </dd>
+            </div>
+            <div>
+              <dt>有效期限</dt>
+              <dd>{{ view.detail.expiresAt ? formatDate(view.detail.expiresAt) : '不過期' }}</dd>
+            </div>
+            @if (view.detail.message.status === 'queued' && view.detail.message.attempts > 0) {
+              <div>
+                <dt>下次嘗試</dt>
+                <dd>{{ formatDate(view.detail.message.nextAttemptAt) }}</dd>
+              </div>
+            }
+            <div>
+              <dt>要求者</dt>
+              <dd>{{ view.detail.requestedBy || '系統' }}</dd>
+            </div>
+            @if (!view.detail.recipientAvailable) {
+              <div class="ui-description-wide">
+                <dt>收件地址</dt>
+                <dd>已依保存期限清除，只保留遮罩。</dd>
+              </div>
+            }
+          </dl>
+          <h3 class="ui-section-heading">關聯</h3>
+          <dl class="ui-description-list">
+            <div class="ui-description-wide">
+              <dt>訊息 ID</dt>
+              <dd><nx-copy-value label="訊息 ID" [value]="view.detail.message.id" /></dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>Message-ID</dt>
+              <dd><nx-copy-value label="Message-ID" [value]="view.detail.headerMessageId" /></dd>
+            </div>
+            @if (view.detail.batchId) {
+              <div class="ui-description-wide">
+                <dt>批次 ID</dt>
+                <dd><nx-copy-value label="批次 ID" [value]="view.detail.batchId" /></dd>
+              </div>
+            }
+            @if (view.detail.resendOfId) {
+              <div class="ui-description-wide">
+                <dt>重寄來源</dt>
+                <dd><nx-copy-value label="重寄來源 ID" [value]="view.detail.resendOfId" /></dd>
+              </div>
+            }
+            @if (view.detail.traceId) {
+              <div class="ui-description-wide">
+                <dt>TraceId</dt>
+                <dd><nx-copy-value label="TraceId" [value]="view.detail.traceId" /></dd>
+              </div>
+            }
+          </dl>
+          @if (view.detail.providerResponse) {
+            <details class="ui-raw-record">
+              <summary><nx-icon name="chevron" />伺服器最終回應</summary>
+              <pre>{{ view.detail.providerResponse }}</pre>
+            </details>
+          }
+        </section>
+      } @else if (detailLoading()) {
+        <p class="form-note" role="status">正在取得郵件詳情…</p>
+      }
+    </nx-detail-drawer>
+    <nx-mail-test-dialog [from]="status()?.fromAddress ?? ''" (sent)="testSent($event)" />
+  }
+</nx-feature-page>

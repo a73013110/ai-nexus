@@ -34,6 +34,8 @@ USING (VALUES
     -- 動作：只是授權，不出現在選單。
     (N'diagnostics.logs.detail'),
     (N'diagnostics.logs.export'),
+    (N'mail.messages'),
+    (N'mail.messages.resend'),
     (N'quality'),
     (N'quality.retrieval'),
     (N'design')
@@ -98,6 +100,8 @@ USING (VALUES
     (N'administrators', N'diagnostics.logs', NULL),
     (N'administrators', N'diagnostics.logs.detail', NULL),
     (N'administrators', N'diagnostics.logs.export', NULL),
+    (N'administrators', N'mail.messages', NULL),
+    (N'administrators', N'mail.messages.resend', NULL),
     (N'administrators', N'audit', N'all'),
     (N'administrators', N'design', NULL)
 ) AS s ([GroupId], [FeatureId], [Scope])
@@ -140,6 +144,7 @@ VALUES
     (N'system.knowledge-retrieval', N'system', N'page', N'knowledge.retrieval', NULL, 40),
     (N'system.integrations', N'system', N'page', N'integrations', NULL, 50),
     (N'system.monitoring', N'system', N'page', N'monitoring', NULL, 60),
+    (N'system.mail-messages', N'system', N'page', N'mail.messages', NULL, 65),
     (N'system.diagnostics-logs', N'system', N'page', N'diagnostics.logs', NULL, 70),
     (N'system.audit', N'system', N'page', N'audit', NULL, 80),
     (N'system.quality', N'system', N'page', N'quality', NULL, 90),

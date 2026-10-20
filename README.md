@@ -69,6 +69,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 活動稽核 | 登入、異動與查閱紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
 | 系統日誌 | 查證代碼、錯誤與耗時、關聯流程；查詢／詳情／匯出分別授權 | [系統日誌](docs/features/system-logs.md) |
 | 即時監控 | 在線人員與工作階段、API／SQL／HTTP 負載、操作時間軸 | [監控](docs/features/monitoring.md) |
+| 郵件 | 系統信 outbox、SMTP／Google relay、重試與暫停、寄送紀錄、重寄與測試信 | [郵件寄送](docs/features/mail.md) |
 | 介面元件 | 管理員檢視實際元件、主題、鍵盤與動畫 | [設計系統](docs/frontend/design-system.md) |
 
 各功能的新增、刪除、保存與權限對照見 [資源操作](docs/features/feature-lifecycle.md)。

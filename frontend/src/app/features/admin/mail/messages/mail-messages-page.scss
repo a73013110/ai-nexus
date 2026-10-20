@@ -1,0 +1,76 @@
+.mail-table table {
+  table-layout: fixed;
+  min-width: 56rem;
+}
+nx-view-switch {
+  margin-bottom: 0;
+}
+code {
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}
+.mail-time-column {
+  width: 11rem;
+}
+.mail-status-column {
+  width: 9rem;
+}
+.mail-attempts-column {
+  width: 4.5rem;
+}
+.mail-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.mail-actions .form-note {
+  margin: 0;
+}
+.mail-attempts {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.mail-attempts > li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--canvas);
+  border-radius: var(--p-radius-sm);
+  font-size: var(--text-caption);
+}
+.mail-attempts p {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.mail-attempt-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.mail-attempt-head time {
+  color: var(--secondary);
+}
+.mail-response,
+.mail-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}
+.mail-body {
+  max-height: 24rem;
+  overflow: auto;
+  padding: 10px 12px;
+  background: var(--canvas);
+  border-radius: var(--p-radius-sm);
+}
