@@ -14,6 +14,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
+| 郵件寄送、outbox | `docs/architecture/mail-outbox.md`（設定、重試、保存見 `docs/features/mail.md`） |
 | 後端測試、`AppFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
