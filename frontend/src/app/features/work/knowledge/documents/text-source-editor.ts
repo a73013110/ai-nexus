@@ -19,6 +19,10 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { KnowledgeApi } from '../knowledge-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
+import { formatNumber } from '@shared/browser/format';
+
+/** 與後端 `TextDocuments.MaxCharacters` 一致；輸入上限與字數提示共用。 */
+const MAX_TEXT = 64000;
 
 @Component({
   selector: 'nx-text-source-editor',
@@ -54,7 +58,7 @@ import { JobToasts } from '@features/work/jobs/job-toasts';
               nxField
               required
               rows="15"
-              maxlength="64000"
+              [maxLength]="maxText"
               [readOnly]="busy() || loading()"
               [value]="text()"
               placeholder="將文字貼在這裡…"
@@ -67,7 +71,7 @@ import { JobToasts } from '@features/work/jobs/job-toasts';
         </div>
         <footer class="dialog-foot">
           <p class="dialog-note">
-            {{ text().length.toLocaleString() }} / 64,000 字元 · 原始內容會保留為文字檔
+            {{ count(text().length) }} / {{ count(maxText) }} 字元 · 原始內容會保留為文字檔
           </p>
           <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
             取消
@@ -99,6 +103,8 @@ export class TextSourceEditor {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly saved = output<DocumentDto>();
+  readonly maxText = MAX_TEXT;
+  readonly count = formatNumber;
   /** 對話框編輯的內容：集合中的新來源，或既有文件的文字。 */
   private readonly editing = signal<{ collection: string; documentId: string } | null>(null);
   private readonly sourceRead = apiResource({
@@ -169,8 +175,8 @@ export class TextSourceEditor {
         this.dialog().nativeElement.close();
         this.saved.emit(result);
       }
-    } catch (error2) {
-      if (current()) this.saveError.set(this.scope.message(error2));
+    } catch (error) {
+      if (current()) this.saveError.set(this.scope.message(error));
     } finally {
       if (current()) this.busy.set(false);
     }

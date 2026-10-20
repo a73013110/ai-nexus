@@ -40,7 +40,7 @@ import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
 import { accessLabel } from '@features/work/collaboration/access-label';
 import { FileDrop } from '@shared/browser/file-drop';
-import { FilesApi } from '@features/work/files/files-api';
+import { acceptsFile, FilesApi } from '@features/work/files/files-api';
 import { KnowledgeApi } from './knowledge-api';
 import { LibraryPicker } from '@features/work/files/file-library/library-picker';
 import { TextSourceEditor } from './documents/text-source-editor';
@@ -101,7 +101,9 @@ export class KnowledgePage {
     feature: 'knowledge',
     loader: () => this.uploads.policy(),
   });
-  readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
+  private readonly collections = computed<CollectionDto[]>(
+    () => this.collectionsRead.value() ?? [],
+  );
   readonly current = computed(() =>
     this.collections().find((item) => item.resource.id === this.id()),
   );
@@ -119,7 +121,7 @@ export class KnowledgePage {
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly loading = this.collectionsRead.loading;
   readonly loadingDocuments = this.documentsRead.loading;
-  readonly actionError = signal('');
+  private readonly actionError = signal('');
   readonly error = computed(
     () =>
       this.actionError() ||
@@ -142,9 +144,9 @@ export class KnowledgePage {
     const term = this.term().toLowerCase(),
       ownership = this.ownership();
     return this.collections().filter(
-      (item2) =>
-        (ownership === 'all' || item2.resource.isOwner === (ownership === 'mine')) &&
-        item2.resource.name.toLowerCase().includes(term),
+      (item) =>
+        (ownership === 'all' || item.resource.isOwner === (ownership === 'mine')) &&
+        item.resource.name.toLowerCase().includes(term),
     );
   });
   readonly uploading = signal(false);
@@ -159,10 +161,10 @@ export class KnowledgePage {
   readonly editorId = signal<string | null>(null);
   readonly editorError = signal('');
   readonly saving = signal(false);
-  readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
-  readonly confirm = viewChild.required(ConfirmDialog);
+  private readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
+  private readonly confirm = viewChild.required(ConfirmDialog);
   readonly textEditor = viewChild.required(TextSourceEditor);
-  readonly sharing = viewChild(ResourceSharing);
+  private readonly sharing = viewChild(ResourceSharing);
   /** 集合的導覽，或已開啟集合的導覽（依此檢視者在該處可以變更的內容決定）。 */
   readonly tour = computed(() => {
     const resource = this.current()?.resource;
@@ -280,13 +282,7 @@ export class KnowledgePage {
       this.actionError.set('每批最多上傳十份文件。');
       return;
     }
-    if (
-      candidates.some(
-        (item3) =>
-          item3.size > policy.maxFileBytes ||
-          !policy.extensions.includes('.' + item3.name.split('.').pop()?.toLowerCase()),
-      )
-    ) {
+    if (candidates.some((file) => !acceptsFile(policy, file))) {
       this.actionError.set(
         `支援 ${policy.extensions.slice(0, 8).join('、')}，每份最多 ${policy.maxFileBytes / 1048576} MB。`,
       );
@@ -334,7 +330,7 @@ export class KnowledgePage {
     }
   }
   /** 確認後移除來源或整個集合；原始檔案仍保留在檔案庫中。 */
-  async remove(id: string, name: string, collection = false) {
+  private async remove(id: string, name: string, collection = false) {
     const valid = this.scope.guard();
     if (
       !(await this.confirm().ask({
@@ -357,7 +353,7 @@ export class KnowledgePage {
       if (valid()) this.actionError.set(this.scope.message(error));
     }
   }
-  async reindex(document: DocumentDto) {
+  private async reindex(document: DocumentDto) {
     const valid = this.scope.guard();
     this.actionError.set('');
     try {

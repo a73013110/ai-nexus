@@ -54,13 +54,12 @@ export class ReaderDialog {
       if (target && !dialog.open) dialog.showModal();
       else if (!target && dialog.open) dialog.close();
     });
-    let generation = this.overlay.auth.generation();
+    // 換帳號就關閉預覽：上一個帳號開啟的文件不留在新帳號的畫面上。
+    let account = this.overlay.auth.guard();
     effect(() => {
-      const next = this.overlay.auth.generation();
-      if (next !== generation) {
-        generation = next;
-        this.overlay.close();
-      }
+      if (account()) return;
+      account = this.overlay.auth.guard();
+      this.overlay.close();
     });
     inject(Router)
       .events.pipe(takeUntilDestroyed())

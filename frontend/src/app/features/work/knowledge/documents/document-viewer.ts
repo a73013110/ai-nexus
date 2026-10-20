@@ -30,7 +30,6 @@ import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { TextHighlight } from '@shared/ui/text-highlight';
 import { ViewScope } from '@shared/browser/view-scope';
-import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { jobFailure } from '@features/work/jobs/job-kind';
 import { Island } from '@shared/ui/island';
@@ -38,13 +37,35 @@ import { IslandService, type IslandItem } from '@shared/ui/island-service';
 import { KnowledgeApi } from '../knowledge-api';
 import { readerUrl, type ReaderTarget } from '@shared/browser/reader-overlay';
 import { SharingApi } from '@features/work/sharing/sharing-api';
-import { FilesApi } from '@features/work/files/files-api';
+import { attachmentContent, FilesApi } from '@features/work/files/files-api';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { below } from '@shared/browser/breakpoints';
 import { mediaQuery } from '@shared/browser/media-query';
+import { isActive } from '@core/api/generation-status';
 import { HtmlPreview } from './html-preview';
 import { HtmlScriptGate } from './html-script-gate';
 import { richKind } from './html-scripts';
+import { documentBusy } from './document-status';
+
+/** 不屬於知識庫的原檔（預覽圖片、分享檔案）以已就緒文件的形狀顯示，沒有工作也不能編輯。 */
+const readyDocument = (
+  id: string,
+  file: { fileName: string; contentType: string },
+  pageCount = 1,
+): DocumentDto => ({
+  id,
+  fileName: file.fileName,
+  contentType: file.contentType,
+  collectionId: null,
+  status: 'ready',
+  pageCount,
+  chunkCount: 0,
+  warning: null,
+  jobId: null,
+  canEdit: false,
+  hasOriginal: true,
+  textVersion: 0,
+});
 
 @Component({
   selector: 'nx-document-viewer',
@@ -74,7 +95,6 @@ import { richKind } from './html-scripts';
 export class DocumentViewer {
   private readonly api = inject(KnowledgeApi);
   private readonly shares = inject(SharingApi);
-  private readonly jobs = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
@@ -190,7 +210,7 @@ export class DocumentViewer {
     if (shareId)
       return apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: shareId, file: id } });
     return this.rawImage()
-      ? apiHref('/api/v1/attachments/{id}/content', { path: { id } })
+      ? attachmentContent(id)
       : apiHref('/api/v1/documents/{id}/content', { path: { id: this.document()?.id || '' } });
   });
   readonly htmlUrl = computed(() => {
@@ -249,7 +269,7 @@ export class DocumentViewer {
     const job = this.document() ? this.job() : null;
     if (!job || job.status === 'completed') return items;
     const control = this.canControl();
-    if (job.status === 'queued' || job.status === 'running')
+    if (isActive(job.status))
       items.push({
         id: 'job-active',
         priority: 50,
@@ -378,20 +398,7 @@ export class DocumentViewer {
         // 預覽點陣圖片不會排入 OCR，也不會產生模型呼叫。
         if (file.isImage) {
           this.rawImage.set(true);
-          this.document.set({
-            id,
-            fileName: file.fileName,
-            contentType: file.contentType,
-            collectionId: null,
-            status: 'ready',
-            pageCount: 1,
-            chunkCount: 0,
-            warning: null,
-            jobId: null,
-            canEdit: false,
-            hasOriginal: true,
-            textVersion: 0,
-          });
+          this.document.set(readyDocument(id, file));
           this.imageLoading.set(true);
           return;
         }
@@ -400,20 +407,7 @@ export class DocumentViewer {
         ? await this.shares.preview(target.shareId, id, this.controller.signal)
         : null;
       const info: DocumentDto = shared
-        ? {
-            id,
-            fileName: shared.file.fileName,
-            contentType: shared.file.contentType,
-            collectionId: null,
-            status: 'ready',
-            pageCount: shared.pages.length || 1,
-            chunkCount: 0,
-            warning: null,
-            jobId: null,
-            canEdit: false,
-            hasOriginal: true,
-            textVersion: 0,
-          }
+        ? readyDocument(id, shared.file, shared.pages.length || 1)
         : await (attachment
             ? this.api.readAttachment(id, this.controller.signal)
             : this.api.document(id, this.controller.signal));
@@ -546,7 +540,7 @@ export class DocumentViewer {
         this.job.set(value.job);
         this.canControl.set(value.canControl);
       }
-      if (info.status !== 'ready' && ['queued', 'running', 'processing'].includes(info.status))
+      if (documentBusy(info.status))
         this.scope.later(() => void this.refresh(id, valid), 2500, 'reader-poll');
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));
@@ -649,8 +643,7 @@ export class DocumentViewer {
     this.busy.set(true);
     this.error.set('');
     try {
-      const value = await (retry ? this.jobs.retry(job.id) : this.jobs.cancel(job.id));
-      if (retry) this.jobToasts.track(value);
+      const value = await this.jobToasts.control(job.id, retry);
       if (valid() && this.document()?.id === id) {
         this.job.set(value);
         await this.refresh(id!, valid);
