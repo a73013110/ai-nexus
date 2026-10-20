@@ -28,6 +28,8 @@ await db.SaveChangesAsync(ct);                   // 業務資料與信件一起�
 ## 寄送端（Mail 模組內部）
 
 - `Delivery/MailDispatcher`：單一 `BackgroundService`（ADR 0001），以 `UPDLOCK, READPAST` 條件式 UPDATE 批次認領並加租約，結果以 `LeaseToken` fencing 寫回、每次嘗試一列 `DeliveryAttempts`；節流與斷路器只在記憶體。
-- `Delivery/MailFailures` 把 MailKit 例外分成暫時、永久與傳輸層故障；新增分類時同步更新 [郵件寄送](../features/mail.md) 的表與前端標籤。
+- `Delivery/MailFailures` 把 MailKit 例外分成暫時、永久與傳輸層故障；新增分類時同步更新 [郵件寄送](../features/mail.md) 的表與前端標籤。傳輸把例外包成 `MailSendException` 帶出失敗步驟（`MailAttemptStages`）與憑證摘要，分類仍看原始例外。
 - `IMailTransport`：`SmtpMailTransport`（MailKit）、`PickupMailTransport`、`DisabledMailTransport`；測試以 `RecordingMailTransport` 取代，並直接呼叫 `MailDispatcher.DispatchAsync`、`MailRetentionWorker.PurgeAsync`。
+- 寄送與連線診斷（`Transport/SmtpProbe`）共用 `SmtpConnector` 與 `SmtpCertificate`：逾時、EHLO 網域與憑證規則只有一份，診斷通過就代表寄送走同一條路。SMTP 行為的單元測試用 `FakeSmtpServer`（loopback，可開 STARTTLS）。
+- 執行期開關放 `mail.DeliverySettings`（`MailDeliverySettings`），dispatcher 每輪讀一次；要和秘密一起部署的設定才放 `MailOptions`。
 - Gmail API／OAuth（XOAUTH2）未實作：組織禁用 SMTP AUTH 時，在 `SmtpMailTransport` 加 OAuth2 驗證即可，outbox 不必改。

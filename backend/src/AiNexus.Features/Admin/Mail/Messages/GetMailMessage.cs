@@ -5,9 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
 
-/// <summary>一次寄送嘗試；<paramref name="Response"/> 寫入時已遮罩 email、網址與路徑。</summary>
+/// <summary>
+/// 一次寄送嘗試；<paramref name="Response"/> 是伺服器回應或失敗細節（含 TLS 憑證摘要），寫入時已遮罩 email、網址與路徑。
+/// <paramref name="Stage"/> 是失敗的步驟（<c>MailAttemptStages</c>）。
+/// </summary>
 public sealed record MailAttemptDto(int Attempt, string Transport, DateTimeOffset StartedAt, DateTimeOffset FinishedAt, string Outcome,
-    int? SmtpStatus, string? EnhancedStatus, string? Response, string? ErrorCode, string? IssueCode);
+    int? SmtpStatus, string? EnhancedStatus, string? Response, string? ErrorCode, string? IssueCode, string? Stage);
 
 /// <summary>
 /// 寄送紀錄的詳情。<paramref name="Text"/> 是純文字內文預覽：敏感信或內文已清除時為 null（HTML 不回傳、不渲染）。
@@ -32,7 +35,7 @@ internal sealed class GetMailMessage(AppDbContext db)
         var content = message.Sensitive ? null : await db.Set<OutboundMessageContent>().AsNoTracking().Where(x => x.MessageId == id && !x.Protected)
             .Select(x => x.Text).SingleOrDefaultAsync(ct);
         var attempts = await db.Set<DeliveryAttempt>().AsNoTracking().Where(x => x.MessageId == id).OrderBy(x => x.Attempt)
-            .Select(x => new MailAttemptDto(x.Attempt, x.Transport, x.StartedAt, x.FinishedAt, x.Outcome, x.SmtpStatus, x.EnhancedStatus, x.Response, x.ErrorCode, x.IssueCode))
+            .Select(x => new MailAttemptDto(x.Attempt, x.Transport, x.StartedAt, x.FinishedAt, x.Outcome, x.SmtpStatus, x.EnhancedStatus, x.Response, x.ErrorCode, x.IssueCode, x.Stage))
             .ToListAsync(ct);
         var blocked = ResendMailMessage.Blocker(message, content is not null)?.Code;
         return new MailMessageDetailDto(MailMessageDto.From(message), message.HeaderMessageId, message.FromAddress, message.BatchId, message.ResendOfId,

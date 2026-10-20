@@ -486,6 +486,18 @@
     scale: 0.98;
   }
 }
+// A status badge whose state changed while the page refreshed itself (shared/ui/status-badge):
+// it pops on the spring with a same-colour ring that fades, so the change is noticed once.
+@keyframes status-settle {
+  from {
+    scale: 0.82;
+    box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--badge-color) 28%, transparent);
+  }
+  to {
+    scale: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
 @keyframes issue-depart {
   to {
     opacity: 0;

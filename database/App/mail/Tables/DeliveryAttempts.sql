@@ -10,8 +10,10 @@ CREATE TABLE [mail].[DeliveryAttempts] (
     [Response]       NVARCHAR (512)     NULL,
     [ErrorCode]      NVARCHAR (80)      NULL,
     [IssueCode]      NVARCHAR (40)      NULL,
+    [Stage]          NVARCHAR (16)      NULL,
     CONSTRAINT [pk_DeliveryAttempts] PRIMARY KEY CLUSTERED ([MessageId] ASC, [Attempt] ASC),
     CONSTRAINT [ck_DeliveryAttempts_Outcome] CHECK ([Outcome]=N'abandoned' OR [Outcome]=N'transport' OR [Outcome]=N'permanent' OR [Outcome]=N'transient' OR [Outcome]=N'sent'),
+    CONSTRAINT [ck_DeliveryAttempts_Stage] CHECK ([Stage]=N'connect' OR [Stage]=N'tls' OR [Stage]=N'auth' OR [Stage]=N'sender' OR [Stage]=N'recipient' OR [Stage]=N'data'),
     CONSTRAINT [fk_DeliveryAttempts_OutboundMessages] FOREIGN KEY ([MessageId]) REFERENCES [mail].[OutboundMessages] ([Id]) ON DELETE CASCADE
 );
 
@@ -58,12 +60,17 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'結果：se
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'SMTP 回應或傳輸訊息，寫入前遮罩 email、網址與路徑並截斷 512 字元。', @level0type = N'SCHEMA', @level0name = N'mail', @level1type = N'TABLE', @level1name = N'DeliveryAttempts', @level2type = N'COLUMN', @level2name = N'Response';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'成功時為 SMTP 最終回應；失敗時為伺服器回應或例外訊息（含 TLS 憑證摘要）。寫入前遮罩 email、網址與路徑並截斷 512 字元。', @level0type = N'SCHEMA', @level0name = N'mail', @level1type = N'TABLE', @level1name = N'DeliveryAttempts', @level2type = N'COLUMN', @level2name = N'Response';
 
 
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'SMTP 回應碼（例如 250、451、550）；連線類失敗為 null。', @level0type = N'SCHEMA', @level0name = N'mail', @level1type = N'TABLE', @level1name = N'DeliveryAttempts', @level2type = N'COLUMN', @level2name = N'SmtpStatus';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'失敗發生在哪一步：connect（連線）、tls、auth（認證）、sender（MAIL FROM）、recipient（RCPT TO）、data（內容）；成功、本地拒絕與中止為 null。', @level0type = N'SCHEMA', @level0name = N'mail', @level1type = N'TABLE', @level1name = N'DeliveryAttempts', @level2type = N'COLUMN', @level2name = N'Stage';
 
 
 GO

@@ -74,3 +74,11 @@ code {
   background: var(--canvas);
   border-radius: var(--p-radius-sm);
 }
+.mail-stage {
+  color: var(--secondary);
+}
+// 背景更新新出現的信從上方落入；新的寄送嘗試同樣進場。
+.mail-table tr.is-arrived,
+.mail-attempt {
+  animation: issue-arrive var(--motion-morph) var(--ease-spring) both;
+}

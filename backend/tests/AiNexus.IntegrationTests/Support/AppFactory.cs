@@ -110,10 +110,12 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             services.PostConfigure<AdminBootstrapOptions>(options => options.Administrators = bootstrapAdministrators);
             services.RemoveAll<IMailTransport>();
             services.AddSingleton<IMailTransport>(Mail);
+            // 部署單位會把自己的 mail server 寫進 appsettings.json；測試一律換成固定值，不受收件網域限制與指紋影響。
             services.PostConfigure<MailOptions>(options =>
             {
-                options.Transport = MailTransports.Smtp; options.Smtp.Host = "smtp.fixture.test";
+                options.Transport = MailTransports.Smtp; options.Smtp.Host = "smtp.fixture.test"; options.Smtp.Port = 587; options.Smtp.Security = MailSmtpOptions.StartTls;
                 options.From.Address = "ainexus@fixture.test"; options.PublicBaseUrl = "https://ainexus.fixture.test";
+                options.AllowedRecipientDomains = []; options.Smtp.UserName = ""; options.Smtp.ServerCertificateThumbprint = "";
             });
             configureServices?.Invoke(services);
         });

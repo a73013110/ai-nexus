@@ -17,6 +17,8 @@ public sealed class DeliveryAttempt
     public string? Response { get; set; }
     public string? ErrorCode { get; set; }
     public string? IssueCode { get; set; }
+    /// <summary>失敗的步驟（<see cref="MailAttemptStages"/>）；成功、本地拒絕與中止為 null。</summary>
+    public string? Stage { get; set; }
 }
 
 internal sealed class DeliveryAttemptConfiguration : IEntityTypeConfiguration<DeliveryAttempt>
@@ -31,6 +33,7 @@ internal sealed class DeliveryAttemptConfiguration : IEntityTypeConfiguration<De
         attempt.Property(x => x.Response).HasMaxLength(OutboundMessage.ResponseMaxLength);
         attempt.Property(x => x.ErrorCode).HasMaxLength(80);
         attempt.Property(x => x.IssueCode).HasMaxLength(40);
+        attempt.Property(x => x.Stage).HasMaxLength(16);
         attempt.HasOne<OutboundMessage>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
     }
 }

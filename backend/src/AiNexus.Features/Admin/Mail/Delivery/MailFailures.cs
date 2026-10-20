@@ -4,14 +4,17 @@ using AiNexus.Data.App.Mail;
 using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Admin.Mail.Delivery;
 
 /// <summary>
 /// 一次寄送失敗的分類。<paramref name="Outcome"/> 見 <see cref="MailAttemptOutcomes"/>；<paramref name="Connection"/> 表示連線層失敗（連續 3 次開斷路器）；
-/// <paramref name="Unexpected"/> 是無法分類的例外，會產生查證代碼。
+/// <paramref name="Unexpected"/> 是無法分類的例外，會產生查證代碼。<paramref name="Stage"/> 是失敗的步驟（<see cref="MailAttemptStages"/>），
+/// <paramref name="Detail"/> 是遮罩後的伺服器回應或例外訊息（含憑證摘要），寫進寄送嘗試；<paramref name="Reason"/> 是不含自由文字的短原因，寫進日誌。
 /// </summary>
-public sealed record MailFailure(string Outcome, string ErrorCode, int? SmtpStatus, string? EnhancedStatus, bool Connection, bool Unexpected, string ErrorType);
+public sealed record MailFailure(string Outcome, string ErrorCode, int? SmtpStatus, string? EnhancedStatus, bool Connection, bool Unexpected, string ErrorType,
+    string? Stage = null, string? Detail = null, string? Reason = null);
 
 /// <summary>
 /// 把 MailKit 的例外與 SMTP 回應分類成：單封暫時性（退避重試）、單封永久性（不再重試）、傳輸層故障（設定或服務整體壞掉，暫停寄送）。
@@ -28,7 +31,21 @@ public static partial class MailFailures
     public const string Deferred = "mail_deferred";
     public const string DeliveryFailed = "mail_delivery_failed";
 
-    public static MailFailure Classify(Exception exception) => exception switch
+    public static MailFailure Classify(Exception exception)
+    {
+        var (stage, certificate, inner) = exception is MailSendException { InnerException: { } cause } send ? (send.Stage, send.Certificate, cause) : (null, null, exception);
+        var failure = Kind(inner);
+        var reason = certificate is { Accepted: false } ? string.Join(":", certificate.ChainStatus.Prepend(certificate.PolicyErrors))
+            : failure.SmtpStatus is { } status ? $"{status} {failure.EnhancedStatus}".TrimEnd()
+            : failure.ErrorType;
+        // 憑證被拒時 MailKit 的訊息是一大段說明文字，憑證摘要比它有用；其他情況保留伺服器回應或例外訊息。
+        var detail = certificate is { Accepted: false } ? $"{certificate.Describe()}; {inner.GetType().Name}"
+            : failure.SmtpStatus is { } code ? $"{code} {inner.Message}"
+            : $"{inner.GetType().Name}: {inner.Message}";
+        return failure with { Stage = stage, Detail = DiagnosticRedactor.Text(detail, OutboundMessage.ResponseMaxLength), Reason = DiagnosticRedactor.Text(reason, 160) };
+    }
+
+    private static MailFailure Kind(Exception exception) => exception switch
     {
         SmtpCommandException command => Command(command),
         // MailKit 與 .NET 的 TLS／認證例外：設定錯誤或憑證不符，每一封都會失敗。

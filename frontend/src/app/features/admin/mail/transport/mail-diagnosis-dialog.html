@@ -1,0 +1,114 @@
+<dialog
+  nxCompactDialog
+  #dialog
+  class="platform-dialog"
+  aria-label="郵件連線診斷"
+  [size]="result() ? 'lg' : 'md'"
+  (cancel)="cancel($event)"
+>
+  <form class="dialog-form" (submit)="run($event)">
+    <nx-dialog-header heading="郵件連線診斷" closeLabel="關閉連線診斷" />
+    <div class="dialog-body" [nxViewMotion]="result() ? 'result' : 'form'">
+      <p class="form-note">
+        以目前設定連到
+        {{
+          server() || '郵件伺服器'
+        }}，依序檢查連線、TLS、憑證、帳密與收件者；不送出內容，不會寄出信。
+      </p>
+      <label
+        >收件地址（選填）<input
+          nxField
+          type="email"
+          maxlength="254"
+          autocomplete="email"
+          placeholder="空白時以寄件地址檢查"
+          [value]="to()"
+          [readOnly]="busy()"
+          (input)="to.set($any($event.target).value)"
+      /></label>
+      @if (error()) {
+        <nx-notice tone="danger" [message]="error()" />
+      }
+      @if (view(); as current) {
+        <nx-notice [tone]="current.verdict.tone" [message]="current.verdict.message" />
+        <ol class="diagnosis-steps" aria-label="診斷步驟">
+          @for (item of current.steps; track item.step.id) {
+            <li [attr.data-status]="item.step.status">
+              <div class="diagnosis-step-head">
+                <nx-status-badge [tone]="item.status.tone" [state]="item.step.status">{{
+                  item.status.label
+                }}</nx-status-badge>
+                <strong>{{ item.label }}</strong>
+                @if (item.step.status !== 'skipped') {
+                  <span class="diagnosis-elapsed">{{ item.step.elapsedMs }} ms</span>
+                }
+              </div>
+              @if (item.step.status !== 'skipped' || item.step.summary) {
+                <p>{{ item.step.summary }}</p>
+              }
+            </li>
+          }
+        </ol>
+        @if (current.certificate; as certificate) {
+          <h3 class="ui-section-heading">伺服器憑證</h3>
+          <dl class="ui-description-list">
+            <div class="ui-description-wide">
+              <dt>主旨</dt>
+              <dd>{{ certificate.subject || '—' }}</dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>簽發者</dt>
+              <dd>{{ certificate.issuer || '—' }}</dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>主體別名（SAN）</dt>
+              <dd>{{ certificate.dnsNames.length ? certificate.dnsNames.join('、') : '—' }}</dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>有效期間</dt>
+              <dd>{{ certificate.validity }}</dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>驗證結果</dt>
+              <dd>
+                <code>{{ certificate.policyErrors }}</code>
+                @for (status of certificate.chainStatus; track status) {
+                  <code>{{ status }}</code>
+                }
+              </dd>
+            </div>
+            <div class="ui-description-wide">
+              <dt>SHA-256 指紋</dt>
+              <dd>
+                <nx-copy-value label="SHA-256 指紋" [value]="certificate.sha256" />
+                <span class="form-note">{{ certificate.grouped }}</span>
+              </dd>
+            </div>
+          </dl>
+        }
+        @if (current.result.capabilities.length) {
+          <h3 class="ui-section-heading">伺服器能力（EHLO）</h3>
+          <p class="diagnosis-capabilities">
+            @for (capability of current.result.capabilities; track capability) {
+              <code>{{ capability }}</code>
+            }
+          </p>
+        }
+        @if (current.result.transcript) {
+          <details class="ui-raw-record">
+            <summary>SMTP 對話紀錄（驗證內容已遮罩）</summary>
+            <pre>{{ current.result.transcript }}</pre>
+          </details>
+        }
+      }
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+        關閉
+      </button>
+      <button class="primary-button" [disabled]="busy()">
+        {{ busy() ? '正在診斷…' : result() ? '再診斷一次' : '開始診斷' }}
+      </button>
+    </footer>
+  </form>
+</dialog>

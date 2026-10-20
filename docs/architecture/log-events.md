@@ -29,6 +29,8 @@
 | 3300 / 3301 / 3302 | `mail.batch_sent` / `mail.delivery_retry` / `mail.delivery_failed` | `Mail/Delivery/MailDispatcher.cs` |
 | 3303 / 3304 / 3305 | `mail.transport_unavailable` / `mail.transport_restored` / `mail.queue_unavailable` | 同上 |
 | 3306 | `mail.retention_failed` | `Mail/Delivery/MailRetentionWorker.cs` |
+| 3307 | `mail.queue_advanced` | `Mail/Delivery/MailDispatcher.cs` |
+| 3308 | `mail.diagnosed` | `Mail/Transport/DiagnoseMailTransport.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
