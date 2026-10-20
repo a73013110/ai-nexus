@@ -3,6 +3,7 @@ import { Notice } from '@shared/ui/notice';
 import { Card } from '@shared/ui/card';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { SearchField } from '@shared/ui/search-field';
+import { ViewScope } from '@shared/browser/view-scope';
 import { safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -40,6 +41,7 @@ import {
   formatNumber,
   formatModelName,
   formatModelDisplayName,
+  nameInitial,
 } from '@shared/browser/format';
 import { routeOf } from '@core/api/catalog';
 
@@ -60,6 +62,7 @@ import { routeOf } from '@core/api/catalog';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
+  providers: [ViewScope],
 })
 export class SettingsPage {
   /** 範本裡的連結由功能目錄取得網址。 */
@@ -71,6 +74,7 @@ export class SettingsPage {
   readonly service = inject(UserSettingsService);
   private readonly api = inject(WorkspaceApi);
   private readonly drafts = inject(DraftRepository);
+  private readonly scope = inject(ViewScope);
   /** 設定與帳號一起重新讀取，絕不使用其他裝置的快取。 */
   private readonly settingsRead = apiResource({
     freshAccount: true,
@@ -143,13 +147,13 @@ export class SettingsPage {
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((pointX) => ({
-    value: String(pointX),
-    label: `${pointX} px`,
+  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((size) => ({
+    value: String(size),
+    label: `${size} px`,
   }));
-  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((pointX2) => ({
-    value: String(pointX2),
-    label: `${pointX2} 倍`,
+  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((ratio) => ({
+    value: String(ratio),
+    label: `${ratio} 倍`,
   }));
   readonly densityOptions = [
     { value: 'comfortable', label: '舒適', description: '適合長文閱讀' },
@@ -160,9 +164,9 @@ export class SettingsPage {
     { value: 'standard', label: '標準' },
     { value: 'wide', label: '寬廣' },
   ];
-  readonly sidebarOptions = [240, 264, 288, 320, 360].map((pointX3) => ({
-    value: String(pointX3),
-    label: `${pointX3} px`,
+  readonly sidebarOptions = [240, 264, 288, 320, 360].map((width) => ({
+    value: String(width),
+    label: `${width} px`,
   }));
   readonly effortOptions = [
     { value: 'auto', label: '依模型預設' },
@@ -178,13 +182,9 @@ export class SettingsPage {
       label: formatModelName(item),
     })),
   ]);
-  private alive = true;
   constructor() {
     effect(() => this.stateChange.emit({ changed: this.changed(), saving: this.saving() }));
-    inject(DestroyRef).onDestroy(() => {
-      this.alive = false;
-      this.service.restore();
-    });
+    inject(DestroyRef).onDestroy(() => this.service.restore());
   }
   load() {
     this.saveError.set('');
@@ -194,25 +194,22 @@ export class SettingsPage {
     this.policyRead.reload();
   }
   update<K extends keyof UserSettingsDto>(key: K, value: UserSettingsDto[K]) {
-    this.draft.update((current) => ({ ...current, [key]: value }));
-    this.service.preview(this.draft());
-    this.notice.set('');
+    this.edit((current) => ({ ...current, [key]: value }));
   }
   appearance(key: 'theme' | 'defaultModelId' | 'reducedMotion', value: string | boolean | null) {
-    this.draft.update((current) => ({
-      ...current,
-      appearance: { ...current.appearance, [key]: value },
-    }));
+    this.edit((current) => ({ ...current, appearance: { ...current.appearance, [key]: value } }));
+  }
+  /** 每次修改都立即預覽，並清掉上一次動作的提示。 */
+  private edit(change: (current: UserSettingsDto) => UserSettingsDto) {
+    this.draft.update(change);
     this.service.preview(this.draft());
     this.notice.set('');
   }
   searchChanged(value: string) {
     this.search.set(value);
-    if (
-      !this.visibleSections().some((item) => item.id === this.section()) &&
-      this.visibleSections()[0]
-    )
-      this.section.set(this.visibleSections()[0].id);
+    const visible = this.visibleSections();
+    if (visible[0] && !visible.some((item) => item.id === this.section()))
+      this.section.set(visible[0].id);
   }
   reset() {
     this.draft.set(structuredClone(this.saved()));
@@ -220,23 +217,25 @@ export class SettingsPage {
     this.notice.set('已取消尚未儲存的變更。');
   }
   async save() {
+    const current = this.scope.guard();
     this.saving.set(true);
     this.saveError.set('');
     try {
       const value = await this.service.save(this.draft());
-      if (!this.alive) return;
+      if (!current()) return;
       this.saved.set(structuredClone(value));
       this.notice.set('已儲存，會套用於此帳號的其他裝置。');
     } catch (error) {
-      if (this.alive) this.saveError.set(safeMessage(error));
+      if (current()) this.saveError.set(safeMessage(error));
     } finally {
-      if (this.alive) this.saving.set(false);
+      if (current()) this.saving.set(false);
     }
   }
   async enableNotifications() {
     if (!('Notification' in window)) return;
+    const current = this.scope.guard();
     const permission = await Notification.requestPermission();
-    if (!this.alive) return;
+    if (!current()) return;
     this.notificationPermission.set(permission);
     if (permission === 'granted') this.update('notifyOnCompletion', true);
   }
@@ -260,4 +259,5 @@ export class SettingsPage {
   readonly format = formatNumber;
   readonly duration = formatDuration;
   readonly bytes = formatBytes;
+  readonly initial = nameInitial;
 }

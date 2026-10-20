@@ -25,7 +25,7 @@
       }
     </nav>
     <div class="settings-account">
-      <span class="avatar">{{ session.me()?.displayName?.slice(0, 1) || 'N' }}</span
+      <span class="avatar">{{ initial(session.me()?.displayName) }}</span
       ><span
         ><strong>{{ session.me()?.displayName }}</strong
         ><small>個人工作區</small></span
@@ -334,7 +334,7 @@
             <section nxCard class="settings-card">
               <h2>公司身分</h2>
               <div class="account-identity">
-                <span class="avatar">{{ session.me()?.displayName?.slice(0, 1) }}</span>
+                <span class="avatar">{{ initial(session.me()?.displayName) }}</span>
                 <div>
                   <strong>{{ session.me()?.displayName }}</strong>
                   <p>{{ session.me()?.account }}</p>
