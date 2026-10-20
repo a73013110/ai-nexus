@@ -147,7 +147,7 @@
                     [disabled]="store.locked()"
                     (valueChange)="people.find($event)"
                 /></label>
-                @if (people.text().trim().length >= 2) {
+                @if (people.searchable()) {
                   <div class="directory-results" role="region" aria-label="符合的使用者">
                     @for (user of people.results(); track user.id) {
                       <button
