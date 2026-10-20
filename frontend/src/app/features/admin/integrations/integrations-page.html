@@ -51,17 +51,17 @@
                   [placeholder]="'搜尋' + source.name + '的標題或識別碼…'"
                   [value]="query()"
                   (input)="query.set($any($event.target).value)"
-                  [disabled]="searching() || busy()" /></label
+                  [disabled]="locked()" /></label
               ><nx-select
                 label="來源資料類型"
                 [options]="kindOptions()"
                 [value]="kind()"
                 (valueChange)="kind.set($event)"
-                [disabled]="searching() || busy()"
+                [disabled]="locked()"
               /><button
                 class="primary-button"
                 type="submit"
-                [disabled]="searching() || busy() || query().trim().length < 2"
+                [disabled]="locked() || query().trim().length < 2"
               >
                 <nx-icon name="search" />{{ searching() ? '查詢中…' : '查詢' }}
               </button>
