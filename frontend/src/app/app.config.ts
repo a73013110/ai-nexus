@@ -10,6 +10,8 @@ import { ClientIssues } from '@core/errors/client-issues';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { withMorphTransitions } from '@core/layout/view-morph';
+import { provideNavigationBadges } from '@core/layout/navigation-badges';
+import { NotificationStore } from '@features/platform/notifications/notification-store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,5 +38,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideZonelessChangeDetection(),
     provideRouter(routes, withMorphTransitions()),
+    // 側欄入口的徽章；新來源在這裡加一行（見 NavigationBadges）。
+    provideNavigationBadges(() => inject(NotificationStore).featureBadges),
   ],
 };
