@@ -5,6 +5,8 @@ import type { DirectoryUserDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CollaborationApi } from './collaboration-api';
 
+const MIN_QUERY_LENGTH = 2;
+
 /**
  * 人員選擇器的查詢：輸入暫停後才搜尋目錄，從兩個字元起算。
  * 結果會排除 `chosen` 已列出的人，以及已登入的使用者（分享給自己沒有意義；`includeSelf` 用於管理員替自己分派，例如組織單位）。
@@ -17,7 +19,7 @@ export function directorySearch(chosen: () => string[], options: { includeSelf?:
   const text = signal('');
   const query = signal('');
   const read = apiResource({
-    params: () => (query().length >= 2 ? query() : undefined),
+    params: () => (query().length >= MIN_QUERY_LENGTH ? query() : undefined),
     loader: (value) => api.directory(value),
   });
   const results = computed<DirectoryUserDto[]>(() => {
@@ -27,6 +29,8 @@ export function directorySearch(chosen: () => string[], options: { includeSelf?:
   });
   return {
     text: text.asReadonly(),
+    /** 輸入已達查詢字數；結果區以此決定是否顯示，門檻只在這裡定義。 */
+    searchable: computed(() => text().trim().length >= MIN_QUERY_LENGTH),
     results,
     error: read.error,
     find(value: string) {
