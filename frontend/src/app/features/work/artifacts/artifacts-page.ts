@@ -22,6 +22,7 @@ import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '@core
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
+import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
 import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
@@ -233,7 +234,7 @@ export class ArtifactsPage {
     const unload = (event: BeforeUnloadEvent) => {
       if (this.dirty()) event.preventDefault();
     };
-    bindHotkeys({ 'mod+s': () => void this.save() });
+    bindHotkeys({ [SHORTCUTS.saveArtifact.keys]: () => void this.save() });
     window.addEventListener('beforeunload', unload);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', unload));
   }

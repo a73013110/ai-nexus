@@ -18,7 +18,7 @@
       type="button"
       class="icon-button"
       aria-label="開啟快捷指令"
-      title="快捷指令 Ctrl + K"
+      [title]="'快捷指令 ' + paletteKeys"
       (click)="commands.emit()"
     >
       <nx-icon name="command" />

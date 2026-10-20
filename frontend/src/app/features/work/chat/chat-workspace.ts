@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { ConversationDto, ConversationSettingsRequest } from '@core/api/schema';
+import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
 import { SidebarPanelContent } from '@core/layout/sidebar-panel';
 import { WorkspaceCommands } from '@core/layout/workspace-commands';
 import { WorkspaceLayout } from '@core/layout/workspace-layout';
@@ -100,14 +101,14 @@ export class ChatWorkspace {
       label: '開始新對話',
       detail: '建立新的工作思路',
       icon: 'plus',
-      shortcut: 'Ctrl Alt N',
+      shortcut: SHORTCUTS.newChat.keys,
     },
     {
       id: 'prompts',
       label: '開啟常用提示詞',
       detail: '套用或整理個人範本',
       icon: 'library',
-      shortcut: 'Ctrl Shift L',
+      shortcut: SHORTCUTS.promptLibrary.keys,
     },
     {
       id: 'import',
@@ -151,8 +152,8 @@ export class ChatWorkspace {
     });
     bindHotkeys(
       {
-        'mod+alt+n': () => void this.router.navigate([routeOf('chat')]),
-        'mod+shift+l': () => void this.library().open(),
+        [SHORTCUTS.newChat.keys]: () => void this.router.navigate([routeOf('chat')]),
+        [SHORTCUTS.promptLibrary.keys]: () => void this.library().open(),
       },
       () =>
         !this.tours.active() && !this.tours.loading() && !document.querySelector('dialog[open]'),

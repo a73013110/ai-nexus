@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hotkey } from './hotkeys';
+import { hotkey, keyCaps, keyText } from './hotkeys';
 
 const press = (init: KeyboardEventInit) => hotkey(new KeyboardEvent('keydown', init));
 
@@ -17,5 +17,21 @@ describe('hotkey', () => {
   });
   it('ignores the bare keydown Chrome autofill dispatches', () => {
     expect(hotkey(new Event('keydown') as KeyboardEvent)).toBe('');
+  });
+});
+
+describe('keyCaps', () => {
+  it('shows the platform modifiers', () => {
+    expect(keyCaps('mod+alt+n', false)).toEqual(['Ctrl', 'Alt', 'N']);
+    expect(keyCaps('mod+alt+n', true)).toEqual(['⌘', '⌥', 'N']);
+  });
+  it('names keys the way they are printed', () => {
+    expect(keyCaps('escape', false)).toEqual(['Esc']);
+    expect(keyCaps('f2', false)).toEqual(['F2']);
+    expect(keyCaps('shift+enter', true)).toEqual(['⇧', 'Enter']);
+  });
+  it('joins plain text by platform convention', () => {
+    expect(keyText('mod+k', false)).toBe('Ctrl+K');
+    expect(keyText('mod+k', true)).toBe('⌘K');
   });
 });

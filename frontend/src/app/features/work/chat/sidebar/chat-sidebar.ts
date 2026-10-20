@@ -10,8 +10,10 @@ import {
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '@core/api/schema';
+import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
 import { ViewMorph } from '@core/layout/view-morph';
 import { currentDay } from '@shared/browser/calendar-day';
+import { keyText } from '@shared/browser/hotkeys';
 import { rovingIndex } from '@shared/browser/roving-index';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
@@ -42,6 +44,7 @@ import { routeOf } from '@core/api/catalog';
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
+  readonly paletteKeys = keyText(SHORTCUTS.commandPalette.keys);
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   readonly store = inject(ChatStore);

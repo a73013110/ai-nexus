@@ -30,6 +30,8 @@ import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { TextHighlight } from '@shared/ui/text-highlight';
 import { ViewScope } from '@shared/browser/view-scope';
+import { hotkey } from '@shared/browser/hotkeys';
+import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { jobFailure } from '@features/work/jobs/job-kind';
 import { Island } from '@shared/ui/island';
@@ -483,7 +485,7 @@ export class DocumentViewer {
     }
   }
   shortcut(event: KeyboardEvent) {
-    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'f') return;
+    if (hotkey(event) !== SHORTCUTS.findInDocument.keys) return;
     if (!this.hasText() || this.searchDisabled()) return;
     event.preventDefault();
     this.openSearch();

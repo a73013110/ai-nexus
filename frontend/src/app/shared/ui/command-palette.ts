@@ -10,17 +10,19 @@ import {
 } from '@angular/core';
 import { Icon } from './icon';
 import { CompactDialog } from './compact-dialog';
+import { KeyCombo } from './key-combo';
 
 export interface Command {
   id: string;
   label: string;
   detail: string;
   icon: string;
+  /** `hotkey()` 格式的組合鍵（例：`mod+alt+n`），顯示時依平台換成 ⌘ 或 Ctrl。 */
   shortcut?: string;
 }
 @Component({
   selector: 'nx-command-palette',
-  imports: [Icon, CompactDialog],
+  imports: [Icon, CompactDialog, KeyCombo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './command-palette.scss',
   template: `<dialog
@@ -70,7 +72,7 @@ export interface Command {
             ><small>{{ command.detail }}</small></span
           >
           @if (command.shortcut) {
-            <kbd>{{ command.shortcut }}</kbd>
+            <nx-key-combo [keys]="command.shortcut" />
           }
         </button>
       } @empty {
