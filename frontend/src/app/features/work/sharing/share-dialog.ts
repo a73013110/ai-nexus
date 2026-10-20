@@ -22,6 +22,12 @@ import { SharingApi } from './sharing-api';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { Checkbox } from '@shared/ui/checkbox';
 import { routeOf } from '@core/api/catalog';
+
+type ShareKind = 'conversation' | 'artifact';
+
+/** 與後端 `ShareLink.MaxRecipients` 一致；超過時伺服器以驗證錯誤拒絕。 */
+const MAX_RECIPIENTS = 20;
+
 @Component({
   selector: 'nx-share-dialog',
   imports: [Notice, CompactDialog, DialogHeader, Field, Select, Icon, RouterLink, Checkbox],
@@ -78,14 +84,10 @@ import { routeOf } from '@core/api/catalog';
             </button>
           }
         </div>
-        @if (people.text().trim().length >= 2) {
+        @if (people.searchable()) {
           <div class="directory-results">
             @for (user of people.results(); track user.id) {
-              <button
-                class="directory-user"
-                [disabled]="busy() || recipients().length >= 20"
-                (click)="add(user)"
-              >
+              <button class="directory-user" [disabled]="busy() || full()" (click)="add(user)">
                 <span
                   ><strong>{{ user.displayName }}</strong
                   ><small>{{ user.account }}</small></span
@@ -117,7 +119,9 @@ import { routeOf } from '@core/api/catalog';
     </div>
     @if (!created()) {
       <footer class="dialog-foot">
-        <p class="dialog-note">最多 20 位收件者。建立後可在「我分享的」隨時撤銷。</p>
+        <p class="dialog-note">
+          最多 {{ maxRecipients }} 位收件者。建立後可在「我分享的」隨時撤銷。
+        </p>
         <button class="secondary-button" [disabled]="busy()" (click)="dialog.close()">取消</button>
         <button
           class="primary-button"
@@ -133,24 +137,26 @@ import { routeOf } from '@core/api/catalog';
 export class ShareDialog {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
-  readonly kind = input.required<string>();
+  readonly kind = input.required<ShareKind>();
   readonly sourceId = input.required<string>();
   readonly name = input('');
   readonly version = input<number | null>(null);
-  readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  readonly maxRecipients = MAX_RECIPIENTS;
   readonly recipients = signal<DirectoryUserDto[]>([]);
+  readonly full = computed(() => this.recipients().length >= MAX_RECIPIENTS);
   readonly people = directorySearch(() => this.recipients().map((item) => item.id));
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);
   readonly busy = signal(false);
-  readonly createError = signal('');
+  private readonly createError = signal('');
   readonly error = computed(() => this.createError() || this.people.error());
   readonly copy = inject(CopyFeedback);
   private readonly api = inject(SharingApi);
   private readonly scope = inject(ViewScope);
-  private request = 0;
-  private context?: { kind: string; id: string; version: number | null };
+  /** 開啟當下的來源；建立期間宿主可能換成別的對話或成果，送出與結果都以此為準。 */
+  private context?: { kind: ShareKind; id: string; version: number | null };
   readonly durations = [
     { value: '1', label: '1 小時' },
     { value: '24', label: '1 天' },
@@ -159,7 +165,6 @@ export class ShareDialog {
   ];
   open() {
     if (this.busy()) return;
-    ++this.request;
     this.context = { kind: this.kind(), id: this.sourceId(), version: this.version() };
     this.created.set(null);
     this.createError.set('');
@@ -172,7 +177,7 @@ export class ShareDialog {
     return `${location.origin}/shared/${id}`;
   }
   add(user: DirectoryUserDto) {
-    if (!this.recipients().some((item) => item.id === user.id) && this.recipients().length < 20)
+    if (!this.full() && !this.recipients().some((item) => item.id === user.id))
       this.recipients.update((all) => [...all, user]);
   }
   remove(id: string) {
@@ -182,7 +187,8 @@ export class ShareDialog {
     if (this.busy() || !this.recipients().length || !this.context) return;
     const context = this.context,
       alive = this.scope.guard();
-    const valid = () => alive() && context === this.context && context.id === this.sourceId();
+    // busy 期間 open() 不會換掉 context，只需確認宿主仍指向同一個來源。
+    const valid = () => alive() && context.id === this.sourceId();
     this.busy.set(true);
     this.createError.set('');
     try {
@@ -195,8 +201,8 @@ export class ShareDialog {
         artifactVersion: context.version,
       });
       if (valid()) this.created.set(value);
-    } catch (error2) {
-      if (valid()) this.createError.set(this.scope.message(error2));
+    } catch (failure) {
+      if (valid()) this.createError.set(this.scope.message(failure));
     } finally {
       if (alive()) this.busy.set(false);
     }
