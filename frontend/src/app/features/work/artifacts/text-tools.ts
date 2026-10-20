@@ -23,6 +23,7 @@ import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { Icon } from '@shared/ui/icon';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { InferenceSignal } from '@shared/ui/inference-signal';
+import { formatNumber } from '@shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { routeOf } from '@core/api/catalog';
@@ -117,7 +118,7 @@ import { routeOf } from '@core/api/catalog';
             }
             <details class="text-tool-source">
               <summary>
-                選取原文 <span>{{ source().length.toLocaleString() }} 字元</span>
+                選取原文 <span>{{ formatNumber(source().length) }} 字元</span>
               </summary>
               <p>{{ source() }}</p>
             </details>
@@ -179,6 +180,7 @@ export class TextTools {
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   readonly copy = inject(CopyFeedback);
+  readonly formatNumber = formatNumber;
   readonly modelId = input<string | null>(null);
   readonly projectId = input<string | null>(null);
   readonly canReplace = input(false);
@@ -205,17 +207,13 @@ export class TextTools {
   readonly labels: Record<string, string> = Object.fromEntries(
     TEXT_ACTIONS.map((action) => [action.value, `${action.label}段落`]),
   );
-  readonly languages = ['English', '繁體中文', '日本語', '简体中文'].map((value) => ({
-    value,
-    label:
-      value === 'English'
-        ? '英文'
-        : value === '日本語'
-          ? '日文'
-          : value === '简体中文'
-            ? '簡體中文'
-            : value,
-  }));
+  // value 是交給模型的目標語言名稱，label 是介面上的稱呼。
+  readonly languages = [
+    { value: 'English', label: '英文' },
+    { value: '繁體中文', label: '繁體中文' },
+    { value: '日本語', label: '日文' },
+    { value: '简体中文', label: '簡體中文' },
+  ];
   private controller?: AbortController;
   private sourceMessage: string | null = null;
   constructor() {

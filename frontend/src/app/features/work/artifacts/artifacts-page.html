@@ -105,9 +105,9 @@
         [value]="mode()"
         (valueChange)="mode.set($event)"
       />
-      @if (mode() !== 'read' && editable()) {
+      @if (editing()) {
         <span class="artifact-count"
-          >{{ content().length.toLocaleString() }} / 64,000 字元 · Ctrl / ⌘ S 儲存</span
+          >{{ formatNumber(content().length) }} / 64,000 字元 · Ctrl / ⌘ S 儲存</span
         >
         @if (dirty()) {
           <button class="quiet-button" [disabled]="busy()" (click)="discard()">捨棄修改</button>
@@ -121,7 +121,7 @@
         </button>
       }
     </div>
-    @if (mode() !== 'read' && editable()) {
+    @if (editing()) {
       <input
         nxField
         class="artifact-name"
@@ -138,7 +138,7 @@
         @for (item of textActions; track item.value) {
           <button
             class="quiet-button"
-            [disabled]="selected.text.length > 8000 || busy()"
+            [disabled]="selected.text.length > maxSelection || busy()"
             (click)="transform(item.value)"
           >
             <nx-icon [name]="item.icon" />{{ item.label }}
@@ -147,7 +147,7 @@
       </div>
     }
     <div class="artifact-body" [class.split]="mode() === 'split'">
-      @if (mode() !== 'read' && editable()) {
+      @if (editing()) {
         <textarea
           nxField
           #editor

@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { SelectedText } from '@shared/browser/text-selection';
+import { rovingIndex } from '@shared/browser/roving-index';
 import { Icon } from '@shared/ui/icon';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 
@@ -78,17 +79,8 @@ export class TextSelectionToolbar {
     }
     const buttons = [...this.panel().nativeElement.querySelectorAll<HTMLButtonElement>('button')];
     const index = buttons.indexOf(event.target as HTMLButtonElement);
-    const next =
-      event.key === 'ArrowRight'
-        ? (index + 1) % buttons.length
-        : event.key === 'ArrowLeft'
-          ? (index - 1 + buttons.length) % buttons.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? buttons.length - 1
-              : -1;
-    if (next >= 0) {
+    const next = rovingIndex(event.key, index, buttons.length, { orientation: 'horizontal' });
+    if (next !== null) {
       event.preventDefault();
       buttons[next].focus();
     }
