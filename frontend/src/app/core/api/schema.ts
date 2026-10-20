@@ -9094,6 +9094,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/mail-samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMailSamples"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/mail-status": {
         parameters: {
             query?: never;
@@ -10390,6 +10406,23 @@ export interface components {
             errorCode: null | string;
             sensitive: boolean;
         };
+        MailSampleDto: {
+            category: string;
+            name: string;
+            description: string;
+            priority: string;
+            sensitive: boolean;
+            templateType: string;
+            modelType: string;
+            parameters: components["schemas"]["MailSampleParameter"][];
+        };
+        MailSampleParameter: {
+            name: string;
+            type: string;
+            required: boolean;
+            description: string;
+            example: null | string;
+        };
         MailSettingsDto: {
             autoRetry: boolean;
             /** Format: date-time */
@@ -10426,6 +10459,10 @@ export interface components {
         };
         MailTestRequest: {
             to: string;
+            category?: null | string;
+            parameters?: null | {
+                [key: string]: string;
+            };
         };
         MeDto: {
             /** Format: uuid */
@@ -11998,6 +12035,8 @@ export type MailDiagnosisStep = components['schemas']['MailDiagnosisStep'];
 export type MailEnqueuedDto = components['schemas']['MailEnqueuedDto'];
 export type MailMessageDetailDto = components['schemas']['MailMessageDetailDto'];
 export type MailMessageDto = components['schemas']['MailMessageDto'];
+export type MailSampleDto = components['schemas']['MailSampleDto'];
+export type MailSampleParameter = components['schemas']['MailSampleParameter'];
 export type MailSettingsDto = components['schemas']['MailSettingsDto'];
 export type MailSettingsRequest = components['schemas']['MailSettingsRequest'];
 export type MailStatusDto = components['schemas']['MailStatusDto'];
@@ -36988,6 +37027,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MailEnqueuedDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListMailSamples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSampleDto"][];
                 };
             };
             /** @description Bad Request */

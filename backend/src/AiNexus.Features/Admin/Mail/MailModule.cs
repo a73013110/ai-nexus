@@ -13,7 +13,7 @@ namespace AiNexus.Features.Admin.Mail;
 /// <summary>
 /// 郵件寄送平台：其他模組透過 <see cref="MailOutbox"/> 在自己的交易內入列，<see cref="MailDispatcher"/> 在背景寄出，
 /// <see cref="MailRetentionWorker"/> 依保存期限清理。傳輸由 <c>Mail:Transport</c> 決定（SMTP、pickup 目錄或停用）。
-/// 管理端的寄送紀錄（查詢、詳情、重寄、立即重試、測試信）用來查證「到底有沒有寄出」，連線診斷用來查「為什麼寄不出」。
+/// 管理端的寄送紀錄（查詢、詳情、重寄、立即重試、以任一登記的系統信寄測試信）用來查證「到底有沒有寄出」，連線診斷用來查「為什麼寄不出」。
 /// </summary>
 public sealed class MailModule : IFeatureModule
 {
@@ -51,6 +51,12 @@ public sealed class MailModule : IFeatureModule
         services.AddHostedService<MailDispatcher>();
         services.AddHostedService<MailRetentionWorker>();
         services.AddMonitoringSource<MailMonitoring>();
+        services.AddMailSample(new TestMail(), "郵件設定測試", "管理頁原本的測試信：確認設定能寄出，內容是要求者、時間、傳輸與寄件地址。",
+            x => new TestMailModel(
+                x.Text(nameof(TestMailModel.RequestedBy), "要求者顯示名稱", MailSampleContext.ExampleName),
+                x.Time(nameof(TestMailModel.RequestedAt), "要求時間（信內以 UTC 顯示）", x.Context.Now),
+                x.Text(nameof(TestMailModel.Transport), "傳輸名稱（只影響信內文字，不改變實際傳輸）", x.Context.Transport),
+                x.Text(nameof(TestMailModel.From), "寄件地址（預設為目前的 Mail:From 系統信箱；只影響信內文字，不改變實際寄件者）", x.Context.From)));
         services.AddFeaturePolicy(FeatureCatalog.MailMessages);
         services.AddFeaturePolicy(FeatureCatalog.MailMessagesResend);
         services.AddRateLimiter(options => options.AddPerUserLimit(TestRateLimit, 3).AddPerUserLimit(DiagnosisRateLimit, 5));
@@ -64,6 +70,7 @@ public sealed class MailModule : IFeatureModule
         ResendMailMessage.Map(messages);
         RetryMailMessage.Map(messages);
         SendTestMail.Map(api.MapGroup("/admin/mail-tests").RequireAuthorization(Policies.MailMessages));
+        ListMailSamples.Map(api.MapGroup("/admin/mail-samples").RequireAuthorization(Policies.MailMessages));
         GetMailStatus.Map(api.MapGroup("/admin/mail-status").RequireAuthorization(Policies.MailMessages));
         DiagnoseMailTransport.Map(api.MapGroup("/admin/mail-diagnoses").RequireAuthorization(Policies.MailMessages));
         UpdateMailSettings.Map(api.MapGroup("/admin/mail-settings").RequireAuthorization(Policies.MailMessages));

@@ -8,7 +8,9 @@ public sealed record TestMailModel(string RequestedBy, DateTimeOffset RequestedA
 /// <summary>管理頁「寄測試信」的範本：確認設定能寄出，內容不含任何秘密。</summary>
 public sealed class TestMail : MailTemplate<TestMailModel>
 {
-    public override string Category => "mail.test";
+    public const string TestCategory = "mail.test";
+
+    public override string Category => TestCategory;
 
     public override string Subject(TestMailModel model) => "AI Nexus 郵件設定測試";
 

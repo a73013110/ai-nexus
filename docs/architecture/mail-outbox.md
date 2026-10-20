@@ -16,6 +16,8 @@ if (!enqueued.IsSuccess) return enqueued.Error;   // mail_address_invalid／mail
 await db.SaveChangesAsync(ct);                   // 業務資料與信件一起提交
 ```
 
+5. 登記到寄信測試：在模組的 `AddServices` 呼叫 `services.AddMailSample(範本, 名稱, 說明, x => new 模型(x.Text(...), x.Number(...), ...))`（[`MailSample`](../../backend/src/AiNexus.Features/Admin/Mail/MailSample.cs)）。依建構子順序宣告每個參數、名稱與建構子參數同名（`SendTestMailTests` 檢查），管理頁才能預填範例並顯示正確的 C# 用法；例見 `AccountModule`。
+
 ## 規則
 
 - **交易**：`EnqueueAsync`／`EnqueueManyAsync` 只 `db.Add`，不儲存；業務失敗或回滾就不會寄出，寄信也不會早於業務提交。範本在入列時渲染，紀錄保存的就是寄出的內容。
