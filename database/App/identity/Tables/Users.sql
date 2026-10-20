@@ -29,14 +29,14 @@ CREATE TABLE [identity].[Users] (
 
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_AdAccount]
-    ON [identity].[Users]([AdAccount] ASC) WHERE ([AdAccount] IS NOT NULL);
+CREATE NONCLUSTERED INDEX [ix_Users_Email]
+    ON [identity].[Users]([Email] ASC) WHERE ([Email] IS NOT NULL);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [ix_Users_Email]
-    ON [identity].[Users]([Email] ASC) WHERE ([Email] IS NOT NULL);
+CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_AdAccount]
+    ON [identity].[Users]([AdAccount] ASC) WHERE ([AdAccount] IS NOT NULL);
 
 
 GO
