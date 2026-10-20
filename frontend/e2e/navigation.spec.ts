@@ -1048,11 +1048,9 @@ test("the menu follows the server tree with links beside pages, nested groups an
   await expect(
     launcher.getByRole("link", { name: "系統日誌", exact: true }),
   ).toBeVisible();
-  await expect(launcher.locator(".workspace-group > :is(h3, h4)")).toHaveText([
-    "AI 工作台",
-    "系統管理",
-    "診斷",
-  ]);
+  await expect(
+    launcher.locator(".workspace-group > :is(h3, h4) .group-name"),
+  ).toHaveText(["AI 工作台", "系統管理", "診斷"]);
   for (const name of ["協作", "洞察"])
     await expect(
       launcher.getByRole("region", { name, exact: true }),

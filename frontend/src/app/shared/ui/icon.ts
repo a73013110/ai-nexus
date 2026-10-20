@@ -80,6 +80,8 @@ import {
   List,
   Pin,
   ChevronsLeft,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Clock,
   RotateCcw,
   Network,
@@ -165,6 +167,8 @@ const icons: Record<string, IconNode> = {
   calendar: Calendar,
   columns: SlidersHorizontal,
   first: ChevronsLeft,
+  'expand-all': ChevronsUpDown,
+  'collapse-all': ChevronsDownUp,
   clock: Clock,
 };
 /** `nx-icon` 不需功能套件即可繪製的名稱；API 的選單圖示不認得時會退回備用。 */
