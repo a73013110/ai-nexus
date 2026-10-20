@@ -119,6 +119,8 @@ public sealed class SettingsTests
         settings.AddJsonFile(Path.Combine(Host, "appsettings.json")).AddJsonFile(Path.Combine(Host, template));
         // 範本中的 Windows 磁碟路徑在 Linux 測試機上不是有效根路徑，因此這裡改用暫存目錄覆寫。
         settings["Files:StoragePath"] = Path.GetTempPath();
+        // Mail:Transport 在 Production 必須明確設定；Local／Secrets 範本給開發機用（Development 會補 Pickup），這裡以 Production 驗證時補上停用。
+        if (string.IsNullOrEmpty(settings["Mail:Transport"])) settings["Mail:Transport"] = "Disabled";
         using var services = Services(settings);
         foreach (var root in Roots)
         {

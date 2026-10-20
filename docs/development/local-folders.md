@@ -15,6 +15,7 @@
 | `certs/` | 匯出給 Angular dev server 的 HTTPS 憑證與私鑰 | `Start-Dev.ps1` |
 | `logs/` | 開發模式前後端的輸出與錯誤 | `Start-Dev.ps1` |
 | `script-history.json` | 腳本選單最近執行的腳本與參數，刪除只會清掉「最近使用」 | `Show-Scripts.ps1` |
+| `mail/` | 開發時寄出的信（`Mail:Transport` 空值＝pickup），`<日期>/<訊息 ID>.eml` | 網站（Development） |
 | `notes/` | 個人的排查紀錄、進度與臨時計畫 | 手動 |
 
 設定的載入順序與欄位見 [參數](configuration.md)。

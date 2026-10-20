@@ -36,6 +36,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
+| `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
 | `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Admin/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
 | `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取 | — |
@@ -44,9 +45,9 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 每個 Options 類別以 `AddSettings<T, TValidator>(區段)`（[`SettingsRegistration`](../../backend/src/AiNexus.Platform/Configuration/SettingsRegistration.cs)）註冊：`BindConfiguration` 綁定、`[OptionsValidator]` source generator 產生的驗證器檢查，`ValidateOnStart` 讓錯誤在接受任何請求前出現。
 
-- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... the following properties were not found on the instance of AiNexus.Features.Platform.Inference.InferenceOptions: 'Execution'`。
+- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... properties were not found on the instance of ...InferenceOptions: 'Execution'`。
 - **不合法的值**：訊息含類別與屬性，例如 `KnowledgeOptions.Retrieval.TopK` 超出範圍，或 `Model 'ollama/qwen3:8b': ContextTokens must be ...`。
-- `SettingsTests` 確保每個區段都有產生的驗證器、`appsettings.json` 加上三份範本都能綁定通過，且公開檔案的秘密欄位為空。
+- `SettingsTests` 確保每個區段有產生的驗證器、預設值加三份範本都能綁定，且公開檔的秘密欄位為空。
 
 新增設定時在模組的 Options 類別加 `public const string Section`、屬性與驗證屬性，跨欄位規則寫在 `IValidatableObject.Validate`；同時在 `appsettings.json` 補上預設值。
 

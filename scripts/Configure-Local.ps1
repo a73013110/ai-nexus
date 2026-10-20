@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-互動輸入本機的 SQL、AD 與 Google AI 設定。
+互動輸入本機的 SQL、AD、Google AI 與 SMTP 設定。
 
 .DESCRIPTION
 一般參數寫入 .local/config/appsettings.Local.json，密碼與 key 以遮蔽輸入寫入 .local/secrets/appsettings.Secrets.json
@@ -43,7 +43,8 @@ foreach ($field in @(
     @{ Path = 'Databases.App.User'; Prompt = '既有 SQL 登入帳號' },
     @{ Path = 'Databases.App.Password'; Prompt = 'SQL 密碼' },
     @{ Path = 'Identity.ActiveDirectory.BindPassword'; Prompt = 'AD 服務帳號密碼' },
-    @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' }
+    @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' },
+    @{ Path = 'Mail.Smtp.Password'; Prompt = 'SMTP 密碼或 App Password（開發機用 pickup 不寄信時直接 Enter）' }
 )) {
     $value = Read-Secret "$($field.Prompt)（遮蔽輸入，Enter 保留）"
     if ($value) { Set-RepoSetting $secrets $field.Path $value }

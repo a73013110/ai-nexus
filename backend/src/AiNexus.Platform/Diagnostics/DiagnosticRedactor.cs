@@ -15,7 +15,7 @@ public static partial class DiagnosticRedactor
     {
         "IssueCode", "TraceId", "SpanId", "RequestId", "OperationId", "JobId", "RunId", "UserId", "Attempt", "Method", "Route", "StatusCode", "DurationMs",
         "ExternalService", "ErrorCode", "ErrorType", "Code", "SqlError", "SqlNumber", "RequestedMode", "ActualMode", "Reason", "Stage", "Kind", "Count", "RetryCount", "ElapsedMs", "Provider", "ProfileId", "Dimensions", "UntrustedClient", "ClientKind", "ClientFingerprint", "AttachmentId", "DocumentId", "CollectionId", "ResourceId", "ResourceType",
-        "ClientAddress", "UserAgent", "RequestProtocol", "RequestScheme", "RequestOutcome", "RequestAborted", "ResponseStarted"
+        "ClientAddress", "UserAgent", "RequestProtocol", "RequestScheme", "RequestOutcome", "RequestAborted", "ResponseStarted", "MailMessageId"
     };
 
     /// <summary>
