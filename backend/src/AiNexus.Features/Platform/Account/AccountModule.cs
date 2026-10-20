@@ -1,5 +1,7 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Platform.Account.Security;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account;
@@ -16,6 +18,7 @@ public sealed class AccountModule : IFeatureModule
     {
         builder.Services.AddScoped<PersonalUsage>();
         builder.Services.AddScoped<AccountSecurity>();
+        builder.Services.AddDomainEventHandler<UserEmailChanged, NotifyAdministeredEmailChange>();
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(VerificationRateLimit, 10).AddPerUserLimit(CredentialsRateLimit, 5));
     }
 

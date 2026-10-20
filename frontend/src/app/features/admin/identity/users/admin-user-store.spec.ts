@@ -28,6 +28,9 @@ function setup(testing = false) {
       saved = { ...saved, displayName: body.displayName };
     }),
     roles: vi.fn(async () => undefined),
+    email: vi.fn(async (_id: string, email: string | null) => {
+      saved = { ...saved, email, emailSource: email ? 'admin' : null, emailVerifiedAt: null };
+    }),
   };
   const admin = { saved: vi.fn(), readUsers: vi.fn() };
   const session = {
@@ -83,6 +86,32 @@ describe('admin user store', () => {
     expect(store.dirty().storage).toBe(true);
     store.revert('storage');
     expect(store.storage()).toBe('');
+  });
+
+  it('sets an email as trimmed text and clears it with null', async () => {
+    const { store, api, admin, settle } = setup();
+    store.open(user);
+    await settle();
+    expect(store.emailEditable()).toBe(true);
+    store.email.set('  wang@corp.test ');
+    expect(store.dirty().email).toBe(true);
+    await store.saveEmail();
+    expect(api.email).toHaveBeenCalledWith('u1', 'wang@corp.test');
+    expect(store.dirty().email).toBe(false);
+    expect(admin.readUsers).toHaveBeenCalled();
+    await settle();
+    expect(store.current()?.emailSource).toBe('admin');
+    store.email.set('');
+    await store.saveEmail();
+    expect(api.email).toHaveBeenLastCalledWith('u1', null);
+  });
+
+  it('treats a directory email as read-only', async () => {
+    const { store, settle } = setup();
+    store.open({ ...user, email: 'wang@corp.test', emailSource: 'directory' } as AdminUserDto);
+    expect(store.emailEditable()).toBe(false);
+    expect(store.email()).toBe('wang@corp.test');
+    await settle();
   });
 
   it('starts every opening from the saved values on the account tab', async () => {

@@ -17,6 +17,54 @@
       />
     </form>
   }
+  @case ('email') {
+    <form class="dialog-form" (submit)="submit($event)">
+      <div class="dialog-body">
+        <ng-container [ngTemplateOutlet]="error" />
+        <div class="form-sections">
+          <section class="form-section" role="group" aria-labelledby="user-email-address">
+            <header class="form-section-head">
+              <h3 id="user-email-address">通知信箱</h3>
+              <p class="form-note">
+                @if (store.current(); as user) {
+                  @if (user.email) {
+                    目前：{{ emailState(user) }}
+                  } @else {
+                    尚未設定
+                  }
+                }
+              </p>
+            </header>
+            <div class="form-section-body">
+              <label
+                >信箱<input
+                  nxField
+                  type="email"
+                  maxlength="254"
+                  autocomplete="off"
+                  aria-describedby="user-email-hint"
+                  placeholder="name@company.com"
+                  [value]="store.email()"
+                  [readOnly]="store.locked() || !store.emailEditable()"
+                  (input)="store.email.set($any($event.target).value)"
+              /></label>
+              <p id="user-email-hint" class="form-note">
+                @if (store.emailEditable()) {
+                  管理員設定的信箱在本人驗證前標示為未驗證，不會用來寄驗證碼；留空儲存即清除。原本已驗證的信箱會收到變更通知。
+                } @else {
+                  此信箱由公司 AD 提供，每次登入時同步，請在 AD 修改。
+                }
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+      <ng-container
+        [ngTemplateOutlet]="actions"
+        [ngTemplateOutletContext]="{ label: '儲存通知信箱' }"
+      />
+    </form>
+  }
   @case ('roles') {
     <form class="dialog-form" (submit)="submit($event)">
       <div class="dialog-body">

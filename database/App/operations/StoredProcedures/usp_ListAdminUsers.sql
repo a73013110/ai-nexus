@@ -1,5 +1,5 @@
 
--- 管理頁的使用者列表（ListAdminUsers）：未刪除的使用者每頁 100 筆、依帳號排序，附角色、近期用量、對話數與儲存空間。
+-- 管理頁的使用者列表（ListAdminUsers）：未刪除的使用者每頁 100 筆、依帳號排序，附通知信箱、角色、近期用量、對話數與儲存空間。
 -- 結果集依序為：總筆數、本頁使用者、本頁使用者的角色。
 -- @Since 與 @DefaultAttachmentLimitBytes 由程式傳入（TimeProvider 與設定），不用資料庫時鐘。
 CREATE PROCEDURE [operations].[usp_ListAdminUsers]
@@ -22,7 +22,8 @@ WHERE u.DeletedAt IS NULL
        OR CHARINDEX(@Search, u.Account) > 0
        OR CHARINDEX(@Search, u.DisplayName) > 0
        OR CHARINDEX(@Search, u.LocalAccount) > 0
-       OR CHARINDEX(@Search, u.AdAccount) > 0);
+       OR CHARINDEX(@Search, u.AdAccount) > 0
+       OR CHARINDEX(@Search, u.Email) > 0);
 
 SELECT COUNT(*) AS Total FROM @matches;
 
@@ -96,6 +97,7 @@ storage AS (
 )
 SELECT u.Id, u.Account, u.DisplayName, u.LastSeenAt, u.Enabled,
        u.AdEnabled, u.LocalEnabled, u.AdAccount, u.LocalAccount, CAST(IIF(u.PasswordHash IS NULL, 0, 1) AS BIT) AS HasLocalPassword,
+       u.Email, u.EmailSource, u.EmailVerifiedAt,
        ISNULL(t.Requests, 0) AS Requests, ISNULL(t.Completed, 0) AS Completed, ISNULL(t.Failed, 0) AS Failed, ISNULL(t.Cancelled, 0) AS Cancelled,
        ISNULL(t.InputTokens, 0) AS InputTokens, ISNULL(t.OutputTokens, 0) AS OutputTokens, ISNULL(t.RequestsWithUsage, 0) AS RequestsWithUsage,
        ISNULL(t.TotalDurationMilliseconds, 0) AS TotalDurationMilliseconds, ISNULL(t.TimedRequests, 0) AS TimedRequests,

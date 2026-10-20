@@ -3,7 +3,7 @@ import { ApiClient } from '@core/api/api-client';
 import type { ModelPolicyRequest, UserAccountRequest } from '@core/api/schema';
 
 /**
- * 使用者頁（`identity.users`）的端點：帳號、角色指派、附件容量、個人模型政策、洞察與稽核式讀取對話。
+ * 使用者頁（`identity.users`）的端點：帳號、通知信箱、角色指派、附件容量、個人模型政策、洞察與稽核式讀取對話。
  * 後端分散在 Identity、Operations、Inference、Files、Conversations，授權都是使用者頁，所以集中在這裡。
  */
 @Injectable({ providedIn: 'root' })
@@ -25,6 +25,9 @@ export class IdentityApi {
     this.api.put('/api/v1/admin/users/{id}/model-policy', { path: { id }, body });
   storage = (id: string, limitBytes: number | null) =>
     this.api.put('/api/v1/admin/users/{id}/storage', { path: { id }, body: { limitBytes } });
+  /** `null` 清除；AD 提供的信箱由後端拒絕。 */
+  email = (id: string, email: string | null) =>
+    this.api.put('/api/v1/admin/users/{id}/email', { path: { id }, body: { email } });
   roles = (id: string, roleIds: string[]) =>
     this.api.put('/api/v1/admin/users/{id}/roles', { path: { id }, body: { roleIds } });
   createUser = (body: UserAccountRequest) => this.api.post('/api/v1/admin/users', { body });

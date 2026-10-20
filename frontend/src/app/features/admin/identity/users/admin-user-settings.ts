@@ -9,7 +9,7 @@ import { AccessControlStore } from '@features/admin/access-control/access-contro
 import { StorageUsage } from '@features/work/files/file-library/storage-usage';
 import { ModelPolicyEditor } from '@features/platform/inference/model-policies/model-policy-editor';
 import { AdminUserStore, type UserSettingsTab } from './admin-user-store';
-import { UserAccountFields } from './user-account-fields';
+import { UserAccountFields, emailState } from './user-account-fields';
 import { UserRoleFields } from './user-role-fields';
 
 /**
@@ -38,10 +38,12 @@ export class AdminUserSettings {
   readonly admin = inject(AccessControlStore);
   readonly session = inject(WorkspaceSession);
   readonly tab = input.required<UserSettingsTab>();
+  readonly emailState = emailState;
   submit(event: Event) {
     event.preventDefault();
     const tab = this.tab();
     if (tab === 'account') void this.store.saveAccount();
+    if (tab === 'email') void this.store.saveEmail();
     if (tab === 'roles') void this.store.saveRoles();
     if (tab === 'models') void this.store.saveModels();
     if (tab === 'storage') void this.store.saveStorage();

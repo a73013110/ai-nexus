@@ -28,6 +28,7 @@ const actions: Record<string, string> = {
   'dashboard.platform.read': '檢視平台用量',
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
+  'admin.user_email': '設定使用者信箱',
   'admin.user_model_policy': '設定個人模型政策',
   'admin.user_storage': '調整使用者容量',
   'admin.user': '建立或調整使用者',

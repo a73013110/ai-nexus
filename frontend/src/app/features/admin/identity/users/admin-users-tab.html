@@ -1,7 +1,7 @@
 <div class="page-toolbar">
   <nx-search-field
     label="搜尋使用者"
-    placeholder="搜尋姓名或登入帳號"
+    placeholder="搜尋姓名、登入帳號或信箱"
     [value]="store.search()"
     (valueChange)="store.find($event)"
   />
@@ -24,6 +24,7 @@
   <table>
     <colgroup>
       <col nxTableColumn="name" />
+      <col nxTableColumn="email" />
       <col nxTableColumn="authentication" class="admin-status-column" />
       <col nxTableColumn="roles" />
       <col nxTableColumn="usage" />
@@ -33,6 +34,7 @@
     <thead>
       <tr>
         <th scope="col" nxTableColumn="name">使用者</th>
+        <th scope="col" nxTableColumn="email">通知信箱</th>
         <th scope="col" nxTableColumn="authentication">登入與狀態</th>
         <th scope="col" nxTableColumn="roles">角色</th>
         <th scope="col" nxTableColumn="usage">30 天用量</th>
@@ -58,6 +60,14 @@
             >
               <strong>{{ user.displayName }}</strong></button
             ><small class="ui-truncate" [title]="user.account">{{ user.account }}</small>
+          </td>
+          <td nxTableColumn="email">
+            @if (user.email) {
+              <span class="ui-truncate" [title]="user.email">{{ user.email }}</span
+              ><small>{{ emailState(user) }}</small>
+            } @else {
+              <span>—</span>
+            }
           </td>
           <td nxTableColumn="authentication">
             <nx-access-status [enabled]="user.enabled !== false" /><small>{{
