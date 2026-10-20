@@ -33,8 +33,8 @@
 
 ## 本地密碼的 AD 新鮮度
 
-AD 綁定（SID 不是 `managed:`）且仍允許 AD 登入的使用者，最近一次 AD 驗證超過 `Identity:SelfService:DirectoryFreshnessDays`（預設 30 天）就不能用本地密碼登入，回 403 `directory_verification_required`，先用 AD 登入一次即恢復。
+預設關閉（`Identity:SelfService:DirectoryFreshnessDays` 為 0）：AD 使用者可自行建立本地密碼並一直使用。設為 N（1–365）天時，AD 綁定（SID 不是 `managed:`）且仍允許 AD 登入的使用者，最近一次 AD 驗證超過 N 天就不能用本地密碼登入，回 403 `directory_verification_required`，先用 AD 登入一次即恢復。
 
-- 目的：AD 帳號停用（離職）後，使用者自行設定的本地密碼最晚在期限後失效；管理員停用帳號則立即失效。
+- 目的：AD 帳號停用（離職）後，使用者自行設定的本地密碼最晚在期限後失效；未開啟時只能靠管理員停用帳號（立即失效）。
 - 只在密碼正確後才回這個代碼，密碼錯誤仍是一般的帳密錯誤。
 - 管理員關掉 AD 登入的帳號是明確的本地專用帳號，不套用。

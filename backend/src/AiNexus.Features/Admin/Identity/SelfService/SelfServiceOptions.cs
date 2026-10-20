@@ -28,9 +28,9 @@ public sealed class SelfServiceOptions
 
     /// <summary>
     /// AD 綁定使用者（且仍允許 AD 登入）最近一次 AD 驗證超過這個天數，就不能用本地密碼登入，須先用 AD 登入一次。
-    /// 讓 AD 已停用的離職者，自行設定的本地密碼最晚在這個期限後失效。
+    /// 讓 AD 已停用的離職者，自行設定的本地密碼最晚在這個期限後失效。0 表示不限制（預設）。
     /// </summary>
-    [Range(1, 365)] public int DirectoryFreshnessDays { get; set; } = 30;
+    [Range(0, 365)] public int DirectoryFreshnessDays { get; set; }
 }
 
 [OptionsValidator]
