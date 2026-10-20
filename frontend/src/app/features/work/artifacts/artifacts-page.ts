@@ -28,7 +28,8 @@ import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { downloadBlob } from '@shared/browser/download';
-import { formatDate, relativeTime } from '@shared/browser/format';
+import { formatDate, formatNumber, relativeTime } from '@shared/browser/format';
+import { MAX_SELECTED_TEXT } from '@shared/browser/text-selection';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
@@ -70,6 +71,8 @@ export class ArtifactsPage {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   readonly textActions = TEXT_ACTIONS;
+  readonly maxSelection = MAX_SELECTED_TEXT;
+  readonly formatNumber = formatNumber;
   private readonly api = inject(ArtifactsApi);
   private readonly scope = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);
@@ -152,23 +155,24 @@ export class ArtifactsPage {
     const term = this.filter().toLowerCase(),
       ownership = this.ownership();
     return this.list().filter(
-      (item2) =>
-        (ownership === 'all' || item2.resource.isOwner === (ownership === 'mine')) &&
-        item2.resource.name.toLowerCase().includes(term),
+      (item) =>
+        (ownership === 'all' || item.resource.isOwner === (ownership === 'mine')) &&
+        item.resource.name.toLowerCase().includes(term),
     );
   });
-  readonly dirty = computed(
-    () =>
-      !!this.document() &&
-      (this.restoring() ||
-        this.title() !== this.document()!.resource.name ||
-        this.content() !== this.document()!.content),
-  );
-  readonly editable = computed(
-    () =>
-      this.document()?.resource.canEdit &&
-      (this.document()?.version === this.document()?.currentVersion || this.restoring()),
-  );
+  readonly dirty = computed(() => {
+    const doc = this.document();
+    return (
+      !!doc &&
+      (this.restoring() || this.title() !== doc.resource.name || this.content() !== doc.content)
+    );
+  });
+  readonly editable = computed(() => {
+    const doc = this.document();
+    return !!doc?.resource.canEdit && (doc.version === doc.currentVersion || this.restoring());
+  });
+  /** 編輯區（編輯或並排預覽）是否開啟；沒有編輯權時一律只能閱讀。 */
+  readonly editing = computed(() => this.mode() !== 'read' && this.editable());
   /** 標題下方的一行：檢視者的權限、畫面上的版本，以及是否已儲存。 */
   readonly summary = computed(() => {
     const doc = this.document();
@@ -190,8 +194,8 @@ export class ArtifactsPage {
   readonly tour = computed(() =>
     this.id()
       ? artifactTour({
-          editable: !!this.editable(),
-          editing: this.mode() !== 'read' && !!this.editable(),
+          editable: this.editable(),
+          editing: this.editing(),
           manage: this.documentActions().length > 0,
           shared: this.session.has('sharing'),
         })
@@ -207,22 +211,23 @@ export class ArtifactsPage {
       : []),
   ]);
   readonly choices = computed(() =>
-    this.revisions().map((item3) => ({
-      value: String(item3.version),
-      label: `版本 ${item3.version}`,
-      description: `${item3.author} · ${formatDate(item3.createdAt)}`,
+    this.revisions().map((revision) => ({
+      value: String(revision.version),
+      label: `版本 ${revision.version}`,
+      description: `${revision.author} · ${formatDate(revision.createdAt)}`,
     })),
   );
-  private version = 0;
+  // 列表與 /:id 共用同一個元件，換網址不會銷毀 ViewScope；寫入另以導覽次數判斷是否仍屬於畫面上的文件。
+  private revision = 0;
   private replaceTarget: { start: number; end: number; text: string } | null = null;
   private operationGuard() {
-    const generation = this.version,
+    const revision = this.revision,
       valid = this.scope.guard();
-    return () => valid() && generation === this.version;
+    return () => valid() && revision === this.revision;
   }
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
-      ++this.version;
+      ++this.revision;
       this.actionError.set('');
     });
     const unload = (event: BeforeUnloadEvent) => {
@@ -328,7 +333,7 @@ export class ArtifactsPage {
   }
   transform(action: string) {
     const selected = this.selection();
-    if (!selected || selected.text.length > 8000) return;
+    if (!selected || selected.text.length > MAX_SELECTED_TEXT) return;
     this.replaceTarget = selected;
     this.tools().open(selected.text, action);
   }
@@ -387,6 +392,7 @@ export class ArtifactsPage {
           all?.filter((item) => item.resource.id !== doc.resource.id),
         );
         this.listRead.reload();
+        // 導覽前先解鎖，否則 canLeave 會因 busy 擋下離開。
         this.busy.set(false);
         await this.router.navigate([routeOf('artifacts')]);
       }

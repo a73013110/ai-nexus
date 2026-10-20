@@ -1,5 +1,8 @@
 import { Directive, ElementRef, HostListener, inject, output } from '@angular/core';
 
+/** 段落工具單次可處理的字元數，與後端 `TransformText.MaxTextCharacters` 一致。 */
+export const MAX_SELECTED_TEXT = 8000;
+
 export interface SelectedText {
   text: string;
   sourceId: string;
@@ -30,7 +33,7 @@ export class TextSelection {
       return;
     }
     const text = selection.toString().trim();
-    if (!text || text.length > 8000) {
+    if (!text || text.length > MAX_SELECTED_TEXT) {
       this.textSelected.emit(null);
       return;
     }
