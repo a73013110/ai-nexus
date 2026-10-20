@@ -66,11 +66,11 @@ test("audit-only access keeps deep-link filters and same-page links without requ
   await expect(page.locator(".audit-row")).toHaveCount(1);
   expect(queries[0].searchParams.get("traceId")).toBe(traceId);
   expect(queries[0].searchParams.get("category")).toBe("authentication");
-  await expect(page.locator(".workspace-navigation a.current")).toHaveCount(1);
-  await expect(page.locator(".workspace-navigation a.current")).toHaveAttribute(
-    "href",
-    "/admin/audit",
-  );
+  // 已釘選的稽核在釘選列與全部功能各標一次，兩個都指向同一頁。
+  const current = page.locator(".workspace-navigation a.current");
+  await expect(current).toHaveCount(2);
+  for (const link of await current.all())
+    await expect(link).toHaveAttribute("href", "/admin/audit");
   await page
     .getByRole("list", { name: "釘選功能", exact: true })
     .getByRole("link", { name: "活動稽核", exact: true })

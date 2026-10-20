@@ -13,13 +13,17 @@ import {
 import { NavigationEnd, PRIMARY_OUTLET, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { NgTemplateOutlet } from '@angular/common';
 import { Icon } from '@shared/ui/icon';
+import { CountBadge } from '@shared/ui/count-badge';
 import { ScrollArea } from '@shared/ui/scroll-area';
 import { anchoredPopover } from '@shared/browser/anchored-popover';
 import { setPopoverOrigin } from '@shared/browser/popover-position';
 import { uniqueId } from '@shared/browser/unique-id';
 import { FeatureLauncher } from './feature-launcher';
 import { NavigationPreferences } from './navigation-preferences';
+import { NavigationBadges } from './navigation-badges';
+import { NavigationEntry } from './navigation-entry';
 import { featureIcon } from './navigation-tree';
 
 /**
@@ -30,7 +34,15 @@ import { featureIcon } from './navigation-tree';
 @Component({
   selector: 'nx-workspace-navigation',
   host: { '[class.is-compact]': 'compact()' },
-  imports: [RouterLink, Icon, ScrollArea, FeatureLauncher],
+  imports: [
+    RouterLink,
+    NgTemplateOutlet,
+    Icon,
+    CountBadge,
+    ScrollArea,
+    FeatureLauncher,
+    NavigationEntry,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './workspace-navigation.scss',
   template: `<nav
@@ -38,6 +50,18 @@ import { featureIcon } from './navigation-tree';
     aria-label="工作區功能"
     [class.collapsible]="collapsible()"
   >
+    <!-- 「全部功能」收起來時，沒釘選的功能有徽章就在它的圖示上提示一個圓點。 -->
+    <ng-template #launcherIcon let-closed>
+      <span class="icon-badge-anchor">
+        <nx-icon name="apps" />
+        @if (closed && hiddenBadge()) {
+          <nx-count-badge tone="danger" [dot]="true" [count]="1" [overlay]="true" />
+        }
+      </span>
+    </ng-template>
+    @if (hiddenBadge()) {
+      <span class="sr-only" [id]="hiddenBadgeId">其他功能有新動態</span>
+    }
     <nx-scroll-area label="工作區功能">
       <ul
         class="pinned-features"
@@ -49,16 +73,18 @@ import { featureIcon } from './navigation-tree';
       >
         @for (feature of pins.pinned(); track feature.id) {
           <li>
+            <!-- 釘選列裡都是已釘選的功能，不再顯示圖釘。 -->
             <a
+              nxNavigationEntry
               [routerLink]="feature.route"
               [class.current]="activeFeature() === feature.id"
               [attr.aria-current]="activeFeature() === feature.id ? 'page' : null"
-              [attr.title]="feature.name"
-              [attr.aria-label]="feature.name"
+              [layout]="strip() || compact() ? 'icon' : 'row'"
+              [name]="feature.name"
+              [icon]="icon(feature.icon)"
+              [badge]="badges.of(feature.id)"
               (click)="activated.emit()"
-            >
-              <nx-icon [name]="icon(feature.icon)" /><span>{{ feature.name }}</span>
-            </a>
+            ></a>
           </li>
         }
         @if (strip() && collapsible()) {
@@ -70,9 +96,13 @@ import { featureIcon } from './navigation-tree';
               title="全部功能"
               [class.is-open]="expanded()"
               [attr.aria-expanded]="expanded()"
+              [attr.aria-describedby]="hiddenBadge() && !expanded() ? hiddenBadgeId : null"
               (click)="expandedChange.emit(!expanded())"
             >
-              <nx-icon name="apps" />
+              <ng-container
+                [ngTemplateOutlet]="launcherIcon"
+                [ngTemplateOutletContext]="{ $implicit: !expanded() }"
+              />
             </button>
           </li>
         }
@@ -86,17 +116,26 @@ import { featureIcon } from './navigation-tree';
           title="全部功能"
           [class.current]="activeIndex() < 0 && !!activeFeature()"
           [attr.popovertarget]="flyoutId"
+          [attr.aria-describedby]="hiddenBadge() && !flyoutOpen() ? hiddenBadgeId : null"
         >
-          <nx-icon name="apps" />
+          <ng-container
+            [ngTemplateOutlet]="launcherIcon"
+            [ngTemplateOutletContext]="{ $implicit: !flyoutOpen() }"
+          />
         </button>
       } @else if (collapsible() && !strip()) {
         <button
           type="button"
           class="workspace-disclosure"
           [attr.aria-expanded]="expanded()"
+          [attr.aria-describedby]="hiddenBadge() && !expanded() ? hiddenBadgeId : null"
           (click)="expandedChange.emit(!expanded())"
         >
-          <nx-icon name="apps" /><strong>全部功能</strong> <nx-icon name="chevron" />
+          <ng-container
+            [ngTemplateOutlet]="launcherIcon"
+            [ngTemplateOutletContext]="{ $implicit: !expanded() }"
+          /><strong>全部功能</strong>
+          <nx-icon name="chevron" />
         </button>
       } @else if (!collapsible() || expanded()) {
         <h2 class="launcher-title">全部功能</h2>
@@ -126,6 +165,7 @@ import { featureIcon } from './navigation-tree';
 })
 export class WorkspaceNavigation {
   readonly pins = inject(NavigationPreferences);
+  readonly badges = inject(NavigationBadges);
   private readonly router = inject(Router);
   private readonly navigation = toSignal(
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
@@ -136,6 +176,16 @@ export class WorkspaceNavigation {
   readonly expanded = input(false);
   readonly expandedChange = output<boolean>();
   readonly flyoutId = uniqueId('launcher-flyout');
+  readonly hiddenBadgeId = uniqueId('launcher-badge');
+  /** 沒釘選的功能有徽章：「全部功能」收起來時看不到它們，由觸發鈕代為提示。 */
+  readonly hiddenBadge = computed(() =>
+    this.badges.any(
+      this.pins
+        .pages()
+        .map((page) => page.id)
+        .filter((id) => !this.pins.has(id)),
+    ),
+  );
   /** 圖示顯示時，把釘選（與啟動器切換）並排放在同一列。 */
   readonly strip = computed(() => !this.compact() && this.pins.display() === 'icons');
   private readonly flyout = viewChild<ElementRef<HTMLElement>>('flyout');

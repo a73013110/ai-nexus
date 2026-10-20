@@ -1,10 +1,11 @@
 import { isCancellation, safeMessage } from '@core/errors/safe-errors';
-import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import type { NotificationDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { WorkspaceLayout } from '@core/layout/workspace-layout';
-import { notificationUrl } from './notification-target';
+import type { NavigationBadgeMap } from '@core/layout/navigation-badges';
+import { notificationFeature, notificationUrl } from './notification-target';
 import { NotificationsApi } from './notifications-api';
 
 @Injectable({ providedIn: 'root' })
@@ -22,6 +23,18 @@ export class NotificationStore {
   readonly unreadOnly = signal(false);
   /** 通知中心的分頁：伺服器收件匣，或此分頁的提示歷史。 */
   readonly view = signal<'inbox' | 'session'>('inbox');
+  /**
+   * 側欄徽章：已載入的通知中，每個功能的未讀數（例：完成的對話記在對話）。只算目前載入的最新一頁，
+   * 輪詢會更新；更早的未讀不在其中，未讀總數仍以鈴鐺（伺服器的計數）為準。
+   */
+  readonly featureBadges = computed<NavigationBadgeMap>(() => {
+    const counts = new Map<string, number>();
+    for (const item of this.items()) {
+      const feature = item.readAt ? null : notificationFeature(item.target);
+      if (feature) counts.set(feature, (counts.get(feature) ?? 0) + 1);
+    }
+    return counts;
+  });
   private timer?: ReturnType<typeof setTimeout>;
   private controller?: AbortController;
   private owner = '';

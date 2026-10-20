@@ -1,0 +1,82 @@
+// 只排內容；外框（高度、內距、圓角、顏色、選取底色）由所在列表決定。
+// 徽章比工具列的小一號，圖示欄 36px 的格子也放得下「99+」；外圈是側欄底色，看起來像從圖示上切出來。
+:host {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  --count-badge-size: 1rem;
+  --count-badge-font-size: 0.6875rem;
+  --count-badge-padding: 0.25rem;
+  --count-badge-ring: var(--sidebar);
+}
+:host(.is-row) {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--p-space-2);
+}
+:host(.is-tile) {
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+:host(.is-icon) {
+  justify-content: center;
+}
+// 選取中的入口是凸起的 surface 晶片，徽章外圈跟著換色。
+:host(.current),
+:host([aria-pressed='true']) {
+  --count-badge-ring: var(--surface);
+  .entry-icon > nx-icon {
+    color: var(--accent);
+  }
+}
+.entry-icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+// 名稱單行截斷；圖釘與外部連結標記 flex: none，名稱再長也不會擠掉它們。
+.entry-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+:host(.is-row) .entry-label {
+  flex: 1;
+}
+:host(.is-icon) .entry-label {
+  display: none;
+}
+.entry-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:host(.is-tile) .entry-name {
+  text-align: center;
+}
+.entry-pin,
+.entry-external {
+  flex: none;
+  --icon-size: var(--icon-xs);
+  color: var(--muted);
+}
+.entry-pin {
+  rotate: 35deg;
+}
+// 圖示格的外部連結標記放在圖示右上（外部連結沒有功能 ID，不會有徽章搶位置）；條列時靠右。
+:host(.is-tile) .entry-external {
+  position: absolute;
+  top: var(--p-space-1);
+  left: calc(50% + 8px);
+}
+:host(.is-row) .entry-external {
+  margin-left: auto;
+}
+:host(.is-icon) .entry-external {
+  display: none;
+}

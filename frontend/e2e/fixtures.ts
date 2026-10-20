@@ -99,18 +99,25 @@ export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
   ].map((id, index) => seededPage("system.access", id, (index + 1) * 10)),
   // 組織排在使用者之後（Seed 的 SortOrder 15）。
   seededPage("system.access", "organization", 15),
-  ...[
-    "operations.usage",
-    "billing.prices",
-    "knowledge.retrieval",
-    "integrations",
-    "monitoring",
-    "diagnostics.logs",
-    "audit",
-    "quality",
-    "quality.retrieval",
-    "design",
-  ].map((id, index) => seededPage("system", id, (index + 2) * 10)),
+  ...(
+    [
+      ["system.usage", "用量與計費", ["operations.usage", "billing.prices"]],
+      ["system.data", "資料與檢索", ["integrations", "knowledge.retrieval"]],
+      [
+        "system.observability",
+        "監控與紀錄",
+        ["monitoring", "diagnostics.logs", "audit", "mail.messages"],
+      ],
+      [
+        "system.evaluation",
+        "評測與開發",
+        ["quality", "quality.retrieval", "design"],
+      ],
+    ] as const
+  ).flatMap(([group, name, pages], index) => [
+    seededGroup(group, "system", name, (index + 2) * 10),
+    ...pages.map((id, order) => seededPage(group, id, (order + 1) * 10)),
+  ]),
 ];
 
 /**

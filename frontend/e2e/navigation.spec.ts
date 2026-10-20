@@ -33,16 +33,16 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await expect(tools.getByRole("region", { name: "系統管理" })).toHaveCount(0);
   await launcher.click();
   // The launcher lists every feature in the shared groups; pinned ones keep their place with a
-  // pin mark, and the current page stays marked once, on its pinned row.
+  // pin before the name, and every entry of the current page is marked, pinned row included.
   await expect(
     tools.getByRole("region", { name: "系統管理", exact: true }),
   ).toBeVisible();
   const work = tools.getByRole("region", { name: "AI 工作台", exact: true });
   await expect(
     work.getByRole("link", { name: "對話", exact: true }),
-  ).not.toHaveClass(/current/);
-  await expect(work.locator(".pin-mark")).toHaveCount(2);
-  await expect(tools.locator('[aria-current="page"]')).toHaveCount(1);
+  ).toHaveClass(/current/);
+  await expect(work.locator(".entry-pin")).toHaveCount(2);
+  await expect(tools.locator('[aria-current="page"]')).toHaveCount(2);
   await tools.getByRole("button", { name: "自訂釘選", exact: true }).click();
   await expect(tools.getByRole("status")).toContainText("已釘選 2／5 項");
   await tools.getByRole("button", { name: "釘選檔案庫", exact: true }).click();
@@ -880,7 +880,7 @@ test("the icon rail keeps pins, opens every other feature beside it and still sc
   await expect(
     flyout
       .getByRole("link", { name: "對話", exact: true })
-      .locator(".pin-mark"),
+      .locator(".entry-pin"),
   ).toHaveCount(1);
   await expect
     .poll(async () => {
@@ -1065,7 +1065,7 @@ test("the menu follows the server tree with links beside pages, nested groups an
   await expect(wiki).toHaveAttribute("href", "https://wiki.example.com/ops");
   await expect(wiki).toHaveAttribute("target", "_blank");
   await expect(wiki).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(wiki.locator(".entry-mark")).toHaveCount(1);
+  await expect(wiki.locator(".entry-external")).toHaveCount(1);
   const system = launcher.getByRole("region", {
     name: "系統管理",
     exact: true,
@@ -1098,10 +1098,11 @@ test("the menu follows the server tree with links beside pages, nested groups an
   await expect(
     launcher.getByRole("link", { name: "系統日誌", exact: true }),
   ).toBeVisible();
-  // 外部連結沒有本站路由：目前頁面仍只標一項。
-  await expect(
-    page.locator(".workspace-navigation [aria-current='page']"),
-  ).toHaveCount(1);
+  // 外部連結沒有本站路由，不會被標為目前所在；已釘選的檔案庫在釘選列與全部功能各標一次。
+  const current = page.locator(".workspace-navigation [aria-current='page']");
+  await expect(current).toHaveCount(2);
+  for (const link of await current.all())
+    await expect(link).toHaveAttribute("href", "/work/files");
   // 外部連結不能釘選。
   await launcher.getByRole("button", { name: "自訂釘選", exact: true }).click();
   await expect(
