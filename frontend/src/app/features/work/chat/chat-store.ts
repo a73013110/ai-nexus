@@ -539,7 +539,8 @@ export class ChatStore {
       const latest = await this.api.run(run.id);
       if (current()) await this.follow(latest);
     } catch (error) {
-      this.report(error);
+      // 換帳號後才回來的失敗屬於前一個帳號，不能寫到新帳號的畫面上。
+      if (current()) this.report(error);
     }
   }
 
