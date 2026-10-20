@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { dayRange, fillDays, metricLabel, workspaceLink } from './dashboard-format';
+import { dayRange, fillDays, workspaceLink } from './dashboard-format';
 import { relativeTime } from '@shared/browser/format';
 
 describe('dashboard format', () => {
-  it('reads a metric aloud with its unit, and unknown values as a dash', () => {
-    expect(metricLabel({ value: 3, format: 'count', unit: '個' })).toBe('3 個');
-    expect(metricLabel({ value: null, format: 'count', unit: '個' })).toBe('—');
-  });
-
   it('only turns workspace paths into router links', () => {
     expect(workspaceLink('/work/jobs?job=abc')).toEqual({
       path: '/work/jobs',

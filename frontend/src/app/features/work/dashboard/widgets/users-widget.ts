@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { money } from '@features/admin/billing/billing-api';
+import { formatNumber } from '@shared/browser/format';
 import { DashboardStore } from '../dashboard-store';
 
 /** 以所選幣別計算每位使用者的花費；選取一位會把整個總覽縮小到他。 */
@@ -65,7 +66,7 @@ import { DashboardStore } from '../dashboard-store';
                 <strong>{{ user.displayName }}</strong
                 ><small>{{ user.account }}</small>
               </th>
-              <td class="ui-table-numeric">{{ user.requests.toLocaleString() }}</td>
+              <td class="ui-table-numeric">{{ formatNumber(user.requests) }}</td>
               <td class="ui-table-numeric">{{ money(user.amount, user.currency) }}</td>
               <td>
                 <meter
@@ -100,6 +101,7 @@ import { DashboardStore } from '../dashboard-store';
 export class UsersWidget {
   readonly store = inject(DashboardStore);
   readonly money = money;
+  readonly formatNumber = formatNumber;
   readonly users = computed(() =>
     [...this.store.users()].sort((first, second) => second.amount - first.amount),
   );

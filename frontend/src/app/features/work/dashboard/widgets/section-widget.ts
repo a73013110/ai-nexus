@@ -6,8 +6,7 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { Sparkline } from '@shared/ui/sparkline';
 import { DashboardStore } from '../dashboard-store';
 import { metricFormatter, metricText, relativeTime } from '@shared/browser/format';
-import { fillDays, tone, TONE_COLORS, workspaceLink } from '../dashboard-format';
-import { isFeatureId } from '@core/api/catalog';
+import { fillDays, sectionLink, tone, TONE_COLORS, workspaceLink } from '../dashboard-format';
 
 /**
  * 後端送來的任何總覽區段：數字、第一個每日數列、分布，以及檢視者最近的項目。
@@ -104,12 +103,12 @@ export class SectionWidget {
     const series = this.section()?.series[0];
     if (!series) return null;
     const values = fillDays(this.store.days(), series.points).map((item) => item.value);
-    const total = values.reduce((start, end) => start + end, 0);
+    const total = values.reduce((sum, value) => sum + value, 0);
     return { label: series.label, values, total: metricText(total, 'count') + ' ' + series.unit };
   });
   readonly shares = computed(() => {
     const shares = this.section()?.shares ?? [];
-    const total = shares.reduce((first, second) => first + second.value, 0) || 1;
+    const total = shares.reduce((sum, part) => sum + part.value, 0) || 1;
     return shares.map((part, index) => ({
       ...part,
       color:
@@ -128,8 +127,6 @@ export class SectionWidget {
   );
   readonly route = computed(() => {
     const section = this.section();
-    return section && isFeatureId(section.feature) && this.store.session.has(section.feature)
-      ? workspaceLink(section.route)
-      : null;
+    return section ? sectionLink(section, this.store.session) : null;
   });
 }

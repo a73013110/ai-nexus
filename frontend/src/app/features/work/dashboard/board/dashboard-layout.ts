@@ -31,12 +31,12 @@ export function parseTiles(value: unknown): TileState[] | null {
   if (!Array.isArray(tiles)) return null;
   return tiles
     .filter(
-      (item2): item2 is TileState =>
-        !!item2 &&
-        typeof item2.id === 'string' &&
-        item2.id.length <= 120 &&
-        !RETIRED.has(item2.id) &&
-        isTileSize(item2.size),
+      (item): item is TileState =>
+        !!item &&
+        typeof item.id === 'string' &&
+        item.id.length <= 120 &&
+        !RETIRED.has(item.id) &&
+        isTileSize(item.size),
     )
     .slice(0, 100)
     .map((item) => ({
@@ -84,7 +84,7 @@ export function updateTile(
   id: string,
   change: Partial<Omit<TileState, 'id'>>,
 ): TileState[] {
-  return tiles.map((item3) => (item3.id === id ? { ...item3, ...change } : item3));
+  return tiles.map((item) => (item.id === id ? { ...item, ...change } : item));
 }
 
 function read(key: string): unknown {
@@ -127,7 +127,7 @@ export class DashboardLayout {
     const widgets = new Map(this.widgets().map((item) => [item.id, item]));
     return this.tiles()
       .filter((item) => widgets.has(item.id))
-      .map((item4): PlacedTile => ({ ...item4, widget: widgets.get(item4.id)! }));
+      .map((item): PlacedTile => ({ ...item, widget: widgets.get(item.id)! }));
   });
   readonly visible = computed(() => this.placed().filter((item) => !item.hidden));
   readonly hidden = computed(() => this.placed().filter((item) => item.hidden));

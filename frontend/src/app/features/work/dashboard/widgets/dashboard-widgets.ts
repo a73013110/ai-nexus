@@ -28,8 +28,6 @@ export function isTileSize(value: unknown): value is TileSize {
 export interface DashboardWidget {
   id: string;
   title: string;
-  /** 磚塊顯示的內容，於自訂列表中呈現。 */
-  description: string;
   icon: string;
   size: TileSize;
   tall?: boolean;
@@ -87,7 +85,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'overview',
       title: '關鍵指標',
-      description: '已知費用、模型與工具呼叫、Token 與處理中工作',
       icon: 'gauge',
       size: 'xl',
       component: OverviewWidget,
@@ -95,7 +92,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'spend',
       title: '費用趨勢',
-      description: '每日已知費用，可切換幣別與費用類型',
       icon: 'money',
       size: 'w',
       component: SpendWidget,
@@ -103,7 +99,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'activity',
       title: '呼叫熱度',
-      description: '每日模型與工具呼叫的日曆熱圖',
       icon: 'calendar',
       size: 'm',
       component: ActivityWidget,
@@ -111,7 +106,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'flow',
       title: '工作流程',
-      description: '從原檔、索引到回覆、成果與分享的流向',
       icon: 'integrations',
       size: 'xl',
       component: FlowWidget,
@@ -119,7 +113,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'recent',
       title: '繼續工作',
-      description: '各功能中自己最近的對話、文件與任務',
       icon: 'history',
       size: 'm',
       component: RecentWidget,
@@ -127,7 +120,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'mix',
       title: '模型分布',
-      description: '費用或 Token 在各模型與工具之間的占比',
       icon: 'chart',
       size: 'm',
       component: MixWidget,
@@ -135,7 +127,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     {
       id: 'tokens',
       title: 'Token 使用量',
-      description: '依模型與輸入／輸出檢視每日 Token',
       icon: 'database',
       size: 'l',
       component: TokensWidget,
@@ -143,10 +134,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     ...context.sections.map((section): DashboardWidget => ({
       id: 'section:' + section.id,
       title: section.title,
-      description: section.metrics
-        .slice(0, 3)
-        .map((item) => item.label)
-        .join('、'),
       icon: sectionIcon(section.id),
       size: SECTION_SIZES[section.id] ?? 'm',
       component: SectionWidget,
@@ -157,7 +144,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
     widgets.push({
       id: 'users',
       title: '使用者區間費用',
-      description: '依使用者排序的呼叫與已知費用，可檢視單一使用者',
       icon: 'user',
       size: 'xl',
       component: UsersWidget,

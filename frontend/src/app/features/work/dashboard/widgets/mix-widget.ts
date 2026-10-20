@@ -81,8 +81,8 @@ export class MixWidget {
 
 /** 最大的幾個部分，其餘合併為一項。 */
 function top(parts: { key: string; label: string; value: number }[]) {
-  const sorted = [...parts].sort((first2, second2) => second2.value - first2.value);
-  const rest = sorted.slice(SHOWN).reduce((sum, item2) => sum + item2.value, 0);
+  const sorted = [...parts].sort((first, second) => second.value - first.value);
+  const rest = sorted.slice(SHOWN).reduce((sum, item) => sum + item.value, 0);
   return rest > 0
     ? [...sorted.slice(0, SHOWN), { key: '__other', label: '其他', value: rest }]
     : sorted;

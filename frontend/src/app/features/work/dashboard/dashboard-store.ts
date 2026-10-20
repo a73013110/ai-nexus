@@ -3,9 +3,10 @@ import { ActivatedRoute } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { DashboardDto, DashboardSectionDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { localDateKey } from '@shared/browser/calendar-day';
 import { downloadBlob } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
-import { BillingApi, chargeKind, datePeriod, localDate } from '@features/admin/billing/billing-api';
+import { BillingApi, chargeKind, datePeriod } from '@features/admin/billing/billing-api';
 import { DashboardApi } from './dashboard-api';
 import { dayRange, fillDays } from './dashboard-format';
 
@@ -13,6 +14,11 @@ import { dayRange, fillDays } from './dashboard-format';
 const REFRESH_MS = 60_000;
 /** 輸入的日期要等檢視者停止輸入後才套用，避免讀到輸到一半的日期（或被稽核）。 */
 const DATE_SETTLE_MS = 600;
+
+/** 含今天在內 `count` 天期間的第一天。 */
+const firstDayOf = (count: number) => localDateKey(new Date(Date.now() - (count - 1) * 86400000));
+/** 費用合計、每日與模型列共用的幣別＋類型鍵；不同幣別與類型不相加。 */
+const unitOf = (item: { currency: string; kind: string }) => item.currency + ':' + item.kind;
 
 /**
  * 總覽的一次讀取，以及其周圍的選擇：範圍、期間、所選使用者與顯示的幣別。
@@ -36,8 +42,8 @@ export class DashboardStore {
       : 'personal',
   );
   readonly owner = signal('');
-  readonly today = localDate(new Date());
-  readonly from = signal(localDate(new Date(Date.now() - 29 * 86400000)));
+  readonly today = localDateKey(new Date());
+  readonly from = signal(firstDayOf(30));
   readonly through = signal(this.today);
   readonly rangeOptions = [
     { value: '7', label: '7 天' },
@@ -78,7 +84,7 @@ export class DashboardStore {
       ? '我的工作'
       : this.appliedOwner()
         ? '使用者：' +
-          (this.data()?.spend.users.find((item2) => item2.ownerId === this.appliedOwner())
+          (this.data()?.spend.users.find((item) => item.ownerId === this.appliedOwner())
             ?.displayName ?? '指定使用者')
         : '整個平台',
   );
@@ -95,9 +101,9 @@ export class DashboardStore {
   }
 
   readonly units = computed(() =>
-    (this.data()?.spend.totals ?? []).map((item3) => ({
-      value: item3.currency + ':' + item3.kind,
-      label: item3.currency ? item3.currency + ' · ' + chargeKind(item3.kind) : '未設定價格',
+    (this.data()?.spend.totals ?? []).map((item) => ({
+      value: unitOf(item),
+      label: item.currency ? item.currency + ' · ' + chargeKind(item.kind) : '未設定價格',
     })),
   );
   /** 所選幣別仍有花費時保留；否則顯示第一個。 */
@@ -109,13 +115,11 @@ export class DashboardStore {
         : (options[0]?.value ?? ''),
   });
   readonly total = computed(
-    () =>
-      this.data()?.spend.totals.find((item) => item.currency + ':' + item.kind === this.unit()) ??
-      null,
+    () => this.data()?.spend.totals.find((item) => unitOf(item) === this.unit()) ?? null,
   );
   readonly unknownCalls = computed(
     () =>
-      (this.data()?.spend.totals.reduce((first, item4) => first + item4.unknownCalls, 0) ?? 0) +
+      (this.data()?.spend.totals.reduce((sum, item) => sum + item.unknownCalls, 0) ?? 0) +
       (this.data()?.spend.legacyCalls ?? 0),
   );
   /** 所選幣別與類型下，每天的已知花費。 */
@@ -123,7 +127,7 @@ export class DashboardStore {
     fillDays(
       this.days(),
       (this.data()?.spend.daily ?? [])
-        .filter((item) => item.currency + ':' + item.kind === this.unit())
+        .filter((item) => unitOf(item) === this.unit())
         .map((item) => ({ date: item.label, value: item.amount })),
     ),
   );
@@ -137,9 +141,9 @@ export class DashboardStore {
   readonly tokensDaily = computed(() =>
     fillDays(
       this.days(),
-      (this.data()?.tokens.daily ?? []).map((item5) => ({
-        date: item5.date,
-        value: item5.inputTokens + item5.outputTokens,
+      (this.data()?.tokens.daily ?? []).map((item) => ({
+        date: item.date,
+        value: item.inputTokens + item.outputTokens,
       })),
     ),
   );
@@ -154,13 +158,11 @@ export class DashboardStore {
   );
   readonly modelRows = computed(() =>
     (this.data()?.spend.models ?? [])
-      .filter((item) => item.currency + ':' + item.kind === this.unit())
-      .sort((first2, second) => second.amount - first2.amount),
+      .filter((item) => unitOf(item) === this.unit())
+      .sort((first, second) => second.amount - first.amount),
   );
   readonly users = computed(() =>
-    (this.data()?.spend.users ?? []).filter(
-      (item) => item.currency + ':' + item.kind === this.unit(),
-    ),
+    (this.data()?.spend.users ?? []).filter((item) => unitOf(item) === this.unit()),
   );
   /** 正在產生的 AI 回覆，加上排隊或執行中的背景工作。 */
   readonly activeWork = computed(
@@ -172,7 +174,7 @@ export class DashboardStore {
     this.sections()
       .filter((item) => item.id !== 'notifications')
       .flatMap((section) => section.items.map((item) => ({ ...item, section })))
-      .sort((first3, second2) => (second2.at ?? '').localeCompare(first3.at ?? '')),
+      .sort((first, second) => (second.at ?? '').localeCompare(first.at ?? '')),
   );
 
   private settle = 0;
@@ -210,7 +212,7 @@ export class DashboardStore {
     this.range.set(value);
     if (value === 'custom') return;
     this.through.set(this.today);
-    this.from.set(localDate(new Date(Date.now() - (Number(value) - 1) * 86400000)));
+    this.from.set(firstDayOf(Number(value)));
     this.load(false);
   }
   setScope(value: string) {
@@ -233,8 +235,8 @@ export class DashboardStore {
       );
       const blob = await response.blob();
       if (valid()) downloadBlob(blob, 'ai-nexus-spend', 'csv');
-    } catch (error2) {
-      if (valid()) this.exportError.set(this.view.message(error2));
+    } catch (error) {
+      if (valid()) this.exportError.set(this.view.message(error));
     } finally {
       if (valid()) this.exporting.set(false);
     }
