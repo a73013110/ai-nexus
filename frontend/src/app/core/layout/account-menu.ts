@@ -2,6 +2,7 @@ import { Notice } from '@shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { SettingsOverlay } from '../preferences/settings-overlay';
+import { nameInitial } from '@shared/browser/format';
 import { ActionMenu } from '@shared/ui/action-menu';
 import { Icon } from '@shared/ui/icon';
 import { WorkspaceLayout } from './workspace-layout';
@@ -20,7 +21,7 @@ import { WorkspaceLayout } from './workspace-layout';
       [items]="items()"
       (action)="act($event)"
     >
-      <span class="avatar">{{ session.me()?.displayName?.slice(0, 1) || 'N' }}</span>
+      <span class="avatar">{{ initial(session.me()?.displayName) }}</span>
       <span class="profile-name"
         ><strong>{{ session.me()?.displayName || '帳號' }}</strong
         ><small>{{ session.me()?.account }}</small></span
@@ -34,6 +35,7 @@ import { WorkspaceLayout } from './workspace-layout';
 export class AccountMenu {
   readonly session = inject(WorkspaceSession);
   readonly layout = inject(WorkspaceLayout);
+  protected readonly initial = nameInitial;
   /** 圖示欄會隱藏名稱，因此從它開啟的選單會重複顯示目前登入的是誰。 */
   readonly profile = computed(() => ({
     title: this.session.me()?.displayName || '帳號',

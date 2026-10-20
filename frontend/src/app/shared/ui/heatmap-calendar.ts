@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { localDateKey } from '../browser/calendar-day';
 import { formatNumber } from '../browser/format';
 
 export interface HeatmapPoint {
@@ -11,9 +12,6 @@ const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
 function day(value: string) {
   const [pointY, max2, delta] = value.split('-').map(Number);
   return new Date(pointY, max2 - 1, delta);
-}
-function key(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -96,7 +94,7 @@ export class HeatmapCalendar {
     }[][] = [];
     for (let cursor = new Date(start), index = 0; cursor <= last && index < 60 * 7; index++) {
       if (index % 7 === 0) weeks.push([]);
-      const id = key(cursor),
+      const id = localDateKey(cursor),
         value = values.get(id) ?? 0;
       weeks[weeks.length - 1].push({
         key: id,

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { SignInIdentityDto } from '@core/api/schema';
+import { nameInitial } from '@shared/browser/format';
 import { rovingIndex } from '@shared/browser/roving-index';
 import { Icon } from '@shared/ui/icon';
 
@@ -40,7 +41,7 @@ const KINDS: Readonly<Record<string, string>> = {
               class="avatar identity-avatar"
               [attr.data-kind]="identity.kind"
               aria-hidden="true"
-              >{{ identity.name.slice(0, 1) || 'N' }}</span
+              >{{ initial(identity.name) }}</span
             >
             <span class="identity-text"
               ><strong>{{ identity.name }}</strong
@@ -77,6 +78,7 @@ export class LoginIdentity {
   readonly choosing = input<string | null>(null);
   readonly chosen = output<string>();
   readonly back = output<void>();
+  protected readonly initial = nameInitial;
   kind(kind: string) {
     return KINDS[kind] ?? '身分';
   }

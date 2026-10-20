@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { nameInitial } from '@shared/browser/format';
 
 /** 依一天中的當地時間問候。 */
 export function salutation(hour: number) {
@@ -14,9 +15,7 @@ export function salutation(hour: number) {
   styleUrl: './login-welcome.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { role: 'status' },
-  template: `<span class="avatar welcome-avatar" aria-hidden="true">{{
-      name().slice(0, 1) || 'N'
-    }}</span>
+  template: `<span class="avatar welcome-avatar" aria-hidden="true">{{ initial(name()) }}</span>
     <h2>{{ greeting }}，{{ name() }}</h2>
     <p>{{ identity() ? '以「' + identity() + '」身分，' : '' }}正在開啟你的工作區</p>`,
 })
@@ -25,4 +24,5 @@ export class LoginWelcome {
   /** 上一步所選的身分，帳號需要做選擇時才會有。 */
   readonly identity = input<string | null>(null);
   readonly greeting = salutation(new Date().getHours());
+  protected readonly initial = nameInitial;
 }

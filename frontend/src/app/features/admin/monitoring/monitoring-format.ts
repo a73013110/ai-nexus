@@ -5,6 +5,7 @@ import {
   APP_TIME_ZONE,
   compactNumber,
   formatBytes,
+  formatMilliseconds,
   formatNumber,
   metricText,
 } from '@shared/browser/format';
@@ -35,8 +36,7 @@ export const dependencyStatus = (value: string) => statuses[value] ?? value;
 export const subsystemStatus = (value: string) => subsystemStatuses[value] ?? value;
 export const presenceState = (value: string) => states[value] ?? value;
 export const monitoringTime = (value: string) => clock.format(new Date(value));
-export const monitoringLatency = (value: number | null | undefined) =>
-  value == null ? '—' : value.toLocaleString('zh-TW', { maximumFractionDigits: 1 }) + ' ms';
+export const monitoringLatency = (value: number | null | undefined) => formatMilliseconds(value, 1);
 
 const PAGES: Readonly<Record<string, string>> = {
   reader: '閱讀器',

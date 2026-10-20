@@ -17,11 +17,10 @@ import { Icon } from '@shared/ui/icon';
 import { ScrollArea } from '@shared/ui/scroll-area';
 import { anchoredPopover } from '@shared/browser/anchored-popover';
 import { setPopoverOrigin } from '@shared/browser/popover-position';
+import { uniqueId } from '@shared/browser/unique-id';
 import { FeatureLauncher } from './feature-launcher';
 import { NavigationPreferences } from './navigation-preferences';
 import { featureIcon } from './navigation-tree';
-
-let sequence = 0;
 
 /**
  * Pinned features on top, then “全部功能”: inline when the page has no sidebar panel, a disclosure
@@ -136,7 +135,7 @@ export class WorkspaceNavigation {
   readonly activated = output<void>();
   readonly expanded = input(false);
   readonly expandedChange = output<boolean>();
-  readonly flyoutId = `launcher-flyout-${++sequence}`;
+  readonly flyoutId = uniqueId('launcher-flyout');
   /** 圖示顯示時，把釘選（與啟動器切換）並排放在同一列。 */
   readonly strip = computed(() => !this.compact() && this.pins.display() === 'icons');
   private readonly flyout = viewChild<ElementRef<HTMLElement>>('flyout');

@@ -12,12 +12,11 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { NavigationNodeDto } from '@core/api/schema';
+import { uniqueId } from '@shared/browser/unique-id';
 import { Icon } from '@shared/ui/icon';
 import { navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
 import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
 import { WorkspaceCommands } from './workspace-commands';
-
-let sequence = 0;
 
 /**
  * 「全部功能」：伺服器依此帳號修剪過的選單樹（頁面、外部連結與巢狀分群，依管理員排的順序），
@@ -209,7 +208,7 @@ export class FeatureLauncher {
   );
   readonly icon = navigationIcon;
   readonly runs = navigationRuns;
-  private readonly id = `nx-launcher-${++sequence}`;
+  private readonly id = uniqueId('nx-launcher');
   /** 每個節點的分群深度（最上層為 0）與上層分群，給子分群樣式與「展開目前頁面所在的分群」用。 */
   private readonly structure = computed(() => {
     const depths = new Map<string, number>();
