@@ -11,7 +11,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 
 /// <summary>
 /// 本地帳密驗證。雜湊比對耗時，所以比對時不持鎖；比對完才取得寫入鎖並重讀使用者，讓撤銷與並行登入都以較新的狀態為準。
-/// AD 綁定且仍允許 AD 登入的使用者，最近一次 AD 驗證超過 <see cref="SelfServiceOptions.DirectoryFreshnessDays"/> 就拒絕本地密碼：
+/// 有設定 <see cref="SelfServiceOptions.DirectoryFreshnessDays"/>（大於 0）時，AD 綁定且仍允許 AD 登入的使用者，最近一次 AD 驗證超過該天數就拒絕本地密碼：
 /// AD 帳號停用（離職）後，自行設定的本地密碼最晚在這個期限後失效。管理員把 AD 登入關掉的帳號是明確的本地專用帳號，不套用。
 /// </summary>
 public sealed class LocalAuthenticator(AppDbContext db, Argon2Passwords passwords, IdentityWriteLock writes, IOptions<SelfServiceOptions> selfService, TimeProvider clock)
@@ -62,6 +62,7 @@ public sealed class LocalAuthenticator(AppDbContext db, Argon2Passwords password
     }
 
     private bool DirectoryStale(User user, DateTimeOffset now)
-        => user.AdEnabled && !user.Sid.StartsWith("managed:", StringComparison.Ordinal)
+        => selfService.Value.DirectoryFreshnessDays > 0
+            && user.AdEnabled && !user.Sid.StartsWith("managed:", StringComparison.Ordinal)
             && (user.DirectoryVerifiedAt is not { } verified || now - verified > TimeSpan.FromDays(selfService.Value.DirectoryFreshnessDays));
 }
