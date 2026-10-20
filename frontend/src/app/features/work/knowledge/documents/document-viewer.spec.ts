@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { SharingApi } from '@features/work/sharing/sharing-api';
-import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { FilesApi } from '@features/work/files/files-api';
 import { DocumentViewer } from './document-viewer';
@@ -53,7 +52,11 @@ const failedJob = {
 
 async function setup(
   ready: (root: HTMLElement) => boolean = (root) => !!root.querySelector('.html-gate'),
-  overrides: { document?: object; job?: () => Promise<object>; jobs?: object } = {},
+  overrides: {
+    document?: object;
+    job?: () => Promise<object>;
+    control?: (id: string, retry: boolean) => Promise<object>;
+  } = {},
 ) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
@@ -84,9 +87,8 @@ async function setup(
           ],
         },
       },
-      { provide: JobToasts, useValue: { observeDocument: vi.fn(), track: vi.fn() } },
+      { provide: JobToasts, useValue: { observeDocument: vi.fn(), control: overrides.control } },
       { provide: SharingApi, useValue: {} },
-      { provide: JobsApi, useValue: overrides.jobs ?? {} },
       { provide: FilesApi, useValue: {} },
     ],
   });
@@ -128,7 +130,7 @@ describe('DocumentViewer', () => {
 
   it('shows a failed job in its own island and retries it in place', async () => {
     let job: object = failedJob;
-    const retry = vi.fn(async () => {
+    const control = vi.fn(async () => {
       job = {
         ...failedJob,
         status: 'queued',
@@ -143,7 +145,7 @@ describe('DocumentViewer', () => {
       {
         document: { jobId: 'j1', status: 'failed' },
         job: async () => ({ job, canControl: true }),
-        jobs: { retry },
+        control,
       },
     );
     const status = root.querySelector('.viewer-status')!;
@@ -159,7 +161,7 @@ describe('DocumentViewer', () => {
       await fixture.whenStable();
       if (!status.textContent?.includes('等待重試')) throw new Error('job not refreshed yet');
     });
-    expect(retry).toHaveBeenCalledWith('j1');
+    expect(control).toHaveBeenCalledWith('j1', true);
     // 重新排入後回到精簡膠囊，顯示進度。
     expect(status.getAttribute('data-mode')).toBe('compact');
   });

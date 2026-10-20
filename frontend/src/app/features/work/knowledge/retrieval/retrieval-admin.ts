@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { apiResource } from '@core/api/api-resource';
+import { isActive } from '@core/api/generation-status';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type {
   CollectionDto,
@@ -87,10 +88,7 @@ export class RetrievalAdmin {
   readonly profilesRead = apiResource({
     feature: 'knowledge.retrieval',
     loader: () => this.api.embeddingProfiles(),
-    poll: (profiles) =>
-      profiles?.some((item) => item.job && ['queued', 'running'].includes(item.job.status))
-        ? 2000
-        : null,
+    poll: (profiles) => (profiles?.some((item) => this.jobActive(item)) ? 2000 : null),
   });
   readonly capabilitiesRead = apiResource({
     feature: 'knowledge.retrieval',
@@ -146,7 +144,7 @@ export class RetrievalAdmin {
     return formatPercent(profile.coverage.ratio);
   }
   jobActive(profile: EmbeddingProfileDto) {
-    return !!profile.job && ['queued', 'running'].includes(profile.job.status);
+    return !!profile.job && isActive(profile.job.status);
   }
   load() {
     this.actionError.set('');
