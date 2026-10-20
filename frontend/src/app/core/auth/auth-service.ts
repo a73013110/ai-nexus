@@ -8,6 +8,7 @@ import { WORKSPACE_HOME } from '../layout/workspace-home';
 import { routeOf } from '../api/catalog';
 
 const RECENT_SESSION_MS = 5000;
+const RENEWED = 'renewed';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -20,12 +21,15 @@ export class AuthService {
   private confirmedAt = 0;
   private readonly channel =
     typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('ai-nexus-identity');
+  private readonly transport = inject(ApiClient);
   constructor() {
-    const transport = inject(ApiClient);
-    if (this.channel) this.channel.onmessage = () => window.location.reload();
+    // `renewed` 只代表同一帳號的 session 換發（CSRF token 失效），重讀 token 即可；其他訊息代表換了帳號，整頁重新載入。
+    if (this.channel)
+      this.channel.onmessage = (event: MessageEvent) =>
+        event.data === RENEWED ? void this.load() : window.location.reload();
     inject(DestroyRef).onDestroy(() => this.channel?.close());
     effect(() => {
-      if (transport.expired())
+      if (this.transport.expired())
         untracked(() => {
           this.session.set(null);
           this.generation.update((value) => value + 1);
@@ -102,6 +106,16 @@ export class AuthService {
     await this.load(); // 測試已逾時、伺服器已自行還原身分時，先更新 CSRF。
     // 測試身分從使用者頁開始，結束後回到那裡。
     this.replaceIdentity(await this.api.endTestIdentity(), routeOf('identity.users'));
+  }
+  /**
+   * 同一帳號的 session cookie 已換發（步升驗證、帳號安全變更）：claims 改變後舊的 CSRF token 失效，
+   * 改用伺服器回傳的新 token，並請同一瀏覽器的其他分頁重讀自己的 token（cookie 是共用的）。不開始新的登入世代。
+   */
+  renewed(csrfToken: string) {
+    this.transport.token(csrfToken);
+    const session = this.session();
+    if (session) this.session.set({ ...session, csrfToken });
+    this.channel?.postMessage(RENEWED);
   }
   private replaceIdentity(session: AuthSessionDto, url: string) {
     this.replace(session);
