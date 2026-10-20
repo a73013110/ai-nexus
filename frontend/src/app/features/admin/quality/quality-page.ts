@@ -47,7 +47,6 @@ import { Icon } from '@shared/ui/icon';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { JobProgress } from '@features/work/jobs/job-progress';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
-import { JobsApi } from '@features/work/jobs/jobs-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { QualityApi } from './quality-api';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -128,7 +127,6 @@ export class QualityPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(QualityApi);
   private readonly workspaceApi = inject(WorkspaceApi);
-  private readonly jobs = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -555,8 +553,7 @@ export class QualityPage {
     if (!detail?.run.canControl || this.busy()) return;
     this.busy.set(true);
     try {
-      if (retry) this.jobToasts.track(await this.jobs.retry(detail.run.job.id));
-      else await this.jobs.cancel(detail.run.job.id);
+      await this.jobToasts.control(detail.run.job.id, retry);
       if (valid()) this.selectRun(detail.run.id);
     } catch (failure) {
       if (valid()) this.actionError.set(this.scope.message(failure));
