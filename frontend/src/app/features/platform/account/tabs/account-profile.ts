@@ -1,12 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { nameInitial } from '@shared/browser/format';
-import { SettingGroup } from '@shared/ui/setting-row';
+import { Notice } from '@shared/ui/notice';
+import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { AccountSecurityStore, emailBadge } from '../security/account-security-store';
 
-/** 帳號分頁的「個人資料」：目前只顯示目錄提供的姓名與帳號；自助維護的欄位之後加在這張卡片。 */
+/**
+ * 帳號分頁的「個人資料」：目錄提供的姓名與帳號（唯讀，姓名自改等於可冒名），以及通知信箱。
+ * AD 提供的信箱由目錄維護；其他情況可自行設定，以寄到新地址的驗證碼確認。
+ */
 @Component({
   selector: 'nx-account-profile',
-  imports: [SettingGroup],
+  imports: [Notice, SettingGroup, SettingRow, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .account-identity {
@@ -47,12 +53,47 @@ import { SettingGroup } from '@shared/ui/setting-row';
         <div>
           <strong>{{ me.displayName }}</strong>
           <span>{{ me.account }}</span>
+          @if (store.security()?.adAccount; as adAccount) {
+            <span>AD 帳號：{{ adAccount }}（登入時只需輸入這個名稱）</span>
+          }
         </div>
       </div>
+    }
+    @if (store.error()) {
+      <nx-notice tone="danger" [message]="store.error()" />
+    }
+    @if (store.security(); as security) {
+      <nx-setting-row label="通知信箱" [description]="emailDescription()">
+        <nx-status-badge [tone]="badge()!.tone">{{ badge()!.label }}</nx-status-badge>
+        @if (store.editable() && security.emailEditable) {
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="!security.mailAvailable"
+            (click)="store.open('email')"
+          >
+            {{ !security.email ? '設定' : security.emailVerifiedAt ? '變更' : '驗證' }}
+          </button>
+        }
+      </nx-setting-row>
     }
   </nx-setting-group>`,
 })
 export class AccountProfile {
   readonly session = inject(WorkspaceSession);
+  readonly store = inject(AccountSecurityStore);
   readonly initial = nameInitial;
+  readonly badge = computed(() => {
+    const security = this.store.security();
+    return security ? emailBadge(security) : null;
+  });
+  readonly emailDescription = computed(() => {
+    const security = this.store.security();
+    if (!security) return '';
+    const address = security.email ?? '尚未設定；驗證碼與帳號安全通知會寄到這裡。';
+    if (security.emailSource === 'directory')
+      return `${address}（由公司 AD 提供，需更正請聯絡資訊管理人員）`;
+    if (!security.mailAvailable) return `${address}（系統尚未設定寄信，暫時無法驗證）`;
+    return address;
+  });
 }
