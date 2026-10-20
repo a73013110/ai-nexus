@@ -1,8 +1,7 @@
-
 -- 管理頁的使用者列表（ListAdminUsers）：未刪除的使用者每頁 100 筆、依帳號排序，附通知信箱、角色、近期用量、對話數與儲存空間。
 -- 結果集依序為：總筆數、本頁使用者、本頁使用者的角色。
 -- @Since 與 @DefaultAttachmentLimitBytes 由程式傳入（TimeProvider 與設定），不用資料庫時鐘。
-CREATE PROCEDURE [operations].[usp_ListAdminUsers]
+CREATE   PROCEDURE [operations].[usp_ListAdminUsers]
     @Search                      NVARCHAR (120) = NULL,
     @Offset                      INT,
     @Since                       DATETIMEOFFSET (7),
