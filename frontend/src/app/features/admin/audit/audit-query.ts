@@ -1,5 +1,6 @@
 import type { ParamMap, Params } from '@angular/router';
 import type { AuditActionDto } from '@core/api/schema';
+import { TRACE_ID } from '@core/errors/safe-errors';
 import type { QueryChip, QueryStateOptions } from '@shared/ui/query-state';
 import {
   CUSTOM_RANGE,
@@ -34,8 +35,6 @@ export const AUDIT_RESULTS = [
   { value: 'saved', label: '已儲存' },
   { value: 'read', label: '已檢視' },
 ];
-/** W3C TraceId：32 碼 hex。 */
-export const TRACE_ID = /^[a-f\d]{32}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export const emptyAuditQuery = (): AuditQuery => ({

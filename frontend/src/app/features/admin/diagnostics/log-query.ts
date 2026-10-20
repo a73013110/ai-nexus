@@ -1,5 +1,6 @@
 import type { ParamMap, Params } from '@angular/router';
 import type { LogLevel } from '@core/api/schema';
+import { ISSUE_CODE, TRACE_ID } from '@core/errors/safe-errors';
 import { formatDateTimeInput } from '@shared/browser/format';
 import type { QueryChip, QueryStateOptions } from '@shared/ui/query-state';
 import {
@@ -60,8 +61,6 @@ const DAY = hoursAgo(24);
  * 與伺服器 `Diagnostics.MaxQueryDays` 的預設值相同；調整設定時伺服器仍會擋，這裡只是先給明確的訊息。
  */
 export const MAX_QUERY_DAYS = 31;
-const TRACE = /^[a-f\d]{32}$/i;
-const ISSUE = /^NX-[a-f\d]{32}$/i;
 const GUID = /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
 
 export const emptyLogQuery = (): LogQuery => ({
@@ -80,8 +79,8 @@ export type LogSearchKind = '' | 'issueCode' | 'traceId' | 'guid' | 'text';
 export function searchKind(search: string): LogSearchKind {
   const value = search.trim();
   if (!value) return '';
-  if (ISSUE.test(value)) return 'issueCode';
-  if (TRACE.test(value)) return 'traceId';
+  if (ISSUE_CODE.test(value)) return 'issueCode';
+  if (TRACE_ID.test(value)) return 'traceId';
   if (GUID.test(value)) return 'guid';
   return 'text';
 }
@@ -97,7 +96,7 @@ export function validateLogQuery(query: LogQuery, now = Date.now()): string {
   if (Date.parse(bounds.to) - Date.parse(bounds.from) > MAX_QUERY_DAYS * DAY)
     return `查詢範圍最長 ${MAX_QUERY_DAYS} 天，請縮小時間範圍。`;
   const search = query.search.trim();
-  if (/^NX-/i.test(search) && !ISSUE.test(search)) return '查證代碼是 NX- 加 32 碼英數字。';
+  if (/^NX-/i.test(search) && !ISSUE_CODE.test(search)) return '查證代碼是 NX- 加 32 碼英數字。';
   if (searchKind(search) === 'text') {
     if (search.length > 72) return '訊息文字最多 72 字。';
     if (Date.parse(bounds.to) - Date.parse(bounds.from) > DAY)
@@ -200,7 +199,9 @@ function toParams(query: LogQuery): Params {
 function fromParams(params: ParamMap, defaults: LogQuery): LogQuery {
   const text = (key: string, max: number) => (params.get(key) ?? '').trim().slice(0, max);
   const legacy = (['issueCode', 'traceId', 'jobId', 'runId', 'operationId'] as const).find((key) =>
-    (key === 'issueCode' ? ISSUE : key === 'traceId' ? TRACE : GUID).test(params.get(key) ?? ''),
+    (key === 'issueCode' ? ISSUE_CODE : key === 'traceId' ? TRACE_ID : GUID).test(
+      params.get(key) ?? '',
+    ),
   );
   const match = params.get('match');
   const guid: LogGuidField =

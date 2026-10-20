@@ -21,9 +21,11 @@ import { formatDate, formatModelName } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyValue } from '@shared/ui/copy-value';
 import {
+  CursorTrail,
   DataTable,
   DataTableColumn,
   DataTableRow,
+  PAGE_SIZES,
   TablePagination,
   TableState,
   type TableColumn,
@@ -185,8 +187,7 @@ export class ActivityAuditPage {
     this.presentedRows().findIndex((row) => row.entry.id === this.selectedId()),
   );
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
-  /** 已看過各頁的游標，上一頁時用；只能往後讀，所以要記下來。 */
-  private cursors: (number | undefined)[] = [undefined];
+  private readonly cursors = new CursorTrail<number | undefined>(undefined);
 
   constructor() {
     // 每次套用條件都從最新一頁重讀；相對時間（最近 24 小時）以套用當下計算。
@@ -211,7 +212,7 @@ export class ActivityAuditPage {
   changePage(direction: -1 | 1) {
     const index = this.pageIndex() + direction;
     if (index < 0 || (direction === 1 && !this.hasNext())) return;
-    this.goTo(index, direction === 1 ? this.rows().at(-1)?.id : this.cursors[index]);
+    this.goTo(index, direction === 1 ? this.rows().at(-1)?.id : this.cursors.at(index));
   }
   firstPage() {
     this.goTo(0, undefined);
@@ -223,13 +224,12 @@ export class ActivityAuditPage {
   }
   changePageSize(size: number) {
     const request = this.request();
-    if (this.loading() || !request || ![25, 50, 100].includes(size)) return;
+    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
     this.pageSize.set(size);
     this.read(request.filters, undefined, 0);
   }
   private read(filters: AuditFilters, before: number | undefined, index: number) {
-    if (index === 0) this.cursors = [undefined];
-    this.cursors[index] = before;
+    this.cursors.visit(index, before);
     this.drawer()?.close();
     this.selectedId.set(null);
     this.exportError.set('');

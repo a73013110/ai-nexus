@@ -1,7 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DataTable, DataTableColumn, DataTableRow, TablePagination } from './data-table';
+import {
+  CursorTrail,
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  TablePagination,
+} from './data-table';
 
 @Component({
   selector: 'nx-data-table-host',
@@ -179,5 +185,18 @@ describe('DataTable', () => {
     fixture.detectChanges();
     jump.dispatchEvent(new Event('change'));
     expect(selected).toEqual([2, 0]);
+  });
+});
+
+describe('CursorTrail', () => {
+  it('remembers the cursor of each visited page until the first page is read again', () => {
+    const trail = new CursorTrail<string | null>(null);
+    trail.visit(1, 'a');
+    trail.visit(2, 'b');
+    expect(trail.at(1)).toBe('a');
+    expect(trail.at(2)).toBe('b');
+    trail.visit(0, null);
+    expect(trail.at(0)).toBeNull();
+    expect(trail.at(1)).toBeUndefined();
   });
 });

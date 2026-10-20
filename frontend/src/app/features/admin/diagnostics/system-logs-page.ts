@@ -19,9 +19,11 @@ import { downloadBlob } from '@shared/browser/download';
 import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
 import {
+  CursorTrail,
   DataTable,
   DataTableColumn,
   DataTableRow,
+  PAGE_SIZES,
   TablePagination,
   TableSortHeader,
   TableState,
@@ -139,8 +141,7 @@ export class SystemLogsPage {
   readonly milliseconds = milliseconds;
   readonly tone = levelTone;
   readonly categoryName = (value: string) => value.split('.').at(-1) || value;
-  /** 看過的每一頁的游標，上一頁時用。 */
-  private cursors: (string | null)[] = [null];
+  private readonly cursors = new CursorTrail<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -171,7 +172,7 @@ export class SystemLogsPage {
   }
   changePage(direction: -1 | 1) {
     const index = this.pageIndex() + direction;
-    const cursor = direction === 1 ? this.page()?.nextCursor : this.cursors[index];
+    const cursor = direction === 1 ? this.page()?.nextCursor : this.cursors.at(index);
     if (index < 0 || (direction === 1 && !cursor)) return;
     this.goTo(index, cursor ?? null);
   }
@@ -191,7 +192,7 @@ export class SystemLogsPage {
   }
   changePageSize(size: number) {
     const request = this.request();
-    if (this.loading() || !request || ![25, 50, 100].includes(size)) return;
+    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
     this.pageSize.set(size);
     this.read({ ...request.filter, take: size }, null, 0);
   }
@@ -199,8 +200,7 @@ export class SystemLogsPage {
     this.pageRead.reload();
   }
   private read(filter: LogFilter, cursor: string | null, index: number) {
-    if (index === 0) this.cursors = [null];
-    this.cursors[index] = cursor;
+    this.cursors.visit(index, cursor);
     this.inspector()?.close();
     this.closeDetail();
     this.exportError.set('');

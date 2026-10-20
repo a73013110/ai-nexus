@@ -385,6 +385,29 @@ export class TableState {
   readonly visible = computed(() => this.count() === 0);
 }
 
+/** `TablePagination` 預設可選的每頁筆數；頁面收到 `pageSizeChange` 時以它擋下其他值。 */
+export const PAGE_SIZES: readonly number[] = [25, 50, 100];
+
+/**
+ * `cursor` 分頁看過的各頁游標：游標只能往後讀，上一頁要用記下的游標重讀。
+ * `first` 是第一頁的游標（沒有游標時的值）。
+ */
+export class CursorTrail<T> {
+  private cursors: T[];
+  constructor(private readonly first: T) {
+    this.cursors = [first];
+  }
+  /** 讀第 `index` 頁前記下它的游標；回到第一頁（新查詢、排序、每頁筆數）時清掉舊紀錄。 */
+  visit(index: number, cursor: T) {
+    if (index === 0) this.cursors = [this.first];
+    this.cursors[index] = cursor;
+  }
+  /** 看過的第 `index` 頁的游標。 */
+  at(index: number): T | undefined {
+    return this.cursors[index];
+  }
+}
+
 /**
  * 表格頁尾的分頁列：左側是範圍與每頁筆數，右側是一組有外框的翻頁按鈕，頁碼在按鈕中間。
  * `cursor`（游標分頁、不算總數）：上一頁、下一頁與回到第一頁，大表不必計數也不會跳過資料。
@@ -487,7 +510,7 @@ export class TablePagination {
   readonly mode = input<'cursor' | 'offset'>('cursor');
   readonly pageIndex = input(0);
   readonly pageSize = input(50);
-  readonly pageSizes = input<readonly number[]>([25, 50, 100]);
+  readonly pageSizes = input<readonly number[]>(PAGE_SIZES);
   /** 目前這一頁的列數。 */
   readonly count = input(0);
   /** `cursor`：這次讀取是否回傳下一頁游標。 */
