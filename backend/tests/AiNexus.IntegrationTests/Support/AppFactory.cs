@@ -7,6 +7,8 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Chat.Runs;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Mail;
+using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
@@ -44,6 +46,8 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     private readonly string files = Path.Combine(Path.GetTempPath(), $"ainexus-test-{Guid.NewGuid():N}");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
+    /// <summary>取代 SMTP；郵件寄送由測試直接呼叫 <c>MailDispatcher.DispatchAsync</c> 驅動。</summary>
+    public RecordingMailTransport Mail { get; } = new();
     public AppFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<FilesOptions>? attachments = null, string[]? administrators = null,
         Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
@@ -104,6 +108,13 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             services.PostConfigure<FilesOptions>(options => { options.StoragePath = Path.Combine(files, "attachments"); configureAttachments?.Invoke(options); });
             services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = Path.Combine(files, "logs"); options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
             services.PostConfigure<AdminBootstrapOptions>(options => options.Administrators = bootstrapAdministrators);
+            services.RemoveAll<IMailTransport>();
+            services.AddSingleton<IMailTransport>(Mail);
+            services.PostConfigure<MailOptions>(options =>
+            {
+                options.Transport = MailTransports.Smtp; options.Smtp.Host = "smtp.fixture.test";
+                options.From.Address = "ainexus@fixture.test"; options.PublicBaseUrl = "https://ainexus.fixture.test";
+            });
             configureServices?.Invoke(services);
         });
     }

@@ -22,6 +22,17 @@ public sealed class DiagnosticRedactorTests
         Assert.True(DiagnosticRedactor.Text(new string('a', 100000)).Length <= 512);
     }
 
+    [Fact]
+    public void MailMessageIdsAreKeptButRecipientAddressesNeverAre()
+    {
+        var id = Guid.NewGuid();
+        var json = DiagnosticRedactor.Json(DiagnosticRedactor.Properties(new Dictionary<string, object?>
+        {
+            ["MailMessageId"] = id, ["Recipient"] = "chen@company.com", ["ErrorCode"] = "mail_rejected for chen@company.com"
+        }));
+        Assert.Contains(id.ToString(), json); Assert.Contains("mail_rejected", json); Assert.DoesNotContain("chen@company.com", json);
+    }
+
     private sealed class DangerousObject { public override string ToString() => throw new Exception("Arbitrary object must never be rendered"); }
 
     [Fact]

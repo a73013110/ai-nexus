@@ -13,6 +13,7 @@ using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Admin.Integrations;
+using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge;
 using AiNexus.Features.Work.Prompts;
@@ -58,6 +59,7 @@ public static class FeatureModules
         Add<IntegrationsModule>(builder);
         Add<CollaborationModule>(builder);
         Add<NotificationsModule>(builder);
+        Add<MailModule>(builder);
         Add<ProjectsModule>(builder);
         Add<SharingModule>(builder);
         Add<KnowledgeModule>(builder);
@@ -115,6 +117,7 @@ public static class FeatureModules
         Map<DashboardModule>(api);
         Map<WebSearchModule>(api);
         Map<MonitoringModule>(api);
+        Map<MailModule>(api);
 
         IdentityModule.MapPublicEndpoints(app.MapGroup("").WithTags(Tag<IdentityModule>()));
         return app;

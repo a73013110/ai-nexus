@@ -1,0 +1,172 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Mail;
+using AiNexus.Features.Admin.Mail;
+using AiNexus.Features.Admin.Mail.Delivery;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using static AiNexus.IntegrationTests.Support.MailFixtures;
+
+namespace AiNexus.IntegrationTests.Mail;
+
+public sealed class MailDispatcherTests
+{
+    [Fact]
+    public async Task SentMessagesRecordTheRelayResponseAndSensitiveContentIsDeleted()
+    {
+        await using var factory = new AppFactory(services: services => services.PostConfigure<MailOptions>(x => x.MaxConcurrency = 1));
+        var greeting = await EnqueueAsync(factory, new Greeting(), "小陳", "chen@company.com");
+        var code = await EnqueueAsync(factory, new Code(), "654321", "chen@company.com");
+        Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+
+        var sent = factory.Mail.Sent.ToList();
+        // 安全信（Priority=Security）先寄。
+        Assert.Equal([code, greeting], sent.Select(x => x.Id));
+        var mime = sent[1].Message;
+        Assert.Equal($"{greeting:N}@fixture.test", mime.MessageId);
+        Assert.Equal("auto-generated", mime.Headers["Auto-Submitted"]);
+        Assert.Contains("這是一封測試信。", mime.TextBody, StringComparison.Ordinal);
+        Assert.Contains("654321", sent[0].Message.TextBody, StringComparison.Ordinal);
+
+        var message = await MessageAsync(factory, greeting);
+        Assert.Equal((MailStates.Sent, 1, MailTransports.Smtp, (Guid?)null), (message.Status, message.Attempts, message.Transport, message.LeaseToken));
+        Assert.NotNull(message.SentAt);
+        // 回應裡的 email 寫入前遮罩。
+        Assert.StartsWith("250 2.0.0 OK", message.ProviderResponse, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture@example.test", message.ProviderResponse, StringComparison.Ordinal);
+        Assert.Equal(MailAttemptOutcomes.Sent, Assert.Single(await AttemptsAsync(factory, greeting)).Outcome);
+        Assert.NotNull(await ContentAsync(factory, greeting));
+        Assert.Null(await ContentAsync(factory, code));
+        Assert.NotNull((await MessageAsync(factory, code)).ContentPurgedAt);
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ConcurrentDispatchersSendEachMessageOnce()
+    {
+        await using var factory = new AppFactory(services: services => services.PostConfigure<MailOptions>(x => x.MaxPerMinute = 1000));
+        for (var i = 0; i < 30; i++) await EnqueueAsync(factory, new Greeting(), $"#{i}", $"user{i}@company.com");
+        var claimed = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Dispatcher(factory).DispatchAsync(CancellationToken.None)));
+        while (await Dispatcher(factory).DispatchAsync(CancellationToken.None) > 0) { }
+        Assert.Equal(30, factory.Mail.Sent.Count);
+        Assert.Equal(30, factory.Mail.Sent.Select(x => x.Id).Distinct().Count());
+        Assert.True(claimed.Sum() <= 30);
+    }
+
+    [Fact]
+    public async Task TemporaryFailuresBackOffAndPermanentFailuresStop()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock);
+        var busy = await EnqueueAsync(factory, new Greeting(), "busy", "busy@company.com");
+        var unknown = await EnqueueAsync(factory, new Greeting(), "unknown", "unknown@company.com");
+        factory.Mail.Failure = mail => mail.Id == busy
+            ? new SmtpCommandException(SmtpErrorCode.RecipientNotAccepted, SmtpStatusCode.MailboxBusy, "4.2.1 Mailbox busy")
+            : new SmtpCommandException(SmtpErrorCode.RecipientNotAccepted, SmtpStatusCode.MailboxUnavailable, "5.1.1 unknown@company.com does not exist");
+        Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+
+        var retry = await MessageAsync(factory, busy);
+        Assert.Equal((MailStates.Queued, MailFailures.Deferred, 1), (retry.Status, retry.ErrorCode, retry.Attempts));
+        Assert.InRange(retry.NextAttemptAt - clock.GetUtcNow(), TimeSpan.FromSeconds(47), TimeSpan.FromSeconds(73));
+        var attempt = Assert.Single(await AttemptsAsync(factory, busy));
+        Assert.Equal((MailAttemptOutcomes.Transient, 450, "4.2.1"), (attempt.Outcome, attempt.SmtpStatus, attempt.EnhancedStatus));
+
+        var rejected = await MessageAsync(factory, unknown);
+        Assert.Equal((MailStates.Failed, MailFailures.Rejected), (rejected.Status, rejected.ErrorCode));
+        Assert.Equal(550, Assert.Single(await AttemptsAsync(factory, unknown)).SmtpStatus);
+
+        // 退避時間未到不認領；到了再寄一次就成功。
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        factory.Mail.Failure = null;
+        clock.Advance(TimeSpan.FromMinutes(2));
+        Assert.Equal(1, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.Equal((MailStates.Sent, 2), ((await MessageAsync(factory, busy)).Status, (await MessageAsync(factory, busy)).Attempts));
+        Assert.Equal([MailAttemptOutcomes.Transient, MailAttemptOutcomes.Sent], (await AttemptsAsync(factory, busy)).Select(x => x.Outcome));
+    }
+
+    [Fact]
+    public async Task TransportFailuresPauseSendingWithoutBurningTheRestOfTheQueue()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock, services: services => services.PostConfigure<MailOptions>(x => x.MaxConcurrency = 1));
+        var ids = new List<Guid>();
+        for (var i = 0; i < 3; i++) ids.Add(await EnqueueAsync(factory, new Greeting(), $"#{i}", $"user{i}@company.com"));
+        factory.Mail.Failure = _ => new AuthenticationException("535 5.7.8 Username and Password not accepted");
+        Assert.Equal(3, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+
+        var circuit = factory.Services.GetRequiredService<MailCircuit>();
+        Assert.True(circuit.IsOpen);
+        var messages = new List<OutboundMessage>();
+        foreach (var id in ids) messages.Add(await MessageAsync(factory, id));
+        var first = Assert.Single(messages, x => x.Attempts == 1);
+        Assert.Equal((MailStates.Queued, MailFailures.TransportUnavailable, circuit.OpenUntil!.Value), (first.Status, first.ErrorCode, first.NextAttemptAt));
+        Assert.Equal(MailAttemptOutcomes.Transport, Assert.Single(await AttemptsAsync(factory, first.Id)).Outcome);
+        // 斷路器開啟後，同一輪剩下的信退回佇列：不記嘗試、不算次數。
+        foreach (var rest in messages.Where(x => x.Id != first.Id))
+        {
+            Assert.Equal((MailStates.Queued, 0, (string?)null), (rest.Status, rest.Attempts, rest.ErrorCode));
+            Assert.Empty(await AttemptsAsync(factory, rest.Id));
+        }
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+
+        factory.Mail.Failure = null;
+        clock.Advance(MailCircuit.OpenFor);
+        Assert.Equal(3, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.False(circuit.IsOpen);
+        Assert.Equal(3, factory.Mail.Sent.Count);
+    }
+
+    [Fact]
+    public async Task ExpiredLeasesAreReclaimedAsAbandonedAttemptsAndExpiredMessagesAreNotSent()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock);
+        var stuck = await EnqueueAsync(factory, new Greeting(), "stuck", "stuck@company.com");
+        var expired = await EnqueueAsync(factory, new Code(), "000000", "late@company.com", new(ExpiresAt: clock.GetUtcNow().AddMinutes(15)));
+        using (var scope = factory.Services.CreateScope())
+        {
+            // 模擬寄到一半中止的 worker：已認領、租約已過期。
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().Where(x => x.Id == stuck)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)
+                    .SetProperty(x => x.LeaseToken, Guid.NewGuid()).SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddMinutes(1)));
+        }
+        clock.Advance(TimeSpan.FromMinutes(16));
+        Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+
+        Assert.Equal([(1, MailAttemptOutcomes.Abandoned), (2, MailAttemptOutcomes.Sent)], (await AttemptsAsync(factory, stuck)).Select(x => (x.Attempt, x.Outcome)));
+        var late = await MessageAsync(factory, expired);
+        Assert.Equal((MailStates.Failed, MailFailures.Expired), (late.Status, late.ErrorCode));
+        Assert.Null(await ContentAsync(factory, expired));
+        Assert.Equal([stuck], factory.Mail.Sent.Select(x => x.Id));
+    }
+
+    [Fact]
+    public async Task PerMinuteAndPerDayLimitsHoldBackTheQueue()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock, services: services => services.PostConfigure<MailOptions>(x => { x.MaxPerMinute = 2; x.MaxPerDay = 3; x.GiveUpAfterHours = 48; }));
+        for (var i = 0; i < 5; i++) await EnqueueAsync(factory, new Greeting(), $"#{i}", $"user{i}@company.com");
+        Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        clock.Advance(TimeSpan.FromMinutes(1));
+        // 每日上限 3：只剩 1 封額度。
+        Assert.Equal(1, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        clock.Advance(TimeSpan.FromMinutes(1));
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        clock.Advance(TimeSpan.FromDays(1));
+        Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.Equal(5, factory.Mail.Sent.Count);
+    }
+
+    [Fact]
+    public async Task DisabledTransportKeepsMessagesQueued()
+    {
+        await using var factory = new AppFactory(services: services => services.PostConfigure<MailOptions>(x => x.Transport = MailTransports.Disabled));
+        var id = await EnqueueAsync(factory, new Greeting(), "x", "chen@company.com");
+        Assert.Equal(0, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.Equal(MailStates.Queued, (await MessageAsync(factory, id)).Status);
+        Assert.False(factory.Services.CreateScope().ServiceProvider.GetRequiredService<MailOutbox>().Available);
+    }
+}

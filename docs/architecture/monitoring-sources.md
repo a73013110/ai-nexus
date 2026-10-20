@@ -25,6 +25,7 @@
 | `generation` | Inference | 3 秒 | `GenerationScheduler` 記憶體計數 | 工作者未就緒 failing；佇列滿或排隊數 > 工作者 degraded |
 | `model-providers` | Inference | 15 秒 | `ModelCatalog` 既有快取（10 秒） | 全部不可用 failing；部分不可用 degraded |
 | `jobs` | Jobs | 30 秒 | `(Status, LeaseUntil, CreatedAt)` 索引 | 執行中租約過期或 1 小時內有失敗 degraded |
+| `mail` | Mail | 30 秒 | Pending 篩選索引、斷路器記憶體狀態 | 斷路器開著 failing；1 小時內有失敗或最久等待 > 10 分鐘 degraded；傳輸停用 idle |
 | `log-pipeline` | Diagnostics | 5 秒 | `DiagnosticHealth` 記憶體計數，日誌管線的完整指標（日誌頁只取 `Degraded`） | 有寫入失敗、遺失、損毀或待補寫 degraded |
 | `knowledge-index` | Knowledge | 30 秒 | 文件狀態索引，只數未完成與失敗 | 有失敗文件 degraded |
 | `usage-today` | Billing | 60 秒 | `UsageReports`，伺服器本地日，走 `CreatedAt` 覆蓋索引 | 失敗 ≥ 5 次且 > 20% degraded |

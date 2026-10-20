@@ -26,6 +26,9 @@
 | 3100 / 3101 | `generation.started` / `generation.finished` | `Chat/Runs/GenerationWorker.cs`、`RunService.cs` |
 | 3102 / 3103 / 3104 | `generation.disabled` / `generation.storage_unavailable` / `generation.startup_failed` | `Chat/Runs/GenerationWorker.cs` |
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
+| 3300 / 3301 / 3302 | `mail.batch_sent` / `mail.delivery_retry` / `mail.delivery_failed` | `Mail/Delivery/MailDispatcher.cs` |
+| 3303 / 3304 / 3305 | `mail.transport_unavailable` / `mail.transport_restored` / `mail.queue_unavailable` | 同上 |
+| 3306 | `mail.retention_failed` | `Mail/Delivery/MailRetentionWorker.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
