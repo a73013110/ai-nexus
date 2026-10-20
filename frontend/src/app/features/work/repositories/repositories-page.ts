@@ -234,12 +234,12 @@ export class RepositoriesPage {
     try {
       await this.api.disconnect();
       if (!valid()) return;
-      this.statusRead.value.update((item2) =>
-        item2 ? { ...item2, connected: false, login: null } : item2,
+      this.statusRead.value.update((status) =>
+        status ? { ...status, connected: false, login: null } : status,
       );
       void this.router.navigate([routeOf('repositories')]);
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -257,10 +257,10 @@ export class RepositoriesPage {
       else await this.api.pin(key);
       if (valid())
         this.toast.show({ title: pinned ? '已取消釘選' : '已釘選到列表上方', duration: 2400 });
-    } catch (error3) {
+    } catch (error) {
       if (!valid()) return;
       this.store.setPinned(!!pinned);
-      this.actionError.set(this.scope.message(error3));
+      this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -275,8 +275,8 @@ export class RepositoriesPage {
       await this.router.navigate([routeOf('repositories'), owner, name, 'reviews', id], {
         replaceUrl: true,
       });
-    } catch (error4) {
-      if (valid()) this.actionError.set(this.scope.message(error4));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     }
   }
 }

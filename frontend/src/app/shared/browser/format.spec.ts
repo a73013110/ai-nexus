@@ -34,6 +34,7 @@ describe('avatar initials', () => {
     expect(nameInitial('王小明')).toBe('王');
     expect(nameInitial('')).toBe('N');
     expect(nameInitial(undefined)).toBe('N');
+    expect(nameInitial('', '?')).toBe('?');
   });
 });
 

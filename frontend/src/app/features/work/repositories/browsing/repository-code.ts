@@ -273,8 +273,8 @@ export class RepositoryCode {
           title: `${result.skipped.length} 個檔案沒有帶入`,
           description: '非文字或超過大小上限的檔案會略過：' + result.skipped.slice(0, 3).join('、'),
         });
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }

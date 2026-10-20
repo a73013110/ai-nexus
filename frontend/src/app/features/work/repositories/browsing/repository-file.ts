@@ -106,7 +106,7 @@ export class RepositoryFile {
   readonly lines = computed(() => formatNumber(this.lineCount()));
   readonly size = computed(() => formatBytes(this.file().size));
   readonly numbers = computed(() =>
-    Array.from({ length: this.lineCount() }, (_, index2) => index2 + 1).join('\n'),
+    Array.from({ length: this.lineCount() }, (_, index) => index + 1).join('\n'),
   );
   private clear: () => void = () => undefined;
 

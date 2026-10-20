@@ -137,7 +137,9 @@ export class RepositoryThreads {
     const state = this.query().get('state') ?? 'open';
     return ['open', 'closed', 'all'].includes(state) ? state : 'open';
   });
-  readonly q = computed(() => (this.kind() === 'issues' ? (this.query().get('q') ?? '') : ''));
+  private readonly q = computed(() =>
+    this.kind() === 'issues' ? (this.query().get('q') ?? '') : '',
+  );
   readonly search = linkedSignal(() => this.q());
   readonly states = computed(() => [
     { value: 'open', label: '開啟中' },
@@ -153,12 +155,12 @@ export class RepositoryThreads {
         ? { key, kind: this.kind(), state: this.state(), q: this.q(), page: this.page() }
         : undefined;
     },
-    loader: async ({ key, kind, state, q: query2, page }): Promise<ThreadRead> => {
+    loader: async ({ key, kind, state, q, page }): Promise<ThreadRead> => {
       const data =
         kind === 'pulls'
           ? await this.api.pulls(key, state, page)
-          : await this.api.issues(key, state, page, query2);
-      return { id: `${key.owner}/${key.name}:${kind}:${state}:${query2}`, page, data };
+          : await this.api.issues(key, state, page, q);
+      return { id: `${key.owner}/${key.name}:${kind}:${state}:${q}`, page, data };
     },
   });
   private readonly id = computed(
@@ -208,7 +210,7 @@ export class RepositoryThreads {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((item) => item + 1);
+    if (!this.loading()) this.page.update((page) => page + 1);
   }
   private row(item: RepositoryIssueDto | RepositoryPullDto): ThreadRow {
     const open = item.state === 'open';

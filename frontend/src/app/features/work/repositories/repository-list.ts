@@ -114,11 +114,7 @@ export class RepositoryList {
   private readonly read = apiResource({
     feature: 'repositories',
     params: () => ({ q: this.query(), page: this.page() }),
-    loader: async ({ q: query2, page }) => ({
-      q: query2,
-      page,
-      data: await this.api.list(query2, page),
-    }),
+    loader: async ({ q, page }) => ({ q, page, data: await this.api.list(q, page) }),
   });
   private readonly latest = computed(() => {
     const read = this.read.value();
@@ -162,7 +158,7 @@ export class RepositoryList {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((item) => item + 1);
+    if (!this.loading()) this.page.update((page) => page + 1);
   }
   link(fullName: string) {
     return [routeOf('repositories'), ...fullName.split('/')];

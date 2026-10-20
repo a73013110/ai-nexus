@@ -106,11 +106,13 @@ export class RepositoryImportDialog {
   );
   readonly choices = computed(() =>
     this.collections()
-      .filter((item) => item.resource.canEdit)
-      .map((item2) => ({
-        value: item2.resource.id,
-        label: item2.resource.name,
-        description: item2.resource.isOwner ? '私人或由你共用的知識庫' : '共用知識庫 · 成員可閱讀',
+      .filter((collection) => collection.resource.canEdit)
+      .map((collection) => ({
+        value: collection.resource.id,
+        label: collection.resource.name,
+        description: collection.resource.isOwner
+          ? '私人或由你共用的知識庫'
+          : '共用知識庫 · 成員可閱讀',
       })),
   );
   readonly selected = linkedSignal(() => this.choices()[0]?.value ?? '');
@@ -123,7 +125,7 @@ export class RepositoryImportDialog {
     this.folder.set(folder);
     this.commit.set(commit);
     this.saveError.set('');
-    this.opened.update((item) => item + 1);
+    this.opened.update((count) => count + 1);
     this.dialog().nativeElement.showModal();
   }
   async save() {
@@ -145,8 +147,8 @@ export class RepositoryImportDialog {
         `完成後可在「${collection.label}」查詢；可以先離開這個頁面。`,
       );
       if (valid()) this.dialog().nativeElement.close();
-    } catch (error2) {
-      if (valid()) this.saveError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.saveError.set(this.scope.message(error));
     } finally {
       if (valid()) this.saving.set(false);
     }

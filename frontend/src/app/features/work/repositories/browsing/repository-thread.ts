@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { RepositoryCommentDto, RepositoryIssueDto, RepositoryPullDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { formatDate, relativeTime } from '@shared/browser/format';
+import { formatDate, nameInitial, relativeTime } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Icon } from '@shared/ui/icon';
@@ -203,7 +203,7 @@ export class RepositoryThread {
   readonly date = formatDate;
   readonly when = relativeTime;
 
-  initial = (name: string) => (name || '?').slice(0, 1).toUpperCase();
+  initial = (name: string) => nameInitial(name, '?').toUpperCase();
   reload() {
     this.actionError.set('');
     this.read.reload();
@@ -235,8 +235,8 @@ export class RepositoryThread {
         },
         valid,
       );
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }

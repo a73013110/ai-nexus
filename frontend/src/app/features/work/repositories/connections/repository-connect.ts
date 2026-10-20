@@ -123,8 +123,8 @@ export class RepositoryConnect {
     try {
       const status = await this.api.connect(token);
       if (valid()) this.connected.emit(status);
-    } catch (error2) {
-      if (valid()) this.error.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.error.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }

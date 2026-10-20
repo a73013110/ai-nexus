@@ -70,8 +70,8 @@ export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>
 /** 帶有 `modelDisplayName` 的紀錄（用量、價目、回饋）。 */
 export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
   modelName(model.modelDisplayName);
-/** 頭像只顯示名稱第一個字；名稱空白時用 N 佔位，避免出現空的圓圈。 */
-export const nameInitial = (name?: string | null) => name?.slice(0, 1) || 'N';
+/** 頭像只顯示名稱第一個字；名稱空白時用備援字（預設 N）佔位，避免出現空的圓圈。 */
+export const nameInitial = (name?: string | null, fallback = 'N') => name?.slice(0, 1) || fallback;
 const relative = new Intl.RelativeTimeFormat('zh-TW', { numeric: 'auto' });
 /** "3 分鐘前", "昨天"; older than a month falls back to the date. */
 export function relativeTime(iso: string, now = Date.now()) {

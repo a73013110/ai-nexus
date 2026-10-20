@@ -49,10 +49,10 @@ export class RepositoriesApi {
       path,
       query: base ? { head, base } : { head },
     });
-  issues = (path: RepositoryKey, state: string, page: number, text2 = '') =>
+  issues = (path: RepositoryKey, state: string, page: number, text = '') =>
     this.api.get('/api/v1/repositories/{owner}/{name}/issues', {
       path,
-      query: text2 ? { state, page, q: text2 } : { state, page },
+      query: text ? { state, page, q: text } : { state, page },
     });
   issue = (path: RepositoryKey, number: number) =>
     this.api.get('/api/v1/repositories/{owner}/{name}/issues/{number}', {

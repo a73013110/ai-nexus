@@ -106,10 +106,10 @@ export class RepositoryDiff {
     computation: (files) => {
       const open = new Set<number>();
       let budget = openBudget;
-      files.forEach((file, index2) => {
+      files.forEach((file, index) => {
         const size = file.additions + file.deletions;
         if (size <= largeFile && size <= budget) {
-          open.add(index2);
+          open.add(index);
           budget -= size;
         }
       });
@@ -129,7 +129,7 @@ export class RepositoryDiff {
     });
   }
   all(open: boolean) {
-    this.opened.set(open ? new Set(this.files().map((_, index3) => index3)) : new Set());
+    this.opened.set(open ? new Set(this.files().map((_, index) => index)) : new Set());
   }
   /** 五個方塊分為新增與刪除兩部分，與代管網站的繪製方式相同。 */
   blocks(file: DiffFile) {
