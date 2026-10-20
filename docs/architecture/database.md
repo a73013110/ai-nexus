@@ -2,7 +2,7 @@
 
 - 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫。**結構以開發庫為準**：DBA 在 SSMS 修改，匯出到 `database/App/` 建成 dacpac；EF Core 只做對應，沒有 migration（[ADR 0010](../decisions/0010-database-first-schema.md)～[0014](../decisions/0014-procedure-audit.md)）。
 - 對應在 `backend/src/AiNexus.Data/App/`，由單一 `AppDbContext` 載入；跨模組外鍵與同一交易可直接使用。
-- **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名；唯一例外 `WebSearches` → `WebSearchRecord`，因為 `WebSearch` 與模組命名空間同名會無法引用。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
+- **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名；唯一例外 `WebSearches` → `WebSearchRecord`（`WebSearch` 與模組命名空間同名）。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
 - 欄位用到的列舉、狀態常數與值型別（`RunStates`、`UserPreferences`）跟著實體放在 `AiNexus.Data`；`AiNexus.Data` 只依賴 Platform，不能引用模組型別。
 
 ## 改結構
@@ -41,6 +41,7 @@
 - `Messages.ParentId` 形成訊息樹，`Conversations.ActiveLeafId` 決定目前分支；編輯與重新生成都新增訊息，不覆寫。
 - `ArtifactRevisions` 以 `ArtifactId`＋`Version` 為主鍵；expected version 不符時不覆蓋他人的修改。
 - `BackgroundJobs.ActiveKey` 唯一，避免同一業務重複排程；`LeaseToken` 做 fencing，過期 worker 不能提交。
+- `OutboundMessages`：`IdempotencyKey` 唯一防重複，`LeaseToken` 做認領 fencing。
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
 - `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
 - `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞），腳本在 `database/App/FullText/`：`CREATE FULLTEXT` 不能在交易內執行，也不進 dacpac，部署時在結構更新後執行；缺全文元件或斷詞器時跳過，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
@@ -70,7 +71,7 @@
 
 ## 測試
 
-整合測試在 LocalDB 上以 dacpac 與 `Seed/` 建庫，EF 對應、資料表說明與唯一索引都對這個庫檢查；見 [測試資料庫](../development/test-database.md)。
+整合測試的庫由 dacpac 與 `Seed/` 建在 LocalDB；見 [測試資料庫](../development/test-database.md)。
 
 ## 保存與備份
 

@@ -1,0 +1,6 @@
+CREATE SCHEMA [mail]
+    AUTHORIZATION [dbo];
+
+
+GO
+
