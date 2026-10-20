@@ -321,5 +321,6 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   verification_code_invalid: '驗證碼不正確，請重新輸入。',
   verification_cooldown: '剛寄出驗證碼，請稍候一分鐘再重新寄送。',
   verification_expired: '驗證碼已失效或已使用，請重新索取。',
+  verification_not_found: '找不到這組驗證碼，請重新索取。',
   verification_rate_limited: '驗證碼索取次數過多，請一小時後再試。',
 };

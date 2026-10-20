@@ -38,9 +38,9 @@ internal static class IdentityApi
         client.DefaultRequestHeaders.Remove("X-CSRF-Token"); client.DefaultRequestHeaders.Add("X-CSRF-Token", session.CsrfToken);
     }
 
-    internal static async Task<MeDto> Login(HttpClient client, string account, string method = "ad")
+    internal static async Task<MeDto> Login(HttpClient client, string account, string method = "ad", string? password = null)
     {
-        await Csrf(client); (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest(account, method == "local" ? Password : "fixture-password", method))).EnsureSuccessStatusCode();
+        await Csrf(client); (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest(account, password ?? (method == "local" ? Password : "fixture-password"), method))).EnsureSuccessStatusCode();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         client.DefaultRequestHeaders.Remove("X-CSRF-Token"); client.DefaultRequestHeaders.Add("X-CSRF-Token", me.CsrfToken); return me;
     }
