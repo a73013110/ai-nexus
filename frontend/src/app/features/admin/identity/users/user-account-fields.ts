@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { AdminUserDto, UserAccountRequest } from '@core/api/schema';
+import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { Field } from '@shared/ui/field';
 
@@ -58,8 +59,6 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
     (key) => first[key] === second[key],
   );
 }
-
-let sequence = 0;
 
 /**
  * 名稱、開關與登入方式，分成兩個表單區段；由建立對話框與使用者檢視器共用，
@@ -162,7 +161,7 @@ let sequence = 0;
   `,
 })
 export class UserAccountFields {
-  readonly id = `nx-user-account-${++sequence}`;
+  readonly id = uniqueId('nx-user-account');
   readonly value = input.required<UserAccountDraft>();
   readonly disabled = input(false);
   readonly valueChange = output<UserAccountDraft>();

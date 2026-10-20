@@ -13,6 +13,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
+import { uniqueId } from '@shared/browser/unique-id';
 import {
   brandHalfPaths,
   brandHalves,
@@ -31,11 +32,11 @@ const LAND = 2900;
 const TAIL = 0.16;
 const playedKey = 'ai-nexus.login-mark-played';
 
-const clamp = (count: number) => Math.min(1, Math.max(0, count));
-const inOut = (count2: number) => (count2 < 0.5 ? 4 * count2 ** 3 : 1 - (-2 * count2 + 2) ** 3 / 2);
-const out = (count3: number) => 1 - (1 - count3) ** 3;
+const clamp = (t: number) => Math.min(1, Math.max(0, t));
+const inOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+const out = (t: number) => 1 - (1 - t) ** 3;
 /** 強調：快速開始、緩慢落定，與登入的 morph 相同（motion.scss）。 */
-const land = (count4: number) => 1 - (1 - count4) ** 4;
+const land = (t: number) => 1 - (1 - t) ** 4;
 
 /**
  * 繪製動畫在一個分頁中只播放一次；之後的造訪（例如登出後）從已停靠的標記開始，
@@ -75,12 +76,12 @@ interface Box {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.is-complete]': 'complete()' },
   template: `<svg #stage class="signal-stage" viewBox="-1 -1 2 2" aria-hidden="true">
-      <mask id="nx-signal-flood">
+      <mask [attr.id]="floodId">
         @for (tip of tips; track $index) {
           <circle #flood [attr.cx]="tip.x" [attr.cy]="tip.y" r="0" fill="#fff" />
         }
       </mask>
-      <path class="signal-fill" [attr.d]="outline" mask="url(#nx-signal-flood)" />
+      <path class="signal-fill" [attr.d]="outline" [attr.mask]="'url(#' + floodId + ')'" />
       @for (half of halves; track $index) {
         <path #trace class="signal-trace" [attr.d]="half" pathLength="1" />
         <path #tail class="signal-tail" [attr.d]="half" pathLength="1" />
@@ -115,6 +116,7 @@ export class SignalMark {
   readonly outline = brandPath;
   readonly halves = brandHalfPaths;
   readonly tips = brandTips;
+  readonly floodId = uniqueId('nx-signal-flood');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly stage = viewChild.required<ElementRef<SVGSVGElement>>('stage');
   private readonly floods = viewChildren<ElementRef<SVGCircleElement>>('flood');
@@ -137,7 +139,7 @@ export class SignalMark {
         cancelAnimationFrame(this.frame);
         this.previous = 0;
         if (!document.hidden && !this.complete())
-          this.frame = requestAnimationFrame((time2) => this.tick(time2));
+          this.frame = requestAnimationFrame((time) => this.tick(time));
       };
       document.addEventListener('visibilitychange', visibility);
       // 標記等待或飛行時發生的版面變化，會讓它留在自己的盒子上。
@@ -164,7 +166,7 @@ export class SignalMark {
       return;
     }
     this.paint(0);
-    if (!document.hidden) this.frame = requestAnimationFrame((time3) => this.tick(time3));
+    if (!document.hidden) this.frame = requestAnimationFrame((time) => this.tick(time));
   }
   finish() {
     cancelAnimationFrame(this.frame);
@@ -177,7 +179,7 @@ export class SignalMark {
     this.previous = time;
     if (this.elapsed >= LAND) return this.finish();
     this.paint(this.elapsed);
-    this.frame = requestAnimationFrame((time4) => this.tick(time4));
+    this.frame = requestAnimationFrame((next) => this.tick(next));
   }
   /** 宿主像素的盒子；錨點每幀都會重新讀取，因此飛行途中的縮放會被跟上。 */
   private box(element: Element | null): Box | null {

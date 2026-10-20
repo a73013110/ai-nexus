@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { SignInIdentityDto } from '@core/api/schema';
+import { rovingIndex } from '@shared/browser/roving-index';
 import { Icon } from '@shared/ui/icon';
 
 const KINDS: Readonly<Record<string, string>> = {
@@ -80,15 +81,18 @@ export class LoginIdentity {
     return KINDS[kind] ?? '身分';
   }
   move(event: KeyboardEvent) {
-    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
-    if (!step) return;
     const options = [
       ...((event.currentTarget as HTMLElement)
         .closest('ul')
         ?.querySelectorAll<HTMLButtonElement>('button') ?? []),
     ];
-    const index = options.indexOf(document.activeElement as HTMLButtonElement);
+    const next = rovingIndex(
+      event.key,
+      options.indexOf(document.activeElement as HTMLButtonElement),
+      options.length,
+    );
+    if (next === null) return;
     event.preventDefault();
-    options[(index + step + options.length) % options.length]?.focus();
+    options[next]?.focus();
   }
 }

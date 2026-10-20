@@ -1,8 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { AdminCatalogDto } from '@core/api/schema';
+import { uniqueId } from '@shared/browser/unique-id';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { Notice } from '@shared/ui/notice';
-import { AccessControlStore } from '@features/admin/access-control/access-control-store';
+import {
+  AccessControlStore,
+  accessChoice,
+} from '@features/admin/access-control/access-control-store';
 import { FeatureSummary } from '@features/admin/access-control/roles/feature-summary';
 
 /** 使用者能開啟的功能：已啟用角色中，已啟用群組裡已啟用的功能。 */
@@ -20,8 +24,6 @@ export function userFeatures(catalog: AdminCatalogDto | null, roleIds: string[],
   );
   return catalog.features.filter((item) => item.enabled && features.has(item.id));
 }
-
-let sequence = 0;
 
 /**
  * 角色指派與其授予功能的預覽，分成兩個表單區段；由建立對話框與檢視器共用，
@@ -70,7 +72,7 @@ let sequence = 0;
   `,
 })
 export class UserRoleFields {
-  readonly id = `nx-user-roles-${++sequence}`;
+  readonly id = uniqueId('nx-user-roles');
   readonly store = inject(AccessControlStore);
   readonly roleIds = input.required<string[]>();
   /** 停用的使用者保留角色，但無法開啟任何內容。 */
@@ -82,11 +84,7 @@ export class UserRoleFields {
     {
       id: 'roles',
       name: '全部角色',
-      options: (this.store.catalog()?.roles ?? []).map((role) => ({
-        id: role.id,
-        label: role.name + (role.enabled ? '' : '（停用）'),
-        description: role.id,
-      })),
+      options: (this.store.catalog()?.roles ?? []).map(accessChoice),
     },
   ]);
   readonly features = computed(() =>

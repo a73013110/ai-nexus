@@ -11,7 +11,6 @@ export class IdentityApi {
   private readonly api = inject(ApiClient);
   users = (search: string, offset = 0) =>
     this.api.get('/api/v1/admin/users', { query: { search, offset } });
-  access = (id: string) => this.api.get('/api/v1/admin/users/{id}/access', { path: { id } });
   insights = (id: string) => this.api.get('/api/v1/admin/users/{id}/insights', { path: { id } });
   conversations = (id: string, search: string, includeDeleted: boolean, offset = 0) =>
     this.api.get('/api/v1/admin/users/{id}/conversations', {
