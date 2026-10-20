@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
+import { isActive } from '@core/api/generation-status';
 import type { RepositoryReviewDetailDto, RepositoryReviewDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ClientValidationError } from '@core/errors/safe-errors';
@@ -247,16 +248,13 @@ export class RepositoryReview {
         throw new ClientValidationError('reviewRepository');
       return detail;
     },
-    poll: (detail) =>
-      ['queued', 'running'].includes(detail?.review.job.status ?? '') ? 3000 : null,
+    poll: (detail) => (isActive(detail?.review.job.status ?? '') ? 3000 : null),
   });
   readonly detail = computed<RepositoryReviewDetailDto | null>(() => {
     const detail = this.read.value();
     return detail?.review.id === this.id() ? detail : null;
   });
-  readonly active = computed(() =>
-    ['queued', 'running'].includes(this.detail()?.review.job.status ?? ''),
-  );
+  readonly active = computed(() => isActive(this.detail()?.review.job.status ?? ''));
   readonly binary = computed(
     () => this.detail()?.sections.filter((item) => item.binary).length ?? 0,
   );
@@ -304,8 +302,8 @@ export class RepositoryReview {
       const job = await this.api.reviewJob(id, retry);
       if (retry) this.jobs.track(job);
       if (valid()) this.read.reload();
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scopeGuard.message(error2));
+    } catch (error) {
+      if (valid()) this.actionError.set(this.scopeGuard.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -329,11 +327,11 @@ export class RepositoryReview {
     try {
       const review = await this.api.comment(id, body);
       if (!valid()) return;
-      this.read.value.update((item2) => (item2 ? { ...item2, review } : item2));
+      this.read.value.update((current) => (current ? { ...current, review } : current));
       this.commentDialog().nativeElement.close();
       this.toast.success('已貼到 Pull Request');
-    } catch (error3) {
-      if (valid()) this.commentError.set(this.scopeGuard.message(error3));
+    } catch (error) {
+      if (valid()) this.commentError.set(this.scopeGuard.message(error));
     } finally {
       if (valid()) this.posting.set(false);
     }

@@ -174,15 +174,15 @@ export class RepositoryDetail {
     const detail = this.store.detail();
     if (!detail) return [];
     const options: SelectOption[] = [
-      ...detail.branches.map((item2) => ({
-        value: item2.name,
-        label: item2.name,
-        description: item2.name === detail.repository.defaultBranch ? '預設分支' : '分支',
+      ...detail.branches.map((branch) => ({
+        value: branch.name,
+        label: branch.name,
+        description: branch.name === detail.repository.defaultBranch ? '預設分支' : '分支',
       })),
-      ...detail.tags.map((item) => ({ value: item.name, label: item.name, description: '標籤' })),
+      ...detail.tags.map((tag) => ({ value: tag.name, label: tag.name, description: '標籤' })),
     ];
     const ref = this.store.refName();
-    if (ref && !options.some((item) => item.value === ref))
+    if (ref && !options.some((option) => option.value === ref))
       options.unshift({
         value: ref,
         label: isSha(ref) ? shortSha(ref) : ref,

@@ -9,7 +9,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
-import { formatDate } from '@shared/browser/format';
+import { formatDate, nameInitial } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { RepositoriesApi } from '../repositories-api';
@@ -143,7 +143,7 @@ export class RepositoryChange {
     const newline = message.indexOf('\n');
     return newline < 0 ? '' : message.slice(newline + 1).trim();
   });
-  readonly initial = computed(() => (this.change()?.head.author || '?').slice(0, 1).toUpperCase());
+  readonly initial = computed(() => nameInitial(this.change()?.head.author, '?').toUpperCase());
   readonly giteaUrl = computed(() => {
     const url = this.store.detail()?.repository.url ?? '';
     return this.base()

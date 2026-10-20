@@ -11,7 +11,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { RepositoryCommitDto, RepositoryCommitPageDto } from '@core/api/schema';
-import { APP_TIME_ZONE, relativeTime } from '@shared/browser/format';
+import { APP_TIME_ZONE, nameInitial, relativeTime } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { RepositoriesApi } from '../repositories-api';
@@ -140,7 +140,7 @@ export class RepositoryCommits {
     const read = this.read.value();
     return read && read.commit === this.store.commit() ? read : null;
   });
-  readonly items = linkedSignal<
+  private readonly items = linkedSignal<
     { commit: string; page: number; data: RepositoryCommitPageDto } | null,
     RepositoryCommitDto[]
   >({
@@ -168,19 +168,19 @@ export class RepositoryCommits {
   /** 最多兩個提交；選第三個會取代較舊的那個選擇。 */
   readonly picked = signal<string[]>([]);
   readonly range = computed(() => {
-    const [text, text2] = this.picked();
-    if (!text || !text2) return null;
+    const [first, second] = this.picked();
+    if (!first || !second) return null;
     const items = this.items(),
-      ia = items.findIndex((item) => item.sha === text),
-      ib = items.findIndex((item) => item.sha === text2);
-    if (ia < 0 || ib < 0) return null;
-    const head = items[Math.min(ia, ib)],
-      from = items[Math.max(ia, ib)];
+      firstIndex = items.findIndex((item) => item.sha === first),
+      secondIndex = items.findIndex((item) => item.sha === second);
+    if (firstIndex < 0 || secondIndex < 0) return null;
+    const head = items[Math.min(firstIndex, secondIndex)],
+      from = items[Math.max(firstIndex, secondIndex)];
     return {
       head: head.sha,
       from: from.sha,
       base: from.parents[0] ?? from.sha,
-      count: Math.abs(ia - ib) + 1,
+      count: Math.abs(firstIndex - secondIndex) + 1,
     };
   });
   readonly within = computed(() => {
@@ -205,12 +205,12 @@ export class RepositoryCommits {
     });
   }
 
-  initial = (name: string) => (name || '?').slice(0, 1).toUpperCase();
+  initial = (name: string) => nameInitial(name, '?').toUpperCase();
   reload() {
     this.read.reload();
   }
   more() {
-    if (!this.loading()) this.page.update((item) => item + 1);
+    if (!this.loading()) this.page.update((page) => page + 1);
   }
   pick(sha: string) {
     this.picked.update((current) =>

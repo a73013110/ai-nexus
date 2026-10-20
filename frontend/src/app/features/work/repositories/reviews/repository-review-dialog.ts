@@ -170,7 +170,7 @@ export class RepositoryReviewDialog {
     this.note.set('');
     this.saveError.set('');
     this.key = crypto.randomUUID();
-    this.opened.update((item) => item + 1);
+    this.opened.update((count) => count + 1);
     this.dialog().nativeElement.showModal();
   }
   async save(event: Event) {
@@ -195,8 +195,8 @@ export class RepositoryReviewDialog {
       if (!valid()) return;
       this.dialog().nativeElement.close();
       void this.router.navigate(this.store.link('reviews', review.id));
-    } catch (error2) {
-      if (valid()) this.saveError.set(this.scope.message(error2));
+    } catch (error) {
+      if (valid()) this.saveError.set(this.scope.message(error));
     } finally {
       if (valid()) this.saving.set(false);
     }
