@@ -10,7 +10,7 @@ import { systemProblem } from '@core/errors/safe-errors';
 
 export type MessageDisplay = Pick<
   MessageDto,
-  'role' | 'content' | 'status' | 'attachments' | 'sources' | 'webSources' | 'timing' | 'errorCode'
+  'role' | 'content' | 'status' | 'attachments' | 'sources' | 'webSources' | 'timing'
 > & { issueCode?: string | null };
 /** 同一份已定案的回答、引用與附件，在聊天與唯讀快照中呈現相同。 */
 @Component({
@@ -29,23 +29,21 @@ export type MessageDisplay = Pick<
     @if (message().sources?.length) {
       <nav class="source-citations" aria-label="回答引用來源">
         @for (source of message().sources; track source.number) {
+          @let pages =
+            source.endPage > source.pageNumber
+              ? source.pageNumber + '–' + source.endPage
+              : source.pageNumber;
           @if (!shareId()) {
             <a
               [nxReaderLink]="source.documentId"
               [readerPage]="source.pageNumber"
               [title]="source.excerpt"
               ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
-              ><small
-                >第 {{ source.pageNumber
-                }}{{ source.endPage > source.pageNumber ? '–' + source.endPage : '' }} 頁</small
-              ><nx-icon name="document"
+              ><small>第 {{ pages }} 頁</small><nx-icon name="document"
             /></a>
           } @else {
             <details class="shared-citation">
-              <summary>
-                [{{ source.number }}] {{ source.title }} · 第 {{ source.pageNumber
-                }}{{ source.endPage > source.pageNumber ? '–' + source.endPage : '' }} 頁
-              </summary>
+              <summary>[{{ source.number }}] {{ source.title }} · 第 {{ pages }} 頁</summary>
               <p>{{ source.excerpt }}</p>
             </details>
           }

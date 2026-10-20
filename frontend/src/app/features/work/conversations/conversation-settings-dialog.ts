@@ -20,6 +20,11 @@ import { ProjectsApi } from '@features/work/projects/projects-api';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 
+// 與後端 invalid_labels 的限制一致；送出前先擋，說明與錯誤訊息共用同一組數字。
+const MAX_LABELS = 5;
+const MAX_LABEL_LENGTH = 24;
+const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LENGTH} 字元。`;
+
 @Component({
   selector: 'nx-conversation-settings',
   imports: [Notice, CompactDialog, DialogHeader, Field, FormField, Select],
@@ -46,7 +51,7 @@ import { ViewScope } from '@shared/browser/view-scope';
         <label
           >標籤<input nxField [formField]="fields.labels" placeholder="工作, 企劃, 會議"
         /></label>
-        <p class="panel-note">以逗號分隔，最多 5 個標籤，每個最多 24 字元。</p>
+        <p class="panel-note">以逗號分隔，{{ labelRule }}</p>
         @if (session.has('projects') || projectId()) {
           <span class="field-label" aria-hidden="true">所屬專案</span
           ><nx-select
@@ -104,6 +109,7 @@ export class ConversationSettingsDialog {
     maxLength(schema.instruction, 4000);
     maxLength(schema.labels, 150);
   });
+  readonly labelRule = LABEL_RULE;
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.projectsRead.error());
@@ -142,18 +148,23 @@ export class ConversationSettingsDialog {
       .labels.split(/[,，]/)
       .map((label) => label.trim())
       .filter(Boolean);
-    if (labels.length > 5 || labels.some((label) => label.length > 24)) {
-      this.actionError.set('最多 5 個標籤，每個最多 24 字元。');
+    if (labels.length > MAX_LABELS || labels.some((label) => label.length > MAX_LABEL_LENGTH)) {
+      this.actionError.set(LABEL_RULE);
       return;
     }
+    const valid = this.scope.guard();
     this.busy.set(true);
     this.actionError.set('');
     try {
-      if (await this.save()(target, { systemInstruction: this.model().instruction, labels }))
-        this.dialog()?.nativeElement.close();
+      const saved = await this.save()(target, {
+        systemInstruction: this.model().instruction,
+        labels,
+      });
+      if (!valid()) return;
+      if (saved) this.dialog()?.nativeElement.close();
       else this.actionError.set('未能儲存設定，請確認連線後重試。');
     } finally {
-      this.busy.set(false);
+      if (valid()) this.busy.set(false);
     }
   }
 }
