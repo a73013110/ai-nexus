@@ -28,6 +28,9 @@ import { ChatModels } from './state/chat-models';
 import { ChatRun } from './state/chat-run';
 import { routeOf } from '@core/api/catalog';
 
+/** 送出中的提問在伺服器回傳前的暫時 ID 前綴；對話串據此認出被伺服器副本取代的那則提問。 */
+export const PENDING_MESSAGE_PREFIX = 'pending:';
+
 /**
  * 協調聊天頁：啟動、選取對話與送出。有自己生命週期的狀態放在 ChatModels、ChatRun、ChatDraft 與
  * ChatHistory，
@@ -145,16 +148,17 @@ export class ChatStore {
   } | null = null;
   private preferenceWrite: Promise<void> = Promise.resolve();
   private preferenceVersion = 0;
-  private authGeneration = -1;
+  /** 目前資料所屬的帳號世代；null 表示尚未啟動。世代改變時整份重設。 */
+  private account: (() => boolean) | null = null;
   // 儲存要等工作階段的草稿讀取完成；啟動太慢時，不可以用空白草稿覆寫它。
   // 擁有者保存在此處，因為共用工作階段在此 store 重設前就會忘記帳號。
   private draftOwner: string | null = null;
 
   constructor() {
     effect(() => {
-      const generation = this.auth.generation();
-      if (this.authGeneration >= 0 && generation !== this.authGeneration)
-        untracked(() => this.resetSession());
+      // 先讀世代建立依賴；尚未啟動時 account 為 null，不讀就不會再被喚醒。
+      this.auth.generation();
+      if (this.account && !this.account()) untracked(() => this.resetSession());
     });
     effect((onCleanup) => {
       this.draft();
@@ -184,11 +188,9 @@ export class ChatStore {
   }
 
   initialize(retry = false): Promise<void> {
-    if (this.initialized && !retry && this.authGeneration === this.auth.generation())
-      return this.initialized;
-    if (this.authGeneration >= 0 && this.authGeneration !== this.auth.generation())
-      this.resetSession();
-    this.authGeneration = this.auth.generation();
+    if (this.initialized && !retry && this.account?.()) return this.initialized;
+    if (this.account && !this.account()) this.resetSession();
+    this.account = this.auth.guard();
     this.initialized = this.bootstrap();
     return this.initialized;
   }
@@ -433,7 +435,7 @@ export class ChatStore {
   private showPrompt(text: string, parentId: string | null) {
     this.unsent = { text, editing: this.editing(), files: this.attachments.files() };
     this.prompt.set({
-      id: 'pending:' + crypto.randomUUID(),
+      id: PENDING_MESSAGE_PREFIX + crypto.randomUUID(),
       parentId,
       role: 'user',
       content: text,
@@ -593,8 +595,8 @@ export class ChatStore {
 
   rateMessage(value: { id: string; rating: number }) {
     this.messages.update((items) =>
-      items.map((item2) =>
-        item2.id === value.id ? { ...item2, feedbackRating: value.rating } : item2,
+      items.map((item) =>
+        item.id === value.id ? { ...item, feedbackRating: value.rating } : item,
       ),
     );
   }
@@ -662,6 +664,6 @@ export class ChatStore {
     this.error.set(null);
     this.selectionVersion++;
     this.preferenceVersion++;
-    this.authGeneration = this.auth.generation();
+    this.account = this.auth.guard();
   }
 }

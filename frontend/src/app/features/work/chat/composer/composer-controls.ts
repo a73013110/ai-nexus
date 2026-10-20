@@ -4,7 +4,7 @@ import type { ContextUsageDto, ModelDto, ModelPolicyDto } from '@core/api/schema
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Select } from '@shared/ui/select';
-import { formatModelName } from '@shared/browser/format';
+import { formatModelName, formatNumber } from '@shared/browser/format';
 import { ReasoningChoice } from './reasoning-choice';
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -113,20 +113,19 @@ const EFFORT_LABELS: Record<string, string> = {
           <strong>Context 用量</strong>
           @if (usage(); as context) {
             <p class="context-value">
-              約 {{ context.estimatedInputTokens.toLocaleString() }}
-              <span>/ {{ context.contextTokens.toLocaleString() }} tokens</span>
+              約 {{ formatNumber(context.estimatedInputTokens) }}
+              <span>/ {{ formatNumber(context.contextTokens) }} tokens</span>
             </p>
             <meter min="0" max="100" [value]="percent()" aria-label="預估上下文用量"></meter>
-            <p>預留 {{ context.reservedOutputTokens.toLocaleString() }} tokens 給回答。</p>
+            <p>預留 {{ formatNumber(context.reservedOutputTokens) }} tokens 給回答。</p>
             @if (context.reservedKnowledgeTokens) {
               <p>
-                其中約 {{ context.reservedKnowledgeTokens.toLocaleString() }} tokens
-                預留給知識來源。
+                其中約 {{ formatNumber(context.reservedKnowledgeTokens) }} tokens 預留給知識來源。
               </p>
             }
             @if (context.reservedWebSearchTokens) {
               <p>
-                約 {{ context.reservedWebSearchTokens.toLocaleString() }} tokens
+                約 {{ formatNumber(context.reservedWebSearchTokens) }} tokens
                 預留給網路摘要（不會在預覽時搜尋）。
               </p>
             }
@@ -174,10 +173,10 @@ export class ComposerControls {
           : '沒有可用模型',
   );
   readonly modelOptions = computed(() =>
-    this.models().map((item2) => ({
-      value: item2.id,
-      label: formatModelName(item2),
-      description: `${item2.contextTokens.toLocaleString()} Context${item2.supportsImages ? ' · 圖片分析' : ''}`,
+    this.models().map((model) => ({
+      value: model.id,
+      label: formatModelName(model),
+      description: `${formatNumber(model.contextTokens)} Context${model.supportsImages ? ' · 圖片分析' : ''}`,
     })),
   );
   readonly effortOptions = computed(() => [
@@ -188,6 +187,7 @@ export class ComposerControls {
     })),
   ]);
   readonly modelName = formatModelName;
+  readonly formatNumber = formatNumber;
   readonly percent = computed(() => {
     const value = this.usage();
     return value

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
+import { formatNumber } from '@shared/browser/format';
 import { isSubmitKey } from '@shared/browser/submit-key';
 
 @Component({
@@ -43,7 +44,7 @@ import { isSubmitKey } from '@shared/browser/submit-key';
       <p class="dialog-note">
         草稿同步保留 ·
         <span class="focus-composer-count" [class.is-over]="over()"
-          >{{ text().length.toLocaleString() }} / {{ limit().toLocaleString() }} 字元</span
+          >{{ formatNumber(text().length) }} / {{ formatNumber(limit()) }} 字元</span
         >
       </p>
       <button type="button" class="secondary-button" (click)="dialog.close()">
@@ -62,6 +63,7 @@ export class FocusComposer {
   readonly enterToSend = input(true);
   /** 較長的文字仍可編輯，與主輸入框相同，只阻擋送出。 */
   readonly limit = input(24000);
+  readonly formatNumber = formatNumber;
   readonly over = computed(() => this.text().length > this.limit());
   readonly textChange = output<string>();
   readonly sent = output<void>();
