@@ -25,6 +25,10 @@ public static class SessionIdentity
     public const string TestExpires = "test_expires";
     public const string TestId = "test_id";
     public const string ActiveIdentity = "active_identity";
+    /// <summary>LDAP 登入時暫時帶給 <see cref="CurrentUser"/> 的目錄信箱；<see cref="Principal"/> 不帶它，不會寫進 cookie。</summary>
+    public const string DirectoryEmail = "directory_email";
+    /// <summary>最近一次步升驗證（重新輸入密碼或驗證碼）的 Unix 秒數；敏感的帳號變更要求它在有效期限內。</summary>
+    public const string Reauthenticated = "reauthenticated_at";
     public const string Restored = "Identity.Restored";
     /// <summary>測試身分結束的稽核動作；一次測試（<see cref="TestId"/>）最多一筆，也是 cookie 是否已撤銷的判斷依據。</summary>
     public const string TestEndAction = "identity.test_end";

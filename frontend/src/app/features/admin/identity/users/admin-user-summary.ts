@@ -5,7 +5,7 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { UserUnits } from '@features/admin/organization/user-units';
 import { AdminUserStore } from './admin-user-store';
-import { signInMethods } from './user-account-fields';
+import { emailState, signInMethods } from './user-account-fields';
 
 /**
  * 使用者的登入方式、角色、所屬單位與最近 30 天，位於檢視器標題列（名稱、狀態、帳號）與分頁之間。
@@ -20,8 +20,11 @@ import { signInMethods } from './user-account-fields';
     @if (store.current(); as user) {
       <div class="summary-identity">
         <p class="summary-meta">
-          <span>登入：{{ methods(user) }}</span
-          ><span>最近活動 {{ date(user.lastSeenAt) }}</span>
+          <span>登入：{{ methods(user) }}</span>
+          @if (user.email) {
+            <span>信箱：{{ user.email }}（{{ emailState(user) }}）</span>
+          }
+          <span>最近活動 {{ date(user.lastSeenAt) }}</span>
         </p>
         <div class="resource-badges summary-roles" aria-label="角色">
           @for (role of roles(); track role) {
@@ -74,6 +77,7 @@ export class AdminUserSummary {
   });
   readonly roles = computed(() => this.admin.roleNames(this.store.current()?.roleIds ?? []));
   readonly methods = signInMethods;
+  readonly emailState = emailState;
   readonly date = formatDate;
   readonly format = formatNumber;
   readonly bytes = formatBytes;

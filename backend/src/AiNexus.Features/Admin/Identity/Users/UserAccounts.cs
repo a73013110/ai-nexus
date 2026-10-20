@@ -9,6 +9,21 @@ public static class UserAccounts
     /// <summary>去掉網域前綴（<c>DOMAIN\</c>）與 UPN 後綴（<c>@domain</c>）後的目錄帳號名。</summary>
     public static string AccountName(string account) => account.Trim().Split('\\').Last().Split('@')[0];
 
+    /// <summary>
+    /// AD 表單登入輸入的容忍：去掉 <c>DOMAIN\</c> 前綴；只有後綴等於 AD 網域或 <paramref name="suffixes"/> 之一時才去掉 <c>@後綴</c>。
+    /// 其他輸入原樣回傳，由 <c>LdapAuthenticator</c> 的格式檢查以帳密錯誤拒絕，不透露是格式問題。
+    /// </summary>
+    public static string DirectoryLoginName(string input, string domain, IReadOnlyCollection<string> suffixes)
+    {
+        var value = input.Trim();
+        var slash = value.IndexOf('\\');
+        if (slash > 0 && slash == value.LastIndexOf('\\')) value = value[(slash + 1)..];
+        var at = value.LastIndexOf('@');
+        if (at <= 0) return value;
+        var suffix = value[(at + 1)..];
+        return string.Equals(suffix, domain, StringComparison.OrdinalIgnoreCase) || suffixes.Contains(suffix, StringComparer.OrdinalIgnoreCase) ? value[..at] : value;
+    }
+
     /// <summary>通過 <see cref="IsValid"/> 的帳號所對應的儲存形式（去空白、Unicode FormC、大寫）；未設定時回傳 <see langword="null"/>。</summary>
     public static string? Normalize(string? account)
     {

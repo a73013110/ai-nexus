@@ -20,7 +20,7 @@ namespace AiNexus.Features.Admin.Identity;
 /// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="User"/>（必要時建立、綁定或更新），結果在同一請求內快取。
 /// </summary>
 public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
-    DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
+    DirectoryProfileCache profiles, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
     private User? resolved;
@@ -50,12 +50,17 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         if (sid is null && OperatingSystem.IsWindows() && principal.Identity is WindowsIdentity windows) sid = windows.User?.Value;
         if (string.IsNullOrWhiteSpace(sid)) return IdentityErrors.WindowsSidRequired;
         if (principal.Identity.Name is not { } account) return IdentityErrors.WindowsAccountRequired;
-        var displayName = principal.FindFirstValue(SessionIdentity.DisplayName) ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
+        // LDAP 登入由 LogIn 帶入目錄的姓名與信箱；Windows 整合驗證則依 SID 查 AD（快取一小時）。
+        var profile = principal.FindFirstValue(SessionIdentity.DisplayName) is { } claimed
+            ? new DirectoryProfile(claimed, principal.FindFirstValue(SessionIdentity.DirectoryEmail))
+            : profiles.GetOrAdd(sid, () => ResolveProfile(sid, account));
+        var displayName = profile.DisplayName;
+        var directoryEmail = UserEmails.TryNormalize(profile.Email, out var normalizedEmail) ? normalizedEmail : null;
         // 多數請求只讀既有的對應，不取全域寫入鎖；只有建立、綁定或更新使用者，或套用初始授權時才取鎖。
         // 綁定是依帳號跨 SID 進行，且本地登入寫的也是同一批資料列，所以鎖必須共用。
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad")) return IdentityErrors.LoginMethodDisabled;
-        if (existing is not null && !Stale(existing, displayName) && !await PendingGrantAsync(existing, ct))
+        if (existing is not null && !Stale(existing, displayName, directoryEmail) && !await PendingGrantAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try
@@ -72,19 +77,23 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
                 else if (user is not null) return IdentityErrors.AdBindingConflict;
             }
             if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
+            var now = clock.GetUtcNow();
             if (user is null)
             {
-                user = new User { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = clock.GetUtcNow() };
+                user = new User { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = now, DirectoryVerifiedAt = now };
+                SyncEmail(user, directoryEmail, now);
                 db.Users.Add(user);
                 db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
                 await db.SaveChangesAsync(ct);
             }
-            else if (Stale(user, displayName) || db.Entry(user).State == EntityState.Modified)
+            else if (Stale(user, displayName, directoryEmail) || db.Entry(user).State == EntityState.Modified)
             {
                 user.Account = account;
                 if (!user.ProfileManaged) user.DisplayName = displayName;
-                user.LastSeenAt = clock.GetUtcNow();
+                SyncEmail(user, directoryEmail, now);
+                // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據。
+                user.LastSeenAt = now; user.DirectoryVerifiedAt = now;
                 await db.SaveChangesAsync(ct);
             }
             foreach (var grant in grants) await grant.ApplyAsync(user, ct);
@@ -100,8 +109,20 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         return false;
     }
 
-    private bool Stale(User user, string displayName)
-        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || (!user.ProfileManaged && user.DisplayName != displayName);
+    private bool Stale(User user, string displayName, string? directoryEmail)
+        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || user.DirectoryVerifiedAt is null
+            || (!user.ProfileManaged && (user.DisplayName != displayName || (DirectoryOwnsEmail(user) && user.Email != directoryEmail)));
+
+    /// <summary>目錄只管理「沒有信箱」或「來源就是目錄」的信箱；本人驗證或管理者設定的值，以及管理者維護個人資料的使用者，目錄都不覆寫。</summary>
+    private static bool DirectoryOwnsEmail(User user) => user.EmailSource is null or EmailSources.Directory;
+
+    private static void SyncEmail(User user, string? directoryEmail, DateTimeOffset now)
+    {
+        if (user.ProfileManaged || !DirectoryOwnsEmail(user) || user.Email == directoryEmail) return;
+        user.Email = directoryEmail;
+        user.EmailSource = directoryEmail is null ? null : EmailSources.Directory;
+        user.EmailVerifiedAt = directoryEmail is null ? null : now;
+    }
 
     /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
     private User? Track(User? user)
@@ -113,21 +134,21 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         return user;
     }
 
-    private static string ResolveName(string sid, string account)
+    private static DirectoryProfile ResolveProfile(string sid, string account)
     {
         var name = account.Split('\\').Last();
-        if (OperatingSystem.IsWindows()) name = ResolveWindowsName(sid) ?? name;
-        return name;
+        var resolved = OperatingSystem.IsWindows() ? ResolveWindowsProfile(sid) : null;
+        return new(resolved?.DisplayName is { Length: > 0 } display ? display : name, resolved?.Email);
     }
 
     [SupportedOSPlatform("windows")]
-    private static string? ResolveWindowsName(string sid)
+    private static DirectoryProfile? ResolveWindowsProfile(string sid)
     {
         try
         {
             using var context = new PrincipalContext(ContextType.Domain);
             using var user = UserPrincipal.FindByIdentity(context, IdentityType.Sid, sid);
-            return user?.DisplayName;
+            return user is null ? null : new(user.DisplayName ?? "", user.EmailAddress);
         }
         catch (PrincipalException) { return null; }
         catch (SystemException) { return null; }

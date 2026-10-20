@@ -36,7 +36,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         ct.ThrowIfCancellationRequested();
         var filter = $"(&(objectClass=user)({settings.AccountAttribute}={EscapeFilter(account)}))";
         // SizeLimit 設為 2 而非 1：多於一筆就能判定為異常（同名帳號），而不是靜默取第一筆。
-        var search = new SearchRequest(settings.Base, filter, SearchScope.Subtree, "objectSid", "sAMAccountName", "displayName", "userAccountControl")
+        var search = new SearchRequest(settings.Base, filter, SearchScope.Subtree, "objectSid", "sAMAccountName", "displayName", "userAccountControl", "mail")
         {
             SizeLimit = 2,
             TimeLimit = TimeSpan.FromSeconds(5),
@@ -60,7 +60,8 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         var sid = new SecurityIdentifier(bytes, 0).Value;
         var name = entry.Attributes["sAMAccountName"]?[0]?.ToString() ?? account;
         var display = entry.Attributes["displayName"]?[0]?.ToString() ?? name;
-        return new AdIdentity(sid, $"{name}@{settings.Domain}", display);
+        var mail = entry.Attributes["mail"]?[0]?.ToString();
+        return new AdIdentity(sid, $"{name}@{settings.Domain}", display, string.IsNullOrWhiteSpace(mail) ? null : mail);
     }
 
     private static AdAuthenticationOptions Require(AdAuthenticationOptions settings)

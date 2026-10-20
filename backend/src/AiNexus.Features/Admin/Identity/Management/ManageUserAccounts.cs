@@ -93,7 +93,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
             user.AdAccount = ad; user.LocalAccount = local;
             if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) user.Account = local ?? ad!;
-            if (hash is not null) { user.PasswordHash = hash; user.FailedLogins = 0; user.LockedUntil = null; }
+            if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
             await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
             return Result.Success;
         }, ct);

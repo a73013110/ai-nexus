@@ -9,7 +9,9 @@ namespace AiNexus.Features.Admin.Operations;
 
 public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversations);
 
-public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null);
+/// <summary>使用者列與詳情共用；<paramref name="Email"/> 等信箱欄位只有詳情（<c>GetAdminUserInsights</c>）回傳，列表 procedure 不含。</summary>
+public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null,
+    string? Email = null, string? EmailSource = null, DateTimeOffset? EmailVerifiedAt = null);
 
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 
