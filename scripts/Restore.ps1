@@ -20,8 +20,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
-$env:NG_CLI_ANALYTICS = 'false'
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+Disable-RepoTelemetry
 Push-Location -LiteralPath (Get-RepoRoot)
 try {
     npm --prefix frontend ci --no-fund --no-audit

@@ -105,6 +105,15 @@ function Add-Wrapped([Collections.Generic.List[string]]$Lines, [string]$Text, [s
     foreach ($part in Split-RepoDisplayLine $Text ($Width - (Get-RepoDisplayWidth $Prefix))) { $Lines.Add((Format-Line @("$Prefix$part", $Style) $Width)) }
 }
 
+function Add-FullwidthWarning([Collections.Generic.List[string]]$Lines, $Value, [int]$Width) {
+    # 中文輸入法在全形模式會打出全形英數與全形空白，路徑或伺服器名稱多半是誤打，只提醒、不自動轉換（中文資料夾名稱可能本來就有全形標點）。
+    if ("$Value" -match '[\uFF01-\uFF5E\u3000]') { Add-Wrapped $Lines '提醒：值裡有全形英數或全形空白，若不是故意的，請切換成半形再輸入。' $theme.Warn $Width }
+}
+
+function Get-CheckboxSegments([bool]$Checked) {
+    if ($Checked) { @('[x]', "$($theme.Bold)$($theme.Good)") } else { @('[ ]', $theme.Dim) }
+}
+
 function Get-ListRows([string]$Text) {
     $terms = @(Get-Terms $Text)
     $rows = [Collections.Generic.List[hashtable]]::new()
@@ -215,7 +224,7 @@ function Get-Placeholder($Parameter) {
 
 function Get-ValueSegments($Parameter, $Value, [bool]$Selected) {
     switch ($Parameter.Kind) {
-        'Switch' { return $(if ($Value) { @('[x]', "$($theme.Bold)$($theme.Good)") } else { @('[ ]', $theme.Dim) }) }
+        'Switch' { return Get-CheckboxSegments $Value }
         'Unsupported' { return @('選單無法填寫這個參數，需要時請手動下指令', $theme.Dim) }
         'Credential' {
             $segments = switch ($Value) {
@@ -269,8 +278,7 @@ function Get-ParameterFrame([hashtable]$State, [int]$Width, [int]$Height) {
     $current = $parameters[$State.Field]
     # 訊息與提醒排在參數說明前面，空間不夠時被截掉的是說明。
     if ($State.Message) { Add-Wrapped $detail $State.Message $State.MessageStyle $Width }
-    # 中文輸入法在全形模式會打出全形英數與全形空白，路徑或伺服器名稱多半是誤打，只提醒、不自動轉換（中文資料夾名稱可能本來就有全形標點）。
-    if ("$($State.Values[$current.Name])" -match '[\uFF01-\uFF5E\u3000]') { Add-Wrapped $detail '提醒：值裡有全形英數或全形空白，若不是故意的，請切換成半形再輸入。' $theme.Warn $Width }
+    Add-FullwidthWarning $detail $State.Values[$current.Name] $Width
     if ($current.Help) { Add-Wrapped $detail $current.Help '' $Width }
     $command = Format-RepoCommandLine $item.Name (ConvertTo-RunParameters $item $State.Values)
     $preview = [Collections.Generic.List[string]]::new()
@@ -324,7 +332,7 @@ function Get-SettingsFrame([hashtable]$State, [int]$Width) {
             if ($null -eq $value) { $segments += @($(if ($State.Shared.HasSavedPassword) { '已儲存，打字以更換' } else { '未儲存' }), $theme.Dim) }
             elseif ($value -eq '') { $segments += @('儲存時清除', $theme.Warn) }
             else { $segments += @(('*' * $value.Length), $theme.Bold) }
-        } elseif ($value -is [bool]) { $segments += $(if ($value) { @('[x]', "$($theme.Bold)$($theme.Good)") } else { @('[ ]', $theme.Dim) }) }
+        } elseif ($value -is [bool]) { $segments += Get-CheckboxSegments $value }
         else { $segments += @("$value", $theme.Bold) }
         if ($selected -and $value -isnot [bool]) { $segments += @(' ', $theme.Reverse) }
         $lines.Add((Format-Line $segments $Width))
@@ -332,9 +340,7 @@ function Get-SettingsFrame([hashtable]$State, [int]$Width) {
     $lines.Add((Format-Rule $Width))
     if ($State.Message) { Add-Wrapped $lines $State.Message $State.MessageStyle $Width }
     $current = $keys[$State.SettingsField]
-    if ($current -ne 'Password' -and "$($State.SettingsValues[$current])" -match '[\uFF01-\uFF5E\u3000]') {
-        Add-Wrapped $lines '提醒：值裡有全形英數或全形空白，若不是故意的，請切換成半形再輸入。' $theme.Warn $Width
-    }
+    if ($current -ne 'Password') { Add-FullwidthWarning $lines $State.SettingsValues[$current] $Width }
     Add-Wrapped $lines "伺服器與資料庫寫入 $($State.SettingsPath)；帳密寫入 $($State.SecretsPath)，只有目前使用者可讀。兩者都和網站共用。" $theme.Dim $Width
     Add-Wrapped $lines '帳號或密碼留空就不儲存，-Credential 改成執行前輸入。' $theme.Dim $Width
     , $lines

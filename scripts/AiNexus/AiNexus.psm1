@@ -13,9 +13,8 @@ function Get-RepoRoot {
 }
 
 function Get-RepoLocalPaths {
-    <# .SYNOPSIS Machine settings and secrets files under .local/. #>
+    <# .SYNOPSIS .local/ 下的本機設定檔與秘密檔路徑。 #>
     @{
-        Root = $root
         Settings = Join-Path $root '.local/config/appsettings.Local.json'
         Secrets = Join-Path $root '.local/secrets/appsettings.Secrets.json'
     }
@@ -131,6 +130,15 @@ function Assert-RepoHttpsCertificate {
     <# .SYNOPSIS Throws unless the .NET SDK development HTTPS certificate exists. #>
     dotnet dev-certs https --check --quiet
     if ($LASTEXITCODE -ne 0) { throw '找不到本機 HTTPS 憑證。請先執行 dotnet dev-certs https --trust，再重新啟動。純 HTTP 測試可明確使用 -Http（僅限 localhost）。' }
+}
+
+function Disable-RepoTelemetry {
+    <#
+    .SYNOPSIS 關閉 Angular CLI 與 .NET CLI 的使用資料回傳。
+    .DESCRIPTION 沒有設定時 Angular CLI 第一次執行會停下來詢問是否分享使用資料。設在目前工作階段的環境變數，之後啟動的 npm、dotnet 都沿用。
+    #>
+    $env:NG_CLI_ANALYTICS = 'false'
+    $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 }
 
 function Invoke-RepoHostCommand {
