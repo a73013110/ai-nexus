@@ -55,7 +55,6 @@ import { RETRIEVAL_TOUR } from './quality-tour';
   templateUrl: './retrieval-evaluation.html',
 })
 export class RetrievalEvaluation {
-  /** 範本裡的連結由功能目錄取得網址。 */
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobs = inject(JobsApi);
@@ -100,6 +99,7 @@ export class RetrievalEvaluation {
   readonly busy = signal(false);
   readonly loading = computed(() => this.collectionsRead.loading() || this.runsRead.loading());
   readonly date = formatDate;
+  readonly active = isActive;
   readonly tour = RETRIEVAL_TOUR;
   readonly form = new FormGroup({
     title: new FormControl('', {
@@ -128,13 +128,13 @@ export class RetrievalEvaluation {
     this.collectionsRead.reload();
     this.runsRead.reload();
   }
-  options() {
-    return this.runs().map((item2) => ({
-      value: item2.id,
-      label: `${item2.title} · ${this.date(item2.createdAt)}`,
-      description: item2.job.stage,
-    }));
-  }
+  readonly options = computed(() =>
+    this.runs().map((item) => ({
+      value: item.id,
+      label: `${item.title} · ${this.date(item.createdAt)}`,
+      description: item.job.stage,
+    })),
+  );
   choose(id: string, checked: boolean) {
     this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((item) => item !== id)));
   }

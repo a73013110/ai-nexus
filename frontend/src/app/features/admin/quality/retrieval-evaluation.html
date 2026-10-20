@@ -31,7 +31,7 @@
         </ng-container>
         @if (report(); as report) {
           <nx-job-progress [job]="report.run.job">
-            @if (report.run.job.status === 'queued' || report.run.job.status === 'running') {
+            @if (active(report.run.job.status)) {
               <button class="quiet-button" [disabled]="busy()" (click)="control('cancel')">
                 取消評測
               </button>
