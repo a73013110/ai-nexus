@@ -40,7 +40,13 @@ function setup() {
         provide: WorkspaceSession,
         useValue: {
           me,
-          auth: { generation },
+          auth: {
+            generation,
+            guard: () => {
+              const current = generation();
+              return () => current === generation();
+            },
+          },
           settings: { value: () => ({ notifyOnCompletion: false }) },
         },
       },
