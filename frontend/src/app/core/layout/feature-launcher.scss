@@ -80,7 +80,7 @@
   color: inherit;
   font: inherit;
   text-align: start;
-  > span {
+  > span:first-child {
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -134,76 +134,32 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px 0;
 }
+// 格子的外框；圖示、名稱、圖釘與徽章的排列在 NavigationEntry。
 .workspace-icons > * {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-width: 0;
   min-height: 52px;
   padding: var(--p-space-1);
   border-radius: var(--p-radius-md);
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-// 長名稱最多兩行並平均斷行，格子高度才不會參差。
-.workspace-icons span {
-  display: -webkit-box;
-  max-width: 100%;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  text-align: center;
-  text-wrap: balance;
-}
 .workspace-icons > :not(.current):hover {
   background: var(--hover);
   color: var(--ink);
 }
-// Selected and pinned share the sidebar's raised chip; the icon carries the accent.
+// Selected and pinned share the sidebar's raised chip; the icon carries the accent (NavigationEntry).
 .workspace-icons > :is(.current, [aria-pressed='true']) {
   background: var(--surface);
   box-shadow: var(--selected-ring);
   color: var(--ink);
   font-weight: 600;
-  nx-icon {
-    color: var(--accent);
-  }
-}
-// 釘選與外部連結是項目的屬性、不是選取，所以用小標記而不是晶片。
-.workspace-icons .entry-mark {
-  position: absolute;
-  top: var(--p-space-1);
-  left: calc(50% + 8px);
-  --icon-size: var(--icon-xs);
-  color: var(--muted);
-}
-.workspace-icons .pin-mark {
-  transform: rotate(35deg);
-}
-.workspace-icons.is-list .entry-mark {
-  position: static;
-  margin-left: auto;
-  flex: none;
 }
 .workspace-icons.is-list {
   grid-template-columns: minmax(0, 1fr);
 }
 .workspace-icons.is-list > * {
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: var(--p-space-2);
   min-height: var(--row);
   padding: 0 var(--p-space-2);
   font-size: var(--text-label);
-}
-.workspace-icons.is-list span {
-  -webkit-line-clamp: 1;
-  text-align: left;
 }
 .workspace-icons > :disabled {
   opacity: 0.45;

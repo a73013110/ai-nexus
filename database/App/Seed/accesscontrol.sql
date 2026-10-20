@@ -110,6 +110,7 @@ WHEN NOT MATCHED BY TARGET THEN
     INSERT ([GroupId], [FeatureId], [Scope]) VALUES (s.[GroupId], s.[FeatureId], s.[Scope]);
 
 -- 預設選單樹。節點 Id 是可讀代稱（<分群>.<功能 ID 的點換成連字號>），同層 SortOrder 間隔 10；page 的名稱與圖示取自程式目錄，所以 Name、Icon 為 NULL。
+-- 系統管理的頁面一律放進子分群，不直接掛在 system 底下：分群混著散頁時，圖示格狀會在托盤之間夾出零散的格子。
 -- 目錄每個 Page 至少要放一次，新頁面才不會預設看不到（FeatureCatalogSeedTests 檢查）；動作與閱讀器不放進選單。
 DECLARE @navigation TABLE (
     [Id]        NVARCHAR (64)  NOT NULL PRIMARY KEY,
@@ -139,17 +140,21 @@ VALUES
     (N'system.access.access-control-groups', N'system.access', N'page', N'access-control.groups', NULL, 30),
     (N'system.access.access-control-features', N'system.access', N'page', N'access-control.features', NULL, 40),
     (N'system.access.access-control-navigation', N'system.access', N'page', N'access-control.navigation', NULL, 50),
-    (N'system.operations-usage', N'system', N'page', N'operations.usage', NULL, 20),
-    (N'system.billing-prices', N'system', N'page', N'billing.prices', NULL, 30),
-    (N'system.knowledge-retrieval', N'system', N'page', N'knowledge.retrieval', NULL, 40),
-    (N'system.integrations', N'system', N'page', N'integrations', NULL, 50),
-    (N'system.monitoring', N'system', N'page', N'monitoring', NULL, 60),
-    (N'system.mail-messages', N'system', N'page', N'mail.messages', NULL, 65),
-    (N'system.diagnostics-logs', N'system', N'page', N'diagnostics.logs', NULL, 70),
-    (N'system.audit', N'system', N'page', N'audit', NULL, 80),
-    (N'system.quality', N'system', N'page', N'quality', NULL, 90),
-    (N'system.quality-retrieval', N'system', N'page', N'quality.retrieval', NULL, 100),
-    (N'system.design', N'system', N'page', N'design', NULL, 110);
+    (N'system.usage', N'system', N'group', NULL, N'用量與計費', 20),
+    (N'system.usage.operations-usage', N'system.usage', N'page', N'operations.usage', NULL, 10),
+    (N'system.usage.billing-prices', N'system.usage', N'page', N'billing.prices', NULL, 20),
+    (N'system.data', N'system', N'group', NULL, N'資料與檢索', 30),
+    (N'system.data.integrations', N'system.data', N'page', N'integrations', NULL, 10),
+    (N'system.data.knowledge-retrieval', N'system.data', N'page', N'knowledge.retrieval', NULL, 20),
+    (N'system.observability', N'system', N'group', NULL, N'監控與紀錄', 40),
+    (N'system.observability.monitoring', N'system.observability', N'page', N'monitoring', NULL, 10),
+    (N'system.observability.diagnostics-logs', N'system.observability', N'page', N'diagnostics.logs', NULL, 20),
+    (N'system.observability.audit', N'system.observability', N'page', N'audit', NULL, 30),
+    (N'system.observability.mail-messages', N'system.observability', N'page', N'mail.messages', NULL, 40),
+    (N'system.evaluation', N'system', N'group', NULL, N'評測與開發', 50),
+    (N'system.evaluation.quality', N'system.evaluation', N'page', N'quality', NULL, 10),
+    (N'system.evaluation.quality-retrieval', N'system.evaluation', N'page', N'quality.retrieval', NULL, 20),
+    (N'system.evaluation.design', N'system.evaluation', N'page', N'design', NULL, 30);
 
 -- 一層一層寫入：每輪只寫父節點已存在的列，沒有新列就停（外鍵要求父節點先存在）。
 -- 既有環境的選單可能被管理員改過：上層分群已刪除，或同層已有同一頁面（唯一索引會擋），這些預設節點直接略過，Seed 不因此失敗。

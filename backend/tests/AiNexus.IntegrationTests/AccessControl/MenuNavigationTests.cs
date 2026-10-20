@@ -18,13 +18,13 @@ public sealed class MenuNavigationTests
     {
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
-        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
+        // 成員在系統管理只看得到「評測與開發」的兩個評測頁：其他子分群沒有可見頁面而被修剪，系統管理只剩這個分群，由它取代。
+        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "system.evaluation"], tree.Select(x => x.Id));
         var dashboard = tree[0];
         Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));
         Assert.Equal(["work.chat", "work.projects", "work.files", "work.knowledge", "work.artifacts"], tree[1].Children.Select(x => x.Id));
         Assert.Equal(("group", "AI 工作台"), (tree[1].Kind, tree[1].Name));
-        // 成員在系統管理只有兩個評測頁；「身分與權限」整個分群沒有可見頁面而被修剪。
-        Assert.Equal(["system.quality", "system.quality-retrieval"], tree[3].Children.Select(x => x.Id));
+        Assert.Equal(["system.evaluation.quality", "system.evaluation.quality-retrieval"], tree[3].Children.Select(x => x.Id));
     }
 
     [Fact]
@@ -34,13 +34,14 @@ public sealed class MenuNavigationTests
         using var member = await factory.SignedInAsync("bob");
         (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
-        var quality = Assert.Single(tree, x => x.Id == "system.quality");
+        // 單一路徑一路攤到葉節點：評測分群與系統管理都只剩這一頁。
+        var quality = Assert.Single(tree, x => x.Id == "system.evaluation.quality");
         Assert.Equal(("page", FeatureCatalog.Quality), (quality.Kind, quality.FeatureId));
-        Assert.DoesNotContain(tree, x => x.Id == BuiltInAccess.SystemNavigation);
+        Assert.DoesNotContain(tree, x => x.Id is BuiltInAccess.SystemNavigation or "system.evaluation");
 
         // 改名後的有效名稱進入選單。
         (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.Quality}", new FeatureUpdateRequest("評測", true))).EnsureSuccessStatusCode();
-        Assert.Equal("評測", Assert.Single((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation, x => x.Id == "system.quality").Name);
+        Assert.Equal("評測", Assert.Single((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation, x => x.Id == "system.evaluation.quality").Name);
     }
 
     [Fact]
