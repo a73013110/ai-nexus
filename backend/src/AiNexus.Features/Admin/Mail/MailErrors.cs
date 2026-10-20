@@ -19,4 +19,8 @@ public static class MailErrors
     public static readonly Error NotRetryable = Error.Conflict("mail_not_retryable");
     public static readonly Error FilterInvalid = Error.Invalid("mail_filter_invalid");
     public static readonly Error CursorInvalid = Error.Invalid("mail_cursor_invalid");
+    /// <summary>寄信測試選的範本沒有登記（<see cref="MailSample"/>）。</summary>
+    public static readonly Error SampleNotFound = Error.NotFound("mail_sample_not_found");
+    /// <summary>寄信測試的參數有未知名稱，或值不符合型別。</summary>
+    public static readonly Error SampleInvalid = Error.Invalid("mail_sample_invalid");
 }

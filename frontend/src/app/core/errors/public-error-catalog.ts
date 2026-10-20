@@ -78,6 +78,9 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   mail_not_configured: '郵件寄送尚未設定，請聯絡系統管理員。',
   mail_recipient_blocked: '收件地址的網域不在允許清單內。',
   mail_recipient_unavailable: '收件地址已依保存期限清除，不能重寄。',
+  mail_sample_invalid:
+    '參數不正確：數字要是整數、是否要是 true 或 false、時間要是 ISO 8601，必填欄位不可空白。',
+  mail_sample_not_found: '找不到這種郵件範本，請重新整理後再選。',
   message_not_found: '找不到來源訊息。',
   artifact_limit: '個人成果文件已達 200 份上限。',
   artifact_version_limit: '此文件最多保留 200 個版本；請建立副本繼續工作。',

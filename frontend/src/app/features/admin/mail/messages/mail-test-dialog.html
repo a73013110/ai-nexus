@@ -1,0 +1,120 @@
+<dialog
+  nxCompactDialog
+  [size]="sample()?.parameters?.length ? 'lg' : 'md'"
+  #dialog
+  class="platform-dialog"
+  aria-label="寄信測試"
+  (cancel)="cancel($event)"
+>
+  <form class="dialog-form" (submit)="send($event)">
+    <nx-dialog-header heading="寄信測試" closeLabel="關閉寄信測試" />
+    <div class="dialog-body">
+      <p class="form-note">
+        寄件地址：{{
+          from() || '未設定'
+        }}。測試信照常排隊寄出，主旨加「[測試]」（設定測試信除外），結果在寄送紀錄查看。
+      </p>
+      <label
+        >收件地址<input
+          nxField
+          #field
+          type="email"
+          required
+          maxlength="254"
+          autocomplete="email"
+          placeholder="name@company.com"
+          [value]="to()"
+          [readOnly]="busy()"
+          (input)="to.set($any($event.target).value)"
+      /></label>
+      <label
+        >郵件範本<nx-select
+          label="郵件範本"
+          [placeholder]="loading() ? '正在讀取…' : '選擇郵件範本'"
+          [options]="options()"
+          [value]="category()"
+          [disabled]="busy() || loading()"
+          (valueChange)="choose($event)"
+      /></label>
+      @if (sample(); as current) {
+        <p class="form-note">{{ current.description }}</p>
+        <div class="sample-traits">
+          <code>{{ current.category }}</code>
+          <nx-status-badge [tone]="current.priority === 'security' ? 'warning' : 'neutral'">{{
+            priority()
+          }}</nx-status-badge>
+          @if (current.sensitive) {
+            <nx-status-badge tone="danger">敏感信：寄出後刪除內文、不能重寄</nx-status-badge>
+          }
+        </div>
+        @if (current.parameters.length) {
+          <div class="sample-heading">
+            <h3 class="ui-section-heading">參數（{{ current.modelType }}）</h3>
+            <button type="button" class="secondary-button" [disabled]="busy()" (click)="reset()">
+              還原範例值
+            </button>
+          </div>
+          <ul class="sample-parameters" aria-label="範本參數">
+            @for (parameter of current.parameters; track parameter.name) {
+              <li>
+                @if (parameter.type === 'flag') {
+                  <nx-checkbox
+                    [label]="parameter.name"
+                    [description]="parameter.description"
+                    [checked]="values()[parameter.name] === 'true'"
+                    [disabled]="busy()"
+                    (checkedChange)="set(parameter.name, $event ? 'true' : 'false')"
+                  />
+                } @else {
+                  <label
+                    ><span class="sample-parameter-name"
+                      ><code>{{ parameter.name }}</code
+                      ><span class="sample-parameter-type"
+                        >{{ types[parameter.type] || parameter.type
+                        }}{{ parameter.required ? '・必填' : '・選填' }}</span
+                      ></span
+                    ><input
+                      nxField
+                      [type]="parameter.type === 'number' ? 'number' : 'text'"
+                      [attr.inputmode]="parameter.type === 'number' ? 'numeric' : null"
+                      maxlength="2000"
+                      [attr.aria-describedby]="'sample-' + parameter.name"
+                      [placeholder]="parameter.type === 'time' ? '2026-01-31T09:00:00Z' : ''"
+                      [value]="values()[parameter.name] ?? ''"
+                      [readOnly]="busy()"
+                      (input)="set(parameter.name, $any($event.target).value)"
+                  /></label>
+                  <p class="form-note" [id]="'sample-' + parameter.name">
+                    {{ parameter.description }}
+                  </p>
+                }
+              </li>
+            }
+          </ul>
+        }
+        <details class="ui-raw-record sample-usage">
+          <summary>開發者用法（C#）</summary>
+          <pre>{{ usage() }}</pre>
+          <nx-copy-value label="程式碼" [value]="usage()" [showValue]="false" [compact]="false" />
+        </details>
+      }
+      @if (invalid()) {
+        <nx-notice tone="warning" [message]="invalid()" />
+      }
+      @if (error()) {
+        <nx-notice tone="danger" [message]="error()" />
+      }
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+        取消
+      </button>
+      <button
+        class="primary-button"
+        [disabled]="busy() || !to().trim() || !sample() || !!invalid()"
+      >
+        {{ busy() ? '正在送出…' : '寄出測試信' }}
+      </button>
+    </footer>
+  </form>
+</dialog>

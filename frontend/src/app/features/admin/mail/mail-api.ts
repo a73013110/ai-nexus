@@ -5,7 +5,7 @@ import { ApiClient, type ApiQuery } from '@core/api/api-client';
 export type MailFilters = Omit<ApiQuery<'/api/v1/admin/mail-messages', 'get'>, 'before' | 'take'>;
 
 /**
- * 郵件寄送紀錄的讀取、測試信與連線診斷（`mail.messages`）；重寄與立即重試另需 `mail.messages.resend`。
+ * 郵件寄送紀錄的讀取、寄信測試與連線診斷（`mail.messages`）；重寄與立即重試另需 `mail.messages.resend`。
  */
 @Injectable({ providedIn: 'root' })
 export class MailApi {
@@ -26,7 +26,11 @@ export class MailApi {
   /** 自動重試開關；下一輪寄送就生效，不必重啟。 */
   updateSettings = (autoRetry: boolean) =>
     this.api.put('/api/v1/admin/mail-settings', { body: { autoRetry } });
-  test = (to: string) => this.api.post('/api/v1/admin/mail-tests', { body: { to } });
+  /** 寄信測試可選的系統信，含參數說明與範例值。 */
+  samples = (signal?: AbortSignal) => this.api.get('/api/v1/admin/mail-samples', { signal });
+  /** `parameters` 只放和範例不同的值；沒填的由伺服器補範例值。 */
+  test = (to: string, category: string, parameters: Record<string, string>) =>
+    this.api.post('/api/v1/admin/mail-tests', { body: { to, category, parameters } });
   /** 同步跑一次 SMTP 對話（不寄出）；`to` 空白時伺服器用寄件地址檢查 RCPT。 */
   diagnose = (to: string) =>
     this.api.post('/api/v1/admin/mail-diagnoses', { body: { to: to || null } });
