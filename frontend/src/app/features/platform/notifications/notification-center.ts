@@ -156,7 +156,6 @@ export class NotificationCenter {
     { value: 'inbox', label: '通知匣' },
     { value: 'session', label: '本次工作階段', count: this.toasts.history().length },
   ]);
-  readonly toggle = (value: boolean) => !value;
   private readonly phone = mediaQuery(below('phone'));
   /** 手機使用模態底部面板，較寬的螢幕使用 popover。開啟時決定，退場時沿用。 */
   readonly sheet = linkedSignal<boolean, boolean>({
@@ -219,11 +218,11 @@ export class NotificationCenter {
       );
     else positionPopover(trigger, panel, 480, 'right', 640);
   }
-  /** 點外部輕關閉由原生處理；store 同步，焦點回到鈴鐺。 */
   toggleUnreadOnly() {
-    this.store.unreadOnly.update(this.toggle);
-    this.store.refresh();
+    this.store.unreadOnly.update((value) => !value);
+    void this.store.refresh();
   }
+  /** 點外部輕關閉由原生處理；store 同步，焦點回到鈴鐺。 */
   toggled(event: Event) {
     this.popover.sync(event);
     if (this.popover.opened()) return;

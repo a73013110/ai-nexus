@@ -1,4 +1,4 @@
-import { safeMessage } from '@core/errors/safe-errors';
+import { isCancellation, safeMessage } from '@core/errors/safe-errors';
 import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import type { NotificationDto } from '@core/api/schema';
@@ -26,6 +26,10 @@ export class NotificationStore {
   private controller?: AbortController;
   private owner = '';
   private generation = -1;
+  /**
+   * 每次 refresh 遞增：同帳號下較新的讀取也要讓舊回應作廢（回應已讀完時 abort 不會讓它拋錯），
+   * 也避免舊請求的 finally 清掉新請求的 loading。帳號守衛涵蓋不了這種同帳號的競態。
+   */
   private revision = 0;
   private seen = new Set<string>();
   private primed = false;
@@ -52,7 +56,7 @@ export class NotificationStore {
         this.seen.clear();
         this.primed = false;
         this.latest = 0;
-        if (owner) void this.poll(generation);
+        if (owner) void this.poll(this.guard());
       });
     });
     inject(DestroyRef).onDestroy(() => {
@@ -60,24 +64,26 @@ export class NotificationStore {
       this.controller?.abort();
     });
   }
-  private async poll(generation: number) {
-    const owner = this.owner;
+  /** 帳號與登入世代都沒變；換人時 effect 已重設狀態，晚到的結果一律丟棄。 */
+  private guard() {
+    const owner = this.owner,
+      current = this.session.auth.guard();
+    return () => owner === this.owner && current();
+  }
+  /** 守衛在 effect 取得一次並沿用整條輪詢鏈，換帳號時舊鏈自行停止，不會與新鏈重疊。 */
+  private async poll(current: () => boolean) {
     await this.refresh(false, true);
-    if (owner && owner === this.owner && generation === this.session.auth.generation())
+    if (current())
       this.timer = setTimeout(
-        () => void this.poll(generation),
+        () => void this.poll(current),
         document.visibilityState === 'hidden' ? 30000 : 8000,
       );
   }
   async refresh(more = false, poll = false) {
     if (!this.owner) return;
     const revision = ++this.revision,
-      owner = this.owner,
-      generation = this.session.auth.generation();
-    const valid = () =>
-      revision === this.revision &&
-      owner === this.owner &&
-      generation === this.session.auth.generation();
+      current = this.guard();
+    const valid = () => revision === this.revision && current();
     this.controller?.abort();
     this.controller = new AbortController();
     this.loading.set(true);
@@ -122,8 +128,7 @@ export class NotificationStore {
       if (!preserve) this.hasMore.set(page.hasMore);
       this.error.set('');
     } catch (error) {
-      if (valid() && !(error instanceof DOMException && error.name === 'AbortError'))
-        this.error.set(safeMessage(error));
+      if (valid() && !isCancellation(error)) this.error.set(safeMessage(error));
     } finally {
       if (valid()) this.loading.set(false);
     }
@@ -140,11 +145,11 @@ export class NotificationStore {
   }
   completed(id: string) {
     return this.items().some(
-      (item2) =>
-        item2.target.kind === 'conversation' &&
-        item2.target.id === id &&
-        item2.type === 'conversation.completed' &&
-        !item2.readAt,
+      (item) =>
+        item.target.kind === 'conversation' &&
+        item.target.id === id &&
+        item.type === 'conversation.completed' &&
+        !item.readAt,
     );
   }
   readConversation(id: string) {
@@ -153,55 +158,51 @@ export class NotificationStore {
         void this.read(item).catch(() => {});
   }
   async read(item: NotificationDto) {
-    const owner = this.owner,
-      generation = this.session.auth.generation();
+    const current = this.guard();
     try {
       await this.api.read(item.id);
-      if (owner !== this.owner || generation !== this.session.auth.generation()) return;
-      const unread = this.items().some((item3) => item3.id === item.id && !item3.readAt);
+      if (!current()) return;
+      const unread = this.items().some((row) => row.id === item.id && !row.readAt);
+      const readAt = new Date().toISOString();
       this.items.update((rows) =>
-        rows.map((item4) =>
-          item4.id === item.id ? { ...item4, readAt: new Date().toISOString() } : item4,
-        ),
+        rows
+          .map((row) => (row.id === item.id ? { ...row, readAt } : row))
+          .filter((row) => !this.unreadOnly() || !row.readAt),
       );
-      if (this.unreadOnly()) this.items.update((rows) => rows.filter((item) => !item.readAt));
       if (unread) this.unread.update((value) => Math.max(0, value - 1));
-    } catch (error2) {
-      if (owner === this.owner && generation === this.session.auth.generation())
-        this.error.set(safeMessage(error2));
-      throw error2;
+    } catch (error) {
+      if (current()) this.error.set(safeMessage(error));
+      throw error;
     }
   }
   async activate(item: NotificationDto) {
     const destination = notificationUrl(item.target, item.version);
     if (!destination) return;
-    const generation = this.session.auth.generation();
+    const current = this.guard();
     try {
       await this.read(item);
-      if (generation !== this.session.auth.generation()) return;
+      if (!current()) return;
       this.close();
       this.layout.closeMobile();
       await this.router.navigateByUrl(destination);
     } catch {}
   }
   async readAll() {
-    const through = this.items()[0]?.createdAt,
-      generation = this.session.auth.generation();
+    const through = this.items()[0]?.createdAt;
     if (!through) return;
-    try {
-      await this.api.readThrough(through);
-      if (generation === this.session.auth.generation()) await this.refresh();
-    } catch (error3) {
-      if (generation === this.session.auth.generation()) this.error.set(safeMessage(error3));
-    }
+    await this.write(() => this.api.readThrough(through));
   }
   async dismiss(item: NotificationDto) {
-    const generation = this.session.auth.generation();
+    await this.write(() => this.api.dismiss(item.id));
+  }
+  /** 寫入成功就重讀最新一頁，未讀數以伺服器為準。 */
+  private async write(request: () => Promise<unknown>) {
+    const current = this.guard();
     try {
-      await this.api.dismiss(item.id);
-      if (generation === this.session.auth.generation()) await this.refresh();
-    } catch (error4) {
-      if (generation === this.session.auth.generation()) this.error.set(safeMessage(error4));
+      await request();
+      if (current()) await this.refresh();
+    } catch (error) {
+      if (current()) this.error.set(safeMessage(error));
     }
   }
   private browserNotify(item: NotificationDto) {

@@ -22,12 +22,14 @@ import { Icon } from '@shared/ui/icon';
     }
     <div class="notification-list" [attr.aria-busy]="store.loading()">
       @for (item of store.items(); track item.id) {
-        <!-- The row is a pointer shortcut for 「查看內容」, which stays the keyboard path. -->
+        @let destination = url(item.target, item.version);
+        @let text = body(item);
+        <!-- 整列只是「查看內容」的滑鼠捷徑，鍵盤仍走該按鈕。 -->
         <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <article
           class="notification-row"
           [class.is-unread]="!item.readAt"
-          [class.is-actionable]="url(item.target, item.version)"
+          [class.is-actionable]="destination"
           [attr.data-severity]="item.severity"
           (click)="open($event, item)"
         >
@@ -43,10 +45,10 @@ import { Icon } from '@shared/ui/icon';
                 <span class="notification-unread">未讀</span>
               }
             </div>
-            <p>{{ body(item) }}<nx-issue-code [message]="body(item)" /></p>
+            <p>{{ text }}<nx-issue-code [message]="text" /></p>
             <div class="notification-actions">
               <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
-              @if (url(item.target, item.version)) {
+              @if (destination) {
                 <button class="quiet-button" (click)="store.activate(item)">
                   查看內容<nx-icon name="chevron" />
                 </button>
