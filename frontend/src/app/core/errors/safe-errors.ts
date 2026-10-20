@@ -2,6 +2,13 @@ import { publicErrorHints } from './public-error-catalog';
 
 const serverPattern = /^NX-[0-9A-F]{32}$/;
 const localPattern = /^LOCAL-[0-9A-F]{16}$/;
+/**
+ * 查詢條件與連結裡的查證代碼：不分大小寫，因為手貼或舊書籤可能是小寫；送給伺服器前要轉成大寫。
+ * 顯示給使用者的代碼另以 `validIssueCode` 嚴格檢查。
+ */
+export const ISSUE_CODE = /^NX-[a-f\d]{32}$/i;
+/** W3C TraceId：32 碼 hex，不分大小寫。 */
+export const TRACE_ID = /^[a-f\d]{32}$/i;
 const localIssues = new WeakMap<object, string>();
 const localValidationHints = {
   storageLimit: '容量請輸入 0 至 1,000,000 GB，最多九位小數；留空可恢復群組或預設上限。',
