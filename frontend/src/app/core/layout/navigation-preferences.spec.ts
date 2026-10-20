@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { NavigationNodeDto } from '@core/api/schema';
 import { catalogFeature } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
-import { NavigationPreferences } from './navigation-preferences';
+import {
+  DEFAULT_COLLAPSE_THRESHOLD,
+  NavigationPreferences,
+  defaultCollapsed,
+} from './navigation-preferences';
 
 const page = (featureId: string, id = featureId): NavigationNodeDto => ({
   id,
@@ -141,5 +145,61 @@ describe('navigation preferences', () => {
     expect(preferences.isCollapsed('work')).toBe(false);
     me.set({ id: 'user-1', access: access(['chat']) });
     expect(preferences.isCollapsed('work')).toBe(true);
+  });
+  it('expands or collapses many groups at once and writes only on change', () => {
+    const { preferences } = setup(['chat', 'files', 'sharing', 'jobs']);
+    const key = 'ai-nexus.navigation-collapsed.user-1';
+    preferences.setAllCollapsed(['work', 'collaboration'], false);
+    preferences.expand(['work']);
+    preferences.setCollapsed('work', false);
+    expect(localStorage.getItem(key)).toBeNull();
+    preferences.setAllCollapsed(['work', 'collaboration'], true);
+    expect(JSON.parse(localStorage.getItem(key)!)).toEqual(['work', 'collaboration']);
+    localStorage.removeItem(key);
+    preferences.setAllCollapsed(['collaboration', 'work'], true);
+    expect(localStorage.getItem(key)).toBeNull();
+    preferences.setAllCollapsed(['work', 'collaboration'], false);
+    expect(JSON.parse(localStorage.getItem(key)!)).toEqual([]);
+    expect(preferences.isCollapsed('work')).toBe(false);
+  });
+  it('uses the default only until something is saved, and an empty save stays expanded', () => {
+    const { preferences, me } = setup(['chat', 'files', 'sharing', 'jobs']);
+    const defaults = signal<ReadonlySet<string>>(new Set(['collaboration']));
+    preferences.useDefaultCollapsed(() => defaults());
+    expect(preferences.isCollapsed('collaboration')).toBe(true);
+    defaults.set(new Set(['work']));
+    expect([...preferences.collapsed()]).toEqual(['work']);
+    // 第一次操作時，以當下看到的狀態（含預設）存起來。
+    preferences.setCollapsed('collaboration', true);
+    expect(JSON.parse(localStorage.getItem('ai-nexus.navigation-collapsed.user-1')!)).toEqual([
+      'work',
+      'collaboration',
+    ]);
+    preferences.setAllCollapsed(['work', 'collaboration'], false);
+    defaults.set(new Set(['work', 'collaboration']));
+    expect(preferences.collapsed().size).toBe(0);
+    // 另一個帳號沒有儲存過，仍用預設。
+    me.set({ id: 'user-2', access: access(['chat']) });
+    expect(preferences.isCollapsed('work')).toBe(true);
+  });
+  it('collapses nested groups off the current branch on narrow screens or past the threshold', () => {
+    const nested = (count: number) =>
+      Array.from({ length: count }, (_, index) => group(`nested-${index}`, [page(`p${index}`)]));
+    const tree = [
+      group('work', [page('chat'), group('drafts', [page('files')])]),
+      group('system', nested(3)),
+    ];
+    // 第一層一律展開；目前頁面所在的那一支（system › nested-1）保留展開。
+    expect([...defaultCollapsed(tree, ['nested-1', 'system'], true)]).toEqual([
+      'drafts',
+      'nested-0',
+      'nested-2',
+    ]);
+    expect(defaultCollapsed(tree, [], false).size).toBe(0);
+    const many = [group('system', nested(DEFAULT_COLLAPSE_THRESHOLD + 1))];
+    expect(defaultCollapsed(many, [], false).size).toBe(DEFAULT_COLLAPSE_THRESHOLD + 1);
+    expect(
+      defaultCollapsed([group('system', nested(DEFAULT_COLLAPSE_THRESHOLD))], [], false).size,
+    ).toBe(0);
   });
 });

@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Sits on the navigation's grid: rows put icons 8px in, tool buttons match the pinned cells, and
 // the icon grid's three columns are two cells wide each.
 :host {
@@ -32,8 +34,8 @@
   width: var(--cell);
   height: var(--row);
 }
-// Both glyphs share the cell; the one for the next display turns in while the other turns away.
-.display-toggle {
+// 兩個符號疊在同一格（顯示切換、全部展開／收合）：data-show 指的那個轉入，另一個轉開。
+.glyph-toggle {
   display: grid;
   place-items: center;
   > nx-icon {
@@ -43,8 +45,8 @@
       rotate var(--motion-morph) var(--ease-spring),
       scale var(--motion-morph) var(--ease-spring);
   }
-  &[data-display='icons'] > nx-icon:first-child,
-  &[data-display='list'] > nx-icon:last-child {
+  &[data-show='last'] > nx-icon:first-child,
+  &[data-show='first'] > nx-icon:last-child {
     opacity: 0;
     rotate: -90deg;
     scale: 0.6;
@@ -56,23 +58,46 @@
   font-size: var(--text-caption);
   line-height: 1.6;
 }
+// 層級靠字級階梯分辨，不縮排、不加托盤：第一層粗體加整寬分隔線，第二層小字接一條刻線，第三層以上再小。
+// 標題都沒有底色、外框與陰影，hover 只用平的 --hover，不會和目前所在的 --surface 晶片混淆。
 .workspace-groups {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-3);
+  gap: var(--p-space-2);
   padding-bottom: var(--p-space-2);
 }
 .workspace-group :is(h3, h4) {
-  margin: 0 0 var(--p-space-1);
+  margin: 0;
   font-size: var(--text-caption);
   font-weight: 500;
   color: var(--muted);
+}
+// 黏在捲動區（側欄的 nx-scroll-area、圖示欄的飛出層）頂端；黏頂範圍是自己的分群，下一個第一層標題
+// 捲上來時會把它推走。底色要不透明，蓋住捲到下面的格子與徽章。捲動容器有上內距時（飛出層），
+// 由容器以 --launcher-sticky-top 抵銷，否則標題上方會露出一條捲動中的內容。
+.workspace-group > h3 {
+  position: sticky;
+  top: var(--launcher-sticky-top, 0);
+  z-index: 1;
+  padding-top: var(--p-space-1);
+  border-top: 1px solid var(--line);
+  background: var(--sidebar);
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.workspace-group > h4 {
+  font-size: var(--density-caption-size, var(--text-caption));
+  letter-spacing: 0.02em;
+}
+.workspace-group > h4.is-deep {
+  font-size: var(--p-font-xs);
 }
 // 分群標題就是展開／收合按鈕：整列可點，箭頭朝下＝展開、朝右＝收合（同差異檢視的檔案列）。
 .workspace-group-toggle {
   display: flex;
   align-items: center;
-  gap: var(--p-space-1);
+  gap: var(--p-space-2);
   width: 100%;
   min-height: 1.75rem;
   padding: 0 var(--p-space-2);
@@ -80,23 +105,72 @@
   color: inherit;
   font: inherit;
   text-align: start;
-  > span:first-child {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  > nx-icon {
-    flex: none;
-    --icon-size: var(--icon-xs);
-    rotate: 90deg;
-    transition: rotate var(--motion) var(--ease-spring);
-  }
-  &[aria-expanded='false'] > nx-icon {
-    rotate: 0deg;
+  h3 > & {
+    min-height: var(--row);
   }
   &:hover {
     background: var(--hover);
     color: var(--ink);
+  }
+  // 目前頁面所在、展開中的子分群標題轉為 --ink，沿路看得出自己在哪一支。
+  &.is-trail {
+    color: var(--ink);
+    font-weight: 600;
+  }
+}
+@include bp.below(phone, $or: '(pointer: coarse)') {
+  .workspace-group-toggle {
+    min-height: var(--row);
+  }
+}
+.group-icon {
+  flex: none;
+  --icon-size: var(--icon-sm);
+  color: var(--secondary);
+}
+.group-name,
+.group-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+h3 .group-name {
+  flex: 1;
+}
+.group-path {
+  flex: 0 1 auto;
+  max-width: 45%;
+  font-weight: 400;
+}
+.group-rule {
+  flex: 1;
+  min-width: var(--p-space-3);
+  height: 1px;
+  background: var(--line);
+}
+.group-here {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.group-count {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.group-chevron {
+  flex: none;
+  --icon-size: var(--icon-xs);
+  color: var(--muted);
+  rotate: 90deg;
+  transition: rotate var(--motion) var(--ease-spring);
+  [aria-expanded='false'] > & {
+    rotate: 0deg;
   }
 }
 // 0fr↔1fr 的列高過渡讓內容收起／展開而不必量高度；收合完才隱藏（visibility 在過渡結束時才切換）。
@@ -117,17 +191,9 @@
   overflow: clip;
   overflow-clip-margin: var(--p-space-1);
 }
-// 子分群是父區段裡的一塊淺色托盤：與後面直接放在父層的項目分得開，又不像內縮加邊線那樣吃掉格子寬度；
-// 圖示與條列共用同一個外框，項目在托盤內與父層對齊。
-.workspace-group.is-nested {
-  margin-block: var(--p-space-1);
-  padding: var(--p-space-1) 2px 2px;
-  border-radius: var(--p-radius-lg);
-  background: color-mix(in srgb, var(--hover) 50%, transparent);
-}
-.workspace-group.is-nested + .workspace-icons,
-.workspace-icons + .workspace-group.is-nested {
-  margin-block-start: var(--p-space-2);
+// 不縮排：分群與前後直接放在上層的項目只隔一點距離，圖示格在任何深度都是同樣三欄。
+.workspace-group-content > * + * {
+  margin-block-start: var(--p-space-1);
 }
 .workspace-icons {
   display: grid;

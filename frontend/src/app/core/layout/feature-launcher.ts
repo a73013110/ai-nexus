@@ -18,8 +18,15 @@ import { Icon } from '@shared/ui/icon';
 import { CountBadge } from '@shared/ui/count-badge';
 import { NavigationBadges } from './navigation-badges';
 import { NavigationEntry } from './navigation-entry';
-import { navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
-import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
+import { below } from '@shared/browser/breakpoints';
+import { mediaQuery } from '@shared/browser/media-query';
+import { isGroup, navigationIcon, navigationNodes, navigationRuns } from './navigation-tree';
+import {
+  PIN_LIMIT,
+  NavigationPreferences,
+  defaultCollapsed,
+  type NavigationDisplay,
+} from './navigation-preferences';
 import { SHORTCUTS } from './keyboard-shortcuts';
 import { WorkspaceCommands } from './workspace-commands';
 
@@ -29,7 +36,8 @@ import { WorkspaceCommands } from './workspace-commands';
  * 編輯時每個頁面都會變成釘選切換。目前頁面的每個入口（含釘選列）都標為目前所在，不論是否已釘選。
  * 外部連結帶外部連結標記，一律 `rel="noopener noreferrer"`，依設定決定是否開新分頁。
  * 每一格就是選單的一個節點（一個頁面＝一個網址）；分群標題是展開／收合的按鈕，收合狀態依帳號記住，
- * 目前頁面所在的分群在換頁時自動展開。
+ * 目前頁面所在的分群在換頁時自動展開。層級只靠字級階梯分辨、不縮排，圖示格在任何深度都是三欄：
+ * 第一層是黏頂的粗體標題，第二層是小字加刻線，第三層以上再小一點並帶上層路徑。
  */
 @Component({
   selector: 'nx-feature-launcher',
@@ -45,10 +53,22 @@ import { WorkspaceCommands } from './workspace-commands';
       >
         <nx-icon [name]="editing() ? 'check' : 'pin'" />{{ editing() ? '完成' : '自訂釘選' }}
       </button>
+      @if (groups().length) {
+        <button
+          type="button"
+          class="icon-button glyph-toggle"
+          [attr.data-show]="anyCollapsed() ? 'first' : 'last'"
+          [attr.aria-label]="anyCollapsed() ? '全部展開' : '全部收合'"
+          [attr.title]="anyCollapsed() ? '全部展開' : '全部收合'"
+          (click)="pins.setAllCollapsed(groups(), !anyCollapsed())"
+        >
+          <nx-icon name="expand-all" /><nx-icon name="collapse-all" />
+        </button>
+      }
       <button
         type="button"
-        class="icon-button display-toggle"
-        [attr.data-display]="pins.display()"
+        class="icon-button glyph-toggle"
+        [attr.data-show]="pins.display() === 'icons' ? 'last' : 'first'"
         [attr.aria-label]="nextDisplay().label"
         [attr.title]="nextDisplay().label"
         (click)="pins.setDisplay(nextDisplay().value)"
@@ -149,34 +169,49 @@ import { WorkspaceCommands } from './workspace-commands';
     <ng-template #section let-node let-depth="depth">
       @let group = asNode(node);
       @let open = !pins.isCollapsed(group.id);
-      <section
-        class="workspace-group"
-        [class.is-nested]="depth > 0"
-        [class.is-collapsed]="!open"
-        [attr.aria-label]="group.name"
-      >
+      @let here = !open && trail(group);
+      @let badge = !open && hasBadge(group);
+      <section class="workspace-group" [class.is-collapsed]="!open" [attr.aria-label]="group.name">
         <ng-template #toggle>
           <button
             type="button"
             class="workspace-group-toggle"
+            [class.is-trail]="open && depth > 0 && trail(group)"
+            [attr.title]="path(group) ? path(group) + ' › ' + group.name : null"
             [attr.aria-expanded]="open"
             [attr.aria-controls]="bodyId(group)"
-            [attr.aria-describedby]="!open && hasBadge(group) ? bodyId(group) + '-badge' : null"
+            [attr.aria-describedby]="hints(group, here, badge)"
             (click)="pins.setCollapsed(group.id, open)"
           >
-            <span>{{ group.name }}</span>
-            <!-- 收合的分群裡有徽章時，在標題提示一個圓點，不必展開也知道裡面有新動態。 -->
-            @if (!open && hasBadge(group)) {
+            @if (depth === 0 && icon(group); as glyph) {
+              <nx-icon class="group-icon" [name]="glyph" />
+            }
+            @if (path(group); as ancestors) {
+              <span class="group-path">{{ ancestors }} ›</span>
+            }
+            <span class="group-name">{{ group.name }}</span>
+            <!-- 收合的分群含目前頁面時標一個圓點；裡面有徽章時提示紅點，不必展開也知道有新動態。 -->
+            @if (here) {
+              <span class="group-here" aria-hidden="true"></span>
+              <span class="sr-only" [id]="bodyId(group) + '-here'">目前頁面在此</span>
+            }
+            @if (badge) {
               <nx-count-badge tone="danger" [dot]="true" [count]="1" />
               <span class="sr-only" [id]="bodyId(group) + '-badge'">有新動態</span>
             }
-            <nx-icon name="chevron" aria-hidden="true" />
+            @if (depth > 0) {
+              <span class="group-rule"></span>
+            }
+            @if (depth === 0 || !open) {
+              <span class="group-count" aria-hidden="true">{{ count(group) }}</span>
+            }
+            <nx-icon class="group-chevron" name="chevron" aria-hidden="true" />
           </button>
         </ng-template>
         @if (depth === 0) {
           <h3><ng-container [ngTemplateOutlet]="toggle" /></h3>
         } @else {
-          <h4><ng-container [ngTemplateOutlet]="toggle" /></h4>
+          <h4 [class.is-deep]="depth > 1"><ng-container [ngTemplateOutlet]="toggle" /></h4>
         }
         <!-- 收合時 inert：連結離開 Tab 順序與無障礙樹，高度收合的過渡仍看得到。 -->
         <div class="workspace-group-body" [id]="bodyId(group)" [inert]="!open">
@@ -230,27 +265,58 @@ export class FeatureLauncher {
   private readonly id = uniqueId('nx-launcher');
   /**
    * 每個節點的分群深度（最上層為 0）與上層分群，給子分群樣式與「展開目前頁面所在的分群」用；
-   * 以及每個分群（含子分群）裡的功能，收合時判斷要不要在標題提示徽章。
+   * 每個分群（含子分群）裡的功能（收合時判斷要不要在標題提示徽章）與項目數，第三層以上的上層路徑，
+   * 以及依選單順序的所有分群（全部展開／收合）。
    */
   private readonly structure = computed(() => {
     const depths = new Map<string, number>();
     const parents = new Map<string, string>();
     const features = new Map<string, string[]>();
-    const visit = (nodes: readonly NavigationNodeDto[], depth: number, parent?: string) => {
+    const counts = new Map<string, number>();
+    const paths = new Map<string, string>();
+    const groups: string[] = [];
+    const visit = (
+      nodes: readonly NavigationNodeDto[],
+      depth: number,
+      trail: readonly string[],
+      parent?: string,
+    ) => {
       const found: string[] = [];
+      let count = 0;
       for (const node of nodes) {
         depths.set(node.id, depth);
         if (parent) parents.set(node.id, parent);
-        if (node.featureId) found.push(node.featureId);
-        const inside = visit(node.children, depth + 1, node.id);
-        if (node.kind === 'group') features.set(node.id, inside);
-        found.push(...inside);
+        if (!isGroup(node)) {
+          count++;
+          if (node.featureId) found.push(node.featureId);
+          continue;
+        }
+        groups.push(node.id);
+        // 路徑不含第一層：第一層標題黏在捲動區頂端，一直看得到。
+        if (depth > 1) paths.set(node.id, trail.join(' › '));
+        const inside = visit(
+          node.children,
+          depth + 1,
+          depth > 0 ? [...trail, node.name] : [],
+          node.id,
+        );
+        features.set(node.id, inside.found);
+        counts.set(node.id, inside.count);
+        found.push(...inside.found);
+        count += inside.count;
       }
-      return found;
+      return { found, count };
     };
-    visit(this.pins.tree(), 0);
-    return { depths, parents, features };
+    visit(this.pins.tree(), 0, []);
+    return { depths, parents, features, counts, paths, groups };
   });
+  readonly groups = computed(() => this.structure().groups);
+  /**
+   * 「全部展開／收合」鈕同顯示切換的慣例，顯示的是按下後的動作：還有任一分群收合就是全部展開。
+   * 全部收合包含第一層。
+   */
+  readonly anyCollapsed = computed(() => this.groups().some((id) => this.pins.isCollapsed(id)));
+  private readonly narrow = mediaQuery(below('narrow'));
   /** 同一頁面可能放在多個分群；換頁時只展開第一次出現的位置所在的分群。 */
   private readonly firstPlacement = computed(() => {
     const first = new Map<string, string>();
@@ -268,6 +334,9 @@ export class FeatureLauncher {
   });
 
   constructor() {
+    this.pins.useDefaultCollapsed(() =>
+      defaultCollapsed(this.pins.tree(), this.currentGroups(), this.narrow()),
+    );
     // 換頁時展開目前頁面所在的分群，側欄才看得到自己在哪；之後使用者仍可再收合它。
     effect(() => {
       const groups = this.currentGroups();
@@ -287,6 +356,23 @@ export class FeatureLauncher {
    */
   current(node: NavigationNodeDto) {
     return !!node.featureId && this.active() === node.featureId;
+  }
+  /** 分群（含子分群）裡有目前頁面。 */
+  trail(group: NavigationNodeDto) {
+    return this.currentGroups().includes(group.id);
+  }
+  count(group: NavigationNodeDto) {
+    return this.structure().counts.get(group.id) ?? 0;
+  }
+  path(group: NavigationNodeDto) {
+    return this.structure().paths.get(group.id) ?? '';
+  }
+  /** 收合時標題的補充說明（目前頁面在此、有新動態）；都沒有時不設。 */
+  hints(group: NavigationNodeDto, here: boolean, badge: boolean) {
+    const ids = [here && 'here', badge && 'badge']
+      .filter(Boolean)
+      .map((hint) => `${this.bodyId(group)}-${hint}`);
+    return ids.length ? ids.join(' ') : null;
   }
   hasBadge(group: NavigationNodeDto) {
     return this.badges.any(this.structure().features.get(group.id) ?? []);
