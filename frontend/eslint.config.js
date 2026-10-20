@@ -123,6 +123,8 @@ module.exports = tseslint.config(
           controlComponents: ['nx-select', 'nx-search-field', 'nx-date-time-picker', 'nx-checkbox'],
         },
       ],
+      // NavigationEntry renders the icon and name into its host and sets aria-label itself.
+      '@angular-eslint/template/elements-content': ['error', { allowList: ['nxNavigationEntry'] }],
       // Used only inside <dialog>, where it is the standard way to place initial focus.
       '@angular-eslint/template/no-autofocus': 'off',
       '@angular-eslint/template/prefer-self-closing-tags': 'error',
