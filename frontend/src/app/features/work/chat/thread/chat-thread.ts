@@ -20,7 +20,7 @@ import { Icon } from '@shared/ui/icon';
 import { TextSelectionToolbar } from '@features/work/artifacts/text-selection-toolbar';
 import { TextTools } from '@features/work/artifacts/text-tools';
 import { ChatMessage } from './chat-message';
-import { ChatStore } from '../chat-store';
+import { ChatStore, PENDING_MESSAGE_PREFIX } from '../chat-store';
 import { ConversationOutline } from './conversation-outline';
 
 /**
@@ -79,7 +79,9 @@ export class ChatThread {
       )
         return none;
       const shown = new Set(before.messages.map((message) => message.id));
-      const replacing = before.messages.some((message) => message.id.startsWith(pendingPrefix));
+      const replacing = before.messages.some((message) =>
+        message.id.startsWith(PENDING_MESSAGE_PREFIX),
+      );
       return new Set(
         current.messages
           .filter((message) => !shown.has(message.id) && !(replacing && message.role === 'user'))
@@ -154,4 +156,3 @@ interface EnteringSource {
   conversation: string | null;
 }
 const none: ReadonlySet<string> = new Set();
-const pendingPrefix = 'pending:';

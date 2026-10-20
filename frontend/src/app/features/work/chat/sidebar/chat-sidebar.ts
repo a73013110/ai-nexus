@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '@core/api/schema';
 import { ViewMorph } from '@core/layout/view-morph';
 import { currentDay } from '@shared/browser/calendar-day';
+import { rovingIndex } from '@shared/browser/roving-index';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { MenuPanel } from '@shared/ui/menu-panel';
@@ -120,18 +121,15 @@ export class ChatSidebar {
   }
   /** 方向鍵在對話之間移動，如同列表；Tab 仍會逐列進入各自的選單。 */
   historyKey(event: KeyboardEvent, history: HTMLElement) {
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    // 搜尋框只用 ↓ 進入列表，其他鍵留給輸入。
+    const fromSearch = event.currentTarget !== history;
+    if (fromSearch && event.key !== 'ArrowDown') return;
     const links = [...history.querySelectorAll<HTMLElement>('.history-row > a')];
     const current = links.indexOf(event.target as HTMLElement);
-    const fromSearch = event.currentTarget !== history;
-    if (fromSearch ? event.key !== 'ArrowDown' : current < 0) return;
+    if (!fromSearch && current < 0) return;
+    const next = rovingIndex(event.key, current, links.length, { wrap: false });
+    if (next === null) return;
     event.preventDefault();
-    const index =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? links.length - 1
-          : Math.max(0, Math.min(links.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)));
-    links[index]?.focus();
+    links[next]?.focus();
   }
 }

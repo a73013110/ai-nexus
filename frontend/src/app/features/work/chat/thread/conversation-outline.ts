@@ -113,16 +113,15 @@ export class ConversationOutline {
   readonly expanded = signal(false);
   readonly preview = signal<number | null>(null);
   readonly active = signal(0);
-  readonly toggle = (value: boolean) => !value;
   readonly turns = computed(() => {
     const rows = this.messages();
-    return rows.flatMap((message, index2) =>
+    return rows.flatMap((message, index) =>
       message.role === 'user'
         ? [
             {
               id: message.id,
               prompt: message.content,
-              answer: rows[index2 + 1]?.role === 'assistant' ? rows[index2 + 1].content : '',
+              answer: rows[index + 1]?.role === 'assistant' ? rows[index + 1].content : '',
             },
           ]
         : [],
@@ -172,7 +171,7 @@ export class ConversationOutline {
         ? Array.from(root.querySelectorAll<HTMLElement>('nx-chat-message[data-role="user"]'))
         : [];
       if (!root || !prompts.length) return;
-      const order = new Map<Element, number>(prompts.map((node, index3) => [node, index3]));
+      const order = new Map<Element, number>(prompts.map((node, index) => [node, index]));
       const passed = new Set<number>();
       let observer: IntersectionObserver | undefined;
       let height = -1;
@@ -233,7 +232,7 @@ export class ConversationOutline {
     this.expanded.set(false);
   }
   toggleExpanded() {
-    this.expanded.update(this.toggle);
+    this.expanded.update((open) => !open);
     this.preview.set(null);
   }
   jumpAndClose(index: number) {
