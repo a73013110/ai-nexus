@@ -25,6 +25,17 @@ import { formatDate } from '@shared/browser/format';
 import { IntegrationsApi } from './integrations-api';
 import { routeOf } from '@core/api/catalog';
 
+/** 來源資料類型與歷程事件的顯示名稱；未列出的沿用來源給的代碼。 */
+const LABELS: Record<string, string> = {
+  document: '公文',
+  reference: '規範／表單',
+  organization: '單位資料',
+  approved: '核准',
+  returned: '退回',
+  version: '版本更新',
+  created: '建立',
+};
+
 @Component({
   selector: 'nx-integrations-page',
   styleUrl: './integrations-page.scss',
@@ -77,6 +88,8 @@ export class IntegrationsPage {
   readonly rows = computed<SourceRecordDto[]>(() => this.results() ?? []);
   readonly searched = computed(() => this.results() !== null);
   readonly searching = this.rowsRead.loading;
+  /** 查詢中或執行動作時鎖住搜尋表單。 */
+  readonly locked = computed(() => this.searching() || this.busy());
   /** 畫面上的紀錄：連結指定的、單一搜尋命中，或使用者開啟的那一筆。 */
   private readonly record = linkedSignal<SourceRecordDto[] | null, string | null>({
     source: this.results,
@@ -113,15 +126,8 @@ export class IntegrationsPage {
     { value: 'all', label: '全部類型' },
     ...(this.current()?.kinds ?? []).map((item) => ({ value: item, label: this.label(item) })),
   ]);
-  private revision = 0;
-  private guard() {
-    const revision = this.revision,
-      valid = this.scope.guard();
-    return () => valid() && revision === this.revision;
-  }
   select(source: SourceDto) {
     if (this.busy()) return;
-    ++this.revision;
     this.current.set(source);
     this.submitted.set(null);
     this.record.set(null);
@@ -145,7 +151,7 @@ export class IntegrationsPage {
   async use(action: 'import' | 'chat') {
     const detail = this.detail(),
       source = this.current(),
-      valid = this.guard();
+      valid = this.scope.guard();
     if (!detail || !source || this.busy()) return;
     this.busy.set(true);
     this.actionError.set('');
@@ -160,23 +166,14 @@ export class IntegrationsPage {
           await this.router.navigate([routeOf('chat'), next.conversation.id]);
         }
       }
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
   label(kind: string) {
-    const names: Record<string, string> = {
-      document: '公文',
-      reference: '規範／表單',
-      organization: '單位資料',
-      approved: '核准',
-      returned: '退回',
-      version: '版本更新',
-      created: '建立',
-    };
-    return names[kind] ?? kind;
+    return LABELS[kind] ?? kind;
   }
   readonly date = formatDate;
 }
