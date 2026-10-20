@@ -45,6 +45,9 @@ export const adminRoutes: Routes = [
       (module) => module.diagnosticsRoutes,
     ),
   ),
+  moduleRoute('mail', () =>
+    import('@features/admin/mail/mail.routes').then((module) => module.mailRoutes),
+  ),
   moduleRoute('quality', () =>
     import('@features/admin/quality/quality.routes').then((module) => module.qualityRoutes),
   ),

@@ -31,7 +31,9 @@ public sealed partial class MailDispatcher(
     public const int PerLane = 10;
 
     // 過期仍是 sending 的列（worker 中止）一併認領；PreviousStatus 讓呼叫端補記 abandoned。條件與 ix_OutboundMessages_Pending 的篩選一致。
+    // READPAST 只能在 READ COMMITTED／REPEATABLE READ 使用，而連線池的連線可能還留著上一個請求的 SERIALIZABLE（行政稽核），所以先明確設回。
     private const string ClaimSql = """
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
         WITH next AS (
             SELECT TOP (@Take) *
             FROM mail.OutboundMessages WITH (UPDLOCK, READPAST, ROWLOCK)

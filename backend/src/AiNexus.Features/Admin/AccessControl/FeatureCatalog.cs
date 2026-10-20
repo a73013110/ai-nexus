@@ -67,6 +67,8 @@ public static class FeatureCatalog
     public const string DiagnosticsLogs = "diagnostics.logs";
     public const string DiagnosticsLogsDetail = "diagnostics.logs.detail";
     public const string DiagnosticsLogsExport = "diagnostics.logs.export";
+    public const string MailMessages = "mail.messages";
+    public const string MailMessagesResend = "mail.messages.resend";
     public const string Quality = "quality";
     public const string QualityRetrieval = "quality.retrieval";
     public const string Design = "design";
@@ -95,6 +97,7 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition MonitoringModule = new(Monitoring, Admin, "即時監控");
     private static readonly ModuleDefinition AuditModule = new(Audit, Admin, "活動稽核");
     private static readonly ModuleDefinition DiagnosticsModule = new("diagnostics", Admin, "診斷");
+    private static readonly ModuleDefinition MailModule = new("mail", Admin, "郵件");
     private static readonly ModuleDefinition QualityModule = new(Quality, Admin, "品質評測");
     private static readonly ModuleDefinition DesignModule = new(Design, Admin, "介面元件");
 
@@ -102,7 +105,7 @@ public static class FeatureCatalog
     [
         DashboardModule, ChatModule, ProjectsModule, FilesModule, KnowledgeModule, ArtifactsModule, SharingModule, JobsModule, RepositoriesModule,
         IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, IntegrationsModule, MonitoringModule, AuditModule, DiagnosticsModule,
-        QualityModule, DesignModule,
+        MailModule, QualityModule, DesignModule,
     ];
 
     /// <summary>宣告順序即輸出到 OpenAPI 的順序。圖示名稱必須是前端 <c>shared/ui/icon.ts</c> 已有的名稱。</summary>
@@ -135,6 +138,8 @@ public static class FeatureCatalog
         new(DiagnosticsLogs, FeatureKind.Page, DiagnosticsModule, "系統日誌", "logs"),
         new(DiagnosticsLogsDetail, FeatureKind.Action, DiagnosticsModule, "日誌診斷詳情", "search"),
         new(DiagnosticsLogsExport, FeatureKind.Action, DiagnosticsModule, "日誌匯出", "download"),
+        new(MailMessages, FeatureKind.Page, MailModule, "郵件寄送紀錄", "mail"),
+        new(MailMessagesResend, FeatureKind.Action, MailModule, "重寄郵件", "repeat"),
         new(Quality, FeatureKind.Page, QualityModule, "品質評測", "shield"),
         new(QualityRetrieval, FeatureKind.Page, QualityModule, "檢索評測", "search"),
         // 介面元件工作臺是純前端頁面、沒有 API；獨立成一個 grant 才能單獨授予。
