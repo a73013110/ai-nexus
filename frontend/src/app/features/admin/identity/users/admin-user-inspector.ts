@@ -77,6 +77,7 @@ export class AdminUserInspector {
     const dirty = this.store.dirty();
     return [
       { value: 'account', label: '帳號', dirty: dirty.account },
+      { value: 'email', label: '通知信箱', dirty: dirty.email },
       { value: 'roles', label: '角色與權限', dirty: dirty.roles },
       { value: 'models', label: 'AI 模型', dirty: dirty.models },
       { value: 'storage', label: '附件容量', dirty: dirty.storage },

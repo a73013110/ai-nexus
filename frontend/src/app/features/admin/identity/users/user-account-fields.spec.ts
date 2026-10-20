@@ -65,7 +65,8 @@ describe('user account form', () => {
     expect(emailState({ emailSource: 'user', emailVerifiedAt: '2026-10-20T00:00:00Z' })).toBe(
       '已驗證',
     );
-    expect(emailState({ emailSource: 'admin', emailVerifiedAt: null })).toBe('未驗證');
+    expect(emailState({ emailSource: 'admin', emailVerifiedAt: null })).toBe('管理員設定・未驗證');
+    expect(emailState({ emailSource: 'user', emailVerifiedAt: null })).toBe('未驗證');
   });
 });
 

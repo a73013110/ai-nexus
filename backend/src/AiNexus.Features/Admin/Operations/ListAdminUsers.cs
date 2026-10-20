@@ -9,13 +9,13 @@ namespace AiNexus.Features.Admin.Operations;
 
 public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversations);
 
-/// <summary>使用者列與詳情共用；<paramref name="Email"/> 等信箱欄位只有詳情（<c>GetAdminUserInsights</c>）回傳，列表 procedure 不含。</summary>
+/// <summary>使用者列與詳情共用；<paramref name="Activity"/> 只有列表回傳，詳情另有用量明細。</summary>
 public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null,
     string? Email = null, string? EmailSource = null, DateTimeOffset? EmailVerifiedAt = null);
 
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 
-/// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附角色、用量、對話數與儲存空間。查詢在 <c>operations.usp_ListAdminUsers</c>。</summary>
+/// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附通知信箱、角色、用量、對話數與儲存空間；搜尋涵蓋姓名、帳號與信箱。查詢在 <c>operations.usp_ListAdminUsers</c>。</summary>
 internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
@@ -45,6 +45,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
     /// <summary>procedure 第二個結果集的一列；欄位名稱與 procedure 的輸出一致，只在執行時對應（整合測試涵蓋）。</summary>
     private sealed record Row(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, bool Enabled,
         bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, bool HasLocalPassword,
+        string? Email, string? EmailSource, DateTimeOffset? EmailVerifiedAt,
         int Requests, int Completed, int Failed, int Cancelled, long InputTokens, long OutputTokens, int RequestsWithUsage,
         long TotalDurationMilliseconds, int TimedRequests, int Conversations,
         long UsedBytes, long LimitBytes, long RemainingBytes, long? PersonalLimitBytes, long? GroupLimitBytes, long DefaultLimitBytes, string LimitSource)
@@ -53,7 +54,8 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
             new(new(Requests, Completed, Failed, Cancelled, InputTokens, OutputTokens, RequestsWithUsage, TotalDurationMilliseconds, TimedRequests), Conversations),
             Enabled,
             new(AdEnabled, LocalEnabled, AdAccount, LocalAccount, HasLocalPassword),
-            new(UsedBytes, LimitBytes, RemainingBytes, PersonalLimitBytes, GroupLimitBytes, DefaultLimitBytes, LimitSource));
+            new(UsedBytes, LimitBytes, RemainingBytes, PersonalLimitBytes, GroupLimitBytes, DefaultLimitBytes, LimitSource),
+            Email, EmailSource, EmailVerifiedAt);
     }
 
     private sealed record RoleRow(Guid UserId, string RoleId);

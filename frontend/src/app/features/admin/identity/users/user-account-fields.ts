@@ -54,10 +54,14 @@ export function signInMethods(user: AdminUserDto) {
   return methods.join(' · ') || '未開放登入';
 }
 
-/** 信箱的來源與驗證狀態；AD 提供的信箱由目錄同步，視為已驗證。 */
+/**
+ * 信箱的來源與驗證狀態；AD 提供的信箱由目錄同步，視為已驗證。
+ * 管理員設定的地址在本人驗證前不能收步升驗證碼，標示來源讓管理員知道還差本人驗證。
+ */
 export function emailState(user: Pick<AdminUserDto, 'emailSource' | 'emailVerifiedAt'>) {
   if (user.emailSource === 'directory') return 'AD 提供';
-  return user.emailVerifiedAt ? '已驗證' : '未驗證';
+  if (user.emailVerifiedAt) return '已驗證';
+  return user.emailSource === 'admin' ? '管理員設定・未驗證' : '未驗證';
 }
 
 export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraft) {

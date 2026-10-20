@@ -25,7 +25,7 @@ import { sameIds } from '@features/admin/access-control/roles/same-ids';
 /** 草稿在檢視器的同一次開啟（`key`）內跟隨已儲存的值。 */
 type Keyed<T> = readonly [string | undefined, T];
 
-export type UserTab = 'account' | 'roles' | 'models' | 'storage' | 'conversations';
+export type UserTab = 'account' | 'email' | 'roles' | 'models' | 'storage' | 'conversations';
 /** 會編輯某些內容的分頁；各自獨立儲存。 */
 export type UserSettingsTab = Exclude<UserTab, 'conversations'>;
 
@@ -90,6 +90,13 @@ export class AdminUserStore {
     source: () => [this.key(), this.savedAccount()],
     computation: ([, saved]) => saved,
   });
+  private readonly savedEmail = linkedSignal(() => this.current()?.email ?? '');
+  readonly email = linkedSignal<Keyed<string>, string>({
+    source: () => [this.key(), this.savedEmail()],
+    computation: ([, saved]) => saved,
+  });
+  /** AD 提供的信箱由目錄同步，下次登入會覆寫，所以管理員只能檢視。 */
+  readonly emailEditable = computed(() => this.current()?.emailSource !== 'directory');
   private readonly savedRoles = linkedSignal<readonly string[], readonly string[]>({
     source: () => this.current()?.roleIds ?? [],
     computation: (saved) => saved,
@@ -131,6 +138,7 @@ export class AdminUserStore {
 
   readonly dirty = computed<Record<UserSettingsTab, boolean>>(() => ({
     account: !sameUserAccount(this.account(), this.savedAccount()),
+    email: this.email().trim() !== this.savedEmail(),
     roles: !sameIds(this.roles(), this.savedRoles()),
     models: !!this.modelPolicy() && !sameModelPolicy(this.models(), this.savedModels()),
     storage: this.storage().trim() !== this.savedStorage(),
@@ -153,6 +161,7 @@ export class AdminUserStore {
   /** 把分頁的草稿還原為已儲存的值。 */
   revert(tab: UserSettingsTab) {
     if (tab === 'account') this.account.set(this.savedAccount());
+    if (tab === 'email') this.email.set(this.savedEmail());
     if (tab === 'roles') this.roles.set([...this.savedRoles()]);
     if (tab === 'models') this.models.set(this.savedModels());
     if (tab === 'storage') this.storage.set(this.savedStorage());
@@ -175,6 +184,22 @@ export class AdminUserStore {
           hasLocalPassword: draft.localEnabled && (draft.hasLocalPassword || !!draft.password),
         });
         this.changed('帳號已儲存', '停用、登入方式或密碼變更會讓舊的工作階段失效。');
+      },
+    );
+  }
+  saveEmail() {
+    const email = this.email().trim();
+    return this.save(
+      'email',
+      (id) => this.api.email(id, email || null),
+      () => {
+        this.savedEmail.set(email);
+        this.overviewRead.reload();
+        this.toast.success(
+          email ? '通知信箱已設定' : '通知信箱已清除',
+          email ? '本人驗證前不會用來寄驗證碼。' : undefined,
+        );
+        this.admin.readUsers();
       },
     );
   }

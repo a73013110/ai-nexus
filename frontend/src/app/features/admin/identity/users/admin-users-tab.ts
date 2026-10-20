@@ -26,7 +26,7 @@ import { SearchField } from '@shared/ui/search-field';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
 import { AdminUserCreateDialog } from './admin-user-create-dialog';
-import { signInMethods } from './user-account-fields';
+import { emailState, signInMethods } from './user-account-fields';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
 import { TestIdentityDialog } from './test-identity-dialog';
 
@@ -63,6 +63,7 @@ export class AdminUsersTab {
   readonly createDialog = viewChild.required(AdminUserCreateDialog);
   readonly userColumns: TableColumn[] = [
     { id: 'name', label: '使用者', hideable: false },
+    { id: 'email', label: '通知信箱' },
     { id: 'authentication', label: '登入與狀態' },
     { id: 'roles', label: '角色' },
     { id: 'usage', label: '30 天用量' },
@@ -71,6 +72,7 @@ export class AdminUsersTab {
   readonly bytes = formatBytes;
   readonly format = formatNumber;
   readonly methods = signInMethods;
+  readonly emailState = emailState;
   constructor() {
     effect(() => {
       if (this.store.users()) this.userTable()?.resetScroll();
