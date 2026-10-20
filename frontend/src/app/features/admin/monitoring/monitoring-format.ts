@@ -72,6 +72,16 @@ export function toneOf(status: string): BadgeTone {
       return 'neutral';
   }
 }
+/** 依賴項或子系統是否列為異常；閒置與尚無觀測都不算。 */
+export const isProblem = (status: string) => status === 'degraded' || status === 'failing';
+/** 健康問題的等級對應徽章色調與文字；不是嚴重就是注意。 */
+export const severityTone = (severity: string): BadgeTone =>
+  severity === 'critical' ? 'danger' : 'warning';
+export const severityText = (tone: BadgeTone) => (tone === 'danger' ? '嚴重' : '注意');
+/** 數列的已知值；裝飾用的趨勢會略過沒有樣本的桶。 */
+export const knownValues = (values: readonly (number | null)[]) =>
+  values.filter((value): value is number => value !== null && Number.isFinite(value));
+
 /** 來自後端的事實，以徽章色調表示；正向狀態顯示為成功色。 */
 export function factTone(tone: string): BadgeTone {
   return tone === 'positive'
@@ -81,7 +91,7 @@ export function factTone(tone: string): BadgeTone {
       : 'neutral';
 }
 
-/** How long the process has run, at the precision a person reads: 「3 天 4 小時」. */
+/** 程序已運作多久，取人會讀的精度：「3 天 4 小時」。 */
 export function uptimeText(seconds: number | null | undefined) {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—';
   const minutes = Math.floor(seconds / 60),

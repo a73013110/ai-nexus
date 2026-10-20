@@ -8,9 +8,8 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { Panel } from '@shared/ui/panel';
 import { Sparkline } from '@shared/ui/sparkline';
 import { MonitoringStore } from '../monitoring-store';
+import { knownValues } from '../monitoring-format';
 
-const known = (values: readonly (number | null)[]) =>
-  values.filter((value2): value2 is number => value2 !== null && Number.isFinite(value2));
 const megabytes = (value: number) => formatNumber(Math.round(value / 1e6));
 const percent = (value: number) => metricText(value, 'percent').replace('%', '');
 const count = (value: number) => formatNumber(Math.round(value));
@@ -102,9 +101,9 @@ export class MonitoringRuntime {
   private readonly series = computed(() => {
     const points = this.store.resourceTimeline();
     return {
-      heap: known(points.map((part) => part.managedHeapBytes)),
-      queue: known(points.map((part2) => part2.threadPoolQueueLength)),
-      gc: known(points.map((part3) => part3.gcPausePercent)),
+      heap: knownValues(points.map((point) => point.managedHeapBytes)),
+      queue: knownValues(points.map((point) => point.threadPoolQueueLength)),
+      gc: knownValues(points.map((point) => point.gcPausePercent)),
     };
   });
   private readonly alerts = computed(

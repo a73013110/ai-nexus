@@ -6,6 +6,7 @@ import { MonitoringStore } from '../monitoring-store';
 import {
   dependencyStatus,
   healthHeadline,
+  isProblem,
   monitoringTime,
   subsystemStatus,
   toneOf,
@@ -105,18 +106,16 @@ export class MonitoringHero {
       items: readonly { id: string; name: string; status: string }[],
       words: (status: string) => string,
     ) => {
-      const problems = items.filter(
-        (index) => index.status === 'degraded' || index.status === 'failing',
-      );
-      const healthy = items.filter((index2) => index2.status === 'healthy').length;
+      const problems = items.filter((item) => isProblem(item.status));
+      const healthy = items.filter((item) => item.status === 'healthy').length;
       return {
         key,
         label,
         problems: problems.length,
-        dots: items.map((index3) => ({
-          id: index3.id,
-          tone: toneOf(index3.status),
-          title: `${index3.name}：${words(index3.status)}`,
+        dots: items.map((item) => ({
+          id: item.id,
+          tone: toneOf(item.status),
+          title: `${item.name}：${words(item.status)}`,
         })),
         text: !items.length
           ? '尚未設定'

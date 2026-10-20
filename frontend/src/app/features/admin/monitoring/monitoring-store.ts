@@ -52,25 +52,28 @@ export function readSnapshot(value: unknown): MonitoringSnapshot {
 
 /** 數列以最新完成的桶比較：桶關閉後就不會再變。 */
 const sameSeries = (
-  items: readonly (TrafficPoint | ResourcePoint)[],
-  items2: readonly (TrafficPoint | ResourcePoint)[],
+  first: readonly (TrafficPoint | ResourcePoint)[],
+  second: readonly (TrafficPoint | ResourcePoint)[],
 ) =>
-  items === items2 ||
-  (items.length === items2.length &&
-    items.at(0)?.at === items2.at(0)?.at &&
-    items.at(-1)?.at === items2.at(-1)?.at);
+  first === second ||
+  (first.length === second.length &&
+    first.at(0)?.at === second.at(0)?.at &&
+    first.at(-1)?.at === second.at(-1)?.at);
 const healthKey = (health: HealthSummary | null) =>
   health
     ? health.status +
       '|' +
       health.issues
-        .map((index) =>
-          [index.code, index.severity, index.subject, index.title, index.detail].join('·'),
+        .map((issue) =>
+          [issue.code, issue.severity, issue.subject, issue.title, issue.detail].join('·'),
         )
         .join('|')
     : '';
-const sameJson = <T>(first2: T, second: T) =>
-  first2 === second || JSON.stringify(first2) === JSON.stringify(second);
+const sameJson = <T>(first: T, second: T) =>
+  first === second || JSON.stringify(first) === JSON.stringify(second);
+/** 超過四次更新沒收到快照就算過期，至少 15 秒；過期顯示與看門狗共用同一個門檻。 */
+const staleAfter = (snapshot: MonitoringSnapshot) =>
+  Math.max(15000, snapshot.refreshSeconds * 4000);
 
 /**
  * 只有新的健康狀態連續兩次快照都成立才發聲，避免數值在門檻附近來回跳動；
@@ -108,7 +111,7 @@ export class MonitoringStore {
 
   // 切片在內容沒變時保留參考，所以每 3 秒的快照只重新渲染真正變動的部分。
   readonly health = computed(() => this.snapshot()?.health ?? null, {
-    equal: (first3, second2) => healthKey(first3) === healthKey(second2),
+    equal: (first, second) => healthKey(first) === healthKey(second),
   });
   readonly timeline = computed<readonly TrafficPoint[]>(() => this.snapshot()?.timeline ?? [], {
     equal: sameSeries,
@@ -126,21 +129,13 @@ export class MonitoringStore {
     { equal: sameJson },
   );
   readonly issueCount = computed(() => this.health()?.issues.length ?? 0);
-  readonly worstSeverity = computed<'critical' | 'warning' | null>(() => {
-    const issues = this.health()?.issues ?? [];
-    return issues.some((index2) => index2.severity === 'critical')
-      ? 'critical'
-      : issues.length
-        ? 'warning'
-        : null;
-  });
   /** 資料超過四次更新，或沒有即時串流時，會以此狀態顯示。 */
   readonly stale = computed(() => {
     const snapshot = this.snapshot();
     return (
       this.connection() !== 'live' ||
       !snapshot ||
-      this.now() - Date.parse(snapshot.at) > Math.max(15000, snapshot.refreshSeconds * 4000)
+      this.now() - Date.parse(snapshot.at) > staleAfter(snapshot)
     );
   });
 
@@ -149,7 +144,6 @@ export class MonitoringStore {
   private retry?: ReturnType<typeof setTimeout>;
   private watchdog?: ReturnType<typeof setTimeout>;
   private clock?: ReturnType<typeof setInterval>;
-  private revision = 0;
   private retries = 0;
   private started = false;
   constructor() {
@@ -200,15 +194,16 @@ export class MonitoringStore {
     const said = this.gate.observe(
       snapshot.health.status +
         ':' +
-        snapshot.health.issues.map((index3) => index3.code + '/' + index3.subject).join(','),
+        snapshot.health.issues.map((issue) => issue.code + '/' + issue.subject).join(','),
       healthAnnouncement(snapshot.health),
     );
     if (said) this.announcement.set(said);
     return snapshot;
   }
+  /** 換掉 controller 就讓舊的 `follow` 失效；看門狗只中止、不換，因此它中止的那條會進入重連。 */
   private stop() {
-    ++this.revision;
     this.controller?.abort();
+    this.controller = undefined;
     clearTimeout(this.retry);
     clearTimeout(this.watchdog);
   }
@@ -223,24 +218,24 @@ export class MonitoringStore {
       return;
     }
     this.controller = new AbortController();
-    void this.follow(this.revision, this.controller.signal);
+    void this.follow(this.controller.signal);
   }
-  private async follow(revision: number, signal: AbortSignal) {
+  private async follow(signal: AbortSignal) {
     this.connection.set(this.snapshot() ? 'reconnecting' : 'connecting');
     let received = false;
     try {
       this.armWatchdog();
       const response = await this.api.events(this.minutes(), signal);
       for await (const frame of jsonEvents<unknown>(response, 'snapshot', signal)) {
-        if (signal.aborted || revision !== this.revision) return;
+        if (signal.aborted) return;
         const snapshot = this.receive(frame);
         received = true;
         this.connection.set('live');
         this.error.set('');
         this.retries = 0;
-        this.armWatchdog(Math.max(15000, snapshot.refreshSeconds * 4000));
+        this.armWatchdog(staleAfter(snapshot));
       }
-      if (signal.aborted || revision !== this.revision) return;
+      if (signal.aborted) return;
       // 伺服器每十分鐘會結束一次串流，好重新檢查 cookie；這不是錯誤。
       if (received) {
         this.restart();
@@ -248,7 +243,7 @@ export class MonitoringStore {
       }
       throw new Error('事件串流已結束');
     } catch (error) {
-      if (revision !== this.revision) return;
+      if (signal !== this.controller?.signal) return;
       clearTimeout(this.watchdog);
       if (error instanceof ApiError && [401, 403].includes(error.status)) {
         this.connection.set('denied');

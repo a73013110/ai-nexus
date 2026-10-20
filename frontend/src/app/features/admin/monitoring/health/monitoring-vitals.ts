@@ -6,11 +6,8 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { Sparkline } from '@shared/ui/sparkline';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { MonitoringStore } from '../monitoring-store';
-import { monitoringLatency } from '../monitoring-format';
+import { knownValues, monitoringLatency, severityText, severityTone } from '../monitoring-format';
 
-/** 數列的已知值；裝飾用的趨勢會略過沒有樣本的桶。 */
-const known = (values: readonly (number | null)[]) =>
-  values.filter((value2): value2 is number => value2 !== null && Number.isFinite(value2));
 const decimals = (value: number) =>
   value.toLocaleString('zh-TW', { maximumFractionDigits: value >= 100 ? 0 : value >= 10 ? 1 : 2 });
 const whole = (value: number) => formatNumber(Math.round(value));
@@ -51,9 +48,7 @@ interface Vital {
           <span class="vital-label"
             ><span>{{ vital.label }}</span>
             @if (vital.tone !== 'neutral') {
-              <nx-status-badge [tone]="vital.tone">{{
-                vital.tone === 'danger' ? '嚴重' : '注意'
-              }}</nx-status-badge>
+              <nx-status-badge [tone]="vital.tone">{{ severityText(vital.tone) }}</nx-status-badge>
             }
           </span>
           <strong class="vital-value"
@@ -80,22 +75,23 @@ interface Vital {
 export class MonitoringVitals {
   private readonly store = inject(MonitoringStore);
   readonly data = input.required<MonitoringSnapshot>();
+  readonly severityText = severityText;
   // 每個數列一個陣列，只有新的桶關閉時才重新計算（store 的切片）。
   private readonly series = computed(() => {
     const traffic = this.store.timeline(),
       resources = this.store.resourceTimeline();
     return {
-      requests: traffic.map((part) => part.requestsPerSecond),
-      p95: known(traffic.map((part2) => part2.p95Ms)),
-      errors: traffic.map((part3) => part3.serverErrors),
-      cpu: known(resources.map((part4) => part4.cpuPercent)),
-      memory: known(resources.map((part5) => part5.workingSetBytes)),
+      requests: traffic.map((point) => point.requestsPerSecond),
+      p95: knownValues(traffic.map((point) => point.p95Ms)),
+      errors: traffic.map((point) => point.serverErrors),
+      cpu: knownValues(resources.map((point) => point.cpuPercent)),
+      memory: knownValues(resources.map((point) => point.workingSetBytes)),
     };
   });
   private readonly tones = computed(() => {
     const tones = new Map<string, BadgeTone>();
     const raise = (key: string, severity: string) => {
-      const tone: BadgeTone = severity === 'critical' ? 'danger' : 'warning';
+      const tone = severityTone(severity);
       if (tones.get(key) !== 'danger') tones.set(key, tone);
     };
     const keys: Record<string, string> = {

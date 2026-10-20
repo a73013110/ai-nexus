@@ -18,7 +18,7 @@ const d = (points: readonly Point[]) =>
     .map((part) => part.join(' '))
     .join(', ')}`;
 /** 從核心錨點（0, 50）到第 `y` 位置那一列的連線，以及從 18% 起的尾段（de Casteljau 演算法）。 */
-export function wire(pointY: number) {
+function wire(pointY: number) {
   const curve: Point[] = [
     [0, 50],
     [50, 50],
@@ -56,10 +56,10 @@ export class MonitoringServiceMap {
   readonly snapshot = this.store.snapshot;
   readonly moving = computed(() => !this.store.stale() && !this.theme.reducedMotion());
   readonly observed = computed(() =>
-    this.store.dependencies().filter((draft) => draft.status !== 'unobserved'),
+    this.store.dependencies().filter((dependency) => dependency.status !== 'unobserved'),
   );
   readonly unobserved = computed(() =>
-    this.store.dependencies().filter((draft2) => draft2.status === 'unobserved'),
+    this.store.dependencies().filter((dependency) => dependency.status === 'unobserved'),
   );
   private readonly count = computed(() => this.observed().length);
   /**
