@@ -18,8 +18,9 @@ import { ChatStore } from './chat-store';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => (resolve = done));
-  return { promise, resolve };
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((done, fail) => ((resolve = done), (reject = fail)));
+  return { promise, resolve, reject };
 }
 
 const me = (features: string[]) => ({
@@ -50,6 +51,7 @@ function setup(features = ['chat']) {
     conversations: vi.fn(() => conversations.promise),
     webSearchStatus: vi.fn(async () => ({ available: true, notice: '' })),
     context: vi.fn(),
+    run: vi.fn(),
   };
   const account = signal<ReturnType<typeof me> | null>(null);
   const generation = signal(1);
@@ -175,5 +177,41 @@ describe('chat store bootstrap', () => {
     await preview;
     expect(items4.store.contextPending()).toBe(false);
     expect(items4.store.canSend()).toBe(true);
+  });
+
+  describe('resume across an account switch', () => {
+    const run = { id: 'r1', conversationId: 'c1', status: 'running' } as never;
+
+    async function resuming() {
+      const items = setup();
+      items.models.resolve(catalog);
+      items.conversations.resolve([]);
+      await items.store.initialize();
+      items.store.run.live.set(run);
+      const latest = deferred<unknown>();
+      items.api.run.mockReturnValue(latest.promise);
+      const resumed = items.store.resume();
+      // 登出再登入另一人：世代改變，store 重設成新帳號的空白狀態。
+      items.generation.set(2);
+      TestBed.tick();
+      return { items, latest, resumed };
+    }
+
+    it('drops a failure that arrives after the account changed', async () => {
+      const { items, latest, resumed } = await resuming();
+      latest.reject(new Error('前一個帳號的失敗'));
+      await resumed;
+      expect(items.store.error()).toBeNull();
+      expect(items.store.liveRun()).toBeNull();
+    });
+
+    it('drops a run that arrives after the account changed', async () => {
+      const { items, latest, resumed } = await resuming();
+      latest.resolve(run);
+      await resumed;
+      expect(items.store.error()).toBeNull();
+      expect(items.store.liveRun()).toBeNull();
+      expect(items.store.streamingText()).toBe('');
+    });
   });
 });
