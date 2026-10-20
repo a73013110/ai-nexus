@@ -1,8 +1,18 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient, type ApiQuery } from '@core/api/api-client';
+import { ApiClient, apiHref, type ApiQuery } from '@core/api/api-client';
+import type { AttachmentPolicyDto } from '@core/api/schema';
 import { ClientValidationError } from '@core/errors/safe-errors';
 
 type FileFilters = ApiQuery<'/api/v1/files', 'get'>;
+
+/** 原檔內容的網址，給縮圖與下載連結由瀏覽器直接載入。 */
+export const attachmentContent = (id: string) =>
+  apiHref('/api/v1/attachments/{id}/content', { path: { id } });
+
+/** 單一檔案的副檔名與大小是否符合附件政策；份數與總量上限由呼叫端依情境檢查。 */
+export const acceptsFile = (policy: AttachmentPolicyDto, file: File) =>
+  file.size <= policy.maxFileBytes &&
+  policy.extensions.includes('.' + file.name.split('.').pop()?.toLowerCase());
 
 /** 已上傳的原始檔：草稿附件、上傳配額與檔案庫。 */
 @Injectable({ providedIn: 'root' })

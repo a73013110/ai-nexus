@@ -13,10 +13,10 @@ import {
 } from '@angular/core';
 import type { LibraryFileDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
-import { apiHref } from '@core/api/api-client';
 import { ReaderLink } from '@shared/browser/reader-link';
-import { formatBytes, formatDate } from '@shared/browser/format';
+import { formatBytes, formatDay } from '@shared/browser/format';
 import { FileLibraryStore } from '../file-library-store';
+import { attachmentContent } from '../files-api';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
 import { TablePagination } from '@shared/ui/data-table';
@@ -136,12 +136,12 @@ export class LibraryPicker {
   readonly label = input('從檔案庫加入');
   readonly chosen = output<LibraryFileDto>();
   readonly bytes = formatBytes;
-  readonly date = (value: string) => formatDate(value).split(' ')[0];
+  readonly date = formatDay;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   open() {
     this.dialog().nativeElement.showModal();
-    void this.store.load();
+    this.store.load();
   }
   /** 翻頁回到清單開頭。 */
   turn(index: number) {
@@ -152,9 +152,7 @@ export class LibraryPicker {
     this.dialog().nativeElement.close();
     this.chosen.emit(file);
   }
-  url(id: string) {
-    return apiHref('/api/v1/attachments/{id}/content', { path: { id } });
-  }
+  readonly url = attachmentContent;
   extension(name: string) {
     return name.split('.').pop()?.toUpperCase().slice(0, 4) || 'FILE';
   }

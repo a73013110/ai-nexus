@@ -10,11 +10,11 @@ import {
 import { RouterLink } from '@angular/router';
 import { catalogFeature } from '@core/api/catalog';
 import type { LibraryFileDto } from '@core/api/schema';
-import { apiHref } from '@core/api/api-client';
 import { ReaderLink } from '@shared/browser/reader-link';
 import { Icon } from '@shared/ui/icon';
 import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
-import { formatBytes, formatDate } from '@shared/browser/format';
+import { formatBytes, formatDay } from '@shared/browser/format';
+import { attachmentContent } from '../files-api';
 
 /**
  * 引用處的種類（`chat`、`projects`、`knowledge`）就是功能目錄的頁面 ID；網址與圖示都由目錄取得，
@@ -96,7 +96,7 @@ export class FileBrowser {
   readonly remove = output<LibraryFileDto>();
   readonly bytes = formatBytes;
   readonly usagePage = usagePage;
-  readonly date = (value: string) => formatDate(value).split(' ')[0];
+  readonly date = formatDay;
   private readonly menu = viewChild.required(MenuPanel);
   /** 選單開啟中的檔案；一個面板服務所有磚塊。 */
   private readonly chosen = signal<LibraryFileDto | null>(null);
@@ -133,9 +133,7 @@ export class FileBrowser {
       link.click();
     }
   }
-  url(id: string) {
-    return apiHref('/api/v1/attachments/{id}/content', { path: { id } });
-  }
+  readonly url = attachmentContent;
   extension(name: string) {
     return name.split('.').pop()?.toUpperCase() || 'FILE';
   }

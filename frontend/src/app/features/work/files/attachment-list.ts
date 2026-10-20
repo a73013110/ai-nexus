@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { AttachmentDto } from '@core/api/schema';
 import { apiHref } from '@core/api/api-client';
+import { attachmentContent } from './files-api';
 import { Icon } from '@shared/ui/icon';
 import { ReaderLink } from '@shared/browser/reader-link';
 
@@ -70,7 +71,7 @@ export class AttachmentList {
     const share = this.shareId();
     return share
       ? apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: share, file: id } })
-      : apiHref('/api/v1/attachments/{id}/content', { path: { id } });
+      : attachmentContent(id);
   }
   size(bytes: number) {
     return bytes >= 1024 * 1024
