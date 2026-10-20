@@ -20,7 +20,9 @@ function childrenOf(units: readonly UnitDto[]) {
   const children = new Map<string | null, UnitDto[]>();
   for (const unit of units) {
     const key = unit.parentId ?? null;
-    children.set(key, [...(children.get(key) ?? []), unit]);
+    const list = children.get(key);
+    if (list) list.push(unit);
+    else children.set(key, [unit]);
   }
   for (const list of children.values()) list.sort(byOrder);
   return children;
@@ -60,14 +62,6 @@ export function subtree(units: readonly UnitDto[], id: string) {
     for (const child of children.get(current) ?? []) pending.push(child.id);
   }
   return result;
-}
-
-/** 單位所在的層數（最上層為 1）。 */
-export function depthOf(units: readonly UnitDto[], id: string) {
-  const byId = new Map(units.map((unit) => [unit.id, unit]));
-  let depth = 0;
-  for (let at = byId.get(id); at && depth <= MAX_DEPTH; at = byId.get(at.parentId ?? '')) depth++;
-  return depth;
 }
 
 /** 以 `id` 為根的子樹有幾層（只有自己為 1）。 */

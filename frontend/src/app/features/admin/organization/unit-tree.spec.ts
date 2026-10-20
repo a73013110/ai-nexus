@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { UnitDto } from '@core/api/schema';
-import { depthOf, heightOf, moved, subtree, unitRows } from './unit-tree';
+import { heightOf, moved, subtree, unitRows } from './unit-tree';
 
 const unit = (id: string, parentId: string | null, sortOrder: number, enabled = true): UnitDto => ({
   id,
@@ -48,8 +48,7 @@ describe('unit tree', () => {
     expect(unitRows([unit('orphan', 'gone', 10)]).map((row) => row.depth)).toEqual([1]);
   });
 
-  it('measures depth, height and the subtree a move cannot target', () => {
-    expect(depthOf(units, 'systems')).toBe(3);
+  it('measures height and the subtree a move cannot target', () => {
     expect(heightOf(units, 'company')).toBe(3);
     expect(heightOf(units, 'systems')).toBe(1);
     expect([...subtree(units, 'it')].sort()).toEqual(['it', 'systems']);

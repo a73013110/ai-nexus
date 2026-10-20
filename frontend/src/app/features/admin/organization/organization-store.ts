@@ -128,9 +128,10 @@ export class OrganizationStore {
       after();
       return true;
     } catch (error) {
-      if (alive()) this.actionError.set(safeMessage(error));
+      if (!alive()) return false;
+      this.actionError.set(safeMessage(error));
       // 例如期間有人改了同一層：重讀，讓畫面回到伺服器的狀態。
-      if (alive()) this.unitsRead.reload();
+      this.unitsRead.reload();
       return false;
     } finally {
       if (alive()) this.busy.set(false);
