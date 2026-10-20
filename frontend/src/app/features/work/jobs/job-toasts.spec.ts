@@ -8,6 +8,7 @@ import { ToastService, type ToastOptions } from '@shared/ui/toast-service';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { JobToasts } from './job-toasts';
+import { JobsApi } from './jobs-api';
 
 const job = (patch: Partial<JobDto> = {}) =>
   ({
@@ -63,13 +64,25 @@ function setup() {
   const generation = signal(1);
   const shown: ToastOptions[] = [];
   const knowledge = { document: vi.fn(async () => document({ status: 'ready' })) };
+  const jobs = {
+    retry: vi.fn(async (id: string) => job({ id, updatedAt: '2026-10-11T09:00:00Z' })),
+    cancel: vi.fn(async (id: string) => job({ id, cancelRequested: true })),
+  };
+  const auth = {
+    generation,
+    guard: () => {
+      const current = generation();
+      return () => current === generation();
+    },
+  };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: NotificationStore, useValue: { items } },
       { provide: KnowledgeApi, useValue: knowledge },
+      { provide: JobsApi, useValue: jobs },
       { provide: ToastService, useValue: { show: (item: ToastOptions) => shown.push(item) } },
-      { provide: WorkspaceSession, useValue: { auth: { generation }, has: () => true } },
+      { provide: WorkspaceSession, useValue: { auth, has: () => true } },
     ],
   });
   const toasts = TestBed.inject(JobToasts);
@@ -81,7 +94,7 @@ function setup() {
     await Promise.resolve();
     await Promise.resolve();
   };
-  return { toasts, items, generation, shown, knowledge, navigate, poll };
+  return { toasts, items, generation, shown, knowledge, jobs, navigate, poll };
 }
 
 describe('JobToasts', () => {
@@ -127,6 +140,21 @@ describe('JobToasts', () => {
     await poll(event('cancelled', 'job-1', '2026-10-11T09:01:00Z'));
     await poll(event('completed', 'job-1', '2026-10-11T09:02:00Z'));
     expect(shown).toEqual([]);
+  });
+
+  it('watches a job retried through control but not one stopped through it', async () => {
+    const { toasts, shown, jobs, poll } = setup();
+    expect((await toasts.control('job-1', false)).cancelRequested).toBe(true);
+    expect(jobs.cancel).toHaveBeenCalledWith('job-1');
+    await poll(event('failed', 'job-1', '2026-10-11T09:01:00Z'));
+    expect(shown).toEqual([]);
+    await toasts.control('job-1', true);
+    expect(jobs.retry).toHaveBeenCalledWith('job-1');
+    await poll(event('failed', 'job-1', '2026-10-11T08:30:00Z'));
+    expect(shown).toEqual([]);
+    await poll(event('failed', 'job-1', '2026-10-11T09:02:00Z'));
+    expect(shown).toHaveLength(1);
+    expect(shown[0]).toMatchObject({ id: 'job-1', tone: 'danger' });
   });
 
   it('follows a document from recognition to embedding before announcing it', async () => {

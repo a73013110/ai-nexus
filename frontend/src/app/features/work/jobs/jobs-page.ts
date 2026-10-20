@@ -25,6 +25,10 @@ import { JobToasts } from './job-toasts';
 import { apiResource } from '@core/api/api-resource';
 import { jobsTour } from './jobs-tour';
 import { routeOf } from '@core/api/catalog';
+import { isActive } from '@core/api/generation-status';
+
+/** 「需要處理」篩選與可重試的狀態。 */
+const needsAttention = (status: string) => status === 'failed' || status === 'cancelled';
 
 @Component({
   selector: 'nx-jobs-page',
@@ -147,16 +151,16 @@ export class JobsPage {
   readonly jobs = apiResource({
     feature: 'jobs',
     params: () => this.target(),
-    loader: async (target) => {
-      const jobs = await this.api.list();
-      if (target && !jobs.some((item2) => item2.id === target))
-        jobs.push(await this.api.get(target));
+    loader: async (target, signal) => {
+      const jobs = await this.api.list(signal);
+      if (target && !jobs.some((job) => job.id === target))
+        jobs.push(await this.api.get(target, signal));
       return jobs;
     },
     poll: () => 3000,
   });
   readonly filter = signal(this.target() ? 'all' : 'active');
-  readonly actionError = signal('');
+  private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.jobs.error());
   readonly busy = signal<string | null>(null);
   readonly filterOptions = [
@@ -168,14 +172,14 @@ export class JobsPage {
   readonly term = signal('');
   readonly visible = computed(() =>
     (this.jobs.value() ?? []).filter(
-      (item3) =>
-        item3.label.toLowerCase().includes(this.term().toLowerCase()) &&
+      (job) =>
+        job.label.toLowerCase().includes(this.term().toLowerCase()) &&
         (this.filter() === 'all' ||
           (this.filter() === 'active'
-            ? ['queued', 'running'].includes(item3.status)
+            ? isActive(job.status)
             : this.filter() === 'attention'
-              ? ['failed', 'cancelled'].includes(item3.status)
-              : item3.status === 'completed')),
+              ? needsAttention(job.status)
+              : job.status === 'completed')),
     ),
   );
   /** 列表的導覽；卡片步驟依目前篩選顯示的卡片與動作而定。 */
@@ -202,10 +206,10 @@ export class JobsPage {
     return job.kind === 'repository-review' && this.session.has('repositories');
   }
   canStop(job: JobDto) {
-    return ['queued', 'running'].includes(job.status);
+    return isActive(job.status);
   }
   canRetry(job: JobDto) {
-    return ['failed', 'cancelled'].includes(job.status) && job.attempt < 6;
+    return needsAttention(job.status) && job.attempt < 6;
   }
   reload() {
     this.actionError.set('');
@@ -217,8 +221,7 @@ export class JobsPage {
     this.busy.set(job.id);
     this.actionError.set('');
     try {
-      const value = await (retry ? this.api.retry(job.id) : this.api.cancel(job.id));
-      if (retry) this.jobToasts.track(value);
+      const value = await this.jobToasts.control(job.id, retry);
       if (valid())
         this.jobs.value.update((items) =>
           items?.map((item) => (item.id === value.id ? value : item)),

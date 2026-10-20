@@ -1,6 +1,7 @@
 import { Notice } from '@shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { JobDto } from '@core/api/schema';
+import { isActive } from '@core/api/generation-status';
 import { InferenceSignal } from '@shared/ui/inference-signal';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { jobFailure, jobStatus } from './job-kind';
@@ -52,6 +53,6 @@ import { jobFailure, jobStatus } from './job-kind';
 export class JobProgress {
   readonly failure = computed(() => jobFailure(this.job()));
   readonly job = input.required<JobDto>();
-  readonly active = computed(() => ['queued', 'running'].includes(this.job().status));
+  readonly active = computed(() => isActive(this.job().status));
   readonly status = computed(() => jobStatus(this.job().status));
 }
