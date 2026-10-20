@@ -15,6 +15,7 @@ public static class AuditActions
         (ExportActivityAudit.Action, "稽核匯出"),
         ("admin.user", "使用者設定"),
         ("identity.test_", "測試身分"),
+        ("account.", "帳號安全"),
         ("admin.user_roles", "使用者角色"),
         ("admin.user_model_policy", "個人模型政策"),
         ("admin.user_storage", "使用者容量上限"),

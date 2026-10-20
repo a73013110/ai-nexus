@@ -48,6 +48,16 @@ public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfService
         return new IssuedChallenge(challenge, code, superseded);
     }
 
+    /// <summary>
+    /// 儲存剛發出的驗證碼（與呼叫端加入的寄信列同一交易）。並行發碼時 filtered unique index 讓其中一方失敗，回 <c>verification_cooldown</c>。
+    /// </summary>
+    public async Task<Result> SaveAsync(CancellationToken ct)
+    {
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) when (!ct.IsCancellationRequested) { return IdentityErrors.VerificationCooldown; }
+        return Result.Success;
+    }
+
     /// <summary>使用者自己的驗證碼（顯示到期時間、剩餘次數與寄送狀態）；別人的或不存在時為 null。</summary>
     public Task<VerificationChallenge?> FindAsync(Guid userId, Guid id, CancellationToken ct)
         => db.Set<VerificationChallenge>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);

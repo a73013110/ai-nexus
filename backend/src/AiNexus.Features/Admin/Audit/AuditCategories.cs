@@ -14,7 +14,7 @@ public static class AuditCategories
         "billing.report.read", "billing.report.export", "dashboard.platform.read", "integration.searched", "integration.record.read", ExportActivityAudit.Action];
     private static readonly string[] Administrative = ["billing.price.created", "system.diagnostics.configuration"];
     private static readonly Expression<Func<AuditEvent, string>> Category = entry =>
-        entry.Action.StartsWith("identity.") ? "authentication" :
+        entry.Action.StartsWith("identity.") || entry.Action.StartsWith("account.") ? "authentication" :
         entry.Action.StartsWith("logs.") || Reads.Contains(entry.Action) ? "access" :
         entry.Action.StartsWith("admin.") || entry.Action.StartsWith("resource.acl") || Administrative.Contains(entry.Action) ? "administration" : "activity";
     private static readonly Func<AuditEvent, string> Classify = Category.Compile();

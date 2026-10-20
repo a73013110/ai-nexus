@@ -312,6 +312,7 @@ public static class PublicErrorCatalog
         ["verification_code_invalid"] = "驗證碼不正確，請重新輸入。",
         ["verification_cooldown"] = "剛寄出驗證碼，請稍候一分鐘再重新寄送。",
         ["verification_expired"] = "驗證碼已失效或已使用，請重新索取。",
+        ["verification_not_found"] = "找不到這組驗證碼，請重新索取。",
         ["verification_rate_limited"] = "驗證碼索取次數過多，請一小時後再試。",
         ["vision_not_supported"] = "目前模型不支援圖片，請切換支援圖片的模型，或移除圖片附件。",
         ["web_query_too_long"] = "網路搜尋提問最多 2000 個字元，請簡化查詢。",
