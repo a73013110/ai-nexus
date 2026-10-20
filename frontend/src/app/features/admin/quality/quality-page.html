@@ -109,7 +109,7 @@
         @if (detail(); as view) {
           <nx-job-progress [job]="view.run.job">
             @if (view.run.canControl) {
-              @if (view.run.job.status === 'running' || view.run.job.status === 'queued') {
+              @if (active(view.run.job.status)) {
                 <button
                   class="quiet-button"
                   (click)="control(false)"
@@ -317,9 +317,9 @@
             type="button"
             class="secondary-button"
             (click)="addCase()"
-            [disabled]="cases().length >= 20"
+            [disabled]="cases().length >= maxCases"
           >
-            <nx-icon name="plus" />新增題目（{{ cases().length }} / 20）
+            <nx-icon name="plus" />新增題目（{{ cases().length }} / {{ maxCases }}）
           </button>
         } @else if (form() === 'run') {
           @for (item of variants(); track $index; let i = $index) {
@@ -366,7 +366,7 @@
             type="button"
             class="secondary-button"
             (click)="addVariant()"
-            [disabled]="variants().length >= 3"
+            [disabled]="variants().length >= maxVariants"
           >
             加入比較方案
           </button>

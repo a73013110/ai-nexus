@@ -58,14 +58,41 @@ import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { accessLabel } from '@features/work/collaboration/access-label';
 import { evaluationSetTour, qualityTour } from './quality-tour';
 import { routeOf } from '@core/api/catalog';
+import { isActive } from '@core/api/generation-status';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
+type EvaluationExport = { name: string; description: string; cases: EvaluationCase[] };
+/** 題數與方案數上限與後端驗證一致；表單按鈕、計數與匯入檢查共用。 */
+const MAX_CASES = 20;
+const MAX_VARIANTS = 3;
 const blankCase = (): EvaluationCase => ({
   question: '',
   reference: '',
   requiredTerms: [],
   forbiddenTerms: [],
 });
+/** 匯入檔只接受 version 1 匯出格式，逐欄檢查型別，不把任意 JSON 帶進表單。 */
+function isEvaluationExport(data: unknown): data is EvaluationExport {
+  const file = data as (EvaluationExport & { version?: unknown }) | null;
+  return (
+    !!file &&
+    file.version === 1 &&
+    typeof file.name === 'string' &&
+    typeof file.description === 'string' &&
+    Array.isArray(file.cases) &&
+    file.cases.length >= 1 &&
+    file.cases.length <= MAX_CASES &&
+    file.cases.every(
+      (item) =>
+        !!item &&
+        typeof item.question === 'string' &&
+        typeof item.reference === 'string' &&
+        Array.isArray(item.requiredTerms) &&
+        Array.isArray(item.forbiddenTerms) &&
+        [...item.requiredTerms, ...item.forbiddenTerms].every((term) => typeof term === 'string'),
+    )
+  );
+}
 @Component({
   selector: 'nx-quality-page',
   styleUrl: './quality-page.scss',
@@ -148,7 +175,7 @@ export class QualityPage {
     feature: 'quality',
     params: () => this.runId() || undefined,
     loader: (id) => this.api.detail(id),
-    poll: (detail) => (['queued', 'running'].includes(detail?.run.job.status ?? '') ? 2000 : null),
+    poll: (detail) => (detail && isActive(detail.run.job.status) ? 2000 : null),
   });
   readonly detail = computed<EvaluationDetailDto | null>(() => {
     const value = this.detailRead.value();
@@ -174,17 +201,14 @@ export class QualityPage {
       this.runsRead.error() ||
       this.detailRead.error(),
   );
-  readonly toast = inject(ToastService);
+  private readonly toast = inject(ToastService);
   readonly filter = signal('');
+  private readonly needle = computed(() => this.filter().toLowerCase());
   readonly visible = computed(() =>
-    this.sets().filter((item) =>
-      item.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
-    ),
+    this.sets().filter((item) => item.resource.name.toLowerCase().includes(this.needle())),
   );
   readonly visibleFeedback = computed(() =>
-    this.feedback().filter((item2) =>
-      item2.conversationTitle.toLowerCase().includes(this.filter().toLowerCase()),
-    ),
+    this.feedback().filter((item) => item.conversationTitle.toLowerCase().includes(this.needle())),
   );
   /** 頁面標題下方，已開啟集合的描述與其大小、版本。 */
   readonly summary = computed(() => {
@@ -228,6 +252,9 @@ export class QualityPage {
   });
   readonly access = accessLabel;
   readonly when = relativeTime;
+  readonly active = isActive;
+  readonly maxCases = MAX_CASES;
+  readonly maxVariants = MAX_VARIANTS;
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly sharing = viewChild(ResourceSharing);
   readonly form = signal('set');
@@ -244,19 +271,23 @@ export class QualityPage {
   readonly reviewNote = signal('');
   readonly scores = [
     { value: '', label: '未評分' },
-    ...[1, 2, 3, 4, 5].map((pointX) => ({ value: String(pointX), label: `${pointX} 分` })),
+    ...[1, 2, 3, 4, 5].map((point) => ({ value: String(point), label: `${point} 分` })),
   ];
   readonly runOptions = computed(() =>
-    this.runs().map((item3) => ({
-      value: item3.id,
-      label: `${this.date(item3.createdAt)} · 題庫 v${item3.setVersion}`,
-      description: item3.job.stage,
+    this.runs().map((item) => ({
+      value: item.id,
+      label: `${this.date(item.createdAt)} · 題庫 v${item.setVersion}`,
+      description: item.job.stage,
     })),
   );
   private editingId: string | null = null;
   editing() {
     return this.editingId !== null;
   }
+  /**
+   * 導覽不受 busy 鎖住：在 /quality 與 /quality/:id 之間切換時頁面元件被重用，
+   * 進行中的寫入不能把結果套到另一個評測集，所以換路由就作廢舊的 guard 並解除 busy。
+   */
   private revision = 0;
   private reviewTarget = { c: 0, v: 0, run: '' };
   constructor() {
@@ -312,8 +343,8 @@ export class QualityPage {
       );
       this.setsRead.reload();
       await this.router.navigate([routeOf('quality')]);
-    } catch (error2) {
-      if (valid()) this.actionError.set(this.scope.message(error2));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -338,14 +369,14 @@ export class QualityPage {
     value: string,
   ) {
     this.cases.update((items) =>
-      items.map((item, index2) =>
-        index2 === index
+      items.map((item, position) =>
+        position === index
           ? {
               ...item,
               [field]: field.endsWith('Terms')
                 ? value
                     .split(/[,，\n]/)
-                    .map((item) => item.trim())
+                    .map((term) => term.trim())
                     .filter(Boolean)
                 : value,
             }
@@ -354,11 +385,11 @@ export class QualityPage {
     );
   }
   addCase() {
-    if (this.cases().length < 20) this.cases.update((items2) => [...items2, blankCase()]);
+    if (this.cases().length < MAX_CASES) this.cases.update((items) => [...items, blankCase()]);
   }
-  removeCase(index3: number) {
+  removeCase(index: number) {
     if (this.cases().length > 1)
-      this.cases.update((item) => item.filter((_, count) => count !== index3));
+      this.cases.update((items) => items.filter((_, position) => position !== index));
   }
   exportSet() {
     const value = this.current();
@@ -386,40 +417,20 @@ export class QualityPage {
     const valid = this.guard();
     try {
       if (file.size > 1400000) throw new ClientValidationError('evaluationFileSize');
-      let data;
+      let data: unknown;
       try {
         data = JSON.parse(await file.text());
       } catch {
         throw new ClientValidationError('evaluationFormat');
       }
       if (!valid()) return;
-      if (
-        !data ||
-        data.version !== 1 ||
-        typeof data.name !== 'string' ||
-        typeof data.description !== 'string' ||
-        !Array.isArray(data.cases) ||
-        data.cases.length < 1 ||
-        data.cases.length > 20 ||
-        data.cases.some(
-          (item4: EvaluationCase) =>
-            !item4 ||
-            typeof item4.question !== 'string' ||
-            typeof item4.reference !== 'string' ||
-            !Array.isArray(item4.requiredTerms) ||
-            !Array.isArray(item4.forbiddenTerms) ||
-            [...item4.requiredTerms, ...item4.forbiddenTerms].some(
-              (target2) => typeof target2 !== 'string',
-            ),
-        )
-      )
-        throw new ClientValidationError('evaluationFormat');
+      if (!isEvaluationExport(data)) throw new ClientValidationError('evaluationFormat');
       this.openSet();
       this.name.set(data.name);
       this.description.set(data.description);
       this.cases.set(data.cases);
-    } catch (error3) {
-      if (valid()) this.actionError.set(this.scope.message(error3));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     }
   }
   async openRun() {
@@ -439,39 +450,34 @@ export class QualityPage {
         );
       this.models.set(catalog.models);
       this.policy.set(catalog.policy);
-      this.variants.set([
-        {
-          label: '方案 A',
-          modelId: catalog.policy.defaultModelId ?? catalog.models[0].id,
-          instruction: '',
-        },
-      ]);
+      this.variants.set([this.blankVariant(0)]);
       this.form.set('run');
       this.dialog().nativeElement.showModal();
-    } catch (error4) {
-      if (valid()) this.actionError.set(this.scope.message(error4));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
-  variant(index4: number, field: keyof VariantForm, value: string) {
-    this.variants.update((items3) =>
-      items3.map((item, count2) => (index4 === count2 ? { ...item, [field]: value } : item)),
+  /** 第 index 個方案的預設值：依序命名 A、B、C，模型用政策預設或清單第一個。 */
+  private blankVariant(index: number): VariantForm {
+    return {
+      label: `方案 ${String.fromCharCode(65 + index)}`,
+      modelId: this.policy()?.defaultModelId ?? this.models()[0]?.id ?? null,
+      instruction: '',
+    };
+  }
+  variant(index: number, field: keyof VariantForm, value: string) {
+    this.variants.update((items) =>
+      items.map((item, position) => (position === index ? { ...item, [field]: value } : item)),
     );
   }
   addVariant() {
-    if (this.variants().length < 3)
-      this.variants.update((items4) => [
-        ...items4,
-        {
-          label: `方案 ${String.fromCharCode(65 + items4.length)}`,
-          modelId: this.policy()?.defaultModelId ?? this.models()[0]?.id ?? null,
-          instruction: '',
-        },
-      ]);
+    if (this.variants().length < MAX_VARIANTS)
+      this.variants.update((items) => [...items, this.blankVariant(items.length)]);
   }
-  removeVariant(index5: number) {
-    this.variants.update((item) => item.filter((_, count3) => count3 !== index5));
+  removeVariant(index: number) {
+    this.variants.update((items) => items.filter((_, position) => position !== index));
   }
   close(event?: Event) {
     event?.preventDefault();
@@ -496,9 +502,9 @@ export class QualityPage {
         if (!valid()) return;
         this.dialog().nativeElement.close();
         this.currentRead.value.set(value);
-        this.setsRead.value.update((item5) => [
+        this.setsRead.value.update((items) => [
           value,
-          ...(item5 ?? []).filter((item6) => item6.resource.id !== value.resource.id),
+          ...(items ?? []).filter((item) => item.resource.id !== value.resource.id),
         ]);
         await this.router.navigate([routeOf('quality'), value.resource.id]);
         this.toast.success('題庫已儲存');
@@ -507,7 +513,7 @@ export class QualityPage {
         this.jobToasts.track(run.job);
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        this.runsRead.value.update((item7) => item7 && { ...item7, rows: [run, ...item7.rows] });
+        this.runsRead.value.update((read) => read && { ...read, rows: [run, ...read.rows] });
         this.selectRun(run.id);
       } else if (this.form() === 'review') {
         const target = this.reviewTarget;
@@ -523,8 +529,8 @@ export class QualityPage {
         this.selectRun(target.run);
         this.toast.success('人工評分已儲存');
       }
-    } catch (error5) {
-      if (valid()) this.actionError.set(this.scope.message(error5));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -538,9 +544,9 @@ export class QualityPage {
     this.form.set('review');
     this.dialog().nativeElement.showModal();
   }
-  result(column: number, value2: number) {
+  result(caseIndex: number, variantIndex: number) {
     return this.detail()?.results.find(
-      (item) => item.caseIndex === column && item.variantIndex === value2,
+      (item) => item.caseIndex === caseIndex && item.variantIndex === variantIndex,
     );
   }
   async control(retry: boolean) {
@@ -552,8 +558,8 @@ export class QualityPage {
       if (retry) this.jobToasts.track(await this.jobs.retry(detail.run.job.id));
       else await this.jobs.cancel(detail.run.job.id);
       if (valid()) this.selectRun(detail.run.id);
-    } catch (error6) {
-      if (valid()) this.actionError.set(this.scope.message(error6));
+    } catch (failure) {
+      if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
       if (valid()) this.busy.set(false);
     }

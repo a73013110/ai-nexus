@@ -147,8 +147,8 @@ export class MessageFeedback {
       this.rated.emit({ id, rating: value });
       this.requested.set(false);
       this.notice.set(value ? '回饋已儲存' : '回饋已移除');
-    } catch (error2) {
-      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(error2));
+    } catch (failure) {
+      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(failure));
     } finally {
       if (alive()) this.saving.set(false);
     }
