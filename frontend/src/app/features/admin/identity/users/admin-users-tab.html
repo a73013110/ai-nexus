@@ -114,14 +114,14 @@
   <div table-footer class="ui-table-footer">
     <nx-table-pagination
       mode="offset"
-      [pageIndex]="(store.users()?.offset || 0) / 100"
-      [pageSize]="100"
-      [pageSizes]="[100]"
+      [pageIndex]="(store.users()?.offset || 0) / store.pageSize"
+      [pageSize]="store.pageSize"
+      [pageSizes]="[store.pageSize]"
       [count]="store.users()?.users?.length || 0"
       [total]="store.users()?.total || 0"
       [busy]="store.loadingUsers()"
-      (pageChange)="store.readUsers((store.users()?.offset || 0) + $event * 100)"
-      (pageSelect)="store.readUsers($event * 100)"
+      (pageChange)="store.readUsers((store.users()?.offset || 0) + $event * store.pageSize)"
+      (pageSelect)="store.readUsers($event * store.pageSize)"
     />
   </div>
 </nx-data-table>

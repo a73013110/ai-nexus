@@ -18,6 +18,8 @@ export class AdminUsersStore {
   private readonly query = signal('');
   private readonly typing = signal(false);
   readonly offset = signal(0);
+  /** 伺服器固定每頁 100 筆（`ListAdminUsers`），分頁只能照它換算。 */
+  readonly pageSize = 100;
   readonly usersRead = apiResource({
     feature: 'identity.users',
     params: () => (this.ready() ? { search: this.query(), offset: this.offset() } : undefined),
