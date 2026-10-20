@@ -163,6 +163,7 @@ public static class PublicErrorCatalog
         ["mail_cursor_invalid"] = "分頁已失效，請重新查詢。",
         ["mail_filter_invalid"] = "郵件篩選格式或範圍不正確。",
         ["mail_message_not_found"] = "找不到這封信，紀錄可能已依保存期限刪除。",
+        ["mail_not_retryable"] = "這封信已經寄出或結束，不能立即重試；需要時請用重寄建立新信。",
         ["mail_not_configured"] = "郵件寄送尚未設定，請聯絡系統管理員。",
         ["mail_recipient_blocked"] = "收件地址的網域不在允許清單內。",
         ["mail_recipient_unavailable"] = "收件地址已依保存期限清除，不能重寄。",

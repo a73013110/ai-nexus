@@ -1,0 +1,52 @@
+code {
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}
+.diagnosis-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.diagnosis-steps > li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--canvas);
+  border-radius: var(--p-radius-sm);
+  font-size: var(--text-caption);
+  animation: issue-arrive var(--motion-morph) var(--ease-spring) both;
+}
+@for $i from 1 through 8 {
+  .diagnosis-steps > li:nth-child(#{$i}) {
+    animation-delay: #{$i * 40}ms;
+  }
+}
+.diagnosis-steps > li[data-status='skipped'] {
+  color: var(--secondary);
+}
+.diagnosis-steps p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.diagnosis-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.diagnosis-elapsed {
+  margin-left: auto;
+  color: var(--secondary);
+  font-variant-numeric: tabular-nums;
+}
+.diagnosis-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+dd code + code {
+  margin-left: 6px;
+}

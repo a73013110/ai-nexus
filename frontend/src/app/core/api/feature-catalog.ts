@@ -289,7 +289,7 @@ export const CATALOG_FEATURES = [
     id: 'mail.messages.resend',
     kind: 'action',
     module: 'mail',
-    name: '重寄郵件',
+    name: '重寄與重試郵件',
     icon: 'repeat',
     route: null,
     scopes: [],

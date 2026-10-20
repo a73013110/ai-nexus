@@ -139,7 +139,7 @@ public static class FeatureCatalog
         new(DiagnosticsLogsDetail, FeatureKind.Action, DiagnosticsModule, "日誌診斷詳情", "search"),
         new(DiagnosticsLogsExport, FeatureKind.Action, DiagnosticsModule, "日誌匯出", "download"),
         new(MailMessages, FeatureKind.Page, MailModule, "郵件寄送紀錄", "mail"),
-        new(MailMessagesResend, FeatureKind.Action, MailModule, "重寄郵件", "repeat"),
+        new(MailMessagesResend, FeatureKind.Action, MailModule, "重寄與重試郵件", "repeat"),
         new(Quality, FeatureKind.Page, QualityModule, "品質評測", "shield"),
         new(QualityRetrieval, FeatureKind.Page, QualityModule, "檢索評測", "search"),
         // 介面元件工作臺是純前端頁面、沒有 API；獨立成一個 grant 才能單獨授予。

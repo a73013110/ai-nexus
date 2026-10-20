@@ -30,6 +30,11 @@ public sealed partial class MailDispatcher(
     /// <summary>每條 lane 一輪最多寄幾封；一輪結束才關連線，太大會讓斷路器與停機反應變慢。</summary>
     public const int PerLane = 10;
 
+    // 連線或傳輸層故障對每一封都一樣，與信本身無關；故障排除後不該讓它們繼續等原本的退避時間。4xx（mail_deferred）可能是灰名單，照原退避。
+    private static readonly string[] Deferrable = [MailFailures.TransportUnavailable, MailFailures.ConnectionFailed, MailFailures.Timeout];
+
+    private bool resumedAtStart;
+
     // 過期仍是 sending 的列（worker 中止）一併認領；PreviousStatus 讓呼叫端補記 abandoned。條件與 ix_OutboundMessages_Pending 的篩選一致。
     // READPAST 只能在 READ COMMITTED／REPEATABLE READ 使用，而連線池的連線可能還留著上一個請求的 SERIALIZABLE（行政稽核），所以先明確設回。
     private const string ClaimSql = """
@@ -73,6 +78,12 @@ public sealed partial class MailDispatcher(
         if (!settings.Enabled || circuit.IsOpen) return 0;
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!resumedAtStart)
+        {
+            // 設定多半是改完重啟才生效（IOptions），重啟前因故障延後的信沒有理由再等。
+            await AdvanceAsync(db, "startup", stop);
+            resumedAtStart = true;
+        }
         var now = clock.GetUtcNow();
         var wanted = settings.MaxConcurrency * PerLane;
         if (settings.MaxPerDay > 0)
@@ -99,18 +110,19 @@ public sealed partial class MailDispatcher(
         throttle.Return(allowed - claimed.Count);
         if (claimed.Count == 0) return 0;
         await RecordAbandonedAsync(db, claimed, now);
+        var autoRetry = await MailDeliverySettings.AutoRetryAsync(db, CancellationToken.None);
 
         var started = clock.GetTimestamp();
         // 依優先序輪流分配，每條 lane 都先寄安全信。
         var ordered = claimed.OrderByDescending(x => x.Priority).ThenBy(x => x.NextAttemptAt).Select(x => x.Id).ToList();
         var lanes = Math.Min(settings.MaxConcurrency, ordered.Count);
-        var sent = (await Task.WhenAll(Enumerable.Range(0, lanes).Select(lane => RunLaneAsync([.. ordered.Where((_, i) => i % lanes == lane)], lease, stop)))).Sum();
+        var sent = (await Task.WhenAll(Enumerable.Range(0, lanes).Select(lane => RunLaneAsync([.. ordered.Where((_, i) => i % lanes == lane)], lease, autoRetry, stop)))).Sum();
         var elapsed = (long)clock.GetElapsedTime(started).TotalMilliseconds;
         if (sent > 0) LogBatchSent(logger, sent, elapsed);
         return claimed.Count;
     }
 
-    private async Task<int> RunLaneAsync(List<Guid> ids, Guid lease, CancellationToken stop)
+    private async Task<int> RunLaneAsync(List<Guid> ids, Guid lease, bool autoRetry, CancellationToken stop)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -125,12 +137,12 @@ public sealed partial class MailDispatcher(
                 await ReleaseAsync(db, ids[i..], lease);
                 break;
             }
-            if (await DeliverAsync(db, contents, session, ids[i], lease, stop)) sent++;
+            if (await DeliverAsync(db, contents, session, ids[i], lease, autoRetry, stop)) sent++;
         }
         return sent;
     }
 
-    private async Task<bool> DeliverAsync(AppDbContext db, MailContents contents, IMailSession session, Guid id, Guid lease, CancellationToken stop)
+    private async Task<bool> DeliverAsync(AppDbContext db, MailContents contents, IMailSession session, Guid id, Guid lease, bool autoRetry, CancellationToken stop)
     {
         db.ChangeTracker.Clear();
         var message = await db.Set<OutboundMessage>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.LeaseToken == lease, stop);
@@ -165,22 +177,31 @@ public sealed partial class MailDispatcher(
         {
             var failure = MailFailures.Classify(ex);
             var issue = failure.Unexpected ? issues.Report(ex, MailFailures.DeliveryFailed, LogLevel.Warning) : null;
+            var stage = failure.Stage ?? "unknown";
+            var reason = failure.Reason ?? failure.ErrorType;
             if (failure.Outcome == MailAttemptOutcomes.Transport)
             {
-                if (circuit.Open(failure.ErrorCode)) LogTransportUnavailable(logger, failure.ErrorCode, failure.ErrorType);
+                if (circuit.Open(failure.ErrorCode)) LogTransportUnavailable(logger, failure.ErrorCode, stage, reason);
             }
             else if (failure.Connection && circuit.ConnectionFailed(failure.ErrorCode))
             {
-                LogTransportUnavailable(logger, failure.ErrorCode, failure.ErrorType);
+                LogTransportUnavailable(logger, failure.ErrorCode, stage, reason);
             }
-            await FinishAsync(db, message, lease, started, failure, issue);
-            if (failure.Outcome == MailAttemptOutcomes.Permanent) LogDeliveryFailed(logger, message.Id, failure.ErrorCode);
-            else LogDeliveryRetry(logger, message.Id, message.Attempts, failure.ErrorCode, failure.ErrorType);
+            // 自動重試關閉時，暫時性與傳輸層失敗也直接結束；斷路器照常開啟，佇列裡其他信不會一起被耗掉。
+            var retry = autoRetry && failure.Outcome != MailAttemptOutcomes.Permanent;
+            await FinishAsync(db, message, lease, started, failure, issue, retry: retry);
+            if (retry) LogDeliveryRetry(logger, message.Id, message.Attempts, failure.ErrorCode, stage, reason);
+            else LogDeliveryFailed(logger, message.Id, failure.ErrorCode, stage, reason);
             return false;
         }
 
-        if (circuit.Succeeded()) LogTransportRestored(logger);
+        var restored = circuit.Succeeded();
         await FinishAsync(db, message, lease, started, null, null, response);
+        if (restored)
+        {
+            LogTransportRestored(logger);
+            await AdvanceAsync(db, "restored", CancellationToken.None);
+        }
         return true;
     }
 
@@ -197,18 +218,13 @@ public sealed partial class MailDispatcher(
 
     /// <summary>
     /// 以租約 fencing 寫回結果並記一筆嘗試（同一交易）。寄出後一律用 <see cref="CancellationToken.None"/>，停機也要寫完，否則會重寄。
-    /// 敏感信一結束（寄出或失敗）就刪除內文。
+    /// 敏感信一結束（寄出或失敗）就刪除內文。<paramref name="retry"/> 為 false 時失敗即結束（永久性失敗或自動重試關閉）。
     /// </summary>
-    private async Task FinishAsync(AppDbContext db, OutboundMessage message, Guid lease, DateTimeOffset started, MailFailure? failure, string? issue, string? response = null)
+    private async Task FinishAsync(AppDbContext db, OutboundMessage message, Guid lease, DateTimeOffset started, MailFailure? failure, string? issue, string? response = null, bool retry = false)
     {
         var now = clock.GetUtcNow();
         var outcome = failure?.Outcome ?? MailAttemptOutcomes.Sent;
-        var status = outcome switch
-        {
-            MailAttemptOutcomes.Sent => MailStates.Sent,
-            MailAttemptOutcomes.Permanent => MailStates.Failed,
-            _ => MailStates.Queued,
-        };
+        var status = outcome == MailAttemptOutcomes.Sent ? MailStates.Sent : retry ? MailStates.Queued : MailStates.Failed;
         var next = outcome == MailAttemptOutcomes.Transport ? circuit.OpenUntil ?? now
             : now + MailFailures.Backoff(message.Attempts, RandomNumberGenerator.GetInt32(1000) / 1000d);
         var redacted = response is null ? null : DiagnosticRedactor.Text(response, OutboundMessage.ResponseMaxLength);
@@ -242,9 +258,10 @@ public sealed partial class MailDispatcher(
             Outcome = outcome,
             SmtpStatus = failure?.SmtpStatus,
             EnhancedStatus = failure?.EnhancedStatus,
-            Response = redacted,
+            Response = redacted ?? failure?.Detail,
             ErrorCode = failure?.ErrorCode,
             IssueCode = issue,
+            Stage = failure?.Stage,
         });
         await db.SaveChangesAsync(CancellationToken.None);
         await transaction.CommitAsync(CancellationToken.None);
@@ -276,22 +293,35 @@ public sealed partial class MailDispatcher(
         await db.SaveChangesAsync(CancellationToken.None);
     }
 
+    /// <summary>傳輸恢復或程序啟動時，把因連線或傳輸層故障延後的信提前到現在（單一 UPDATE，走 Pending 篩選索引）。</summary>
+    private async Task AdvanceAsync(AppDbContext db, string reason, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        var advanced = await db.Set<OutboundMessage>()
+            .Where(x => x.Status == MailStates.Queued && x.NextAttemptAt > now && x.ErrorCode != null && Deferrable.Contains(x.ErrorCode))
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.NextAttemptAt, now).SetProperty(x => x.UpdatedAt, now), ct);
+        if (advanced > 0) LogQueueAdvanced(logger, advanced, reason);
+    }
+
     private sealed record Claim(Guid Id, int Attempts, MailPriority Priority, DateTimeOffset NextAttemptAt, string PreviousStatus);
 
     [LoggerMessage(EventId = 3300, EventName = "mail.batch_sent", Level = LogLevel.Information, Message = "Mail dispatcher sent {Count} messages in {ElapsedMs} ms.")]
     private static partial void LogBatchSent(ILogger logger, int count, long elapsedMs);
 
-    [LoggerMessage(EventId = 3301, EventName = "mail.delivery_retry", Level = LogLevel.Warning, Message = "Mail {MailMessageId} will retry after attempt {Attempt} ({ErrorCode}, {ErrorType}).")]
-    private static partial void LogDeliveryRetry(ILogger logger, Guid mailMessageId, int attempt, string errorCode, string errorType);
+    [LoggerMessage(EventId = 3301, EventName = "mail.delivery_retry", Level = LogLevel.Warning, Message = "Mail {MailMessageId} will retry after attempt {Attempt} ({ErrorCode} at {Stage}: {Reason}).")]
+    private static partial void LogDeliveryRetry(ILogger logger, Guid mailMessageId, int attempt, string errorCode, string stage, string reason);
 
-    [LoggerMessage(EventId = 3302, EventName = "mail.delivery_failed", Level = LogLevel.Warning, Message = "Mail {MailMessageId} failed permanently ({ErrorCode}).")]
-    private static partial void LogDeliveryFailed(ILogger logger, Guid mailMessageId, string errorCode);
+    [LoggerMessage(EventId = 3302, EventName = "mail.delivery_failed", Level = LogLevel.Warning, Message = "Mail {MailMessageId} failed ({ErrorCode} at {Stage}: {Reason}).")]
+    private static partial void LogDeliveryFailed(ILogger logger, Guid mailMessageId, string errorCode, string stage, string reason);
 
-    [LoggerMessage(EventId = 3303, EventName = "mail.transport_unavailable", Level = LogLevel.Error, Message = "Mail transport unavailable ({ErrorCode}, {ErrorType}); sending paused.")]
-    private static partial void LogTransportUnavailable(ILogger logger, string errorCode, string errorType);
+    [LoggerMessage(EventId = 3303, EventName = "mail.transport_unavailable", Level = LogLevel.Error, Message = "Mail transport unavailable ({ErrorCode} at {Stage}: {Reason}); sending paused. Run the connection diagnosis on the mail page for details.")]
+    private static partial void LogTransportUnavailable(ILogger logger, string errorCode, string stage, string reason);
 
     [LoggerMessage(EventId = 3304, EventName = "mail.transport_restored", Level = LogLevel.Information, Message = "Mail transport restored; sending resumed.")]
     private static partial void LogTransportRestored(ILogger logger);
+
+    [LoggerMessage(EventId = 3307, EventName = "mail.queue_advanced", Level = LogLevel.Information, Message = "Moved {Count} mails deferred by transport failures to now ({Reason}).")]
+    private static partial void LogQueueAdvanced(ILogger logger, int count, string reason);
 
     [LoggerMessage(EventId = 3305, EventName = "mail.queue_unavailable", Level = LogLevel.Warning, Message = "Mail queue unavailable ({ErrorType}).")]
     private static partial void LogQueueUnavailable(ILogger logger, string errorType);

@@ -59,8 +59,42 @@ const outcomes: Record<string, MailStatusView> = {
 export const mailOutcome = (outcome: string): MailStatusView =>
   outcomes[outcome] ?? { label: outcome, tone: 'neutral' };
 
+/** 失敗的步驟（`MailAttemptStages`）；沒有步驟（成功、本地拒絕、中止）時為空字串。 */
+const stages: Record<string, string> = {
+  connect: '連線',
+  tls: 'TLS／憑證',
+  auth: '帳密驗證',
+  sender: '寄件者',
+  recipient: '收件者',
+  data: '內容傳送',
+};
+export const mailStage = (stage: string | null | undefined) =>
+  stage ? stages[stage] || stage : '';
+
 const priorities: Record<string, string> = { security: '安全', normal: '一般', bulk: '大量' };
 export const mailPriority = (priority: string) => priorities[priority] || priority;
+
+/** 有信在寄送或即將到期時的更新間隔；伺服器每 2 秒認領一輪。 */
+export const MAIL_ACTIVE_POLL = 3000;
+/** 沒有進行中的信時，第一頁仍定期更新，才看得到新入列的信。 */
+export const MAIL_IDLE_POLL = 30_000;
+
+/**
+ * 下次自動更新的毫秒數：有信寄送中就馬上再看；等待中的信在下次嘗試時間過後再看（最多等 `MAIL_IDLE_POLL`），
+ * 不必為了一小時後的重試每 3 秒問一次；都結束了就用 `idle`（null＝停止）。
+ */
+export function mailPollDelay(
+  messages: readonly Pick<MailMessageDto, 'status' | 'nextAttemptAt'>[],
+  idle: number | null,
+  now = Date.now(),
+): number | null {
+  if (messages.some((message) => message.status === 'sending')) return MAIL_ACTIVE_POLL;
+  const waits = messages
+    .filter((message) => message.status === 'queued')
+    .map((message) => Date.parse(message.nextAttemptAt) - now + 1000);
+  if (!waits.length) return idle;
+  return Math.min(Math.max(Math.min(...waits), MAIL_ACTIVE_POLL), MAIL_IDLE_POLL);
+}
 
 /** 不能重寄的原因（`resendBlockedBy`）。 */
 export const resendBlocked = (code: string | null | undefined) =>

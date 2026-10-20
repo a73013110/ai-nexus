@@ -119,6 +119,50 @@ public sealed class MailDispatcherTests
     }
 
     [Fact]
+    public async Task RecoveredTransportBringsMailsDeferredByTheFailureForward()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock, services: services => services.PostConfigure<MailOptions>(x => x.MaxConcurrency = 1));
+        var ids = new[] { await EnqueueAsync(factory, new Greeting(), "a", "a@company.com"), await EnqueueAsync(factory, new Greeting(), "b", "b@company.com") };
+        var dispatcher = Dispatcher(factory);
+        factory.Mail.Failure = _ => new MailSendException(MailAttemptStages.Auth, null, new AuthenticationException("535: 5.7.3 Authentication unsuccessful"));
+        Assert.Equal(2, await dispatcher.DispatchAsync(CancellationToken.None));
+        var failed = (await Task.WhenAll(ids.Select(id => MessageAsync(factory, id)))).Single(x => x.Attempts == 1);
+        var attempt = Assert.Single(await AttemptsAsync(factory, failed.Id));
+        // 失敗的細節（遮罩後的伺服器回應）寫進嘗試，管理頁才看得出原因。
+        Assert.Equal(("AuthenticationException: 535: 5.7.3 Authentication unsuccessful", MailAttemptStages.Auth), (attempt.Response, attempt.Stage));
+
+        // 管理者修好設定後結束暫停：另一封寄出即視為恢復，被故障延後的那封提前到現在，不再等暫停結束。
+        factory.Mail.Failure = null;
+        factory.Services.GetRequiredService<MailCircuit>().Resume();
+        Assert.Equal(1, await dispatcher.DispatchAsync(CancellationToken.None));
+        Assert.Equal(clock.GetUtcNow(), (await MessageAsync(factory, failed.Id)).NextAttemptAt);
+        Assert.Equal(1, await dispatcher.DispatchAsync(CancellationToken.None));
+        Assert.Equal(2, factory.Mail.Sent.Count);
+    }
+
+    [Fact]
+    public async Task ARestartRetriesConnectionFailuresAtOnceButKeepsServerDeferrals()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock);
+        var refused = await EnqueueAsync(factory, new Greeting(), "a", "a@company.com");
+        var greylisted = await EnqueueAsync(factory, new Greeting(), "b", "b@company.com");
+        factory.Mail.Failure = mail => mail.Id == greylisted
+            ? new SmtpCommandException(SmtpErrorCode.RecipientNotAccepted, SmtpStatusCode.MailboxBusy, "4.2.1 Greylisted")
+            : new MailSendException(MailAttemptStages.Connect, null, new IOException("Connection reset"));
+        var dispatcher = Dispatcher(factory);
+        Assert.Equal(2, await dispatcher.DispatchAsync(CancellationToken.None));
+        Assert.Equal(0, await dispatcher.DispatchAsync(CancellationToken.None));
+
+        // 新的 dispatcher（程序重啟）一啟動就提前連線故障的信；4xx 是伺服器要求稍後再試，照原退避。
+        factory.Mail.Failure = null;
+        Assert.Equal(1, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
+        Assert.Equal([refused], factory.Mail.Sent.Select(x => x.Id));
+        Assert.Equal(MailStates.Queued, (await MessageAsync(factory, greylisted)).Status);
+    }
+
+    [Fact]
     public async Task ExpiredLeasesAreReclaimedAsAbandonedAttemptsAndExpiredMessagesAreNotSent()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);

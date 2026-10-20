@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -38,10 +39,15 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { MailApi, type MailFilters } from '../mail-api';
+import { MailDiagnosisDialog } from '../transport/mail-diagnosis-dialog';
 import {
+  MAIL_ACTIVE_POLL,
+  MAIL_IDLE_POLL,
   mailError,
   mailOutcome,
+  mailPollDelay,
   mailPriority,
+  mailStage,
   mailStatus,
   resendBlocked,
 } from './mail-presentation';
@@ -57,8 +63,9 @@ interface MailPageRequest {
 }
 
 /**
- * 郵件寄送紀錄（`mail.messages`）：查證「到底有沒有寄出」。收件者只顯示遮罩，敏感信看不到內文；
- * 重寄另需 `mail.messages.resend`。傳輸停用或暫停寄送時頁首提示並連到監控，不另放健康卡。
+ * 郵件寄送紀錄（`mail.messages`）：查證「到底有沒有寄出」，連線診斷查「為什麼寄不出」。收件者只顯示遮罩，敏感信看不到內文；
+ * 重寄與立即重試另需 `mail.messages.resend`。傳輸停用或暫停寄送時頁首提示並連到監控，不另放健康卡。
+ * 列表、詳情與頁首狀態依進行中的信自動更新（`mailPollDelay`），所以沒有「重新整理」：同條件再按「查詢」也會重讀第一頁。
  */
 @Component({
   selector: 'nx-mail-messages-page',
@@ -72,6 +79,7 @@ interface MailPageRequest {
     FeaturePage,
     Field,
     Icon,
+    MailDiagnosisDialog,
     MailTestDialog,
     Notice,
     QueryBar,
@@ -104,11 +112,17 @@ export class MailMessagesPage {
       request,
       rows: await this.api.list(request.filters, request.take, request.before, signal),
     }),
+    // 只有第一頁會出現新入列的信；較舊的頁面只在有進行中的信時更新。
+    poll: (page) =>
+      page ? mailPollDelay(page.rows, page.request.index === 0 ? MAIL_IDLE_POLL : null) : null,
   });
   private readonly statusRead = apiResource({
     feature: 'mail.messages',
     loader: (_params, signal) => this.api.status(signal),
-    poll: () => 30_000,
+    poll: (status) =>
+      status && (status.pausedUntil || status.queued + status.sending > 0)
+        ? MAIL_ACTIVE_POLL
+        : MAIL_IDLE_POLL,
   });
   readonly status = this.statusRead.value;
   readonly rows = computed<MailMessageDto[]>(() => this.pageRead.value()?.rows ?? []);
@@ -118,7 +132,21 @@ export class MailMessagesPage {
     const page = this.pageRead.value();
     return !!page && page.rows.length === page.request.take;
   });
-  readonly loading = computed(() => this.pageRead.refreshing());
+  /** 只有換條件、換頁才算載入（擋操作、顯示忙碌）；背景更新不打斷閱讀。 */
+  readonly loading = computed(() => this.pageRead.loading());
+  /** 同一個請求的背景更新裡新出現的列（新入列的信），進場時有動效；換頁或換條件時清空。 */
+  private readonly arrived = linkedSignal<
+    { request: MailPageRequest; rows: MailMessageDto[] } | undefined,
+    ReadonlySet<string>
+  >({
+    source: () => this.pageRead.value(),
+    computation: (page, previous) => {
+      const before = previous?.source;
+      if (!page || !before || before.request !== page.request) return new Set();
+      const known = new Set(before.rows.map((row) => row.id));
+      return new Set(page.rows.filter((row) => !known.has(row.id)).map((row) => row.id));
+    },
+  });
   readonly readError = computed(() => this.pageRead.error());
   readonly columns: TableColumn[] = [
     { id: 'time', label: '時間', hideable: false },
@@ -135,6 +163,7 @@ export class MailMessagesPage {
       date: formatDate(message.createdAt),
       status: mailStatus(message, now),
       error: mailError(message.errorCode),
+      arrived: this.arrived().has(message.id),
     }));
   });
   readonly selectedId = signal<string | null>(null);
@@ -146,6 +175,7 @@ export class MailMessagesPage {
     feature: 'mail.messages',
     params: () => this.selectedId() ?? undefined,
     loader: (id, signal) => this.api.get(id, signal),
+    poll: (detail) => (detail ? mailPollDelay([detail.message], null) : null),
   });
   readonly detail = computed(() => {
     const detail = this.detailRead.value();
@@ -157,6 +187,7 @@ export class MailMessagesPage {
         outcome: mailOutcome(attempt.outcome),
         started: formatDate(attempt.startedAt),
         error: mailError(attempt.errorCode),
+        stage: mailStage(attempt.stage),
       })),
       priority: mailPriority(detail.message.priority),
       blocked: resendBlocked(detail.resendBlockedBy),
@@ -167,10 +198,14 @@ export class MailMessagesPage {
   readonly drawer = viewChild(DetailDrawer);
   private readonly table = viewChild(DataTable);
   private readonly testDialog = viewChild(MailTestDialog);
+  private readonly diagnosisDialog = viewChild(MailDiagnosisDialog);
   private readonly cursors = new CursorTrail<string | undefined>(undefined);
   readonly notice = signal('');
   readonly actionError = signal('');
   readonly resending = signal(false);
+  readonly retrying = signal(false);
+  readonly savingSettings = signal(false);
+  readonly settingsError = signal('');
   /** 同一次開啟的詳情重寄共用一個冪等鍵：連點或逾時重試只建立一封。 */
   private resendKey = '';
   readonly formatDate = formatDate;
@@ -185,8 +220,18 @@ export class MailMessagesPage {
         if (typeof filters !== 'string') this.read(filters, undefined, 0);
       });
     });
+    // 換頁或換條件才回到頂端；背景更新保留捲動位置。
     effect(() => {
-      if (this.pageRead.value()) this.table()?.resetScroll();
+      if (this.request()) this.table()?.resetScroll();
+    });
+    // 列表先看到開啟中那封的狀態變了（背景更新），詳情跟著重讀，兩邊不會不一致。
+    let watched: string | undefined;
+    effect(() => {
+      const row = this.selected()?.message;
+      const key = row ? `${row.id}:${row.status}:${row.attempts}` : undefined;
+      if (watched && key && key !== watched && watched.startsWith(row!.id))
+        untracked(() => this.detailRead.reload());
+      watched = key;
     });
   }
 
@@ -215,7 +260,8 @@ export class MailMessagesPage {
     this.selectedId.set(null);
     this.request.set({ filters, take: this.pageSize(), before, index });
   }
-  refresh() {
+  /** 表格讀取失敗時的重試；平常由自動更新負責。 */
+  reload() {
     this.pageRead.reload();
     this.statusRead.reload();
   }
@@ -233,6 +279,9 @@ export class MailMessagesPage {
     this.notice.set('');
     this.testDialog()?.open();
   }
+  openDiagnosis() {
+    this.diagnosisDialog()?.open();
+  }
   testSent(id: string) {
     this.notice.set(`測試信已排入佇列（訊息 ID ${id}），寄送結果請看第一筆紀錄。`);
     this.reread();
@@ -242,6 +291,37 @@ export class MailMessagesPage {
     const request = this.request();
     if (request) this.read(request.filters, undefined, 0);
     this.statusRead.reload();
+  }
+  async toggleAutoRetry(autoRetry: boolean) {
+    if (this.savingSettings()) return;
+    this.savingSettings.set(true);
+    this.settingsError.set('');
+    try {
+      const saved = await this.api.updateSettings(autoRetry);
+      const current = this.statusRead.value();
+      if (current) this.statusRead.value.set({ ...current, autoRetry: saved.autoRetry });
+    } catch (error) {
+      this.settingsError.set(safeMessage(error));
+    } finally {
+      this.savingSettings.set(false);
+    }
+  }
+  async retry() {
+    const id = this.selectedId();
+    if (!id || this.retrying()) return;
+    this.retrying.set(true);
+    this.actionError.set('');
+    try {
+      await this.api.retry(id);
+      this.notice.set('已排入立即重試，結果會自動更新在這封信的寄送嘗試。');
+      this.pageRead.reload();
+      this.detailRead.reload();
+      this.statusRead.reload();
+    } catch (error) {
+      this.actionError.set(safeMessage(error));
+    } finally {
+      this.retrying.set(false);
+    }
   }
   async resend() {
     const id = this.selectedId();
