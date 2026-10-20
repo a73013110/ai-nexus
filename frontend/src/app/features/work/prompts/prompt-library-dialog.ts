@@ -2,7 +2,6 @@ import { apiResource } from '@core/api/api-resource';
 import { Notice } from '@shared/ui/notice';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { Field } from '@shared/ui/field';
-import { safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,12 +17,14 @@ import { FormField, form, maxLength, required } from '@angular/forms/signals';
 import type { PromptTemplateDto } from '@core/api/schema';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
+import { ViewScope } from '@shared/browser/view-scope';
 import { PromptsApi } from './prompts-api';
 
 @Component({
   selector: 'nx-prompt-library',
   imports: [Notice, CompactDialog, DialogHeader, Field, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [ViewScope],
   styleUrl: './prompt-library-dialog.scss',
   template: `<dialog nxCompactDialog size="lg" #dialog class="platform-dialog library-dialog">
     <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" />
@@ -94,6 +95,7 @@ import { PromptsApi } from './prompts-api';
 })
 export class PromptLibraryDialog {
   private readonly api = inject(PromptsApi);
+  private readonly scope = inject(ViewScope);
   readonly draft = input('');
   readonly used = output<string>();
   /** 每次開啟都會讀取已儲存的提示。 */
@@ -105,10 +107,10 @@ export class PromptLibraryDialog {
   readonly prompts = computed<PromptTemplateDto[]>(() => this.promptsRead.value() ?? []);
   readonly loading = this.promptsRead.loading;
   readonly busy = signal(false);
-  readonly actionError = signal('');
+  private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.promptsRead.error());
   readonly editingId = signal<string | null>(null);
-  readonly model = signal({ title: '', content: '' });
+  private readonly model = signal({ title: '', content: '' });
   readonly fields = form(this.model, (schema) => {
     required(schema.title);
     maxLength(schema.title, 80);
@@ -123,7 +125,7 @@ export class PromptLibraryDialog {
     this.dialog()?.nativeElement.showModal();
     this.opened.update((value) => value + 1);
   }
-  edit(prompt: PromptTemplateDto | null) {
+  private edit(prompt: PromptTemplateDto | null) {
     this.editingId.set(prompt?.id ?? null);
     this.model.set({ title: prompt?.title ?? '', content: prompt?.content ?? this.draft() });
   }
@@ -139,32 +141,33 @@ export class PromptLibraryDialog {
   async save(event: Event) {
     event.preventDefault();
     if (this.busy() || this.fields().invalid()) return;
+    const valid = this.scope.guard();
     this.busy.set(true);
     this.actionError.set('');
     try {
       await this.api.savePrompt(this.editingId(), this.model().title, this.model().content);
+      if (!valid()) return;
       this.promptsRead.reload();
       this.edit(null);
     } catch (error) {
-      this.report(error);
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       this.busy.set(false);
     }
   }
   async remove(id: string) {
     if (this.busy()) return;
+    const valid = this.scope.guard();
     this.busy.set(true);
     try {
       await this.api.deletePrompt(id);
+      if (!valid()) return;
       this.promptsRead.value.update((prompts) => prompts?.filter((prompt) => prompt.id !== id));
       if (this.editingId() === id) this.edit(null);
     } catch (error) {
-      this.report(error);
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       this.busy.set(false);
     }
-  }
-  private report(error: unknown) {
-    this.actionError.set(safeMessage(error));
   }
 }
