@@ -11,7 +11,7 @@ const pixels = (values: number[]) =>
   imports: [SettingGroup, SettingRow],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './appearance-tab.scss',
-  template: `<nx-setting-group heading="工作區外觀">
+  template: `<nx-setting-group class="appearance-workspace" heading="工作區外觀">
       <nx-setting-row
         label="主題"
         description="配合環境光線，或跟隨作業系統。"
@@ -26,7 +26,7 @@ const pixels = (values: number[]) =>
         (checkedChange)="store.appearance('reducedMotion', $event)"
       />
     </nx-setting-group>
-    <nx-setting-group heading="閱讀與版面">
+    <nx-setting-group class="appearance-reading" heading="閱讀與版面">
       <nx-setting-row
         label="對話字級"
         description="對話正文與訊息輸入使用相同字級。"

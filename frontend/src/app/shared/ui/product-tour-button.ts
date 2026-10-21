@@ -3,7 +3,7 @@ import { ClientIssues } from '@core/errors/client-issues';
 import { Icon } from './icon';
 import { ProductTour, type ProductTourDefinition } from './product-tour';
 
-/** 操作導覽的觸發鈕；`FeaturePage`、`DialogHeader` 與 `DetailDrawer` 的 `tour` 都用它。 */
+/** 操作導覽的觸發鈕；`FeaturePage`、`DialogHeader` 與 `DetailDrawer` 的 `tour` 都用它，自繪標題列（文件閱讀器、個人設定）才直接放。 */
 @Component({
   selector: 'nx-product-tour-button',
   imports: [Icon],

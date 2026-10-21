@@ -14,18 +14,29 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { ProductTourButton } from '@shared/ui/product-tour-button';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { SETTINGS_TABS } from './settings-tabs';
 import { SettingsStore } from './settings-store';
+import { settingsTour } from './settings-tour';
 
 /**
  * 個人設定對話框的內容：左側分類、右側「標題｜捲動的分頁內容｜儲存列」三段。分頁清單在
  * `SETTINGS_TABS`，草稿與儲存在 `SettingsStore`，這裡只負責切換與版面。
+ * 設定只有對話框這一個入口，標題列由這裡自己畫（不是 `nx-dialog-header`），導覽鈕也放在這裡。
  */
 @Component({
   selector: 'nx-settings-page',
-  imports: [DialogSaveBar, Icon, NgComponentOutlet, Notice, SearchField, ViewMotion],
+  imports: [
+    DialogSaveBar,
+    Icon,
+    NgComponentOutlet,
+    Notice,
+    ProductTourButton,
+    SearchField,
+    ViewMotion,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -50,6 +61,14 @@ export class SettingsPage {
   });
   /** 唯讀分頁平常沒有儲存列；在別的分頁改了還沒存時仍顯示，才不會忘了儲存。 */
   readonly showSaveBar = computed(() => this.current().saved || this.store.changed());
+  /** 導覽跟著目前分頁切換。 */
+  readonly tour = computed(() =>
+    settingsTour({
+      tab: this.current().id,
+      saveBar: this.showSaveBar(),
+      testing: this.store.session.testing(),
+    }),
+  );
   readonly note = computed(
     () => this.store.notice() || (this.store.changed() ? '' : '設定依帳號保存，其他裝置也會套用。'),
   );

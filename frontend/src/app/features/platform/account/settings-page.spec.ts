@@ -5,12 +5,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { WorkspaceApi } from '@core/api/workspace-api';
+import { ClientIssues } from '@core/errors/client-issues';
 import { ThemeService } from '@core/preferences/theme-service';
 import { DraftRepository } from '@core/preferences/draft-repository';
 import { UserSettingsService, defaultSettings } from '@core/preferences/user-settings';
+import { ProductTour, tourSteps } from '@shared/ui/product-tour';
 import { SettingsPage } from './settings-page';
 import { SETTINGS_TABS } from './settings-tabs';
 import { ownFeatureSections } from './tabs/account-access';
+import { AccountSecurityApi } from './security/account-security-api';
 
 const access = {
   roles: [{ id: 'members', name: '成員' }],
@@ -58,7 +61,10 @@ const access = {
   ],
 };
 
-function setup({ usage = vi.fn(async () => null) } = {}) {
+function setup({
+  usage = vi.fn(async (): Promise<unknown> => null),
+  policy = vi.fn(async (): Promise<unknown> => null),
+} = {}) {
   const generation = signal(1);
   const session = {
     auth: { generation, session: signal({ mode: 'Ldap', method: 'ad' }), logout: vi.fn() },
@@ -70,7 +76,7 @@ function setup({ usage = vi.fn(async () => null) } = {}) {
   const service = {
     load: vi.fn(async () => defaultSettings()),
     usage,
-    policy: vi.fn(async () => null),
+    policy,
     preview: vi.fn(),
     restore: vi.fn(),
     save: vi.fn(async (value) => value),
@@ -91,6 +97,9 @@ function setup({ usage = vi.fn(async () => null) } = {}) {
       { provide: WorkspaceApi, useValue: api },
       { provide: DraftRepository, useValue: { clearAccount: vi.fn() } },
       { provide: ThemeService, useValue: { reducedMotion: signal(true) } },
+      { provide: ProductTour, useValue: { loading: signal(false), active: signal(false) } },
+      { provide: ClientIssues, useValue: {} },
+      { provide: AccountSecurityApi, useValue: { get: vi.fn(async () => null) } },
     ],
   });
   const fixture = TestBed.createComponent(SettingsPage);
@@ -181,6 +190,60 @@ describe('SettingsPage', () => {
     expect(root.querySelector('nx-workspace-navigation')).toBeNull();
     expect(root.textContent).toContain('成員');
     expect(root.textContent).toContain('日誌匯出');
+  });
+});
+
+describe('settings tour targets', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('shows the tour button and finds every step on every tab', async () => {
+    const storage = {
+      usedBytes: 0,
+      limitBytes: 1024,
+      remainingBytes: 1024,
+      personalLimitBytes: null,
+      groupLimitBytes: null,
+      defaultLimitBytes: 1024,
+      limitSource: 'default',
+    };
+    const { fixture, root, open } = setup({
+      usage: vi.fn(async () => ({
+        days: 30,
+        requests: 0,
+        completed: 0,
+        failed: 0,
+        cancelled: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        daily: [],
+        storage,
+        totalDurationMilliseconds: 0,
+        timedRequests: 0,
+        tokens: null,
+      })),
+      policy: vi.fn(async () => ({
+        resetsAt: '2026-10-22T00:00:00Z',
+        models: [],
+        storedAttachmentLimitBytes: null,
+      })),
+    });
+    await fixture.whenStable();
+    expect(root.querySelector('.settings-tools nx-product-tour-button')).not.toBeNull();
+    for (const tab of SETTINGS_TABS) {
+      await open(tab.id);
+      // 對話分頁的網路搜尋第一次讀取失敗（見 setup），重新載入後才有那一列。
+      if (tab.id === 'conversation') {
+        fixture.componentInstance.store.reload();
+        await fixture.whenStable();
+      }
+      const steps = tourSteps(fixture.componentInstance.tour());
+      expect(steps.length, tab.id).toBeGreaterThan(tab.saved ? 2 : 1);
+      for (const step of steps)
+        expect(
+          root.querySelector(step.target.replace(/^nx-settings-page /, '')),
+          step.target,
+        ).not.toBeNull();
+    }
   });
 });
 

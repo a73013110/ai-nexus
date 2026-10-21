@@ -35,6 +35,7 @@ import { SettingsStore } from '../settings-store';
     }
     @if (policy(); as limits) {
       <nx-setting-group
+        class="usage-budget"
         heading="今日 token 預算"
         [description]="'輸入與輸出合計，' + date(limits.resetsAt) + ' 重設。'"
       >
@@ -82,7 +83,11 @@ import { SettingsStore } from '../settings-store';
           [hint]="stats.timedRequests + ' 次有耗時紀錄'"
         />
       </nx-stat-grid>
-      <nx-setting-group heading="原檔容量" description="草稿計入；同一原檔被多處引用只計一次。">
+      <nx-setting-group
+        class="usage-storage"
+        heading="原檔容量"
+        description="草稿計入；同一原檔被多處引用只計一次。"
+      >
         <nx-storage-usage [storage]="stats.storage" />
         @if (attachmentLimit() != null) {
           <p class="form-note">

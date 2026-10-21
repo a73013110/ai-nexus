@@ -12,9 +12,10 @@
   height: 100%;
   overflow: hidden;
 }
-// 關閉鈕固定在整個對話框的右上角：桌面是標題列的右端，手機是分類列的右端。
-.settings-close {
+// 導覽與關閉鈕固定在整個對話框的右上角：桌面是標題列的右端，手機是分類列的右端。
+.settings-tools {
   position: absolute;
+  display: flex;
   top: var(--p-space-3);
   right: var(--p-space-2);
   z-index: 1;
@@ -79,7 +80,7 @@
 }
 .settings-page-header h1 {
   margin: 0;
-  padding-right: var(--button-target);
+  padding-right: calc(2 * var(--button-target));
   font-size: var(--p-font-2xl);
   font-weight: 650;
   letter-spacing: -0.025em;
@@ -121,11 +122,11 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
-  // 分類改成標題上方一列可橫向捲動的按鈕；右側留給關閉鈕。
+  // 分類改成標題上方一列可橫向捲動的按鈕；右側留給導覽與關閉鈕。
   .settings-sidebar {
     gap: var(--p-space-2);
     padding: var(--p-space-3);
-    padding-right: calc(var(--button-target) + var(--p-space-3));
+    padding-right: calc(2 * var(--button-target) + var(--p-space-3));
     border-right: 0;
     border-bottom: 1px solid var(--line);
     overflow: hidden;
@@ -135,7 +136,7 @@
   }
   .settings-categories {
     flex-direction: row;
-    margin-right: calc(-1 * (var(--button-target) + var(--p-space-3)) + var(--p-space-3));
+    margin-right: calc(-2 * var(--button-target));
     overflow-x: auto;
     scrollbar-width: none;
   }
