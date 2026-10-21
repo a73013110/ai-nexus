@@ -15,11 +15,13 @@ import {
 import { below } from '../browser/breakpoints';
 import { mediaQuery } from '../browser/media-query';
 import { Icon } from './icon';
+import { ProductTourButton } from './product-tour-button';
+import type { ProductTourDefinition } from './product-tour';
 
 /** 桌面版的非模態檢視器；窄螢幕時變成原生模態。 */
 @Component({
   selector: 'nx-detail-drawer',
-  imports: [Icon],
+  imports: [Icon, ProductTourButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     #dialog
@@ -45,6 +47,9 @@ import { Icon } from './icon';
         >
           <nx-icon [name]="wide() ? 'minimize' : 'maximize'" />
         </button>
+        @if (tour(); as definition) {
+          <nx-product-tour-button [tour]="definition" [compact]="true" />
+        }
         <button
           type="button"
           autofocus
@@ -66,6 +71,8 @@ import { Icon } from './icon';
 export class DetailDrawer {
   readonly title = input.required<string>();
   readonly closed = output<void>();
+  /** 抽屜內容的導覽；觸發鈕在關閉鈕之前。 */
+  readonly tour = input<ProductTourDefinition | null>(null);
   readonly wide = signal(false);
   readonly modal = signal(false);
   readonly id = uniqueId('nx-drawer');

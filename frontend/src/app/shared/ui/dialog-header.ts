@@ -12,6 +12,8 @@ import { requestDialogClose } from '../browser/dialog-close';
 import { CompactDialog } from './compact-dialog';
 import { Icon } from './icon';
 import { idleChromePart } from './idle-chrome';
+import { ProductTourButton } from './product-tour-button';
+import type { ProductTourDefinition } from './product-tour';
 
 /**
  * `.platform-dialog` 的標題列：標題、可選的細節與工具，以及關閉鈕。
@@ -24,7 +26,7 @@ let headerSequence = 0;
 
 @Component({
   selector: 'nx-dialog-header',
-  imports: [Icon],
+  imports: [Icon, ProductTourButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'dialog-bar', '[attr.data-chrome]': 'chrome()' },
   template: `<div class="dialog-title">
@@ -46,6 +48,9 @@ let headerSequence = 0;
         <nx-icon [name]="maximized() ? 'minimize' : 'maximize'" />
       </button>
     }
+    @if (tour(); as definition) {
+      <nx-product-tour-button [tour]="definition" [compact]="true" />
+    }
     @if (closable()) {
       <button
         type="button"
@@ -64,6 +69,8 @@ export class DialogHeader {
   readonly closable = input(true);
   readonly closeLabel = input('關閉');
   readonly maximizable = input(false, { transform: booleanAttribute });
+  /** 對話框內容的導覽；觸發鈕在關閉鈕之前。 */
+  readonly tour = input<ProductTourDefinition | null>(null);
   protected readonly dialog = inject(CompactDialog, { optional: true });
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly maximized = computed(() => !!this.dialog?.maximized());

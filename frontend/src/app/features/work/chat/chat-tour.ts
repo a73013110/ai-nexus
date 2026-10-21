@@ -30,16 +30,12 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
         description:
           '在這裡選擇模型、推理強度（窄畫面在模型選單裡）與可用的網路搜尋。切換前可查看模型能力與 Context 使用量。',
       },
-      ...(knowledge
-        ? [
-            {
-              target: '.knowledge-trigger, .composer .tools-menu',
-              title: '讓回答有資料依據',
-              description:
-                '從「來源」（窄畫面在「＋」選單）加入知識庫，讓回答參考你的文件。需要查證時，可從回答的來源開啟閱讀器。',
-            },
-          ]
-        : []),
+      knowledge && {
+        target: '.knowledge-trigger, .composer .tools-menu',
+        title: '讓回答有資料依據',
+        description:
+          '從「來源」（窄畫面在「＋」選單）加入知識庫，讓回答參考你的文件。需要查證時，可從回答的來源開啟閱讀器。',
+      },
       {
         target: '.composer .send-button',
         title: '送出，然後一起完善',

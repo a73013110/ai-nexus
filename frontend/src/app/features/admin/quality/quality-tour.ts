@@ -1,4 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
+import type { ProductTourDefinition, TourSteps } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The card step follows the open tab (評測集 or 我的回饋) and is skipped while
@@ -65,7 +65,7 @@ export function evaluationSetTour(options: {
   /** 畫面上的執行接受檢視者的手動審查。 */
   review: boolean;
 }): ProductTourDefinition {
-  const steps: TourStep[] = [
+  const steps: TourSteps = [
     {
       target: 'nx-quality-page .feature-title',
       title: '評測集的內容',
@@ -91,15 +91,11 @@ export function evaluationSetTour(options: {
       description:
         '各方案並排顯示回答、耗時、tokens 與必要詞、禁用詞的命中數；這些是文字檢核線索，不是語意正確率。',
     },
-    ...(options.review
-      ? [
-          {
-            target: 'nx-quality-page .evaluation-review',
-            title: '補上人工評分',
-            description: '為答案打 1–5 分並寫下判讀說明，與自動指標分開保存，授權成員都看得到。',
-          },
-        ]
-      : []),
+    options.review && {
+      target: 'nx-quality-page .evaluation-review',
+      title: '補上人工評分',
+      description: '為答案打 1–5 分並寫下判讀說明，與自動指標分開保存，授權成員都看得到。',
+    },
     {
       target: 'nx-quality-page .quality-set-menu',
       title: '評測集操作',

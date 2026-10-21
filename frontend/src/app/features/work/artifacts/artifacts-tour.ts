@@ -1,4 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
+import type { ProductTourDefinition, TourSteps } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The opening step points to the chat's "儲存成果" only for viewers with chat;
@@ -54,7 +54,7 @@ export function artifactTour(options: {
   /** 可以建立唯讀連結。 */
   shared: boolean;
 }): ProductTourDefinition {
-  const steps: TourStep[] = [
+  const steps: TourSteps = [
     {
       target: 'nx-artifacts-page .feature-title',
       title: '成果的狀態',
@@ -83,39 +83,30 @@ export function artifactTour(options: {
           description: '你目前只能閱讀這個版本；具編輯權限的成員在最新版本可切換到編輯或並排預覽。',
           side: 'bottom',
         },
-    ...(options.editing
-      ? [
-          {
-            target: 'nx-artifacts-page .artifact-editor',
-            title: '選取段落交給 AI',
-            description:
-              '選取文字後上方出現改寫、摘要、解釋與翻譯，單次上限 8,000 字元；確認結果後才會替換原段落。',
-          },
-          {
-            target: 'nx-artifacts-page .artifact-save',
-            title: '儲存新版本',
-            description:
-              'Ctrl / ⌘ S 也能儲存。若同事先存了較新的版本，你的文字會保留在畫面上供合併。',
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.editing && {
+      target: 'nx-artifacts-page .artifact-editor',
+      title: '選取段落交給 AI',
+      description:
+        '選取文字後上方出現改寫、摘要、解釋與翻譯，單次上限 8,000 字元；確認結果後才會替換原段落。',
+    },
+    options.editing && {
+      target: 'nx-artifacts-page .artifact-save',
+      title: '儲存新版本',
+      description: 'Ctrl / ⌘ S 也能儲存。若同事先存了較新的版本，你的文字會保留在畫面上供合併。',
+      side: 'bottom',
+    },
     {
       target: 'nx-artifacts-page .artifact-export',
       title: '匯出已儲存的版本',
       description: '匯出目前檢視的版本為 Word、PDF 或 Markdown；尚未儲存的修改不會包含在內。',
       side: 'bottom',
     },
-    ...(options.manage
-      ? [
-          {
-            target: 'nx-artifacts-page .artifact-menu',
-            title: '分享與權限',
-            description: `「成果操作」可${options.shared ? '建立唯讀分享、' : ''}設定具名的讀者、編輯者或唯讀群組，或移除成果文件與所有版本。`,
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.manage && {
+      target: 'nx-artifacts-page .artifact-menu',
+      title: '分享與權限',
+      description: `「成果操作」可${options.shared ? '建立唯讀分享、' : ''}設定具名的讀者、編輯者或唯讀群組，或移除成果文件與所有版本。`,
+      side: 'bottom',
+    },
   ];
   return { steps };
 }

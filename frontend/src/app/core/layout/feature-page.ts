@@ -41,8 +41,8 @@ import { FeatureTrail } from './feature-trail';
           </div>
           <ng-content select="[page-actions]" />
           @if (tour(); as definition) {
-            <!-- Every page keeps its tour at the far right of its header. -->
-            <nx-product-tour-button class="feature-tour" [tour]="definition" [compact]="true" />
+            <!-- 每頁的導覽都在標題列最右側。 -->
+            <nx-product-tour-button [tour]="definition" [compact]="true" />
           }
         </header>
         <ng-content />

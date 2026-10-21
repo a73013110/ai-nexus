@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { ClientIssues } from '@core/errors/client-issues';
 import { CompactDialog } from './compact-dialog';
 import { DialogHeader } from './dialog-header';
 import { IdleChrome } from './idle-chrome';
+import { ProductTour } from './product-tour';
 
 @Component({
   selector: 'nx-dialog-header-host',
@@ -33,6 +35,17 @@ class ProjectionHost {}
     <dialog nxCompactDialog size="full"><nx-dialog-header heading="表單" maximizable /></dialog>`,
 })
 class MaximizeHost {}
+
+@Component({
+  selector: 'nx-dialog-header-tour-host',
+  imports: [DialogHeader],
+  template: `<dialog>
+    <nx-dialog-header heading="設定" [tour]="tour()" />
+  </dialog>`,
+})
+class TourHost {
+  readonly tour = signal<{ steps: [] } | null>({ steps: [] });
+}
 
 function setup() {
   const fixture = TestBed.createComponent(Host);
@@ -70,6 +83,27 @@ describe('DialogHeader', () => {
       'tool',
       'icon-button',
     ]);
+  });
+
+  it('shows the compact tour trigger before the close button only when a tour is given', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ProductTour, useValue: { loading: signal(false), active: signal(false) } },
+        { provide: ClientIssues, useValue: {} },
+      ],
+    });
+    const fixture = TestBed.createComponent(TourHost);
+    fixture.detectChanges();
+    const bar = (fixture.nativeElement as HTMLElement).querySelector('nx-dialog-header')!;
+    expect([...bar.children].map((item) => item.localName)).toEqual([
+      'div',
+      'nx-product-tour-button',
+      'button',
+    ]);
+    expect(bar.querySelector('nx-product-tour-button button')?.className).toContain('icon-button');
+    fixture.componentInstance.tour.set(null);
+    fixture.detectChanges();
+    expect(bar.querySelector('nx-product-tour-button')).toBeNull();
   });
 
   it('closes the dialog through a cancelable cancel event', () => {

@@ -1,4 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
+import type { ProductTourDefinition, TourSteps } from '@shared/ui/product-tour';
 
 /** 集合導覽；沒有列出任何專案時，卡片步驟會略過。 */
 export const PROJECTS_TOUR: ProductTourDefinition = {
@@ -43,38 +43,30 @@ export function projectTour(options: {
   artifacts: boolean;
   manage: boolean;
 }): ProductTourDefinition {
-  const steps: TourStep[] = [
+  const steps: TourSteps = [
     {
       target: 'nx-projects-page .feature-title',
       title: '專案的工作說明',
       description: '標題下方是這個專案的目的，提醒每位成員這裡在做什麼。',
       side: 'bottom',
     },
-    ...(options.chat
-      ? [
-          {
-            target: 'nx-projects-page .project-start',
-            title: '從專案開始對話',
-            description: '新對話自動帶入共用指示與已辨識的參考文件；專案封存後無法開始。',
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.chat && {
+      target: 'nx-projects-page .project-start',
+      title: '從專案開始對話',
+      description: '新對話自動帶入共用指示與已辨識的參考文件；專案封存後無法開始。',
+      side: 'bottom',
+    },
     {
       target: 'nx-projects-page .project-templates',
       title: '用範本快速開始',
       description:
         '點選範本會建立專案對話並把提問放進輸入框，確認後再送出。編輯者可新增或修改範本。',
     },
-    ...(options.chat
-      ? [
-          {
-            target: 'nx-projects-page .project-conversations',
-            title: '只有你看得到的對話',
-            description: '這裡列出你在專案中的提問；需要同事閱讀時，在對話建立具名分享。',
-          },
-        ]
-      : []),
+    options.chat && {
+      target: 'nx-projects-page .project-conversations',
+      title: '只有你看得到的對話',
+      description: '這裡列出你在專案中的提問；需要同事閱讀時，在對話建立具名分享。',
+    },
     {
       target: 'nx-projects-page .project-guidance',
       title: '共用指示',
@@ -86,25 +78,17 @@ export function projectTour(options: {
       description:
         '上傳或拖曳文字、PDF 與圖片，辨識完成後隨提問帶入，全文上限 12,000 字元；大量資料請用知識庫。',
     },
-    ...(options.artifacts
-      ? [
-          {
-            target: 'nx-projects-page .project-outputs',
-            title: '專案成果',
-            description: '成果沿用專案成員權限，可檢視版本與匯出。',
-          },
-        ]
-      : []),
-    ...(options.manage
-      ? [
-          {
-            target: 'nx-projects-page nx-action-menu',
-            title: '管理專案',
-            description: '「專案操作」可編輯、封存或還原；擁有者另可設定成員與權限、刪除專案。',
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.artifacts && {
+      target: 'nx-projects-page .project-outputs',
+      title: '專案成果',
+      description: '成果沿用專案成員權限，可檢視版本與匯出。',
+    },
+    options.manage && {
+      target: 'nx-projects-page nx-action-menu',
+      title: '管理專案',
+      description: '「專案操作」可編輯、封存或還原；擁有者另可設定成員與權限、刪除專案。',
+      side: 'bottom',
+    },
   ];
   return { steps };
 }
