@@ -1,4 +1,4 @@
-import { queryBarStep } from '@shared/ui/data-workspace-tour';
+import { cursorPaginationStep, queryBarStep } from '@shared/ui/data-workspace-tour';
 import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 const PAGE = 'nx-activity-audit-page';
@@ -41,12 +41,7 @@ export function activityAuditTour(options: {
           '由伺服器匯出整個已套用的查詢，不分頁，預設區間在按下時重算；超過筆數上限會拒絕而不截斷，每次匯出本身也會留下稽核紀錄。',
         side: 'bottom',
       },
-      {
-        target: `${PAGE} nx-table-pagination`,
-        title: '翻頁',
-        description:
-          '紀錄固定由新到舊、不計總數，只有上一頁、下一頁與回到第一頁，新事件不會讓翻頁重複；要找較早的紀錄請縮小日期範圍。每頁筆數與目前頁不寫進網址。',
-      },
+      cursorPaginationStep(PAGE, { sortable: false }),
     ],
   };
 }

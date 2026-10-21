@@ -53,6 +53,7 @@ import {
 } from './mail-presentation';
 import { MAIL_RANGES, MAIL_STATUSES, mailFilters, mailQueryOptions } from './mail-query';
 import { MailTestDialog } from './mail-test-dialog';
+import { mailDetailTour, mailMessagesTour } from './mail-tour';
 
 interface MailPageRequest {
   filters: MailFilters;
@@ -194,6 +195,36 @@ export class MailMessagesPage {
     };
   });
   readonly detailLoading = this.detailRead.loading;
+  private readonly logsName = computed(() =>
+    this.session.has('diagnostics.logs') ? this.session.featureName('diagnostics.logs') : null,
+  );
+  /** 沒有 `mail.messages` 時頁面只剩標題，不給導覽。 */
+  readonly tour = computed(() =>
+    this.session.has('mail.messages')
+      ? mailMessagesTour({
+          resend: this.session.has('mail.messages.resend'),
+          testing: this.session.testing(),
+          logs: this.logsName(),
+        })
+      : null,
+  );
+  /** 動作的條件與模板相同：等待中可立即重試，否則看伺服器的 `canResend`；詳情載入前不給導覽。 */
+  readonly drawerTour = computed(() => {
+    const view = this.detail();
+    if (!view) return null;
+    const { message, canResend } = view.detail;
+    return mailDetailTour({
+      action: !this.session.has('mail.messages.resend')
+        ? null
+        : message.status === 'queued'
+          ? 'retry'
+          : canResend
+            ? 'resend'
+            : null,
+      attempts: view.attempts.length > 0,
+      logs: this.logsName(),
+    });
+  });
   readonly detailError = this.detailRead.error;
   readonly drawer = viewChild(DetailDrawer);
   private readonly table = viewChild(DataTable);

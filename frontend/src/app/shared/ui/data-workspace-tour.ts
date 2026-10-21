@@ -23,12 +23,17 @@ export function queryBarStep(
   };
 }
 
-/** `nx-table-pagination` 的 `cursor` 模式：不計總數，換頁沿用已套用的條件。 */
-export function cursorPaginationStep(host: string): TourStep {
+/**
+ * `nx-table-pagination` 的 `cursor` 模式：不計總數，換頁沿用已套用的條件。
+ * 預設頁面有排序切換；固定由新到舊的頁面傳 `sortable: false`，文案改說明新紀錄不會讓翻頁重複。
+ */
+export function cursorPaginationStep(host: string, options: { sortable?: boolean } = {}): TourStep {
   return {
     target: `${host} nx-table-pagination`,
     title: '翻頁',
     description:
-      '大表不計總數，只有上一頁、下一頁與回到第一頁，改用時間範圍與排序定位；換頁、排序與每頁筆數沿用已套用的條件，不寫進網址。',
+      options.sortable === false
+        ? '紀錄固定由新到舊、不計總數，只有上一頁、下一頁與回到第一頁，新紀錄不會讓翻頁重複；要找較早的紀錄請縮小時間範圍。換頁與每頁筆數沿用已套用的條件，不寫進網址。'
+        : '大表不計總數，只有上一頁、下一頁與回到第一頁，改用時間範圍與排序定位；換頁、排序與每頁筆數沿用已套用的條件，不寫進網址。',
   };
 }

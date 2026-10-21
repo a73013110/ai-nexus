@@ -3,12 +3,13 @@
   description="查證系統信是否寄出、為什麼失敗，必要時重寄。"
   density="compact"
   layoutMode="data"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (session.has('mail.messages')) {
       <button
         type="button"
-        class="quiet-button"
+        class="quiet-button mail-diagnose"
         [disabled]="!status()?.enabled || session.testing()"
         [title]="session.testing() ? session.testingNote() : ''"
         (click)="openDiagnosis()"
@@ -18,7 +19,7 @@
       @if (session.has('mail.messages.resend') && status(); as current) {
         <button
           type="button"
-          class="quiet-button"
+          class="quiet-button mail-auto-retry"
           [attr.aria-pressed]="current.autoRetry"
           [disabled]="savingSettings() || session.testing()"
           [title]="
@@ -39,7 +40,7 @@
       }
       <button
         type="button"
-        class="secondary-button"
+        class="secondary-button mail-test"
         [disabled]="!status()?.enabled || session.testing()"
         [title]="session.testing() ? session.testingNote() : ''"
         (click)="openTest()"
@@ -240,7 +241,7 @@
         />
       </div>
     </nx-data-table>
-    <nx-detail-drawer title="郵件詳情" (closed)="selectedId.set(null)">
+    <nx-detail-drawer title="郵件詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
       <nx-drawer-pager
         drawer-actions
         noun="郵件"
@@ -272,7 +273,7 @@
               <div class="mail-actions">
                 <button
                   type="button"
-                  class="secondary-button"
+                  class="secondary-button mail-retry"
                   [disabled]="retrying() || session.testing()"
                   [title]="session.testing() ? session.testingNote() : ''"
                   (click)="retry()"
@@ -287,7 +288,7 @@
               <div class="mail-actions">
                 <button
                   type="button"
-                  class="secondary-button"
+                  class="secondary-button mail-resend"
                   [disabled]="resending() || session.testing()"
                   [title]="session.testing() ? session.testingNote() : ''"
                   (click)="resend()"
@@ -340,7 +341,7 @@
           } @else {
             <p class="form-note">還沒有寄送嘗試。</p>
           }
-          <h3 class="ui-section-heading">內文</h3>
+          <h3 class="ui-section-heading mail-body-heading">內文</h3>
           @if (view.detail.text) {
             <pre class="mail-body">{{ view.detail.text }}</pre>
           } @else {
@@ -400,7 +401,7 @@
             }
           </dl>
           <h3 class="ui-section-heading">關聯</h3>
-          <dl class="ui-description-list">
+          <dl class="ui-description-list mail-relations">
             <div class="ui-description-wide">
               <dt>訊息 ID</dt>
               <dd><nx-copy-value label="訊息 ID" [value]="view.detail.message.id" /></dd>

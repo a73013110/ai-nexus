@@ -6,6 +6,7 @@ import type { AuditCatalogDto, AuditDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ClientIssues } from '@core/errors/client-issues';
+import { cursorPaginationStep } from '@shared/ui/data-workspace-tour';
 import { ProductTour, tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
 import { ActivityAuditPage } from './activity-audit-page';
 import { AuditApi } from './audit-api';
@@ -37,6 +38,7 @@ describe('activityAuditTour', () => {
 
   it('describes fixed newest-first paging without a sort toggle', () => {
     const paging = tourSteps(activityAuditTour({ logs: null })).at(-1)!;
+    expect(paging).toEqual(cursorPaginationStep('nx-activity-audit-page', { sortable: false }));
     expect(paging.description).toContain('由新到舊');
     expect(paging.description).not.toContain('排序');
   });
