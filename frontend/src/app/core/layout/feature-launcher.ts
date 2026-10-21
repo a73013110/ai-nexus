@@ -43,7 +43,7 @@ import { WorkspaceCommands } from './workspace-commands';
   selector: 'nx-feature-launcher',
   imports: [RouterLink, NgTemplateOutlet, Icon, CountBadge, NavigationEntry],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './feature-launcher.scss',
+  styleUrls: ['./feature-launcher.scss', './feature-launcher-groups.scss'],
   template: `<div class="launcher-tools">
       <button
         type="button"

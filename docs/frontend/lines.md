@@ -6,7 +6,7 @@
 
 | 角色 | 淺色／深色 | 用於 |
 | --- | --- | --- |
-| `--control-line` | `--ink` 混入 `--line` 46%／32% | 次要按鈕、`SearchField`、`Select`（`field` 與 `pill`）、`nxField` 的 input／textarea／select、`DateTimePicker`、`TimeRangePicker`、勾選框、分頁按鈕組、有外框的 chip 與篩選鈕、Markdown 編輯框 |
+| `--control-line` | `--ink` 混入 `--line` 46%／32% | 次要按鈕、`SearchField`、`Select`（`field` 與 `pill`）、`nxField` 的 input／textarea／select、`DateTimePicker`、`TimeRangePicker`、勾選框、分頁按鈕組、有外框的 chip 與篩選鈕、Markdown 編輯框、switch 關閉時的軌道（填色） |
 | `--line` | `--p-stone-300`／`--p-night-600` | 列與區塊之間的分隔線、側欄與抽屜邊、浮層、對話框、toast、內嵌區塊（程式碼、預覽、`Notice`） |
 | `--tile-line` | `--line` 70% | 資源表面（總覽、`Panel`、`ResourceCard`、檔案與儲存庫卡片）與其內的分隔 |
 | `--material-line` | `--ink` 8% | 半透明材質（`FloatingToolbar`、黏頂列），見[質感](materials.md) |

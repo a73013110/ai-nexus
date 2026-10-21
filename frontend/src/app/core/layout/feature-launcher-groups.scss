@@ -1,0 +1,142 @@
+@use 'breakpoints' as bp;
+
+// 啟動器的分群標題與收合；與格子、工具列分檔，各自留在元件樣式預算內（feature-launcher.ts 一起載入）。
+// 層級靠字級階梯分辨，不縮排、不加托盤：第一層粗體加整寬分隔線，第二層小字接一條刻線，第三層以上再小。
+// 標題都沒有底色、外框與陰影，hover 只用平的 --hover，不會和目前所在的 --surface 晶片混淆。
+.workspace-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+  padding-bottom: var(--p-space-2);
+}
+.workspace-group :is(h3, h4) {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--muted);
+}
+// 黏在捲動區（側欄的 nx-scroll-area、圖示欄的飛出層）頂端；黏頂範圍是自己的分群，下一個第一層標題
+// 捲上來時會把它推走。底色要不透明，蓋住捲到下面的格子與徽章。捲動容器有上內距時（飛出層），
+// 由容器以 --launcher-sticky-top 抵銷，否則標題上方會露出一條捲動中的內容。
+.workspace-group > h3 {
+  position: sticky;
+  top: var(--launcher-sticky-top, 0);
+  z-index: 1;
+  padding-top: var(--p-space-1);
+  border-top: 1px solid var(--line);
+  background: var(--sidebar);
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.workspace-group > h4 {
+  font-size: var(--density-caption-size, var(--text-caption));
+  letter-spacing: 0.02em;
+}
+.workspace-group > h4.is-deep {
+  font-size: var(--p-font-xs);
+}
+// 分群標題就是展開／收合按鈕：整列可點，箭頭朝下＝展開、朝右＝收合（同差異檢視的檔案列）。
+.workspace-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0 var(--p-space-2);
+  border-radius: var(--radius-item);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  h3 > & {
+    min-height: var(--row);
+  }
+  &:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  // 目前頁面所在、展開中的子分群標題轉為 --ink，沿路看得出自己在哪一支。
+  &.is-trail {
+    color: var(--ink);
+    font-weight: 600;
+  }
+}
+@include bp.below(phone, $or: '(pointer: coarse)') {
+  .workspace-group-toggle {
+    min-height: var(--row);
+  }
+}
+.group-icon {
+  flex: none;
+  --icon-size: var(--icon-sm);
+  color: var(--secondary);
+}
+.group-name,
+.group-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+h3 .group-name {
+  flex: 1;
+}
+.group-path {
+  flex: 0 1 auto;
+  max-width: 45%;
+  font-weight: 400;
+}
+.group-rule {
+  flex: 1;
+  min-width: var(--p-space-3);
+  height: 1px;
+  background: var(--line);
+}
+.group-here {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.group-count {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.group-chevron {
+  flex: none;
+  --icon-size: var(--icon-xs);
+  color: var(--muted);
+  rotate: 90deg;
+  transition: rotate var(--motion) var(--ease-spring);
+  [aria-expanded='false'] > & {
+    rotate: 0deg;
+  }
+}
+// 0fr↔1fr 的列高過渡讓內容收起／展開而不必量高度；收合完才隱藏（visibility 在過渡結束時才切換）。
+// 內容同時淡出：收到最後幾格只剩最上面的徽章露在邊上，看起來像殘影。裁切也不留邊，
+// overflow-clip-margin 四邊都留，收到底時下緣那圈正好露出那顆徽章。
+.workspace-group-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-fast) var(--ease),
+    visibility var(--motion-morph);
+}
+.workspace-group.is-collapsed > .workspace-group-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+}
+.workspace-group-content {
+  min-height: 0;
+  overflow: clip;
+}
+// 不縮排：分群與前後直接放在上層的項目只隔一點距離，圖示格在任何深度都是同樣三欄。
+.workspace-group-content > * + * {
+  margin-block-start: var(--p-space-1);
+}

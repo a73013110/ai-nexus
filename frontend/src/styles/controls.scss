@@ -153,13 +153,21 @@ kbd {
   height: var(--button-target);
   flex: none;
 }
+// 關閉的軌道用 --control-line：狀態只靠軌道與圓鈕辨識，兩者對底色都要 3:1（WCAG 1.4.11），
+// --line 只有 1.3:1。hover 不鋪按鈕底色（那是 48×44 的方塊），改加深軌道。
+.switch:not(:disabled):hover {
+  background: transparent;
+}
 .switch::before {
   content: '';
   position: absolute;
   inset: calc(50% - 12px) 0;
-  background: var(--line);
+  background: var(--control-line);
   border-radius: var(--radius-full);
   transition: background var(--motion) var(--ease);
+}
+.switch:not(:disabled, [aria-checked='true']):hover::before {
+  background: var(--secondary);
 }
 .switch span {
   position: absolute;
@@ -174,6 +182,9 @@ kbd {
 }
 .switch[aria-checked='true']::before {
   background: var(--signal);
+}
+.switch[aria-checked='true']:not(:disabled):hover::before {
+  background: color-mix(in srgb, var(--signal) 86%, var(--ink));
 }
 .switch[aria-checked='true'] span {
   transform: translateX(24px);
