@@ -485,8 +485,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(editor).not.toBeVisible();
   await expect(features).toContainText("AI 對話");
   // Roles and groups share the feature table's shape: name and id, status, row activation.
-  await tabs.getByRole("link", { name: "角色", exact: true }).click();
-  await expect(page).toHaveURL(routeOf("access-control.roles"));
+  await page.goto(routeOf("access-control.roles"));
   const roles = page.locator(".admin-roles-table");
   await expect(roles.getByRole("region", { name: "角色列表" })).toBeVisible();
   await expect(roles.locator(".ui-table-toolbar")).toContainText("2 個");
@@ -559,8 +558,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     .click();
   await discard.getByRole("button", { name: "放棄變更", exact: true }).click();
   await expect(editor).not.toBeVisible();
-  await tabs.getByRole("link", { name: "功能群組與模型", exact: true }).click();
-  await expect(page).toHaveURL(routeOf("access-control.groups"));
+  await page.goto(routeOf("access-control.groups"));
   const groups = page.locator(".admin-groups-table");
   await expect(groups.locator("tbody tr")).toHaveCount(2);
   await expect(groups.locator("tbody tr").first()).toContainText("全部模型");
@@ -584,11 +582,8 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   ]);
   // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
-  // 功能依目錄的區 › 模組分卡，與授權摘要相同（不依側欄分群）。
-  const work = editor.getByRole("group", {
-    name: "AI 工作台 › 對話",
-    exact: true,
-  });
+  // 功能依完整選單的分群分卡，與授權摘要相同。
+  const work = editor.getByRole("group", { name: "AI 工作台", exact: true });
   await expect(work).toHaveCSS("border-left-style", "solid");
   await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
   await editor
@@ -1134,6 +1129,25 @@ async function administration(page: Page) {
       },
       { id: "audit", name: "活動稽核", route: "/admin/audit", enabled: true },
     ].map(featureDto),
+    // 功能在完整預設選單上的位置（同 seed 的選單樹），授權摘要依此分組。
+    navigationSections: [
+      { id: "work", path: ["AI 工作台"], featureIds: ["chat", "files"] },
+      {
+        id: "system.access",
+        path: ["系統管理", "身分與權限"],
+        featureIds: ["identity.users"],
+      },
+      {
+        id: "system.observability",
+        path: ["系統管理", "監控與紀錄"],
+        featureIds: [
+          "diagnostics.logs",
+          "diagnostics.logs.detail",
+          "diagnostics.logs.export",
+          "audit",
+        ],
+      },
+    ],
     models: [
       {
         id: "fixture:8b",

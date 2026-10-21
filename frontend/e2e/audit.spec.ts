@@ -106,7 +106,7 @@ test("management access alone does not imply audit access or issue protected aud
   expect(requests).toEqual([]);
 });
 
-test("recorded feature changes read under their catalog area and module", async ({
+test("recorded feature changes read under their menu group", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -128,6 +128,20 @@ test("recorded feature changes read under their catalog area and module", async 
             },
           ],
           models: [],
+          // 完整預設選單上的位置；不在選單裡的目錄功能歸「未放入選單」，不在目錄的歸「其他」。
+          navigationSections: [
+            { id: "work", path: ["AI 工作台"], featureIds: ["chat"] },
+            {
+              id: "system.observability",
+              path: ["系統管理", "監控與紀錄"],
+              featureIds: [
+                "diagnostics.logs",
+                "diagnostics.logs.detail",
+                "diagnostics.logs.export",
+                "audit",
+              ],
+            },
+          ],
         },
       });
     if (url.pathname === "/api/v1/admin/audit")
@@ -170,17 +184,18 @@ test("recorded feature changes read under their catalog area and module", async 
       .locator(selector),
   );
   await expect(before.locator(".feature-category-label")).toHaveText([
-    "AI 工作台 › 對話",
+    "AI 工作台",
   ]);
+  // 依選單分組、組內依選單順序（動作接在上層頁面之後），不論快照順序；已移除的 ID 放最後。
   await expect(after.locator(".feature-category-label")).toHaveText([
-    "AI 工作台 › 對話",
-    "系統管理 › 活動稽核",
-    "系統管理 › 診斷",
+    "AI 工作台",
+    "系統管理 › 監控與紀錄",
+    "其他",
   ]);
-  await expect(after.locator(".resource-badges")).toHaveText([
+  await expect(after.locator(".resource-badges span")).toHaveText([
     "對話",
-    "活動稽核",
     "日誌匯出",
+    "活動稽核",
     "retired",
   ]);
 });
