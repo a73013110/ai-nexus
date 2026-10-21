@@ -21,6 +21,7 @@ import { Notice } from '@shared/ui/notice';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
+import { unitDialogTour } from './organization-tour';
 import { MAX_DEPTH, heightOf, subtree, unitRows } from './unit-tree';
 
 interface Draft {
@@ -64,7 +65,7 @@ const sameDraft = (a: Draft, b: Draft) =>
     >
       @if (editor(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
-          <nx-dialog-header [heading]="e.title" closeLabel="關閉單位編輯" />
+          <nx-dialog-header [heading]="e.title" closeLabel="關閉單位編輯" [tour]="tour()" />
           <div class="dialog-body">
             @if (error()) {
               <nx-notice tone="danger" [message]="error()" />
@@ -76,7 +77,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                   <p class="form-note">同一個上層底下名稱不可重複；組織最多八層。</p>
                 </header>
                 <div class="form-section-body">
-                  <label class="form-field-short"
+                  <label class="form-field-short unit-name-field"
                     >名稱<input
                       #name
                       nxField
@@ -93,7 +94,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                   @if (nameError()) {
                     <p class="form-note field-error" [id]="id + '-error'">{{ nameError() }}</p>
                   }
-                  <label class="form-field-short"
+                  <label class="form-field-short unit-parent-field"
                     >上層單位<nx-select
                       label="上層單位"
                       [searchable]="true"
@@ -103,6 +104,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       (valueChange)="update('parentId', $event)"
                   /></label>
                   <nx-checkbox
+                    class="unit-enabled"
                     label="啟用"
                     description="停用的單位保留成員與歷史，但它與所有下層單位都不參與資料範圍，也不能再加入成員。"
                     [checked]="e.draft.enabled"
@@ -164,6 +166,9 @@ export class UnitDialog {
   readonly error = signal('');
   readonly nameError = signal('');
   readonly locked = computed(() => this.saving() || this.session.testing());
+  readonly tour = computed(() =>
+    unitDialogTour({ editing: !!this.editor()?.id, testing: this.session.testing() }),
+  );
   readonly dirty = computed(() => {
     const editor = this.editor(),
       opened = this.opened();

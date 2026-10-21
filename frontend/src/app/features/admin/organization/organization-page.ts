@@ -21,6 +21,7 @@ import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { OrganizationStore } from './organization-store';
+import { organizationTour } from './organization-tour';
 import { UnitDialog } from './unit-dialog';
 import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
 
@@ -52,6 +53,7 @@ export class OrganizationPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(OrganizationStore);
   readonly maxDepth = MAX_DEPTH;
+  readonly tour = computed(() => organizationTour({ testing: this.session.testing() }));
   private readonly menu = viewChild.required(MenuPanel);
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly dialog = viewChild.required(UnitDialog);

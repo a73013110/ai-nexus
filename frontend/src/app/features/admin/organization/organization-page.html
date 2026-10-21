@@ -1,11 +1,12 @@
 <nx-feature-page
   [title]="session.featureName('organization')"
   description="維護部門樹與人員所屬，用來決定主管關係與資料範圍；功能權限仍由角色決定。"
+  [tour]="tour()"
 >
   <button
     page-actions
     type="button"
-    class="primary-button"
+    class="primary-button organization-create"
     [disabled]="store.locked()"
     (click)="create()"
   >
@@ -84,7 +85,7 @@
                 <button
                   #trigger
                   type="button"
-                  class="icon-button"
+                  class="icon-button unit-menu"
                   aria-haspopup="menu"
                   [attr.aria-label]="'單位操作：' + row.unit.name"
                   [attr.aria-expanded]="isMenuOpen(trigger)"
