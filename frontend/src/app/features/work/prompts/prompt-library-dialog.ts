@@ -18,7 +18,9 @@ import type { PromptTemplateDto } from '@core/api/schema';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
 import { ViewScope } from '@shared/browser/view-scope';
+import { WorkspaceSession } from '@core/auth/workspace-session';
 import { PromptsApi } from './prompts-api';
+import { promptLibraryTour } from './prompt-library-tour';
 
 @Component({
   selector: 'nx-prompt-library',
@@ -27,7 +29,7 @@ import { PromptsApi } from './prompts-api';
   providers: [ViewScope],
   styleUrl: './prompt-library-dialog.scss',
   template: `<dialog nxCompactDialog size="lg" #dialog class="platform-dialog library-dialog">
-    <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" />
+    <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" [tour]="tour()" />
     <div class="dialog-body dialog-body-flush library-layout">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
@@ -46,14 +48,14 @@ import { PromptsApi } from './prompts-api';
               ><small>{{ prompt.content.slice(0, 64) }}</small></button
             ><button
               type="button"
-              class="icon-button"
+              class="icon-button template-edit"
               [attr.aria-label]="'編輯範本：' + prompt.title"
               (click)="compose(prompt)"
             >
               <nx-icon name="edit" /></button
             ><button
               type="button"
-              class="icon-button"
+              class="icon-button template-delete"
               [disabled]="busy()"
               [attr.aria-label]="'刪除範本：' + prompt.title"
               (click)="remove(prompt.id)"
@@ -96,6 +98,7 @@ import { PromptsApi } from './prompts-api';
 export class PromptLibraryDialog {
   private readonly api = inject(PromptsApi);
   private readonly scope = inject(ViewScope);
+  private readonly session = inject(WorkspaceSession);
   readonly draft = input('');
   readonly used = output<string>();
   /** 每次開啟都會讀取已儲存的提示。 */
@@ -110,6 +113,9 @@ export class PromptLibraryDialog {
   private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.promptsRead.error());
   readonly editingId = signal<string | null>(null);
+  readonly tour = computed(() =>
+    promptLibraryTour({ editing: this.editingId() !== null, testing: this.session.testing() }),
+  );
   private readonly model = signal({ title: '', content: '' });
   readonly fields = form(this.model, (schema) => {
     required(schema.title);
