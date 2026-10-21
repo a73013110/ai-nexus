@@ -31,11 +31,6 @@
     color: var(--accent);
   }
 }
-.entry-icon {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-}
 // 名稱單行截斷；圖釘與外部連結標記 flex: none，名稱再長也不會擠掉它們。
 .entry-label {
   display: flex;

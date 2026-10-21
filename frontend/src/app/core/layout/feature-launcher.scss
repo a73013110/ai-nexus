@@ -174,7 +174,7 @@ h3 .group-name {
   }
 }
 // 0fr↔1fr 的列高過渡讓內容收起／展開而不必量高度；收合完才隱藏（visibility 在過渡結束時才切換）。
-// 裁切留一點邊，選取中的格子外框不會被切掉。
+// 裁切不留邊：留邊的那一圈在收合途中會露出正被收起的格子與徽章；徽章本身就不會超出格子。
 .workspace-group-body {
   display: grid;
   grid-template-rows: 1fr;
@@ -189,7 +189,6 @@ h3 .group-name {
 .workspace-group-content {
   min-height: 0;
   overflow: clip;
-  overflow-clip-margin: var(--p-space-1);
 }
 // 不縮排：分群與前後直接放在上層的項目只隔一點距離，圖示格在任何深度都是同樣三欄。
 .workspace-group-content > * + * {

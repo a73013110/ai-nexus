@@ -75,12 +75,11 @@ kbd {
   ):active {
   scale: 0.97;
 }
+// 疊加徽章（nx-count-badge overlay）的定位基準，包住圖示。
 .icon-badge-anchor {
   position: relative;
   display: inline-flex;
   flex: none;
-  --count-badge-top: 0;
-  --count-badge-end: -0.375rem;
 }
 .danger-text {
   color: var(--error);

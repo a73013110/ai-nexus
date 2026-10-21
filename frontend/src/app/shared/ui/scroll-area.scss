@@ -1,12 +1,7 @@
 :host {
   --scroll-area-surface: var(--sidebar);
   --scroll-area-edge-size: 1.5rem;
-  // 捲動容器會裁掉超出邊界的內容，疊在圖示右上角的徽章、選取外圈貼著上緣或兩側就被切掉。
-  // 呼叫端設定這段外擴：視窗往上與兩側長出去、內容再用等量內距推回原位，版面不動但留出繪製空間。
-  // 下緣不外擴，免得蓋住緊接在下方的分隔線；捲動後溢入外擴區的內容由頂端漸層遮住。
-  --scroll-area-bleed: 0px;
   position: relative;
-  margin: calc(-1 * var(--scroll-area-bleed)) calc(-1 * var(--scroll-area-bleed)) 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -27,7 +22,6 @@
 .scroll-area-content {
   display: flow-root;
   min-width: 0;
-  padding: var(--scroll-area-bleed) var(--scroll-area-bleed) 0;
 }
 .scroll-area-edge {
   position: absolute;

@@ -26,7 +26,7 @@ export type NavigationEntryLayout = 'row' | 'tile' | 'icon';
     '[attr.aria-label]': 'label() || name() + note()',
     '[attr.aria-describedby]': 'badge() === null ? null : descriptionId',
   },
-  template: `<span class="entry-icon">
+  template: `<span class="entry-icon icon-badge-anchor">
       <nx-icon [name]="icon()" />
       @if (badge(); as badge) {
         <nx-count-badge

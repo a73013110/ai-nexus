@@ -15,9 +15,6 @@
   min-height: 0;
 }
 .workspace-navigation > nx-scroll-area {
-  // 34px 的列放 20px 圖示，上下只剩 7px、圖示欄格子兩側 8px；右上角的徽章（含外圈）會再多出
-  // 2～4px，第一列與最右格（「全部功能」）的徽章因此被捲動區切掉。外擴不超過側欄內距。
-  --scroll-area-bleed: var(--p-space-1);
   flex: 1;
 }
 // One selected chip springs between pinned rows instead of each row painting its own background.
