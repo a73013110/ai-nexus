@@ -12,6 +12,7 @@
     [heading]="user?.displayName ?? ''"
     [detail]="user?.account ?? ''"
     closeLabel="關閉使用者管理"
+    [tour]="tour()"
   >
     @if (user) {
       <nx-access-status dialog-title [enabled]="user.enabled !== false" />
