@@ -32,7 +32,7 @@
 | 區 | 名稱 | 模組 |
 |---|---|---|
 | `work` | AI 工作台 | Dashboard、Chat、Conversations、Projects、Files、Knowledge、Artifacts、Prompts、Sharing、Collaboration、Repositories、Jobs |
-| `staff` | 員工服務 | 規劃中：Attendance（出勤打卡）、Leave（請假）等公司內部自助服務 |
+| `staff` | 員工服務 | 規劃中：Attendance（出勤打卡，見 [ADR 0018](0018-attendance-cards-and-punches.md)）、Leave（請假）等公司內部自助服務 |
 | `admin` | 系統管理 | Identity、AccessControl、Organization、Operations、Audit、Diagnostics、Monitoring、Integrations、Quality、Billing、Design（只有前端） |
 | `platform` | 基礎能力 | Account、Inference、WebSearch、Notifications；沒有選單頁，不出現在網址 |
 
