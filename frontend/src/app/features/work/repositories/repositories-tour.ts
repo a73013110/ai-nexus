@@ -1,4 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
+import type { ProductTourDefinition, TourStep, TourSteps } from '@shared/ui/product-tour';
 import type { RepositorySection } from './repository-detail';
 
 /** Joins the last two items with 「或」: 「甲、乙或丙」. */
@@ -61,7 +61,7 @@ function sectionSteps(options: {
   item: boolean;
   chat: boolean;
   knowledge: boolean;
-}): TourStep[] {
+}): TourSteps {
   const { section, item, chat, knowledge } = options;
   switch (section) {
     case 'commits':
@@ -162,28 +162,20 @@ function sectionSteps(options: {
               title: '瀏覽資料夾與檔案',
               description: '點資料夾往下、點檔案看行號與語法上色；資料夾的 README 顯示在清單下方。',
             },
-            ...(chat
-              ? [
-                  {
-                    target: 'nx-repository-code input.pick',
-                    title: '勾選檔案帶入對話',
-                    description:
-                      '可跨資料夾勾選最多 20 個檔案，打包成一個附件放進新對話的草稿，不會自動送出。',
-                    side: 'bottom' as const,
-                  },
-                ]
-              : []),
-            ...(knowledge
-              ? [
-                  {
-                    target: 'nx-repository-code .repository-import',
-                    title: '匯入知識庫',
-                    description:
-                      '把目前資料夾的文字檔匯入你能編輯的知識庫，由背景任務逐檔處理；之後不會跟著 Gitea 更新。',
-                    side: 'bottom' as const,
-                  },
-                ]
-              : []),
+            chat && {
+              target: 'nx-repository-code input.pick',
+              title: '勾選檔案帶入對話',
+              description:
+                '可跨資料夾勾選最多 20 個檔案，打包成一個附件放進新對話的草稿，不會自動送出。',
+              side: 'bottom',
+            },
+            knowledge && {
+              target: 'nx-repository-code .repository-import',
+              title: '匯入知識庫',
+              description:
+                '把目前資料夾的文字檔匯入你能編輯的知識庫，由背景任務逐檔處理；之後不會跟著 Gitea 更新。',
+              side: 'bottom',
+            },
           ];
   }
 }
@@ -210,18 +202,14 @@ export function repositoryTour(options: {
           '在程式碼、提交紀錄、Pull Request、議題與 AI 檢閱之間切換；標籤上的數字是開啟中的數量。',
         side: 'bottom',
       },
-      ...(options.empty
-        ? []
-        : [
-            {
-              target: 'nx-repository-detail .ref-select',
-              title: '固定閱讀的版本',
-              description:
-                '選擇分支或標籤後固定到一個提交（旁邊的短 SHA，點一下複製），之後閱讀的內容不會混入新的推送。',
-              side: 'bottom' as const,
-            },
-            ...sectionSteps(options),
-          ]),
+      !options.empty && {
+        target: 'nx-repository-detail .ref-select',
+        title: '固定閱讀的版本',
+        description:
+          '選擇分支或標籤後固定到一個提交（旁邊的短 SHA，點一下複製），之後閱讀的內容不會混入新的推送。',
+        side: 'bottom',
+      },
+      ...(options.empty ? [] : sectionSteps(options)),
       {
         target: 'nx-repositories-page .pin-toggle',
         title: '釘選常用的程式庫',

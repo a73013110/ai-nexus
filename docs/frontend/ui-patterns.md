@@ -19,7 +19,7 @@
 - 目前功能的每個入口都標 `aria-current="page"`（詳細路由仍屬該功能）；導覽溢位用 `ScrollArea` 的箭頭提示。
 - `ViewportInset` 讓工作區與抽屜避開全域提示和測試身分列。
 - 文件閱讀連結用 `ReaderLink`：來源放 URL（可重新整理、開新分頁；只收本站路徑），閱讀位置放 history state，返回聊天時保留草稿、捲動與焦點。登入後的返回位置只收白名單路徑。
-- 操作導覽用 `ProductTourDefinition`（可略過、重播，依可見功能過濾，不代替送出），入口只在 `FeaturePage` 的 `tour`。「可隨時重播」的提示由 `ProductTour` 加在最後一個顯示的步驟，定義裡不必寫。
+- 操作導覽用 `ProductTourDefinition`（依可見功能過濾、不代替送出，重播提示自動加），入口是 `FeaturePage`、`DialogHeader`、`DetailDrawer` 的 `tour`；條件步驟寫 `x && {…}`。dialog 內也可用，Escape 只關導覽。
 
 ## 表單
 

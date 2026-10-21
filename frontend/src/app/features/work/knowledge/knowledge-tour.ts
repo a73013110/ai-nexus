@@ -1,4 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
+import type { ProductTourDefinition, TourSteps } from '@shared/ui/product-tour';
 
 /** 集合導覽；沒有列出任何集合時，卡片步驟會略過。 */
 export const KNOWLEDGE_TOUR: ProductTourDefinition = {
@@ -41,30 +41,26 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
  * 不在畫面上的步驟（空列表的文件、隱藏的篩選）會略過。
  */
 export function collectionTour(options: { edit: boolean; manage: boolean }): ProductTourDefinition {
-  const steps: TourStep[] = [
+  const steps: TourSteps = [
     {
       target: 'nx-knowledge-page .feature-title',
       title: '這個知識庫的用途',
       description: '標題下方是知識庫的說明，提醒成員這裡收的是哪些資料。',
       side: 'bottom',
     },
-    ...(options.edit
-      ? [
-          {
-            target: 'nx-knowledge-page .knowledge-upload',
-            title: '上傳文件',
-            description:
-              '支援 PDF、Word、Excel、PowerPoint、圖片與文字，也可把檔案拖曳到來源區；每批最多十份，掃描 PDF 與圖片會自動辨識文字。',
-            side: 'bottom' as const,
-          },
-          {
-            target: 'nx-knowledge-page .knowledge-sources .panel-actions',
-            title: '貼上文字或從檔案庫加入',
-            description: '沒有檔案時可直接貼上純文字建立來源；已在檔案庫的原檔不必重新上傳。',
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.edit && {
+      target: 'nx-knowledge-page .knowledge-upload',
+      title: '上傳文件',
+      description:
+        '支援 PDF、Word、Excel、PowerPoint、圖片與文字，也可把檔案拖曳到來源區；每批最多十份，掃描 PDF 與圖片會自動辨識文字。',
+      side: 'bottom',
+    },
+    options.edit && {
+      target: 'nx-knowledge-page .knowledge-sources .panel-actions',
+      title: '貼上文字或從檔案庫加入',
+      description: '沒有檔案時可直接貼上純文字建立來源；已在檔案庫的原檔不必重新上傳。',
+      side: 'bottom',
+    },
     {
       target: 'nx-knowledge-page .document-filter',
       title: '篩選來源文件',
@@ -96,16 +92,12 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
       description:
         '輸入問題，檢查會找到哪些段落與頁碼，結果列出檢索模式與分數。要讓 AI 引用，在對話輸入框旁選取知識庫。',
     },
-    ...(options.manage
-      ? [
-          {
-            target: 'nx-knowledge-page .page-actions nx-action-menu',
-            title: '知識庫操作',
-            description: '「⋯」可修改名稱與說明；擁有者另可設定存取權限、移除整個知識庫。',
-            side: 'bottom' as const,
-          },
-        ]
-      : []),
+    options.manage && {
+      target: 'nx-knowledge-page .page-actions nx-action-menu',
+      title: '知識庫操作',
+      description: '「⋯」可修改名稱與說明；擁有者另可設定存取權限、移除整個知識庫。',
+      side: 'bottom',
+    },
   ];
   return { steps };
 }

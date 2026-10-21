@@ -36,16 +36,12 @@ export function sharesTour(options: {
         description: '輸入標題的任一段，清單會立即篩選。',
         side: 'bottom',
       },
-      ...(options.cards
-        ? [
-            {
-              target: 'nx-shared-page .resource-card',
-              title: '打開分享',
-              description:
-                '卡片顯示分享的是對話或成果文件、分享者或收件者與分享時間，已撤銷或到期會標示狀態。',
-            },
-          ]
-        : []),
+      options.cards && {
+        target: 'nx-shared-page .resource-card',
+        title: '打開分享',
+        description:
+          '卡片顯示分享的是對話或成果文件、分享者或收件者與分享時間，已撤銷或到期會標示狀態。',
+      },
     ],
   };
 }
@@ -87,17 +83,13 @@ export function shareTour(options: {
         title: '分享資訊',
         description: `列出收件者、建立與到期時間${options.artifact ? '及分享的版本' : '，以及附件是否一併分享'}。`,
       },
-      ...(options.manage
-        ? [
-            {
-              target: 'nx-shared-page .share-menu',
-              title: '撤銷分享',
-              description:
-                '「分享操作」可撤銷分享，收件者立即無法閱讀或下載附件；原始內容保留，已下載或複製的內容無法收回。',
-              side: 'bottom' as const,
-            },
-          ]
-        : []),
+      options.manage && {
+        target: 'nx-shared-page .share-menu',
+        title: '撤銷分享',
+        description:
+          '「分享操作」可撤銷分享，收件者立即無法閱讀或下載附件；原始內容保留，已下載或複製的內容無法收回。',
+        side: 'bottom',
+      },
     ],
   };
 }

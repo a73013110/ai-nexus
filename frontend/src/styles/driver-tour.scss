@@ -120,3 +120,15 @@
     animation: none;
   }
 }
+// ProductTour 的導覽層（manual popover）只負責進入 top layer；遮罩與說明框各自以視口定位。
+.nx-tour-layer {
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+  pointer-events: none;
+}
