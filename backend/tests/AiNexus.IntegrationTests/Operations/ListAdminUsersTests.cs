@@ -56,11 +56,11 @@ public sealed class ListAdminUsersTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var ids = page.Users.Select(x => x.Id).ToArray();
-            var storage = await scope.ServiceProvider.GetRequiredService<AttachmentQuota>().ForOwnersAsync(ids, CancellationToken.None);
+            var quota = scope.ServiceProvider.GetRequiredService<AttachmentQuota>();
             var usage = (await scope.ServiceProvider.GetRequiredService<UsageReports>().ByOwnersAsync(ids, CancellationToken.None)).ToDictionary(x => x.OwnerId, x => x.Usage);
             foreach (var user in page.Users)
             {
-                Assert.Equal(storage[user.Id], user.Storage);
+                Assert.Equal(await quota.ForAsync(user.Id, CancellationToken.None), user.Storage);
                 Assert.Equal(usage.GetValueOrDefault(user.Id) ?? new(0, 0, 0, 0, 0, 0, 0), user.Activity!.Usage);
                 Assert.Equal(await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == user.Id), user.Activity.Conversations);
                 Assert.Equal(await db.Set<UserRole>().Where(x => x.UserId == user.Id).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(), user.RoleIds);
@@ -73,6 +73,7 @@ public sealed class ListAdminUsersTests
         var carolRow = page.Users.Single(x => x.Id == carolId);
         Assert.Equal(("group", 7000L), (carolRow.Storage!.LimitSource, carolRow.Storage.LimitBytes));
         Assert.Contains("storage-probe", carolRow.RoleIds);
+        Assert.Equal("default", page.Users.Single(x => x.Account == @"TEST\alice").Storage!.LimitSource);
 
         var found = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?search=BO"))!;
         Assert.Equal((1, bobId), (found.Total, Assert.Single(found.Users).Id));

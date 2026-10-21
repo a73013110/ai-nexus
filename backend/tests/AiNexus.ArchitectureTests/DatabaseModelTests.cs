@@ -33,7 +33,9 @@ public sealed class DatabaseModelTests
             .ToLookup(x => x.Entity, x => x.Configuration);
         var mismatched = EntityTypes().SelectMany(entity =>
         {
-            var schema = entity.GetSchema() ?? "dbo";
+            // 只經由函式讀取的實體（UsageEntry）沒有表，以函式的 schema 為準。
+            var function = entity.GetTableName() is null ? entity.GetFunctionMappings().FirstOrDefault()?.StoreFunction : null;
+            var schema = (function is null ? entity.GetSchema() : function.Schema) ?? "dbo";
             // 實體型別可能來自 Platform（日誌管線的 DiagnosticEvent），那時只檢查組態的位置。
             var types = configurations[entity.ClrType].Append(entity.ClrType).Where(t => t.Assembly == Assemblies.Data);
             return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{entity.GetTableName()}");

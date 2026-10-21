@@ -18,13 +18,6 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     /// <summary>清除本請求已讀取的授權。授權可能被寫入改變之後，或必須讀到最新 SQL 結果的重新檢查之前呼叫。</summary>
     public void Invalidate() => grants.Clear();
 
-    public IQueryable<UserGroupGrant> GroupMemberships(IReadOnlyList<Guid> users) =>
-        (from userId in activeUsers.Ids join assignment in db.Set<UserRole>() on userId equals assignment.UserId
-         join role in db.Set<Role>() on assignment.RoleId equals role.Id
-         join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
-         join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
-         where users.Contains(userId) && role.Enabled && roleGroup.Enabled
-         select new UserGroupGrant { UserId = userId, GroupId = roleGroup.Id }).Distinct();
     public async Task<AccessDto> ForUserAsync(Guid user, CancellationToken ct)
     {
         var memoize = ReferenceEquals(http.HttpContext?.RequestServices, scope);
@@ -68,7 +61,7 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var roleIds = db.Set<UserRole>().Where(x => x.UserId == user).Select(x => x.RoleId);
         var roles = await db.Set<Role>().AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
-        var groupIds = GroupMemberships([user]).Select(x => x.GroupId);
+        var groupIds = GroupIds(user);
         var groups = await db.Set<RoleGroup>().AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
@@ -84,18 +77,24 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
             .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope!).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
         return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { Scopes = scopes };
     }
+
+    // 啟用的使用者經由啟用的角色取得的啟用群組。SQL 報表（儲存上限、管理列表）用同一條規則的 accesscontrol.udf_UserGroups；
+    // 授權刻意留在程式（ADR 0011），「啟用」的定義跟著 IActiveUsers 走，改這裡要一起改函式。
+    private IQueryable<string> GroupIds(Guid user) =>
+        from userId in activeUsers.Ids
+        where userId == user
+        join assignment in db.Set<UserRole>() on userId equals assignment.UserId
+        join role in db.Set<Role>() on assignment.RoleId equals role.Id
+        join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
+        join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
+        where role.Enabled && roleGroup.Enabled
+        select roleGroup.Id;
 }
 
 /// <summary>已啟用且未刪除的使用者 id。由 Identity 實作，讓 AccessControl 不必直接讀取使用者表就能過濾授權。</summary>
 public interface IActiveUsers
 {
     IQueryable<Guid> Ids { get; }
-}
-
-public sealed class UserGroupGrant
-{
-    public Guid UserId { get; init; }
-    public string GroupId { get; init; } = "";
 }
 
 /// <summary>由 Identity 的 <c>FeatureAuthorizationHandler</c> 依登入者當下的授權評估。</summary>

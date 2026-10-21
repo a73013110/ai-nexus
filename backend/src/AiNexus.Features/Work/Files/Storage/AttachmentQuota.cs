@@ -1,7 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Files;
-using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -13,34 +11,19 @@ namespace AiNexus.Features.Work.Files.Storage;
 [ValidatedInHandler("The limit is checked inside the audited administrative transaction (SetUserAttachmentStorage).")]
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
 
-public sealed class AttachmentQuota(AppDbContext db, AccessService access, IOptions<FilesOptions> options)
+public sealed class AttachmentQuota(AppDbContext db, ISqlDatabase<AppDbContext> sql, IOptions<FilesOptions> options)
 {
-    // 個人覆寫刻意優先於繼承的上限（包含群組上限）。
-    public static long Effective(long? personal, long? group, long baseline) => personal ?? group ?? baseline;
-
     /// <summary>沒有個人與群組上限時的預設儲存上限（設定）。</summary>
     public long DefaultLimitBytes => options.Value.DefaultOwnerLimitBytes;
 
-    public async Task<AttachmentStorageDto> ForAsync(Guid owner, CancellationToken ct) => (await ForOwnersAsync([owner], ct))[owner];
-
-    public async Task<IReadOnlyDictionary<Guid, AttachmentStorageDto>> ForOwnersAsync(IReadOnlyList<Guid> owners, CancellationToken ct)
-    {
-        var users = await db.Users.AsNoTracking().Where(x => owners.Contains(x.Id)).Select(x => new { x.Id, x.AttachmentLimitBytes }).ToListAsync(ct);
-        var groups = await (from membership in access.GroupMemberships(owners) join policy in db.Set<GroupModelPolicy>() on membership.GroupId equals policy.GroupId
-            select new { membership.UserId, policy.StoredAttachmentLimitBytes }).GroupBy(x => x.UserId)
-            .Select(g => new { OwnerId = g.Key, Limit = g.Min(x => x.StoredAttachmentLimitBytes) }).ToDictionaryAsync(x => x.OwnerId, x => x.Limit, ct);
-        var bytes = await db.Set<Attachment>().Where(x => owners.Contains(x.OwnerId)).GroupBy(x => x.OwnerId)
-            .Select(g => new { OwnerId = g.Key, Bytes = g.Sum(x => x.Size) }).ToDictionaryAsync(x => x.OwnerId, x => x.Bytes, ct);
-        return users.ToDictionary(x => x.Id, x =>
-        {
-            var personal = x.AttachmentLimitBytes;
-            var group = groups.GetValueOrDefault(x.Id);
-            var limit = Effective(personal, group, options.Value.DefaultOwnerLimitBytes);
-            var used = bytes.GetValueOrDefault(x.Id);
-            var source = personal is not null ? "personal" : group is not null ? "group" : "default";
-            return new AttachmentStorageDto(used, limit, Math.Max(0, limit - used), personal, group, options.Value.DefaultOwnerLimitBytes, source);
-        });
-    }
+    /// <summary>
+    /// 已用、上限與上限來源，規則在 <c>files.udf_AttachmentStorage</c>（<c>operations.usp_ListAdminUsers</c> 讀同一份）。
+    /// 經 <see cref="ISqlDatabase{TDatabase}"/> 共用 EF 的連線與目前交易，所以 <see cref="ReserveAsync"/> 在 <see cref="LockOwnerAsync"/> 之後讀到的是鎖定後的最新已提交資料。
+    /// </summary>
+    public Task<AttachmentStorageDto> ForAsync(Guid owner, CancellationToken ct) => sql.QuerySingleAsync<AttachmentStorageDto>("""
+        SELECT UsedBytes, LimitBytes, RemainingBytes, PersonalLimitBytes, GroupLimitBytes, DefaultLimitBytes, LimitSource
+        FROM [files].[udf_AttachmentStorage](@DefaultLimitBytes) WHERE OwnerId = @Owner
+        """, new { Owner = owner, DefaultLimitBytes }, cancellationToken: ct);
 
     // 需在呼叫端的交易內呼叫，並在檢查位元組或綁定、解除引用之前執行。
     // 資料庫列鎖讓同一個 SQL 資料庫的所有程序彼此協調。

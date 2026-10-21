@@ -115,4 +115,5 @@ GO
 - 讀取用 `QueryProcedureAsync`，寫入用 `ExecuteProcedureAsync`（同一個批次帶稽核情境）；record 欄位名稱、順序、型別與 `SELECT` 一致。
 - 背景工作只改處理狀態、不寫稽核的認領（`mail.usp_ClaimOutboundMessages`）也用 `QueryProcedureAsync`。需要特定隔離層級時在 procedure 內 `SET TRANSACTION ISOLATION LEVEL`：結束時恢復呼叫前的層級，不會留在連線池的連線上。
 - 每支被程式呼叫的 procedure 都要有整合測試（`ProcedureCoverageTests`）；寫稽核的用 `ProcedureAudits` 檢查。
+- 程式與 procedure 都要用的規則寫成一支 inline 函式，兩邊都讀它，不在 C# 重寫一次：EF 以 `[DbFunction]` 對應成可再組合的 `IQueryable`（`AppDbContext.UsageEntries`，keyless 實體 `ToTable(null)`），Dapper 直接從函式 `SELECT`（`AttachmentQuota`）。函式不在 `ProcedureCoverageTests` 範圍內，結果另以整合測試檢查。
 - 範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Admin/Operations/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Admin/Billing/Prices/CreateModelPrice.cs)。
