@@ -43,21 +43,7 @@
   - 不呼叫外部 API、不做長時間運算。鎖會一直持有到提交，外部服務多慢，鎖就持有多久；外部呼叫也無法回復。
   - 讀取放在交易開始前；必須在交易內讀取再寫回的資料，用 `UPDLOCK` 或並行控制欄位避免兩個請求同時通過檢查。
   - 需要「寫庫後呼叫外部服務」時：先提交，再由背景工作呼叫，結果寫回狀態欄位；失敗時重試或補償。
-- **procedure 的交易寫法**：可能被外層交易呼叫的 procedure，只在沒有外層交易時才自己開交易；發生錯誤時不自行 `ROLLBACK` 外層交易，直接 `THROW`，由呼叫端回復。內層 `ROLLBACK` 會連 EF 的寫入一起回復，並出現錯誤 266，C# 端接著 Commit 就會失敗。
-
-  ```sql
-  SET XACT_ABORT ON;
-  DECLARE @ownsTran bit = IIF(@@TRANCOUNT = 0, 1, 0);
-  BEGIN TRY
-      IF @ownsTran = 1 BEGIN TRAN;
-      -- 資料異動
-      IF @ownsTran = 1 COMMIT;
-  END TRY
-  BEGIN CATCH
-      IF @ownsTran = 1 AND @@TRANCOUNT > 0 ROLLBACK;
-      THROW;
-  END CATCH
-  ```
+- **procedure 的交易寫法**：可能被外層交易呼叫的 procedure，只在沒有外層交易時才自己開交易；發生錯誤時不自行 `ROLLBACK` 外層交易，直接 `THROW`，由呼叫端回復。內層 `ROLLBACK` 會連 EF 的寫入一起回復，並出現錯誤 266，C# 端接著 Commit 就會失敗。寫法見 [SQL 物件](../architecture/sql-objects.md#寫入)。
 
 - **回復不了的東西**：已用掉的 IDENTITY 與 SEQUENCE 值（會跳號）、外部副作用（HTTP、檔案、linked server），以及 EF 的 ChangeTracker（資料庫已回復，context 仍以為已儲存）。回復後不要繼續使用同一個 DbContext。
 

@@ -25,14 +25,14 @@
 - 一次異動多列時，不逐列 `EXEC`：用 `OUTPUT` 收集異動列，再一次寫入。
 
   ```sql
-  UPDATE identity.Users SET Enabled = 0
+  UPDATE [identity].[Users] SET Enabled = 0
   OUTPUT inserted.Id INTO @changed (Id)
   WHERE ...;
 
-  INSERT audit.AuditEvents (OwnerId, ActorId, TraceId, OperationId, Action, ResourceId, Result, DetailsJson, At)
+  INSERT [audit].[AuditEvents] (OwnerId, ActorId, TraceId, OperationId, Action, ResourceId, Result, DetailsJson, At)
   SELECT c.OwnerId, c.ActorId, c.TraceId, c.OperationId, N'admin.user', d.Id, N'saved',
-         (SELECT d.Id AS id, CAST(0 AS bit) AS enabled FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), c.At
-  FROM @changed d CROSS APPLY audit.udf_AuditContext() c;
+         (SELECT d.Id AS id, CAST(0 AS BIT) AS enabled FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), c.At
+  FROM @changed AS d CROSS APPLY [audit].[udf_AuditContext]() AS c;
   ```
 
 ## 明細與程式一致
