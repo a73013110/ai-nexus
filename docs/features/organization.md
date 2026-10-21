@@ -2,6 +2,8 @@
 
 結論：`/admin/organization`（授權 `organization`，預設給 administrators）維護部門樹與人員所屬。部門只決定「在組織中的位置」與主管關係，用來計算資料範圍；能使用哪些功能仍由角色決定（[ADR 0017](../decisions/0017-organization-units-and-data-scopes.md)）。部門與所屬由管理員維護，不從 AD 同步。
 
+頁首與單位編輯對話框右上角的問號可開啟操作導覽。
+
 ## 單位
 
 - 樹狀，最多 8 層；同一個上層底下名稱不可重複（`organization_unit_name_duplicate`）。
