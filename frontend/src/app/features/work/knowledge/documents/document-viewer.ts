@@ -48,6 +48,8 @@ import { HtmlPreview } from './html-preview';
 import { HtmlScriptGate } from './html-script-gate';
 import { richKind } from './html-scripts';
 import { documentBusy } from './document-status';
+import { documentReaderTour } from './document-reader-tour';
+import { ProductTourButton } from '@shared/ui/product-tour-button';
 
 /** 不屬於知識庫的原檔（預覽圖片、分享檔案）以已就緒文件的形狀顯示，沒有工作也不能編輯。 */
 const readyDocument = (
@@ -84,6 +86,7 @@ const readyDocument = (
     Island,
     MarkdownView,
     HtmlPreview,
+    ProductTourButton,
   ],
   host: { '(keydown)': 'shortcut($event)' },
   // 標題列（放大時）與浮動工具列共用同一套出現／淡出規則。
@@ -224,6 +227,17 @@ export class DocumentViewer {
     return this.rawImage()
       ? apiHref('/api/v1/attachments/{id}/render', { path: { id } })
       : apiHref('/api/v1/documents/{id}/render', { path: { id: this.document()?.id || '' } });
+  });
+  readonly tour = computed(() => {
+    const job = this.job();
+    return documentReaderTour({
+      view: this.isPdf() || this.isImage() ? 'original' : this.isRich() ? 'rich' : 'text',
+      image: this.isImage(),
+      paged: this.paged(),
+      searchable: this.hasText(),
+      processing: !!this.document() && !!job && job.status !== 'completed',
+      embedded: this.embedded(),
+    });
   });
   readonly standaloneUrl = computed(() => readerUrl(this.target(), this.page()));
   /** 這頁沒有擷取文字時的說明；工作已失敗或停止就不說「會自動顯示」。 */

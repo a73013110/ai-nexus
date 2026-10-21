@@ -98,7 +98,7 @@
                 @case ('building') {
                   <button
                     type="button"
-                    class="primary-button"
+                    class="primary-button retrieval-activate"
                     [disabled]="working() || session.testing() || !profile.coverage.complete"
                     [title]="
                       profile.coverage.complete ? '' : '覆蓋率達 100% 且文件全部就緒後才能啟用'
@@ -111,7 +111,7 @@
                 @case ('retired') {
                   <button
                     type="button"
-                    class="danger-button"
+                    class="danger-button retrieval-clear"
                     [disabled]="
                       working() || session.testing() || profile.coverage.completedChunks === 0
                     "
@@ -124,7 +124,7 @@
               @if (profile.status !== 'retired') {
                 <button
                   type="button"
-                  class="secondary-button"
+                  class="secondary-button retrieval-rebuild"
                   [disabled]="working() || session.testing() || jobActive(profile)"
                   (click)="operate(profile, 'rebuild')"
                 >
@@ -160,7 +160,7 @@
   <button
     table-actions
     type="button"
-    class="quiet-button"
+    class="quiet-button retrieval-probe"
     title="驗證只傳送合成資料，會計入檢索模型呼叫配額"
     [disabled]="probing() || session.testing() || !capabilities().length"
     (click)="probe()"
