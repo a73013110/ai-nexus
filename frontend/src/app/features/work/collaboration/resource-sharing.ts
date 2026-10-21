@@ -22,6 +22,16 @@ import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { SearchField } from '@shared/ui/search-field';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { resourceSharingTour } from './resource-sharing-tour';
+
+/** 資源種類在文案中的名詞，與對方找到它的列表功能。 */
+const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> = {
+  collection: { noun: '知識庫', feature: 'knowledge' },
+  project: { noun: '專案', feature: 'projects' },
+  artifact: { noun: '成果文件', feature: 'artifacts' },
+  evaluationSet: { noun: '評測集', feature: 'quality' },
+};
 
 @Component({
   selector: 'nx-resource-sharing',
@@ -36,7 +46,12 @@ import { SearchField } from '@shared/ui/search-field';
     class="platform-dialog"
     (cancel)="cancel($event)"
   >
-    <nx-dialog-header heading="存取權限" [detail]="name()" closeLabel="關閉存取權限" />
+    <nx-dialog-header
+      heading="存取權限"
+      [detail]="name()"
+      closeLabel="關閉存取權限"
+      [tour]="tour()"
+    />
     <div class="dialog-body">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
@@ -45,7 +60,7 @@ import { SearchField } from '@shared/ui/search-field';
         <p role="status" class="form-note">正在載入授權…</p>
       } @else {
         <div class="platform-form">
-          <label
+          <label class="sharing-search"
             >加入使用者<nx-search-field
               label="尋找要授權的使用者"
               placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
@@ -80,7 +95,7 @@ import { SearchField } from '@shared/ui/search-field';
                     [value]="member.role"
                     (valueChange)="role(member.userId, $event)"
                   /><button
-                    class="icon-button"
+                    class="icon-button member-remove"
                     [attr.aria-label]="'移除成員：' + member.displayName"
                     (click)="remove(member.userId)"
                   >
@@ -95,6 +110,7 @@ import { SearchField } from '@shared/ui/search-field';
           @if (allowGroups() && groups().length) {
             <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
             <nx-choice-groups
+              class="sharing-groups"
               label="可檢視的群組"
               [groups]="groupChoices()"
               [selected]="groupIds()"
@@ -111,7 +127,7 @@ import { SearchField } from '@shared/ui/search-field';
         <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
           取消
         </button>
-        <button class="primary-button" [disabled]="saving()" (click)="save()">
+        <button class="primary-button sharing-save" [disabled]="saving()" (click)="save()">
           {{ saving() ? '正在儲存…' : '儲存權限' }}
         </button>
       </footer>
@@ -126,6 +142,7 @@ export class ResourceSharing {
   readonly saved = output<void>();
   private readonly api = inject(CollaborationApi);
   private readonly scope = inject(ViewScope);
+  private readonly session = inject(WorkspaceSession);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   /** 每次開啟都會讀取目前的權限；編輯在儲存前只留在本地。 */
   private readonly opened = signal(0);
@@ -161,6 +178,19 @@ export class ResourceSharing {
     { value: 'viewer', label: '可檢視' },
     { value: 'editor', label: '可編輯' },
   ];
+  /** 載入中畫面上只有標題列，先不給導覽。 */
+  readonly tour = computed(() => {
+    if (this.loading()) return null;
+    const label = kindLabels[this.kind()];
+    return resourceSharingTour({
+      noun: label.noun,
+      listName: this.session.featureName(label.feature),
+      sharingName: this.session.featureName('sharing'),
+      members: this.members().length > 0,
+      groups: this.allowGroups() && this.groups().length > 0,
+      testing: this.session.testing(),
+    });
+  });
   open() {
     this.dialog().nativeElement.showModal();
     this.saveError.set('');
