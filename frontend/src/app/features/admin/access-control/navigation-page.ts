@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
+import { accessPageNames, navigationTour } from './access-control-tour';
 import { NavigationStore } from './navigation-store';
 import { NavigationEditor } from './navigation/navigation-editor';
 import { NavigationItemDialog } from './navigation/navigation-item-dialog';
@@ -17,6 +18,7 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
       [title]="session.featureName('access-control.navigation')"
       description="安排側欄的分群、頁面與外部連結；每個人只看到自己有權限的項目。"
       layoutMode="data"
+      [tour]="tour()"
     >
       @if (store.loading() && !store.ready()) {
         <p role="status">正在載入選單…</p>
@@ -38,4 +40,10 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
 export class NavigationPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(NavigationStore);
+  readonly tour = computed(() =>
+    navigationTour({
+      names: accessPageNames((id) => this.session.featureName(id)),
+      testing: this.session.testing(),
+    }),
+  );
 }

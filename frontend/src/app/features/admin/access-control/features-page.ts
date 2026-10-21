@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
+import { accessPageNames, featuresTour } from './access-control-tour';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
 import { AdminFeaturesTab } from './roles/admin-features-tab';
 
@@ -16,6 +17,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
       [title]="session.featureName('access-control.features')"
       description="調整功能名稱與開關；停用的功能不授予任何人。"
       layoutMode="data"
+      [tour]="tour()"
     >
       @if (store.loading()) {
         <p role="status">正在載入功能…</p>
@@ -33,4 +35,10 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
 export class FeaturesPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AccessControlStore);
+  readonly tour = computed(() =>
+    featuresTour({
+      names: accessPageNames((id) => this.session.featureName(id)),
+      testing: this.session.testing(),
+    }),
+  );
 }
