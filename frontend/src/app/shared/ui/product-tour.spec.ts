@@ -1,8 +1,11 @@
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeService } from '@core/preferences/theme-service';
 import { ProductTour, tourSteps, type ProductTourDefinition } from './product-tour';
+// 先靜態載入導覽層：它經 Icon 帶進 @lucide/angular，測試環境載入要近 10 秒，滿載時會超過 hook 的逾時。
+// 模組載入不計逾時；正式程式的 import() 照樣執行，只是取到已載入的模組。
+import './product-tour-overlay';
 
 const step = (target: string, title: string) => ({ target, title, description: title + '。' });
 
@@ -25,8 +28,6 @@ describe('ProductTour', () => {
     target.dispatchEvent(event);
     return event;
   };
-  // 第一次載入導覽層的 chunk 較慢，不算進個別測試的時間。
-  beforeAll(() => import('./product-tour-overlay'), 30000);
   beforeEach(() => {
     // jsdom 沒有版面與 top layer：以 hidden 屬性代表不可見，popover 只記錄狀態；
     // popover 內的元素在 jsdom 無法取得焦點，說明框內的焦點由 e2e 驗證。
