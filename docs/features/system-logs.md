@@ -2,6 +2,8 @@
 
 「系統日誌」在 `/admin/diagnostics/logs`（功能 `diagnostics.logs`），回答「為什麼失敗、HTTP 狀態與耗時、例外與執行流程」。誰在何時做了什麼屬於 [活動稽核](activity-audit.md)。資料來自 `diagnostics.DiagnosticEvents`，架構見 [診斷日誌架構](../architecture/diagnostics.md)，設定與故障排除見 [維運](../operations/diagnostics.md)。
 
+頁面右上角與診斷詳情抽屜可開啟操作導覽。
+
 ## 權限
 
 | 功能 | 伺服器要求 |

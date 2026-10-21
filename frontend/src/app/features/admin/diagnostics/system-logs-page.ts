@@ -39,6 +39,7 @@ import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { DiagnosticsApi, type LogFilter } from './diagnostics-api';
+import { systemLogsTour } from './diagnostics-tour';
 import { LogDetailDrawer } from './log-detail-drawer';
 import { levelTone, milliseconds } from './log-display';
 import {
@@ -142,6 +143,20 @@ export class SystemLogsPage {
   readonly tone = levelTone;
   readonly categoryName = (value: string) => value.split('.').at(-1) || value;
   private readonly cursors = new CursorTrail<string | null>(null);
+  /** 沒有 `diagnostics.logs` 時頁面只剩標題，不給導覽。 */
+  readonly tour = computed(() => {
+    const session = this.session;
+    if (!session.has('diagnostics.logs')) return null;
+    const name = (feature: 'monitoring' | 'audit') =>
+      session.has(feature) ? session.featureName(feature) : null;
+    return systemLogsTour({
+      detail: session.has('diagnostics.logs.detail'),
+      export: session.has('diagnostics.logs.export'),
+      degraded: this.degraded(),
+      monitoring: name('monitoring'),
+      audit: name('audit'),
+    });
+  });
 
   constructor() {
     effect(() => {

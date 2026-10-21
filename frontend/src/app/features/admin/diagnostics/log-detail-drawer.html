@@ -1,4 +1,4 @@
-<nx-detail-drawer class="log-detail" title="診斷詳情" (closed)="closed.emit()">
+<nx-detail-drawer class="log-detail" title="診斷詳情" [tour]="tour()" (closed)="closed.emit()">
   <nx-drawer-pager
     drawer-actions
     noun="日誌"
@@ -128,7 +128,7 @@
             <p class="ui-panel-note">此事件未記錄請求資訊（歷史日誌或背景事件）。</p>
           }
           <h3 class="ui-section-heading">關聯</h3>
-          <dl class="ui-description-list">
+          <dl class="ui-description-list log-identifiers">
             @for (id of identifiers(selected.event); track id.label) {
               <div [class.ui-description-wide]="id.wide">
                 <dt>{{ id.label }}</dt>
