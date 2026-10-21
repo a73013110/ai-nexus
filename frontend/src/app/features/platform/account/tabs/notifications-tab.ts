@@ -18,7 +18,7 @@ type Permission = NotificationPermission | 'unsupported';
       gap: var(--section-gap);
     }
   `,
-  template: `<nx-setting-group heading="回覆完成">
+  template: `<nx-setting-group class="notification-completion" heading="回覆完成">
     <nx-setting-row
       label="回覆完成通知"
       description="工作區在背景時提醒你回覆已完成；通知不含提問或回覆內容。"

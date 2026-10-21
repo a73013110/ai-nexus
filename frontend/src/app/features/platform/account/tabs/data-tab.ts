@@ -30,12 +30,14 @@ import { SettingsStore } from '../settings-store';
     }
     <nx-setting-group heading="此瀏覽器的草稿">
       <nx-setting-row
+        class="data-autosave"
         label="自動保存草稿"
         description="依帳號保存未送出的文字與附件參照，不同步到其他裝置。共用電腦建議關閉。"
         [checked]="store.draft().saveLocalDrafts"
         (checkedChange)="store.update('saveLocalDrafts', $event)"
       />
       <nx-setting-row
+        class="data-clear"
         label="清除本機草稿"
         description="移除這個瀏覽器中你所有未送出的草稿；已送出的對話不受影響。"
       >

@@ -52,7 +52,10 @@
       </form>
     }
   </section>
-  <button class="icon-button settings-close" aria-label="關閉設定" type="button" (click)="close()">
-    <nx-icon name="close" />
-  </button>
+  <div class="settings-tools">
+    <nx-product-tour-button [tour]="tour()" [compact]="true" />
+    <button class="icon-button" aria-label="關閉設定" type="button" (click)="close()">
+      <nx-icon name="close" />
+    </button>
+  </div>
 </div>

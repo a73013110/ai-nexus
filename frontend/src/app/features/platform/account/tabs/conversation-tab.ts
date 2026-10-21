@@ -33,7 +33,7 @@ import { SettingsStore } from '../settings-store';
         ><button type="button" notice-actions (click)="store.reload()">重新載入</button>
       </nx-notice>
     }
-    <nx-setting-group heading="輸入與瀏覽">
+    <nx-setting-group class="conversation-input" heading="輸入與瀏覽">
       <nx-setting-row
         label="按 Enter 送出"
         [description]="
@@ -51,7 +51,7 @@ import { SettingsStore } from '../settings-store';
         (checkedChange)="store.update('autoFollow', $event)"
       />
     </nx-setting-group>
-    <nx-setting-group heading="新對話預設">
+    <nx-setting-group class="conversation-defaults" heading="新對話預設">
       @if (models()?.policy?.allowModelSelection) {
         <nx-setting-row
           label="預設模型"
@@ -72,6 +72,7 @@ import { SettingsStore } from '../settings-store';
       />
       @if (webSearch(); as search) {
         <nx-setting-row
+          class="conversation-web-search"
           [label]="'網路搜尋 · ' + (search.available ? '已啟用' : '尚未啟用')"
           [description]="
             search.available
