@@ -24,6 +24,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate } from '@shared/browser/format';
 import { IntegrationsApi } from './integrations-api';
 import { routeOf } from '@core/api/catalog';
+import { integrationsTour } from './integrations-tour';
 
 /** 來源資料類型與歷程事件的顯示名稱；未列出的沿用來源給的代碼。 */
 const LABELS: Record<string, string> = {
@@ -172,6 +173,15 @@ export class IntegrationsPage {
       if (valid()) this.busy.set(false);
     }
   }
+  readonly tour = computed(() =>
+    integrationsTour({
+      queryable: this.current()?.canQuery ?? false,
+      chat: this.session.has('chat'),
+      artifacts: this.session.has('artifacts'),
+      chatName: this.session.featureName('chat'),
+      artifactsName: this.session.featureName('artifacts'),
+    }),
+  );
   label(kind: string) {
     return LABELS[kind] ?? kind;
   }

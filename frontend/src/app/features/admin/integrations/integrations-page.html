@@ -1,5 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('integrations')"
+  [tour]="tour()"
   description="以你的來源權限查詢公文與校務資料，快速接續閱讀、整理與分析。"
 >
   @if (error()) {
@@ -30,7 +31,7 @@
     </div>
     @if (current(); as source) {
       @if (!source.canQuery) {
-        <nx-empty-state>
+        <nx-empty-state class="source-unavailable">
           <nx-icon name="lock" />
           <h2>{{ source.name }}尚未可用</h2>
           <p>{{ source.notice }}</p>
@@ -108,12 +109,20 @@
                 </div>
                 <div class="page-actions">
                   @if (session.has('chat')) {
-                    <button class="primary-button" (click)="use('chat')" [disabled]="busy()">
+                    <button
+                      class="primary-button source-chat"
+                      (click)="use('chat')"
+                      [disabled]="busy()"
+                    >
                       <nx-icon name="lines" />帶入對話
                     </button>
                   }
                   @if (session.has('artifacts')) {
-                    <button class="secondary-button" (click)="use('import')" [disabled]="busy()">
+                    <button
+                      class="secondary-button source-snapshot"
+                      (click)="use('import')"
+                      [disabled]="busy()"
+                    >
                       <nx-icon name="document" />儲存個人快照
                     </button>
                   }
