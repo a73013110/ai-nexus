@@ -29,6 +29,7 @@ import { AdminUserStore, type UserTab } from './admin-user-store';
 import { AdminUserSummary } from './admin-user-summary';
 import { UserConversationReader } from './user-conversation-reader';
 import { routeOf } from '@core/api/catalog';
+import { userInspectorTour } from '../identity-tour';
 
 /**
  * 單一使用者的管理中心：他是誰，以及其最近 30 天的資料；分頁包括帳號、
@@ -84,6 +85,14 @@ export class AdminUserInspector {
       { value: 'conversations', label: '對話' },
     ];
   });
+  /** 「對話」頁籤改介紹受稽核的唯讀檢視，其他頁籤介紹摘要與頁籤。 */
+  readonly tour = computed(() =>
+    userInspectorTour({
+      audit: this.session.has('audit'),
+      testing: this.session.testing(),
+      conversations: this.store.tab() === 'conversations',
+    }),
+  );
   constructor() {
     effect(() => {
       const user = this.user(),

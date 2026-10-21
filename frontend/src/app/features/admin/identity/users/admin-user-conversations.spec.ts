@@ -1,6 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { tourSteps } from '@shared/ui/product-tour';
+import { userInspectorTour } from '../identity-tour';
 import { AdminUserConversations } from './admin-user-conversations';
 import { UserConversationReader } from './user-conversation-reader';
 
@@ -95,5 +97,16 @@ describe('AdminUserConversations', () => {
     expect(document.activeElement).toBe(
       root.querySelector('.conversation-item[data-conversation="a"]'),
     );
+  });
+
+  it('renders every conversation tour target inside the tab', () => {
+    const { root } = setup(false);
+    const prefix = 'nx-admin-user-inspector nx-admin-user-conversations ';
+    const targets = tourSteps(
+      userInspectorTour({ audit: false, testing: false, conversations: true }),
+    ).map((step) => step.target);
+    expect(targets.every((target) => target.startsWith(prefix))).toBe(true);
+    for (const target of targets)
+      expect(root.querySelector(target.slice(prefix.length)), target).not.toBeNull();
   });
 });

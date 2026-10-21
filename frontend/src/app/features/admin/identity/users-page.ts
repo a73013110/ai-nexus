@@ -6,6 +6,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AdminUsersStore } from './admin-users-store';
+import { usersTour } from './identity-tour';
 import { AdminUserInspector } from './users/admin-user-inspector';
 import { AdminUsersTab } from './users/admin-users-tab';
 
@@ -19,6 +20,7 @@ import { AdminUsersTab } from './users/admin-users-tab';
       [title]="session.featureName('identity.users')"
       description="管理公司身分、角色指派與個人的 AI 使用政策。"
       layoutMode="data"
+      [tour]="tour()"
     >
       @if (store.loading()) {
         <p role="status">正在載入使用者…</p>
@@ -47,6 +49,7 @@ export class UsersPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AdminUsersStore);
   readonly inspected = signal<AdminUserDto | null>(null);
+  readonly tour = computed(() => usersTour({ testing: this.session.testing() }));
   /** 使用者列表目前這一頁；管理對話框的上下筆只在這一頁內移動。 */
   readonly pageUsers = computed(() => this.store.users()?.users ?? []);
   readonly inspectedIndex = computed(() => {
