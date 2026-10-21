@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
+import { accessPageNames, groupsTour } from './access-control-tour';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
 import { AdminGroupsTab } from './roles/admin-groups-tab';
 
@@ -16,6 +17,7 @@ import { AdminGroupsTab } from './roles/admin-groups-tab';
       [title]="session.featureName('access-control.groups')"
       description="功能群組授予功能、AI 模型與附件容量，再由角色加入。"
       layoutMode="data"
+      [tour]="tour()"
     >
       @if (store.loading()) {
         <p role="status">正在載入功能群組…</p>
@@ -33,4 +35,10 @@ import { AdminGroupsTab } from './roles/admin-groups-tab';
 export class GroupsPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AccessControlStore);
+  readonly tour = computed(() =>
+    groupsTour({
+      names: accessPageNames((id) => this.session.featureName(id)),
+      testing: this.session.testing(),
+    }),
+  );
 }

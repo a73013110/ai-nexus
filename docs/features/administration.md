@@ -1,6 +1,6 @@
 # 存取管理
 
-存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能 `/admin/access-control/features`（`access-control.features`）、選單 `/admin/access-control/navigation`（`access-control.navigation`）。一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
+存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能 `/admin/access-control/features`（`access-control.features`）、選單 `/admin/access-control/navigation`（`access-control.navigation`）。一般登入不會取得管理權。各頁、使用者詳情與編輯對話框右上角的問號可開啟操作導覽。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
 部門樹與人員所屬在同一個「身分與權限」分群的 [組織](organization.md) 頁，另有授權。平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
@@ -21,7 +21,7 @@
 ## 使用者
 
 - 點使用者列開啟使用者詳情，是管理單一使用者的地方：頂部是身分、狀態、登入方式、角色與 30 天用量，頁籤為「帳號」（姓名、啟用、登入方式與密碼）、「通知信箱」、「角色與權限」（含儲存後可用功能預覽）、「AI 模型」「附件容量」「對話」。可編輯的頁籤各自儲存，切換或關閉時未儲存的變更會先確認；測試身分期間全部唯讀。
-- 「新增使用者」只填帳號與角色；模型政策、容量與活動在建立後從詳情調整。列的「⋯」選單只放「以此身分測試」與「刪除使用者」（需確認）。列表頁與詳情右上角的問號可開啟操作導覽。
+- 「新增使用者」只填帳號與角色；模型政策、容量與活動在建立後從詳情調整。列的「⋯」選單只放「以此身分測試」與「刪除使用者」（需確認）。
 - 每位使用者可啟用 AD、本地密碼或兩者，兩種登入對應同一個 UserId、角色與私人資料。
 - 預建的 AD 帳號填目錄短帳號，首次成功驗證才綁定 SID；已綁定的帳號不能換綁他人。手動輸入的姓名不會被目錄登入覆蓋。
 - 通知信箱：列表顯示信箱與來源、可搜尋；AD 提供的唯讀，其他可由管理員設定或清除（[規則](account-security.md#管理員設定信箱)）。

@@ -12,6 +12,7 @@
         [heading]="e.title"
         [detail]="e.id ? label(e.draft.kind) : ''"
         closeLabel="關閉選單項目編輯"
+        [tour]="tour()"
       />
       <div #body class="dialog-body">
         @if (error()) {
@@ -45,7 +46,7 @@
                   [disabled]="locked()"
                   (valueChange)="update('kind', $any($event))"
                 />
-                <label class="form-field-short"
+                <label class="form-field-short navigation-parent"
                   >位置<nx-select
                     label="位置"
                     [options]="parents()"
@@ -142,7 +143,11 @@
             </div>
           </section>
           @if (e.draft.kind === 'link') {
-            <section class="form-section" role="group" [attr.aria-labelledby]="id + '-audience'">
+            <section
+              class="form-section navigation-audience"
+              role="group"
+              [attr.aria-labelledby]="id + '-audience'"
+            >
               <header class="form-section-head">
                 <h3 [id]="id + '-audience'">可見群組</h3>
                 <p class="form-note">

@@ -38,6 +38,7 @@ import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AccessControlApi } from '../access-control-api';
 import { AccessControlStore, accessChoice } from '../access-control-store';
+import { accessEditorTour, accessPageNames } from '../access-control-tour';
 import { FeatureSummary } from './feature-summary';
 import { sameIds } from './same-ids';
 import {
@@ -225,6 +226,18 @@ export class AccessEditorDialog {
         (scope): SelectOption => ({ value: scope.id, label: scope.name }),
       ),
     }));
+  });
+  readonly tour = computed(() => {
+    const draft = this.editor();
+    return draft
+      ? accessEditorTour({
+          names: accessPageNames((id) => this.session.featureName(id)),
+          kind: draft.kind,
+          creating: draft.isNew,
+          models: this.groupSection() === 'models',
+          testing: this.session.testing(),
+        })
+      : null;
   });
   readonly icon = featureIcon;
   /** 圖示來自功能目錄，編輯器只顯示。 */

@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from './access-control-store';
+import { accessPageNames, rolesTour } from './access-control-tour';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
 import { AdminRolesTab } from './roles/admin-roles-tab';
 
@@ -16,6 +17,7 @@ import { AdminRolesTab } from './roles/admin-roles-tab';
       [title]="session.featureName('access-control.roles')"
       description="以角色組合功能群組；使用者取得角色後才能使用其中的功能。"
       layoutMode="data"
+      [tour]="tour()"
     >
       @if (store.loading()) {
         <p role="status">正在載入角色…</p>
@@ -33,4 +35,11 @@ import { AdminRolesTab } from './roles/admin-roles-tab';
 export class RolesPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AccessControlStore);
+  readonly tour = computed(() =>
+    rolesTour({
+      names: accessPageNames((id) => this.session.featureName(id)),
+      testing: this.session.testing(),
+      assign: this.session.has('identity.users'),
+    }),
+  );
 }

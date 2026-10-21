@@ -26,6 +26,7 @@ import { Notice } from '@shared/ui/notice';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AccessControlApi } from '../access-control-api';
+import { accessPageNames, navigationItemTour } from '../access-control-tour';
 import { AccessControlStore, accessChoice } from '../access-control-store';
 import { NavigationStore } from '../navigation-store';
 import { sameIds } from '../roles/same-ids';
@@ -178,6 +179,17 @@ export class NavigationItemDialog {
     },
   ]);
   readonly label = navigationKindLabel;
+  readonly tour = computed(() => {
+    const editor = this.editor();
+    return editor
+      ? navigationItemTour({
+          names: accessPageNames((id) => this.session.featureName(id)),
+          kind: editor.draft.kind,
+          creating: !editor.id,
+          testing: this.session.testing(),
+        })
+      : null;
+  });
 
   /** 新增：`parentId` 為 `null` 時放在最上層。 */
   create(kind: NavigationKind, parentId: string | null = null) {
