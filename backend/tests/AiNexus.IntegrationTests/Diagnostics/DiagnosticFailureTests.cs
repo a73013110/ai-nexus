@@ -67,19 +67,24 @@ public sealed class DiagnosticFailureTests
         Assert.True(completed);
     }
 
-    // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支；只有啟動時的結構比對（sys.columns）查真的資料庫。
+    // 在 SQL 接縫處注入失敗，以走到正式環境的檢索／fallback 分支。查真的資料庫的只有：啟動時的結構比對（sys.columns），
+    // 以及種子資料路徑上的儲存配額（files.udf_AttachmentStorage）與向量寫入（knowledge.usp_WriteChunkEmbeddings）。
     private sealed class FullTextFailure(AppDbContext db) : ISqlDatabase<AppDbContext>
     {
         private readonly DbContextSqlDatabase<AppDbContext> inner = new(db);
         public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
-            => typeof(T) == typeof(bool) ? Task.FromResult((T)(object)true) : throw new InvalidOperationException("Unexpected SQL: " + sql);
+            => typeof(T) == typeof(bool) ? Task.FromResult((T)(object)true)
+                : sql.Contains("udf_AttachmentStorage", StringComparison.Ordinal) ? inner.QuerySingleAsync<T>(sql, parameters, commandTimeout, cancellationToken)
+                : throw new InvalidOperationException("Unexpected SQL: " + sql);
         public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
             => sql.Contains("FREETEXTTABLE", StringComparison.Ordinal) ? throw SqlFailure()
                 : sql.Contains("sys.columns", StringComparison.Ordinal) ? inner.QueryAsync<T>(sql, parameters, commandTimeout, cancellationToken)
                 : Task.FromResult<IReadOnlyList<T>>([]);
         public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
         public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
-        public Task<IReadOnlyList<T>> QueryProcedureAsync<T>(string procedure, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
+        public Task<IReadOnlyList<T>> QueryProcedureAsync<T>(string procedure, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => procedure == "knowledge.usp_WriteChunkEmbeddings" ? inner.QueryProcedureAsync<T>(procedure, parameters, commandTimeout, cancellationToken)
+                : throw new InvalidOperationException("Unexpected procedure: " + procedure);
         public Task<TResult> QueryProcedureAsync<TResult>(string procedure, object? parameters, Func<SqlResults, Task<TResult>> read, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
         public Task<IReadOnlyList<T>> ExecuteProcedureAsync<T>(string procedure, object? parameters = null, Guid? auditOwner = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
     }

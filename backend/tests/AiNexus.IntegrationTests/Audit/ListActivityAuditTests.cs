@@ -35,11 +35,12 @@ public sealed class ListActivityAuditTests
         Assert.NotEmpty(catalog.Models);
         // 列出所有功能（而不只限稽核者自己的授權），順序是目錄的宣告順序：紀錄的變更可能指向任何功能。
         Assert.Equal(FeatureCatalog.Grants.Select(x => x.Id), catalog.Features.Select(x => x.Id));
-        // 功能的選單位置來自完整的預設樹，不依稽核者自己的授權修剪：檢索管理在系統管理底下，動作接在上層頁面之後。
-        var system = Assert.Single(catalog.NavigationSections, x => x.Id == "system");
-        Assert.Equal(["系統管理"], system.Path);
-        Assert.Contains(FeatureCatalog.KnowledgeRetrieval, system.FeatureIds);
-        var logs = system.FeatureIds.SkipWhile(x => x != FeatureCatalog.DiagnosticsLogs).Take(3);
+        // 功能的選單位置來自完整的預設樹，不依稽核者自己的授權修剪：檢索管理在系統管理的子分群底下，動作接在上層頁面之後。
+        var data = Assert.Single(catalog.NavigationSections, x => x.Id == "system.data");
+        Assert.Equal(["系統管理", "資料與檢索"], data.Path);
+        Assert.Contains(FeatureCatalog.KnowledgeRetrieval, data.FeatureIds);
+        var observability = Assert.Single(catalog.NavigationSections, x => x.Id == "system.observability");
+        var logs = observability.FeatureIds.SkipWhile(x => x != FeatureCatalog.DiagnosticsLogs).Take(3);
         Assert.Equal([FeatureCatalog.DiagnosticsLogs, FeatureCatalog.DiagnosticsLogsDetail, FeatureCatalog.DiagnosticsLogsExport], logs);
         var rows = (await auditor.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=administration"))!;
         Assert.Contains(rows, row => row.Action == "admin.user_roles" && row.ResourceId == target.Id);
