@@ -30,6 +30,7 @@ import { MonitoringServiceMap } from './health/monitoring-service-map';
 import { MonitoringStore } from './monitoring-store';
 import { MonitoringSubsystems } from './health/monitoring-subsystems';
 import { MonitoringTraffic } from './traffic/monitoring-traffic';
+import { monitoringDrawerTour, monitoringTour } from './monitoring-tour';
 import { MonitoringVitals } from './health/monitoring-vitals';
 
 type Selection =
@@ -92,6 +93,24 @@ export class MonitoringPage {
     { value: '5', label: '5 分鐘' },
     { value: '15', label: '15 分鐘' },
   ];
+  // 快照每幾秒換一次參考；只取間隔數字，導覽定義才不會跟著每份快照重建。
+  private readonly refreshSeconds = computed(() => this.store.snapshot()?.refreshSeconds ?? null);
+  /** 沒有監控授權時頁面只顯示空狀態，不提供導覽。 */
+  readonly tour = computed(() =>
+    this.ready() && this.session.has('monitoring')
+      ? monitoringTour({
+          refreshSeconds: this.refreshSeconds(),
+          logs: this.session.has('diagnostics.logs')
+            ? this.session.featureName('diagnostics.logs')
+            : null,
+          audit: this.session.has('audit') ? this.session.featureName('audit') : null,
+        })
+      : null,
+  );
+  readonly drawerTour = computed(() => {
+    const kind = this.selection()?.kind;
+    return kind ? monitoringDrawerTour(kind) : null;
+  });
   readonly drawerTitle = computed(() => DRAWER_TITLES[this.selection()?.kind ?? 'dependency']);
   /** 檢視器是否開啟；退場時內容會保留。 */
   readonly drawerOpen = signal(false);
