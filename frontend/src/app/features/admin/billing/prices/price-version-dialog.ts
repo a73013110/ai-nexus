@@ -25,6 +25,7 @@ import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
 import { ToastService } from '@shared/ui/toast-service';
 import { BillingApi, PROVIDERS, chargeKind, providerName } from '../billing-api';
+import { priceVersionTour } from '../prices-tour';
 
 const emptyPrice = (): PriceRequest => ({
   provider: 'google',
@@ -99,6 +100,13 @@ export class PriceVersionDialog {
       return `已帶入此版本（${formatDate(seed.price.effectiveAt)} 生效）。儲存會建立新版本，歷史價格保持原樣。`;
     if (seed.from === 'current') return '以目前價格為起點；儲存會建立新版本，歷史價格保持原樣。';
     return '價格只影響之後的呼叫；不同幣別分開統計。';
+  });
+  readonly tour = computed(() => {
+    const from = this.seed().from;
+    return priceVersionTour({
+      copied: from === 'current' || from === 'history',
+      testing: this.locked(),
+    });
   });
   /** 拒絕寫入時，取代儲存列原本的「尚未變更／有未儲存的變更」。 */
   readonly note = this.session.testingNote;

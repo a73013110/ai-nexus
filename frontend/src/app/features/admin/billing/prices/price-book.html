@@ -1,5 +1,6 @@
 <div class="page-toolbar price-toolbar">
   <nx-view-switch
+    class="price-view"
     label="價格檢視"
     appearance="segment"
     [options]="views"
@@ -7,6 +8,7 @@
     (valueChange)="view.set($event === 'history' ? 'history' : 'current')"
   />
   <nx-search-field
+    class="price-search"
     label="搜尋模型或工具"
     placeholder="搜尋名稱或供應商"
     [value]="search()"
@@ -14,7 +16,7 @@
   />
   <button
     type="button"
-    class="primary-button"
+    class="primary-button price-add"
     [disabled]="session.testing() || loading()"
     [title]="session.testingNote()"
     (click)="add()"
@@ -119,7 +121,7 @@
             <td data-stack="end">
               <button
                 type="button"
-                class="icon-button"
+                class="icon-button price-adjust"
                 data-row-action
                 [disabled]="session.testing()"
                 [attr.aria-label]="'新增價格版本：' + row.name"
@@ -210,7 +212,7 @@
                 {{ kind(price.kind) }}</small
               >
             </th>
-            <td class="ops-span" nxTableColumn="state">
+            <td class="ops-span price-state" nxTableColumn="state">
               <nx-status-badge [tone]="version.state.tone">{{
                 version.state.label
               }}</nx-status-badge>
@@ -238,7 +240,7 @@
             <td data-stack="end">
               <button
                 type="button"
-                class="icon-button"
+                class="icon-button price-reuse"
                 data-row-action
                 [disabled]="session.testing()"
                 [attr.aria-label]="'帶入此版本：' + version.name"
