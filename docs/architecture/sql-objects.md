@@ -28,7 +28,7 @@
 
 ```sql
 -- （檔頭）
-CREATE PROCEDURE [operations].[usp_ListThings]
+CREATE OR ALTER PROCEDURE [operations].[usp_ListThings]
     @Search NVARCHAR (120) = NULL,
     @Offset INT
 AS
@@ -51,7 +51,7 @@ GO
 
 ```sql
 -- （檔頭）
-CREATE PROCEDURE [billing].[usp_RenameThing]
+CREATE OR ALTER PROCEDURE [billing].[usp_RenameThing]
     @Id   UNIQUEIDENTIFIER,
     @Name NVARCHAR (100)
 AS
@@ -90,7 +90,7 @@ GO
 
 ```sql
 -- （檔頭）
-CREATE FUNCTION [audit].[udf_Something] ()
+CREATE OR ALTER FUNCTION [audit].[udf_Something] ()
 RETURNS TABLE
 AS
 RETURN
@@ -100,15 +100,15 @@ GO
 ```
 
 - function 用 inline 資料表值函式；scalar 函式在 `SELECT` 裡會逐列呼叫（[ADR 0014](../decisions/0014-procedure-audit.md#效能)）。
-- view：`CREATE VIEW [<schema>].[vw_<名稱>] AS SELECT …;`。
+- view：`CREATE OR ALTER VIEW [<schema>].[vw_<名稱>] AS SELECT …;`。
 
 ## 流程
 
-1. 在開發庫的 SSMS 依範本執行：新物件 `CREATE`；修改時從 `database/App/<schema>/` 開檔，`CREATE` 改成 `ALTER`、加一行 `Modify` 後執行。不用 `CREATE OR ALTER`：匯出檔會變成 `CREATE   PROCEDURE`，多出空白差異。
+1. 在開發庫的 SSMS 依範本以 `CREATE OR ALTER` 執行，新增與修改同一個寫法；修改時從 `database/App/<schema>/` 開檔，`CREATE` 改成 `CREATE OR ALTER`、加一行 `Modify` 後執行。匯出時 `OR ALTER` 會被換成空白（`CREATE   PROCEDURE`），這是匯出檔的固定樣子，不手動收掉空白。
 2. `./scripts/Show-Scripts.ps1` 選 `Export-Database.ps1` 匯出，只 stage 與本次有關的檔案。
 3. `dotnet build database/App`（引用錯誤在這裡失敗），再跑 `./scripts/Verify.ps1`。
 
-`database/App/` 的物件檔是 `CREATE`＋`GO`，可直接在 SSMS 執行，用來在其他庫建同一個物件。
+`database/App/` 的物件檔是 `CREATE   <類型>`＋`GO`，可直接在 SSMS 執行，用來在其他庫建同一個物件。
 
 ## 程式端
 

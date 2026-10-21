@@ -18,7 +18,7 @@
 
 `StructuredChunker` 先找標題、中文條文、段落及句界，再做硬切；維護標題階層，允許跨頁，引用顯示起訖頁。預設目標 450、上限 700、最小 80 tokens、句界重疊 12%。CJK 約每字一 token，其他文字約四字元一 token；這是估算。表格按完整列處理，超過硬上限的單列明確失敗，不悄悄截斷。UTF-16 surrogate pair 保持完整。
 
-實際 embedding 輸入為 `文件名 › HeadingPath\n本文`，`Text` 只存本文。SHA-256 ContentHash 計算完整輸入；同 profile 的相同 hash 可複製向量。批次預設 16，背景併發 1，在聊天生成或排隊時讓出 GPU；容量限制屬每個程序，已發出的請求不會被聊天搶占。每批寫入使用多列 Dapper INSERT，參與 lease-fenced checkpoint 的同一個 EF transaction。HTTP 共用具名 client、逾時與暫時錯誤重試；最多重試兩次，408／429／5xx／網路錯誤採指數退避與抖動。向量檢查數量、維度、有限值與非零值後 L2 正規化。
+實際 embedding 輸入為 `文件名 › HeadingPath\n本文`，`Text` 只存本文。SHA-256 ContentHash 計算完整輸入；同 profile 的相同 hash 可複製向量。批次預設 16，背景併發 1，在聊天生成或排隊時讓出 GPU；容量限制屬每個程序，已發出的請求不會被聊天搶占。每批寫入以一個 JSON 參數呼叫 `knowledge.usp_WriteChunkEmbeddings`（不受 2100 個參數上限限制），參與 lease-fenced checkpoint 的同一個 EF transaction。HTTP 共用具名 client、逾時與暫時錯誤重試；最多重試兩次，408／429／5xx／網路錯誤採指數退避與抖動。向量檢查數量、維度、有限值與非零值後 L2 正規化。
 
 查詢快取以 profile key + 正規化查詢 hash 為鍵，獨立 `IMemoryCache` 最多 512 筆、預設 TTL 10 分鐘，條帶鎖抑制重複請求。embedding 與 rerank 共用每人每日 20,000 次配額、SQL 使用者列鎖（`RetrievalInvocation`）；批次算一次，快取命中不新增模型呼叫。
 
