@@ -25,6 +25,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
     public DbSet<RunEvent> RunEvents => Set<RunEvent>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
+    /// <summary>
+    /// <c>inference.udf_UsageEntries</c>：期間 [<paramref name="from"/>, <paramref name="until"/>) 的用量紀錄，<paramref name="until"/> 為 null 表示不限。
+    /// 合併規則只寫在函式裡，<c>operations.usp_ListAdminUsers</c> 讀同一份。
+    /// </summary>
+    [DbFunction("udf_UsageEntries", "inference")]
+    public IQueryable<UsageEntry> UsageEntries(DateTimeOffset from, DateTimeOffset? until) => FromExpression(() => UsageEntries(from, until));
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 }

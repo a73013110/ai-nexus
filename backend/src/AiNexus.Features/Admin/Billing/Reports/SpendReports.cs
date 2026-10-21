@@ -1,12 +1,10 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Billing;
-using AiNexus.Data.App.Inference;
 using System.Globalization;
 using System.Text;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Billing.Reports;
 
@@ -23,144 +21,47 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
     }
 }
 
-public sealed class SpendReports(AppDbContext db, ModelPresentation presentation)
+/// <summary>
+/// 花費報表的查詢：期間報表在 <c>billing.usp_GetSpendReport</c>、單一對話在 <c>billing.usp_GetConversationSpend</c>，各一次往返。
+/// procedure 只依 Provider、ModelId 回傳原始彙總；模型顯示名稱的隱藏與合併、是否列出使用者，以及對話找不到時回哪個錯誤，都在這裡決定。
+/// </summary>
+public sealed class SpendReports(ISqlDatabase<AppDbContext> sql, ModelPresentation presentation)
 {
-    public async Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)
+    public Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)
     {
-        var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);
-        if (owner is Guid id) query = query.Where(x => x.OwnerId == id);
-
-        var requests = await query.CountAsync(ct);
-        var pending = await query.CountAsync(x => x.State == "pending", ct);
-        var totals = await TotalsAsync(query, ct);
-        var daily = (await query
-                .GroupBy(x => new { Day = x.CreatedAt.AddMinutes(p.Offset).Date, x.Currency, x.Kind })
-                .Select(g => new
-                {
-                    g.Key.Day,
-                    g.Key.Currency,
-                    g.Key.Kind,
-                    Amount = g.Sum(x => x.Amount ?? 0),
-                    Requests = g.Count(),
-                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                    Input = g.Sum(x => x.InputTokens ?? 0),
-                    Output = g.Sum(x => x.OutputTokens ?? 0),
-                })
-                .OrderBy(x => x.Day)
-                .ToListAsync(ct))
-            .Select(x => new SpendBucketDto(
-                x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                x.Currency,
-                x.Kind,
-                x.Amount,
-                x.Requests,
-                x.Unknown,
-                x.Input,
-                x.Output))
-            .ToArray();
-        var models = await ModelsAsync(query, administrator, ct);
-        var input = await query.SumAsync(x => x.InputTokens ?? 0, ct);
-        var output = await query.SumAsync(x => x.OutputTokens ?? 0, ct);
-        IReadOnlyList<SpendUserDto> users = administrator ? await UsersAsync(query, ct) : [];
-
-        // 舊版執行紀錄沒有費用紀錄，只計入呼叫次數，費用保持未知。
-        var legacy = await db.Runs
-                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
-                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct)
-            + await db.Set<ModelInvocation>()
-                .CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until
-                    && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
-        return new(p.From, p.Until, p.Offset, requests + legacy, pending, legacy, input, output, totals, daily, models, users);
+        // 只有全平台報表列出各使用者；期間與時區位移由程式決定，procedure 不用資料庫時鐘。
+        var arguments = new { OwnerId = owner, p.From, p.Until, p.Offset, IncludeUsers = administrator };
+        return sql.QueryProcedureAsync("billing.usp_GetSpendReport", arguments, async results =>
+        {
+            var summary = await results.ReadSingleAsync<ReportSummary>();
+            var totals = await results.ReadAsync<MoneyTotalDto>();
+            var daily = await results.ReadAsync<SpendBucketDto>();
+            var models = MergePresentedModels(await results.ReadAsync<ModelRow>(), administrator);
+            var users = await results.ReadAsync<SpendUserDto>();
+            return new SpendReportDto(p.From, p.Until, p.Offset, summary.Requests, summary.PendingCalls, summary.LegacyCalls,
+                summary.InputTokens, summary.OutputTokens, totals, daily, models, users);
+        }, cancellationToken: ct);
     }
 
     public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return BillingErrors.ConversationNotFound;
-        var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
-        var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
-        var count = await calls.CountAsync(ct);
-        var pending = await calls.CountAsync(x => x.State == "pending", ct);
-        return new ConversationSpendDto(count + legacy, pending, legacy, await TotalsAsync(calls, ct), await ModelsAsync(calls, false, ct));
+        var arguments = new { OwnerId = owner, ConversationId = id };
+        var spend = await sql.QueryProcedureAsync<ConversationSpendDto?>("billing.usp_GetConversationSpend", arguments, async results =>
+        {
+            // 沒有摘要列＝對話不存在、已刪除或不是本人的；procedure 這時不再輸出其他結果集。
+            if (await results.ReadAsync<ConversationSummary>() is not [var summary]) return null;
+            var totals = await results.ReadAsync<MoneyTotalDto>();
+            var models = MergePresentedModels(await results.ReadAsync<ModelRow>(), false);
+            return new ConversationSpendDto(summary.Requests, summary.PendingCalls, summary.LegacyCalls, totals, models);
+        }, cancellationToken: ct);
+        return spend is null ? BillingErrors.ConversationNotFound : spend;
     }
-
-    // 各幣別／計費類型的已知金額；待結算的呼叫不算未知費用。
-    private static async Task<IReadOnlyList<MoneyTotalDto>> TotalsAsync(IQueryable<ModelCharge> calls, CancellationToken ct) => await calls
-        .GroupBy(x => new { x.Currency, x.Kind })
-        .Select(g => new MoneyTotalDto(
-            g.Key.Currency,
-            g.Key.Kind,
-            g.Sum(x => x.Amount ?? 0),
-            g.Count(x => x.Amount != null),
-            g.Count(x => x.Amount == null && x.State != "pending")))
-        .ToListAsync(ct);
-
-    private async Task<IReadOnlyList<SpendBucketDto>> ModelsAsync(IQueryable<ModelCharge> calls, bool administrator, CancellationToken ct) =>
-        MergePresentedModels((await calls
-                .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind })
-                .Select(g => new
-                {
-                    g.Key.Provider,
-                    g.Key.ModelId,
-                    g.Key.Currency,
-                    g.Key.Kind,
-                    Amount = g.Sum(x => x.Amount ?? 0),
-                    Requests = g.Count(),
-                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                    Input = g.Sum(x => x.InputTokens ?? 0),
-                    Output = g.Sum(x => x.OutputTokens ?? 0),
-                })
-                .OrderByDescending(x => x.Requests)
-                .ToListAsync(ct))
-            .Select(x => new SpendBucketDto(
-                Label(x.Provider, x.ModelId, administrator),
-                x.Currency,
-                x.Kind,
-                x.Amount,
-                x.Requests,
-                x.Unknown,
-                x.Input,
-                x.Output)));
-
-    // 只有全平台報表列出各使用者；匯出 CSV 也用這份清單，所以不分頁。
-    private async Task<IReadOnlyList<SpendUserDto>> UsersAsync(IQueryable<ModelCharge> calls, CancellationToken ct) =>
-        await (from g in calls.GroupBy(x => new { x.OwnerId, x.Currency, x.Kind })
-                select new
-                {
-                    g.Key.OwnerId,
-                    g.Key.Currency,
-                    g.Key.Kind,
-                    Amount = g.Sum(x => x.Amount ?? 0),
-                    Requests = g.Count(),
-                    Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
-                })
-            .Join(db.Users, x => x.OwnerId, u => u.Id, (x, u) => new
-            {
-                u.Id,
-                u.DisplayName,
-                u.Account,
-                x.Currency,
-                x.Kind,
-                x.Amount,
-                x.Requests,
-                x.Unknown,
-            })
-            .OrderByDescending(x => x.Requests)
-            .Select(x => new SpendUserDto(
-                x.Id,
-                x.DisplayName,
-                x.Account,
-                x.Currency,
-                x.Kind,
-                x.Amount,
-                x.Requests,
-                x.Unknown))
-            .ToListAsync(ct);
 
     private string Label(string provider, string model, bool administrator) => presentation.DisplayName(model, administrator, provider)!;
 
     // 隱藏的模型名稱可能對應多個真實模型，它們會被合併到同一個公開標籤。
-    private static IReadOnlyList<SpendBucketDto> MergePresentedModels(IEnumerable<SpendBucketDto> rows) => rows
-        .GroupBy(x => new { x.Label, x.Currency, x.Kind })
+    private IReadOnlyList<SpendBucketDto> MergePresentedModels(IEnumerable<ModelRow> rows, bool administrator) => rows
+        .GroupBy(x => new { Label = Label(x.Provider, x.ModelId, administrator), x.Currency, x.Kind })
         .Select(g => new SpendBucketDto(
             g.Key.Label,
             g.Key.Currency,
@@ -191,4 +92,13 @@ public sealed class SpendReports(AppDbContext db, ModelPresentation presentation
         }
         return Encoding.UTF8.GetBytes(csv.ToString());
     }
+
+    // 以下 record 的欄位名稱、順序與型別與 procedure 的 SELECT 一致，只在執行時對應（整合測試涵蓋）；
+    // 合計、每日與各使用者直接對應到 MoneyTotalDto、SpendBucketDto、SpendUserDto。
+    private sealed record ReportSummary(int Requests, int PendingCalls, int LegacyCalls, long InputTokens, long OutputTokens);
+
+    private sealed record ConversationSummary(int Requests, int PendingCalls, int LegacyCalls);
+
+    private sealed record ModelRow(string Provider, string ModelId, string Currency, string Kind, decimal Amount, int Requests,
+        int UnknownCalls, long InputTokens, long OutputTokens);
 }

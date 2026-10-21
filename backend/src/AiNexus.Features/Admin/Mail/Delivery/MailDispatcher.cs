@@ -35,21 +35,6 @@ public sealed partial class MailDispatcher(
 
     private bool resumedAtStart;
 
-    // 過期仍是 sending 的列（worker 中止）一併認領；PreviousStatus 讓呼叫端補記 abandoned。條件與 ix_OutboundMessages_Pending 的篩選一致。
-    // READPAST 只能在 READ COMMITTED／REPEATABLE READ 使用，而連線池的連線可能還留著上一個請求的 SERIALIZABLE（行政稽核），所以先明確設回。
-    private const string ClaimSql = """
-        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-        WITH next AS (
-            SELECT TOP (@Take) *
-            FROM mail.OutboundMessages WITH (UPDLOCK, READPAST, ROWLOCK)
-            WHERE Status IN (N'queued', N'sending')
-              AND ((Status = N'queued' AND NextAttemptAt <= @Now) OR (Status = N'sending' AND LeaseUntil < @Now))
-            ORDER BY Priority DESC, NextAttemptAt
-        )
-        UPDATE next SET Status = N'sending', Attempts = Attempts + 1, LeaseToken = @Lease, LeaseUntil = @LeaseUntil, UpdatedAt = @Now
-        OUTPUT inserted.Id, inserted.Attempts, inserted.Priority, inserted.NextAttemptAt, deleted.Status AS PreviousStatus;
-        """;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -99,7 +84,8 @@ public sealed partial class MailDispatcher(
         IReadOnlyList<Claim> claimed;
         try
         {
-            claimed = await scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>().QueryAsync<Claim>(ClaimSql,
+            // 認領條件、隔離層級與鎖定見 procedure 檔頭；只改狀態、不寫稽核，所以不用 ExecuteProcedureAsync。PreviousStatus 讓下面補記 abandoned。
+            claimed = await scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>().QueryProcedureAsync<Claim>("mail.usp_ClaimOutboundMessages",
                 new { Take = allowed, Now = now, Lease = lease, LeaseUntil = now + LeaseDuration }, cancellationToken: stop);
         }
         catch

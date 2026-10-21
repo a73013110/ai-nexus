@@ -57,7 +57,7 @@ public sealed class ProcedureAudits
         return written;
     }
 
-    /// <summary>讀取用的 procedure：確實被呼叫過，且沒有寫任何稽核。</summary>
+    /// <summary>讀取用（或背景工作只改處理狀態）的 procedure：確實被呼叫過，且沒有寫任何稽核。</summary>
     public void AssertReadOnly(string procedure)
     {
         var made = Calls(procedure);

@@ -1,5 +1,7 @@
 namespace AiNexus.Features.Admin.Billing.Reports;
 
+// MoneyTotalDto、SpendBucketDto（每日）與 SpendUserDto 由 billing.usp_GetSpendReport 的結果集依建構子直接對應：
+// 改名、改順序或改型別要同時改 procedure 的 SELECT，否則只在執行時失敗。
 public sealed record MoneyTotalDto(string Currency, string Kind, decimal Amount, int KnownCalls, int UnknownCalls);
 
 public sealed record SpendBucketDto(string Label, string Currency, string Kind, decimal Amount, int Requests,

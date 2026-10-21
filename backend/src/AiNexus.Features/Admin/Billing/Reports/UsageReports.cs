@@ -21,45 +21,8 @@ public sealed class UsageReports(AppDbContext db, ModelPresentation presentation
     /// <summary>近 30 天的起點（含今日，以 UTC 日界切分），沒有指定期間時的預設起點。</summary>
     public DateTimeOffset Since => UtcDay.Start(clock.GetUtcNow()).AddDays(-29);
 
-    private sealed class Entry
-    {
-        public Guid OwnerId { get; init; }
-        public DateTimeOffset CreatedAt { get; init; }
-        public string Kind { get; init; } = "";
-        public string ModelId { get; init; } = "";
-        public string Status { get; init; } = "";
-        public long? InputTokens { get; init; }
-        public long? OutputTokens { get; init; }
-        public long? DurationMilliseconds { get; init; }
-    }
-
-    // 聊天執行與模型工作合併成同一種紀錄，之後的統計才能一起計算。
-    private IQueryable<Entry> Entries(DateTimeOffset? from = null, DateTimeOffset? until = null) => db.Runs.AsNoTracking()
-        .Where(x => x.CreatedAt >= (from ?? Since) && (until == null || x.CreatedAt < until))
-        .Select(x => new Entry
-        {
-            OwnerId = x.OwnerId,
-            CreatedAt = x.CreatedAt,
-            Kind = "chat",
-            ModelId = x.ModelId,
-            Status = x.Status,
-            InputTokens = x.InputTokens,
-            OutputTokens = x.OutputTokens,
-            DurationMilliseconds = x.DurationMilliseconds,
-        })
-        .Concat(db.Set<ModelInvocation>().AsNoTracking()
-            .Where(x => x.CreatedAt >= (from ?? Since) && (until == null || x.CreatedAt < until))
-            .Select(x => new Entry
-            {
-                OwnerId = x.OwnerId,
-                CreatedAt = x.CreatedAt,
-                Kind = x.Kind,
-                ModelId = x.ModelId,
-                Status = x.Status,
-                InputTokens = x.InputTokens,
-                OutputTokens = x.OutputTokens,
-                DurationMilliseconds = x.DurationMilliseconds,
-            }));
+    // 聊天執行與模型工作合併成同一種紀錄（inference.udf_UsageEntries），之後的統計才能一起計算；預設期間為近 30 天。
+    private IQueryable<UsageEntry> Entries(DateTimeOffset? from = null, DateTimeOffset? until = null) => db.UsageEntries(from ?? Since, until);
 
     public async Task<IReadOnlyList<OwnerUsageDto>> ByOwnersAsync(IReadOnlyList<Guid> ids, CancellationToken ct) =>
         await Entries().Where(x => ids.Contains(x.OwnerId))
@@ -173,7 +136,7 @@ public sealed class UsageReports(AppDbContext db, ModelPresentation presentation
     public Task<IReadOnlyList<UsageKindDto>> KindsAsync(Guid owner, CancellationToken ct) =>
         KindsAsync(Entries().Where(x => x.OwnerId == owner), ct);
 
-    private static async Task<IReadOnlyList<UsageKindDto>> KindsAsync(IQueryable<Entry> entries, CancellationToken ct) => await entries
+    private static async Task<IReadOnlyList<UsageKindDto>> KindsAsync(IQueryable<UsageEntry> entries, CancellationToken ct) => await entries
         .GroupBy(x => x.Kind)
         .OrderBy(g => g.Key)
         .Select(g => new UsageKindDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0)))

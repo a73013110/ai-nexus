@@ -19,6 +19,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
 | 資料表、EF 對應、結構變更 | `docs/architecture/database.md` |
+| procedure、function、view 的寫法 | `docs/architecture/sql-objects.md` |
 | 設定、秘密 | `docs/development/configuration.md` |
 | 授權、功能 grant、選單 | `docs/architecture/access-control.md` |
 | 資料範圍、`IDataScope`、依部門切資料 | `docs/architecture/data-scopes.md` |

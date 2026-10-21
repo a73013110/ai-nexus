@@ -61,14 +61,7 @@
 
 連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增唯讀來源＝在擁有它的模組加 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。
 
-### 新增一支 procedure
-
-1. 依[改結構](#改結構)建立 `<schema>.usp_<UseCase>`；交易見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md#交易)，稽核見 [ADR 0014](../decisions/0014-procedure-audit.md)。
-2. 讀取用 `QueryProcedureAsync`，寫入用 `ExecuteProcedureAsync`（同批次帶稽核情境）；record 欄位名稱、順序、型別與 `SELECT` 一致。
-3. 預期內的失敗：`THROW 50000, N'<error_code>', 1;`（`ProcedureError`）。
-4. 測試用 `ProcedureAudits`。
-
-範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Admin/Operations/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Admin/Billing/Prices/CreateModelPrice.cs)。
+procedure、function、view 的命名、檔頭、交易寫法與流程見 [SQL 物件](sql-objects.md)。
 
 ## 測試
 

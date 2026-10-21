@@ -17,7 +17,10 @@ public interface ISqlDatabase<TDatabase>
     /// <returns>受影響的資料列筆數。</returns>
     Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
 
-    /// <summary>呼叫只讀取的 procedure（<c>schema.usp_&lt;UseCase&gt;</c>），回傳第一個結果集。不帶稽核情境。</summary>
+    /// <summary>
+    /// 呼叫不寫稽核的 procedure（<c>schema.usp_&lt;UseCase&gt;</c>），回傳第一個結果集。不帶稽核情境。
+    /// 用於讀取，以及背景工作只改處理狀態的認領（例如郵件 outbox）；業務異動用 <c>ExecuteProcedureAsync</c>。
+    /// </summary>
     Task<IReadOnlyList<T>> QueryProcedureAsync<T>(string procedure, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>呼叫只讀取、回傳多個結果集的 procedure；<paramref name="read"/> 依序讀出每個結果集。不帶稽核情境。</summary>

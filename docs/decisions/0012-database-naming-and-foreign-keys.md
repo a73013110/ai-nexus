@@ -34,7 +34,7 @@
 - 約束名稱在 schema 內必須唯一，所以帶表名。
 - 唯一性用唯一索引（`ux_`），不用 UNIQUE constraint：唯一索引可以加篩選條件，命名也只需一套。
 - **`df_`、`ck_` 一定要命名**。SSMS 設計工具只填預設值時，SQL Server 會產生隨機名稱，每個環境都不同；改到該欄位時會被刪除重建，結構比對也較難判讀。
-- 每張表與欄位都要有說明（`MS_Description`），由 DBA 在 SSMS 維護；測試檢查漏寫。
+- 每張表與欄位都要有說明（`MS_Description`），由 DBA 在 SSMS 維護；測試檢查漏寫。procedure、function、view 的說明寫在檔頭，不加 `MS_Description`（[SQL 物件](../architecture/sql-objects.md#檔頭)）。
 
 ## 外鍵
 
