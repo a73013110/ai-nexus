@@ -3,6 +3,7 @@
   description="追蹤登入、功能操作、授權異動與資料查閱。"
   density="compact"
   layoutMode="data"
+  [tour]="tour()"
 >
   @if (session.has('audit')) {
     @if (catalogError()) {
@@ -84,7 +85,7 @@
       <button
         table-actions
         type="button"
-        class="quiet-button"
+        class="quiet-button audit-export"
         [disabled]="loading() || exporting() || !rows().length"
         (click)="export()"
       >
@@ -188,7 +189,7 @@
         />
       </div>
     </nx-data-table>
-    <nx-detail-drawer title="稽核詳情" (closed)="selectedId.set(null)">
+    <nx-detail-drawer title="稽核詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
       <nx-drawer-pager
         drawer-actions
         noun="稽核"
@@ -247,7 +248,7 @@
             </dl>
           }
           <h3 class="ui-section-heading">基本資訊</h3>
-          <dl class="ui-description-list">
+          <dl class="ui-description-list audit-basics">
             <div>
               <dt>操作者</dt>
               <dd>{{ row.entry.actor }}</dd>
@@ -291,7 +292,7 @@
           </dl>
           @if (row.entry.traceId || row.entry.operationId || row.entry.issueCode) {
             <h3 class="ui-section-heading">流程關聯</h3>
-            <dl class="ui-description-list">
+            <dl class="ui-description-list audit-flow">
               @if (row.entry.traceId) {
                 <div class="ui-description-wide">
                   <dt>TraceId</dt>

@@ -7,7 +7,7 @@
 - 使用 `audit` 功能授權，初始授予 administrators 群組（範圍「全部」）。持有 `admin` 不隱含 `audit`；可以只給稽核人員 `audit` 而不給帳號管理權。每個 request 重新驗證 grant。
 - 授權帶[資料範圍](../architecture/data-scopes.md)：`own` 只看自己是操作者或對象的紀錄，`unit`／`unit-tree` 看所屬單位（及下層）目前成員的紀錄，`all` 看全部；沒有對應使用者的紀錄（系統動作、未驗證的登入失敗）只有 `all` 看得到。列表與匯出套用同一個範圍；稽核紀錄沒有存當時的單位，所以人調單位後，紀錄跟著人到新單位。
 - 查詢由 `Audit` 模組的 `ListActivityAudit` 負責（`GET /api/v1/admin/audit`）。`GET /api/v1/admin/audit/catalog` 只提供解讀異動所需的功能、模型名稱，以及分類與動作篩選清單，不回傳角色、權限群組或帳號清單；另附功能的選單位置，功能異動依選單分組，與[存取管理](administration.md#授權工作流程)相同。
-- 前端在 `features/admin/audit`，依路由延後載入，不依賴管理頁。
+- 前端在 `features/admin/audit`，依路由延後載入，不依賴管理頁；頁面右上角與詳情抽屜可開啟操作導覽。
 
 ## 記錄什麼
 
