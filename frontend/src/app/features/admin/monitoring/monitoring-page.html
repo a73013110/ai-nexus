@@ -2,6 +2,7 @@
   [title]="session.featureName('monitoring')"
   description="此執行個體是否正常、哪裡需要處理，以及誰在線上。"
   [stickyHeader]="ready() && session.has('monitoring')"
+  [tour]="tour()"
 >
   @if (ready() && session.has('monitoring')) {
     <div page-actions class="monitor-actions">
@@ -14,7 +15,7 @@
       />
       <button
         type="button"
-        class="secondary-button"
+        class="secondary-button monitor-pause"
         (click)="store.toggle()"
         [attr.aria-pressed]="store.paused()"
       >
@@ -33,7 +34,7 @@
       </button>
       <button
         type="button"
-        class="quiet-button"
+        class="quiet-button monitor-export"
         [disabled]="exporting() || !store.snapshot()"
         (click)="export()"
       >
@@ -140,7 +141,7 @@
     </div>
   }
 </nx-feature-page>
-<nx-detail-drawer [title]="drawerTitle()" (closed)="drawerOpen.set(false)">
+<nx-detail-drawer [title]="drawerTitle()" [tour]="drawerTour()" (closed)="drawerOpen.set(false)">
   @if (selectedSession()) {
     <nx-drawer-pager
       drawer-actions
