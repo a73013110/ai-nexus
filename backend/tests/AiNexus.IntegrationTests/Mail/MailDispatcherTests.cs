@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Admin.Mail.Delivery;
+using AiNexus.Platform.Data.Sql;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
@@ -187,6 +188,62 @@ public sealed class MailDispatcherTests
     }
 
     [Fact]
+    public async Task ClaimingTakesDueMessagesAndExpiredLeasesByPriorityWithoutWritingAudit()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var audits = new ProcedureAudits();
+        await using var factory = new AppFactory(clock: clock, services: audits.Register);
+        var stuck = await EnqueueAsync(factory, new Greeting(), "stuck", "stuck@company.com");
+        clock.Advance(TimeSpan.FromSeconds(1));
+        var queued = await EnqueueAsync(factory, new Greeting(), "queued", "queued@company.com");
+        var later = await EnqueueAsync(factory, new Greeting(), "later", "later@company.com");
+        var leased = await EnqueueAsync(factory, new Greeting(), "leased", "leased@company.com");
+        clock.Advance(TimeSpan.FromSeconds(1));
+        var code = await EnqueueAsync(factory, new Code(), "123456", "code@company.com");
+        var now = clock.GetUtcNow();
+        using (var scope = factory.Services.CreateScope())
+        {
+            // stuck：寄到一半中止、租約已過期；leased：另一個 worker 寄送中、租約未到期；later：退避中。
+            var messages = scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>();
+            await messages.Where(x => x.Id == stuck).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)
+                .SetProperty(x => x.LeaseToken, Guid.NewGuid()).SetProperty(x => x.LeaseUntil, now.AddSeconds(-1)));
+            await messages.Where(x => x.Id == leased).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)
+                .SetProperty(x => x.LeaseToken, Guid.NewGuid()).SetProperty(x => x.LeaseUntil, now.AddMinutes(1)));
+            await messages.Where(x => x.Id == later).ExecuteUpdateAsync(p => p.SetProperty(x => x.NextAttemptAt, now.AddMinutes(5)));
+        }
+
+        // 只取 @Take 封：安全信優先，同優先序 NextAttemptAt 早的先；OUTPUT 不保證順序，比對前自己排。
+        var lease = Guid.NewGuid();
+        var first = await ClaimAsync(factory, 2, now, lease);
+        Assert.Equal([(code, 1, MailStates.Queued), (stuck, 2, MailStates.Sending)],
+            first.OrderByDescending(x => x.Priority).ThenBy(x => x.NextAttemptAt).Select(x => (x.Id, x.Attempts, x.PreviousStatus)));
+        var reclaimed = await MessageAsync(factory, stuck);
+        Assert.Equal((MailStates.Sending, (Guid?)lease, (DateTimeOffset?)(now + MailDispatcher.LeaseDuration), now),
+            (reclaimed.Status, reclaimed.LeaseToken, reclaimed.LeaseUntil, reclaimed.UpdatedAt));
+
+        // 已認領的、租約未到期的與退避中的都不會再被認領。
+        Assert.Equal([queued], (await ClaimAsync(factory, 10, now, Guid.NewGuid())).Select(x => x.Id));
+        Assert.Equal(1, (await MessageAsync(factory, leased)).Attempts);
+        audits.AssertReadOnly(ClaimProcedure);
+    }
+
+    [Fact]
+    public async Task ClaimingInsideASerializableTransactionRestoresTheCallersIsolationLevel()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(clock: clock);
+        var id = await EnqueueAsync(factory, new Greeting(), "x", "chen@company.com");
+        using var scope = factory.Services.CreateScope();
+        var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>();
+        // 與連線池中留著行政稽核 SERIALIZABLE 的連線相同處境：READPAST 在這個層級會被拒（錯誤 650），procedure 內設回 READ COMMITTED 才能認領。
+        await using var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var now = clock.GetUtcNow();
+        Assert.Equal(id, Assert.Single(await sql.QueryProcedureAsync<Claimed>(ClaimProcedure, new { Take = 10, Now = now, Lease = Guid.NewGuid(), LeaseUntil = now + MailDispatcher.LeaseDuration })).Id);
+        // procedure 結束時恢復呼叫前的層級（4＝SERIALIZABLE），不會留給同一條連線之後的命令。
+        Assert.Equal((short)4, await sql.QuerySingleAsync<short>("SELECT transaction_isolation_level FROM sys.dm_exec_sessions WHERE session_id = @@SPID"));
+    }
+
+    [Fact]
     public async Task PerMinuteAndPerDayLimitsHoldBackTheQueue()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
@@ -213,4 +270,16 @@ public sealed class MailDispatcherTests
         Assert.Equal(MailStates.Queued, (await MessageAsync(factory, id)).Status);
         Assert.False(factory.Services.CreateScope().ServiceProvider.GetRequiredService<MailOutbox>().Available);
     }
+
+    private const string ClaimProcedure = "mail.usp_ClaimOutboundMessages";
+
+    private static async Task<IReadOnlyList<Claimed>> ClaimAsync(AppFactory factory, int take, DateTimeOffset now, Guid lease)
+    {
+        using var scope = factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ISqlDatabase<AppDbContext>>().QueryProcedureAsync<Claimed>(ClaimProcedure,
+            new { Take = take, Now = now, Lease = lease, LeaseUntil = now + MailDispatcher.LeaseDuration });
+    }
+
+    // 與 MailDispatcher 的 Claim 相同：名稱、順序與型別對應 procedure 的 OUTPUT。
+    private sealed record Claimed(Guid Id, int Attempts, MailPriority Priority, DateTimeOffset NextAttemptAt, string PreviousStatus);
 }

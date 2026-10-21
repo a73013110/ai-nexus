@@ -27,7 +27,7 @@ Set-Location 'D:\Packages\AiNexus'
 ## SQL 帳號權限
 
 - 部署帳號（DBA 或發版身分）：結構變更需要 `db_ddladmin`（或 `db_owner`），建新庫需要 `CREATE DATABASE`；`Verify-Database.ps1` 只需要 VIEW DEFINITION。
-- runtime 登入需要所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE，不給建庫、ALTER 或 `db_owner`；網站啟動時讀 `sys.columns` 比對結構，public 角色預設即可看到有權限物件的欄位。管理與一般端點共用同一條連線。
+- runtime 登入需要所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE 與 EXECUTE（procedure），不給建庫、ALTER 或 `db_owner`；網站啟動時讀 `sys.columns` 比對結構，public 角色預設即可看到有權限物件的欄位。管理與一般端點共用同一條連線。
 - 外部來源登入只授權固定 view 的 SELECT（見 [INTEGRATIONS](../features/integrations.md)）。
 
 ## 讀取隔離（RCSI）
