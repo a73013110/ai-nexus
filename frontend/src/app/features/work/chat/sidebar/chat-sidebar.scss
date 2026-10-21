@@ -7,7 +7,7 @@
   padding: var(--control-padding-block) var(--p-space-3);
   background: var(--accent);
   color: var(--accent-text);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   font-weight: 600;
   font-size: var(--text-label);
 }
@@ -34,7 +34,7 @@
   padding: var(--control-padding-block) var(--p-space-2);
   font-size: var(--text-caption);
   color: var(--secondary);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
 }
 // The shared rail keeps 44px targets while compact, including the mobile drawer.
 :host-context(.workspace-sidebar.is-compact) .icon-button {
@@ -95,7 +95,7 @@
 .history-row {
   display: flex;
   align-items: center;
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   margin-bottom: 0.125rem;
   position: relative;
   content-visibility: auto;

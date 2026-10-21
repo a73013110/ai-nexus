@@ -31,7 +31,7 @@
   align-items: center;
   gap: var(--p-space-1);
   padding: 0.125rem 0.5rem;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--tile-inset);
   color: var(--secondary);
   font-size: var(--text-caption);
@@ -46,7 +46,7 @@
   gap: var(--p-space-1);
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--tile-line);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--secondary);
   font: var(--text-caption) var(--font-code);
@@ -72,7 +72,7 @@
 }
 .bar-skeleton {
   height: 2.5rem;
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-mark);
 }
 .body-skeleton {
   height: 22rem;

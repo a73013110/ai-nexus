@@ -52,7 +52,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       display: grid;
       width: 100%;
       padding: var(--p-space-2);
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-item);
       text-align: start;
     }
     li > button:hover {

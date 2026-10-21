@@ -16,8 +16,6 @@ const SHOWN = 6;
       display: grid;
       gap: var(--p-space-3);
       container-type: inline-size;
-      --view-switch-radius: var(--p-radius-pill);
-      --view-switch-track: var(--tile-inset);
       --donut-value-size: clamp(0.8125rem, 5.5cqi, 1.125rem);
     }
   `,

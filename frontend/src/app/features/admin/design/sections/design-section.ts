@@ -40,7 +40,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
     code {
       padding: 0 var(--p-space-1);
-      border-radius: var(--p-radius-sm);
+      border-radius: var(--radius-mark);
       background: var(--hover);
       color: var(--secondary);
       font: var(--p-font-xs) var(--font-code);
@@ -59,7 +59,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       min-width: 0;
       padding: var(--p-space-4);
       border: 1px solid var(--line);
-      border-radius: var(--p-radius-lg);
+      border-radius: var(--radius-surface);
       background: var(--surface);
     }
     .design-stage.is-stacked {

@@ -24,7 +24,7 @@ iframe {
   max-width: 26rem;
   padding: var(--p-space-5);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-surface);
   background: var(--surface);
   box-shadow: var(--shadow-floating);
 }
@@ -47,7 +47,7 @@ iframe {
   bottom: var(--p-space-3);
   padding: 4px 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--secondary);
   font-size: var(--text-caption);

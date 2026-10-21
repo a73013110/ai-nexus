@@ -8,7 +8,7 @@
   align-items: center;
   min-height: var(--button-target);
   border: 1px solid var(--line);
-  border-radius: var(--date-control-radius, var(--p-radius-md));
+  border-radius: var(--radius-field);
   background: var(--surface);
 }
 .ui-date-control:focus-within {
@@ -95,7 +95,7 @@
   padding: 0;
   color: var(--ink);
   border: 1px solid transparent;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-item);
   font-variant-numeric: tabular-nums;
 }
 .ui-calendar td button:hover {

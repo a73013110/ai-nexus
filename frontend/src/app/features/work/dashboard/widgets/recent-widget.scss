@@ -17,7 +17,7 @@ a {
   align-items: center;
   gap: var(--p-space-3);
   padding: var(--p-space-2);
-  border-radius: var(--tile-inner-radius, var(--p-radius-md));
+  border-radius: var(--tile-inner-radius);
   color: inherit;
   text-decoration: none;
   transition: background var(--motion-fast) var(--ease);

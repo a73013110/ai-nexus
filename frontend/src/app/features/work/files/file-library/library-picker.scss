@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   content-visibility: auto;
   contain-intrinsic-block-size: auto 3.5rem;
 }
@@ -43,7 +43,7 @@
   height: 2.5rem;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   background: var(--canvas);
   color: var(--secondary);
   font-size: 0.625rem;

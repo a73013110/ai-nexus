@@ -2,7 +2,7 @@
 // tall as its rows and never taller than the host, so a short list leaves no empty framed area.
 :host {
   // The frame's corner; the last row rounds its bottom corners to match (data-workspace.scss).
-  --table-radius: var(--p-radius-lg);
+  --table-radius: var(--radius-surface);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -52,7 +52,7 @@
 }
 .ui-table-columns-panel {
   padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-surface);
   font-size: var(--p-font-sm);
 }
 .ui-table-columns-panel h3 {

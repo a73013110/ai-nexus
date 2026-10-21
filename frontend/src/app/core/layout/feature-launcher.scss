@@ -21,7 +21,7 @@
   min-width: 0;
   height: var(--row);
   padding: 0 var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   color: var(--secondary);
   font-size: var(--text-label);
   white-space: nowrap;
@@ -101,7 +101,7 @@
   width: 100%;
   min-height: 1.75rem;
   padding: 0 var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -209,7 +209,7 @@ h3 .group-name {
 .workspace-icons > * {
   min-height: 52px;
   padding: var(--p-space-1);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   color: var(--secondary);
   font-size: var(--text-caption);
 }

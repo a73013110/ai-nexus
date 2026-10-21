@@ -7,7 +7,7 @@
   min-width: 0;
   padding: var(--p-space-5);
   border: 1px solid var(--tile-line, var(--line));
-  border-radius: var(--tile-radius, var(--p-radius-lg));
+  border-radius: var(--tile-radius);
   background: var(--surface);
   box-shadow: var(--tile-shadow, none);
   transition:
@@ -60,14 +60,14 @@ h2 {
   display: flex;
   margin-right: var(--p-space-1);
   padding: 2px;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   background: var(--tile-inset, var(--hover));
   button {
     min-width: 1.625rem;
     height: 1.625rem;
     padding: 0 0.25rem;
     border: 0;
-    border-radius: var(--p-radius-pill);
+    border-radius: max(0px, calc(var(--radius-action) - 2px));
     background: none;
     color: var(--secondary);
     font: inherit;
@@ -90,7 +90,7 @@ h2 {
   width: 1.875rem;
   height: 1.875rem;
   border: 0;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   background: none;
   color: var(--secondary);
   cursor: pointer;

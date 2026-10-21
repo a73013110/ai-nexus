@@ -40,7 +40,7 @@ code {
   gap: 6px;
   padding: 10px 12px;
   background: var(--canvas);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-block);
   font-size: var(--text-caption);
 }
 .mail-attempts p {
@@ -72,7 +72,7 @@ code {
   overflow: auto;
   padding: 10px 12px;
   background: var(--canvas);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-block);
 }
 .mail-stage {
   color: var(--secondary);

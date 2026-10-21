@@ -13,7 +13,7 @@ import { Icon } from '../ui/icon';
       display: block;
       min-width: 0;
       border: 1px solid var(--line);
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-block);
       overflow: clip;
     }
     header {

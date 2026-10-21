@@ -24,7 +24,7 @@ import type { BadgeTone } from './count-badge';
       align-items: center;
       gap: 0.375rem;
       padding: 0.125rem 0.5rem;
-      border-radius: var(--p-radius-sm);
+      border-radius: var(--radius-full);
       color: var(--badge-color);
       background: color-mix(in srgb, var(--badge-color) 9%, var(--surface));
       font-size: var(--p-font-xs);

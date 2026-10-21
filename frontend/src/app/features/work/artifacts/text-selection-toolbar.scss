@@ -8,7 +8,7 @@
   flex-wrap: wrap;
   padding: var(--p-space-1);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: calc(var(--radius-action) + var(--p-space-1));
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
@@ -23,7 +23,7 @@
   min-height: var(--button-target);
   padding-inline: var(--p-space-3);
   font-size: var(--text-caption);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   white-space: nowrap;
 }
 .paragraph-float > button:hover {

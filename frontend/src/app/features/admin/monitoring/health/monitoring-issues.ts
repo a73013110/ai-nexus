@@ -45,7 +45,7 @@ export interface MonitoringTarget {
       width: 100%;
       padding: var(--p-space-3) var(--p-space-2);
       border: 0;
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-item);
       background: transparent;
       color: inherit;
       text-align: left;

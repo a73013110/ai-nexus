@@ -111,7 +111,7 @@
   color: var(--secondary);
   padding: var(--p-space-1) var(--p-space-2);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-full);
 }
 .platform-form {
   display: flex;
@@ -129,7 +129,7 @@
 .platform-form fieldset {
   border: 1px solid var(--line);
   padding: var(--section-padding);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
 }
 .platform-form legend {
   font-size: var(--text-ui);
@@ -224,7 +224,7 @@
 // 人員選擇器（`directorySearch`）的搜尋結果清單，分享對話框、資源共用與組織成員共用。
 .directory-results {
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   overflow: auto;
   max-height: 15rem;
 }

@@ -28,7 +28,7 @@
   left: 0;
   width: var(--indicator-w, 0);
   height: 2px;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--accent);
   opacity: 0;
   pointer-events: none;
@@ -52,7 +52,7 @@
   min-width: var(--view-switch-button-min-width, auto);
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--view-switch-button-padding-inline, var(--p-space-3));
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   font-size: var(--view-switch-button-font-size, var(--text-label));
   color: var(--secondary);
   white-space: nowrap;
@@ -82,7 +82,7 @@
     top: 0;
     bottom: auto;
     height: var(--indicator-h, 0);
-    border-radius: var(--p-radius-md);
+    border-radius: var(--radius-action);
     background: var(--surface);
     box-shadow: var(--selected-ring);
     transform: translate(var(--indicator-x, 0), var(--indicator-y, 0));
@@ -90,6 +90,7 @@
 }
 :host(.ui-view-switch-icons) button {
   padding: var(--p-space-1);
+  border-radius: var(--radius-action);
 }
 :host(.ui-view-switch-icons) button[aria-pressed='true'] {
   color: var(--ink);
@@ -97,20 +98,21 @@
     color: var(--accent);
   }
 }
-// Hosts can round the track and chip into capsules (--view-switch-radius) and tint the track.
+// 軌道與晶片同心：晶片圓角＝軌道圓角減去 2px 內距。軌道色預設為內凹表面，浮動工具列這種自己就是
+// 軌道的容器設 --view-switch-track: transparent，避免表面裡再疊一層表面。
 :host(.ui-view-switch-segment) {
   width: fit-content;
   gap: 2px;
   margin-bottom: 0;
   padding: 2px;
-  border-radius: calc(var(--view-switch-radius, var(--p-radius-md)) + 2px);
-  background: var(--view-switch-track, var(--hover));
+  border-radius: var(--radius-action);
+  background: var(--view-switch-track, var(--tile-inset));
   &::before {
-    border-radius: var(--view-switch-radius, var(--p-radius-md));
+    border-radius: max(0px, calc(var(--radius-action) - 2px));
   }
 }
 :host(.ui-view-switch-segment) button {
-  border-radius: var(--view-switch-radius, var(--p-radius-md));
+  border-radius: max(0px, calc(var(--radius-action) - 2px));
 }
 :host(.ui-view-switch-segment.ui-view-switch-fill) {
   width: 100%;

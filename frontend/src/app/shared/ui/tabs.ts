@@ -49,7 +49,7 @@ export interface TabItem {
       left: 0;
       width: var(--indicator-w, 0);
       height: 2px;
-      border-radius: var(--p-radius-pill);
+      border-radius: var(--radius-full);
       background: var(--accent);
       opacity: 0;
       pointer-events: none;
@@ -70,7 +70,7 @@ export interface TabItem {
       flex: none;
       min-height: var(--button-target);
       padding: var(--p-space-2) var(--tab-padding-inline, var(--p-space-3));
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-item);
       color: var(--secondary);
       font-size: var(--p-font-sm);
       white-space: nowrap;
@@ -88,7 +88,7 @@ export interface TabItem {
     .tab-dirty {
       width: 0.375rem;
       height: 0.375rem;
-      border-radius: var(--p-radius-pill);
+      border-radius: var(--radius-full);
       background: var(--signal);
     }
   `,

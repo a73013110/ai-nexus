@@ -51,7 +51,7 @@
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-icon);
   background: var(--tile-inset);
   color: var(--accent);
   font-weight: 650;

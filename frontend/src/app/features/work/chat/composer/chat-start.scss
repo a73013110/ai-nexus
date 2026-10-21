@@ -21,7 +21,7 @@
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--p-space-3);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   color: var(--secondary);
   text-align: start;
   transition:
@@ -74,7 +74,7 @@
     flex: none;
     width: min(13.5rem, 70%);
     padding: var(--p-space-3);
-    border-radius: var(--p-radius-lg);
+    border-radius: var(--radius-surface);
     background: var(--surface);
     color: var(--ink);
     scroll-snap-align: start;

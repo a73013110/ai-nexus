@@ -24,7 +24,7 @@
     align-items: center;
     gap: var(--p-space-1);
     padding: 0.125rem 0.375rem;
-    border-radius: var(--p-radius-sm);
+    border-radius: var(--radius-item);
     overflow-wrap: anywhere;
   }
   a {
@@ -138,7 +138,7 @@
   display: block;
   height: 1.25rem;
   margin: var(--p-space-3) var(--p-space-4);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-mark);
 }
 .file-skeleton {
   height: 24rem;
@@ -156,7 +156,7 @@
   max-width: min(100%, 40rem);
   padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
   border: 1px solid var(--tile-line);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   background: color-mix(in srgb, var(--surface) 80%, transparent);
   box-shadow: var(--shadow-floating);
   backdrop-filter: blur(20px) saturate(1.6);

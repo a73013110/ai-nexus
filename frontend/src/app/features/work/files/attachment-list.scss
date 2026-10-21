@@ -23,7 +23,7 @@
   padding: var(--p-space-1);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   transition:
     border-color var(--motion) var(--ease),
     box-shadow var(--motion) var(--ease);
@@ -36,7 +36,7 @@
   gap: var(--p-space-3);
   padding: var(--p-space-2);
   min-height: var(--button-target);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   color: var(--ink);
   transition: background var(--motion) var(--ease);
 }
@@ -56,7 +56,7 @@
   align-self: center;
   min-width: var(--button-target);
   min-height: var(--button-target);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   color: var(--secondary);
   background: transparent;
   transition:
@@ -106,7 +106,7 @@
   height: var(--attachment-thumb);
   object-fit: cover;
   flex: none;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-mark);
   background: var(--hover);
 }
 .attachment-symbol {
@@ -114,7 +114,7 @@
   height: var(--attachment-thumb);
   display: grid;
   place-items: center;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-icon);
   color: var(--accent);
   background: var(--accent-soft);
   flex: none;

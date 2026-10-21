@@ -34,7 +34,7 @@
     position: absolute;
     inset: 0 0 auto;
     height: var(--nav-row);
-    border-radius: var(--p-radius-md);
+    border-radius: var(--radius-item);
     background: var(--surface);
     box-shadow: var(--selected-ring);
     opacity: 0;
@@ -59,7 +59,7 @@
   min-width: 0;
   height: var(--nav-row);
   padding: 0 var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
   color: var(--secondary);
   font-size: var(--text-label);
   white-space: nowrap;

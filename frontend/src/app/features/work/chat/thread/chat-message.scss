@@ -17,7 +17,8 @@
 .message.user {
   --user-copy-background: var(--user-bubble);
   --user-copy-border: 1px solid var(--user-bubble-border);
-  --user-copy-radius: var(--p-radius-lg) var(--p-radius-lg) var(--p-radius-sm) var(--p-radius-lg);
+  --user-copy-radius: var(--radius-surface) var(--radius-surface) var(--radius-mark)
+    var(--radius-surface);
   width: var(--message-user-width);
   margin-left: auto;
 }
@@ -27,7 +28,7 @@
 }
 .message.search-match {
   background: var(--accent-soft);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
 }
 .message.search-current {
   box-shadow: -3px 0 0 var(--accent);
@@ -56,7 +57,7 @@
   place-items: center;
   width: var(--icon-2xl);
   height: var(--icon-2xl);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-icon);
   background: var(--accent);
   color: var(--accent-text);
   font-size: var(--text-caption);

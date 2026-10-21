@@ -57,7 +57,7 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
       width: min(100%, 20rem);
       height: 8rem;
       border: 1px solid var(--line);
-      border-radius: var(--p-radius-lg);
+      border-radius: var(--radius-surface);
       background:
         radial-gradient(
           14rem circle at var(--spot-x, 50%) var(--spot-y, 50%),

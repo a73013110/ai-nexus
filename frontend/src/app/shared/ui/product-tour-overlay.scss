@@ -14,7 +14,7 @@
 }
 .tour-spot {
   position: fixed;
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   pointer-events: none;
   box-shadow:
     0 0 0 1.5px color-mix(in srgb, var(--surface) 70%, transparent),
@@ -115,7 +115,7 @@
 .tour-dots i {
   width: 6px;
   height: 6px;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--ink) 20%, transparent);
   transition:
     width var(--motion-morph) var(--ease-spring),
@@ -132,7 +132,7 @@
   position: absolute;
   top: var(--p-space-2);
   right: var(--p-space-2);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
 }
 @media (pointer: coarse) {
   .tour-footer button {

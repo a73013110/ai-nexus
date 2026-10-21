@@ -2,7 +2,7 @@
 // reduced motion the global switch ends the animation at once, leaving a still block.
 .skeleton {
   display: block;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-mark);
   background:
     linear-gradient(
         90deg,

@@ -57,8 +57,8 @@ import { DesignSection } from './design-section';
     <nx-design-section
       id="design-space"
       title="間距、圓角與面積"
-      api="--p-space-* · --p-radius-*"
-      description="4px 基準；桌面控制項 34px，觸控與窄螢幕 44px。"
+      api="--p-space-* · --radius-*"
+      description="4px 基準；桌面控制項 34px，觸控與窄螢幕 44px。圓角依元件類型取角色，不依所在頁面。"
     >
       <div class="design-spacing" aria-label="間距 4 到 32 像素">
         @for (space of spaces; track space) {
@@ -66,8 +66,10 @@ import { DesignSection } from './design-section';
         }
       </div>
       <div class="design-radii">
-        @for (radius of radii; track radius) {
-          <span [style.border-radius]="'var(--p-radius-' + radius + ')'">{{ radius }}</span>
+        @for (radius of radii; track radius.role) {
+          <span [style.border-radius]="'var(--radius-' + radius.role + ')'" [title]="radius.use">
+            {{ radius.role }}<small>{{ radius.label }}</small>
+          </span>
         }
       </div>
     </nx-design-section>
@@ -131,7 +133,17 @@ export class DesignFoundations {
     { token: '--text-caption', use: '輔助資訊', sample: '時間、狀態與來源', className: '' },
   ];
   readonly spaces = [4, 8, 12, 16, 24, 32];
-  readonly radii = ['sm', 'md', 'lg', 'pill'];
+  readonly radii = [
+    { role: 'action', label: '按鈕', use: '按鈕、icon 按鈕、segment、搜尋、篩選 select' },
+    { role: 'field', label: '欄位', use: '文字、textarea、表單 select、日期與時間' },
+    { role: 'item', label: '項目', use: '清單列、選單項目、導覽與分頁標籤' },
+    { role: 'block', label: '區塊', use: '內嵌的程式碼、預覽、提示、表單分組、提示框' },
+    { role: 'surface', label: '浮層', use: '浮層、對話框、toast、composer、選項卡片' },
+    { role: 'mark', label: '標記', use: 'kbd、行內 code、勾選框、骨架' },
+    { role: 'data', label: '資料', use: '圖例色塊、熱圖格、分段長條' },
+    { role: 'icon', label: '圖示', use: '圖示底板與字母頭像（尺寸的 25%）' },
+    { role: 'full', label: '徽章', use: 'badge、chip、計數、switch、meter' },
+  ];
   readonly motion = [
     { token: '--ease', duration: '--motion', label: '進場' },
     { token: '--ease-exit', duration: '--motion', label: '離場' },

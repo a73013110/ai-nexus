@@ -13,15 +13,12 @@
   margin-bottom: var(--p-space-4);
   nx-view-switch {
     margin: 0;
-    --view-switch-radius: var(--p-radius-pill);
-    --view-switch-track: var(--tile-inset);
     --view-switch-button-padding-inline: var(--p-space-3);
   }
 }
 .gallery-search {
   width: min(100%, 18rem);
   margin-left: auto;
-  --search-field-radius: var(--p-radius-pill);
   --search-field-line: var(--tile-line);
 }
 .gallery-grid {

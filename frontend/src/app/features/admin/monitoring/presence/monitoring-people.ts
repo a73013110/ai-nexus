@@ -39,7 +39,7 @@ import { monitoringFeatureNames } from '../monitoring-format';
       min-height: var(--control-height-compact);
       padding: 0 var(--p-space-3);
       border: 1px solid var(--line);
-      border-radius: var(--p-radius-pill);
+      border-radius: var(--radius-action);
       background: transparent;
       color: var(--secondary);
       font-size: var(--text-caption);

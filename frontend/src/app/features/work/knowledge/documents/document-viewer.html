@@ -75,7 +75,7 @@
             <nx-icon name="back" />
           </button>
           <nx-select
-            appearance="pill"
+            appearance="inline"
             label="文件頁碼"
             [options]="pageOptions()"
             [value]="'' + page()"
@@ -94,7 +94,7 @@
       @if (isPdf() && mode() === 'original') {
         <nx-select
           class="viewer-zoom"
-          appearance="pill"
+          appearance="inline"
           label="文件縮放"
           [options]="zoomOptions"
           [value]="zoom()"
@@ -104,7 +104,7 @@
       @if (isImage() && mode() === 'original') {
         <nx-select
           class="viewer-zoom"
-          appearance="pill"
+          appearance="inline"
           label="圖片縮放"
           [options]="imageZoomOptions"
           [value]="imageZoom()"

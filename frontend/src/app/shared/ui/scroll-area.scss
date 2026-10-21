@@ -59,7 +59,7 @@
 .scroll-area-edge nx-icon {
   --icon-size: var(--icon-md);
   background: var(--scroll-area-surface);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
 }
 .scroll-area-edge:hover {
   color: var(--ink);

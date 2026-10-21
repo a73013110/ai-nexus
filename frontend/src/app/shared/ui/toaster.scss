@@ -4,7 +4,7 @@
 // motion.scss; the surface is ::before, so the card can morph from a capsule with its shadow.
 .toaster {
   --pill: 2.5rem;
-  --toast-radius: var(--p-radius-lg);
+  --toast-radius: var(--radius-surface);
   --toast-morph: calc(var(--motion-morph) + 100ms);
   inset: auto var(--p-space-4) var(--p-space-4) auto;
   width: min(22rem, calc(100vw - 2 * var(--p-space-4)));
@@ -108,7 +108,7 @@ ol {
   align-self: center;
   min-height: 1.75rem;
   padding-inline: var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   background: var(--ink);
   color: var(--surface);
   font-weight: 600;

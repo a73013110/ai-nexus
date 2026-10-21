@@ -15,7 +15,7 @@
   gap: var(--p-space-1);
   min-width: 0;
   padding: var(--p-space-4);
-  border-radius: var(--tile-inner-radius, var(--p-radius-lg));
+  border-radius: var(--tile-inner-radius);
   background: var(--tile-inset, var(--surface-subtle));
   container-type: inline-size;
   --sparkline-height: 2rem;

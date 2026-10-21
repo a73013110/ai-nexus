@@ -4,8 +4,10 @@
 // idle-chrome.ts）時
 // 整個外框由一層 ::after 蓋住，作為指向（或點一下）喚回的位置，點到那裡不會按到看不見的按鈕。
 // 減少動態時由全域開關（styles/motion.scss）移除 transition 與進場，直接到位。
+// 外框本身就是軌道：裡面的 segment 不再畫軌道，只留選取晶片；select 用 inline（無外框）。
 :host {
   --floating-toolbar-pad: var(--p-space-1);
+  --view-switch-track: transparent;
   position: absolute;
   inset-block-start: var(--floating-toolbar-offset, var(--p-space-3));
   inset-inline: var(--p-space-3);

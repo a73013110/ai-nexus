@@ -29,7 +29,7 @@
 .heatmap-cell,
 .heatmap-scale i {
   --level: 0%;
-  border-radius: var(--heatmap-radius, 3px);
+  border-radius: var(--heatmap-radius, var(--radius-data));
   background: color-mix(in srgb, var(--heat) var(--level), var(--surface-subtle));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 5%, transparent);
   &[data-level='1'] {

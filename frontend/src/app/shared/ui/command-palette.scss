@@ -38,7 +38,7 @@
   gap: var(--p-space-3);
   text-align: left;
   padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
 }
 .command-results > button[aria-selected='true'] {
   background: var(--accent-soft);
@@ -74,7 +74,7 @@
   padding-inline: var(--p-space-1);
   background: var(--canvas);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-mark);
 }
 @include bp.below(phone) {
   .command-results nx-key-combo {

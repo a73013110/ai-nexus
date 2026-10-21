@@ -6,7 +6,7 @@
   padding: var(--section-padding);
   margin-bottom: var(--section-gap);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   background: var(--surface);
 }
 form {
@@ -36,7 +36,7 @@ form {
 }
 .ui-query-more-panel {
   padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-surface);
   overflow: auto;
 }
 .ui-query-more-panel h3 {
@@ -100,7 +100,7 @@ form {
   min-height: 1.75rem;
   padding-inline: var(--p-space-2) 0;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--surface-subtle);
   font-size: var(--text-caption);
 }
@@ -116,7 +116,7 @@ form {
   flex: none;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   color: var(--secondary);
 }
 .ui-query-chips button[aria-disabled='true'] {

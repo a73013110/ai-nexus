@@ -19,7 +19,7 @@
   height: 2.5rem;
   margin-bottom: var(--p-space-1);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
 }
 .design-swatch strong {
   font-weight: 550;
@@ -82,16 +82,21 @@ code {
 }
 .design-spacing i {
   height: 4px;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--signal);
 }
 .design-radii span {
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 2.25rem;
+  align-content: center;
+  width: 4.5rem;
+  height: 3rem;
   border: 1px solid var(--line);
   background: var(--surface-subtle);
+}
+.design-radii small {
+  font: var(--p-font-xs) var(--font-ui);
+  color: var(--muted);
 }
 // 懸停或聚焦時，圓點沿軌道移動，重播該曲線。
 .design-motion {
@@ -99,14 +104,14 @@ code {
   gap: var(--p-space-1);
   width: 9rem;
   padding: var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   text-align: left;
   font-size: var(--text-caption);
 }
 .design-motion-track {
   position: relative;
   height: 1.25rem;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   background: var(--hover);
 }
 .design-motion i {

@@ -63,7 +63,7 @@
   place-items: center;
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-icon);
   background: color-mix(in srgb, var(--tone, var(--muted)) 14%, transparent);
   color: var(--tone, var(--muted));
   font: 700 0.6875rem / 1 var(--font-code);
@@ -95,7 +95,7 @@
   i {
     width: 0.4375rem;
     height: 0.4375rem;
-    border-radius: 2px;
+    border-radius: var(--radius-data);
     background: var(--line);
   }
   [data-kind='add'] {

@@ -55,7 +55,7 @@ h2 {
   padding: var(--p-space-1);
   margin-block: calc(var(--login-space) * 0.66);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   // One chip springs to the chosen method, like the sidebar's navigation pill.
   &::before {
     content: '';
@@ -66,7 +66,7 @@ h2 {
       (100% - 2 * var(--p-space-1) - (var(--method-count) - 1) * var(--method-gap)) /
         var(--method-count)
     );
-    border-radius: var(--p-radius-sm);
+    border-radius: max(0px, calc(var(--radius-action) - var(--p-space-1)));
     background: var(--accent-soft);
     translate: calc(var(--method-index) * (100% + var(--method-gap))) 0;
     transition: translate var(--motion-morph) var(--ease-spring);
@@ -76,7 +76,7 @@ h2 {
   position: relative;
   flex: 1;
   min-height: var(--button-target);
-  border-radius: var(--p-radius-sm);
+  border-radius: max(0px, calc(var(--radius-action) - var(--p-space-1)));
   color: var(--secondary);
   font-size: var(--text-label);
   transition: color var(--motion) var(--ease);
@@ -102,7 +102,7 @@ input {
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-field);
   min-height: 46px;
   transition:
     border-color var(--motion) var(--ease),

@@ -31,7 +31,7 @@
   display: flex;
   gap: var(--p-space-3);
   padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-item);
 }
 .notification-row.is-unread {
   background: var(--surface-subtle);

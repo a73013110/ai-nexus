@@ -3,7 +3,7 @@
 :host {
   --island-surface: color-mix(in srgb, var(--surface) 88%, transparent);
   --island-height: 2.5rem;
-  --island-radius: 1.25rem;
+  --island-radius: calc(var(--island-height) / 2);
   --button-target: 2rem;
   container-type: inline-size;
   display: flex;
@@ -137,7 +137,7 @@
   flex: none;
   min-height: var(--button-target);
   padding-inline: var(--p-space-3);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   background: var(--accent);
   color: var(--accent-text);
   font-weight: 600;
@@ -182,7 +182,6 @@
 @media (pointer: coarse) {
   :host {
     --island-height: 2.75rem;
-    --island-radius: 1.375rem;
     --button-target: 2.75rem;
   }
 }

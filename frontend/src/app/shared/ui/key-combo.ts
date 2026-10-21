@@ -21,7 +21,7 @@ import { keyCaps } from '../browser/hotkeys';
       padding: 0 var(--p-space-1);
       border: 1px solid var(--line);
       border-bottom-width: 2px;
-      border-radius: var(--p-radius-sm);
+      border-radius: var(--radius-mark);
       background: var(--surface-subtle);
       color: var(--secondary);
       font-size: var(--text-caption);

@@ -30,7 +30,7 @@
     left: 0;
     width: var(--indicator-w, 0);
     height: var(--indicator-h, 0);
-    border-radius: var(--p-radius-md);
+    border-radius: var(--radius-item);
     background: var(--surface);
     box-shadow: var(--selected-ring);
     opacity: 0;
@@ -49,7 +49,7 @@
     align-items: center;
     min-height: var(--button-target);
     padding-inline: var(--p-space-2);
-    border-radius: var(--p-radius-md);
+    border-radius: var(--radius-item);
     color: var(--secondary);
     font-size: var(--text-label);
   }
@@ -70,7 +70,7 @@
   gap: var(--p-space-8);
   padding: var(--p-space-5);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   background: var(--canvas);
   color: var(--ink);
 }

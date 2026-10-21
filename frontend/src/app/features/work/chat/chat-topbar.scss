@@ -47,7 +47,7 @@
   font-size: var(--text-caption);
   color: var(--secondary);
   background: var(--hover);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-full);
   padding: 0 var(--p-space-2);
 }
 @include bp.below(wide) {

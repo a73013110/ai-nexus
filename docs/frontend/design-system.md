@@ -22,7 +22,7 @@
 - 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件（`StatTile`、`Sparkline`、`DonutChart` 等）見 `/admin/design`「資料視覺化」。
 - `meter`／`progress` 由 `controls.scss` 統一：軌道 `--line`、填色 `--meter-color`（預設 `--accent`），元件只改這個變數。
 - [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
-- 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。工具列用膠囊：segment `ViewSwitch`、`Select` 的 `pill`、`--search-field-radius`。
+- 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。
 - 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額過萬用縮寫（`figureMoney`），完整值放 title 與報讀文字，卡片不能溢出。
 
 ## 主題
@@ -42,7 +42,7 @@
 
 ## 外框與密度
 
-- 參考 [Vercel Geist](https://vercel.com/geist/introduction) 與 Linear 的緊湊介面：1px 細線＋分層陰影（`--shadow` 貼合、`--shadow-floating` 浮層），控制項圓角 6px（`--p-radius-md`）、浮層與對話框 12px（`--dialog-radius`），遮罩不模糊。
+- 參考 [Vercel Geist](https://vercel.com/geist/introduction) 與 Linear 的緊湊介面：1px 細線＋分層陰影（`--shadow` 貼合、`--shadow-floating` 浮層），圓角依元件類型取 `--radius-*`（見[形狀](shapes.md)），遮罩不模糊。
 - 主要／危險按鈕 hover 往 `--ink` 混色加深（深色主題變亮），不降透明度；次要按鈕有 `--surface` 底。
 
 ## 動效

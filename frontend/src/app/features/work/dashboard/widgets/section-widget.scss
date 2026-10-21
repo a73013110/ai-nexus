@@ -33,7 +33,7 @@ dt {
 }
 .metric-period {
   padding: 0 0.25rem;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-full);
   background: var(--hover);
   color: var(--muted);
   font-size: 0.625rem;
@@ -85,7 +85,7 @@ small {
   gap: 2px;
   height: 0.5rem;
   overflow: hidden;
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-full);
   i {
     min-width: 3px;
     transition: flex-grow var(--motion-morph) var(--ease-spring);
@@ -109,7 +109,7 @@ small {
     width: 0.5rem;
     height: 0.5rem;
     margin-right: 0.3125rem;
-    border-radius: 2px;
+    border-radius: var(--radius-data);
   }
   b {
     color: var(--ink);

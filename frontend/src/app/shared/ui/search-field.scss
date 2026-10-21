@@ -11,7 +11,7 @@
   padding: 0 var(--p-space-3);
   background: var(--surface);
   border: 1px solid var(--search-field-line, var(--line));
-  border-radius: var(--search-field-radius, var(--p-radius-md));
+  border-radius: var(--radius-action);
 }
 .search-field input[type='search'] {
   border: 0;

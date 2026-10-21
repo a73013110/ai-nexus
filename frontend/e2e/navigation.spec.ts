@@ -80,6 +80,8 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await account.click();
   const menu = page.getByRole("menu", { name: "登入者選單", exact: true });
   await expect(menu).toContainText("測試使用者");
+  // 進場會從左側 4px 滑入，量的是落定後的位置，不是動畫第一格。
+  await settleEntrance(page);
   const [rail, panel] = await Promise.all([
     page.locator(".workspace-sidebar").boundingBox(),
     menu.boundingBox(),

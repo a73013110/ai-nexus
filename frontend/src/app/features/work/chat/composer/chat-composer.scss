@@ -100,7 +100,7 @@
   place-items: center;
   background: var(--accent);
   color: var(--accent-text);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   flex: none;
   transition:
     transform var(--motion-fast) var(--ease),
@@ -159,7 +159,7 @@
 }
 .attach-button {
   color: var(--accent);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
 }
 .upload-status {
   display: flex;

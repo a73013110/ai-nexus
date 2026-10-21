@@ -11,8 +11,6 @@
 }
 nx-view-switch {
   max-width: 100%;
-  --view-switch-radius: var(--p-radius-pill);
-  --view-switch-track: var(--tile-inset, var(--hover));
   --view-switch-button-padding-inline: var(--p-space-3);
 }
 .toolbar-period {
@@ -28,7 +26,6 @@ nx-view-switch {
   min-width: 0;
   color: var(--muted);
   font-size: var(--p-font-xs);
-  --date-control-radius: var(--p-radius-pill);
   nx-date-time-picker {
     width: 10.5rem;
   }
@@ -46,7 +43,7 @@ nx-view-switch {
 }
 .toolbar-pill {
   border: 1px solid var(--tile-line, var(--line));
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   background: var(--surface);
 }
 .toolbar-button {

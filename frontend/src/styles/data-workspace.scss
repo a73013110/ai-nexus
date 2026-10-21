@@ -41,7 +41,7 @@
   min-width: 0;
   padding: var(--card-padding, var(--section-padding));
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   background: var(--card-background, var(--surface));
 }
 .ui-section-header h2,
@@ -92,7 +92,7 @@ select:where(.ui-input) {
   min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-field);
   background: var(--surface);
   color: var(--ink);
   font-size: var(--control-font-size);
@@ -220,7 +220,7 @@ select:where(.ui-input) {
   align-items: stretch;
   margin-inline-start: auto;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-action);
   background: var(--surface);
 }
 .ui-pagination-group > * + * {
@@ -233,12 +233,12 @@ select:where(.ui-input) {
   border-radius: 0;
 }
 .ui-pagination-group > :first-child {
-  border-start-start-radius: calc(var(--p-radius-md) - 1px);
-  border-end-start-radius: calc(var(--p-radius-md) - 1px);
+  border-start-start-radius: calc(var(--radius-action) - 1px);
+  border-end-start-radius: calc(var(--radius-action) - 1px);
 }
 .ui-pagination-group > :last-child {
-  border-start-end-radius: calc(var(--p-radius-md) - 1px);
-  border-end-end-radius: calc(var(--p-radius-md) - 1px);
+  border-start-end-radius: calc(var(--radius-action) - 1px);
+  border-end-end-radius: calc(var(--radius-action) - 1px);
 }
 .ui-pagination-group .icon-button:hover:not([aria-disabled='true']) {
   background: var(--hover);
@@ -265,7 +265,7 @@ select:where(.ui-input) {
   height: 1.375rem;
   padding: 0 var(--p-space-1);
   border: 0;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-field);
   background: var(--hover);
   color: var(--ink);
   font: inherit;
@@ -440,7 +440,7 @@ select:where(.ui-input) {
   color: var(--ink);
   font-size: var(--p-font-data);
   font-weight: 600;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-mark);
 }
 @media (pointer: coarse) {
   .ui-table-link,
@@ -455,7 +455,7 @@ select:where(.ui-input) {
 }
 .ui-count-label {
   padding: 0.125rem 0.5rem;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-full);
   background: var(--accent-soft);
   color: var(--accent);
   font-size: var(--p-font-xs);
@@ -497,7 +497,7 @@ select:where(.ui-input) {
   margin: var(--p-space-2) 0 0;
   padding: var(--section-padding);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   background: var(--surface-subtle);
   font-size: var(--text-caption);
   white-space: pre-wrap;
@@ -537,7 +537,7 @@ select:where(.ui-input) {
   padding: var(--p-space-3);
   background: var(--surface-subtle);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   font-size: var(--p-font-sm);
   line-height: 1.6;
   overflow-wrap: anywhere;

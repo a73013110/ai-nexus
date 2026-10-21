@@ -58,7 +58,7 @@ import { positionPopover } from '../browser/popover-position';
       white-space: nowrap;
       font-size: var(--text-caption);
       color: var(--secondary);
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-action);
     }
     .info-popover-trigger nx-icon {
       --icon-size: var(--icon-md);

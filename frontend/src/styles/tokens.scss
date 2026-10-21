@@ -164,10 +164,22 @@
   --p-space-8: 2rem;
   --p-space-10: 2.5rem;
   --p-space-12: 3rem;
+  --p-radius-xs: 0.125rem;
   --p-radius-sm: 0.25rem;
   --p-radius-md: 0.375rem;
   --p-radius-lg: 0.75rem;
   --p-radius-pill: 999px;
+  // 形狀依元件類型，不依所在頁面（docs/frontend/shapes.md）；元件只用這一層，
+  // 不直接用 --p-radius-*（scripts/tests/Styles.Tests.ps1 檢查）。
+  --radius-action: var(--p-radius-pill);
+  --radius-full: var(--p-radius-pill);
+  --radius-field: var(--p-radius-md);
+  --radius-item: var(--p-radius-md);
+  --radius-block: var(--p-radius-md);
+  --radius-surface: var(--p-radius-lg);
+  --radius-mark: var(--p-radius-sm);
+  --radius-data: var(--p-radius-xs);
+  --radius-icon: 25%;
 
   @include light-theme;
   --danger-surface: var(--p-red-700);
@@ -246,7 +258,7 @@
   --drawer-width: 36rem;
   --composer-input-min: 2rem;
   --composer-input-max: min(12rem, 25dvh);
-  --composer-radius: var(--p-radius-lg);
+  --composer-radius: var(--radius-surface);
   --message-gap: var(--p-space-4);
   --message-user-width: 85%;
   --user-bubble: var(--accent-soft);
@@ -264,7 +276,7 @@
   --command-width: 38rem;
   --scrollbar-size: 0.75rem;
   --scrollbar-inset: 0.1875rem;
-  --dialog-radius: var(--p-radius-lg);
+  --dialog-radius: var(--radius-surface);
   --dialog-inset: var(--p-space-2);
   --dialog-padding: var(--p-space-5);
   --attachment-thumb: 3rem;

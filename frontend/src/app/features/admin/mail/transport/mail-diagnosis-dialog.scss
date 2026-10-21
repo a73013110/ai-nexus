@@ -14,7 +14,7 @@ code {
   gap: 4px;
   padding: 8px 12px;
   background: var(--canvas);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-block);
   font-size: var(--text-caption);
   animation: issue-arrive var(--motion-morph) var(--ease-spring) both;
 }

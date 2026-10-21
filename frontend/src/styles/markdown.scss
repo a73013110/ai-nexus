@@ -11,7 +11,7 @@
 .markdown-diagram-slot:empty {
   min-height: 14rem;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   background: var(--surface-subtle);
 }
 .markdown > :first-child {
@@ -97,12 +97,12 @@
     monospace;
   background: var(--code);
   padding: 2px 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
 }
 .code-block {
   border: 1px solid var(--line);
   background: var(--code);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   margin: 20px 0;
   overflow: hidden;
 }
@@ -123,7 +123,7 @@
     'Microsoft JhengHei',
     sans-serif;
   padding: 5px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-action);
   min-height: 26px;
 }
 .markdown pre {

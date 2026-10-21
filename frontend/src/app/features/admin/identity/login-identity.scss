@@ -31,7 +31,7 @@ h2 {
   min-height: 4rem;
   padding: var(--p-space-3) var(--p-space-4);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--radius-surface);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
@@ -73,7 +73,7 @@ h2 {
 }
 .identity-avatar[data-kind='organization'],
 .identity-avatar[data-kind='department'] {
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-icon);
 }
 .identity-avatar[data-kind='delegate'] {
   border-style: dashed;

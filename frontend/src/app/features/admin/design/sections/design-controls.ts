@@ -79,7 +79,7 @@ import { DesignSamples } from './design-samples';
       min-height: 10rem;
       padding: 4.5rem var(--p-space-4) var(--p-space-4);
       border: 1px solid var(--line);
-      border-radius: var(--p-radius-md);
+      border-radius: var(--radius-block);
       background: var(--canvas);
       color: var(--secondary);
     }

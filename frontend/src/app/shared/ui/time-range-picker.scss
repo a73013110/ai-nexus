@@ -14,7 +14,7 @@
   min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-field);
   background: var(--surface);
   color: var(--ink);
   font-size: var(--control-font-size);
@@ -49,7 +49,7 @@
 .ui-time-range-panel {
   gap: var(--p-space-3);
   padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-surface);
   overflow: auto;
 }
 .ui-time-range-presets {
@@ -64,7 +64,7 @@
   gap: var(--p-space-2);
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--p-space-2);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-item);
   color: var(--ink);
   font-size: var(--control-font-size);
   text-align: start;

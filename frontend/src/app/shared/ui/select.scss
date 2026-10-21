@@ -11,7 +11,7 @@
   min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-field);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
@@ -41,7 +41,7 @@
   padding: var(--p-space-1) var(--select-trigger-padding-inline, var(--p-space-2));
   max-width: var(--select-trigger-max-width, 13rem);
   border: 0;
-  border-radius: var(--select-trigger-radius, var(--p-radius-sm));
+  border-radius: var(--radius-action);
   background: transparent;
   color: var(--select-trigger-color, var(--secondary));
   font-size: var(--text-caption);
@@ -56,7 +56,7 @@
   gap: var(--p-space-1);
   padding: var(--p-space-1) var(--p-space-3);
   border-color: var(--tile-line);
-  border-radius: var(--p-radius-pill);
+  border-radius: var(--radius-action);
   font-size: var(--text-caption);
 }
 .select-panel {
@@ -72,7 +72,7 @@
   min-height: var(--button-target);
   text-align: left;
   padding: var(--control-padding-block) var(--control-padding-inline);
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--radius-item);
   color: var(--ink);
 }
 .select-option.is-active,
@@ -136,7 +136,7 @@
   width: 1rem;
   height: 1rem;
   border: 1.5px solid var(--muted);
-  border-radius: 4px;
+  border-radius: var(--radius-mark);
   background: var(--surface);
   color: var(--accent-text);
 }

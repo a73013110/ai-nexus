@@ -23,7 +23,7 @@ nx-notice {
   place-items: center;
   min-height: 7rem;
   padding: var(--p-space-4);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
   background: var(--canvas);
 }
 .design-island-stage nx-island {
@@ -68,7 +68,7 @@ nx-notice {
   --empty-state-padding: var(--p-space-4);
   min-width: 14rem;
   border: 1px dashed var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
 }
 .design-empty nx-icon {
   color: var(--muted);
@@ -86,5 +86,5 @@ nx-notice {
   overflow-y: auto;
   padding-inline: var(--p-space-2);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--radius-block);
 }
