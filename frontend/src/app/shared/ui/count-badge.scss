@@ -37,12 +37,10 @@
   --count-badge-font-size: var(--text-caption);
 }
 :host(.is-overlay) {
-  // 同 Material 3：徽章大半疊在圖示右上角，只探出一點（含外圈上 4px、右 8px），整顆落在列高 34px、
-  // 格寬 36px 的控制項內。外層的捲動區與收合裁切因此不必為徽章留邊，留了邊反而會在收合時露出殘影。
-  // 錨在右緣，位數變多往圖示那側長，不會再往外凸。
   position: absolute;
-  inset-block-start: -0.125rem;
-  inset-inline-end: -0.375rem;
+  inset-block-start: var(--count-badge-top, 0);
+  inset-inline-end: var(--count-badge-end, 0);
+  transform: translate(50%, -50%);
   box-shadow: 0 0 0 2px var(--count-badge-ring, var(--surface));
   pointer-events: none;
 }
@@ -51,8 +49,4 @@
   width: var(--count-badge-dot-size);
   height: var(--count-badge-dot-size);
   padding: 0;
-}
-:host(.is-overlay.is-dot) {
-  inset-block-start: 0;
-  inset-inline-end: -0.125rem;
 }

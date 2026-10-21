@@ -15,6 +15,10 @@
   min-height: 0;
 }
 .workspace-navigation > nx-scroll-area {
+  // 釘選列是 34px 的列放 20px 圖示，第一列的徽章會探出列頂；外擴讓它不被捲動區切掉。
+  // 內容推回原位後，全部功能的黏頂標題也要以同樣距離停在原位，不黏進外擴區。
+  --scroll-area-bleed: var(--count-badge-room);
+  --launcher-sticky-top: var(--count-badge-room);
   flex: 1;
 }
 // One selected chip springs between pinned rows instead of each row painting its own background.

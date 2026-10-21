@@ -174,16 +174,19 @@ h3 .group-name {
   }
 }
 // 0fr↔1fr 的列高過渡讓內容收起／展開而不必量高度；收合完才隱藏（visibility 在過渡結束時才切換）。
-// 裁切不留邊：留邊的那一圈在收合途中會露出正被收起的格子與徽章；徽章本身就不會超出格子。
+// 內容同時淡出：收到最後幾格只剩最上面的徽章露在邊上，看起來像殘影。裁切也不留邊，
+// overflow-clip-margin 四邊都留，收到底時下緣那圈正好露出那顆徽章。
 .workspace-group-body {
   display: grid;
   grid-template-rows: 1fr;
   transition:
     grid-template-rows var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-fast) var(--ease),
     visibility var(--motion-morph);
 }
 .workspace-group.is-collapsed > .workspace-group-body {
   grid-template-rows: 0fr;
+  opacity: 0;
   visibility: hidden;
 }
 .workspace-group-content {
@@ -198,6 +201,9 @@ h3 .group-name {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px 0;
+  // 第一列上方緊貼黏頂的分群標題（不透明底）與收合裁切，徽章探出格頂的部分要留在這段內距裡；
+  // 下面幾列的徽章落在上一列格子的下內距，不必再留。
+  padding-block-start: var(--count-badge-room);
 }
 // 格子的外框；圖示、名稱、圖釘與徽章的排列在 NavigationEntry。
 .workspace-icons > * {

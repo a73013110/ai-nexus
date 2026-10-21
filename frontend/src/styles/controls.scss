@@ -81,6 +81,10 @@ kbd {
   display: inline-flex;
   flex: none;
 }
+// 工具列圖示鈕四周留白多，徽章再往外推一點，少壓住圖示。
+.icon-button > .icon-badge-anchor {
+  --count-badge-end: -0.375rem;
+}
 .danger-text {
   color: var(--error);
 }
