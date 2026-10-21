@@ -38,7 +38,7 @@ import { monitoringFeatureNames } from '../monitoring-format';
       gap: var(--p-space-2);
       min-height: var(--control-height-compact);
       padding: 0 var(--p-space-3);
-      border: 1px solid var(--line);
+      border: 1px solid var(--control-line);
       border-radius: var(--radius-action);
       background: transparent;
       color: var(--secondary);

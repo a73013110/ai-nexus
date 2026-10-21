@@ -58,7 +58,7 @@
   right: var(--login-gutter);
   bottom: calc(var(--login-gutter) - 12px);
   pointer-events: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: 50%;
   background: var(--sidebar);
 }

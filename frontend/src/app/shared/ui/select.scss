@@ -10,7 +10,7 @@
   width: 100%;
   min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-field);
   background: var(--surface);
   color: var(--ink);
@@ -51,11 +51,10 @@
 :host(.select-inline) .select-trigger:hover {
   background: var(--hover);
 }
-// Pill: a capsule on a toolbar (overview, galleries) — hairline outline, flat hover.
+// 膠囊：工具列上的 select（總覽、資源列表）；外框沿用 field 的控制項外框，只換形狀與字級。
 :host(.select-pill) .select-trigger {
   gap: var(--p-space-1);
   padding: var(--p-space-1) var(--p-space-3);
-  border-color: var(--tile-line);
   border-radius: var(--radius-action);
   font-size: var(--text-caption);
 }
@@ -135,7 +134,7 @@
   flex: none;
   width: 1rem;
   height: 1rem;
-  border: 1.5px solid var(--muted);
+  border: 1.5px solid var(--control-line);
   border-radius: var(--radius-mark);
   background: var(--surface);
   color: var(--accent-text);

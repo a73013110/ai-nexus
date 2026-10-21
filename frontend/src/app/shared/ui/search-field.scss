@@ -10,7 +10,7 @@
   min-height: var(--button-target);
   padding: 0 var(--p-space-3);
   background: var(--surface);
-  border: 1px solid var(--search-field-line, var(--line));
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-action);
 }
 .search-field input[type='search'] {

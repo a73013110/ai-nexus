@@ -43,6 +43,10 @@
   // on --surface; check both themes when changing a primitive.
   --muted: var(--p-stone-500);
   --line: var(--p-stone-300);
+  // 線條依元件類型取角色（docs/frontend/lines.md）。控制項外框是辨識輸入框、select、日期與次要按鈕的
+  // 唯一線索，WCAG 1.4.11 要它對內外底色都有 3:1；--line 對白底只有 1.3:1，所以朝 --ink 混。
+  // 淺色 46%：對 --surface 3.4、--canvas 3.3、--sidebar 3.0。改 --line 或 --ink 時兩個主題都要重算。
+  --control-line: color-mix(in srgb, var(--ink) 46%, var(--line));
   --accent: var(--p-navy-700);
   --accent-text: var(--p-white);
   --accent-soft: var(--p-blue-100);
@@ -326,6 +330,8 @@
   --secondary: var(--p-silver-200);
   --muted: var(--p-silver-300);
   --line: var(--p-night-600);
+  // 暗底上一點亮度差就拉開對比，混 32% 即過 3:1：對 --surface 3.2、--canvas 3.6。
+  --control-line: color-mix(in srgb, var(--ink) 32%, var(--line));
   --accent: var(--p-sky-200);
   --accent-text: var(--p-dark-accent);
   --accent-soft: var(--p-dark-accent-soft);

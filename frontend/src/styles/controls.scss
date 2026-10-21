@@ -47,7 +47,7 @@ kbd {
   background: color-mix(in srgb, var(--accent) 86%, var(--ink));
 }
 .secondary-button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   background: var(--surface);
 }
 .danger-button {

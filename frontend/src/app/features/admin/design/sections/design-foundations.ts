@@ -105,6 +105,7 @@ export class DesignFoundations {
         { token: '--surface-subtle', label: '低層次' },
         { token: '--hover', label: '懸停' },
         { token: '--line', label: '分隔線' },
+        { token: '--control-line', label: '控制項外框' },
       ],
     },
     {

@@ -54,7 +54,7 @@ h2 {
   gap: var(--method-gap);
   padding: var(--p-space-1);
   margin-block: calc(var(--login-space) * 0.66);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-action);
   // One chip springs to the chosen method, like the sidebar's navigation pill.
   &::before {
@@ -101,7 +101,7 @@ input {
   padding: 11px 14px;
   background: var(--surface);
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-field);
   min-height: 46px;
   transition:

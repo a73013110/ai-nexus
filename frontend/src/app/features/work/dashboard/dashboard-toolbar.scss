@@ -37,12 +37,12 @@ nx-view-switch {
   gap: var(--p-space-2);
   margin-left: auto;
 }
-// Capsules: a hairline outline, a flat hover; neither is a filled block of color.
+// 膠囊：控制項外框與平面懸停，都不是一整塊色塊。
 .toolbar-unit {
   max-width: 16rem;
 }
 .toolbar-pill {
-  border: 1px solid var(--tile-line, var(--line));
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-action);
   background: var(--surface);
 }

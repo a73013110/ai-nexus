@@ -99,6 +99,7 @@ const TOKEN_NAMES = [
   '--surface-subtle',
   '--hover',
   '--line',
+  '--control-line',
   '--ink',
   '--secondary',
   '--muted',

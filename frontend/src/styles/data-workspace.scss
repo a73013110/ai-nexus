@@ -91,7 +91,7 @@ select:where(.ui-input) {
   min-width: 0;
   min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-field);
   background: var(--surface);
   color: var(--ink);
@@ -219,12 +219,12 @@ select:where(.ui-input) {
   display: inline-flex;
   align-items: stretch;
   margin-inline-start: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius-action);
   background: var(--surface);
 }
 .ui-pagination-group > * + * {
-  border-inline-start: 1px solid var(--line);
+  border-inline-start: 1px solid var(--control-line);
 }
 .ui-pagination-group .icon-button {
   width: 2.125rem;

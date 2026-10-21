@@ -223,11 +223,13 @@ test("theme previews have readable contrast, full navigation and usable narrow l
     page.locator(".design-preview").evaluate((element) => {
       const style = getComputedStyle(element);
       const luminance = (color: string) => {
+        // color-mix() 算出的顏色回傳為 color(srgb r g b)，通道已是 0–1。
+        const scale = color.startsWith("color(") ? 1 : 255;
         const rgb = color
           .match(/[\d.]+/g)!
           .slice(0, 3)
           .map(Number)
-          .map((x) => x / 255)
+          .map((x) => x / scale)
           .map((x) =>
             x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4,
           );
@@ -253,6 +255,11 @@ test("theme previews have readable contrast, full navigation and usable narrow l
         muted: ratio(resolved("--muted"), resolved("--canvas")),
         primary: ratio(resolved("--accent-text"), resolved("--accent")),
         danger: ratio(resolved("--danger-text"), resolved("--danger-surface")),
+        // 控制項外框是非文字對比（WCAG 1.4.11），對內側 --surface 與外側 --canvas 都要 3:1。
+        "control-line": Math.min(
+          ratio(resolved("--control-line"), resolved("--surface")),
+          ratio(resolved("--control-line"), resolved("--canvas")),
+        ),
         ...Object.fromEntries(
           [...element.querySelectorAll("nx-count-badge:not(.is-dot)")].map(
             (badge, index) => {
@@ -271,7 +278,9 @@ test("theme previews have readable contrast, full navigation and usable narrow l
     await page.getByRole("button", { name: theme, exact: true }).click();
     for (const [name, value] of Object.entries(await contrast()))
       if (name !== "caption")
-        expect(value, `${theme}: ${name}`).toBeGreaterThanOrEqual(4.5);
+        expect(value, `${theme}: ${name}`).toBeGreaterThanOrEqual(
+          name === "control-line" ? 3 : 4.5,
+        );
     await page.locator(".feature-main").evaluate((el) => (el.scrollTop = 0));
     await settleEntrance(page);
   }
