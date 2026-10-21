@@ -43,6 +43,7 @@ import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { AuditApi, type AuditFilters } from './audit-api';
 import { auditLogQuery } from './audit-navigation';
+import { activityAuditTour, auditDetailTour } from './audit-tour';
 import {
   auditAction,
   auditChanges,
@@ -188,6 +189,24 @@ export class ActivityAuditPage {
   );
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
   private readonly cursors = new CursorTrail<number | undefined>(undefined);
+  private readonly logsName = computed(() =>
+    this.session.has('diagnostics.logs') ? this.session.featureName('diagnostics.logs') : null,
+  );
+  /** 沒有 `audit` 時頁面只剩標題，不給導覽。 */
+  readonly tour = computed(() =>
+    this.session.has('audit') ? activityAuditTour({ logs: this.logsName() }) : null,
+  );
+  /** 日誌連結的條件與範本相同：有授權且這筆紀錄能帶入 Trace 或查證代碼。 */
+  readonly drawerTour = computed(() => {
+    const row = this.selected();
+    if (!row) return null;
+    const { traceId, operationId, issueCode } = row.entry;
+    return auditDetailTour({
+      changes: row.changes.length > 0,
+      flow: !!(traceId || operationId || issueCode),
+      logs: row.logs ? this.logsName() : null,
+    });
+  });
 
   constructor() {
     // 每次套用條件都從最新一頁重讀；相對時間（最近 24 小時）以套用當下計算。
