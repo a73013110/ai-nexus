@@ -6,8 +6,18 @@
 
 1. 在模組根目錄新增 `<Module>Dashboard.cs`（`internal sealed class`），實作 [`IDashboardSource`](../../backend/src/AiNexus.Platform/Dashboard/IDashboardSource.cs)：`Feature` 是決定是否顯示的功能 grant。總覽對每個人都一樣，不加管理員專用的區塊；平台層級的監控與帳號狀況放在各自的管理頁。
 2. 在模組的 `AddServices` 呼叫 `services.AddDashboardSource<XxxDashboard>()`。
-3. 用 [`DashboardSection`](../../backend/src/AiNexus.Platform/Dashboard/DashboardSection.cs) 組出內容：`Count`（目前數量）、`Period`（依查詢期間）、`Size`、`Daily`（`DashboardDays.CountAsync` 依使用者時區分日）、`Share`、`Item`。範例：[`JobsDashboard`](../../backend/src/AiNexus.Features/Work/Jobs/JobsDashboard.cs)。
-4. 在 `backend/tests/AiNexus.IntegrationTests/Dashboard/GetDashboardTests.cs` 或模組自己的測試驗證數字口徑，並重產合約（`Export-Contracts.ps1`）。
+3. 數字由一支 procedure `<schema>.usp_Get<Module>Dashboard` 一次往返取回，以 [`DashboardProcedure.QueryDashboardAsync`](../../backend/src/AiNexus.Platform/Dashboard/DashboardProcedure.cs) 呼叫；schema 是擁有該模組的 schema，模組沒有自己的 schema 時用主要資料表的（Chat → `conversations`）。檔頭與排版見 [SQL 物件](sql-objects.md)。
+4. 用 [`DashboardSection`](../../backend/src/AiNexus.Platform/Dashboard/DashboardSection.cs) 組出內容：`Count`（目前數量）、`Period`（依查詢期間）、`Size`、`Daily`、`Share`、`Item`。範例：[`JobsDashboard`](../../backend/src/AiNexus.Features/Work/Jobs/JobsDashboard.cs) 與 `jobs.usp_GetJobsDashboard`。
+5. 在 `backend/tests/AiNexus.IntegrationTests/Dashboard/DashboardProcedureTests.cs` 的 `Shapes` 登記結果集形狀，在 `GetDashboardTests.cs` 或模組自己的測試驗證數字口徑，並重產合約（`Export-Contracts.ps1`）。
+
+procedure 的寫法：
+
+- 參數固定為 `@Owner`（NULL＝全平台）、`@Actor`、`@From`、`@Until`、`@OffsetMinutes`，沒用到也要宣告；來源自己的參數（例如 `TimeProvider` 的現在時間）接在後面。時間一律由程式傳入。
+- 結果集依序：計數一列 → 每日 `(Day, Value)` → 分佈 `([Key], Value)` → 最近項目；沒有的省略，其餘順序不變。COUNT 對應 `int`、位元組 `long`、平均 `double?`，欄位名稱與順序要和 C# record 一致。
+- 每日序列一律 `CROSS APPLY [dbo].[udf_DashboardDay](時間, @From, @Until, @OffsetMinutes)`：同時套用期間並依檢視者的 UTC 位移切日，所有區塊的日界才一致。
+- 軟刪除要自己寫（`Resources.IsDeleted`、`Conversations.IsDeleted`）：procedure 不經過 EF 的 `SoftDelete` filter。
+- 依 `@Owner` 篩選的查詢加 `OPTION (RECOMPILE)`，個人範圍才會用 `OwnerId` 索引，不沿用全平台的掃描計畫。
+- 只回數字與原始值；文字、色調、顯示名稱、哪些指標出現與授權都留在 C#。
 
 規則：
 
@@ -16,7 +26,7 @@
 - 未知值傳 `null`，不要傳 0；錯誤內容比照原功能遮罩（例：失敗通知只顯示查證訊息）。
 - 標題留空時用該功能在 `accesscontrol.Features` 的名稱與路由；不屬於任何頁面的區塊（通知）傳空字串路由。
 - 帶 `Danger` 且大於 0 的指標會讓區塊進入 attention 狀態；`ActiveWhen` 標出進行中的工作，主視覺據此呈現。
-- 來源共用同一個請求的 `AppDbContext`，依序執行；每個來源維持少量彙總查詢，不要載入整張表。
+- 來源共用同一個請求的連線，依序執行；每個來源一次往返，只回彙總與少量項目，不要載入整張表。
 
 `IDashboardSource` 放在 `backend/src/AiNexus.Platform/Dashboard`：它和 `IFeatureModule` 一樣是組合各模組的擴充點，各層模組都要實作，放進任何業務模組都會造成依賴循環。
 

@@ -40,7 +40,7 @@ internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageR
         Guid? owner = platform ? ownerId : actor;
         var window = new DashboardScope(actor, owner, platform, period.From, period.Until, period.Offset);
         var sections = new List<DashboardSectionDto>();
-        // 各來源共用同一個請求的 DbContext，不能並行，所以依序執行。
+        // 各來源的 procedure 共用同一個請求的 DbContext 連線，不能並行，所以依序執行；每個來源一次往返。
         foreach (var source in sources)
         {
             if (!features.TryGetValue(source.Feature, out var feature)) continue;
