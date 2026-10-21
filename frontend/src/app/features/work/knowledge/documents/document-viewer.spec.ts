@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, type DebugElement, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
@@ -6,6 +6,8 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { SharingApi } from '@features/work/sharing/sharing-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { FilesApi } from '@features/work/files/files-api';
+import { ClientIssues } from '@core/errors/client-issues';
+import { ProductTour, tourSteps } from '@shared/ui/product-tour';
 import { DocumentViewer } from './document-viewer';
 import { KnowledgeApi } from '../knowledge-api';
 
@@ -90,6 +92,8 @@ async function setup(
       { provide: JobToasts, useValue: { observeDocument: vi.fn(), control: overrides.control } },
       { provide: SharingApi, useValue: {} },
       { provide: FilesApi, useValue: {} },
+      { provide: ProductTour, useValue: { loading: signal(false), active: signal(false) } },
+      { provide: ClientIssues, useValue: {} },
     ],
   });
   const fixture = TestBed.createComponent(Host);
@@ -101,10 +105,32 @@ async function setup(
   return { fixture, root };
 }
 
+/** 導覽每個檢視器內的目標都在畫面上（返回鈕屬於獨立閱讀器頁面，不在這個宿主內）。 */
+function expectTourTargets(root: HTMLElement, fixture: { debugElement: DebugElement }) {
+  const viewer = fixture.debugElement.query((element) => element.name === 'nx-document-viewer')
+    .componentInstance as DocumentViewer;
+  expect(root.querySelector('nx-document-viewer nx-product-tour-button')).not.toBeNull();
+  const steps = tourSteps(viewer.tour()).filter((step) =>
+    step.target.startsWith('nx-document-viewer '),
+  );
+  for (const step of steps) expect(root.querySelector(step.target), step.target).not.toBeNull();
+  return steps.map((step) => step.title);
+}
+
 describe('DocumentViewer', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.unstubAllGlobals();
+  });
+
+  it('offers a tour whose steps match an HTML document', async () => {
+    const { fixture, root } = await setup();
+    expect(expectTourTargets(root, fixture)).toEqual([
+      '核對來源原文',
+      '預覽與原始碼',
+      '搜尋內文',
+      '下載原檔',
+    ]);
   });
 
   it('keeps focus in the viewer when the script notice switches to the source', async () => {
@@ -148,6 +174,7 @@ describe('DocumentViewer', () => {
         control,
       },
     );
+    expect(expectTourTargets(root, fixture)).toContain('處理進度');
     const status = root.querySelector('.viewer-status')!;
     // 失敗是緊急通知：直接展開，顯示查證代碼而非儲存的例外訊息。
     expect(status.getAttribute('data-mode')).toBe('expanded');

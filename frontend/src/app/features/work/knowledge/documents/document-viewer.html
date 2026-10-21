@@ -9,7 +9,7 @@
   </div>
   @if (document()?.hasOriginal) {
     <a
-      class="icon-button"
+      class="icon-button viewer-download"
       [href]="contentUrl() + '?download=true'"
       aria-label="下載原檔"
       title="下載原檔"
@@ -36,6 +36,9 @@
         <nx-icon [name]="maximized() ? 'minimize' : 'maximize'" />
       </button>
     }
+  }
+  <nx-product-tour-button [tour]="tour()" [compact]="true" />
+  @if (embedded()) {
     <button
       autofocus
       class="icon-button"
