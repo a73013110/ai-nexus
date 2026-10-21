@@ -6,14 +6,23 @@
   (cancel)="cancel($event)"
 >
   <form class="dialog-form" (submit)="save($event)">
-    <nx-dialog-header heading="新增價格版本" [detail]="detail()" closeLabel="關閉新增價格版本" />
+    <nx-dialog-header
+      heading="新增價格版本"
+      [detail]="detail()"
+      closeLabel="關閉新增價格版本"
+      [tour]="tour()"
+    />
     @if (opened()) {
       <div class="dialog-body">
         @if (error()) {
           <nx-notice tone="danger" [message]="error()" />
         }
         <div class="form-sections">
-          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-target'">
+          <section
+            class="form-section price-target-section"
+            role="group"
+            [attr.aria-labelledby]="id + '-target'"
+          >
             <header class="form-section-head">
               <h3 [id]="id + '-target'">計費對象</h3>
               <p class="form-note">依名稱選擇；計費以供應商與原生識別碼對應。</p>
@@ -51,7 +60,7 @@
               <p class="form-note">token 單價以每百萬 tokens 計，最多 8 位小數。</p>
             </header>
             <div class="form-section-body">
-              <div class="price-pair">
+              <div class="price-pair price-basis">
                 <label
                   >幣別<nx-select
                     label="計費幣別"
@@ -67,7 +76,7 @@
                     (valueChange)="setKind($event)"
                 /></label>
               </div>
-              <div class="price-pair">
+              <div class="price-pair price-rates">
                 @for (rate of rates; track rate.key) {
                   <label
                     >{{ rate.label
@@ -123,7 +132,7 @@
                   (valueChange)="effective.set($event)"
                 /><small>台北時區；留空即儲存時生效，可排定未來版本。</small>
               </div>
-              <label
+              <label class="price-note-field"
                 >價格依據或備註<textarea
                   nxField
                   maxlength="500"
