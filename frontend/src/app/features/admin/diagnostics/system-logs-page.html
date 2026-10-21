@@ -4,10 +4,12 @@
   density="compact"
   layoutMode="data"
   [wide]="true"
+  [tour]="tour()"
 >
   @if (session.has('diagnostics.logs')) {
     @if (degraded()) {
       <nx-notice
+        class="log-degraded"
         tone="warning"
         message="日誌系統降級：部分事件可能延遲寫入或遺失，查詢結果可能不完整。"
       >
@@ -41,7 +43,7 @@
           (valuesChange)="setLevels($event)"
         />
       </div>
-      <div class="ui-field ui-query-wide">
+      <div class="ui-field ui-query-wide log-search">
         <div class="ui-field-head">
           <label for="log-search">搜尋</label>
           <span id="log-search-kind" class="ui-field-hint log-search-kind">
@@ -118,7 +120,7 @@
         <button
           table-actions
           type="button"
-          class="quiet-button"
+          class="quiet-button log-export"
           [disabled]="loading() || exporting() || !page()"
           (click)="export()"
         >

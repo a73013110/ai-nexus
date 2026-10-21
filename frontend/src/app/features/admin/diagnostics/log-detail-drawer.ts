@@ -25,6 +25,7 @@ import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { levelTone, milliseconds } from './log-display';
 import { DiagnosticsApi, emptyLogFilter, type LogFilter } from './diagnostics-api';
+import { logDetailTour } from './diagnostics-tour';
 import { routeOf } from '@core/api/catalog';
 
 const requestFields = [
@@ -188,6 +189,16 @@ export class LogDetailDrawer {
     } catch {
       return [];
     }
+  });
+  /** 抽屜沒有選取事件時不給導覽。 */
+  readonly tour = computed(() => {
+    const entry = this.current();
+    if (!entry) return null;
+    return logDetailTour({
+      exception: !!this.detail()?.exceptionType,
+      flow: !!this.flow(),
+      audit: entry.traceId && this.session.has('audit') ? this.session.featureName('audit') : null,
+    });
   });
   readonly date = formatDate;
   readonly tone = levelTone;
