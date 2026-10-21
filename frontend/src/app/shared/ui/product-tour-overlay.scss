@@ -1,0 +1,142 @@
+:host {
+  --tour-scrim: color-mix(in srgb, var(--p-night-950) 58%, transparent);
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+:host(.tour-leaving) {
+  pointer-events: none;
+}
+.tour-spot {
+  position: fixed;
+  border-radius: var(--p-radius-lg);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--surface) 70%, transparent),
+    0 0 0 100vmax var(--tour-scrim);
+  transition:
+    left var(--motion-morph) var(--ease-spring),
+    top var(--motion-morph) var(--ease-spring),
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-enter) var(--ease),
+    scale var(--motion-enter) var(--ease);
+  // 進場從較大的範圍收束到目標。
+  @starting-style {
+    opacity: 0;
+    scale: 1.2;
+  }
+}
+// 到位後外圈擴散一次（JS 以 pseudoElement 播放），提示視線落點。
+.tour-spot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 80%, transparent);
+  opacity: 0;
+}
+:host(.tour-leaving) .tour-spot {
+  opacity: 0;
+  transition: opacity var(--motion) var(--ease-exit);
+}
+.product-tour {
+  width: min(21rem, calc(100vw - 2rem));
+  padding: 0;
+  overflow: clip;
+  border-color: var(--material-line);
+  border-radius: var(--tile-radius);
+  background: var(--material-thick);
+  backdrop-filter: var(--material-filter);
+  overflow-wrap: anywhere;
+  // 共用浮層的退場之外，位置以彈簧跟著目標移動。
+  transition:
+    left var(--motion-morph) var(--ease-spring),
+    top var(--motion-morph) var(--ease-spring),
+    opacity var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit),
+    scale var(--motion) var(--ease-exit),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
+}
+// 捲動、改變視窗大小時直接跟上目標，不播放移動的彈簧。
+:host(.tour-tracking) :is(.tour-spot, .product-tour) {
+  transition: none;
+}
+.tour-body {
+  position: relative;
+  padding: var(--p-space-5) var(--p-space-5) var(--p-space-4);
+}
+.tour-eyebrow {
+  display: flex;
+  gap: var(--p-space-2);
+  margin: 0 var(--p-space-8) 0 0;
+  color: var(--signal);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.tour-progress {
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.tour-title {
+  margin: var(--p-space-2) 0 var(--p-space-1);
+  font-size: var(--p-font-lg);
+  font-weight: 600;
+  text-wrap: balance;
+}
+.tour-description {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-sm);
+  line-height: 1.75;
+}
+.tour-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-top: var(--p-space-4);
+}
+// 頁面圓點：目前那顆拉長成膠囊。
+.tour-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-right: auto;
+}
+.tour-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--p-radius-pill);
+  background: color-mix(in srgb, var(--ink) 20%, transparent);
+  transition:
+    width var(--motion-morph) var(--ease-spring),
+    background-color var(--motion) var(--ease);
+}
+.tour-dots i.current {
+  width: 20px;
+  background: var(--ink);
+}
+.quiet-button:disabled {
+  visibility: hidden;
+}
+.tour-close {
+  position: absolute;
+  top: var(--p-space-2);
+  right: var(--p-space-2);
+  border-radius: var(--p-radius-pill);
+}
+@media (pointer: coarse) {
+  .tour-footer button {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}

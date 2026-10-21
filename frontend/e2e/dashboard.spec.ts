@@ -7,6 +7,7 @@ import {
   settleEntrance,
   dashboardFixture,
   featureOf,
+  walkTour,
 } from "./fixtures";
 
 const FEATURES = [
@@ -363,23 +364,7 @@ for (const width of [1440, 375]) {
     const launcher = page
       .locator(".feature-header")
       .getByRole("button", { name: "操作導覽", exact: true });
-    await launcher.click();
-    const tour = page.locator(".driver-popover.nx-tour");
-    const title = tour.locator(".driver-popover-title");
-    const progress = tour.locator(".driver-popover-progress-text");
-    await expect(title).toHaveText("一句話掌握現況");
-    const total = Number((await progress.innerText()).split("/")[1]);
-    const titles = [await title.innerText()];
-    for (let step = 2; step <= total; step++) {
-      await tour.getByRole("button", { name: "下一步", exact: true }).click();
-      await expect(progress).toHaveText(`${step} / ${total}`);
-      titles.push(await title.innerText());
-      await settleEntrance(page);
-      const bounds = (await tour.boundingBox())!;
-      expect(bounds.x).toBeGreaterThanOrEqual(0);
-      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
-    }
+    const { titles } = await walkTour(page, launcher);
     expect(titles).toEqual([
       "一句話掌握現況",
       ...(width === 375 ? [] : ["切換總覽範圍"]),
@@ -391,10 +376,6 @@ for (const width of [1440, 375]) {
       "排出自己的總覽",
       "需要最新數字時",
     ]);
-    await tour.getByRole("button", { name: "開始使用", exact: true }).click();
-    await expect(tour).toHaveCount(0);
-    await expect(launcher).toBeFocused();
-    await expect(page.locator(".driver-overlay")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }

@@ -5,6 +5,7 @@ import {
   expectViewportContained,
   settleEntrance,
   ApiFixture,
+  walkTour,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
@@ -360,26 +361,7 @@ for (const width of [1440, 375]) {
     const launcher = page
       .locator(".feature-header")
       .getByRole("button", { name: "操作導覽", exact: true });
-    const tour = page.locator(".driver-popover.nx-tour");
-    const title = tour.locator(".driver-popover-title");
-    const description = tour.locator(".driver-popover-description");
-    const progress = tour.locator(".driver-popover-progress-text");
-    await launcher.click();
-    await expect(title).toHaveText(/./);
-    const total = Number((await progress.innerText()).split("/")[1]);
-    const titles = [await title.innerText()];
-    let menu = "";
-    for (let step = 2; step <= total; step++) {
-      await tour.getByRole("button", { name: "下一步", exact: true }).click();
-      await expect(progress).toHaveText(`${step} / ${total}`);
-      titles.push(await title.innerText());
-      if (titles.at(-1) === "檔案操作") menu = await description.innerText();
-      await settleEntrance(page);
-      const bounds = (await tour.boundingBox())!;
-      expect(bounds.x).toBeGreaterThanOrEqual(0);
-      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
-    }
+    const { titles, descriptions, last } = await walkTour(page, launcher);
     expect(titles).toEqual([
       "你的原檔都在這裡",
       "先保存，再決定用途",
@@ -390,12 +372,10 @@ for (const width of [1440, 375]) {
       "檔案操作",
       "留意原檔容量",
     ]);
-    expect(menu.includes("加入知識庫")).toBe(knowledge);
-    await expect(description).toContainText("重播導覽");
-    await tour.getByRole("button", { name: "開始使用", exact: true }).click();
-    await expect(tour).toHaveCount(0);
-    await expect(launcher).toBeFocused();
-    await expect(page.locator(".driver-overlay")).toHaveCount(0);
+    expect(
+      descriptions[titles.indexOf("檔案操作")].includes("加入知識庫"),
+    ).toBe(knowledge);
+    expect(last).toContain("重播導覽");
     expect(errors).toEqual([]);
   });
 }

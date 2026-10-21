@@ -364,6 +364,47 @@ export async function settleEntrance(page: Page) {
   });
 }
 
+/** 操作導覽的說明框與導覽層；導覽的選擇器只寫在這裡。 */
+export function productTour(page: Page) {
+  const popover = page.locator(".product-tour");
+  return {
+    popover,
+    title: popover.locator(".tour-title"),
+    description: popover.locator(".tour-description"),
+    progress: popover.locator(".tour-progress"),
+    layer: page.locator("nx-product-tour"),
+  };
+}
+
+/**
+ * 按觸發鈕走完一次導覽，回傳每步的標題與說明（`last` 是最後一步的說明）。每步等動效結束後
+ * 檢查說明框留在視口內；按「開始使用」後導覽層移除、焦點回到觸發鈕。
+ */
+export async function walkTour(page: Page, launcher: Locator) {
+  const { popover, title, description, progress, layer } = productTour(page);
+  const viewport = page.viewportSize()!;
+  await launcher.click();
+  await expect(title).toHaveText(/./);
+  const total = Number((await progress.innerText()).split("/")[1]);
+  const titles = [await title.innerText()];
+  const descriptions = [await description.innerText()];
+  for (let step = 2; step <= total; step++) {
+    await popover.getByRole("button", { name: "下一步", exact: true }).click();
+    await expect(progress).toHaveText(`${step} / ${total}`);
+    titles.push(await title.innerText());
+    descriptions.push(await description.innerText());
+    await settleEntrance(page);
+    const bounds = (await popover.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height);
+  }
+  await popover.getByRole("button", { name: "開始使用", exact: true }).click();
+  await expect(layer).toHaveCount(0);
+  await expect(launcher).toBeFocused();
+  return { titles, descriptions, last: descriptions.at(-1)! };
+}
+
 // Browser fixtures only. These routes are never included in frontend bundles or server auth.
 export class ApiFixture {
   readonly conversations: ConversationDto[] = [];

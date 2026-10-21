@@ -28,11 +28,6 @@
             },
             "assets": [
               {
-                "glob": "driver.css",
-                "input": "node_modules/driver.js/dist",
-                "output": "vendor/driver"
-              },
-              {
                 "glob": "**/*",
                 "input": "public"
               },
@@ -57,10 +52,7 @@
                 "output": "vendor/pdfjs/wasm"
               }
             ],
-            "styles": [
-              "src/styles.scss",
-              { "input": "src/styles/driver-tour.scss", "bundleName": "driver-tour", "inject": false }
-            ]
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {

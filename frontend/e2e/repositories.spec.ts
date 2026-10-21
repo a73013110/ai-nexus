@@ -1,10 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import {
-  ApiFixture,
-  expectViewportContained,
-  settleEntrance,
-} from "./fixtures";
+import { ApiFixture, expectViewportContained, walkTour } from "./fixtures";
 
 const head = "c".repeat(40),
   middle = "b".repeat(40),
@@ -674,34 +670,7 @@ for (const width of [1440, 375]) {
     const launcher = page
       .locator(".feature-header")
       .getByRole("button", { name: "操作導覽", exact: true });
-    const tour = page.locator(".driver-popover.nx-tour");
-    const title = tour.locator(".driver-popover-title");
-    const description = tour.locator(".driver-popover-description");
-    const progress = tour.locator(".driver-popover-progress-text");
-    // Walks to the end and returns each step's title and description.
-    const walk = async () => {
-      await launcher.click();
-      await expect(title).toHaveText(/./);
-      const total = Number((await progress.innerText()).split("/")[1]);
-      const titles = [await title.innerText()];
-      const descriptions = [await description.innerText()];
-      for (let step = 2; step <= total; step++) {
-        await tour.getByRole("button", { name: "下一步", exact: true }).click();
-        await expect(progress).toHaveText(`${step} / ${total}`);
-        titles.push(await title.innerText());
-        descriptions.push(await description.innerText());
-        await settleEntrance(page);
-        const bounds = (await tour.boundingBox())!;
-        expect(bounds.x).toBeGreaterThanOrEqual(0);
-        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
-      }
-      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
-      await expect(tour).toHaveCount(0);
-      await expect(launcher).toBeFocused();
-      await expect(page.locator(".driver-overlay")).toHaveCount(0);
-      return { titles, descriptions };
-    };
+    const walk = () => walkTour(page, launcher);
     await page.goto("/work/repositories");
     await expect(page.locator(".resource-card")).toBeVisible();
     const list = await walk();

@@ -2,6 +2,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import {
   ApiFixture,
   expectViewportContained,
+  productTour,
   settleEntrance,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
@@ -19,11 +20,7 @@ for (const width of [1440, 375]) {
     page,
   }) => {
     const errors: string[] = [];
-    const styles: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    page.on("request", (request) => {
-      if (request.url().includes("/vendor/driver/")) styles.push(request.url());
-    });
     const knowledge = new KnowledgeFixture();
     const fixture = width === 1440 ? knowledge.core : new ApiFixture();
     if (width === 1440) {
@@ -38,21 +35,26 @@ for (const width of [1440, 375]) {
       .locator(".topbar")
       .getByRole("button", { name: "操作導覽", exact: true });
     await expect(launcher).toBeEnabled();
-    expect(styles).toHaveLength(0);
     await launcher.click();
-    const tour = page.locator(".driver-popover.nx-tour");
+    const { popover: tour, title, progress, layer } = productTour(page);
     await expect(tour).toBeVisible();
-    await expect(tour.locator(".driver-popover-title")).toHaveText(
-      "從這裡開始新的思路",
-    );
-    await expect(tour.locator(".driver-popover-progress-text")).toHaveText(
-      /1 \/ [56]/,
-    );
+    await expect(title).toHaveText("從這裡開始新的思路");
+    await expect(progress).toHaveText(/1 \/ [56]/);
     await expect(tour).toHaveAttribute("role", "dialog");
-    await tour.getByRole("button", { name: "下一步", exact: true }).click();
-    await expect(tour.locator(".driver-popover-title")).toHaveText(
-      "把問題交給 AI",
-    );
+    await expect(
+      tour.getByRole("button", { name: "下一步", exact: true }),
+    ).toBeFocused();
+    // 導覽期間 Tab 留在說明框內。
+    for (let press = 0; press < 3; press++) {
+      await page.keyboard.press("Tab");
+      await expect
+        .poll(() =>
+          tour.evaluate((card) => card.contains(document.activeElement)),
+        )
+        .toBe(true);
+    }
+    await page.keyboard.press("ArrowRight");
+    await expect(title).toHaveText("把問題交給 AI");
     await settleEntrance(page);
     const bounds = (await tour.boundingBox())!;
     expect(bounds.x).toBeGreaterThanOrEqual(0);
@@ -63,30 +65,19 @@ for (const width of [1440, 375]) {
     await page.keyboard.press("Control+k");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await page.keyboard.press("Escape");
-    await expect(tour).toHaveCount(0);
+    await expect(layer).toHaveCount(0);
     await expect(launcher).toBeFocused();
     await launcher.click();
-    await expect(tour.locator(".driver-popover-progress-text")).toHaveText(
-      /1 \/ [56]/,
-    );
-    const total = Number(
-      (await tour.locator(".driver-popover-progress-text").innerText()).split(
-        "/",
-      )[1],
-    );
+    await expect(progress).toHaveText(/1 \/ [56]/);
+    const total = Number((await progress.innerText()).split("/")[1]);
     for (let step = 2; step <= total; step++) {
       await tour.getByRole("button", { name: "下一步", exact: true }).click();
-      await expect(tour.locator(".driver-popover-progress-text")).toHaveText(
-        `${step} / ${total}`,
-      );
+      await expect(progress).toHaveText(`${step} / ${total}`);
     }
-    await expect(tour.locator(".driver-popover-title")).toHaveText(
-      "送出，然後一起完善",
-    );
+    await expect(title).toHaveText("送出，然後一起完善");
     await tour.getByRole("button", { name: "開始使用", exact: true }).click();
-    await expect(tour).toHaveCount(0);
+    await expect(layer).toHaveCount(0);
     await expect(launcher).toBeFocused();
-    expect(styles).toHaveLength(1);
     expect(fixture.messages).toHaveLength(0);
     expect(errors).toEqual([]);
     await expectViewportContained(page);
@@ -101,10 +92,12 @@ test("tour respects reduced motion and cleans up overlays when its route closes"
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
   await openChat(page);
   await page.locator(".topbar .tour-trigger").click();
-  const tour = page.locator(".driver-popover.nx-tour");
+  const { popover: tour, layer } = productTour(page);
   await expect(tour).toBeVisible();
-  await expect(tour).toHaveCSS("animation-name", "none");
-  await expect(tour).toHaveClass(/tour-reduced-motion/);
+  // 減少動態：說明框與聚光框直接到位，不播放進場與移動。
+  await expect(tour).toHaveCSS("animation-duration", "0s");
+  await expect(tour).toHaveCSS("transition-property", "none");
+  await expect(page.locator(".tour-spot")).toHaveCSS("opacity", "1");
   await page.evaluate(() => {
     const link = document.querySelector<HTMLAnchorElement>(
       ".workspace-sidebar .brand",
@@ -112,8 +105,26 @@ test("tour respects reduced motion and cleans up overlays when its route closes"
     link?.click();
   });
   await expect(page).toHaveURL(/\/work\/dashboard$/);
-  await expect(page.locator(".driver-popover, .driver-overlay")).toHaveCount(0);
-  await expect(page.locator("body")).not.toHaveClass(/driver-active/);
+  await expect(layer).toHaveCount(0);
+});
+
+test("clicking the scrim ends the tour without touching the page", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  await openChat(page);
+  const launcher = page.locator(".topbar .tour-trigger");
+  await launcher.click();
+  const { popover: tour, layer } = productTour(page);
+  await expect(tour).toBeVisible();
+  await settleEntrance(page);
+  // 點在遮罩上（頁面左下角），導覽結束、底下的元件不會收到點擊。
+  const viewport = page.viewportSize()!;
+  await page.mouse.click(4, viewport.height - 4);
+  await expect(layer).toHaveCount(0);
+  await expect(launcher).toBeFocused();
+  expect(fixture.messages).toHaveLength(0);
 });
 
 test("a pending tour never opens after navigation and can be started again", async ({
@@ -121,26 +132,25 @@ test("a pending tour never opens after navigation and can be started again", asy
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
+  await openChat(page);
+  // 導覽層是延遲載入的 chunk；攔住開啟導覽時的第一個 script 請求，模擬慢速網路。
   let pending: Route | undefined;
-  await page.route("**/vendor/driver/driver.css", (route) => {
+  await page.route("**/*.js", (route) => {
+    if (pending) return route.continue();
     pending = route;
   });
-  await openChat(page);
   const launcher = page.locator(".topbar .tour-trigger");
   await launcher.click();
   await expect(launcher).toBeDisabled();
   await expect.poll(() => Boolean(pending)).toBe(true);
   await page.locator(".workspace-sidebar .brand").click();
   await expect(page).toHaveURL(/\/work\/dashboard$/);
+  const loaded = page.waitForResponse(pending!.request().url());
   await pending!.continue();
-  await expect
-    .poll(() =>
-      page
-        .locator('link[href*="vendor/driver"]')
-        .evaluate((link: HTMLLinkElement) => Boolean(link.sheet)),
-    )
-    .toBe(true);
-  await expect(page.locator(".driver-overlay")).toHaveCount(0);
+  await loaded;
+  await settleEntrance(page);
+  const { popover: tour, layer } = productTour(page);
+  await expect(layer).toHaveCount(0);
   await page
     .locator(".workspace-sidebar")
     .getByRole("link", { name: "對話", exact: true })
@@ -148,7 +158,7 @@ test("a pending tour never opens after navigation and can be started again", asy
     .click();
   await expect(launcher).toBeEnabled();
   await launcher.click();
-  await expect(page.locator(".driver-popover.nx-tour")).toBeVisible();
+  await expect(tour).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".driver-overlay")).toHaveCount(0);
+  await expect(layer).toHaveCount(0);
 });
