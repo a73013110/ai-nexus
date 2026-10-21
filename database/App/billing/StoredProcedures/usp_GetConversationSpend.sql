@@ -5,7 +5,7 @@
 --              結果集依序為：摘要、合計、各模型。對話不存在、已刪除或不屬於 @OwnerId 時只回傳沒有資料列的摘要，由程式回 conversation_not_found。
 --              模型只依 Provider、ModelId 分組，顯示名稱與隱藏由程式決定；Amount 為 NULL 是未知費用，待結算（pending）不算未知。
 -- =============================================
-CREATE PROCEDURE [billing].[usp_GetConversationSpend]
+CREATE   PROCEDURE [billing].[usp_GetConversationSpend]
     @OwnerId        UNIQUEIDENTIFIER,
     @ConversationId UNIQUEIDENTIFIER
 AS

@@ -6,7 +6,7 @@
 --              Chat 模組沒有自己的 schema，放在主要資料表所在的 conversations。軟刪除的對話（IsDeleted）不算，提問也只算未刪除對話裡的。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [conversations].[usp_GetChatDashboard]
+CREATE   PROCEDURE [conversations].[usp_GetChatDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

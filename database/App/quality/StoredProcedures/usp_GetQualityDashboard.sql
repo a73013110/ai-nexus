@@ -6,7 +6,7 @@
 --              評分依 UpdatedAt 落在期間內計算（改評分會移到新的日期）；進行中的評測不受期間限制。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [quality].[usp_GetQualityDashboard]
+CREATE   PROCEDURE [quality].[usp_GetQualityDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

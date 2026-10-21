@@ -6,7 +6,7 @@
 --              這個區塊沒有個人項目，@Actor 不使用。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [files].[usp_GetFilesDashboard]
+CREATE   PROCEDURE [files].[usp_GetFilesDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

@@ -6,7 +6,7 @@
 --              期間與 @Offset 由程式傳入（SpendPeriod），不用資料庫時鐘；模型只依 Provider、ModelId 分組，顯示名稱與隱藏由程式決定。
 --              Amount 為 NULL 是未知費用，但待結算（pending）的呼叫不算未知；舊版執行紀錄沒有費用紀錄，只計入呼叫次數。
 -- =============================================
-CREATE PROCEDURE [billing].[usp_GetSpendReport]
+CREATE   PROCEDURE [billing].[usp_GetSpendReport]
     @OwnerId      UNIQUEIDENTIFIER = NULL,
     @From         DATETIMEOFFSET (7),
     @Until        DATETIMEOFFSET (7),

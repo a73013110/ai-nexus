@@ -5,7 +5,7 @@
 --              「啟用且未刪除」與 Identity 的 ActiveUsers（IActiveUsers）相同；授權判斷留在程式（AccessService，ADR 0011），兩邊要一起改。
 --              供 SQL 報表（儲存上限、管理列表）使用；呼叫端以 UserId 過濾，條件會展開進查詢計畫。
 -- =============================================
-CREATE FUNCTION [accesscontrol].[udf_UserGroups] ()
+CREATE   FUNCTION [accesscontrol].[udf_UserGroups] ()
 RETURNS TABLE
 AS
 RETURN

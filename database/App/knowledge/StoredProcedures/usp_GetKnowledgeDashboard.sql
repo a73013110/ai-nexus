@@ -6,7 +6,7 @@
 --              知識庫文件＝未刪除（Documents.IsDeleted）、屬於某個知識庫，且 Resources 未軟刪除；私人讀取與專案文件沒有 CollectionId，不算。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [knowledge].[usp_GetKnowledgeDashboard]
+CREATE   PROCEDURE [knowledge].[usp_GetKnowledgeDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

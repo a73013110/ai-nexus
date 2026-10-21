@@ -5,7 +5,7 @@
 --              結果集依序為：計數、每日收到通知數（含已讀）、@Actor 的未讀通知（最近 6 筆）；錯誤通知的遮罩由程式處理。
 --              通知是個人資料，全平台範圍也只看 @Actor 自己的，所以不使用 @Owner。
 -- =============================================
-CREATE PROCEDURE [notifications].[usp_GetNotificationsDashboard]
+CREATE   PROCEDURE [notifications].[usp_GetNotificationsDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

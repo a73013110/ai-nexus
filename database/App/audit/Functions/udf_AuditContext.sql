@@ -6,7 +6,7 @@
 --              inline 函式會展開進查詢計畫，CROSS APPLY 到多列也沒有逐列呼叫的成本。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
 -- =============================================
-CREATE FUNCTION [audit].[udf_AuditContext] ()
+CREATE   FUNCTION [audit].[udf_AuditContext] ()
 RETURNS TABLE
 AS
 RETURN
@@ -15,6 +15,11 @@ RETURN
            CAST(SESSION_CONTEXT(N'audit.trace_id') AS NVARCHAR (32)) AS TraceId,
            CAST(SESSION_CONTEXT(N'audit.operation_id') AS UNIQUEIDENTIFIER) AS OperationId,
            CAST(SESSION_CONTEXT(N'audit.at') AS DATETIMEOFFSET (7)) AS At;
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'目前批次的稽核情境（有效身分、實際操作者、追蹤識別、時間），由程式以 session context 帶入。', @level0type = N'SCHEMA', @level0name = N'audit', @level1type = N'FUNCTION', @level1name = N'udf_AuditContext';
+
 
 GO
 

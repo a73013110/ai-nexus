@@ -5,7 +5,7 @@
 --              @DefaultLimitBytes 由程式傳入（Files:DefaultOwnerLimitBytes）；欄位順序與 AttachmentStorageDto 一致（OwnerId 除外）。
 --              呼叫端以 OwnerId 過濾，APPLY 依每位使用者以索引查詢，不彙總整張附件表。
 -- =============================================
-CREATE FUNCTION [files].[udf_AttachmentStorage] (@DefaultLimitBytes BIGINT)
+CREATE   FUNCTION [files].[udf_AttachmentStorage] (@DefaultLimitBytes BIGINT)
 RETURNS TABLE
 AS
 RETURN

@@ -6,7 +6,7 @@
 --              review 的狀態取自它的背景任務；任務已不存在時視為 completed（與程式原本的預設相同）。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [repositories].[usp_GetRepositoriesDashboard]
+CREATE   PROCEDURE [repositories].[usp_GetRepositoriesDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

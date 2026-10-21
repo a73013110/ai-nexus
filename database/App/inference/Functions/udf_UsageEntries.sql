@@ -5,7 +5,7 @@
 --              期間為 [@From, @Until)，@Until 為 NULL 表示不限；時間由程式傳入（TimeProvider），不用資料庫時鐘。
 --              EF 以 AppDbContext.UsageEntries 對應（UsageReports），operations.usp_ListAdminUsers 也讀它。
 -- =============================================
-CREATE FUNCTION [inference].[udf_UsageEntries] (@From DATETIMEOFFSET (7), @Until DATETIMEOFFSET (7))
+CREATE   FUNCTION [inference].[udf_UsageEntries] (@From DATETIMEOFFSET (7), @Until DATETIMEOFFSET (7))
 RETURNS TABLE
 AS
 RETURN

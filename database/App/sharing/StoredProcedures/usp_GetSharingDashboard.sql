@@ -6,7 +6,7 @@
 --              @Now 與 @ExpiringBefore（即將到期的界線）由程式的 TimeProvider 算出，不用資料庫時鐘；Received 只在指定 @Owner 時有意義（NULL 時為 0）。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [sharing].[usp_GetSharingDashboard]
+CREATE   PROCEDURE [sharing].[usp_GetSharingDashboard]
     @Owner          UNIQUEIDENTIFIER = NULL,
     @Actor          UNIQUEIDENTIFIER,
     @From           DATETIMEOFFSET (7),

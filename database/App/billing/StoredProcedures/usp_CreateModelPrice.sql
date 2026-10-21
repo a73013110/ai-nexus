@@ -6,7 +6,7 @@
 --              失敗稽核由程式在回復後寫入，procedure 內寫的會跟著交易回復（ADR 0014）。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
 -- =============================================
-CREATE PROCEDURE [billing].[usp_CreateModelPrice]
+CREATE   PROCEDURE [billing].[usp_CreateModelPrice]
     @Id                    UNIQUEIDENTIFIER,
     @Provider              NVARCHAR (32),
     @ModelId               NVARCHAR (160),
@@ -58,6 +58,11 @@ BEGIN
         THROW;
     END CATCH
 END;
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'新增一個價格版本並寫入成功稽核；同一供應商、模型與生效時間已存在時以 price_exists 失敗。', @level0type = N'SCHEMA', @level0name = N'billing', @level1type = N'PROCEDURE', @level1name = N'usp_CreateModelPrice';
+
 
 GO
 

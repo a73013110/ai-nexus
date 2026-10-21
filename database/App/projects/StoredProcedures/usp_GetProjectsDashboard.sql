@@ -6,7 +6,7 @@
 --              只算未軟刪除的 Resources；Shared 只在指定 @Owner 時有意義（NULL 時為 0，程式不顯示）。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [projects].[usp_GetProjectsDashboard]
+CREATE   PROCEDURE [projects].[usp_GetProjectsDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

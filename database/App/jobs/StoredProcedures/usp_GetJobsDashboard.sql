@@ -5,7 +5,7 @@
 --              結果集依序為：計數、每日建立數、期間內各種類數量、@Actor 的 queued／running／failed 任務（最近 6 筆）。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [jobs].[usp_GetJobsDashboard]
+CREATE   PROCEDURE [jobs].[usp_GetJobsDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

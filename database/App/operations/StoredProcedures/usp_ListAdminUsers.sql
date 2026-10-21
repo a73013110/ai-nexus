@@ -7,7 +7,7 @@
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
 -- Modify:      2026-10-21 Yikai 改讀共用函式 udf_UsageEntries、udf_AttachmentStorage
 -- =============================================
-CREATE PROCEDURE [operations].[usp_ListAdminUsers]
+CREATE   PROCEDURE [operations].[usp_ListAdminUsers]
     @Search                      NVARCHAR (120) = NULL,
     @Offset                      INT,
     @Since                       DATETIMEOFFSET (7),
@@ -83,6 +83,11 @@ BEGIN
     JOIN @page AS p ON p.Id = ur.UserId
     ORDER BY ur.UserId, ur.RoleId;
 END;
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'管理頁使用者列表：總筆數、本頁使用者（含用量、對話數、儲存空間）與其角色。', @level0type = N'SCHEMA', @level0name = N'operations', @level1type = N'PROCEDURE', @level1name = N'usp_ListAdminUsers';
+
 
 GO
 

@@ -6,7 +6,7 @@
 --              成果數只算未軟刪除的 Resources；版本數依作者（協作者的編輯算在協作者名下），不看成果是否已刪除。
 --              @Owner 為 NULL＝全平台；依 @Owner 篩選的查詢加 OPTION (RECOMPILE)，個人範圍才會用 OwnerId 索引而不沿用全平台的計畫。
 -- =============================================
-CREATE PROCEDURE [artifacts].[usp_GetArtifactsDashboard]
+CREATE   PROCEDURE [artifacts].[usp_GetArtifactsDashboard]
     @Owner         UNIQUEIDENTIFIER = NULL,
     @Actor         UNIQUEIDENTIFIER,
     @From          DATETIMEOFFSET (7),

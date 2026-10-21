@@ -6,7 +6,7 @@
 --              @Now、@LeaseUntil 由程式傳入（TimeProvider），不用資料庫時鐘。OUTPUT 不保證順序，程式自行依 Priority、NextAttemptAt 排序。
 --              背景工作的狀態轉移，不寫稽核：程式以 QueryProcedureAsync 呼叫，不帶稽核情境。
 -- =============================================
-CREATE PROCEDURE [mail].[usp_ClaimOutboundMessages]
+CREATE   PROCEDURE [mail].[usp_ClaimOutboundMessages]
     @Take       INT,
     @Now        DATETIMEOFFSET (7),
     @Lease      UNIQUEIDENTIFIER,
