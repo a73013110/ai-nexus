@@ -37,7 +37,7 @@
   </nx-stat-grid>
 }
 @if (stats(); as stats) {
-  <p class="form-note">
+  <p class="form-note usage-coverage">
     {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；{{
       format(stats.requests - stats.requestsWithUsage)
     }}
@@ -117,7 +117,7 @@
 </nx-data-table>
 <div class="ops-pair">
   <nx-data-table
-    class="ops-table ops-figures"
+    class="ops-table ops-figures usage-kinds"
     label="使用來源"
     [busy]="read.refreshing()"
     [stacked]="true"
@@ -178,7 +178,12 @@
       (retry)="read.reload()"
     />
   </nx-data-table>
-  <nx-data-table class="ops-table" label="服務狀態" [busy]="read.refreshing()" [stacked]="true">
+  <nx-data-table
+    class="ops-table usage-services"
+    label="服務狀態"
+    [busy]="read.refreshing()"
+    [stacked]="true"
+  >
     <div table-toolbar class="ui-table-toolbar">
       <h2>服務狀態</h2>
     </div>
