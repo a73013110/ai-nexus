@@ -13,12 +13,12 @@ public sealed class IntegrationsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddSqlDatabase<GdwebDatabase>();
+        services.AddSqlDatabase<GdDatabase>();
         services.AddSqlDatabase<MeihoDatabase>();
         services.AddSettings<IntegrationsOptions, IntegrationsOptionsValidator>(IntegrationsOptions.Section);
         services.AddScoped<SourceGateway>();
         services.AddMonitoringSource<IntegrationsMonitoring>();
-        services.AddScoped<IControlledSourceAdapter, GdwebSource>();
+        services.AddScoped<IControlledSourceAdapter, GdSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
         services.AddFeaturePolicy(FeatureCatalog.Integrations);
     }

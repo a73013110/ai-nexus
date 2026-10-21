@@ -16,7 +16,7 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
     IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
 {
     private static readonly SourceEntry[] Catalog = [
-        new("gdweb", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdwebDatabase.Name),
+        new("gd", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdDatabase.Name),
         new("meiho", "校務系統", "先提供核准的規範與單位資料；學生資料須另建逐筆授權 adapter。", ["reference", "organization"], MeihoDatabase.Name)
     ];
 

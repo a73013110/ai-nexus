@@ -17,7 +17,7 @@ test("controlled source search opens authorized status and history, then hands a
   });
   await core.attach(page);
   const detail: SourceDetailDto = {
-    sourceId: "gdweb",
+    sourceId: "gd",
     record: {
       id: "DOC-001",
       kind: "document",
@@ -49,7 +49,7 @@ test("controlled source search opens authorized status and history, then hands a
     if (path.endsWith("/integrations"))
       return json([
         {
-          id: "gdweb",
+          id: "gd",
           name: "公文系統",
           description: "授權公文與簽核歷程",
           status: "configured",
@@ -139,7 +139,7 @@ test("unconfigured sources disclose setup status and do not offer queries", asyn
       contentType: "application/json",
       body: JSON.stringify([
         {
-          id: "gdweb",
+          id: "gd",
           name: "公文系統",
           description: "唯讀文件",
           status: "acl-unconfirmed",

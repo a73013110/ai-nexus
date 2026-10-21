@@ -45,7 +45,7 @@ SQL 登入（需要 VIEW DEFINITION）；省略時執行中詢問帳密。
 這次額外排除的資料表，格式同排除清單，與清單合併。要長期排除的表寫進清單，才會經過 code review。
 
 .PARAMETER SkipExtractVerification
-不驗證匯出的模型（VerifyExtraction=False）。來源有跨資料庫參照（例如 view 讀取 [Gdweb].dbo.x）時，Extract 解析不到
+不驗證匯出的模型（VerifyExtraction=False）。來源有跨資料庫參照（例如 view 讀取 [Gd].dbo.x）時，Extract 解析不到
 另一個資料庫而失敗，只能關閉驗證；改由 App.sqlproj 的 ArtifactReference（對方庫的 dacpac）在 build 時驗證。
 
 .PARAMETER SqlPackagePath

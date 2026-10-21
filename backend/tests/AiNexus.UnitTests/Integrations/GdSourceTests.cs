@@ -3,12 +3,12 @@ using AiNexus.Platform.Data.Sql;
 
 namespace AiNexus.UnitTests.Integrations;
 
-public sealed class GdwebSourceTests
+public sealed class GdSourceTests
 {
     [Fact]
     public async Task SqlAdapterKeepsSearchValuesInParametersAndRechecksGrantAfterHistory()
     {
-        var probe = new QueryProbe(); var adapter = new GdwebSource(probe);
+        var probe = new QueryProbe(); var adapter = new GdSource(probe);
         await adapter.SearchAsync(new("sid-123", "DOMAIN\\actor"), new("' OR 1=1 --%_"), 30, 10, CancellationToken.None);
         Assert.DoesNotContain("OR 1=1", probe.Sql); Assert.Contains("ActorSid = @ActorSid", probe.Sql); Assert.Equal("%' OR 1=1 --~%~_%", probe.Args!.GetType().GetProperty("Pattern")!.GetValue(probe.Args));
         Assert.Equal(30, probe.Args.GetType().GetProperty("Take")!.GetValue(probe.Args));
@@ -16,7 +16,7 @@ public sealed class GdwebSourceTests
     }
 }
 
-public sealed class QueryProbe : ISqlDatabase<GdwebDatabase>
+public sealed class QueryProbe : ISqlDatabase<GdDatabase>
 {
     public string Sql = ""; public object? Args; public bool RevokeOnRecheck; public int SingleReads;
     public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)

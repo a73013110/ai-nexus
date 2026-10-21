@@ -87,10 +87,10 @@ public sealed class SettingsTests
     [Fact]
     public void EveryDatabaseEntryIsDeclaredByAModuleAndSourcesStayReadOnly()
     {
-        using var services = Settings(new() { ["Databases:LegacyGdweb:Server"] = "sql", ["Databases:Gdweb:ReadOnly"] = "false" });
+        using var services = Settings(new() { ["Databases:LegacyGd:Server"] = "sql", ["Databases:Gd:ReadOnly"] = "false" });
         var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        Assert.Contains("Databases:LegacyGdweb is not a database of this application. Known: App, Gdweb, Meiho.", error.Message, StringComparison.Ordinal);
-        Assert.Contains("Databases:Gdweb:ReadOnly must be true", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:LegacyGd is not a database of this application. Known: App, Gd, Meiho.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:Gd:ReadOnly must be true", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

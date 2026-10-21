@@ -24,7 +24,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
-| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
+| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gd`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditOptions.cs) | — |
 | `Identity.Bootstrap` | [`AdminBootstrapOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdminBootstrapOptions.cs) | — |

@@ -72,7 +72,7 @@ describe('integrations tour targets', () => {
     const generation = signal(1);
     const sources: SourceDto[] = [
       {
-        id: 'gdweb',
+        id: 'gd',
         name: '公文系統',
         description: '公文',
         status: 'ready',
@@ -91,7 +91,7 @@ describe('integrations tour targets', () => {
       },
     ];
     const detail: SourceDetailDto = {
-      sourceId: 'gdweb',
+      sourceId: 'gd',
       record: {
         id: 'r1',
         kind: 'document',
@@ -110,7 +110,7 @@ describe('integrations tour targets', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: convertToParamMap({ source: 'gdweb', record: 'r1' }) },
+            snapshot: { queryParamMap: convertToParamMap({ source: 'gd', record: 'r1' }) },
           },
         },
         {

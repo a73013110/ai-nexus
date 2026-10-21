@@ -8,11 +8,11 @@ public sealed class IntegrationsOptions
 {
     public const string Section = "Integrations";
 
-    [ValidateObjectMembers] public SourceOptions Gdweb { get; set; } = new();
+    [ValidateObjectMembers] public SourceOptions Gd { get; set; } = new();
     [ValidateObjectMembers] public SourceOptions Meiho { get; set; } = new();
     public SourceOptions For(string id) => id switch
     {
-        "gdweb" => Gdweb,
+        "gd" => Gd,
         "meiho" => Meiho,
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source."),
     };

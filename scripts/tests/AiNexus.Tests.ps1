@@ -87,7 +87,7 @@ Describe 'Save-RepoJson' {
 Describe 'Get-RepoSecretValues' {
     BeforeAll {
         $settings = [ordered]@{
-            Databases = [ordered]@{ App = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }; Gdweb = [ordered]@{ Server = 'sql'; Password = 'secret-0' } }
+            Databases = [ordered]@{ App = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }; Gd = [ordered]@{ Server = 'sql'; Password = 'secret-0' } }
             Identity = [ordered]@{ ActiveDirectory = [ordered]@{ BindUser = 'reader'; BindPassword = 'secret-2' } }
             Inference = [ordered]@{ Providers = [ordered]@{ Google = [ordered]@{ ApiKey = 'secret-3' }; Ollama = [ordered]@{ ApiKey = '' } } }
         }

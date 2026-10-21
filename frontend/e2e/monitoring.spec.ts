@@ -178,7 +178,7 @@ function snapshot(): MonitoringSnapshot {
         metrics: metrics(34, 1, 128),
       },
       {
-        id: "sql.gdweb",
+        id: "sql.gd",
         name: "公文資料庫",
         kind: "database",
         status: "unobserved",
