@@ -2,7 +2,11 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AttendanceRecordDto, AttendanceRecordsDto } from '@core/api/schema';
+import type {
+  AttendanceRecordDto,
+  AttendanceRecordsDto,
+  AttendanceRulesDto,
+} from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
@@ -52,6 +56,20 @@ const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDt
   ...patch,
 });
 
+const rules: AttendanceRulesDto = {
+  schedules: [
+    {
+      dayType: 'FullDay',
+      scheduledStart: '08:30:00',
+      scheduledEnd: '18:00:00',
+      flexStart: '08:00:00',
+      flexEnd: '09:00:00',
+      workHours: 9.5,
+    },
+  ],
+  rules: [{ title: '遲到', text: '晚於彈性終點上班為遲到。例：上班日 09:10 到，遲到 10 分。' }],
+};
+
 function setup(read: () => Promise<AttendanceRecordsDto>, features = ['attendance.records']) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
@@ -69,7 +87,11 @@ function setup(read: () => Promise<AttendanceRecordsDto>, features = ['attendanc
     testing: signal(false),
     testingNote: signal(''),
   };
-  const api = { records: vi.fn((_query: { from?: string; userId?: string }) => read()) };
+  const api = {
+    records: vi.fn((_query: { from?: string; userId?: string }) => read()),
+    rules: vi.fn(async () => rules),
+    exportRecords: vi.fn(async (_query: { from?: string; userId?: string }) => new Response('')),
+  };
   const organization = { units: vi.fn(async () => []) };
   TestBed.configureTestingModule({
     providers: [
@@ -86,10 +108,25 @@ function setup(read: () => Promise<AttendanceRecordsDto>, features = ['attendanc
 }
 
 describe('AttendanceRecordsPage', () => {
+  const { createObjectURL, revokeObjectURL } = URL;
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
   });
+
+  /** 攔下下載：記錄 `<a download>` 的檔名，不真的觸發瀏覽器下載。 */
+  function captureDownloads() {
+    const names: string[] = [];
+    Object.assign(URL, { createObjectURL: () => 'blob:records', revokeObjectURL: () => undefined });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    return names;
+  }
 
   it('reads the current month and lists each person by day with readable lateness', async () => {
     const { fixture, root, api, organization } = setup(async () => records());
@@ -164,5 +201,71 @@ describe('AttendanceRecordsPage', () => {
     await fixture.whenStable();
     expect(organization.units).toHaveBeenCalledOnce();
     expect(fixture.componentInstance.unitOptions()?.[0].label).toBe('所有單位');
+  });
+
+  it('shows the judgement rules from the server in the header panel', async () => {
+    const { fixture, root, api } = setup(async () => records());
+    await fixture.whenStable();
+    expect(api.rules).toHaveBeenCalledOnce();
+    const schedule = root.querySelector('.records-rules-schedule')!;
+    expect(schedule.textContent).toContain('上班日');
+    expect(schedule.textContent).toContain('08:30–18:00');
+    expect(schedule.textContent).toContain('08:00–09:00');
+    expect(schedule.textContent).toContain('上班＋9.5 小時');
+    expect(root.querySelector('.records-rules-list')?.textContent).toContain(
+      '09:10 到，遲到 10 分',
+    );
+  });
+
+  it('exports the applied filters and saves the file under the server name', async () => {
+    const { fixture, root, api } = setup(async () => records());
+    await fixture.whenStable();
+    const downloads = captureDownloads();
+    let finish!: (response: Response) => void;
+    api.exportRecords.mockReturnValueOnce(new Promise<Response>((resolve) => (finish = resolve)));
+    const button = root.querySelector<HTMLButtonElement>('.records-export')!;
+    expect(button.textContent).toContain('匯出 Excel');
+
+    button.click();
+    await fixture.whenStable();
+    // 匯出期間按鈕停用並顯示進度，避免重複送出。
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain('匯出中');
+    expect(api.exportRecords).toHaveBeenCalledOnce();
+    expect(api.exportRecords.mock.calls[0][0]).toEqual(api.records.mock.calls[0][0]);
+
+    finish(
+      new Response('xlsx', {
+        headers: {
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent('出勤紀錄_20261001-20261031_20261022_100000.xlsx')}`,
+        },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(downloads).toEqual(['出勤紀錄_20261001-20261031_20261022_100000.xlsx']),
+    );
+    await fixture.whenStable();
+    expect(button.disabled).toBe(false);
+    expect(root.querySelector('.records-export-error')).toBeNull();
+  });
+
+  it('reports a failed export without downloading anything', async () => {
+    const { fixture, root, api } = setup(async () => records());
+    await fixture.whenStable();
+    const downloads = captureDownloads();
+    api.exportRecords.mockRejectedValueOnce(new Error('network down'));
+
+    root.querySelector<HTMLButtonElement>('.records-export')!.click();
+    await vi.waitFor(async () => {
+      await fixture.whenStable();
+      expect(root.querySelector('.records-export-error')).not.toBeNull();
+    });
+    expect(downloads).toEqual([]);
+  });
+
+  it('does not offer an export when nobody is listed', async () => {
+    const { fixture, root } = setup(async () => records({ people: [] }));
+    await fixture.whenStable();
+    expect(root.querySelector<HTMLButtonElement>('.records-export')!.disabled).toBe(true);
   });
 });

@@ -4,6 +4,52 @@
   density="compact"
   layoutMode="data"
 >
+  <nx-info-popover
+    page-actions
+    class="records-rules"
+    label="判定規則"
+    panelLabel="出勤判定規則"
+    align="right"
+    [width]="440"
+  >
+    @if (rules(); as rules) {
+      <table class="records-rules-schedule">
+        <caption>
+          上下班時間（台北）
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">日型</th>
+            <th scope="col">表定</th>
+            <th scope="col">彈性上班</th>
+            <th scope="col">應下班</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (schedule of rules.schedules; track schedule.dayType) {
+            <tr>
+              <th scope="row">{{ schedule.dayType }}</th>
+              <td>{{ schedule.scheduled }}</td>
+              <td>{{ schedule.flex }}</td>
+              <td>{{ schedule.clockOut }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <dl class="records-rules-list">
+        @for (rule of rules.items; track rule.title) {
+          <div>
+            <dt>{{ rule.title }}</dt>
+            <dd>{{ rule.text }}</dd>
+          </div>
+        }
+      </dl>
+    } @else if (rulesError()) {
+      <p>無法取得判定規則：{{ rulesError() }}</p>
+    } @else {
+      <p role="status">正在取得判定規則…</p>
+    }
+  </nx-info-popover>
   <nx-query-bar label="出勤紀錄查詢條件" [state]="query" [busy]="loading()">
     <nx-time-range-picker
       label="區間"
@@ -50,6 +96,15 @@
       />
     }
   </nx-query-bar>
+  @if (exportError()) {
+    <nx-notice
+      class="records-export-error"
+      tone="danger"
+      [message]="exportError()"
+      [dismissible]="true"
+      (dismissed)="exportError.set('')"
+    />
+  }
   @if (records(); as data) {
     @if (!data.calendarAvailable) {
       <nx-notice
@@ -95,6 +150,17 @@
         <span class="sr-only" role="status">正在載入出勤紀錄…</span>
       }
     </div>
+    <button
+      table-actions
+      type="button"
+      class="quiet-button records-export"
+      [disabled]="loading() || exporting() || !people().length"
+      (click)="export()"
+    >
+      <nx-icon [name]="exporting() ? 'loading' : 'download'" />{{
+        exporting() ? '匯出中…' : '匯出 Excel'
+      }}
+    </button>
     <table>
       <caption class="sr-only">
         出勤紀錄，依人分組，每天一列；時間為台北時間。

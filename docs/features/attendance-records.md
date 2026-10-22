@@ -1,6 +1,6 @@
 # 出勤紀錄
 
-結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定結果、上下班刷卡、應下班、遲到與早退秒數，以及當天的假單與出差單。判定規則見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；回應形狀是 `contracts/openapi.json` 的 `AttendanceRecordsDto`。
+結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定結果、上下班刷卡、應下班、遲到與早退秒數，以及當天的假單與出差單；同一組條件可[匯出 Excel](#匯出-excel)，頁首「判定規則」面板顯示[規則說明](#規則說明)。判定規則見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；回應形狀是 `contracts/openapi.json` 的 `AttendanceRecordsDto`。
 
 ## 查詢
 
@@ -28,3 +28,22 @@
 - **GD 連不上**：`calendarAvailable`、`leaveAvailable` 為 false。日型退回週末放假、平日無法判定（`DayTypeUnknown`），所以平日不判遲到早退也不判異常；每天的假單是無法取得，刷卡照常顯示。
 - **對不到公文帳號**（沒有 AD 帳號或 `Sys_User` 沒有）：該人 `leaveAvailable` 為 false，每天的假單是無法取得；沒刷卡的日子是無法判定（`LeaveUnavailable`），不是異常。
 - **假單依日切分**：單據的原始起訖與當天 00:00～隔天 00:00 有交集就列在當天（跨日、半天都一樣），只並列、不比對時數；上午請假、下午才到照樣算遲到。
+
+## 規則說明
+
+- `GET /api/v1/attendance-rules`（授權同 `attendance.records`；全公司一套、不含個人資料，不套資料範圍）回傳每種日型的上下班時間與逐條規則。時間取自 `Attendance:Workday` 的目前設定，畫面不寫死；頁面與匯出的「說明」工作表用同一份。
+- 條文只寫在 [AttendanceRules](../../backend/src/AiNexus.Features/Staff/Attendance/Records/AttendanceRules.cs)，舉例的應下班由 `AttendanceEvaluator` 算出；改判定時一併改條文（`AttendanceRulesTests`）。
+- 涵蓋：最早／最晚刷卡為上下班、出勤日依刷卡日期（過午夜算隔天）、彈性上班、遲到從彈性終點起算並改為表定下班、早退以秒計且沒有寬限、只有一筆刷卡、假單只並列不抵銷、日型來自公文系統行事曆、無法判定的情況、只列持卡日。
+
+## 匯出 Excel
+
+- `GET /api/v1/attendance-records/export`，參數與查詢相同。handler 直接呼叫 `ListAttendanceRecords`：區間上限（31 天）、資料範圍、篩選與判定都同一份，看不到的人匯不出來；不另寫 procedure，查詢次數本來就固定。
+- 回 `.xlsx`，檔名 `出勤紀錄_起日-迄日_匯出時間.xlsx`（台灣時間，`filename*` UTF-8）；`/api` 回應一律不快取。
+- 工作表：
+  - **出勤紀錄**：每人每天一列，姓名、帳號每列都有（可篩選）；日期、時刻與遲到早退時數是 Excel 的日期時間值（可加總）。遲到的上班、早退的下班、異常以深紅色標示，列印時每人一頁。
+  - **統計**：每人的天數、各狀態天數、遲到與早退的天數與合計。
+  - **說明**：查詢區間、匯出時間、條件、GD 無法取得的提示，以及上方的規則說明。
+- 對照舊系統 EmpClock「出缺勤計算」：上班、下班、遲到、早退照舊，遲到早退由「＊」改為時數；異常併入「狀態」，備註拆成「說明」（判定原因）與「假單與出差」；舊版只在每人第一列寫姓名、下方塞「遲到(計)」等小計列與空白列，篩選後看不出是誰，改為平面表格加「統計」工作表。卡號改為帳號（一人可能多張卡）。
+- 不另設 `attendance.records.export`：匯出的就是畫面看得到的資料，分權只會讓主管與本人多一道設定；大量帶出靠稽核與每人每分鐘 5 次的 rate limit 控制。
+- 稽核：先寫 `attendance.records.export`（「查閱與匯出」分類，記區間、人員、單位、是否含不列入與人數，不記名單）再產生檔案，寫不進去就不匯出；被拒絕的區間與權限不留紀錄。
+- 試算表由共用的 [Spreadsheet](../../backend/src/AiNexus.Platform/Export/Spreadsheet.cs) 產生（標題列凍結與篩選、欄寬、日期時間格式、分頁、列印重複標題、微軟正黑體），其他列表匯出 Excel 時沿用。

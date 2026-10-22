@@ -11,8 +11,12 @@ import { apiResource } from '@core/api/api-resource';
 import type { AttendancePersonDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
+import { attachmentName, downloadBlob } from '@shared/browser/download';
+import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
 import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
+import { Icon } from '@shared/ui/icon';
+import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
@@ -22,13 +26,15 @@ import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitRows } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
-import { presentRecord } from '../attendance-presentation';
+import { attendanceProblem, presentRecord, presentSchedule } from '../attendance-presentation';
 import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-query';
 
 /**
  * 出勤紀錄（`attendance.records`）：資料範圍內每人每天的判定、上下班刷卡、應下班、遲到早退與當天的假單。
  * 名單依人分組、不分頁（後端一次回整段，最長 31 天）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
  * 單位清單只有組織管理權限讀得到，沒有時不提供單位選單（連結帶入的單位照樣查詢）。
+ * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供，與 Excel 匯出的「說明」工作表同一份。
+ * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生整段的 .xlsx。
  */
 @Component({
   selector: 'nx-attendance-records-page',
@@ -37,6 +43,8 @@ import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-que
     DataTable,
     DataTableColumn,
     FeaturePage,
+    Icon,
+    InfoPopover,
     Notice,
     QueryBar,
     Select,
@@ -45,6 +53,7 @@ import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-que
     TimeRangePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [ViewScope],
   styles: ':host { display: block; min-width: 0; }',
   styleUrl: './attendance-records-page.scss',
   templateUrl: './attendance-records-page.html',
@@ -53,6 +62,7 @@ export class AttendanceRecordsPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AttendanceApi);
   private readonly organization = inject(OrganizationApi);
+  private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
   /** 讀過的人（ID → 人）；指定某人之後名單只剩他，選單仍保留先前讀到的其他人。 */
   private readonly known = signal<ReadonlyMap<string, AttendancePersonDto>>(new Map());
@@ -86,6 +96,18 @@ export class AttendanceRecordsPage {
   readonly loading = this.recordsRead.loading;
   readonly readError = this.recordsRead.error;
   readonly people = computed(() => this.records()?.people ?? []);
+  private readonly rulesRead = apiResource({
+    feature: 'attendance.records',
+    loader: (_: true, signal) => this.api.rules(signal),
+  });
+  /** 判定規則；讀不到時面板改顯示錯誤，不影響查詢。 */
+  readonly rules = computed(() => {
+    const rules = this.rulesRead.value();
+    return rules ? { schedules: rules.schedules.map(presentSchedule), items: rules.rules } : null;
+  });
+  readonly rulesError = this.rulesRead.error;
+  readonly exporting = signal(false);
+  readonly exportError = signal('');
   readonly personOptions = computed<SelectOption[]>(() => [
     { value: '', label: '所有人' },
     ...[...this.known().values()]
@@ -157,5 +179,28 @@ export class AttendanceRecordsPage {
 
   reload() {
     this.recordsRead.reload();
+  }
+
+  async export() {
+    if (this.exporting()) return;
+    // 「本月」等預設區間以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
+    const filters = recordFilters(this.query.applied());
+    if (typeof filters === 'string') {
+      this.exportError.set(filters);
+      return;
+    }
+    const guard = this.view.guard();
+    this.exporting.set(true);
+    this.exportError.set('');
+    try {
+      const response = await this.api.exportRecords(filters);
+      const name = attachmentName(response, { title: '出勤紀錄', extension: 'xlsx' });
+      const blob = await response.blob();
+      if (guard()) downloadBlob(blob, name.title, name.extension);
+    } catch (error) {
+      if (guard()) this.exportError.set(attendanceProblem(error));
+    } finally {
+      if (guard()) this.exporting.set(false);
+    }
   }
 }

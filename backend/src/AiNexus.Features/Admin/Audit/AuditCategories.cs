@@ -11,7 +11,7 @@ public static class AuditCategories
     public static readonly IReadOnlyList<AuditCategoryDto> All = [new("authentication", "登入與身分"), new("administration", "管理異動"), new("access", "查閱與匯出"), new("activity", "功能操作")];
     public static readonly string[] Values = [.. All.Select(x => x.Value)];
     private static readonly string[] Reads = ["admin.user_usage_read", "admin.conversations_list", "admin.conversation_read",
-        "billing.report.read", "billing.report.export", "dashboard.platform.read", "integration.searched", "integration.record.read", ExportActivityAudit.Action];
+        "billing.report.read", "billing.report.export", "dashboard.platform.read", "integration.searched", "integration.record.read", "attendance.records.export", ExportActivityAudit.Action];
     private static readonly string[] Administrative = ["billing.price.created", "system.diagnostics.configuration"];
     private static readonly Expression<Func<AuditEvent, string>> Category = entry =>
         entry.Action.StartsWith("identity.") || entry.Action.StartsWith("account.") ? "authentication" :

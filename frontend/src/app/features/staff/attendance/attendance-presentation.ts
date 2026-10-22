@@ -2,6 +2,7 @@ import type {
   AttendanceDayType,
   AttendanceRecordDto,
   AttendanceReason,
+  AttendanceScheduleDto,
   AttendanceStatus,
   LeaveSheetKind,
 } from '@core/api/schema';
@@ -125,6 +126,20 @@ export function attendanceProblem(error: unknown): string {
 }
 /** 錯誤的代碼；不是 API 錯誤時為空字串。 */
 export const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : '');
+
+/**
+ * 規則說明裡一種日型的時間（後端 `AttendanceRules` 提供設定值，這裡只排版）：「08:30–18:00」「上班＋9.5 小時」。
+ * 時間是 `HH:mm:ss` 字串（台北），只取到分。
+ */
+export function presentSchedule(schedule: AttendanceScheduleDto) {
+  const time = (value: string) => value.slice(0, 5);
+  return {
+    dayType: ATTENDANCE_DAY_TYPE[schedule.dayType] ?? schedule.dayType,
+    scheduled: `${time(schedule.scheduledStart)}–${time(schedule.scheduledEnd)}`,
+    flex: `${time(schedule.flexStart)}–${time(schedule.flexEnd)}`,
+    clockOut: `上班＋${Number(schedule.workHours.toFixed(2))} 小時`,
+  };
+}
 
 /** 單據起訖（台北）的「MM/DD HH:mm」。 */
 const sheetTime = (value: string) => {

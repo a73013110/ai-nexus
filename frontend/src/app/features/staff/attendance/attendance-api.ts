@@ -24,6 +24,11 @@ export class AttendanceApi {
   private readonly api = inject(ApiClient);
   records = (query: AttendanceRecordFilters, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-records', { query, signal });
+  /** 與 `records` 同一組條件匯出 .xlsx；回應是檔案，檔名在 `Content-Disposition`。 */
+  exportRecords = (query: AttendanceRecordFilters) =>
+    this.api.open('/api/v1/attendance-records/export', { query });
+  /** 判定規則的說明，時間是伺服器目前的設定值。 */
+  rules = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-rules', { signal });
 
   cards = (query: ApiQuery<'/api/v1/attendance-cards', 'get'>, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-cards', { query, signal });
