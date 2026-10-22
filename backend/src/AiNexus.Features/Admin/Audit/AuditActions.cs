@@ -18,6 +18,8 @@ public static class AuditActions
         ("account.", "帳號安全"),
         ("admin.user_roles", "使用者角色"),
         ("admin.user_email", "使用者信箱"),
+        ("admin.user_import", "從 AD 匯入使用者"),
+        ("admin.user_sync", "從 AD 更新使用者"),
         ("admin.user_model_policy", "個人模型政策"),
         ("admin.user_storage", "使用者容量上限"),
         ("admin.role", "角色授權"),

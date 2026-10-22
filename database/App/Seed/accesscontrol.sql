@@ -36,6 +36,8 @@ USING (VALUES
     (N'audit'),
     (N'diagnostics.logs'),
     -- 動作：只是授權，不出現在選單。
+    (N'identity.users.import'),
+    (N'identity.users.sync'),
     (N'diagnostics.logs.detail'),
     (N'diagnostics.logs.export'),
     (N'attendance.cards.maintain'),
@@ -116,6 +118,8 @@ USING (VALUES
     (N'administrators', N'attendance.calendar', NULL),
     (N'administrators', N'attendance.calendar.maintain', NULL),
     (N'administrators', N'identity.users', NULL),
+    (N'administrators', N'identity.users.import', NULL),
+    (N'administrators', N'identity.users.sync', NULL),
     (N'administrators', N'access-control.roles', NULL),
     (N'administrators', N'access-control.groups', NULL),
     (N'administrators', N'access-control.features', NULL),

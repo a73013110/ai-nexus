@@ -7,7 +7,7 @@ public sealed class LdapAuthenticatorTests
 {
     [Fact]
     public void LdapFiltersEscapeInjectionCharacters()
-        => Assert.Equal(@"a\2a\29\28\5cb\00", LdapAuthenticator.EscapeFilter("a*)(\\b\0"));
+        => Assert.Equal(@"a\2a\29\28\5cb\00", LdapConnections.EscapeFilter("a*)(\\b\0"));
 
     [Fact]
     public void DomainDerivesServerSearchBaseAndBindName()

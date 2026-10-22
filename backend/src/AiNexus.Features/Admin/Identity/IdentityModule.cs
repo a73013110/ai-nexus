@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
@@ -19,6 +20,10 @@ namespace AiNexus.Features.Admin.Identity;
 public sealed class IdentityModule : IFeatureModule
 {
     public const string LoginRateLimit = "ad-login";
+    /// <summary>匯入對話框的 AD 搜尋（輸入時防抖後送出）。</summary>
+    public const string DirectorySearchRateLimit = "directory-search";
+    /// <summary>匯入預覽、匯入與從 AD 更新：每次最多 100 人、各自查目錄與寫入。</summary>
+    public const string DirectoryWriteRateLimit = "directory-write";
     private const string SessionCookie = "AiNexus.Session";
 
     public static void AddServices(IHostApplicationBuilder builder)
@@ -28,6 +33,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
         services.AddSettings<SelfServiceOptions, SelfServiceOptionsValidator>(SelfServiceOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
+        services.AddSingleton<IAdDirectory, LdapDirectory>();
         services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
@@ -48,9 +54,12 @@ public sealed class IdentityModule : IFeatureModule
             });
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.Connection.RemoteIpAddress?.ToString() ?? "local",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true })));
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
+            .AddPerUserLimit(DirectorySearchRateLimit, 60).AddPerUserLimit(DirectoryWriteRateLimit, 20));
         services.AddSingleton<IdentityWriteLock>();
         services.AddSingleton<DirectoryProfileCache>();
+        services.AddScoped<DirectoryAccounts>();
+        services.AddScoped<DirectoryProvisioning>();
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
@@ -67,6 +76,8 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<Reauthentication>();
         services.AddScoped<UserCredentials>();
         services.AddFeaturePolicy(FeatureCatalog.IdentityUsers);
+        services.AddFeaturePolicy(FeatureCatalog.IdentityUsersImport);
+        services.AddFeaturePolicy(FeatureCatalog.IdentityUsersSync);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
@@ -78,6 +89,11 @@ public sealed class IdentityModule : IFeatureModule
         SetUserRoles.Map(admin);
         SetUserEmail.Map(admin);
         PreviewUserAccess.Map(admin);
+        var import = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersImport);
+        SearchDirectoryPeople.Map(import);
+        PreviewDirectoryImport.Map(import);
+        ImportDirectoryUsers.Map(import);
+        SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersSync));
     }
 
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapAuthenticationEndpoints();

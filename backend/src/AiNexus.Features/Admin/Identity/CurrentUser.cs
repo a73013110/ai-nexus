@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Identity;
 using System.DirectoryServices.AccountManagement;
@@ -18,9 +17,10 @@ namespace AiNexus.Features.Admin.Identity;
 
 /// <summary>
 /// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="User"/>（必要時建立、綁定或更新），結果在同一請求內快取。
+/// 建立與同步的規則在 <see cref="DirectoryAccounts"/>，與管理員從 AD 匯入、更新共用。
 /// </summary>
 public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
-    DirectoryProfileCache profiles, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
+    DirectoryProfileCache profiles, DirectoryAccounts accounts, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
     private User? resolved;
@@ -54,48 +54,31 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         var profile = principal.FindFirstValue(SessionIdentity.DisplayName) is { } claimed
             ? new DirectoryProfile(claimed, principal.FindFirstValue(SessionIdentity.DirectoryEmail))
             : profiles.GetOrAdd(sid, () => ResolveProfile(sid, account));
-        var displayName = profile.DisplayName;
-        var directoryEmail = UserEmails.TryNormalize(profile.Email, out var normalizedEmail) ? normalizedEmail : null;
         // 多數請求只讀既有的對應，不取全域寫入鎖；只有建立、綁定或更新使用者，或套用初始授權時才取鎖。
-        // 綁定是依帳號跨 SID 進行，且本地登入寫的也是同一批資料列，所以鎖必須共用。
+        // 綁定是依帳號跨 SID 進行，且本地登入與管理員匯入寫的也是同一批資料列，所以鎖必須共用。
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad")) return IdentityErrors.LoginMethodDisabled;
-        if (existing is not null && !Stale(existing, displayName, directoryEmail) && !await PendingGrantAsync(existing, ct))
+        if (existing is not null && !Stale(existing, account, profile) && !await PendingGrantAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try
         {
-            var user = await db.Users.SingleOrDefaultAsync(x => x.Sid == sid, ct);
-            string? adAccount = null;
-            if (user is null)
-            {
-                var name = UserAccounts.AccountName(account);
-                if (!UserAccounts.IsValid(name)) return IdentityErrors.InvalidAccount;
-                adAccount = UserAccounts.Normalize(name);
-                user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
-                if (user is not null && user.Sid.StartsWith("managed:", StringComparison.Ordinal))
-                { user.Sid = sid; user.Account = account; }
-                else if (user is not null) return IdentityErrors.AdBindingConflict;
-            }
+            var match = await accounts.MatchAsync(sid, account, ct);
+            if (!match.IsSuccess) return match.Error;
+            var user = match.Value.Existing;
             if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
             var now = clock.GetUtcNow();
             if (user is null)
             {
-                // 走到這裡代表沒有其他使用者佔用這個 AdAccount（上面已綁定預建帳號或拒絕），寫入與管理端預建相同的正規化值；
-                // 出勤以它對應公文帳號（GdAccounts），自動建立時留空就查不到假單。
-                user = new User { Sid = sid, Account = account, AdAccount = adAccount, DisplayName = displayName, LastSeenAt = now, DirectoryVerifiedAt = now };
-                SyncEmail(user, directoryEmail, now);
-                db.Users.Add(user);
-                db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
+                user = accounts.Create(Guid.NewGuid(), sid, account, profile, now);
+                // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據；管理員匯入的帳號則留空，直到本人登入。
+                user.DirectoryVerifiedAt = now;
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
                 await db.SaveChangesAsync(ct);
             }
-            else if (Stale(user, displayName, directoryEmail) || db.Entry(user).State == EntityState.Modified)
+            else if (Stale(user, account, profile) || db.Entry(user).State == EntityState.Modified)
             {
-                user.Account = account;
-                if (!user.ProfileManaged) user.DisplayName = displayName;
-                SyncEmail(user, directoryEmail, now);
-                // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據。
+                DirectoryAccounts.Apply(user, await accounts.ChangesAsync(user, account, profile, ct), now);
                 user.LastSeenAt = now; user.DirectoryVerifiedAt = now;
                 await db.SaveChangesAsync(ct);
             }
@@ -112,20 +95,8 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         return false;
     }
 
-    private bool Stale(User user, string displayName, string? directoryEmail)
-        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || user.DirectoryVerifiedAt is null
-            || (!user.ProfileManaged && (user.DisplayName != displayName || (DirectoryOwnsEmail(user) && user.Email != directoryEmail)));
-
-    /// <summary>目錄只管理「沒有信箱」或「來源就是目錄」的信箱；本人驗證或管理者設定的值，以及管理者維護個人資料的使用者，目錄都不覆寫。</summary>
-    private static bool DirectoryOwnsEmail(User user) => user.EmailSource is null or EmailSources.Directory;
-
-    private static void SyncEmail(User user, string? directoryEmail, DateTimeOffset now)
-    {
-        if (user.ProfileManaged || !DirectoryOwnsEmail(user) || user.Email == directoryEmail) return;
-        user.Email = directoryEmail;
-        user.EmailSource = directoryEmail is null ? null : EmailSources.Directory;
-        user.EmailVerifiedAt = directoryEmail is null ? null : now;
-    }
+    private bool Stale(User user, string account, DirectoryProfile profile)
+        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || user.DirectoryVerifiedAt is null || DirectoryAccounts.Differs(user, account, profile);
 
     /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
     private User? Track(User? user)

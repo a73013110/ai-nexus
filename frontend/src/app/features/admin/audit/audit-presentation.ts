@@ -29,6 +29,8 @@ const actions: Record<string, string> = {
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
   'admin.user_email': '設定使用者信箱',
+  'admin.user_import': '從 AD 匯入使用者',
+  'admin.user_sync': '從 AD 更新使用者',
   'admin.user_model_policy': '設定個人模型政策',
   'admin.user_storage': '調整使用者容量',
   'admin.user': '建立或調整使用者',

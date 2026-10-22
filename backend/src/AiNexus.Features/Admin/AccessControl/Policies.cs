@@ -22,6 +22,8 @@ public static class Policies
     public const string Dashboard = Prefix + FeatureCatalog.Dashboard;
     public const string Repositories = Prefix + FeatureCatalog.Repositories;
     public const string IdentityUsers = Prefix + FeatureCatalog.IdentityUsers;
+    public const string IdentityUsersImport = Prefix + FeatureCatalog.IdentityUsersImport;
+    public const string IdentityUsersSync = Prefix + FeatureCatalog.IdentityUsersSync;
     public const string AccessControlRoles = Prefix + FeatureCatalog.AccessControlRoles;
     public const string AccessControlGroups = Prefix + FeatureCatalog.AccessControlGroups;
     public const string AccessControlFeatures = Prefix + FeatureCatalog.AccessControlFeatures;
@@ -61,8 +63,9 @@ public static class AdministrativeFeatures
 {
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(
     [
-        FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures,
-        FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OrganizationImport, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
+        FeatureCatalog.IdentityUsers, FeatureCatalog.IdentityUsersImport, FeatureCatalog.IdentityUsersSync, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups,
+        FeatureCatalog.AccessControlFeatures, FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OrganizationImport, FeatureCatalog.OperationsUsage,
+        FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
         FeatureCatalog.MailMessages, FeatureCatalog.MailMessagesResend, FeatureCatalog.AttendanceCards, FeatureCatalog.AttendanceCardsMaintain,
         FeatureCatalog.AttendanceImports, FeatureCatalog.AttendanceImportsReimport, FeatureCatalog.AttendanceCalendar, FeatureCatalog.AttendanceCalendarMaintain,
     ], StringComparer.Ordinal);

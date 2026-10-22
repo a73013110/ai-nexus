@@ -7,6 +7,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Chat.Runs;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Features.Platform.Inference;
@@ -48,6 +49,8 @@ public sealed class AppFactory : WebApplicationFactory<Program>
     public TestEmbeddings Embeddings { get; } = new();
     /// <summary>取代 SMTP；郵件寄送由測試直接呼叫 <c>MailDispatcher.DispatchAsync</c> 驅動。</summary>
     public RecordingMailTransport Mail { get; } = new();
+    /// <summary>取代 LDAP 目錄查詢；測試可改名、停用、移除人員或讓目錄離線。</summary>
+    public FixtureAdDirectory AdDirectory { get; } = new();
     public AppFactory(Action<AppDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<FilesOptions>? attachments = null, string[]? administrators = null,
         Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
@@ -81,6 +84,8 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
             services.RemoveAll<IAdAuthenticator>();
             services.AddSingleton<IAdAuthenticator, FixtureAdAuthenticator>();
+            services.RemoveAll<IAdDirectory>();
+            services.AddSingleton<IAdDirectory>(AdDirectory);
             services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.Domain = "fixture.internal"; options.BindUser = "fixture"; options.BindPassword = "fixture-only"; });
             services.RemoveAllKeyed<IInferenceProvider>("google");
             services.RemoveAllKeyed<IInferenceProvider>("ollama");

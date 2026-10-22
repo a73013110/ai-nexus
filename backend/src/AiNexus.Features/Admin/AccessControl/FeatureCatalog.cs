@@ -67,6 +67,8 @@ public static class FeatureCatalog
     public const string AttendanceCalendar = "attendance.calendar";
     public const string AttendanceCalendarMaintain = "attendance.calendar.maintain";
     public const string IdentityUsers = "identity.users";
+    public const string IdentityUsersImport = "identity.users.import";
+    public const string IdentityUsersSync = "identity.users.sync";
     public const string AccessControlRoles = "access-control.roles";
     public const string AccessControlGroups = "access-control.groups";
     public const string AccessControlFeatures = "access-control.features";
@@ -149,6 +151,9 @@ public static class FeatureCatalog
         new(AttendanceCalendar, FeatureKind.Page, AttendanceModule, "假日設定", "calendar"),
         new(AttendanceCalendarMaintain, FeatureKind.Action, AttendanceModule, "修改假日與彈性放假", "edit"),
         new(IdentityUsers, FeatureKind.Page, IdentityModule, "使用者", "user"),
+        // 匯入會建立帳號（取得 member 的工作區），更新只套用目錄資料；分開授予，讓協助維護資料的人不必能開帳號。
+        new(IdentityUsersImport, FeatureKind.Action, IdentityModule, "從 AD 匯入使用者", "upload"),
+        new(IdentityUsersSync, FeatureKind.Action, IdentityModule, "以 AD 資料更新使用者", "repeat"),
         new(AccessControlRoles, FeatureKind.Page, AccessControlModule, "角色", "lock"),
         new(AccessControlGroups, FeatureKind.Page, AccessControlModule, "功能群組與模型", "apps"),
         new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能", "list"),
