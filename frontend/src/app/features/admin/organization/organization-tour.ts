@@ -4,6 +4,8 @@ import type { ProductTourDefinition, TourSteps } from '@shared/ui/product-tour';
 export function organizationTour(options: {
   /** 正以測試身分檢視，頁面全部唯讀。 */
   testing: boolean;
+  /** 有 `organization.import`，頁首有「從公文系統匯入」。 */
+  canImport?: boolean;
 }): ProductTourDefinition {
   const steps: TourSteps = [
     {
@@ -11,6 +13,14 @@ export function organizationTour(options: {
       title: '部門決定資料範圍',
       description:
         '部門樹與人員所屬用來決定主管關係與「本部門、含下層」等資料範圍；能用哪些功能仍由角色決定，也不從 AD 同步。',
+      side: 'bottom',
+    },
+    options.canImport && {
+      target: 'nx-organization-page .organization-import',
+      title: '從公文系統匯入',
+      description: options.testing
+        ? '可預覽公文系統的部門與主管會帶來哪些變動；測試身分期間不能套用。'
+        : '先預覽將新增、更新、停用的單位與主管變動，確認後才套用；匯入的單位標示「公文」，下次匯入會以公文系統為準。',
       side: 'bottom',
     },
     !options.testing && {

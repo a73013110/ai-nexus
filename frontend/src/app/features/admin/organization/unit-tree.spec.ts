@@ -9,6 +9,7 @@ const unit = (id: string, parentId: string | null, sortOrder: number, enabled = 
   enabled,
   sortOrder,
   memberCount: 0,
+  gdDepNo: null,
 });
 const units = [
   unit('hr', 'company', 20),

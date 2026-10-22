@@ -34,6 +34,8 @@ interface Editor {
   id: string | null;
   title: string;
   draft: Draft;
+  /** 來自公文系統的單位（`gdDepNo` 有值）。 */
+  imported: boolean;
 }
 
 const sameDraft = (a: Draft, b: Draft) =>
@@ -69,6 +71,12 @@ const sameDraft = (a: Draft, b: Draft) =>
           <div class="dialog-body">
             @if (error()) {
               <nx-notice tone="danger" [message]="error()" />
+            }
+            @if (imported()) {
+              <nx-notice
+                tone="warning"
+                message="這個單位來自公文系統：名稱、上層與啟用狀態可以在這裡改，但下次匯入會改回公文系統的值；要長期調整請在公文系統修改。"
+              />
             }
             <div class="form-sections">
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
@@ -166,6 +174,7 @@ export class UnitDialog {
   readonly error = signal('');
   readonly nameError = signal('');
   readonly locked = computed(() => this.saving() || this.session.testing());
+  readonly imported = computed(() => !!this.editor()?.imported);
   readonly tour = computed(() =>
     unitDialogTour({ editing: !!this.editor()?.id, testing: this.session.testing() }),
   );
@@ -192,23 +201,23 @@ export class UnitDialog {
   });
 
   create(parent: UnitDto | null = null) {
-    this.show(null, parent ? `新增下層單位：${parent.name}` : '新增單位', {
+    this.show(null, parent ? `新增下層單位：${parent.name}` : '新增單位', false, {
       parentId: parent?.id ?? '',
       name: '',
       enabled: true,
     });
   }
   edit(unit: UnitDto) {
-    this.show(unit.id, `編輯單位：${unit.name}`, {
+    this.show(unit.id, `編輯單位：${unit.name}`, unit.gdDepNo != null, {
       parentId: unit.parentId ?? '',
       name: unit.name,
       enabled: unit.enabled,
     });
   }
-  private show(id: string | null, title: string, draft: Draft) {
+  private show(id: string | null, title: string, imported: boolean, draft: Draft) {
     this.error.set('');
     this.nameError.set('');
-    this.editor.set({ id, title, draft });
+    this.editor.set({ id, title, draft, imported });
     this.opened.set(draft);
     this.dialog().nativeElement.showModal();
   }

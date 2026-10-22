@@ -26,6 +26,16 @@ describe('organizationTour', () => {
     ]);
   });
 
+  it('adds the import step only with the import grant, read-only while testing', () => {
+    expect(titles(organizationTour({ testing: false, canImport: true }))).toContain(
+      '從公文系統匯入',
+    );
+    const testing = tourSteps(organizationTour({ testing: true, canImport: true }));
+    expect(testing.find((step) => step.title === '從公文系統匯入')?.description).toContain(
+      '不能套用',
+    );
+  });
+
   it('drops the disabled write steps and explains read-only while testing an identity', () => {
     const steps = tourSteps(organizationTour({ testing: true }));
     expect(steps.map((step) => step.title)).toEqual([
@@ -37,7 +47,7 @@ describe('organizationTour', () => {
   });
 
   it('scopes every target to the page', () => {
-    for (const step of tourSteps(organizationTour({ testing: false })))
+    for (const step of tourSteps(organizationTour({ testing: false, canImport: true })))
       expect(step.target).toMatch(/^nx-organization-page /);
   });
 });
@@ -126,7 +136,8 @@ describe('organization tour targets', () => {
             testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
-            has: (feature: string) => feature === 'organization',
+            has: (feature: string) =>
+              feature === 'organization' || feature === 'organization.import',
             featureName: () => '組織',
           },
         },

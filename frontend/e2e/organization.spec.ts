@@ -7,13 +7,20 @@ import {
   settleEntrance,
   toasts,
 } from "./fixtures";
-import type { UnitDto, UnitMemberDto } from "../src/app/core/api/schema";
+import type {
+  UnitDto,
+  UnitImportPreviewDto,
+  UnitMemberDto,
+} from "../src/app/core/api/schema";
 
 /** 組織 API 的記憶體替身：只做頁面需要的形狀與兩個錯誤代碼，規則本身由後端整合測試涵蓋。 */
-async function organization(page: Page) {
+async function organization(page: Page, canImport = false) {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
-  fixture.extraFeatures = [{ id: "organization" }];
+  fixture.extraFeatures = [
+    { id: "organization" },
+    ...(canImport ? [{ id: "organization.import" }] : []),
+  ];
   await fixture.attach(page);
   const company = randomUUID(),
     it = randomUUID(),
@@ -27,6 +34,7 @@ async function organization(page: Page) {
       enabled: true,
       sortOrder: 10,
       memberCount: 0,
+      gdDepNo: null,
     },
     {
       id: it,
@@ -35,6 +43,7 @@ async function organization(page: Page) {
       enabled: true,
       sortOrder: 10,
       memberCount: 0,
+      gdDepNo: null,
     },
     {
       id: hr,
@@ -43,6 +52,7 @@ async function organization(page: Page) {
       enabled: false,
       sortOrder: 20,
       memberCount: 0,
+      gdDepNo: null,
     },
   ];
   const members = new Map<string, UnitMemberDto[]>();
@@ -67,6 +77,25 @@ async function organization(page: Page) {
       if (method !== "GET") writes.push({ method, path, body });
       if (method === "GET" && path === "")
         return route.fulfill({ json: units });
+      if (path === "/import" && method === "GET")
+        return route.fulfill({ json: importPreview(company, it) });
+      if (path === "/import" && method === "POST") {
+        // 套用：總公司綁定公文系統的部門 1，資訊處改名。
+        units[0].gdDepNo = 1;
+        units[1].gdDepNo = 2;
+        units[1].name = "資訊部";
+        return route.fulfill({
+          json: {
+            created: 0,
+            adopted: 1,
+            updated: 1,
+            disabled: 0,
+            managersAdded: 1,
+            managersRemoved: 0,
+            issues: 1,
+          },
+        });
+      }
       if (method === "POST") {
         const unit: UnitDto = {
           id: randomUUID(),
@@ -75,6 +104,7 @@ async function organization(page: Page) {
           enabled: body!["enabled"] as boolean,
           sortOrder: 100,
           memberCount: 0,
+          gdDepNo: null,
         };
         units.push(unit);
         return route.fulfill({ json: unit });
@@ -141,6 +171,47 @@ async function organization(page: Page) {
 }
 
 const tree = (page: Page) => page.locator(".unit-list .unit-name > span");
+
+function importPreview(company: string, it: string): UnitImportPreviewDto {
+  return {
+    fingerprint: "a".repeat(64),
+    sourceUnits: 3,
+    units: [
+      {
+        gdDepNo: 1,
+        unitId: company,
+        action: "Adopt",
+        path: ["總公司"],
+        previousPath: null,
+        enabled: true,
+        fields: [],
+      },
+      {
+        gdDepNo: 2,
+        unitId: it,
+        action: "Update",
+        path: ["總公司", "資訊部"],
+        previousPath: ["總公司", "資訊處"],
+        enabled: true,
+        fields: ["Name"],
+      },
+    ],
+    managers: [
+      {
+        gdDepNo: 2,
+        unitId: it,
+        path: ["總公司", "資訊部"],
+        userId: randomUUID(),
+        account: "AD\\carol",
+        displayName: "陳小華",
+        added: true,
+        deputy: true,
+        joinsUnit: true,
+      },
+    ],
+    issues: [{ gdDepNo: 9, name: null, code: "NameMissing", gdUserId: null }],
+  };
+}
 
 test("組織頁以樹狀列出單位，可新增下層、排序並維護成員", async ({ page }) => {
   const state = await organization(page);
@@ -262,4 +333,51 @@ test("手機版單位樹與成員改為上下排列，不產生橫向捲動", as
     .getByRole("button", { name: "總公司 › 資訊處", exact: true })
     .click();
   await expectViewportContained(page);
+});
+
+test("從公文系統匯入先預覽變動與問題，套用後標示來源", async ({ page }) => {
+  const state = await organization(page, true);
+  await page.goto(routeOf("organization"));
+  await page
+    .getByRole("button", { name: "從公文系統匯入", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "從公文系統匯入" });
+  await expect(dialog.getByText("總公司 › 資訊部")).toHaveCount(2);
+  await expect(
+    dialog.getByText("名稱依公文系統更新；原為 總公司 › 資訊處"),
+  ).toBeVisible();
+  await expect(dialog.getByText("設為主管（副主管）")).toBeVisible();
+  await expect(dialog.getByText("名稱空白，略過")).toBeVisible();
+  // 預覽本身不寫入；套用送回指紋。
+  expect(state.writes).toEqual([]);
+  await dialog.getByRole("button", { name: "套用匯入" }).click();
+  await expect(dialog).toBeHidden();
+  expect(state.writes.at(-1)).toEqual({
+    method: "POST",
+    path: "/import",
+    body: { fingerprint: "a".repeat(64) },
+  });
+  await expect(
+    toasts(page).filter({ hasText: "已從公文系統匯入：單位綁定 1、更新 1 個" }),
+  ).toBeVisible();
+  await expect(tree(page)).toHaveText(["總公司", "資訊部", "人資處"]);
+  await expect(
+    page.locator(".unit-row").filter({ hasText: "公文" }),
+  ).toHaveCount(2);
+
+  await page
+    .getByRole("button", { name: "總公司 › 資訊部", exact: true })
+    .click();
+  await expect(page.getByText(/來自公文系統（部門編號 2）/)).toBeVisible();
+});
+
+test("沒有匯入權限時不顯示匯入按鈕", async ({ page }) => {
+  await organization(page);
+  await page.goto(routeOf("organization"));
+  await expect(
+    page.getByRole("heading", { name: "組織單位", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "從公文系統匯入" }),
+  ).toHaveCount(0);
 });

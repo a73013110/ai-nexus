@@ -7,7 +7,7 @@ import type {
   UnitUpdateRequest,
 } from '@core/api/schema';
 
-/** 組織單位與成員的讀寫；使用者的所屬單位也供使用者頁（`identity.users`）讀取。 */
+/** 組織單位與成員的讀寫、從公文系統匯入；使用者的所屬單位也供使用者頁（`identity.users`）讀取。 */
 @Injectable({ providedIn: 'root' })
 export class OrganizationApi {
   private readonly api = inject(ApiClient);
@@ -31,6 +31,11 @@ export class OrganizationApi {
     this.api.delete('/api/v1/admin/organization-units/{id}/members/{userId}', {
       path: { id, userId },
     });
+  /** 從公文系統匯入的預覽（不寫入）。 */
+  previewImport = () => this.api.get('/api/v1/admin/organization-units/import');
+  /** 套用預覽；`fingerprint` 與伺服器重算的不同時回 `organization_import_stale`。 */
+  applyImport = (fingerprint: string) =>
+    this.api.post('/api/v1/admin/organization-units/import', { body: { fingerprint } });
   userUnits = (id: string) =>
     this.api.get('/api/v1/admin/users/{id}/organization-units', { path: { id } });
 }

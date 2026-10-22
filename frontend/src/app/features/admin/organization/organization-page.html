@@ -3,6 +3,17 @@
   description="維護部門樹與人員所屬，用來決定主管關係與資料範圍；功能權限仍由角色決定。"
   [tour]="tour()"
 >
+  @if (canImport()) {
+    <button
+      page-actions
+      type="button"
+      class="secondary-button organization-import"
+      [disabled]="store.busy()"
+      (click)="openImport()"
+    >
+      <nx-icon name="repeat" />從公文系統匯入
+    </button>
+  }
   <button
     page-actions
     type="button"
@@ -24,7 +35,8 @@
       <nx-empty-state>
         <h2>還沒有組織單位</h2>
         <p>
-          從最上層（例如公司）開始建立，再逐層加入處、部、課；部門與所屬由管理員維護，不從 AD 同步。
+          從最上層（例如公司）開始建立，再逐層加入處、部、課；也可以從公文系統匯入部門與主管。部門不從
+          AD 同步。
         </p>
         <button type="button" class="primary-button" [disabled]="store.locked()" (click)="create()">
           新增單位
@@ -77,6 +89,9 @@
                   (click)="store.select(row.unit)"
                 >
                   <span class="ui-truncate" [title]="row.unit.name">{{ row.unit.name }}</span>
+                  @if (row.unit.gdDepNo != null) {
+                    <nx-status-badge tone="info" title="來自公文系統">公文</nx-status-badge>
+                  }
                   @if (!row.unit.enabled) {
                     <nx-status-badge tone="neutral">停用</nx-status-badge>
                   }
@@ -125,6 +140,17 @@
                 </button>
               </div>
             </header>
+            @if (row.unit.gdDepNo != null) {
+              <nx-notice
+                class="organization-imported"
+                tone="info"
+                [message]="
+                  '來自公文系統（部門編號 ' +
+                  row.unit.gdDepNo +
+                  '）：名稱、上層、啟用、順序與主管以公文系統為準，下次匯入會覆蓋這裡的修改；成員與主要所屬不受影響。'
+                "
+              />
+            }
             @if (row.inactive) {
               <nx-notice
                 tone="warning"
@@ -228,4 +254,5 @@
 </nx-feature-page>
 <nx-menu-panel label="單位操作" [items]="actions()" (action)="act($event)" />
 <nx-unit-dialog />
+<nx-unit-import-dialog (applied)="imported($event)" />
 <nx-confirm-dialog />

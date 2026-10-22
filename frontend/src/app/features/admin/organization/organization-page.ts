@@ -19,7 +19,10 @@ import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
 import { Notice } from '@shared/ui/notice';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
+import type { UnitImportResultDto } from '@core/api/schema';
 import { directorySearch } from '@features/work/collaboration/directory-search';
+import { UnitImportDialog } from './imports/unit-import-dialog';
+import { resultSummary } from './imports/unit-import-presentation';
 import { OrganizationStore } from './organization-store';
 import { organizationTour } from './organization-tour';
 import { UnitDialog } from './unit-dialog';
@@ -27,7 +30,7 @@ import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
 
 /**
  * 組織：部門樹與每個單位的直屬成員。單位只用來計算資料範圍與主管關係，不授予功能（ADR 0017）；
- * 部門與所屬由管理員維護，不從 AD 同步。
+ * 部門可手建，也可從公文系統匯入（`organization.import`）；匯入的單位名稱、上層、啟用、順序與主管以公文系統為準。
  */
 @Component({
   selector: 'nx-organization-page',
@@ -43,6 +46,7 @@ import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
     SearchField,
     StatusBadge,
     UnitDialog,
+    UnitImportDialog,
   ],
   providers: [OrganizationStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,10 +57,14 @@ export class OrganizationPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(OrganizationStore);
   readonly maxDepth = MAX_DEPTH;
-  readonly tour = computed(() => organizationTour({ testing: this.session.testing() }));
+  readonly canImport = computed(() => this.session.has('organization.import'));
+  readonly tour = computed(() =>
+    organizationTour({ testing: this.session.testing(), canImport: this.canImport() }),
+  );
   private readonly menu = viewChild.required(MenuPanel);
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly dialog = viewChild.required(UnitDialog);
+  private readonly importDialog = viewChild.required(UnitImportDialog);
   readonly people = directorySearch(() => (this.store.members() ?? []).map((m) => m.userId), {
     includeSelf: true,
   });
@@ -114,6 +122,14 @@ export class OrganizationPage {
       case 'delete':
         return void this.remove(row);
     }
+  }
+  openImport() {
+    this.importDialog().open();
+  }
+  /** 匯入已套用：單位、成員與主管都可能變了，全部重讀。 */
+  imported(result: UnitImportResultDto) {
+    this.store.toast.success(resultSummary(result));
+    this.store.load();
   }
   create(parent = false) {
     this.dialog().create(parent ? this.store.selected() : null);
