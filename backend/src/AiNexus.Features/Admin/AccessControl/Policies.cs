@@ -35,6 +35,8 @@ public static class Policies
     public const string AttendanceCardsMaintain = Prefix + FeatureCatalog.AttendanceCardsMaintain;
     public const string AttendanceImports = Prefix + FeatureCatalog.AttendanceImports;
     public const string AttendanceImportsReimport = Prefix + FeatureCatalog.AttendanceImportsReimport;
+    public const string AttendanceCalendar = Prefix + FeatureCatalog.AttendanceCalendar;
+    public const string AttendanceCalendarMaintain = Prefix + FeatureCatalog.AttendanceCalendarMaintain;
 
     /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";

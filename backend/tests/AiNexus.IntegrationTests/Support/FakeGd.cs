@@ -28,6 +28,7 @@ internal sealed class FakeGd : IDisposable
         CREATE TABLE [dbo].[Form_Leave_Group] (DesNo nvarchar(20) NULL, LeaveSDate datetime NULL, LeaveEDate datetime NULL, DayOfWeek nvarchar(20) NULL);
         CREATE TABLE [dbo].[Form_Travel] (DesNo varchar(20) NOT NULL PRIMARY KEY, ChargeName varchar(50) NULL, ChargeDepName int NULL,
             TravelSDate smalldatetime NULL, TravelEDate smalldatetime NULL, TravelTime float NULL, TravelMain nvarchar(1000) NULL, Place nvarchar(100) NULL, FlowOver varchar(20) NOT NULL);
+        CREATE TABLE [dbo].[Pub_Days] (hDate datetime NOT NULL, UserId varchar(20) NOT NULL, AM bit NOT NULL, PM bit NOT NULL, hReMark varchar(255) NULL);
         """;
 
     private readonly TestDatabase database = TestDatabase.CreateEmpty();
@@ -43,7 +44,13 @@ internal sealed class FakeGd : IDisposable
     /// <summary>指向這個假 GD 的連線設定；測試可以改 <see cref="DatabaseOptions.Name"/> 模擬 GD 中途失效或恢復。</summary>
     public DatabasesOptions Databases { get; }
 
+    /// <summary>回寫假日用的可寫入連線（<c>Databases:GdCalendar</c>）：同一個假 GD，不帶唯讀意圖。</summary>
+    public DatabaseOptions Writable => Connection(Name, readOnly: false);
+
     public static FakeGd Create() => new();
+
+    /// <summary>指向不存在的資料庫的單一連線設定，連線一定失敗。</summary>
+    public static DatabaseOptions Missing(bool readOnly) => Connection("AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N"), readOnly);
 
     /// <summary>假 GD 加上一個 App 資料庫（放使用者），給要把使用者對到公文帳號的測試；結束後兩個都刪除。</summary>
     public static async Task WithAppAsync(Func<FakeGd, AppDbContext, Task> test)
@@ -79,6 +86,18 @@ internal sealed class FakeGd : IDisposable
 
     public void AddUser(string id, string? account) => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME) VALUES (@id, @account, @id)", new { id, account });
 
+    public void AddDay(DateOnly day, bool morningOff = false, bool afternoonOff = false, string? remark = null, string userId = "sys")
+        => Execute("INSERT [dbo].[Pub_Days] (hDate, UserId, AM, PM, hReMark) VALUES (@day, @userId, @morningOff, @afternoonOff, @remark)",
+            new { day = day.ToDateTime(TimeOnly.MinValue), userId, morningOff, afternoonOff, remark = new DbString { Value = remark, IsAnsi = false, Length = 4000 } });
+
+    /// <summary>直接讀假 GD 的一天（不經被測程式）。</summary>
+    public GdDay Day(DateOnly day)
+    {
+        using var connection = new SqlConnection(database.ConnectionString);
+        return connection.QuerySingle<GdDay>("SELECT AM AS MorningOff, PM AS AfternoonOff, hReMark AS Remark, UserId FROM [dbo].[Pub_Days] WHERE hDate = @day",
+            new { day = day.ToDateTime(TimeOnly.MinValue) });
+    }
+
     public void AddKind(string id, string name) => Execute("INSERT [dbo].[Form_LeaveKind] (LeaveId, LeaveKind) VALUES (@id, @name)", new { id, name });
 
     public void AddLeave(string desNo, string userId, string kind, DateTime start, DateTime end, string flow, string? dayOfWeek = null)
@@ -96,6 +115,7 @@ internal sealed class FakeGd : IDisposable
     public void Dispose()
     {
         using (var connection = new SqlConnection(Databases.ConnectionString(GdDatabase.Name))) SqlConnection.ClearPool(connection);
+        using (var connection = new SqlConnection(Writable.ConnectionString())) SqlConnection.ClearPool(connection);
         database.Dispose();
     }
 
@@ -105,8 +125,11 @@ internal sealed class FakeGd : IDisposable
         connection.Execute(sql, parameters);
     }
 
-    private static DatabasesOptions OptionsFor(string name) => new()
-    {
-        [GdDatabase.Name] = new() { Server = TestDatabase.Server, Name = name, IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeoutSeconds = 5, ReadOnly = true }
-    };
+    private static DatabasesOptions OptionsFor(string name) => new() { [GdDatabase.Name] = Connection(name, readOnly: true) };
+
+    private static DatabaseOptions Connection(string name, bool readOnly)
+        => new() { Server = TestDatabase.Server, Name = name, IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeoutSeconds = 5, ReadOnly = readOnly };
 }
+
+/// <summary>假 GD 裡一天的原始值。</summary>
+internal sealed record GdDay(bool MorningOff, bool AfternoonOff, string? Remark, string UserId);

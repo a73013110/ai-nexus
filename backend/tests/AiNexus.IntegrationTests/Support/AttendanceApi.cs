@@ -57,6 +57,13 @@ internal static class AttendanceApi
         => reimport ? GrantAsync(factory, userId, "test-imports", FeatureCatalog.AttendanceImports, FeatureCatalog.AttendanceImportsReimport)
             : GrantAsync(factory, userId, "test-imports-readonly", FeatureCatalog.AttendanceImports);
 
+    internal const string Calendar = "/api/v1/attendance-calendar-days";
+
+    /// <summary>建立只含假日設定頁面的測試群組並授予 <paramref name="userId"/>；<paramref name="maintain"/> 為 false 時只能查詢、不能回寫。</summary>
+    internal static Task GrantCalendarAsync(AppFactory factory, Guid userId, bool maintain = true)
+        => maintain ? GrantAsync(factory, userId, "test-calendar", FeatureCatalog.AttendanceCalendar, FeatureCatalog.AttendanceCalendarMaintain)
+            : GrantAsync(factory, userId, "test-calendar-readonly", FeatureCatalog.AttendanceCalendar);
+
     /// <summary>建立同名的角色與群組，群組授予 <paramref name="features"/>，角色指派給 <paramref name="userId"/>；撤銷時以 <paramref name="id"/> 找群組。</summary>
     private static async Task GrantAsync(AppFactory factory, Guid userId, string id, params string[] features)
     {

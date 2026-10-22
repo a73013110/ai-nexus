@@ -21,7 +21,7 @@
 
 `Identity.ActiveDirectory.Mode`（Ldap）與附件容量沿用預設，不必寫入。AD 的 `Server` 預設連 `Domain`（DNS 解析到網域控制站）、`SearchBase` 預設由 `Domain` 推出 `DC=…`、`UseLdaps` 預設 false（389 StartTLS），只有要指定網域控制站、縮小搜尋範圍或改走 636 時才填。
 
-秘密檔填 `Databases.App.User`、`Databases.App.Password`（application pool 以 gMSA 或網域身分登入 SQL 時改設 `Databases.App.IntegratedSecurity=true`，帳密留空）、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
+秘密檔填 `Databases.App.User`、`Databases.App.Password`（application pool 以 gMSA 或網域身分登入 SQL 時改設 `Databases.App.IntegratedSecurity=true`，帳密留空）、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號；唯一的例外是回寫假日的 `Databases.GdCalendar`，帳號權限見 [假日設定](../features/attendance-calendar.md#部署)，未設定時只停用回寫。
 
 ## 外部連結允許清單
 

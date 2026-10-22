@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Integrations.Sources;
+using AiNexus.Features.Staff.Attendance.Calendar;
 using AiNexus.Features.Staff.Attendance.Cards;
 using AiNexus.Features.Staff.Attendance.Gd;
 using AiNexus.Features.Staff.Attendance.Imports;
@@ -12,9 +13,10 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Staff.Attendance;
 
 /// <summary>
-/// 出勤打卡（ADR 0018）。目前有卡號對應（卡片、持有期間與未歸戶卡號）與刷卡匯入；出勤紀錄與假日設定隨後加入。
+/// 出勤打卡（ADR 0018）。目前有卡號對應（卡片、持有期間與未歸戶卡號）、刷卡匯入與假日設定；出勤紀錄隨後加入。
 /// 卡號對應的寫入共用 AccessControl 的 <see cref="AdministrativeAudit"/>：同一個交易、行政寫入鎖與稽核，並發的重疊檢查靠它串行化。
 /// 假單與出差單由 <see cref="LeaveSheetReader"/> 經 <see cref="GdAccess"/> 唯讀查詢公文系統（GD），連不上時降級而不拋例外。
+/// 假日設定讀 GD 走唯讀的 <see cref="GdAccess"/>，回寫走另一個可寫入連線的 <see cref="GdCalendarWriter"/>（<c>Databases:GdCalendar</c>，未設定時只停用回寫）。
 /// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
 /// </summary>
 public sealed class AttendanceModule : IFeatureModule
@@ -25,6 +27,8 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceCardsMaintain);
         builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceImports);
         builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceImportsReimport);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceCalendar);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceCalendarMaintain);
         builder.Services.AddSettings<AttendanceOptions, AttendanceOptionsValidator>(AttendanceOptions.Section);
         builder.Services.AddSingleton<PunchImportGate>();
         builder.Services.AddSingleton<PunchImportState>();
@@ -36,6 +40,9 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddSingleton<GdAccess>();
         builder.Services.AddScoped<GdAccounts>();
         builder.Services.AddScoped<LeaveSheetReader>();
+        // 回寫假日的可寫入連線只宣告、不註冊 ISqlDatabase：寫入要跨命令持有交易，GdCalendarWriter 自己開連線。宣告為可寫入，不影響 Gd 的唯讀檢查。
+        builder.Services.AddDatabase(GdCalendarDatabase.Name, GdCalendarDatabase.ReadOnly);
+        builder.Services.AddSingleton<GdCalendarWriter>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
@@ -57,5 +64,9 @@ public sealed class AttendanceModule : IFeatureModule
         var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
         ListPunchImports.Map(imports);
         ReimportPunchFile.Map(imports);
+
+        var calendar = api.MapGroup("/attendance-calendar-days").RequireAuthorization(Policies.AttendanceCalendar);
+        ListCalendarDays.Map(calendar);
+        UpdateCalendarDay.Map(calendar);
     }
 }

@@ -1,13 +1,12 @@
 # 出勤打卡
 
-結論：目前完成**卡號對應**與**刷卡匯入**的後端；出勤紀錄與假日設定隨後加入，決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
+結論：目前完成**卡號對應**、**刷卡匯入**與**假日設定**（見 [假日設定](attendance-calendar.md)）的後端；出勤紀錄隨後加入，決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
 
 ## 授權
 
 - `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
 - `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
-- `attendance.calendar.maintain` 先在目錄宣告，端點隨假日設定加入。
 - `attendance.records` 宣告了資料範圍（`own`、`unit`、`unit-tree`、`all`），**端點還沒有，範圍尚未套用**；加端點時依 [資料範圍](../architecture/data-scopes.md) 套用，並補進該文件的對照表。
 - Seed：`workspace` 群組有 `attendance.records` 的 `own`；`hr`（人事）群組有出勤的全部頁面與動作，以及 `all` 範圍的 `attendance.records`，不含使用者管理。`hr` 沒有成員也沒有角色，由管理員連結角色與加人。
 - 主管的 `unit-tree` 預設**尚未實作**（主管身分在組織單位的成員設定，不是角色），留到出勤紀錄步驟；目前由管理員建立群組授予。
@@ -46,4 +45,4 @@
 
 ## 稽核
 
-`admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
+`admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號異動」篩選（假日設定的 `admin.attendance_calendar_day` 也在其中）。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
