@@ -191,12 +191,12 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
           <span calendar-actions class="ui-count-label">{{ selected() || '尚未選取' }}</span>
         </nx-month-calendar>
       </nx-design-example>
-      <nx-design-example class="design-calendar-small" label="自訂範本、週日起始、唯讀">
+      <nx-design-example class="design-calendar-small" label="自訂範本、週一起始、唯讀">
         <nx-month-calendar
           label="示範假日"
           [(month)]="smallMonth"
           [days]="holidays"
-          [weekStart]="0"
+          [weekStart]="1"
           [interactive]="false"
         >
           <ng-template [nxCalendarDay]="holidays" let-day="day">

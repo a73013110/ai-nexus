@@ -20,7 +20,7 @@
 ## 資料視覺化與總覽的例外
 
 - 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件（`StatTile`、`Sparkline`、`DonutChart` 等）見 `/admin/design`「資料視覺化」。
-- 月檢視用 `MonthCalendar`（`frontend/src/app/shared/ui/month-calendar.ts`）：不含業務規則，每日內容由 `days` 的 `marks` 或 `nxCalendarDay` 範本提供；窄容器以 `@container month-calendar` 精簡。
+- 月檢視用 `MonthCalendar`（`frontend/src/app/shared/ui/month-calendar.ts`）：不含業務規則、預設週日起始，每日內容由 `days` 的 `marks` 或 `nxCalendarDay` 範本提供；窄容器以 `@container month-calendar` 精簡。
 - `meter`／`progress` 由 `controls.scss` 統一：軌道 `--line`、填色 `--meter-color`（預設 `--accent`），元件只改這個變數。
 - [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
 - 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。

@@ -41,9 +41,9 @@ describe('calendar keys', () => {
     expect(calendarKeyTarget('ArrowRight', '2026-10-31')).toBe('2026-11-01');
     expect(calendarKeyTarget('ArrowUp', '2026-10-05')).toBe('2026-09-28');
     // 2026-10-07 是星期三。
-    expect(calendarKeyTarget('Home', '2026-10-07')).toBe('2026-10-05');
-    expect(calendarKeyTarget('End', '2026-10-07')).toBe('2026-10-11');
-    expect(calendarKeyTarget('Home', '2026-10-07', { weekStart: 0 })).toBe('2026-10-04');
+    expect(calendarKeyTarget('Home', '2026-10-07')).toBe('2026-10-04');
+    expect(calendarKeyTarget('End', '2026-10-07')).toBe('2026-10-10');
+    expect(calendarKeyTarget('Home', '2026-10-07', { weekStart: 1 })).toBe('2026-10-05');
     expect(calendarKeyTarget('PageUp', '2026-03-31')).toBe('2026-02-28');
     expect(calendarKeyTarget('PageDown', '2024-02-29', { shift: true })).toBe('2025-02-28');
     expect(calendarKeyTarget('Tab', '2026-10-07')).toBeNull();

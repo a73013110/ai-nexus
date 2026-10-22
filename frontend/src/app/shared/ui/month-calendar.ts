@@ -77,7 +77,7 @@ export const fullDateLabel = (date: string) =>
  * `YYYY-MM` 的月曆格子，每列一週，從 `weekStart` 開始；前後補上相鄰月份的日期湊滿整週。
  * 預設只排到這個月需要的週數（4～6 列），`fixedWeeks` 固定 6 列讓換月時高度不變。
  */
-export function monthGrid(month: string, weekStart: WeekStart = 1, fixedWeeks = false) {
+export function monthGrid(month: string, weekStart: WeekStart = 0, fixedWeeks = false) {
   const first = `${month}-01`;
   const length = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).getUTCDate();
   const lead = (weekdayOf(first) - weekStart + 7) % 7;
@@ -106,7 +106,7 @@ export function monthGrid(month: string, weekStart: WeekStart = 1, fixedWeeks = 
 export function calendarKeyTarget(
   key: string,
   date: string,
-  { shift = false, weekStart = 1 as WeekStart } = {},
+  { shift = false, weekStart = 0 as WeekStart } = {},
 ): string | null {
   const offset = (weekdayOf(date) - weekStart + 7) % 7;
   switch (key) {
@@ -285,7 +285,8 @@ export class MonthCalendar {
   readonly selected = model<string | null>(null);
   /** 今天的 `YYYY-MM-DD`；不給就用瀏覽器本地日期（業務日以台北為準時由呼叫端傳入）。 */
   readonly today = input<string | null>(null);
-  readonly weekStart = input<WeekStart>(1);
+  /** 一週的第一天：預設週日（0），與台灣常見的月曆、公文系統的行事曆一致；需要 ISO 週時傳 1。 */
+  readonly weekStart = input<WeekStart>(0);
   readonly fixedWeeks = input(false, { transform: booleanAttribute });
   /** 標題列（月份、本月、上／下個月）；頁面自己有月份切換時關掉。 */
   readonly header = input(true, { transform: booleanAttribute });
