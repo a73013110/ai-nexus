@@ -306,6 +306,7 @@
         "type": "Project",
         "dependencies": {
           "Dapper": "[2.1.89, )",
+          "DocumentFormat.OpenXml": "[3.5.1, )",
           "FluentValidation": "[12.1.1, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.19.1, )",
