@@ -13,7 +13,7 @@ public sealed record UnitMembership(Guid UnitId, bool IsPrimary, bool IsManager)
 /// 其他模組讀取組織的對外合約（員工服務的部門與主管、ADR 0017 的資料範圍）。只回答「現在」：
 /// 有效單位＝自己與所有上層都啟用；停用的單位連同整棵下層都不算，帳號停用或刪除的成員也不算。
 /// 每次呼叫整表讀取單位：部門數以百計，比遞迴 CTE 簡單，也讓「上層停用」的判斷只寫一次。
-/// 也是 AccessControl 的 <see cref="IUnitMembership"/>：資料範圍的 <c>unit</c>、<c>unit-tree</c> 由這裡計算。
+/// 也是 AccessControl 的 <see cref="IUnitMembership"/>：資料範圍的 <c>unit</c>、<c>unit-tree</c> 與主管範圍由這裡計算。
 /// </summary>
 public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUsers) : IUnitMembership
 {
@@ -50,8 +50,12 @@ public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUs
         return ActiveMembers().Where(x => units.Contains(x.UnitId)).Select(x => x.UserId);
     }
 
-    async Task<IReadOnlyList<Guid>> IUnitMembership.UnitsOfAsync(Guid userId, CancellationToken ct)
-        => [.. (await MembershipsAsync(userId, ct)).Select(x => x.UnitId)];
+    /// <summary>主管＝組織管理的主管勾選（<see cref="UnitMember.IsManager"/>），是主管範圍唯一的來源，不另建主管群組（ADR 0017）。</summary>
+    async Task<UnitsOfUser> IUnitMembership.UnitsOfAsync(Guid userId, CancellationToken ct)
+    {
+        var memberships = await MembershipsAsync(userId, ct);
+        return new([.. memberships.Select(x => x.UnitId)], [.. memberships.Where(x => x.IsManager).Select(x => x.UnitId)]);
+    }
 
     /// <summary>單位目前的有效成員（帳號啟用且未刪除）；單位無效時回空清單。</summary>
     public async Task<IReadOnlyList<Guid>> MembersAsync(Guid unitId, bool managersOnly, CancellationToken ct)

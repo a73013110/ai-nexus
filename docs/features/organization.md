@@ -15,14 +15,14 @@
 ## 成員
 
 - 一人可屬多個單位，最多一個**主要所屬**；在某單位勾選主要所屬，會在同一次儲存取消此人在其他單位的主要所屬。
-- **主管**：一個單位可有多位主管；只看直屬單位，不自動延伸到下層。
+- **主管**：一個單位可有多位主管；主管關係只記在直屬單位，不自動成為下層的主管。這個勾選也是[主管範圍](../architecture/data-scopes.md#主管範圍)的唯一來源，取消勾選即失效。
 - 只能加入未刪除的帳號（`organization_user_not_found`）。帳號停用或刪除後所屬仍保留並標示「帳號已停用」，但不參與資料範圍，由管理員自行移出。
 - 只記錄現況。「當時在哪個部門」由業務資料寫入時自己存單位 ID，組織不保留異動歷史。
 - 使用者管理的檢視器顯示此人的所屬單位（唯讀，`identity.users` 或 `organization` 任一授權可讀）。
 
 ## 給其他模組
 
-`OrganizationDirectory`（public）只回答現況：使用者所屬的有效單位、單位與所有下層、單位的有效成員或主管，以及可組合進業務查詢的成員子查詢（`MemberIds`）。有效單位＝自己與所有上層都啟用。它也實作 AccessControl 的 `IUnitMembership`，[資料範圍](../architecture/data-scopes.md)的 `unit`、`unit-tree` 由這裡計算。
+`OrganizationDirectory`（public）只回答現況：使用者所屬的有效單位、單位與所有下層、單位的有效成員或主管，以及可組合進業務查詢的成員子查詢（`MemberIds`）。有效單位＝自己與所有上層都啟用。它也實作 AccessControl 的 `IUnitMembership`，[資料範圍](../architecture/data-scopes.md)的 `unit`、`unit-tree` 與主管範圍由這裡計算。
 
 ## 稽核
 

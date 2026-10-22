@@ -7,9 +7,8 @@
 - `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
 - `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
-- `attendance.records`：資料範圍 `own`、`unit`、`unit-tree`、`all`，見 [出勤紀錄](attendance-records.md#資料範圍)。
+- `attendance.records`：資料範圍 `own`、`unit`、`unit-tree`、`all`，組織勾選的主管自動取得所管單位含下層，見 [出勤紀錄](attendance-records.md#資料範圍)。
 - Seed：`workspace` 群組有 `attendance.records` 的 `own`；`hr`（人事）群組有出勤的全部頁面與動作，以及 `all` 範圍的 `attendance.records`，不含使用者管理。`hr` 沒有成員也沒有角色，由管理員連結角色與加人。
-- 主管的 `unit-tree` 預設**尚未實作**（主管身分在組織單位的成員設定，不是角色）；目前由管理員建立群組授予。
 
 ## 卡片
 

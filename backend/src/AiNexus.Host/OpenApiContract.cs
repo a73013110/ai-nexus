@@ -83,6 +83,8 @@ internal static class OpenApiContract
             ["icon"] = feature.Icon,
             ["route"] = feature.Route,
             ["scopes"] = new JsonArray([.. feature.Scopes.Select(scope => (JsonNode)JsonValue.Create(scope))]),
+            // 主管自動取得的範圍（null＝沒有），群組管理畫面用來提示，不影響授予選項。
+            ["managerScope"] = feature.ManagerScope,
         })]),
         ["scopes"] = new JsonArray([.. DataScopes.Definitions.Select(scope => (JsonNode)new JsonObject { ["id"] = scope.Id, ["name"] = scope.Name })]),
     };

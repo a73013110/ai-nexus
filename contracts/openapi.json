@@ -51298,7 +51298,8 @@
         "name": "總覽",
         "icon": "dashboard",
         "route": "/work/dashboard",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "chat",
@@ -51307,7 +51308,8 @@
         "name": "對話",
         "icon": "chat",
         "route": "/work/chat",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "projects",
@@ -51316,7 +51318,8 @@
         "name": "專案",
         "icon": "projects",
         "route": "/work/projects",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "files",
@@ -51325,7 +51328,8 @@
         "name": "檔案庫",
         "icon": "files",
         "route": "/work/files",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "files.reader",
@@ -51334,7 +51338,8 @@
         "name": "檔案閱讀器",
         "icon": "files",
         "route": "/work/files/reader",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "knowledge",
@@ -51343,7 +51348,8 @@
         "name": "知識庫",
         "icon": "library",
         "route": "/work/knowledge",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "knowledge.reader",
@@ -51352,7 +51358,8 @@
         "name": "文件閱讀器",
         "icon": "document",
         "route": "/work/knowledge/reader",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "knowledge.retrieval",
@@ -51361,7 +51368,8 @@
         "name": "檢索管理",
         "icon": "database",
         "route": "/work/knowledge/retrieval",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "artifacts",
@@ -51370,7 +51378,8 @@
         "name": "成果文件",
         "icon": "document",
         "route": "/work/artifacts",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "sharing",
@@ -51379,7 +51388,8 @@
         "name": "分享",
         "icon": "share",
         "route": "/work/sharing",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "sharing.reader",
@@ -51388,7 +51398,8 @@
         "name": "分享閱讀器",
         "icon": "share",
         "route": "/work/sharing/reader",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "jobs",
@@ -51397,7 +51408,8 @@
         "name": "背景任務",
         "icon": "tasks",
         "route": "/work/jobs",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "repositories",
@@ -51406,7 +51418,8 @@
         "name": "程式庫",
         "icon": "git",
         "route": "/work/repositories",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.records",
@@ -51420,7 +51433,8 @@
           "unit",
           "unit-tree",
           "all"
-        ]
+        ],
+        "managerScope": "unit-tree"
       },
       {
         "id": "attendance.cards",
@@ -51429,7 +51443,8 @@
         "name": "卡號對應",
         "icon": "tag",
         "route": "/staff/attendance/cards",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.cards.maintain",
@@ -51438,7 +51453,8 @@
         "name": "維護卡片與持有期間",
         "icon": "edit",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.imports",
@@ -51447,7 +51463,8 @@
         "name": "打卡匯入紀錄",
         "icon": "upload",
         "route": "/staff/attendance/imports",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.imports.reimport",
@@ -51456,7 +51473,8 @@
         "name": "手動重匯打卡檔",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.calendar",
@@ -51465,7 +51483,8 @@
         "name": "假日設定",
         "icon": "calendar",
         "route": "/staff/attendance/calendar",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "attendance.calendar.maintain",
@@ -51474,7 +51493,8 @@
         "name": "修改假日與彈性放假",
         "icon": "edit",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "identity.users",
@@ -51483,7 +51503,8 @@
         "name": "使用者",
         "icon": "user",
         "route": "/admin/identity/users",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "access-control.roles",
@@ -51492,7 +51513,8 @@
         "name": "角色",
         "icon": "lock",
         "route": "/admin/access-control/roles",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "access-control.groups",
@@ -51501,7 +51523,8 @@
         "name": "功能群組與模型",
         "icon": "apps",
         "route": "/admin/access-control/groups",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "access-control.features",
@@ -51510,7 +51533,8 @@
         "name": "功能",
         "icon": "list",
         "route": "/admin/access-control/features",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "access-control.navigation",
@@ -51519,7 +51543,8 @@
         "name": "選單",
         "icon": "sidebar",
         "route": "/admin/access-control/navigation",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "organization",
@@ -51528,7 +51553,8 @@
         "name": "組織單位",
         "icon": "organization",
         "route": "/admin/organization",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "operations.usage",
@@ -51537,7 +51563,8 @@
         "name": "平台用量",
         "icon": "chart",
         "route": "/admin/operations/usage",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "billing.prices",
@@ -51546,7 +51573,8 @@
         "name": "模型與工具價格",
         "icon": "money",
         "route": "/admin/billing/prices",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "integrations",
@@ -51555,7 +51583,8 @@
         "name": "資料來源",
         "icon": "integrations",
         "route": "/admin/integrations",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "monitoring",
@@ -51564,7 +51593,8 @@
         "name": "即時監控",
         "icon": "activity",
         "route": "/admin/monitoring",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "audit",
@@ -51578,7 +51608,8 @@
           "unit",
           "unit-tree",
           "all"
-        ]
+        ],
+        "managerScope": null
       },
       {
         "id": "diagnostics.logs",
@@ -51587,7 +51618,8 @@
         "name": "系統日誌",
         "icon": "logs",
         "route": "/admin/diagnostics/logs",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "diagnostics.logs.detail",
@@ -51596,7 +51628,8 @@
         "name": "日誌診斷詳情",
         "icon": "search",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "diagnostics.logs.export",
@@ -51605,7 +51638,8 @@
         "name": "日誌匯出",
         "icon": "download",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "mail.messages",
@@ -51614,7 +51648,8 @@
         "name": "郵件寄送紀錄",
         "icon": "mail",
         "route": "/admin/mail/messages",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "mail.messages.resend",
@@ -51623,7 +51658,8 @@
         "name": "重寄與重試郵件",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "quality",
@@ -51632,7 +51668,8 @@
         "name": "品質評測",
         "icon": "shield",
         "route": "/admin/quality",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "quality.retrieval",
@@ -51641,7 +51678,8 @@
         "name": "檢索評測",
         "icon": "search",
         "route": "/admin/quality/retrieval",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       },
       {
         "id": "design",
@@ -51650,7 +51688,8 @@
         "name": "介面元件",
         "icon": "sliders",
         "route": "/admin/design",
-        "scopes": [ ]
+        "scopes": [ ],
+        "managerScope": null
       }
     ],
     "scopes": [

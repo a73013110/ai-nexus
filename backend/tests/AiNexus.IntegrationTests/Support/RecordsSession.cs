@@ -32,11 +32,16 @@ internal sealed class RecordsSession : IAsyncDisposable
     public required AppFactory Factory { get; init; }
 
     /// <param name="gdReachable">false 時 GD 連線指向不存在的資料庫：行事曆與假單都讀不到。</param>
-    public static RecordsSession Create(bool gdReachable = true)
+    /// <param name="services">額外的服務設定，例如 <see cref="RequestQueries.Register"/>。</param>
+    public static RecordsSession Create(bool gdReachable = true, Action<IServiceCollection>? services = null)
     {
         var gd = FakeGd.Create();
-        var factory = new AppFactory(clock: new FakeTimeProvider(Now), services: services => services.PostConfigure<DatabasesOptions>(options =>
-            options[GdDatabase.Name] = gdReachable ? gd.Databases[GdDatabase.Name] : FakeGd.Missing(readOnly: true)));
+        var factory = new AppFactory(clock: new FakeTimeProvider(Now), services: collection =>
+        {
+            collection.PostConfigure<DatabasesOptions>(options =>
+                options[GdDatabase.Name] = gdReachable ? gd.Databases[GdDatabase.Name] : FakeGd.Missing(readOnly: true));
+            services?.Invoke(collection);
+        });
         for (var day = 19; day <= 23; day++) gd.AddDay(new(2026, 10, day));
         return new() { Gd = gd, Factory = factory };
     }

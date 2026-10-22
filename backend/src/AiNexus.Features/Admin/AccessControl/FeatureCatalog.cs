@@ -29,6 +29,12 @@ public sealed record FeatureDefinition(string Id, FeatureKind Kind, ModuleDefini
     /// 宣告了就表示該功能的查詢經 <see cref="IDataScope"/> 套用範圍，授予時必須選其中一個（ADR 0017）。
     /// </summary>
     public IReadOnlyList<string> Scopes { get; init; } = [];
+
+    /// <summary>
+    /// 主管範圍：組織管理勾選為主管的人，對其任主管的單位自動取得的範圍（<c>unit</c> 或 <c>unit-tree</c>，必須在 <see cref="Scopes"/> 之內）。
+    /// 不授予功能本身，只在已有授權時與群組範圍 OR 合併（<see cref="IDataScope"/>）；null 表示主管沒有額外範圍。
+    /// </summary>
+    public string? ManagerScope { get; init; }
 }
 
 /// <summary>
@@ -134,7 +140,7 @@ public static class FeatureCatalog
         new(Jobs, FeatureKind.Page, JobsModule, "背景任務", "tasks"),
         new(Repositories, FeatureKind.Page, RepositoriesModule, "程式庫", "git"),
         // 出勤紀錄是員工自助頁，管理頁（卡號對應、匯入紀錄、假日設定）給 HR；管理頁的網址仍在 /staff/attendance，選單才放進系統管理（ADR 0018）。
-        new(AttendanceRecords, FeatureKind.Page, AttendanceModule, "出勤紀錄", "clock") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All] },
+        new(AttendanceRecords, FeatureKind.Page, AttendanceModule, "出勤紀錄", "clock") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All], ManagerScope = DataScopes.UnitTree },
         new(AttendanceCards, FeatureKind.Page, AttendanceModule, "卡號對應", "tag"),
         new(AttendanceCardsMaintain, FeatureKind.Action, AttendanceModule, "維護卡片與持有期間", "edit"),
         new(AttendanceImports, FeatureKind.Page, AttendanceModule, "打卡匯入紀錄", "upload"),

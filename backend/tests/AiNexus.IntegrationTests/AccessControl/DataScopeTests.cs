@@ -55,4 +55,70 @@ public sealed class DataScopeTests
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).IsEmpty);
         await Assert.ThrowsAsync<ArgumentException>(() => scopes.ForAsync(bob, FeatureCatalog.Chat, default));
     }
+
+    [Fact]
+    public async Task ManagersGetTheDeclaredScopeOverTheUnitsTheyManageOnly()
+    {
+        await using var factory = new AppFactory();
+        var bob = await UserIdAsync(factory, "bob");
+        Guid it = Guid.NewGuid(), systems = Guid.NewGuid(), closed = Guid.NewGuid(), hr = Guid.NewGuid();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.AddRange(
+            new Unit { Id = it, Name = "資訊處", SortOrder = 10 },
+            new Unit { Id = systems, ParentId = it, Name = "系統部", SortOrder = 10 },
+            new Unit { Id = closed, ParentId = it, Name = "已裁撤", Enabled = false, SortOrder = 20 },
+            new Unit { Id = hr, Name = "人資處", SortOrder = 20 });
+        await db.SaveChangesAsync();
+        // bob 是資訊處主管，同時掛在人資處但不是主管。
+        db.AddRange(
+            new UnitMember { UnitId = it, UserId = bob, IsPrimary = true, IsManager = true },
+            new UnitMember { UnitId = hr, UserId = bob });
+        await db.SaveChangesAsync();
+        var scopes = scope.ServiceProvider.GetRequiredService<IDataScope>();
+
+        // Seed 的 workspace 給 own；主管範圍 unit-tree 加上所管單位與有效下層，不含停用單位與人資處。
+        var managed = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
+        Assert.Equal(new HashSet<string> { DataScopes.Own, DataScopes.UnitTree }, managed.Scopes);
+        Assert.Equal(new HashSet<Guid> { it, systems }, managed.UnitIds);
+
+        // 沒宣告主管範圍的功能不受影響（bob 預設沒有稽核授權；給 own 也只有 own）。
+        Assert.True((await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).IsEmpty);
+        db.Set<RoleGroupFeature>().Add(new() { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Own });
+        await db.SaveChangesAsync();
+        var audit = await scopes.ForAsync(bob, FeatureCatalog.Audit, default);
+        Assert.Equal(new HashSet<string> { DataScopes.Own }, audit.Scopes);
+        Assert.Empty(audit.UnitIds);
+
+        // 與群組範圍以 OR 合併：群組的 unit 帶進人資處。
+        await SetRecordsScopeAsync(db, DataScopes.Unit);
+        Assert.Equal(new HashSet<Guid> { it, systems, hr }, (await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).UnitIds);
+
+        // 群組沒有可用範圍時只靠主管範圍；功能授權本身不能少。
+        await SetRecordsScopeAsync(db, null);
+        var only = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
+        Assert.Equal(new HashSet<string> { DataScopes.UnitTree }, only.Scopes);
+        Assert.Equal(new HashSet<Guid> { it, systems }, only.UnitIds);
+
+        // 單位停用後連同下層不算；沒有有效的所管單位時就沒有範圍。
+        await db.Set<Unit>().Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
+        await db.Set<Unit>().Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
+
+        // 取消主管勾選就失效。
+        await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false));
+        Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
+        await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, true));
+
+        // 主管範圍不授予功能：沒有授權就沒有範圍；帳號停用也一樣。
+        await db.Users.Where(x => x.Id == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
+        await db.Users.Where(x => x.Id == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
+        await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync();
+        Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
+    }
+
+    private static Task SetRecordsScopeAsync(AppDbContext db, string? value) => db.Set<RoleGroupFeature>()
+        .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords)
+        .ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, value));
 }

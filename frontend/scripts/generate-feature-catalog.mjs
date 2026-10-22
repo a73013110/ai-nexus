@@ -29,6 +29,8 @@ for (const feature of catalog.features) {
     fail(`功能 ${feature.id}：只有 action 沒有網址。`);
   for (const scope of feature.scopes ?? [])
     if (!scopes.has(scope)) fail(`功能 ${feature.id} 的範圍 ${scope} 不在目錄中。`);
+  if (feature.managerScope != null && !(feature.scopes ?? []).includes(feature.managerScope))
+    fail(`功能 ${feature.id} 的主管範圍 ${feature.managerScope} 不在它支援的範圍內。`);
 }
 
 const pick = (items, keys) => items.map((item) => Object.fromEntries(keys.map((key) => [key, item[key] ?? null])));
@@ -42,10 +44,10 @@ export const CATALOG_AREAS = ${JSON.stringify(pick(catalog.areas, ['id', 'name']
 export const CATALOG_MODULES = ${JSON.stringify(pick(catalog.modules, ['id', 'area', 'name']))} as const;
 
 export const CATALOG_FEATURES = ${JSON.stringify(
-  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route', 'scopes']),
+  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route', 'scopes', 'managerScope']),
 )} as const;
 
-/** 資料範圍（ADR 0017），由窄到寬；功能的 \`scopes\` 是它支援的子集，空的表示授權不帶範圍。 */
+/** 資料範圍（ADR 0017），由窄到寬；功能的 \`scopes\` 是它支援的子集，空的表示授權不帶範圍；\`managerScope\` 是主管自動取得的範圍（null＝沒有）。 */
 export const CATALOG_SCOPES = ${JSON.stringify(pick(catalog.scopes, ['id', 'name']))} as const;
 
 export type CatalogArea = (typeof CATALOG_AREAS)[number];

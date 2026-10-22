@@ -48,13 +48,34 @@ public sealed class FeatureCatalogTests
     {
         var order = DataScopes.Definitions.Select(x => x.Id).ToList();
         Assert.Equal(order.Count, order.Distinct().Count());
-        foreach (var feature in FeatureCatalog.All.Where(x => x.Scopes.Count > 0))
-        {
-            Assert.True(feature.IsGrant, $"{feature.Id}：閱讀器不是授權，不能宣告資料範圍。");
-            Assert.All(feature.Scopes, scope => Assert.Contains(scope, order));
-            Assert.Equal(feature.Scopes.OrderBy(order.IndexOf), feature.Scopes);
-            Assert.Equal(feature.Scopes.Count, feature.Scopes.Distinct().Count());
-        }
+        var problems = FeatureCatalog.All.SelectMany(ScopeProblems).ToList();
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+    }
+
+    [Fact]
+    public void ManagerScopeMustBeAUnitScopeTheFeatureSupports()
+    {
+        var module = FeatureCatalog.Modules[0];
+        FeatureDefinition Declare(string? manager, params string[] scopes) => new("fixture.page", FeatureKind.Page, module, "測試", "list") { Scopes = scopes, ManagerScope = manager };
+
+        Assert.Empty(ScopeProblems(Declare(DataScopes.UnitTree, DataScopes.Own, DataScopes.UnitTree)));
+        Assert.Single(ScopeProblems(Declare(DataScopes.UnitTree, DataScopes.Own, DataScopes.Unit)));
+        Assert.Single(ScopeProblems(Declare(DataScopes.Unit)));
+        Assert.Single(ScopeProblems(Declare(DataScopes.All, DataScopes.Own, DataScopes.All)));
+        // 主管範圍目前只給出勤紀錄；稽核等其他功能不宣告，主管不因此多看到資料。
+        Assert.Equal([FeatureCatalog.AttendanceRecords], FeatureCatalog.All.Where(x => x.ManagerScope is not null).Select(x => x.Id));
+        Assert.Equal(DataScopes.UnitTree, FeatureCatalog.Find(FeatureCatalog.AttendanceRecords)!.ManagerScope);
+    }
+
+    /// <summary>範圍宣告的規則：只在授權上、代碼已知、由窄到寬不重複；主管範圍限 <c>unit</c>／<c>unit-tree</c> 且在 <c>Scopes</c> 之內。</summary>
+    private static IEnumerable<string> ScopeProblems(FeatureDefinition feature)
+    {
+        var order = DataScopes.Definitions.Select(x => x.Id).ToList();
+        if (feature.Scopes.Count > 0 && !feature.IsGrant) yield return $"{feature.Id}：閱讀器不是授權，不能宣告資料範圍。";
+        if (feature.Scopes.Any(x => !order.Contains(x))) yield return $"{feature.Id}：範圍代碼不認得。";
+        if (!feature.Scopes.SequenceEqual(feature.Scopes.Distinct().OrderBy(order.IndexOf))) yield return $"{feature.Id}：範圍要由窄到寬且不重複。";
+        if (feature.ManagerScope is { } manager && (manager is not (DataScopes.Unit or DataScopes.UnitTree) || !feature.Scopes.Contains(manager)))
+            yield return $"{feature.Id}：主管範圍 {manager} 必須是 unit 或 unit-tree，且在宣告的範圍內。";
     }
 
     [Fact]
