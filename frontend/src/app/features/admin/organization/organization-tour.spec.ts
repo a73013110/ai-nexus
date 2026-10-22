@@ -1,6 +1,7 @@
 import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { UnitImportPreviewDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ClientIssues } from '@core/errors/client-issues';
@@ -8,7 +9,7 @@ import { ProductTour, tourSteps } from '@shared/ui/product-tour';
 import { CollaborationApi } from '@features/work/collaboration/collaboration-api';
 import { OrganizationApi } from './organization-api';
 import { OrganizationPage } from './organization-page';
-import { organizationTour, unitDialogTour } from './organization-tour';
+import { organizationTour, unitDialogTour, unitImportTour } from './organization-tour';
 
 const titles = (definition: Parameters<typeof tourSteps>[0]) =>
   tourSteps(definition).map((step) => step.title);
@@ -19,6 +20,7 @@ describe('organizationTour', () => {
       '部門決定資料範圍',
       '新增單位',
       '瀏覽部門樹',
+      '標「公文」的單位',
       '單位操作',
       '編輯、搬移與停用',
       '加入成員',
@@ -41,6 +43,7 @@ describe('organizationTour', () => {
     expect(steps.map((step) => step.title)).toEqual([
       '部門決定資料範圍',
       '瀏覽部門樹',
+      '標「公文」的單位',
       '主要所屬與主管',
     ]);
     expect(steps.at(-1)?.description).toContain('只能查看');
@@ -67,10 +70,45 @@ describe('unitDialogTour', () => {
     );
   });
 
+  it('warns first that an imported unit is reverted by the next import', () => {
+    const steps = tourSteps(unitDialogTour({ editing: true, testing: false, imported: true }));
+    expect(steps.map((step) => step.title)).toEqual([
+      '下次匯入會改回',
+      '單位名稱',
+      '搬到其他上層',
+      '啟用與停用',
+    ]);
+    expect(titles(unitDialogTour({ editing: true, testing: false }))).not.toContain(
+      '下次匯入會改回',
+    );
+  });
+
   it('scopes every target to the dialog', () => {
     for (const editing of [false, true])
-      for (const step of tourSteps(unitDialogTour({ editing, testing: false })))
+      for (const step of tourSteps(unitDialogTour({ editing, testing: false, imported: true })))
         expect(step.target).toMatch(/^nx-unit-dialog /);
+  });
+});
+
+describe('unitImportTour', () => {
+  it('walks the preview from the summary to applying', () => {
+    expect(titles(unitImportTour({ testing: false }))).toEqual([
+      '先看變動摘要',
+      '以公文系統為準',
+      '單位變動',
+      '主管變動',
+      '略過的問題',
+      '套用匯入',
+    ]);
+  });
+
+  it('says applying is not possible while testing an identity', () => {
+    expect(tourSteps(unitImportTour({ testing: true })).at(-1)?.description).toContain('不能套用');
+  });
+
+  it('scopes every target to the dialog', () => {
+    for (const step of tourSteps(unitImportTour({ testing: false })))
+      expect(step.target).toMatch(/^nx-unit-import-dialog /);
   });
 });
 
@@ -91,6 +129,35 @@ describe('organization tour targets', () => {
       this.open = true;
     };
     const generation = signal(1);
+    const preview: UnitImportPreviewDto = {
+      fingerprint: 'f1',
+      sourceUnits: 2,
+      units: [
+        {
+          gdDepNo: 12,
+          unitId: 'it',
+          action: 'Update',
+          path: ['總公司', '資訊處'],
+          previousPath: null,
+          enabled: true,
+          fields: ['Name'],
+        },
+      ],
+      managers: [
+        {
+          gdDepNo: 12,
+          unitId: 'it',
+          path: ['總公司', '資訊處'],
+          userId: 'bob',
+          account: 'TEST\\bob',
+          displayName: 'Bob',
+          added: true,
+          deputy: false,
+          joinsUnit: false,
+        },
+      ],
+      issues: [{ gdDepNo: 30, name: '', code: 'NameMissing', gdUserId: null }],
+    };
     const units = [
       {
         id: 'company',
@@ -99,6 +166,7 @@ describe('organization tour targets', () => {
         enabled: true,
         sortOrder: 10,
         memberCount: 0,
+        gdDepNo: null,
       },
       {
         id: 'it',
@@ -107,6 +175,7 @@ describe('organization tour targets', () => {
         enabled: true,
         sortOrder: 10,
         memberCount: 1,
+        gdDepNo: 12,
       },
     ];
     TestBed.configureTestingModule({
@@ -115,6 +184,7 @@ describe('organization tour targets', () => {
           provide: OrganizationApi,
           useValue: {
             units: vi.fn(async () => units),
+            previewImport: vi.fn(async () => preview),
             members: vi.fn(async () => [
               {
                 userId: 'bob',
@@ -162,7 +232,12 @@ describe('organization tour targets', () => {
     }
     page.editSelected();
     await settle();
-    for (const step of tourSteps(unitDialogTour({ editing: true, testing: false })))
+    for (const step of tourSteps(unitDialogTour({ editing: true, testing: false, imported: true })))
+      expect(host.querySelector(step.target), step.target).not.toBeNull();
+    page.openImport();
+    await settle();
+    expect(host.querySelector('nx-unit-import-dialog nx-product-tour-button')).not.toBeNull();
+    for (const step of tourSteps(unitImportTour({ testing: false })))
       expect(host.querySelector(step.target), step.target).not.toBeNull();
   });
 });

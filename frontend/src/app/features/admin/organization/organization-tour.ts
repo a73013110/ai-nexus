@@ -20,7 +20,7 @@ export function organizationTour(options: {
       title: '從公文系統匯入',
       description: options.testing
         ? '可預覽公文系統的部門與主管會帶來哪些變動；測試身分期間不能套用。'
-        : '先預覽將新增、更新、停用的單位與主管變動，確認後才套用；匯入的單位標示「公文」，下次匯入會以公文系統為準。',
+        : '部門與主管以公文系統為準時用：開啟只預覽新增、綁定同名手建單位、更新與停用，確認後才套用；手建的單位不受影響。',
       side: 'bottom',
     },
     !options.testing && {
@@ -33,6 +33,13 @@ export function organizationTour(options: {
       target: 'nx-organization-page .organization-tree .unit-name',
       title: '瀏覽部門樹',
       description: '點單位查看它的直屬成員，箭頭可展開或收合下層；停用的單位與它的下層以灰字標示。',
+      side: 'right',
+    },
+    {
+      target: 'nx-organization-page .organization-tree .unit-source',
+      title: '標「公文」的單位',
+      description:
+        '由公文系統匯入建立或綁定：名稱、上層、啟用、順序與主管以公文系統為準，在這裡修改只維持到下次匯入；成員與主要所屬仍在這裡維護。',
       side: 'right',
     },
     !options.testing && {
@@ -73,9 +80,18 @@ export function unitDialogTour(options: {
   editing: boolean;
   /** 正以測試身分檢視，欄位唯讀。 */
   testing: boolean;
+  /** 編輯的是來自公文系統的單位（`gdDepNo` 有值）。 */
+  imported?: boolean;
 }): ProductTourDefinition {
   return {
     steps: [
+      options.imported && {
+        target: 'nx-unit-dialog .unit-imported',
+        title: '下次匯入會改回',
+        description:
+          '這個單位由公文系統管理：這裡的修改只維持到下次匯入，臨時調整可以，長期請改公文系統。',
+        side: 'bottom',
+      },
       {
         target: 'nx-unit-dialog .unit-name-field',
         title: '單位名稱',
@@ -96,6 +112,62 @@ export function unitDialogTour(options: {
         target: 'nx-unit-dialog .unit-enabled',
         title: '啟用與停用',
         description: '停用的單位保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。',
+        side: 'top',
+      },
+    ],
+  };
+}
+
+const IMPORT = 'nx-unit-import-dialog';
+
+/**
+ * 從公文系統匯入對話框的導覽：預覽的各區只在有內容時出現（沒有的區由導覽略過）。
+ * 測試身分可以預覽、不能套用。
+ */
+export function unitImportTour(options: {
+  /** 正以測試身分檢視，不能套用。 */
+  testing: boolean;
+}): ProductTourDefinition {
+  return {
+    steps: [
+      {
+        target: `${IMPORT} .import-summary`,
+        title: '先看變動摘要',
+        description:
+          '開啟時只預覽、不寫入；摘要列出會新增、綁定手建單位、更新與停用的單位，以及設定或取消的主管。',
+        side: 'bottom',
+      },
+      {
+        target: `${IMPORT} .import-rule`,
+        title: '以公文系統為準',
+        description:
+          '匯入的單位名稱、上層、啟用、順序與主管每次都覆蓋；公文系統已沒有的部門只停用、不刪除，成員與歷史保留。',
+        side: 'bottom',
+      },
+      {
+        target: `${IMPORT} .import-units`,
+        title: '單位變動',
+        description:
+          '每列標示新增、綁定（同一層的同名手建單位改由公文系統管理）、更新或停用，並註明改了哪些欄位或原本的位置。',
+      },
+      {
+        target: `${IMPORT} .import-managers`,
+        title: '主管變動',
+        description:
+          '正副主管都設為主管；不是成員的主管會加入為成員，公文系統不再列為主管的人只取消主管、保留成員資格。',
+      },
+      {
+        target: `${IMPORT} .import-issues`,
+        title: '略過的問題',
+        description:
+          '這些部門或主管帳號不會匯入，其他變動照常套用；請在公文系統修正，或讓對應的人先登入平台後再匯入。',
+      },
+      {
+        target: `${IMPORT} .unit-import-apply`,
+        title: '套用匯入',
+        description: options.testing
+          ? '測試身分期間只能預覽，不能套用。'
+          : '套用時會重新比對；預覽之後公文系統或組織有人改過就拒絕並請你重新預覽，不會套用沒看過的變更。',
         side: 'top',
       },
     ],

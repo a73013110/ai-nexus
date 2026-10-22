@@ -90,7 +90,9 @@
                 >
                   <span class="ui-truncate" [title]="row.unit.name">{{ row.unit.name }}</span>
                   @if (row.unit.gdDepNo != null) {
-                    <nx-status-badge tone="info" title="來自公文系統">公文</nx-status-badge>
+                    <nx-status-badge class="unit-source" tone="info" title="來自公文系統"
+                      >公文</nx-status-badge
+                    >
                   }
                   @if (!row.unit.enabled) {
                     <nx-status-badge tone="neutral">停用</nx-status-badge>

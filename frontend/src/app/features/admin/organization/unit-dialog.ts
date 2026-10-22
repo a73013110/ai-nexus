@@ -74,6 +74,7 @@ const sameDraft = (a: Draft, b: Draft) =>
             }
             @if (imported()) {
               <nx-notice
+                class="unit-imported"
                 tone="warning"
                 message="這個單位來自公文系統：名稱、上層與啟用狀態可以在這裡改，但下次匯入會改回公文系統的值；要長期調整請在公文系統修改。"
               />
@@ -176,7 +177,11 @@ export class UnitDialog {
   readonly locked = computed(() => this.saving() || this.session.testing());
   readonly imported = computed(() => !!this.editor()?.imported);
   readonly tour = computed(() =>
-    unitDialogTour({ editing: !!this.editor()?.id, testing: this.session.testing() }),
+    unitDialogTour({
+      editing: !!this.editor()?.id,
+      testing: this.session.testing(),
+      imported: this.imported(),
+    }),
   );
   readonly dirty = computed(() => {
     const editor = this.editor(),

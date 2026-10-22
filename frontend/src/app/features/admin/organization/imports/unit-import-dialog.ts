@@ -17,6 +17,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { OrganizationApi } from '../organization-api';
+import { unitImportTour } from '../organization-tour';
 import {
   ACTION_LABELS,
   ACTION_TONES,
@@ -42,7 +43,12 @@ import {
     size="lg"
     (cancel)="cancel($event)"
   >
-    <nx-dialog-header heading="從公文系統匯入" closeLabel="關閉匯入" [detail]="detail()" />
+    <nx-dialog-header
+      heading="從公文系統匯入"
+      closeLabel="關閉匯入"
+      [detail]="detail()"
+      [tour]="tour()"
+    />
     <div class="dialog-body" [attr.aria-busy]="loading()">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()"
@@ -78,14 +84,14 @@ import {
             問題 <strong>{{ n.issues }}</strong>
           </li>
         </ul>
-        <p class="form-note">
+        <p class="form-note import-rule">
           來自公文系統的單位，名稱、上層、啟用、順序與主管以公文系統為準；手建的單位不受影響，公文系統已沒有的部門只停用、不刪除。
         </p>
         @if (!changed()) {
           <p class="form-note" role="status">組織已與公文系統一致，沒有需要套用的變動。</p>
         }
         @if (p.units.length) {
-          <section class="import-section" aria-labelledby="unit-import-units">
+          <section class="import-section import-units" aria-labelledby="unit-import-units">
             <h3 id="unit-import-units">
               單位 <span class="ui-count-label">{{ p.units.length }} 個</span>
             </h3>
@@ -107,7 +113,7 @@ import {
           </section>
         }
         @if (p.managers.length) {
-          <section class="import-section" aria-labelledby="unit-import-managers">
+          <section class="import-section import-managers" aria-labelledby="unit-import-managers">
             <h3 id="unit-import-managers">
               主管 <span class="ui-count-label">{{ p.managers.length }} 筆</span>
             </h3>
@@ -136,7 +142,7 @@ import {
           </section>
         }
         @if (p.issues.length) {
-          <section class="import-section" aria-labelledby="unit-import-issues">
+          <section class="import-section import-issues" aria-labelledby="unit-import-issues">
             <h3 id="unit-import-issues">
               問題 <span class="ui-count-label">{{ p.issues.length }} 筆</span>
             </h3>
@@ -243,6 +249,7 @@ export class UnitImportDialog {
     const preview = this.preview();
     return !!preview && hasChanges(preview);
   });
+  readonly tour = computed(() => unitImportTour({ testing: this.session.testing() }));
   readonly canApply = computed(() => this.changed() && !this.busy() && !this.session.testing());
   readonly detail = computed(() => {
     const preview = this.preview();
