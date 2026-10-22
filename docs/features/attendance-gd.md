@@ -4,6 +4,7 @@
 
 ## 連線與帳號權限
 
+- `appsettings.json` 預設連 GD 測試庫（192.168.2.207），開發與測試不會改到正式資料；正式環境在部署設定把 `Databases:Gd:Server` 覆寫成 CARD。
 - `Databases:Gd` 預設可讀寫（`ReadOnly=false`），直接用既有帳號即可。寫入範圍由程式限定：只 `UPDATE` `Pub_Days` 既有日期的四欄，不新增、不刪除、不碰其他表。
 - 只想讀、不想回寫時設 `ReadOnly=true`：假日回寫回 503 `attendance_gd_read_only`，查詢照常；連線另帶 `ApplicationIntent=ReadOnly`。這只是本系統的開關與連線意圖，要在資料庫端擋寫入得另用沒有 UPDATE 權限的帳號。
 - 另建最小權限帳號時的最低需求如下；不給 `db_datareader`、其他表、INSERT、DELETE 或 procedure：
