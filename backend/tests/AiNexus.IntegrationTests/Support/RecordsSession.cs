@@ -39,7 +39,7 @@ internal sealed class RecordsSession : IAsyncDisposable
         var factory = new AppFactory(clock: new FakeTimeProvider(Now), services: collection =>
         {
             collection.PostConfigure<DatabasesOptions>(options =>
-                options[GdDatabase.Name] = gdReachable ? gd.Databases[GdDatabase.Name] : FakeGd.Missing(readOnly: true));
+                options[GdDatabase.Name] = gdReachable ? gd.Databases[GdDatabase.Name] : FakeGd.Missing());
             services?.Invoke(collection);
         });
         for (var day = 19; day <= 23; day++) gd.AddDay(new(2026, 10, day));

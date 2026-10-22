@@ -36,21 +36,21 @@ internal sealed class FakeGd : IDisposable
     private FakeGd()
     {
         Execute(Schema);
-        Databases = OptionsFor(Name);
+        Databases = new() { [GdDatabase.Name] = Connection(Name) };
     }
 
     public string Name => database.Name;
 
-    /// <summary>指向這個假 GD 的連線設定；測試可以改 <see cref="DatabaseOptions.Name"/> 模擬 GD 中途失效或恢復。</summary>
+    /// <summary>
+    /// 指向這個假 GD 的連線設定，與正式預設一樣可寫入（<c>ReadOnly=false</c>）；
+    /// 測試可以改 <see cref="DatabaseOptions.Name"/> 模擬 GD 中途失效或恢復，改 <see cref="DatabaseOptions.ReadOnly"/> 模擬部署設為唯讀。
+    /// </summary>
     public DatabasesOptions Databases { get; }
-
-    /// <summary>回寫假日用的可寫入連線（<c>Databases:GdCalendar</c>）：同一個假 GD，不帶唯讀意圖。</summary>
-    public DatabaseOptions Writable => Connection(Name, readOnly: false);
 
     public static FakeGd Create() => new();
 
     /// <summary>指向不存在的資料庫的單一連線設定，連線一定失敗。</summary>
-    public static DatabaseOptions Missing(bool readOnly) => Connection("AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N"), readOnly);
+    public static DatabaseOptions Missing() => Connection("AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N"));
 
     /// <summary>假 GD 加上一個 App 資料庫（放使用者），給要把使用者對到公文帳號的測試；結束後兩個都刪除。</summary>
     public static async Task WithAppAsync(Func<FakeGd, AppDbContext, Task> test)
@@ -70,7 +70,7 @@ internal sealed class FakeGd : IDisposable
     }
 
     /// <summary>指向不存在的資料庫，連線一定失敗；模擬 GD 連不上。</summary>
-    public static DatabasesOptions Unreachable() => OptionsFor("AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N"));
+    public static DatabasesOptions Unreachable() => new() { [GdDatabase.Name] = Missing() };
 
     /// <summary>沒有 <c>Databases:Gd</c> 設定。</summary>
     public static DatabasesOptions NotConfigured() => new();
@@ -114,11 +114,11 @@ internal sealed class FakeGd : IDisposable
         => Execute("INSERT [dbo].[Form_Travel] (DesNo, ChargeName, TravelSDate, TravelEDate, TravelMain, FlowOver) VALUES (@desNo, @userId, @start, @end, @main, @flow)",
             new { desNo, userId, start, end, main, flow });
 
-    // GdAccess 經 SqlDatabase 用另一個連線字串連進來，那個連線池也要清掉，否則刪除資料庫時連線仍被占用。
+    // 被測程式用設定組出的連線字串連進來（帶不帶唯讀意圖是兩個連線池），都要清掉，否則刪除資料庫時連線仍被占用。
     public void Dispose()
     {
-        using (var connection = new SqlConnection(Databases.ConnectionString(GdDatabase.Name))) SqlConnection.ClearPool(connection);
-        using (var connection = new SqlConnection(Writable.ConnectionString())) SqlConnection.ClearPool(connection);
+        foreach (var readOnly in (bool[])[false, true])
+            using (var connection = new SqlConnection(Connection(Name, readOnly).ConnectionString())) SqlConnection.ClearPool(connection);
         database.Dispose();
     }
 
@@ -128,9 +128,7 @@ internal sealed class FakeGd : IDisposable
         connection.Execute(sql, parameters);
     }
 
-    private static DatabasesOptions OptionsFor(string name) => new() { [GdDatabase.Name] = Connection(name, readOnly: true) };
-
-    private static DatabaseOptions Connection(string name, bool readOnly)
+    private static DatabaseOptions Connection(string name, bool readOnly = false)
         => new() { Server = TestDatabase.Server, Name = name, IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeoutSeconds = 5, ReadOnly = readOnly };
 }
 

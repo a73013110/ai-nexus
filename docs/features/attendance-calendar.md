@@ -1,6 +1,6 @@
 # 假日設定
 
-結論：HR 在本系統查詢與修改公文系統（GD）的假日行事曆 `dbo.Pub_Days`。查詢走唯讀的 `Databases:Gd`，回寫走另一個最小權限的可寫入連線 `Databases:GdCalendar`；為什麼允許回寫見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)。前端頁面目前仍是佔位頁。
+結論：HR 在本系統查詢與修改公文系統（GD）的假日行事曆 `dbo.Pub_Days`。查詢與回寫用同一個 `Databases:Gd`，寫入範圍由程式限定；為什麼允許回寫見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)。前端頁面目前仍是佔位頁。
 
 ## 授權
 
@@ -17,9 +17,9 @@
 
 - `PUT /api/v1/attendance-calendar-days/{date}`，body `{ "morningOff": true, "afternoonOff": true, "remark": "國慶日" }`，回傳修改後的值。
 - 只 `UPDATE` 既有日期的 `AM`、`PM`、`hReMark` 與 `UserId`。GD 沒有這一天回 404 `attendance_calendar_day_not_found`，不新增、不刪除；日期列由公文系統建立。
-- `UserId` 寫操作者的公文帳號 `Sys_User.ID`（`Sys_User.ACCOUNT = Users.AdAccount`，經唯讀連線查）。停用列不算（全部停用時才退回全部列）；沒有 AD 帳號、`Sys_User` 沒有或仍對到多筆回 403 `attendance_gd_account_unmapped`，不退回寫 `sys`。
+- `UserId` 寫操作者的公文帳號 `Sys_User.ID`（`Sys_User.ACCOUNT = Users.AdAccount`）。停用列不算（全部停用時才退回全部列）；沒有 AD 帳號、`Sys_User` 沒有或仍對到多筆回 403 `attendance_gd_account_unmapped`，不退回寫 `sys`。
 - 備註去掉前後空白、空白存成 null；驗證只擋超過 255 字與控制字元。`hReMark` 是 varchar(255)：上限是位元組，取決於 GD 欄位的定序（Big5 中文每字 2 位元組，約 127 字），字碼頁沒有的字（罕用字、表情符號）會被換成問號。本系統不估算，而是在同一個交易寫入後讀回逐字比對，存不下或走樣就回滾並回 400 `attendance_calendar_remark_invalid`。
-- 沒有設定 `Databases:GdCalendar`：網站照常啟動、查詢照常，回寫回 503 `attendance_calendar_writeback_not_configured`。可寫入連線連不上、逾時或權限不足回 503 `attendance_gd_unavailable`（日誌 3409）。
+- `Databases:Gd` 設為 `ReadOnly=true`：查詢照常，回寫回 503 `attendance_gd_read_only`，不連 GD。未設定、連不上、逾時或沒有 UPDATE 權限回 503 `attendance_gd_unavailable`（日誌 3409）。逾時沿用 `Integrations:Gd:CommandTimeoutSeconds`，等不到公文系統的鎖也算逾時。
 
 ## 稽核與跨資料庫的順序
 
@@ -31,13 +31,4 @@
 
 ## 部署
 
-- `Databases:GdCalendar` 指向與 `Databases:Gd` 相同的伺服器與資料庫，但用另一個帳號；`ReadOnly` 維持 `false`（`Gd` 仍必須是 `true`，啟動時檢查）。一般設定填 `Server`、`Name`、`TrustServerCertificate`，秘密檔填 `User`、`Password`（或 `IntegratedSecurity=true`）。逾時沿用 `Integrations:Gd:CommandTimeoutSeconds`，等不到公文系統的鎖也算逾時。
-- DBA 建立最小權限帳號（名稱自訂），只給：
-
-  ```sql
-  GRANT SELECT ON dbo.Pub_Days TO ainexus_calendar;
-  GRANT UPDATE (AM, PM, hReMark, UserId) ON dbo.Pub_Days TO ainexus_calendar;
-  ```
-
-  不需要 `Sys_User`（帳號換算走唯讀連線），不給 INSERT、DELETE 或其他表。這組權限已在本機以同結構驗證過讀前值（含鎖定提示）、更新與讀回；INSERT、DELETE、改 `hDate` 都被拒。
-- 唯讀的 `Databases:Gd` 帳號的權限見 [出勤與公文系統 GD](attendance-gd.md#唯讀帳號的權限)。
+連線與帳號權限（含只讀不回寫的設定）見 [出勤與公文系統 GD](attendance-gd.md#連線與帳號權限)。

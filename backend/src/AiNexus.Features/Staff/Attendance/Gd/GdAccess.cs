@@ -10,7 +10,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Staff.Attendance.Gd;
 
 /// <summary>
-/// 出勤唯讀查詢公文系統（GD）的唯一入口；連線用 Integrations 宣告的 <see cref="GdDatabase"/>，逾時沿用 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
+/// 出勤存取公文系統（GD）的唯一入口：查詢走這裡，假日回寫（<see cref="GdCalendarWriter"/>）也從這裡取得連線與設定，
+/// 兩者共用 Integrations 宣告的 <see cref="GdDatabase"/>（<c>Databases:Gd</c>），逾時都是 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
 /// GD 是別人的系統，連不上不能拖垮出勤頁：未設定，或連線、登入、逾時、結構變動等資料庫錯誤時回傳 <see langword="null"/>，由呼叫端決定降級還是拒絕。
 /// 取消與非資料庫的例外（程式錯誤、欄位型別對不上）照常拋出。每次存取的成敗記在 <see cref="Availability"/>，供監控（<see cref="GdMonitoring"/>）判定。
 /// </summary>
@@ -32,6 +33,17 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     private readonly Lock gate = new();
     private GdAvailability availability = GdAvailability.Unknown;
 
+    /// <summary>是否已設定 <c>Databases:Gd</c>。</summary>
+    public bool Configured => Settings.Configured;
+
+    /// <summary><c>Databases:Gd:ReadOnly</c>（預設 false）：部署選擇只讀 GD，假日回寫因此停用。連線同時帶 <c>ApplicationIntent=ReadOnly</c>。</summary>
+    public bool ReadOnly => Settings.ReadOnly;
+
+    /// <summary>每個 GD 命令的逾時秒數；查詢與回寫共用，等不到公文系統的鎖也算逾時。</summary>
+    public int CommandTimeoutSeconds => integrations.Value.Gd.CommandTimeoutSeconds;
+
+    private DatabaseOptions Settings => databases.Value.For(GdDatabase.Name);
+
     /// <summary>最近一次存取的結果。</summary>
     public GdAvailability Availability
     {
@@ -40,7 +52,7 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
 
     /// <summary>執行唯讀查詢；GD 不可用時為 <see langword="null"/>（與「沒有資料」的空清單不同）。</summary>
     public Task<IReadOnlyList<T>?> QueryAsync<T>(string sql, object? parameters, CancellationToken ct)
-        => RunAsync(token => database.QueryAsync<T>(sql, parameters, integrations.Value.Gd.CommandTimeoutSeconds, token), ct, ct);
+        => RunAsync(token => database.QueryAsync<T>(sql, parameters, CommandTimeoutSeconds, token), ct, ct);
 
     /// <summary>
     /// <c>IN</c> 清單可能很長的查詢：<paramref name="keys"/> 分批代入、結果串接；<paramref name="parameters"/> 把一批鍵組成該批的參數物件。
@@ -69,12 +81,31 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
         await RunAsync(token => database.QueryAsync<int>(ProbeSql, null, (int)Math.Ceiling(timeout.TotalSeconds), token), ct, limit.Token);
     }
 
+    /// <summary>
+    /// 開一條由呼叫端管理交易的 GD 連線，只給必須在同一個交易跨多個命令的假日回寫；查詢一律用 <see cref="QueryAsync{T}"/>。
+    /// 連線字串與查詢同一個來源，未設定時呼叫端應先看 <see cref="Configured"/>。這條路不更新 <see cref="Availability"/>，失敗由呼叫端記錄。
+    /// </summary>
+    internal async Task<SqlConnection> OpenAsync(CancellationToken ct)
+    {
+        var connection = new SqlConnection(databases.Value.ConnectionString(GdDatabase.Name));
+        try
+        {
+            await connection.OpenAsync(ct);
+            return connection;
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
+    }
+
     /// <param name="query">以傳入的 token 執行查詢。</param>
     /// <param name="ct">呼叫端的取消：照常拋出，不算 GD 的失敗。</param>
     /// <param name="limit">實際傳給查詢的 token；探測時多了時限，時限到了算逾時。一般查詢與 <paramref name="ct"/> 相同。</param>
     private async Task<IReadOnlyList<T>?> RunAsync<T>(Func<CancellationToken, Task<IReadOnlyList<T>>> query, CancellationToken ct, CancellationToken limit)
     {
-        if (!databases.Value.For(GdDatabase.Name).Configured)
+        if (!Configured)
         {
             Failed(GdFailure.NotConfigured, nameof(GdFailure.NotConfigured), 0);
             return null;
@@ -147,6 +178,6 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     [LoggerMessage(EventId = 3408, EventName = "attendance.gd_restored", Level = LogLevel.Information, Message = "GD can be queried again.")]
     private static partial void LogRestored(ILogger logger);
 
-    [LoggerMessage(EventId = 3411, EventName = "attendance.gd_query_rejected", Level = LogLevel.Warning, Message = "GD rejected a query ({ErrorType}, {SqlNumber}); a table, column or grant the read-only account needs is missing.")]
+    [LoggerMessage(EventId = 3411, EventName = "attendance.gd_query_rejected", Level = LogLevel.Warning, Message = "GD rejected a query ({ErrorType}, {SqlNumber}); a table, column or grant the GD account needs is missing.")]
     private static partial void LogRejected(ILogger logger, string errorType, int sqlNumber);
 }

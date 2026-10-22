@@ -1,10 +1,7 @@
 using System.Data;
 using System.Data.Common;
-using AiNexus.Features.Admin.Integrations;
-using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Staff.Attendance.Gd;
 
@@ -12,15 +9,15 @@ namespace AiNexus.Features.Staff.Attendance.Gd;
 public sealed record GdCalendarValues(bool MorningOff, bool AfternoonOff, string? Remark);
 
 /// <summary>
-/// 回寫 GD 假日的唯一入口（ADR 0018 的例外寫入），連線用 <see cref="GdCalendarDatabase"/>，逾時沿用 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
-/// 只 <c>UPDATE</c> 既有日期的 <c>AM</c>、<c>PM</c>、<c>hReMark</c> 與 <c>UserId</c>，不新增、不刪除。
+/// 回寫 GD 假日的唯一入口（ADR 0018 的例外寫入），連線、逾時與唯讀設定都取自查詢用的 <see cref="GdAccess"/>（同一個 <c>Databases:Gd</c>）。
+/// 寫入範圍由這裡的 SQL 保證，不靠資料庫帳號：只 <c>UPDATE</c> 既有日期的 <c>AM</c>、<c>PM</c>、<c>hReMark</c> 與 <c>UserId</c>，不新增、不刪除。
 /// 回傳的 <see cref="GdCalendarEdit"/> 仍持有交易與列鎖，呼叫端寫完本系統的稽核才提交，見 <see cref="GdCalendarEdit"/>。
 /// </summary>
 /// <remarks>
 /// <c>ISqlDatabase</c> 每次呼叫各開一條連線、不支援跨命令的交易，
 /// 而「鎖定讀前值 → 更新 → 讀回 → 等稽核寫完再提交」必須在同一條連線、同一個交易，所以這裡直接用 SqlClient。
 /// </remarks>
-public sealed partial class GdCalendarWriter(IOptions<DatabasesOptions> databases, IOptions<IntegrationsOptions> integrations, ILogger<GdCalendarWriter> logger)
+public sealed partial class GdCalendarWriter(GdAccess gd, ILogger<GdCalendarWriter> logger)
 {
     // hDate 是 datetime，以整天的區間比對：公文系統寫入的日期理應是午夜，萬一帶了時間也不會漏掉。同一天有多列時一起更新，前值取第一列。
     // UPDLOCK＋HOLDLOCK 鎖住這一天到提交為止：並發的兩次修改依序進行，各自的稽核前值都是真正的前一個狀態。
@@ -39,21 +36,24 @@ public sealed partial class GdCalendarWriter(IOptions<DatabasesOptions> database
     /// <summary>字串截斷：2628 是 SQL Server 2019 起的訊息，8152 是較舊的版本。</summary>
     private static readonly int[] TruncationErrors = [2628, 8152];
 
-    public bool Configured => databases.Value.For(GdCalendarDatabase.Name).Configured;
+    /// <summary>
+    /// 不必連 GD 就能判定的拒絕：未設定 <c>Databases:Gd</c> 回 <c>attendance_gd_unavailable</c>（與查詢一致），
+    /// 設為 <c>ReadOnly=true</c> 回 <c>attendance_gd_read_only</c>。
+    /// </summary>
+    public Result CanWrite() => !gd.Configured ? AttendanceErrors.GdUnavailable : gd.ReadOnly ? AttendanceErrors.GdReadOnly : Result.Success;
 
     /// <summary>
     /// 鎖定並更新 <paramref name="day"/>，修改者寫 <paramref name="gdUserId"/>；成功時交易尚未提交。
-    /// 失敗（日期不存在、備註存不下、連不上或沒有權限）時交易已回滾，GD 沒有任何變動。
+    /// 失敗（未設定或唯讀、日期不存在、備註存不下、連不上或沒有權限）時交易已回滾或根本沒開始，GD 沒有任何變動。
     /// </summary>
     public async Task<Result<GdCalendarEdit>> UpdateAsync(DateOnly day, GdCalendarValues values, string gdUserId, CancellationToken ct)
     {
-        if (!Configured) return AttendanceErrors.CalendarWritebackNotConfigured;
+        if (CanWrite().Error is { } refused) return refused;
         SqlConnection? connection = null;
         SqlTransaction? transaction = null;
         try
         {
-            connection = new SqlConnection(databases.Value.ConnectionString(GdCalendarDatabase.Name));
-            await connection.OpenAsync(ct);
+            connection = await gd.OpenAsync(ct);
             transaction = (SqlTransaction)await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
             GdCalendarValues? before = null;
@@ -118,7 +118,7 @@ public sealed partial class GdCalendarWriter(IOptions<DatabasesOptions> database
 
     private SqlCommand Command(string sql, SqlConnection connection, SqlTransaction transaction, DateOnly day)
     {
-        var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = integrations.Value.Gd.CommandTimeoutSeconds };
+        var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = gd.CommandTimeoutSeconds };
         command.Parameters.Add("@Day", SqlDbType.DateTime).Value = day.ToDateTime(TimeOnly.MinValue);
         command.Parameters.Add("@Next", SqlDbType.DateTime).Value = day.AddDays(1).ToDateTime(TimeOnly.MinValue);
         return command;

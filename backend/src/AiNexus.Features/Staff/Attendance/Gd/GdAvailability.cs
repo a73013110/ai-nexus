@@ -12,7 +12,7 @@ public enum GdFailure
     /// <summary>連線或查詢逾時，含監控探測超過時限。</summary>
     Timeout,
 
-    /// <summary>連得上，但 GD 拒絕這個查詢：資料表、欄位不存在或沒有權限（GD 改版，或唯讀帳號少了授權）。只影響部分查詢。</summary>
+    /// <summary>連得上，但 GD 拒絕這個查詢：資料表、欄位不存在或沒有權限（GD 改版，或帳號少了授權）。只影響部分查詢。</summary>
     Rejected,
 }
 

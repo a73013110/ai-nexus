@@ -23,8 +23,8 @@
 ## 設定步驟
 
 1. 原系統 DBA 準備兩個 `ainexus` view，契約見 [authorized-views.sql](../../deploy/sql/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
-2. 建立專用唯讀 SQL login/user 並加入 `ainexus_reader`。校務只給兩個 view 的 SELECT；公文的帳號與出勤共用，完整清單見 [出勤與公文系統 GD](attendance-gd.md#唯讀帳號的權限)。不給來源全庫 `db_datareader`、清單以外的表、寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
-3. 在 `.local/config/appsettings.Local.json` 的 `Databases.Gd`／`Databases.Meiho` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password（或 `IntegratedSecurity=true`）。`ReadOnly` 預設 true，改成 false 會啟動失敗。欄位規則見 [設定與秘密](../development/configuration.md#程式碼表達不了的注意事項)。
+2. 建立專用 SQL login/user 並加入 `ainexus_reader`。校務只給兩個 view 的 SELECT；公文的帳號與出勤共用（出勤回寫假日另需 UPDATE），完整清單見 [出勤與公文系統 GD](attendance-gd.md#連線與帳號權限)。不給來源全庫 `db_datareader`、清單以外的表、其他寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
+3. 在 `.local/config/appsettings.Local.json` 的 `Databases.Gd`／`Databases.Meiho` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password（或 `IntegratedSecurity=true`）。`Databases.Meiho.ReadOnly` 預設 true，改成 false 會啟動失敗；`Databases.Gd.ReadOnly` 預設 false，只讀時設 true。欄位規則見 [設定與秘密](../development/configuration.md#程式碼表達不了的注意事項)。
 4. 在一般設定的 `Integrations.Gd`／`Meiho` 設定 `Transport=sql`、`Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。未來 API adapter 可沿用來源識別與 ACL 契約；目前設定其他 transport 會明確顯示未支援。
 5. 「存取管理 → 功能群組與模型」將 `資料來源` 功能授予需要的群組。此功能初始只提供給平台管理員，來源權限仍須另外設定。重新啟動後查詢，測試帳號應只有原系統核准的列。
 
@@ -45,7 +45,7 @@
 
 其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs)。
 
-兩個來源的連線一律加密並帶唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
+兩個來源的連線一律加密，`ReadOnly=true` 時帶唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
 
 ## View 契約與查詢
 

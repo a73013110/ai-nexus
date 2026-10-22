@@ -49,6 +49,12 @@ public static class AttendanceErrors
     public static readonly Error GdUnavailable = Error.Unavailable("attendance_gd_unavailable");
 
     /// <summary>
+    /// <c>Databases:Gd</c> 設為 <c>ReadOnly=true</c>：部署選擇只讀 GD，假日只能查詢、回寫停用。
+    /// 與其他「依設定停用」的功能一樣回 503；它不會自己恢復，要改設定並重啟，所以與暫時連不上的 <see cref="GdUnavailable"/> 分開。
+    /// </summary>
+    public static readonly Error GdReadOnly = Error.Unavailable("attendance_gd_read_only");
+
+    /// <summary>
     /// 操作者對不到唯一的公文帳號（沒有 AD 帳號、<c>Sys_User</c> 沒有，或對到多筆）。回寫假日要記修改者的 <c>Sys_User.ID</c>，
     /// 對不到時拒絕，不退回寫 <c>sys</c>，否則 GD 那邊看不出是誰改的。
     /// </summary>
@@ -62,7 +68,4 @@ public static class AttendanceErrors
 
     /// <summary>備註以 GD 欄位的字碼頁存不下：超過 255 位元組，或含該字碼頁沒有的字（會被換成問號）。</summary>
     public static readonly Error CalendarRemarkInvalid = Error.Invalid("attendance_calendar_remark_invalid");
-
-    /// <summary>沒有設定 <c>Databases:GdCalendar</c>：假日只能查詢，回寫停用；不讓整個網站因此無法啟動。</summary>
-    public static readonly Error CalendarWritebackNotConfigured = Error.Unavailable("attendance_calendar_writeback_not_configured");
 }

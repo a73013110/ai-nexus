@@ -124,6 +124,20 @@ public sealed class GdMonitoringTests
         Assert.Equal(SubsystemStates.Healthy, (await session.ReadAsync()).Status);
     }
 
+    [Theory]
+    [InlineData(false, "可寫入")]
+    [InlineData(true, "唯讀")]
+    public async Task TheCalendarWritebackFactFollowsReadOnly(bool readOnly, string expected)
+    {
+        await using var session = Session.Create();
+        session.Connection.ReadOnly = readOnly;
+
+        var reading = await session.ReadAsync();
+
+        Assert.Equal(SubsystemStates.Healthy, reading.Status);
+        Assert.Equal(expected, Text(reading, "calendar_writeback"));
+    }
+
     [Fact]
     public async Task AGdThatIsNotConfiguredIsIdleAndNeverProbed()
     {

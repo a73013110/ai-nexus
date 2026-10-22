@@ -58,8 +58,8 @@ internal sealed class UpdateCalendarDay(AppDbContext db, GdAccounts accounts, Gd
         var key = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var after = new GdCalendarValues(request.MorningOff, request.AfternoonOff, CardRules.Normalize(request.Remark));
 
-        // 先檢查不必連 GD 的條件；設定缺漏是部署問題，不必等到查帳號才發現。
-        if (!writer.Configured) return await RefuseAsync(actor, key, AttendanceErrors.CalendarWritebackNotConfigured);
+        // 先檢查不必連 GD 的條件；未設定或設為唯讀是部署問題，不必等到查帳號才發現。
+        if (writer.CanWrite().Error is { } refused) return await RefuseAsync(actor, key, refused);
         if (!CalendarDates.IsSupported(date)) return await RefuseAsync(actor, key, AttendanceErrors.CalendarDayNotFound);
         var map = await accounts.ResolveAsync([actor], ct);
         if (map is null) return await RefuseAsync(actor, key, AttendanceErrors.GdUnavailable);

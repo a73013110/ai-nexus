@@ -85,14 +85,23 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public void EveryDatabaseEntryIsDeclaredByAModuleAndSourcesStayReadOnly()
+    public void EveryDatabaseEntryIsDeclaredByAModuleAndReadOnlySourcesStayReadOnly()
     {
-        using var services = Settings(new() { ["Databases:LegacyGd:Server"] = "sql", ["Databases:Gd:ReadOnly"] = "false", ["Databases:GdCalendar:ReadOnly"] = "false" });
+        using var services = Settings(new() { ["Databases:LegacyGd:Server"] = "sql", ["Databases:Meiho:ReadOnly"] = "false" });
         var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        Assert.Contains("Databases:LegacyGd is not a database of this application. Known: App, Gd, GdCalendar, Meiho.", error.Message, StringComparison.Ordinal);
-        Assert.Contains("Databases:Gd:ReadOnly must be true", error.Message, StringComparison.Ordinal);
-        // 回寫假日的連線是唯一可寫入 GD 的設定，宣告它不能放鬆 Gd 的唯讀檢查，它自己也不要求唯讀。
-        Assert.DoesNotContain("Databases:GdCalendar", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:LegacyGd is not a database of this application. Known: App, Gd, Meiho.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:Meiho:ReadOnly must be true", error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>GD 要回寫假日，不宣告唯讀；只想讀的部署設 <c>ReadOnly=true</c>，不設就可寫入。</summary>
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("false", false)]
+    [InlineData("true", true)]
+    public void GdReadOnlyIsOptional(string? readOnly, bool expected)
+    {
+        using var services = Settings(new() { ["Databases:Gd:Server"] = "sql", ["Databases:Gd:Name"] = "GD", ["Databases:Gd:IntegratedSecurity"] = "true", ["Databases:Gd:ReadOnly"] = readOnly });
+        Assert.Equal(expected, services.GetRequiredService<IOptions<DatabasesOptions>>().Value.For("Gd").ReadOnly);
     }
 
     [Fact]

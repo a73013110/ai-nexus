@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Staff.Attendance.Calendar;
+using AiNexus.Features.Staff.Attendance.Gd;
+using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
@@ -58,7 +60,7 @@ public sealed class CalendarDaysTests
     [Fact]
     public async Task AnUnreachableGdIsAnErrorRatherThanAnEmptyCalendar()
     {
-        await using var session = await CalendarSession.CreateAsync(readable: false);
+        await using var session = await CalendarSession.CreateAsync(reachable: false);
 
         await AssertCodeAsync(await session.Hr.GetAsync($"{Calendar}?from=2026-10-01&to=2026-10-31", TestContext.Current.CancellationToken), HttpStatusCode.ServiceUnavailable, "attendance_gd_unavailable");
     }
@@ -175,25 +177,38 @@ public sealed class CalendarDaysTests
     }
 
     [Fact]
-    public async Task WithoutAWritableConnectionTheCalendarIsReadOnly()
+    public async Task ByDefaultGdIsWritableSoTheWriteSucceeds()
     {
-        await using var session = await CalendarSession.CreateAsync(writableConfigured: false);
+        await using var session = await CalendarSession.CreateAsync();
+        session.Gd.AddDay(NationalDay);
+
+        Assert.False(session.Factory.Services.GetRequiredService<GdAccess>().ReadOnly);
+        (await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, false, null), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+
+        Assert.Equal(new GdDay(true, false, null, CalendarSession.HrGdId), session.Gd.Day(NationalDay));
+        Assert.Equal(["saved"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
+    }
+
+    [Fact]
+    public async Task AGdSetToReadOnlyStillListsButRefusesTheWrite()
+    {
+        await using var session = await CalendarSession.CreateAsync(readOnly: true);
         session.Gd.AddDay(NationalDay);
         var ct = TestContext.Current.CancellationToken;
 
         Assert.Single((await session.Hr.GetFromJsonAsync<CalendarDayDto[]>($"{Calendar}?from=2026-10-01&to=2026-10-31", ct))!);
-        await AssertCodeAsync(await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, null), ct), HttpStatusCode.ServiceUnavailable, "attendance_calendar_writeback_not_configured");
+        await AssertCodeAsync(await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, null), ct), HttpStatusCode.ServiceUnavailable, "attendance_gd_read_only");
 
         Assert.Equal(new GdDay(false, false, null, "sys"), session.Gd.Day(NationalDay));
-        Assert.Equal(["attendance_calendar_writeback_not_configured"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
+        Assert.Equal(["attendance_gd_read_only"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
     }
 
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
-    public async Task AnUnreachableGdRefusesTheWrite(bool readable, bool writableReachable)
+    public async Task AMissingOrUnreachableGdRefusesTheWrite(bool configured, bool reachable)
     {
-        await using var session = await CalendarSession.CreateAsync(readable: readable, writableReachable: writableReachable);
+        await using var session = await CalendarSession.CreateAsync(configured: configured, reachable: reachable);
         session.Gd.AddDay(NationalDay);
 
         await AssertCodeAsync(await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, null), TestContext.Current.CancellationToken),
