@@ -191,7 +191,7 @@ export function navigationTour(options: {
       target: 'nx-navigation-page .navigation-table td[data-label="內容"]',
       title: '每個人看到的不同',
       description:
-        '使用者只看到有權限且啟用的頁面與可見的連結；沒有可見項目的分群不顯示，只剩一項的分群直接顯示該項。',
+        '使用者只看到有權限且啟用的頁面與可見的連結；沒有可見項目的分群不顯示，只要有一項就照常顯示分群。',
     },
     !options.testing && {
       target: 'nx-navigation-page .navigation-table .navigation-row-menu',

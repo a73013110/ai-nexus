@@ -52,12 +52,11 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await tools.getByRole("button", { name: "釘選使用者", exact: true }).click();
   await tools.getByRole("button", { name: "完成", exact: true }).click();
   await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
-  // 協作分群裡這個帳號只看得到背景任務：伺服器把只剩一項的分群換成該項，不留一個只有一項的標題。
+  // 協作分群裡這個帳號只看得到背景任務：只剩一項仍保留分群。
   await expect(
-    tools.getByRole("region", { name: "協作", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    tools.getByRole("link", { name: "背景任務", exact: true }),
+    tools
+      .getByRole("region", { name: "協作", exact: true })
+      .getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(pinned.getByRole("link")).toHaveText(["對話", "使用者"]);
@@ -1022,7 +1021,7 @@ test("the menu follows the server tree with links beside pages, nested groups an
       openInNewTab: false,
       sortOrder: 30,
     }),
-    // 只剩一項：以該項取代分群。
+    // 只剩一項：仍保留分群。
     group("insights", "system", "洞察", 30),
     page_("quality", "insights", 10),
     page_("identity.users", "system", 40),
@@ -1052,11 +1051,10 @@ test("the menu follows the server tree with links beside pages, nested groups an
   ).toBeVisible();
   await expect(
     launcher.locator(".workspace-group > :is(h3, h4) .group-name"),
-  ).toHaveText(["AI 工作台", "系統管理", "診斷"]);
-  for (const name of ["協作", "洞察"])
-    await expect(
-      launcher.getByRole("region", { name, exact: true }),
-    ).toHaveCount(0);
+  ).toHaveText(["AI 工作台", "系統管理", "診斷", "洞察"]);
+  await expect(
+    launcher.getByRole("region", { name: "協作", exact: true }),
+  ).toHaveCount(0);
   // 最上層的頁面與外部連結在分群之前，依管理員排的順序。
   await expect(launcher.getByRole("link").first()).toHaveAccessibleName("總覽");
   const wiki = launcher.getByRole("link", {
@@ -1070,7 +1068,7 @@ test("the menu follows the server tree with links beside pages, nested groups an
     name: "系統管理",
     exact: true,
   });
-  // 分群裡的項目與子分群照順序交錯；只剩品質評測的「洞察」直接顯示為該頁。
+  // 分群裡的項目與子分群照順序交錯；只剩品質評測的「洞察」仍是分群。
   await expect(system.getByRole("link")).toHaveText([
     "活動稽核",
     "系統日誌",
@@ -1127,7 +1125,9 @@ test("the menu follows the server tree with links beside pages, nested groups an
     "開啟外部連結 · 系統管理 › 診斷",
   ]);
   await search.fill("品質評測");
-  await expect(options.locator("small")).toHaveText(["前往功能 · 系統管理"]);
+  await expect(options.locator("small")).toHaveText([
+    "前往功能 · 系統管理 › 洞察",
+  ]);
   await search.fill("總覽");
   await expect(options.locator("small")).toHaveText(["前往功能"]);
   // 開新分頁的連結：新分頁拿不到 opener，也收不到本站網址當 Referer。

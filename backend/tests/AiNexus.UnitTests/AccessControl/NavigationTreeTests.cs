@@ -36,7 +36,7 @@ public sealed class NavigationTreeTests
     }
 
     [Fact]
-    public void EmptyGroupsArePrunedAndSingleChildGroupsAreFlattenedRecursively()
+    public void EmptyGroupsArePrunedLevelByLevelAndSingleChildGroupsStay()
     {
         NavigationItemDto[] items =
         [
@@ -50,12 +50,21 @@ public sealed class NavigationTreeTests
             Group("empty", null, 40),
             Group("hidden", null, 50),
             Page("hidden.audit", "hidden", FeatureCatalog.Audit, 10),
+            // 子分群全被修剪：上層也沒有可見項目。
+            Group("nested", null, 60),
+            Group("nested.inner", "nested", 10),
+            Page("nested.inner.audit", "nested.inner", FeatureCatalog.Audit, 10),
         ];
         var tree = Build(items, [Feature(FeatureCatalog.Chat), Feature(FeatureCatalog.Projects), Feature(FeatureCatalog.IdentityUsers)]);
-        Assert.Equal(["work", "system.access.deep.users"], tree.Select(x => x.Id));
+        Assert.Equal(["work", "system"], tree.Select(x => x.Id));
         Assert.Equal(("group", "工作", "apps"), (tree[0].Kind, tree[0].Name, tree[0].Icon));
         Assert.Equal(["work.chat", "work.projects"], tree[0].Children.Select(x => x.Id));
-        Assert.Equal("page", tree[1].Kind);
+        // 只剩一項的分群仍保留，一路到葉節點。
+        var access = Assert.Single(tree[1].Children);
+        Assert.Equal(("system.access", "group"), (access.Id, access.Kind));
+        var deep = Assert.Single(access.Children);
+        Assert.Equal(("system.access.deep", "group"), (deep.Id, deep.Kind));
+        Assert.Equal(("system.access.deep.users", "page"), (Assert.Single(deep.Children).Id, Assert.Single(deep.Children).Kind));
     }
 
     [Fact]
@@ -87,10 +96,12 @@ public sealed class NavigationTreeTests
     }
 
     [Fact]
-    public void AGroupWhoseOnlyVisibleChildIsALinkBecomesThatLink()
+    public void AGroupWhoseOnlyVisibleChildIsALinkKeepsTheGroup()
     {
         NavigationItemDto[] items = [Group("tools", null, 10), Link("tools.wiki", "tools", "https://intranet.example.com/wiki", 10), Link("tools.secret", "tools", "https://intranet.example.com/s", 20, "admins")];
-        Assert.Equal("tools.wiki", Assert.Single(Build(items, [])).Id);
+        var tools = Assert.Single(Build(items, []));
+        Assert.Equal(("tools", "group"), (tools.Id, tools.Kind));
+        Assert.Equal("tools.wiki", Assert.Single(tools.Children).Id);
     }
 
     [Fact]

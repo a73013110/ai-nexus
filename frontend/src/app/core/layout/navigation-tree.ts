@@ -35,7 +35,7 @@ export const isGroup = (node: NavigationNodeDto) => node.kind === 'group';
 
 /**
  * 依選單順序（深度優先）回傳區段。`/me` 的 `navigation` 已由伺服器修剪（未授權的頁面、看不到的連結、
- * 空分群都已移除，只剩一個子節點的分群已攤平），這裡只負責排成扁平列表，不重新判斷可見性。
+ * 空分群都已移除；只剩一項的分群仍保留），這裡只負責排成扁平列表，不重新判斷可見性。
  * 第一個區段是最上層，名稱為 `topName`；沒有項目時會省略，除非 `keepTop`。
  */
 export function navigationSections(

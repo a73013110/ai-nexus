@@ -122,7 +122,7 @@ export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
 
 /**
  * 與後端 `NavigationTree` 相同的修剪：頁面要已授權（在 `features` 裡）且是目錄頁面，名稱用授權回報的名稱；
- * 外部連結要沒有可見群組或使用者屬於其中之一；沒有可見子節點的分群不輸出，只剩一個時以該子節點取代。
+ * 外部連結要沒有可見群組或使用者屬於其中之一；沒有可見子節點的分群不輸出，只剩一個仍保留分群。
  * 同層依 `sortOrder`、再依 id 排列。
  */
 export function navigationTree(
@@ -180,7 +180,6 @@ export function navigationTree(
         }
         const children = level(item.id);
         if (children.length === 0) return [];
-        if (children.length === 1) return children;
         return [{ ...base, name: item.name ?? "", icon: item.icon, children }];
       });
   return level(null);

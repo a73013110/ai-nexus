@@ -43,9 +43,9 @@ AD login → Users（SID）→ UserRoles → Roles
 
 - **節點**：`group` 分群（可巢狀，名稱與圖示可改）、`page` 指向目錄的頁面（名稱取功能的名稱覆寫或目錄預設，圖示取目錄）、`link` 外部連結（名稱、網址、是否另開分頁）。同層依 `SortOrder`、再依 Id。
 - **結構規則**（`NavigationRules`，套在變更後的整棵樹上）：父節點必須是分群、不可成環、最多 4 層、同一層不可重複同一頁面（不同位置可以）；page 必須是目錄的頁面。批次移動全部通過才寫入；分群要先清空才能刪除。
-- **可見範圍**：`/me` 與存取預覽回傳伺服器修剪過的樹（`NavigationTree.Build`）。page 要已授權且啟用；link 要沒有指定可見群組，或使用者屬於其中任一有效群組（`NavigationItemAudiences`），且主機仍在允許清單；沒有可見子節點的分群不輸出，只剩一個的由該子節點取代。授權檢查（`AccessService.ForUserAsync`）不讀選單。管理與稽核目錄另附未修剪樹上的功能位置（`NavigationTree.Sections`）供授權清單分組。
+- **可見範圍**：`/me` 與存取預覽回傳伺服器修剪過的樹（`NavigationTree.Build`）。page 要已授權且啟用；link 要沒有指定可見群組，或使用者屬於其中任一有效群組（`NavigationItemAudiences`），且主機仍在允許清單；沒有可見子節點的分群不輸出（逐層判斷），只剩一個也保留。授權檢查（`AccessService.ForUserAsync`）不讀選單。管理與稽核目錄另附未修剪樹上的功能位置（`NavigationTree.Sections`）供授權清單分組。
 - **外部連結**：網址須以 `https://` 開頭、不含使用者資訊，主機須在 `AccessControl:NavigationLinkHosts` 允許清單內（[寫法](../operations/iis-configuration.md#外部連結允許清單)；預設空＝不允許）。儲存與產生 `/me` 時各檢查一次（`NavigationLinks`），主機移出清單後連結直接不輸出、不報錯。
-- **Seed**：`database/App/Seed/accesscontrol.sql` 寫入預設樹（Id 是可讀代稱，如 `work.chat`），只新增、不覆蓋：以 Id 比對，移動過的節點留在原位；刪除的預設節點只要上層還在，下次 Seed 會再加回來；上層已刪或同層已有同一頁面時略過。`FeatureCatalogSeedTests` 要求目錄每個頁面至少放在預設樹一次。
+- **Seed**：`database/App/Seed/accesscontrol.sql` 寫入預設樹（Id 是可讀代稱，如 `work.chat`），只新增、不覆蓋：以 Id 比對，移動過的節點留在原位；刪除的預設節點只要上層還在，下次 Seed 會再加回來。`FeatureCatalogSeedTests` 要求目錄每個頁面至少放在預設樹一次。
 
 ## 擴充功能
 

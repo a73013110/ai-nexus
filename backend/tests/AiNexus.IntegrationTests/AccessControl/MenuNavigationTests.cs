@@ -18,32 +18,36 @@ public sealed class MenuNavigationTests
     {
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
-        // 成員在系統管理只看得到「評測與開發」的兩個評測頁：其他子分群沒有可見頁面而被修剪，系統管理只剩這個分群，由它取代。
-        // 員工服務只有出勤紀錄一頁（卡號對應等管理頁屬於人事與出勤，沒有授權就修剪），分群攤平成該頁。
-        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "staff.attendance-records", "system.evaluation"], tree.Select(x => x.Id));
+        // 成員在系統管理只看得到「評測與開發」的兩個評測頁：其他子分群沒有可見頁面而被修剪，系統管理只剩這個子分群，仍保留兩層分群。
+        // 員工服務只有出勤紀錄一頁（卡號對應等管理頁屬於人事與出勤，沒有授權就修剪），分群照常顯示。
+        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "staff", BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
         var dashboard = tree[0];
         Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));
         Assert.Equal(["work.chat", "work.projects", "work.files", "work.knowledge", "work.artifacts"], tree[1].Children.Select(x => x.Id));
         Assert.Equal(("group", "AI 工作台"), (tree[1].Kind, tree[1].Name));
-        Assert.Equal(("page", FeatureCatalog.AttendanceRecords), (tree[3].Kind, tree[3].FeatureId));
-        Assert.Equal(["system.evaluation.quality", "system.evaluation.quality-retrieval"], tree[4].Children.Select(x => x.Id));
+        Assert.Equal(("group", FeatureCatalog.AttendanceRecords), (tree[3].Kind, Assert.Single(tree[3].Children).FeatureId));
+        var evaluation = Assert.Single(tree[4].Children);
+        Assert.Equal("system.evaluation", evaluation.Id);
+        Assert.Equal(["system.evaluation.quality", "system.evaluation.quality-retrieval"], evaluation.Children.Select(x => x.Id));
     }
 
     [Fact]
-    public async Task GroupsLeftWithOneVisibleChildAreReplacedByThatChild()
+    public async Task GroupsLeftWithOneVisibleChildStayGroups()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         using var member = await factory.SignedInAsync("bob");
         (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
-        // 單一路徑一路攤到葉節點：評測分群與系統管理都只剩這一頁。
-        var quality = Assert.Single(tree, x => x.Id == "system.evaluation.quality");
+        // 評測分群與系統管理都只剩這一頁，兩層分群仍照常輸出。
+        var system = Assert.Single(tree, x => x.Id == BuiltInAccess.SystemNavigation);
+        var evaluation = Assert.Single(system.Children);
+        Assert.Equal(("system.evaluation", "group"), (evaluation.Id, evaluation.Kind));
+        var quality = Assert.Single(evaluation.Children);
         Assert.Equal(("page", FeatureCatalog.Quality), (quality.Kind, quality.FeatureId));
-        Assert.DoesNotContain(tree, x => x.Id is BuiltInAccess.SystemNavigation or "system.evaluation");
 
         // 改名後的有效名稱進入選單。
         (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.Quality}", new FeatureUpdateRequest("評測", true))).EnsureSuccessStatusCode();
-        Assert.Equal("評測", Assert.Single((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation, x => x.Id == "system.evaluation.quality").Name);
+        Assert.Equal("評測", Assert.Single(Flatten((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation), x => x.Id == "system.evaluation.quality").Name);
     }
 
     [Fact]

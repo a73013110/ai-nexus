@@ -9,10 +9,10 @@ public static class NavigationTree
     public const int MaxDepth = 4;
 
     /// <summary>
-    /// 依使用者的授權修剪並攤平選單：
+    /// 依使用者的授權修剪選單：
     /// page 要功能已授權且啟用（<paramref name="features"/> 已是這個集合）並且是目錄的頁面；
     /// link 要 audiences 為空或使用者屬於其中任一有效群組（<paramref name="groups"/>），且主機仍在允許清單；
-    /// group 沒有可見子節點就不輸出，只剩一個時以該子節點取代自己（遞迴套用，單一路徑會一路攤到葉節點）。
+    /// group 沒有可見子節點就不輸出（逐層判斷，子分群被修剪光的上層也跟著不輸出）；只剩一項仍保留分群，側欄的分群結構不隨授權多寡改變。
     /// 同層依 <c>SortOrder</c>、再依 Id（ordinal）排序。
     /// </summary>
     public static IReadOnlyList<NavigationNodeDto> Build(IReadOnlyList<NavigationItemDto> items, IEnumerable<FeatureDto> features,
@@ -43,12 +43,7 @@ public static class NavigationTree
                     return new(item.Id, item.Kind, item.Name ?? "", item.Icon, null, null, item.Url, item.OpenInNewTab, []);
                 case NavigationItem.GroupKind:
                     var visible = Visible(children[item.Id]);
-                    return visible.Count switch
-                    {
-                        0 => null,
-                        1 => visible[0],
-                        _ => new(item.Id, item.Kind, item.Name ?? "", item.Icon, null, null, null, false, visible),
-                    };
+                    return visible.Count == 0 ? null : new(item.Id, item.Kind, item.Name ?? "", item.Icon, null, null, null, false, visible);
                 default:
                     return null;
             }
