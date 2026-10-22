@@ -22,6 +22,7 @@ import { Notice } from '@shared/ui/notice';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
 import { attendanceProblem, errorCode, weekday } from '../attendance-presentation';
+import { CALENDAR_DAY_TOUR } from '../attendance-tour';
 import { HOLIDAY_KINDS, HolidayGlyph, holidayKind, type HolidayKind } from './holiday-glyph';
 
 interface DayDraft {
@@ -69,6 +70,7 @@ const same = (a: DayDraft, b: DayDraft) =>
             [heading]="title()"
             [detail]="weekdayName()"
             closeLabel="關閉假日編輯"
+            [tour]="tour"
           />
           <div class="dialog-body">
             @if (error()) {
@@ -158,6 +160,7 @@ export class CalendarDayDialog {
   readonly saving = signal(false);
   readonly error = signal('');
   readonly locked = computed(() => this.saving() || this.session.testing());
+  readonly tour = CALENDAR_DAY_TOUR;
   readonly dirty = computed(() => {
     const opened = this.opened();
     return !!opened && !same(this.draft(), opened);

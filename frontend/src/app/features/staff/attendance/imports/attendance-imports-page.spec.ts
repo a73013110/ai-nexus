@@ -6,6 +6,7 @@ import type { PunchImportDto, PunchReimportResult } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ApiError } from '@core/errors/safe-errors';
+import { tourSteps } from '@shared/ui/product-tour';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
 import { AttendanceImportsPage } from './attendance-imports-page';
@@ -220,6 +221,25 @@ describe('AttendanceImportsPage', () => {
     expect(dialog().error()).toContain('讀不到打卡檔資料夾');
     expect(toast.success).not.toHaveBeenCalled();
     expect(root.querySelector('.imports-failure')).toBeNull();
+  });
+
+  it('finds every tour target on the page and in both reimport modes', async () => {
+    const { fixture, root, dialog } = setup();
+    await fixture.whenStable();
+    expect(root.querySelector('nx-feature-page nx-product-tour-button')).not.toBeNull();
+    for (const step of tourSteps(fixture.componentInstance.tour()))
+      expect(
+        root.querySelector(step.target.replace(/^nx-attendance-imports-page /, '')),
+        step.target,
+      ).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('.imports-reimport')!.click();
+    for (const mode of ['single', 'range'] as const) {
+      dialog().switchMode(mode);
+      fixture.detectChanges();
+      expect(root.querySelector('nx-reimport-dialog nx-product-tour-button')).not.toBeNull();
+      for (const step of tourSteps(dialog().tour()))
+        expect(root.querySelector(step.target), step.target).not.toBeNull();
+    }
   });
 
   it('summarises mixed results: successes in a toast, failures and missing files on the page', () => {

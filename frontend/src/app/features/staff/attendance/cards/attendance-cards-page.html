@@ -3,6 +3,7 @@
   description="登錄打卡卡號並指派持有人；刷卡依持有期間歸戶到人。"
   density="compact"
   layoutMode="data"
+  [tour]="tour()"
 >
   @if (store.canMaintain()) {
     <button
@@ -19,6 +20,7 @@
   <!-- 頁內分頁與該分頁的說明同一列，間距交給 page-toolbar。 -->
   <div class="page-toolbar">
     <nx-view-switch
+      class="cards-view"
       label="卡號集合"
       appearance="segment"
       [options]="views"
@@ -26,7 +28,7 @@
       (valueChange)="query.commit({ view: $any($event) })"
     />
     @if (query.applied().view === 'unattributed') {
-      <p class="form-note">
+      <p class="form-note cards-unattributed-note">
         員工卡上沒有持有期間涵蓋的刷卡，依卡號彙總；指派時開始時間預設為第一筆未歸戶刷卡。
       </p>
     }
@@ -246,7 +248,7 @@
     </nx-data-table>
   }
 </nx-feature-page>
-<nx-detail-drawer title="卡片詳情" (closed)="closed()">
+<nx-detail-drawer title="卡片詳情" [tour]="drawerTour()" (closed)="closed()">
   <div drawer-summary class="ui-drawer-summary">
     @if (store.selected(); as card) {
       <div>

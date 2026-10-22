@@ -34,6 +34,7 @@ import { ToastService } from '@shared/ui/toast-service';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { AttendanceApi, type PunchImportFilters } from '../attendance-api';
 import { IMPORT_TRIGGER, importStatus } from '../attendance-presentation';
+import { attendanceImportsTour } from '../attendance-tour';
 import {
   IMPORT_RANGES,
   IMPORT_STATUSES,
@@ -111,6 +112,12 @@ export class AttendanceImportsPage {
   readonly ranges = IMPORT_RANGES;
   readonly query = queryState(importsQueryOptions);
   readonly draft = this.query.draft;
+  readonly tour = computed(() =>
+    attendanceImportsTour({
+      maintain: this.session.has('attendance.imports.reimport'),
+      testing: this.session.testing(),
+    }),
+  );
   readonly pageSize = signal(50);
   private readonly request = signal<ImportsPageRequest | undefined>(undefined);
   private readonly pageRead = apiResource({

@@ -27,6 +27,7 @@ import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitRows } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { attendanceProblem, presentRecord, presentSchedule } from '../attendance-presentation';
+import { attendanceRecordsTour } from '../attendance-tour';
 import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-query';
 
 /**
@@ -86,6 +87,7 @@ export class AttendanceRecordsPage {
     }),
   );
   readonly draft = this.query.draft;
+  readonly tour = computed(() => attendanceRecordsTour({ units: !!this.unitOptions() }));
   private readonly request = signal<AttendanceRecordFilters | undefined>(undefined);
   private readonly recordsRead = apiResource({
     feature: 'attendance.records',

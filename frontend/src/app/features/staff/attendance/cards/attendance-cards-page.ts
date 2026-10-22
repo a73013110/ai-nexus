@@ -32,6 +32,7 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { Field } from '@shared/ui/field';
 import { AttendanceCardsStore, holderName } from './attendance-cards-store';
 import { CARD_KINDS, cardKindLabel } from '../attendance-presentation';
+import { attendanceCardsTour, cardDetailTour } from '../attendance-tour';
 import { AssignmentDialog } from './assignment-dialog';
 import { CardDialog } from './card-dialog';
 import { CARD_SEARCH_MAX, cardsQueryOptions } from './cards-query';
@@ -78,6 +79,24 @@ export class AttendanceCardsPage {
     { value: 'cards', label: '卡片' },
     { value: 'unattributed', label: '未歸戶卡號' },
   ];
+  readonly tour = computed(() =>
+    attendanceCardsTour({
+      view: this.query.applied().view,
+      maintain: this.store.canMaintain(),
+      testing: this.session.testing(),
+    }),
+  );
+  /** 選取卡片時才有抽屜的導覽；訪客卡沒有指派步驟。 */
+  readonly drawerTour = computed(() => {
+    const card = this.store.selected();
+    return card
+      ? cardDetailTour({
+          visitor: card.kind === 'visitor',
+          maintain: this.store.canMaintain(),
+          testing: this.session.testing(),
+        })
+      : null;
+  });
   readonly drawer = viewChild(DetailDrawer);
   private readonly cardDialog = viewChild.required(CardDialog);
   private readonly assignmentDialog = viewChild.required(AssignmentDialog);

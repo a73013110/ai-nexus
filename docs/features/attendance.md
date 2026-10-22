@@ -1,6 +1,6 @@
 # 出勤打卡
 
-結論：**卡號對應**、**刷卡匯入**、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）的後端與頁面已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間（`AttendanceUserCards` 以 `userId` 另查，Identity 不依賴出勤）：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。
+結論：**卡號對應**、**刷卡匯入**、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間（`AttendanceUserCards` 以 `userId` 另查，Identity 不依賴出勤）：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。頁首、詳情與對話框的問號可開啟操作導覽。
 
 ## 授權
 
@@ -20,13 +20,13 @@
 
 - 期間是 `[StartsAt, EndsAt)`，`EndsAt` 為空表示持有中。持有人是使用者或姓名，至少一個；只有姓名的期間之後用修改綁上使用者，先前的刷卡隨之歸戶。
 - 同一張卡的期間不可重疊，同一人可同時持有多張。
-- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`（一般錯誤回應，不帶持有人；前端由持有歷史提示目前是誰持有）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
+- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`（不帶持有人，前端由持有歷史提示是誰持有）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
 - 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
 - 檢查與寫入在 `AdministrativeAudit` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
 
 ## 未歸戶卡號
 
-員工卡上沒有持有期間涵蓋的刷卡（含尚未登錄的卡號），依卡號彙總筆數、第一筆與最後一筆刷卡，可依出勤日篩選。第一筆未歸戶刷卡的時間是指派時起始時間的預設值。
+員工卡上沒有持有期間涵蓋的刷卡（含尚未登錄的卡號），依卡號彙總筆數、第一筆與最後一筆刷卡，可依出勤日篩選。指派時起始時間預設為第一筆未歸戶刷卡。
 
 ## 刷卡匯入
 

@@ -20,9 +20,8 @@ import { ViewMotion } from '@shared/ui/view-motion';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AttendanceApi } from '../attendance-api';
 import { attendanceProblem, taipeiToday } from '../attendance-presentation';
-
-/** 一次最多重匯幾天（幾個檔）；與後端 `ReimportPunchFiles.MaxDays` 相同，送出前先擋，不等伺服器回 400。 */
-export const MAX_REIMPORT_DAYS = 31;
+import { reimportTour } from '../attendance-tour';
+import { MAX_REIMPORT_DAYS } from './imports-query';
 
 type ReimportMode = 'single' | 'range';
 
@@ -123,7 +122,7 @@ export function reimportOutcome(result: PunchReimportResult): {
     (cancel)="cancel($event)"
   >
     <form class="dialog-form" novalidate (submit)="submit($event)">
-      <nx-dialog-header heading="手動重匯打卡檔" closeLabel="關閉重匯" />
+      <nx-dialog-header heading="手動重匯打卡檔" closeLabel="關閉重匯" [tour]="tour()" />
       <div class="dialog-body">
         @if (error()) {
           <nx-notice tone="danger" [message]="error()" />
@@ -172,7 +171,7 @@ export function reimportOutcome(result: PunchReimportResult): {
             }
           }
         </div>
-        <p class="form-note">
+        <p class="form-note reimport-note">
           <span aria-live="polite">{{ summary() }}</span>
           檔名日期不是出勤日，檔案可能含前一天深夜的刷卡；不論檔案有沒有變都會重新匯入。
         </p>
@@ -209,6 +208,7 @@ export class ReimportDialog {
   readonly to = signal(this.today);
   readonly running = signal(false);
   readonly error = signal('');
+  readonly tour = computed(() => reimportTour({ mode: this.mode() }));
   /** 這次要重匯的區間；單一檔案是起訖相同的區間。無效時為 undefined，送出停用。 */
   private readonly plan = computed(() =>
     this.mode() === 'single'

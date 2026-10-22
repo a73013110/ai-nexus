@@ -3,6 +3,7 @@
   description="打卡機每日檔案的匯入結果；失敗的檔案保留上次成功的刷卡。"
   density="compact"
   layoutMode="data"
+  [tour]="tour()"
 >
   @if (session.has('attendance.imports.reimport')) {
     <button

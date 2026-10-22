@@ -1,6 +1,6 @@
 # 出勤紀錄
 
-結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定結果、上下班刷卡、應下班、遲到與早退秒數，以及當天的假單與出差單；同一組條件可[匯出 Excel](#匯出-excel)，頁首「判定規則」面板顯示[規則說明](#規則說明)。判定規則見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；回應形狀是 `contracts/openapi.json` 的 `AttendanceRecordsDto`。
+結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定結果、上下班刷卡、應下班、遲到與早退秒數，以及當天的假單與出差單；同一組條件可[匯出 Excel](#匯出-excel)，頁首「判定規則」面板顯示[規則說明](#規則說明)。判定規則見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；回應形狀是 `contracts/openapi.json` 的 `AttendanceRecordsDto`。頁首的問號可開啟操作導覽。
 
 ## 查詢
 

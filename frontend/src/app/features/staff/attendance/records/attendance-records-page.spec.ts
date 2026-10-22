@@ -9,6 +9,7 @@ import type {
 } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { tourSteps } from '@shared/ui/product-tour';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { AttendanceApi } from '../attendance-api';
 import { AttendanceRecordsPage } from './attendance-records-page';
@@ -261,6 +262,23 @@ describe('AttendanceRecordsPage', () => {
       expect(root.querySelector('.records-export-error')).not.toBeNull();
     });
     expect(downloads).toEqual([]);
+  });
+
+  it('finds every tour target and mentions units only when they can be chosen', async () => {
+    const { fixture, root } = setup(async () => records(), ['attendance.records', 'organization']);
+    await fixture.whenStable();
+    const tour = fixture.componentInstance.tour();
+    expect(root.querySelector('nx-feature-page nx-product-tour-button')).not.toBeNull();
+    expect(
+      tourSteps(tour)
+        .map((step) => step.description)
+        .join(),
+    ).toContain('單位（含下層）');
+    for (const step of tourSteps(tour))
+      expect(
+        root.querySelector(step.target.replace(/^nx-attendance-records-page /, '')),
+        step.target,
+      ).not.toBeNull();
   });
 
   it('does not offer an export when nobody is listed', async () => {

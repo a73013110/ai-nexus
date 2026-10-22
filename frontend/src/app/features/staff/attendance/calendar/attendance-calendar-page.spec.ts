@@ -6,6 +6,7 @@ import type { CalendarDayDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ApiError } from '@core/errors/safe-errors';
+import { tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
 import { AttendanceCalendarPage } from './attendance-calendar-page';
@@ -187,6 +188,28 @@ describe('AttendanceCalendarPage', () => {
     expect(first.textContent).toContain('改為上班');
     expect(first.textContent).toContain('上班日');
     expect(api.calendarDays).toHaveBeenCalledOnce();
+  });
+
+  it('finds every tour target in both views and in the day dialog', async () => {
+    const { fixture, root, dialog, cell, showList } = setup();
+    await fixture.whenStable();
+    const page = fixture.componentInstance;
+    const expectTargets = (definition: ProductTourDefinition) => {
+      for (const step of tourSteps(definition))
+        expect(
+          root.querySelector(step.target.replace(/^nx-attendance-calendar-page /, '')),
+          step.target,
+        ).not.toBeNull();
+    };
+    expect(root.querySelector('nx-feature-page nx-product-tour-button')).not.toBeNull();
+    expectTargets(page.tour());
+    cell(1).click();
+    await fixture.whenStable();
+    expect(root.querySelector('nx-calendar-day-dialog nx-product-tour-button')).not.toBeNull();
+    expectTargets(dialog().tour);
+    await showList();
+    expect(tourSteps(page.tour()).map((step) => step.title)).toContain('逐日清單');
+    expectTargets(page.tour());
   });
 
   it('offers no edits without the maintain action', async () => {

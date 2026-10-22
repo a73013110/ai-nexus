@@ -37,6 +37,7 @@ import {
   taipeiToday,
   weekday,
 } from '../attendance-presentation';
+import { attendanceCalendarTour } from '../attendance-tour';
 import { CalendarDayDialog } from './calendar-day-dialog';
 import { HolidayGlyph, holidayKind, type HolidayKind } from './holiday-glyph';
 
@@ -146,6 +147,14 @@ export class AttendanceCalendarPage {
   readonly readOnly = signal(false);
   readonly editable = computed(
     () => this.canMaintain() && !this.readOnly() && !this.session.testing(),
+  );
+  readonly tour = computed(() =>
+    attendanceCalendarTour({
+      view: this.view(),
+      maintain: this.canMaintain(),
+      testing: this.session.testing(),
+      gdReadOnly: this.readOnly(),
+    }),
   );
   /** 正在編輯（或剛編輯過）的日期，月曆上標成選取。 */
   readonly selected = signal<string | null>(null);

@@ -3,6 +3,7 @@
   description="公文系統的假日行事曆；出勤判定依這裡的上午、下午放假。"
   density="compact"
   layoutMode="data"
+  [tour]="tour()"
 >
   @if (canMaintain() && readOnly()) {
     <nx-notice
