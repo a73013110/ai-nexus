@@ -14,7 +14,7 @@
 
 腳本開頭的 `:setvar`，說明寫在腳本裡。常改的是 `Apply`（0 預覽、1 寫入）、`TargetServer`（linked server 名稱）、`TargetDatabase`、`SourceDatabase`、`BatchSize`（每批刷卡筆數，預設 50000）。
 
-- `LegacyMachineCode`、`LegacyEventCode`：舊表沒存打卡檔的第一欄與最後一欄，預設 `001`、`11`。**機器代號是刷卡去重鍵的一部分**，必須與打卡檔相同，日後匯入同一天的檔才會認成同一筆；執行前看一下共用資料夾裡的檔案確認。
+- `LegacyMachineCode`、`LegacyEventCode`：舊表沒存打卡檔的第一欄與最後一欄，預設 `001`、`11`。**機器代號是刷卡去重鍵的一部分**，必須與打卡檔相同，日後匯入同一天的檔才會認成同一筆；現有打卡機是 `001`（2026-10-22 確認），換機或多台時再改。
 - `UnmatchedAsHolderName`：預設 0，對不上使用者的期間不寫。設 1 改以舊系統姓名寫入（`UserId` 為空），HR 之後在卡號對應頁綁人；代價是這些卡不會出現在未歸戶清單。
 
 ## 步驟
