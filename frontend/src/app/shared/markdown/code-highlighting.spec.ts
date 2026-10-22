@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { highlightWhenVisible } from './code-highlighting';
 import { renderMarkdownWithDiagrams } from './markdown';
 
 const renderMarkdown = (content: string) => renderMarkdownWithDiagrams(content).html;
 
 describe('deferred code highlighting', () => {
+  // 上色器第一次使用時才動態載入 highlight.js 與十多種文法；全套平行執行時載入可能超過
+  // vi.waitFor 預設的 1 秒而偶發失敗。先載入好，等待就只涵蓋要驗證的分段上色。
+  beforeAll(() => import('./code-highlight'));
+
   it('renders escaped code first, then colours known languages only', async () => {
     const host = document.createElement('div');
     document.body.append(host);
