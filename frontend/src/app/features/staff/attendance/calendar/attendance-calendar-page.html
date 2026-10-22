@@ -1,0 +1,154 @@
+<nx-feature-page
+  [title]="session.featureName('attendance.calendar')"
+  description="公文系統的假日行事曆；出勤判定依這裡的上午、下午放假。"
+  density="compact"
+  layoutMode="data"
+>
+  @if (canMaintain() && readOnly()) {
+    <nx-notice
+      class="calendar-read-only"
+      tone="warning"
+      message="公文系統的連線設為唯讀，假日目前只能查詢；要修改請聯絡管理員調整設定。"
+    />
+  }
+  <div class="calendar-nav" role="group" aria-label="切換月份">
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="上個月"
+      title="上個月"
+      [attr.aria-disabled]="loading() || null"
+      (click)="go(-1)"
+    >
+      <nx-icon name="left" />
+    </button>
+    <h2 class="calendar-month" aria-live="polite">{{ title() }}</h2>
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="下個月"
+      title="下個月"
+      [attr.aria-disabled]="loading() || null"
+      (click)="go(1)"
+    >
+      <nx-icon name="chevron" />
+    </button>
+    <button type="button" class="quiet-button" (click)="thisMonth()">本月</button>
+    @if (canMaintain() && session.testing()) {
+      <span class="form-note">{{ session.testingNote() }}</span>
+    }
+  </div>
+  <nx-data-table
+    class="calendar-table"
+    label="假日行事曆"
+    [busy]="loading()"
+    [columns]="columns"
+    [stacked]="true"
+    preferenceKey="staff-attendance-calendar"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        假日
+        @if (loaded()?.days) {
+          <span class="ui-count-label">放假 {{ offDays() }} 天</span>
+        }
+      </h2>
+      @if (loading()) {
+        <span class="sr-only" role="status">正在載入假日行事曆…</span>
+      }
+    </div>
+    <table>
+      <caption class="sr-only">
+        {{
+          title()
+        }}的假日行事曆，每天一列。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="date" class="calendar-date-column" />
+        <col nxTableColumn="type" class="calendar-type-column" />
+        <col nxTableColumn="morning" class="calendar-half-column" />
+        <col nxTableColumn="afternoon" class="calendar-half-column" />
+        <col nxTableColumn="remark" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col" nxTableColumn="date">日期</th>
+          <th scope="col" nxTableColumn="type">類型</th>
+          <th scope="col" nxTableColumn="morning">上午</th>
+          <th scope="col" nxTableColumn="afternoon">下午</th>
+          <th scope="col" nxTableColumn="remark">備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.date) {
+          <tr
+            nxTableRow
+            [rowEnabled]="editable() && !!row.value"
+            [class.is-weekend]="row.weekend"
+            [class.is-missing]="!row.value"
+            (rowActivate)="edit(row.value)"
+          >
+            <td nxTableColumn="date">
+              @if (editable() && row.value) {
+                <button
+                  type="button"
+                  class="ui-table-link calendar-edit"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'編輯 ' + row.label"
+                  (click)="edit(row.value)"
+                >
+                  <time [attr.datetime]="row.date">{{ row.label }}</time>
+                </button>
+              } @else {
+                <time [attr.datetime]="row.date">{{ row.label }}</time>
+              }
+              @if (row.today) {
+                <small class="calendar-today">今天</small>
+              }
+            </td>
+            @if (row.value; as day) {
+              <td nxTableColumn="type" data-label="類型">
+                @if (day.morningOff || day.afternoonOff) {
+                  <nx-status-badge tone="info">{{ row.type }}</nx-status-badge>
+                } @else {
+                  {{ row.type }}
+                }
+              </td>
+              <td nxTableColumn="morning" data-label="上午">
+                {{ day.morningOff ? '放假' : '上班' }}
+              </td>
+              <td nxTableColumn="afternoon" data-label="下午">
+                {{ day.afternoonOff ? '放假' : '上班' }}
+              </td>
+              <td nxTableColumn="remark" data-label="備註">
+                <span class="ui-truncate" [title]="day.remark ?? ''">{{ day.remark || '—' }}</span>
+              </td>
+            } @else {
+              <td nxTableColumn="type" data-label="類型">
+                <nx-status-badge
+                  tone="warning"
+                  title="公文系統沒有這一天，不能在這裡新增；出勤判定時週末當放假、平日無法判定。"
+                  >未建立</nx-status-badge
+                >
+              </td>
+              <td nxTableColumn="morning" data-label="上午">—</td>
+              <td nxTableColumn="afternoon" data-label="下午">—</td>
+              <td nxTableColumn="remark" data-label="備註">—</td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      [count]="rows().length"
+      [loading]="loading()"
+      [error]="readError()"
+      loadingText="正在取得假日行事曆"
+      errorTitle="無法取得假日行事曆"
+      emptyTitle="沒有假日資料"
+      (retry)="reload()"
+    />
+  </nx-data-table>
+</nx-feature-page>
+<nx-calendar-day-dialog (saved)="saved($event)" (readOnly)="readOnly.set(true)" />

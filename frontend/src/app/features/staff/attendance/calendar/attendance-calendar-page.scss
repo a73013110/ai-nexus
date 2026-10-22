@@ -1,0 +1,42 @@
+.calendar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin-bottom: var(--p-space-3);
+}
+.calendar-month {
+  min-width: 8.5rem;
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+}
+.calendar-nav .form-note {
+  margin: 0 0 0 var(--p-space-2);
+}
+.calendar-table table {
+  table-layout: fixed;
+  min-width: 40rem;
+}
+.calendar-date-column {
+  width: 9rem;
+}
+.calendar-type-column {
+  width: 8rem;
+}
+.calendar-half-column {
+  width: 5rem;
+}
+.calendar-today {
+  margin-inline-start: var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+}
+tr.is-weekend time {
+  color: var(--secondary);
+}
+tr.is-missing > td:not(:first-child) {
+  color: var(--secondary);
+}

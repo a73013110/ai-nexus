@@ -1,0 +1,97 @@
+@use 'breakpoints' as bp;
+
+.records-table table {
+  table-layout: fixed;
+  min-width: 60rem;
+}
+.records-date-column {
+  width: 7.5rem;
+}
+.records-day-type-column {
+  width: 5.5rem;
+}
+.records-status-column {
+  width: 10rem;
+}
+.records-time-column {
+  width: 5.5rem;
+}
+.records-duration-column {
+  width: 6.5rem;
+}
+.records-time {
+  font-variant-numeric: tabular-nums;
+}
+// 每個人一組：組首列是姓名與當段的異常摘要，捲動時不固定（表頭已固定）。
+.records-person-row > th {
+  background: var(--surface-subtle);
+  font-weight: 400;
+}
+.records-person-row > th > * + * {
+  margin-inline-start: var(--p-space-2);
+}
+.records-person-name strong {
+  font-weight: 600;
+}
+.records-person-name small,
+.records-person-summary,
+.records-reason,
+.records-today,
+.records-sheets small {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.records-person-name small {
+  margin-inline-start: var(--p-space-2);
+}
+.records-person-summary > span + span::before {
+  content: '・';
+}
+.records-person-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40rem;
+}
+.records-reason {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.records-today {
+  display: block;
+  font-weight: 600;
+}
+tr.is-weekend > td:first-child {
+  color: var(--secondary);
+}
+.records-flag {
+  color: var(--warning);
+  font-weight: 600;
+}
+.records-unavailable {
+  color: var(--warning);
+  font-weight: 600;
+}
+.records-sheets {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.records-sheets li {
+  overflow-wrap: anywhere;
+}
+.records-sheets small {
+  display: block;
+}
+.records-none {
+  color: var(--secondary);
+}
+.records-excluded {
+  align-self: end;
+}
+@include bp.below(narrow) {
+  .records-person-group {
+    contain-intrinsic-size: auto 80rem;
+  }
+}

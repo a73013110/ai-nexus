@@ -1,0 +1,219 @@
+<nx-feature-page
+  [title]="session.featureName('attendance.records')"
+  description="逐日檢視上下班刷卡、假單與出勤判定。"
+  density="compact"
+  layoutMode="data"
+>
+  <nx-query-bar label="出勤紀錄查詢條件" [state]="query" [busy]="loading()">
+    <nx-time-range-picker
+      label="區間"
+      [presets]="ranges"
+      [withTime]="false"
+      [value]="draft().range"
+      (valueChange)="query.set('range', $event)"
+    />
+    @if (personOptions().length > 2 || draft().userId) {
+      <div class="ui-field records-person">
+        <span aria-hidden="true">人員</span>
+        <nx-select
+          label="人員"
+          placeholder="所有人"
+          [searchable]="true"
+          [searchFrom]="10"
+          [options]="personOptions()"
+          [value]="draft().userId"
+          (valueChange)="query.set('userId', $event)"
+        />
+      </div>
+    }
+    @if (unitOptions(); as units) {
+      <div class="ui-field records-unit">
+        <span aria-hidden="true">單位</span>
+        <nx-select
+          label="單位（含下層）"
+          placeholder="所有單位"
+          [searchable]="true"
+          [searchFrom]="10"
+          [options]="units"
+          [value]="draft().unitId"
+          (valueChange)="query.set('unitId', $event)"
+        />
+      </div>
+    }
+    @if (showExcluded()) {
+      <nx-checkbox
+        class="records-excluded"
+        label="含不列入出勤的人"
+        description="只影響全公司範圍的查詢"
+        [checked]="draft().includeExcluded"
+        (checkedChange)="query.set('includeExcluded', $event)"
+      />
+    }
+  </nx-query-bar>
+  @if (records(); as data) {
+    @if (!data.calendarAvailable) {
+      <nx-notice
+        class="records-calendar-unavailable"
+        tone="warning"
+        message="假日行事曆無法取得：公文系統暫時連不上，週末當放假、平日一律無法判定，也不判遲到、早退與異常。"
+      />
+    }
+    @if (!data.leaveAvailable) {
+      <nx-notice
+        class="records-leave-unavailable"
+        tone="warning"
+        message="假單無法取得：公文系統暫時連不上，沒刷卡的日子改為無法判定，假單欄顯示「無法取得」。"
+      />
+    }
+    @if (readError()) {
+      <nx-notice tone="danger" [message]="readError()"
+        ><button notice-actions type="button" class="secondary-button" (click)="reload()">
+          重試
+        </button></nx-notice
+      >
+    }
+  }
+  <nx-data-table
+    class="records-table"
+    label="出勤紀錄"
+    [busy]="loading()"
+    [columns]="columns"
+    [stacked]="true"
+    preferenceKey="staff-attendance-records"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        出勤紀錄
+        @if (records()) {
+          <span class="ui-count-label">{{ people().length }} 人</span>
+        }
+      </h2>
+      @if (period()) {
+        <span class="form-note">{{ period() }}</span>
+      }
+      @if (loading()) {
+        <span class="sr-only" role="status">正在載入出勤紀錄…</span>
+      }
+    </div>
+    <table>
+      <caption class="sr-only">
+        出勤紀錄，依人分組，每天一列；時間為台北時間。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="date" class="records-date-column" />
+        <col nxTableColumn="dayType" class="records-day-type-column" />
+        <col nxTableColumn="status" class="records-status-column" />
+        <col nxTableColumn="clockIn" class="records-time-column" />
+        <col nxTableColumn="clockOut" class="records-time-column" />
+        <col nxTableColumn="expected" class="records-time-column" />
+        <col nxTableColumn="late" class="records-duration-column" />
+        <col nxTableColumn="early" class="records-duration-column" />
+        <col nxTableColumn="sheets" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col" nxTableColumn="date">日期</th>
+          <th scope="col" nxTableColumn="dayType">日型</th>
+          <th scope="col" nxTableColumn="status">狀態</th>
+          <th scope="col" nxTableColumn="clockIn">上班</th>
+          <th scope="col" nxTableColumn="clockOut">下班</th>
+          <th scope="col" nxTableColumn="expected">應下班</th>
+          <th scope="col" nxTableColumn="late">遲到</th>
+          <th scope="col" nxTableColumn="early">早退</th>
+          <th scope="col" nxTableColumn="sheets">假單與出差</th>
+        </tr>
+      </thead>
+      @for (group of groups(); track group.person.userId) {
+        <tbody class="records-person-group">
+          <tr class="records-person-row">
+            <th scope="rowgroup" colspan="9">
+              <span class="records-person-name"
+                ><strong>{{ group.person.displayName }}</strong
+                ><small>{{ group.person.account }}</small></span
+              >
+              @if (group.person.excluded) {
+                <nx-status-badge tone="neutral">不列入出勤</nx-status-badge>
+              }
+              @if (!group.person.leaveAvailable && records()?.leaveAvailable) {
+                <nx-status-badge
+                  tone="warning"
+                  title="對不到公文系統帳號（沒有 AD 帳號，或公文系統查無此人）"
+                  >假單無法取得</nx-status-badge
+                >
+              }
+              <span class="records-person-summary">
+                @if (group.anomalies) {
+                  <span>異常 {{ group.anomalies }} 天</span>
+                }
+                @if (group.late) {
+                  <span>遲到 {{ group.late }} 天</span>
+                }
+                @if (group.early) {
+                  <span>早退 {{ group.early }} 天</span>
+                }
+              </span>
+            </th>
+          </tr>
+          @for (row of group.days; track row.day.date) {
+            <tr [class.is-weekend]="row.weekend">
+              <td nxTableColumn="date">
+                <time [attr.datetime]="row.day.date">{{ row.date }}（{{ row.weekday }}）</time>
+                @if (row.today) {
+                  <small class="records-today">今天</small>
+                }
+              </td>
+              <td nxTableColumn="dayType" data-label="日型">{{ row.dayType }}</td>
+              <td nxTableColumn="status">
+                <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge>
+                @if (row.reason) {
+                  <small class="records-reason">{{ row.reason }}</small>
+                }
+              </td>
+              <td nxTableColumn="clockIn" class="records-time" data-label="上班">
+                {{ row.clockIn || '—' }}
+              </td>
+              <td nxTableColumn="clockOut" class="records-time" data-label="下班">
+                {{ row.singlePunch ? '—' : row.clockOut || '—' }}
+              </td>
+              <td nxTableColumn="expected" class="records-time" data-label="應下班">
+                {{ row.expected || '—' }}
+              </td>
+              <td nxTableColumn="late" data-label="遲到" [class.records-flag]="row.late">
+                {{ row.late || '—' }}
+              </td>
+              <td nxTableColumn="early" data-label="早退" [class.records-flag]="row.early">
+                {{ row.early || '—' }}
+              </td>
+              <td nxTableColumn="sheets" data-label="假單與出差">
+                @if (row.leaveUnavailable) {
+                  <span class="records-unavailable">無法取得</span>
+                } @else {
+                  <ul class="records-sheets">
+                    @for (item of row.sheets; track item.sheet.desNo) {
+                      <li [title]="item.sheet.title + '（' + item.sheet.desNo + '）'">
+                        <strong>{{ item.kind }}</strong> {{ item.sheet.title }}
+                        <small>{{ item.time }} · {{ item.sheet.flowStatus }}</small>
+                      </li>
+                    } @empty {
+                      <li class="records-none">—</li>
+                    }
+                  </ul>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      }
+    </table>
+    <nx-table-state
+      [count]="groups().length"
+      [loading]="loading()"
+      [error]="records() ? '' : readError()"
+      loadingText="正在取得出勤紀錄"
+      errorTitle="無法取得出勤紀錄"
+      emptyTitle="這段期間沒有出勤紀錄"
+      emptyText="只列出期間內持有員工卡的人；未來的日子不列出。"
+      (retry)="reload()"
+    />
+  </nx-data-table>
+</nx-feature-page>
