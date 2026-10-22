@@ -37209,6 +37209,197 @@
         }
       }
     },
+    "/api/v1/attendance-records": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "operationId": "ListAttendanceRecords",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeExcluded",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRecordsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/attendance-cards": {
       "get": {
         "tags": [
@@ -41489,6 +41680,182 @@
           }
         }
       },
+      "AttendanceDayType": {
+        "enum": [
+          "FullDay",
+          "MorningOff",
+          "AfternoonOff",
+          "DayOff",
+          "Unknown"
+        ]
+      },
+      "AttendancePersonDto": {
+        "required": [
+          "userId",
+          "displayName",
+          "account",
+          "leaveAvailable",
+          "excluded",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "leaveAvailable": {
+            "type": "boolean"
+          },
+          "excluded": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceRecordDto"
+            }
+          }
+        }
+      },
+      "AttendanceReason": {
+        "enum": [
+          "NoPunchOrLeave",
+          "LeaveUnavailable",
+          "DayTypeUnknown",
+          "SinglePunch",
+          "DayInProgress",
+          null
+        ]
+      },
+      "AttendanceRecordDto": {
+        "required": [
+          "date",
+          "dayType",
+          "status",
+          "reason",
+          "clockIn",
+          "clockOut",
+          "expectedClockOut",
+          "lateSeconds",
+          "earlyLeaveSeconds",
+          "leave",
+          "sheets"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "dayType": {
+            "$ref": "#/components/schemas/AttendanceDayType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AttendanceReason"
+              }
+            ]
+          },
+          "clockIn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "clockOut": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expectedClockOut": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lateSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "earlyLeaveSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leave": {
+            "$ref": "#/components/schemas/LeaveState"
+          },
+          "sheets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaveSheet"
+            }
+          }
+        }
+      },
+      "AttendanceRecordsDto": {
+        "required": [
+          "from",
+          "to",
+          "today",
+          "calendarAvailable",
+          "leaveAvailable",
+          "people"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "calendarAvailable": {
+            "type": "boolean"
+          },
+          "leaveAvailable": {
+            "type": "boolean"
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendancePersonDto"
+            }
+          }
+        }
+      },
+      "AttendanceStatus": {
+        "enum": [
+          "Present",
+          "OnLeave",
+          "Anomaly",
+          "Undetermined",
+          "DayOff"
+        ]
+      },
       "AuditActionDto": {
         "required": [
           "value",
@@ -44563,6 +44930,52 @@
             }
           }
         }
+      },
+      "LeaveSheet": {
+        "required": [
+          "desNo",
+          "kind",
+          "title",
+          "startsAt",
+          "endsAt",
+          "flowStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "desNo": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LeaveSheetKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "flowStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "LeaveSheetKind": {
+        "enum": [
+          "Leave",
+          "Travel"
+        ]
+      },
+      "LeaveState": {
+        "enum": [
+          "None",
+          "Filed",
+          "Unavailable"
+        ]
       },
       "LibraryFileDto": {
         "required": [

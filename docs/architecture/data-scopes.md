@@ -35,3 +35,4 @@
 | 功能 | 範圍 | 條件 |
 |---|---|---|
 | `audit`（[活動稽核](../features/activity-audit.md#權限)） | `own`、`unit`、`unit-tree`、`all` | 紀錄的操作者或對象是範圍內的人（`AuditDataScope`） |
+| `attendance.records`（[出勤紀錄](../features/attendance-records.md#資料範圍)） | `own`、`unit`、`unit-tree`、`all` | 持卡人是範圍內的人（`ListAttendanceRecords`） |

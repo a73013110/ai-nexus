@@ -1,15 +1,15 @@
 # 出勤打卡
 
-結論：目前完成**卡號對應**、**刷卡匯入**與**假日設定**（見 [假日設定](attendance-calendar.md)）的後端，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；出勤紀錄隨後加入，決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
+結論：目前完成**卡號對應**、**刷卡匯入**、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）的後端，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
 
 ## 授權
 
 - `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
 - `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
-- `attendance.records` 宣告了資料範圍（`own`、`unit`、`unit-tree`、`all`），**端點還沒有，範圍尚未套用**；加端點時依 [資料範圍](../architecture/data-scopes.md) 套用，並補進該文件的對照表。
+- `attendance.records`：資料範圍 `own`、`unit`、`unit-tree`、`all`，見 [出勤紀錄](attendance-records.md#資料範圍)。
 - Seed：`workspace` 群組有 `attendance.records` 的 `own`；`hr`（人事）群組有出勤的全部頁面與動作，以及 `all` 範圍的 `attendance.records`，不含使用者管理。`hr` 沒有成員也沒有角色，由管理員連結角色與加人。
-- 主管的 `unit-tree` 預設**尚未實作**（主管身分在組織單位的成員設定，不是角色），留到出勤紀錄步驟；目前由管理員建立群組授予。
+- 主管的 `unit-tree` 預設**尚未實作**（主管身分在組織單位的成員設定，不是角色）；目前由管理員建立群組授予。
 
 ## 卡片
 
@@ -46,7 +46,7 @@
 ## 出勤判定
 
 - 規則在 `Attendance:Workday`，`FullDay`、`MorningOff`、`AfternoonOff` 各一份（預設值與驗證見 [AttendanceOptions](../../backend/src/AiNexus.Features/Staff/Attendance/AttendanceOptions.cs)）。
-- 判定是 [AttendanceEvaluator](../../backend/src/AiNexus.Features/Staff/Attendance/Records/AttendanceEvaluator.cs) 的純函式，遲到與早退以秒計；行事曆缺日時週末當放假、平日無法判定，假單無法取得時沒刷卡的日子無法判定。查詢端點尚未加入。
+- 判定是 [AttendanceEvaluator](../../backend/src/AiNexus.Features/Staff/Attendance/Records/AttendanceEvaluator.cs) 的純函式，遲到與早退以秒計；行事曆缺日時週末當放假、平日無法判定，假單無法取得時沒刷卡的日子無法判定。查詢與今天、GD 連不上的處理見 [出勤紀錄](attendance-records.md)。
 
 ## 稽核
 

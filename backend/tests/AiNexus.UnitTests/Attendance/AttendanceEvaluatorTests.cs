@@ -175,6 +175,37 @@ public sealed class AttendanceEvaluatorTests
         Assert.Equal(TimeSpan.FromHours(8), result.ClockIn!.Value.Offset);
     }
 
+    [Fact]
+    public void TodayIsNeverAnAnomalyAndNotYetJudgedForLateness()
+    {
+        foreach (var (first, last) in new (DateTimeOffset?, DateTimeOffset?)[] { (null, null), (At(9, 30), null), (At(9, 30), At(12, 0)) })
+        {
+            var result = AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, first, last, LeaveState.None), Rules, Day);
+
+            Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.DayInProgress), (result.Status, result.Reason));
+            Assert.Equal((first, null, 0, 0), (result.ClockIn, result.ExpectedClockOut, result.LateSeconds, result.EarlyLeaveSeconds));
+        }
+    }
+
+    [Fact]
+    public void TodayKeepsStatesThatAreNotJudgements()
+    {
+        Assert.Equal(AttendanceStatus.OnLeave, AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, null, null, LeaveState.Filed), Rules, Day).Status);
+        Assert.Equal(AttendanceStatus.DayOff, AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.DayOff, null, null, LeaveState.None), Rules, Day).Status);
+        var unknown = AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.Unknown, null, null, LeaveState.None), Rules, Day);
+        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.DayTypeUnknown), (unknown.Status, unknown.Reason));
+    }
+
+    [Fact]
+    public void PastDaysAreJudgedAsUsualAndFutureDaysAreRefused()
+    {
+        var tomorrow = Day.AddDays(1);
+
+        AssertPresent(AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, At(9, 5), At(18, 0), LeaveState.None), Rules, tomorrow), At(18, 0), Minutes(5), 0);
+        Assert.Equal(AttendanceStatus.Anomaly, AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, null, null, LeaveState.None), Rules, tomorrow).Status);
+        Assert.Throws<ArgumentOutOfRangeException>(() => AttendanceEvaluator.Evaluate(new(tomorrow, AttendanceDayType.FullDay, null, null, LeaveState.None), Rules, Day));
+    }
+
     [Theory]
     [InlineData(false, false, AttendanceDayType.FullDay)]
     [InlineData(true, false, AttendanceDayType.MorningOff)]

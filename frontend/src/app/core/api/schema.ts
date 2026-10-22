@@ -9158,6 +9158,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListAttendanceRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance-cards": {
         parameters: {
             query?: never;
@@ -9672,6 +9688,51 @@ export interface components {
             /** Format: int64 */
             limitBytes: null | number;
         };
+        /** @enum {unknown} */
+        AttendanceDayType: "FullDay" | "MorningOff" | "AfternoonOff" | "DayOff" | "Unknown";
+        AttendancePersonDto: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            account: string;
+            leaveAvailable: boolean;
+            excluded: boolean;
+            days: components["schemas"]["AttendanceRecordDto"][];
+        };
+        /** @enum {unknown} */
+        AttendanceReason: "NoPunchOrLeave" | "LeaveUnavailable" | "DayTypeUnknown" | "SinglePunch" | "DayInProgress" | null;
+        AttendanceRecordDto: {
+            /** Format: date */
+            date: string;
+            dayType: components["schemas"]["AttendanceDayType"];
+            status: components["schemas"]["AttendanceStatus"];
+            reason: null | components["schemas"]["AttendanceReason"];
+            /** Format: date-time */
+            clockIn: null | string;
+            /** Format: date-time */
+            clockOut: null | string;
+            /** Format: date-time */
+            expectedClockOut: null | string;
+            /** Format: int32 */
+            lateSeconds: number;
+            /** Format: int32 */
+            earlyLeaveSeconds: number;
+            leave: components["schemas"]["LeaveState"];
+            sheets: components["schemas"]["LeaveSheet"][];
+        };
+        AttendanceRecordsDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date */
+            today: string;
+            calendarAvailable: boolean;
+            leaveAvailable: boolean;
+            people: components["schemas"]["AttendancePersonDto"][];
+        };
+        /** @enum {unknown} */
+        AttendanceStatus: "Present" | "OnLeave" | "Anomaly" | "Undetermined" | "DayOff";
         AuditActionDto: {
             value: string;
             label: string;
@@ -10487,6 +10548,20 @@ export interface components {
         KnowledgeSelectionDto: {
             collectionIds: string[];
         };
+        LeaveSheet: {
+            desNo: string;
+            kind: components["schemas"]["LeaveSheetKind"];
+            title: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            flowStatus: string;
+        };
+        /** @enum {unknown} */
+        LeaveSheetKind: "Leave" | "Travel";
+        /** @enum {unknown} */
+        LeaveState: "None" | "Filed" | "Unavailable";
         LibraryFileDto: {
             file: components["schemas"]["AttachmentDto"];
             /** Format: date-time */
@@ -12183,6 +12258,12 @@ export type AttachmentDto = components['schemas']['AttachmentDto'];
 export type AttachmentPolicyDto = components['schemas']['AttachmentPolicyDto'];
 export type AttachmentStorageDto = components['schemas']['AttachmentStorageDto'];
 export type AttachmentStorageLimitRequest = components['schemas']['AttachmentStorageLimitRequest'];
+export type AttendanceDayType = components['schemas']['AttendanceDayType'];
+export type AttendancePersonDto = components['schemas']['AttendancePersonDto'];
+export type AttendanceReason = components['schemas']['AttendanceReason'];
+export type AttendanceRecordDto = components['schemas']['AttendanceRecordDto'];
+export type AttendanceRecordsDto = components['schemas']['AttendanceRecordsDto'];
+export type AttendanceStatus = components['schemas']['AttendanceStatus'];
 export type AuditActionDto = components['schemas']['AuditActionDto'];
 export type AuditCatalogDto = components['schemas']['AuditCatalogDto'];
 export type AuditCategoryDto = components['schemas']['AuditCategoryDto'];
@@ -12266,6 +12347,9 @@ export type KnowledgeHitDto = components['schemas']['KnowledgeHitDto'];
 export type KnowledgeSearchDto = components['schemas']['KnowledgeSearchDto'];
 export type KnowledgeSearchRequest = components['schemas']['KnowledgeSearchRequest'];
 export type KnowledgeSelectionDto = components['schemas']['KnowledgeSelectionDto'];
+export type LeaveSheet = components['schemas']['LeaveSheet'];
+export type LeaveSheetKind = components['schemas']['LeaveSheetKind'];
+export type LeaveState = components['schemas']['LeaveState'];
 export type LibraryFileDto = components['schemas']['LibraryFileDto'];
 export type LocalLoginDto = components['schemas']['LocalLoginDto'];
 export type LocalLoginRequest = components['schemas']['LocalLoginRequest'];
@@ -37828,6 +37912,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MailSettingsDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListAttendanceRecords: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                userId?: string;
+                unitId?: string;
+                includeExcluded?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordsDto"];
                 };
             };
             /** @description Bad Request */

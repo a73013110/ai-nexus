@@ -16,4 +16,7 @@ public static class TaipeiTime
 
     /// <summary>同一時刻換成 +08:00 表示；呼叫端給了別的位移（例如 UTC）時，日期與時刻才比得上出勤規則。</summary>
     public static DateTimeOffset Of(DateTimeOffset value) => value.ToOffset(Offset);
+
+    /// <summary>台灣的今天：伺服器時區不一定是台灣，由 <paramref name="clock"/> 的 UTC 換成 +08:00 再取日期。</summary>
+    public static DateOnly Today(TimeProvider clock) => DateOnly.FromDateTime(Of(clock.GetUtcNow()).DateTime);
 }

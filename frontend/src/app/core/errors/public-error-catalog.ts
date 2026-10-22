@@ -112,6 +112,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   attendance_import_filter_invalid: '查詢條件不正確，請檢查期間、檔案、狀態與分頁。',
   attendance_import_source_unavailable: '讀不到打卡檔資料夾，請聯絡管理員確認網路共用與讀取權限。',
   attendance_period_invalid: '結束日期不能早於開始日期。',
+  attendance_records_range_invalid: '查詢區間不正確：起訖日期必填，結束不能早於開始，最長 31 天。',
   attendance_user_not_found: '找不到這位使用者，帳號可能已刪除。',
   invalid_file_name: '檔案名稱不正確或過長。',
   file_size_limit: '檔案過大。',

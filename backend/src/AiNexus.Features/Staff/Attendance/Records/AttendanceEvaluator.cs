@@ -4,7 +4,7 @@ namespace AiNexus.Features.Staff.Attendance.Records;
 
 /// <summary>
 /// 出勤判定（ADR 0018「出勤判定」）：純函式，只看輸入與規則設定，不讀時鐘也不查資料庫，查詢時逐日計算、不存檔。
-/// 「今天」還沒下班或還沒刷卡的情況由呼叫端決定要不要判定；這裡一律當成已結束的一天。
+/// 不帶今天的多載一律當成已結束的一天；查詢端點用帶 <c>today</c> 的多載，今天不判成異常。
 /// </summary>
 public static class AttendanceEvaluator
 {
@@ -20,6 +20,21 @@ public static class AttendanceEvaluator
         { AfternoonOff: true } => AttendanceDayType.AfternoonOff,
         _ => AttendanceDayType.FullDay
     };
+
+    /// <summary>
+    /// 以 <paramref name="today"/>（台灣日期）為準判定：過去的日子同 <see cref="Evaluate(AttendanceDay, WorkdayOptions)"/>；
+    /// 今天的出勤與異常改為 <see cref="AttendanceStatus.Undetermined"/>（<see cref="AttendanceReason.DayInProgress"/>），刷卡照樣回傳。
+    /// 今天的檔通常晚上才匯入，白天看到的「沒刷卡」「只有上班」都不是結論；連遲到也不算，因為中午的快照之後還可能被晚上的檔取代。
+    /// 放假、請假與其他無法判定的狀態本來就不是異常，維持原樣。未來的日子沒有可判定的東西，呼叫端不要傳進來（拋出）。
+    /// </summary>
+    public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules, DateOnly today)
+    {
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(day.Date, today);
+        var result = Evaluate(day, rules);
+        return day.Date == today && result.Status is AttendanceStatus.Present or AttendanceStatus.Anomaly
+            ? result with { Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ExpectedClockOut = null, LateSeconds = 0, EarlyLeaveSeconds = 0 }
+            : result;
+    }
 
     public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules)
     {
