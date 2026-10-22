@@ -64,7 +64,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 連網搜尋 | 手動開啟、SearXNG／Brave、來源與時間、配額 | [網路搜尋](docs/features/web-search.md) |
 | 資料來源 | 公文／校務唯讀 adapter、歷程、私人成果與聊天草稿 | [資料來源](docs/features/integrations.md) |
 | 通知 | 共用通知中心、未讀、進度與分享事件、瀏覽器通知 | [通知](docs/features/notifications.md) |
-| 存取管理 | 帳號、角色／群組／功能、模型政策與配額、測試身分、個人用量與唯讀對話 | [存取管理](docs/features/administration.md)、[模型政策](docs/features/model-policy.md)、[測試身分](docs/features/test-identity.md) |
+| 存取管理 | 帳號（含從 AD 匯入與更新）、角色／群組／功能、模型政策與配額、測試身分、個人用量與唯讀對話 | [存取管理](docs/features/administration.md)、[從 AD 匯入](docs/features/directory-import.md)、[模型政策](docs/features/model-policy.md)、[測試身分](docs/features/test-identity.md) |
 | 組織 | 部門樹、人員所屬與主管（可從公文系統匯入）；資料範圍的依據，不授予功能 | [組織](docs/features/organization.md) |
 | 出勤打卡 | 卡號持有期間、接手、未歸戶卡號、刷卡匯入、假日設定、出勤紀錄、舊資料轉移 | [出勤打卡](docs/features/attendance.md) |
 | 平台營運 | 全平台用量、知識檢索索引、模型與工具價格；與存取管理分開授權 | [平台營運](docs/features/operations.md)、[費用](docs/features/billing.md) |

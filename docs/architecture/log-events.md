@@ -7,7 +7,7 @@
 - `backend/src` 內呼叫 `LogInformation`／`LogWarning` 等擴充方法會因 CA1848 編譯失敗（`.editorconfig`）。改在記錄的類別內宣告 `private static partial void LogXxx(ILogger logger, ...)`，類別加 `partial`。
 - 每個 `[LoggerMessage]` 要有 `EventId`（正整數）與以點分隔的 `EventName`；兩者在全部組件內不可重複，由 `LoggingTests` 檢查。
 - 模板只放受核准的屬性名（`DiagnosticRedactor.Fields`）；例外型別用 `{ErrorType}`，不要放例外訊息。
-- 範圍：1xxx HTTP 與錯誤、2xxx 檢索、3xxx 背景工作與生成、4xxx 前端回報、5xxx 服務生命週期、6xxx 檔案與分享。新事件取該區下一個號碼，並補進下表。
+- 範圍：1xxx HTTP 與錯誤、2xxx 檢索、3xxx 背景工作與生成、4xxx 前端回報、5xxx 服務生命週期、6xxx 檔案與分享、7xxx 身分與目錄。新事件取該區下一個號碼，並補進下表。
 - 等級不由事件決定時（`Issues.Report`），方法加 `LogLevel level` 參數、屬性不設 `Level`。被診斷 provider 刻意保留在最低等級以下的事件（`http.rejected`）要設 `SkipEnabledCheck = true`，否則產生的程式會先檢查 `IsEnabled` 而把它丟掉。
 - 框架或套件自己的日誌沒有 EventId 時，provider 以 Category＋模板的 SHA-256 產生穩定 ID；這不是業務識別，追查時同時看 Category。
 
@@ -42,6 +42,8 @@
 | 5003 / 5004 / 5005 | `database.read_committed_snapshot_off` / `database.schema_mismatch` / `database.schema_drift` | `AiNexus.Data/App/DatabaseSchema.cs` |
 | 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
+| 7001 | `identity.directory_rename_skipped` | `Identity/Users/DirectoryAccounts.cs` |
+| 7002 | `identity.directory_provisioned` | `Identity/Provisioning/DirectoryProvisioning.cs` |
 
 `service.startup.failed` 不經 logger，由 `DiagnosticStartup` 直接寫入 journal。
 

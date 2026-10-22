@@ -6,7 +6,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 ## 預設授權
 
-每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面與品質評測；`administrators`（平台管理）擁有全部功能、範圍取最寬（`FeatureCatalogSeedTests` 強制）；`hr` 是出勤管理（[出勤打卡](../features/attendance.md)），獨立成群組讓 HR 不必是管理員。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+首次登入或[從 AD 匯入](../features/directory-import.md)的使用者取得 `member` 角色（`workspace` 群組）。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面與品質評測；`administrators`（平台管理）擁有全部功能、範圍取最寬（`FeatureCatalogSeedTests` 強制）；`hr` 是出勤管理（[出勤打卡](../features/attendance.md)），獨立成群組讓 HR 不必是管理員。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 ## 功能目錄
 
@@ -30,7 +30,7 @@ AD login → Users（SID）→ UserRoles → Roles
 
 後端 conversations、models、context、runs、取消與 SSE 全部要求 `feature:chat` policy。AuthorizationHandler 每個 request 查 SQL 的有效 grant，同一 request 內的授權處理、資源 ACL 與模型政策共用這次讀取（管理異動與遠端呼叫後的複查會重新讀取）；撤銷在下一次 request 生效，不等待 cookie 過期。已建立的生成會按原工作生命週期完成；已開啟的 SSE 訂閱不持續重驗授權。要立即中斷既有工作／訂閱需另增加撤銷事件機制。
 
-首次登入建立 UserRole；既有使用者沒有角色時不自動補回，避免管理員撤銷後，使用者重新登入又獲得權限。
+既有使用者沒有角色時，登入不自動補回，避免管理員撤銷後重新登入又獲得權限。
 
 ## 登入身分
 
@@ -57,4 +57,4 @@ AD login → Users（SID）→ UserRoles → Roles
 
 `administrator → administrators` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。第一位管理員見 [存取管理](../features/administration.md#設定第一位管理員)。
 
-管理時使用 ID，不依顯示名稱相連；授權與 audit 同一 transaction 提交。
+管理時使用 ID，不依顯示名稱相連；授權與稽核在同一交易提交。

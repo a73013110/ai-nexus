@@ -8,12 +8,12 @@
 
 | 來源 | 寫入時機 | 本人可改 |
 | --- | --- | --- |
-| `directory` | AD／Windows 登入時讀目錄 `mail`，寫入即視為已驗證；目錄移除 `mail` 時一併清空 | 否 |
+| `directory` | AD／Windows 登入或管理員[從 AD 匯入、更新](directory-import.md)時讀目錄 `mail`，寫入即視為已驗證；目錄移除 `mail` 時一併清空 | 否 |
 | `user` | 本人以驗證碼驗證新地址 | 是 |
 | `admin` | 管理員在使用者詳情設定（[管理員設定信箱](#管理員設定信箱)）；本人驗證前視為未驗證 | 是 |
 
 - 目錄只覆寫「沒有信箱」或「來源是 `directory`」的值；`ProfileManaged=1`（管理員維護個人資料）的使用者姓名與信箱都不被目錄覆寫。
-- 每次 AD 驗證成功（LDAP 登入、Windows 驗證的請求，至多每 5 分鐘寫一次）更新 `DirectoryVerifiedAt`，供本地密碼新鮮度規則使用。
+- 每次 AD 驗證成功（LDAP 登入、Windows 驗證的請求，至多每 5 分鐘寫一次）更新 `DirectoryVerifiedAt`，供本地密碼新鮮度規則使用；管理員匯入或從 AD 更新不算驗證，不寫入。
 
 ## 管理員設定信箱
 
