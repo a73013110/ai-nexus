@@ -27,11 +27,8 @@ public sealed class AttributedPunch
     public Guid? UserId { get; init; }
     public string? HolderName { get; init; }
 
-    /// <summary>
-    /// 沒有持有期間涵蓋且不是訪客卡；沒登錄的卡號也算。實際上不會是 null，但 SQL Server 對 <c>CONVERT(BIT, IIF(...))</c>
-    /// 的欄位一律回報可為 null，型別要與它一致（啟動時的結構比對會檢查 nullable）。
-    /// </summary>
-    public bool? IsUnattributed { get; init; }
+    /// <summary>沒有持有期間涵蓋且不是訪客卡；沒登錄的卡號也算。view 以 <c>ISNULL</c> 保證 NOT NULL。</summary>
+    public bool IsUnattributed { get; init; }
 }
 
 internal sealed class AttributedPunchConfiguration : IEntityTypeConfiguration<AttributedPunch>

@@ -25,7 +25,7 @@ SELECT
     a.[Id]             AS [AssignmentId],
     a.[UserId],
     a.[HolderName],
-    CONVERT(BIT, IIF(a.[Id] IS NULL AND ISNULL(c.[Kind], N'employee') <> N'visitor', 1, 0)) AS [IsUnattributed]
+    ISNULL(CONVERT(BIT, IIF(a.[Id] IS NULL AND ISNULL(c.[Kind], N'employee') <> N'visitor', 1, 0)), CONVERT(BIT, 0)) AS [IsUnattributed]
 FROM [attendance].[Punches] AS p
 LEFT JOIN [attendance].[Cards] AS c
     ON c.[CardNumber] = p.[CardNumber]
