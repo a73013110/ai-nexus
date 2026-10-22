@@ -455,6 +455,13 @@
     scale: 0.4;
   }
 }
+// 月曆換月（shared/ui/month-calendar）：新月份從翻頁方向（--calendar-turn 為 -1／1）滑入。
+@keyframes calendar-turn {
+  from {
+    opacity: 0;
+    translate: calc(var(--calendar-turn, 0) * 1.25rem) 0;
+  }
+}
 @keyframes tile-arrive {
   from {
     opacity: 0;

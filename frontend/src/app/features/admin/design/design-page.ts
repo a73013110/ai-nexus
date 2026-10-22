@@ -87,6 +87,7 @@ const INDEX = [
       { id: 'design-stat', name: '頭條數字' },
       { id: 'design-donut', name: '環狀分布' },
       { id: 'design-heatmap', name: '日曆熱圖' },
+      { id: 'design-calendar', name: '月曆' },
       { id: 'design-spotlight', name: '聚光與傾斜' },
     ],
   },

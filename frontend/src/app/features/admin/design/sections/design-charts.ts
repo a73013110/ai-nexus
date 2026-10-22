@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { localDateKey } from '@shared/browser/calendar-day';
 import { DonutChart } from '@shared/ui/donut-chart';
 import { HeatmapCalendar } from '@shared/ui/heatmap-calendar';
+import { CalendarDayTemplate, MonthCalendar, type CalendarDay } from '@shared/ui/month-calendar';
 import { NumberTicker } from '@shared/ui/number-ticker';
 import { Sparkline } from '@shared/ui/sparkline';
 import { Spotlight } from '@shared/ui/spotlight';
@@ -11,8 +12,29 @@ import { DesignExample, DesignSection } from './design-section';
 /** `offset` 天前的本地日期。 */
 const day = (offset: number) => localDateKey(new Date(Date.now() - offset * 86_400_000));
 const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
+const THIS_MONTH = day(0).slice(0, 7);
+/** 本月平日的示範出缺勤：每天的出勤人數，偶爾一兩筆異常。 */
+const ATTENDANCE: CalendarDay[] = Array.from({ length: 28 }, (_, index) => {
+  const date = `${THIS_MONTH}-${String(index + 1).padStart(2, '0')}`;
+  const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
+  if (weekday === 0 || weekday === 6) return { date };
+  const anomalies = index % 5 === 2 ? 1 + (index % 2) : 0;
+  return {
+    date,
+    marks: [
+      { label: '出勤', tone: 'success' as const, count: 40 - (index % 4) },
+      ...(anomalies ? [{ label: '異常', tone: 'danger' as const, count: anomalies }] : []),
+    ],
+  };
+});
+/** 自訂範本的示範：兩天放假、一天半天。 */
+const HOLIDAYS: (CalendarDay & { text: string })[] = [
+  { date: `${THIS_MONTH}-09`, text: '補假', description: '補假' },
+  { date: `${THIS_MONTH}-10`, text: '國慶', description: '國慶日' },
+  { date: `${THIS_MONTH}-24`, text: '下午休', description: '下午放假' },
+];
 
-/** 總覽使用的資料視覺化：計數器、趨勢、分布與每日熱度。 */
+/** 總覽使用的資料視覺化：計數器、趨勢、分布、每日熱度與月曆。 */
 @Component({
   selector: 'nx-design-charts',
   imports: [
@@ -25,6 +47,8 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
     Spotlight,
     StatGrid,
     StatTile,
+    CalendarDayTemplate,
+    MonthCalendar,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -49,6 +73,19 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
     nx-donut-chart,
     nx-heatmap-calendar {
       width: min(100%, 30rem);
+    }
+    nx-design-example:has(> nx-month-calendar) {
+      flex: 2 1 28rem;
+      align-items: stretch;
+    }
+    nx-design-example.design-calendar-small {
+      flex: 1 1 16rem;
+      max-width: 22rem;
+    }
+    .design-holiday {
+      color: var(--accent);
+      font-size: var(--p-font-xs);
+      font-weight: 600;
     }
     .design-spot {
       position: relative;
@@ -139,6 +176,38 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
       />
     </nx-design-section>
     <nx-design-section
+      id="design-calendar"
+      title="月曆"
+      api="MonthCalendar · nxCalendarDay"
+      description="月檢視：今天、選取、週末與前後月淡化；每天的內容由呼叫端提供（marks 的圓點與數量，或 nxCalendarDay 範本）。方向鍵移動、PageUp／PageDown 換月、Enter 選取；容器窄時格子變矮、只留圓點。"
+    >
+      <nx-design-example label="每日標記（當日出缺勤）">
+        <nx-month-calendar
+          label="示範出缺勤"
+          [(month)]="month"
+          [(selected)]="selected"
+          [days]="attendance"
+        >
+          <span calendar-actions class="ui-count-label">{{ selected() || '尚未選取' }}</span>
+        </nx-month-calendar>
+      </nx-design-example>
+      <nx-design-example class="design-calendar-small" label="自訂範本、週日起始、唯讀">
+        <nx-month-calendar
+          label="示範假日"
+          [(month)]="smallMonth"
+          [days]="holidays"
+          [weekStart]="0"
+          [interactive]="false"
+        >
+          <ng-template [nxCalendarDay]="holidays" let-day="day">
+            @if (day) {
+              <span class="design-holiday">{{ day.text }}</span>
+            }
+          </ng-template>
+        </nx-month-calendar>
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
       id="design-spotlight"
       title="聚光"
       api="nxSpotlight"
@@ -149,6 +218,11 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
 })
 export class DesignCharts {
   readonly count = signal(12_480);
+  readonly month = signal(THIS_MONTH);
+  readonly smallMonth = signal(THIS_MONTH);
+  readonly selected = signal<string | null>(null);
+  readonly attendance = ATTENDANCE;
+  readonly holidays = HOLIDAYS;
   readonly trend = TREND;
   readonly from = day(55);
   readonly through = day(0);

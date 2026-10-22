@@ -1,0 +1,206 @@
+// 月曆與資料表同一種外框（--line、--radius-surface）；格子以髮絲線分隔，週末與前後月退到
+// --surface-subtle。選取同表格的選取列（--accent-soft），今天是實心的 --accent 圓。
+// 每格自成 stacking context：範本可以放 `position: absolute; inset: 0; z-index: -1` 的底色層鋪滿整格，
+// 日期數字與文字仍在它上面。
+:host {
+  container: month-calendar / inline-size;
+  display: block;
+  min-width: 0;
+}
+.calendar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+  margin-bottom: var(--p-space-3);
+}
+.calendar-title {
+  font-size: var(--text-heading);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-inline-start: auto;
+}
+.calendar-grid {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.calendar-weekdays,
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-weekdays {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  > div {
+    padding: var(--p-space-2) var(--p-space-3);
+  }
+  > .is-weekend {
+    color: var(--muted);
+  }
+}
+.calendar-weeks[data-turn] {
+  animation: calendar-turn var(--motion-panel) var(--ease) both;
+}
+.calendar-weeks[data-turn='-1'] {
+  --calendar-turn: -1;
+}
+.calendar-weeks[data-turn='1'] {
+  --calendar-turn: 1;
+}
+.calendar-week + .calendar-week {
+  border-top: 1px solid var(--line);
+}
+.calendar-day {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-1);
+  min-width: 0;
+  min-height: var(--calendar-cell-height, 6.25rem);
+  padding: var(--p-space-2);
+  outline: none;
+  transition: background-color var(--motion-fast) var(--ease);
+  & + & {
+    border-inline-start: 1px solid var(--line);
+  }
+  &:is(.is-weekend, .is-outside) {
+    background: var(--surface-subtle);
+  }
+  &.is-outside {
+    cursor: pointer;
+  }
+  &.is-selected {
+    background: var(--accent-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+}
+:host(.is-interactive) .calendar-day:not(.is-disabled, .is-outside) {
+  cursor: pointer;
+  &:not(.is-selected):hover {
+    background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  }
+}
+.calendar-date {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.125rem;
+  border-radius: 50%;
+  color: var(--ink);
+  font-size: var(--p-font-data);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    color var(--motion-fast) var(--ease);
+  .is-weekend > & {
+    color: var(--secondary);
+  }
+  .is-outside > & {
+    color: var(--muted);
+  }
+  .is-selected > & {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .is-today > & {
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 700;
+  }
+}
+.calendar-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.calendar-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1) var(--p-space-2);
+  margin-top: auto;
+}
+.calendar-mark {
+  --mark: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  i {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background: var(--mark);
+  }
+  b {
+    font-weight: 600;
+  }
+  &[data-tone='accent'] {
+    --mark: var(--accent);
+  }
+  &[data-tone='info'] {
+    --mark: var(--info);
+  }
+  &[data-tone='success'] {
+    --mark: var(--success);
+  }
+  &[data-tone='warning'] {
+    --mark: var(--warning);
+  }
+  &[data-tone='danger'] {
+    --mark: var(--danger);
+  }
+}
+// 窄容器（手機、儀表板的小卡）：格子變矮、內容置中，只留圓點。
+@container month-calendar (width < 36rem) {
+  .calendar-weekdays > div {
+    padding-inline: 0;
+    text-align: center;
+  }
+  .calendar-day {
+    align-items: center;
+    min-height: var(--calendar-cell-height-compact, 3.25rem);
+    padding: var(--p-space-1) 2px;
+  }
+  .calendar-content {
+    align-items: center;
+  }
+  .calendar-marks {
+    justify-content: center;
+    gap: 2px;
+  }
+  .calendar-mark b {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .calendar-day.is-selected {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  .is-today > .calendar-date {
+    outline: 1px solid CanvasText;
+  }
+}
