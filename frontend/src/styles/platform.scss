@@ -94,6 +94,11 @@
   flex-wrap: wrap;
   margin-bottom: var(--section-gap);
 }
+// 工具列裡的說明（例如頁內分頁目前那頁的說明）占滿剩餘寬度；放不下時整句換到下一列，不把旁邊的
+// 控制項擠窄。
+.page-toolbar > .form-note {
+  flex: 1 1 20rem;
+}
 .page-toolbar h2,
 .page-toolbar h3 {
   font-size: var(--resource-heading-size);

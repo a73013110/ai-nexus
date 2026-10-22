@@ -16,14 +16,21 @@
       <nx-icon name="plus" />登錄卡片
     </button>
   }
-  <nx-view-switch
-    class="cards-view"
-    label="卡號集合"
-    appearance="segment"
-    [options]="views"
-    [value]="query.applied().view"
-    (valueChange)="query.commit({ view: $any($event) })"
-  />
+  <!-- 頁內分頁與該分頁的說明同一列，間距交給 page-toolbar。 -->
+  <div class="page-toolbar">
+    <nx-view-switch
+      label="卡號集合"
+      appearance="segment"
+      [options]="views"
+      [value]="query.applied().view"
+      (valueChange)="query.commit({ view: $any($event) })"
+    />
+    @if (query.applied().view === 'unattributed') {
+      <p class="form-note">
+        員工卡上沒有持有期間涵蓋的刷卡，依卡號彙總；指派時開始時間預設為第一筆未歸戶刷卡。
+      </p>
+    }
+  </div>
   @if (query.applied().view === 'cards') {
     <nx-query-bar label="卡片查詢條件" [state]="query" [busy]="store.cardsLoading()">
       <label class="ui-field ui-query-wide"
@@ -150,9 +157,6 @@
       />
     </nx-data-table>
   } @else {
-    <p class="form-note cards-note">
-      員工卡上沒有持有期間涵蓋的刷卡，依卡號彙總；指派時開始時間預設為第一筆未歸戶刷卡。
-    </p>
     <nx-data-table
       class="unattributed-table"
       label="未歸戶卡號"

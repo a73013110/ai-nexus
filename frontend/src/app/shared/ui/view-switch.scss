@@ -100,6 +100,8 @@
 }
 // 軌道與晶片同心：晶片圓角＝軌道圓角減去 2px 內距。軌道色預設為內凹表面，浮動工具列這種自己就是
 // 軌道的容器設 --view-switch-track: transparent，避免表面裡再疊一層表面。
+// segment 沒有外距，放在 `.page-toolbar` 等容器裡由容器給間距；頁面直接替它補 margin 與這裡同
+// 權重，子元件樣式較晚插入而被蓋掉，分頁就會貼住下方區塊。
 :host(.ui-view-switch-segment) {
   width: fit-content;
   gap: 2px;
