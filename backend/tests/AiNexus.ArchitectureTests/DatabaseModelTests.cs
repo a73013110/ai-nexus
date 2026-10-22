@@ -33,12 +33,12 @@ public sealed class DatabaseModelTests
             .ToLookup(x => x.Entity, x => x.Configuration);
         var mismatched = EntityTypes().SelectMany(entity =>
         {
-            // 只經由函式讀取的實體（UsageEntry）沒有表，以函式的 schema 為準。
-            var function = entity.GetTableName() is null ? entity.GetFunctionMappings().FirstOrDefault()?.StoreFunction : null;
-            var schema = (function is null ? entity.GetSchema() : function.Schema) ?? "dbo";
+            // 沒有表的實體以檢視（AttributedPunch）或函式（UsageEntry）的 schema 為準。
+            var function = entity.GetTableName() is null && entity.GetViewName() is null ? entity.GetFunctionMappings().FirstOrDefault()?.StoreFunction : null;
+            var schema = (function is null ? entity.GetTableName() is null ? entity.GetViewSchema() : entity.GetSchema() : function.Schema) ?? "dbo";
             // 實體型別可能來自 Platform（日誌管線的 DiagnosticEvent），那時只檢查組態的位置。
             var types = configurations[entity.ClrType].Append(entity.ClrType).Where(t => t.Assembly == Assemblies.Data);
-            return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{entity.GetTableName()}");
+            return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{entity.GetTableName() ?? entity.GetViewName()}");
         }).Distinct().Order(StringComparer.Ordinal).ToList();
         Assert.True(mismatched.Count == 0, "Put each entity and its configuration in AiNexus.Data/App/<Module>/ whose lowercase name is the schema:\n" + string.Join("\n", mismatched));
     }
