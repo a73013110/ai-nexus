@@ -54,7 +54,7 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 `/grant:r` 只替換指定身分的 grant；若既有檔案有其他**顯式**讀取規則，仍須在 NTFS「進階安全性」檢查並移除未授權的 Users／Everyone，確認兩個 JSON 與備份也繼承正確規則。從開發機複製的 Secrets 檔可能限制為開發者／SYSTEM／Administrators；因此要另給 IIS 集區讀取權，而不是使用本機的 `Protect-RepoSecrets` 重設主機 ACL。
 
-應用 SQL 帳號需專用資料庫的資料讀寫（各功能會 Insert／Update／Delete），不要只給 Users 表讀取權，也不要常態 db_owner。DDL／建庫用 DBA 部署帳號或維運階段的暫時權限。外部公文／校務來源只能給核准 view 的 SELECT，`ApplicationIntent=ReadOnly` 本身不能取代 SQL 權限。
+應用 SQL 帳號需專用資料庫的資料讀寫（各功能會 Insert／Update／Delete），不要只給 Users 表讀取權，也不要常態 db_owner。DDL／建庫用 DBA 部署帳號或維運階段的暫時權限。外部公文／校務來源只能給核准物件的 SELECT（見 [SQL 帳號權限](database-setup.md#sql-帳號權限)），`ApplicationIntent=ReadOnly` 本身不能取代 SQL 權限。
 
 ## 資料庫
 

@@ -1,6 +1,6 @@
 # 出勤打卡
 
-結論：目前完成**卡號對應**、**刷卡匯入**與**假日設定**（見 [假日設定](attendance-calendar.md)）的後端；出勤紀錄隨後加入，決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
+結論：目前完成**卡號對應**、**刷卡匯入**與**假日設定**（見 [假日設定](attendance-calendar.md)）的後端，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；出勤紀錄隨後加入，決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/staff/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「員工服務」。四個頁面目前是前端佔位頁（「建置中」）。
 
 ## 授權
 

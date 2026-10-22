@@ -40,4 +40,4 @@
   ```
 
   不需要 `Sys_User`（帳號換算走唯讀連線），不給 INSERT、DELETE 或其他表。這組權限已在本機以同結構驗證過讀前值（含鎖定提示）、更新與讀回；INSERT、DELETE、改 `hDate` 都被拒。
-- 唯讀的 `Databases:Gd` 帳號要能 SELECT `dbo.Pub_Days` 與 `dbo.Sys_User`。
+- 唯讀的 `Databases:Gd` 帳號的權限見 [出勤與公文系統 GD](attendance-gd.md#唯讀帳號的權限)。

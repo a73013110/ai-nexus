@@ -1,8 +1,10 @@
+using System.Collections.Frozen;
 using System.Data.Common;
 using AiNexus.Features.Admin.Integrations;
 using AiNexus.Features.Admin.Integrations.Sources;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Staff.Attendance.Gd;
@@ -10,40 +12,35 @@ namespace AiNexus.Features.Staff.Attendance.Gd;
 /// <summary>
 /// 出勤唯讀查詢公文系統（GD）的唯一入口；連線用 Integrations 宣告的 <see cref="GdDatabase"/>，逾時沿用 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
 /// GD 是別人的系統，連不上不能拖垮出勤頁：未設定，或連線、登入、逾時、結構變動等資料庫錯誤時回傳 <see langword="null"/>，由呼叫端決定降級還是拒絕。
-/// 取消與非資料庫的例外（程式錯誤、欄位型別對不上）照常拋出。
+/// 取消與非資料庫的例外（程式錯誤、欄位型別對不上）照常拋出。每次存取的成敗記在 <see cref="Availability"/>，供監控（<see cref="GdMonitoring"/>）判定。
 /// </summary>
 /// <remarks>
-/// 日誌只在狀態轉換時記一次（連不上、恢復）：GD 停機期間每次開出勤頁都會呼叫，逐次記錄只會洗版。狀態在記憶體，重啟後歸零，所以註冊為單例。
+/// 日誌只在狀態轉換時記一次（連不上、恢復；查詢被拒每段期間一次）：GD 停機期間每次開出勤頁都會呼叫，逐次記錄只會洗版。
+/// 狀態在記憶體，重啟後歸零，所以註冊為單例。
 /// </remarks>
-public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions<DatabasesOptions> databases, IOptions<IntegrationsOptions> integrations, ILogger<GdAccess> logger)
+public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions<DatabasesOptions> databases, IOptions<IntegrationsOptions> integrations,
+    TimeProvider clock, ILogger<GdAccess> logger)
 {
     // SQL Server 單一命令最多 2100 個參數，Dapper 把 IN 清單逐項展開成參數；同一個清單在 SQL 出現多次仍共用同一組參數。
     private const int BatchSize = 500;
+    private const string ProbeSql = "SELECT 1";
 
-    private int unavailable;
+    // 連得上但查詢本身被拒：207 欄位不存在、208 物件不存在、229／230 沒有物件或欄位權限、4104 無法繫結識別字。
+    // 其餘錯誤（網路、登入 18456、資料庫離線 4060…）都當成整個不能用；-2 是用戶端逾時。
+    private static readonly FrozenSet<int> RejectedErrors = FrozenSet.Create(207, 208, 229, 230, 4104);
+
+    private readonly Lock gate = new();
+    private GdAvailability availability = GdAvailability.Unknown;
+
+    /// <summary>最近一次存取的結果。</summary>
+    public GdAvailability Availability
+    {
+        get { lock (gate) return availability; }
+    }
 
     /// <summary>執行唯讀查詢；GD 不可用時為 <see langword="null"/>（與「沒有資料」的空清單不同）。</summary>
-    public async Task<IReadOnlyList<T>?> QueryAsync<T>(string sql, object? parameters, CancellationToken ct)
-    {
-        if (!databases.Value.For(GdDatabase.Name).Configured)
-        {
-            MarkUnavailable("NotConfigured");
-            return null;
-        }
-        try
-        {
-            var rows = await database.QueryAsync<T>(sql, parameters, integrations.Value.Gd.CommandTimeoutSeconds, ct);
-            if (Interlocked.Exchange(ref unavailable, 0) == 1) LogRestored(logger);
-            return rows;
-        }
-        catch (DbException ex)
-        {
-            // 查詢進行中被取消時，SqlClient 丟的是 SqlException 而不是 OperationCanceledException；那是呼叫端放棄，不是 GD 壞了。
-            ct.ThrowIfCancellationRequested();
-            MarkUnavailable(ex.GetType().Name);
-            return null;
-        }
-    }
+    public Task<IReadOnlyList<T>?> QueryAsync<T>(string sql, object? parameters, CancellationToken ct)
+        => RunAsync(token => database.QueryAsync<T>(sql, parameters, integrations.Value.Gd.CommandTimeoutSeconds, token), ct, ct);
 
     /// <summary>
     /// <c>IN</c> 清單可能很長的查詢：<paramref name="keys"/> 分批代入、結果串接；<paramref name="parameters"/> 把一批鍵組成該批的參數物件。
@@ -60,14 +57,96 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
         return rows;
     }
 
-    private void MarkUnavailable(string errorType)
+    /// <summary>
+    /// 監控用的連線探測：<c>SELECT 1</c>，超過 <paramref name="timeout"/> 算逾時。結果與一般查詢一樣更新 <see cref="Availability"/> 與日誌。
+    /// 只證明連得上，測不出某張表被拒，所以成功不會清掉查詢被拒的期間。
+    /// </summary>
+    public async Task ProbeAsync(TimeSpan timeout, CancellationToken ct)
     {
-        if (Interlocked.Exchange(ref unavailable, 1) == 0) LogUnavailable(logger, errorType);
+        // 時限用真實時間：它要趕在監控讀取本身的 5 秒逾時之前結束，和業務時間（TimeProvider）無關。
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(timeout);
+        await RunAsync(token => database.QueryAsync<int>(ProbeSql, null, (int)Math.Ceiling(timeout.TotalSeconds), token), ct, limit.Token);
     }
 
-    [LoggerMessage(EventId = 3407, EventName = "attendance.gd_unavailable", Level = LogLevel.Warning, Message = "GD cannot be queried ({ErrorType}); leave and travel sheets are unavailable until it is reachable.")]
-    private static partial void LogUnavailable(ILogger logger, string errorType);
+    /// <param name="query">以傳入的 token 執行查詢。</param>
+    /// <param name="ct">呼叫端的取消：照常拋出，不算 GD 的失敗。</param>
+    /// <param name="limit">實際傳給查詢的 token；探測時多了時限，時限到了算逾時。一般查詢與 <paramref name="ct"/> 相同。</param>
+    private async Task<IReadOnlyList<T>?> RunAsync<T>(Func<CancellationToken, Task<IReadOnlyList<T>>> query, CancellationToken ct, CancellationToken limit)
+    {
+        if (!databases.Value.For(GdDatabase.Name).Configured)
+        {
+            Failed(GdFailure.NotConfigured, nameof(GdFailure.NotConfigured), 0);
+            return null;
+        }
+        try
+        {
+            var rows = await query(limit);
+            Succeeded();
+            return rows;
+        }
+        catch (DbException ex)
+        {
+            // 查詢進行中被取消時，SqlClient 丟的是 SqlException 而不是 OperationCanceledException；那是呼叫端放棄，不是 GD 壞了。
+            ct.ThrowIfCancellationRequested();
+            var number = (ex as SqlException)?.Number ?? 0;
+            Failed(limit.IsCancellationRequested ? GdFailure.Timeout : Classify(number), ex.GetType().Name, number);
+            return null;
+        }
+        catch (OperationCanceledException ex) when (limit.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            Failed(GdFailure.Timeout, ex.GetType().Name, 0);
+            return null;
+        }
+    }
+
+    private static GdFailure Classify(int sqlNumber)
+        => sqlNumber == -2 ? GdFailure.Timeout : RejectedErrors.Contains(sqlNumber) ? GdFailure.Rejected : GdFailure.Unavailable;
+
+    private void Succeeded()
+    {
+        bool restored;
+        lock (gate)
+        {
+            restored = availability.Outage is not null;
+            availability = availability with { Outage = null, LastSuccessAt = clock.GetUtcNow() };
+        }
+        if (restored) LogRestored(logger);
+    }
+
+    private void Failed(GdFailure reason, string errorType, int sqlNumber)
+    {
+        var now = clock.GetUtcNow();
+        bool restored = false, report;
+        lock (gate)
+        {
+            var previous = availability;
+            if (reason == GdFailure.Rejected)
+            {
+                // 被拒代表連得上，連線層級的中斷到此結束；同一段被拒期間（間隔不到 RejectedWindow）只記一次。
+                restored = previous.Outage is not null;
+                report = !(now - previous.LastRejectedAt < GdAvailability.RejectedWindow);
+                availability = previous with { Outage = null, LastFailureAt = now, LastFailure = reason, LastRejectedAt = now };
+            }
+            else
+            {
+                // 原因改變（例如未設定改成連不上、連不上改成逾時）也記，方便從日誌看出中斷的性質變了。
+                report = previous.Outage != reason;
+                availability = previous with { Outage = reason, LastFailureAt = now, LastFailure = reason };
+            }
+        }
+        if (restored) LogRestored(logger);
+        if (!report) return;
+        if (reason == GdFailure.Rejected) LogRejected(logger, errorType, sqlNumber);
+        else LogUnavailable(logger, reason.ToString(), errorType, sqlNumber);
+    }
+
+    [LoggerMessage(EventId = 3407, EventName = "attendance.gd_unavailable", Level = LogLevel.Warning, Message = "GD cannot be queried ({Reason}, {ErrorType}, {SqlNumber}); leave and travel sheets are unavailable until it is reachable.")]
+    private static partial void LogUnavailable(ILogger logger, string reason, string errorType, int sqlNumber);
 
     [LoggerMessage(EventId = 3408, EventName = "attendance.gd_restored", Level = LogLevel.Information, Message = "GD can be queried again.")]
     private static partial void LogRestored(ILogger logger);
+
+    [LoggerMessage(EventId = 3411, EventName = "attendance.gd_query_rejected", Level = LogLevel.Warning, Message = "GD rejected a query ({ErrorType}, {SqlNumber}); a table, column or grant the read-only account needs is missing.")]
+    private static partial void LogRejected(ILogger logger, string errorType, int sqlNumber);
 }

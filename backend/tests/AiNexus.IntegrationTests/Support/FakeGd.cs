@@ -75,14 +75,15 @@ internal sealed class FakeGd : IDisposable
     /// <summary>沒有 <c>Databases:Gd</c> 設定。</summary>
     public static DatabasesOptions NotConfigured() => new();
 
-    /// <summary>以正式環境同一個 <see cref="SqlDatabase{TDatabase}"/> 實作連到 <paramref name="databases"/> 的 <see cref="GdAccess"/>。</summary>
-    public static GdAccess AccessTo(DatabasesOptions databases, ILogger<GdAccess>? logger = null)
+    /// <summary>以正式環境同一個 <see cref="SqlDatabase{TDatabase}"/> 實作連到 <paramref name="databases"/> 的 <see cref="GdAccess"/>；<paramref name="clock"/> 決定 <see cref="GdAccess.Availability"/> 的時間。</summary>
+    public static GdAccess AccessTo(DatabasesOptions databases, ILogger<GdAccess>? logger = null, TimeProvider? clock = null)
     {
         var options = Options.Create(databases);
-        return new(new SqlDatabase<GdDatabase>(options, new AuditContextSource(TimeProvider.System)), options, Options.Create(new IntegrationsOptions()), logger ?? NullLogger<GdAccess>.Instance);
+        return new(new SqlDatabase<GdDatabase>(options, new AuditContextSource(TimeProvider.System)), options, Options.Create(new IntegrationsOptions()),
+            clock ?? TimeProvider.System, logger ?? NullLogger<GdAccess>.Instance);
     }
 
-    public GdAccess Access(ILogger<GdAccess>? logger = null) => AccessTo(Databases, logger);
+    public GdAccess Access(ILogger<GdAccess>? logger = null, TimeProvider? clock = null) => AccessTo(Databases, logger, clock);
 
     public void AddUser(string id, string? account) => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME) VALUES (@id, @account, @id)", new { id, account });
 
