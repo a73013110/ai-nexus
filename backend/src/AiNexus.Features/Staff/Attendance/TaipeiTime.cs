@@ -10,4 +10,10 @@ public static class TaipeiTime
 
     /// <summary>把沒有時區的台灣本地時間轉成 +08:00；<see cref="DateTime.Kind"/> 一律忽略（<c>Local</c> 搭配非本機位移會讓建構子拋例外）。</summary>
     public static DateTimeOffset At(DateTime local) => new(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), Offset);
+
+    /// <summary>出勤日的某個台灣本地時刻，例如表定上班。</summary>
+    public static DateTimeOffset At(DateOnly date, TimeOnly time) => new(date.ToDateTime(time), Offset);
+
+    /// <summary>同一時刻換成 +08:00 表示；呼叫端給了別的位移（例如 UTC）時，日期與時刻才比得上出勤規則。</summary>
+    public static DateTimeOffset Of(DateTimeOffset value) => value.ToOffset(Offset);
 }

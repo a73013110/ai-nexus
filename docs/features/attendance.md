@@ -43,6 +43,11 @@
 - **查詢**：`GET /api/v1/attendance-imports`，新到舊、游標分頁；可依檔案（`fileId`、`fileName`）、狀態與開始時間期間篩選，帶出檔名與操作者姓名。
 - **監控**：子系統 `attendance-import`，判定見 [監控子系統](../architecture/monitoring-sources.md)。日誌事件 3400–3406；來源資料夾讀不到與恢復只在狀態轉換時各記一次。
 
+## 出勤判定
+
+- 規則在 `Attendance:Workday`，`FullDay`、`MorningOff`、`AfternoonOff` 各一份（預設值與驗證見 [AttendanceOptions](../../backend/src/AiNexus.Features/Staff/Attendance/AttendanceOptions.cs)）。
+- 判定是 [AttendanceEvaluator](../../backend/src/AiNexus.Features/Staff/Attendance/Records/AttendanceEvaluator.cs) 的純函式，遲到與早退以秒計；行事曆缺日時週末當放假、平日無法判定，假單無法取得時沒刷卡的日子無法判定。查詢端點尚未加入。
+
 ## 稽核
 
 `admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
