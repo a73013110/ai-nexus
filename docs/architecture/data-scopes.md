@@ -32,7 +32,7 @@
 
 ## 在模組裡套用
 
-1. 在目錄宣告該功能支援的範圍，Seed 的預設授權給一個值（通常 administrators 給 `all`），開發庫加變更腳本回填既有授權。
+1. 在目錄宣告該功能支援的範圍，Seed 的預設授權給一個值（administrators 一律給宣告的最寬範圍，見[預設授權](access-control.md#預設授權)），開發庫加變更腳本回填既有授權。
 2. handler 取 `IDataScope`，自己把範圍轉成查詢條件（EF 的 `Where` 或預存程序參數），寫在查詢裡；不用 EF 全域查詢篩選（不知道是哪個功能在查，也能被 `IgnoreQueryFilters` 繞過）。
 3. 業務資料寫入時有存單位 ID 的，直接比對 `UnitIds`；沒有存的，用 `OrganizationDirectory.MemberIds(unitIds)` 換成目前成員，它是可組合的子查詢，整段仍是一個 SQL。
 4. `assigned` 的關係（專案成員、負責客戶）由業務模組自己判斷，平台只回答有沒有這個範圍。

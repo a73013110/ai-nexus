@@ -94,6 +94,26 @@ public sealed class FeatureCatalogSeedTests
     }
 
     [Fact]
+    public async Task AdministratorsHoldEveryGrantAtTheWidestDeclaredScope()
+    {
+        await TestDatabase.WithContextAsync(async db =>
+        {
+            var held = (await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup).Select(x => new { x.FeatureId, x.Scope }).ToListAsync())
+                .ToDictionary(x => x.FeatureId, x => x.Scope, StringComparer.Ordinal);
+            // 目錄的 Scopes 由窄到寬（FeatureCatalogTests 檢查），最後一個就是最寬；有 all 時即 all。沒有宣告範圍的為 NULL。
+            var problems = FeatureCatalog.Grants.Select(x => (x.Id, Widest: x.Scopes.Count == 0 ? null : x.Scopes[^1]))
+                .Select(x => !held.TryGetValue(x.Id, out var scope)
+                    ? $"- 缺少 {x.Id}：補上 (N'{BuiltInAccess.AdministratorsGroup}', N'{x.Id}', {Sql(x.Widest)})"
+                    : scope != x.Widest ? $"- {x.Id} 的範圍是 {Sql(scope)}，應為最寬的 {Sql(x.Widest)}" : null)
+                .OfType<string>().ToList();
+            Assert.True(problems.Count == 0,
+                $"{Seed} 的 administrators（平台管理）要擁有 {Catalog} 的每個頁面與動作，有範圍的給宣告的最寬範圍：\n" + string.Join("\n", problems));
+        });
+
+        static string Sql(string? value) => value is null ? "NULL" : $"N'{value}'";
+    }
+
+    [Fact]
     public async Task SeedLeavesNamesToTheCatalog()
     {
         await TestDatabase.WithContextAsync(async db =>

@@ -81,6 +81,7 @@ WHEN NOT MATCHED BY TARGET THEN
 
 -- 預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。
 -- Scope 是資料範圍（ADR 0017）：目錄有宣告範圍的功能必須給一個它支援的範圍，其他功能為 NULL（FeatureCatalogSeedTests 檢查）。
+-- administrators 擁有目錄的每個功能（頁面與動作），有範圍的給宣告的最寬範圍，依目錄順序列出；目錄新增功能時一併加在這裡（FeatureCatalogSeedTests 檢查）。
 MERGE [accesscontrol].[RoleGroupFeatures] AS t
 USING (VALUES
     (N'workspace', N'dashboard', NULL),
@@ -92,10 +93,27 @@ USING (VALUES
     (N'workspace', N'sharing', NULL),
     (N'workspace', N'jobs', NULL),
     (N'workspace', N'repositories', NULL),
-    -- 出勤紀錄的預設範圍：每位成員看自己的（ADR 0018）。主管的 unit-tree 尚未提供預設，由管理員建立群組後授予。
+    -- 出勤紀錄的預設範圍：每位成員看自己的（ADR 0018）。主管看部屬由組織的主管勾選自動取得（目錄的 ManagerScope），不必另建群組。
     (N'workspace', N'attendance.records', N'own'),
     (N'workspace', N'quality', NULL),
     (N'workspace', N'quality.retrieval', NULL),
+    (N'administrators', N'dashboard', NULL),
+    (N'administrators', N'chat', NULL),
+    (N'administrators', N'projects', NULL),
+    (N'administrators', N'files', NULL),
+    (N'administrators', N'knowledge', NULL),
+    (N'administrators', N'knowledge.retrieval', NULL),
+    (N'administrators', N'artifacts', NULL),
+    (N'administrators', N'sharing', NULL),
+    (N'administrators', N'jobs', NULL),
+    (N'administrators', N'repositories', NULL),
+    (N'administrators', N'attendance.records', N'all'),
+    (N'administrators', N'attendance.cards', NULL),
+    (N'administrators', N'attendance.cards.maintain', NULL),
+    (N'administrators', N'attendance.imports', NULL),
+    (N'administrators', N'attendance.imports.reimport', NULL),
+    (N'administrators', N'attendance.calendar', NULL),
+    (N'administrators', N'attendance.calendar.maintain', NULL),
     (N'administrators', N'identity.users', NULL),
     (N'administrators', N'access-control.roles', NULL),
     (N'administrators', N'access-control.groups', NULL),
@@ -104,17 +122,18 @@ USING (VALUES
     (N'administrators', N'organization', NULL),
     (N'administrators', N'operations.usage', NULL),
     (N'administrators', N'billing.prices', NULL),
-    (N'administrators', N'knowledge.retrieval', NULL),
     (N'administrators', N'integrations', NULL),
     (N'administrators', N'monitoring', NULL),
+    (N'administrators', N'audit', N'all'),
     (N'administrators', N'diagnostics.logs', NULL),
     (N'administrators', N'diagnostics.logs.detail', NULL),
     (N'administrators', N'diagnostics.logs.export', NULL),
     (N'administrators', N'mail.messages', NULL),
     (N'administrators', N'mail.messages.resend', NULL),
-    (N'administrators', N'audit', N'all'),
+    (N'administrators', N'quality', NULL),
+    (N'administrators', N'quality.retrieval', NULL),
     (N'administrators', N'design', NULL),
-    -- HR：出勤的管理頁與全公司的出勤紀錄，不含使用者管理（ADR 0018）；成員由管理員加入，Seed 不放任何成員。
+    -- HR：出勤的管理頁與全公司的出勤紀錄，不含使用者管理（ADR 0018）；與 administrators 分開，HR 不必是管理員。成員由管理員加入，Seed 不放任何成員。
     (N'hr', N'attendance.records', N'all'),
     (N'hr', N'attendance.cards', NULL),
     (N'hr', N'attendance.cards.maintain', NULL),
