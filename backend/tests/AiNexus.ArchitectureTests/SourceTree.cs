@@ -25,7 +25,7 @@ internal static partial class SourceTree
 
     /// <summary>
     /// 允許的區（小寫，ADR 0016）。區只是資料夾、不是依賴邊界；新增區要先修訂 ADR。
-    /// <c>staff</c> 規劃中，資料夾出現時即允許。
+    /// <c>staff</c>（員工服務）由 Attendance 使用。
     /// </summary>
     public static readonly IReadOnlySet<string> AllowedAreas = new HashSet<string>(["work", "staff", "admin", "platform"], StringComparer.Ordinal);
 

@@ -1,7 +1,7 @@
 # 0018 出勤打卡
 
 - **狀態**：提議（2026-10-22）
-- **實作**：未開始。取代舊系統 ADAuthentication 的員工卡號與打卡功能。
+- **實作**：進行中。卡號對應的後端已完成（[出勤打卡](../features/attendance.md)）；刷卡匯入、出勤紀錄、假日設定與前端未開始。取代舊系統 ADAuthentication 的員工卡號與打卡功能。
 - **決定**：
   - 新增 `Attendance` 模組（區 `staff`、schema `attendance`），員工以 `identity.Users.Id` 識別，不再用職號。
   - 卡號對應改為「持有期間」；刷卡原始資料不寫人，讀取時依刷卡時間歸戶。

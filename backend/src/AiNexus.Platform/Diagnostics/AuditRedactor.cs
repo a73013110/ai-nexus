@@ -16,7 +16,9 @@ public static class AuditRedactor
         "fingerprint", "retentionDays", "auditRetentionDays", "fileRetentionDays", "queueCapacity", "importantQueueCapacity", "batchSize", "maxDiskBytes", "maxSqlRows", "minimumLevel", "frameworkMinimumLevel", "lowLevelSampleEvery", "otlpEnabled",
         "fileSizeBytes", "flushIntervalMs", "retrySeconds", "sqlTimeoutSeconds", "shutdownSeconds", "maxQueryDays", "maxExportDays", "maxExportRows", "serviceName", "cleanupBatchSize", "locationFingerprint",
         "search", "action", "results", "category", "provider", "modelId", "effectiveAt", "parentId", "featureId", "openInNewTab", "icon", "audienceGroupIds", "unitId", "unitIds", "memberships", "isPrimary", "isManager",
-        "scopes", "scope", "attempts", "nextAttemptAt", "autoRetry", "transport", "failedStep", "certificateVerdict"
+        "scopes", "scope", "attempts", "nextAttemptAt", "autoRetry", "transport", "failedStep", "certificateVerdict",
+        // 出勤卡號對應（ADR 0018）：卡號、持有期間與還沒有帳號的持有人姓名；備註是自由文字，不收。
+        "cardId", "cardNumber", "assignments", "startsAt", "endsAt", "holderName"
     };
 
     /// <summary>

@@ -1,7 +1,7 @@
 # 0016 區、網址、頁面目錄與選單
 
 - **狀態**：採用（2026-10-18），取代 [ADR 0009](0009-module-names-and-data-driven-navigation.md)。
-- **實作**：已完成。區資料夾與模組改名、頁面目錄、區式網址、選單（`NavigationItems`）、Organization 模組與資料範圍（[ADR 0017](0017-organization-units-and-data-scopes.md)）皆已落地；`staff` 區仍是規劃。
+- **實作**：已完成。區資料夾與模組改名、頁面目錄、區式網址、選單（`NavigationItems`）、Organization 模組與資料範圍（[ADR 0017](0017-organization-units-and-data-scopes.md)）皆已落地；`staff` 區隨 Attendance 加入。
 - **決定**：
   - 程式與網址共用「區 → 模組 → 頁面」三層；權限 ID 與 API 不帶區。
   - 頁面與動作的目錄只定義在程式碼；資料庫只存授權與選單。
@@ -32,7 +32,7 @@
 | 區 | 名稱 | 模組 |
 |---|---|---|
 | `work` | AI 工作台 | Dashboard、Chat、Conversations、Projects、Files、Knowledge、Artifacts、Prompts、Sharing、Collaboration、Repositories、Jobs |
-| `staff` | 員工服務 | 規劃中：Attendance（出勤打卡，見 [ADR 0018](0018-attendance-cards-and-punches.md)）、Leave（請假）等公司內部自助服務 |
+| `staff` | 員工服務 | Attendance（出勤打卡，見 [ADR 0018](0018-attendance-cards-and-punches.md)）；規劃：Leave（請假）等自助服務 |
 | `admin` | 系統管理 | Identity、AccessControl、Organization、Operations、Audit、Diagnostics、Monitoring、Integrations、Quality、Billing、Design（只有前端） |
 | `platform` | 基礎能力 | Account、Inference、WebSearch、Notifications；沒有選單頁，不出現在網址 |
 

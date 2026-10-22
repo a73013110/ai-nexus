@@ -24,6 +24,7 @@ using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Admin.Quality;
 using AiNexus.Features.Work.Repositories;
+using AiNexus.Features.Staff.Attendance;
 using AiNexus.Features.Work.Sharing;
 using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Diagnostics;
@@ -72,6 +73,7 @@ public static class FeatureModules
         Add<InferenceModule>(builder);
         Add<ChatModule>(builder);
         Add<MonitoringModule>(builder);
+        Add<AttendanceModule>(builder);
 
         builder.Services.AddEndpointHandlers(typeof(FeatureModules).Assembly);
         builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
@@ -118,6 +120,7 @@ public static class FeatureModules
         Map<WebSearchModule>(api);
         Map<MonitoringModule>(api);
         Map<MailModule>(api);
+        Map<AttendanceModule>(api);
 
         IdentityModule.MapPublicEndpoints(app.MapGroup("").WithTags(Tag<IdentityModule>()));
         return app;

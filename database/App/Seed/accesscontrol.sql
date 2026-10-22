@@ -19,6 +19,10 @@ USING (VALUES
     (N'sharing'),
     (N'jobs'),
     (N'repositories'),
+    (N'attendance.records'),
+    (N'attendance.cards'),
+    (N'attendance.imports'),
+    (N'attendance.calendar'),
     (N'identity.users'),
     (N'access-control.roles'),
     (N'access-control.groups'),
@@ -34,6 +38,9 @@ USING (VALUES
     -- 動作：只是授權，不出現在選單。
     (N'diagnostics.logs.detail'),
     (N'diagnostics.logs.export'),
+    (N'attendance.cards.maintain'),
+    (N'attendance.imports.reimport'),
+    (N'attendance.calendar.maintain'),
     (N'mail.messages'),
     (N'mail.messages.resend'),
     (N'quality'),
@@ -56,7 +63,8 @@ WHEN NOT MATCHED BY TARGET THEN
 MERGE [accesscontrol].[RoleGroups] AS t
 USING (VALUES
     (N'workspace', N'基本工作區'),
-    (N'administrators', N'平台管理')
+    (N'administrators', N'平台管理'),
+    (N'hr', N'人事')
 ) AS s ([Id], [Name])
 ON t.[Id] = s.[Id]
 WHEN NOT MATCHED BY TARGET THEN
@@ -84,6 +92,8 @@ USING (VALUES
     (N'workspace', N'sharing', NULL),
     (N'workspace', N'jobs', NULL),
     (N'workspace', N'repositories', NULL),
+    -- 出勤紀錄的預設範圍：每位成員看自己的（ADR 0018）。主管的 unit-tree 尚未提供預設，由管理員建立群組後授予。
+    (N'workspace', N'attendance.records', N'own'),
     (N'workspace', N'quality', NULL),
     (N'workspace', N'quality.retrieval', NULL),
     (N'administrators', N'identity.users', NULL),
@@ -103,7 +113,15 @@ USING (VALUES
     (N'administrators', N'mail.messages', NULL),
     (N'administrators', N'mail.messages.resend', NULL),
     (N'administrators', N'audit', N'all'),
-    (N'administrators', N'design', NULL)
+    (N'administrators', N'design', NULL),
+    -- HR：出勤的管理頁與全公司的出勤紀錄，不含使用者管理（ADR 0018）；成員由管理員加入，Seed 不放任何成員。
+    (N'hr', N'attendance.records', N'all'),
+    (N'hr', N'attendance.cards', NULL),
+    (N'hr', N'attendance.cards.maintain', NULL),
+    (N'hr', N'attendance.imports', NULL),
+    (N'hr', N'attendance.imports.reimport', NULL),
+    (N'hr', N'attendance.calendar', NULL),
+    (N'hr', N'attendance.calendar.maintain', NULL)
 ) AS s ([GroupId], [FeatureId], [Scope])
 ON t.[GroupId] = s.[GroupId] AND t.[FeatureId] = s.[FeatureId]
 WHEN NOT MATCHED BY TARGET THEN
@@ -132,6 +150,8 @@ VALUES
     (N'collaboration.sharing', N'collaboration', N'page', N'sharing', NULL, 10),
     (N'collaboration.jobs', N'collaboration', N'page', N'jobs', NULL, 20),
     (N'collaboration.repositories', N'collaboration', N'page', N'repositories', NULL, 30),
+    (N'staff', NULL, N'group', NULL, N'員工服務', 35),
+    (N'staff.attendance-records', N'staff', N'page', N'attendance.records', NULL, 10),
     (N'system', NULL, N'group', NULL, N'系統管理', 40),
     (N'system.access', N'system', N'group', NULL, N'身分與權限', 10),
     (N'system.access.identity-users', N'system.access', N'page', N'identity.users', NULL, 10),
@@ -154,7 +174,11 @@ VALUES
     (N'system.evaluation', N'system', N'group', NULL, N'評測與開發', 50),
     (N'system.evaluation.quality', N'system.evaluation', N'page', N'quality', NULL, 10),
     (N'system.evaluation.quality-retrieval', N'system.evaluation', N'page', N'quality.retrieval', NULL, 20),
-    (N'system.evaluation.design', N'system.evaluation', N'page', N'design', NULL, 30);
+    (N'system.evaluation.design', N'system.evaluation', N'page', N'design', NULL, 30),
+    (N'system.hr', N'system', N'group', NULL, N'人事與出勤', 60),
+    (N'system.hr.attendance-cards', N'system.hr', N'page', N'attendance.cards', NULL, 10),
+    (N'system.hr.attendance-imports', N'system.hr', N'page', N'attendance.imports', NULL, 20),
+    (N'system.hr.attendance-calendar', N'system.hr', N'page', N'attendance.calendar', NULL, 30);
 
 -- 一層一層寫入：每輪只寫父節點已存在的列，沒有新列就停（外鍵要求父節點先存在）。
 -- 既有環境的選單可能被管理員改過：上層分群已刪除，或同層已有同一頁面（唯一索引會擋），這些預設節點直接略過，Seed 不因此失敗。
