@@ -53,7 +53,7 @@ public static class PublicErrorCatalog
         ["attendance_gd_account_unmapped"] = "你的帳號對不到唯一的公文系統帳號，無法修改假日；請聯絡管理員。",
         ["attendance_gd_read_only"] = "公文系統的連線設為唯讀，假日目前只能查詢；請聯絡管理員。",
         ["attendance_gd_unavailable"] = "公文系統暫時無法連線，請稍後再試。",
-        ["attendance_import_file_not_found"] = "找不到這一天的打卡檔，請確認打卡機是否已輸出。",
+        ["attendance_import_file_not_found"] = "找不到指定日期的打卡檔，請確認打卡機是否已輸出。",
         ["attendance_import_filter_invalid"] = "查詢條件不正確，請檢查期間、檔案、狀態與分頁。",
         ["attendance_import_source_unavailable"] = "讀不到打卡檔資料夾，請聯絡管理員確認網路共用與讀取權限。",
         ["attendance_period_invalid"] = "結束日期不能早於開始日期。",

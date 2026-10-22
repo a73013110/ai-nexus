@@ -39071,7 +39071,7 @@
         "tags": [
           "Attendance"
         ],
-        "operationId": "ReimportAttendancePunchFile",
+        "operationId": "ReimportAttendancePunchFiles",
         "requestBody": {
           "content": {
             "application/json": {
@@ -39218,7 +39218,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PunchImportDto"
+                  "$ref": "#/components/schemas/PunchReimportResult"
                 }
               }
             }
@@ -47338,13 +47338,39 @@
       },
       "PunchReimportRequest": {
         "required": [
-          "date"
+          "from",
+          "to"
         ],
         "type": "object",
         "properties": {
-          "date": {
+          "from": {
             "type": "string",
             "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PunchReimportResult": {
+        "required": [
+          "imports",
+          "missingFiles"
+        ],
+        "type": "object",
+        "properties": {
+          "imports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PunchImportDto"
+            }
+          },
+          "missingFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

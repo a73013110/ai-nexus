@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
-import type { PunchImportDto } from '@core/api/schema';
+import type { PunchImportDto, PunchReimportResult } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate, formatNumber } from '@shared/browser/format';
@@ -40,7 +40,7 @@ import {
   importFilters,
   importsQueryOptions,
 } from './imports-query';
-import { ReimportDialog } from './reimport-dialog';
+import { ReimportDialog, reimportOutcome } from './reimport-dialog';
 
 interface ImportsPageRequest {
   filters: PunchImportFilters;
@@ -52,7 +52,7 @@ interface ImportsPageRequest {
 
 /**
  * 打卡匯入紀錄（`attendance.imports`）：每次匯入（排程或手動）一筆，新到舊、游標分頁、不計總數。
- * 有 `attendance.imports.reimport` 時可指定檔名日期手動重匯；結果就是第一頁新出現的紀錄。
+ * 有 `attendance.imports.reimport` 時可指定檔名日期（或日期區間）手動重匯；結果就是第一頁新出現的紀錄。
  */
 @Component({
   selector: 'nx-attendance-imports-page',
@@ -146,7 +146,7 @@ export class AttendanceImportsPage {
       trigger: IMPORT_TRIGGER[row.triggerKind] ?? row.triggerKind,
     })),
   );
-  /** 最近一次手動重匯失敗（檔案格式錯誤等）；請求本身成功，所以放在頁面提示。 */
+  /** 最近一次手動重匯中失敗的檔（檔案格式錯誤等）；請求本身成功，所以放在頁面提示。 */
   readonly failure = signal('');
   private readonly dialog = viewChild.required(ReimportDialog);
   private readonly table = viewChild(DataTable);
@@ -196,14 +196,10 @@ export class AttendanceImportsPage {
     this.dialog().open();
   }
   /** 重匯的紀錄在第一頁最前面：回到第一頁重讀。 */
-  imported(result: PunchImportDto) {
-    if (result.status === 'failed')
-      this.failure.set(
-        `重匯 ${result.fileName} 失敗，刷卡維持上次成功的內容。` +
-          (result.errorMessage ? `原因：${result.errorMessage}` : ''),
-      );
-    else
-      this.toast.success(`已重匯 ${result.fileName}`, `${formatNumber(result.punchCount)} 筆刷卡`);
+  imported(result: PunchReimportResult) {
+    const { toast, failure } = reimportOutcome(result);
+    this.failure.set(failure ?? '');
+    if (toast) this.toast.success(toast.title, toast.description);
     const request = this.request();
     if (request) this.read(request.filters, undefined, 0);
   }

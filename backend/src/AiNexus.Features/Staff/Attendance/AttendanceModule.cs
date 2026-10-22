@@ -18,7 +18,7 @@ namespace AiNexus.Features.Staff.Attendance;
 /// 卡號對應的寫入共用 AccessControl 的 <see cref="AdministrativeAudit"/>：同一個交易、行政寫入鎖與稽核，並發的重疊檢查靠它串行化。
 /// 假單與出差單由 <see cref="LeaveSheetReader"/> 經 <see cref="GdAccess"/> 唯讀查詢公文系統（GD），連不上時降級而不拋例外；GD 的可用性接到即時監控（<c>attendance-gd</c>）。
 /// 假日設定經 <see cref="GdAccess"/> 查詢，經 <see cref="GdCalendarWriter"/> 回寫，兩者用同一個 <c>Databases:Gd</c>；設為 <c>ReadOnly=true</c> 時只停用回寫。
-/// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
+/// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期區間重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
 /// </summary>
 public sealed class AttendanceModule : IFeatureModule
 {
@@ -67,7 +67,7 @@ public sealed class AttendanceModule : IFeatureModule
 
         var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
         ListPunchImports.Map(imports);
-        ReimportPunchFile.Map(imports);
+        ReimportPunchFiles.Map(imports);
 
         var calendar = api.MapGroup("/attendance-calendar-days").RequireAuthorization(Policies.AttendanceCalendar);
         ListCalendarDays.Map(calendar);

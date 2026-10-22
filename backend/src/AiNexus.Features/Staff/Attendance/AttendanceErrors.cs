@@ -39,7 +39,7 @@ public static class AttendanceErrors
     /// <summary>匯入紀錄的查詢條件不合法：狀態不明、期間顛倒、每頁筆數不在允許值內，或游標不存在。</summary>
     public static readonly Error ImportFilterInvalid = Error.Invalid("attendance_import_filter_invalid");
 
-    /// <summary>來源資料夾裡沒有指定日期的打卡檔（打卡機尚未輸出，或檔名日期錯誤）。</summary>
+    /// <summary>來源資料夾裡沒有指定日期的打卡檔，區間內一個都沒有（打卡機尚未輸出，或檔名日期錯誤）；只缺部分檔案不是錯誤。</summary>
     public static readonly Error ImportFileNotFound = Error.NotFound("attendance_import_file_not_found");
 
     /// <summary>來源資料夾讀不到（網路共用中斷、IIS 集區身分沒有權限）；此時沒有檔案可記錄，所以不產生匯入紀錄。</summary>

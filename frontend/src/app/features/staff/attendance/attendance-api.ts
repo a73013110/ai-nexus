@@ -49,8 +49,9 @@ export class AttendanceApi {
 
   imports = (filters: PunchImportFilters, take: number, before?: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-imports', { query: { ...filters, take, before }, signal });
-  /** `date` 是檔名日期（`yyyyMMdd.txt`），不是出勤日。 */
-  reimport = (date: string) => this.api.post('/api/v1/attendance-imports', { body: { date } });
+  /** 重匯檔名日期（`yyyyMMdd.txt` 的日期，不是出勤日）`from`～`to`，含頭尾；只重匯一個檔時起訖相同。 */
+  reimport = (from: string, to: string) =>
+    this.api.post('/api/v1/attendance-imports', { body: { from, to } });
 
   calendarDays = (from: string, to: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-calendar-days', { query: { from, to }, signal });

@@ -9263,7 +9263,7 @@ export interface paths {
         };
         get: operations["ListAttendancePunchImports"];
         put?: never;
-        post: operations["ReimportAttendancePunchFile"];
+        post: operations["ReimportAttendancePunchFiles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11182,7 +11182,13 @@ export interface components {
         };
         PunchReimportRequest: {
             /** Format: date */
-            date: string;
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        PunchReimportResult: {
+            imports: components["schemas"]["PunchImportDto"][];
+            missingFiles: string[];
         };
         ReadNotificationsRequest: {
             /** Format: date-time */
@@ -12407,6 +12413,7 @@ export type PromptTemplateDto = components['schemas']['PromptTemplateDto'];
 export type ProviderStatusDto = components['schemas']['ProviderStatusDto'];
 export type PunchImportDto = components['schemas']['PunchImportDto'];
 export type PunchReimportRequest = components['schemas']['PunchReimportRequest'];
+export type PunchReimportResult = components['schemas']['PunchReimportResult'];
 export type ReadNotificationsRequest = components['schemas']['ReadNotificationsRequest'];
 export type ReauthenticationRequest = components['schemas']['ReauthenticationRequest'];
 export type RenameConversationRequest = components['schemas']['RenameConversationRequest'];
@@ -39579,7 +39586,7 @@ export interface operations {
             };
         };
     };
-    ReimportAttendancePunchFile: {
+    ReimportAttendancePunchFiles: {
         parameters: {
             query?: never;
             header?: never;
@@ -39598,7 +39605,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PunchImportDto"];
+                    "application/json": components["schemas"]["PunchReimportResult"];
                 };
             };
             /** @description Bad Request */

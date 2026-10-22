@@ -25,7 +25,7 @@ public sealed class ListPunchImportsTests
         await session.ScanAsync();
         session.Clock.Advance(TimeSpan.FromMinutes(1));
         session.Source.Write(Oct2, [Line("A001", 10, 2, 8, 0)]);
-        await session.Hr.PostAsJsonAsync(Imports, new PunchReimportRequest(new DateOnly(2026, 10, 2)), TestContext.Current.CancellationToken);
+        await session.Hr.PostAsJsonAsync(Imports, new PunchReimportRequest(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 2)), TestContext.Current.CancellationToken);
         return session;
     }
 

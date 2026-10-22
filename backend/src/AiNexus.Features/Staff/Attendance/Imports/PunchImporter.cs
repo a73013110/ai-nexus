@@ -30,7 +30,7 @@ public sealed partial class PunchImporter(
     ILogger<PunchImporter> logger,
     TimeProvider clock)
 {
-    /// <summary>HR 手動重匯：不論檔案有沒有變動都重匯。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
+    /// <summary>HR 手動重匯一個檔（區間由 <see cref="ReimportPunchFiles"/> 逐檔呼叫）：不論檔案有沒有變動都重匯。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
     public async Task<Result<PunchImport>> ReimportAsync(string fileName, Guid requestedBy, CancellationToken ct)
     {
         await gate.Gate.WaitAsync(ct);
