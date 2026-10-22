@@ -133,6 +133,11 @@ public sealed class ListActivityAuditTests
         // 前綴同時涵蓋自身分類，以及其下的管理讀取動作。
         Assert.Equal(["administration", "access"], Assert.Single(catalog.Actions, x => x.Value == "admin.").Categories);
         Assert.Equal(["activity", "access"], Assert.Single(catalog.Actions, x => x.Value == "integration.").Categories);
+        // 卡號與假日回寫各自一項，前綴互不涵蓋。
+        string[] attendance = ["admin.attendance_card", "admin.attendance_card_delete", "admin.attendance_assignment", "admin.attendance_assignment_delete", "admin.calendar_day"];
+        string[] Covered(string label) => [.. attendance.Where(x => x.StartsWith(Assert.Single(catalog.Actions, a => a.Label == label).Value, StringComparison.Ordinal))];
+        Assert.Equal(attendance[..4], Covered("出勤卡號異動"));
+        Assert.Equal(["admin.calendar_day"], Covered("假日設定異動"));
     }
 
     [Fact]

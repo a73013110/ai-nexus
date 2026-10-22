@@ -31,7 +31,7 @@ internal sealed class CalendarDayRequestValidator : RequestValidator<CalendarDay
 /// <summary>
 /// HR 修改 GD 某一天的上午／下午放假與備註（ADR 0018 允許的例外回寫），回傳修改後的值。
 /// 修改者寫操作者的公文帳號（<c>Sys_User.ID</c>，以 AD 帳號換算），對不到唯一一個就拒絕，不退回寫 <c>sys</c>。
-/// 每次嘗試都稽核（<c>admin.attendance_calendar_day</c>），成功含修改前後值，失敗含錯誤代碼。
+/// 每次嘗試都稽核（<c>admin.calendar_day</c>），成功含修改前後值，失敗含錯誤代碼。
 /// </summary>
 /// <remarks>
 /// GD 與本系統是兩個資料庫，無法同一個交易。順序是：鎖定 GD 的這一天並讀前值 → 更新（未提交）→ 在本系統寫 saved 稽核 → 提交 GD。
@@ -44,7 +44,7 @@ internal sealed class CalendarDayRequestValidator : RequestValidator<CalendarDay
 /// </remarks>
 internal sealed class UpdateCalendarDay(AppDbContext db, GdAccounts accounts, GdCalendarWriter writer)
 {
-    public const string AuditAction = "admin.attendance_calendar_day";
+    public const string AuditAction = "admin.calendar_day";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

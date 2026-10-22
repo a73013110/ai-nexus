@@ -12,7 +12,7 @@ namespace AiNexus.IntegrationTests.Attendance;
 
 public sealed class CalendarDaysTests
 {
-    private const string AuditAction = "admin.attendance_calendar_day";
+    private const string AuditAction = "admin.calendar_day";
     private static readonly DateOnly NationalDay = new(2026, 10, 10);
 
     private static string Day(DateOnly day) => $"{Calendar}/{day:yyyy-MM-dd}";

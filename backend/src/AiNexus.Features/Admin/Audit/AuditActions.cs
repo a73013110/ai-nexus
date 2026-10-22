@@ -26,6 +26,7 @@ public static class AuditActions
         ("admin.navigation_", "選單異動"),
         ("admin.organization_", "組織異動"),
         ("admin.attendance_", "出勤卡號異動"),
+        ("admin.calendar_", "假日設定異動"),
         ("admin.mail_", "郵件重寄與測試"),
         ("admin.conversation_read", "對話內容檢視"),
         ("admin.user_usage_read", "使用者用量檢視"),
