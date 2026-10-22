@@ -53,19 +53,16 @@ public sealed class AssignCardTests
     }
 
     [Fact]
-    public async Task AssigningAHeldCardNeedsTheTakeOverFlagAndTheResponseNamesTheHolder()
+    public async Task AssigningAHeldCardNeedsTheTakeOverFlagAndTheHistoryNamesTheHolder()
     {
         await using var session = await HrSession.CreateAsync();
         var (factory, hr, bob, carol, card) = (session.Factory, session.Hr, session.Bob, session.Carol, session.Card);
         var current = await AssignOkAsync(hr, card.Id, bob, At(10, 1));
 
-        var refused = await AssignAsync(hr, card.Id, carol, At(10, 5));
-        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        var held = (await refused.Content.ReadFromJsonAsync<CardHeldResponse>())!;
-        Assert.Equal(("attendance_card_held", 409), (held.Code, held.Status));
-        Assert.Equal((current.Id, bob, "bob"), (held.Current.Id, held.Current.UserId, held.Current.UserDisplayName));
-        // 被拒絕時什麼都沒變。
-        Assert.Null(Assert.Single(await HistoryAsync(hr, card.Id)).EndsAt);
+        await AssertCodeAsync(await AssignAsync(hr, card.Id, carol, At(10, 5)), HttpStatusCode.Conflict, "attendance_card_held");
+        // 錯誤回應不帶資料；前端從持有歷史提示目前是誰持有。被拒絕時什麼都沒變。
+        var unchanged = Assert.Single(await HistoryAsync(hr, card.Id));
+        Assert.Equal((current.Id, bob, "bob", (DateTimeOffset?)null), (unchanged.Id, unchanged.UserId, unchanged.UserDisplayName, unchanged.EndsAt));
 
         var taken = await AssignOkAsync(hr, card.Id, carol, At(10, 5), takeOver: true);
         Assert.Null(taken.EndsAt);

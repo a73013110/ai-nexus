@@ -33,14 +33,14 @@ internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeAudit 
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CardAssignmentUpdateRequest request, CancellationToken ct)
     {
-        // 稽核快照以整張卡為單位，所以先查出它屬於哪張卡；查不到就讓交易內的檢查回 not found 並留下紀錄。
-        var cardId = await db.Set<CardAssignment>().AsNoTracking().Where(x => x.Id == id).Select(x => (Guid?)x.CardId).SingleOrDefaultAsync(ct);
+        // 查不到時快照為 null，交給交易內的檢查回 not found 並留下紀錄。
+        var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
         return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment", id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
         {
             var assignment = await db.Set<CardAssignment>().SingleOrDefaultAsync(x => x.Id == id, ct);
             if (assignment is null) return AttendanceErrors.AssignmentNotFound;
             // 沒換人就不重查：持有人帳號之後被刪除，不該讓更正備註或結束時間的操作失敗。
-            if (request.UserId is { } userId && userId != assignment.UserId && !await db.Users.AnyAsync(x => x.Id == userId && x.DeletedAt == null, ct))
+            if (request.UserId is { } userId && userId != assignment.UserId && !await AssignmentRules.HolderExistsAsync(db, userId, ct))
                 return AttendanceErrors.UserNotFound;
             var others = await db.Set<CardAssignment>().AsNoTracking().Where(x => x.CardId == assignment.CardId && x.Id != id).ToListAsync(ct);
             if (others.Any(x => AssignmentRules.Overlaps(request.StartsAt, request.EndsAt, x))) return AttendanceErrors.AssignmentOverlap;

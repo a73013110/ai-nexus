@@ -6,14 +6,14 @@ import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 
 /**
- * 佔位頁：出勤的四個頁面（紀錄、卡號對應、匯入紀錄、假日設定）共用，之後各自換成真頁面。
- * 標題取自路由的 `data.feature`，不寫死名稱。
+ * 出勤四個頁面共用的佔位頁，之後各自換成真頁面。標題取路由 `data.feature` 的功能名稱，
+ * 在範本裡讀，管理員改了名稱覆寫時跟著更新。
  */
 @Component({
   selector: 'nx-attendance-placeholder-page',
   imports: [FeaturePage, EmptyState, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<nx-feature-page [title]="title">
+  template: `<nx-feature-page [title]="session.featureName(feature)">
     <nx-empty-state>
       <nx-icon name="clock" /><strong>建置中</strong>
       <p>這個頁面還在開發，完成後會在這裡提供。</p>
@@ -21,7 +21,6 @@ import { Icon } from '@shared/ui/icon';
   </nx-feature-page>`,
 })
 export class AttendancePlaceholderPage {
-  protected readonly title = inject(WorkspaceSession).featureName(
-    String(inject(ActivatedRoute).snapshot.data['feature']),
-  );
+  protected readonly session = inject(WorkspaceSession);
+  protected readonly feature = String(inject(ActivatedRoute).snapshot.data['feature']);
 }

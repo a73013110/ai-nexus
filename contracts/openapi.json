@@ -37386,7 +37386,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CardCreateRequest"
+                "$ref": "#/components/schemas/CardRequest"
               }
             }
           },
@@ -37557,7 +37557,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CardUpdateRequest"
+                "$ref": "#/components/schemas/CardRequest"
               }
             }
           },
@@ -38091,9 +38091,9 @@
           "409": {
             "description": "Conflict",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CardHeldResponse"
+                  "$ref": "#/components/schemas/SafeProblemDetails"
                 }
               }
             }
@@ -41604,28 +41604,6 @@
           }
         }
       },
-      "CardCreateRequest": {
-        "required": [
-          "cardNumber",
-          "kind",
-          "note"
-        ],
-        "type": "object",
-        "properties": {
-          "cardNumber": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "note": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "CardDto": {
         "required": [
           "id",
@@ -41669,31 +41647,7 @@
           }
         }
       },
-      "CardHeldResponse": {
-        "required": [
-          "code",
-          "status",
-          "title",
-          "current"
-        ],
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "title": {
-            "type": "string"
-          },
-          "current": {
-            "$ref": "#/components/schemas/CardAssignmentDto"
-          }
-        }
-      },
-      "CardUpdateRequest": {
+      "CardRequest": {
         "required": [
           "cardNumber",
           "kind",

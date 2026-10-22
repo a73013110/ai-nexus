@@ -6,6 +6,8 @@ namespace AiNexus.Data.App.Attendance;
 /// <summary>HR 登錄的門禁卡；持有人不在這裡，見 <see cref="CardAssignment"/>。</summary>
 public sealed class Card
 {
+    public const int CardNumberMaxLength = 32, NoteMaxLength = 200;
+
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>打卡檔裡的卡號原始字串，不補零、不轉數字；與 <see cref="Punch.CardNumber"/> 以相同字串比對。</summary>
@@ -23,6 +25,8 @@ public static class CardKinds
 {
     public const string Employee = "employee";
     public const string Visitor = "visitor";
+
+    public static bool IsDefined(string? kind) => kind is Employee or Visitor;
 }
 
 internal sealed class CardConfiguration : IEntityTypeConfiguration<Card>
@@ -32,8 +36,8 @@ internal sealed class CardConfiguration : IEntityTypeConfiguration<Card>
         card.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         card.ToTable("Cards", "attendance");
         card.HasKey(x => x.Id);
-        card.Property(x => x.CardNumber).HasMaxLength(32);
+        card.Property(x => x.CardNumber).HasMaxLength(Card.CardNumberMaxLength);
         card.Property(x => x.Kind).HasMaxLength(16);
-        card.Property(x => x.Note).HasMaxLength(200);
+        card.Property(x => x.Note).HasMaxLength(Card.NoteMaxLength);
     }
 }

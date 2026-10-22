@@ -26,23 +26,13 @@ internal static class AttendanceApi
     internal static DateTimeOffset At(int month, int day, int hour = 8, int minute = 0) => new(2026, month, day, hour, minute, 0, Taipei);
 
     /// <summary>建立只含卡號對應頁面的測試群組（不用 Seed 的 <c>hr</c>，它含出勤的全部功能）並授予 <paramref name="userId"/>；<paramref name="maintain"/> 為 false 時只能讀。</summary>
-    internal static async Task GrantCardsAsync(AppFactory factory, Guid userId, bool maintain = true)
-    {
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var suffix = maintain ? "test-hr" : "test-hr-readonly";
-        db.Set<Role>().Add(new() { Id = suffix, Name = "人資" });
-        db.Set<RoleGroup>().Add(new() { Id = suffix, Name = "人資" });
-        db.Set<RoleGroupRole>().Add(new() { RoleId = suffix, GroupId = suffix });
-        db.Set<RoleGroupFeature>().Add(new() { GroupId = suffix, FeatureId = FeatureCatalog.AttendanceCards });
-        if (maintain) db.Set<RoleGroupFeature>().Add(new() { GroupId = suffix, FeatureId = FeatureCatalog.AttendanceCardsMaintain });
-        db.Set<UserRole>().Add(new() { UserId = userId, RoleId = suffix });
-        await db.SaveChangesAsync();
-    }
+    internal static Task GrantCardsAsync(AppFactory factory, Guid userId, bool maintain = true)
+        => maintain ? GrantAsync(factory, userId, "test-hr", FeatureCatalog.AttendanceCards, FeatureCatalog.AttendanceCardsMaintain)
+            : GrantAsync(factory, userId, "test-hr-readonly", FeatureCatalog.AttendanceCards);
 
     internal static async Task<CardDto> CreateCardAsync(HttpClient client, string number, string kind = CardKinds.Employee, string? note = null)
     {
-        var response = await client.PostAsJsonAsync(Cards, new CardCreateRequest(number, kind, note));
+        var response = await client.PostAsJsonAsync(Cards, new CardRequest(number, kind, note));
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return (await response.Content.ReadFromJsonAsync<CardDto>())!;
     }
@@ -63,17 +53,20 @@ internal static class AttendanceApi
     internal const string Imports = "/api/v1/attendance-imports";
 
     /// <summary>建立只含匯入紀錄頁面的測試群組並授予 <paramref name="userId"/>；<paramref name="reimport"/> 為 false 時只能讀紀錄、不能手動重匯。</summary>
-    internal static async Task GrantImportsAsync(AppFactory factory, Guid userId, bool reimport = true)
+    internal static Task GrantImportsAsync(AppFactory factory, Guid userId, bool reimport = true)
+        => reimport ? GrantAsync(factory, userId, "test-imports", FeatureCatalog.AttendanceImports, FeatureCatalog.AttendanceImportsReimport)
+            : GrantAsync(factory, userId, "test-imports-readonly", FeatureCatalog.AttendanceImports);
+
+    /// <summary>建立同名的角色與群組，群組授予 <paramref name="features"/>，角色指派給 <paramref name="userId"/>；撤銷時以 <paramref name="id"/> 找群組。</summary>
+    private static async Task GrantAsync(AppFactory factory, Guid userId, string id, params string[] features)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var suffix = reimport ? "test-imports" : "test-imports-readonly";
-        db.Set<Role>().Add(new() { Id = suffix, Name = "匯入" });
-        db.Set<RoleGroup>().Add(new() { Id = suffix, Name = "匯入" });
-        db.Set<RoleGroupRole>().Add(new() { RoleId = suffix, GroupId = suffix });
-        db.Set<RoleGroupFeature>().Add(new() { GroupId = suffix, FeatureId = FeatureCatalog.AttendanceImports });
-        if (reimport) db.Set<RoleGroupFeature>().Add(new() { GroupId = suffix, FeatureId = FeatureCatalog.AttendanceImportsReimport });
-        db.Set<UserRole>().Add(new() { UserId = userId, RoleId = suffix });
+        db.Set<Role>().Add(new() { Id = id, Name = id });
+        db.Set<RoleGroup>().Add(new() { Id = id, Name = id });
+        db.Set<RoleGroupRole>().Add(new() { RoleId = id, GroupId = id });
+        db.Set<RoleGroupFeature>().AddRange(features.Select(feature => new RoleGroupFeature { GroupId = id, FeatureId = feature }));
+        db.Set<UserRole>().Add(new() { UserId = userId, RoleId = id });
         await db.SaveChangesAsync();
     }
 

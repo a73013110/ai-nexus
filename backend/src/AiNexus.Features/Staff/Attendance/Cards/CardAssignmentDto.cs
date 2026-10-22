@@ -21,6 +21,10 @@ public sealed record CardAssignmentDto(
 
 internal static class CardAssignmentQueries
 {
+    /// <summary>涵蓋 <paramref name="at"/> 這一刻的持有期間；與歸戶 view 同一個半開區間。</summary>
+    public static IQueryable<CardAssignment> CoveringAt(this IQueryable<CardAssignment> assignments, DateTimeOffset at)
+        => assignments.Where(x => x.StartsAt <= at && (x.EndsAt == null || x.EndsAt > at));
+
     /// <summary>持有期間連同卡號與使用者顯示名稱；使用者可能沒有（只有姓名的持有人），所以是 left join。</summary>
     public static IQueryable<CardAssignmentDto> ToDtos(this IQueryable<CardAssignment> assignments, AppDbContext db)
         => from a in assignments

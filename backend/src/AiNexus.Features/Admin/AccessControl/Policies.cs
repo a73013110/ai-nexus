@@ -59,6 +59,6 @@ public static class AdministrativeFeatures
     [
         FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups, FeatureCatalog.AccessControlFeatures,
         FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OperationsUsage, FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
-        FeatureCatalog.MailMessages, FeatureCatalog.MailMessagesResend,
+        FeatureCatalog.MailMessages, FeatureCatalog.MailMessagesResend, FeatureCatalog.AttendanceCards, FeatureCatalog.AttendanceCardsMaintain,
     ], StringComparer.Ordinal);
 }

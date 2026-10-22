@@ -20,7 +20,7 @@ internal sealed class DeleteCardAssignment(AppDbContext db, AdministrativeAudit 
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        var cardId = await db.Set<CardAssignment>().AsNoTracking().Where(x => x.Id == id).Select(x => (Guid?)x.CardId).SingleOrDefaultAsync(ct);
+        var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
         return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment_delete", id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
         {
             var assignment = await db.Set<CardAssignment>().SingleOrDefaultAsync(x => x.Id == id, ct);

@@ -35,7 +35,7 @@ internal sealed class PunchConfiguration : IEntityTypeConfiguration<Punch>
         punch.ToTable("Punches", "attendance");
         punch.HasKey(x => x.Id);
         punch.Property(x => x.Id).UseIdentityColumn();
-        punch.Property(x => x.CardNumber).HasMaxLength(32);
+        punch.Property(x => x.CardNumber).HasMaxLength(Card.CardNumberMaxLength);
         punch.Property(x => x.MachineCode).HasMaxLength(16);
         punch.Property(x => x.EventCode).HasMaxLength(16);
         punch.HasOne<PunchFile>().WithMany().HasForeignKey(x => x.PunchFileId).OnDelete(DeleteBehavior.Restrict);

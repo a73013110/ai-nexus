@@ -6,6 +6,7 @@
 
 - `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
+- 卡號對應列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`。
 - `attendance.calendar.maintain` 先在目錄宣告，端點隨假日設定加入。
 - `attendance.records` 宣告了資料範圍（`own`、`unit`、`unit-tree`、`all`），**端點還沒有，範圍尚未套用**；加端點時依 [資料範圍](../architecture/data-scopes.md) 套用，並補進該文件的對照表。
 - Seed：`workspace` 群組有 `attendance.records` 的 `own`；`hr`（人事）群組有出勤的全部頁面與動作，以及 `all` 範圍的 `attendance.records`，不含使用者管理。`hr` 沒有成員也沒有角色，由管理員連結角色與加人。
@@ -21,8 +22,8 @@
 
 - 期間是 `[StartsAt, EndsAt)`，`EndsAt` 為空表示持有中。持有人是使用者或姓名，至少一個；只有姓名的期間之後用修改綁上使用者，先前的刷卡隨之歸戶。
 - 同一張卡的期間不可重疊，同一人可同時持有多張。
-- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`，body 是 `CardHeldResponse`（含目前的持有期間，前端據此提示）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
-- 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段會把既有期間切成兩段（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
+- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`（一般錯誤回應，不帶持有人；前端由持有歷史提示目前是誰持有）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
+- 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
 - 檢查與寫入在 `AdministrativeAudit` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
 
 ## 未歸戶卡號

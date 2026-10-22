@@ -10,6 +10,8 @@ namespace AiNexus.Data.App.Attendance;
 /// </summary>
 public sealed class CardAssignment
 {
+    public const int HolderNameMaxLength = 120, NoteMaxLength = 200;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid CardId { get; set; }
 
@@ -33,8 +35,8 @@ internal sealed class CardAssignmentConfiguration : IEntityTypeConfiguration<Car
         assignment.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         assignment.ToTable("CardAssignments", "attendance");
         assignment.HasKey(x => x.Id);
-        assignment.Property(x => x.HolderName).HasMaxLength(120);
-        assignment.Property(x => x.Note).HasMaxLength(200);
+        assignment.Property(x => x.HolderName).HasMaxLength(CardAssignment.HolderNameMaxLength);
+        assignment.Property(x => x.Note).HasMaxLength(CardAssignment.NoteMaxLength);
         assignment.HasOne<Card>().WithMany().HasForeignKey(x => x.CardId).OnDelete(DeleteBehavior.Restrict);
         assignment.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }

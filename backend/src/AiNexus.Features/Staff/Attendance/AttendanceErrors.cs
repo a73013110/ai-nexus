@@ -19,10 +19,7 @@ public static class AttendanceErrors
     /// <summary>不存在或已刪除的使用者不能成為持有人。</summary>
     public static readonly Error UserNotFound = Error.NotFound("attendance_user_not_found");
 
-    /// <summary>
-    /// 新段開始時間落在該卡目前仍有人持有的期間內，而呼叫端沒有明確要求接手；回應帶目前的持有期間（<c>CardHeldResponse</c>），
-    /// 前端提示後以接手旗標重送。
-    /// </summary>
+    /// <summary>新段開始時間落在該卡有人持有的期間內，而呼叫端沒有明確要求接手；前端提示後以接手旗標重送。</summary>
     public static readonly Error CardHeld = Error.Conflict("attendance_card_held");
 
     /// <summary>期間與同一張卡的其他持有期間重疊，而且接手也無法解決（例如新期間落在舊期間中間，會把舊期間切成兩段）。</summary>

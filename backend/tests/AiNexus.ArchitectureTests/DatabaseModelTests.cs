@@ -33,12 +33,10 @@ public sealed class DatabaseModelTests
             .ToLookup(x => x.Entity, x => x.Configuration);
         var mismatched = EntityTypes().SelectMany(entity =>
         {
-            // 沒有表的實體以檢視（AttributedPunch）或函式（UsageEntry）的 schema 為準。
-            var function = entity.GetTableName() is null && entity.GetViewName() is null ? entity.GetFunctionMappings().FirstOrDefault()?.StoreFunction : null;
-            var schema = (function is null ? entity.GetTableName() is null ? entity.GetViewSchema() : entity.GetSchema() : function.Schema) ?? "dbo";
+            var (schema, name) = StoreObject(entity);
             // 實體型別可能來自 Platform（日誌管線的 DiagnosticEvent），那時只檢查組態的位置。
             var types = configurations[entity.ClrType].Append(entity.ClrType).Where(t => t.Assembly == Assemblies.Data);
-            return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{entity.GetTableName() ?? entity.GetViewName()}");
+            return types.Where(t => Folder(t) != schema).Select(t => $"{t.FullName} → {schema}.{name}");
         }).Distinct().Order(StringComparer.Ordinal).ToList();
         Assert.True(mismatched.Count == 0, "Put each entity and its configuration in AiNexus.Data/App/<Module>/ whose lowercase name is the schema:\n" + string.Join("\n", mismatched));
     }
@@ -52,6 +50,15 @@ public sealed class DatabaseModelTests
             .Select(i => i.GetGenericArguments()[0]).ToHashSet();
         var missing = EntityTypes().Where(e => !e.IsOwned() && !configured.Contains(e.ClrType)).Select(e => e.ClrType.FullName).Order(StringComparer.Ordinal).ToList();
         Assert.True(missing.Count == 0, "Add an IEntityTypeConfiguration for:\n" + string.Join("\n", missing));
+    }
+
+    /// <summary>實體對應的資料庫物件：表，沒有表時是檢視（AttributedPunch）或函式（UsageEntry）。</summary>
+    private static (string Schema, string? Name) StoreObject(IEntityType entity)
+    {
+        if (entity.GetTableName() is { } table) return (entity.GetSchema() ?? "dbo", table);
+        if (entity.GetViewName() is { } view) return (entity.GetViewSchema() ?? "dbo", view);
+        var function = entity.GetFunctionMappings().FirstOrDefault()?.StoreFunction;
+        return (function?.Schema ?? "dbo", function?.Name);
     }
 
     private static string? Folder(Type type)

@@ -9743,11 +9743,6 @@ export interface components {
             endsAt: null | string;
             note: null | string;
         };
-        CardCreateRequest: {
-            cardNumber: string;
-            kind: string;
-            note: null | string;
-        };
         CardDto: {
             /** Format: uuid */
             id: string;
@@ -9758,14 +9753,7 @@ export interface components {
             createdAt: string;
             current: null | components["schemas"]["CardAssignmentDto"];
         };
-        CardHeldResponse: {
-            code: string;
-            /** Format: int32 */
-            status: number;
-            title: string;
-            current: components["schemas"]["CardAssignmentDto"];
-        };
-        CardUpdateRequest: {
+        CardRequest: {
             cardNumber: string;
             kind: string;
             note: null | string;
@@ -12160,10 +12148,8 @@ export type BackupMessage = components['schemas']['BackupMessage'];
 export type CardAssignmentCreateRequest = components['schemas']['CardAssignmentCreateRequest'];
 export type CardAssignmentDto = components['schemas']['CardAssignmentDto'];
 export type CardAssignmentUpdateRequest = components['schemas']['CardAssignmentUpdateRequest'];
-export type CardCreateRequest = components['schemas']['CardCreateRequest'];
 export type CardDto = components['schemas']['CardDto'];
-export type CardHeldResponse = components['schemas']['CardHeldResponse'];
-export type CardUpdateRequest = components['schemas']['CardUpdateRequest'];
+export type CardRequest = components['schemas']['CardRequest'];
 export type ChargeDto = components['schemas']['ChargeDto'];
 export type CitationDto = components['schemas']['CitationDto'];
 export type ClientIssueRequest = components['schemas']['ClientIssueRequest'];
@@ -38066,7 +38052,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CardCreateRequest"];
+                "application/json": components["schemas"]["CardRequest"];
             };
         };
         responses: {
@@ -38209,7 +38195,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CardUpdateRequest"];
+                "application/json": components["schemas"]["CardRequest"];
             };
         };
         responses: {
@@ -38689,7 +38675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CardHeldResponse"];
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
                 };
             };
             /** @description Payload Too Large */

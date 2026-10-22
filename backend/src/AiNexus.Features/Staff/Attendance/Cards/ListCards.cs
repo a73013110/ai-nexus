@@ -19,7 +19,7 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
 
     public async Task<Result<IReadOnlyList<CardDto>>> HandleAsync(string? search, string? kind, CancellationToken ct)
     {
-        if (kind is not null && kind is not (CardKinds.Employee or CardKinds.Visitor)) return AttendanceErrors.FilterInvalid;
+        if (kind is not null && !CardKinds.IsDefined(kind)) return AttendanceErrors.FilterInvalid;
         var query = db.Set<Card>().AsNoTracking();
         if (kind is not null) query = query.Where(x => x.Kind == kind);
         if (search?.Trim() is { Length: > 0 } text)
@@ -31,13 +31,10 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
         }
         var cards = await query.OrderBy(x => x.CardNumber).ToListAsync(ct);
 
-        var now = clock.GetUtcNow();
         var ids = cards.Select(x => x.Id).ToList();
-        var current = await db.Set<CardAssignment>().AsNoTracking()
-            .Where(a => ids.Contains(a.CardId) && a.StartsAt <= now && (a.EndsAt == null || a.EndsAt > now))
-            .ToDtos(db).ToListAsync(ct);
+        var current = await db.Set<CardAssignment>().AsNoTracking().Where(a => ids.Contains(a.CardId)).CoveringAt(clock.GetUtcNow()).ToDtos(db).ToListAsync(ct);
         // 同一張卡的期間不重疊，正常只有一段；壞資料時取開始最晚的那段，不讓清單失敗。
-        var byCard = current.GroupBy(x => x.CardId).ToDictionary(x => x.Key, x => x.OrderByDescending(y => y.StartsAt).First());
+        var byCard = current.GroupBy(x => x.CardId).ToDictionary(x => x.Key, x => x.MaxBy(y => y.StartsAt));
         return Result<IReadOnlyList<CardDto>>.Ok([.. cards.Select(x => CardDto.From(x, byCard.GetValueOrDefault(x.Id)))]);
     }
 }
