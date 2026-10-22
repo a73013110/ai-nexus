@@ -1,0 +1,215 @@
+<dialog
+  nxCompactDialog
+  size="lg"
+  #dialog
+  class="platform-dialog directory-import-dialog"
+  (close)="closed()"
+  (cancel)="busy() ? $event.preventDefault() : null"
+>
+  <nx-dialog-header
+    heading="從 AD 匯入使用者"
+    [detail]="heading()"
+    closeLabel="關閉從 AD 匯入"
+    maximizable
+  />
+  @if (opened()) {
+    @if (step() === 'select') {
+      <div class="dialog-body">
+        <p class="form-note">
+          搜尋公司 AD，勾選要匯入的人；可換關鍵字繼續勾選。已在平台的人也可勾選，匯入時以 AD
+          的姓名、信箱與帳號更新。
+        </p>
+        <nx-search-field
+          label="搜尋 AD 人員"
+          placeholder="姓名、帳號、信箱或部門"
+          [maxLength]="64"
+          [value]="search()"
+          (valueChange)="find($event)"
+        />
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
+        <nx-data-table
+          class="directory-results"
+          label="AD 搜尋結果"
+          [busy]="searching()"
+          [columns]="columns"
+        >
+          <div table-toolbar class="ui-table-toolbar">
+            <h3>搜尋結果</h3>
+          </div>
+          @if (anySelectable()) {
+            <div table-actions>
+              <nx-checkbox
+                label="全選結果"
+                [checked]="allChecked()"
+                (checkedChange)="toggleAll($event)"
+              />
+            </div>
+          }
+          <table>
+            <colgroup>
+              <col nxTableColumn="name" />
+              <col nxTableColumn="email" />
+              <col nxTableColumn="path" />
+              <col nxTableColumn="state" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col" nxTableColumn="name">人員</th>
+                <th scope="col" nxTableColumn="email">信箱</th>
+                <th scope="col" nxTableColumn="path">部門與 OU</th>
+                <th scope="col" nxTableColumn="state">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (person of people(); track person.sid) {
+                <tr>
+                  <td nxTableColumn="name">
+                    <nx-checkbox
+                      [label]="person.displayName"
+                      [description]="person.account"
+                      [checked]="selection().has(person.sid)"
+                      [disabled]="!selectable(person)"
+                      (checkedChange)="toggle(person, $event)"
+                    />
+                  </td>
+                  <td nxTableColumn="email">
+                    <span class="ui-truncate" [title]="person.email || ''">{{
+                      person.email || '—'
+                    }}</span>
+                  </td>
+                  <td nxTableColumn="path">
+                    <span>{{ person.department || '—' }}</span
+                    ><small class="ui-truncate" [title]="person.path">{{ person.path }}</small>
+                  </td>
+                  <td nxTableColumn="state">
+                    <div class="resource-badges">
+                      <nx-status-badge [tone]="stateTone(person.state)">{{
+                        stateLabel(person.state)
+                      }}</nx-status-badge>
+                      @if (person.disabled) {
+                        <nx-status-badge tone="warning">AD 已停用</nx-status-badge>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <nx-table-state
+            [count]="people().length"
+            [loading]="searching()"
+            [error]="results.error()"
+            loadingText="正在搜尋 AD"
+            errorTitle="無法搜尋 AD"
+            [emptyTitle]="search().trim() ? '找不到符合的人員' : '輸入關鍵字搜尋 AD'"
+            [emptyText]="
+              search().trim() ? '試試帳號、信箱開頭或部門名稱。' : '依姓名、帳號、信箱或部門搜尋。'
+            "
+            (retry)="results.reload()"
+          />
+        </nx-data-table>
+        @if (results.value()?.more) {
+          <p class="form-note">符合的人超過 50 位，只列出前 50 位；請輸入更精確的關鍵字。</p>
+        }
+        <section class="directory-selected" aria-labelledby="directory-selected-title">
+          <header>
+            <h3 id="directory-selected-title">已選 {{ selection().size }} 人</h3>
+            @if (selection().size) {
+              <button type="button" class="quiet-button" (click)="clear()">清除</button>
+            }
+          </header>
+          @if (limitNote()) {
+            <p class="form-note" role="status">{{ limitNote() }}</p>
+          }
+          @if (selected().length) {
+            <ul class="directory-chips">
+              @for (person of selected(); track person.sid) {
+                <li>
+                  <span>{{ person.displayName }}</span>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="'移除 ' + person.displayName"
+                    (click)="toggle(person, false)"
+                  >
+                    <nx-icon name="close" />
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="form-note">尚未選取；勾選搜尋結果加入這裡。</p>
+          }
+        </section>
+      </div>
+      <footer class="dialog-foot">
+        <p class="dialog-note">一次最多 {{ limit }} 人，匯入前會先預覽。</p>
+        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+          取消
+        </button>
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="busy() || !selection().size"
+          (click)="preview()"
+        >
+          {{ busy() ? '預覽中…' : '預覽匯入' }}
+        </button>
+      </footer>
+    } @else {
+      <div class="dialog-body">
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
+        @if (step() === 'result') {
+          <nx-notice
+            tone="warning"
+            message="其他人已匯入。標示「未完成」的人在預覽後資料有變動，請返回重新預覽。"
+          />
+        }
+        <p class="form-note" role="status">{{ summary() }}</p>
+        @if (step() === 'preview' && (disabledCount() || includeDisabled())) {
+          <nx-checkbox
+            label="仍要匯入 AD 已停用的帳號"
+            description="例如帳號先建好、到職才啟用的人；匯入後仍無法以 AD 登入，直到 AD 啟用。"
+            [checked]="includeDisabled()"
+            [disabled]="busy()"
+            (checkedChange)="preview($event)"
+          />
+        }
+        <nx-directory-outcome-table
+          [label]="step() === 'preview' ? '匯入預覽' : '匯入結果'"
+          [items]="outcomes()"
+          [known]="selection()"
+        />
+      </div>
+      <footer class="dialog-foot">
+        @if (step() === 'preview') {
+          <p class="dialog-note">
+            {{
+              pending()
+                ? '新建的帳號與首次登入相同：一般使用者角色、只開 AD 登入。'
+                : '沒有需要寫入的人。'
+            }}
+          </p>
+          <button type="button" class="secondary-button" [disabled]="busy()" (click)="back()">
+            返回選取
+          </button>
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="busy() || !pending()"
+            (click)="confirm()"
+          >
+            {{ busy() ? '匯入中…' : '確認匯入（' + pending() + ' 人）' }}
+          </button>
+        } @else {
+          <button type="button" class="secondary-button" (click)="back()">返回選取</button>
+          <button type="button" class="primary-button" (click)="dialog.close()">完成</button>
+        }
+      </footer>
+    }
+  }
+</dialog>

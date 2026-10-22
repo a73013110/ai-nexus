@@ -4,6 +4,8 @@ import type { ProductTourDefinition, TourStep, TourSteps } from '@shared/ui/prod
 export function usersTour(options: {
   /** 正以測試身分檢視，頁面全部唯讀。 */
   testing: boolean;
+  /** 有 `identity.users.import`：頁首有「從 AD 匯入」。 */
+  directoryImport?: boolean;
 }): ProductTourDefinition {
   const steps: TourSteps = [
     {
@@ -26,6 +28,14 @@ export function usersTour(options: {
         '只需填帳號與角色；預建的 AD 帳號在首次登入時才綁定。模型政策與容量建立後再從詳情調整。',
       side: 'bottom',
     },
+    !options.testing &&
+      options.directoryImport && {
+        target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
+        title: '從 AD 匯入',
+        description:
+          '搜尋公司 AD、跨多次搜尋勾選要匯入的人，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
+        side: 'bottom',
+      },
     {
       target: 'nx-users-page .admin-users-table th[nxTableColumn="usage"]',
       title: '最近 30 天用量',

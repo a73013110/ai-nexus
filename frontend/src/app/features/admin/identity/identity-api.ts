@@ -1,6 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
-import type { ModelPolicyRequest, UserAccountRequest } from '@core/api/schema';
+import type {
+  DirectoryImportRequest,
+  ModelPolicyRequest,
+  UserAccountRequest,
+} from '@core/api/schema';
 
 /**
  * 使用者頁（`identity.users`）的端點：帳號、通知信箱、角色指派、附件容量、個人模型政策、洞察與稽核式讀取對話。
@@ -34,4 +38,13 @@ export class IdentityApi {
   updateUser = (id: string, body: UserAccountRequest) =>
     this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
   deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
+  /** AD 搜尋與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。 */
+  searchDirectory = (search: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/directory-people', { query: { search }, signal });
+  previewDirectoryImport = (body: DirectoryImportRequest) =>
+    this.api.post('/api/v1/admin/directory-imports/preview', { body });
+  importDirectoryUsers = (body: DirectoryImportRequest) =>
+    this.api.post('/api/v1/admin/directory-imports', { body });
+  syncDirectoryUsers = (userIds: string[]) =>
+    this.api.post('/api/v1/admin/directory-syncs', { body: { userIds } });
 }

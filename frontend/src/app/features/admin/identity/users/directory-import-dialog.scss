@@ -1,0 +1,47 @@
+// 結果清單在對話框裡限高、自己捲動，已選清單與頁尾才不會被推出視窗。
+.directory-results,
+nx-directory-outcome-table {
+  --table-max-height: min(46dvh, 26rem);
+}
+.directory-results nx-checkbox {
+  --selection-control-padding: 0;
+}
+.directory-selected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+}
+.directory-selected header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+}
+.directory-selected h3 {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.directory-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.directory-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  padding-inline-start: var(--p-space-3);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-full);
+  font-size: var(--text-caption);
+}
+.directory-chips .icon-button {
+  --icon-size: var(--icon-sm);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--p-space-1);
+}

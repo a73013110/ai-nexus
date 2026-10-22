@@ -17,6 +17,11 @@ describe('usersTour', () => {
     ]);
   });
 
+  it('introduces the AD import only with the import grant and outside test identities', () => {
+    expect(titles(usersTour({ testing: false, directoryImport: true }))).toContain('從 AD 匯入');
+    expect(titles(usersTour({ testing: true, directoryImport: true }))).not.toContain('從 AD 匯入');
+  });
+
   it('drops the disabled actions and explains read-only while testing an identity', () => {
     const steps = tourSteps(usersTour({ testing: true }));
     expect(steps.map((step) => step.title)).toEqual([

@@ -29,6 +29,9 @@ import { AdminUserCreateDialog } from './admin-user-create-dialog';
 import { emailState, signInMethods } from './user-account-fields';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
 import { TestIdentityDialog } from './test-identity-dialog';
+import { DirectoryImportDialog } from './directory-import-dialog';
+import { DirectorySyncDialog } from './directory-sync-dialog';
+import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directory-outcomes';
 
 @Component({
   selector: 'nx-admin-users-tab',
@@ -45,6 +48,8 @@ import { TestIdentityDialog } from './test-identity-dialog';
     ConfirmDialog,
     TestIdentityDialog,
     AdminUserCreateDialog,
+    DirectoryImportDialog,
+    DirectorySyncDialog,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: '../../../../shared/ui/management-table-page.scss',
@@ -61,6 +66,9 @@ export class AdminUsersTab {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly testDialog = viewChild.required(TestIdentityDialog);
   readonly createDialog = viewChild.required(AdminUserCreateDialog);
+  /** 只有具備對應動作授權時才建立，所以是選用的。 */
+  readonly importDialog = viewChild(DirectoryImportDialog);
+  readonly syncDialog = viewChild(DirectorySyncDialog);
   readonly userColumns: TableColumn[] = [
     { id: 'name', label: '使用者', hideable: false },
     { id: 'email', label: '通知信箱' },
@@ -78,10 +86,21 @@ export class AdminUsersTab {
       if (this.store.users()) this.userTable()?.resetScroll();
     });
   }
-  /** 只有檢視器沒有持有的部分：切換身分與移除。 */
+  /** 只有檢視器沒有持有的部分：從 AD 更新、切換身分與移除。 */
   actions(user: AdminUserDto): MenuAction[] {
     const testing = this.session.testing();
+    const sync: MenuAction[] = this.session.has('identity.users.sync')
+      ? [
+          {
+            id: 'sync',
+            label: '從 AD 更新',
+            icon: 'repeat',
+            disabled: testing || !user.authentication?.adEnabled,
+          },
+        ]
+      : [];
     return [
+      ...sync,
       {
         id: 'test',
         label: '以此身分測試',
@@ -98,6 +117,7 @@ export class AdminUsersTab {
     ];
   }
   async userAction(action: string, user: AdminUserDto) {
+    if (action === 'sync') await this.sync(user);
     if (action === 'test') this.testDialog().open(user);
     if (action === 'delete') {
       if (
@@ -117,6 +137,29 @@ export class AdminUsersTab {
       } catch (error) {
         this.store.actionError.set(safeMessage(error));
       }
+    }
+  }
+  /** 單人「從 AD 更新」直接執行，結果以 toast 告知；AD 找不到或已停用時用警告語氣並說明不會自動停用。 */
+  private async sync(user: AdminUserDto) {
+    try {
+      const [item] = (await this.api.syncDirectoryUsers([user.id])).items;
+      this.store.readUsers();
+      if (!item) return;
+      if (writesUser(item))
+        this.store.toast.success(
+          '已從 AD 更新：' + user.displayName,
+          item.changes.map(describeChange).join('；'),
+        );
+      else if (item.outcome === 'unchanged' && !outcomeNote(item))
+        this.store.toast.info(user.displayName + ' 已與 AD 一致');
+      else
+        this.store.toast.show({
+          tone: 'warning',
+          title: user.displayName + '：' + outcomeLabel(item.outcome),
+          description: outcomeNote(item) || undefined,
+        });
+    } catch (error) {
+      this.store.actionError.set(safeMessage(error));
     }
   }
 }

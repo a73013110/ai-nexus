@@ -5,6 +5,15 @@
     [value]="store.search()"
     (valueChange)="store.find($event)"
   />
+  @if (session.has('identity.users.import')) {
+    <button
+      class="secondary-button directory-import-button"
+      [disabled]="session.testing()"
+      (click)="importDialog()?.open()"
+    >
+      <nx-icon name="upload" />從 AD 匯入
+    </button>
+  }
   <button class="primary-button" [disabled]="session.testing()" (click)="createDialog().open()">
     <nx-icon name="plus" />新增使用者
   </button>
@@ -21,6 +30,19 @@
   <div table-toolbar class="ui-table-toolbar">
     <h2>使用者</h2>
   </div>
+  @if (session.has('identity.users.sync')) {
+    <div table-actions>
+      <button
+        type="button"
+        class="quiet-button"
+        title="以 AD 資料更新本頁勾選的使用者"
+        [disabled]="session.testing() || !store.users()?.users?.length"
+        (click)="syncDialog()?.open(store.users()?.users || [])"
+      >
+        <nx-icon name="repeat" />從 AD 更新
+      </button>
+    </div>
+  }
   <table>
     <colgroup>
       <col nxTableColumn="name" />
@@ -138,3 +160,9 @@
 <nx-confirm-dialog />
 <nx-test-identity-dialog />
 <nx-admin-user-create-dialog />
+@if (session.has('identity.users.import')) {
+  <nx-directory-import-dialog />
+}
+@if (session.has('identity.users.sync')) {
+  <nx-directory-sync-dialog />
+}

@@ -49,7 +49,12 @@ export class UsersPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AdminUsersStore);
   readonly inspected = signal<AdminUserDto | null>(null);
-  readonly tour = computed(() => usersTour({ testing: this.session.testing() }));
+  readonly tour = computed(() =>
+    usersTour({
+      testing: this.session.testing(),
+      directoryImport: this.session.has('identity.users.import'),
+    }),
+  );
   /** 使用者列表目前這一頁；管理對話框的上下筆只在這一頁內移動。 */
   readonly pageUsers = computed(() => this.store.users()?.users ?? []);
   readonly inspectedIndex = computed(() => {
