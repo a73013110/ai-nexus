@@ -4,7 +4,7 @@
 
 ## 唯讀帳號的權限
 
-`Databases:Gd` 的帳號由 Integrations 與出勤共用，只給下列 SELECT，不給 `db_datareader`、其他表、寫入或 procedure：
+`Databases:Gd` 的帳號由 Integrations 與出勤共用。現有的唯讀帳號已能讀全庫；下列 SELECT 是另建最小權限帳號時的最低需求，不給 `db_datareader`、其他表、寫入或 procedure：
 
 ```sql
 -- Integrations：授權 view，契約與角色見 deploy/sql/authorized-views.sql
@@ -12,14 +12,14 @@ GRANT SELECT ON OBJECT::ainexus.AuthorizedRecords TO ainexus_reader;
 GRANT SELECT ON OBJECT::ainexus.AuthorizedRecordHistory TO ainexus_reader;
 -- 出勤：假日、帳號對應、假單（含跨區間與假別）、出差單
 GRANT SELECT ON dbo.Pub_Days TO ainexus_reader;
-GRANT SELECT (ID, ACCOUNT) ON dbo.Sys_User TO ainexus_reader;
+GRANT SELECT ON dbo.Sys_User TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Leave TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Leave_Group TO ainexus_reader;
 GRANT SELECT ON dbo.Form_LeaveKind TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Travel TO ainexus_reader;
 ```
 
-- `Sys_User` 是公文系統的帳號表，只授權用到的 `ID`、`ACCOUNT` 兩欄，不讓唯讀帳號讀到其他欄位。
+- `Sys_User` 是公文系統的帳號表，帳號對應讀 `ID`、`ACCOUNT`、`Disable`（排除停用帳號），整表授權。
 - 只用其中一個功能時，可只給該段。少了出勤需要的授權，該查詢被拒（日誌 3411），監控轉為 degraded。
 - `ApplicationIntent=ReadOnly` 只是連線意圖，不能取代這些權限。新增讀取的表時同步更新這份清單。
 

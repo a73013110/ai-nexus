@@ -117,6 +117,8 @@ public sealed class CalendarDaysTests
         session.Gd.AddDay(NationalDay);
         session.Gd.AddUser("G-T1", "twice");
         session.Gd.AddUser("G-T2", "twice");
+        // 排除停用列後仍有兩筆啟用，維持拒絕。
+        session.Gd.AddUser("G-T3", "twice", disabled: true);
         await CalendarSession.SetAdAccountAsync(session.Factory, session.HrId, adAccount);
 
         await AssertCodeAsync(await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, "國慶日"), TestContext.Current.CancellationToken),
@@ -124,6 +126,18 @@ public sealed class CalendarDaysTests
 
         Assert.Equal(new GdDay(false, false, null, "sys"), session.Gd.Day(NationalDay));
         Assert.Equal(["attendance_gd_account_unmapped"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
+    }
+
+    [Fact]
+    public async Task AnOperatorWithADisabledOldGdAccountWritesWithTheEnabledOne()
+    {
+        await using var session = await CalendarSession.CreateAsync();
+        session.Gd.AddDay(NationalDay);
+        session.Gd.AddUser("G-OLD", CalendarSession.HrAdAccount, disabled: true);
+
+        (await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, "國慶日"), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+
+        Assert.Equal(new GdDay(true, true, "國慶日", CalendarSession.HrGdId), session.Gd.Day(NationalDay));
     }
 
     [Fact]

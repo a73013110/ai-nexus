@@ -21,7 +21,7 @@ namespace AiNexus.IntegrationTests.Support;
 internal sealed class FakeGd : IDisposable
 {
     private const string Schema = """
-        CREATE TABLE [dbo].[Sys_User] (ID varchar(20) NOT NULL PRIMARY KEY, ACCOUNT varchar(50) NULL, NAME nvarchar(50) NULL, [Disable] bit NOT NULL DEFAULT 0);
+        CREATE TABLE [dbo].[Sys_User] (ID varchar(20) NOT NULL PRIMARY KEY, ACCOUNT varchar(50) NULL, NAME nvarchar(50) NULL, [Disable] bit NULL);
         CREATE TABLE [dbo].[Form_LeaveKind] (LeaveId varchar(10) NOT NULL PRIMARY KEY, LeaveKind varchar(20) NULL, isLeave bit NOT NULL DEFAULT 1, isShow bit NOT NULL DEFAULT 1);
         CREATE TABLE [dbo].[Form_Leave] (DesNo varchar(20) NOT NULL PRIMARY KEY, LeaveUserId varchar(20) NULL, LeaveDepNO int NULL, LeaveKind varchar(10) NULL,
             LeaveSDate datetime NULL, LeaveEDate datetime NULL, LeaveTime float NULL, DayOfWeek varchar(20) NULL, FlowOver varchar(20) NULL);
@@ -85,7 +85,9 @@ internal sealed class FakeGd : IDisposable
 
     public GdAccess Access(ILogger<GdAccess>? logger = null, TimeProvider? clock = null) => AccessTo(Databases, logger, clock);
 
-    public void AddUser(string id, string? account) => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME) VALUES (@id, @account, @id)", new { id, account });
+    /// <summary>加一個公文帳號；<paramref name="disabled"/> 寫進 <c>Disable</c>，null 模擬正式資料中未填的列。</summary>
+    public void AddUser(string id, string? account, bool? disabled = false)
+        => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME, [Disable]) VALUES (@id, @account, @id, @disabled)", new { id, account, disabled });
 
     public void AddDay(DateOnly day, bool morningOff = false, bool afternoonOff = false, string? remark = null, string userId = "sys")
         => Execute("INSERT [dbo].[Pub_Days] (hDate, UserId, AM, PM, hReMark) VALUES (@day, @userId, @morningOff, @afternoonOff, @remark)",

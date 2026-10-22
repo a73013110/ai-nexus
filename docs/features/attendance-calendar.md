@@ -17,7 +17,7 @@
 
 - `PUT /api/v1/attendance-calendar-days/{date}`，body `{ "morningOff": true, "afternoonOff": true, "remark": "國慶日" }`，回傳修改後的值。
 - 只 `UPDATE` 既有日期的 `AM`、`PM`、`hReMark` 與 `UserId`。GD 沒有這一天回 404 `attendance_calendar_day_not_found`，不新增、不刪除；日期列由公文系統建立。
-- `UserId` 寫操作者的公文帳號 `Sys_User.ID`（`Sys_User.ACCOUNT = Users.AdAccount`，經唯讀連線查）。沒有 AD 帳號、`Sys_User` 沒有或對到多筆回 403 `attendance_gd_account_unmapped`，不退回寫 `sys`。
+- `UserId` 寫操作者的公文帳號 `Sys_User.ID`（`Sys_User.ACCOUNT = Users.AdAccount`，經唯讀連線查）。停用列不算（全部停用時才退回全部列）；沒有 AD 帳號、`Sys_User` 沒有或仍對到多筆回 403 `attendance_gd_account_unmapped`，不退回寫 `sys`。
 - 備註去掉前後空白、空白存成 null；驗證只擋超過 255 字與控制字元。`hReMark` 是 varchar(255)：上限是位元組，取決於 GD 欄位的定序（Big5 中文每字 2 位元組，約 127 字），字碼頁沒有的字（罕用字、表情符號）會被換成問號。本系統不估算，而是在同一個交易寫入後讀回逐字比對，存不下或走樣就回滾並回 400 `attendance_calendar_remark_invalid`。
 - 沒有設定 `Databases:GdCalendar`：網站照常啟動、查詢照常，回寫回 503 `attendance_calendar_writeback_not_configured`。可寫入連線連不上、逾時或權限不足回 503 `attendance_gd_unavailable`（日誌 3409）。
 

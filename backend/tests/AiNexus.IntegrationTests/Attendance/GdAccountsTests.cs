@@ -25,6 +25,36 @@ public sealed class GdAccountsTests
     }
 
     [Fact]
+    public async Task DisabledGdAccountsAreDroppedUnlessNoneIsEnabled()
+    {
+        await FakeGd.WithAppAsync(async (gd, db) =>
+        {
+            gd.AddUser("G001", "alice", disabled: true);
+            gd.AddUser("G002", "alice");
+            gd.AddUser("G003", "bob", disabled: null);
+            gd.AddUser("G004", "bob", disabled: true);
+            gd.AddUser("G005", "carol", disabled: true);
+            gd.AddUser("G006", "carol", disabled: true);
+            gd.AddUser("G007", "dave", disabled: true);
+            var alice = FakeGd.AddAppUser(db, "alice");
+            var bob = FakeGd.AddAppUser(db, "bob");
+            var carol = FakeGd.AddAppUser(db, "carol");
+            var dave = FakeGd.AddAppUser(db, "dave");
+
+            var map = await new GdAccounts(db, gd.Access()).ResolveAsync([alice, bob, carol, dave], TestContext.Current.CancellationToken);
+
+            Assert.NotNull(map);
+            Assert.Equal(["G002"], map.GdIds[alice]);
+            // Disable 為 null 視為啟用。
+            Assert.Equal(["G003"], map.GdIds[bob]);
+            // 全部停用時退回全部列，已停用人員的歷史資料仍對得到。
+            Assert.Equal(["G005", "G006"], map.GdIds[carol].Order(StringComparer.Ordinal));
+            Assert.Equal(["G007"], map.GdIds[dave]);
+            Assert.Empty(map.Unmapped);
+        });
+    }
+
+    [Fact]
     public async Task UsersWithoutAnAdAccountOrAGdAccountOrWhoDoNotExistAreUnmapped()
     {
         await FakeGd.WithAppAsync(async (gd, db) =>

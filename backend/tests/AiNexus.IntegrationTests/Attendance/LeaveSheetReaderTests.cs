@@ -175,6 +175,30 @@ public sealed class LeaveSheetReaderTests
     }
 
     [Fact]
+    public async Task ADisabledGdAccountIsReadOnlyWhenItIsTheOnlyOne()
+    {
+        await RunAsync(async s =>
+        {
+            var carol = s.AddUser("carol");
+            var dave = s.AddUser("dave");
+            s.Gd.AddUser("G010", "carol", disabled: true);
+            s.Gd.AddUser("G011", "dave", disabled: true);
+            s.Gd.AddUser("G012", "dave");
+            s.Gd.AddKind("A", "特休");
+            s.Gd.AddLeave("L-10", "G010", "A", At(6, 9), At(6, 12), "Finish");
+            s.Gd.AddLeave("L-11", "G011", "A", At(6, 9), At(6, 12), "Finish");
+            s.Gd.AddLeave("L-12", "G012", "A", At(7, 9), At(7, 12), "Finish");
+
+            var lookup = await s.ReadAsync(Oct6, Oct8, users: [carol, dave]);
+
+            // 已停用人員只剩停用帳號，歷史假單照常查得到；有啟用帳號時只讀啟用的那個。
+            Assert.Equal(["L-10"], lookup.For(carol).Select(x => x.DesNo));
+            Assert.Equal(["L-12"], lookup.For(dave).Select(x => x.DesNo));
+            Assert.Empty(lookup.Unmapped);
+        });
+    }
+
+    [Fact]
     public async Task AMappedUserWithoutSheetsIsNotUnmapped()
     {
         await RunAsync(async s =>
