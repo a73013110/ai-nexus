@@ -26,6 +26,7 @@
 | `model-providers` | Inference | 15 秒 | `ModelCatalog` 既有快取（10 秒） | 全部不可用 failing；部分不可用 degraded |
 | `jobs` | Jobs | 30 秒 | `(Status, LeaseUntil, CreatedAt)` 索引 | 執行中租約過期或 1 小時內有失敗 degraded |
 | `mail` | Mail | 30 秒 | Pending 篩選索引、斷路器記憶體狀態 | 斷路器開著 failing；1 小時內有失敗或最久等待 > 10 分鐘 degraded；傳輸停用 idle |
+| `attendance-import` | Attendance | 30 秒 | `PunchFiles` 的最近一次匯入、`PunchImports` 的 `StartedAt` 索引、掃描結果（記憶體） | 來源資料夾讀不到 failing；有檔案最近一次匯入失敗，或超過 `StaleAfterHours` 沒有成功匯入 degraded；未啟用 idle |
 | `log-pipeline` | Diagnostics | 5 秒 | `DiagnosticHealth` 記憶體計數，日誌管線的完整指標（日誌頁只取 `Degraded`） | 有寫入失敗、遺失、損毀或待補寫 degraded |
 | `knowledge-index` | Knowledge | 30 秒 | 文件狀態索引，只數未完成與失敗 | 有失敗文件 degraded |
 | `usage-today` | Billing | 60 秒 | `UsageReports`，伺服器本地日，走 `CreatedAt` 覆蓋索引 | 失敗 ≥ 5 次且 > 20% degraded |

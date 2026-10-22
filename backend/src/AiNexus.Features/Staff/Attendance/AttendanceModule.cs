@@ -1,12 +1,16 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Staff.Attendance.Cards;
+using AiNexus.Features.Staff.Attendance.Imports;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Staff.Attendance;
 
 /// <summary>
-/// 出勤打卡（ADR 0018）。目前只有卡號對應：卡片、持有期間與未歸戶卡號；刷卡匯入、出勤紀錄與假日設定隨後加入。
+/// 出勤打卡（ADR 0018）。目前有卡號對應（卡片、持有期間與未歸戶卡號）與刷卡匯入；出勤紀錄與假日設定隨後加入。
 /// 卡號對應的寫入共用 AccessControl 的 <see cref="AdministrativeAudit"/>：同一個交易、行政寫入鎖與稽核，並發的重疊檢查靠它串行化。
+/// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
 /// </summary>
 public sealed class AttendanceModule : IFeatureModule
 {
@@ -14,6 +18,14 @@ public sealed class AttendanceModule : IFeatureModule
     {
         builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceCards);
         builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceCardsMaintain);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceImports);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.AttendanceImportsReimport);
+        builder.Services.AddSettings<AttendanceOptions, AttendanceOptionsValidator>(AttendanceOptions.Section);
+        builder.Services.AddSingleton<PunchImportGate>();
+        builder.Services.AddSingleton<PunchImportState>();
+        builder.Services.AddScoped<PunchImporter>();
+        builder.Services.AddHostedService<PunchImportWorker>();
+        builder.Services.AddMonitoringSource<AttendanceMonitoring>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
@@ -31,5 +43,9 @@ public sealed class AttendanceModule : IFeatureModule
         DeleteCardAssignment.Map(assignments);
 
         ListUnattributedCards.Map(api.MapGroup("/attendance-unattributed-cards").RequireAuthorization(Policies.AttendanceCards));
+
+        var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
+        ListPunchImports.Map(imports);
+        ReimportPunchFile.Map(imports);
     }
 }

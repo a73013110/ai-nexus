@@ -33,6 +33,8 @@ public static class Policies
     public const string MailMessagesResend = Prefix + FeatureCatalog.MailMessagesResend;
     public const string AttendanceCards = Prefix + FeatureCatalog.AttendanceCards;
     public const string AttendanceCardsMaintain = Prefix + FeatureCatalog.AttendanceCardsMaintain;
+    public const string AttendanceImports = Prefix + FeatureCatalog.AttendanceImports;
+    public const string AttendanceImportsReimport = Prefix + FeatureCatalog.AttendanceImportsReimport;
 
     /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";
