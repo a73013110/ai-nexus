@@ -10,9 +10,6 @@ namespace AiNexus.Features.Staff.Attendance.Imports;
 /// </summary>
 public static class PunchFileParser
 {
-    /// <summary>打卡機的台灣本地時間，固定 +08:00（資料庫以 check 限制）。</summary>
-    public static readonly TimeSpan MachineOffset = TimeSpan.FromHours(8);
-
     private const int FieldCount = 5;
     private const int MaxListedErrors = 3;
     private const int CardMaxLength = 32;
@@ -47,7 +44,7 @@ public static class PunchFileParser
 
     /// <summary>
     /// 解析整個檔案。空白行與只有 Ctrl-Z（舊系統的檔尾標記）的行略過；同一筆刷卡（卡號、時間、機器代號相同）在同一檔案重複出現只留第一筆。
-    /// 時間依 <see cref="MachineOffset"/> 解讀，出勤日取刷卡時間的日期，與檔名無關。
+    /// 時間依 <see cref="TaipeiTime"/> 解讀，出勤日取刷卡時間的日期，與檔名無關。
     /// </summary>
     public static IReadOnlyList<ParsedPunch> Parse(string text)
     {
@@ -87,7 +84,7 @@ public static class PunchFileParser
         if (!IsToken(eventCode, CodeMaxLength)) return (null, "的事件代號是空的、過長或含控制字元");
         if (!TryDate(fields[2].Trim(), out var date)) return (null, "的日期不是有效的 yyyyMMdd");
         if (!TryTime(fields[3].Trim(), out var time)) return (null, "的時間不是有效的 HHmmss");
-        return (new(card, new DateTimeOffset(date.ToDateTime(time), MachineOffset), date, machine, eventCode), "");
+        return (new(card, TaipeiTime.At(date.ToDateTime(time)), date, machine, eventCode), "");
     }
 
     private static bool IsToken(string value, int maxLength) => value.Length > 0 && value.Length <= maxLength && !value.Any(char.IsControl);

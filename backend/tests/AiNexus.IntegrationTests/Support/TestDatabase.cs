@@ -24,6 +24,7 @@ public sealed class TestDatabase : IDisposable
 {
     public const string Server = @"(localdb)\MSSQLLocalDB";
     private const string HostPrefix = "AiNexus_Test_", TemplatePrefix = "AiNexus_Template_";
+    private const string Collation = "Chinese_Taiwan_Stroke_CI_AS";
     private static readonly Lazy<Template> Shared = new(Template.Create);
     private static readonly string Cache = Path.Combine(Path.GetTempPath(), "ainexus-test-db");
     private static readonly List<Task> Drops = [];
@@ -55,6 +56,14 @@ public sealed class TestDatabase : IDisposable
         File.Copy(template.Log, log);
         var database = new TestDatabase(HostPrefix + id);
         Master($"CREATE DATABASE {Quote(database.Name)} ON (FILENAME = {Literal(data)}), (FILENAME = {Literal(log)}) FOR ATTACH");
+        return database;
+    }
+
+    /// <summary>不含 App 結構的空資料庫（collation 同範本），給模擬外部系統（例如公文系統 GD）的測試自己建表；釋放與過期清理同 <see cref="Create"/>。</summary>
+    public static TestDatabase CreateEmpty()
+    {
+        var database = new TestDatabase(HostPrefix + Guid.NewGuid().ToString("N"));
+        Master($"CREATE DATABASE {Quote(database.Name)} COLLATE {Collation}");
         return database;
     }
 
@@ -152,7 +161,7 @@ public sealed class TestDatabase : IDisposable
             if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
             Directory.CreateDirectory(folder);
             // 自己建庫才能指定檔案位置；collation 與 dacpac 相同，SqlPackage 再套用 RCSI 等資料庫選項。
-            Master($"CREATE DATABASE {Quote(name)} ON (NAME = N'AiNexus', FILENAME = {Literal(Data)}) LOG ON (NAME = N'AiNexus_log', FILENAME = {Literal(Log)}) COLLATE Chinese_Taiwan_Stroke_CI_AS");
+            Master($"CREATE DATABASE {Quote(name)} ON (NAME = N'AiNexus', FILENAME = {Literal(Data)}) LOG ON (NAME = N'AiNexus_log', FILENAME = {Literal(Log)}) COLLATE {Collation}");
             var connection = Connection(name);
             Publish(root, dacpac, connection);
             using (var db = new SqlConnection(connection))
