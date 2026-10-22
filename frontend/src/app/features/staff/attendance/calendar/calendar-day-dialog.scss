@@ -1,0 +1,129 @@
+// 放假時段是四張選項卡片（2×2）：外框與圓角是選項卡片的表面角色，選取時換成 --accent 的框與淡底，
+// 右上角補一個勾，不只靠顏色。卡片內的半格圖形與月曆格子的底色同一種語彙。
+.day-kind {
+  display: grid;
+  gap: var(--p-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.day-kind legend {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  width: 100%;
+  margin-bottom: var(--p-space-2);
+  padding: 0;
+  font-size: var(--text-label);
+  font-weight: 500;
+  small {
+    color: var(--secondary);
+    font-size: var(--p-font-xs);
+    font-weight: 400;
+  }
+}
+.day-kind-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-space-2);
+}
+.day-kind-option {
+  --holiday-glyph-size: 1.25rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-height: 3.75rem;
+  padding: var(--p-space-2) var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    scale var(--motion) var(--ease-spring);
+  &:hover {
+    background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  }
+  &:active {
+    scale: 0.98;
+  }
+  &.is-checked {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .day-kind:disabled & {
+    cursor: default;
+    opacity: 0.6;
+    scale: 1;
+  }
+}
+.day-kind-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.35;
+  b {
+    color: var(--ink);
+    font-size: var(--text-label);
+    font-weight: 600;
+  }
+  small {
+    color: var(--secondary);
+    font-size: var(--p-font-xs);
+  }
+}
+.day-kind-check {
+  --icon-size: var(--icon-sm);
+  position: absolute;
+  top: var(--p-space-2);
+  right: var(--p-space-2);
+  color: var(--accent);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity var(--motion-fast) var(--ease),
+    scale var(--motion) var(--ease-spring);
+  .is-checked > & {
+    opacity: 1;
+    scale: 1;
+  }
+}
+.day-remark {
+  display: grid;
+  gap: var(--field-label-gap);
+  label small {
+    margin-inline-start: var(--p-space-1);
+    color: var(--muted);
+    font-size: var(--p-font-xs);
+    font-weight: 400;
+  }
+}
+.day-remark-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+  margin: 0;
+}
+.day-remark-count {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  &.is-near {
+    color: var(--warning);
+  }
+}
+@media (forced-colors: active) {
+  .day-kind-option.is-checked {
+    outline: 2px solid Highlight;
+  }
+}

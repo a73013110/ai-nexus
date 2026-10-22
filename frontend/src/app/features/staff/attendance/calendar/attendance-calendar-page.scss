@@ -1,9 +1,14 @@
-.calendar-nav {
+.calendar-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--p-space-2);
+  gap: var(--p-space-2) var(--p-space-3);
   margin-bottom: var(--p-space-3);
+}
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
 }
 .calendar-month {
   min-width: 8.5rem;
@@ -12,9 +17,116 @@
   font-size: var(--text-heading);
   font-variant-numeric: tabular-nums;
 }
-.calendar-nav .form-note {
-  margin: 0 0 0 var(--p-space-2);
+.calendar-toolbar .form-note {
+  margin: 0;
 }
+.calendar-view-switch {
+  margin-inline-start: auto;
+}
+.calendar-error,
+.calendar-read-only {
+  margin-bottom: var(--p-space-3);
+}
+
+// 月曆格子：放假的半天鋪上 --accent 的淡色（上半＝上午、下半＝下午），半天之間留一條虛線，
+// 文字只標放假與週末上班；窄容器只留底色與未建立的圓點。
+.holiday-calendar.is-loading {
+  opacity: 0.6;
+  transition: opacity var(--motion) var(--ease);
+}
+.holiday-shade {
+  --holiday-tint: color-mix(in srgb, var(--accent) 11%, transparent);
+  --holiday-edge: 1px dashed color-mix(in srgb, var(--accent) 32%, transparent);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--holiday-tint);
+  &[data-kind='FullDay'] {
+    display: none;
+  }
+  &[data-kind='MorningOff'] {
+    bottom: 50%;
+    border-bottom: var(--holiday-edge);
+  }
+  &[data-kind='AfternoonOff'] {
+    top: 50%;
+    border-top: var(--holiday-edge);
+  }
+}
+.holiday-type {
+  color: var(--accent);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  &[data-kind='FullDay'] {
+    color: var(--secondary);
+  }
+  &[data-kind='AfternoonOff'] {
+    margin-top: auto;
+  }
+}
+// 全天與上午的標籤要留在上半格內、不壓到半天的分界線：格子加高一點，夠寬時改放在日期右側。
+.holiday-calendar {
+  --calendar-cell-height: 7rem;
+}
+@container month-calendar (width >= 44rem) {
+  .holiday-type:not([data-kind='AfternoonOff']) {
+    position: absolute;
+    top: calc(var(--p-space-2) - 0.125rem);
+    inset-inline-end: var(--p-space-2);
+    line-height: 1.75rem;
+  }
+}
+.holiday-remark {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.holiday-missing {
+  color: var(--warning);
+  font-size: var(--p-font-xs);
+}
+.holiday-missing-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--warning);
+}
+@container month-calendar (width < 36rem) {
+  .holiday-type,
+  .holiday-remark {
+    display: none;
+  }
+  .holiday-missing {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-top: auto;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--warning);
+    font-size: 0;
+  }
+}
+.holiday-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2) var(--p-space-5);
+  margin: var(--p-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-space-2);
+  }
+}
+
 .calendar-table table {
   table-layout: fixed;
   min-width: 40rem;
@@ -23,10 +135,15 @@
   width: 9rem;
 }
 .calendar-type-column {
-  width: 8rem;
+  width: 9rem;
 }
 .calendar-half-column {
   width: 5rem;
+}
+.calendar-type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
 }
 .calendar-today {
   margin-inline-start: var(--p-space-2);

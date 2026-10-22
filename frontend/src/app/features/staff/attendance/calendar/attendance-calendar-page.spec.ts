@@ -61,28 +61,60 @@ function setup({
   const dialog = () =>
     fixture.debugElement.query((item) => item.componentInstance instanceof CalendarDayDialog)
       .componentInstance as CalendarDayDialog;
-  return { fixture, root, api, dialog };
+  /** 本月第 `day` 天的月曆格子。 */
+  const cell = (day: number) => {
+    const month = fixture.componentInstance.month();
+    return root.querySelector<HTMLElement>(
+      `.calendar-day[data-date="${month}-${String(day).padStart(2, '0')}"]`,
+    )!;
+  };
+  const showList = async () => {
+    root.querySelectorAll<HTMLButtonElement>('.calendar-view-switch button')[1].click();
+    await fixture.whenStable();
+  };
+  return { fixture, root, api, dialog, cell, showList };
 }
 
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  };
+});
+
 describe('AttendanceCalendarPage', () => {
-  beforeAll(() => {
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
-      this.setAttribute('open', '');
-    };
-    HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
-      this.removeAttribute('open');
-    };
-  });
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.unstubAllGlobals();
   });
 
-  it('lists the whole month and marks the dates the document system does not have', async () => {
-    const { fixture, root, api } = setup();
+  it('shows the month as a calendar with whole and half days off', async () => {
+    const { fixture, root, api, cell } = setup();
     await fixture.whenStable();
     const [from, to] = api.calendarDays.mock.calls[0];
     expect(from).toMatch(/-01$/);
+    expect(root.querySelectorAll('.calendar-day:not(.is-outside)')).toHaveLength(
+      Number(to.slice(8)),
+    );
+    expect(cell(1).querySelector('.holiday-shade')?.getAttribute('data-kind')).toBe('DayOff');
+    expect(cell(1).textContent).toContain('國慶日');
+    expect(cell(1).getAttribute('aria-label')).toContain('放假，國慶日');
+    expect(cell(2).querySelector('.holiday-shade')?.getAttribute('data-kind')).toBe('AfternoonOff');
+    expect(cell(2).textContent).toContain('下午放假');
+    expect(cell(3).getAttribute('aria-label')).toContain('上班日');
+    expect(cell(4).textContent).toContain('未建立');
+    expect(cell(4).getAttribute('aria-disabled')).toBe('true');
+    expect(cell(1).hasAttribute('aria-disabled')).toBe(false);
+    expect(root.querySelector('.calendar-off-days')?.textContent).toContain('放假 2 天');
+  });
+
+  it('keeps the day-by-day list as a second view of the same month', async () => {
+    const { fixture, root, api, showList } = setup();
+    await fixture.whenStable();
+    await showList();
+    const [, to] = api.calendarDays.mock.calls[0];
     const rows = root.querySelectorAll('.calendar-table tbody tr');
     expect(rows).toHaveLength(Number(to.slice(8)));
     expect(rows[0].textContent).toContain('放假');
@@ -91,27 +123,35 @@ describe('AttendanceCalendarPage', () => {
     expect(rows[3].textContent).toContain('未建立');
     expect(rows[0].querySelector('.calendar-edit')).not.toBeNull();
     expect(rows[3].querySelector('.calendar-edit')).toBeNull();
+    expect(root.querySelector('nx-month-calendar')).toBeNull();
+    expect(api.calendarDays).toHaveBeenCalledOnce();
   });
 
   it('explains an unavailable document system instead of showing an empty month', async () => {
-    const { fixture, root } = setup({
+    const { fixture, root, cell, showList } = setup({
       read: async () => {
         throw new ApiError(503, 'attendance_gd_unavailable', undefined, ISSUE);
       },
     });
     await fixture.whenStable();
+    const notice = root.querySelector('.calendar-error')!;
+    expect(notice.textContent).toContain('公文系統暫時無法連線');
+    expect(notice.textContent).toContain(ISSUE);
+    expect(cell(4).textContent).not.toContain('未建立');
+    await showList();
     const state = root.querySelector('nx-table-state')!;
     expect(state.textContent).toContain('公文系統暫時無法連線');
-    expect(state.textContent).toContain(ISSUE);
     expect(root.querySelectorAll('.calendar-table tbody tr')).toHaveLength(0);
   });
 
   it('shows why a read-only document system refuses the change and stops offering edits', async () => {
-    const { fixture, root, api, dialog } = setup();
+    const { fixture, root, api, dialog, cell } = setup();
     await fixture.whenStable();
-    root.querySelector<HTMLButtonElement>('.calendar-edit')!.click();
+    cell(1).click();
     await fixture.whenStable();
+    expect(cell(1).getAttribute('aria-selected')).toBe('true');
     const editor = dialog();
+    expect(editor.title()).toMatch(/^編輯假日：\d{4} 年 \d+ 月 1 日$/);
     editor.update('remark', '補假');
     await editor.save(new Event('submit'));
     await fixture.whenStable();
@@ -122,17 +162,16 @@ describe('AttendanceCalendarPage', () => {
     expect(editor.error()).toContain('公文系統的連線設為唯讀');
     expect(root.querySelector('.calendar-day-error')?.textContent).toContain('唯讀');
     expect(root.querySelector('.calendar-read-only')).not.toBeNull();
-    expect(root.querySelector('.calendar-edit')).toBeNull();
+    expect(root.querySelector('[role="grid"]')?.getAttribute('aria-readonly')).toBe('true');
   });
 
   it('writes the saved day back into the month without rereading it', async () => {
-    const { fixture, root, api, dialog } = setup({
+    const { fixture, root, api, dialog, cell, showList } = setup({
       update: async (date: string, body: Omit<CalendarDayDto, 'date'>) => ({ date, ...body }),
     });
     await fixture.whenStable();
-    root.querySelector<HTMLButtonElement>('.calendar-edit')!.click();
-    dialog().update('morningOff', false);
-    dialog().update('afternoonOff', false);
+    cell(1).click();
+    dialog().choose('FullDay');
     dialog().update('remark', ' 改為上班 ');
     await dialog().save(new Event('submit'));
     await fixture.whenStable();
@@ -141,6 +180,9 @@ describe('AttendanceCalendarPage', () => {
       afternoonOff: false,
       remark: '改為上班',
     });
+    expect(cell(1).getAttribute('aria-label')).toContain('上班日，改為上班');
+    expect(cell(1).querySelector('.holiday-shade')?.getAttribute('data-kind')).toBe('FullDay');
+    await showList();
     const first = root.querySelector('.calendar-table tbody tr')!;
     expect(first.textContent).toContain('改為上班');
     expect(first.textContent).toContain('上班日');
@@ -148,8 +190,46 @@ describe('AttendanceCalendarPage', () => {
   });
 
   it('offers no edits without the maintain action', async () => {
-    const { fixture, root } = setup({ maintain: false });
+    const { fixture, root, dialog, cell, showList } = setup({ maintain: false });
     await fixture.whenStable();
+    expect(root.querySelector('[role="grid"]')?.getAttribute('aria-readonly')).toBe('true');
+    cell(1).click();
+    await fixture.whenStable();
+    expect(dialog().day()).toBeNull();
+    await showList();
     expect(root.querySelector('.calendar-edit')).toBeNull();
+  });
+});
+
+describe('CalendarDayDialog', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.unstubAllGlobals();
+  });
+
+  it('offers the four combinations as one choice and tracks what changed', async () => {
+    const { fixture, root, dialog, cell } = setup();
+    await fixture.whenStable();
+    cell(2).click();
+    await fixture.whenStable();
+    const editor = dialog();
+    const options = [...root.querySelectorAll<HTMLInputElement>('.day-kind input[type="radio"]')];
+    expect(options.map((option) => option.value)).toEqual([
+      'FullDay',
+      'MorningOff',
+      'AfternoonOff',
+      'DayOff',
+    ]);
+    expect(options.find((option) => option.checked)?.value).toBe('AfternoonOff');
+    expect(root.querySelector('.day-kind legend small')).toBeNull();
+    options[3].click();
+    await fixture.whenStable();
+    expect(editor.draft()).toMatchObject({ morningOff: true, afternoonOff: true });
+    expect(editor.dirty()).toBe(true);
+    expect(root.querySelector('.day-kind legend small')?.textContent).toContain('原為「下午放假」');
+    editor.revert();
+    await fixture.whenStable();
+    expect(editor.dirty()).toBe(false);
+    expect(editor.kind()).toBe('AfternoonOff');
   });
 });
