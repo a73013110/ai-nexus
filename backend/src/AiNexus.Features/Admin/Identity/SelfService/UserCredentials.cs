@@ -82,7 +82,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
     private async Task<bool> TakenAsync(User user, string name, CancellationToken ct)
     {
         if (await db.Users.AnyAsync(x => x.Id != user.Id && (x.LocalAccount == name || x.AdAccount == name), ct)) return true;
-        // AD 首次登入自動建立的使用者沒有 AdAccount，要比對完整帳號的短名（與管理端建立帳號同一規則）。
+        // 較早由 AD 首次登入自動建立的使用者沒有 AdAccount，要比對完整帳號的短名（與管理端建立帳號同一規則）。
         var accounts = await db.Users.AsNoTracking().Where(x => x.Id != user.Id && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
         return accounts.Any(x => string.Equals(UserAccounts.AccountName(x), name, StringComparison.OrdinalIgnoreCase));
     }

@@ -66,11 +66,12 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         try
         {
             var user = await db.Users.SingleOrDefaultAsync(x => x.Sid == sid, ct);
+            string? adAccount = null;
             if (user is null)
             {
                 var name = UserAccounts.AccountName(account);
                 if (!UserAccounts.IsValid(name)) return IdentityErrors.InvalidAccount;
-                var adAccount = UserAccounts.Normalize(name);
+                adAccount = UserAccounts.Normalize(name);
                 user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
                 if (user is not null && user.Sid.StartsWith("managed:", StringComparison.Ordinal))
                 { user.Sid = sid; user.Account = account; }
@@ -80,7 +81,9 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
             var now = clock.GetUtcNow();
             if (user is null)
             {
-                user = new User { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = now, DirectoryVerifiedAt = now };
+                // 走到這裡代表沒有其他使用者佔用這個 AdAccount（上面已綁定預建帳號或拒絕），寫入與管理端預建相同的正規化值；
+                // 出勤以它對應公文帳號（GdAccounts），自動建立時留空就查不到假單。
+                user = new User { Sid = sid, Account = account, AdAccount = adAccount, DisplayName = displayName, LastSeenAt = now, DirectoryVerifiedAt = now };
                 SyncEmail(user, directoryEmail, now);
                 db.Users.Add(user);
                 db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
