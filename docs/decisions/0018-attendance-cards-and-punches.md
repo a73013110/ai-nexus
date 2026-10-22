@@ -77,8 +77,8 @@
 
 ## 舊資料轉移
 
-- 舊 `EmpClock.EmpNo` 是匯入當下的持有人：以（卡號、職號）的最早與最晚刷卡還原持有期間。職號經 `EmpCard.Account`（公文帳號 `Sys_User.ID`）→ `Sys_User.ACCOUNT` → `Users.AdAccount` 對到使用者，對不到的列清單人工處理。
-- 刷卡原始資料全部轉入；`UNKNOWN_` 開頭的對應不轉，這些卡自然成為未歸戶卡號。
+- 舊 `EmpClock.EmpNo` 是匯入當下的持有人：卡號上職號連續的刷卡為一段持有期間。職號經 `EmpCard.Account`（`Sys_User.ID`）→ `Sys_User.ACCOUNT` → `Users.AdAccount` 對到使用者，對不到的列清單人工處理。
+- 刷卡全部轉入；`UNKNOWN_` 的對應不轉，這些卡成為未歸戶卡號。見[操作文件](../operations/attendance-migration.md)。
 
 ## 不採用
 
