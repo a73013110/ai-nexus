@@ -9,6 +9,9 @@ namespace AiNexus.Data.App.Attendance;
 /// </summary>
 public sealed class Punch
 {
+    /// <summary>機器代號與事件代號的長度上限。</summary>
+    public const int CodeMaxLength = 16;
+
     /// <summary>自動遞增；量大不用 GUID。</summary>
     public long Id { get; set; }
 
@@ -36,8 +39,8 @@ internal sealed class PunchConfiguration : IEntityTypeConfiguration<Punch>
         punch.HasKey(x => x.Id);
         punch.Property(x => x.Id).UseIdentityColumn();
         punch.Property(x => x.CardNumber).HasMaxLength(Card.CardNumberMaxLength);
-        punch.Property(x => x.MachineCode).HasMaxLength(16);
-        punch.Property(x => x.EventCode).HasMaxLength(16);
+        punch.Property(x => x.MachineCode).HasMaxLength(Punch.CodeMaxLength);
+        punch.Property(x => x.EventCode).HasMaxLength(Punch.CodeMaxLength);
         punch.HasOne<PunchFile>().WithMany().HasForeignKey(x => x.PunchFileId).OnDelete(DeleteBehavior.Restrict);
     }
 }

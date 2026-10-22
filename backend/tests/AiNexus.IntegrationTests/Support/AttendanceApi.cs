@@ -137,8 +137,9 @@ internal sealed class PunchSource : IDisposable
 
     public PunchSource() => Directory.CreateDirectory(Folder);
 
-    public AppFactory CreateFactory(Action<AttendanceOptions>? configure = null, Action<IServiceCollection>? services = null)
-        => new(clock: Clock, services: collection =>
+    /// <summary><paramref name="administrators"/> 有值時改用 LDAP 登入並把這些帳號設為管理員（測試身分的情境）。</summary>
+    public AppFactory CreateFactory(Action<AttendanceOptions>? configure = null, Action<IServiceCollection>? services = null, string[]? administrators = null)
+        => new(ldap: administrators is not null, administrators: administrators, clock: Clock, services: collection =>
         {
             collection.PostConfigure<AttendanceOptions>(options =>
             {
@@ -194,8 +195,9 @@ internal sealed class PunchImportSession : IAsyncDisposable
         return new() { Source = source, Factory = factory, Hr = await factory.SignedInAsync("hr"), HrId = hrId };
     }
 
-    /// <summary>執行一次排程掃描（hosted worker 在測試裡不啟動，由測試直接驅動）。</summary>
-    public Task<PunchScanResult> ScanAsync() => ActivatorUtilities.CreateInstance<PunchImportWorker>(Factory.Services).ScanAsync(CancellationToken.None);
+    /// <summary>執行一次排程掃描（hosted worker 在測試裡不啟動，由測試直接驅動）；<paramref name="log"/> 用來檢查 worker 的日誌。</summary>
+    public Task<PunchScanResult> ScanAsync(LogRecorder<PunchImportWorker>? log = null)
+        => ActivatorUtilities.CreateInstance<PunchImportWorker>(Factory.Services, log is null ? [] : [log]).ScanAsync(CancellationToken.None);
 
     public async Task<Result<PunchImport>> ReimportAsync(string name, Guid? requestedBy = null)
     {

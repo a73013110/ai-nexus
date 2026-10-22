@@ -76,6 +76,20 @@ public sealed class ImportPunchFilesTests
     }
 
     [Fact]
+    public async Task AFileOverTheSizeLimitFailsAndTellsTheLimit()
+    {
+        await using var session = await PunchImportSession.CreateAsync(options => options.Import.MaxFileBytes = 1024);
+        session.Source.Write(Oct1, [.. Enumerable.Range(0, 60).Select(i => Line($"A{i:000}", 10, 1, 8, i))]);
+
+        var scan = await session.ScanAsync();
+
+        Assert.Equal((0, 1), (scan.Imported, scan.Failed));
+        Assert.Empty(await session.PunchesAsync());
+        // 上限不到 1 MB 時以 KB 表示，不會顯示成「0 MB」。
+        Assert.Contains("1 KB", Assert.Single(await session.ImportsAsync()).ErrorMessage);
+    }
+
+    [Fact]
     public async Task ReimportingAChangedFileReplacesWhatItImportedBefore()
     {
         await using var session = await PunchImportSession.CreateAsync();

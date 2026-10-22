@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Staff.Attendance.Imports;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using static AiNexus.IntegrationTests.Support.PunchSource;
 
 namespace AiNexus.IntegrationTests.Attendance;
@@ -133,24 +134,29 @@ public sealed class PunchImportScanTests
     }
 
     [Fact]
-    public async Task AnUnreadableSourceFolderIsReportedAndRecovers()
+    public async Task AnUnreadableSourceFolderIsReportedOnceAndRecovers()
     {
         await using var session = await PunchImportSession.CreateAsync();
         var state = session.Factory.Services.GetRequiredService<PunchImportState>();
+        var log = new LogRecorder<PunchImportWorker>();
         Directory.Delete(session.Source.Folder, recursive: true);
 
-        var down = await session.ScanAsync();
+        var down = await session.ScanAsync(log);
 
         Assert.Equal(new PunchScanResult(false, 0, 0, 0, 0), down);
-        Assert.NotNull(state.Current.SourceError);
+        Assert.NotNull(state.SourceError);
         // 沒有檔案可記錄，所以不會有匯入列。
         Assert.Empty(await session.ImportsAsync());
+        // 中斷期間每個週期都讀不到，日誌只在轉換時記一次。
+        Assert.False((await session.ScanAsync(log)).SourceAvailable);
+        Assert.Equal([(3403, LogLevel.Warning)], log.Recorded);
 
         Directory.CreateDirectory(session.Source.Folder);
         session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
-        var up = await session.ScanAsync();
+        var up = await session.ScanAsync(log);
 
         Assert.Equal((true, 1), (up.SourceAvailable, up.Imported));
-        Assert.Null(state.Current.SourceError);
+        Assert.Null(state.SourceError);
+        Assert.Equal([3403, 3404], log.Recorded.Select(x => x.Id));
     }
 }

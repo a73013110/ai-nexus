@@ -9,9 +9,8 @@ namespace AiNexus.Features.Staff.Attendance.Imports;
 /// <summary>
 /// 以檔案為單位的刷卡匯入（ADR 0018）：每日檔是當天的快照，重匯時這個檔先前寫入的列要換成新內容。
 /// <para>
-/// <b>交易</b>：解析在交易外（讀不到或格式錯誤都不碰資料庫），之後在單一交易內依序寫檔案列（<c>LastImportId</c> 為空）、刷卡的增刪、匯入列、
-/// 最後更新檔案列的版本與 <c>LastImportId</c>（兩張表互相參照，只能照這個順序）。任何錯誤整個回復，<c>Punches</c> 維持上次成功的內容；
-/// 失敗的匯入列另外在回復之後的新交易寫入，否則會跟著回復而消失。
+/// <b>交易</b>：解析在交易外（讀不到或格式錯誤都不碰資料庫），之後在單一交易內寫刷卡的增刪與匯入列，再讓檔案列指向它。
+/// 任何錯誤整個回復，<c>Punches</c> 維持上次成功的內容；失敗的匯入列另外在回復之後的新交易寫入，否則會跟著回復而消失。
 /// </para>
 /// <para>
 /// <b>去重</b>：刷卡的唯一鍵是（卡號、時間、機器代號）。新內容裡已屬於別的檔的那一筆不重寫，歸先寫入的檔。
@@ -31,10 +30,8 @@ public sealed partial class PunchImporter(
     ILogger<PunchImporter> logger,
     TimeProvider clock)
 {
-    private const int ErrorMessageMaxLength = 1000;
-
     /// <summary>HR 手動重匯：不論檔案有沒有變動都重匯。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
-    public async Task<Result<PunchImport>> ReimportAsync(string fileName, Guid? requestedBy, CancellationToken ct)
+    public async Task<Result<PunchImport>> ReimportAsync(string fileName, Guid requestedBy, CancellationToken ct)
     {
         await gate.Gate.WaitAsync(ct);
         try
@@ -50,8 +47,7 @@ public sealed partial class PunchImporter(
     }
 
     /// <summary>
-    /// 排程匯入：進入互斥鎖後以最新的檔案與資料庫狀態重新判斷（<see cref="PunchImportPlanner.NeedsImport"/>），
-    /// 等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
+    /// 排程匯入：進入互斥鎖後以最新的檔案與資料庫狀態重新判斷，等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
     /// </summary>
     public async Task<PunchImport?> ImportIfChangedAsync(string fileName, CancellationToken ct)
     {
@@ -60,20 +56,15 @@ public sealed partial class PunchImporter(
         {
             var located = await Task.Run(() => Locate(fileName), ct);
             if (!located.IsSuccess) return null;
-            var info = located.Value;
-            var file = await db.Set<PunchFile>().AsNoTracking().SingleOrDefaultAsync(x => x.FileName == fileName, ct);
-            var last = file?.LastImportId is { } lastId ? await db.Set<PunchImport>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == lastId, ct) : null;
-            var retryAfter = TimeSpan.FromSeconds(options.Value.Import.FailedRetrySeconds);
-            if (!PunchImportPlanner.NeedsImport(file, last, ModifiedAt(info), info.Length, clock.GetUtcNow(), retryAfter)) return null;
-            return await ImportAsync(info, PunchImportTriggers.Scheduled, null, ct);
+            var current = await PunchImportPlanner.States(db, fileName).SingleOrDefaultAsync(ct);
+            if (!PunchImportPlanner.NeedsImport(current, located.Value, clock.GetUtcNow(), options.Value.Import)) return null;
+            return await ImportAsync(located.Value, PunchImportTriggers.Scheduled, null, ct);
         }
         finally
         {
             gate.Gate.Release();
         }
     }
-
-    internal static DateTimeOffset ModifiedAt(FileInfo info) => new(info.LastWriteTimeUtc, TimeSpan.Zero);
 
     private Result<FileInfo> Locate(string fileName)
     {
@@ -90,12 +81,10 @@ public sealed partial class PunchImporter(
         }
     }
 
-    private async Task<PunchImport> ImportAsync(FileInfo info, string trigger, Guid? requestedBy, CancellationToken ct)
+    private async Task<PunchImport> ImportAsync(FileInfo info, string trigger, Guid? requester, CancellationToken ct)
     {
-        var started = clock.GetUtcNow();
         // 版本在讀檔之前取：讀的途中檔案又被寫入，記下的是較舊的版本，下一輪掃描會發現不同而重匯；反過來才會漏掉。
-        var source = new SourceVersion(info.Name, ModifiedAt(info), info.Length);
-        var requester = trigger == PunchImportTriggers.Manual ? requestedBy : null;
+        var attempt = new Attempt(info.Name, PunchImportPlanner.ModifiedAt(info), info.Length, trigger, requester, clock.GetUtcNow());
         string failure;
         string reason;
         try
@@ -103,10 +92,10 @@ public sealed partial class PunchImporter(
             var punches = PunchFileParser.Parse(PunchFileParser.Decode(await ReadAsync(info, ct)));
             try
             {
-                var committed = await CommitAsync(source, trigger, requester, started, punches, ct);
-                LogImported(logger, trigger, committed.Import.PunchCount, committed.Import.PunchFileId);
-                if (committed.Requeued > 0) LogRequeued(logger, committed.Requeued, committed.Import.PunchFileId);
-                return committed.Import;
+                var (import, requeued) = await CommitAsync(attempt, punches, ct);
+                LogImported(logger, trigger, import.PunchCount, import.PunchFileId);
+                if (requeued > 0) LogRequeued(logger, requeued, import.PunchFileId);
+                return import;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -122,7 +111,7 @@ public sealed partial class PunchImporter(
         {
             (failure, reason) = ($"無法讀取來源檔（{ex.GetType().Name}）。", "read");
         }
-        var failed = await RecordFailureAsync(source, trigger, requester, started, failure, ct);
+        var failed = await RecordFailureAsync(attempt, failure, ct);
         LogFailed(logger, trigger, reason, failed.PunchFileId);
         return failed;
     }
@@ -131,56 +120,43 @@ public sealed partial class PunchImporter(
     private async Task<byte[]> ReadAsync(FileInfo info, CancellationToken ct)
     {
         var limit = options.Value.Import.MaxFileBytes;
-        if (info.Length > limit) throw new PunchFileFormatException($"檔案超過 {limit / 1024 / 1024} MB 的上限。");
+        if (info.Length > limit) throw TooLarge(limit);
         await using var stream = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096, useAsync: true);
         using var buffer = new MemoryStream();
-        // 上面的大小檢查用的是 stat 的結果；stat 之後檔案又長大時，讀完再檢查一次。
         await stream.CopyToAsync(buffer, ct);
-        if (buffer.Length > limit) throw new PunchFileFormatException($"檔案超過 {limit / 1024 / 1024} MB 的上限。");
+        // 上面的檢查用的是 stat 的結果；stat 之後檔案又長大時，讀完再檢查一次。
+        if (buffer.Length > limit) throw TooLarge(limit);
         return buffer.ToArray();
     }
 
-    private async Task<Committed> CommitAsync(SourceVersion source, string trigger, Guid? requester, DateTimeOffset started, IReadOnlyList<ParsedPunch> punches, CancellationToken ct)
+    private static PunchFileFormatException TooLarge(int limit)
+        => new(limit >= 1 << 20 ? $"檔案超過 {limit / (double)(1 << 20):0.#} MB 的上限。" : $"檔案超過 {limit / 1024} KB 的上限。");
+
+    private async Task<(PunchImport Import, int Requeued)> CommitAsync(Attempt attempt, IReadOnlyList<ParsedPunch> punches, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var file = await db.Set<PunchFile>().SingleOrDefaultAsync(x => x.FileName == source.FileName, ct);
-        if (file is null)
-        {
-            file = new() { FileName = source.FileName };
-            db.Add(file);
-            await db.SaveChangesAsync(ct);
-        }
+        var file = await FileRowAsync(attempt.FileName, ct);
 
-        var owned = await db.Set<Punch>().Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
-        var incoming = punches.ToDictionary(x => KeyOf(x));
-        // 只載入新內容涵蓋的出勤日、屬於別的檔的刷卡，用來辨識重複；範圍之外不可能與新內容重複。
-        var foreign = new HashSet<PunchKey>();
+        // 只載入新內容涵蓋的出勤日、屬於別的檔的刷卡：同一筆刷卡的出勤日必定相同，範圍之外不可能重複。
+        var foreign = new HashSet<(string, long, string)>();
         if (punches.Count > 0)
         {
             var (first, last) = (punches.Min(x => x.AttendanceDate), punches.Max(x => x.AttendanceDate));
             var rows = await db.Set<Punch>().AsNoTracking().Where(x => x.PunchFileId != file.Id && x.AttendanceDate >= first && x.AttendanceDate <= last)
                 .Select(x => new { x.CardNumber, x.PunchedAt, x.MachineCode }).ToListAsync(ct);
-            foreign = [.. rows.Select(x => KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode))];
+            foreign = [.. rows.Select(x => ParsedPunch.KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode))];
         }
 
-        // 與其刪光再全部重寫，不如只動有差異的列：結果相同（該檔的列等於新內容扣掉別的檔已有的），寫入量小、也不會改變不變的列的 Id。
-        var kept = 0;
+        // 結果與「刪光再寫入新內容」相同，但只動有差異的列：寫入量小，不變的列也保留原本的 Id。
+        var incoming = punches.ToDictionary(x => x.Key);
+        var owned = await db.Set<Punch>().Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
         var dropped = new List<Punch>();
-        var ownedKeys = new HashSet<PunchKey>();
         foreach (var row in owned)
         {
-            var key = KeyOf(row.CardNumber, row.PunchedAt, row.MachineCode);
-            if (incoming.TryGetValue(key, out var punch))
-            {
-                ownedKeys.Add(key);
-                row.EventCode = punch.EventCode;
-                kept++;
-            }
+            if (incoming.Remove(ParsedPunch.KeyOf(row.CardNumber, row.PunchedAt, row.MachineCode), out var punch)) row.EventCode = punch.EventCode;
             else dropped.Add(row);
         }
-        var added = incoming.Where(x => !ownedKeys.Contains(x.Key) && !foreign.Contains(x.Key)).Select(x => x.Value).ToList();
-        db.RemoveRange(dropped);
-        db.AddRange(added.Select(x => new Punch
+        var added = incoming.Values.Where(x => !foreign.Contains(x.Key)).Select(x => new Punch
         {
             PunchFileId = file.Id,
             CardNumber = x.CardNumber,
@@ -188,27 +164,14 @@ public sealed partial class PunchImporter(
             AttendanceDate = x.AttendanceDate,
             MachineCode = x.MachineCode,
             EventCode = x.EventCode,
-        }));
+        }).ToList();
+        db.RemoveRange(dropped);
+        db.AddRange(added);
         var requeued = await RequeueNeighboursAsync(file, dropped, ct);
 
-        var import = new PunchImport
-        {
-            PunchFileId = file.Id,
-            TriggerKind = trigger,
-            RequestedById = requester,
-            StartedAt = started,
-            FinishedAt = Later(started),
-            SourceModifiedAt = source.ModifiedAt,
-            SourceSize = source.Size,
-            PunchCount = kept + added.Count,
-            Status = PunchImportStatuses.Succeeded,
-        };
-        db.Add(import);
-        await db.SaveChangesAsync(ct);
-        (file.ImportedModifiedAt, file.ImportedSize, file.LastImportId) = (source.ModifiedAt, source.Size, import.Id);
-        await db.SaveChangesAsync(ct);
+        var import = await RecordAsync(file, attempt, owned.Count - dropped.Count + added.Count, null, ct);
         await transaction.CommitAsync(ct);
-        return new(import, requeued);
+        return (import, requeued);
     }
 
     /// <summary>
@@ -219,59 +182,66 @@ public sealed partial class PunchImporter(
     {
         if (dropped.Count == 0) return 0;
         var names = dropped.Select(x => x.AttendanceDate).Distinct()
-            .SelectMany(date => new[] { date.AddDays(-1), date, date.AddDays(1) }).Select(PunchFileParser.FileNameFor)
-            .Where(x => !x.Equals(file.FileName, StringComparison.OrdinalIgnoreCase)).Distinct().ToList();
+            .SelectMany(date => new[] { date.AddDays(-1), date, date.AddDays(1) }).Select(PunchFileParser.FileNameFor).Distinct().ToList();
         return await db.Set<PunchFile>().Where(x => names.Contains(x.FileName) && x.Id != file.Id && x.ImportedModifiedAt != null)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.ImportedModifiedAt, (DateTimeOffset?)null).SetProperty(x => x.ImportedSize, (long?)null), ct);
     }
 
     /// <summary>在回復之後的新交易寫入失敗的匯入列；檔案列的版本不動（<c>Punches</c> 仍是上次成功匯入的內容），只更新 <c>LastImportId</c>。</summary>
-    private async Task<PunchImport> RecordFailureAsync(SourceVersion source, string trigger, Guid? requester, DateTimeOffset started, string message, CancellationToken ct)
+    private async Task<PunchImport> RecordFailureAsync(Attempt attempt, string message, CancellationToken ct)
     {
         // 失敗的交易留下的追蹤狀態不能再用。
         db.ChangeTracker.Clear();
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var file = await db.Set<PunchFile>().SingleOrDefaultAsync(x => x.FileName == source.FileName, ct);
-        if (file is null)
-        {
-            file = new() { FileName = source.FileName };
-            db.Add(file);
-            await db.SaveChangesAsync(ct);
-        }
+        var file = await FileRowAsync(attempt.FileName, ct);
+        var import = await RecordAsync(file, attempt, 0, message.Length > PunchImport.ErrorMessageMaxLength ? message[..PunchImport.ErrorMessageMaxLength] : message, ct);
+        await transaction.CommitAsync(ct);
+        return import;
+    }
+
+    private async Task<PunchFile> FileRowAsync(string fileName, CancellationToken ct)
+    {
+        var file = await db.Set<PunchFile>().SingleOrDefaultAsync(x => x.FileName == fileName, ct);
+        if (file is not null) return file;
+        file = new() { FileName = fileName };
+        db.Add(file);
+        await db.SaveChangesAsync(ct);
+        return file;
+    }
+
+    /// <summary>
+    /// 寫入匯入列（<paramref name="error"/> 為 null 是成功）並讓檔案列指向它；成功時檔案列的版本也換成這次的。
+    /// 兩張表互相參照（<c>PunchImports.PunchFileId</c>、<c>PunchFiles.LastImportId</c>），所以匯入列先存、檔案列後改。
+    /// 交易中追蹤的刷卡增刪也在第一次儲存時一起送出。
+    /// </summary>
+    private async Task<PunchImport> RecordAsync(PunchFile file, Attempt attempt, int punchCount, string? error, CancellationToken ct)
+    {
         var import = new PunchImport
         {
             PunchFileId = file.Id,
-            TriggerKind = trigger,
-            RequestedById = requester,
-            StartedAt = started,
-            FinishedAt = Later(started),
-            SourceModifiedAt = source.ModifiedAt,
-            SourceSize = source.Size,
-            PunchCount = 0,
-            Status = PunchImportStatuses.Failed,
-            ErrorMessage = message.Length > ErrorMessageMaxLength ? message[..ErrorMessageMaxLength] : message,
+            TriggerKind = attempt.Trigger,
+            RequestedById = attempt.Requester,
+            StartedAt = attempt.StartedAt,
+            FinishedAt = Later(attempt.StartedAt),
+            SourceModifiedAt = attempt.ModifiedAt,
+            SourceSize = attempt.Size,
+            PunchCount = punchCount,
+            Status = error is null ? PunchImportStatuses.Succeeded : PunchImportStatuses.Failed,
+            ErrorMessage = error,
         };
         db.Add(import);
         await db.SaveChangesAsync(ct);
         file.LastImportId = import.Id;
+        if (error is null) (file.ImportedModifiedAt, file.ImportedSize) = (attempt.ModifiedAt, attempt.Size);
         await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
         return import;
     }
 
     /// <summary>牆上時鐘可能被校時往回調；資料庫限制結束時間不早於開始時間。</summary>
     private DateTimeOffset Later(DateTimeOffset started) => clock.GetUtcNow() is var now && now > started ? now : started;
 
-    /// <summary>比對用的鍵：卡號與機器代號不分大小寫（與資料庫唯一索引的定序一致），時間以瞬間比較。</summary>
-    private readonly record struct PunchKey(string Card, long UtcTicks, string Machine);
-
-    private static PunchKey KeyOf(ParsedPunch x) => KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode);
-
-    private static PunchKey KeyOf(string card, DateTimeOffset at, string machine) => new(card.ToUpperInvariant(), at.UtcTicks, machine.ToUpperInvariant());
-
-    private sealed record SourceVersion(string FileName, DateTimeOffset ModifiedAt, long Size);
-
-    private sealed record Committed(PunchImport Import, int Requeued);
+    /// <summary>一次匯入的來源版本與觸發資訊；<see cref="Requester"/> 只有手動重匯才有值。</summary>
+    private sealed record Attempt(string FileName, DateTimeOffset ModifiedAt, long Size, string Trigger, Guid? Requester, DateTimeOffset StartedAt);
 
     [LoggerMessage(EventId = 3400, EventName = "attendance.import_succeeded", Level = LogLevel.Information, Message = "Punch file imported ({Kind}): {Count} punches, file {ResourceId}.")]
     private static partial void LogImported(ILogger logger, string kind, int count, Guid resourceId);

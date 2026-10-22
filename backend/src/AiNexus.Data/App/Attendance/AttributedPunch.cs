@@ -38,8 +38,8 @@ internal sealed class AttributedPunchConfiguration : IEntityTypeConfiguration<At
         // 期間重疊時同一筆刷卡會出現多列，沒有唯一鍵，所以是 keyless；檢視只讀，不能追蹤也不能寫入。
         punch.HasNoKey().ToView("vw_AttributedPunches", "attendance");
         punch.Property(x => x.CardNumber).HasMaxLength(Card.CardNumberMaxLength);
-        punch.Property(x => x.MachineCode).HasMaxLength(16);
-        punch.Property(x => x.EventCode).HasMaxLength(16);
+        punch.Property(x => x.MachineCode).HasMaxLength(Punch.CodeMaxLength);
+        punch.Property(x => x.EventCode).HasMaxLength(Punch.CodeMaxLength);
         punch.Property(x => x.CardKind).HasMaxLength(16);
         punch.Property(x => x.HolderName).HasMaxLength(CardAssignment.HolderNameMaxLength);
     }

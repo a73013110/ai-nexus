@@ -6,7 +6,7 @@
 
 - `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
-- 卡號對應列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`。
+- `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
 - `attendance.calendar.maintain` 先在目錄宣告，端點隨假日設定加入。
 - `attendance.records` 宣告了資料範圍（`own`、`unit`、`unit-tree`、`all`），**端點還沒有，範圍尚未套用**；加端點時依 [資料範圍](../architecture/data-scopes.md) 套用，並補進該文件的對照表。
 - Seed：`workspace` 群組有 `attendance.records` 的 `own`；`hr`（人事）群組有出勤的全部頁面與動作，以及 `all` 範圍的 `attendance.records`，不含使用者管理。`hr` 沒有成員也沒有角色，由管理員連結角色與加人。
@@ -42,7 +42,7 @@
 - **並行**：`PunchImportGate` 讓排程與手動重匯一次只跑一個（程序內；跨檔去重與鄰檔補救會動別的檔的列，所以不是每檔一把鎖）。多程序重疊時由 `Punches` 的唯一索引擋下，後到的記為失敗並重試。
 - **手動重匯**：`POST /api/v1/attendance-imports`，body `{ "date": "2026-10-01" }`（檔名日期）。不論檔案有沒有變都重匯，`TriggerKind` 為 `manual`、`RequestedById` 為操作者。找不到檔 `attendance_import_file_not_found`（404）、資料夾讀不到 `attendance_import_source_unavailable`（503），都不留紀錄；檔案存在但匯入失敗回 200 與 failed 的紀錄。不另寫稽核，匯入紀錄就是紀錄。
 - **查詢**：`GET /api/v1/attendance-imports`，新到舊、游標分頁；可依檔案（`fileId`、`fileName`）、狀態與開始時間期間篩選，帶出檔名與操作者姓名。
-- **監控**：子系統 `attendance-import`，判定見 [監控子系統](../architecture/monitoring-sources.md)。日誌事件 3400–3406。
+- **監控**：子系統 `attendance-import`，判定見 [監控子系統](../architecture/monitoring-sources.md)。日誌事件 3400–3406；來源資料夾讀不到與恢復只在狀態轉換時各記一次。
 
 ## 稽核
 

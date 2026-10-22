@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using AiNexus.Data.App.Attendance;
 
 namespace AiNexus.Features.Staff.Attendance.Imports;
 
@@ -12,8 +13,6 @@ public static class PunchFileParser
 {
     private const int FieldCount = 5;
     private const int MaxListedErrors = 3;
-    private const int CardMaxLength = 32;
-    private const int CodeMaxLength = 16;
 
     /// <summary>每日檔的檔名是 <c>yyyyMMdd.txt</c>；其他檔案（備份、說明、暫存）一律不匯入。</summary>
     public static bool TryParseFileName(string fileName, out DateOnly date)
@@ -24,6 +23,12 @@ public static class PunchFileParser
     }
 
     public static string FileNameFor(DateOnly date) => date.ToString("yyyyMMdd", CultureInfo.InvariantCulture) + ".txt";
+
+    /// <summary>
+    /// 檔名與刷卡日期接受的範圍：打卡機時鐘重設會輸出 2000 年之前的日期，這種資料進了資料庫只會讓出勤日錯亂。
+    /// 手動重匯的日期也用它檢查，範圍之外不可能有檔案。
+    /// </summary>
+    public static bool IsSupported(DateOnly date) => date.Year is >= 2000 and <= 2099;
 
     /// <summary>
     /// 把檔案位元組解碼成文字：UTF-8（可有 BOM）或有 BOM 的 UTF-16。無效的位元組直接拒絕而不是換成替代字元，
@@ -43,13 +48,13 @@ public static class PunchFileParser
     }
 
     /// <summary>
-    /// 解析整個檔案。空白行與只有 Ctrl-Z（舊系統的檔尾標記）的行略過；同一筆刷卡（卡號、時間、機器代號相同）在同一檔案重複出現只留第一筆。
+    /// 解析整個檔案。空白行與只有 Ctrl-Z（舊系統的檔尾標記）的行略過；同一筆刷卡（<see cref="ParsedPunch.KeyOf"/>）在同一檔案重複出現只留第一筆。
     /// 時間依 <see cref="TaipeiTime"/> 解讀，出勤日取刷卡時間的日期，與檔名無關。
     /// </summary>
     public static IReadOnlyList<ParsedPunch> Parse(string text)
     {
         var punches = new List<ParsedPunch>();
-        var seen = new HashSet<(string Card, long Ticks, string Machine)>();
+        var seen = new HashSet<(string, long, string)>();
         var errors = new List<string>();
         var invalid = 0;
         using var reader = new StringReader(text);
@@ -65,7 +70,7 @@ public static class PunchFileParser
                 if (errors.Count < MaxListedErrors) errors.Add($"第 {number} 行{problem}");
                 continue;
             }
-            if (seen.Add((punch.CardNumber.ToUpperInvariant(), punch.PunchedAt.UtcTicks, punch.MachineCode.ToUpperInvariant()))) punches.Add(punch);
+            if (seen.Add(punch.Key)) punches.Add(punch);
         }
         if (invalid > 0)
             throw new PunchFileFormatException($"{invalid} 行格式不正確（{string.Join("；", errors)}{(invalid > errors.Count ? "…" : "")}），整個檔案未匯入。");
@@ -79,9 +84,9 @@ public static class PunchFileParser
         var machine = fields[0].Trim();
         var card = fields[1].Trim();
         var eventCode = fields[4].Trim();
-        if (!IsToken(machine, CodeMaxLength)) return (null, "的機器代號是空的、過長或含控制字元");
-        if (!IsToken(card, CardMaxLength)) return (null, "的卡號是空的、過長或含控制字元");
-        if (!IsToken(eventCode, CodeMaxLength)) return (null, "的事件代號是空的、過長或含控制字元");
+        if (!IsToken(machine, Punch.CodeMaxLength)) return (null, "的機器代號是空的、過長或含控制字元");
+        if (!IsToken(card, Card.CardNumberMaxLength)) return (null, "的卡號是空的、過長或含控制字元");
+        if (!IsToken(eventCode, Punch.CodeMaxLength)) return (null, "的事件代號是空的、過長或含控制字元");
         if (!TryDate(fields[2].Trim(), out var date)) return (null, "的日期不是有效的 yyyyMMdd");
         if (!TryTime(fields[3].Trim(), out var time)) return (null, "的時間不是有效的 HHmmss");
         return (new(card, TaipeiTime.At(date.ToDateTime(time)), date, machine, eventCode), "");
@@ -89,12 +94,11 @@ public static class PunchFileParser
 
     private static bool IsToken(string value, int maxLength) => value.Length > 0 && value.Length <= maxLength && !value.Any(char.IsControl);
 
-    // 年份限定在合理範圍：打卡機時鐘重設會輸出 2000 年之前的日期，這種資料進了資料庫只會讓出勤日錯亂。
     private static bool TryDate(string text, out DateOnly date)
     {
         date = default;
         return text.Length == 8 && text.All(char.IsAsciiDigit)
-            && DateOnly.TryParseExact(text, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date) && date.Year is >= 2000 and <= 2099;
+            && DateOnly.TryParseExact(text, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date) && IsSupported(date);
     }
 
     private static bool TryTime(string text, out TimeOnly time)

@@ -30,7 +30,7 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddSingleton<PunchImportState>();
         builder.Services.AddScoped<PunchImporter>();
         builder.Services.AddHostedService<PunchImportWorker>();
-        builder.Services.AddMonitoringSource<AttendanceMonitoring>();
+        builder.Services.AddMonitoringSource<PunchImportMonitoring>();
         // 和 Integrations 共用同一個唯讀 GD 連線；用到的資料庫各模組自己宣告，不靠別的模組代為註冊（重複宣告是冪等的）。
         builder.Services.AddSqlDatabase<GdDatabase>();
         builder.Services.AddSingleton<GdAccess>();

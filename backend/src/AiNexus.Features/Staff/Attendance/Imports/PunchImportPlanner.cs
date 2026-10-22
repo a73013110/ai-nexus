@@ -1,6 +1,11 @@
+using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Staff.Attendance.Imports;
+
+/// <summary>檔案列與它最近一次的匯入（成功或失敗）；排程判斷要不要重匯只看這兩者。</summary>
+public sealed record PunchFileState(PunchFile File, PunchImport? Last);
 
 /// <summary>排程判斷一個檔案要不要重匯的規則；掃描時先篩一次，真正匯入前在互斥鎖內以最新狀態再判斷一次。</summary>
 public static class PunchImportPlanner
@@ -27,4 +32,27 @@ public static class PunchImportPlanner
     /// </summary>
     public static bool IsSettling(DateTimeOffset modifiedAt, DateTimeOffset now, TimeSpan settle)
         => settle > TimeSpan.Zero && now >= modifiedAt && now - modifiedAt < settle;
+
+    internal static bool NeedsImport(PunchFileState? state, FileInfo info, DateTimeOffset now, PunchImportOptions settings)
+        => NeedsImport(state?.File, state?.Last, ModifiedAt(info), info.Length, now, TimeSpan.FromSeconds(settings.FailedRetrySeconds));
+
+    internal static bool IsSettling(FileInfo info, DateTimeOffset now, PunchImportOptions settings)
+        => IsSettling(ModifiedAt(info), now, TimeSpan.FromSeconds(settings.SettleSeconds));
+
+    /// <summary>檔案版本的修改時間；與 <see cref="PunchFile.ImportedModifiedAt"/> 比較，兩邊都是 UTC、100 ns 精度。</summary>
+    internal static DateTimeOffset ModifiedAt(FileInfo info) => new(info.LastWriteTimeUtc, TimeSpan.Zero);
+
+    /// <summary>
+    /// 檔案列連同最近一次匯入；<paramref name="fileName"/> 為 null 時是全部檔案（掃描用）。
+    /// 篩選放在投影之前：投影成 <see cref="PunchFileState"/> 之後 EF 無法再翻譯它的成員。
+    /// </summary>
+    internal static IQueryable<PunchFileState> States(AppDbContext db, string? fileName = null)
+    {
+        var files = db.Set<PunchFile>().AsNoTracking();
+        if (fileName is not null) files = files.Where(x => x.FileName == fileName);
+        return from file in files
+               join import in db.Set<PunchImport>().AsNoTracking() on file.LastImportId equals import.Id into imports
+               from last in imports.DefaultIfEmpty()
+               select new PunchFileState(file, last);
+    }
 }

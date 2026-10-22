@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Staff.Attendance.Imports;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
+using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 using static AiNexus.IntegrationTests.Support.PunchSource;
@@ -105,5 +107,24 @@ public sealed class ReimportPunchFileTests
         await AssertCodeAsync(await member.GetAsync(Imports, TestContext.Current.CancellationToken), HttpStatusCode.Forbidden, "feature_forbidden");
         Assert.Empty(await session.ImportsAsync());
         Assert.Empty(await session.PunchesAsync());
+    }
+
+    [Fact]
+    public async Task ATestIdentityReadsImportsButCannotReimport()
+    {
+        using var source = new PunchSource();
+        source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
+        await using var factory = source.CreateFactory(administrators: ["alice"]);
+        using var admin = factory.CreateClient();
+        await Login(admin, "alice");
+        var hrId = await CreateUser(admin, LocalAccount());
+        await GrantImportsAsync(factory, hrId);
+        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(hrId, "重現人資看到的匯入紀錄"), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+        await Csrf(admin);
+
+        // 匯入紀錄是管理頁：測試身分可以讀取以重現畫面，但不能重匯，否則紀錄會把被扮演的人記成操作者。
+        Assert.Empty((await admin.GetFromJsonAsync<PunchImportDto[]>(Imports, TestContext.Current.CancellationToken))!);
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Imports, Request, TestContext.Current.CancellationToken), HttpStatusCode.Forbidden, "test_admin_read_only");
+        Assert.Empty((await admin.GetFromJsonAsync<PunchImportDto[]>(Imports, TestContext.Current.CancellationToken))!);
     }
 }

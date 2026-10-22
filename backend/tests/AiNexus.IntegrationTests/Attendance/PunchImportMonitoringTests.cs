@@ -4,14 +4,14 @@ using static AiNexus.IntegrationTests.Support.PunchSource;
 
 namespace AiNexus.IntegrationTests.Attendance;
 
-public sealed class AttendanceMonitoringTests
+public sealed class PunchImportMonitoringTests
 {
     private static readonly string Oct1 = NameOf(10, 1);
 
     /// <summary>以監控子系統實際使用的方式讀取：註冊的來源型別、全新的 DI scope。</summary>
     private static async Task<SubsystemReading> ReadAsync(PunchImportSession session)
     {
-        var registration = session.Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.Name == "AttendanceMonitoring");
+        var registration = session.Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.Name == "PunchImportMonitoring");
         using var scope = session.Factory.Services.CreateScope();
         var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(registration.Type);
         Assert.Equal("attendance-import", source.Id);

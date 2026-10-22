@@ -5,13 +5,12 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Staff.Attendance.Imports;
 
-/// <summary>一次掃描的結果，測試與日後的監控用。<paramref name="SourceAvailable"/> 為 false 表示來源資料夾讀不到，其他欄位都是 0。</summary>
+/// <summary>一次掃描的結果，測試用。<paramref name="SourceAvailable"/> 為 false 表示來源資料夾讀不到，其他欄位都是 0。</summary>
 public sealed record PunchScanResult(bool SourceAvailable, int Found, int Imported, int Failed, int Waiting);
 
 /// <summary>
-/// 定期掃描打卡機輸出資料夾，把有變動的每日檔交給 <see cref="PunchImporter"/>（單一 worker，同一時間只匯入一個檔）。
-/// 要不要重匯看 <see cref="PunchImportPlanner"/>：修改時間或大小與上次成功匯入的不同、最近一次失敗、或被標記為要重匯。
-/// 所以打卡機增加輸出次數不必改程式。啟動後立即掃描一次，之後每 <c>ScanIntervalSeconds</c> 一次。
+/// 定期掃描打卡機輸出資料夾，把需要重匯的每日檔（<see cref="PunchImportPlanner"/>）交給 <see cref="PunchImporter"/>；
+/// 依修改時間與大小判斷，所以打卡機增加輸出次數不必改程式。啟動後立即掃描一次，之後每 <c>ScanIntervalSeconds</c> 一次；未啟用時不掃描。
 /// </summary>
 public sealed partial class PunchImportWorker(
     IServiceScopeFactory scopes,
@@ -24,13 +23,14 @@ public sealed partial class PunchImportWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!options.Value.Import.Enabled) return;
         // 網路共用不通時第一次列舉可能卡很久；BackgroundService 在第一個 await 之前是同步執行，會擋住整個 host 的啟動。
         await Task.Yield();
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                if (options.Value.Import.Enabled) await ScanAsync(stoppingToken);
+                await ScanAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -45,7 +45,7 @@ public sealed partial class PunchImportWorker(
     }
 
     /// <summary>
-    /// 掃描一次。來源資料夾讀不到不拋例外，記入 <see cref="PunchImportState"/> 與日誌並回傳 <c>SourceAvailable = false</c>；
+    /// 掃描一次。來源資料夾讀不到不拋例外，記入 <see cref="PunchImportState"/> 並回傳 <c>SourceAvailable = false</c>；
     /// 個別檔案匯入時的非預期錯誤（例如資料庫連不上）只影響該檔，繼續處理其他檔。檔名日期由舊到新處理，所以重複的刷卡歸先寫入的檔。
     /// </summary>
     public async Task<PunchScanResult> ScanAsync(CancellationToken ct)
@@ -58,28 +58,23 @@ public sealed partial class PunchImportWorker(
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            state.Failed(clock.GetUtcNow(), ex.GetType().Name);
-            LogSourceUnavailable(logger, ex.GetType().Name);
+            if (state.SourceFailed(ex.GetType().Name)) LogSourceUnavailable(logger, ex.GetType().Name);
             return new(false, 0, 0, 0, 0);
         }
-        if (state.Succeeded(clock.GetUtcNow())) LogSourceRestored(logger);
+        if (state.SourceRead()) LogSourceRestored(logger);
 
         var (imported, failed, waiting) = (0, 0, 0);
-        var retryAfter = TimeSpan.FromSeconds(settings.FailedRetrySeconds);
-        var settle = TimeSpan.FromSeconds(settings.SettleSeconds);
         // 匯入一個檔可能把別的檔標記為要重匯（見 PunchImporter 的鄰檔補救），這時開頭載入的狀態已經過時；有匯入就再掃一輪，最多三輪。
         for (var pass = 0; pass < MaxPasses; pass++)
         {
-            var known = await KnownAsync(ct);
+            var known = await StatesAsync(ct);
             var (passImported, passFailed) = (0, 0);
             waiting = 0;
             foreach (var info in files)
             {
                 var now = clock.GetUtcNow();
-                var modifiedAt = PunchImporter.ModifiedAt(info);
-                known.TryGetValue(info.Name, out var current);
-                if (!PunchImportPlanner.NeedsImport(current?.File, current?.Last, modifiedAt, info.Length, now, retryAfter)) continue;
-                if (PunchImportPlanner.IsSettling(modifiedAt, now, settle))
+                if (!PunchImportPlanner.NeedsImport(known.GetValueOrDefault(info.Name), info, now, settings)) continue;
+                if (PunchImportPlanner.IsSettling(info, now, settings))
                 {
                     waiting++;
                     continue;
@@ -114,18 +109,12 @@ public sealed partial class PunchImportWorker(
     private static List<FileInfo> List(string directory) => [.. new DirectoryInfo(directory).EnumerateFiles()
         .Where(x => PunchFileParser.TryParseFileName(x.Name, out _)).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
 
-    private async Task<Dictionary<string, Known>> KnownAsync(CancellationToken ct)
+    private async Task<Dictionary<string, PunchFileState>> StatesAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var rows = await (from file in db.Set<PunchFile>().AsNoTracking()
-                          join import in db.Set<PunchImport>().AsNoTracking() on file.LastImportId equals import.Id into imports
-                          from last in imports.DefaultIfEmpty()
-                          select new Known(file, last)).ToListAsync(ct);
+        var rows = await PunchImportPlanner.States(scope.ServiceProvider.GetRequiredService<AppDbContext>()).ToListAsync(ct);
         return rows.ToDictionary(x => x.File.FileName, StringComparer.OrdinalIgnoreCase);
     }
-
-    private sealed record Known(PunchFile File, PunchImport? Last);
 
     [LoggerMessage(EventId = 3403, EventName = "attendance.source_unavailable", Level = LogLevel.Warning, Message = "Punch file source folder cannot be read ({ErrorType}); imports are paused until it is reachable.")]
     private static partial void LogSourceUnavailable(ILogger logger, string errorType);

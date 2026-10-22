@@ -1,18 +1,18 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
-using AiNexus.Features.Staff.Attendance.Imports;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Staff.Attendance;
+namespace AiNexus.Features.Staff.Attendance.Imports;
 
 /// <summary>
 /// 刷卡匯入的監控。未啟用 idle；來源資料夾讀不到 failing；有檔案最近一次匯入失敗，或超過 <c>StaleAfterHours</c> 沒有任何成功匯入 degraded。
 /// 打卡機每天輸出一個新檔，所以太久沒有成功匯入代表打卡機或網路共用出了問題，HR 看到的出勤資料已經過期。
 /// 失敗的檔案走 <c>ix_PunchFiles_LastImportId</c>，最近成功的匯入走 <c>ix_PunchImports_StartedAt</c>。
+/// 出勤的每個外部來源各自一個監控來源，放在擁有它的能力資料夾（同 Inference 的 <c>generation</c> 與 <c>model-providers</c>）。
 /// </summary>
-internal sealed class AttendanceMonitoring(AppDbContext db, PunchImportState state, IOptions<AttendanceOptions> options, TimeProvider clock) : IMonitoringSource
+internal sealed class PunchImportMonitoring(AppDbContext db, PunchImportState state, IOptions<AttendanceOptions> options, TimeProvider clock) : IMonitoringSource
 {
     public string Id => "attendance-import";
     public string Name => "出勤刷卡匯入";
@@ -32,7 +32,7 @@ internal sealed class AttendanceMonitoring(AppDbContext db, PunchImportState sta
             .Select(x => (DateTimeOffset?)x.FinishedAt).FirstOrDefaultAsync(ct);
         var day = now.AddDays(-1);
         var importedDay = await imports.CountAsync(x => x.Status == PunchImportStatuses.Succeeded && x.StartedAt >= day, ct);
-        var sourceError = state.Current.SourceError;
+        var sourceError = state.SourceError;
         double? sinceSuccess = lastSuccess is { } finished ? Math.Max(0, Math.Round((now - finished).TotalSeconds)) : null;
         var stale = sinceSuccess > TimeSpan.FromHours(settings.StaleAfterHours).TotalSeconds;
 

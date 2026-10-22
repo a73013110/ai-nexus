@@ -9,6 +9,8 @@ namespace AiNexus.Data.App.Attendance;
 /// </summary>
 public sealed class PunchFile
 {
+    public const int FileNameMaxLength = 128;
+
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>不含路徑；檔名日期只是輸出日，不是出勤日。</summary>
@@ -29,7 +31,7 @@ internal sealed class PunchFileConfiguration : IEntityTypeConfiguration<PunchFil
     {
         file.ToTable("PunchFiles", "attendance");
         file.HasKey(x => x.Id);
-        file.Property(x => x.FileName).HasMaxLength(128);
+        file.Property(x => x.FileName).HasMaxLength(PunchFile.FileNameMaxLength);
         // 與 PunchImport.PunchFileId 互相參照；兩邊都明確指定外鍵欄位且不設導覽屬性，EF 才不會把兩條外鍵當成同一個關聯的兩端。
         file.HasOne<PunchImport>().WithMany().HasForeignKey(x => x.LastImportId).OnDelete(DeleteBehavior.Restrict);
     }

@@ -7,6 +7,8 @@ namespace AiNexus.Data.App.Attendance;
 /// <summary>每次匯入打卡檔一列（成功或失敗），只增不改；檔案目前狀態在 <see cref="PunchFile"/>。</summary>
 public sealed class PunchImport
 {
+    public const int ErrorMessageMaxLength = 1000;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid PunchFileId { get; set; }
 
@@ -54,7 +56,7 @@ internal sealed class PunchImportConfiguration : IEntityTypeConfiguration<PunchI
         import.HasKey(x => x.Id);
         import.Property(x => x.TriggerKind).HasMaxLength(16);
         import.Property(x => x.Status).HasMaxLength(16);
-        import.Property(x => x.ErrorMessage).HasMaxLength(1000);
+        import.Property(x => x.ErrorMessage).HasMaxLength(PunchImport.ErrorMessageMaxLength);
         import.HasOne<PunchFile>().WithMany().HasForeignKey(x => x.PunchFileId).OnDelete(DeleteBehavior.Restrict);
         import.HasOne<User>().WithMany().HasForeignKey(x => x.RequestedById).OnDelete(DeleteBehavior.Restrict);
     }

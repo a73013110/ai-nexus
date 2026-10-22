@@ -3,24 +3,16 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Staff.Attendance;
 
-/// <summary>出勤設定（<c>Attendance</c> 區段）；之後的出勤判定規則（ADR 0018）也放在這個區段。</summary>
-public sealed class AttendanceOptions : IValidatableObject
+/// <summary>出勤設定（<c>Attendance</c> 區段）；之後的出勤判定規則（ADR 0018）也放在這個區段，各自一個子區段並自行驗證。</summary>
+public sealed class AttendanceOptions
 {
     public const string Section = "Attendance";
 
     [ValidateObjectMembers] public PunchImportOptions Import { get; set; } = new();
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        // 不用 Path.IsPathFullyQualified：非 Windows 的開發機會把 UNC 路徑當成相對路徑而讓啟動失敗。
-        var directory = Import.SourceDirectory;
-        if (directory.Any(char.IsControl) || !(Path.IsPathFullyQualified(directory) || directory.StartsWith(@"\\", StringComparison.Ordinal)))
-            yield return new($"{nameof(Import)}.{nameof(PunchImportOptions.SourceDirectory)} must be an absolute path or a UNC share.", [nameof(Import)]);
-    }
 }
 
 /// <summary>刷卡匯入：背景工作掃描打卡機輸出的每日檔（ADR 0018）。</summary>
-public sealed class PunchImportOptions
+public sealed class PunchImportOptions : IValidatableObject
 {
     /// <summary>只控制背景掃描；HR 手動重匯不受影響，只要來源資料夾讀得到。</summary>
     public bool Enabled { get; set; } = true;
@@ -47,6 +39,13 @@ public sealed class PunchImportOptions
 
     /// <summary>單一檔案大小上限。每日檔每張卡只有最早與最晚兩筆，正常遠小於此；超過視為異常，整檔匯入失敗。</summary>
     [Range(1024, 64 * 1024 * 1024)] public int MaxFileBytes { get; set; } = 8 * 1024 * 1024;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        // UNC 另外判斷：非 Windows 的開發機上 Path.IsPathFullyQualified 會把 UNC 路徑當成相對路徑而讓啟動失敗。
+        if (SourceDirectory.Any(char.IsControl) || !(Path.IsPathFullyQualified(SourceDirectory) || SourceDirectory.StartsWith(@"\\", StringComparison.Ordinal)))
+            yield return new($"{nameof(SourceDirectory)} must be an absolute path or a UNC share.", [nameof(SourceDirectory)]);
+    }
 }
 
 [OptionsValidator]

@@ -21,7 +21,7 @@ internal sealed class ListPunchImports(AppDbContext db)
 
     public async Task<Result<IReadOnlyList<PunchImportDto>>> HandleAsync(Guid? fileId, string? fileName, string? status, DateTimeOffset? from, DateTimeOffset? until, Guid? before, int? take, CancellationToken ct)
     {
-        if (status is not null and not (PunchImportStatuses.Succeeded or PunchImportStatuses.Failed) || from > until || take is { } size && !PageSizes.Contains(size) || fileName?.Length > 128)
+        if (status is not null and not (PunchImportStatuses.Succeeded or PunchImportStatuses.Failed) || from > until || take is { } size && !PageSizes.Contains(size) || fileName?.Length > PunchFile.FileNameMaxLength)
             return AttendanceErrors.ImportFilterInvalid;
         var imports = db.Set<PunchImport>().AsNoTracking();
         if (fileId is { } id) imports = imports.Where(x => x.PunchFileId == id);

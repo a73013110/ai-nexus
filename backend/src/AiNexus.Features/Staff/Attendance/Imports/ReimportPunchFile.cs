@@ -16,8 +16,7 @@ internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReim
 {
     public PunchReimportRequestValidator()
     {
-        // 與解析器接受的年份範圍一致；範圍之外不可能有檔案。
-        RuleFor(x => x.Date).Must(x => x.Year is >= 2000 and <= 2099).WithErrorCode("range");
+        RuleFor(x => x.Date).Must(PunchFileParser.IsSupported).WithErrorCode("range");
     }
 }
 

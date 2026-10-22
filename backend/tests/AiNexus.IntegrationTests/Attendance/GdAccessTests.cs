@@ -14,7 +14,7 @@ public sealed class GdAccessTests
         using var gd = FakeGd.Create();
         gd.AddUser("G001", "alice");
         var options = FakeGd.Unreachable();
-        var log = new Events();
+        var log = new LogRecorder<GdAccess>();
         var access = FakeGd.AccessTo(options, log);
         var ct = TestContext.Current.CancellationToken;
 
@@ -35,7 +35,7 @@ public sealed class GdAccessTests
     [Fact]
     public async Task AGdThatIsNotConfiguredIsUnavailable()
     {
-        var log = new Events();
+        var log = new LogRecorder<GdAccess>();
 
         var rows = await FakeGd.AccessTo(FakeGd.NotConfigured(), log).QueryAsync<string>(UsersSql, null, TestContext.Current.CancellationToken);
 
@@ -56,7 +56,7 @@ public sealed class GdAccessTests
     public async Task ACancelledQueryIsNotTreatedAsUnavailable()
     {
         using var gd = FakeGd.Create();
-        var log = new Events();
+        var log = new LogRecorder<GdAccess>();
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
 
@@ -78,13 +78,5 @@ public sealed class GdAccessTests
 
         Assert.NotNull(rows);
         Assert.Equal(["U0001", "U0700", "U1199"], rows.Order(StringComparer.Ordinal));
-    }
-
-    private sealed class Events : ILogger<GdAccess>
-    {
-        public List<(int Id, LogLevel Level)> Recorded { get; } = [];
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Recorded.Add((eventId.Id, logLevel));
     }
 }
