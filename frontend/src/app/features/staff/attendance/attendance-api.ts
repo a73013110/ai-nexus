@@ -34,6 +34,9 @@ export class AttendanceApi {
   /** 某張卡的持有歷史，新到舊。 */
   assignments = (cardId: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-card-assignments', { query: { cardId }, signal });
+  /** 某位使用者持有過的卡，新到舊；只有姓名、還沒綁上帳號的期間不在其中。 */
+  userAssignments = (userId: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-card-assignments', { query: { userId }, signal });
   /** 已有人持有時回 409 `attendance_card_held`；使用者確認後以 `takeOver: true` 重送。 */
   createAssignment = (body: CardAssignmentCreateRequest) =>
     this.api.post('/api/v1/attendance-card-assignments', { body });

@@ -1,6 +1,6 @@
 # 假日設定
 
-結論：HR 在本系統查詢與修改公文系統（GD）的假日行事曆 `dbo.Pub_Days`。查詢與回寫用同一個 `Databases:Gd`，寫入範圍由程式限定；為什麼允許回寫見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)。前端頁面目前仍是佔位頁。
+結論：HR 在本系統查詢與修改公文系統（GD）的假日行事曆 `dbo.Pub_Days`。查詢與回寫用同一個 `Databases:Gd`，寫入範圍由程式限定；為什麼允許回寫見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)。
 
 ## 授權
 

@@ -24,7 +24,7 @@ export type AssignRequest = Omit<CardAssignmentCreateRequest, 'cardId' | 'takeOv
 };
 
 /** 持有期間 `[startsAt, endsAt)` 是否涵蓋某個時間點。 */
-const covers = (item: CardAssignmentDto, at: number) =>
+export const covers = (item: CardAssignmentDto, at: number) =>
   Date.parse(item.startsAt) <= at && (!item.endsAt || Date.parse(item.endsAt) > at);
 export const holderName = (item: CardAssignmentDto) =>
   item.userDisplayName ?? item.holderName ?? '（未填持有人）';

@@ -9,6 +9,9 @@
             [disabled]="store.locked()"
             (valueChange)="store.account.set($event)"
           />
+          @if (store.current(); as user) {
+            <nx-attendance-user-cards [userId]="user.id" [displayName]="user.displayName" />
+          }
         </div>
       </div>
       <ng-container

@@ -8,6 +8,7 @@ import { Notice } from '@shared/ui/notice';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { StorageUsage } from '@features/work/files/file-library/storage-usage';
 import { ModelPolicyEditor } from '@features/platform/inference/model-policies/model-policy-editor';
+import { AttendanceUserCards } from '@features/staff/attendance/cards/attendance-user-cards';
 import { AdminUserStore, type UserSettingsTab } from './admin-user-store';
 import { UserAccountFields, emailState } from './user-account-fields';
 import { UserRoleFields } from './user-role-fields';
@@ -15,10 +16,12 @@ import { UserRoleFields } from './user-role-fields';
 /**
  * 檢視器中可編輯的分頁。每一個都是獨立的表單，有自己的儲存、錯誤與未儲存狀態；
  * 欄位是可捲動的 `.form-sections`，`DialogSaveBar` 則固定在底部。
+ * 帳號分頁另附出勤卡號（唯讀，有 `attendance.cards` 才顯示），由出勤模組的元件自己讀取。
  */
 @Component({
   selector: 'nx-admin-user-settings',
   imports: [
+    AttendanceUserCards,
     DialogSaveBar,
     Field,
     InfoPopover,
