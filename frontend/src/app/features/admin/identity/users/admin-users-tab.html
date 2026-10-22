@@ -34,7 +34,7 @@
     <div table-actions>
       <button
         type="button"
-        class="quiet-button"
+        class="quiet-button directory-sync-button"
         title="以 AD 資料更新本頁勾選的使用者"
         [disabled]="session.testing() || !store.users()?.users?.length"
         (click)="syncDialog()?.open(store.users()?.users || [])"

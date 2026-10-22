@@ -5,6 +5,7 @@ import type { DirectoryOutcomeDto, DirectoryPersonDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
+import { tourSteps } from '@shared/ui/product-tour';
 import { AdminUsersStore } from '../admin-users-store';
 import { IdentityApi } from '../identity-api';
 import { DirectoryImportDialog } from './directory-import-dialog';
@@ -48,7 +49,7 @@ const directory: Record<string, DirectoryPersonDto[]> = {
   業務: [person('S-3', 'Erin', 'linked')],
 };
 
-function setup() {
+function setup({ render = false } = {}) {
   const generation = signal(1);
   const api = {
     searchDirectory: vi.fn(async (search: string) => ({
@@ -87,13 +88,18 @@ function setup() {
     ],
   });
   // 選取、預覽與匯入的流程在類別上驗證；結果清單的呈現另外渲染 DirectoryOutcomeTable。
-  TestBed.overrideComponent(DirectoryImportDialog, {
-    set: { template: '<dialog #dialog></dialog>' },
-  });
+  if (!render)
+    TestBed.overrideComponent(DirectoryImportDialog, {
+      set: { template: '<dialog #dialog></dialog>' },
+    });
   const fixture = TestBed.createComponent(DirectoryImportDialog);
   fixture.detectChanges();
-  const settle = () => TestBed.inject(ApplicationRef).whenStable();
-  return { dialog: fixture.componentInstance, api, store, settle };
+  const settle = async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    fixture.detectChanges();
+  };
+  const root = fixture.nativeElement as HTMLElement;
+  return { dialog: fixture.componentInstance, api, store, settle, root };
 }
 
 describe('DirectoryImportDialog', () => {
@@ -156,6 +162,50 @@ describe('DirectoryImportDialog', () => {
     expect(store.readUsers).toHaveBeenCalled();
     expect(dialog.step()).toBe('result');
     expect(store.toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe('DirectoryImportDialog tour', () => {
+  beforeAll(() => {
+    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.unstubAllGlobals();
+  });
+
+  it('finds every step of the selection and the preview on screen', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    const { dialog, settle, root } = setup({ render: true });
+    const expectTargets = () => {
+      expect(root.querySelector('nx-dialog-header nx-product-tour-button')).not.toBeNull();
+      for (const step of tourSteps(dialog.tour()))
+        expect(
+          root.querySelector(step.target.replace(/^nx-directory-import-dialog /, '')),
+          step.target,
+        ).not.toBeNull();
+    };
+    dialog.open();
+    dialog.find('研發');
+    await settle();
+    dialog.toggle(dialog.people()[0], true);
+    await settle();
+    expectTargets();
+
+    dialog.find('業務');
+    await settle();
+    dialog.toggle(dialog.people()[0], true);
+    await dialog.preview();
+    await settle();
+    expect(tourSteps(dialog.tour()).map((step) => step.title)).toContain('確認匯入');
+    expectTargets();
   });
 });
 

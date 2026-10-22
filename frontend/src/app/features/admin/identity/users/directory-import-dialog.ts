@@ -21,6 +21,7 @@ import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AdminUsersStore } from '../admin-users-store';
 import { IdentityApi } from '../identity-api';
+import { directoryImportTour } from '../identity-tour';
 import { DirectoryOutcomeTable } from './directory-outcome-table';
 import {
   DIRECTORY_BATCH_LIMIT,
@@ -101,6 +102,7 @@ export class DirectoryImportDialog {
   );
   readonly pending = computed(() => this.outcomes().filter(writesUser).length);
   readonly summary = computed(() => summarize(this.outcomes()));
+  readonly tour = computed(() => directoryImportTour({ step: this.step() }));
   readonly heading = computed(() =>
     this.step() === 'select'
       ? '選取人員'

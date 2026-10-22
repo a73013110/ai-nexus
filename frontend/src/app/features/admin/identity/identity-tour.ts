@@ -6,7 +6,10 @@ export function usersTour(options: {
   testing: boolean;
   /** 有 `identity.users.import`：頁首有「從 AD 匯入」。 */
   directoryImport?: boolean;
+  /** 有 `identity.users.sync`：表格右上與列選單有「從 AD 更新」。 */
+  directorySync?: boolean;
 }): ProductTourDefinition {
+  const sync = !options.testing && !!options.directorySync;
   const steps: TourSteps = [
     {
       target: 'nx-users-page .feature-title',
@@ -21,6 +24,14 @@ export function usersTour(options: {
       description: '輸入姓名、登入帳號或通知信箱的任一段，列表會重新查詢。',
       side: 'bottom',
     },
+    !options.testing &&
+      options.directoryImport && {
+        target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
+        title: '從 AD 匯入',
+        description:
+          '新進人員還沒登入、要先指派角色時用：搜尋公司 AD、跨多次搜尋勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
+        side: 'bottom',
+      },
     !options.testing && {
       target: 'nx-users-page nx-admin-users-tab .page-toolbar .primary-button',
       title: '新增使用者',
@@ -28,14 +39,13 @@ export function usersTour(options: {
         '只需填帳號與角色；預建的 AD 帳號在首次登入時才綁定。模型政策與容量建立後再從詳情調整。',
       side: 'bottom',
     },
-    !options.testing &&
-      options.directoryImport && {
-        target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
-        title: '從 AD 匯入',
-        description:
-          '搜尋公司 AD、跨多次搜尋勾選要匯入的人，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
-        side: 'bottom',
-      },
+    sync && {
+      target: 'nx-users-page .admin-users-table .directory-sync-button',
+      title: '從 AD 更新',
+      description:
+        'AD 改了姓名、信箱或帳號後用：勾選本頁的人批次更新並逐人列出結果。AD 已停用或找不到的人只標示，不會停用平台帳號。',
+      side: 'bottom',
+    },
     {
       target: 'nx-users-page .admin-users-table th[nxTableColumn="usage"]',
       title: '最近 30 天用量',
@@ -52,8 +62,9 @@ export function usersTour(options: {
     !options.testing && {
       target: 'nx-users-page .admin-users-table nx-action-menu',
       title: '測試身分與刪除',
-      description:
-        '可用這位使用者的身分檢視平台；刪除後無法登入，但對話、稽核與登入帳號會保留，避免他人接管。',
+      description: `${
+        sync ? '「從 AD 更新」只更新這一位；' : ''
+      }可用這位使用者的身分檢視平台；刪除後無法登入，但對話、稽核與登入帳號會保留，避免他人接管。`,
       side: 'left',
     },
   ];
@@ -139,5 +150,77 @@ export function userInspectorTour(options: {
           side: 'bottom',
         },
       ];
+  return { steps };
+}
+
+const IMPORT = 'nx-directory-import-dialog';
+
+/**
+ * 從 AD 匯入對話框的導覽，依步驟（選取、預覽、結果）介紹畫面上的區塊；
+ * 「仍要匯入 AD 已停用的帳號」只在預覽且有停用的人時出現，沒有就由導覽略過。
+ */
+export function directoryImportTour(options: {
+  step: 'select' | 'preview' | 'result';
+}): ProductTourDefinition {
+  const steps: TourSteps =
+    options.step === 'select'
+      ? [
+          {
+            target: `${IMPORT} nx-search-field`,
+            title: '搜尋 AD',
+            description:
+              '依姓名、帳號、信箱開頭或部門搜尋，最多列 50 位；找太多時輸入更精確的關鍵字。',
+            side: 'bottom',
+          },
+          {
+            target: `${IMPORT} .directory-results`,
+            title: '勾選要匯入的人',
+            description:
+              '狀態欄標示未匯入、已匯入或預建帳號；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
+          },
+          {
+            target: `${IMPORT} .directory-selected`,
+            title: '跨搜尋累積',
+            description:
+              '換關鍵字再搜尋，已勾選的人會留在這裡；一次最多 100 人，可逐一移除或清除。',
+            side: 'top',
+          },
+          {
+            target: `${IMPORT} .directory-preview`,
+            title: '先預覽',
+            description: '伺服器依 AD 重新比對，逐人列出會新建、綁定、更新或略過；確認前不寫入。',
+            side: 'top',
+          },
+        ]
+      : [
+          {
+            target: `${IMPORT} .directory-summary`,
+            title: options.step === 'preview' ? '預覽摘要' : '有人未完成',
+            description:
+              options.step === 'preview'
+                ? '各類結果的人數；確認匯入只寫入新建、綁定與更新的人。'
+                : '預覽之後資料有變動的人沒有寫入，其他人已完成；「返回選取」重新預覽即可。',
+            side: 'bottom',
+          },
+          options.step === 'preview' && {
+            target: `${IMPORT} .directory-include-disabled`,
+            title: 'AD 已停用的帳號',
+            description:
+              '預設不匯入；到職前先建好、尚未啟用的帳號可勾選匯入，AD 啟用前仍無法以 AD 登入。',
+            side: 'bottom',
+          },
+          {
+            target: `${IMPORT} nx-directory-outcome-table`,
+            title: '逐人結果',
+            description: '每人的結果與會改的欄位（前 → 後），需要你另外處理的情況會附註說明。',
+          },
+          options.step === 'preview' && {
+            target: `${IMPORT} .directory-confirm`,
+            title: '確認匯入',
+            description:
+              '新建的帳號與首次 AD 登入相同：一般使用者角色、只開 AD 登入；角色與政策之後在使用者詳情調整。',
+            side: 'top',
+          },
+        ];
   return { steps };
 }

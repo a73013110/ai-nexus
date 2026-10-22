@@ -11,6 +11,7 @@
     [detail]="heading()"
     closeLabel="關閉從 AD 匯入"
     maximizable
+    [tour]="tour()"
   />
   @if (opened()) {
     @if (step() === 'select') {
@@ -151,7 +152,7 @@
         </button>
         <button
           type="button"
-          class="primary-button"
+          class="primary-button directory-preview"
           [disabled]="busy() || !selection().size"
           (click)="preview()"
         >
@@ -169,9 +170,10 @@
             message="其他人已匯入。標示「未完成」的人在預覽後資料有變動，請返回重新預覽。"
           />
         }
-        <p class="form-note" role="status">{{ summary() }}</p>
+        <p class="form-note directory-summary" role="status">{{ summary() }}</p>
         @if (step() === 'preview' && (disabledCount() || includeDisabled())) {
           <nx-checkbox
+            class="directory-include-disabled"
             label="仍要匯入 AD 已停用的帳號"
             description="例如帳號先建好、到職才啟用的人；匯入後仍無法以 AD 登入，直到 AD 啟用。"
             [checked]="includeDisabled()"
@@ -199,7 +201,7 @@
           </button>
           <button
             type="button"
-            class="primary-button"
+            class="primary-button directory-confirm"
             [disabled]="busy() || !pending()"
             (click)="confirm()"
           >

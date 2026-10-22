@@ -53,6 +53,7 @@ export class UsersPage {
     usersTour({
       testing: this.session.testing(),
       directoryImport: this.session.has('identity.users.import'),
+      directorySync: this.session.has('identity.users.sync'),
     }),
   );
   /** 使用者列表目前這一頁；管理對話框的上下筆只在這一頁內移動。 */
