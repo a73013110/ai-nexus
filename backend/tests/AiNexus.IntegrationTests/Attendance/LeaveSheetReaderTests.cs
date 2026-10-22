@@ -1,5 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Staff.Attendance.Gd;
+using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Staff.Attendance.Leave;
 using AiNexus.Platform.Data;
 using Microsoft.Extensions.DependencyInjection;

@@ -72,6 +72,7 @@ public static class FeatureCatalog
     public const string AccessControlFeatures = "access-control.features";
     public const string AccessControlNavigation = "access-control.navigation";
     public const string Organization = "organization";
+    public const string OrganizationImport = "organization.import";
     public const string OperationsUsage = "operations.usage";
     public const string BillingPrices = "billing.prices";
     public const string Integrations = "integrations";
@@ -153,6 +154,7 @@ public static class FeatureCatalog
         new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能", "list"),
         new(AccessControlNavigation, FeatureKind.Page, AccessControlModule, "選單", "sidebar"),
         new(Organization, FeatureKind.Page, OrganizationModule, "組織單位", "organization"),
+        new(OrganizationImport, FeatureKind.Action, OrganizationModule, "從公文系統匯入部門", "repeat"),
         new(OperationsUsage, FeatureKind.Page, OperationsModule, "平台用量", "chart"),
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
         new(Integrations, FeatureKind.Page, IntegrationsModule, "資料來源", "integrations"),

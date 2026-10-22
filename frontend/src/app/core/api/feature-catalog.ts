@@ -296,6 +296,16 @@ export const CATALOG_FEATURES = [
     managerScope: null,
   },
   {
+    id: 'organization.import',
+    kind: 'action',
+    module: 'organization',
+    name: '從公文系統匯入部門',
+    icon: 'repeat',
+    route: null,
+    scopes: [],
+    managerScope: null,
+  },
+  {
     id: 'operations.usage',
     kind: 'page',
     module: 'operations',

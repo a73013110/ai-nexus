@@ -20,7 +20,9 @@ public static class AuditRedactor
         // 出勤卡號對應（ADR 0018）：卡號、持有期間與還沒有帳號的持有人姓名；備註是自由文字，不收。
         "cardId", "cardNumber", "assignments", "startsAt", "endsAt", "holderName",
         // 出勤假日設定回寫 GD 的前後值：上午／下午放假、備註（節日名稱，例如「國慶日」，不是個人資料）與 GD 的修改者帳號。
-        "morningOff", "afternoonOff", "calendarRemark", "gdUserId"
+        "morningOff", "afternoonOff", "calendarRemark", "gdUserId",
+        // 組織從公文系統匯入（admin.organization_import）：前後的單位、已匯入單位與主管數，以及這次各類變動的數量；不收部門或人員清單。
+        "units", "gdUnits", "managers", "created", "adopted", "updated", "disabled", "managersAdded", "managersRemoved", "issues"
     };
 
     /// <summary>

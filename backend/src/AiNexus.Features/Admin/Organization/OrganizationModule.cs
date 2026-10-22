@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
+using AiNexus.Features.Admin.Organization.Imports;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Organization;
@@ -7,6 +8,7 @@ namespace AiNexus.Features.Admin.Organization;
 /// <summary>
 /// 組織單位（部門樹）與人員所屬的維護（ADR 0017）。其他模組透過 <see cref="OrganizationDirectory"/> 讀取所屬與下層單位；
 /// 管理端點共用 AccessControl 的授權目錄與 <see cref="AdministrativeAudit"/>。
+/// 部門也可以從公文系統匯入（<see cref="PreviewUnitImport"/>、<see cref="ApplyUnitImport"/>），來源 <see cref="IUnitSource"/> 由 Integrations 實作。
 /// </summary>
 public sealed class OrganizationModule : IFeatureModule
 {
@@ -18,6 +20,7 @@ public sealed class OrganizationModule : IFeatureModule
         builder.Services.AddScoped<OrganizationDirectory>();
         builder.Services.AddScoped<IUnitMembership>(sp => sp.GetRequiredService<OrganizationDirectory>());
         builder.Services.AddFeaturePolicy(FeatureCatalog.Organization);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.OrganizationImport);
         builder.Services.AddFeaturePolicy(UserUnitsPolicy, FeatureCatalog.Organization, FeatureCatalog.IdentityUsers);
     }
 
@@ -26,8 +29,10 @@ public sealed class OrganizationModule : IFeatureModule
         var units = api.MapGroup("/admin/organization-units").RequireAuthorization(Policies.Organization);
         ListUnits.Map(units);
         CreateUnit.Map(units);
-        // 字面路徑 /order 與 /{id:guid} 不會互相攔截：後者限定 GUID。
+        // 字面路徑 /order、/import 與 /{id:guid} 不會互相攔截：後者限定 GUID。
         ReorderUnits.Map(units);
+        PreviewUnitImport.Map(units);
+        ApplyUnitImport.Map(units);
         UpdateUnit.Map(units);
         DeleteUnit.Map(units);
         ListUnitMembers.Map(units);

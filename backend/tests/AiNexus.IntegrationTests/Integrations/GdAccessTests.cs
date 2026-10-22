@@ -1,9 +1,9 @@
+using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Admin.Integrations.Sources;
-using AiNexus.Features.Staff.Attendance.Gd;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 
-namespace AiNexus.IntegrationTests.Attendance;
+namespace AiNexus.IntegrationTests.Integrations;
 
 public sealed class GdAccessTests
 {

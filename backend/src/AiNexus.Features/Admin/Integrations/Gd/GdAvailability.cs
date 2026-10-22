@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Staff.Attendance.Gd;
+namespace AiNexus.Features.Admin.Integrations.Gd;
 
 /// <summary>GD 存取失敗的原因分類；只有分類，不含例外訊息、連線字串或帳密。</summary>
 public enum GdFailure

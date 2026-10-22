@@ -1,11 +1,11 @@
+using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Admin.Integrations.Sources;
-using AiNexus.Features.Staff.Attendance.Gd;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
-namespace AiNexus.IntegrationTests.Attendance;
+namespace AiNexus.IntegrationTests.Integrations;
 
 public sealed class GdMonitoringTests
 {
@@ -42,7 +42,7 @@ public sealed class GdMonitoringTests
             var registration = Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.Name == "GdMonitoring");
             using var scope = Factory.Services.CreateScope();
             var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(registration.Type);
-            Assert.Equal("attendance-gd", source.Id);
+            Assert.Equal("gd", source.Id);
             return await source.ReadAsync(TestContext.Current.CancellationToken);
         }
 

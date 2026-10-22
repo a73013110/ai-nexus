@@ -1,8 +1,8 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Integrations;
+using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Admin.Integrations.Sources;
-using AiNexus.Features.Staff.Attendance.Gd;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
@@ -29,6 +29,9 @@ internal sealed class FakeGd : IDisposable
         CREATE TABLE [dbo].[Form_Travel] (DesNo varchar(20) NOT NULL PRIMARY KEY, ChargeName varchar(50) NULL, ChargeDepName int NULL,
             TravelSDate smalldatetime NULL, TravelEDate smalldatetime NULL, TravelTime float NULL, TravelMain nvarchar(1000) NULL, Place nvarchar(100) NULL, FlowOver varchar(20) NOT NULL);
         CREATE TABLE [dbo].[Pub_Days] (hDate datetime NOT NULL, UserId varchar(20) NOT NULL, AM bit NOT NULL, PM bit NOT NULL, hReMark varchar(255) NULL);
+        CREATE TABLE [dbo].[Sys_User_DEPT_BAS] (DEP_NO int NOT NULL PRIMARY KEY, DEP_NAME nvarchar(200) NULL, DEP_CHIEF varchar(20) NULL, DEP_ACHIEF varchar(100) NULL,
+            DEP_EMAIL varchar(50) NULL, PARENT_NO int NULL, UnitClass varchar(10) NULL, ACCOUNT_CODE varchar(10) NULL, DEP_WORD nvarchar(100) NULL, InWord nvarchar(100) NULL,
+            OrderBy int NULL, Attach int NOT NULL DEFAULT 1, CloseDesk bit NOT NULL DEFAULT 0, [Disable] bit NOT NULL DEFAULT 0, DEP_SEARCH int NULL, Agent_No int NULL);
         """;
 
     private readonly TestDatabase database = TestDatabase.CreateEmpty();
@@ -88,6 +91,20 @@ internal sealed class FakeGd : IDisposable
     /// <summary>加一個公文帳號；<paramref name="disabled"/> 寫進 <c>Disable</c>，null 模擬正式資料中未填的列。</summary>
     public void AddUser(string id, string? account, bool? disabled = false)
         => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME, [Disable]) VALUES (@id, @account, @id, @disabled)", new { id, account, disabled });
+
+    /// <summary>加一個部門；<paramref name="parent"/> 照 GD 的寫法，0 表示最上層。<paramref name="deputies"/> 是 <c>DEP_ACHIEF</c> 的原始字串。</summary>
+    public void AddDepartment(int no, string? name, int? parent = 0, string? chief = null, string? deputies = null, int? order = null, bool disabled = false)
+        => Execute("INSERT [dbo].[Sys_User_DEPT_BAS] (DEP_NO, DEP_NAME, PARENT_NO, DEP_CHIEF, DEP_ACHIEF, OrderBy, [Disable]) VALUES (@no, @name, @parent, @chief, @deputies, @order, @disabled)",
+            new { no, name = new DbString { Value = name, IsAnsi = false, Length = 200 }, parent, chief, deputies, order, disabled });
+
+    /// <summary>直接改部門的欄位（不經被測程式），模擬 GD 端的維護。</summary>
+    public void UpdateDepartment(int no, string set, object? parameters = null)
+        => Execute($"UPDATE [dbo].[Sys_User_DEPT_BAS] SET {set} WHERE DEP_NO = {no}", parameters);
+
+    public void RemoveDepartment(int no) => Execute("DELETE [dbo].[Sys_User_DEPT_BAS] WHERE DEP_NO = @no", new { no });
+
+    /// <summary>拿掉部門表，模擬 GD 改版或帳號沒有授權：查詢會被拒（SQL 錯誤 208）。</summary>
+    public void DropDepartments() => Execute("DROP TABLE [dbo].[Sys_User_DEPT_BAS]");
 
     public void AddDay(DateOnly day, bool morningOff = false, bool afternoonOff = false, string? remark = null, string userId = "sys")
         => Execute("INSERT [dbo].[Pub_Days] (hDate, UserId, AM, PM, hReMark) VALUES (@day, @userId, @morningOff, @afternoonOff, @remark)",

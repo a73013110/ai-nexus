@@ -1,18 +1,20 @@
 using System.Collections.Frozen;
 using System.Data.Common;
-using AiNexus.Features.Admin.Integrations;
 using AiNexus.Features.Admin.Integrations.Sources;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Staff.Attendance.Gd;
+namespace AiNexus.Features.Admin.Integrations.Gd;
+
+/// <summary>GD 查詢的結果：成功時 <paramref name="Rows"/> 有值；失敗時為 null，<paramref name="Failure"/> 是原因分類。</summary>
+public sealed record GdRead<T>(IReadOnlyList<T>? Rows, GdFailure? Failure);
 
 /// <summary>
-/// 出勤存取公文系統（GD）的唯一入口：查詢走這裡，假日回寫（<see cref="GdCalendarWriter"/>）也從這裡取得連線與設定，
-/// 兩者共用 Integrations 宣告的 <see cref="GdDatabase"/>（<c>Databases:Gd</c>），逾時都是 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
-/// GD 是別人的系統，連不上不能拖垮出勤頁：未設定，或連線、登入、逾時、結構變動等資料庫錯誤時回傳 <see langword="null"/>，由呼叫端決定降級還是拒絕。
+/// 以程式查詢公文系統（GD）的唯一入口，出勤（假單、假日與回寫）與組織匯入共用：查詢走這裡，出勤的假日回寫也從這裡取得連線與設定，
+/// 全部用 <see cref="GdDatabase"/>（<c>Databases:Gd</c>），逾時都是 <c>Integrations:Gd:CommandTimeoutSeconds</c>。
+/// GD 是別人的系統，連不上不能拖垮呼叫端：未設定，或連線、登入、逾時、結構變動等資料庫錯誤時回傳 <see langword="null"/>，由呼叫端決定降級還是拒絕。
 /// 取消與非資料庫的例外（程式錯誤、欄位型別對不上）照常拋出。每次存取的成敗記在 <see cref="Availability"/>，供監控（<see cref="GdMonitoring"/>）判定。
 /// </summary>
 /// <remarks>
@@ -51,7 +53,11 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     }
 
     /// <summary>執行唯讀查詢；GD 不可用時為 <see langword="null"/>（與「沒有資料」的空清單不同）。</summary>
-    public Task<IReadOnlyList<T>?> QueryAsync<T>(string sql, object? parameters, CancellationToken ct)
+    public async Task<IReadOnlyList<T>?> QueryAsync<T>(string sql, object? parameters, CancellationToken ct)
+        => (await ReadAsync<T>(sql, parameters, ct)).Rows;
+
+    /// <summary>同 <see cref="QueryAsync{T}"/>，失敗時另帶原因：給要把「未設定」「被拒」等原因告訴使用者的呼叫端，不必事後讀 <see cref="Availability"/>（可能已被並發的存取改掉）。</summary>
+    public Task<GdRead<T>> ReadAsync<T>(string sql, object? parameters, CancellationToken ct)
         => RunAsync(token => database.QueryAsync<T>(sql, parameters, CommandTimeoutSeconds, token), ct, ct);
 
     /// <summary>
@@ -59,14 +65,19 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     /// 任何一批失敗都回傳 <see langword="null"/>，不回傳只有部分人的結果。
     /// </summary>
     public async Task<IReadOnlyList<T>?> QueryInAsync<T>(string sql, IEnumerable<string> keys, Func<string[], object> parameters, CancellationToken ct)
+        => (await ReadInAsync<T>(sql, keys, parameters, ct)).Rows;
+
+    /// <summary>同 <see cref="QueryInAsync{T}"/>，失敗時另帶原因。</summary>
+    public async Task<GdRead<T>> ReadInAsync<T>(string sql, IEnumerable<string> keys, Func<string[], object> parameters, CancellationToken ct)
     {
         var rows = new List<T>();
         foreach (var batch in keys.Chunk(BatchSize))
         {
-            if (await QueryAsync<T>(sql, parameters(batch), ct) is not { } found) return null;
+            var read = await ReadAsync<T>(sql, parameters(batch), ct);
+            if (read.Rows is not { } found) return read;
             rows.AddRange(found);
         }
-        return rows;
+        return new(rows, null);
     }
 
     /// <summary>
@@ -82,7 +93,7 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     }
 
     /// <summary>
-    /// 開一條由呼叫端管理交易的 GD 連線，只給必須在同一個交易跨多個命令的假日回寫；查詢一律用 <see cref="QueryAsync{T}"/>。
+    /// 開一條由呼叫端管理交易的 GD 連線，只給必須在同一個交易跨多個命令的假日回寫（出勤的 <c>GdCalendarWriter</c>）；查詢一律用 <see cref="QueryAsync{T}"/>。
     /// 連線字串與查詢同一個來源，未設定時呼叫端應先看 <see cref="Configured"/>。這條路不更新 <see cref="Availability"/>，失敗由呼叫端記錄。
     /// </summary>
     internal async Task<SqlConnection> OpenAsync(CancellationToken ct)
@@ -103,31 +114,25 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
     /// <param name="query">以傳入的 token 執行查詢。</param>
     /// <param name="ct">呼叫端的取消：照常拋出，不算 GD 的失敗。</param>
     /// <param name="limit">實際傳給查詢的 token；探測時多了時限，時限到了算逾時。一般查詢與 <paramref name="ct"/> 相同。</param>
-    private async Task<IReadOnlyList<T>?> RunAsync<T>(Func<CancellationToken, Task<IReadOnlyList<T>>> query, CancellationToken ct, CancellationToken limit)
+    private async Task<GdRead<T>> RunAsync<T>(Func<CancellationToken, Task<IReadOnlyList<T>>> query, CancellationToken ct, CancellationToken limit)
     {
-        if (!Configured)
-        {
-            Failed(GdFailure.NotConfigured, nameof(GdFailure.NotConfigured), 0);
-            return null;
-        }
+        if (!Configured) return Failed<T>(GdFailure.NotConfigured, nameof(GdFailure.NotConfigured), 0);
         try
         {
             var rows = await query(limit);
             Succeeded();
-            return rows;
+            return new(rows, null);
         }
         catch (DbException ex)
         {
             // 查詢進行中被取消時，SqlClient 丟的是 SqlException 而不是 OperationCanceledException；那是呼叫端放棄，不是 GD 壞了。
             ct.ThrowIfCancellationRequested();
             var number = (ex as SqlException)?.Number ?? 0;
-            Failed(limit.IsCancellationRequested ? GdFailure.Timeout : Classify(number), ex.GetType().Name, number);
-            return null;
+            return Failed<T>(limit.IsCancellationRequested ? GdFailure.Timeout : Classify(number), ex.GetType().Name, number);
         }
         catch (OperationCanceledException ex) when (limit.IsCancellationRequested && !ct.IsCancellationRequested)
         {
-            Failed(GdFailure.Timeout, ex.GetType().Name, 0);
-            return null;
+            return Failed<T>(GdFailure.Timeout, ex.GetType().Name, 0);
         }
     }
 
@@ -145,7 +150,7 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
         if (restored) LogRestored(logger);
     }
 
-    private void Failed(GdFailure reason, string errorType, int sqlNumber)
+    private GdRead<T> Failed<T>(GdFailure reason, string errorType, int sqlNumber)
     {
         var now = clock.GetUtcNow();
         bool restored = false, report;
@@ -167,17 +172,17 @@ public sealed partial class GdAccess(ISqlDatabase<GdDatabase> database, IOptions
             }
         }
         if (restored) LogRestored(logger);
-        if (!report) return;
-        if (reason == GdFailure.Rejected) LogRejected(logger, errorType, sqlNumber);
-        else LogUnavailable(logger, reason.ToString(), errorType, sqlNumber);
+        if (report && reason == GdFailure.Rejected) LogRejected(logger, errorType, sqlNumber);
+        else if (report) LogUnavailable(logger, reason.ToString(), errorType, sqlNumber);
+        return new(null, reason);
     }
 
-    [LoggerMessage(EventId = 3407, EventName = "attendance.gd_unavailable", Level = LogLevel.Warning, Message = "GD cannot be queried ({Reason}, {ErrorType}, {SqlNumber}); leave and travel sheets are unavailable until it is reachable.")]
+    [LoggerMessage(EventId = 3407, EventName = "integrations.gd_unavailable", Level = LogLevel.Warning, Message = "GD cannot be queried ({Reason}, {ErrorType}, {SqlNumber}); features that read GD are unavailable until it is reachable.")]
     private static partial void LogUnavailable(ILogger logger, string reason, string errorType, int sqlNumber);
 
-    [LoggerMessage(EventId = 3408, EventName = "attendance.gd_restored", Level = LogLevel.Information, Message = "GD can be queried again.")]
+    [LoggerMessage(EventId = 3408, EventName = "integrations.gd_restored", Level = LogLevel.Information, Message = "GD can be queried again.")]
     private static partial void LogRestored(ILogger logger);
 
-    [LoggerMessage(EventId = 3411, EventName = "attendance.gd_query_rejected", Level = LogLevel.Warning, Message = "GD rejected a query ({ErrorType}, {SqlNumber}); a table, column or grant the GD account needs is missing.")]
+    [LoggerMessage(EventId = 3411, EventName = "integrations.gd_query_rejected", Level = LogLevel.Warning, Message = "GD rejected a query ({ErrorType}, {SqlNumber}); a table, column or grant the GD account needs is missing.")]
     private static partial void LogRejected(ILogger logger, string errorType, int sqlNumber);
 }

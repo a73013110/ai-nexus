@@ -33,9 +33,9 @@
 | 3308 | `mail.diagnosed` | `Mail/Transport/DiagnoseMailTransport.cs` |
 | 3400 / 3401 / 3402 | `attendance.import_succeeded` / `attendance.import_failed` / `attendance.import_requeued` | `Attendance/Imports/PunchImporter.cs` |
 | 3403 / 3404 / 3405 / 3406 | `attendance.source_unavailable` / `attendance.source_restored` / `attendance.import_aborted` / `attendance.scan_aborted` | `Attendance/Imports/PunchImportWorker.cs` |
-| 3407 / 3408 | `attendance.gd_unavailable` / `attendance.gd_restored` | `Attendance/Gd/GdAccess.cs` |
+| 3407 / 3408 | `integrations.gd_unavailable` / `integrations.gd_restored`（原 `attendance.gd_*`，隨 `GdAccess` 移到 Integrations 改名） | `Integrations/Gd/GdAccess.cs` |
 | 3409 / 3410 | `attendance.calendar_write_failed` / `attendance.calendar_commit_failed` | `Attendance/Gd/GdCalendarWriter.cs` |
-| 3411 | `attendance.gd_query_rejected` | `Attendance/Gd/GdAccess.cs` |
+| 3411 | `integrations.gd_query_rejected`（原 `attendance.gd_query_rejected`） | `Integrations/Gd/GdAccess.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |

@@ -18,4 +18,19 @@ public static class OrganizationErrors
     public static readonly Error OrderStale = Error.Conflict("organization_order_stale");
     /// <summary>不存在或已刪除的使用者不能加入單位。</summary>
     public static readonly Error UserNotFound = Error.NotFound("organization_user_not_found");
+
+    /// <summary>沒有設定公文系統的連線（<c>Databases:Gd</c>），無法匯入；要改設定，不會自己恢復。</summary>
+    public static readonly Error ImportNotConfigured = Error.Unavailable("organization_import_not_configured");
+
+    /// <summary>公文系統連不上或逾時。</summary>
+    public static readonly Error ImportUnavailable = Error.Unavailable("organization_import_unavailable");
+
+    /// <summary>公文系統拒絕查詢：部門或帳號表不存在、欄位改了，或 GD 帳號沒有讀取權限（docs/features/attendance-gd.md）。</summary>
+    public static readonly Error ImportRejected = Error.Unavailable("organization_import_rejected");
+
+    /// <summary>公文系統一個部門都沒有；照算會停用所有已匯入的單位，多半是連錯資料庫，所以拒絕。</summary>
+    public static readonly Error ImportEmpty = Error.Conflict("organization_import_empty");
+
+    /// <summary>重算的結果與預覽不同：預覽之後 GD 或組織有人改過，重新預覽後再套用。</summary>
+    public static readonly Error ImportStale = Error.Conflict("organization_import_stale");
 }

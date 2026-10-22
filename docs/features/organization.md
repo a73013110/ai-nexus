@@ -1,6 +1,6 @@
 # 組織
 
-結論：`/admin/organization`（授權 `organization`，預設給 administrators）維護部門樹與人員所屬。部門只決定「在組織中的位置」與主管關係，用來計算資料範圍；能使用哪些功能仍由角色決定（[ADR 0017](../decisions/0017-organization-units-and-data-scopes.md)）。部門與所屬由管理員維護，不從 AD 同步。
+結論：`/admin/organization`（授權 `organization`，預設給 administrators）維護部門樹與人員所屬。部門只決定「在組織中的位置」與主管關係，用來計算資料範圍；能使用哪些功能仍由角色決定（[ADR 0017](../decisions/0017-organization-units-and-data-scopes.md)）。部門可手建，也可[從公文系統匯入](#從公文系統匯入)部門與主管；匯入的單位以公文系統為準，手建的單位與一般成員由管理員維護。不從 AD 同步。
 
 頁首與單位編輯對話框右上角的問號可開啟操作導覽。
 
@@ -20,10 +20,24 @@
 - 只記錄現況。「當時在哪個部門」由業務資料寫入時自己存單位 ID，組織不保留異動歷史。
 - 使用者管理的檢視器顯示此人的所屬單位（唯讀，`identity.users` 或 `organization` 任一授權可讀）。
 
+## 從公文系統匯入
+
+頁首「從公文系統匯入」（動作 `organization.import`，預設給 administrators）讀 GD 的 `Sys_User_DEPT_BAS`，先預覽、確認後才套用。規則在 [`UnitImportPlan`](../../backend/src/AiNexus.Features/Admin/Organization/Imports/UnitImportPlan.cs)，連線與 GD 帳號權限見 [出勤與公文系統 GD](attendance-gd.md)。
+
+- **對應**：單位以 `GdDepNo`（GD 的 `DEP_NO`）對應，重複匯入是更新不是新增。還沒綁定的部門若在同一個上層有同名、未綁定的手建單位，綁定它而不新增（同層本來就不能同名）。
+- **以 GD 為準**：已綁定單位的名稱（去空白）、上層、啟用（`Disable`）與同層順序每次覆蓋。本地仍可編輯，但會被下一次匯入改回，所以樹上標示「公文」、編輯時提示。順序依 `OrderBy`、沒有值的排後、再依 `DEP_NO`，重新編號。
+- **上層**：`PARENT_NO` 為 0、null 或不存在的編號是最上層。
+- **GD 已沒有的部門**：停用，不刪除（成員與歷史引用保留）；重新出現時再啟用。手建單位不受影響。
+- **略過、不失敗**：名稱空白或不合格式、同層同名（已有的單位優先，都是新的就留 `DEP_NO` 小的）、成環、超過八層（含掛在底下的手建單位）的列略過並列為問題；已綁定的維持原樣，新的不建立，無處可掛的下層一併略過。GD 一個部門都沒有時拒絕（`organization_import_empty`），避免把全部停用。
+- **主管**：`DEP_CHIEF` 與 `DEP_ACHIEF`（「、」或全形、半形逗號分隔）都設為主管，不分正副：兩者對資料範圍的意義相同（[主管範圍](../architecture/data-scopes.md#主管範圍)），預覽仍標示副主管。公文帳號經 `Sys_User.ACCOUNT` 對到未刪除使用者的 AD 帳號；公文帳號停用、對不到或對到多人的列為問題。不是成員的主管加入為成員（不設主要所屬）；GD 不再列為主管的人只取消主管，保留成員資格。停用的單位不同步主管。
+- **預覽與套用一致**：預覽附內容的指紋。套用時重讀 GD、在行政交易內重讀組織並重算，指紋不同（期間 GD 或組織有人改過）回 409 `organization_import_stale`，請重新預覽，不會套用沒看過的變更。
+- GD 未設定、連不上或逾時、查詢被拒分別回 503 `organization_import_not_configured`、`organization_import_unavailable`、`organization_import_rejected`。測試身分可預覽、不能套用。
+- 目前只讀用得到的欄位；登記桌 Email（`DEP_EMAIL`）、`UnitClass`、`Attach` 等日後需要時再加。
+
 ## 給其他模組
 
 `OrganizationDirectory`（public）只回答現況：使用者所屬的有效單位、單位與所有下層、單位的有效成員或主管，以及可組合進業務查詢的成員子查詢（`MemberIds`）。有效單位＝自己與所有上層都啟用。它也實作 AccessControl 的 `IUnitMembership`，[資料範圍](../architecture/data-scopes.md)的 `unit`、`unit-tree` 與主管範圍由這裡計算。
 
 ## 稽核
 
-`admin.organization_unit`、`admin.organization_unit_delete`、`admin.organization_order`、`admin.organization_member`、`admin.organization_member_delete`，在活動稽核以「組織異動」篩選；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。測試身分只能讀取。
+`admin.organization_unit`、`admin.organization_unit_delete`、`admin.organization_order`、`admin.organization_member`、`admin.organization_member_delete`、`admin.organization_import`，在活動稽核以「組織異動」篩選；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。匯入只記數量（前後的單位、已匯入單位與主管數，以及各類變動數），完整清單在預覽。測試身分只能讀取。

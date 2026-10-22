@@ -50,7 +50,7 @@ public sealed class MonitoringSnapshotTests
         }
         var first = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
         Assert.Equal(2, first.Version);
-        Assert.Equal(["generation", "model-providers", "jobs", "mail", "attendance-import", "attendance-gd", "log-pipeline", "knowledge-index", "usage-today", "storage", "integrations"], first.Subsystems.Select(x => x.Id));
+        Assert.Equal(["generation", "model-providers", "jobs", "mail", "attendance-import", "gd", "log-pipeline", "knowledge-index", "usage-today", "storage", "integrations"], first.Subsystems.Select(x => x.Id));
         // 讀取在背景執行；頁面會在下一次快照時取得結果。
         await factory.Services.GetRequiredService<SubsystemReadings>().Settled;
         clock.Advance(MonitoringSnapshots.ReuseFor);

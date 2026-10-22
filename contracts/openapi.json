@@ -28537,6 +28537,314 @@
         }
       }
     },
+    "/api/v1/admin/organization-units/import": {
+      "get": {
+        "tags": [
+          "Organization"
+        ],
+        "operationId": "PreviewOrganizationImport",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitImportPreviewDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Organization"
+        ],
+        "operationId": "ApplyOrganizationImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitImportResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/organization-units/{id}": {
       "put": {
         "tags": [
@@ -44379,6 +44687,7 @@
           "access-control.features",
           "access-control.navigation",
           "organization",
+          "organization.import",
           "operations.usage",
           "billing.prices",
           "integrations",
@@ -50516,7 +50825,8 @@
           "name",
           "enabled",
           "sortOrder",
-          "memberCount"
+          "memberCount",
+          "gdDepNo"
         ],
         "type": "object",
         "properties": {
@@ -50542,6 +50852,267 @@
             "format": "int32"
           },
           "memberCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gdDepNo": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UnitImportAction": {
+        "enum": [
+          "Create",
+          "Adopt",
+          "Update",
+          "Disable"
+        ]
+      },
+      "UnitImportChangeDto": {
+        "required": [
+          "gdDepNo",
+          "unitId",
+          "action",
+          "path",
+          "previousPath",
+          "enabled",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "gdDepNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unitId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "action": {
+            "$ref": "#/components/schemas/UnitImportAction"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previousPath": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnitImportField"
+            }
+          }
+        }
+      },
+      "UnitImportField": {
+        "enum": [
+          "Name",
+          "Parent",
+          "Enabled",
+          "SortOrder"
+        ]
+      },
+      "UnitImportIssueCode": {
+        "enum": [
+          "NameMissing",
+          "NameInvalid",
+          "NameDuplicate",
+          "Cycle",
+          "DepthExceeded",
+          "ParentSkipped",
+          "AccountNotFound",
+          "AccountDisabled",
+          "UserNotFound",
+          "UserAmbiguous"
+        ]
+      },
+      "UnitImportIssueDto": {
+        "required": [
+          "gdDepNo",
+          "name",
+          "code",
+          "gdUserId"
+        ],
+        "type": "object",
+        "properties": {
+          "gdDepNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "code": {
+            "$ref": "#/components/schemas/UnitImportIssueCode"
+          },
+          "gdUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UnitImportManagerDto": {
+        "required": [
+          "gdDepNo",
+          "unitId",
+          "path",
+          "userId",
+          "account",
+          "displayName",
+          "added",
+          "deputy",
+          "joinsUnit"
+        ],
+        "type": "object",
+        "properties": {
+          "gdDepNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unitId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "added": {
+            "type": "boolean"
+          },
+          "deputy": {
+            "type": "boolean"
+          },
+          "joinsUnit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UnitImportPreviewDto": {
+        "required": [
+          "fingerprint",
+          "sourceUnits",
+          "units",
+          "managers",
+          "issues"
+        ],
+        "type": "object",
+        "properties": {
+          "fingerprint": {
+            "type": "string"
+          },
+          "sourceUnits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnitImportChangeDto"
+            }
+          },
+          "managers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnitImportManagerDto"
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnitImportIssueDto"
+            }
+          }
+        }
+      },
+      "UnitImportRequest": {
+        "required": [
+          "fingerprint"
+        ],
+        "type": "object",
+        "properties": {
+          "fingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "UnitImportResultDto": {
+        "required": [
+          "created",
+          "adopted",
+          "updated",
+          "disabled",
+          "managersAdded",
+          "managersRemoved",
+          "issues"
+        ],
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "adopted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "disabled": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "managersAdded": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "managersRemoved": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "issues": {
             "type": "integer",
             "format": "int32"
           }
@@ -51579,6 +52150,16 @@
         "name": "組織單位",
         "icon": "organization",
         "route": "/admin/organization",
+        "scopes": [ ],
+        "managerScope": null
+      },
+      {
+        "id": "organization.import",
+        "kind": "action",
+        "module": "organization",
+        "name": "從公文系統匯入部門",
+        "icon": "repeat",
+        "route": null,
         "scopes": [ ],
         "managerScope": null
       },

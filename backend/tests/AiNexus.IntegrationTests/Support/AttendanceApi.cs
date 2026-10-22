@@ -65,7 +65,7 @@ internal static class AttendanceApi
             : GrantAsync(factory, userId, "test-calendar-readonly", FeatureCatalog.AttendanceCalendar);
 
     /// <summary>建立同名的角色與群組，群組授予 <paramref name="features"/>，角色指派給 <paramref name="userId"/>；撤銷時以 <paramref name="id"/> 找群組。</summary>
-    private static async Task GrantAsync(AppFactory factory, Guid userId, string id, params string[] features)
+    internal static async Task GrantAsync(AppFactory factory, Guid userId, string id, params string[] features)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

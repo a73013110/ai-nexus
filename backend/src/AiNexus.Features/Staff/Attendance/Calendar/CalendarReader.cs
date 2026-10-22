@@ -1,4 +1,4 @@
-using AiNexus.Features.Staff.Attendance.Gd;
+using AiNexus.Features.Admin.Integrations.Gd;
 
 namespace AiNexus.Features.Staff.Attendance.Calendar;
 
