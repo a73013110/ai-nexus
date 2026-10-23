@@ -41,8 +41,13 @@ export class IdentityApi {
   /** 瀏覽 AD 與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。未指定 `parent` 時是搜尋根。 */
   directoryNodes = (parent: string | undefined, signal?: AbortSignal) =>
     this.api.get('/api/v1/admin/directory-nodes', { query: { parent }, signal });
-  directoryPeople = (node: string, subtree: boolean, signal?: AbortSignal) =>
-    this.api.get('/api/v1/admin/directory-people', { query: { node, subtree }, signal });
+  directoryPeople = (node: string, subtree: boolean, q: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/directory-people', {
+      query: { node, subtree, q: q || undefined },
+      signal,
+    });
+  directoryPerson = (sid: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/directory-people/{sid}', { path: { sid }, signal });
   previewDirectoryImport = (body: DirectoryImportRequest) =>
     this.api.post('/api/v1/admin/directory-imports/preview', { body });
   importDirectoryUsers = (body: DirectoryImportRequest) =>

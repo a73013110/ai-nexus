@@ -6,7 +6,7 @@
 }
 header {
   display: grid;
-  gap: var(--p-space-2);
+  gap: var(--p-space-1);
 }
 h4 {
   margin: 0;
@@ -18,31 +18,30 @@ h5 {
   font-size: var(--text-label);
   font-weight: 600;
 }
+.directory-person-account {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-person-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+  margin-top: var(--p-space-1);
+}
 .directory-person-changes {
   padding: var(--p-space-3);
   border-radius: var(--radius-item);
   background: var(--surface-subtle);
 }
-dl {
+.directory-person-skeleton {
   display: grid;
   gap: var(--p-space-3);
-  margin: 0;
 }
-dt {
-  display: flex;
-  align-items: baseline;
-  gap: var(--p-space-2);
-  color: var(--secondary);
-  font-size: var(--text-caption);
+.directory-person-skeleton .skeleton {
+  height: 0.875rem;
 }
-dt code {
-  color: var(--muted);
-  font-family: var(--font-code);
-  font-size: var(--p-font-xs);
-}
-dd {
-  margin: var(--p-space-1) 0 0;
-  overflow-wrap: anywhere;
+.directory-person-skeleton .skeleton:first-child {
+  height: var(--button-target);
 }
 .directory-person-locked {
   --icon-size: var(--icon-sm);

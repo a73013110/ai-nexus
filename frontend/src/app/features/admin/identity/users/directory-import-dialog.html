@@ -23,24 +23,32 @@
               class="icon-button"
               aria-label="重新讀取目錄"
               title="重新讀取目錄"
+              [attr.aria-disabled]="store.refreshing() || null"
               (click)="store.refresh()"
             >
-              <nx-icon name="refresh" />
+              <nx-icon
+                [class.directory-spin]="store.refreshing()"
+                [name]="store.refreshing() ? 'loading' : 'refresh'"
+              />
             </button>
           </div>
           @if (store.treeError()) {
             <nx-notice tone="danger" [message]="store.treeError()" />
-          } @else if (!store.root()) {
-            <p class="form-note directory-tree-loading" role="status">正在讀取目錄…</p>
           }
           <nx-tree-view
             label="組織單位"
+            [busy]="!store.root() && !store.treeError()"
             [items]="store.treeItems()"
             [selected]="store.node()"
             [expanded]="store.expanded()"
             (nodeSelect)="store.choose($event)"
             (nodeToggle)="store.expand($event.id, $event.open)"
           />
+          @if (store.truncated().length) {
+            <p class="form-note directory-truncated">
+              {{ store.truncated().join('、') }} 的子節點超過 500 個，只列出前 500 個。
+            </p>
+          }
           <div class="directory-subtree">
             <button
               type="button"
@@ -56,7 +64,7 @@
           </div>
         </aside>
         <nx-directory-people-table />
-        <aside class="directory-side" aria-label="匯入籃與 AD 屬性">
+        <aside id="directory-side" class="directory-side" aria-label="匯入籃與 AD 屬性">
           <nx-view-switch
             [fill]="true"
             label="右側面板"

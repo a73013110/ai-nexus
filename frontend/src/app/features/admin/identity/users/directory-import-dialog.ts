@@ -66,6 +66,8 @@ export class DirectoryImportDialog {
   readonly outcomes = signal<DirectoryOutcomeDto[]>([]);
   readonly busy = signal(false);
   readonly error = signal('');
+  /** 預覽的那一批人；確認時只匯入這一批，預覽中途改了勾選也不會匯入沒看過的人。 */
+  private previewed: string[] = [];
 
   readonly tally = computed(() => tally(this.outcomes()));
   readonly disabledCount = computed(
@@ -104,6 +106,7 @@ export class DirectoryImportDialog {
   });
 
   open() {
+    this.previewed = [];
     this.step.set('select');
     this.includeDisabled.set(false);
     this.outcomes.set([]);
@@ -116,25 +119,30 @@ export class DirectoryImportDialog {
   }
   async preview(includeDisabled = this.includeDisabled()) {
     if (!this.store.selection().size || this.busy()) return;
+    const sids =
+      includeDisabled === this.includeDisabled() || !this.previewed.length
+        ? [...this.store.selection().keys()]
+        : this.previewed;
     await this.run(async () => {
-      const result = await this.api.previewDirectoryImport({
-        sids: [...this.store.selection().keys()],
-        includeDisabled,
-      });
+      const result = await this.api.previewDirectoryImport({ sids, includeDisabled });
+      this.previewed = sids;
       this.includeDisabled.set(includeDisabled);
       this.outcomes.set(result.items);
       this.step.set('preview');
     });
   }
   back() {
+    // 部分失敗後返回：成功的人狀態已變，重讀清單，匯入籃的分組才會跟著更新。
+    if (this.step() === 'result') this.store.people.reload();
     this.error.set('');
+    this.previewed = [];
     this.step.set('select');
   }
   async confirm() {
     if (!this.pending() || this.busy()) return;
     await this.run(async () => {
       const result = await this.api.importDirectoryUsers({
-        sids: [...this.store.selection().keys()],
+        sids: this.previewed,
         includeDisabled: this.includeDisabled(),
       });
       this.users.readUsers();
@@ -145,7 +153,6 @@ export class DirectoryImportDialog {
   /** 結果步驟的「繼續匯入」：清空匯入籃、重讀目前節點（狀態已變），回到選取。 */
   again() {
     this.store.clear();
-    this.store.people.reload();
     this.outcomes.set([]);
     this.includeDisabled.set(false);
     this.back();

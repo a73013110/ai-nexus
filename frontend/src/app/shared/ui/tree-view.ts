@@ -20,6 +20,8 @@ export interface TreeItem {
   icon?: string;
   title?: string;
   count?: number | null;
+  /** 報讀用的數量說明（例：「含下層 12 人」）；沒給時只讀數字。 */
+  countLabel?: string;
   badge?: number;
   badgeLabel?: string;
   muted?: boolean;
@@ -45,54 +47,82 @@ interface TreeRow {
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './tree-view.scss',
-  template: `<ul class="ui-tree" role="tree" [attr.aria-label]="label()">
-    @for (row of rows(); track row.item.id) {
-      <li
-        role="treeitem"
-        class="ui-tree-item"
-        [class.ui-tree-muted]="row.item.muted"
-        [attr.data-id]="row.item.id"
-        [attr.aria-level]="row.level + 1"
-        [attr.aria-expanded]="row.item.hasChildren ? row.open : null"
-        [attr.aria-selected]="row.item.id === selected()"
-        [attr.aria-busy]="row.item.loading || null"
-        [attr.tabindex]="row.item.id === focusId() ? 0 : -1"
-        [attr.title]="row.item.title || null"
-        [style.--tree-level]="row.level"
-        (click)="click($event, row)"
-        (keydown)="key($event)"
-        (focus)="focused.set(row.item.id)"
-      >
-        <span
-          class="ui-tree-twisty"
-          [class.ui-tree-open]="row.open"
-          [class.ui-tree-leaf]="!row.item.hasChildren"
-          aria-hidden="true"
-          ><nx-icon name="chevron"
-        /></span>
-        @if (row.item.icon) {
-          <nx-icon class="ui-tree-icon" [name]="row.item.icon" />
+  template: `@if (busy() && !items().length) {
+      <div class="ui-tree-skeleton" role="status" [attr.aria-label]="'正在載入' + label()">
+        @for (row of skeleton; track $index) {
+          <span [style.--tree-level]="row.level"
+            ><i class="skeleton" [style.width.%]="row.width"></i
+          ></span>
         }
-        <span class="ui-tree-label">{{ row.item.label }}</span>
-        @if (row.item.loading) {
-          <nx-icon class="ui-tree-spinner" name="loading" />
-        } @else if (row.item.count !== undefined && row.item.count !== null) {
-          <span class="ui-tree-count">{{ row.item.count }}</span>
-        }
-        @if (row.item.badge) {
-          <span class="ui-tree-badge" [attr.aria-label]="row.item.badgeLabel || null">{{
-            row.item.badge
-          }}</span>
-        }
-      </li>
+      </div>
     }
-  </ul>`,
+    <ul class="ui-tree" role="tree" [attr.aria-label]="label()" [hidden]="!rows().length">
+      @for (row of rows(); track row.item.id) {
+        <li
+          role="treeitem"
+          class="ui-tree-item"
+          [class.ui-tree-muted]="row.item.muted"
+          [attr.data-id]="row.item.id"
+          [attr.aria-level]="row.level + 1"
+          [attr.aria-expanded]="row.item.hasChildren ? row.open : null"
+          [attr.aria-selected]="row.item.id === selected()"
+          [attr.aria-busy]="row.item.loading || null"
+          [attr.tabindex]="row.item.id === focusId() ? 0 : -1"
+          [attr.title]="row.item.title || null"
+          [style.--tree-level]="row.level"
+          (click)="click($event, row)"
+          (keydown)="key($event)"
+          (focus)="focused.set(row.item.id)"
+        >
+          <span
+            class="ui-tree-twisty"
+            [class.ui-tree-open]="row.open"
+            [class.ui-tree-leaf]="!row.item.hasChildren"
+            aria-hidden="true"
+            ><nx-icon name="chevron"
+          /></span>
+          @if (row.item.icon) {
+            <nx-icon class="ui-tree-icon" [name]="row.item.icon" />
+          }
+          <span class="ui-tree-label">{{ row.item.label }}</span>
+          @if (row.item.loading) {
+            <nx-icon class="ui-tree-spinner" name="loading" />
+          } @else if (row.item.count !== undefined && row.item.count !== null) {
+            <span class="ui-tree-count" [attr.aria-hidden]="row.item.countLabel ? true : null">{{
+              row.item.count
+            }}</span>
+            @if (row.item.countLabel) {
+              <span class="sr-only">{{ row.item.countLabel }}</span>
+            }
+          }
+          @if (row.item.badge) {
+            <!-- 一般 span 上的 aria-label 多數報讀器不讀，改用隱藏文字。 -->
+            <span class="ui-tree-badge" [attr.aria-hidden]="row.item.badgeLabel ? true : null">{{
+              row.item.badge
+            }}</span>
+            @if (row.item.badgeLabel) {
+              <span class="sr-only">{{ row.item.badgeLabel }}</span>
+            }
+          }
+        </li>
+      }
+    </ul>`,
 })
 export class TreeView {
   readonly label = input.required<string>();
   readonly items = input.required<readonly TreeItem[]>();
   readonly selected = input<string | null>(null);
   readonly expanded = input<ReadonlySet<string>>(new Set());
+  /** 第一層還在載入：沒有節點時顯示骨架。下層的載入用節點自己的 `loading`。 */
+  readonly busy = input(false);
+  protected readonly skeleton = [
+    { level: 0, width: 70 },
+    { level: 1, width: 82 },
+    { level: 1, width: 64 },
+    { level: 1, width: 76 },
+    { level: 1, width: 58 },
+    { level: 1, width: 70 },
+  ];
   readonly nodeSelect = output<string>();
   /** 使用者要展開或收合；`open` 是要變成的狀態。 */
   readonly nodeToggle = output<{ id: string; open: boolean }>();

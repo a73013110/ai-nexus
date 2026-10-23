@@ -34,9 +34,23 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
     private const int MaxCounted = 20_000;
     private const int MaxChildren = 500;
     private const int MaxCountedChildren = 50;
+    // 檢視單一人員時列出的群組上限；超過時只回前面一段（AD 本身超過 1500 個值也要分段讀取）。
+    private const int MaxGroups = 200;
     private static readonly string[] Attributes =
-        ["objectSid", "sAMAccountName", "displayName", "mail", "department", "title", "userAccountControl", "userPrincipalName", "whenChanged", "lastLogonTimestamp"];
+        ["objectSid", "sAMAccountName", "displayName", "mail", "department", "title", "userAccountControl", "userPrincipalName"];
+    private static readonly string[] DetailAttributes =
+    [
+        .. Attributes, "objectGUID", "givenName", "sn", "employeeID", "description", "company", "manager", "physicalDeliveryOfficeName", "telephoneNumber",
+        "mobile", "accountExpires", "pwdLastSet", "lockoutTime", "badPwdCount", "badPasswordTime", "lastLogon", "lastLogonTimestamp", "logonCount",
+        "whenCreated", "whenChanged", "memberOf",
+    ];
+    // 即時計算的屬性（鎖定、密碼過期與到期時間）只能以 base 範圍查詢單一物件，不能放進子樹查詢。
+    private static readonly string[] ComputedAttributes = ["msDS-User-Account-Control-Computed", "msDS-UserPasswordExpiryTimeComputed"];
+    private const int Lockout = 0x10;
+    private const int PasswordExpired = 0x80_0000;
     private static readonly string[] NoAttributes = ["1.1"];
+    // 與畫面上節點內搜尋相同的欄位，目錄端找人與畫面篩選的結果才一致。
+    private static readonly string[] SearchedAttributes = ["displayName", "sAMAccountName", "userPrincipalName", "mail", "department", "title"];
     // 與登入的閘門分開：管理員連續瀏覽不應排擠同時間的登入。
     private readonly SemaphoreSlim gate = new(2, 2);
 
@@ -48,11 +62,19 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         return Children(connection, dn, ct);
     }, ct);
 
-    public Task<DirectoryListing?> PeopleAsync(string dn, bool subtree, int limit, CancellationToken ct) => RunAsync((connection, _) =>
+    public Task<DirectoryListing?> PeopleAsync(string dn, bool subtree, string? query, int limit, CancellationToken ct) => RunAsync((connection, _) =>
     {
         if (!OperatingSystem.IsWindows()) throw PlatformUnavailable();
-        return People(connection, dn, subtree, limit, ct);
+        return People(connection, dn, subtree, query, limit, ct);
     }, ct);
+
+    /// <summary>人員篩選；有關鍵字時加上「任一欄位包含」，關鍵字一律跳脫，不能改寫篩選結構。</summary>
+    public static string PeopleFilter(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return PersonFilter;
+        var words = EscapeFilter(query.Trim());
+        return $"(&{PersonFilter}(|{string.Concat(SearchedAttributes.Select(x => $"({x}=*{words}*)"))}))";
+    }
 
     public Task<IReadOnlyList<DirectoryPerson>> FindAsync(IReadOnlyCollection<string> sids, CancellationToken ct)
     {
@@ -65,6 +87,22 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         }, ct);
     }
 
+    public Task<DirectoryPersonDetail?> DetailAsync(string sid, CancellationToken ct)
+    {
+        if (!SidPattern().IsMatch(sid)) return Task.FromResult<DirectoryPersonDetail?>(null);
+        return RunAsync((connection, settings) =>
+        {
+            if (!OperatingSystem.IsWindows()) throw PlatformUnavailable();
+            return Detail(connection, settings.Base, sid);
+        }, ct);
+    }
+
+    /// <summary>
+    /// 存放的 <c>userAccountControl</c> 併入即時計算的「已鎖定」與「密碼已過期」：AD 不會把這兩個狀態寫回存放的值，
+    /// 只看存放的值會把鎖定中的帳號顯示成正常。
+    /// </summary>
+    public static int AccountControl(int stored, int? computed) => stored | ((computed ?? 0) & (Lockout | PasswordExpired));
+
     /// <summary>依 SID 查人的篩選；AD 接受字串形式的 SID（<c>S-1-5-21-…</c>）。</summary>
     public static string SidFilter(IEnumerable<string> sids)
         => $"(&{PersonFilter}(|{string.Concat(sids.Select(x => $"(objectSid={EscapeFilter(x)})"))}))";
@@ -74,7 +112,10 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         => value is { Length: >= 14 } && DateTime.TryParseExact(value[..14], "yyyyMMddHHmmss", CultureInfo.InvariantCulture,
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var time) ? new DateTimeOffset(time, TimeSpan.Zero) : null;
 
-    /// <summary><c>lastLogonTimestamp</c> 的 FILETIME（100 奈秒刻度）；0 表示從未登入，回 null。</summary>
+    /// <summary>
+    /// FILETIME 屬性（<c>lastLogon</c>、<c>pwdLastSet</c>、<c>accountExpires</c>…，100 奈秒刻度）。0 表示沒有（從未登入、未鎖定），
+    /// <c>0x7FFFFFFFFFFFFFFF</c> 表示永不（帳號或密碼不到期），兩者都回 null。
+    /// </summary>
     public static DateTimeOffset? FileTime(string? value)
         => long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var ticks) && ticks > 0 && ticks <= DateTime.MaxValue.ToFileTimeUtc()
             ? DateTimeOffset.FromFileTime(ticks).ToUniversalTime() : null;
@@ -128,13 +169,13 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
             var hasChildren = nested.More || nested.Entries.Any(x => DirectoryNames.Below(x.DistinguishedName, node.DistinguishedName));
             return new DirectoryNode(node.DistinguishedName, name, ou ? DirectoryNodeKinds.OrganizationalUnit : DirectoryNodeKinds.Container, count, hasChildren);
         }).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        return new(people.More ? null : people.Entries.Count, children);
+        return new(people.More ? null : people.Entries.Count, children, found.More);
     }
 
     [SupportedOSPlatform("windows")]
-    private static DirectoryListing? People(LdapConnection connection, string dn, bool subtree, int limit, CancellationToken ct)
+    private static DirectoryListing? People(LdapConnection connection, string dn, bool subtree, string? query, int limit, CancellationToken ct)
     {
-        var request = Request(dn, PersonFilter, subtree ? SearchScope.Subtree : SearchScope.OneLevel, Attributes);
+        var request = Request(dn, PeopleFilter(query), subtree ? SearchScope.Subtree : SearchScope.OneLevel, Attributes);
         // 要求伺服器依顯示名稱排序，超過上限時截掉的是名單後段；伺服器不支援時照收、在這裡排序。
         request.Controls.Add(new SortRequestControl("displayName", false) { IsCritical = false });
         if (Collect(connection, dn, request, limit, PageSize, ct) is not var (entries, more)) return null;
@@ -148,6 +189,30 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         foreach (var batch in sids.Chunk(SidBatch))
             people.AddRange(Read(Collect(connection, Request(root, SidFilter(batch), SearchScope.Subtree, Attributes), int.MaxValue, PageSize, ct).Entries));
         return people;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static DirectoryPersonDetail? Detail(LdapConnection connection, string root, string sid)
+    {
+        var response = (SearchResponse)connection.SendRequest(Request(root, SidFilter([sid]), SearchScope.Subtree, DetailAttributes));
+        if (response.Entries.Count == 0 || response.Entries[0] is not { } entry || Read([entry]).FirstOrDefault() is not { } person) return null;
+        var computed = ((SearchResponse)connection.SendRequest(Request(entry.DistinguishedName, "(objectClass=*)", SearchScope.Base, ComputedAttributes)))
+            .Entries.Cast<SearchResultEntry>().FirstOrDefault();
+        // 群組超過 1500 個時 AD 以 memberOf;range=0-1499 分段回傳；只列前面一段並標示還有更多。
+        var memberOf = entry.Attributes.AttributeNames.Cast<string>().FirstOrDefault(x => x.StartsWith("memberOf", StringComparison.OrdinalIgnoreCase));
+        var groups = memberOf is null ? [] : entry.Attributes[memberOf].GetValues(typeof(string)).Cast<string>().Select(DirectoryNames.NameOf)
+            .Order(StringComparer.OrdinalIgnoreCase).ToList();
+        var pwdLastSet = Text(entry, "pwdLastSet");
+        return new(person.Sid, entry.Attributes["objectGUID"]?[0] is byte[] { Length: 16 } guid ? new Guid(guid).ToString() : null, person.Dn, person.AccountName,
+            person.DisplayName, Text(entry, "givenName"), Text(entry, "sn"), person.Upn, person.Email, Text(entry, "employeeID"), Text(entry, "description"),
+            Text(entry, "company"), person.Department, person.Title, Text(entry, "manager") is { } manager ? DirectoryNames.NameOf(manager) : null,
+            Text(entry, "physicalDeliveryOfficeName"), Text(entry, "telephoneNumber"), Text(entry, "mobile"),
+            AccountControl(Number(entry, "userAccountControl") ?? 0, computed is null ? null : Number(computed, "msDS-User-Account-Control-Computed")),
+            FileTime(Text(entry, "accountExpires")), FileTime(pwdLastSet), pwdLastSet == "0",
+            computed is null ? null : FileTime(Text(computed, "msDS-UserPasswordExpiryTimeComputed")), FileTime(Text(entry, "lockoutTime")),
+            Number(entry, "badPwdCount"), FileTime(Text(entry, "badPasswordTime")), FileTime(Text(entry, "lastLogon")), FileTime(Text(entry, "lastLogonTimestamp")),
+            Number(entry, "logonCount"), GeneralizedTime(Text(entry, "whenCreated")), GeneralizedTime(Text(entry, "whenChanged")),
+            [.. groups.Take(MaxGroups)], groups.Count > MaxGroups || memberOf?.Contains(';', StringComparison.Ordinal) == true);
     }
 
     /// <summary>以節點為搜尋根的第一個查詢：節點已被刪除或改名（畫面上的樹是舊的）回 null，其他目錄錯誤照常往外拋。</summary>
@@ -188,13 +253,15 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         {
             if (entry.Attributes["objectSid"]?[0] is not byte[] bytes || Text(entry, "sAMAccountName") is not { } name) continue;
             yield return new(new SecurityIdentifier(bytes, 0).Value, entry.DistinguishedName, name, Text(entry, "displayName") ?? name, Text(entry, "mail"),
-                Text(entry, "department"), Text(entry, "title"), Disabled(entry), Text(entry, "userPrincipalName"),
-                GeneralizedTime(Text(entry, "whenChanged")), FileTime(Text(entry, "lastLogonTimestamp")));
+                Text(entry, "department"), Text(entry, "title"), Disabled(entry), Text(entry, "userPrincipalName"));
         }
     }
 
     private static string? Text(SearchResultEntry entry, string attribute)
         => entry.Attributes[attribute]?[0] is string value && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
+
+    private static int? Number(SearchResultEntry entry, string attribute)
+        => int.TryParse(Text(entry, attribute), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     [GeneratedRegex(@"^S-1-\d{1,3}(-\d{1,10}){1,15}$")]
     private static partial Regex SidPattern();

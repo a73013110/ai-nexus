@@ -15,7 +15,7 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 /// （只有 <c>changed</c> 有值），規則與預覽相同；預覽仍以 SID 重新讀目錄重算，這裡只供畫面分類與提示。
 /// </summary>
 public sealed record DirectoryPersonDto(string Sid, string Dn, string Account, string? Upn, string DisplayName, string? Email, string? Department, string? Title,
-    string Path, bool Disabled, DateTimeOffset? WhenChanged, DateTimeOffset? LastLogon, string State, Guid? UserId, IReadOnlyList<DirectoryChange> Changes);
+    string Path, bool Disabled, string State, Guid? UserId, IReadOnlyList<DirectoryChange> Changes);
 
 /// <summary><see cref="DirectoryPersonDto.State"/> 的值，判斷規則與 <see cref="DirectoryAccounts.MatchAsync"/> 相同。</summary>
 public static class DirectoryPersonStates
@@ -82,7 +82,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             }
             else state = DirectoryPersonStates.New;
             return new DirectoryPersonDto(person.Sid, person.Dn, person.AccountName, person.Upn, person.DisplayName, person.Email, person.Department, person.Title,
-                person.Path, person.Disabled, person.WhenChanged, person.LastLogon, state, id, changes);
+                person.Path, person.Disabled, state, id, changes);
         })];
     }
 

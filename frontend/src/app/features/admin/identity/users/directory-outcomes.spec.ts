@@ -30,8 +30,6 @@ const person = (sid: string, state = 'new', extra: Partial<DirectoryPersonDto> =
     title: null,
     path: '',
     disabled: false,
-    whenChanged: null,
-    lastLogon: null,
     state,
     userId: null,
     changes: [],

@@ -27148,6 +27148,13 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -27287,6 +27294,166 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DirectoryPeopleDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/directory-people/{sid}": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "GetDirectoryPerson",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryPersonDetailDto"
                 }
               }
             }
@@ -45317,7 +45484,8 @@
         "required": [
           "node",
           "children",
-          "writable"
+          "writable",
+          "moreChildren"
         ],
         "type": "object",
         "properties": {
@@ -45331,6 +45499,9 @@
             }
           },
           "writable": {
+            "type": "boolean"
+          },
+          "moreChildren": {
             "type": "boolean"
           }
         }
@@ -45434,6 +45605,239 @@
           }
         }
       },
+      "DirectoryPersonDetailDto": {
+        "required": [
+          "sid",
+          "objectGuid",
+          "dn",
+          "path",
+          "account",
+          "displayName",
+          "givenName",
+          "surname",
+          "upn",
+          "email",
+          "employeeId",
+          "description",
+          "company",
+          "department",
+          "title",
+          "manager",
+          "office",
+          "phone",
+          "mobile",
+          "accountControl",
+          "accountExpires",
+          "passwordLastSet",
+          "passwordMustChange",
+          "passwordExpires",
+          "lockoutTime",
+          "badPasswordCount",
+          "badPasswordTime",
+          "lastLogon",
+          "lastLogonTimestamp",
+          "logonCount",
+          "whenCreated",
+          "whenChanged",
+          "groups",
+          "moreGroups"
+        ],
+        "type": "object",
+        "properties": {
+          "sid": {
+            "type": "string"
+          },
+          "objectGuid": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dn": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "givenName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "surname": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "upn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "employeeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "company": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "department": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manager": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "office": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mobile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountControl": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "accountExpires": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "passwordLastSet": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "passwordMustChange": {
+            "type": "boolean"
+          },
+          "passwordExpires": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lockoutTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "badPasswordCount": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "badPasswordTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastLogon": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastLogonTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "logonCount": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "whenCreated": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "whenChanged": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "moreGroups": {
+            "type": "boolean"
+          }
+        }
+      },
       "DirectoryPersonDto": {
         "required": [
           "sid",
@@ -45446,8 +45850,6 @@
           "title",
           "path",
           "disabled",
-          "whenChanged",
-          "lastLogon",
           "state",
           "userId",
           "changes"
@@ -45495,20 +45897,6 @@
           },
           "disabled": {
             "type": "boolean"
-          },
-          "whenChanged": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "lastLogon": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
           },
           "state": {
             "type": "string"

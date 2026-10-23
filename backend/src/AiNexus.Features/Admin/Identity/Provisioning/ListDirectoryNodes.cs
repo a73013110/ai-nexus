@@ -9,9 +9,9 @@ public sealed record DirectoryNodeDto(string Dn, string Name, string Kind, int? 
 
 /// <summary>
 /// <c>Node</c> 是查詢的節點本身（未指定時是搜尋根），<c>Children</c> 是它的直屬子節點（依名稱排序）。
-/// <c>Writable</c> 是服務帳號能否寫回 AD（見 <see cref="IAdDirectory.Writable"/>）。
+/// <c>Writable</c> 是服務帳號能否寫回 AD（見 <see cref="IAdDirectory.Writable"/>）；<c>MoreChildren</c> 表示子節點超過上限，只列前面一段。
 /// </summary>
-public sealed record DirectoryNodesDto(DirectoryNodeDto Node, IReadOnlyList<DirectoryNodeDto> Children, bool Writable);
+public sealed record DirectoryNodesDto(DirectoryNodeDto Node, IReadOnlyList<DirectoryNodeDto> Children, bool Writable, bool MoreChildren);
 
 /// <summary>
 /// 匯入對話框的目錄樹（<c>identity.users.import</c>）：一次展開一層。只能瀏覽設定的搜尋根之下，DN 由前一次回應帶回，
@@ -33,7 +33,8 @@ internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuth
         var node = new DirectoryNodeDto(dn, root && settings.SearchBase.Length == 0 ? settings.Domain : DirectoryNames.NameOf(dn),
             root ? DirectoryNodeKinds.Root : dn.StartsWith("OU=", StringComparison.OrdinalIgnoreCase) ? DirectoryNodeKinds.OrganizationalUnit : DirectoryNodeKinds.Container,
             branch.People, branch.Children.Count > 0);
-        return new DirectoryNodesDto(node, [.. branch.Children.Select(x => new DirectoryNodeDto(x.Dn, x.Name, x.Kind, x.People, x.HasChildren))], directory.Writable);
+        return new DirectoryNodesDto(node, [.. branch.Children.Select(x => new DirectoryNodeDto(x.Dn, x.Name, x.Kind, x.People, x.HasChildren))], directory.Writable,
+            branch.MoreChildren);
     }
 
     /// <summary>

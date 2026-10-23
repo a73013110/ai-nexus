@@ -34,6 +34,13 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
+.directory-truncated {
+  margin: 0;
+  padding-inline: var(--p-space-2);
+}
+.directory-spin {
+  animation: orbit-turn var(--motion-spin) linear infinite;
+}
 .directory-subtree {
   display: flex;
   align-items: center;

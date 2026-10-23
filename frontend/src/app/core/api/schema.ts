@@ -8358,6 +8358,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/directory-people/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDirectoryPerson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/directory-imports/preview": {
         parameters: {
             query?: never;
@@ -10375,6 +10391,7 @@ export interface components {
             node: components["schemas"]["DirectoryNodeDto"];
             children: components["schemas"]["DirectoryNodeDto"][];
             writable: boolean;
+            moreChildren: boolean;
         };
         DirectoryOutcomeDto: {
             sid: string;
@@ -10397,6 +10414,54 @@ export interface components {
             people: components["schemas"]["DirectoryPersonDto"][];
             more: boolean;
         };
+        DirectoryPersonDetailDto: {
+            sid: string;
+            objectGuid: null | string;
+            dn: string;
+            path: string;
+            account: string;
+            displayName: string;
+            givenName: null | string;
+            surname: null | string;
+            upn: null | string;
+            email: null | string;
+            employeeId: null | string;
+            description: null | string;
+            company: null | string;
+            department: null | string;
+            title: null | string;
+            manager: null | string;
+            office: null | string;
+            phone: null | string;
+            mobile: null | string;
+            /** Format: int32 */
+            accountControl: number;
+            /** Format: date-time */
+            accountExpires: null | string;
+            /** Format: date-time */
+            passwordLastSet: null | string;
+            passwordMustChange: boolean;
+            /** Format: date-time */
+            passwordExpires: null | string;
+            /** Format: date-time */
+            lockoutTime: null | string;
+            /** Format: int32 */
+            badPasswordCount: null | number;
+            /** Format: date-time */
+            badPasswordTime: null | string;
+            /** Format: date-time */
+            lastLogon: null | string;
+            /** Format: date-time */
+            lastLogonTimestamp: null | string;
+            /** Format: int32 */
+            logonCount: null | number;
+            /** Format: date-time */
+            whenCreated: null | string;
+            /** Format: date-time */
+            whenChanged: null | string;
+            groups: string[];
+            moreGroups: boolean;
+        };
         DirectoryPersonDto: {
             sid: string;
             dn: string;
@@ -10408,10 +10473,6 @@ export interface components {
             title: null | string;
             path: string;
             disabled: boolean;
-            /** Format: date-time */
-            whenChanged: null | string;
-            /** Format: date-time */
-            lastLogon: null | string;
             state: string;
             /** Format: uuid */
             userId: null | string;
@@ -12611,6 +12672,7 @@ export type DirectoryNodesDto = components['schemas']['DirectoryNodesDto'];
 export type DirectoryOutcomeDto = components['schemas']['DirectoryOutcomeDto'];
 export type DirectoryOutcomesDto = components['schemas']['DirectoryOutcomesDto'];
 export type DirectoryPeopleDto = components['schemas']['DirectoryPeopleDto'];
+export type DirectoryPersonDetailDto = components['schemas']['DirectoryPersonDetailDto'];
 export type DirectoryPersonDto = components['schemas']['DirectoryPersonDto'];
 export type DirectorySyncRequest = components['schemas']['DirectorySyncRequest'];
 export type DirectoryUserDto = components['schemas']['DirectoryUserDto'];
@@ -29817,6 +29879,7 @@ export interface operations {
             query?: {
                 node?: string;
                 subtree?: boolean;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -29831,6 +29894,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DirectoryPeopleDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDirectoryPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryPersonDetailDto"];
                 };
             };
             /** @description Bad Request */

@@ -16,6 +16,12 @@
     </div>
     <nx-copy-value class="directory-dn is-truncated" label="複製 DN" [value]="node.dn" />
   </header>
+} @else if (!store.treeError()) {
+  <div class="directory-node" role="status" aria-label="正在讀取目錄">
+    <span class="skeleton directory-skeleton-crumbs"></span>
+    <span class="skeleton directory-skeleton-title"></span>
+    <span class="skeleton directory-skeleton-dn"></span>
+  </div>
 }
 <div class="directory-toolbar">
   <nx-view-switch
@@ -30,7 +36,7 @@
     placeholder="姓名、帳號、信箱、部門"
     [maxLength]="64"
     [value]="store.query()"
-    (valueChange)="store.query.set($event)"
+    (valueChange)="store.setQuery($event)"
   />
   <nx-checkbox
     class="directory-hide-disabled"
@@ -42,7 +48,7 @@
 @if (store.banner(); as banner) {
   <div class="directory-banner" role="status">
     <span>{{ banner.text }}</span>
-    <button type="button" class="quiet-button" (click)="store.remove(banner.drop)">
+    <button type="button" class="quiet-button" (click)="dropBanner(banner.drop)">
       {{ banner.action }}
     </button>
   </div>
@@ -53,12 +59,17 @@
 @if (store.more()) {
   <nx-notice
     tone="info"
-    message="這裡超過 1,000 人，只列出依姓名排序的前 1,000 位；請改選下層 OU 或關閉「包含子 OU」。"
+    [message]="
+      store.searchedServer()
+        ? '符合的人超過 1,000 位，只列出前 1,000 位；請輸入更完整的姓名或帳號。'
+        : '這裡超過 1,000 人，只列出前 1,000 位；搜尋會在整個節點裡找人，也可以改選下層 OU。'
+    "
   />
 }
 <nx-data-table
   class="directory-people"
   label="節點人員"
+  preferenceKey="identity.directory-people"
   [busy]="store.people.loading()"
   [columns]="columns"
 >
@@ -69,7 +80,6 @@
       <col nxTableColumn="department" />
       <col nxTableColumn="email" />
       <col nxTableColumn="state" />
-      <col nxTableColumn="inspect" class="directory-col-inspect" />
     </colgroup>
     <thead>
       <tr>
@@ -79,7 +89,7 @@
             label="選取清單中的全部人員"
             [checked]="store.headState() === 'all'"
             [mixed]="store.headState() === 'some'"
-            [disabled]="!store.visible().length"
+            [disabled]="!selectableCount()"
             (checkedChange)="store.toggleAll($event)"
           />
         </th>
@@ -87,20 +97,17 @@
         <th scope="col" nxTableColumn="department">部門與職稱</th>
         <th scope="col" nxTableColumn="email">信箱</th>
         <th scope="col" nxTableColumn="state">平台狀態</th>
-        <th scope="col" nxTableColumn="inspect"><span class="sr-only">AD 屬性</span></th>
       </tr>
     </thead>
     <tbody>
       @for (person of store.visible(); track person.sid) {
         @let picked = store.selection().has(person.sid);
         <tr
-          class="ui-table-row"
-          tabindex="-1"
+          nxTableRow
           [class.is-selected]="store.inspected() === person.sid"
           [class.is-picked]="picked"
           [class.is-dimmed]="person.disabled || !selectable(person)"
-          (mousedown)="hold($event)"
-          (click)="rowClick($event, person)"
+          (rowActivate)="inspect(person)"
         >
           <td nxTableColumn="select">
             <nx-checkbox
@@ -112,10 +119,19 @@
             />
           </td>
           <td nxTableColumn="name">
-            <strong class="ui-truncate" [title]="person.displayName">{{
-              person.displayName
-            }}</strong>
-            <small class="ui-truncate" [title]="person.account">{{ person.account }}</small>
+            <button
+              type="button"
+              class="ui-table-link"
+              data-row-action
+              [attr.aria-label]="'檢視 AD 屬性：' + person.displayName"
+              [attr.aria-controls]="panelId"
+              (click)="inspect(person)"
+              (focus)="follow(person)"
+            >
+              <strong class="ui-truncate" [title]="person.displayName">{{
+                person.displayName
+              }}</strong></button
+            ><small class="ui-truncate" [title]="person.account">{{ person.account }}</small>
           </td>
           <td nxTableColumn="department">
             <span class="ui-truncate">{{ person.department || '—' }}</span>
@@ -139,24 +155,13 @@
               <small>{{ changedFields(person.changes) }}與平台不同</small>
             }
           </td>
-          <td nxTableColumn="inspect">
-            <button
-              type="button"
-              class="icon-button"
-              [attr.aria-label]="'檢視 ' + person.displayName + ' 的 AD 屬性'"
-              title="檢視 AD 屬性"
-              (click)="store.inspect(person)"
-            >
-              <nx-icon name="sidebar" />
-            </button>
-          </td>
         </tr>
       }
     </tbody>
   </table>
   <nx-table-state
     [count]="store.visible().length"
-    [loading]="store.people.loading() && !store.all().length"
+    [loading]="store.listLoading()"
     [error]="store.people.error()"
     loadingText="正在讀取 AD 人員"
     errorTitle="無法讀取這個節點"
@@ -169,6 +174,6 @@
       >顯示 {{ store.visible().length }} / {{ store.all().length }} 人 · 這裡已選
       {{ store.pickedHere() }} 人</span
     >
-    <span><kbd>Shift</kbd>＋點選可連續選取一段</span>
+    <span>點列檢視 AD 屬性 · <kbd>Shift</kbd>＋勾選可連續選取一段</span>
   </div>
 </nx-data-table>

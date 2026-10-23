@@ -130,7 +130,8 @@
   align-items: center;
   gap: var(--p-space-2);
 }
-.resource-badges span {
+// 只套在直接放進來的文字標籤；放進來的元件（nx-status-badge 的圓點）內部的 span 不受影響。
+.resource-badges > span {
   font-size: var(--text-caption);
   background: var(--sidebar);
   color: var(--secondary);

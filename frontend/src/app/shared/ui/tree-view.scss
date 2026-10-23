@@ -89,19 +89,22 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+// 減少動態時由全域規則停下旋轉與展開動畫。
 .ui-tree-spinner {
   color: var(--muted);
-  animation: ui-tree-spin 0.9s linear infinite;
+  animation: orbit-turn var(--motion-spin) linear infinite;
 }
-@keyframes ui-tree-spin {
-  to {
-    transform: rotate(1turn);
-  }
+// 第一層還沒讀到時的骨架：形狀與節點列相同，高度不跳動。
+.ui-tree-skeleton {
+  display: grid;
+  gap: var(--p-space-1);
 }
-@media (prefers-reduced-motion: reduce) {
-  .ui-tree-twisty nx-icon,
-  .ui-tree-spinner {
-    transition: none;
-    animation: none;
-  }
+.ui-tree-skeleton span {
+  display: flex;
+  align-items: center;
+  height: var(--button-target);
+  padding-inline: calc(var(--p-space-1) + var(--tree-level, 0) * var(--p-space-4)) var(--p-space-2);
+}
+.ui-tree-skeleton .skeleton {
+  height: 0.75rem;
 }

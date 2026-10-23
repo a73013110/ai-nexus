@@ -189,13 +189,13 @@ export function directoryImportTour(options: {
             target: `${IMPORT} .directory-people`,
             title: '勾選要匯入的人',
             description:
-              '表頭可全選目前清單，Shift＋點選連續選一段；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
+              '勾選框才是選取：表頭可全選目前清單，Shift＋勾選連續選一段；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
           },
           {
             target: `${IMPORT} .directory-side`,
             title: '匯入籃與 AD 屬性',
             description:
-              '切換節點時已選的人會留在匯入籃，依新增、更新、略過分組；列尾的面板鈕可對照 AD 屬性與會改的欄位。',
+              '切換節點時已選的人會留在匯入籃，依新增、更新、略過分組；點清單中的人就在這裡列出分組、可篩選的完整 AD 屬性與會改的欄位。',
             side: 'left',
           },
           {

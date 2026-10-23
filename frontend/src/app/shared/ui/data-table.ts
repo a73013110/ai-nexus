@@ -287,7 +287,8 @@ export class DataTableRow {
       !this.enabled() ||
       event.defaultPrevented ||
       !(event.target instanceof Element) ||
-      event.target.closest('button,a,input,select,textarea,[contenteditable="true"]') ||
+      // label 會把點擊轉給它的控制項（列內的核取方塊），一樣算巢狀控制項。
+      event.target.closest('button,a,input,label,select,textarea,[contenteditable="true"]') ||
       window.getSelection()?.toString()
     )
       return;
@@ -322,7 +323,7 @@ export class DataTableRow {
 
 /**
  * 表頭下方的載入中、無資料與讀取失敗狀態。失敗時顯示訊息與重試；仍有列顯示時整個隱藏（錯誤由
- * 頁面自己顯示）。
+ * 頁面自己顯示）。載入中畫成幾列骨架（列的形狀已知），文字只給輔助科技讀。
  */
 @Component({
   selector: 'nx-table-state',
@@ -332,6 +333,7 @@ export class DataTableRow {
     // 讀取失敗要立即讀出，與 nx-notice 的 danger 相同；載入中與空狀態只是狀態更新。
     '[attr.role]': 'error() ? "alert" : "status"',
     '[hidden]': '!visible()',
+    '[attr.data-loading]': 'loading() && !error() ? "" : null',
   },
   styles: `
     :host {
@@ -345,6 +347,14 @@ export class DataTableRow {
     }
     :host([hidden]) {
       display: none;
+    }
+    :host([data-loading]) {
+      justify-items: stretch;
+      gap: var(--p-space-4);
+      padding: var(--p-space-4);
+    }
+    .ui-table-skeleton {
+      height: 0.875rem;
     }
     p {
       margin: 0;
@@ -361,8 +371,10 @@ export class DataTableRow {
         <nx-icon [name]="loading() ? 'loading' : 'refresh'" />重試
       </button>
     } @else if (loading()) {
-      <nx-icon name="loading" />
-      <p>{{ loadingText() }}</p>
+      @for (width of skeleton; track $index) {
+        <span class="skeleton ui-table-skeleton" aria-hidden="true" [style.width.%]="width"></span>
+      }
+      <p class="sr-only">{{ loadingText() }}</p>
     } @else {
       <nx-icon name="search" />
       <strong>{{ emptyTitle() }}</strong>
@@ -383,6 +395,8 @@ export class TableState {
   readonly emptyText = input('');
   readonly retry = output<void>();
   readonly visible = computed(() => this.count() === 0);
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [92, 74, 86, 62, 80];
 }
 
 /** `TablePagination` 預設可選的每頁筆數；頁面收到 `pageSizeChange` 時以它擋下其他值。 */

@@ -18,6 +18,9 @@ internal static class DirectoryApi
     internal static async Task<DirectoryPeopleDto> List(HttpClient admin, string node, bool subtree = false)
         => (await admin.GetFromJsonAsync<DirectoryPeopleDto>($"{People}?node={Uri.EscapeDataString(node)}&subtree={(subtree ? "true" : "false")}"))!;
 
+    internal static async Task<DirectoryPersonDetailDto> Detail(HttpClient admin, string sid)
+        => (await admin.GetFromJsonAsync<DirectoryPersonDetailDto>($"{People}/{Uri.EscapeDataString(sid)}"))!;
+
     internal static Task<DirectoryOutcomeDto[]> Import(HttpClient admin, params string[] sids) => Import(admin, new DirectoryImportRequest(sids));
 
     internal static Task<DirectoryOutcomeDto[]> Import(HttpClient admin, DirectoryImportRequest request) => Post(admin, Imports, request);

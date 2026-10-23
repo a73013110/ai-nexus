@@ -79,6 +79,7 @@ const INDEX = [
       { id: 'design-resources', name: '資源集合' },
       { id: 'design-tree', name: '樹狀瀏覽' },
       { id: 'design-changes', name: '欄位變更' },
+      { id: 'design-properties', name: '屬性清單' },
       { id: 'design-markdown', name: '內容閱讀' },
     ],
   },

@@ -10,20 +10,23 @@ public sealed record DirectoryPeopleDto(IReadOnlyList<DirectoryPersonDto> People
 /// <summary>
 /// 匯入對話框選取節點後列出的人員（<c>identity.users.import</c>）：直屬或含子節點，附平台對應狀態與以 AD 更新時會改的欄位。
 /// 一次回完整清單（上限 1000 人），篩選、搜尋與全選都在畫面上做：LDAP 的分頁游標綁在連線上，無法跨請求翻頁。
+/// 節點超過上限時畫面改帶 <c>q</c> 在目錄端找人，否則上限之後的人永遠看不到（例如所有人都在 <c>CN=Users</c>）。
 /// </summary>
 internal sealed class ListDirectoryPeople(IAdDirectory directory, DirectoryProvisioning provisioning, IOptions<AdAuthenticationOptions> options)
 {
     public const int Limit = 1000;
+    public const int MaxQuery = 64;
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/directory-people", (string? node, bool? subtree, ListDirectoryPeople handler, CancellationToken ct) => handler.HandleAsync(node, subtree == true, ct).ToHttpResultAsync())
+        .MapGet("/directory-people", (string? node, bool? subtree, string? q, ListDirectoryPeople handler, CancellationToken ct) => handler.HandleAsync(node, subtree == true, q, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)
         .WithName("ListDirectoryPeople");
 
-    public async Task<Result<DirectoryPeopleDto>> HandleAsync(string? node, bool subtree, CancellationToken ct)
+    public async Task<Result<DirectoryPeopleDto>> HandleAsync(string? node, bool subtree, string? query, CancellationToken ct)
     {
         if (ListDirectoryNodes.Resolve(options.Value, node) is not { } dn) return IdentityErrors.DirectoryNodeInvalid;
-        if (await directory.PeopleAsync(dn, subtree, Limit, ct) is not { } listing) return IdentityErrors.DirectoryNodeNotFound;
+        if (query is { Length: > MaxQuery } || query?.Any(char.IsControl) == true) return IdentityErrors.DirectoryQueryInvalid;
+        if (await directory.PeopleAsync(dn, subtree, query, Limit, ct) is not { } listing) return IdentityErrors.DirectoryNodeNotFound;
         return new DirectoryPeopleDto(await provisioning.DescribeAsync(listing.People, ct), listing.More);
     }
 }

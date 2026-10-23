@@ -38,13 +38,18 @@
 .ui-table-toolbar-wrap:has(> .ui-table-actions:only-child:empty) {
   display: none;
 }
+// 表格動作與「欄位」固定靠右；沒有標題（[table-toolbar]）時也一樣，不會跑到左邊。
 .ui-table-actions {
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
+  margin-inline-start: auto;
 }
 .ui-table-actions:empty {
   display: none;
+}
+.ui-table-actions:empty + .ui-table-columns-trigger {
+  margin-inline-start: auto;
 }
 .ui-table-columns-trigger {
   margin-inline-end: var(--p-space-3);

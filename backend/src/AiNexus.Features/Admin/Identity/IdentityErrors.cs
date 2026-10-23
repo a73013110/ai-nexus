@@ -53,6 +53,9 @@ internal static class IdentityErrors
     // 目錄樹的節點：DN 不在搜尋根之下（或格式不合），以及畫面上的樹已過時、節點在 AD 已刪除或改名。
     public static readonly Error DirectoryNodeInvalid = Error.Invalid("directory_node_invalid");
     public static readonly Error DirectoryNodeNotFound = Error.NotFound("directory_node_not_found");
+    // 檢視單一人員時 SID 已不在目錄（刪除或移出搜尋根），格式不合的 SID 也一樣回報。
+    public static readonly Error DirectoryPersonNotFound = Error.NotFound("directory_person_not_found");
+    public static readonly Error DirectoryQueryInvalid = Error.Invalid("directory_query_invalid");
     // 預覽之後、寫入之前資料已被別人改動（同時登入、另一位管理員編輯）：該人不寫入，請重新預覽。
     public static readonly Error DirectoryChanged = Error.Conflict("directory_changed");
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using AiNexus.Features.Admin.Identity.Provisioning;
 using static AiNexus.IntegrationTests.Support.DirectoryApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
@@ -46,6 +47,10 @@ public sealed class ListDirectoryTests
         Assert.Equal("研發處 › 平台部", dave.Path);
         Assert.Equal("carol.lin@fixture.internal", team.People[1].Upn);
 
+        var found = await admin.GetFromJsonAsync<DirectoryPeopleDto>($"{People}?node={Uri.EscapeDataString(FixtureAdDirectory.Root)}&subtree=true&q=%E5%B0%88%E5%93%A1");
+        Assert.Equal(["陳艾琳"], found!.People.Select(x => x.DisplayName));
+        await AssertCodeAsync(await admin.GetAsync($"{People}?node={Uri.EscapeDataString(FixtureAdDirectory.Root)}&q={new string('x', 65)}"), HttpStatusCode.BadRequest, "directory_query_invalid");
+
         var it = "OU=資訊處," + FixtureAdDirectory.Root;
         var alice = Assert.Single((await List(admin, it)).People, x => x.Account == "alice");
         Assert.Equal(DirectoryPersonStates.Synced, alice.State); Assert.Equal(me.Id, alice.UserId); Assert.Empty(alice.Changes);
@@ -55,6 +60,23 @@ public sealed class ListDirectoryTests
         Assert.Equal(DirectoryPersonStates.Changed, alice.State);
         var change = Assert.Single(alice.Changes);
         Assert.Equal(("displayName", "alice", "陳愛麗"), (change.Field, change.Before, change.After));
+    }
+
+    [Fact]
+    public async Task OnePersonIsReadWithTheFullAttributesOnlyWhenInspected()
+    {
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
+        using var admin = f.CreateClient(); await Login(admin, "alice");
+
+        var dave = await Detail(admin, FixtureAdDirectory.Dave);
+        Assert.Equal(("dave.wu", "吳大衛", "研發處 › 平台部"), (dave.Account, dave.DisplayName, dave.Path));
+        Assert.Equal(0x202, dave.AccountControl);
+        Assert.Equal(["研發群組"], dave.Groups);
+
+        await AssertCodeAsync(await admin.GetAsync($"{People}/S-1-5-21-1000-2000-3000-9999"), HttpStatusCode.NotFound, "directory_person_not_found");
+        await AssertCodeAsync(await admin.GetAsync($"{People}/not-a-sid"), HttpStatusCode.NotFound, "directory_person_not_found");
+        using var member = f.CreateClient(); await Login(member, "bob");
+        await AssertCodeAsync(await member.GetAsync($"{People}/{FixtureAdDirectory.Dave}"), HttpStatusCode.Forbidden, "feature_forbidden");
     }
 
     [Fact]

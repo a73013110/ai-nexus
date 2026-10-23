@@ -26,7 +26,7 @@ import { Icon } from './icon';
         [checked]="checked()"
         [indeterminate]="mixed() && !checked()"
         [disabled]="disabled()"
-        (change)="checkedChange.emit($any($event.target).checked)" />
+        (change)="change($event)" />
       <span class="selection-indicator" aria-hidden="true"
         ><nx-icon [name]="mixed() && !checked() ? 'minus' : 'check'" /></span
     ></span>
@@ -49,4 +49,16 @@ export class Checkbox {
   readonly mixed = input(false);
   readonly hideLabel = input(false, { transform: booleanAttribute });
   readonly checkedChange = output<boolean>();
+
+  /**
+   * 受控元件：先把方框還原成目前的輸入，再通知使用端。使用端接受時 `checked` 變了，綁定會寫回新值；
+   * 拒絕時（例如超過人數上限、沒有可選的人）輸入沒變、綁定不會重寫，方框也不會停在使用者點出來的狀態。
+   */
+  change(event: Event) {
+    const box = event.target as HTMLInputElement;
+    const next = box.checked;
+    box.checked = this.checked();
+    box.indeterminate = this.mixed() && !this.checked();
+    this.checkedChange.emit(next);
+  }
 }

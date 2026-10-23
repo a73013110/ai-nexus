@@ -63,13 +63,15 @@ public sealed class FixtureAdDirectory : IAdDirectory
         }
     }
 
-    public Task<DirectoryListing?> PeopleAsync(string dn, bool subtree, int limit, CancellationToken ct)
+    public Task<DirectoryListing?> PeopleAsync(string dn, bool subtree, string? query, int limit, CancellationToken ct)
     {
         Fail();
         if (!Exists(dn)) return Task.FromResult<DirectoryListing?>(null);
         lock (gate)
         {
             var found = people.Where(x => subtree ? DirectoryNames.Within(x.Dn, dn) : Parent(x.Dn).Equals(dn, StringComparison.OrdinalIgnoreCase))
+                .Where(x => string.IsNullOrWhiteSpace(query) || new[] { x.DisplayName, x.AccountName, x.Upn, x.Email, x.Department, x.Title }
+                    .Any(value => value?.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase) == true))
                 .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
             return Task.FromResult<DirectoryListing?>(new([.. found.Take(limit)], found.Count > limit));
         }
@@ -79,6 +81,20 @@ public sealed class FixtureAdDirectory : IAdDirectory
     {
         Fail();
         lock (gate) return Task.FromResult<IReadOnlyList<DirectoryPerson>>([.. people.Where(x => sids.Contains(x.Sid, StringComparer.OrdinalIgnoreCase))]);
+    }
+
+    /// <summary>完整屬性由清單欄位推得，其他屬性是固定的虛構值；停用的人帶停用位元。</summary>
+    public Task<DirectoryPersonDetail?> DetailAsync(string sid, CancellationToken ct)
+    {
+        Fail();
+        lock (gate)
+        {
+            var x = people.FirstOrDefault(p => p.Sid.Equals(sid, StringComparison.OrdinalIgnoreCase));
+            var created = new DateTimeOffset(2025, 1, 6, 1, 0, 0, TimeSpan.Zero);
+            return Task.FromResult(x is null ? null : new DirectoryPersonDetail(x.Sid, null, x.Dn, x.AccountName, x.DisplayName, null, null, x.Upn, x.Email, null,
+                null, "示範公司", x.Department, x.Title, null, null, null, null, 0x200 | (x.Disabled ? 2 : 0), null, created, false, null, null, 0, null, null, null,
+                null, created, created, ["研發群組"], false));
+        }
     }
 
     private bool Exists(string dn) => dn.Equals(Root, StringComparison.OrdinalIgnoreCase) || nodes.Any(x => x.Dn.Equals(dn, StringComparison.OrdinalIgnoreCase));

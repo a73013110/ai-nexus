@@ -1,0 +1,106 @@
+:host {
+  display: grid;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+.ui-props-tools {
+  display: grid;
+  gap: var(--p-space-2);
+}
+.ui-props-blank-toggle {
+  --selection-control-padding: 0;
+  font-size: var(--text-caption);
+}
+.ui-props-group {
+  display: grid;
+  gap: var(--p-space-2);
+}
+h5 {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.ui-props-note {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+dl {
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-item);
+  background: var(--surface);
+}
+// 每個屬性一列：名稱在上、來源名稱靠右，值在下；列之間細線分隔，掃讀時不會對錯行。
+.ui-props-item {
+  display: grid;
+  gap: var(--p-space-1);
+  padding: var(--p-space-2) var(--p-space-3);
+}
+.ui-props-item + .ui-props-item {
+  border-top: 1px solid var(--line);
+}
+dt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  min-width: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+dt code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+dd {
+  display: grid;
+  justify-items: start;
+  gap: var(--p-space-1);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--p-font-data);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+dd small {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.ui-props-none {
+  color: var(--muted);
+}
+.ui-props-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+}
+.ui-props-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ui-props-list li {
+  padding: 0 var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  font-size: var(--text-caption);
+}
+.ui-props-empty {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  text-align: center;
+}

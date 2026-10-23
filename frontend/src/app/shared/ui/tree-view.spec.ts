@@ -64,6 +64,26 @@ function setup() {
 describe('TreeView', () => {
   afterEach(() => TestBed.resetTestingModule());
 
+  it('shows a skeleton in place of the first level while it loads', () => {
+    const fixture = TestBed.createComponent(TreeView);
+    fixture.componentRef.setInput('label', '組織單位');
+    fixture.componentRef.setInput('items', []);
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const tree = () => root.querySelector<HTMLElement>('[role="tree"]')!;
+    expect(root.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe(
+      '正在載入組織單位',
+    );
+    expect(root.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+    expect(tree().hidden).toBe(true);
+
+    fixture.componentRef.setInput('items', items);
+    fixture.detectChanges();
+    expect(root.querySelector('[role="status"]')).toBeNull();
+    expect(tree().hidden).toBe(false);
+  });
+
   it('renders the open branches as an ARIA tree with one tab stop on the selected node', () => {
     const { tree, node, element } = setup();
     expect(tree.getAttribute('aria-label')).toBe('組織單位');
@@ -92,7 +112,9 @@ describe('TreeView', () => {
     expect(node('root')!.querySelector('.ui-tree-count')?.textContent).toBe('9');
     const badge = node('root')!.querySelector('.ui-tree-badge')!;
     expect(badge.textContent).toBe('2');
-    expect(badge.getAttribute('aria-label')).toBe('已選 2 人');
+    // 報讀器讀隱藏文字，數字本身不重複讀。
+    expect(badge.getAttribute('aria-hidden')).toBe('true');
+    expect(node('root')!.querySelector('.sr-only')?.textContent).toBe('已選 2 人');
     // 0 是有意義的人數，仍要顯示；badge 為 0 則不顯示。
     expect(node('empty')!.querySelector('.ui-tree-count')?.textContent).toBe('0');
     expect(node('empty')!.querySelector('.ui-tree-badge')).toBeNull();

@@ -20,6 +20,7 @@ import { Icon } from '@shared/ui/icon';
 import { QueryBar } from '@shared/ui/query-bar';
 import { QueryState } from '@shared/ui/query-state';
 import { Panel } from '@shared/ui/panel';
+import { PropertyGroup, PropertyList } from '@shared/ui/property-list';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -74,6 +75,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     Icon,
     MarkdownView,
     Panel,
+    PropertyList,
     QueryBar,
     ResourceCard,
     ResourceGallery,
@@ -109,7 +111,8 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     .design-resources {
       --gallery-min: 13rem;
     }
-    nx-tree-view {
+    nx-tree-view,
+    .design-properties {
       width: min(100%, 20rem);
     }
   `,
@@ -293,6 +296,16 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
+      id="design-properties"
+      title="屬性清單"
+      api="PropertyList"
+      description="屬性多的詳情（AD 屬性、原始紀錄）分組列出：名稱旁附來源名稱，可篩選名稱或值並標出相符處；沒有值的屬性預設收起，整組共用的說明只寫一次。"
+    >
+      <nx-design-example label="分組、旗標、多值與識別碼">
+        <nx-property-list class="design-properties" label="示範屬性" [groups]="propertyGroups" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
       id="design-markdown"
       class="design-markdown"
       title="內容閱讀"
@@ -449,6 +462,42 @@ export class DesignData {
     { label: '姓名', before: '林可柔', after: '林可蘿' },
     { label: '電子郵件', before: null, after: 'carol@example.test' },
     { label: '分機', before: '2051', after: null },
+  ];
+  readonly propertyGroups: PropertyGroup[] = [
+    {
+      id: 'identity',
+      label: '身分',
+      items: [
+        { key: 'displayName', label: '顯示名稱', value: '林可蘿' },
+        { key: 'mail', label: '信箱', value: 'carol@example.test' },
+        { key: 'employeeID', label: '員工編號', value: null },
+      ],
+    },
+    {
+      id: 'account',
+      label: '帳號狀態',
+      note: '旗標由一個數值拆開；警示放前面。',
+      items: [
+        {
+          key: 'userAccountControl',
+          label: '帳號控制',
+          value: '66064（0x00010210）',
+          badges: [
+            { label: '已鎖定', tone: 'danger' },
+            { label: '密碼永不過期', tone: 'neutral' },
+          ],
+        },
+        { key: 'lastLogon', label: '最近登入', value: '2026/10/20 09:12:40', hint: '3 天前' },
+      ],
+    },
+    {
+      id: 'object',
+      label: '物件',
+      items: [
+        { key: 'memberOf', label: '群組（2）', list: ['研發群組', '專案 A'] },
+        { key: 'objectSid', label: 'SID', value: 'S-1-5-21-1000-2000-3000-1101', copy: true },
+      ],
+    },
   ];
   readonly properties = JSON.stringify(
     { service: 'AiNexus.Host', attempts: 2, state: 'completed' },

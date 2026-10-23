@@ -1,7 +1,12 @@
 import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { DirectoryNodeDto, DirectoryOutcomeDto, DirectoryPersonDto } from '@core/api/schema';
+import type {
+  DirectoryNodeDto,
+  DirectoryOutcomeDto,
+  DirectoryPersonDetailDto,
+  DirectoryPersonDto,
+} from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
@@ -56,12 +61,48 @@ const person = (
   title: null,
   path: '研發處 › 平台部',
   disabled: false,
-  whenChanged: null,
-  lastLogon: null,
   state,
   userId: null,
   changes: [],
   ...extra,
+});
+
+/** 完整屬性：A 鎖定中且密碼永不過期，其他人只有一般帳號。 */
+const detail = (sid: string): DirectoryPersonDetailDto => ({
+  sid,
+  objectGuid: null,
+  dn: `CN=${sid},${USERS}`,
+  path: 'Users',
+  account: sid.toLowerCase(),
+  displayName: sid,
+  givenName: null,
+  surname: null,
+  upn: null,
+  email: null,
+  employeeId: null,
+  description: null,
+  company: '示範公司',
+  department: null,
+  title: null,
+  manager: null,
+  office: null,
+  phone: null,
+  mobile: null,
+  accountControl: sid === 'A' ? 0x10210 : 0x200,
+  accountExpires: null,
+  passwordLastSet: '2026-01-05T01:00:00Z',
+  passwordMustChange: false,
+  passwordExpires: null,
+  lockoutTime: sid === 'A' ? '2026-10-20T01:00:00Z' : null,
+  badPasswordCount: 3,
+  badPasswordTime: null,
+  lastLogon: null,
+  lastLogonTimestamp: null,
+  logonCount: 0,
+  whenCreated: '2025-01-06T01:00:00Z',
+  whenChanged: '2026-10-13T01:30:02Z',
+  groups: ['研發群組'],
+  moreGroups: false,
 });
 
 const outcome = (
@@ -100,20 +141,25 @@ const rdPeople = () => [
   person('I', '鄭雅婷', PLATFORM, 'deleted'),
 ];
 
-function setup({ render = false, users = usersPeople() } = {}) {
+function setup({ render = false, users = usersPeople(), capped = false } = {}) {
   const generation = signal(1);
   const everyone = [...users, ...rdPeople()];
   const api = {
     directoryNodes: vi.fn(async (parent: string | undefined) => ({
       ...tree[parent ?? ROOT],
       writable: false,
+      moreChildren: false,
     })),
-    directoryPeople: vi.fn(async (dn: string, subtree: boolean) => ({
-      people: everyone.filter((item) =>
-        subtree ? withinDn(item.dn, dn) : item.dn.slice(item.dn.indexOf(',') + 1) === dn,
+    // capped：模擬節點超過上限，沒有關鍵字時回 more，有關鍵字時在目錄端依姓名篩選。
+    directoryPeople: vi.fn(async (dn: string, subtree: boolean, q = '') => ({
+      people: everyone.filter(
+        (item) =>
+          (subtree ? withinDn(item.dn, dn) : item.dn.slice(item.dn.indexOf(',') + 1) === dn) &&
+          item.displayName.includes(q),
       ),
-      more: false,
+      more: capped && !q,
     })),
+    directoryPerson: vi.fn(async (sid: string) => detail(sid)),
     previewDirectoryImport: vi.fn(async ({ includeDisabled }: { includeDisabled?: boolean }) => ({
       items: [
         outcome('A', 'create'),
@@ -162,7 +208,7 @@ function setup({ render = false, users = usersPeople() } = {}) {
   const root = fixture.nativeElement as HTMLElement;
   const dialog = fixture.componentInstance;
   const named = (name: string) => dialog.store.visible().find((x) => x.displayName === name)!;
-  return { dialog, store: dialog.store, api, users: usersStore, settle, root, named };
+  return { dialog, store: dialog.store, api, users: usersStore, settle, root, named, everyone };
 }
 
 const polyfillDialog = () => {
@@ -184,7 +230,7 @@ describe('DirectoryImportDialog', () => {
     await settle();
     expect(api.directoryNodes).toHaveBeenCalledWith(undefined);
     expect(store.node()).toBe(USERS);
-    expect(api.directoryPeople).toHaveBeenLastCalledWith(USERS, false, expect.anything());
+    expect(api.directoryPeople).toHaveBeenLastCalledWith(USERS, false, '', expect.anything());
     expect(store.visible().map((x) => x.sid)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
     expect(store.counts()).toEqual({ all: 6, new: 2, changed: 1, synced: 2, blocked: 1 });
     expect(store.crumbs().map((x) => x.name)).toEqual(['fixture.internal', 'Users']);
@@ -240,7 +286,7 @@ describe('DirectoryImportDialog', () => {
     store.choose(RD);
     store.setSubtree(true);
     await settle();
-    expect(api.directoryPeople).toHaveBeenLastCalledWith(RD, true, expect.anything());
+    expect(api.directoryPeople).toHaveBeenLastCalledWith(RD, true, '', expect.anything());
     expect(store.visible().map((x) => x.sid)).toEqual(['G', 'H', 'I']);
   });
 
@@ -400,7 +446,7 @@ describe('DirectoryImportDialog screen', () => {
       removeEventListener() {},
     }));
 
-  it('picks rows by clicking, a run with Shift, and marks the header box as partly picked', async () => {
+  it('picks rows with their boxes, a run with Shift, and marks the header box as partly picked', async () => {
     stubMedia();
     const { dialog, store, settle, root } = setup({ render: true });
     dialog.open();
@@ -420,11 +466,13 @@ describe('DirectoryImportDialog screen', () => {
     ]);
     expect(rows()[1].textContent).toContain('1 欄異動');
 
-    rows()[0]
-      .querySelector('strong')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const box = (index: number) =>
+      rows()[index].querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    box(0).click();
     await settle();
-    rows()[2].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+    // 核取方塊的 change 不帶修飾鍵，Shift 由按下時的指標事件記下。
+    box(2).dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+    box(2).click();
     await settle();
     expect([...store.selection().keys()]).toEqual(['A', 'B', 'C']);
     expect(rows()[0].classList).toContain('is-picked');
@@ -434,13 +482,16 @@ describe('DirectoryImportDialog screen', () => {
       '已選 3 / 100 人',
     );
 
-    // 不可選的人點了也不會勾。
-    rows()[3].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // 點列是檢視 AD 屬性，不勾選；不可選的人也能檢視。
+    rows()[3]
+      .querySelector('td:nth-child(4)')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await settle();
     expect(store.selection().has('D')).toBe(false);
-    expect(rows()[3].querySelector<HTMLInputElement>('input[type="checkbox"]')!.disabled).toBe(
-      true,
-    );
+    expect(store.inspected()).toBe('D');
+    expect(store.panel()).toBe('attributes');
+    expect(rows()[3].classList).toContain('is-selected');
+    expect(box(3).disabled).toBe(true);
 
     head().click();
     await settle();
@@ -452,6 +503,113 @@ describe('DirectoryImportDialog screen', () => {
     await settle();
     expect([...store.selection().keys()]).toEqual(['A', 'B', 'F']);
     expect(root.querySelector('.directory-banner')).toBeNull();
+  });
+
+  it('searches the whole node on the server once the list hits the limit', async () => {
+    const { dialog, store, api, settle } = setup({ capped: true });
+    dialog.open();
+    await settle();
+    expect(store.more()).toBe(true);
+
+    store.setQuery('洪');
+    // 畫面先依已讀到的人篩選，停止輸入一下才到目錄端找。
+    expect(store.visible().map((x) => x.sid)).toEqual(['F']);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+    expect(api.directoryPeople).toHaveBeenLastCalledWith(USERS, false, '洪', expect.anything());
+    expect(store.searchedServer()).toBe(true);
+    expect(store.more()).toBe(false);
+
+    store.clearFilters();
+    await settle();
+    expect(store.searchedServer()).toBe(false);
+    expect(store.all()).toHaveLength(6);
+  });
+
+  it('refreshes the tree off screen once, keeping the open branches and the current node', async () => {
+    const { dialog, store, api, settle } = setup();
+    dialog.open();
+    await settle();
+    store.expand(RD, true);
+    await settle();
+    store.choose(PLATFORM);
+    await settle();
+    const nodes = store.nodes();
+    const reads = api.directoryNodes.mock.calls.length;
+
+    const pending = store.refresh();
+    void store.refresh();
+    expect(store.refreshing()).toBe(true);
+    // 讀的期間舊樹仍在畫面上。
+    expect(store.nodes()).toBe(nodes);
+    await pending;
+    await settle();
+    expect(store.refreshing()).toBe(false);
+    expect(api.directoryNodes.mock.calls.slice(reads).map(([dn]) => dn)).toEqual([undefined, RD]);
+    expect(store.nodes()).not.toBe(nodes);
+    expect(store.expanded().has(RD)).toBe(true);
+    expect(store.node()).toBe(PLATFORM);
+  });
+
+  it('drops a picked person who can no longer be imported when the list is read again', async () => {
+    const { dialog, store, settle, named, everyone } = setup();
+    dialog.open();
+    await settle();
+    store.toggle(named('王可蘿'), true);
+    store.toggle(named('白大衛'), true);
+    everyone[0] = person('A', '王可蘿', USERS, 'conflict');
+    store.people.reload();
+    await settle();
+    expect([...store.selection().keys()]).toEqual(['B']);
+    expect(store.limitNote()).toContain('1 人的狀態已變成無法匯入');
+  });
+
+  it('imports only the people that were previewed', async () => {
+    const { dialog, store, api, settle, named } = setup();
+    dialog.open();
+    await settle();
+    store.toggle(named('王可蘿'), true);
+    await dialog.preview();
+    store.toggle(named('白大衛'), true);
+    await dialog.confirm();
+    expect(api.importDirectoryUsers).toHaveBeenCalledWith({ sids: ['A'], includeDisabled: false });
+  });
+
+  it('reads the full attributes only after the pointer rests on a person and keeps them', async () => {
+    stubMedia();
+    const { dialog, store, api, settle, root, named } = setup({ render: true });
+    dialog.open();
+    await settle();
+    store.inspect(named('白大衛'));
+    store.inspect(named('王可蘿'));
+    await settle();
+    expect(api.directoryPerson).not.toHaveBeenCalled();
+    expect(root.querySelector('nx-directory-person-card [role="status"]')).not.toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await settle();
+    expect(api.directoryPerson.mock.calls.map(([sid]) => sid)).toEqual(['A']);
+    const card = root.querySelector('nx-directory-person-card')!;
+    expect(
+      [...card.querySelectorAll('.directory-person-badges nx-status-badge')].map((badge) =>
+        badge.textContent?.trim(),
+      ),
+    ).toEqual(['未匯入', '已鎖定']);
+    expect([...card.querySelectorAll('nx-property-list h5')].map((h) => h.textContent)).toEqual([
+      '身分',
+      '組織',
+      '帳號狀態',
+      '登入活動',
+      '所屬群組',
+      '物件',
+    ]);
+    expect(card.textContent).toContain('密碼永不過期');
+
+    // 回到看過的人直接用快取，不再讀目錄。
+    store.inspect(named('白大衛'));
+    store.inspect(named('王可蘿'));
+    await settle();
+    expect(api.directoryPerson).toHaveBeenCalledTimes(1);
   });
 
   it('finds every step of the selection and the preview on screen', async () => {
