@@ -8326,6 +8326,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/directory-nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDirectoryNodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/directory-people": {
         parameters: {
             query?: never;
@@ -8333,7 +8349,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["SearchDirectoryPeople"];
+        get: operations["ListDirectoryPeople"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10347,6 +10363,19 @@ export interface components {
             /** @default false */
             includeDisabled: boolean;
         };
+        DirectoryNodeDto: {
+            dn: string;
+            name: string;
+            kind: string;
+            /** Format: int32 */
+            people: null | number;
+            hasChildren: boolean;
+        };
+        DirectoryNodesDto: {
+            node: components["schemas"]["DirectoryNodeDto"];
+            children: components["schemas"]["DirectoryNodeDto"][];
+            writable: boolean;
+        };
         DirectoryOutcomeDto: {
             sid: string;
             /** Format: uuid */
@@ -10370,16 +10399,23 @@ export interface components {
         };
         DirectoryPersonDto: {
             sid: string;
+            dn: string;
             account: string;
+            upn: null | string;
             displayName: string;
             email: null | string;
             department: null | string;
             title: null | string;
             path: string;
             disabled: boolean;
+            /** Format: date-time */
+            whenChanged: null | string;
+            /** Format: date-time */
+            lastLogon: null | string;
             state: string;
             /** Format: uuid */
             userId: null | string;
+            changes: components["schemas"]["DirectoryChange"][];
         };
         DirectorySyncRequest: {
             userIds: string[];
@@ -12570,6 +12606,8 @@ export type DiagnosticSummary = components['schemas']['DiagnosticSummary'];
 export type DirectoryChange = components['schemas']['DirectoryChange'];
 export type DirectoryGroupDto = components['schemas']['DirectoryGroupDto'];
 export type DirectoryImportRequest = components['schemas']['DirectoryImportRequest'];
+export type DirectoryNodeDto = components['schemas']['DirectoryNodeDto'];
+export type DirectoryNodesDto = components['schemas']['DirectoryNodesDto'];
 export type DirectoryOutcomeDto = components['schemas']['DirectoryOutcomeDto'];
 export type DirectoryOutcomesDto = components['schemas']['DirectoryOutcomesDto'];
 export type DirectoryPeopleDto = components['schemas']['DirectoryPeopleDto'];
@@ -29635,10 +29673,150 @@ export interface operations {
             };
         };
     };
-    SearchDirectoryPeople: {
+    ListDirectoryNodes: {
         parameters: {
             query?: {
-                search?: string;
+                parent?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryNodesDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDirectoryPeople: {
+        parameters: {
+            query?: {
+                node?: string;
+                subtree?: boolean;
             };
             header?: never;
             path?: never;

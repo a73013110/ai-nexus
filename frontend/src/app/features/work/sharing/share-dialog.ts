@@ -90,9 +90,9 @@ export function shareLink(id: string, base = document.baseURI) {
           }
         </div>
         @if (people.searchable()) {
-          <div class="directory-results">
+          <div class="person-picker-results">
             @for (user of people.results(); track user.id) {
-              <button class="directory-user" [disabled]="busy() || full()" (click)="add(user)">
+              <button class="person-picker-user" [disabled]="busy() || full()" (click)="add(user)">
                 <span
                   ><strong>{{ user.displayName }}</strong
                   ><small>{{ user.account }}</small></span

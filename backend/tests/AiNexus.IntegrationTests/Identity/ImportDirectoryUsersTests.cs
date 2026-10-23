@@ -102,7 +102,7 @@ public sealed class ImportDirectoryUsersTests
 
         // 同名但不同 SID 的人不能接管已連結的帳號；改名撞到別人已用的 AD 帳號時，帳號與 AdAccount 都保留原值。
         const string impostor = "S-1-5-21-1000-2000-3000-1104";
-        f.AdDirectory.Put(new(impostor, "carol.wang", "王可蘿二號", null, null, null, "", false));
+        f.AdDirectory.Put(new(impostor, "CN=王可蘿二號,OU=業務處," + FixtureAdDirectory.Root, "carol.wang", "王可蘿二號", null, null, null, false));
         Assert.Equal(DirectoryOutcomes.Conflict, Assert.Single(await Import(admin, impostor)).Outcome);
         f.AdDirectory.Put(f.AdDirectory.Get(FixtureAdDirectory.Carol) with { AccountName = "erin.chen" });
         Assert.Equal(DirectoryOutcomes.Unchanged, Assert.Single(await Import(admin, FixtureAdDirectory.Carol)).Outcome);
@@ -141,7 +141,7 @@ public sealed class ImportDirectoryUsersTests
         var target = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"]));
         (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(target, "檢查匯入權限"))).EnsureSuccessStatusCode();
         await Csrf(admin);
-        (await admin.GetAsync("/api/v1/admin/directory-people?search=erin")).EnsureSuccessStatusCode();
+        (await admin.GetAsync(People + "?node=" + Uri.EscapeDataString(FixtureAdDirectory.Root) + "&subtree=true")).EnsureSuccessStatusCode();
         await AssertCodeAsync(await admin.PostAsJsonAsync(Imports, new DirectoryImportRequest([FixtureAdDirectory.Erin])), HttpStatusCode.Forbidden, "test_admin_read_only");
         await AssertCodeAsync(await admin.PostAsJsonAsync(Syncs, new DirectorySyncRequest([target])), HttpStatusCode.Forbidden, "test_admin_read_only");
 

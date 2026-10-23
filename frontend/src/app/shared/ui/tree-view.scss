@@ -1,0 +1,107 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.ui-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ui-tree-item {
+  --icon-size: var(--icon-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding-inline: calc(var(--p-space-1) + var(--tree-level, 0) * var(--p-space-4)) var(--p-space-2);
+  border-radius: var(--radius-item);
+  color: var(--ink);
+  font-size: var(--density-text-size, var(--text-label));
+  cursor: pointer;
+  user-select: none;
+}
+.ui-tree-item:hover {
+  background: var(--hover);
+}
+// 選取的節點是凸起的晶片（與側欄目前所在一致），hover 只是平的底色。
+.ui-tree-item[aria-selected='true'] {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
+}
+.ui-tree-item[aria-selected='true'] .ui-tree-icon {
+  color: var(--accent);
+}
+.ui-tree-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.ui-tree-muted {
+  color: var(--muted);
+}
+.ui-tree-twisty {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-mark);
+  color: var(--muted);
+}
+.ui-tree-twisty:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.ui-tree-twisty nx-icon {
+  transition: transform var(--motion) var(--ease);
+}
+.ui-tree-open nx-icon {
+  transform: rotate(90deg);
+}
+.ui-tree-leaf {
+  visibility: hidden;
+}
+.ui-tree-icon {
+  flex: none;
+  color: var(--secondary);
+}
+.ui-tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-tree-count {
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.ui-tree-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.125rem;
+  padding-inline: var(--p-space-1);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ui-tree-spinner {
+  color: var(--muted);
+  animation: ui-tree-spin 0.9s linear infinite;
+}
+@keyframes ui-tree-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-tree-twisty nx-icon,
+  .ui-tree-spinner {
+    transition: none;
+    animation: none;
+  }
+}

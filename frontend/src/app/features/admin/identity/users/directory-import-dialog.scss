@@ -1,47 +1,96 @@
-// 結果清單在對話框裡限高、自己捲動，已選清單與頁尾才不會被推出視窗。
-.directory-results,
-nx-directory-outcome-table {
-  --table-max-height: min(46dvh, 26rem);
+@use 'breakpoints' as bp;
+
+// 三欄：OU 樹｜節點人員｜匯入籃與 AD 屬性。各欄自己捲動，對話框本身不捲；窄螢幕改成上下堆疊、整體捲動。
+.directory-panes {
+  display: grid;
+  grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr) minmax(16rem, 20rem);
+  overflow: hidden;
 }
-.directory-results nx-checkbox {
-  --selection-control-padding: 0;
-}
-.directory-selected {
+.directory-tree,
+.directory-side {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-2);
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-subtle);
 }
-.directory-selected header {
+.directory-tree {
+  gap: var(--p-space-2);
+  padding: var(--p-space-3) var(--p-space-2) 0;
+  border-inline-end: 1px solid var(--line);
+}
+.directory-pane-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--p-space-2);
+  padding-inline-start: var(--p-space-2);
 }
-.directory-selected h3 {
+.directory-pane-head .panel-eyebrow {
   margin: 0;
-  font-size: var(--text-label);
-  font-weight: 600;
 }
-.directory-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.directory-chips li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-space-1);
-  padding-inline-start: var(--p-space-3);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-full);
-  font-size: var(--text-caption);
-}
-.directory-chips .icon-button {
-  --icon-size: var(--icon-sm);
-  min-width: 0;
+.directory-tree nx-tree-view {
+  flex: 1;
   min-height: 0;
-  padding: var(--p-space-1);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.directory-subtree {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin-inline: calc(-1 * var(--p-space-2));
+  padding: var(--p-space-3) var(--p-space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-label);
+}
+.directory-side {
+  border-inline-start: 1px solid var(--line);
+}
+.directory-side nx-view-switch {
+  flex: none;
+  padding: var(--p-space-2) var(--p-space-3) 0;
+}
+.directory-side-body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--p-space-4);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+// 預覽與結果在全螢幕對話框裡限寬置中，逐人清單才不會被拉到整個螢幕寬。
+.directory-review > * {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+}
+.directory-error {
+  color: var(--danger-text);
+}
+nx-directory-outcome-table {
+  min-height: 0;
+}
+@include bp.below(tablet) {
+  .directory-panes {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    overflow: auto;
+  }
+  // 堆疊時每一列依內容撐高（min-height: 0 會讓列被壓扁），整個 body 一起捲動。
+  .directory-tree,
+  .directory-side {
+    min-height: auto;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .directory-tree nx-tree-view {
+    flex: none;
+    max-height: 16rem;
+  }
+  .directory-side-body {
+    flex: none;
+    overflow: visible;
+  }
+  nx-directory-people-table {
+    min-height: 32rem;
+  }
 }

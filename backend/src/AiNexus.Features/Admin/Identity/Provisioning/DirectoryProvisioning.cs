@@ -10,16 +10,21 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
 
-/// <summary>搜尋結果的一位人員與平台上的對應狀態（<see cref="DirectoryPersonStates"/>）。</summary>
-public sealed record DirectoryPersonDto(string Sid, string Account, string DisplayName, string? Email, string? Department, string? Title, string Path,
-    bool Disabled, string State, Guid? UserId);
+/// <summary>
+/// 節點清單的一位人員與平台上的對應狀態（<see cref="DirectoryPersonStates"/>）。<c>Changes</c> 是以 AD 匯入時會改的欄位
+/// （只有 <c>changed</c> 有值），規則與預覽相同；預覽仍以 SID 重新讀目錄重算，這裡只供畫面分類與提示。
+/// </summary>
+public sealed record DirectoryPersonDto(string Sid, string Dn, string Account, string? Upn, string DisplayName, string? Email, string? Department, string? Title,
+    string Path, bool Disabled, DateTimeOffset? WhenChanged, DateTimeOffset? LastLogon, string State, Guid? UserId, IReadOnlyList<DirectoryChange> Changes);
 
 /// <summary><see cref="DirectoryPersonDto.State"/> 的值，判斷規則與 <see cref="DirectoryAccounts.MatchAsync"/> 相同。</summary>
 public static class DirectoryPersonStates
 {
     public const string New = "new";
-    /// <summary>已有同一個 SID 的平台帳號；再次匯入＝以 AD 更新。</summary>
-    public const string Linked = "linked";
+    /// <summary>已有同一個 SID 的平台帳號，且有欄位與 AD 不同；匯入＝以 AD 更新。</summary>
+    public const string Changed = "changed";
+    /// <summary>已有同一個 SID 的平台帳號，欄位都與 AD 一致。</summary>
+    public const string Synced = "synced";
     /// <summary>管理員預建、尚未綁定的同名帳號，匯入時綁定。</summary>
     public const string Prebuilt = "prebuilt";
     public const string Conflict = "conflict";
@@ -42,23 +47,42 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
     /// <summary>格式檢查：<c>S-1-</c> 開頭、只含英數與連字號；實際是否存在由目錄判斷。</summary>
     public static bool IsSid(string? value) => value is { Length: > 4 and <= 184 } && value.StartsWith("S-1-", StringComparison.Ordinal) && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-');
 
-    /// <summary>搜尋結果的平台狀態：兩次批次查詢（SID、AD 帳號名），不逐人查詢。</summary>
+    /// <summary>
+    /// 節點人員的平台狀態：兩次批次查詢（SID、AD 帳號名），不逐人查詢。已連結的人以 <see cref="DirectoryAccounts.Changes"/> 算出差異，
+    /// 改名是否被佔用也從同一批帳號名判斷，所以與預覽的結果一致。
+    /// </summary>
     public async Task<IReadOnlyList<DirectoryPersonDto>> DescribeAsync(IReadOnlyList<DirectoryPerson> people, CancellationToken ct)
     {
         var sids = people.Select(x => x.Sid).ToArray();
-        var linked = (await db.Users.AsNoTracking().Where(x => sids.Contains(x.Sid)).Select(x => new { x.Id, x.Sid, x.DeletedAt }).ToListAsync(ct))
-            .ToDictionary(x => x.Sid, StringComparer.OrdinalIgnoreCase);
+        var linked = (await db.Users.AsNoTracking().Where(x => sids.Contains(x.Sid)).ToListAsync(ct)).ToDictionary(x => x.Sid, StringComparer.OrdinalIgnoreCase);
         var names = people.Select(x => UserAccounts.IsValid(x.AccountName) ? UserAccounts.Normalize(x.AccountName) : null).OfType<string>().Distinct().ToArray();
         var named = (await db.Users.AsNoTracking().Where(x => x.AdAccount != null && names.Contains(x.AdAccount)).Select(x => new { x.Id, x.Sid, x.AdAccount }).ToListAsync(ct))
             .ToDictionary(x => x.AdAccount!, StringComparer.Ordinal);
         return [.. people.Select(person =>
         {
-            var (state, id) = linked.TryGetValue(person.Sid, out var user) ? (user.DeletedAt is null ? DirectoryPersonStates.Linked : DirectoryPersonStates.Deleted, (Guid?)user.Id)
-                : !UserAccounts.IsValid(person.AccountName) ? (DirectoryPersonStates.InvalidAccount, null)
-                : named.TryGetValue(UserAccounts.Normalize(person.AccountName)!, out var holder)
-                    ? (holder.Sid.StartsWith("managed:", StringComparison.Ordinal) ? DirectoryPersonStates.Prebuilt : DirectoryPersonStates.Conflict, holder.Id)
-                : (DirectoryPersonStates.New, null);
-            return new DirectoryPersonDto(person.Sid, person.AccountName, person.DisplayName, person.Email, person.Department, person.Title, person.Path, person.Disabled, state, id);
+            IReadOnlyList<DirectoryChange> changes = [];
+            string state; Guid? id = null;
+            if (linked.TryGetValue(person.Sid, out var user))
+            {
+                id = user.Id;
+                if (user.DeletedAt is not null) state = DirectoryPersonStates.Deleted;
+                else
+                {
+                    var account = AccountOf(person, user);
+                    var taken = DirectoryAccounts.RenamedAdAccount(user, account) is { } renamed && named.TryGetValue(renamed, out var holder) && holder.Id != user.Id;
+                    changes = DirectoryAccounts.Changes(user, account, Profile(person), taken);
+                    state = changes.Count > 0 ? DirectoryPersonStates.Changed : DirectoryPersonStates.Synced;
+                }
+            }
+            else if (!UserAccounts.IsValid(person.AccountName)) state = DirectoryPersonStates.InvalidAccount;
+            else if (named.TryGetValue(UserAccounts.Normalize(person.AccountName)!, out var holder))
+            {
+                state = holder.Sid.StartsWith("managed:", StringComparison.Ordinal) ? DirectoryPersonStates.Prebuilt : DirectoryPersonStates.Conflict;
+                id = holder.Id;
+            }
+            else state = DirectoryPersonStates.New;
+            return new DirectoryPersonDto(person.Sid, person.Dn, person.AccountName, person.Upn, person.DisplayName, person.Email, person.Department, person.Title,
+                person.Path, person.Disabled, person.WhenChanged, person.LastLogon, state, id, changes);
         })];
     }
 
@@ -135,11 +159,15 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
         }
         if (user.DeletedAt is not null) return new(person, DirectoryOutcomes.Deleted, user, account, []);
         if (match.Value.Bound && person.Disabled && !includeDisabled) return new(person, DirectoryOutcomes.Disabled, user, account, []);
-        if (!match.Value.Bound && string.Equals(UserAccounts.AccountName(user.Account), person.AccountName, StringComparison.OrdinalIgnoreCase)) account = user.Account;
+        if (!match.Value.Bound) account = AccountOf(person, user);
         var changes = await accounts.ChangesAsync(user, account, Profile(person), ct);
         var outcome = match.Value.Bound ? DirectoryOutcomes.Bind : changes.Count > 0 ? DirectoryOutcomes.Update : DirectoryOutcomes.Unchanged;
         return new(person, outcome, user, account, changes);
     }
+
+    /// <summary>已連結的帳號沿用原本的完整帳號寫法，只有帳號名改了才換成 <c>sam@Domain</c>。</summary>
+    private string AccountOf(DirectoryPerson person, User user)
+        => string.Equals(UserAccounts.AccountName(user.Account), person.AccountName, StringComparison.OrdinalIgnoreCase) ? user.Account : $"{person.AccountName}@{options.Value.Domain}";
 
     private static DirectoryProfile Profile(DirectoryPerson person) => new(person.DisplayName, person.Email);
 

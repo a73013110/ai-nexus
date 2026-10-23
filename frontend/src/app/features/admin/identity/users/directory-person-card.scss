@@ -1,0 +1,61 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+header {
+  display: grid;
+  gap: var(--p-space-2);
+}
+h4 {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 600;
+}
+h5 {
+  margin: 0 0 var(--p-space-2);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.directory-person-changes {
+  padding: var(--p-space-3);
+  border-radius: var(--radius-item);
+  background: var(--surface-subtle);
+}
+dl {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: 0;
+}
+dt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+dt code {
+  color: var(--muted);
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}
+dd {
+  margin: var(--p-space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+.directory-person-locked {
+  --icon-size: var(--icon-sm);
+  display: flex;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-item);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-person-locked strong {
+  display: block;
+  color: var(--ink);
+}

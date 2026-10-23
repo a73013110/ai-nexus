@@ -7,153 +7,118 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { apiResource } from '@core/api/api-resource';
-import type { DirectoryOutcomeDto, DirectoryPersonDto } from '@core/api/schema';
+import type { DirectoryOutcomeDto } from '@core/api/schema';
 import { safeMessage } from '@core/errors/safe-errors';
-import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
-import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { SearchField } from '@shared/ui/search-field';
-import { StatusBadge } from '@shared/ui/status-badge';
+import { StatGrid, StatTile } from '@shared/ui/stat-tile';
+import { TreeView } from '@shared/ui/tree-view';
+import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AdminUsersStore } from '../admin-users-store';
 import { IdentityApi } from '../identity-api';
 import { directoryImportTour } from '../identity-tour';
+import { DirectoryBasket } from './directory-basket';
+import { DirectoryImportStore } from './directory-import-store';
 import { DirectoryOutcomeTable } from './directory-outcome-table';
-import {
-  DIRECTORY_BATCH_LIMIT,
-  type DirectorySelection,
-  selectable,
-  selectPeople,
-  selectsAll,
-  stateLabel,
-  stateTone,
-  summarize,
-  writesUser,
-} from './directory-outcomes';
+import { fieldLabel, summarize, tally, writesUser } from './directory-outcomes';
+import { DirectoryPeopleTable } from './directory-people-table';
+import { DirectoryPersonCard } from './directory-person-card';
 
 type Step = 'select' | 'preview' | 'result';
 
 /**
- * 從 AD 匯入使用者：搜尋（防抖）→ 勾選（跨搜尋累積，最多 100 人）→ 伺服器預覽 → 確認匯入。
- * 已在平台的人也可勾選，匯入時以 AD 資料更新（與登入同一套規則）。全部寫入成功就關閉並以 toast 摘要；
- * 有人未完成時停在結果步驟，讓管理員看到是誰、為什麼。
+ * 從 AD 匯入使用者：依 OU 樹瀏覽節點 → 勾選人員（跨節點累積，最多 100 人）→ 伺服器預覽 → 確認匯入 → 結果。
+ * 已在平台的人也可勾選，匯入時以 AD 資料更新（與登入同一套規則）。結果步驟可繼續匯入別的節點；
+ * 選取狀態放在 {@link DirectoryImportStore}，三個窗格共用。
  */
 @Component({
   selector: 'nx-directory-import-dialog',
   imports: [
     Checkbox,
     CompactDialog,
-    DataTable,
-    DataTableColumn,
     DialogHeader,
+    DirectoryBasket,
     DirectoryOutcomeTable,
+    DirectoryPeopleTable,
+    DirectoryPersonCard,
     Icon,
     Notice,
-    SearchField,
-    StatusBadge,
-    TableState,
+    StatGrid,
+    StatTile,
+    TreeView,
+    ViewSwitch,
   ],
+  providers: [DirectoryImportStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './directory-import-dialog.scss',
   templateUrl: './directory-import-dialog.html',
 })
 export class DirectoryImportDialog {
   private readonly api = inject(IdentityApi);
-  private readonly store = inject(AdminUsersStore);
-  private readonly scope = inject(ViewScope);
+  private readonly users = inject(AdminUsersStore);
+  readonly store = inject(DirectoryImportStore);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly limit = DIRECTORY_BATCH_LIMIT;
-  readonly opened = signal(false);
   readonly step = signal<Step>('select');
-  readonly search = signal('');
-  private readonly query = signal('');
-  private readonly typing = signal(false);
-  readonly selection = signal<DirectorySelection>(new Map());
   readonly includeDisabled = signal(false);
   readonly outcomes = signal<DirectoryOutcomeDto[]>([]);
   readonly busy = signal(false);
   readonly error = signal('');
-  readonly limitNote = signal('');
-  readonly columns: TableColumn[] = [
-    { id: 'name', label: '人員', hideable: false },
-    { id: 'email', label: '信箱' },
-    { id: 'path', label: '部門與 OU' },
-    { id: 'state', label: '狀態', hideable: false },
-  ];
-  readonly stateLabel = stateLabel;
-  readonly stateTone = stateTone;
-  readonly selectable = selectable;
-  readonly results = apiResource({
-    feature: 'identity.users.import',
-    params: () => (this.opened() && this.query() ? this.query() : undefined),
-    loader: (search, signal) => this.api.searchDirectory(search, signal),
-  });
-  readonly people = computed(() => (this.query() ? (this.results.value()?.people ?? []) : []));
-  readonly searching = computed(() => this.typing() || this.results.loading());
-  readonly selected = computed(() => [...this.selection().values()]);
-  readonly allChecked = computed(() => selectsAll(this.selection(), this.people()));
-  readonly anySelectable = computed(() => this.people().some(selectable));
+
+  readonly tally = computed(() => tally(this.outcomes()));
   readonly disabledCount = computed(
-    () => this.outcomes().filter((item) => item.outcome === 'disabled').length,
+    () =>
+      this.outcomes().filter(
+        (item) => item.outcome === 'disabled' || (item.directoryDisabled && writesUser(item)),
+      ).length,
   );
   readonly pending = computed(() => this.outcomes().filter(writesUser).length);
+  readonly failed = computed(() => this.outcomes().some((item) => item.outcome === 'failed'));
   readonly summary = computed(() => summarize(this.outcomes()));
+  readonly skippedNote = computed(
+    () => summarize(this.outcomes().filter((item) => !writesUser(item))) || '沒有略過的人',
+  );
+  /** 「更新」會改到哪些欄位（去重），寫在統計卡的說明。 */
+  readonly updatedFields = computed(() => {
+    const labels = new Set<string>();
+    for (const item of this.outcomes())
+      if (item.outcome === 'update')
+        for (const change of item.changes) labels.add(fieldLabel(change.field));
+    return [...labels].join('、');
+  });
   readonly tour = computed(() => directoryImportTour({ step: this.step() }));
   readonly heading = computed(() =>
-    this.step() === 'select'
-      ? '選取人員'
-      : this.step() === 'preview'
-        ? '確認匯入內容'
-        : '部分人員未完成',
+    this.step() === 'select' ? '選取人員' : this.step() === 'preview' ? '預覽變更' : '完成',
   );
+  readonly panels = computed<ViewOption[]>(() => [
+    { value: 'basket', label: `匯入籃 ${this.store.selection().size}` },
+    { value: 'attributes', label: 'AD 屬性' },
+  ]);
+  readonly footNote = computed(() => {
+    const size = this.store.selection().size;
+    return size
+      ? `已選 ${size} 人，來自 ${this.store.sources()} 個節點；可切換節點繼續勾選。`
+      : `一次最多 ${this.store.limit} 人；切換節點時已選的人會保留。`;
+  });
 
   open() {
     this.step.set('select');
-    this.search.set('');
-    this.query.set('');
-    this.selection.set(new Map());
     this.includeDisabled.set(false);
     this.outcomes.set([]);
     this.error.set('');
-    this.limitNote.set('');
-    this.opened.set(true);
+    this.store.open();
     this.dialog().nativeElement.showModal();
   }
   closed() {
-    this.opened.set(false);
-    this.scope.cancel('directory-search');
-  }
-  find(value: string) {
-    this.search.set(value);
-    this.typing.set(true);
-    this.scope.later(
-      () => {
-        this.typing.set(false);
-        this.query.set(value.trim());
-      },
-      300,
-      'directory-search',
-    );
-  }
-  toggle(person: DirectoryPersonDto, checked: boolean) {
-    this.apply([person], checked);
-  }
-  toggleAll(checked: boolean) {
-    this.apply(this.people(), checked);
-  }
-  clear() {
-    this.selection.set(new Map());
-    this.limitNote.set('');
+    this.store.close();
   }
   async preview(includeDisabled = this.includeDisabled()) {
-    if (!this.selection().size || this.busy()) return;
+    if (!this.store.selection().size || this.busy()) return;
     await this.run(async () => {
       const result = await this.api.previewDirectoryImport({
-        sids: [...this.selection().keys()],
+        sids: [...this.store.selection().keys()],
         includeDisabled,
       });
       this.includeDisabled.set(includeDisabled);
@@ -169,26 +134,21 @@ export class DirectoryImportDialog {
     if (!this.pending() || this.busy()) return;
     await this.run(async () => {
       const result = await this.api.importDirectoryUsers({
-        sids: [...this.selection().keys()],
+        sids: [...this.store.selection().keys()],
         includeDisabled: this.includeDisabled(),
       });
-      const saved = result.items.filter(writesUser).length;
-      this.store.readUsers();
-      if (result.items.some((item) => item.outcome === 'failed')) {
-        this.outcomes.set(result.items);
-        this.step.set('result');
-        return;
-      }
-      this.dialog().nativeElement.close();
-      this.store.toast.success(`已從 AD 匯入 ${saved} 位使用者`, summarize(result.items));
+      this.users.readUsers();
+      this.outcomes.set(result.items);
+      this.step.set('result');
     });
   }
-  private apply(people: readonly DirectoryPersonDto[], checked: boolean) {
-    const { selection, skipped } = selectPeople(this.selection(), people, checked);
-    this.selection.set(selection);
-    this.limitNote.set(
-      skipped ? `一次最多匯入 ${this.limit} 人，另有 ${skipped} 人沒有加入。` : '',
-    );
+  /** 結果步驟的「繼續匯入」：清空匯入籃、重讀目前節點（狀態已變），回到選取。 */
+  again() {
+    this.store.clear();
+    this.store.people.reload();
+    this.outcomes.set([]);
+    this.includeDisabled.set(false);
+    this.back();
   }
   private async run(work: () => Promise<void>) {
     this.busy.set(true);

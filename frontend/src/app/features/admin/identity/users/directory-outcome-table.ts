@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { DirectoryOutcomeDto, DirectoryPersonDto } from '@core/api/schema';
 import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
+import { ChangeList } from '@shared/ui/change-list';
 import { StatusBadge } from '@shared/ui/status-badge';
 import {
-  describeChange,
+  fieldChanges,
   outcomeLabel,
   outcomeName,
   outcomeNote,
@@ -13,7 +14,7 @@ import {
 /** 匯入預覽、匯入結果與「從 AD 更新」結果共用的逐人清單：結果、會改（或已改）的欄位與需要管理員注意的事。 */
 @Component({
   selector: 'nx-directory-outcome-table',
-  imports: [DataTable, DataTableColumn, StatusBadge, TableState],
+  imports: [ChangeList, DataTable, DataTableColumn, StatusBadge, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-data-table class="directory-outcomes" [label]="label()" [columns]="columns">
     <table>
@@ -48,8 +49,8 @@ import {
               </div>
             </td>
             <td nxTableColumn="detail">
-              @for (change of item.changes; track change.field) {
-                <span class="directory-change">{{ describeChange(change) }}</span>
+              @if (item.changes.length) {
+                <nx-change-list [changes]="fieldChanges(item.changes)" />
               }
               @if (outcomeNote(item); as note) {
                 <small>{{ note }}</small>
@@ -68,9 +69,9 @@ import {
       display: block;
       min-width: 0;
     }
-    .directory-change {
+    nx-change-list + small {
       display: block;
-      overflow-wrap: anywhere;
+      margin-top: var(--p-space-1);
     }
   `,
 })
@@ -88,5 +89,5 @@ export class DirectoryOutcomeTable {
   readonly outcomeLabel = outcomeLabel;
   readonly outcomeTone = outcomeTone;
   readonly outcomeNote = outcomeNote;
-  readonly describeChange = describeChange;
+  readonly fieldChanges = fieldChanges;
 }

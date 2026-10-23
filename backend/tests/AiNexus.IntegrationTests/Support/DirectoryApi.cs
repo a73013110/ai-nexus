@@ -9,8 +9,14 @@ internal static class DirectoryApi
     internal const string Imports = "/api/v1/admin/directory-imports";
     internal const string Syncs = "/api/v1/admin/directory-syncs";
 
-    internal static async Task<DirectoryPeopleDto> Search(HttpClient admin, string search)
-        => (await admin.GetFromJsonAsync<DirectoryPeopleDto>($"/api/v1/admin/directory-people?search={Uri.EscapeDataString(search)}"))!;
+    internal const string Nodes = "/api/v1/admin/directory-nodes";
+    internal const string People = "/api/v1/admin/directory-people";
+
+    internal static async Task<DirectoryNodesDto> Children(HttpClient admin, string? parent = null)
+        => (await admin.GetFromJsonAsync<DirectoryNodesDto>(parent is null ? Nodes : $"{Nodes}?parent={Uri.EscapeDataString(parent)}"))!;
+
+    internal static async Task<DirectoryPeopleDto> List(HttpClient admin, string node, bool subtree = false)
+        => (await admin.GetFromJsonAsync<DirectoryPeopleDto>($"{People}?node={Uri.EscapeDataString(node)}&subtree={(subtree ? "true" : "false")}"))!;
 
     internal static Task<DirectoryOutcomeDto[]> Import(HttpClient admin, params string[] sids) => Import(admin, new DirectoryImportRequest(sids));
 

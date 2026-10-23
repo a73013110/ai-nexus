@@ -6,7 +6,7 @@
   --icon-size: var(--icon-sm);
   opacity: 0;
 }
-.selection-box input:checked + .selection-indicator nx-icon {
+.selection-box input:is(:checked, :indeterminate) + .selection-indicator nx-icon {
   opacity: 1;
 }
 .selection-control {
@@ -53,7 +53,7 @@
   background: var(--surface);
   pointer-events: none;
 }
-.selection-box input:checked + .selection-indicator {
+.selection-box input:is(:checked, :indeterminate) + .selection-indicator {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
@@ -82,4 +82,7 @@
   color: var(--secondary);
   margin-top: 2px;
   line-height: 1.5;
+}
+.selection-control.is-label-hidden {
+  justify-content: center;
 }

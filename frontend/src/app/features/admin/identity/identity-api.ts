@@ -38,9 +38,11 @@ export class IdentityApi {
   updateUser = (id: string, body: UserAccountRequest) =>
     this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
   deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
-  /** AD 搜尋與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。 */
-  searchDirectory = (search: string, signal?: AbortSignal) =>
-    this.api.get('/api/v1/admin/directory-people', { query: { search }, signal });
+  /** 瀏覽 AD 與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。未指定 `parent` 時是搜尋根。 */
+  directoryNodes = (parent: string | undefined, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/directory-nodes', { query: { parent }, signal });
+  directoryPeople = (node: string, subtree: boolean, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/directory-people', { query: { node, subtree }, signal });
   previewDirectoryImport = (body: DirectoryImportRequest) =>
     this.api.post('/api/v1/admin/directory-imports/preview', { body });
   importDirectoryUsers = (body: DirectoryImportRequest) =>

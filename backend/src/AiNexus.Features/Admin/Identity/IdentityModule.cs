@@ -20,8 +20,8 @@ namespace AiNexus.Features.Admin.Identity;
 public sealed class IdentityModule : IFeatureModule
 {
     public const string LoginRateLimit = "ad-login";
-    /// <summary>匯入對話框的 AD 搜尋（輸入時防抖後送出）。</summary>
-    public const string DirectorySearchRateLimit = "directory-search";
+    /// <summary>匯入對話框瀏覽 AD 目錄樹與節點人員（每展開一層、每選一個節點各一次）。</summary>
+    public const string DirectoryReadRateLimit = "directory-read";
     /// <summary>匯入預覽、匯入與從 AD 更新：每次最多 100 人、各自查目錄與寫入。</summary>
     public const string DirectoryWriteRateLimit = "directory-write";
     private const string SessionCookie = "AiNexus.Session";
@@ -55,7 +55,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.Connection.RemoteIpAddress?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
-            .AddPerUserLimit(DirectorySearchRateLimit, 60).AddPerUserLimit(DirectoryWriteRateLimit, 20));
+            .AddPerUserLimit(DirectoryReadRateLimit, 60).AddPerUserLimit(DirectoryWriteRateLimit, 20));
         services.AddSingleton<IdentityWriteLock>();
         services.AddSingleton<DirectoryProfileCache>();
         services.AddScoped<DirectoryAccounts>();
@@ -90,7 +90,8 @@ public sealed class IdentityModule : IFeatureModule
         SetUserEmail.Map(admin);
         PreviewUserAccess.Map(admin);
         var import = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersImport);
-        SearchDirectoryPeople.Map(import);
+        ListDirectoryNodes.Map(import);
+        ListDirectoryPeople.Map(import);
         PreviewDirectoryImport.Map(import);
         ImportDirectoryUsers.Map(import);
         SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersSync));

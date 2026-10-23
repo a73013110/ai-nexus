@@ -1,7 +1,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Checkbox } from './checkbox';
+import { Icon } from './icon';
 
 @Component({
   selector: 'nx-checkbox-host',
@@ -52,6 +54,38 @@ describe('Checkbox', () => {
     host.checked.set(true);
     fixture.detectChanges();
     expect(row.className).toBe(before);
+  });
+
+  it('shows a partly picked header as mixed until it is checked', () => {
+    const fixture = TestBed.createComponent(Checkbox);
+    fixture.componentRef.setInput('label', '選取清單中的全部人員');
+    fixture.componentRef.setInput('mixed', true);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const input = element.querySelector<HTMLInputElement>('input')!;
+    expect(input.indeterminate).toBe(true);
+    const icon = () => fixture.debugElement.query(By.directive(Icon)).componentInstance as Icon;
+    expect(icon().name()).toBe('minus');
+
+    // 勾選的優先：全部選了就不再是 mixed，即使使用端還沒把 mixed 關掉。
+    fixture.componentRef.setInput('checked', true);
+    fixture.detectChanges();
+    expect(input.indeterminate).toBe(false);
+    expect(icon().name()).toBe('check');
+  });
+
+  it('hides the visible label but keeps the name for assistive technology', () => {
+    @Component({
+      imports: [Checkbox],
+      template: `<nx-checkbox hideLabel label="選取 林可蘿" description="研發處" />`,
+    })
+    class Hidden {}
+    const fixture = TestBed.createComponent(Hidden);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.selection-control')?.classList).toContain('is-label-hidden');
+    expect(element.querySelector('.selection-copy')).toBeNull();
+    expect(element.querySelector('input')?.getAttribute('aria-label')).toBe('選取 林可蘿');
   });
 
   it('marks a disabled row and ignores clicks', () => {

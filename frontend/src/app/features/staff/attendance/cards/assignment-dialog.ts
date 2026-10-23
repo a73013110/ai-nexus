@@ -133,9 +133,9 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                         (valueChange)="people.find($event)"
                     /></label>
                     @if (people.searchable()) {
-                      <div class="directory-results" role="region" aria-label="符合的使用者">
+                      <div class="person-picker-results" role="region" aria-label="符合的使用者">
                         @for (user of people.results(); track user.id) {
-                          <button type="button" class="directory-user" (click)="choose(user)">
+                          <button type="button" class="person-picker-user" (click)="choose(user)">
                             <span
                               ><strong>{{ user.displayName }}</strong
                               ><small>{{ user.account }}</small></span

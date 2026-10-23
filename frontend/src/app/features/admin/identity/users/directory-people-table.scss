@@ -1,0 +1,111 @@
+// 窗格高度由對話框決定；表格吃掉剩下的高度、自己捲動（表頭固定），不另設 --table-max-height。
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-3);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--p-space-4) var(--p-space-5);
+}
+.directory-node {
+  display: grid;
+  gap: var(--p-space-1);
+  min-width: 0;
+}
+.directory-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1);
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+.directory-crumbs button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.directory-crumbs button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.directory-crumbs [aria-current] {
+  color: var(--ink);
+}
+.directory-node-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--p-space-1) var(--p-space-3);
+}
+.directory-node-title h3 {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 600;
+}
+.directory-node-title span {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-dn {
+  color: var(--muted);
+}
+.directory-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+}
+.directory-toolbar nx-search-field {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+.directory-hide-disabled {
+  --selection-control-padding: 0 var(--p-space-2);
+  flex: none;
+}
+.directory-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-1) var(--p-space-3);
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--radius-item);
+  background: var(--accent-soft);
+  font-size: var(--text-caption);
+}
+.directory-people {
+  flex: 1 1 auto;
+}
+.directory-col-select {
+  width: 3rem;
+}
+.directory-col-inspect {
+  width: 3.25rem;
+}
+.directory-people nx-checkbox {
+  --selection-control-padding: 0;
+}
+.directory-people tr.is-picked:not(.is-selected) {
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+}
+.directory-people tr.is-dimmed td:not(:first-child, :last-child) {
+  color: var(--muted);
+}
+.directory-people td small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-people-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
+  font-size: var(--text-caption);
+}

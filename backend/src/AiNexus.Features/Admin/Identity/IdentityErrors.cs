@@ -50,7 +50,9 @@ internal static class IdentityErrors
     // 目錄查詢（匯入、從 AD 更新）的失敗不沿用登入的 ad_* 代碼：管理頁要能提示「服務帳號未設定」與「暫時連不上」，登入則刻意不分辨。
     public static readonly Error DirectoryNotConfigured = Error.Unavailable("directory_not_configured");
     public static readonly Error DirectoryUnavailable = Error.Unavailable("directory_unavailable");
-    public static readonly Error InvalidSearch = Error.Invalid("invalid_search");
+    // 目錄樹的節點：DN 不在搜尋根之下（或格式不合），以及畫面上的樹已過時、節點在 AD 已刪除或改名。
+    public static readonly Error DirectoryNodeInvalid = Error.Invalid("directory_node_invalid");
+    public static readonly Error DirectoryNodeNotFound = Error.NotFound("directory_node_not_found");
     // 預覽之後、寫入之前資料已被別人改動（同時登入、另一位管理員編輯）：該人不寫入，請重新預覽。
     public static readonly Error DirectoryChanged = Error.Conflict("directory_changed");
 }

@@ -7,8 +7,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { ViewScope } from '@shared/browser/view-scope';
 import { CodeBlock } from '@shared/markdown/code-block';
 import { MarkdownView } from '@shared/markdown/markdown-view';
+import { ChangeList, FieldChange } from '@shared/ui/change-list';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
@@ -23,13 +25,43 @@ import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
+import { TreeItem, TreeView } from '@shared/ui/tree-view';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignExample, DesignSection } from './design-section';
+
+/** 展開時才「載入」的下層，模擬目錄或組織 API 的回應。 */
+const LAZY_CHILDREN: Record<string, TreeItem[]> = {
+  rd: [
+    {
+      id: 'rd-platform',
+      label: '平台部',
+      icon: 'container',
+      count: 9,
+      badge: 2,
+      badgeLabel: '已選 2 人',
+      hasChildren: false,
+    },
+    { id: 'rd-apps', label: '應用部', icon: 'container', count: 15, hasChildren: false },
+  ],
+  sales: [
+    { id: 'sales-north', label: '北區業務組', icon: 'container', count: 12, hasChildren: false },
+    {
+      id: 'sales-pending',
+      label: '待整併小組',
+      icon: 'container',
+      title: '目前沒有成員',
+      count: 0,
+      muted: true,
+      hasChildren: false,
+    },
+  ],
+};
 
 /** 精簡的資料工作區（篩選、表格、詳情抽屜）與閱讀元件。 */
 @Component({
   selector: 'nx-design-data',
   imports: [
+    ChangeList,
     CodeBlock,
     CopyValue,
     DataTable,
@@ -49,6 +81,7 @@ import { DesignExample, DesignSection } from './design-section';
     TablePagination,
     TableState,
     Tabs,
+    TreeView,
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +108,9 @@ import { DesignExample, DesignSection } from './design-section';
     }
     .design-resources {
       --gallery-min: 13rem;
+    }
+    nx-tree-view {
+      width: min(100%, 20rem);
     }
   `,
   template: `<nx-design-section
@@ -230,6 +266,33 @@ import { DesignExample, DesignSection } from './design-section';
       </nx-panel>
     </nx-design-section>
     <nx-design-section
+      id="design-tree"
+      title="樹狀瀏覽"
+      api="TreeView"
+      description="目錄、組織這類階層瀏覽：展開時才載入下層，節點旁可帶數量與已選小計，沒有成員的節點淡化。上下鍵移動、右鍵展開、左鍵收合或回上層，Enter 選取。"
+    >
+      <nx-design-example label="延遲載入、數量與已選">
+        <nx-tree-view
+          label="示範組織"
+          [items]="tree()"
+          [selected]="treeSelected()"
+          [expanded]="treeOpen()"
+          (nodeSelect)="treeSelected.set($event)"
+          (nodeToggle)="toggleNode($event.id, $event.open)"
+        />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-changes"
+      title="欄位變更"
+      api="ChangeList"
+      description="預覽寫入、同步差異與稽核前後值共用：舊值刪除線、新值淡底，原本沒有值只列新值，清空寫「（無）」。"
+    >
+      <nx-design-example label="改名、新增、清空">
+        <nx-change-list [changes]="changes" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
       id="design-markdown"
       class="design-markdown"
       title="內容閱讀"
@@ -358,6 +421,35 @@ export class DesignData {
     this.shownRows().findIndex((row) => row.event === this.selected()),
   );
   private readonly toast = inject(ToastService);
+  private readonly scope = inject(ViewScope);
+  readonly tree = signal<readonly TreeItem[]>([
+    {
+      id: 'org',
+      label: '示範公司',
+      icon: 'globe',
+      count: 36,
+      hasChildren: true,
+      children: [
+        {
+          id: 'rd',
+          label: '研發處',
+          icon: 'folder',
+          count: 24,
+          badge: 2,
+          badgeLabel: '已選 2 人',
+          hasChildren: true,
+        },
+        { id: 'sales', label: '業務處', icon: 'folder', count: 12, hasChildren: true },
+      ],
+    },
+  ]);
+  readonly treeOpen = signal<ReadonlySet<string>>(new Set(['org']));
+  readonly treeSelected = signal<string | null>('rd');
+  readonly changes: FieldChange[] = [
+    { label: '姓名', before: '林可柔', after: '林可蘿' },
+    { label: '電子郵件', before: null, after: 'carol@example.test' },
+    { label: '分機', before: '2051', after: null },
+  ];
   readonly properties = JSON.stringify(
     { service: 'AiNexus.Host', attempts: 2, state: 'completed' },
     null,
@@ -369,6 +461,41 @@ export class DesignData {
   inspectAdjacent(direction: -1 | 1) {
     const row = this.shownRows()[this.selectedIndex() + direction];
     if (row) this.inspect(row.event);
+  }
+  toggleNode(id: string, open: boolean) {
+    this.treeOpen.update((ids) => {
+      const next = new Set(ids);
+      if (open) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    const node = this.findNode(this.tree(), id);
+    if (!open || !node || node.children || node.loading) return;
+    this.patchNode(id, { loading: true });
+    // 以 ViewScope 排程，離開頁面時計時器一併清掉；同一節點只會有一個載入中。
+    this.scope.later(
+      () => this.patchNode(id, { loading: false, children: LAZY_CHILDREN[id] ?? [] }),
+      600,
+      `design-tree-${id}`,
+    );
+  }
+  private findNode(items: readonly TreeItem[], id: string): TreeItem | undefined {
+    for (const item of items) {
+      const found = item.id === id ? item : this.findNode(item.children ?? [], id);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  private patchNode(id: string, changes: Partial<TreeItem>) {
+    const walk = (items: readonly TreeItem[]): TreeItem[] =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, ...changes }
+          : item.children
+            ? { ...item, children: walk(item.children) }
+            : item,
+      );
+    this.tree.update(walk);
   }
   exported() {
     this.toast.success('示範匯出', '實際頁面依已套用的條件匯出。');

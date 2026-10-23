@@ -1,0 +1,109 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+.directory-basket-total {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-basket-total strong {
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+}
+.directory-basket-total .quiet-button {
+  margin-inline-start: auto;
+}
+.directory-basket-group {
+  display: grid;
+  gap: var(--p-space-1);
+}
+.directory-basket-group header {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.directory-basket-group h4 {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.directory-basket-count {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.directory-basket-group header .quiet-button {
+  margin-inline-start: auto;
+  font-size: var(--text-caption);
+}
+// 三組的色點與預覽統計同一套語意：新增＝成功、更新＝資訊、略過＝中性。
+.directory-mark {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+.directory-mark[data-group='new'] {
+  background: var(--success);
+}
+.directory-mark[data-group='changed'] {
+  background: var(--info);
+}
+.directory-basket-group p {
+  margin: 0 0 var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-basket-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.directory-basket-group li {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.directory-basket-person {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  padding: var(--p-space-1) var(--p-space-2);
+  border: 0;
+  border-radius: var(--radius-item);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.directory-basket-person:hover {
+  background: var(--hover);
+}
+.directory-basket-person span,
+.directory-basket-person small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.directory-basket-person span {
+  font-size: var(--text-label);
+}
+.directory-basket-person small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-basket-person small.is-warning {
+  color: var(--warning);
+}
+.directory-basket-group .icon-button {
+  --icon-size: var(--icon-sm);
+  flex: none;
+}

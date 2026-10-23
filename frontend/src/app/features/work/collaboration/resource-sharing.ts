@@ -68,9 +68,9 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
               (valueChange)="people.find($event)"
           /></label>
           @if (people.searchable()) {
-            <div class="directory-results" role="region" aria-label="符合的使用者">
+            <div class="person-picker-results" role="region" aria-label="符合的使用者">
               @for (user of people.results(); track user.id) {
-                <button class="directory-user" (click)="add(user)">
+                <button class="person-picker-user" (click)="add(user)">
                   <span
                     ><strong>{{ user.displayName }}</strong
                     ><small>{{ user.account }}</small></span

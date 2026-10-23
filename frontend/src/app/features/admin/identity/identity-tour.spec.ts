@@ -73,11 +73,13 @@ describe('usersTour', () => {
 });
 
 describe('directoryImportTour', () => {
-  it('follows the dialog from searching and picking to previewing and confirming', () => {
+  it('follows the dialog from browsing and picking to previewing and confirming', () => {
     expect(titles(directoryImportTour({ step: 'select' }))).toEqual([
-      '搜尋 AD',
+      '依 OU 瀏覽',
+      '包含子 OU',
+      '依平台狀態篩選',
       '勾選要匯入的人',
-      '跨搜尋累積',
+      '匯入籃與 AD 屬性',
       '先預覽',
     ]);
     expect(titles(directoryImportTour({ step: 'preview' }))).toEqual([
@@ -90,7 +92,7 @@ describe('directoryImportTour', () => {
 
   it('explains what to do when someone could not be imported', () => {
     const steps = tourSteps(directoryImportTour({ step: 'result' }));
-    expect(steps.map((step) => step.title)).toEqual(['有人未完成', '逐人結果']);
+    expect(steps.map((step) => step.title)).toEqual(['匯入結果', '逐人結果']);
     expect(steps[0].description).toContain('重新預覽');
   });
 

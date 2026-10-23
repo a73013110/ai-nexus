@@ -26969,18 +26969,184 @@
         }
       }
     },
+    "/api/v1/admin/directory-nodes": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "ListDirectoryNodes",
+        "parameters": [
+          {
+            "name": "parent",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryNodesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/directory-people": {
       "get": {
         "tags": [
           "Identity"
         ],
-        "operationId": "SearchDirectoryPeople",
+        "operationId": "ListDirectoryPeople",
         "parameters": [
           {
-            "name": "search",
+            "name": "node",
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "subtree",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -45116,6 +45282,59 @@
           }
         }
       },
+      "DirectoryNodeDto": {
+        "required": [
+          "dn",
+          "name",
+          "kind",
+          "people",
+          "hasChildren"
+        ],
+        "type": "object",
+        "properties": {
+          "dn": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "people": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "hasChildren": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DirectoryNodesDto": {
+        "required": [
+          "node",
+          "children",
+          "writable"
+        ],
+        "type": "object",
+        "properties": {
+          "node": {
+            "$ref": "#/components/schemas/DirectoryNodeDto"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectoryNodeDto"
+            }
+          },
+          "writable": {
+            "type": "boolean"
+          }
+        }
+      },
       "DirectoryOutcomeDto": {
         "required": [
           "sid",
@@ -45218,23 +45437,37 @@
       "DirectoryPersonDto": {
         "required": [
           "sid",
+          "dn",
           "account",
+          "upn",
           "displayName",
           "email",
           "department",
           "title",
           "path",
           "disabled",
+          "whenChanged",
+          "lastLogon",
           "state",
-          "userId"
+          "userId",
+          "changes"
         ],
         "type": "object",
         "properties": {
           "sid": {
             "type": "string"
           },
+          "dn": {
+            "type": "string"
+          },
           "account": {
             "type": "string"
+          },
+          "upn": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "displayName": {
             "type": "string"
@@ -45263,6 +45496,20 @@
           "disabled": {
             "type": "boolean"
           },
+          "whenChanged": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastLogon": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
           "state": {
             "type": "string"
           },
@@ -45272,6 +45519,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectoryChange"
+            }
           }
         }
       },

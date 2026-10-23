@@ -59,13 +59,30 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     /// </summary>
     public async Task<IReadOnlyList<DirectoryChange>> ChangesAsync(User user, string account, DirectoryProfile profile, CancellationToken ct)
     {
-        var changes = new List<DirectoryChange>();
+        var renamed = RenamedAdAccount(user, account);
+        var taken = renamed is not null && await db.Users.AnyAsync(x => x.Id != user.Id && x.AdAccount == renamed, ct);
+        if (taken) LogRenameConflict(logger, user.Id, "ad_account_in_use");
+        return Changes(user, account, profile, taken);
+    }
+
+    /// <summary>AD 帳號名改了時的新 AdAccount（正規化後）；沒改或名稱不符平台規則時為 null。</summary>
+    public static string? RenamedAdAccount(User user, string account)
+    {
         var name = UserAccounts.AccountName(account);
-        if (user.AdAccount is not null && UserAccounts.IsValid(name) && UserAccounts.Normalize(name) is { } renamed && renamed != user.AdAccount)
+        return user.AdAccount is not null && UserAccounts.IsValid(name) && UserAccounts.Normalize(name) is { } renamed && renamed != user.AdAccount ? renamed : null;
+    }
+
+    /// <summary>
+    /// <see cref="ChangesAsync"/> 的純計算版本：<paramref name="renameTaken"/> 由呼叫端查好（列表一次批次查，不逐人查詢）。
+    /// </summary>
+    public static IReadOnlyList<DirectoryChange> Changes(User user, string account, DirectoryProfile profile, bool renameTaken)
+    {
+        var changes = new List<DirectoryChange>();
+        if (RenamedAdAccount(user, account) is { } renamed)
         {
             // 新名稱已被另一位使用者佔用（通常是已離職、名稱被 AD 重新配發的舊帳號）：帳號與 AdAccount 都維持原值，
             // 否則完整帳號與 AdAccount 會指向不同的人，之後管理端編輯也會被 ad_binding_immutable 擋下。
-            if (await db.Users.AnyAsync(x => x.Id != user.Id && x.AdAccount == renamed, ct)) { LogRenameConflict(logger, user.Id, "ad_account_in_use"); account = user.Account; }
+            if (renameTaken) account = user.Account;
             else changes.Add(new("adAccount", user.AdAccount, renamed));
         }
         if (user.Account != account) changes.Insert(0, new("account", user.Account, account));

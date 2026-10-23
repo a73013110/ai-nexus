@@ -86,7 +86,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             services.AddSingleton<IAdAuthenticator, FixtureAdAuthenticator>();
             services.RemoveAll<IAdDirectory>();
             services.AddSingleton<IAdDirectory>(AdDirectory);
-            services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.Domain = "fixture.internal"; options.BindUser = "fixture"; options.BindPassword = "fixture-only"; });
+            services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.Domain = "fixture.internal"; options.SearchBase = ""; options.BindUser = "fixture"; options.BindPassword = "fixture-only"; });
             services.RemoveAllKeyed<IInferenceProvider>("google");
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);

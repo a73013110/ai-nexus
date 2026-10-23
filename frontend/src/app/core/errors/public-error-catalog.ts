@@ -340,6 +340,8 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   web_search_daily_quota: '今日網路搜尋已達上限。',
   account_changed: '帳號設定已在其他地方變更，請重新整理後再試。',
   directory_changed: '預覽後使用者資料已有變動，這位使用者未寫入；請重新預覽。',
+  directory_node_invalid: '這個目錄節點不在可瀏覽的範圍內。',
+  directory_node_not_found: 'AD 已找不到這個節點（可能已刪除或改名），請重新整理目錄。',
   directory_not_configured: '尚未設定 AD 服務帳號，無法查詢目錄；請聯絡系統管理員。',
   directory_unavailable: '目前無法連到公司 AD，請稍後重試或聯絡系統管理員。',
   directory_verification_required:

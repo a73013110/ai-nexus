@@ -1,0 +1,174 @@
+@if (store.current(); as node) {
+  <header class="directory-node">
+    <nav class="directory-crumbs" aria-label="節點路徑">
+      @for (crumb of store.crumbs(); track crumb.dn; let last = $last) {
+        @if (last) {
+          <span aria-current="location">{{ crumb.name }}</span>
+        } @else {
+          <button type="button" (click)="store.choose(crumb.dn)">{{ crumb.name }}</button
+          ><span aria-hidden="true">/</span>
+        }
+      }
+    </nav>
+    <div class="directory-node-title">
+      <h3>{{ node.name }}</h3>
+      <span>{{ subtitle() }}</span>
+    </div>
+    <nx-copy-value class="directory-dn is-truncated" label="複製 DN" [value]="node.dn" />
+  </header>
+}
+<div class="directory-toolbar">
+  <nx-view-switch
+    appearance="segment"
+    label="依平台狀態篩選"
+    [options]="filters()"
+    [value]="store.filter()"
+    (valueChange)="store.setFilter($any($event))"
+  />
+  <nx-search-field
+    label="在這個節點搜尋"
+    placeholder="姓名、帳號、信箱、部門"
+    [maxLength]="64"
+    [value]="store.query()"
+    (valueChange)="store.query.set($event)"
+  />
+  <nx-checkbox
+    class="directory-hide-disabled"
+    label="隱藏 AD 停用"
+    [checked]="store.hideDisabled()"
+    (checkedChange)="store.hideDisabled.set($event)"
+  />
+</div>
+@if (store.banner(); as banner) {
+  <div class="directory-banner" role="status">
+    <span>{{ banner.text }}</span>
+    <button type="button" class="quiet-button" (click)="store.remove(banner.drop)">
+      {{ banner.action }}
+    </button>
+  </div>
+}
+@if (store.limitNote()) {
+  <nx-notice tone="warning" [message]="store.limitNote()" />
+}
+@if (store.more()) {
+  <nx-notice
+    tone="info"
+    message="這裡超過 1,000 人，只列出依姓名排序的前 1,000 位；請改選下層 OU 或關閉「包含子 OU」。"
+  />
+}
+<nx-data-table
+  class="directory-people"
+  label="節點人員"
+  [busy]="store.people.loading()"
+  [columns]="columns"
+>
+  <table>
+    <colgroup>
+      <col nxTableColumn="select" class="directory-col-select" />
+      <col nxTableColumn="name" />
+      <col nxTableColumn="department" />
+      <col nxTableColumn="email" />
+      <col nxTableColumn="state" />
+      <col nxTableColumn="inspect" class="directory-col-inspect" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" nxTableColumn="select">
+          <nx-checkbox
+            hideLabel
+            label="選取清單中的全部人員"
+            [checked]="store.headState() === 'all'"
+            [mixed]="store.headState() === 'some'"
+            [disabled]="!store.visible().length"
+            (checkedChange)="store.toggleAll($event)"
+          />
+        </th>
+        <th scope="col" nxTableColumn="name">人員</th>
+        <th scope="col" nxTableColumn="department">部門與職稱</th>
+        <th scope="col" nxTableColumn="email">信箱</th>
+        <th scope="col" nxTableColumn="state">平台狀態</th>
+        <th scope="col" nxTableColumn="inspect"><span class="sr-only">AD 屬性</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (person of store.visible(); track person.sid) {
+        @let picked = store.selection().has(person.sid);
+        <tr
+          class="ui-table-row"
+          tabindex="-1"
+          [class.is-selected]="store.inspected() === person.sid"
+          [class.is-picked]="picked"
+          [class.is-dimmed]="person.disabled || !selectable(person)"
+          (mousedown)="hold($event)"
+          (click)="rowClick($event, person)"
+        >
+          <td nxTableColumn="select">
+            <nx-checkbox
+              hideLabel
+              [label]="'選取 ' + person.displayName"
+              [checked]="picked"
+              [disabled]="!selectable(person)"
+              (checkedChange)="check(person, $event)"
+            />
+          </td>
+          <td nxTableColumn="name">
+            <strong class="ui-truncate" [title]="person.displayName">{{
+              person.displayName
+            }}</strong>
+            <small class="ui-truncate" [title]="person.account">{{ person.account }}</small>
+          </td>
+          <td nxTableColumn="department">
+            <span class="ui-truncate">{{ person.department || '—' }}</span>
+            @if (person.title) {
+              <small class="ui-truncate">{{ person.title }}</small>
+            }
+          </td>
+          <td nxTableColumn="email">
+            <span class="ui-truncate" [title]="person.email || ''">{{ person.email || '—' }}</span>
+          </td>
+          <td nxTableColumn="state">
+            <div class="resource-badges">
+              <nx-status-badge [tone]="stateTone(person.state)">{{
+                stateLabel(person)
+              }}</nx-status-badge>
+              @if (person.disabled) {
+                <nx-status-badge tone="warning">AD 停用</nx-status-badge>
+              }
+            </div>
+            @if (person.changes.length) {
+              <small>{{ changedFields(person.changes) }}與平台不同</small>
+            }
+          </td>
+          <td nxTableColumn="inspect">
+            <button
+              type="button"
+              class="icon-button"
+              [attr.aria-label]="'檢視 ' + person.displayName + ' 的 AD 屬性'"
+              title="檢視 AD 屬性"
+              (click)="store.inspect(person)"
+            >
+              <nx-icon name="sidebar" />
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <nx-table-state
+    [count]="store.visible().length"
+    [loading]="store.people.loading() && !store.all().length"
+    [error]="store.people.error()"
+    loadingText="正在讀取 AD 人員"
+    errorTitle="無法讀取這個節點"
+    [emptyTitle]="empty().title"
+    [emptyText]="empty().text"
+    (retry)="store.people.reload()"
+  />
+  <div table-footer class="ui-table-footer directory-people-foot">
+    <span
+      >顯示 {{ store.visible().length }} / {{ store.all().length }} 人 · 這裡已選
+      {{ store.pickedHere() }} 人</span
+    >
+    <span><kbd>Shift</kbd>＋點選可連續選取一段</span>
+  </div>
+</nx-data-table>

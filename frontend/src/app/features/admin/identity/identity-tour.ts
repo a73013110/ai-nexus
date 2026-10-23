@@ -29,7 +29,7 @@ export function usersTour(options: {
         target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
         title: '從 AD 匯入',
         description:
-          '新進人員還沒登入、要先指派角色時用：搜尋公司 AD、跨多次搜尋勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
+          '新進人員還沒登入、要先指派角色時用：依 OU 瀏覽公司 AD、跨節點勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
         side: 'bottom',
       },
     !options.testing && {
@@ -166,24 +166,37 @@ export function directoryImportTour(options: {
     options.step === 'select'
       ? [
           {
-            target: `${IMPORT} nx-search-field`,
-            title: '搜尋 AD',
+            target: `${IMPORT} .directory-tree nx-tree-view`,
+            title: '依 OU 瀏覽',
             description:
-              '依姓名、帳號、信箱開頭或部門搜尋，最多列 50 位；找太多時輸入更精確的關鍵字。',
+              '和 AD 工具一樣逐層展開；數字是含下層的人數，淡色節點沒有人員，藍色小計是這裡已選的人數。',
+            side: 'right',
+          },
+          {
+            target: `${IMPORT} .directory-subtree`,
+            title: '包含子 OU',
+            description: '預設只列節點直屬的人；打開後連同下層 OU 一起列出（一次最多 1,000 人）。',
+            side: 'top',
+          },
+          {
+            target: `${IMPORT} .directory-toolbar nx-view-switch`,
+            title: '依平台狀態篩選',
+            description:
+              '未匯入、有異動（AD 與平台不同）、已同步；也可在節點內搜尋或隱藏 AD 停用的人。',
             side: 'bottom',
           },
           {
-            target: `${IMPORT} .directory-results`,
+            target: `${IMPORT} .directory-people`,
             title: '勾選要匯入的人',
             description:
-              '狀態欄標示未匯入、已匯入或預建帳號；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
+              '表頭可全選目前清單，Shift＋點選連續選一段；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
           },
           {
-            target: `${IMPORT} .directory-selected`,
-            title: '跨搜尋累積',
+            target: `${IMPORT} .directory-side`,
+            title: '匯入籃與 AD 屬性',
             description:
-              '換關鍵字再搜尋，已勾選的人會留在這裡；一次最多 100 人，可逐一移除或清除。',
-            side: 'top',
+              '切換節點時已選的人會留在匯入籃，依新增、更新、略過分組；列尾的面板鈕可對照 AD 屬性與會改的欄位。',
+            side: 'left',
           },
           {
             target: `${IMPORT} .directory-preview`,
@@ -195,11 +208,11 @@ export function directoryImportTour(options: {
       : [
           {
             target: `${IMPORT} .directory-summary`,
-            title: options.step === 'preview' ? '預覽摘要' : '有人未完成',
+            title: options.step === 'preview' ? '預覽摘要' : '匯入結果',
             description:
               options.step === 'preview'
-                ? '各類結果的人數；確認匯入只寫入新建、綁定與更新的人。'
-                : '預覽之後資料有變動的人沒有寫入，其他人已完成；「返回選取」重新預覽即可。',
+                ? '會新增、更新與略過的人數；確認匯入只寫入新增與更新的人。'
+                : '已寫入的人數；標示「未完成」的人在預覽後資料有變動，「返回選取」重新預覽即可。',
             side: 'bottom',
           },
           options.step === 'preview' && {
