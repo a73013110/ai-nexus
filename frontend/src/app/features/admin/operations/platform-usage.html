@@ -17,15 +17,24 @@
 </div>
 @if (read.error() && stats()) {
   <nx-notice [message]="read.error()"
-    ><button notice-actions type="button" (click)="read.reload()">重新載入</button>
+    ><button
+      notice-actions
+      nxPending
+      type="button"
+      [pending]="read.refreshing()"
+      (click)="read.reload()"
+    >
+      {{ read.refreshing() ? '重新載入中…' : '重新載入' }}
+    </button>
   </nx-notice>
 }
 @if (stats() || read.loading()) {
-  <nx-stat-grid label="平台用量摘要">
+  <nx-stat-grid label="平台用量摘要" [busy]="read.refreshing()">
     @for (tile of tiles(); track tile.key) {
       <nx-stat-tile
         [label]="tile.label"
         [value]="tile.value"
+        [loading]="!stats()"
         [unit]="tile.unit"
         [hint]="tile.hint"
       />
@@ -33,7 +42,11 @@
   </nx-stat-grid>
 }
 @if (stats(); as stats) {
-  <p class="form-note usage-coverage">
+  <p
+    class="form-note usage-coverage"
+    [class.is-refreshing]="read.refreshing()"
+    [attr.aria-busy]="read.refreshing() || null"
+  >
     {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；{{
       format(stats.requests - stats.requestsWithUsage)
     }}
@@ -105,7 +118,7 @@
     [count]="models().length"
     [loading]="read.loading()"
     [error]="read.error()"
-    loadingText="正在讀取平台用量"
+    loadingText="正在載入平台用量…"
     errorTitle="無法載入平台用量"
     emptyTitle="區間內尚無模型使用紀錄"
     (retry)="read.reload()"
@@ -168,7 +181,7 @@
       [count]="kinds().length"
       [loading]="read.loading()"
       [error]="read.error()"
-      loadingText="正在讀取使用來源"
+      loadingText="正在載入使用來源…"
       errorTitle="無法載入使用來源"
       emptyTitle="區間內尚無使用紀錄"
       (retry)="read.reload()"
@@ -214,7 +227,7 @@
       [count]="services().length"
       [loading]="read.loading()"
       [error]="read.error()"
-      loadingText="正在讀取服務狀態"
+      loadingText="正在載入服務狀態…"
       errorTitle="無法載入服務狀態"
       emptyTitle="沒有服務狀態"
       (retry)="read.reload()"

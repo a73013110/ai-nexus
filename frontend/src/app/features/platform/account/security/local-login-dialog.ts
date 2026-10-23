@@ -12,6 +12,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AccountSecurityStore } from './account-security-store';
 import { bindSecurityDialog } from './security-dialog';
 
@@ -26,15 +27,15 @@ export function localPasswordProblem(password: string, confirmation: string) {
 /** 啟用本地登入，或變更本地帳號名與密碼。 */
 @Component({
   selector: 'nx-local-login-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Notice],
+  imports: [CompactDialog, DialogHeader, Field, Notice, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     size="sm"
     #dialog
     class="platform-dialog"
+    [busy]="busy()"
     (close)="store.dialog() === 'local-login' && store.close()"
-    (cancel)="busy() ? $event.preventDefault() : null"
   >
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header [heading]="heading()" closeLabel="關閉本地登入設定" />
@@ -82,10 +83,15 @@ export function localPasswordProblem(password: string, confirmation: string) {
         <p class="form-note">12–128 個字元，建議用一句好記的長句；不可包含帳號名稱或常見密碼。</p>
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="store.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || store.close()"
+        >
           取消
         </button>
-        <button type="submit" class="primary-button" [disabled]="busy()">
+        <button nxPending type="submit" class="primary-button" [pending]="busy()">
           {{ busy() ? '儲存中…' : '儲存' }}
         </button>
       </footer>

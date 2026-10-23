@@ -12,12 +12,13 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { RepositoriesApi } from '../repositories-api';
 
 /** 以三個簡短步驟連接（或重新授權）使用者自己的 Gitea token。 */
 @Component({
   selector: 'nx-repository-connect',
-  imports: [Field, Icon, Notice],
+  imports: [Field, Icon, Notice, PendingButton],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-connect.scss',
@@ -82,16 +83,13 @@ import { RepositoriesApi } from '../repositories-api';
               </button>
             }
             <button
+              nxPending
               type="submit"
               class="primary-button"
-              [class.busy]="busy()"
-              [disabled]="busy() || !token().trim()"
+              [pending]="busy()"
+              [disabled]="!token().trim()"
             >
-              @if (busy()) {
-                <nx-icon class="verifying-icon" name="loading" />驗證中…
-              } @else {
-                {{ reconnecting() ? '更新授權' : '連線 Gitea' }}
-              }
+              {{ busy() ? '驗證中…' : reconnecting() ? '更新授權' : '連線 Gitea' }}
             </button>
           </div>
         </form>

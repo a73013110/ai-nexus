@@ -16,41 +16,51 @@ function day(value: string) {
 
 /**
  * 本地日期的日曆，每週一欄（週一在前），依最忙的那一天分為五級上色。範圍外的日子留白；
- * 移到某一天或使其聚焦，即可讀取它的數值。
+ * 移到某一天或使其聚焦，即可讀取它的數值。首次載入（`loading`）在格子的位置畫同尺寸的骨架，
+ * 已有資料時重讀（`busy`）淡化；讀取中不顯示「此期間尚無資料」。
  */
 @Component({
   selector: 'nx-heatmap-calendar',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './heatmap-calendar.scss',
-  template: `<figure class="heatmap" [style.--weeks]="weeks().length">
+  template: `<figure
+    class="heatmap"
+    [style.--weeks]="weeks().length"
+    [class.is-refreshing]="refreshing()"
+    [attr.aria-busy]="busy() || loading() || null"
+  >
     <figcaption class="sr-only">{{ label() }}：{{ summary() }}</figcaption>
     <div class="heatmap-days" aria-hidden="true">
       @for (name of weekdays; track name) {
         <span>{{ $index % 2 ? '' : name }}</span>
       }
     </div>
-    <div class="heatmap-grid" role="list" [attr.aria-label]="label()">
-      @for (week of weeks(); track $index) {
-        @for (cell of week; track cell.key) {
-          @if (cell.inRange) {
-            <span
-              role="listitem"
-              tabindex="0"
-              class="heatmap-cell"
-              [attr.data-level]="cell.level"
-              [style.animation-delay.ms]="cell.delay"
-              [attr.aria-label]="cell.key + ' ' + format()(cell.value) + unit()"
-              (pointerenter)="active.set(cell)"
-              (focus)="active.set(cell)"
-              (pointerleave)="active.set(null)"
-              (blur)="active.set(null)"
-            ></span>
-          } @else {
-            <span class="heatmap-cell is-outside" aria-hidden="true"></span>
+    @if (placeholder()) {
+      <span class="skeleton heatmap-skeleton" role="status" [attr.aria-label]="summary()"></span>
+    } @else {
+      <div class="heatmap-grid" role="list" [attr.aria-label]="label()">
+        @for (week of weeks(); track $index) {
+          @for (cell of week; track cell.key) {
+            @if (cell.inRange) {
+              <span
+                role="listitem"
+                tabindex="0"
+                class="heatmap-cell"
+                [attr.data-level]="cell.level"
+                [style.animation-delay.ms]="cell.delay"
+                [attr.aria-label]="cell.key + ' ' + format()(cell.value) + unit()"
+                (pointerenter)="active.set(cell)"
+                (focus)="active.set(cell)"
+                (pointerleave)="active.set(null)"
+                (blur)="active.set(null)"
+              ></span>
+            } @else {
+              <span class="heatmap-cell is-outside" aria-hidden="true"></span>
+            }
           }
         }
-      }
-    </div>
+      </div>
+    }
     <div class="heatmap-foot" aria-hidden="true">
       <output>
         @if (active(); as cell) {
@@ -74,6 +84,10 @@ export class HeatmapCalendar {
   readonly label = input.required<string>();
   readonly unit = input('');
   readonly format = input<(value: number) => string>(formatNumber);
+  /** 首次載入：還沒有資料，畫骨架。 */
+  readonly loading = input(false);
+  /** 重新讀取：已有資料時淡化；沒有資料時同首次載入。 */
+  readonly busy = input(false);
   readonly weekdays = WEEKDAYS;
   readonly active = signal<{ key: string; value: number } | null>(null);
   readonly weeks = computed(() => {
@@ -107,7 +121,13 @@ export class HeatmapCalendar {
     }
     return weeks;
   });
+  private readonly total = computed(() =>
+    this.points().reduce((sum, point) => sum + point.value, 0),
+  );
+  protected readonly placeholder = computed(() => this.loading() || (this.busy() && !this.total()));
+  protected readonly refreshing = computed(() => this.busy() && !this.placeholder());
   readonly summary = computed(() => {
+    if (this.placeholder()) return `正在載入${this.label()}…`;
     const cells = this.weeks()
       .flat()
       .filter((item) => item.inRange);

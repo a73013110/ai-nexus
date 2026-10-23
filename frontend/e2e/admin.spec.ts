@@ -767,7 +767,7 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
     ]);
   // 側欄讀的是 `/me` 的選單樹，所以會重讀帳號。
   await expect.poll(() => me).toBeGreaterThan(reads);
-  await expect(table).toHaveAttribute("aria-busy", "false");
+  await expect(table).not.toHaveAttribute("aria-busy");
 
   // ←：移出分群，排在原分群之後。
   await files.press("ArrowLeft");
@@ -777,7 +777,7 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
   await expect
     .poll(() => orders().at(-1))
     .toEqual({ items: [{ id: "work.files", parentId: null, sortOrder: 25 }] });
-  await expect(table).toHaveAttribute("aria-busy", "false");
+  await expect(table).not.toHaveAttribute("aria-busy");
 
   // 伺服器拒絕時還原位置，並以錯誤代碼的提示說明原因。
   await page.route("**/api/v1/admin/navigation-items/order", (route) =>
@@ -820,7 +820,7 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
       items: [{ id: "work.files", parentId: "work", sortOrder: 60 }],
     });
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(table).toHaveAttribute("aria-busy", "false");
+  await expect(table).not.toHaveAttribute("aria-busy");
 
   // 拖曳到某列的上半：插到它之前。
   const drag = async (target: Locator, ratio: number) => {
@@ -847,7 +847,7 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
   await expect
     .poll(() => orders().at(-1))
     .toEqual({ items: [{ id: "work.files", parentId: "work", sortOrder: 0 }] });
-  await expect(table).toHaveAttribute("aria-busy", "false");
+  await expect(table).not.toHaveAttribute("aria-busy");
 
   // 拖到分群列的中段：移入該分群、排在最後。
   await drag(table.locator('tr[data-item="collaboration"]'), 0.5);

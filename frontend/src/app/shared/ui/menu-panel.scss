@@ -18,6 +18,9 @@
   button:focus-visible {
     background: var(--hover);
   }
+  button[aria-busy='true'] {
+    cursor: progress;
+  }
   .menu-check {
     margin-inline-start: auto;
     color: var(--signal);

@@ -5,11 +5,14 @@
 >
   <div page-actions class="page-actions">
     <button
+      nxPending
+      type="button"
       class="primary-button file-upload"
-      [disabled]="uploading() || !policy()"
+      [pending]="uploading()"
+      [disabled]="!uploading() && !policy()"
       (click)="fileInput.click()"
     >
-      <nx-icon name="upload" />{{ uploading() ? '正在保存…' : '上傳檔案' }}
+      <nx-icon name="upload" />{{ uploading() ? '上傳中…' : '上傳檔案' }}
     </button>
     <input
       #fileInput
@@ -22,7 +25,15 @@
   </div>
   @if (error()) {
     <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+      ><button
+        notice-actions
+        nxPending
+        type="button"
+        [pending]="store.result.refreshing()"
+        (click)="reload()"
+      >
+        {{ store.result.refreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
     >
   }
   <div
@@ -37,7 +48,8 @@
       [search]="store.search()"
       [filters]="kinds"
       [filter]="store.type()"
-      [loading]="store.loading() && !store.items().length"
+      [loading]="store.result.loading() && !store.items().length"
+      [busy]="store.loading()"
       [empty]="!store.items().length"
       (searchChange)="store.find($event)"
       (filterChange)="store.filter($event)"
@@ -54,7 +66,7 @@
       <nx-file-browser
         [items]="store.items()"
         [knowledge]="session.has('knowledge')"
-        [busy]="busy()"
+        [working]="deleting()"
         (addKnowledge)="knowledge().open($event)"
         (remove)="remove($event)"
         (rename)="rename($event)"
@@ -74,7 +86,10 @@
     >
   </div>
   <footer class="file-footer">
-    <nx-storage-usage [storage]="store.result.value()?.storage" />
+    <nx-storage-usage
+      [storage]="store.result.value()?.storage"
+      [loading]="store.result.loading()"
+    />
     @if (store.paged()) {
       <nx-table-pagination
         mode="offset"

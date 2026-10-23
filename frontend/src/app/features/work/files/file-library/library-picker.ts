@@ -56,23 +56,29 @@ import { TablePagination } from '@shared/ui/data-table';
           label="搜尋檔案庫"
           placeholder="搜尋檔案庫中的檔案"
           [value]="store.search()"
+          [busy]="store.loading()"
           (valueChange)="store.find($event)"
         />
       </nx-dialog-header>
-      <div #body class="dialog-body dialog-body-flush" [attr.aria-busy]="store.loading()">
+      <div #body class="dialog-body dialog-body-flush" [attr.aria-busy]="store.loading() || null">
         @if (store.error()) {
           <nx-notice tone="danger" [message]="store.error()" />
         }
         @if (store.loading() && !store.items().length) {
-          <p role="status" class="picker-note">正在載入檔案…</p>
-        } @else if (!store.items().length) {
+          <div class="picker-skeleton" role="status">
+            <span class="sr-only">正在載入檔案…</span>
+            @for (slot of [0, 1, 2, 3]; track slot) {
+              <span class="skeleton"></span>
+            }
+          </div>
+        } @else if (!store.items().length && !store.error()) {
           <nx-empty-state
             ><p>
               沒有符合的檔案。已送出的對話附件與上傳至知識庫的原檔都會保存在這裡。
             </p></nx-empty-state
           >
         } @else {
-          <ul class="picker-list">
+          <ul class="picker-list" [class.is-refreshing]="store.loading()">
             @for (item of store.items(); track item.file.id) {
               <li>
                 <button

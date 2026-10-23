@@ -3,6 +3,7 @@
   #itemDialog
   class="platform-dialog navigation-item-dialog"
   [size]="editor()?.draft?.kind === 'link' ? 'lg' : 'md'"
+  [busy]="saving()"
   (cancel)="cancel($event)"
 >
   @if (editor(); as e) {
@@ -175,12 +176,18 @@
           <button
             type="button"
             class="secondary-button"
-            [disabled]="saving()"
+            [attr.aria-disabled]="saving() || null"
             (click)="requestClose()"
           >
             取消
           </button>
-          <button type="submit" class="primary-button" [disabled]="locked()">
+          <button
+            nxPending
+            type="submit"
+            class="primary-button"
+            [pending]="saving()"
+            [disabled]="session.testing()"
+          >
             {{ saving() ? '建立中…' : '建立' + label(e.draft.kind) }}
           </button>
         </footer>

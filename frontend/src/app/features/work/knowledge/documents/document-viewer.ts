@@ -1,5 +1,4 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { EmptyState } from '@shared/ui/empty-state';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { FloatingToolbar } from '@shared/ui/floating-toolbar';
@@ -75,7 +74,6 @@ const readyDocument = (
   selector: 'nx-document-viewer',
   imports: [
     NgTemplateOutlet,
-    EmptyState,
     SearchField,
     ViewSwitch,
     FloatingToolbar,

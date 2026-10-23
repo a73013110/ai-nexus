@@ -14,46 +14,53 @@ import {
 import type { MessageDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { QualityApi } from './quality-api';
 
 @Component({
   selector: 'nx-message-feedback',
   host: { class: 'ui-density-compact' },
-  imports: [Notice, Field, Icon, Select],
+  imports: [Notice, Field, Icon, PendingButton, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './message-feedback.scss',
   template: `<div class="message-feedback">
     <div class="feedback-buttons" role="group" aria-label="回答品質回饋">
       <button
+        nxPending
         class="quiet-button"
         [class.feedback-active]="rating() === 1"
         [attr.aria-pressed]="rating() === 1"
         aria-label="回答有幫助"
-        [disabled]="busy()"
+        [pending]="working() === 'up'"
+        [disabled]="busy() && working() !== 'up'"
         (click)="rate(1)"
       >
         <nx-icon name="thumb-up" />
       </button>
       <button
+        nxPending
         class="quiet-button"
         [class.feedback-active]="rating() === -1"
         [attr.aria-pressed]="rating() === -1"
         aria-label="回答待改善"
-        [disabled]="busy()"
+        [pending]="working() === 'down'"
+        [disabled]="busy() && working() !== 'down'"
         (click)="rate(-1)"
       >
         <nx-icon name="thumb-down" />
       </button>
       @if (rating() === -1) {
         <button
+          nxPending
           class="quiet-button"
-          (click)="openDetails()"
           [attr.aria-expanded]="expanded()"
-          [disabled]="busy()"
+          [pending]="opening()"
+          [disabled]="busy() && !opening()"
+          (click)="openDetails()"
         >
-          補充回饋
+          {{ opening() ? '開啟中…' : '補充回饋' }}
         </button>
       }
     </div>
@@ -75,7 +82,15 @@ import { QualityApi } from './quality-api';
           (input)="note.set($any($event.target).value)"
           [disabled]="busy()"
         ></textarea
-        ><button class="secondary-button" (click)="save(-1)" [disabled]="busy()">儲存補充</button>
+        ><button
+          nxPending
+          class="secondary-button"
+          [pending]="working() === 'detail'"
+          [disabled]="busy() && working() !== 'detail'"
+          (click)="save(-1)"
+        >
+          {{ working() === 'detail' ? '儲存中…' : '儲存補充' }}
+        </button>
       </div>
     }
     @if (error()) {
@@ -104,8 +119,11 @@ export class MessageFeedback {
     return value && value.id === this.message().id ? value : null;
   });
   readonly expanded = computed(() => this.requested() && !!this.details());
-  private readonly saving = signal(false);
-  readonly busy = computed(() => this.saving() || this.detailsRead.loading());
+  /** 正在儲存的是哪個控制項：讚、待改善或補充說明；只有它轉圈。 */
+  readonly working = signal<'up' | 'down' | 'detail' | null>(null);
+  /** 第一次開啟補充回饋時正在讀取既有內容。 */
+  readonly opening = this.detailsRead.loading;
+  readonly busy = computed(() => this.working() !== null || this.detailsRead.loading());
   readonly reason = linkedSignal(() => this.details()?.feedback?.reason ?? '');
   readonly note = linkedSignal(() => this.details()?.feedback?.note ?? '');
   readonly saveError = signal('');
@@ -120,7 +138,7 @@ export class MessageFeedback {
     { value: 'other', label: '其他' },
   ];
   rate(value: number) {
-    void this.save(this.rating() === value ? 0 : value);
+    void this.save(this.rating() === value ? 0 : value, value === 1 ? 'up' : 'down');
   }
   openDetails() {
     if (this.expanded()) this.requested.set(false);
@@ -129,11 +147,11 @@ export class MessageFeedback {
       this.requested.set(true);
     }
   }
-  async save(value: number) {
+  async save(value: number, from: 'up' | 'down' | 'detail' = 'detail') {
     if (this.busy()) return;
     const id = this.message().id,
       alive = this.scope.guard();
-    this.saving.set(true);
+    this.working.set(from);
     this.saveError.set('');
     try {
       await this.api.feedback(
@@ -150,7 +168,7 @@ export class MessageFeedback {
     } catch (failure) {
       if (alive() && this.message().id === id) this.saveError.set(this.scope.message(failure));
     } finally {
-      if (alive()) this.saving.set(false);
+      if (alive()) this.working.set(null);
     }
   }
 }

@@ -154,10 +154,13 @@
     [class.viewer-image]="isImage() && mode() === 'original'"
     [class.viewer-frame]="isRich() && view() !== 'text'"
     [class.viewer-image-zoomed]="isImage() && imageZoom() !== 'fit'"
-    [attr.aria-busy]="loading() || rendering() || imageLoading()"
+    [attr.aria-busy]="loading() || rendering() || imageLoading() || null"
   >
     @if (loading()) {
-      <nx-empty-state><p>正在開啟文件…</p></nx-empty-state>
+      <div class="reader-original" role="status">
+        <span class="sr-only">正在開啟文件…</span>
+        <span class="skeleton viewer-skeleton"></span>
+      </div>
     } @else if (document(); as info) {
       @if (mode() === 'original' && (isPdf() || isImage())) {
         <div class="reader-original">
@@ -165,7 +168,9 @@
             <canvas #pdfCanvas [attr.aria-label]="info.fileName + ' 第 ' + page() + ' 頁'"></canvas>
           } @else {
             @if (imageLoading()) {
-              <p class="reader-image-loading" role="status">正在載入原始圖片…</p>
+              <p class="reader-image-loading" role="status">
+                <nx-icon name="loading" />正在載入原始圖片…
+              </p>
             }
             <img
               [src]="contentUrl()"

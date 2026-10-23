@@ -6,13 +6,13 @@
   (scroll)="onScroll()"
 >
   @if (store.loadingConversation()) {
-    <div class="conversation-loading chat-column" role="status">
+    <div class="conversation-skeleton chat-column" role="status">
       <span class="sr-only">正在開啟對話…</span>
-      <div class="loading-prompt skeleton" aria-hidden="true"></div>
-      <div class="loading-answer" aria-hidden="true">
+      <div class="skeleton-prompt skeleton" aria-hidden="true"></div>
+      <div class="skeleton-answer" aria-hidden="true">
         <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
       </div>
-      <div class="loading-prompt is-short skeleton" aria-hidden="true"></div>
+      <div class="skeleton-prompt is-short skeleton" aria-hidden="true"></div>
     </div>
   } @else if (!store.visibleMessages().length) {
     <section

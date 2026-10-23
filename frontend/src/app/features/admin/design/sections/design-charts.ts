@@ -7,6 +7,7 @@ import { NumberTicker } from '@shared/ui/number-ticker';
 import { Sparkline } from '@shared/ui/sparkline';
 import { Spotlight } from '@shared/ui/spotlight';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignExample, DesignSection } from './design-section';
 
 /** `offset` 天前的本地日期。 */
@@ -49,6 +50,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
     StatTile,
     CalendarDayTemplate,
     MonthCalendar,
+    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -127,17 +129,20 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       <nx-design-example label="無填色">
         <nx-sparkline [values]="trend" [area]="false" />
       </nx-design-example>
+      <nx-design-example label="載入中">
+        <nx-sparkline [values]="[]" [loading]="true" />
+      </nx-design-example>
     </nx-design-section>
     <nx-design-section
       id="design-stat"
       title="頭條數字"
       api="StatGrid · StatTile"
-      description="管理頁摘要的一列數字：標籤、表格數字與一句脈絡，字級隨卡片寬度縮放；手機兩欄。值為 null 時保留同高的載入佔位，只有真實的警告或危險才上色。"
+      description="管理頁摘要的一列數字：標籤、表格數字與一句脈絡，字級隨卡片寬度縮放；手機兩欄。首次載入（loading）保留同高的骨架；值為 null 是未知、顯示「—」；已有數字時重讀由 StatGrid 的 busy 淡化。只有真實的警告或危險才上色。"
     >
       <nx-stat-grid label="示範摘要">
         <nx-stat-tile label="生成次數" value="18,452" unit="次" hint="完成 17,980 · 失敗 312" />
         <nx-stat-tile label="原檔容量" value="31.23 GB" hint="4,210 份原檔" />
-        <nx-stat-tile label="載入中" [value]="null" hint="形狀已知的內容先佔位" />
+        <nx-stat-tile label="載入中" [loading]="true" hint="形狀已知的內容先佔位" />
         <nx-stat-tile label="未定價" value="2" unit="項" hint="費用顯示為未知" tone="warning" />
       </nx-stat-grid>
     </nx-design-section>
@@ -145,7 +150,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-donut"
       title="環狀分布"
       api="DonutChart"
-      description="依序使用 --series-1～7；滑過或聚焦圖例時中央改顯示該部分。圖例即是可讀的數值清單。"
+      description="依序使用 --series-1～7；滑過或聚焦圖例時中央改顯示該部分。圖例即是可讀的數值清單。圖表首次載入（loading）畫同形狀的骨架，讀取中不顯示「此期間尚無資料」；已有資料時重讀（busy）淡化。"
     >
       <nx-design-example label="分布">
         <nx-donut-chart
@@ -160,16 +165,28 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       <nx-design-example label="沒有資料">
         <nx-donut-chart label="示範空分布" [segments]="[]" />
       </nx-design-example>
+      <nx-design-example label="載入中">
+        <nx-donut-chart label="示範載入分布" [segments]="[]" [loading]="true" />
+      </nx-design-example>
     </nx-design-section>
     <nx-design-section
       id="design-heatmap"
       title="日曆熱圖"
       api="HeatmapCalendar"
-      description="每週一欄、週一在上，依最忙的一天分五階（--heat）；每一天可聚焦讀出數值。"
+      description="每週一欄、週一在上，依最忙的一天分五階（--heat）；每一天可聚焦讀出數值。載入中以同比例的骨架佔位。"
+      [stacked]="true"
     >
+      <nx-view-switch
+        label="熱圖狀態示範"
+        [options]="chartStates"
+        [value]="chartState()"
+        (valueChange)="chartState.set($event)"
+      />
       <nx-heatmap-calendar
         label="示範每日呼叫"
         unit=" 次"
+        [loading]="chartState() === 'loading'"
+        [busy]="chartState() === 'refreshing'"
         [points]="heat"
         [from]="from"
         [through]="through"
@@ -224,6 +241,12 @@ export class DesignCharts {
   readonly attendance = ATTENDANCE;
   readonly holidays = HOLIDAYS;
   readonly trend = TREND;
+  readonly chartStates = [
+    { value: 'data', label: '資料' },
+    { value: 'loading', label: '載入' },
+    { value: 'refreshing', label: '重讀' },
+  ];
+  readonly chartState = signal('data');
   readonly from = day(55);
   readonly through = day(0);
   readonly heat = Array.from({ length: 56 }, (_, index) => ({

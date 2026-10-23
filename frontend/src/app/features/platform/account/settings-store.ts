@@ -32,6 +32,8 @@ export class SettingsStore {
   );
   readonly draft = linkedSignal<UserSettingsDto>(() => structuredClone(this.saved()));
   readonly loading = this.read.loading;
+  /** 「重新載入」的重讀（含首次讀取），給重試鈕轉圈與內容淡化。 */
+  readonly refreshing = this.read.refreshing;
   readonly saving = signal(false);
   private readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.read.error());

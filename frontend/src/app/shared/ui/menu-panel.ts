@@ -23,6 +23,8 @@ export interface MenuAction {
   danger?: boolean;
   /** 讓此項目成為顯示狀態的核取方塊（menuitemcheckbox）。 */
   checked?: boolean;
+  /** 此項目的動作進行中：圖示換成轉圈，點擊不關閉選單也不送出。 */
+  busy?: boolean;
 }
 
 /**
@@ -60,10 +62,12 @@ export interface MenuAction {
           [attr.role]="item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'"
           [attr.aria-checked]="item.checked ?? null"
           [disabled]="item.disabled"
+          [attr.aria-busy]="item.busy || null"
+          [attr.aria-disabled]="item.busy || null"
           [class.danger-text]="item.danger"
-          (click)="choose(item.id)"
+          (click)="item.busy || choose(item.id)"
         >
-          <nx-icon [name]="item.icon" />{{ item.label }}
+          <nx-icon [name]="item.busy ? 'loading' : item.icon" />{{ item.label }}
           @if (item.checked) {
             <nx-icon name="check" class="menu-check" />
           }

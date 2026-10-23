@@ -22,10 +22,6 @@
   background: var(--surface);
   box-shadow: var(--tile-shadow);
   list-style: none;
-  transition: opacity var(--motion) var(--ease);
-  &.stale {
-    opacity: 0.55;
-  }
   li {
     border-top: 1px solid var(--tile-line);
     animation: arrive var(--motion-enter) var(--ease) both;

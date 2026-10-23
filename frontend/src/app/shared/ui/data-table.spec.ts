@@ -7,6 +7,8 @@ import {
   DataTableColumn,
   DataTableRow,
   TablePagination,
+  TableSortHeader,
+  TableState,
 } from './data-table';
 
 @Component({
@@ -39,6 +41,37 @@ class Host {
   ];
 }
 
+@Component({
+  selector: 'nx-data-table-state-host',
+  imports: [DataTable, TableState],
+  template: `<nx-data-table label="範例" [busy]="busy()">
+    <table>
+      <tbody>
+        @for (row of rows(); track row) {
+          <tr>
+            <td>{{ row }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      [count]="rows().length"
+      [loading]="loading()"
+      [retrying]="retrying()"
+      [error]="error()"
+      (retry)="retries = retries + 1"
+    />
+  </nx-data-table>`,
+})
+class StateHost {
+  readonly busy = signal(false);
+  readonly loading = signal(false);
+  readonly retrying = signal(false);
+  readonly error = signal('');
+  readonly rows = signal<string[]>([]);
+  retries = 0;
+}
+
 describe('DataTable', () => {
   afterEach(() => TestBed.resetTestingModule());
 
@@ -66,6 +99,61 @@ describe('DataTable', () => {
     expect(line.classList).toContain('is-active');
     expect(scroll.classList).toContain('is-refreshing');
     expect(element.querySelectorAll('tbody tr')).toHaveLength(2);
+  });
+
+  it('shows the skeleton alone on the first load and dims only once rows are on screen', () => {
+    const fixture = TestBed.createComponent(StateHost);
+    const host = fixture.componentInstance;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const table = element.querySelector('nx-data-table')!;
+    const line = element.querySelector('.refresh-line')!;
+    const scroll = element.querySelector('.ui-table-scroll')!;
+    expect(table.getAttribute('aria-busy')).toBeNull();
+
+    host.busy.set(true);
+    host.loading.set(true);
+    fixture.detectChanges();
+    expect(table.getAttribute('aria-busy')).toBe('true');
+    expect(element.querySelector('.ui-table-skeleton')).not.toBeNull();
+    expect(line.classList).not.toContain('is-active');
+    expect(scroll.classList).not.toContain('is-refreshing');
+
+    host.loading.set(false);
+    host.busy.set(false);
+    host.rows.set(['甲', '乙']);
+    fixture.detectChanges();
+    host.busy.set(true);
+    fixture.detectChanges();
+    expect(line.classList).toContain('is-active');
+    expect(scroll.classList).toContain('is-refreshing');
+  });
+
+  it('spins the retry button while the failed read runs again, from retrying or the table busy', () => {
+    const fixture = TestBed.createComponent(StateHost);
+    const host = fixture.componentInstance;
+    host.error.set('連線逾時');
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const retry = element.querySelector<HTMLButtonElement>('nx-table-state button')!;
+    expect(retry.getAttribute('aria-busy')).toBeNull();
+    retry.click();
+    expect(host.retries).toBe(1);
+
+    host.retrying.set(true);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(retry.disabled).toBe(false);
+    expect(retry.textContent).toContain('重試中…');
+    retry.click();
+    expect(host.retries).toBe(1);
+
+    host.retrying.set(false);
+    host.busy.set(true);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    // 錯誤仍在畫面上，不退回骨架。
+    expect(element.querySelector('.ui-table-skeleton')).toBeNull();
   });
 
   it('keeps row activation and column visibility in the stacked mode', () => {
@@ -201,6 +289,39 @@ describe('DataTable', () => {
     fixture.detectChanges();
     jump.dispatchEvent(new Event('change'));
     expect(selected).toEqual([2, 0]);
+  });
+
+  it('keeps a held sort button focusable and ignores presses while reading', () => {
+    @Component({
+      imports: [TableSortHeader],
+      template: `<table>
+        <thead>
+          <tr>
+            <th
+              nxSortHeader="時間"
+              [disabled]="busy()"
+              (directionChange)="changes.push($event)"
+            ></th>
+          </tr>
+        </thead>
+      </table>`,
+    })
+    class SortHost {
+      readonly busy = signal(true);
+      readonly changes: string[] = [];
+    }
+    const fixture = TestBed.createComponent(SortHost);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    button.click();
+    expect(fixture.componentInstance.changes).toEqual([]);
+    fixture.componentInstance.busy.set(false);
+    fixture.detectChanges();
+    expect(button.hasAttribute('aria-disabled')).toBe(false);
+    button.click();
+    expect(fixture.componentInstance.changes).toEqual(['asc']);
   });
 });
 

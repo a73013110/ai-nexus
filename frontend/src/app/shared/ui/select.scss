@@ -23,12 +23,20 @@
   white-space: nowrap;
 }
 .select-trigger nx-icon {
-  transform: rotate(90deg);
   --icon-size: var(--icon-md);
+}
+.select-chevron {
+  transform: rotate(90deg);
   transition: transform var(--motion) var(--ease);
 }
-.select-trigger[aria-expanded='true'] nx-icon {
+.select-trigger[aria-expanded='true'] .select-chevron {
   transform: rotate(-90deg);
+}
+.select-loading {
+  color: var(--secondary);
+}
+.select-trigger[aria-busy='true'] {
+  cursor: progress;
 }
 .select-trigger:hover:not(:disabled) {
   background: var(--hover);

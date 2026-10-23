@@ -63,7 +63,7 @@ import { DesignSamples } from './design-samples';
       id="design-fields"
       title="欄位與搜尋"
       api="nxField · SearchField"
-      description="驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。"
+      description="驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。打字即搜尋時傳 busy（防抖等待加讀取中）：放大鏡換成轉圈，欄位仍可輸入。"
     >
       <nx-design-example label="nxField">
         <label class="ui-field"
@@ -77,6 +77,9 @@ import { DesignSamples } from './design-samples';
           [value]="search()"
           (valueChange)="search.set($event)"
         />
+      </nx-design-example>
+      <nx-design-example label="SearchField busy">
+        <nx-search-field label="示範搜尋中" value="星河" [busy]="true" />
       </nx-design-example>
     </nx-design-section>
     <nx-design-section

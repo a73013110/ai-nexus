@@ -34,7 +34,7 @@
     }
   </div>
   @if (query.applied().view === 'cards') {
-    <nx-query-bar label="卡片查詢條件" [state]="query" [busy]="store.cardsLoading()">
+    <nx-query-bar label="卡片查詢條件" [state]="query" [busy]="store.cardsRefreshing()">
       <label class="ui-field ui-query-wide"
         >搜尋<input
           nxField
@@ -59,19 +59,21 @@
     @if (store.cardsError() && store.cardsLoaded()) {
       <nx-notice tone="danger" [message]="store.cardsError()"
         ><button
+          nxPending
           notice-actions
           type="button"
           class="secondary-button"
+          [pending]="store.cardsRefreshing()"
           (click)="store.reloadCards()"
         >
-          重試
+          {{ store.cardsRefreshing() ? '重試中…' : '重試' }}
         </button></nx-notice
       >
     }
     <nx-data-table
       class="cards-table"
       label="卡片列表"
-      [busy]="store.cardsLoading()"
+      [busy]="store.cardsRefreshing()"
       [columns]="cardColumns"
       [stacked]="true"
       preferenceKey="staff-attendance-cards"
@@ -151,7 +153,7 @@
         [count]="rows().length"
         [loading]="store.cardsLoading()"
         [error]="store.cardsLoaded() ? '' : store.cardsError()"
-        loadingText="正在取得卡片"
+        loadingText="正在載入卡片…"
         errorTitle="無法取得卡片"
         emptyTitle="沒有符合條件的卡片"
         emptyText="移除部分條件，或從「未歸戶卡號」登錄打卡機出現過的卡號。"
@@ -162,7 +164,7 @@
     <nx-data-table
       class="unattributed-table"
       label="未歸戶卡號"
-      [busy]="store.unattributedLoading()"
+      [busy]="store.unattributedRefreshing()"
       [columns]="unattributedColumns"
       [stacked]="true"
       preferenceKey="staff-attendance-unattributed"
@@ -239,7 +241,7 @@
         [count]="unattributedRows().length"
         [loading]="store.unattributedLoading()"
         [error]="store.unattributedError()"
-        loadingText="正在取得未歸戶卡號"
+        loadingText="正在載入未歸戶卡號…"
         errorTitle="無法取得未歸戶卡號"
         emptyTitle="沒有未歸戶的刷卡"
         emptyText="所有員工卡的刷卡都已歸戶到持有人。"
@@ -297,16 +299,22 @@
           >
             <nx-icon name="edit" />編輯
           </button>
+          <!-- 持有歷史還沒讀到前不知道能不能刪，先停用；自己刪除中不停用，焦點才留在這顆。 -->
+          @let deleting = store.working() === 'card:' + card.id;
           <button
+            nxPending
             type="button"
             class="quiet-button cards-delete"
-            [disabled]="store.locked() || !!history().length"
+            [pending]="deleting"
+            [disabled]="
+              !deleting && (store.locked() || store.assignments() === null || !!history().length)
+            "
             [title]="
               history().length ? '已有持有期間的卡不能刪除；不再使用時結束持有期間即可。' : ''
             "
             (click)="deleteCard(card)"
           >
-            <nx-icon name="trash" />刪除
+            <nx-icon name="trash" />{{ deleting ? '刪除中…' : '刪除' }}
           </button>
         </div>
       }
@@ -314,18 +322,29 @@
       @if (store.assignmentsError()) {
         <nx-notice tone="danger" [message]="store.assignmentsError()"
           ><button
+            nxPending
             notice-actions
             type="button"
             class="secondary-button"
+            [pending]="store.assignmentsRefreshing()"
             (click)="store.reloadAssignments()"
           >
-            重試
+            {{ store.assignmentsRefreshing() ? '重試中…' : '重試' }}
           </button></nx-notice
         >
       } @else if (store.assignments() === null) {
-        <p class="form-note" role="status">正在取得持有歷史…</p>
+        <div class="cards-history-skeleton" role="status">
+          @for (width of historySkeleton; track $index) {
+            <span class="skeleton" [style.width.%]="width"></span>
+          }
+          <span class="sr-only">正在載入持有歷史…</span>
+        </div>
       } @else {
-        <ol class="cards-history">
+        <ol
+          class="cards-history"
+          [class.is-refreshing]="store.assignmentsRefreshing()"
+          [attr.aria-busy]="store.assignmentsRefreshing() || null"
+        >
           @for (entry of history(); track entry.item.id) {
             <li [class.is-current]="entry.current">
               <div class="cards-history-head">
@@ -372,13 +391,16 @@
                   >
                     編輯
                   </button>
+                  @let removing = store.working() === 'assignment:' + entry.item.id;
                   <button
+                    nxPending
                     type="button"
                     class="quiet-button"
-                    [disabled]="store.locked()"
+                    [pending]="removing"
+                    [disabled]="!removing && store.locked()"
                     (click)="deleteAssignment(entry.item)"
                   >
-                    刪除
+                    {{ removing ? '刪除中…' : '刪除' }}
                   </button>
                 </div>
               }

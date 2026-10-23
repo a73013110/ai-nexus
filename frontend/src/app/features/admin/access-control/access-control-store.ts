@@ -26,7 +26,10 @@ export class AccessControlStore {
     loader: () => this.api.catalog(),
   });
   readonly catalog = computed(() => this.catalogRead.value() ?? null);
+  /** 首次載入（表格畫骨架）。 */
   readonly loading = this.catalogRead.loading;
+  /** 重讀中（含寫入後與重試）：表格淡化、重試鈕轉圈。 */
+  readonly refreshing = this.catalogRead.refreshing;
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.catalogRead.error());
   readonly toast = inject(ToastService);

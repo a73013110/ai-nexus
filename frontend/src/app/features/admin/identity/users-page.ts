@@ -4,6 +4,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AdminUsersStore } from './admin-users-store';
 import { usersTour } from './identity-tour';
@@ -13,7 +14,7 @@ import { AdminUsersTab } from './users/admin-users-tab';
 /** 使用者管理：公司身分、角色指派、個人政策與稽核式檢視；角色名稱與功能預覽取自存取目錄。 */
 @Component({
   selector: 'nx-users-page',
-  imports: [Notice, FeaturePage, AdminUserInspector, AdminUsersTab],
+  imports: [Notice, PendingButton, FeaturePage, AdminUserInspector, AdminUsersTab],
   providers: [AccessControlStore, AdminUsersStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -22,14 +23,23 @@ import { AdminUsersTab } from './users/admin-users-tab';
       layoutMode="data"
       [tour]="tour()"
     >
-      @if (store.loading()) {
-        <p role="status">正在載入使用者…</p>
-      } @else if (store.error()) {
+      <!-- 目錄與列表的首次載入都由表格的骨架表示；目錄讀取失敗時只留提示與重試。 -->
+      @if (store.error()) {
         <nx-notice [message]="store.error()"
-          ><button notice-actions (click)="store.load()">重新載入</button>
+          ><button
+            notice-actions
+            nxPending
+            type="button"
+            [pending]="store.access.refreshing() || store.usersRead.refreshing()"
+            (click)="store.load()"
+          >
+            {{
+              store.access.refreshing() || store.usersRead.refreshing() ? '重新載入中…' : '重新載入'
+            }}
+          </button>
         </nx-notice>
       }
-      @if (store.access.catalog()) {
+      @if (store.access.catalog() || !store.access.error()) {
         <nx-admin-users-tab
           class="ui-table-fill"
           [selectedId]="inspected()?.id ?? null"

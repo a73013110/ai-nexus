@@ -25,6 +25,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate } from '@shared/browser/format';
 import { downloadFile } from '@shared/browser/download';
 import { Checkbox } from '@shared/ui/checkbox';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { JobProgress } from '@features/work/jobs/job-progress';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -39,6 +40,7 @@ import { RETRIEVAL_TOUR } from './quality-tour';
   imports: [
     Notice,
     Field,
+    PendingButton,
     ReactiveFormsModule,
     DecimalPipe,
     Checkbox,
@@ -95,7 +97,14 @@ export class RetrievalEvaluation {
       this.reportRead.error(),
   );
   readonly busy = signal(false);
+  /** 由哪個控制項觸發的寫入：只有它轉圈，其他寫入仍由 `busy` 擋下。 */
+  readonly working = signal<'start' | 'cancel' | 'retry' | 'download' | null>(null);
   readonly loading = computed(() => this.collectionsRead.loading() || this.runsRead.loading());
+  readonly runsLoading = this.runsRead.loading;
+  /** 讀取失敗後按重試：重試鈕轉圈。 */
+  readonly refreshing = computed(
+    () => this.collectionsRead.refreshing() || this.runsRead.refreshing(),
+  );
   readonly date = formatDate;
   readonly active = isActive;
   readonly tour = RETRIEVAL_TOUR;
@@ -160,6 +169,7 @@ export class RetrievalEvaluation {
       return;
     }
     this.busy.set(true);
+    this.working.set('start');
     try {
       const run = await this.api.startRetrievalEvaluation({
         title: this.form.controls.title.value.trim(),
@@ -173,7 +183,7 @@ export class RetrievalEvaluation {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
   }
   async importCorpus(event: Event) {
@@ -201,6 +211,7 @@ export class RetrievalEvaluation {
       valid = this.scope.guard();
     if (!report || this.busy()) return;
     this.busy.set(true);
+    this.working.set(action);
     this.actionError.set('');
     try {
       await this.jobToasts.control(report.run.job.id, action === 'retry');
@@ -208,7 +219,7 @@ export class RetrievalEvaluation {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
   }
   async download() {
@@ -216,6 +227,7 @@ export class RetrievalEvaluation {
       valid = this.scope.guard();
     if (!report || this.busy()) return;
     this.busy.set(true);
+    this.working.set('download');
     this.actionError.set('');
     try {
       const latest = await this.api.retrievalReport(report.run.id);
@@ -223,7 +235,11 @@ export class RetrievalEvaluation {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
+  }
+  private settle() {
+    this.busy.set(false);
+    this.working.set(null);
   }
 }

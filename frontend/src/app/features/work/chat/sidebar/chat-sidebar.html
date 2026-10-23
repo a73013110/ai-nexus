@@ -25,10 +25,11 @@
     </button>
   </div>
   <div class="history-search">
-    <nx-icon name="search" /><input
+    <nx-icon [name]="searching() ? 'loading' : 'search'" /><input
       type="search"
       aria-label="搜尋對話標題與內容"
       placeholder="搜尋標題與內容"
+      [attr.aria-busy]="searching() || null"
       [formField]="searchForm.query"
       (input)="searchChanged()"
       (keydown)="historyKey($event, history)"
@@ -55,9 +56,21 @@
   </div>
   <!-- 按鍵由取得焦點的列連結處理；列表本身只負責轉送方向鍵。 -->
   <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
-  <nav #history class="history" aria-label="對話歷史" (keydown)="historyKey($event, history)">
-    @if (store.loading()) {
-      <p class="sidebar-note" role="status">正在取得對話…</p>
+  <nav
+    #history
+    class="history"
+    aria-label="對話歷史"
+    [class.is-refreshing]="listRefreshing()"
+    [attr.aria-busy]="listRefreshing() || null"
+    (keydown)="historyKey($event, history)"
+  >
+    @if (firstLoad()) {
+      <div class="history-skeleton" role="status">
+        @for (width of skeleton; track $index) {
+          <span class="skeleton" [style.width.%]="width"></span>
+        }
+        <span class="sr-only">正在載入對話…</span>
+      </div>
     }
     @for (group of groups(); track group.label) {
       <div class="history-group">
@@ -96,7 +109,7 @@
         }
       </div>
     } @empty {
-      @if (!store.loading()) {
+      @if (!firstLoad()) {
         <p class="sidebar-note">
           {{
             searchModel().query
@@ -111,7 +124,15 @@
       }
     }
     @if (store.hasMore()) {
-      <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
+      <button
+        nxPending
+        type="button"
+        class="quiet-button load-more"
+        [pending]="store.history.loadingMore()"
+        (click)="loadMore()"
+      >
+        {{ store.history.loadingMore() ? '載入中…' : '載入更早的對話' }}
+      </button>
     }
   </nav>
   <nx-menu-panel [label]="menuLabel()" [items]="menuItems()" (action)="chooseMenu($event)" />

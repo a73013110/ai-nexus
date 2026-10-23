@@ -12,8 +12,10 @@ import {
   formatNumber,
 } from '@shared/browser/format';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
+import { TrendChart } from '@shared/ui/trend-chart';
 import { SettingsStore } from '../settings-store';
 
 /**
@@ -22,16 +24,31 @@ import { SettingsStore } from '../settings-store';
  */
 @Component({
   selector: 'nx-usage-tab',
-  imports: [Notice, SettingGroup, SettingRow, StatGrid, StatTile, StorageUsage, TokenUsageChart],
+  imports: [
+    Notice,
+    PendingButton,
+    SettingGroup,
+    SettingRow,
+    StatGrid,
+    StatTile,
+    StorageUsage,
+    TokenUsageChart,
+    TrendChart,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './usage-tab.scss',
   template: `@if (error()) {
       <nx-notice [message]="error()"
-        ><button type="button" notice-actions (click)="store.reload()">重新載入</button>
+        ><button
+          nxPending
+          type="button"
+          notice-actions
+          [pending]="refreshing()"
+          (click)="store.reload()"
+        >
+          {{ refreshing() ? '重新載入中…' : '重新載入' }}
+        </button>
       </nx-notice>
-    }
-    @if (loading()) {
-      <p role="status" class="form-note">正在載入使用狀況…</p>
     }
     @if (policy(); as limits) {
       <nx-setting-group
@@ -58,9 +75,16 @@ import { SettingsStore } from '../settings-store';
           <p class="form-note">目前沒有可用的模型。</p>
         }
       </nx-setting-group>
+    } @else if (policyRead.loading()) {
+      <nx-setting-group class="usage-budget" heading="今日 token 預算">
+        <div class="budget-skeleton" role="status">
+          <span class="skeleton"></span><span class="skeleton"></span>
+          <span class="sr-only">正在載入 token 預算…</span>
+        </div>
+      </nx-setting-group>
     }
     @if (usage(); as stats) {
-      <nx-stat-grid label="最近 30 天用量">
+      <nx-stat-grid label="最近 30 天用量" [busy]="usageRead.refreshing()">
         <nx-stat-tile
           label="30 天生成"
           [value]="format(stats.requests)"
@@ -96,27 +120,42 @@ import { SettingsStore } from '../settings-store';
         }
       </nx-setting-group>
       <nx-setting-group heading="每日 token 走勢">
-        <nx-token-usage-chart [usage]="stats.tokens" />
+        <nx-token-usage-chart [usage]="stats.tokens" [busy]="usageRead.refreshing()" />
+      </nx-setting-group>
+    } @else if (usageRead.loading()) {
+      <!-- 首次載入：照讀到後的版面排骨架，數字、容量與走勢不會一個個冒出來。 -->
+      <nx-stat-grid label="最近 30 天用量">
+        <nx-stat-tile label="30 天生成" [loading]="true" />
+        <nx-stat-tile label="回報 tokens" [loading]="true" />
+        <nx-stat-tile label="平均耗時" [loading]="true" />
+      </nx-stat-grid>
+      <nx-setting-group
+        class="usage-storage"
+        heading="原檔容量"
+        description="草稿計入；同一原檔被多處引用只計一次。"
+      >
+        <nx-storage-usage [loading]="true" />
+      </nx-setting-group>
+      <nx-setting-group heading="每日 token 走勢">
+        <nx-trend-chart [points]="[]" label="每日 Tokens" [loading]="true" />
       </nx-setting-group>
     }`,
 })
 export class UsageTab {
   readonly store = inject(SettingsStore);
   private readonly service = inject(UserSettingsService);
-  private readonly usageRead = apiResource({
+  protected readonly usageRead = apiResource({
     params: () => this.store.version(),
     loader: () => this.service.usage(),
   });
-  private readonly policyRead = apiResource({
+  protected readonly policyRead = apiResource({
     params: () => this.store.version(),
     loader: () => this.service.policy(),
   });
   readonly usage = computed(() => this.usageRead.value() ?? null);
   readonly policy = computed(() => this.policyRead.value() ?? null);
   readonly attachmentLimit = computed(() => this.policy()?.storedAttachmentLimitBytes ?? null);
-  readonly loading = computed(
-    () => (this.usageRead.loading() || this.policyRead.loading()) && !this.usage(),
-  );
+  readonly refreshing = computed(() => this.usageRead.refreshing() || this.policyRead.refreshing());
   readonly error = computed(() =>
     this.usageRead.error() || this.policyRead.error() ? '使用狀況暫時無法取得。' : '',
   );

@@ -14,6 +14,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { RepositoriesApi } from './repositories-api';
@@ -22,13 +23,15 @@ import { routeOf } from '@core/api/catalog';
 /** 使用者的 token 能讀取的每個儲存庫，依最近更新排序，釘選的在最上方。 */
 @Component({
   selector: 'nx-repository-list',
-  imports: [RouterLink, EmptyState, Icon, Notice, ResourceCard, ResourceGallery],
+  imports: [RouterLink, EmptyState, Icon, Notice, PendingButton, ResourceCard, ResourceGallery],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-list.scss',
   template: `@if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="loading()" (click)="reload()">
+          {{ loading() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (pinned().length && !query()) {
@@ -55,6 +58,7 @@ import { routeOf } from '@core/api/catalog';
       placeholder="搜尋名稱或說明"
       [search]="search()"
       [loading]="firstLoad()"
+      [busy]="refreshing()"
       [empty]="!items().length && !error()"
       (searchChange)="type($event)"
     >
@@ -98,8 +102,15 @@ import { routeOf } from '@core/api/catalog';
     </nx-resource-gallery>
     @if (hasMore()) {
       <div class="more">
-        <button type="button" class="secondary-button" [disabled]="loading()" (click)="more()">
-          {{ loading() ? '載入中…' : '載入更多' }}
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="loadingMore()"
+          [disabled]="refreshing()"
+          (click)="more()"
+        >
+          {{ loadingMore() ? '載入中…' : '載入更多' }}
         </button>
       </div>
     }`,
@@ -141,12 +152,21 @@ export class RepositoryList {
   readonly loading = this.read.refreshing;
   readonly error = this.read.error;
   readonly firstLoad = computed(() => this.read.loading() && !this.items().length);
+  /** 輸入後還在防抖等待；與第一頁的重讀合起來是卡片格線的重新讀取。 */
+  private readonly typing = signal(false);
+  /** 搜尋或重讀第一頁：卡片淡化、搜尋欄轉圈。載入更多只轉按鈕，不淡化已有的卡片。 */
+  readonly refreshing = computed(
+    () => this.typing() || (this.read.refreshing() && this.page() === 1),
+  );
+  readonly loadingMore = computed(() => this.read.refreshing() && this.page() > 1);
   readonly when = relativeTime;
 
   type(value: string) {
     this.search.set(value);
+    this.typing.set(true);
     this.scope.later(
       () => {
+        this.typing.set(false);
         this.page.set(1);
         this.query.set(value.trim());
       },

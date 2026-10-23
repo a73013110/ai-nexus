@@ -94,6 +94,8 @@
           <ng-container [ngTemplateOutlet]="error" />
           <nx-model-policy-editor
             [models]="admin.catalog()?.models || []"
+            [loading]="admin.loading()"
+            [busy]="admin.refreshing()"
             [value]="store.models()"
             [effective]="policy.effective"
             [personal]="true"
@@ -107,16 +109,27 @@
         />
       </form>
     } @else if (store.loadingModels()) {
-      <div class="dialog-body">
-        <p class="form-note" role="status">正在載入模型政策…</p>
+      <div class="dialog-body models-skeleton" role="status">
+        @for (width of skeleton; track $index) {
+          <span class="skeleton" [style.width.%]="width"></span>
+        }
+        <span class="sr-only">正在載入模型政策…</span>
       </div>
     } @else {
       <div class="dialog-body">
         @if (store.modelsError()) {
           <nx-notice tone="danger" [message]="store.modelsError()" />
         }
-        <button type="button" class="secondary-button" (click)="store.reloadModels()">
-          重新載入模型政策
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="store.refreshingModels()"
+          (click)="store.reloadModels()"
+        >
+          <nx-icon name="refresh" />{{
+            store.refreshingModels() ? '重新載入中…' : '重新載入模型政策'
+          }}
         </button>
       </div>
     }

@@ -27,14 +27,33 @@
       <p>{{ current().description }}</p>
     </header>
     <div class="settings-body">
-      <div class="settings-content" [nxViewMotion]="current().id">
+      <div
+        class="settings-content"
+        [class.is-refreshing]="current().saved && store.refreshing() && !store.loading()"
+        [attr.aria-busy]="(current().saved && store.refreshing()) || null"
+        [nxViewMotion]="current().id"
+      >
         @if (showSaveBar() && store.error()) {
           <nx-notice [message]="store.error()"
-            ><button type="button" notice-actions (click)="store.reload()">重新載入</button>
+            ><button
+              nxPending
+              type="button"
+              notice-actions
+              [pending]="store.refreshing()"
+              (click)="store.reload()"
+            >
+              {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
+            </button>
           </nx-notice>
         }
         @if (current().saved && store.loading()) {
-          <p role="status" class="form-note">正在載入你的設定…</p>
+          <div class="settings-skeleton" role="status">
+            @for (row of skeleton; track $index) {
+              <span class="skeleton is-label" [style.width.%]="row"></span>
+              <span class="skeleton"></span>
+            }
+            <span class="sr-only">正在載入你的設定…</span>
+          </div>
         } @else {
           <ng-container *ngComponentOutlet="current().component" />
         }

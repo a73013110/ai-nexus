@@ -48,7 +48,7 @@
 
 ## 讀取與寫入
 
-- 讀取一律用 `core/api/api-resource.ts` 的 `apiResource()`：它等帳號載入、檢查功能授權、換帳號時重來並丟掉晚到的回應，把失敗轉成審核過的訊息。全站的載入、錯誤與重試因此是同一種寫法：`loading()` 顯示第一次讀取，`error()` 放進 Notice，重試按鈕呼叫 `reload()`。
+- 讀取一律用 `core/api/api-resource.ts` 的 `apiResource()`：它等帳號載入、檢查功能授權、換帳號時重來並丟掉晚到的回應，把失敗轉成審核過的訊息。載入狀態的用法見 [載入與送出中](loading.md)；`error()` 放進 Notice，重試呼叫 `reload()`。
 - 依路由或選擇讀取時，`params` 回傳目前的請求；回傳 `undefined` 表示不讀。換請求時舊值會保留到新值回來，所以畫面上若可能出現別筆資料，loader 回傳 `{ id, data }`，再用 computed 比對目前的 id（例：`projects-page.ts`、`admin-user-store.ts`）。
 - 需要輪詢的讀取用 `poll`（例：任務、知識庫處理中的文件），分頁隱藏時暫停。
 - 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`prompt-library-dialog.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-store.ts`）。

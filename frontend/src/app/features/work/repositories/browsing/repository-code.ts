@@ -17,6 +17,7 @@ import { formatBytes } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ToastService } from '@shared/ui/toast-service';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryFile } from './repository-file';
@@ -32,7 +33,7 @@ const chatLimit = 20;
  */
 @Component({
   selector: 'nx-repository-code',
-  imports: [RouterLink, Icon, Notice, RepositoryFile, RepositoryImportDialog],
+  imports: [RouterLink, Icon, Notice, PendingButton, RepositoryFile, RepositoryImportDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-code.scss',
@@ -67,7 +68,9 @@ const chatLimit = 20;
     </div>
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="retry()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="retry()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (filePath()) {
@@ -76,20 +79,29 @@ const chatLimit = 20;
           @if (canChat()) {
             <button
               file-actions
+              nxPending
               type="button"
               class="quiet-button"
-              [disabled]="busy()"
+              [pending]="busy()"
               (click)="chat([file.path])"
             >
-              <nx-icon name="chat" />帶入對話
+              <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
             </button>
           }
         </nx-repository-file>
       } @else if (!error()) {
-        <div class="skeleton file-skeleton" role="status" aria-label="正在讀取檔案"></div>
+        <div role="status">
+          <span class="sr-only">正在載入檔案…</span>
+          <div class="skeleton file-skeleton"></div>
+        </div>
       }
     } @else {
-      <section class="entries" aria-label="檔案" [class.stale]="treeStale()">
+      <section
+        class="entries"
+        aria-label="檔案"
+        [class.is-refreshing]="treeRefreshing()"
+        [attr.aria-busy]="treeRefreshing() || null"
+      >
         @if (tree(); as tree) {
           @for (entry of tree.entries; track entry.path; let i = $index) {
             <div
@@ -140,9 +152,12 @@ const chatLimit = 20;
             <p class="blank">這個資料夾是空的。</p>
           }
         } @else if (!error()) {
-          @for (row of [1, 2, 3, 4, 5]; track row) {
-            <span class="skeleton row-skeleton"></span>
-          }
+          <div role="status">
+            <span class="sr-only">正在載入檔案清單…</span>
+            @for (row of [1, 2, 3, 4, 5]; track row) {
+              <span class="skeleton row-skeleton"></span>
+            }
+          </div>
         }
       </section>
       @if (tree()?.readme; as readme) {
@@ -159,12 +174,13 @@ const chatLimit = 20;
           清除
         </button>
         <button
+          nxPending
           type="button"
           class="primary-button"
-          [disabled]="busy()"
+          [pending]="busy()"
           (click)="chat([...picked()])"
         >
-          <nx-icon name="chat" />{{ busy() ? '正在整理…' : '帶入對話' }}
+          <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
         </button>
       </div>
     }
@@ -205,6 +221,14 @@ export class RepositoryCode {
   readonly tree = computed(() => this.treeRead.value()?.value ?? null);
   readonly treeStale = computed(
     () => this.treeRead.value()?.id !== `${this.store.commit()}:${this.folder()}`,
+  );
+  /** 換資料夾或重試時，已顯示的清單淡化等新內容。 */
+  readonly treeRefreshing = computed(
+    () => (!!this.tree() && this.treeStale()) || this.treeRead.refreshing(),
+  );
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = computed(() =>
+    this.filePath() ? this.fileRead.refreshing() : this.treeRead.refreshing(),
   );
   private readonly fileRead = apiResource({
     feature: 'repositories',

@@ -16,7 +16,12 @@ import {
   selector: 'nx-directory-outcome-table',
   imports: [ChangeList, DataTable, DataTableColumn, StatusBadge, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<nx-data-table class="directory-outcomes" [label]="label()" [columns]="columns">
+  template: `<nx-data-table
+    class="directory-outcomes"
+    [label]="label()"
+    [columns]="columns"
+    [busy]="busy()"
+  >
     <table>
       <colgroup>
         <col nxTableColumn="name" />
@@ -80,6 +85,8 @@ export class DirectoryOutcomeTable {
   readonly label = input('匯入結果');
   /** 選取時的資料：目錄已找不到的人用它顯示姓名。 */
   readonly known = input<ReadonlyMap<string, DirectoryPersonDto>>(new Map());
+  /** 重新預覽中：保留舊結果並淡化。 */
+  readonly busy = input(false);
   readonly columns: TableColumn[] = [
     { id: 'name', label: '人員', hideable: false },
     { id: 'outcome', label: '結果', hideable: false },

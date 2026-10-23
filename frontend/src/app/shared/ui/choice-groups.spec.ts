@@ -11,6 +11,7 @@ import { ChoiceGroups, type ChoiceGroup } from './choice-groups';
     [groups]="groups"
     [selected]="selected()"
     [disabled]="disabled()"
+    [pending]="pending()"
     (selectedChange)="selected.set($event)"
   />`,
 })
@@ -31,6 +32,7 @@ class Host {
   // `retired` 在所有群組之外，任何變更都必須保留它。
   readonly selected = signal<string[]>(['retired', 'files']);
   readonly disabled = signal(false);
+  readonly pending = signal(false);
 }
 
 function setup() {
@@ -81,6 +83,33 @@ describe('ChoiceGroups', () => {
     expect(host.selected()).toEqual(['retired']);
     // 只有一個選項不需要批次按鈕。
     expect(cards()[1].querySelector('.choice-group-batch')).toBeNull();
+  });
+
+  it('spins beside the option just changed and ignores other changes while it saves', () => {
+    const { fixture, host, element, cards } = setup();
+    const box = (label: string) =>
+      cards()[0].querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+    box('對話').click();
+    host.pending.set(true);
+    fixture.detectChanges();
+    expect(element.querySelector('nx-choice-groups')!.getAttribute('aria-busy')).toBe('true');
+    expect(element.querySelectorAll('.selection-pending')).toHaveLength(1);
+    expect(box('對話').getAttribute('aria-busy')).toBe('true');
+    expect(box('專案').disabled).toBe(false);
+    box('專案').click();
+    cards()[0].querySelector<HTMLButtonElement>('.choice-group-batch')!.click();
+    fixture.detectChanges();
+    expect(host.selected()).toEqual(['retired', 'files', 'chat']);
+
+    host.pending.set(false);
+    fixture.detectChanges();
+    cards()[0].querySelector<HTMLButtonElement>('.choice-group-batch')!.click();
+    host.pending.set(true);
+    fixture.detectChanges();
+    // 全選由卡片的按鈕轉圈，選項旁不轉。
+    const batch = cards()[0].querySelector<HTMLButtonElement>('.choice-group-batch')!;
+    expect(batch.getAttribute('aria-busy')).toBe('true');
+    expect(element.querySelectorAll('.selection-pending')).toHaveLength(0);
   });
 
   it('disables the options and the batch button together', () => {

@@ -12,6 +12,7 @@ import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { formatDate, nameInitial } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryDiff } from './repository-diff';
 import { RepositoryReviewDialog } from '../reviews/repository-review-dialog';
@@ -20,7 +21,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
 /** 單一提交與其父提交的比較，或從 `base` 到 `head` 之間的全部變更。 */
 @Component({
   selector: 'nx-repository-change',
-  imports: [RouterLink, Icon, Notice, RepositoryDiff, RepositoryReviewDialog],
+  imports: [RouterLink, Icon, Notice, PendingButton, RepositoryDiff, RepositoryReviewDialog],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-change.scss',
@@ -29,7 +30,9 @@ import { RepositoryStore, shortSha } from '../repository-store';
     >
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (change(); as change) {
@@ -109,7 +112,8 @@ import { RepositoryStore, shortSha } from '../repository-store';
         <nx-repository-diff [diff]="change.diff" />
       }
     } @else if (!error()) {
-      <div class="loading" role="status" aria-label="正在讀取變更">
+      <div class="loading" role="status">
+        <span class="sr-only">正在載入變更…</span>
         <span class="skeleton head-skeleton"></span><span class="skeleton diff-skeleton"></span>
       </div>
     }
@@ -153,6 +157,8 @@ export class RepositoryChange {
   readonly short = shortSha;
   readonly date = formatDate;
 
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = this.read.refreshing;
   reload() {
     this.read.reload();
   }

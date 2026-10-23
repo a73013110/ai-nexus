@@ -8,8 +8,15 @@
   @if (session.has('audit')) {
     @if (catalogError()) {
       <nx-notice tone="danger" [message]="catalogError()"
-        ><button notice-actions type="button" class="secondary-button" (click)="retry()">
-          重新載入
+        ><button
+          notice-actions
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="catalogRefreshing()"
+          (click)="retry()"
+        >
+          {{ catalogRefreshing() ? '重新載入中…' : '重新載入' }}
         </button></nx-notice
       >
     }
@@ -38,6 +45,7 @@
           [searchable]="true"
           [searchFrom]="10"
           [options]="actionOptions()"
+          [loading]="catalogLoading()"
           [value]="draft().action"
           (valueChange)="query.set('action', $event)"
         />
@@ -78,20 +86,21 @@
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>活動紀錄</h2>
-        @if (loading()) {
+        <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
+        @if (loading() && rows().length) {
           <span class="sr-only" role="status">正在載入稽核紀錄…</span>
         }
       </div>
       <button
+        nxPending
         table-actions
         type="button"
         class="quiet-button audit-export"
-        [disabled]="loading() || exporting() || !rows().length"
+        [pending]="exporting()"
+        [disabled]="!rows().length"
         (click)="export()"
       >
-        <nx-icon [name]="exporting() ? 'loading' : 'download'" />{{
-          exporting() ? '匯出中…' : '匯出 CSV'
-        }}
+        <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 CSV' }}
       </button>
       <table>
         <caption class="sr-only">
@@ -145,8 +154,8 @@
                   [attr.aria-label]="'檢視稽核：' + row.action + '，' + row.date"
                   [attr.aria-controls]="drawer()?.id"
                   [attr.aria-expanded]="selectedId() === row.entry.id"
-                  [disabled]="loading()"
-                  (click)="openDetails(row.entry.id)"
+                  [attr.aria-disabled]="loading() || null"
+                  (click)="loading() || openDetails(row.entry.id)"
                 >
                   {{ row.action }}
                 </button>
@@ -170,7 +179,7 @@
         [count]="rows().length"
         [loading]="loading()"
         [error]="readError()"
-        loadingText="正在取得稽核紀錄"
+        loadingText="正在載入稽核紀錄…"
         errorTitle="無法取得稽核紀錄"
         emptyTitle="沒有符合條件的稽核紀錄"
         emptyText="試著擴大時間範圍，或移除部分條件。"

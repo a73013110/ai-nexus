@@ -1,6 +1,7 @@
 import { uniqueId } from '../browser/unique-id';
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { Checkbox } from './checkbox';
+import { PendingButton } from './pending-button';
 
 export interface ChoiceOption {
   id: string;
@@ -22,10 +23,10 @@ export interface ChoiceGroup {
  */
 @Component({
   selector: 'nx-choice-groups',
-  imports: [Checkbox],
+  imports: [Checkbox, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './choice-groups.scss',
-  host: { role: 'group', '[attr.aria-label]': 'label()' },
+  host: { role: 'group', '[attr.aria-label]': 'label()', '[attr.aria-busy]': 'pending() || null' },
   template: `@for (group of summary(); track group.id) {
     <section
       class="choice-group"
@@ -41,11 +42,13 @@ export interface ChoiceGroup {
         <span class="sr-only">已選 {{ group.checked }} 項，共 {{ group.options.length }} 項</span>
         @if (batch() && group.options.length > 1) {
           <button
+            nxPending
             type="button"
             class="quiet-button choice-group-batch"
             [attr.aria-label]="(group.all ? '全不選：' : '全選：') + group.name"
             [disabled]="disabled()"
-            (click)="setAll(group.options, !group.all)"
+            [pending]="pending() && changed() === 'group:' + group.id"
+            (click)="setAll(group.id, group.options, !group.all)"
           >
             {{ group.all ? '全不選' : '全選' }}
           </button>
@@ -58,6 +61,7 @@ export interface ChoiceGroup {
             [description]="option.description ?? ''"
             [checked]="chosen().has(option.id)"
             [disabled]="disabled()"
+            [pending]="pending() && changed() === option.id"
             (checkedChange)="toggle(option.id, $event)"
           />
         }
@@ -72,6 +76,13 @@ export class ChoiceGroups {
   readonly groups = input.required<readonly ChoiceGroup[]>();
   readonly selected = input.required<readonly string[]>();
   readonly disabled = input(false);
+  /**
+   * 選取立即儲存、正在送出：剛切換的那一項（或那張卡片的全選鈕）旁轉圈，其餘切換一律忽略到完成；
+   * 不用 `disabled`，焦點留在原處。
+   */
+  readonly pending = input(false);
+  /** 最近一次切換的選項 id，或按了全選／全不選的群組（`group:` 加群組 id，免得與選項 id 相撞）；送出中的轉圈畫在它旁邊。 */
+  protected readonly changed = signal<string | null>(null);
   /** 顯示每個群組的全選／全不選按鈕。 */
   readonly batch = input(true);
   readonly selectedChange = output<string[]>();
@@ -88,9 +99,13 @@ export class ChoiceGroups {
       });
   });
   toggle(id: string, checked: boolean) {
+    if (this.pending()) return;
+    this.changed.set(id);
     this.change([id], checked);
   }
-  setAll(options: readonly ChoiceOption[], checked: boolean) {
+  setAll(groupId: string, options: readonly ChoiceOption[], checked: boolean) {
+    if (this.pending()) return;
+    this.changed.set('group:' + groupId);
     this.change(
       options.map((option) => option.id),
       checked,

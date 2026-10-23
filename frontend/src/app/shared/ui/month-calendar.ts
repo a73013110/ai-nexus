@@ -201,7 +201,7 @@ export class CalendarDayTemplate<T extends CalendarDay = CalendarDay> {
       role="grid"
       [attr.aria-label]="label() + '，' + title()"
       [attr.aria-readonly]="interactive() ? null : true"
-      [attr.aria-busy]="busy() || null"
+      [attr.aria-busy]="busy() || loading() || null"
     >
       <div class="calendar-weekdays" role="row">
         @for (weekday of weekdays(); track weekday.index) {
@@ -215,7 +215,11 @@ export class CalendarDayTemplate<T extends CalendarDay = CalendarDay> {
         }
       </div>
       @for (shown of [validMonth()]; track shown) {
-        <div class="calendar-weeks" [attr.data-turn]="turn() || null">
+        <div
+          class="calendar-weeks"
+          [attr.data-turn]="turn() || null"
+          [class.is-refreshing]="busy() && !loading()"
+        >
           @for (week of weeks(); track week[0].date) {
             <div class="calendar-week" role="row">
               @for (cell of week; track cell.date) {
@@ -241,7 +245,9 @@ export class CalendarDayTemplate<T extends CalendarDay = CalendarDay> {
                   <span class="calendar-date" aria-hidden="true">{{ cell.day }}</span>
                   @if (cell.inMonth) {
                     <div class="calendar-content" aria-hidden="true">
-                      @if (dayTemplate(); as custom) {
+                      @if (loading()) {
+                        <span class="skeleton calendar-skeleton"></span>
+                      } @else if (dayTemplate(); as custom) {
                         <ng-container
                           *ngTemplateOutlet="
                             custom.template;
@@ -292,7 +298,13 @@ export class MonthCalendar {
   readonly header = input(true, { transform: booleanAttribute });
   /** false 時只能瀏覽：不選取、不送出 `dayActivate`。 */
   readonly interactive = input(true, { transform: booleanAttribute });
+  /** 重新讀取（換月、寫入後重讀）：已有的格子內容保留並淡化。 */
   readonly busy = input(false, { transform: booleanAttribute });
+  /**
+   * 這個月的資料還沒到（首次載入或換月）：每一天的內容換成骨架，不畫成「沒有內容」的空白格。
+   * 日期、今天與選取照常顯示，鍵盤仍可移動。
+   */
+  readonly loading = input(false, { transform: booleanAttribute });
   /** 點選或以 Enter／Space 選了本月一個可用的日期。 */
   readonly dayActivate = output<string>();
 

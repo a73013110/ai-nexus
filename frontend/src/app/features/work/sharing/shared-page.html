@@ -16,13 +16,16 @@
         class="share-menu"
         label="分享操作"
         [items]="shareActions()"
+        [busy]="busy()"
         (action)="shareAction($event)"
       />
     }
   </div>
   @if (error()) {
     <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="load()">重試</button></nx-notice
+      ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="load()">
+        {{ refreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
     >
   }
   @if (!id()) {
@@ -33,6 +36,7 @@
       [filters]="scopes"
       [filter]="sent() ? 'sent' : 'received'"
       [loading]="listLoading()"
+      [busy]="listRefreshing()"
       [empty]="!visible().length"
       (searchChange)="term.set($event)"
       (filterChange)="switchTab($event === 'sent')"
@@ -139,7 +143,8 @@
       </nx-panel>
     </div>
   } @else if (contentLoading()) {
-    <div class="share-layout" role="status" aria-label="正在載入分享">
+    <div class="share-layout" role="status">
+      <span class="sr-only">正在載入分享…</span>
       <span class="skeleton share-skeleton"></span><span class="skeleton share-skeleton"></span>
     </div>
   }

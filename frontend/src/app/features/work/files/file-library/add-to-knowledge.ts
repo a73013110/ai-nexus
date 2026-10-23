@@ -18,12 +18,13 @@ import type { CollectionDto, LibraryFileDto } from '@core/api/schema';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-add-to-knowledge',
-  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, RouterLink],
+  imports: [Notice, CompactDialog, DialogHeader, Icon, PendingButton, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './add-to-knowledge.scss',
@@ -32,7 +33,7 @@ import { routeOf } from '@core/api/catalog';
     #dialog
     class="platform-dialog"
     aria-label="加入知識庫"
-    (cancel)="saving() ? $event.preventDefault() : null"
+    [busy]="saving()"
   >
     <nx-dialog-header heading="加入知識庫" closeLabel="關閉加入知識庫" />
     <div class="dialog-body">
@@ -44,30 +45,45 @@ import { routeOf } from '@core/api/catalog';
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
       }
-      @if (loading()) {
-        <p role="status">正在載入可編輯的知識庫…</p>
-      } @else if (!choices().length) {
+      <!-- 每次開啟都重讀：下拉先佔位並轉圈，讀完確定沒有可加入的知識庫才換成說明。 -->
+      @if (loading() || choices().length) {
+        <nx-select
+          label="目標知識庫"
+          [options]="choices()"
+          [loading]="loading()"
+          [disabled]="saving()"
+          [value]="selected()"
+          (valueChange)="selected.set($event)"
+        />
+      } @else if (!readError()) {
         <p>目前沒有可加入的知識庫。</p>
         <a class="secondary-button" [routerLink]="routeOf('knowledge')" (click)="dialog.close()"
           >前往建立知識庫</a
         >
-      } @else {
-        <nx-select
-          label="目標知識庫"
-          [options]="choices()"
-          [value]="selected()"
-          (valueChange)="selected.set($event)"
-        />
       }
     </div>
     <footer class="dialog-foot">
       <p class="dialog-note">
         共用原檔並建立檢索索引。加入後，該知識庫的成員可以閱讀原檔與查詢內容。
       </p>
-      <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">取消</button>
-      @if (choices().length) {
-        <button class="primary-button" [disabled]="saving() || !selected()" (click)="save()">
-          {{ saving() ? '正在加入…' : '加入並建立索引' }}
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="saving() || null"
+        (click)="saving() || dialog.close()"
+      >
+        取消
+      </button>
+      @if (loading() || choices().length) {
+        <button
+          nxPending
+          type="button"
+          class="primary-button"
+          [pending]="saving()"
+          [disabled]="!selected()"
+          (click)="save()"
+        >
+          {{ saving() ? '加入中…' : '加入並建立索引' }}
         </button>
       }
     </footer>
@@ -93,6 +109,7 @@ export class AddToKnowledge {
   readonly loading = this.collectionsRead.refreshing;
   readonly saving = signal(false);
   readonly saveError = signal('');
+  readonly readError = this.collectionsRead.error;
   readonly error = computed(() => this.saveError() || this.collectionsRead.error());
   readonly added = output<void>();
   readonly choices = computed(() =>

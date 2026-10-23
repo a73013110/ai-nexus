@@ -18,6 +18,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { AttendanceCardsStore } from './attendance-cards-store';
@@ -76,6 +77,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
     Field,
     Icon,
     Notice,
+    PendingButton,
     SearchField,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,6 +86,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
       #assignmentDialog
       class="platform-dialog"
       size="md"
+      [busy]="store.busy()"
       (cancel)="cancel($event)"
     >
       @if (editor(); as e) {
@@ -129,6 +132,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                         label="尋找持有人帳號"
                         placeholder="輸入至少兩個字，搜尋帳號或姓名"
                         [value]="people.text()"
+                        [busy]="people.loading()"
                         [disabled]="locked()"
                         (valueChange)="people.find($event)"
                     /></label>
@@ -142,7 +146,12 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                             ><nx-icon name="plus" />
                           </button>
                         } @empty {
-                          <p class="form-note">尚無符合帳號；新進員工可先只填姓名。</p>
+                          <!-- 防抖等待與查詢途中還沒有答案，不先說「尚無符合」。 -->
+                          @if (people.loading()) {
+                            <p class="form-note" role="status">正在搜尋…</p>
+                          } @else {
+                            <p class="form-note">尚無符合帳號；新進員工可先只填姓名。</p>
+                          }
                         }
                       </div>
                     }
@@ -212,17 +221,31 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
             <button
               type="button"
               class="secondary-button"
-              [disabled]="store.busy()"
+              [attr.aria-disabled]="store.busy() || null"
               (click)="requestClose()"
             >
               取消
             </button>
             <button
+              nxPending
               type="submit"
               class="primary-button"
-              [disabled]="locked() || (!!e.id && !dirty())"
+              [pending]="store.busy()"
+              [disabled]="!store.busy() && (session.testing() || (!!e.id && !dirty()))"
             >
-              {{ store.busy() ? '儲存中…' : e.ending ? '結束持有' : e.id ? '儲存' : '指派' }}
+              {{
+                store.busy()
+                  ? e.ending
+                    ? '結束中…'
+                    : e.id
+                      ? '儲存中…'
+                      : '指派中…'
+                  : e.ending
+                    ? '結束持有'
+                    : e.id
+                      ? '儲存'
+                      : '指派'
+              }}
             </button>
           </footer>
         </form>

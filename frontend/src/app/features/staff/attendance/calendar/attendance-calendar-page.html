@@ -20,7 +20,7 @@
         aria-label="上個月"
         title="上個月"
         [attr.aria-disabled]="loading() || null"
-        (click)="go(-1)"
+        (click)="loading() || go(-1)"
       >
         <nx-icon name="left" />
       </button>
@@ -31,11 +31,18 @@
         aria-label="下個月"
         title="下個月"
         [attr.aria-disabled]="loading() || null"
-        (click)="go(1)"
+        (click)="loading() || go(1)"
       >
         <nx-icon name="chevron" />
       </button>
-      <button type="button" class="quiet-button" (click)="thisMonth()">本月</button>
+      <button
+        type="button"
+        class="quiet-button"
+        [attr.aria-disabled]="loading() || null"
+        (click)="loading() || thisMonth()"
+      >
+        本月
+      </button>
     </div>
     @if (loaded()?.days) {
       <span class="ui-count-label calendar-off-days">放假 {{ offDays() }} 天</span>
@@ -52,14 +59,22 @@
       (valueChange)="showView($event)"
     />
   </div>
-  @if (loading()) {
+  <!-- 月曆的骨架沒有文字，讀取都在這裡播報；清單的首次載入由表格狀態播報。 -->
+  @if (refreshing() && (view() === 'calendar' || rows().length)) {
     <span class="sr-only" role="status">正在載入假日行事曆…</span>
   }
   @if (view() === 'calendar') {
     @if (readError(); as problem) {
       <nx-notice class="calendar-error" [message]="problem">
-        <button notice-actions type="button" class="secondary-button" (click)="reload()">
-          重試
+        <button
+          nxPending
+          notice-actions
+          type="button"
+          class="secondary-button"
+          [pending]="refreshing()"
+          (click)="reload()"
+        >
+          {{ refreshing() ? '重試中…' : '重試' }}
         </button>
       </nx-notice>
     }
@@ -73,8 +88,8 @@
       [days]="days()"
       [today]="today"
       [interactive]="editable()"
-      [busy]="loading()"
-      [class.is-loading]="loading()"
+      [loading]="loading()"
+      [busy]="refreshing()"
       (dayActivate)="editDate($event)"
     >
       <ng-template [nxCalendarDay]="days()" let-day="day">
@@ -103,7 +118,7 @@
     <nx-data-table
       class="calendar-table"
       label="假日行事曆"
-      [busy]="loading()"
+      [busy]="refreshing()"
       [columns]="columns"
       [stacked]="true"
       preferenceKey="staff-attendance-calendar"
@@ -204,7 +219,7 @@
         [count]="rows().length"
         [loading]="loading()"
         [error]="readError()"
-        loadingText="正在取得假日行事曆"
+        loadingText="正在載入假日行事曆…"
         errorTitle="無法取得假日行事曆"
         emptyTitle="沒有假日資料"
         (retry)="reload()"

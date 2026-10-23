@@ -14,15 +14,15 @@
   class="admin-access-table navigation-table"
   label="選單項目列表"
   [stacked]="true"
-  [busy]="saving()"
+  [busy]="store.refreshing()"
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      選單 <span class="ui-count-label">{{ store.items().length }} 項</span>
+      選單
+      @if (store.ready()) {
+        <span class="ui-count-label">{{ store.items().length }} 項</span>
+      }
     </h2>
-    @if (saving()) {
-      <span class="form-note" role="status">正在儲存…</span>
-    }
   </div>
   <table>
     <colgroup>
@@ -128,19 +128,23 @@
               aria-haspopup="menu"
               [attr.aria-label]="'選單項目操作：' + row.name"
               [attr.aria-expanded]="isMenuOpen(trigger)"
+              [attr.aria-busy]="deleting() === row.item.id || null"
               (click)="openMenu(row, trigger)"
             >
-              <nx-icon name="more" />
+              <nx-icon [name]="deleting() === row.item.id ? 'loading' : 'more'" />
             </button>
           </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="5" class="form-note">選單還沒有任何項目，從「新增」開始。</td>
         </tr>
       }
     </tbody>
   </table>
+  <nx-table-state
+    [count]="rows().length"
+    [loading]="!store.ready()"
+    loadingText="正在載入選單…"
+    emptyTitle="選單還沒有任何項目"
+    emptyText="從「新增」開始。"
+  />
 </nx-data-table>
 <nx-menu-panel label="選單項目操作" [items]="actions()" (action)="act($event)" />
 <p class="sr-only" aria-live="polite">{{ announcement() }}</p>
@@ -160,7 +164,15 @@
       </div>
       <footer class="dialog-foot">
         <button type="button" class="secondary-button" (click)="moveDialog.close()">取消</button>
-        <button type="submit" class="primary-button" [disabled]="busy()">移動</button>
+        <button
+          nxPending
+          type="submit"
+          class="primary-button"
+          [pending]="saving()"
+          [disabled]="session.testing()"
+        >
+          {{ saving() ? '移動中…' : '移動' }}
+        </button>
       </footer>
     </form>
   }

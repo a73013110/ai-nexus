@@ -36,6 +36,8 @@ export class RepositoryStore {
   });
   readonly loading = computed(() => this.detailRead.loading() && !this.detail());
   readonly error = this.detailRead.error;
+  /** 使用者看得到的重讀（重試、重新連線後）。 */
+  readonly refreshing = this.detailRead.refreshing;
   readonly refName = computed(() => this.ref() || this.detail()?.repository.defaultBranch || '');
   readonly commit = computed(() => {
     const detail = this.detail(),

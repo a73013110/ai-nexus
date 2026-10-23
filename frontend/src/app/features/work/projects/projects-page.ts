@@ -40,6 +40,7 @@ import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { PROJECTS_TOUR, projectTour } from './projects-tour';
 import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { Panel } from '@shared/ui/panel';
 import { ResourceCard } from '@shared/ui/resource-card';
@@ -68,6 +69,7 @@ import { routeOf } from '@core/api/catalog';
     ResourceSharing,
     TextTools,
     ActionMenu,
+    PendingButton,
     Panel,
     ResourceCard,
     ResourceGallery,
@@ -156,7 +158,24 @@ export class ProjectsPage {
       this.currentRead.error() ||
       this.detailRead.error(),
   );
-  readonly busy = signal(false);
+  /**
+   * 進行中的動作（`save`、`start:<範本 id>`、`archive`、`delete`、`upload`、`remove:<id>`）：
+   * 按下的那顆按鈕轉圈，其他寫入等它完成。
+   */
+  readonly working = signal<string | null>(null);
+  readonly busy = computed(() => this.working() !== null);
+  /** 使用者看得到的重讀（重試、寫入後重讀）；處理中文件的輪詢不算。 */
+  readonly refreshing = computed(
+    () =>
+      this.projectsRead.refreshing() ||
+      this.currentRead.refreshing() ||
+      this.detailRead.refreshing(),
+  );
+  readonly projectsRefreshing = this.projectsRead.refreshing;
+  /** 詳情（範本、對話、文件、成果）還沒讀到：各面板畫骨架、不顯示 0 與空狀態。 */
+  readonly detailLoading = computed(() => !this.detail() && this.detailRead.refreshing());
+  /** 已有詳情時重讀（新增、移除、上傳後）：面板內容保留並淡化。 */
+  readonly detailRefreshing = computed(() => !!this.detail() && this.detailRead.refreshing());
   private readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly archived = signal(false);
@@ -225,7 +244,7 @@ export class ProjectsPage {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
       ++this.revision;
       this.controller?.abort();
-      this.busy.set(false);
+      this.working.set(null);
       this.actionError.set('');
     });
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
@@ -278,7 +297,7 @@ export class ProjectsPage {
     event.preventDefault();
     if (this.busy()) return;
     const valid = this.guard();
-    this.busy.set(true);
+    this.working.set('save');
     this.actionError.set('');
     try {
       if (this.kind() === 'project') {
@@ -293,7 +312,7 @@ export class ProjectsPage {
         if (!valid()) return;
         this.dialog().nativeElement.close();
         this.toast.success('專案設定已儲存');
-        this.busy.set(false);
+        this.working.set(null);
         if (!this.editingId) {
           // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
           this.projectsRead.reload();
@@ -313,14 +332,14 @@ export class ProjectsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async start(templateId?: string) {
     const current = this.current(),
       valid = this.guard();
     if (!current || this.busy()) return;
-    this.busy.set(true);
+    this.working.set('start:' + (templateId ?? ''));
     this.actionError.set('');
     try {
       const value = await this.api.start(current.resource.id, templateId);
@@ -331,14 +350,14 @@ export class ProjectsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async archive() {
     const current = this.current(),
       valid = this.guard();
     if (!current || this.busy()) return;
-    this.busy.set(true);
+    this.working.set('archive');
     try {
       const value = await this.api.save(
         current.resource.id,
@@ -361,7 +380,7 @@ export class ProjectsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async removeProject() {
@@ -379,7 +398,7 @@ export class ProjectsPage {
       !valid()
     )
       return;
-    this.busy.set(true);
+    this.working.set('delete');
     this.actionError.set('');
     try {
       await this.api.remove(current.resource.id);
@@ -392,7 +411,7 @@ export class ProjectsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   chooseFiles(event: Event) {
@@ -410,7 +429,7 @@ export class ProjectsPage {
       this.actionError.set('每批最多 4 份文件，單檔需符合平台格式與容量限制。');
       return;
     }
-    this.busy.set(true);
+    this.working.set('upload');
     this.actionError.set('');
     const controller = (this.controller = new AbortController());
     // 一則提示隨批次從上傳進行到完成；其他情況則撤回它。
@@ -445,7 +464,7 @@ export class ProjectsPage {
       if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(error));
     } finally {
       if (!done) this.toast.dismiss(progress);
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async remove(kind: 'file' | 'template', id: string) {
@@ -462,7 +481,7 @@ export class ProjectsPage {
       }))
     )
       return;
-    this.busy.set(true);
+    this.working.set('remove:' + id);
     try {
       if (kind === 'file') await this.knowledge.remove(id);
       else await this.api.removeTemplate(current.resource.id, id);
@@ -470,7 +489,7 @@ export class ProjectsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
 }

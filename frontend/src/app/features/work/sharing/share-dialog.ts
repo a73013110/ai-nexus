@@ -1,6 +1,5 @@
 import { Notice } from '@shared/ui/notice';
 import { CompactDialog } from '@shared/ui/compact-dialog';
-import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,6 +20,8 @@ import { Icon } from '@shared/ui/icon';
 import { SharingApi } from './sharing-api';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { Checkbox } from '@shared/ui/checkbox';
+import { PendingButton } from '@shared/ui/pending-button';
+import { SearchField } from '@shared/ui/search-field';
 import { routeOf } from '@core/api/catalog';
 
 type ShareKind = 'conversation' | 'artifact';
@@ -35,17 +36,21 @@ export function shareLink(id: string, base = document.baseURI) {
 
 @Component({
   selector: 'nx-share-dialog',
-  imports: [Notice, CompactDialog, DialogHeader, Field, Select, Icon, RouterLink, Checkbox],
+  imports: [
+    Notice,
+    CompactDialog,
+    DialogHeader,
+    PendingButton,
+    SearchField,
+    Select,
+    Icon,
+    RouterLink,
+    Checkbox,
+  ],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './share-dialog.scss',
-  template: `<dialog
-    nxCompactDialog
-    size="md"
-    #dialog
-    class="platform-dialog"
-    (cancel)="busy() ? $event.preventDefault() : null"
-  >
+  template: `<dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="busy()">
     <nx-dialog-header heading="建立唯讀分享" [detail]="name()" closeLabel="關閉分享視窗" />
     <div class="dialog-body">
       @if (error()) {
@@ -72,15 +77,13 @@ export function shareLink(id: string, base = document.baseURI) {
           }}。收件者只能閱讀，無法修改原始內容；需要更新時請建立新的分享。
         </nx-notice>
         <label
-          >收件者<input
-            nxField
-            type="search"
-            aria-label="搜尋分享收件者"
+          >收件者<nx-search-field
+            label="搜尋分享收件者"
             placeholder="輸入至少兩個字，搜尋公司帳號"
-            maxlength="120"
-            [disabled]="busy()"
             [value]="people.text()"
-            (input)="people.find($any($event.target).value)"
+            [busy]="people.loading()"
+            [disabled]="busy()"
+            (valueChange)="people.find($event)"
         /></label>
         <div class="share-recipients">
           @for (user of recipients(); track user.id) {
@@ -99,7 +102,11 @@ export function shareLink(id: string, base = document.baseURI) {
                 ><nx-icon name="plus" />
               </button>
             } @empty {
-              <p class="form-note">尚無符合且未加入的帳號。</p>
+              @if (people.loading()) {
+                <p class="form-note" role="status">正在搜尋…</p>
+              } @else {
+                <p class="form-note">尚無符合且未加入的帳號。</p>
+              }
             }
           </div>
         }
@@ -127,13 +134,23 @@ export function shareLink(id: string, base = document.baseURI) {
         <p class="dialog-note">
           最多 {{ maxRecipients }} 位收件者。建立後可在「我分享的」隨時撤銷。
         </p>
-        <button class="secondary-button" [disabled]="busy()" (click)="dialog.close()">取消</button>
         <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || dialog.close()"
+        >
+          取消
+        </button>
+        <button
+          nxPending
+          type="button"
           class="primary-button"
-          [disabled]="busy() || !recipients().length"
+          [pending]="busy()"
+          [disabled]="!recipients().length"
           (click)="create()"
         >
-          {{ busy() ? '正在建立…' : '建立分享' }}
+          {{ busy() ? '建立中…' : '建立分享' }}
         </button>
       </footer>
     }

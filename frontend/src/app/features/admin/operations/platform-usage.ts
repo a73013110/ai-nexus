@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { PendingButton } from '@shared/ui/pending-button';
 import { RefreshButton } from '@shared/ui/refresh-button';
 import { apiResource } from '@core/api/api-resource';
 import {
@@ -46,7 +47,16 @@ interface ServiceRow {
  */
 @Component({
   selector: 'nx-platform-usage',
-  imports: [RefreshButton, DataTable, Notice, StatGrid, StatTile, StatusBadge, TableState],
+  imports: [
+    RefreshButton,
+    DataTable,
+    Notice,
+    PendingButton,
+    StatGrid,
+    StatTile,
+    StatusBadge,
+    TableState,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../../shared/ui/management-section-page.scss', './platform-usage.scss'],
   templateUrl: './platform-usage.html',

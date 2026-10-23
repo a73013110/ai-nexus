@@ -13,12 +13,38 @@ import { Icon } from './icon';
     description="chat"
     [checked]="checked()"
     [disabled]="disabled()"
+    [pending]="pending()"
     (checkedChange)="checked.set($event)"
   />`,
 })
 class Host {
   readonly checked = signal(false);
   readonly disabled = signal(false);
+  readonly pending = signal(false);
+}
+
+@Component({
+  selector: 'nx-checkbox-rejecting',
+  imports: [Checkbox],
+  template: `<nx-checkbox label="對話" [checked]="false" (checkedChange)="asked = asked + 1" />`,
+})
+class Rejecting {
+  asked = 0;
+}
+
+@Component({
+  selector: 'nx-checkbox-saving',
+  imports: [Checkbox],
+  template: `<nx-checkbox
+    label="對話"
+    [checked]="checked()"
+    [pending]="pending()"
+    (checkedChange)="pending.set(true)"
+  />`,
+})
+class Saving {
+  readonly checked = signal(false);
+  readonly pending = signal(false);
 }
 
 function setup() {
@@ -86,6 +112,66 @@ describe('Checkbox', () => {
     expect(element.querySelector('.selection-control')?.classList).toContain('is-label-hidden');
     expect(element.querySelector('.selection-copy')).toBeNull();
     expect(element.querySelector('input')?.getAttribute('aria-label')).toBe('選取 林可蘿');
+  });
+
+  it('spins beside a pending box and ignores toggles without disabling it', () => {
+    const { fixture, host, row, input } = setup();
+    host.pending.set(true);
+    fixture.detectChanges();
+    expect(input.disabled).toBe(false);
+    expect(input.getAttribute('aria-busy')).toBe('true');
+    expect(row.querySelector('.selection-pending')?.classList).toContain('is-spinning');
+    input.click();
+    fixture.detectChanges();
+    expect(host.checked()).toBe(false);
+    expect(input.checked).toBe(false);
+
+    host.pending.set(false);
+    fixture.detectChanges();
+    expect(row.querySelector('.selection-pending')).toBeNull();
+    input.click();
+    fixture.detectChanges();
+    expect(host.checked()).toBe(true);
+  });
+
+  it('shows the click at once and snaps back after the next render when the owner rejects it', () => {
+    const fixture = TestBed.createComponent(Rejecting);
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    input.click();
+    // 畫面更新前就讀得到使用者點出來的狀態（自動化測試與報讀器都在這時讀）。
+    expect(input.checked).toBe(true);
+    expect(fixture.componentInstance.asked).toBe(1);
+    fixture.detectChanges();
+    expect(input.checked).toBe(false);
+  });
+
+  it('keeps the click while the owner saves and settles on the saved value afterwards', () => {
+    const fixture = TestBed.createComponent(Saving);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    input.click();
+    fixture.detectChanges();
+    // 儲存中：仍顯示使用者勾的狀態，不先跳回舊值。
+    expect(host.pending()).toBe(true);
+    expect(input.checked).toBe(true);
+
+    // 儲存失敗：輸入沒變，結束送出後才拉回。
+    host.pending.set(false);
+    fixture.detectChanges();
+    expect(input.checked).toBe(false);
+
+    input.click();
+    fixture.detectChanges();
+    host.checked.set(true);
+    host.pending.set(false);
+    fixture.detectChanges();
+    expect(input.checked).toBe(true);
   });
 
   it('marks a disabled row and ignores clicks', () => {

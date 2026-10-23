@@ -18,6 +18,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
@@ -55,6 +56,7 @@ const sameDraft = (a: Draft, b: Draft) =>
     DialogSaveBar,
     Field,
     Notice,
+    PendingButton,
     Select,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +65,7 @@ const sameDraft = (a: Draft, b: Draft) =>
       #unitDialog
       class="platform-dialog"
       size="md"
+      [busy]="saving()"
       (cancel)="cancel($event)"
     >
       @if (editor(); as e) {
@@ -132,12 +135,18 @@ const sameDraft = (a: Draft, b: Draft) =>
               <button
                 type="button"
                 class="secondary-button"
-                [disabled]="saving()"
+                [attr.aria-disabled]="saving() || null"
                 (click)="requestClose()"
               >
                 取消
               </button>
-              <button type="submit" class="primary-button" [disabled]="locked()">
+              <button
+                nxPending
+                type="submit"
+                class="primary-button"
+                [pending]="saving()"
+                [disabled]="session.testing()"
+              >
                 {{ saving() ? '建立中…' : '建立單位' }}
               </button>
             </footer>

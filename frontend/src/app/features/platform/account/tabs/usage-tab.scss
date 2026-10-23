@@ -22,3 +22,14 @@ meter {
 .form-note {
   margin: 0;
 }
+.budget-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+  padding-block: var(--p-space-2);
+}
+.budget-skeleton .skeleton {
+  height: 0.875rem;
+}
+.budget-skeleton .skeleton:nth-child(2) {
+  width: 60%;
+}

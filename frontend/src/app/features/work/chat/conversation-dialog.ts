@@ -6,24 +6,25 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
+import { FormField, form, maxLength, readonly, required } from '@angular/forms/signals';
 import type { ConversationDto } from '@core/api/schema';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ChatConversations } from './state/chat-conversations';
 
 /** 從歷史列表或頂部列選單重新命名或刪除對話前的確認。 */
 @Component({
   selector: 'nx-conversation-dialog',
-  imports: [CompactDialog, DialogHeader, Field, FormField],
+  imports: [CompactDialog, DialogHeader, Field, FormField, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     size="sm"
     #dialog
     class="platform-dialog"
-    (cancel)="busy() ? $event.preventDefault() : null"
+    [busy]="busy()"
     (close)="mode.set(null)"
   >
     <form class="dialog-form" (submit)="confirm($event)">
@@ -40,16 +41,31 @@ import { ChatConversations } from './state/chat-conversations';
         }
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || close()"
+        >
           取消
         </button>
         <button
+          nxPending
           type="submit"
           class="primary-button"
           [class.danger-button]="mode() === 'delete'"
-          [disabled]="busy() || (mode() === 'rename' && renameForm.title().invalid())"
+          [pending]="busy()"
+          [disabled]="mode() === 'rename' && renameForm.title().invalid()"
         >
-          {{ busy() ? '處理中…' : mode() === 'delete' ? '刪除對話' : '儲存標題' }}
+          {{
+            mode() === 'delete'
+              ? busy()
+                ? '刪除中…'
+                : '刪除對話'
+              : busy()
+                ? '儲存中…'
+                : '儲存標題'
+          }}
         </button>
       </footer>
     </form>
@@ -65,6 +81,8 @@ export class ConversationDialog {
   readonly renameForm = form(this.renameModel, (schema) => {
     required(schema.title);
     maxLength(schema.title, 120);
+    // 儲存中欄位唯讀（不停用，焦點留在原處）；失敗後解除，可直接修改再送出。
+    readonly(schema.title, () => this.busy());
   });
 
   open(mode: 'rename' | 'delete', target: ConversationDto) {

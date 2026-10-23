@@ -15,7 +15,8 @@ import { ProductTour, type ProductTourDefinition } from './product-tour';
     [class]="compact() ? 'icon-button tour-trigger' : 'quiet-button tour-trigger'"
     aria-label="操作導覽"
     title="操作導覽 · 可隨時跳過或重播"
-    [disabled]="tours.loading() || tours.active()"
+    [attr.aria-disabled]="tours.loading() || tours.active() || null"
+    [attr.aria-busy]="tours.loading() || null"
     (click)="start()"
   >
     <nx-icon [name]="tours.loading() ? 'loading' : 'tour'" />
@@ -35,6 +36,8 @@ export class ProductTourButton {
     inject(DestroyRef).onDestroy(() => this.started && this.tours.stop(this.started));
   }
   async start() {
+    // 以 aria-disabled 擋下（焦點留在鈕上），所以這裡自己忽略準備中與導覽進行中的點擊。
+    if (this.tours.loading() || this.tours.active()) return;
     try {
       await this.tours.start((this.started = this.tour()));
     } catch (error) {

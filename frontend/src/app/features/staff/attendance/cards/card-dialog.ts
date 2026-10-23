@@ -17,6 +17,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { AttendanceCardsStore } from './attendance-cards-store';
 import { CARD_KINDS } from '../attendance-presentation';
@@ -45,13 +46,23 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
  */
 @Component({
   selector: 'nx-card-dialog',
-  imports: [CompactDialog, ConfirmDialog, DialogHeader, DialogSaveBar, Field, Notice, ViewSwitch],
+  imports: [
+    CompactDialog,
+    ConfirmDialog,
+    DialogHeader,
+    DialogSaveBar,
+    Field,
+    Notice,
+    PendingButton,
+    ViewSwitch,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
       nxCompactDialog
       #cardDialog
       class="platform-dialog"
       size="md"
+      [busy]="store.busy()"
       (cancel)="cancel($event)"
     >
       @if (editor(); as e) {
@@ -118,12 +129,18 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
               <button
                 type="button"
                 class="secondary-button"
-                [disabled]="store.busy()"
+                [attr.aria-disabled]="store.busy() || null"
                 (click)="requestClose()"
               >
                 取消
               </button>
-              <button type="submit" class="primary-button" [disabled]="locked()">
+              <button
+                nxPending
+                type="submit"
+                class="primary-button"
+                [pending]="store.busy()"
+                [disabled]="session.testing()"
+              >
                 {{ store.busy() ? '登錄中…' : '登錄卡片' }}
               </button>
             </footer>

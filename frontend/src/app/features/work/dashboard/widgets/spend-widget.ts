@@ -19,7 +19,12 @@ import { DashboardStore } from '../dashboard-store';
       font-size: var(--p-font-xs);
     }
   `,
-  template: `<nx-trend-chart [points]="points()" label="每日已知費用" [currency]="currency()" />
+  template: `<nx-trend-chart
+      [points]="points()"
+      label="每日已知費用"
+      [currency]="currency()"
+      [busy]="store.refreshing()"
+    />
     <p>{{ note() }}</p>`,
 })
 export class SpendWidget {

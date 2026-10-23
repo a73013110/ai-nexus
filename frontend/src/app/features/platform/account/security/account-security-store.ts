@@ -41,6 +41,8 @@ export class AccountSecurityStore {
   readonly loading = this.read.loading;
   readonly error = this.read.error;
   readonly dialog = signal<SecurityDialog | null>(null);
+  /** 停用本地登入送出中（確認身分之後才開始算）。 */
+  readonly disabling = signal(false);
   /** 唯讀（測試身分）時不顯示任何變更按鈕。 */
   readonly editable = computed(() => !!this.security() && !this.security()!.readOnly);
   private after: (() => void) | null = null;
@@ -95,6 +97,7 @@ export class AccountSecurityStore {
 
   disableLocalLogin() {
     this.stepUp(async () => {
+      this.disabling.set(true);
       try {
         const changed = await this.guard(null, () => this.api.disableLocalLogin());
         if (!changed) return;
@@ -106,6 +109,8 @@ export class AccountSecurityStore {
           title: '無法停用本地登入',
           description: safeMessage(error),
         });
+      } finally {
+        this.disabling.set(false);
       }
     });
   }

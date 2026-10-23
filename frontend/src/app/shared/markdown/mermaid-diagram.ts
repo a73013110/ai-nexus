@@ -167,7 +167,7 @@ export class DiagramCanvas {
   template: `<figure
       class="mermaid-frame"
       aria-label="Mermaid 圖表與原始碼"
-      [attr.aria-busy]="loading()"
+      [attr.aria-busy]="loading() || null"
     >
       <figcaption class="mermaid-toolbar ui-density-compact">
         <span class="mermaid-label"><nx-icon name="integrations" />Mermaid</span>

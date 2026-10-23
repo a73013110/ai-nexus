@@ -140,7 +140,8 @@ export function repositorySection(view: string): RepositorySection {
         </div>
       }
     } @else if (store.loading()) {
-      <div class="loading" role="status" aria-label="正在讀取程式庫">
+      <div class="loading" role="status">
+        <span class="sr-only">正在載入程式庫…</span>
         <span class="skeleton bar-skeleton"></span><span class="skeleton body-skeleton"></span>
       </div>
     }`,

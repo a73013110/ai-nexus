@@ -12,9 +12,10 @@ import {
   viewChild,
   computed,
 } from '@angular/core';
-import { FormField, form, maxLength } from '@angular/forms/signals';
+import { FormField, form, maxLength, readonly } from '@angular/forms/signals';
 import type { ConversationDto, ConversationSettingsRequest } from '@core/api/schema';
 import { DialogHeader } from '@shared/ui/dialog-header';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ProjectsApi } from '@features/work/projects/projects-api';
 import { WorkspaceSession } from '@core/auth/workspace-session';
@@ -27,15 +28,10 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
 
 @Component({
   selector: 'nx-conversation-settings',
-  imports: [Notice, CompactDialog, DialogHeader, Field, FormField, Select],
+  imports: [Notice, CompactDialog, DialogHeader, Field, FormField, PendingButton, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog
-    nxCompactDialog
-    #dialog
-    class="platform-dialog"
-    (cancel)="busy() ? $event.preventDefault() : null"
-  >
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="busy()">
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="讓這段對話更合用" closeLabel="關閉對話設定" />
       <div class="dialog-body">
@@ -58,21 +54,36 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
             label="對話所屬專案"
             [value]="projectId()"
             [options]="projectOptions()"
-            [disabled]="busy()"
+            [loading]="projectsRead.refreshing() || moving()"
+            [disabled]="busy() && !moving()"
             (valueChange)="chooseProject($event)"
           />
           <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
+          @if (moving()) {
+            <span class="sr-only" role="status">正在儲存所屬專案…</span>
+          }
         }
         @if (error()) {
           <nx-notice tone="danger" [message]="error()" />
         }
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || dialog.close()"
+        >
           取消
         </button>
-        <button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
-          {{ busy() ? '儲存中…' : '儲存設定' }}
+        <button
+          nxPending
+          type="submit"
+          class="primary-button"
+          [pending]="busy() && !moving()"
+          [disabled]="fields().invalid()"
+        >
+          {{ busy() && !moving() ? '儲存中…' : '儲存設定' }}
         </button>
       </footer>
     </form>
@@ -87,7 +98,7 @@ export class ConversationSettingsDialog {
   private readonly target = signal<ConversationDto | null>(null);
   /** 每次開啟都會讀取可移入的專案，即使是同一個對話。 */
   private readonly opened = signal(0);
-  private readonly projectsRead = apiResource({
+  protected readonly projectsRead = apiResource({
     params: () => (this.opened() && this.session.has('projects') ? this.opened() : undefined),
     loader: () => this.projects.list(),
   });
@@ -108,9 +119,14 @@ export class ConversationSettingsDialog {
   readonly fields = form(this.model, (schema) => {
     maxLength(schema.instruction, 4000);
     maxLength(schema.labels, 150);
+    // 送出中欄位唯讀（不停用，焦點留在原處）；失敗後解除即可修改再送出。
+    readonly(schema.instruction, () => this.busy());
+    readonly(schema.labels, () => this.busy());
   });
   readonly labelRule = LABEL_RULE;
   readonly busy = signal(false);
+  /** 所屬專案立即儲存中：下拉鈕轉圈，送出鈕與其他欄位等它完成。 */
+  readonly moving = signal(false);
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.projectsRead.error());
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
@@ -130,6 +146,7 @@ export class ConversationSettingsDialog {
     if (!target || this.busy()) return;
     const valid = this.scope.guard();
     this.busy.set(true);
+    this.moving.set(true);
     this.actionError.set('');
     try {
       if (await this.assignProject()(target, value || null)) {
@@ -137,7 +154,10 @@ export class ConversationSettingsDialog {
       } else if (valid())
         this.actionError.set('未能變更專案，請確認沒有正在生成的回答，並檢查專案權限。');
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) {
+        this.busy.set(false);
+        this.moving.set(false);
+      }
     }
   }
   async submit(event: Event) {

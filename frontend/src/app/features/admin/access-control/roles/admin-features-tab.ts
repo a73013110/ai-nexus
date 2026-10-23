@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import type { AdminFeatureDto } from '@core/api/schema';
 import { featureIcon } from '@core/layout/navigation-tree';
-import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { AccessControlStore } from '../access-control-store';
 import { AccessStatus } from './access-status';
@@ -12,7 +12,7 @@ import { AccessStatus } from './access-status';
  */
 @Component({
   selector: 'nx-admin-features-tab',
-  imports: [Icon, DataTable, DataTableRow, AccessStatus],
+  imports: [Icon, DataTable, DataTableRow, TableState, AccessStatus],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../../../../shared/ui/management-table-page.scss', './admin-features-tab.scss'],
   templateUrl: './admin-features-tab.html',

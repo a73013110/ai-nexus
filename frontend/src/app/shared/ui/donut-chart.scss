@@ -121,3 +121,15 @@ figcaption {
   color: var(--muted);
   font-size: var(--text-caption);
 }
+// 環的骨架：同尺寸的圓挖空中心，圖例是幾條長短不一的列。
+.donut-skeleton {
+  width: 100%;
+  max-width: 9.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  mask: radial-gradient(closest-side, transparent 72%, #000 73%);
+}
+.donut-legend > i {
+  height: 0.875rem;
+  margin: 0.3125rem var(--p-space-2);
+}

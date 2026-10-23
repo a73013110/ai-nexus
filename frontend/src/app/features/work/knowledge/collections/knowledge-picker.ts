@@ -15,12 +15,13 @@ import { anchoredPopover } from '@shared/browser/anchored-popover';
 import { positionPopover } from '@shared/browser/popover-position';
 import { KnowledgeSelection } from './knowledge-selection';
 import { Checkbox } from '@shared/ui/checkbox';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { routeOf } from '@core/api/catalog';
 
 @Component({
   selector: 'nx-knowledge-picker',
-  imports: [Notice, Icon, RouterLink, Checkbox, SearchField],
+  imports: [Notice, Icon, RouterLink, Checkbox, PendingButton, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './knowledge-picker.scss',
   template: `<button
@@ -58,15 +59,28 @@ import { routeOf } from '@core/api/catalog';
       }
       @if (selection.loadFailed()) {
         <button
+          nxPending
           type="button"
           class="secondary-button"
-          [disabled]="selection.saving()"
+          [pending]="selection.saving()"
           (click)="selection.reload()"
         >
-          重新載入知識來源
+          {{ selection.saving() ? '重新載入中…' : '重新載入知識來源' }}
         </button>
       }
-      <div class="knowledge-choices">
+      <div
+        class="knowledge-choices"
+        [class.is-refreshing]="refreshing()"
+        [attr.aria-busy]="refreshing() || null"
+      >
+        @if (selection.listing() && !selection.collections().length) {
+          <div class="knowledge-skeleton" role="status">
+            @for (width of skeleton; track $index) {
+              <span class="skeleton" [style.width.%]="width"></span>
+            }
+            <span class="sr-only">正在載入知識庫…</span>
+          </div>
+        }
         @for (collection of visible(); track collection.resource.id) {
           <nx-checkbox
             [label]="collection.resource.name"
@@ -76,16 +90,19 @@ import { routeOf } from '@core/api/catalog';
               (collection.resource.isOwner ? '' : ' · 已共用')
             "
             [checked]="selection.ids().includes(collection.resource.id)"
+            [pending]="selection.toggling() === collection.resource.id"
             [disabled]="
               disabled() ||
-              selection.saving() ||
+              (selection.saving() && selection.toggling() !== collection.resource.id) ||
               selection.loadFailed() ||
               (selection.ids().length >= 3 && !selection.ids().includes(collection.resource.id))
             "
             (checkedChange)="selection.toggle(collection.resource.id, $event)"
           />
         } @empty {
-          <p class="form-note">目前沒有符合的知識庫。</p>
+          @if (!selection.listing()) {
+            <p class="form-note">目前沒有符合的知識庫。</p>
+          }
         }
       </div>
       @for (id of unavailable(); track id) {
@@ -118,6 +135,12 @@ export class KnowledgePicker {
       .ids()
       .filter((item) => !this.selection.collections().some((card) => card.resource.id === item)),
   );
+  /** 已有清單時重讀（每次打開都會更新）：保留舊選項並淡化。 */
+  readonly refreshing = computed(
+    () => this.selection.listing() && this.selection.collections().length > 0,
+  );
+  /** 骨架列的寬度（%）。 */
+  protected readonly skeleton = [78, 62, 70];
   readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   private from: HTMLElement | null = null;

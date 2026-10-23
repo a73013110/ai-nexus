@@ -4,3 +4,11 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+.models-skeleton {
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-4);
+}
+.models-skeleton .skeleton {
+  height: 0.875rem;
+}

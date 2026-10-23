@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { uniqueId } from '../browser/unique-id';
 import { Card } from './card';
+import { Icon } from './icon';
 import { Select, type SelectOption } from './select';
 
 /**
@@ -53,7 +54,7 @@ export class SettingGroup {
  */
 @Component({
   selector: 'nx-setting-row',
-  imports: [Select],
+  imports: [Select, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'setting-row' },
   styles: `
@@ -98,6 +99,10 @@ export class SettingGroup {
     nx-select {
       width: var(--setting-select-width, 11rem);
     }
+    .setting-pending {
+      --icon-size: var(--icon-sm);
+      color: var(--secondary);
+    }
     /* 窄卡片（手機）：控制項貼著說明的第一行，下拉選單縮窄，名稱才不會被擠成一字一行。 */
     @container setting-group (width <= 30rem) {
       :host {
@@ -123,9 +128,13 @@ export class SettingGroup {
           [options]="items"
           [value]="value()"
           [disabled]="disabled()"
+          [loading]="loading()"
           (valueChange)="valueChange.emit($event)"
         />
       } @else if (checked() !== undefined) {
+        @if (pending()) {
+          <nx-icon name="loading" class="setting-pending" />
+        }
         <button
           type="button"
           class="switch"
@@ -133,8 +142,10 @@ export class SettingGroup {
           [attr.aria-checked]="checked()"
           [attr.aria-labelledby]="labelId"
           [attr.aria-describedby]="description() ? descriptionId : null"
+          [attr.aria-busy]="pending() || null"
+          [attr.aria-disabled]="pending() || null"
           [disabled]="disabled()"
-          (click)="checkedChange.emit(!checked())"
+          (click)="pending() || checkedChange.emit(!checked())"
         >
           <span></span>
         </button>
@@ -148,11 +159,18 @@ export class SettingRow {
   /** 下拉選單的選項；與 `checked` 擇一。 */
   readonly options = input<SelectOption[]>();
   readonly value = input('');
+  /** 下拉選項讀取中（交給 `nx-select` 的 `loading`）；讀取期間傳 `[]` 當選項，列才不會先藏起來。 */
+  readonly loading = input(false);
   readonly valueChange = output<string>();
   /** 開關目前的狀態；`undefined` 表示這列不是開關。 */
   readonly checked = input<boolean>();
   readonly checkedChange = output<boolean>();
   readonly disabled = input(false);
+  /**
+   * 開關的變更正在儲存（不可還原或很慢的設定）：開關旁轉圈並忽略再次切換；不用 `disabled`，
+   * 焦點留在開關上。可還原的設定改用樂觀更新。
+   */
+  readonly pending = input(false);
   protected readonly labelId = uniqueId('nx-setting-label');
   protected readonly descriptionId = uniqueId('nx-setting-description');
 }

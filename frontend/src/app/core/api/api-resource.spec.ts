@@ -78,6 +78,64 @@ describe('apiResource', () => {
     expect(read.value()).toBe(2);
   });
 
+  it('keeps polled reads quiet but shows a reload pressed while a poll is in flight', async () => {
+    let calls = 0;
+    let release: () => void = () => undefined;
+    const loader = vi.fn(async () => {
+      const call = ++calls;
+      if (call > 1) await new Promise<void>((done) => (release = done));
+      return call;
+    });
+    const { read, settle } = setup({ loader, poll: (value) => (value === 1 ? 5 : null) });
+    await settle();
+    expect(read.value()).toBe(1);
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+    // 輪詢中的讀取不淡化畫面。
+    expect(read.refreshing()).toBe(false);
+    expect(read.loading()).toBe(false);
+    read.reload();
+    TestBed.tick();
+    expect(read.refreshing()).toBe(true);
+    // 輪詢那次結束後，以使用者的要求再讀一次（輪詢可能早於某次寫入）。
+    release();
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(loader).toHaveBeenCalledTimes(3);
+    });
+    expect(read.refreshing()).toBe(true);
+    release();
+    await settle();
+    expect(read.value()).toBe(3);
+    expect(read.refreshing()).toBe(false);
+  });
+
+  it('reports a user reload as refreshing but not as loading', async () => {
+    let release: () => void = () => undefined;
+    let calls = 0;
+    const loader = vi.fn(async () => {
+      const call = ++calls;
+      if (call > 1) await new Promise<void>((done) => (release = done));
+      return call;
+    });
+    const { read, settle } = setup({ loader });
+    await settle();
+    read.reload();
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+    expect(read.refreshing()).toBe(true);
+    expect(read.loading()).toBe(false);
+    expect(read.value()).toBe(1);
+    release();
+    await settle();
+    expect(read.refreshing()).toBe(false);
+    expect(read.value()).toBe(2);
+  });
+
   it('stays idle without a request', async () => {
     const loader = vi.fn(async () => 'value');
     const { read, settle } = setup({ params: () => undefined, loader });

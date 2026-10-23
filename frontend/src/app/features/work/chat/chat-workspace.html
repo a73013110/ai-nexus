@@ -25,10 +25,24 @@
   @if (store.error(); as error) {
     <nx-notice [message]="error">
       @if (!store.ready()) {
-        <button notice-actions (click)="reload()" [disabled]="store.loading()">重新連線</button>
+        <button
+          notice-actions
+          nxPending
+          type="button"
+          [pending]="store.loading()"
+          (click)="reload()"
+        >
+          {{ store.loading() ? '重新連線中…' : '重新連線' }}
+        </button>
       } @else if (store.pendingSubmission()) {
-        <button notice-actions (click)="store.retrySubmission()" [disabled]="store.submitting()">
-          重試提交
+        <button
+          notice-actions
+          nxPending
+          type="button"
+          [pending]="store.submitting()"
+          (click)="store.retrySubmission()"
+        >
+          {{ store.submitting() ? '提交中…' : '重試提交' }}
         </button>
       } @else if (store.connection() === 'disconnected') {
         <button notice-actions (click)="store.resume()">恢復連線</button>

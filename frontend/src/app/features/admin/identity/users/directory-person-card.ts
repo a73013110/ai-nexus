@@ -4,6 +4,7 @@ import { ChangeList } from '@shared/ui/change-list';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { PropertyList } from '@shared/ui/property-list';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { accountAlerts, attributeGroups } from './directory-attributes';
@@ -16,7 +17,7 @@ import { fieldChanges, stateLabel, stateTone } from './directory-outcomes';
  */
 @Component({
   selector: 'nx-directory-person-card',
-  imports: [ChangeList, EmptyState, Icon, Notice, PropertyList, StatusBadge],
+  imports: [ChangeList, EmptyState, Icon, Notice, PendingButton, PropertyList, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './directory-person-card.scss',
   template: `@if (store.inspectedPerson(); as person) {
@@ -51,14 +52,21 @@ import { fieldChanges, stateLabel, stateTone } from './directory-outcomes';
         />
       } @else if (store.detailError()) {
         <nx-notice tone="danger" [message]="error()" />
-        <button type="button" class="secondary-button" (click)="store.detail.reload()">
-          <nx-icon name="refresh" />重新讀取
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="store.detail.refreshing()"
+          (click)="store.detail.reload()"
+        >
+          <nx-icon name="refresh" />{{ store.detail.refreshing() ? '重新讀取中…' : '重新讀取' }}
         </button>
       } @else {
-        <div class="directory-person-skeleton" role="status" aria-label="正在讀取 AD 屬性">
+        <div class="directory-person-skeleton" role="status">
           @for (width of skeleton; track $index) {
             <span class="skeleton" [style.width.%]="width"></span>
           }
+          <span class="sr-only">正在載入 AD 屬性…</span>
         </div>
       }
       @if (!store.writable()) {

@@ -21,6 +21,8 @@ export class NavigationStore {
   readonly items = computed(() => this.read.value() ?? []);
   readonly ready = computed(() => this.read.value() !== undefined && !!this.access.catalog());
   readonly loading = computed(() => this.read.loading() || this.access.loading());
+  /** 重讀中（含移動、刪除後與重試）；首次載入也算在內。 */
+  readonly refreshing = computed(() => this.read.refreshing() || this.access.refreshing());
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.read.error() || this.access.error());
   readonly toast = inject(ToastService);

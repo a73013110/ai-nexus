@@ -1,5 +1,5 @@
 import { CompactDialog } from '@shared/ui/compact-dialog';
-import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,7 +15,7 @@ import { DocumentViewer } from './document-viewer';
 
 @Component({
   selector: 'nx-reader-dialog',
-  imports: [CompactDialog, EmptyState, DocumentViewer],
+  imports: [CompactDialog, Icon, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './reader-dialog.scss',
   template: `<dialog
@@ -36,7 +36,7 @@ import { DocumentViewer } from './document-viewer';
         />
       }
     } @placeholder {
-      <nx-empty-state><p>正在開啟預覽…</p></nx-empty-state>
+      <p class="reader-placeholder" role="status"><nx-icon name="loading" />正在開啟預覽…</p>
     }
   </dialog>`,
 })

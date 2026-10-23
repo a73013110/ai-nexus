@@ -74,7 +74,7 @@ import { monitoringFeatureNames } from '../monitoring-format';
     }
   `,
   template: `<nx-panel heading="線上人員" [count]="sessions().length">
-    <ul class="features" aria-label="依目前功能篩選工作階段">
+    <ul class="features" aria-label="依目前功能篩選工作階段" [class.is-refreshing]="busy()">
       <li>
         <button
           type="button"
@@ -99,6 +99,7 @@ import { monitoringFeatureNames } from '../monitoring-format';
     <nx-monitoring-sessions
       [sessions]="sessions()"
       [selectedId]="selectedId()"
+      [busy]="busy()"
       [(feature)]="feature"
       (selected)="selected.emit($event)"
     />
@@ -107,6 +108,8 @@ import { monitoringFeatureNames } from '../monitoring-format';
 export class MonitoringPeople {
   readonly sessions = input.required<OnlineSession[]>();
   readonly selectedId = input<string | null>(null);
+  /** 連線中斷、顯示的是舊快照：保留內容並淡化。 */
+  readonly busy = input(false);
   readonly feature = model('all');
   readonly selected = output<OnlineSession>();
   /** 工作階段表格；頁面的詳情抽屜依它目前這一頁逐筆瀏覽。 */

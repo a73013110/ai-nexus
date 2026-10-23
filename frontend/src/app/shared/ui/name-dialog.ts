@@ -2,6 +2,7 @@ import { Notice } from './notice';
 import { CompactDialog } from './compact-dialog';
 import { DialogHeader } from './dialog-header';
 import { Field } from './field';
+import { PendingButton } from './pending-button';
 import { safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -20,7 +21,7 @@ export interface NameRequest {
   save: (name: string) => Promise<void>;
 }
 @Component({
-  imports: [Notice, CompactDialog, DialogHeader, Field],
+  imports: [Notice, CompactDialog, DialogHeader, Field, PendingButton],
   selector: 'nx-name-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -29,7 +30,7 @@ export interface NameRequest {
     #dialog
     class="platform-dialog"
     [attr.aria-label]="request()?.title"
-    (cancel)="cancel($event)"
+    [busy]="busy()"
   >
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header [heading]="request()?.title ?? ''" />
@@ -52,11 +53,16 @@ export interface NameRequest {
         }
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || dialog.close()"
+        >
           取消
         </button>
-        <button class="primary-button" [disabled]="busy() || !name().trim()">
-          {{ busy() ? '正在儲存…' : '儲存名稱' }}
+        <button nxPending class="primary-button" [pending]="busy()" [disabled]="!name().trim()">
+          {{ busy() ? '儲存中…' : '儲存名稱' }}
         </button>
       </footer>
     </form>
@@ -81,9 +87,6 @@ export class NameDialog {
       const dot = request.value.lastIndexOf('.');
       field.setSelectionRange(0, dot > 0 ? dot : request.value.length);
     });
-  }
-  cancel(event: Event) {
-    if (this.busy()) event.preventDefault();
   }
   async save(event: Event) {
     event.preventDefault();

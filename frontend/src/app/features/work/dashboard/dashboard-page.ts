@@ -5,6 +5,7 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { ViewScope } from '@shared/browser/view-scope';
 import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { DashboardBoard } from './board/dashboard-board';
 import { DashboardEditBar } from './board/dashboard-edit-bar';
@@ -27,6 +28,7 @@ import { DASHBOARD_TOUR } from './dashboard-tour';
     FeaturePage,
     Icon,
     Notice,
+    PendingButton,
     Select,
   ],
   providers: [

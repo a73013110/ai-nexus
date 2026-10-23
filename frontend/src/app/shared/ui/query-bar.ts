@@ -44,7 +44,12 @@ import type { QueryChip, QueryState } from './query-state';
         </button>
       }
       <div class="ui-query-actions">
-        <button type="submit" class="primary-button" [attr.aria-disabled]="busy() || null">
+        <button
+          type="submit"
+          class="primary-button"
+          [attr.aria-disabled]="busy() || null"
+          [attr.aria-busy]="busy() || null"
+        >
           <nx-icon [name]="busy() ? 'loading' : 'search'" />查詢
         </button>
         <button

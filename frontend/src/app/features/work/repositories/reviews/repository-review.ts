@@ -22,6 +22,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ToastService } from '@shared/ui/toast-service';
 import { JobProgress } from '@features/work/jobs/job-progress';
 import { JobToasts } from '@features/work/jobs/job-toasts';
@@ -44,6 +45,7 @@ const commentLimit = 20_000;
     JobProgress,
     MarkdownView,
     Notice,
+    PendingButton,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,7 +53,9 @@ const commentLimit = 20_000;
   template: `<a class="back" [routerLink]="store.link('reviews')"><nx-icon name="left" />AI 檢閱</a>
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (detail(); as d) {
@@ -71,21 +75,25 @@ const commentLimit = 20_000;
         <nx-job-progress [job]="d.review.job">
           @if (active()) {
             <button
+              nxPending
               type="button"
               class="quiet-button"
-              [disabled]="busy() || d.review.job.cancelRequested"
+              [pending]="working() === 'stop'"
+              [disabled]="(busy() && working() !== 'stop') || d.review.job.cancelRequested"
               (click)="changeJob(false)"
             >
-              停止
+              {{ working() === 'stop' ? '停止中…' : '停止' }}
             </button>
           } @else if (d.review.job.status === 'failed' || d.review.job.status === 'cancelled') {
             <button
+              nxPending
               type="button"
               class="quiet-button"
-              [disabled]="busy() || d.review.job.attempt >= 6"
+              [pending]="working() === 'retry'"
+              [disabled]="(busy() && working() !== 'retry') || d.review.job.attempt >= 6"
               (click)="changeJob(true)"
             >
-              沿用已完成的分析重試
+              {{ working() === 'retry' ? '重試中…' : '沿用已完成的分析重試' }}
             </button>
           }
         </nx-job-progress>
@@ -177,17 +185,12 @@ const commentLimit = 20_000;
       }
       <p class="disclaimer">結果來自變更的靜態分析，仍需核對上下文並執行測試。</p>
     } @else if (!error()) {
-      <div class="loading" role="status" aria-label="正在讀取 review">
+      <div class="loading" role="status">
+        <span class="sr-only">正在載入檢閱…</span>
         <span class="skeleton head-skeleton"></span><span class="skeleton body-skeleton"></span>
       </div>
     }
-    <dialog
-      nxCompactDialog
-      size="lg"
-      #comment
-      class="platform-dialog"
-      (cancel)="posting() ? $event.preventDefault() : null"
-    >
+    <dialog nxCompactDialog size="lg" #comment class="platform-dialog" [busy]="posting()">
       <form class="dialog-form" (submit)="post($event)">
         <nx-dialog-header [heading]="'貼到 Pull Request #' + detail()?.review?.pullRequest" />
         <div class="dialog-body">
@@ -199,6 +202,7 @@ const commentLimit = 20_000;
               nxField
               rows="14"
               [maxLength]="limit"
+              [readOnly]="posting()"
               [value]="draft()"
               (input)="draft.set($any($event.target).value)"
             ></textarea>
@@ -212,13 +216,18 @@ const commentLimit = 20_000;
           <button
             type="button"
             class="secondary-button"
-            [disabled]="posting()"
-            (click)="comment.close()"
+            [attr.aria-disabled]="posting() || null"
+            (click)="posting() || comment.close()"
           >
             取消
           </button>
-          <button class="primary-button" [disabled]="posting() || !draft().trim()">
-            {{ posting() ? '正在留言…' : '留言' }}
+          <button
+            nxPending
+            class="primary-button"
+            [pending]="posting()"
+            [disabled]="!draft().trim()"
+          >
+            {{ posting() ? '留言中…' : '留言' }}
           </button>
         </footer>
       </form>
@@ -259,7 +268,11 @@ export class RepositoryReview {
     () => this.detail()?.sections.filter((item) => item.binary).length ?? 0,
   );
   readonly expanded = signal<ReadonlySet<number>>(new Set());
-  readonly busy = signal(false);
+  /** 停止或重試工作進行中：按下的那顆按鈕轉圈。 */
+  readonly working = signal<'stop' | 'retry' | null>(null);
+  readonly busy = computed(() => this.working() !== null);
+  /** 使用者看得到的重讀（重試）；工作進行中的輪詢不算。 */
+  readonly refreshing = this.read.refreshing;
   private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.read.error());
   readonly draft = signal('');
@@ -296,7 +309,7 @@ export class RepositoryReview {
     const id = this.detail()?.review.id;
     if (!id || this.busy()) return;
     const valid = this.scopeGuard.guard();
-    this.busy.set(true);
+    this.working.set(retry ? 'retry' : 'stop');
     this.actionError.set('');
     try {
       const job = await this.api.reviewJob(id, retry);
@@ -305,7 +318,7 @@ export class RepositoryReview {
     } catch (error) {
       if (valid()) this.actionError.set(this.scopeGuard.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   openComment() {

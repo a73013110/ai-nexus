@@ -10,17 +10,21 @@
     @if (current(); as project) {
       @if (session.has('chat')) {
         <button
+          nxPending
+          type="button"
           class="primary-button project-start"
-          [disabled]="busy() || project.isArchived"
+          [pending]="working() === 'start:'"
+          [disabled]="(busy() && working() !== 'start:') || project.isArchived"
           (click)="start()"
         >
-          <nx-icon name="chat" />開始對話
+          <nx-icon name="chat" />{{ working() === 'start:' ? '開始中…' : '開始對話' }}
         </button>
       }
       @if (projectActions().length) {
         <nx-action-menu
           label="專案操作"
           [items]="projectActions()"
+          [busy]="working() === 'archive' || working() === 'delete'"
           (action)="projectAction($event)"
         />
       }
@@ -36,7 +40,9 @@
   </div>
   @if (error()) {
     <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+      ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+        {{ refreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
     >
   }
   @if (!id()) {
@@ -47,6 +53,7 @@
       [filters]="scopes"
       [filter]="archived() ? 'archived' : 'active'"
       [loading]="projectsLoading()"
+      [busy]="projectsRefreshing()"
       [empty]="!visible().length"
       (searchChange)="filter.set($event)"
       (filterChange)="archived.set($event === 'archived')"
@@ -78,8 +85,15 @@
     @if (project.isArchived) {
       <nx-notice tone="warning" message="專案已封存：可閱讀，但不能開始對話或修改內容。">
         @if (project.resource.canEdit) {
-          <button notice-actions type="button" [disabled]="busy()" (click)="archive()">
-            還原專案
+          <button
+            notice-actions
+            nxPending
+            type="button"
+            [pending]="working() === 'archive'"
+            [disabled]="busy() && working() !== 'archive'"
+            (click)="archive()"
+          >
+            {{ working() === 'archive' ? '還原中…' : '還原專案' }}
           </button>
         }
       </nx-notice>
@@ -90,25 +104,43 @@
           class="project-templates"
           heading="共用範本"
           icon="idea"
-          [count]="templates().length"
+          [count]="detailLoading() ? null : templates().length"
         >
           @if (editable()) {
             <button panel-actions class="quiet-button" [disabled]="busy()" (click)="openTemplate()">
               <nx-icon name="plus" />新增範本
             </button>
           }
-          <div class="template-grid">
+          <div
+            class="template-grid"
+            [class.is-refreshing]="detailRefreshing()"
+            [attr.aria-busy]="detailRefreshing() || null"
+          >
+            @if (detailLoading()) {
+              <div class="panel-skeleton" role="status">
+                <span class="sr-only">正在載入範本…</span>
+                <span class="skeleton"></span><span class="skeleton"></span>
+              </div>
+            }
             @for (item of templates(); track item.id) {
               <div class="template-card">
                 <button
                   type="button"
                   class="template-start"
-                  [disabled]="busy() || project.isArchived || !session.has('chat')"
+                  [attr.aria-busy]="working() === 'start:' + item.id || null"
+                  [disabled]="
+                    (busy() && working() !== 'start:' + item.id) ||
+                    project.isArchived ||
+                    !session.has('chat')
+                  "
                   (click)="start(item.id)"
                 >
                   <strong>{{ item.title }}</strong
                   ><span>{{ item.content }}</span
-                  ><small>使用範本開始對話<nx-icon name="chevron" /></small>
+                  ><small
+                    >{{ working() === 'start:' + item.id ? '開始中…' : '使用範本開始對話'
+                    }}<nx-icon [name]="working() === 'start:' + item.id ? 'loading' : 'chevron'"
+                  /></small>
                 </button>
                 @if (editable()) {
                   <div class="template-tools">
@@ -119,9 +151,12 @@
                     >
                       <nx-icon name="edit" /></button
                     ><button
+                      nxPending
+                      type="button"
                       class="icon-button"
                       [attr.aria-label]="'移除範本 ' + item.title"
-                      [disabled]="busy()"
+                      [pending]="working() === 'remove:' + item.id"
+                      [disabled]="busy() && working() !== 'remove:' + item.id"
                       (click)="remove('template', item.id)"
                     >
                       <nx-icon name="trash" />
@@ -130,7 +165,9 @@
                 }
               </div>
             } @empty {
-              <p class="form-note">把常用提問保存為範本，成員點一下即可開始。</p>
+              @if (!detailLoading()) {
+                <p class="form-note">把常用提問保存為範本，成員點一下即可開始。</p>
+              }
             }
           </div>
         </nx-panel>
@@ -139,16 +176,29 @@
             class="project-conversations"
             heading="我的對話"
             icon="chat"
-            [count]="conversations().length"
+            [count]="detailLoading() ? null : conversations().length"
           >
-            <nav class="project-rows" aria-label="我的專案對話">
+            <nav
+              class="project-rows"
+              aria-label="我的專案對話"
+              [class.is-refreshing]="detailRefreshing()"
+              [attr.aria-busy]="detailRefreshing() || null"
+            >
+              @if (detailLoading()) {
+                <div class="panel-skeleton" role="status">
+                  <span class="sr-only">正在載入對話…</span>
+                  <span class="skeleton"></span><span class="skeleton"></span>
+                </div>
+              }
               @for (item of conversations(); track item.id) {
                 <a class="project-row" [routerLink]="[routeOf('chat'), item.id]"
                   ><span class="row-name">{{ item.title }}</span
                   ><small>{{ when(item.updatedAt) }}</small></a
                 >
               } @empty {
-                <p class="form-note">尚無對話。從範本或「開始對話」接續工作。</p>
+                @if (!detailLoading()) {
+                  <p class="form-note">尚無對話。從範本或「開始對話」接續工作。</p>
+                }
               }
             </nav>
             <p class="form-note panel-foot">
@@ -182,13 +232,17 @@
           class="project-files"
           heading="參考文件"
           icon="document"
-          [count]="files().length"
+          [count]="detailLoading() ? null : files().length"
           [nxFileDrop]="editable() && !busy()"
           (filesDropped)="upload($event)"
         >
           @if (editable()) {
-            <label panel-actions class="icon-button upload-label" title="上傳文件"
-              ><nx-icon name="upload" /><input
+            <label
+              panel-actions
+              class="icon-button upload-label"
+              title="上傳文件"
+              [attr.aria-busy]="working() === 'upload' || null"
+              ><nx-icon [name]="working() === 'upload' ? 'loading' : 'upload'" /><input
                 type="file"
                 aria-label="上傳專案文件"
                 multiple
@@ -197,7 +251,17 @@
                 (change)="chooseFiles($event)"
             /></label>
           }
-          <div class="project-rows">
+          <div
+            class="project-rows"
+            [class.is-refreshing]="detailRefreshing()"
+            [attr.aria-busy]="detailRefreshing() || null"
+          >
+            @if (detailLoading()) {
+              <div class="panel-skeleton" role="status">
+                <span class="sr-only">正在載入參考文件…</span>
+                <span class="skeleton"></span><span class="skeleton"></span>
+              </div>
+            }
             @for (file of files(); track file.id) {
               <div class="project-row">
                 <a class="row-name" [nxReaderLink]="file.id">{{ file.fileName }}</a>
@@ -206,9 +270,12 @@
                 }}</nx-status-badge>
                 @if (file.canEdit && !project.isArchived) {
                   <button
+                    nxPending
+                    type="button"
                     class="icon-button"
                     [attr.aria-label]="'移除 ' + file.fileName"
-                    [disabled]="busy()"
+                    [pending]="working() === 'remove:' + file.id"
+                    [disabled]="busy() && working() !== 'remove:' + file.id"
                     (click)="remove('file', file.id)"
                   >
                     <nx-icon name="trash" />
@@ -216,9 +283,11 @@
                 }
               </div>
             } @empty {
-              <p class="form-note">
-                {{ editable() ? '拖曳文件到這裡。文字、PDF 與圖片均可。' : '尚無參考文件。' }}
-              </p>
+              @if (!detailLoading()) {
+                <p class="form-note">
+                  {{ editable() ? '拖曳文件到這裡。文字、PDF 與圖片均可。' : '尚無參考文件。' }}
+                </p>
+              }
             }
           </div>
           <p class="form-note panel-foot">
@@ -226,7 +295,12 @@
           </p>
         </nx-panel>
         @if (session.has('artifacts')) {
-          <nx-panel class="project-outputs" heading="成果" icon="files" [count]="outputs().length">
+          <nx-panel
+            class="project-outputs"
+            heading="成果"
+            icon="files"
+            [count]="detailLoading() ? null : outputs().length"
+          >
             @if (editable()) {
               <button
                 panel-actions
@@ -239,14 +313,27 @@
                 <nx-icon name="plus" />
               </button>
             }
-            <nav class="project-rows" aria-label="專案成果">
+            <nav
+              class="project-rows"
+              aria-label="專案成果"
+              [class.is-refreshing]="detailRefreshing()"
+              [attr.aria-busy]="detailRefreshing() || null"
+            >
+              @if (detailLoading()) {
+                <div class="panel-skeleton" role="status">
+                  <span class="sr-only">正在載入成果…</span>
+                  <span class="skeleton"></span><span class="skeleton"></span>
+                </div>
+              }
               @for (item of outputs(); track item.resource.id) {
                 <a class="project-row" [routerLink]="[routeOf('artifacts'), item.resource.id]"
                   ><span class="row-name">{{ item.resource.name }}</span
                   ><small>版本 {{ item.version }}</small></a
                 >
               } @empty {
-                <p class="form-note">成果沿用專案成員權限，可檢視版本與匯出。</p>
+                @if (!detailLoading()) {
+                  <p class="form-note">成果沿用專案成員權限，可檢視版本與匯出。</p>
+                }
               }
             </nav>
           </nx-panel>
@@ -259,12 +346,13 @@
       [name]="project.resource.name"
     />
   } @else if (loading()) {
-    <div class="project-layout" role="status" aria-label="正在載入專案">
+    <div class="project-layout" role="status">
+      <span class="sr-only">正在載入專案…</span>
       <span class="skeleton project-skeleton"></span><span class="skeleton project-skeleton"></span>
     </div>
   }
 </nx-feature-page>
-<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="close($event)">
+<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="busy()" (cancel)="close($event)">
   <form class="dialog-form" (submit)="save($event)">
     <nx-dialog-header [heading]="kind() === 'project' ? '專案設定' : '共用範本'" />
     <div class="dialog-body">
@@ -278,7 +366,7 @@
           aria-label="項目名稱"
           autofocus
           required
-          [disabled]="busy()"
+          [readOnly]="busy()"
           [attr.maxlength]="kind() === 'project' ? 120 : 80"
           [value]="name()"
           (input)="name.set($any($event.target).value)"
@@ -290,7 +378,7 @@
             aria-label="專案說明"
             maxlength="2000"
             rows="3"
-            [disabled]="busy()"
+            [readOnly]="busy()"
             [value]="description()"
             (input)="description.set($any($event.target).value)"
           ></textarea></label
@@ -300,7 +388,7 @@
             aria-label="專案共用指示"
             maxlength="4000"
             rows="6"
-            [disabled]="busy()"
+            [readOnly]="busy()"
             placeholder="例如：以繁體中文回答、先列結論，最後列出待確認事項。"
             [value]="instructions()"
             (input)="instructions.set($any($event.target).value)"
@@ -314,7 +402,7 @@
             maxlength="12000"
             rows="8"
             required
-            [disabled]="busy()"
+            [readOnly]="busy()"
             [value]="templateText()"
             (input)="templateText.set($any($event.target).value)"
           ></textarea>
@@ -322,13 +410,20 @@
       }
     </div>
     <footer class="dialog-foot">
-      <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="busy() || null"
+        (click)="close()"
+      >
         取消</button
       ><button
+        nxPending
         class="primary-button"
-        [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
+        [pending]="working() === 'save'"
+        [disabled]="!name().trim() || (kind() === 'template' && !templateText().trim())"
       >
-        {{ busy() ? '正在儲存…' : '儲存' }}
+        {{ working() === 'save' ? '儲存中…' : '儲存' }}
       </button>
     </footer>
   </form>

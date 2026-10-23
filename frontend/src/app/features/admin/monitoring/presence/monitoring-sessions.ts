@@ -38,6 +38,8 @@ export class MonitoringSessions {
   readonly sessions = input.required<OnlineSession[]>();
   /** 在檢視器中開啟的工作階段，與任何開啟的列一樣標示。 */
   readonly selectedId = input<string | null>(null);
+  /** 連線中斷、顯示的是舊快照：表格淡化。 */
+  readonly busy = input(false);
   readonly selected = output<OnlineSession>();
   readonly feature = model('all');
   readonly query = signal('');

@@ -33,6 +33,7 @@ const SHOWN = 6;
         [format]="spendFormat()"
         totalLabel="已知費用"
         empty="價格設定完成後，新的呼叫會出現在這裡。"
+        [busy]="store.refreshing()"
       />
     } @else {
       <nx-donut-chart
@@ -40,6 +41,7 @@ const SHOWN = 6;
         [segments]="tokens()"
         [format]="compact"
         totalLabel="Token"
+        [busy]="store.refreshing()"
       />
     }`,
 })

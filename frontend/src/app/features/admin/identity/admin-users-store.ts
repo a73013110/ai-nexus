@@ -27,7 +27,13 @@ export class AdminUsersStore {
   });
   readonly users = computed(() => this.usersRead.value() ?? null);
   readonly loading = this.access.loading;
-  readonly loadingUsers = computed(() => this.typing() || this.usersRead.refreshing());
+  /**
+   * 表格的讀取狀態：搜尋的防抖等待、重讀，以及列表還在等目錄（目錄讀到前列表不會開始讀）。
+   * 沒有列時表格畫骨架，有列時淡化。
+   */
+  readonly loadingUsers = computed(
+    () => this.typing() || this.usersRead.refreshing() || this.access.loading(),
+  );
   readonly actionError = this.access.actionError;
   readonly toast = this.access.toast;
   /** 使用者列表沒有資料時讀取失敗由表格狀態顯示（附重試），頁首只提示已有資料時的失敗。 */

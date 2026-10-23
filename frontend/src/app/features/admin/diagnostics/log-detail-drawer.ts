@@ -20,6 +20,7 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
@@ -54,6 +55,7 @@ const outcomes: Record<string, string> = {
     EmptyState,
     Icon,
     Notice,
+    PendingButton,
     RouterLink,
     StatusBadge,
     Tabs,
@@ -100,6 +102,8 @@ export class LogDetailDrawer {
   });
   readonly detailLoading = this.detailRead.refreshing;
   readonly detailError = this.detailRead.error;
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [48, 92, 76, 84, 60];
   private readonly flow = computed(() => {
     const entry = this.current(),
       range = this.range();

@@ -8,19 +8,40 @@ import { EmptyState } from '@shared/ui/empty-state';
 import { Notice } from '@shared/ui/notice';
 import { IssueCode } from '@shared/ui/issue-code';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 
 @Component({
   selector: 'nx-notification-feed',
-  imports: [Notice, EmptyState, IssueCode, Icon],
+  imports: [Notice, EmptyState, IssueCode, Icon, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './notification-feed.scss',
   host: { style: 'display: contents' },
   template: `@if (store.error()) {
       <nx-notice [message]="store.error()"
-        ><button notice-actions (click)="store.refresh()">重試</button>
+        ><button
+          notice-actions
+          nxPending
+          type="button"
+          [pending]="store.loading()"
+          (click)="store.refresh()"
+        >
+          {{ store.loading() ? '重試中…' : '重試' }}
+        </button>
       </nx-notice>
     }
-    <div class="notification-list" [attr.aria-busy]="store.loading()">
+    <div
+      class="notification-list"
+      [class.is-refreshing]="store.loading() && store.items().length > 0"
+      [attr.aria-busy]="store.loading() || null"
+    >
+      @if (store.loading() && !store.items().length) {
+        <div class="notification-skeleton" role="status">
+          @for (width of skeleton; track $index) {
+            <span class="skeleton" [style.width.%]="width"></span>
+          }
+          <span class="sr-only">正在載入通知…</span>
+        </div>
+      }
       @for (item of store.items(); track item.id) {
         @let destination = url(item.target, item.version);
         @let text = body(item);
@@ -49,42 +70,53 @@ import { Icon } from '@shared/ui/icon';
             <div class="notification-actions">
               <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
               @if (destination) {
-                <button class="quiet-button" (click)="store.activate(item)">
+                <button type="button" class="quiet-button" (click)="store.activate(item)">
                   查看內容<nx-icon name="chevron" />
                 </button>
               }
               @if (!item.readAt) {
-                <button class="quiet-button" (click)="store.read(item).catch(ignore)">
-                  標為已讀
+                @let reading = store.isWorking('read:' + item.id);
+                <button
+                  nxPending
+                  type="button"
+                  class="quiet-button"
+                  [pending]="reading"
+                  (click)="store.read(item).catch(ignore)"
+                >
+                  {{ reading ? '標記中…' : '標為已讀' }}
                 </button>
               }
             </div>
           </div>
           <button
+            nxPending
+            type="button"
             class="icon-button"
             [attr.aria-label]="'移除通知：' + item.title"
+            [pending]="store.isWorking('dismiss:' + item.id)"
             (click)="store.dismiss(item)"
           >
             <nx-icon name="close" />
           </button>
         </article>
       } @empty {
-        <nx-empty-state role="status">
-          <nx-icon name="bell" />
-          <p>
-            {{
-              store.loading()
-                ? '正在載入通知…'
-                : store.unreadOnly()
-                  ? '目前沒有未讀通知'
-                  : '新的工作進度會出現在這裡'
-            }}
-          </p>
-        </nx-empty-state>
+        <!-- 讀取中或讀取失敗時還不知道有沒有通知，不先說「沒有」。 -->
+        @if (!store.loading() && !store.error()) {
+          <nx-empty-state>
+            <nx-icon name="bell" />
+            <p>{{ store.unreadOnly() ? '目前沒有未讀通知' : '新的工作進度會出現在這裡' }}</p>
+          </nx-empty-state>
+        }
       }
       @if (store.hasMore()) {
-        <button class="secondary-button" [disabled]="store.loading()" (click)="store.refresh(true)">
-          載入更早的通知
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="store.loadingMore()"
+          (click)="store.loading() || store.refresh(true)"
+        >
+          {{ store.loadingMore() ? '載入中…' : '載入更早的通知' }}
         </button>
       }
     </div>`,
@@ -101,6 +133,8 @@ export class NotificationFeed {
   readonly date = formatDate;
   readonly url = notificationUrl;
   readonly ignore = () => {};
+  /** 骨架列的寬度（%），長短交錯才像通知。 */
+  protected readonly skeleton = [82, 58, 74, 50, 66];
   /** 點擊列自己的控制項與文字選取，保留其原本行為。 */
   open(event: MouseEvent, item: NotificationDto) {
     if (

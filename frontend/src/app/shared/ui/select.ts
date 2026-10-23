@@ -5,6 +5,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  afterRenderEffect,
   computed,
   inject,
   input,
@@ -32,6 +33,8 @@ export interface SelectOption {
  * 面板在原生 top layer，不會被對話框或捲動區裁切。
  * 投影的 `[select-footer]` 放在選項下方的相關設定（例如模型下的推理強度）；Tab 會移入，
  * 焦點離開面板即關閉。
+ * 選項來自 API 時傳 `loading`：觸發鈕轉圈、還對不到選項的值顯示「正在載入…」而不是 placeholder
+ * （看起來會像沒選）；載入中仍可打開，選單裡是「正在載入選項…」而不是「沒有符合的選項」。
  */
 @Component({
   selector: 'nx-select',
@@ -53,12 +56,17 @@ export interface SelectOption {
       [attr.aria-haspopup]="search() ? 'dialog' : 'listbox'"
       [attr.aria-controls]="search() ? id + '-panel' : id"
       [attr.aria-activedescendant]="opened() && active() >= 0 ? id + '-' + active() : null"
-      [disabled]="disabled() || !options().length"
+      [attr.aria-busy]="loading() || null"
+      [disabled]="disabled() || (!options().length && !loading())"
       (click)="toggle()"
       (keydown)="key($event)"
     >
-      <span [attr.title]="title()">{{ summary() }}</span
-      ><nx-icon name="chevron" />
+      <span [attr.title]="title()">{{ summary() }}</span>
+      @if (loading()) {
+        <nx-icon name="loading" class="select-loading" />
+      } @else {
+        <nx-icon name="chevron" class="select-chevron" />
+      }
     </button>
     @if (multiple()) {
       <span hidden [id]="id + '-label'">{{ label() }}</span>
@@ -136,7 +144,11 @@ export interface SelectOption {
             }
           </button>
         } @empty {
-          <p class="select-empty">沒有符合的選項</p>
+          @if (loading()) {
+            <p class="select-empty" role="status">正在載入選項…</p>
+          } @else {
+            <p class="select-empty">沒有符合的選項</p>
+          }
         }
       </div>
       <ng-content select="[select-footer]" />
@@ -150,6 +162,8 @@ export class Select {
   readonly values = input<readonly string[]>([]);
   readonly options = input.required<SelectOption[]>();
   readonly disabled = input(false);
+  /** 選項讀取中（首次載入或重讀）；綁 `apiResource` 的 `refreshing()`。 */
+  readonly loading = input(false);
   readonly placeholder = input('請選擇');
   readonly searchable = input(false);
   /** 選項達到這個數量才顯示搜尋框，短清單打開直接是選項。 */
@@ -174,10 +188,12 @@ export class Select {
     this.options().filter((option) => this.values().includes(option.value)),
   );
   readonly summary = computed(() => {
-    if (!this.multiple()) return this.selected()?.label || this.placeholder();
+    // 選項還沒到時對不到名稱：維持「正在載入…」，不退回 placeholder（已選的值會像被清掉）。
+    const empty = this.loading() ? '正在載入…' : this.placeholder();
+    if (!this.multiple()) return this.selected()?.label || empty;
     const chosen = this.chosen();
     return chosen.length === 0
-      ? this.placeholder()
+      ? empty
       : chosen.length === 1
         ? chosen[0].label
         : `已選 ${chosen.length} 項`;
@@ -203,12 +219,17 @@ export class Select {
   private searchTimer?: ReturnType<typeof setTimeout>;
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.searchTimer));
+    // 載入中打開的面板，選項到了之後高度會變，重新對齊錨點才不會超出視窗。
+    afterRenderEffect(() => {
+      this.options();
+      this.popover.reposition();
+    });
   }
   toggle() {
     this.opened() ? this.close() : this.open();
   }
   private open() {
-    if (this.disabled() || !this.options().length) return;
+    if (this.disabled() || (!this.options().length && !this.loading())) return;
     this.query.set('');
     this.active.set(
       Math.max(

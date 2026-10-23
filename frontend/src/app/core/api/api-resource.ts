@@ -4,6 +4,7 @@ import {
   inject,
   linkedSignal,
   resource,
+  signal,
   untracked,
   type Signal,
   type WritableSignal,
@@ -38,13 +39,16 @@ export interface ApiResource<T> {
   readonly value: WritableSignal<T | undefined>;
   /** 新請求正在進行：第一次讀取，或請求改變。 */
   readonly loading: Signal<boolean>;
-  /** 任何讀取正在進行中，包含 `reload()` 與輪詢。 */
+  /**
+   * 使用者感覺得到的讀取正在進行：第一次讀取、請求改變或 `reload()`。輪詢觸發的重讀不算，
+   * 背景更新才不會讓畫面每隔幾秒淡化一次；輪詢途中呼叫 `reload()` 則立刻算在內。
+   */
   readonly refreshing: Signal<boolean>;
   /** 上次失敗讀取的審閱過訊息；上次成功時為空字串。 */
   readonly error: Signal<string>;
   /**
-   * 以目前的請求再讀一次。新請求仍在載入時呼叫（那次載入可能早於某次寫入），
-   * 會等該次載入結束後再讀一次，而不是忽略此呼叫。
+   * 以目前的請求再讀一次。已有讀取在途中時呼叫（那次讀取可能早於某次寫入，也可能是輪詢），
+   * 會等該次讀取結束後再讀一次，而不是忽略此呼叫。
    */
   reload(): void;
 }
@@ -94,6 +98,12 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
     return !failure || isCancellation(failure) ? '' : safeMessage(failure);
   });
   const loading = computed(() => ref.status() === 'loading');
+  // 目前在途的重讀是否由輪詢發起；使用者的 reload() 會清掉它，讓同一次讀取改為看得見。
+  const polling = signal(false);
+  const refreshing = computed(() => {
+    const status = ref.status();
+    return status === 'loading' || (status === 'reloading' && !polling());
+  });
   if (options.poll) {
     const poll = options.poll;
     effect((onCleanup) => {
@@ -103,13 +113,16 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
       if (delay === null) return;
       let timer = setTimeout(function tick() {
         if (document.hidden) timer = setTimeout(tick, delay);
-        else ref.reload();
+        else {
+          polling.set(true);
+          ref.reload();
+        }
       }, delay);
       onCleanup(() => clearTimeout(timer));
     });
   }
-  // Angular 在新請求載入時會忽略 reload()；若期間有寫入，會顯示寫入前開始的那次讀取結果，
-  // 所以這裡讓 reload 等該次載入結束。
+  // Angular 在讀取途中（新請求或重讀）會忽略 reload()；若期間有寫入，會顯示寫入前開始的那次
+  // 讀取結果，所以這裡讓 reload 等該次讀取結束再讀一次。
   let pendingReload = false;
   effect(() => {
     const status = ref.status();
@@ -118,7 +131,10 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
     untracked(() => ref.reload());
   });
   const reload = () => {
-    if (!ref.reload() && untracked(ref.status) === 'loading') pendingReload = true;
+    polling.set(false);
+    if (ref.reload()) return;
+    const status = untracked(ref.status);
+    if (status === 'loading' || status === 'reloading') pendingReload = true;
   };
-  return { value, loading, refreshing: ref.isLoading, error, reload };
+  return { value, loading, refreshing, error, reload };
 }

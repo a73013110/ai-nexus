@@ -6,6 +6,7 @@ import {
   input,
   output,
 } from '@angular/core';
+import { PendingButton } from './pending-button';
 
 /**
  * 編輯已儲存內容的設定表單底部：備註 | 還原 | 儲存。按鈕保持位置；沒有任何變更時兩者都是靜止狀態，
@@ -15,6 +16,7 @@ import {
 @Component({
   selector: 'nx-dialog-save-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PendingButton],
   host: { class: 'dialog-foot' },
   styleUrl: './dialog-save-bar.scss',
   template: `<span class="dialog-note" role="status" [class.is-dirty]="dirty() && !note()">{{
@@ -23,12 +25,19 @@ import {
     <button
       type="button"
       class="secondary-button"
-      [disabled]="!dirty() || saving()"
+      [disabled]="!dirty()"
+      [attr.aria-disabled]="saving() || null"
       (click)="undo()"
     >
       還原
     </button>
-    <button type="submit" class="primary-button" [disabled]="!dirty() || saving() || disabled()">
+    <button
+      nxPending
+      type="submit"
+      class="primary-button"
+      [pending]="saving()"
+      [disabled]="!dirty() || disabled()"
+    >
       {{ saving() ? '儲存中…' : label() }}
     </button>`,
 })
@@ -42,8 +51,9 @@ export class DialogSaveBar {
   readonly note = input('');
   readonly revert = output<void>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  /** 按鈕會自行停用，因此焦點會移到表單的第一個欄位，而不是頁面。 */
+  /** 按鈕會自行停用，因此焦點會移到表單的第一個欄位，而不是頁面。儲存中只以 aria-disabled 擋下。 */
   undo() {
+    if (this.saving()) return;
     this.revert.emit();
     this.host.nativeElement
       .closest('form')

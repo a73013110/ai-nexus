@@ -11,6 +11,18 @@
     transform: rotate(360deg);
   }
 }
+// 換頁進度線（RouteProgress）：沒有真實進度，先快後慢長到九成；減少動態時直接停在終點。
+@keyframes route-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  20% {
+    transform: scaleX(0.4);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
 // The generation matrix: each dot lifts in turn along the diagonal, so a wave crosses the grid.
 @keyframes matrix-wave {
   0%,

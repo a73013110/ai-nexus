@@ -53,6 +53,8 @@ export class AttendanceCardsStore {
   readonly cards = computed(() => this.cardsRead.value() ?? []);
   readonly cardsLoaded = computed(() => this.cardsRead.value() !== undefined);
   readonly cardsLoading = this.cardsRead.loading;
+  /** 查詢、重試與寫入後的重讀：表格淡化、查詢鈕轉圈。 */
+  readonly cardsRefreshing = this.cardsRead.refreshing;
   readonly cardsError = this.cardsRead.error;
   /** 切到未歸戶卡號時才讀。 */
   readonly showUnattributed = signal(false);
@@ -63,6 +65,7 @@ export class AttendanceCardsStore {
   });
   readonly unattributed = computed(() => this.unattributedRead.value() ?? []);
   readonly unattributedLoading = this.unattributedRead.loading;
+  readonly unattributedRefreshing = this.unattributedRead.refreshing;
   readonly unattributedError = this.unattributedRead.error;
   readonly selectedId = signal<string | null>(null);
   /** 選取的卡片；被別人刪除或不在目前篩選結果時變成 null。 */
@@ -79,9 +82,13 @@ export class AttendanceCardsStore {
     return loaded && loaded.id === this.selectedId() ? loaded.items : null;
   });
   readonly assignmentsError = this.assignmentsRead.error;
+  /** 寫入後重讀持有歷史：已有的歷史保留並淡化。 */
+  readonly assignmentsRefreshing = this.assignmentsRead.refreshing;
   /** 寫入按鈕只給有 `attendance.cards.maintain` 的人；測試身分看得到但停用（伺服器回 `test_admin_read_only`）。 */
   readonly canMaintain = computed(() => this.session.has('attendance.cards.maintain'));
   readonly busy = signal(false);
+  /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `locked` 停用。 */
+  readonly working = signal('');
   readonly actionError = signal('');
   readonly locked = computed(() => this.busy() || this.session.testing());
 
@@ -106,6 +113,7 @@ export class AttendanceCardsStore {
     const outcome = await this.write(
       () => this.api.deleteCard(card.id),
       `已刪除卡號 ${card.cardNumber}`,
+      `card:${card.id}`,
     );
     if (outcome.saved && this.selectedId() === card.id) this.selectedId.set(null);
     return outcome;
@@ -179,6 +187,7 @@ export class AttendanceCardsStore {
     return this.write(
       () => this.api.deleteAssignment(item.id),
       `已刪除 ${holderName(item)} 的持有期間`,
+      `assignment:${item.id}`,
     );
   }
 
@@ -190,10 +199,11 @@ export class AttendanceCardsStore {
   }
 
   /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */
-  private async write<T>(run: () => Promise<T>, done: string): Promise<WriteOutcome<T>> {
+  private async write<T>(run: () => Promise<T>, done: string, key = ''): Promise<WriteOutcome<T>> {
     if (this.locked()) return { saved: false, error: '' };
     const alive = this.scope.guard();
     this.busy.set(true);
+    this.working.set(key);
     try {
       const value = await run();
       if (!alive()) return { saved: false, error: '' };
@@ -206,7 +216,10 @@ export class AttendanceCardsStore {
       this.afterWrite();
       return { saved: false, error: safeMessage(error) };
     } finally {
-      if (alive()) this.busy.set(false);
+      if (alive()) {
+        this.busy.set(false);
+        this.working.set('');
+      }
     }
   }
 }

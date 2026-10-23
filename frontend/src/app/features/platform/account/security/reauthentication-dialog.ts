@@ -14,6 +14,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { AccountSecurityStore } from './account-security-store';
 import { bindSecurityDialog } from './security-dialog';
@@ -27,15 +28,23 @@ const METHODS = [
 /** 步升驗證：變更信箱或登入方式前，以目前登入方式的密碼或寄到已驗證信箱的驗證碼確認本人。 */
 @Component({
   selector: 'nx-reauthentication-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Notice, VerificationCodeField, ViewSwitch],
+  imports: [
+    CompactDialog,
+    DialogHeader,
+    Field,
+    Notice,
+    PendingButton,
+    VerificationCodeField,
+    ViewSwitch,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     size="sm"
     #dialog
     class="platform-dialog"
+    [busy]="busy()"
     (close)="store.dialog() === 'reauthenticate' && store.close()"
-    (cancel)="busy() ? $event.preventDefault() : null"
   >
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="確認是你本人" closeLabel="關閉確認身分" />
@@ -77,17 +86,35 @@ const METHODS = [
           } @else {
             <p class="form-note">驗證碼會寄到 {{ store.security()?.email }}，15 分鐘內有效。</p>
           }
-          <button type="button" class="secondary-button" [disabled]="busy()" (click)="send()">
-            {{ challenge() ? '重新寄送驗證碼' : '寄送驗證碼' }}
+          <button
+            nxPending
+            type="button"
+            class="secondary-button"
+            [pending]="working() === 'send'"
+            [disabled]="working() === 'confirm'"
+            (click)="send()"
+          >
+            {{ working() === 'send' ? '寄送中…' : challenge() ? '重新寄送驗證碼' : '寄送驗證碼' }}
           </button>
         }
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="store.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || store.close()"
+        >
           取消
         </button>
-        <button type="submit" class="primary-button" [disabled]="busy() || !ready()">
-          {{ busy() ? '確認中…' : '確認' }}
+        <button
+          nxPending
+          type="submit"
+          class="primary-button"
+          [pending]="working() === 'confirm'"
+          [disabled]="working() === 'send' || (!busy() && !ready())"
+        >
+          {{ working() === 'confirm' ? '確認中…' : '確認' }}
         </button>
       </footer>
     </form>
@@ -105,7 +132,9 @@ export class ReauthenticationDialog {
   readonly password = signal('');
   readonly code = signal('');
   readonly challenge = signal<VerificationCodeDto | null>(null);
-  readonly busy = signal(false);
+  /** 進行中的動作：寄送驗證碼或確認身分；只讓按下的那顆轉。 */
+  readonly working = signal<'' | 'send' | 'confirm'>('');
+  readonly busy = computed(() => this.working() !== '');
   readonly error = signal('');
   readonly ready = computed(() =>
     this.method() === 'password'
@@ -124,7 +153,8 @@ export class ReauthenticationDialog {
   }
 
   async send() {
-    this.busy.set(true);
+    if (this.busy()) return;
+    this.working.set('send');
     this.error.set('');
     try {
       this.challenge.set(await this.store.sendCode());
@@ -132,14 +162,14 @@ export class ReauthenticationDialog {
     } catch (error) {
       this.error.set(safeMessage(error));
     } finally {
-      this.busy.set(false);
+      this.working.set('');
     }
   }
 
   async submit(event: Event) {
     event.preventDefault();
     if (this.busy() || !this.ready()) return;
-    this.busy.set(true);
+    this.working.set('confirm');
     this.error.set('');
     try {
       const challenge = this.challenge();
@@ -151,7 +181,7 @@ export class ReauthenticationDialog {
     } catch (error) {
       this.error.set(safeMessage(error));
     } finally {
-      this.busy.set(false);
+      this.working.set('');
     }
   }
 }

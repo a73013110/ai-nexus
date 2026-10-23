@@ -3,6 +3,7 @@
   size="lg"
   #dialog
   class="platform-dialog price-dialog"
+  [busy]="saving()"
   (cancel)="cancel($event)"
 >
   <form class="dialog-form" (submit)="save($event)">
@@ -150,7 +151,7 @@
         label="新增價格版本"
         [dirty]="dirty()"
         [saving]="saving()"
-        [disabled]="!canSave()"
+        [disabled]="!canSave() && !saving()"
         [note]="note()"
         (revert)="revert()"
       />

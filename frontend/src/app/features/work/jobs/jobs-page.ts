@@ -18,6 +18,7 @@ import { formatDate, relativeTime } from '@shared/browser/format';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Icon } from '@shared/ui/icon';
 import { JobProgress } from './job-progress';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ResourceTarget } from '@shared/ui/resource-target';
 import { JobsApi } from './jobs-api';
 import { jobKindIcon, jobKindName } from './job-kind';
@@ -39,6 +40,7 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
     FeaturePage,
     Icon,
     JobProgress,
+    PendingButton,
     RouterLink,
     ResourceTarget,
   ],
@@ -52,7 +54,15 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
   >
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button
+          notice-actions
+          nxPending
+          type="button"
+          [pending]="jobs.refreshing()"
+          (click)="reload()"
+        >
+          {{ jobs.refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     <nx-resource-gallery
@@ -62,6 +72,7 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
       [filters]="filterOptions"
       [filter]="filter()"
       [loading]="jobs.loading()"
+      [busy]="jobs.refreshing()"
       [empty]="!visible().length"
       (searchChange)="term.set($event)"
       (filterChange)="filter.set($event)"
@@ -104,19 +115,24 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
             }
             @if (canStop(job)) {
               <button
+                nxPending
+                type="button"
                 class="quiet-button job-control"
-                [disabled]="busy() === job.id || job.cancelRequested"
+                [pending]="busy().has(job.id)"
+                [disabled]="job.cancelRequested && !busy().has(job.id)"
                 (click)="act(job, false)"
               >
-                <nx-icon name="stop" />停止處理
+                <nx-icon name="stop" />{{ busy().has(job.id) ? '停止中…' : '停止處理' }}
               </button>
             } @else if (canRetry(job)) {
               <button
+                nxPending
+                type="button"
                 class="quiet-button job-control"
-                [disabled]="busy() === job.id"
+                [pending]="busy().has(job.id)"
                 (click)="act(job, true)"
               >
-                <nx-icon name="repeat" />重試
+                <nx-icon name="repeat" />{{ busy().has(job.id) ? '重試中…' : '重試' }}
               </button>
             }
           </div>
@@ -162,7 +178,8 @@ export class JobsPage {
   readonly filter = signal(this.target() ? 'all' : 'active');
   private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.jobs.error());
-  readonly busy = signal<string | null>(null);
+  /** 送出停止或重試中的任務：只有那張卡片的按鈕轉圈，其他卡片照常可操作。 */
+  readonly busy = signal<ReadonlySet<string>>(new Set());
   readonly filterOptions = [
     { value: 'active', label: '處理中' },
     { value: 'all', label: '全部' },
@@ -216,9 +233,9 @@ export class JobsPage {
     this.jobs.reload();
   }
   async act(job: JobDto, retry: boolean) {
-    if (this.busy()) return;
+    if (this.busy().has(job.id)) return;
     const valid = this.scope.guard();
-    this.busy.set(job.id);
+    this.busy.update((ids) => new Set(ids).add(job.id));
     this.actionError.set('');
     try {
       const value = await this.jobToasts.control(job.id, retry);
@@ -229,7 +246,12 @@ export class JobsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(null);
+      if (valid())
+        this.busy.update((ids) => {
+          const next = new Set(ids);
+          next.delete(job.id);
+          return next;
+        });
     }
   }
   readonly kind = jobKindName;

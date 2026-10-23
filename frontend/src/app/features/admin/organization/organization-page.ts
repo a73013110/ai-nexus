@@ -17,6 +17,7 @@ import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import type { UnitImportResultDto } from '@core/api/schema';
@@ -43,6 +44,7 @@ import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
     Icon,
     MenuPanel,
     Notice,
+    PendingButton,
     SearchField,
     StatusBadge,
     UnitDialog,
@@ -68,6 +70,8 @@ export class OrganizationPage {
   readonly people = directorySearch(() => (this.store.members() ?? []).map((m) => m.userId), {
     includeSelf: true,
   });
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [72, 56, 64, 48, 60];
   /** 開啟操作選單的那一列。 */
   private readonly menuRow = signal<UnitRow | null>(null);
   readonly actions = computed<MenuAction[]>(() => {
@@ -156,10 +160,22 @@ export class OrganizationPage {
     if (await this.store.saveMember(user.id, false, false, true)) this.people.clear();
   }
   setPrimary(member: UnitMemberDto, value: boolean) {
-    void this.store.saveMember(member.userId, value, member.isManager);
+    void this.store.saveMember(
+      member.userId,
+      value,
+      member.isManager,
+      false,
+      `primary:${member.userId}`,
+    );
   }
   setManager(member: UnitMemberDto, value: boolean) {
-    void this.store.saveMember(member.userId, member.isPrimary, value);
+    void this.store.saveMember(
+      member.userId,
+      member.isPrimary,
+      value,
+      false,
+      `manager:${member.userId}`,
+    );
   }
   async removeMember(member: UnitMemberDto) {
     const unit = this.store.selected();

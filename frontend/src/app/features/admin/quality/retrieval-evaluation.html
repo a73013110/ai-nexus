@@ -5,12 +5,20 @@
 >
   @if (error()) {
     <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="load()">重試</button></nx-notice
+      ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="load()">
+        {{ refreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
     >
   }
   <div class="retrieval-layout">
-    @if (runs().length) {
-      <nx-panel class="retrieval-reports" heading="評測報告" icon="chart" [count]="runs().length">
+    <!-- 紀錄清單讀取中先佔好報告面板的位置，回來後才不會把右側表單整個推開。 -->
+    @if (runs().length || runsLoading()) {
+      <nx-panel
+        class="retrieval-reports"
+        heading="評測報告"
+        icon="chart"
+        [count]="runs().length || null"
+      >
         <ng-container panel-actions>
           <nx-select
             appearance="pill"
@@ -19,11 +27,13 @@
             [value]="report()?.run?.id || ''"
             (valueChange)="select($event)"
           /><button
+            nxPending
             type="button"
             class="icon-button"
-            aria-label="下載指標報告"
+            [attr.aria-label]="working() === 'download' ? '下載中…' : '下載指標報告'"
             title="下載指標報告"
-            [disabled]="busy() || !report()"
+            [pending]="working() === 'download'"
+            [disabled]="(busy() && working() !== 'download') || !report()"
             (click)="download()"
           >
             <nx-icon name="download" />
@@ -32,17 +42,25 @@
         @if (report(); as report) {
           <nx-job-progress [job]="report.run.job">
             @if (active(report.run.job.status)) {
-              <button class="quiet-button" [disabled]="busy()" (click)="control('cancel')">
-                取消評測
+              <button
+                nxPending
+                class="quiet-button"
+                [pending]="working() === 'cancel'"
+                [disabled]="busy() && working() !== 'cancel'"
+                (click)="control('cancel')"
+              >
+                {{ working() === 'cancel' ? '取消中…' : '取消評測' }}
               </button>
             }
             @if (report.run.job.status === 'failed' || report.run.job.status === 'cancelled') {
               <button
+                nxPending
                 class="quiet-button"
-                [disabled]="busy() || session.testing()"
+                [pending]="working() === 'retry'"
+                [disabled]="(busy() && working() !== 'retry') || session.testing()"
                 (click)="control('retry')"
               >
-                <nx-icon name="repeat" />續跑評測
+                <nx-icon name="repeat" />{{ working() === 'retry' ? '續跑中…' : '續跑評測' }}
               </button>
             }
           </nx-job-progress>
@@ -140,7 +158,10 @@
             </div>
           </details>
         } @else {
-          <span class="skeleton report-skeleton" role="status" aria-label="正在載入評測報告"></span>
+          <div role="status">
+            <span class="skeleton report-skeleton"></span>
+            <span class="sr-only">正在載入評測報告…</span>
+          </div>
         }
       </nx-panel>
     }
@@ -168,7 +189,10 @@
         <fieldset class="retrieval-collections">
           <legend>選擇知識庫（最多三個）</legend>
           @if (loading()) {
-            <span class="skeleton choice-skeleton" role="status" aria-label="正在載入知識庫"></span>
+            <div role="status">
+              <span class="skeleton choice-skeleton"></span>
+              <span class="sr-only">正在載入知識庫…</span>
+            </div>
           }
           @for (collection of collections(); track collection.resource.id) {
             <nx-checkbox
@@ -203,11 +227,18 @@
         </details>
         <div class="page-actions">
           <button
+            nxPending
             type="submit"
             class="primary-button retrieval-start"
-            [disabled]="busy() || form.invalid || !selected().length || session.testing()"
+            [pending]="working() === 'start'"
+            [disabled]="
+              (busy() && working() !== 'start') ||
+              form.invalid ||
+              !selected().length ||
+              session.testing()
+            "
           >
-            <nx-icon name="play" />開始四模式評測
+            <nx-icon name="play" />{{ working() === 'start' ? '排入中…' : '開始四模式評測' }}
           </button>
         </div>
       </form>

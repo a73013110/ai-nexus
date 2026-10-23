@@ -72,6 +72,11 @@
   letter-spacing: -0.02em;
   line-height: 1.3;
 }
+.summary-skeleton {
+  width: 4rem;
+  height: 1.25rem;
+  align-self: center;
+}
 .summary-stat em {
   color: var(--muted);
   font-size: var(--text-caption);

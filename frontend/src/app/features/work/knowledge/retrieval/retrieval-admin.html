@@ -14,7 +14,9 @@
 </div>
 @if (error()) {
   <nx-notice [message]="error()"
-    ><button notice-actions type="button" (click)="load()">重新載入</button>
+    ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="load()">
+      {{ refreshing() ? '重新載入中…' : '重新載入' }}
+    </button>
   </nx-notice>
 }
 <nx-data-table
@@ -93,38 +95,52 @@
               @switch (profile.status) {
                 @case ('building') {
                   <button
+                    nxPending
                     type="button"
                     class="primary-button retrieval-activate"
-                    [disabled]="working() || session.testing() || !profile.coverage.complete"
+                    [pending]="isWorking(profile, 'activate')"
+                    [disabled]="
+                      blocked(profile, 'activate') ||
+                      session.testing() ||
+                      !profile.coverage.complete
+                    "
                     [title]="
                       profile.coverage.complete ? '' : '覆蓋率達 100% 且文件全部就緒後才能啟用'
                     "
                     (click)="operate(profile, 'activate')"
                   >
-                    啟用索引
+                    {{ isWorking(profile, 'activate') ? '啟用中…' : '啟用索引' }}
                   </button>
                 }
                 @case ('retired') {
                   <button
+                    nxPending
                     type="button"
                     class="danger-button retrieval-clear"
+                    [pending]="isWorking(profile, 'clear')"
                     [disabled]="
-                      working() || session.testing() || profile.coverage.completedChunks === 0
+                      blocked(profile, 'clear') ||
+                      session.testing() ||
+                      profile.coverage.completedChunks === 0
                     "
                     (click)="operate(profile, 'clear')"
                   >
-                    清除退役向量
+                    {{ isWorking(profile, 'clear') ? '清除中…' : '清除退役向量' }}
                   </button>
                 }
               }
               @if (profile.status !== 'retired') {
                 <button
+                  nxPending
                   type="button"
                   class="secondary-button retrieval-rebuild"
-                  [disabled]="working() || session.testing() || jobActive(profile)"
+                  [pending]="isWorking(profile, 'rebuild')"
+                  [disabled]="
+                    blocked(profile, 'rebuild') || session.testing() || jobActive(profile)
+                  "
                   (click)="operate(profile, 'rebuild')"
                 >
-                  開始重建
+                  {{ isWorking(profile, 'rebuild') ? '重建中…' : '開始重建' }}
                 </button>
               }
             </div>
@@ -136,8 +152,9 @@
   <nx-table-state
     [count]="profiles().length"
     [loading]="profilesRead.loading()"
+    [retrying]="profilesRead.refreshing()"
     [error]="profilesRead.error()"
-    loadingText="正在讀取檢索索引"
+    loadingText="正在載入檢索索引…"
     errorTitle="無法載入檢索索引"
     emptyTitle="尚未建立檢索索引"
     emptyText="第一次處理知識庫文件時會建立。"
@@ -155,15 +172,15 @@
   </div>
   <button
     table-actions
+    nxPending
     type="button"
     class="quiet-button retrieval-probe"
     title="驗證只傳送合成資料，會計入檢索模型呼叫配額"
-    [disabled]="probing() || session.testing() || !capabilities().length"
+    [pending]="probing()"
+    [disabled]="!probing() && (session.testing() || !capabilities().length)"
     (click)="probe()"
   >
-    <nx-icon [name]="probing() ? 'loading' : 'check'" />{{
-      probing() ? '正在驗證…' : '驗證檢索模型'
-    }}
+    <nx-icon name="check" />{{ probing() ? '驗證中…' : '驗證檢索模型' }}
   </button>
   <table>
     <colgroup>
@@ -200,8 +217,9 @@
   <nx-table-state
     [count]="capabilities().length"
     [loading]="capabilitiesRead.loading()"
+    [retrying]="capabilitiesRead.refreshing()"
     [error]="capabilitiesRead.error()"
-    loadingText="正在讀取服務能力"
+    loadingText="正在載入服務能力…"
     errorTitle="無法載入服務能力"
     emptyTitle="沒有服務能力資料"
     (retry)="capabilitiesRead.reload()"
@@ -219,6 +237,12 @@
         <p class="form-note">最多 {{ limit }} 個，已選 {{ selected().length }} 個。</p>
       </header>
       <div class="form-section-body retrieval-collections">
+        @if (collectionsLoading()) {
+          <span class="sr-only" role="status">正在載入知識庫…</span>
+          @for (slot of [0, 1, 2]; track slot) {
+            <span class="skeleton retrieval-collection-skeleton"></span>
+          }
+        }
         @for (collection of collections(); track collection.resource.id) {
           <nx-checkbox
             [label]="collection.resource.name"
@@ -227,7 +251,9 @@
             (checkedChange)="select(collection.resource.id, $event)"
           />
         } @empty {
-          <p class="form-note">目前沒有可存取的知識庫。</p>
+          @if (!collectionsLoading()) {
+            <p class="form-note">目前沒有可存取的知識庫。</p>
+          }
         }
       </div>
     </section>
@@ -270,13 +296,13 @@
         </label>
         <div class="retrieval-submit">
           <button
+            nxPending
             type="submit"
             class="primary-button"
-            [disabled]="form.invalid || !selected().length || searching()"
+            [pending]="searching()"
+            [disabled]="form.invalid || !selected().length"
           >
-            <nx-icon [name]="searching() ? 'loading' : 'search'" />{{
-              searching() ? '正在檢索…' : '測試檢索'
-            }}
+            <nx-icon name="search" />{{ searching() ? '檢索中…' : '測試檢索' }}
           </button>
         </div>
       </div>
@@ -286,6 +312,8 @@
     <div class="retrieval-result">
       <nx-retrieval-results [result]="result" />
     </div>
+  } @else if (searching()) {
+    <p class="form-note retrieval-result" role="status"><nx-icon name="loading" />正在檢索來源…</p>
   }
 </section>
 <nx-confirm-dialog />

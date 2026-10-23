@@ -101,8 +101,8 @@ test("model selector reports loading before enabling installed models", async ({
   await page.goto("/work/chat");
   const model = page.getByRole("combobox", { name: "選擇模型" });
   try {
-    await expect(model).toContainText("正在載入模型…");
-    await expect(model).toBeDisabled();
+    await expect(model).toContainText("正在載入…");
+    await expect(model).toHaveAttribute("aria-busy", "true");
   } finally {
     release();
   }

@@ -62,6 +62,16 @@
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
+// 送出中（自己或外層的 aria-busy，例如 nx-choice-groups）：仍可聚焦，只是暫不接受切換。
+.selection-control.is-pending,
+:host-context([aria-busy='true']) .selection-control:not(.is-disabled) {
+  cursor: progress;
+}
+.selection-pending {
+  --icon-size: var(--icon-sm);
+  margin-inline-start: auto;
+  color: var(--secondary);
+}
 .selection-control.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;

@@ -84,3 +84,8 @@
     height: 0.625rem;
   }
 }
+// 載入中佔住格子的位置：七列、每週一欄的比例，資料到了版面不跳。
+.heatmap-skeleton {
+  aspect-ratio: var(--weeks) / 7;
+  border-radius: var(--radius-block);
+}

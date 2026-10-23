@@ -4,7 +4,7 @@
   #dialog
   class="platform-dialog directory-import-dialog"
   (close)="closed()"
-  (cancel)="busy() ? $event.preventDefault() : null"
+  [busy]="busy()"
 >
   <nx-dialog-header
     heading="從 AD 匯入使用者"
@@ -80,13 +80,20 @@
         } @else {
           <p class="dialog-note">{{ footNote() }}</p>
         }
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || dialog.close()"
+        >
           取消
         </button>
         <button
+          nxPending
           type="button"
           class="primary-button directory-preview"
-          [disabled]="busy() || !store.selection().size"
+          [pending]="busy()"
+          [disabled]="!store.selection().size"
           (click)="preview()"
         >
           {{
@@ -112,6 +119,7 @@
         <nx-stat-grid
           class="directory-summary"
           [label]="step() === 'preview' ? '匯入預覽摘要' : '匯入結果摘要'"
+          [busy]="task() === 'preview'"
         >
           <nx-stat-tile
             [label]="step() === 'preview' ? '新增' : '已新增'"
@@ -138,7 +146,8 @@
             label="仍要匯入 AD 已停用的帳號"
             description="例如帳號先建好、到職才啟用的人；匯入後仍無法以 AD 登入，直到 AD 啟用。"
             [checked]="includeDisabled()"
-            [disabled]="busy()"
+            [disabled]="task() === 'import'"
+            [pending]="task() === 'preview'"
             (checkedChange)="preview($event)"
           />
         }
@@ -146,6 +155,7 @@
           [label]="step() === 'preview' ? '匯入預覽' : '匯入結果'"
           [items]="outcomes()"
           [known]="store.selection()"
+          [busy]="task() === 'preview'"
         />
       </div>
       <footer class="dialog-foot">
@@ -157,16 +167,23 @@
                 : '沒有需要寫入的人。'
             }}
           </p>
-          <button type="button" class="secondary-button" [disabled]="busy()" (click)="back()">
+          <button
+            type="button"
+            class="secondary-button"
+            [attr.aria-disabled]="busy() || null"
+            (click)="busy() || back()"
+          >
             返回選取
           </button>
           <button
+            nxPending
             type="button"
             class="primary-button directory-confirm"
-            [disabled]="busy() || !pending()"
+            [pending]="task() === 'import'"
+            [disabled]="!pending() || task() === 'preview'"
             (click)="confirm()"
           >
-            {{ busy() ? '匯入中…' : '確認匯入（' + pending() + ' 人）' }}
+            {{ task() === 'import' ? '匯入中…' : '確認匯入（' + pending() + ' 人）' }}
           </button>
         } @else {
           <p class="dialog-note" role="status">{{ summary() }}</p>

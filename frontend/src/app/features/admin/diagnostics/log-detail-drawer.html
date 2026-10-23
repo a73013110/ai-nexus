@@ -30,14 +30,28 @@
     tabindex="0"
     [id]="detailTabs.panelId(detailTab())"
     [attr.aria-labelledby]="detailTabs.tabId(detailTab())"
+    [class.is-refreshing]="detailLoading() && !!detail()"
+    [attr.aria-busy]="detailLoading() || null"
   >
-    @if (detailLoading()) {
-      <p class="ui-panel-note" role="status">正在載入診斷詳情…</p>
+    @if (detailLoading() && !detail() && !detailError()) {
+      <div class="log-skeleton" role="status">
+        @for (width of skeleton; track $index) {
+          <span class="skeleton" [style.width.%]="width"></span>
+        }
+        <span class="sr-only">正在載入診斷詳情…</span>
+      </div>
     }
     @if (detailError()) {
       <nx-notice [message]="detailError()"
-        ><button notice-actions type="button" class="secondary-button" (click)="reloadDetail()">
-          重新載入詳情
+        ><button
+          notice-actions
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="detailLoading()"
+          (click)="reloadDetail()"
+        >
+          {{ detailLoading() ? '重新載入中…' : '重新載入詳情' }}
         </button>
       </nx-notice>
     }
@@ -181,8 +195,13 @@
     }
     @if (detailTab() === 'timeline') {
       <p class="ui-panel-note">依時間由舊到新 · 本次查詢範圍內最多 50 筆</p>
-      @if (relatedLoading()) {
-        <p role="status">正在載入關聯流程…</p>
+      @if (relatedLoading() && !related().length) {
+        <div class="log-skeleton" role="status">
+          @for (width of skeleton; track $index) {
+            <span class="skeleton" [style.width.%]="width"></span>
+          }
+          <span class="sr-only">正在載入關聯流程…</span>
+        </div>
       }
       @if (relatedError()) {
         <nx-notice tone="danger" [message]="relatedError()" />

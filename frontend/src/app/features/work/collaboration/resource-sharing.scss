@@ -38,3 +38,13 @@
     flex-basis: calc(100% - 3rem);
   }
 }
+.acl-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+}
+.acl-skeleton .skeleton {
+  height: 2.75rem;
+}
+.acl-skeleton .is-field {
+  height: 4rem;
+}

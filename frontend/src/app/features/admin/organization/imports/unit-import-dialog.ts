@@ -15,6 +15,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { OrganizationApi } from '../organization-api';
 import { unitImportTour } from '../organization-tour';
@@ -34,13 +35,14 @@ import {
  */
 @Component({
   selector: 'nx-unit-import-dialog',
-  imports: [CompactDialog, DialogHeader, Notice, StatusBadge],
+  imports: [CompactDialog, DialogHeader, Notice, PendingButton, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     #importDialog
     class="platform-dialog"
     size="lg"
+    [busy]="applying()"
     (cancel)="cancel($event)"
   >
     <nx-dialog-header
@@ -49,16 +51,28 @@ import {
       [detail]="detail()"
       [tour]="tour()"
     />
-    <div class="dialog-body" [attr.aria-busy]="loading()">
+    <div class="dialog-body" [attr.aria-busy]="loading() || null">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()"
-          ><button notice-actions type="button" [disabled]="busy()" (click)="refresh()">
-            重新預覽
+          ><button
+            notice-actions
+            nxPending
+            type="button"
+            [pending]="loading()"
+            [disabled]="applying()"
+            (click)="refresh()"
+          >
+            {{ loading() ? '預覽中…' : '重新預覽' }}
           </button></nx-notice
         >
       }
-      @if (loading()) {
-        <p role="status" class="form-note">正在讀取公文系統的部門與主管…</p>
+      @if (loading() && !error()) {
+        <div class="import-skeleton" role="status">
+          @for (width of skeleton; track $index) {
+            <span class="skeleton" [style.width.%]="width"></span>
+          }
+          <span class="sr-only">正在載入公文系統的部門與主管…</span>
+        </div>
       } @else if (preview(); as p) {
         @let n = counts()!;
         <ul class="import-summary" aria-label="變動摘要">
@@ -171,13 +185,20 @@ import {
       @if (session.testing()) {
         <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
       }
-      <button type="button" class="secondary-button" [disabled]="applying()" (click)="close()">
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="applying() || null"
+        (click)="close()"
+      >
         取消
       </button>
       <button
+        nxPending
         type="button"
         class="primary-button unit-import-apply"
-        [disabled]="!canApply()"
+        [pending]="applying()"
+        [disabled]="!canApply() && !applying()"
         (click)="apply()"
       >
         {{ applying() ? '匯入中…' : '套用匯入' }}
@@ -185,6 +206,13 @@ import {
     </footer>
   </dialog>`,
   styles: `
+    .import-skeleton {
+      display: grid;
+      gap: var(--p-space-3);
+    }
+    .import-skeleton .skeleton {
+      height: 2.25rem;
+    }
     .import-summary {
       display: flex;
       flex-wrap: wrap;
@@ -241,6 +269,8 @@ export class UnitImportDialog {
   readonly applying = signal(false);
   readonly error = signal('');
   readonly busy = computed(() => this.loading() || this.applying());
+  /** 骨架列的寬度（%）：先是摘要，再是逐筆變動。 */
+  protected readonly skeleton = [60, 100, 100, 100, 100];
   readonly counts = computed(() => {
     const preview = this.preview();
     return preview ? importCounts(preview) : null;

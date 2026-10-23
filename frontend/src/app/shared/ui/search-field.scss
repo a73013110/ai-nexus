@@ -39,6 +39,9 @@
   color: var(--muted);
   --icon-size: var(--icon-lg);
 }
+.search-field > nx-icon.is-busy {
+  color: var(--secondary);
+}
 // A bare search fills its bar; the bar's hairline and the caret mark the field.
 :host(.search-bare) {
   width: 100%;

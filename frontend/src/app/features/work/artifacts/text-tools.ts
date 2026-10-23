@@ -21,6 +21,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { InferenceSignal } from '@shared/ui/inference-signal';
 import { formatNumber } from '@shared/browser/format';
@@ -38,6 +39,7 @@ import { routeOf } from '@core/api/catalog';
     MarkdownEditor,
     Field,
     Icon,
+    PendingButton,
     ViewSwitch,
     InferenceSignal,
   ],
@@ -50,6 +52,7 @@ import { routeOf } from '@core/api/catalog';
     #surface="nxCompactDialog"
     #dialog
     class="platform-dialog text-tools-dialog"
+    [busy]="saving()"
     (cancel)="cancel($event)"
   >
     <nx-dialog-header
@@ -89,6 +92,7 @@ import { routeOf } from '@core/api/catalog';
                 aria-label="成果名稱"
                 maxlength="120"
                 required
+                [readOnly]="saving()"
                 [value]="title()"
                 (input)="title.set($any($event.target).value)" /></label
             ><nx-markdown-editor
@@ -100,13 +104,20 @@ import { routeOf } from '@core/api/catalog';
             />
           </div>
           <footer class="dialog-foot">
-            <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
+            <button
+              type="button"
+              class="secondary-button"
+              [attr.aria-disabled]="saving() || null"
+              (click)="close()"
+            >
               取消</button
             ><button
+              nxPending
               class="primary-button"
-              [disabled]="saving() || !title().trim() || !result().trim()"
+              [pending]="saving()"
+              [disabled]="!title().trim() || !result().trim()"
             >
-              {{ saving() ? '正在儲存…' : '儲存並開啟' }}
+              {{ saving() ? '儲存中…' : '儲存並開啟' }}
             </button>
           </footer>
         </form>

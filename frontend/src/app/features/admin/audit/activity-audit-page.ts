@@ -35,6 +35,7 @@ import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
@@ -82,6 +83,7 @@ interface AuditPageRequest {
     Field,
     Icon,
     Notice,
+    PendingButton,
     QueryBar,
     RouterLink,
     Select,
@@ -153,6 +155,9 @@ export class ActivityAuditPage {
   readonly loading = computed(() => this.catalogRead.loading() || this.pageRead.refreshing());
   readonly readError = computed(() => this.pageRead.error());
   readonly catalogError = this.catalogRead.error;
+  /** 動作選項來自目錄：讀到前選單顯示「正在載入」，不先只給「所有動作」。 */
+  readonly catalogLoading = this.catalogRead.loading;
+  readonly catalogRefreshing = this.catalogRead.refreshing;
   readonly exporting = signal(false);
   readonly exportError = signal('');
   readonly selectedId = signal<number | null>(null);
@@ -171,8 +176,10 @@ export class ActivityAuditPage {
       ...auditOutcome(entry),
       date: formatDate(entry.at),
       action: auditAction(entry.action),
-      category:
-        this.categories().find((item) => item.value === entry.category)?.label || '功能操作',
+      // 目錄還沒讀到時先留白，不先顯示可能錯誤的「功能操作」。
+      category: this.catalog()
+        ? this.categories().find((item) => item.value === entry.category)?.label || '功能操作'
+        : '',
       context: auditContext(entry.detailsJson),
       logs: auditLogQuery(entry),
       resource: auditResource(entry.detailsJson),

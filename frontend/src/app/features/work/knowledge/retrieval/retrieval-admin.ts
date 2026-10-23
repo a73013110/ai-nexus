@@ -29,6 +29,7 @@ import { DataTable, TableState } from '@shared/ui/data-table';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ToastService } from '@shared/ui/toast-service';
@@ -70,6 +71,7 @@ const BENCH_COLLECTIONS = 3;
     Icon,
     JobProgress,
     Notice,
+    PendingButton,
     ReactiveFormsModule,
     RetrievalResults,
     Select,
@@ -110,7 +112,15 @@ export class RetrievalAdmin {
   });
   readonly limit = BENCH_COLLECTIONS;
   readonly result = signal<KnowledgeSearchDto | null>(null);
-  readonly working = signal(false);
+  /** 進行中的索引操作（索引 id 與動作）：只有按下的那顆按鈕轉圈，其他操作等它完成。 */
+  readonly working = signal<{ id: number; action: ProfileAction } | null>(null);
+  readonly collectionsLoading = this.collectionsRead.loading;
+  readonly refreshing = computed(
+    () =>
+      this.profilesRead.refreshing() ||
+      this.capabilitiesRead.refreshing() ||
+      this.collectionsRead.refreshing(),
+  );
   readonly probing = signal(false);
   readonly searching = signal(false);
   readonly actionError = signal('');
@@ -160,7 +170,7 @@ export class RetrievalAdmin {
   async operate(profile: EmbeddingProfileDto, action: ProfileAction) {
     if (this.working() || !(await this.confirmation().ask(confirmations[action](profile)))) return;
     const guard = this.scope.guard();
-    this.working.set(true);
+    this.working.set({ id: profile.id, action });
     this.actionError.set('');
     try {
       if (action === 'clear') await this.api.clearProfileVectors(profile.id);
@@ -174,8 +184,16 @@ export class RetrievalAdmin {
     } catch (error) {
       if (guard()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (guard()) this.working.set(false);
+      if (guard()) this.working.set(null);
     }
+  }
+  isWorking(profile: EmbeddingProfileDto, action: ProfileAction) {
+    const working = this.working();
+    return working?.id === profile.id && working.action === action;
+  }
+  /** 其他操作進行中時擋下；按下的那顆由 `nxPending` 自己擋，不停用（焦點才不會掉）。 */
+  blocked(profile: EmbeddingProfileDto, action: ProfileAction) {
+    return !!this.working() && !this.isWorking(profile, action);
   }
   async probe() {
     if (this.probing()) return;

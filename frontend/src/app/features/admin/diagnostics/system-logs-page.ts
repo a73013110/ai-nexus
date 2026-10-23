@@ -33,6 +33,7 @@ import {
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
@@ -74,6 +75,7 @@ interface LogPageRequest {
     Icon,
     LogDetailDrawer,
     Notice,
+    PendingButton,
     QueryBar,
     RouterLink,
     Select,

@@ -110,6 +110,10 @@
   color: var(--accent);
   --icon-size: var(--icon-xl);
 }
+.review-skeleton {
+  display: grid;
+  gap: var(--p-space-2);
+}
 .row-skeleton {
   display: block;
   height: 3.75rem;

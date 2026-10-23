@@ -290,7 +290,7 @@ test("組織頁以樹狀列出單位，可新增下層、排序並維護成員",
     .getByRole("dialog", { name: "刪除「資訊處」？" })
     .getByRole("button", { name: "刪除" })
     .click();
-  await expect(page.getByText(/仍有下層單位或成員/)).toBeVisible();
+  await expect(page.getByText(/單位仍有下層單位或成員/)).toBeVisible();
 
   // 移出成員需確認。
   await row.getByRole("button", { name: "將 王小明 移出單位" }).click();

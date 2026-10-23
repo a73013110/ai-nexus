@@ -3,6 +3,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { isLoginMethod, LOGIN_METHODS } from '@features/admin/identity/login-methods';
 import { formatDate } from '@shared/browser/format';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AccountSecurityStore } from '../security/account-security-store';
@@ -13,13 +14,24 @@ import { AccountSecurityStore } from '../security/account-security-store';
  */
 @Component({
   selector: 'nx-account-sign-in',
-  imports: [ConfirmDialog, SettingGroup, SettingRow, StatusBadge],
+  imports: [ConfirmDialog, PendingButton, SettingGroup, SettingRow, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .sign-in-method {
       color: var(--secondary);
       font-size: var(--text-caption);
       white-space: nowrap;
+    }
+    .row-skeleton {
+      display: grid;
+      gap: var(--p-space-2);
+      padding-block: var(--p-space-3);
+    }
+    .row-skeleton .skeleton {
+      height: 0.875rem;
+    }
+    .row-skeleton .skeleton + .skeleton {
+      width: 60%;
     }
   `,
   template: `<nx-setting-group heading="登入方式">
@@ -37,9 +49,22 @@ import { AccountSecurityStore } from '../security/account-security-store';
             </button>
           }
           @if (store.editable() && security.localLogin.enabled && !security.localLogin.required) {
-            <button type="button" class="secondary-button" (click)="disable()">停用</button>
+            <button
+              nxPending
+              type="button"
+              class="secondary-button"
+              [pending]="store.disabling()"
+              (click)="disable()"
+            >
+              {{ store.disabling() ? '停用中…' : '停用' }}
+            </button>
           }
         </nx-setting-row>
+      } @else if (store.loading()) {
+        <div class="row-skeleton" role="status">
+          <span class="skeleton"></span><span class="skeleton"></span>
+          <span class="sr-only">正在載入本地登入狀態…</span>
+        </div>
       }
       @if (session.testing()) {
         <nx-setting-row

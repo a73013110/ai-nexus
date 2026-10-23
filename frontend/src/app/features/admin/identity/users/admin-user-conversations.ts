@@ -16,6 +16,7 @@ import { TablePagination } from '@shared/ui/data-table';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { RunTimingDisplay } from '@features/work/conversations/run-timing';
@@ -33,6 +34,7 @@ import { UserConversationReader } from './user-conversation-reader';
     Icon,
     MarkdownView,
     Notice,
+    PendingButton,
     RunTimingDisplay,
     SearchField,
     StatusBadge,
@@ -47,6 +49,8 @@ export class AdminUserConversations {
   readonly date = formatDate;
   readonly format = formatNumber;
   readonly bytes = formatBytes;
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [88, 64, 80, 56, 72];
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
   private readonly narrow = mediaQuery(below('narrow'));

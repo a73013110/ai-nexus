@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
+import { DashboardStore } from '../dashboard-store';
 import { DashboardLayout } from './dashboard-layout';
 import { DashboardTile } from './dashboard-tile';
 
@@ -46,6 +47,7 @@ const SCROLL_SPEED = 18;
         <nx-dashboard-tile
           [tile]="tile"
           [editing]="layout.editing()"
+          [busy]="store.refreshing()"
           [class.is-dragging]="dragging() === tile.id"
           [style.animation-delay.ms]="$index * 45"
           (grab)="grab($event, tile.id)"
@@ -60,6 +62,7 @@ const SCROLL_SPEED = 18;
 })
 export class DashboardBoard {
   readonly layout = inject(DashboardLayout);
+  readonly store = inject(DashboardStore);
   private readonly app = inject(ApplicationRef);
   private readonly theme = inject(ThemeService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

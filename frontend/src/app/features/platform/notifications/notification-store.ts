@@ -17,7 +17,15 @@ export class NotificationStore {
   readonly items = signal<NotificationDto[]>([]);
   readonly unread = signal(0);
   readonly hasMore = signal(false);
+  /**
+   * 使用者感覺得到的讀取：開啟、手動重讀、切換只看未讀、寫入後重讀。輪詢不設它，
+   * 背景更新才不會每 8 秒讓重讀鈕轉圈、讓列表淡化。
+   */
   readonly loading = signal(false);
+  /** 「載入更早的通知」進行中；只讓那顆按鈕轉，列表不淡化。 */
+  readonly loadingMore = signal(false);
+  /** 進行中的寫入：`read:<id>`、`dismiss:<id>` 或 `all`，只讓按下的那顆轉。 */
+  readonly working = signal<ReadonlySet<string>>(new Set());
   readonly error = signal('');
   readonly opened = signal(false);
   readonly unreadOnly = signal(false);
@@ -65,6 +73,8 @@ export class NotificationStore {
         this.unreadOnly.set(false);
         this.view.set('inbox');
         this.loading.set(false);
+        this.loadingMore.set(false);
+        this.working.set(new Set());
         this.error.set('');
         this.seen.clear();
         this.primed = false;
@@ -94,12 +104,14 @@ export class NotificationStore {
   }
   async refresh(more = false, poll = false) {
     if (!this.owner) return;
+    // 使用者觸發的讀取還在途中就跳過這次輪詢：輪詢會中止它，那次讀取的轉圈與結果都會被吞掉。
+    if (poll && (this.loading() || this.loadingMore())) return;
     const revision = ++this.revision,
       current = this.guard();
     const valid = () => revision === this.revision && current();
     this.controller?.abort();
     this.controller = new AbortController();
-    this.loading.set(true);
+    if (!poll) (more ? this.loadingMore : this.loading).set(true);
     const before = more && this.items().length ? this.items().at(-1)!.id : undefined;
     try {
       const page = await this.api.list(this.unreadOnly(), before, this.controller.signal);
@@ -143,7 +155,11 @@ export class NotificationStore {
     } catch (error) {
       if (valid() && !isCancellation(error)) this.error.set(safeMessage(error));
     } finally {
-      if (valid()) this.loading.set(false);
+      // 較新的讀取會中止這次並接手；兩個旗標都由最後那次清掉，不會卡在讀取中。
+      if (valid()) {
+        this.loading.set(false);
+        this.loadingMore.set(false);
+      }
     }
   }
   /** 開啟通知中心的鈴鐺；桌面版 popover 會錨定於它並把焦點還給它。 */
@@ -170,8 +186,14 @@ export class NotificationStore {
       if (item.target.kind === 'conversation' && item.target.id === id && !item.readAt)
         void this.read(item).catch(() => {});
   }
+  /** 這個寫入（`read:<id>`、`dismiss:<id>`、`all`）正在進行。 */
+  isWorking(key: string) {
+    return this.working().has(key);
+  }
   async read(item: NotificationDto) {
-    const current = this.guard();
+    const current = this.guard(),
+      key = `read:${item.id}`;
+    this.mark(key, true);
     try {
       await this.api.read(item.id);
       if (!current()) return;
@@ -186,6 +208,8 @@ export class NotificationStore {
     } catch (error) {
       if (current()) this.error.set(safeMessage(error));
       throw error;
+    } finally {
+      if (current()) this.mark(key, false);
     }
   }
   async activate(item: NotificationDto) {
@@ -203,20 +227,31 @@ export class NotificationStore {
   async readAll() {
     const through = this.items()[0]?.createdAt;
     if (!through) return;
-    await this.write(() => this.api.readThrough(through));
+    await this.write('all', () => this.api.readThrough(through));
   }
   async dismiss(item: NotificationDto) {
-    await this.write(() => this.api.dismiss(item.id));
+    await this.write(`dismiss:${item.id}`, () => this.api.dismiss(item.id));
   }
-  /** 寫入成功就重讀最新一頁，未讀數以伺服器為準。 */
-  private async write(request: () => Promise<unknown>) {
+  /** 寫入成功就重讀最新一頁，未讀數以伺服器為準；按鈕轉到重讀結束，結果才不會晚一拍出現。 */
+  private async write(key: string, request: () => Promise<unknown>) {
     const current = this.guard();
+    this.mark(key, true);
     try {
       await request();
       if (current()) await this.refresh();
     } catch (error) {
       if (current()) this.error.set(safeMessage(error));
+    } finally {
+      if (current()) this.mark(key, false);
     }
+  }
+  private mark(key: string, on: boolean) {
+    this.working.update((keys) => {
+      const next = new Set(keys);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
   }
   private browserNotify(item: NotificationDto) {
     if (

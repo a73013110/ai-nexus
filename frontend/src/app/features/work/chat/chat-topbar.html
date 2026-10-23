@@ -40,8 +40,8 @@
         class="icon-button"
         aria-label="分享此對話"
         title="建立具名唯讀分享"
-        [disabled]="store.busy()"
-        (click)="action.emit('share')"
+        [attr.aria-disabled]="store.busy() || null"
+        (click)="store.busy() || action.emit('share')"
       >
         <nx-icon name="share" />
       </button>
@@ -49,6 +49,9 @@
     <nx-conversation-actions
       [conversation]="conversation"
       [busy]="store.busy()"
+      [working]="
+        conversations.working()?.id === conversation.id ? conversations.working()!.action : null
+      "
       [sharing]="store.hasSharing()"
       [compact]="compact()"
       [spend]="spend.menuLabel()"

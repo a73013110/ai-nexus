@@ -5,6 +5,7 @@ import {
   Directive,
   ElementRef,
   computed,
+  contentChild,
   effect,
   inject,
   input,
@@ -14,6 +15,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { PendingButton } from './pending-button';
 import { Select } from './select';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
@@ -48,7 +50,7 @@ export type TableSortDirection = 'asc' | 'desc';
   host: {
     class: 'ui-data-table',
     '[class.ui-table-stack]': 'stacked()',
-    '[attr.aria-busy]': 'busy()',
+    '[attr.aria-busy]': 'busy() || null',
   },
   template: `<div class="ui-table-frame">
     <div class="ui-table-toolbar-wrap">
@@ -95,13 +97,13 @@ export type TableSortDirection = 'asc' | 'desc';
         <nx-icon name="reset" />還原預設欄位
       </button>
     </div>
-    <span class="refresh-line" [class.is-active]="busy()" aria-hidden="true"></span>
+    <span class="refresh-line" [class.is-active]="refreshing()" aria-hidden="true"></span>
     <div
       class="ui-table-scroll"
       role="region"
       tabindex="0"
       [attr.aria-label]="label()"
-      [class.is-refreshing]="busy()"
+      [class.is-refreshing]="refreshing()"
     >
       <ng-content select="table" />
       <ng-content select="nx-table-state" />
@@ -111,6 +113,7 @@ export type TableSortDirection = 'asc' | 'desc';
 })
 export class DataTable {
   readonly label = input.required<string>();
+  /** 讀取中（首次載入或重新讀取）；綁 `apiResource` 的 `refreshing()`，有防抖的搜尋再加上打字中。 */
   readonly busy = input(false);
   readonly columns = input<TableColumn[]>([]);
   readonly preferenceKey = input('');
@@ -118,6 +121,12 @@ export class DataTable {
   readonly stacked = input(false);
   readonly hidden = signal<string[]>([]);
   readonly id = 'nx-table-columns-' + ++tableSequence;
+  private readonly state = contentChild(TableState);
+  /**
+   * 淡化與細線只給已有列的表格：沒有列時 `nx-table-state` 正顯示骨架、空狀態或錯誤，
+   * 骨架本身就是載入回饋，再疊上淡化會像停用。沒有投影 `nx-table-state` 的表格照 `busy` 顯示。
+   */
+  protected readonly refreshing = computed(() => this.busy() && !this.state()?.visible());
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('columnTrigger');
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('columnPanel');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -220,10 +229,11 @@ export class DataTableColumn {
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { scope: 'col', '[attr.aria-sort]': 'direction() === "asc" ? "ascending" : "descending"' },
+  // 讀取中只以 aria-disabled 擋：剛按下的排序鈕若變成 disabled，焦點會掉到頁首。
   template: `<button
     type="button"
     class="ui-table-sort"
-    [disabled]="disabled()"
+    [attr.aria-disabled]="disabled() || null"
     [attr.aria-label]="
       label() +
       '：' +
@@ -231,7 +241,7 @@ export class DataTableColumn {
         ? ascendingLabel() + '，切換為' + descendingLabel()
         : descendingLabel() + '，切換為' + ascendingLabel())
     "
-    (click)="directionChange.emit(direction() === 'asc' ? 'desc' : 'asc')"
+    (click)="disabled() || directionChange.emit(direction() === 'asc' ? 'desc' : 'asc')"
   >
     {{ label() }}<nx-icon [name]="direction() === 'asc' ? 'arrow' : 'down'" />
   </button>`,
@@ -331,10 +341,14 @@ export class DataTableRow {
 /**
  * 表頭下方的載入中、無資料與讀取失敗狀態。失敗時顯示訊息與重試；仍有列顯示時整個隱藏（錯誤由
  * 頁面自己顯示）。載入中畫成幾列骨架（列的形狀已知），文字只給輔助科技讀。
+ *
+ * 綁法：`loading` 綁首次載入（`apiResource` 的 `loading()`），只決定要不要畫骨架；`retrying`
+ * 綁重讀（`refreshing()`），重試鈕在重讀期間轉圈。`apiResource` 的 `reload()` 不會讓 `loading()`
+ * 變真，所以重試的回饋不能靠 `loading`。放在 `nx-data-table` 裡時也跟著表格的 `busy` 轉圈。
  */
 @Component({
   selector: 'nx-table-state',
-  imports: [Icon],
+  imports: [Icon, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // 讀取失敗要立即讀出，與 nx-notice 的 danger 相同；載入中與空狀態只是狀態更新。
@@ -374,8 +388,14 @@ export class DataTableRow {
       <nx-icon name="info" />
       <strong>{{ errorTitle() }}</strong>
       <p>{{ error() }}</p>
-      <button type="button" class="secondary-button" [disabled]="loading()" (click)="retry.emit()">
-        <nx-icon [name]="loading() ? 'loading' : 'refresh'" />重試
+      <button
+        nxPending
+        type="button"
+        class="secondary-button"
+        [pending]="retryPending()"
+        (click)="retry.emit()"
+      >
+        <nx-icon name="refresh" />{{ retryPending() ? '重試中…' : '重試' }}
       </button>
     } @else if (loading()) {
       @for (width of skeleton; track $index) {
@@ -394,7 +414,10 @@ export class DataTableRow {
 export class TableState {
   /** 顯示中的列數；有列就隱藏。 */
   readonly count = input(0);
+  /** 首次載入：沒有列時畫骨架。 */
   readonly loading = input(false);
+  /** 失敗後重讀中：重試鈕轉圈並擋重複按下。 */
+  readonly retrying = input(false);
   readonly error = input<string | null | undefined>('');
   readonly loadingText = input('正在載入…');
   readonly errorTitle = input('無法載入資料');
@@ -402,6 +425,10 @@ export class TableState {
   readonly emptyText = input('');
   readonly retry = output<void>();
   readonly visible = computed(() => this.count() === 0);
+  private readonly table = inject(DataTable, { optional: true });
+  protected readonly retryPending = computed(
+    () => this.retrying() || this.loading() || !!this.table?.busy(),
+  );
   /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
   protected readonly skeleton = [92, 74, 86, 62, 80];
 }

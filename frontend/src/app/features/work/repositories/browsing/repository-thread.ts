@@ -16,6 +16,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryReviewDialog } from '../reviews/repository-review-dialog';
 import { RepositoryStore } from '../repository-store';
@@ -34,7 +35,7 @@ interface Thread {
 /** 單一議題或拉取請求與其討論；拉取請求可送交 AI 審查。 */
 @Component({
   selector: 'nx-repository-thread',
-  imports: [RouterLink, Icon, MarkdownView, Notice, RepositoryReviewDialog],
+  imports: [RouterLink, Icon, MarkdownView, Notice, PendingButton, RepositoryReviewDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-thread.scss',
@@ -43,7 +44,9 @@ interface Thread {
     >
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (thread(); as thread) {
@@ -86,8 +89,14 @@ interface Thread {
             }
           }
           @if (canChat()) {
-            <button type="button" class="quiet-button" [disabled]="busy()" (click)="chat()">
-              <nx-icon name="chat" />{{ busy() ? '正在整理…' : '帶入對話' }}
+            <button
+              nxPending
+              type="button"
+              class="quiet-button"
+              [pending]="busy()"
+              (click)="chat()"
+            >
+              <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
             </button>
           }
           <a class="quiet-button" [href]="thread.item.url" target="_blank" rel="noopener noreferrer"
@@ -134,7 +143,8 @@ interface Thread {
         }
       </ol>
     } @else if (!error()) {
-      <div class="loading" role="status" aria-label="正在讀取">
+      <div class="loading" role="status">
+        <span class="sr-only">正在載入{{ kind() === 'pulls' ? ' Pull Request' : '議題' }}…</span>
         <span class="skeleton head-skeleton"></span><span class="skeleton body-skeleton"></span>
       </div>
     }
@@ -198,6 +208,8 @@ export class RepositoryThread {
   });
   readonly canChat = computed(() => this.session.has('chat'));
   readonly busy = signal(false);
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = this.read.refreshing;
   private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.read.error());
   readonly date = formatDate;

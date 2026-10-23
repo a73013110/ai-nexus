@@ -113,3 +113,11 @@
     position: static;
   }
 }
+.template-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+  padding: var(--p-space-3) var(--p-space-2);
+}
+.template-skeleton .skeleton {
+  height: 2.25rem;
+}

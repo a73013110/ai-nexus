@@ -3,8 +3,10 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
+import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { StorageUsage } from '@features/work/files/file-library/storage-usage';
 import { ModelPolicyEditor } from '@features/platform/inference/model-policies/model-policy-editor';
@@ -24,10 +26,12 @@ import { UserRoleFields } from './user-role-fields';
     AttendanceUserCards,
     DialogSaveBar,
     Field,
+    Icon,
     InfoPopover,
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
+    PendingButton,
     StorageUsage,
     UserAccountFields,
     UserRoleFields,
@@ -42,6 +46,8 @@ export class AdminUserSettings {
   readonly session = inject(WorkspaceSession);
   readonly tab = input.required<UserSettingsTab>();
   readonly emailState = emailState;
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [72, 90, 64, 84];
   submit(event: Event) {
     event.preventDefault();
     const tab = this.tab();

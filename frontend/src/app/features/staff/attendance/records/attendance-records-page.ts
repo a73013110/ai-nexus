@@ -18,6 +18,7 @@ import { DataTable, DataTableColumn, TableState, type TableColumn } from '@share
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
@@ -47,6 +48,7 @@ import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-que
     Icon,
     InfoPopover,
     Notice,
+    PendingButton,
     QueryBar,
     Select,
     StatusBadge,
@@ -72,6 +74,8 @@ export class AttendanceRecordsPage {
     params: () => (this.session.has('organization') ? true : undefined),
     loader: () => this.organization.units(),
   });
+  /** 單位清單讀取中（有組織權限才會讀）；選單先佔位轉圈。 */
+  readonly unitsLoading = this.unitsRead.refreshing;
   readonly unitOptions = computed<SelectOption[] | null>(() => {
     const units = this.unitsRead.value();
     if (!units) return null;
@@ -95,7 +99,12 @@ export class AttendanceRecordsPage {
     loader: (query, signal) => this.api.records(query, signal),
   });
   readonly records = this.recordsRead.value;
+  /** 新條件的第一次讀取（還沒有這次的結果）。 */
   readonly loading = this.recordsRead.loading;
+  /** 使用者感覺得到的讀取（查詢、重試）：表格淡化、查詢鈕轉圈。 */
+  readonly refreshing = this.recordsRead.refreshing;
+  /** 還沒有任何結果：人員選單（選項來自名單）先佔位轉圈。之後的查詢只淡化表格，選單照舊可選。 */
+  readonly firstLoad = computed(() => this.loading() && !this.records());
   readonly readError = this.recordsRead.error;
   readonly people = computed(() => this.records()?.people ?? []);
   private readonly rulesRead = apiResource({

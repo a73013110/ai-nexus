@@ -17,6 +17,8 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
 import type { SourceDetailDto, SourceDto, SourceRecordDto } from '@core/api/schema';
 import { FeaturePage } from '@core/layout/feature-page';
+import { PendingButton } from '@shared/ui/pending-button';
+import { RefreshButton } from '@shared/ui/refresh-button';
 import { Select } from '@shared/ui/select';
 import { Icon } from '@shared/ui/icon';
 import { MarkdownView } from '@shared/markdown/markdown-view';
@@ -40,7 +42,19 @@ const LABELS: Record<string, string> = {
 @Component({
   selector: 'nx-integrations-page',
   styleUrl: './integrations-page.scss',
-  imports: [Notice, Card, EmptyState, FilterPanel, Field, FeaturePage, Select, Icon, MarkdownView],
+  imports: [
+    Notice,
+    Card,
+    EmptyState,
+    FilterPanel,
+    Field,
+    FeaturePage,
+    PendingButton,
+    RefreshButton,
+    Select,
+    Icon,
+    MarkdownView,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './integrations-page.html',
@@ -88,7 +102,7 @@ export class IntegrationsPage {
   });
   readonly rows = computed<SourceRecordDto[]>(() => this.results() ?? []);
   readonly searched = computed(() => this.results() !== null);
-  readonly searching = this.rowsRead.loading;
+  readonly searching = this.rowsRead.refreshing;
   /** 查詢中或執行動作時鎖住搜尋表單。 */
   readonly locked = computed(() => this.searching() || this.busy());
   /** 畫面上的紀錄：連結指定的、單一搜尋命中，或使用者開啟的那一筆。 */
@@ -114,7 +128,13 @@ export class IntegrationsPage {
   });
   readonly loading = this.sourcesRead.loading;
   readonly reading = this.detailRead.loading;
-  readonly busy = signal(false);
+  /** 使用者重新載入同一筆紀錄中；30 秒一次的背景檢查不算。 */
+  readonly refreshingDetail = this.detailRead.refreshing;
+  /** 進行中的動作：該按鈕轉圈，其他寫入與切換暫停。 */
+  readonly acting = signal<'import' | 'chat' | null>(null);
+  readonly busy = computed(() => this.acting() !== null);
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [36, 72, 92, 84, 88, 60];
   readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -154,7 +174,7 @@ export class IntegrationsPage {
       source = this.current(),
       valid = this.scope.guard();
     if (!detail || !source || this.busy()) return;
-    this.busy.set(true);
+    this.acting.set(action);
     this.actionError.set('');
     try {
       if (action === 'import') {
@@ -170,7 +190,7 @@ export class IntegrationsPage {
     } catch (failure) {
       if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.acting.set(null);
     }
   }
   readonly tour = computed(() =>

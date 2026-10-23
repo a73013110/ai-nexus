@@ -67,6 +67,28 @@ describe('directory search', () => {
     expect(context.search.results().map((item) => item.id)).toEqual(['b']);
   });
 
+  it('counts the debounce wait and the request as loading', async () => {
+    const context = setup();
+    let answer!: (value: typeof people) => void;
+    context.directory.mockImplementationOnce(
+      () => new Promise<typeof people>((done) => (answer = done)),
+    );
+    context.search.find('王');
+    expect(context.search.loading()).toBe(false);
+    context.search.find('王小');
+    expect(context.search.loading()).toBe(true);
+    expect(context.search.results()).toEqual([]);
+    await pause(280);
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    expect(context.search.loading()).toBe(true);
+    answer(people);
+    await context.settle();
+    expect(context.search.loading()).toBe(false);
+    expect(context.search.results().map((item) => item.id)).toEqual(['a', 'b']);
+    context.search.clear();
+    expect(context.search.loading()).toBe(false);
+  });
+
   it('hides results for text that has not been searched yet and clears everything', async () => {
     const context = setup();
     await type(context, '王小');

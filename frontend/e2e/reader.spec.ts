@@ -81,9 +81,8 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.getByRole("heading", { name: fileName })).toBeVisible();
   await expect(dialog.locator(".reader-original img")).toBeVisible();
-  await expect(dialog.locator(".viewer-stage")).toHaveAttribute(
+  await expect(dialog.locator(".viewer-stage")).not.toHaveAttribute(
     "aria-busy",
-    "false",
   );
   expect(fixture.attachmentDocuments.has(id)).toBe(false);
   await expect(page).toHaveURL(origin);

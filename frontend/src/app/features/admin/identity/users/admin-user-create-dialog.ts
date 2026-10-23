@@ -10,6 +10,7 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
 import { UserAccountFields, userAccountDraft, userAccountRequest } from './user-account-fields';
@@ -21,16 +22,10 @@ import { UserRoleFields } from './user-role-fields';
  */
 @Component({
   selector: 'nx-admin-user-create-dialog',
-  imports: [CompactDialog, DialogHeader, Notice, UserAccountFields, UserRoleFields],
+  imports: [CompactDialog, DialogHeader, Notice, PendingButton, UserAccountFields, UserRoleFields],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog
-      nxCompactDialog
-      size="md"
-      #dialog
-      class="platform-dialog"
-      (cancel)="saving() ? $event.preventDefault() : null"
-    >
+    <dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving()">
       <form class="dialog-form" (submit)="save($event)">
         <nx-dialog-header
           heading="新增使用者"
@@ -60,12 +55,12 @@ import { UserRoleFields } from './user-role-fields';
             <button
               type="button"
               class="secondary-button"
-              [disabled]="saving()"
-              (click)="dialog.close()"
+              [attr.aria-disabled]="saving() || null"
+              (click)="saving() || dialog.close()"
             >
               取消
             </button>
-            <button type="submit" class="primary-button" [disabled]="saving()">
+            <button nxPending type="submit" class="primary-button" [pending]="saving()">
               {{ saving() ? '建立中…' : '建立使用者' }}
             </button>
           </footer>

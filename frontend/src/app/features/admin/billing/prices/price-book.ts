@@ -20,6 +20,7 @@ import {
 } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch } from '@shared/ui/view-switch';
@@ -120,6 +121,7 @@ function rank(provider: string) {
     DataTableRow,
     Icon,
     Notice,
+    PendingButton,
     PriceVersionDialog,
     SearchField,
     StatusBadge,

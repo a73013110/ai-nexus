@@ -33,6 +33,7 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
@@ -136,6 +137,7 @@ export function featureNameOverride(name: string, defaultName: string) {
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
+    PendingButton,
     Select,
     Tabs,
     ViewMotion,

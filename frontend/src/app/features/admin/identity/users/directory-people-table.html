@@ -17,10 +17,11 @@
     <nx-copy-value class="directory-dn is-truncated" label="複製 DN" [value]="node.dn" />
   </header>
 } @else if (!store.treeError()) {
-  <div class="directory-node" role="status" aria-label="正在讀取目錄">
+  <div class="directory-node" role="status">
     <span class="skeleton directory-skeleton-crumbs"></span>
     <span class="skeleton directory-skeleton-title"></span>
     <span class="skeleton directory-skeleton-dn"></span>
+    <span class="sr-only">正在載入目錄…</span>
   </div>
 }
 <div class="directory-toolbar">
@@ -36,6 +37,7 @@
     placeholder="姓名、帳號、信箱、部門"
     [maxLength]="64"
     [value]="store.query()"
+    [busy]="store.people.refreshing()"
     (valueChange)="store.setQuery($event)"
   />
   <nx-checkbox
@@ -163,7 +165,7 @@
     [count]="store.visible().length"
     [loading]="store.listLoading()"
     [error]="store.people.error()"
-    loadingText="正在讀取 AD 人員"
+    loadingText="正在載入 AD 人員…"
     errorTitle="無法讀取這個節點"
     [emptyTitle]="empty().title"
     [emptyText]="empty().text"

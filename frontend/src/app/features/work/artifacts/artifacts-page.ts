@@ -24,6 +24,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -52,6 +53,7 @@ import { routeOf } from '@core/api/catalog';
     Field,
     FeaturePage,
     Icon,
+    PendingButton,
     Select,
     ResourceSharing,
     ConfirmDialog,
@@ -108,7 +110,25 @@ export class ArtifactsPage {
   });
   readonly loading = computed(() => this.listRead.loading() || this.documentRead.loading());
   readonly listLoading = this.listRead.loading;
-  readonly busy = signal(false);
+  /**
+   * 進行中的動作（`save`、`version`、`export`、`delete`）：觸發它的按鈕或選單鈕轉圈，
+   * 其他寫入與離開頁面等它完成。
+   */
+  readonly working = signal<'save' | 'version' | 'export' | 'delete' | null>(null);
+  readonly busy = computed(() => this.working() !== null);
+  readonly listRefreshing = this.listRead.refreshing;
+  /** 儲存新版本後版本清單重讀中：版本下拉轉圈。 */
+  readonly revisionsRefreshing = this.revisionsRead.refreshing;
+  /** 文件讀取中（開啟、重試）；讀完仍沒有文件才顯示「找不到」。 */
+  readonly documentRefreshing = this.documentRead.refreshing;
+  /** 讀取結束卻沒有文件也沒有錯誤（錯誤由頁首的提示說明）：顯示「找不到」，不留著骨架。 */
+  readonly missing = computed(() => !this.documentRead.value() && !this.error());
+  readonly refreshing = computed(
+    () =>
+      this.listRead.refreshing() ||
+      this.documentRead.refreshing() ||
+      this.revisionsRead.refreshing(),
+  );
   readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -257,7 +277,7 @@ export class ArtifactsPage {
     const doc = this.document(),
       valid = this.operationGuard();
     if (!doc || !this.editable() || this.busy() || !this.dirty()) return;
-    this.busy.set(true);
+    this.working.set('save');
     this.actionError.set('');
     try {
       const value = await this.api.save(
@@ -276,7 +296,7 @@ export class ArtifactsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async chooseVersion(version: string) {
@@ -284,7 +304,7 @@ export class ArtifactsPage {
     const id = this.document()?.resource.id,
       valid = this.operationGuard();
     if (!id) return;
-    this.busy.set(true);
+    this.working.set('version');
     this.actionError.set('');
     try {
       const value = await this.api.get(id, Number(version));
@@ -292,7 +312,7 @@ export class ArtifactsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   restore() {
@@ -353,7 +373,7 @@ export class ArtifactsPage {
     const doc = this.document(),
       valid = this.operationGuard();
     if (!doc || this.busy()) return;
-    this.busy.set(true);
+    this.working.set('export');
     this.actionError.set('');
     try {
       const response = await this.api.export(doc.resource.id, format, doc.version),
@@ -365,7 +385,7 @@ export class ArtifactsPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
   async remove() {
@@ -382,7 +402,7 @@ export class ArtifactsPage {
     )
       return;
     const valid = this.operationGuard();
-    this.busy.set(true);
+    this.working.set('delete');
     this.actionError.set('');
     try {
       await this.api.remove(doc.resource.id);
@@ -394,13 +414,13 @@ export class ArtifactsPage {
         );
         this.listRead.reload();
         // 導覽前先解鎖，否則 canLeave 會因 busy 擋下離開。
-        this.busy.set(false);
+        this.working.set(null);
         await this.router.navigate([routeOf('artifacts')]);
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
 }

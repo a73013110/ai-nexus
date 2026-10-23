@@ -13,6 +13,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AccountSecurityStore } from './account-security-store';
 import { bindSecurityDialog } from './security-dialog';
 import { VerificationCodeField } from './verification-code-field';
@@ -23,15 +24,15 @@ import { VerificationCodeField } from './verification-code-field';
  */
 @Component({
   selector: 'nx-email-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Notice, VerificationCodeField],
+  imports: [CompactDialog, DialogHeader, Field, Notice, PendingButton, VerificationCodeField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     size="sm"
     #dialog
     class="platform-dialog"
+    [busy]="busy()"
     (close)="store.dialog() === 'email' && store.close()"
-    (cancel)="busy() ? $event.preventDefault() : null"
   >
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="通知信箱" closeLabel="關閉通知信箱" />
@@ -56,8 +57,15 @@ import { VerificationCodeField } from './verification-code-field';
         @if (challenge(); as current) {
           <nx-verification-code-field [challenge]="current" [(code)]="code" />
           <div class="dialog-inline-actions">
-            <button type="button" class="secondary-button" [disabled]="busy()" (click)="send()">
-              重新寄送
+            <button
+              nxPending
+              type="button"
+              class="secondary-button"
+              [pending]="working() === 'resend'"
+              [disabled]="working() === 'confirm'"
+              (click)="send('resend')"
+            >
+              {{ working() === 'resend' ? '寄送中…' : '重新寄送' }}
             </button>
             <button type="button" class="secondary-button" [disabled]="busy()" (click)="edit()">
               改用其他地址
@@ -66,12 +74,30 @@ import { VerificationCodeField } from './verification-code-field';
         }
       </div>
       <footer class="dialog-foot">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="store.close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="busy() || store.close()"
+        >
           取消
         </button>
-        <button type="submit" class="primary-button" [disabled]="busy() || !ready()">
+        <!-- 自己送出中不停用（焦點留在這顆）；重新寄送進行中才停用。 -->
+        <button
+          nxPending
+          type="submit"
+          class="primary-button"
+          [pending]="working() === 'send' || working() === 'confirm'"
+          [disabled]="working() === 'resend' || (!busy() && !ready())"
+        >
           {{
-            challenge() ? (busy() ? '驗證中…' : '驗證並儲存') : busy() ? '寄送中…' : '寄送驗證碼'
+            challenge()
+              ? working() === 'confirm'
+                ? '驗證中…'
+                : '驗證並儲存'
+              : working() === 'send'
+                ? '寄送中…'
+                : '寄送驗證碼'
           }}
         </button>
       </footer>
@@ -90,7 +116,9 @@ export class EmailDialog {
   readonly email = signal('');
   readonly code = signal('');
   readonly challenge = signal<VerificationCodeDto | null>(null);
-  readonly busy = signal(false);
+  /** 進行中的動作：第一次寄送、重新寄送或驗證；只讓按下的那顆轉。 */
+  readonly working = signal<'' | 'send' | 'resend' | 'confirm'>('');
+  readonly busy = computed(() => this.working() !== '');
   readonly error = signal('');
   readonly ready = computed(() =>
     this.challenge() ? this.code().length === 6 : this.email().trim().length > 0,
@@ -114,8 +142,9 @@ export class EmailDialog {
     this.error.set('');
   }
 
-  async send() {
-    await this.busyWhile(async () => {
+  async send(action: 'send' | 'resend' = 'send') {
+    if (this.busy()) return;
+    await this.busyWhile(action, async () => {
       const challenge = await this.store.requestEmail(this.email().trim());
       if (challenge) {
         this.challenge.set(challenge);
@@ -129,18 +158,18 @@ export class EmailDialog {
     if (this.busy() || !this.ready()) return;
     const challenge = this.challenge();
     if (!challenge) return this.send();
-    await this.busyWhile(() => this.store.confirmEmail(challenge.id, this.code()));
+    await this.busyWhile('confirm', () => this.store.confirmEmail(challenge.id, this.code()));
   }
 
-  private async busyWhile(work: () => Promise<void>) {
-    this.busy.set(true);
+  private async busyWhile(action: 'send' | 'resend' | 'confirm', work: () => Promise<void>) {
+    this.working.set(action);
     this.error.set('');
     try {
       await work();
     } catch (error) {
       this.error.set(safeMessage(error));
     } finally {
-      this.busy.set(false);
+      this.working.set('');
     }
   }
 }

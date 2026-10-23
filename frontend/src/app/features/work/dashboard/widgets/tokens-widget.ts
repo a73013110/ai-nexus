@@ -11,7 +11,7 @@ import { DashboardStore } from '../dashboard-store';
       display: block;
     }
   `,
-  template: `<nx-token-usage-chart [usage]="store.data()?.tokens" />`,
+  template: `<nx-token-usage-chart [usage]="store.data()?.tokens" [busy]="store.refreshing()" />`,
 })
 export class TokensWidget {
   readonly store = inject(DashboardStore);

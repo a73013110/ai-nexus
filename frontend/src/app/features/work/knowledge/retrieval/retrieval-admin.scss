@@ -58,6 +58,9 @@ td > nx-job-progress {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
   max-width: none;
 }
+.retrieval-collection-skeleton {
+  height: 2.5rem;
+}
 .retrieval-mode {
   max-width: 16rem;
 }

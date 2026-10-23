@@ -13,6 +13,7 @@ import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AdminUsersStore } from '../admin-users-store';
 import { IdentityApi } from '../identity-api';
 import { DirectoryOutcomeTable } from './directory-outcome-table';
@@ -24,7 +25,7 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
  */
 @Component({
   selector: 'nx-directory-sync-dialog',
-  imports: [Checkbox, CompactDialog, DialogHeader, DirectoryOutcomeTable, Notice],
+  imports: [Checkbox, CompactDialog, DialogHeader, DirectoryOutcomeTable, Notice, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .directory-sync-list {
@@ -46,7 +47,7 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
       #dialog
       class="platform-dialog"
       (close)="opened.set(false)"
-      (cancel)="busy() ? $event.preventDefault() : null"
+      [busy]="busy()"
     >
       <nx-dialog-header
         heading="從 AD 更新使用者"
@@ -96,15 +97,17 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
             <button
               type="button"
               class="secondary-button"
-              [disabled]="busy()"
-              (click)="dialog.close()"
+              [attr.aria-disabled]="busy() || null"
+              (click)="busy() || dialog.close()"
             >
               取消
             </button>
             <button
+              nxPending
               type="button"
               class="primary-button"
-              [disabled]="busy() || !selected().size"
+              [pending]="busy()"
+              [disabled]="!selected().size"
               (click)="sync()"
             >
               {{ busy() ? '更新中…' : '從 AD 更新（' + selected().size + ' 人）' }}

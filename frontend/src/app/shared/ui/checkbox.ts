@@ -1,5 +1,17 @@
 import { uniqueId } from '../browser/unique-id';
-import { ChangeDetectionStrategy, Component, booleanAttribute, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  afterRenderEffect,
+  booleanAttribute,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { Icon } from './icon';
 
 /**
@@ -16,16 +28,19 @@ import { Icon } from './icon';
   template: `<label
     class="selection-control"
     [class.is-disabled]="disabled()"
+    [class.is-pending]="pending()"
     [class.is-label-hidden]="hideLabel()"
   >
     <span class="selection-box"
       ><input
+        #box
         type="checkbox"
         [attr.aria-label]="label()"
         [attr.aria-describedby]="description() ? id : null"
         [checked]="checked()"
         [indeterminate]="mixed() && !checked()"
         [disabled]="disabled()"
+        [attr.aria-busy]="pending() || null"
         (change)="change($event)" />
       <span class="selection-indicator" aria-hidden="true"
         ><nx-icon [name]="mixed() && !checked() ? 'minus' : 'check'" /></span
@@ -38,6 +53,9 @@ import { Icon } from './icon';
         }
       </span>
     }
+    @if (pending()) {
+      <nx-icon name="loading" class="selection-pending" />
+    }
   </label>`,
 })
 export class Checkbox {
@@ -47,18 +65,46 @@ export class Checkbox {
   readonly checked = input(false);
   readonly disabled = input(false);
   readonly mixed = input(false);
+  /**
+   * 立即生效的勾選正在儲存：旁邊轉圈並忽略再次切換。不用 `disabled`，焦點才留在方框上；
+   * 可還原的設定改用樂觀更新，不必等。
+   */
+  readonly pending = input(false);
   readonly hideLabel = input(false, { transform: booleanAttribute });
   readonly checkedChange = output<boolean>();
 
+  private readonly injector = inject(Injector);
+  private readonly box = viewChild.required<ElementRef<HTMLInputElement>>('box');
+
+  constructor() {
+    // 送出中保留使用者點出來的狀態；結束（或輸入改變）後依輸入校正，失敗時方框才跳回。
+    afterRenderEffect(() => {
+      const checked = this.checked();
+      const mixed = this.mixed();
+      if (!this.pending()) this.sync(checked, mixed);
+    });
+  }
+
   /**
-   * 受控元件：先把方框還原成目前的輸入，再通知使用端。使用端接受時 `checked` 變了，綁定會寫回新值；
-   * 拒絕時（例如超過人數上限、沒有可選的人）輸入沒變、綁定不會重寫，方框也不會停在使用者點出來的狀態。
+   * 受控元件：方框先照使用者點的顯示（不先還原，否則畫面更新前讀到的仍是舊狀態），再通知使用端；
+   * 下一次繪製後依輸入校正。使用端拒絕（例如超過人數上限、沒有可選的人）時輸入沒變、綁定不會重寫，
+   * 校正才把方框拉回；使用端開始儲存（`pending`）就等它結束。送出中再點的一律拉回。
    */
   change(event: Event) {
     const box = event.target as HTMLInputElement;
-    const next = box.checked;
-    box.checked = this.checked();
-    box.indeterminate = this.mixed() && !this.checked();
-    this.checkedChange.emit(next);
+    const ignored = this.pending();
+    if (!ignored) this.checkedChange.emit(box.checked);
+    afterNextRender(
+      () => {
+        if (ignored || !this.pending()) this.sync(this.checked(), this.mixed());
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private sync(checked: boolean, mixed: boolean) {
+    const box = this.box().nativeElement;
+    box.checked = checked;
+    box.indeterminate = mixed && !checked;
   }
 }

@@ -1,6 +1,7 @@
 import { map } from 'rxjs';
 import { apiResource } from '@core/api/api-resource';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ToastService } from '@shared/ui/toast-service';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Card } from '@shared/ui/card';
@@ -104,6 +105,7 @@ function isEvaluationExport(data: unknown): data is EvaluationExport {
     Field,
     FeaturePage,
     ConfirmDialog,
+    PendingButton,
     RouterLink,
     Icon,
     Select,
@@ -188,7 +190,19 @@ export class QualityPage {
   readonly setsLoading = this.setsRead.loading;
   readonly feedbackLoading = this.feedbackRead.loading;
   readonly currentLoading = this.currentRead.loading;
+  /** 比較紀錄清單第一次讀取（或換評測集）：面板顯示骨架，不先給空狀態。 */
+  readonly runsLoading = this.runsRead.loading;
+  /** 讀取失敗後按重試：重試鈕轉圈。 */
+  readonly refreshing = computed(
+    () =>
+      this.setsRead.refreshing() ||
+      this.feedbackRead.refreshing() ||
+      this.currentRead.refreshing() ||
+      this.runsRead.refreshing(),
+  );
   readonly busy = signal(false);
+  /** 由哪個控制項觸發的寫入：只有它轉圈，其他寫入仍由 `busy` 擋下。 */
+  readonly working = signal<'run' | 'control' | 'delete' | null>(null);
   readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -292,6 +306,7 @@ export class QualityPage {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
       ++this.revision;
       this.busy.set(false);
+      this.working.set(null);
       this.actionError.set('');
     });
   }
@@ -331,6 +346,7 @@ export class QualityPage {
     )
       return;
     this.busy.set(true);
+    this.working.set('delete');
     this.actionError.set('');
     try {
       await this.api.remove(current.resource.id);
@@ -344,7 +360,7 @@ export class QualityPage {
     } catch (failure) {
       if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
   }
   selectRun(id: string) {
@@ -435,6 +451,7 @@ export class QualityPage {
     if (this.busy()) return;
     const valid = this.guard();
     this.busy.set(true);
+    this.working.set('run');
     this.actionError.set('');
     try {
       const catalog = await this.workspaceApi.models();
@@ -454,7 +471,7 @@ export class QualityPage {
     } catch (failure) {
       if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
   }
   /** 第 index 個方案的預設值：依序命名 A、B、C，模型用政策預設或清單第一個。 */
@@ -552,14 +569,19 @@ export class QualityPage {
       valid = this.guard();
     if (!detail?.run.canControl || this.busy()) return;
     this.busy.set(true);
+    this.working.set('control');
     try {
       await this.jobToasts.control(detail.run.job.id, retry);
       if (valid()) this.selectRun(detail.run.id);
     } catch (failure) {
       if (valid()) this.actionError.set(this.scope.message(failure));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.settle();
     }
+  }
+  private settle() {
+    this.busy.set(false);
+    this.working.set(null);
   }
   readonly date = formatDate;
 }

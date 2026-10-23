@@ -52,10 +52,10 @@
     } @else if (rulesError()) {
       <p>無法取得判定規則：{{ rulesError() }}</p>
     } @else {
-      <p role="status">正在取得判定規則…</p>
+      <p class="records-rules-loading" role="status"><nx-icon name="loading" />正在載入判定規則…</p>
     }
   </nx-info-popover>
-  <nx-query-bar label="出勤紀錄查詢條件" [state]="query" [busy]="loading()">
+  <nx-query-bar label="出勤紀錄查詢條件" [state]="query" [busy]="refreshing()">
     <nx-time-range-picker
       label="區間"
       [presets]="ranges"
@@ -63,7 +63,8 @@
       [value]="draft().range"
       (valueChange)="query.set('range', $event)"
     />
-    @if (personOptions().length > 2 || draft().userId) {
+    <!-- 人員選項來自讀到的名單、單位來自組織；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
+    @if (personOptions().length > 2 || draft().userId || firstLoad()) {
       <div class="ui-field records-person">
         <span aria-hidden="true">人員</span>
         <nx-select
@@ -72,12 +73,13 @@
           [searchable]="true"
           [searchFrom]="10"
           [options]="personOptions()"
+          [loading]="firstLoad()"
           [value]="draft().userId"
           (valueChange)="query.set('userId', $event)"
         />
       </div>
     }
-    @if (unitOptions(); as units) {
+    @if (unitOptions() || unitsLoading()) {
       <div class="ui-field records-unit">
         <span aria-hidden="true">單位</span>
         <nx-select
@@ -85,7 +87,8 @@
           placeholder="所有單位"
           [searchable]="true"
           [searchFrom]="10"
-          [options]="units"
+          [options]="unitOptions() ?? []"
+          [loading]="unitsLoading()"
           [value]="draft().unitId"
           (valueChange)="query.set('unitId', $event)"
         />
@@ -127,8 +130,15 @@
     }
     @if (readError()) {
       <nx-notice tone="danger" [message]="readError()"
-        ><button notice-actions type="button" class="secondary-button" (click)="reload()">
-          重試
+        ><button
+          nxPending
+          notice-actions
+          type="button"
+          class="secondary-button"
+          [pending]="refreshing()"
+          (click)="reload()"
+        >
+          {{ refreshing() ? '重試中…' : '重試' }}
         </button></nx-notice
       >
     }
@@ -136,7 +146,7 @@
   <nx-data-table
     class="records-table"
     label="出勤紀錄"
-    [busy]="loading()"
+    [busy]="refreshing()"
     [columns]="columns"
     [stacked]="true"
     preferenceKey="staff-attendance-records"
@@ -151,20 +161,21 @@
       @if (period()) {
         <span class="form-note">{{ period() }}</span>
       }
-      @if (loading()) {
+      <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
+      @if (refreshing() && groups().length) {
         <span class="sr-only" role="status">正在載入出勤紀錄…</span>
       }
     </div>
     <button
+      nxPending
       table-actions
       type="button"
       class="quiet-button records-export"
-      [disabled]="loading() || exporting() || !people().length"
+      [pending]="exporting()"
+      [disabled]="!exporting() && !people().length"
       (click)="export()"
     >
-      <nx-icon [name]="exporting() ? 'loading' : 'download'" />{{
-        exporting() ? '匯出中…' : '匯出 Excel'
-      }}
+      <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 Excel' }}
     </button>
     <table>
       <caption class="sr-only">
@@ -280,7 +291,7 @@
       [count]="groups().length"
       [loading]="loading()"
       [error]="records() ? '' : readError()"
-      loadingText="正在取得出勤紀錄"
+      loadingText="正在載入出勤紀錄…"
       errorTitle="無法取得出勤紀錄"
       emptyTitle="這段期間沒有出勤紀錄"
       emptyText="只列出期間內持有員工卡的人；未來的日子不列出。"

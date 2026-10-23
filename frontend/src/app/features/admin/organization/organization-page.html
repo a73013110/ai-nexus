@@ -24,10 +24,30 @@
     <nx-icon name="plus" />新增單位
   </button>
   @if (store.loading() && !store.ready()) {
-    <p role="status">正在載入組織…</p>
+    <div class="organization-layout" role="status">
+      <div nxCard class="organization-skeleton">
+        @for (width of skeleton; track $index) {
+          <span class="skeleton" [style.width.%]="width"></span>
+        }
+      </div>
+      <div nxCard class="organization-skeleton">
+        @for (width of skeleton.slice(0, 3); track $index) {
+          <span class="skeleton" [style.width.%]="width"></span>
+        }
+      </div>
+      <span class="sr-only">正在載入組織…</span>
+    </div>
   } @else if (store.error()) {
     <nx-notice tone="danger" [message]="store.error()"
-      ><button notice-actions (click)="store.load()">重新載入</button>
+      ><button
+        notice-actions
+        nxPending
+        type="button"
+        [pending]="store.refreshing()"
+        (click)="store.load()"
+      >
+        {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
+      </button>
     </nx-notice>
   }
   @if (store.ready()) {
@@ -49,11 +69,12 @@
             <h2 id="organization-tree-title">
               單位 <span class="ui-count-label">{{ store.units().length }} 個</span>
             </h2>
-            @if (store.busy()) {
-              <span class="form-note" role="status">正在儲存…</span>
-            }
           </header>
-          <ul class="unit-list">
+          <ul
+            class="unit-list"
+            [class.is-refreshing]="store.refreshing()"
+            [attr.aria-busy]="store.refreshing() || null"
+          >
             @for (row of store.rows(); track row.unit.id) {
               <li
                 class="unit-row"
@@ -106,9 +127,12 @@
                   aria-haspopup="menu"
                   [attr.aria-label]="'單位操作：' + row.unit.name"
                   [attr.aria-expanded]="isMenuOpen(trigger)"
+                  [attr.aria-busy]="store.working() === 'unit:' + row.unit.id || null"
                   (click)="openMenu(row, trigger)"
                 >
-                  <nx-icon name="more" />
+                  <nx-icon
+                    [name]="store.working() === 'unit:' + row.unit.id ? 'loading' : 'more'"
+                  />
                 </button>
               </li>
             }
@@ -174,24 +198,32 @@
                     placeholder="輸入至少兩個字，搜尋帳號或姓名"
                     [value]="people.text()"
                     [disabled]="store.locked()"
+                    [busy]="people.loading()"
                     (valueChange)="people.find($event)"
                 /></label>
                 @if (people.searchable()) {
                   <div class="person-picker-results" role="region" aria-label="符合的使用者">
                     @for (user of people.results(); track user.id) {
+                      @let adding = store.working() === 'add:' + user.id;
+                      <!-- 名稱在前、圖示在後的列：送出中把結尾的 + 換成轉圈（store 擋重複寫入）。 -->
                       <button
                         type="button"
                         class="person-picker-user"
-                        [disabled]="store.locked()"
+                        [attr.aria-busy]="adding || null"
+                        [disabled]="store.locked() && !adding"
                         (click)="add(user)"
                       >
                         <span
                           ><strong>{{ user.displayName }}</strong
                           ><small>{{ user.account }}</small></span
-                        ><nx-icon name="plus" />
+                        ><nx-icon [name]="adding ? 'loading' : 'plus'" />
                       </button>
                     } @empty {
-                      <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+                      @if (people.loading()) {
+                        <p class="form-note" role="status">正在搜尋…</p>
+                      } @else {
+                        <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+                      }
                     }
                   </div>
                 }
@@ -200,10 +232,19 @@
             <h3 class="member-heading">
               直屬成員 <span class="ui-count-label">{{ row.unit.memberCount }} 人</span>
             </h3>
-            @if (store.membersLoading()) {
-              <p role="status" class="form-note">正在載入成員…</p>
-            } @else {
-              <ul class="member-list">
+            @if (store.membersLoading() && !store.membersError()) {
+              <div class="organization-skeleton" role="status">
+                @for (width of skeleton.slice(0, 3); track $index) {
+                  <span class="skeleton" [style.width.%]="width"></span>
+                }
+                <span class="sr-only">正在載入成員…</span>
+              </div>
+            } @else if (!store.membersLoading()) {
+              <ul
+                class="member-list"
+                [class.is-refreshing]="store.membersRefreshing()"
+                [attr.aria-busy]="store.membersRefreshing() || null"
+              >
                 @for (member of store.members(); track member.userId) {
                   <li class="member-row" [class.is-inactive]="!member.active">
                     <span class="member-name"
@@ -213,23 +254,30 @@
                         <nx-status-badge tone="neutral">帳號已停用</nx-status-badge>
                       }
                     </span>
+                    @let primary = store.memberPending('primary:' + member.userId);
+                    @let manager = store.memberPending('manager:' + member.userId);
+                    @let removing = store.memberPending('remove:' + member.userId);
                     <nx-checkbox
                       label="主要所屬"
                       [checked]="member.isPrimary"
-                      [disabled]="store.locked()"
+                      [pending]="primary"
+                      [disabled]="store.membersLocked() && !primary"
                       (checkedChange)="setPrimary(member, $event)"
                     />
                     <nx-checkbox
                       label="主管"
                       [checked]="member.isManager"
-                      [disabled]="store.locked()"
+                      [pending]="manager"
+                      [disabled]="store.membersLocked() && !manager"
                       (checkedChange)="setManager(member, $event)"
                     />
                     <button
+                      nxPending
                       type="button"
                       class="icon-button"
                       [attr.aria-label]="'將 ' + member.displayName + ' 移出單位'"
-                      [disabled]="store.locked()"
+                      [pending]="removing"
+                      [disabled]="store.membersLocked() && !removing"
                       (click)="removeMember(member)"
                     >
                       <nx-icon name="close" />

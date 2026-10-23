@@ -229,9 +229,12 @@ describe('AttendanceRecordsPage', () => {
 
     button.click();
     await fixture.whenStable();
-    // 匯出期間按鈕停用並顯示進度，避免重複送出。
-    expect(button.disabled).toBe(true);
+    // 匯出期間按鈕轉圈並擋下重複送出；用 aria-disabled 而不是 disabled，焦點才留在按鈕上。
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.textContent).toContain('匯出中');
+    button.click();
     expect(api.exportRecords).toHaveBeenCalledOnce();
     expect(api.exportRecords.mock.calls[0][0]).toEqual(api.records.mock.calls[0][0]);
 
@@ -246,7 +249,7 @@ describe('AttendanceRecordsPage', () => {
       expect(downloads).toEqual(['出勤紀錄_20261001-20261031_20261022_100000.xlsx']),
     );
     await fixture.whenStable();
-    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBeNull();
     expect(root.querySelector('.records-export-error')).toBeNull();
   });
 

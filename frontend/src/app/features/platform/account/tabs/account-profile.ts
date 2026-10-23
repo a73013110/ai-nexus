@@ -42,6 +42,17 @@ import { AccountSecurityStore, emailBadge } from '../security/account-security-s
       font-size: var(--text-caption);
       overflow-wrap: anywhere;
     }
+    .row-skeleton {
+      display: grid;
+      gap: var(--p-space-2);
+      padding-block: var(--p-space-3);
+    }
+    .row-skeleton .skeleton {
+      height: 0.875rem;
+    }
+    .row-skeleton .skeleton + .skeleton {
+      width: 60%;
+    }
   `,
   template: `<nx-setting-group
     heading="個人資料"
@@ -76,6 +87,11 @@ import { AccountSecurityStore, emailBadge } from '../security/account-security-s
           </button>
         }
       </nx-setting-row>
+    } @else if (store.loading()) {
+      <div class="row-skeleton" role="status">
+        <span class="skeleton"></span><span class="skeleton"></span>
+        <span class="sr-only">正在載入通知信箱…</span>
+      </div>
     }
   </nx-setting-group>`,
 })

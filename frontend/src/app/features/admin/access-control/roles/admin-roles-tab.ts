@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import type { AdminRoleDto } from '@core/api/schema';
-import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { AccessControlStore } from '../access-control-store';
 import { AccessStatus } from './access-status';
@@ -8,20 +8,28 @@ import { AccessStatus } from './access-status';
 /** 角色組合功能群組；使用者則領取角色。 */
 @Component({
   selector: 'nx-admin-roles-tab',
-  imports: [Icon, DataTable, DataTableRow, AccessStatus],
+  imports: [Icon, DataTable, DataTableRow, TableState, AccessStatus],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: '../../../../shared/ui/management-table-page.scss',
   template: `
     <div class="page-toolbar">
       <p class="form-note">使用者取得角色，角色加入功能群組。</p>
-      <button class="primary-button" (click)="edit.emit(undefined)">
+      <button class="primary-button" [disabled]="!store.catalog()" (click)="edit.emit(undefined)">
         <nx-icon name="plus" />新增角色
       </button>
     </div>
-    <nx-data-table class="admin-access-table admin-roles-table" label="角色列表" [stacked]="true">
+    <nx-data-table
+      class="admin-access-table admin-roles-table"
+      label="角色列表"
+      [stacked]="true"
+      [busy]="store.refreshing()"
+    >
       <div table-toolbar class="ui-table-toolbar">
         <h2>
-          角色 <span class="ui-count-label">{{ roles().length }} 個</span>
+          角色
+          @if (store.catalog()) {
+            <span class="ui-count-label">{{ roles().length }} 個</span>
+          }
         </h2>
       </div>
       <table>
@@ -71,6 +79,12 @@ import { AccessStatus } from './access-status';
           }
         </tbody>
       </table>
+      <nx-table-state
+        [count]="roles().length"
+        [loading]="store.loading()"
+        loadingText="正在載入角色…"
+        emptyTitle="還沒有角色"
+      />
     </nx-data-table>
   `,
 })

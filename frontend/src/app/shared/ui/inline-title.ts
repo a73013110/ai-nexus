@@ -10,11 +10,12 @@ import {
 } from '@angular/core';
 import { Icon } from './icon';
 import { Field } from './field';
+import { PendingButton } from './pending-button';
 
 @Component({
   selector: 'nx-inline-title',
   host: { '[class.is-block]': "appearance() === 'block'" },
-  imports: [Icon, Field],
+  imports: [Icon, Field, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './inline-title.scss',
   template: `@if (editing()) {
@@ -33,10 +34,11 @@ import { Field } from './field';
           [attr.aria-describedby]="id + '-help'"
         />
         <button
+          nxPending
           type="button"
           class="icon-button"
           aria-label="儲存對話名稱"
-          [disabled]="saving()"
+          [pending]="saving()"
           (click)="commit()"
         >
           <nx-icon name="check" />
@@ -45,7 +47,7 @@ import { Field } from './field';
           type="button"
           class="icon-button"
           aria-label="取消修改名稱"
-          [disabled]="saving()"
+          [attr.aria-disabled]="saving() || null"
           (click)="cancel()"
         >
           <nx-icon name="close" />
@@ -55,7 +57,7 @@ import { Field } from './field';
           class="inline-title-help"
           [class.ui-error-text]="error()"
           role="status"
-          >{{ error() || (saving() ? '正在儲存…' : 'Enter 儲存 · Esc 取消') }}</span
+          >{{ error() || (saving() ? '正在儲存名稱…' : 'Enter 儲存 · Esc 取消') }}</span
         >
       </div>
     } @else {

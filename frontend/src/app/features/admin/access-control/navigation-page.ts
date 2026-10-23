@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from './access-control-store';
 import { accessPageNames, navigationTour } from './access-control-tour';
 import { NavigationStore } from './navigation-store';
@@ -11,7 +12,7 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
 /** 選單：側欄的分群、頁面與外部連結，以及它們的順序與層級。 */
 @Component({
   selector: 'nx-navigation-page',
-  imports: [Notice, FeaturePage, NavigationEditor, NavigationItemDialog],
+  imports: [Notice, PendingButton, FeaturePage, NavigationEditor, NavigationItemDialog],
   providers: [AccessControlStore, NavigationStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -20,14 +21,21 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
       layoutMode="data"
       [tour]="tour()"
     >
-      @if (store.loading() && !store.ready()) {
-        <p role="status">正在載入選單…</p>
-      } @else if (store.error()) {
+      <!-- 首次載入由表格的骨架表示；讀取失敗且沒有資料時只留提示與重試。 -->
+      @if (store.error()) {
         <nx-notice [message]="store.error()"
-          ><button notice-actions (click)="store.load()">重新載入</button>
+          ><button
+            notice-actions
+            nxPending
+            type="button"
+            [pending]="store.refreshing()"
+            (click)="store.load()"
+          >
+            {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
+          </button>
         </nx-notice>
       }
-      @if (store.ready()) {
+      @if (store.ready() || !store.error()) {
         <nx-navigation-editor
           class="ui-table-fill"
           (create)="dialog.create($event.kind, $event.parentId)"

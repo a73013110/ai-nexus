@@ -14,6 +14,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ProductTourButton } from '@shared/ui/product-tour-button';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewMotion } from '@shared/ui/view-motion';
@@ -33,6 +34,7 @@ import { settingsTour } from './settings-tour';
     Icon,
     NgComponentOutlet,
     Notice,
+    PendingButton,
     ProductTourButton,
     SearchField,
     ViewMotion,
@@ -48,6 +50,8 @@ export class SettingsPage {
   readonly store = inject(SettingsStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly tabs = SETTINGS_TABS;
+  /** 首次載入骨架：每列一個名稱（寬度 %）配一個控制項，形狀接近設定列。 */
+  protected readonly skeleton = [38, 52, 30, 46];
   readonly search = signal('');
   readonly tabId = signal(SETTINGS_TABS[0].id);
   readonly current = computed(

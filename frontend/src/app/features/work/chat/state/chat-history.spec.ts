@@ -56,6 +56,32 @@ describe('chat history', () => {
     expect(history.hasMore()).toBe(false);
   });
 
+  it('separates a list reload from loading older conversations and clears only for the latest read', async () => {
+    const pending: ((value: unknown) => void)[] = [];
+    const conversations = vi.fn(() => new Promise((resolve) => pending.push(resolve)));
+    const { history } = setup({ conversations });
+    const first = history.refresh();
+    expect(history.refreshing()).toBe(true);
+    expect(history.loadingMore()).toBe(false);
+    pending[0](rows('a', 100));
+    await first;
+    expect(history.refreshing()).toBe(false);
+
+    const more = history.refresh(true);
+    expect(history.loadingMore()).toBe(true);
+    expect(history.refreshing()).toBe(false);
+    // 載入更早的對話途中換了搜尋：較舊的讀取回來時不能把新讀取的狀態清掉。
+    history.search.set('新');
+    const searched = history.refresh();
+    pending[1](rows('b', 3));
+    await more;
+    expect(history.refreshing()).toBe(true);
+    pending[2](rows('c', 1));
+    await searched;
+    expect(history.refreshing()).toBe(false);
+    expect(history.loadingMore()).toBe(false);
+  });
+
   it('places a changed conversation where the server list would, or drops it from the view', () => {
     const { history } = setup({});
     const row = (id: string, updatedAt: string, changes: Partial<ConversationDto> = {}) =>

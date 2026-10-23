@@ -32,6 +32,7 @@ export interface PropertyGroup {
 /**
  * 分組的屬性清單（詳情面板、原始屬性檢視）：屬性很多時以分組與篩選取代捲動找欄位。
  * 篩選比對名稱、來源名稱與值並標出相符處；沒有值的屬性預設收起，數量寫在開關上，需要時再展開。
+ * 重讀時保留舊屬性，由呼叫端在本元件加 `.is-refreshing` 與 `aria-busy`；首次載入由呼叫端畫骨架。
  */
 @Component({
   selector: 'nx-property-list',

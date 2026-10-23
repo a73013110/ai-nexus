@@ -33,6 +33,7 @@ import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -83,6 +84,7 @@ interface MailPageRequest {
     MailDiagnosisDialog,
     MailTestDialog,
     Notice,
+    PendingButton,
     QueryBar,
     RouterLink,
     StatusBadge,
@@ -133,8 +135,11 @@ export class MailMessagesPage {
     const page = this.pageRead.value();
     return !!page && page.rows.length === page.request.take;
   });
-  /** 只有換條件、換頁才算載入（擋操作、顯示忙碌）；背景更新不打斷閱讀。 */
-  readonly loading = computed(() => this.pageRead.loading());
+  /**
+   * 使用者感覺得到的讀取（換條件、換頁、重試與寫入後重讀）：擋操作、表格淡化。
+   * 背景更新（輪詢）不算，不打斷閱讀。
+   */
+  readonly loading = computed(() => this.pageRead.refreshing());
   /** 同一個請求的背景更新裡新出現的列（新入列的信），進場時有動效；換頁或換條件時清空。 */
   private readonly arrived = linkedSignal<
     { request: MailPageRequest; rows: MailMessageDto[] } | undefined,
@@ -195,6 +200,10 @@ export class MailMessagesPage {
     };
   });
   readonly detailLoading = this.detailRead.loading;
+  /** 詳情讀取失敗後重試中。 */
+  readonly detailRefreshing = this.detailRead.refreshing;
+  /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
+  protected readonly skeleton = [40, 88, 72, 92, 64];
   private readonly logsName = computed(() =>
     this.session.has('diagnostics.logs') ? this.session.featureName('diagnostics.logs') : null,
   );
@@ -295,6 +304,9 @@ export class MailMessagesPage {
   reload() {
     this.pageRead.reload();
     this.statusRead.reload();
+  }
+  reloadDetail() {
+    this.detailRead.reload();
   }
   openDetails(id: string) {
     if (this.selectedId() !== id) this.resendKey = crypto.randomUUID();

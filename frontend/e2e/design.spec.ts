@@ -180,6 +180,10 @@ test("production controls support keyboard selection, disabled options and dialo
     page.getByRole("menuitem", { name: "修改示範標題" }),
   ).toBeFocused();
   await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("menuitem", { name: "複製示範（送出中示範）" }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitem", { name: "重設示範" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toBeFocused();

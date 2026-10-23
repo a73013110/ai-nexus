@@ -15,6 +15,7 @@ import { FloatingToolbar } from '@shared/ui/floating-toolbar';
 import { Icon } from '@shared/ui/icon';
 import { IdleChrome } from '@shared/ui/idle-chrome';
 import { NameDialog } from '@shared/ui/name-dialog';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
@@ -38,6 +39,7 @@ import { DesignSamples } from './design-samples';
     IdleChrome,
     Icon,
     NameDialog,
+    PendingButton,
     Select,
     Tabs,
     ViewSwitch,
@@ -90,8 +92,8 @@ import { DesignSamples } from './design-samples';
   template: `<nx-design-section
       id="design-buttons"
       title="按鈕"
-      api=".primary-button · .secondary-button · .quiet-button · .icon-button"
-      description="一個區域只有一個主要操作；危險操作一律經過確認。按下時微縮，完成回饋以右下角通知呈現。"
+      api=".primary-button · .secondary-button · .quiet-button · .icon-button · button[nxPending]"
+      description="一個區域只有一個主要操作；危險操作一律經過確認。按下時微縮，完成回饋以右下角通知呈現。送出中（nxPending）前導圖示換成轉圈、文字改成「動詞＋中…」，不淡化、焦點留在原處，再按也不會重複送出。"
     >
       <div class="design-buttons">
         <button type="button" class="primary-button" (click)="toast.success('主要操作示範')">
@@ -112,6 +114,25 @@ import { DesignSamples } from './design-samples';
           <nx-icon name="reset" />重設示範</button
         ><button type="button" class="secondary-button" disabled>停用操作</button>
       </div>
+      <div class="design-buttons">
+        <button
+          nxPending
+          type="button"
+          class="primary-button"
+          [pending]="pending() === 'save'"
+          (click)="pend('save', '示範已儲存')"
+        >
+          {{ pending() === 'save' ? '儲存中…' : '儲存示範' }}</button
+        ><button
+          nxPending
+          type="button"
+          class="quiet-button"
+          [pending]="pending() === 'export'"
+          (click)="pend('export', '示範已匯出')"
+        >
+          <nx-icon name="download" />{{ pending() === 'export' ? '匯出中…' : '匯出示範' }}
+        </button>
+      </div>
     </nx-design-section>
     <nx-design-section
       id="design-dialogs"
@@ -131,7 +152,7 @@ import { DesignSamples } from './design-samples';
       id="design-menus"
       title="選單與下拉"
       api="ActionMenu · Select"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -151,8 +172,16 @@ import { DesignSamples } from './design-samples';
           (valuesChange)="levelValues.set($event)"
         />
       </nx-design-example>
+      <nx-design-example label="Select loading">
+        <nx-select label="示範模型" value="model-a" [options]="[]" [loading]="true" />
+      </nx-design-example>
       <nx-design-example label="ActionMenu">
-        <nx-action-menu label="示範更多操作" [items]="actions" (action)="action($event)" />
+        <nx-action-menu
+          label="示範更多操作"
+          [items]="actions"
+          [busy]="pending() === 'copy'"
+          (action)="action($event)"
+        />
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
@@ -260,7 +289,7 @@ import { DesignSamples } from './design-samples';
       id="design-checkbox"
       title="核取方塊"
       api="Checkbox"
-      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。"
+      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。立即儲存又不可還原的勾選用 pending：旁邊轉圈、暫不接受切換。"
     >
       <nx-checkbox
         label="開啟此項授權"
@@ -269,6 +298,13 @@ import { DesignSamples } from './design-samples';
         (checkedChange)="checked.set($event)"
       />
       <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
+      <nx-checkbox
+        label="立即生效的設定"
+        description="切換後儲存約一秒（pending）。"
+        [checked]="instant()"
+        [pending]="pending() === 'instant'"
+        (checkedChange)="saveInstant($event)"
+      />
     </nx-design-section>
     <nx-design-section
       id="design-choice-groups"
@@ -280,7 +316,8 @@ import { DesignSamples } from './design-samples';
         label="示範授權"
         [groups]="choiceGroups"
         [selected]="chosen()"
-        (selectedChange)="chosen.set($event)"
+        [pending]="pending() === 'choices'"
+        (selectedChange)="saveChoices($event)"
       />
     </nx-design-section>
     <nx-confirm-dialog />
@@ -293,6 +330,9 @@ export class DesignControls {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly naming = viewChild.required(NameDialog);
   readonly checked = signal(true);
+  readonly instant = signal(false);
+  /** 正在「送出」的示範動作；同一時間只示範一個。 */
+  readonly pending = signal<string | null>(null);
   readonly levels: SelectOption[] = ['Information', 'Warning', 'Error'].map((value) => ({
     value,
     label: value,
@@ -364,6 +404,7 @@ export class DesignControls {
   ];
   readonly actions: MenuAction[] = [
     { id: 'edit', label: '修改示範標題', icon: 'edit' },
+    { id: 'copy', label: '複製示範（送出中示範）', icon: 'copy' },
     { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
     { id: 'reset', label: '重設示範', icon: 'reset', danger: true },
   ];
@@ -373,7 +414,28 @@ export class DesignControls {
   }
   action(id: string) {
     if (id === 'edit') this.samples.editRequest.update((item) => item + 1);
+    if (id === 'copy') this.pend('copy', '示範已複製');
     if (id === 'reset') void this.reset();
+  }
+  /** 模擬一次約一秒的寫入；完成後通知。 */
+  pend(id: string, done?: string, then?: () => void) {
+    if (this.pending()) return;
+    this.pending.set(id);
+    this.scope.later(
+      () => {
+        this.pending.set(null);
+        then?.();
+        if (done) this.toast.success(done);
+      },
+      1200,
+      'design-pending',
+    );
+  }
+  saveInstant(checked: boolean) {
+    this.pend('instant', undefined, () => this.instant.set(checked));
+  }
+  saveChoices(selected: string[]) {
+    this.pend('choices', undefined, () => this.chosen.set(selected));
   }
   async reset() {
     const guard = this.scope.guard();

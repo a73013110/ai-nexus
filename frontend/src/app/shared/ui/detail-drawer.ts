@@ -18,7 +18,10 @@ import { Icon } from './icon';
 import { ProductTourButton } from './product-tour-button';
 import type { ProductTourDefinition } from './product-tour';
 
-/** 桌面版的非模態檢視器；窄螢幕時變成原生模態。 */
+/**
+ * 桌面版的非模態檢視器；窄螢幕時變成原生模態。重讀時舊內容留著，由呼叫端在內容區加
+ * `.is-refreshing` 與 `aria-busy`，不換回骨架。
+ */
 @Component({
   selector: 'nx-detail-drawer',
   imports: [Icon, ProductTourButton],

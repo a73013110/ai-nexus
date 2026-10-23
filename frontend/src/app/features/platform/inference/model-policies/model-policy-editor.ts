@@ -98,7 +98,12 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
         </ul>
       </nx-info-popover>
     </div>
-    <nx-data-table class="model-policy-table" label="模型授權與額度" [stacked]="true">
+    <nx-data-table
+      class="model-policy-table"
+      label="模型授權與額度"
+      [stacked]="true"
+      [busy]="busy()"
+    >
       <table>
         <colgroup>
           <col />
@@ -182,6 +187,8 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
       </table>
       <nx-table-state
         [count]="models().length"
+        [loading]="loading()"
+        loadingText="正在載入模型…"
         emptyTitle="目前沒有設定模型"
         emptyText="請先設定地端模型供應商。"
       />
@@ -212,6 +219,10 @@ export class ModelPolicyEditor {
   readonly effective = input<EffectiveModelPolicyDto | null>(null);
   readonly personal = input(false);
   readonly disabled = input(false);
+  /** 模型清單首次載入：表格畫骨架，不先說「目前沒有設定模型」。綁模型目錄的 `loading()`。 */
+  readonly loading = input(false);
+  /** 模型清單重讀中：已有的列保留並淡化。綁模型目錄的 `refreshing()`。 */
+  readonly busy = input(false);
   readonly name = formatModelName;
   readonly format = formatNumber;
   readonly maxTokenLimit = maxTokenLimit;

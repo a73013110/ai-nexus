@@ -13,10 +13,11 @@ import {
   viewChild,
   computed,
 } from '@angular/core';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
+import { FormField, form, maxLength, readonly, required } from '@angular/forms/signals';
 import type { PromptTemplateDto } from '@core/api/schema';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ViewScope } from '@shared/browser/view-scope';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { PromptsApi } from './prompts-api';
@@ -24,22 +25,37 @@ import { promptLibraryTour } from './prompt-library-tour';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [Notice, CompactDialog, DialogHeader, Field, Icon, FormField],
+  imports: [Notice, CompactDialog, DialogHeader, Field, Icon, FormField, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ViewScope],
   styleUrl: './prompt-library-dialog.scss',
-  template: `<dialog nxCompactDialog size="lg" #dialog class="platform-dialog library-dialog">
+  template: `<dialog
+    nxCompactDialog
+    size="lg"
+    #dialog
+    class="platform-dialog library-dialog"
+    [busy]="busy()"
+  >
     <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" [tour]="tour()" />
     <div class="dialog-body dialog-body-flush library-layout">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
       }
-      <div class="template-list">
+      <div
+        class="template-list"
+        [class.is-refreshing]="listRefreshing()"
+        [attr.aria-busy]="listRefreshing() || null"
+      >
         <button type="button" class="template-create" (click)="compose(null)">
           <nx-icon name="plus" />新增範本
         </button>
-        @if (loading()) {
-          <p class="template-note" role="status">正在取得範本…</p>
+        @if (firstLoad()) {
+          <div class="template-skeleton" role="status">
+            @for (width of skeleton; track $index) {
+              <span class="skeleton" [style.width.%]="width"></span>
+            }
+            <span class="sr-only">正在載入範本…</span>
+          </div>
         }
         @for (prompt of prompts(); track prompt.id) {
           <div class="template-row" [class.is-editing]="editingId() === prompt.id">
@@ -54,9 +70,10 @@ import { promptLibraryTour } from './prompt-library-tour';
             >
               <nx-icon name="edit" /></button
             ><button
+              nxPending
               type="button"
               class="icon-button template-delete"
-              [disabled]="busy()"
+              [pending]="deleting().has(prompt.id)"
               [attr.aria-label]="'刪除範本：' + prompt.title"
               (click)="remove(prompt.id)"
             >
@@ -64,7 +81,7 @@ import { promptLibraryTour } from './prompt-library-tour';
             </button>
           </div>
         } @empty {
-          @if (!loading()) {
+          @if (!firstLoad()) {
             <p class="template-note">還沒有範本。可將目前草稿保存為第一個範本。</p>
           }
         }
@@ -87,7 +104,13 @@ import { promptLibraryTour } from './prompt-library-tour';
           ></textarea>
         </label>
         <div class="template-actions">
-          <button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
+          <button
+            nxPending
+            type="submit"
+            class="primary-button"
+            [pending]="busy()"
+            [disabled]="fields().invalid()"
+          >
             {{ busy() ? '儲存中…' : '儲存範本' }}
           </button>
         </div>
@@ -108,8 +131,16 @@ export class PromptLibraryDialog {
     loader: () => this.api.prompts(),
   });
   readonly prompts = computed<PromptTemplateDto[]>(() => this.promptsRead.value() ?? []);
-  readonly loading = this.promptsRead.loading;
+  /** 每次開啟都會重讀；還沒有範本時畫骨架，已有範本時保留舊列並淡化。 */
+  readonly firstLoad = computed(() => this.promptsRead.refreshing() && !this.prompts().length);
+  readonly listRefreshing = computed(
+    () => this.promptsRead.refreshing() && this.prompts().length > 0,
+  );
+  /** 骨架列的寬度（%）。 */
+  protected readonly skeleton = [82, 64, 74];
   readonly busy = signal(false);
+  /** 刪除中的範本：只擋那一列的刪除鈕，其他列照常可用。 */
+  readonly deleting = signal<ReadonlySet<string>>(new Set());
   private readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.promptsRead.error());
   readonly editingId = signal<string | null>(null);
@@ -122,6 +153,9 @@ export class PromptLibraryDialog {
     maxLength(schema.title, 80);
     required(schema.content);
     maxLength(schema.content, 12000);
+    // 儲存中欄位唯讀（不停用，焦點留在原處）。
+    readonly(schema.title, () => this.busy());
+    readonly(schema.content, () => this.busy());
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private readonly titleField = viewChild<ElementRef<HTMLInputElement>>('titleField');
@@ -162,9 +196,9 @@ export class PromptLibraryDialog {
     }
   }
   async remove(id: string) {
-    if (this.busy()) return;
+    if (this.deleting().has(id)) return;
     const valid = this.scope.guard();
-    this.busy.set(true);
+    this.deleting.update((ids) => new Set(ids).add(id));
     try {
       await this.api.deletePrompt(id);
       if (!valid()) return;
@@ -173,7 +207,11 @@ export class PromptLibraryDialog {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      this.busy.set(false);
+      this.deleting.update((ids) => {
+        const next = new Set(ids);
+        next.delete(id);
+        return next;
+      });
     }
   }
 }

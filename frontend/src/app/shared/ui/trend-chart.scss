@@ -111,3 +111,13 @@
   min-height: 11rem;
   color: var(--secondary);
 }
+.trend-skeleton {
+  height: 11rem;
+}
+.trend-loading .trend-axis {
+  margin-top: var(--p-space-2);
+}
+.trend-loading i {
+  width: 3.5rem;
+  height: 0.75rem;
+}

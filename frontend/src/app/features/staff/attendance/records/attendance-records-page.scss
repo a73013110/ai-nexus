@@ -95,3 +95,8 @@ tr.is-weekend > td:first-child {
     contain-intrinsic-size: auto 80rem;
   }
 }
+.records-rules-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}

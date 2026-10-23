@@ -28,18 +28,18 @@
   }
 }
 .message-list,
-.conversation-loading {
+.conversation-skeleton {
   padding: var(--p-space-4) var(--outline-space) var(--p-space-3) 0;
 }
 // Message-shaped placeholders; they appear only when opening takes long enough to notice.
-.conversation-loading {
+.conversation-skeleton {
   display: flex;
   flex-direction: column;
   gap: var(--message-gap);
   font-size: var(--text-body);
   animation: arrive var(--motion) var(--ease) var(--motion) both;
 }
-.loading-prompt {
+.skeleton-prompt {
   align-self: flex-end;
   width: min(60%, 28rem);
   height: 3.25em;
@@ -49,7 +49,7 @@
     width: min(40%, 18rem);
   }
 }
-.loading-answer {
+.skeleton-answer {
   display: grid;
   gap: 0.75em;
   padding: var(--p-space-2) 0 var(--p-space-2) var(--p-space-4);
@@ -103,7 +103,7 @@
 }
 @include bp.below(narrow) {
   .message-list,
-  .conversation-loading {
+  .conversation-skeleton {
     padding-right: 0;
   }
 }

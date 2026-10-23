@@ -36,10 +36,6 @@
     animation-delay: calc(var(--motion-stagger) * #{$i - 1});
   }
 }
-// Old data stays readable but recedes; the hero says why.
-.monitor-dashboard.is-stale > :not(nx-monitoring-hero) {
-  opacity: 0.6;
-}
 .monitor-notices {
   display: grid;
   gap: var(--p-space-2);

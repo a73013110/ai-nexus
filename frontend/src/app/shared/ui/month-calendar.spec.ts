@@ -66,6 +66,8 @@ describe('calendar keys', () => {
     [days]="days()"
     [weekStart]="weekStart()"
     [interactive]="interactive()"
+    [busy]="busy()"
+    [loading]="loading()"
     (dayActivate)="activated.push($event)"
   >
     @if (custom()) {
@@ -81,6 +83,8 @@ class Host {
   readonly weekStart = signal<WeekStart>(1);
   readonly interactive = signal(true);
   readonly custom = signal(false);
+  readonly busy = signal(false);
+  readonly loading = signal(false);
   readonly days = signal<CalendarDay[]>([
     {
       date: '2026-10-10',
@@ -126,6 +130,31 @@ describe('MonthCalendar', () => {
     expect(cell('2026-10-22').tabIndex).toBe(0);
     expect(cell('2026-09-28').classList).toContain('is-outside');
     expect(cell('2026-09-28').querySelector('.calendar-content')).toBeNull();
+  });
+
+  it('holds skeleton days while the month loads and dims the days it refreshes', async () => {
+    const { fixture, host, root, cell } = setup();
+    const grid = root.querySelector('[role="grid"]')!;
+    const weeks = () => root.querySelector('.calendar-weeks')!;
+    host.loading.set(true);
+    host.busy.set(true);
+    await fixture.whenStable();
+    expect(grid.getAttribute('aria-busy')).toBe('true');
+    expect(cell('2026-10-12').querySelector('.skeleton')).not.toBeNull();
+    expect(cell('2026-10-12').querySelector('.calendar-mark')).toBeNull();
+    // 骨架本身就是回饋，不再疊淡化。
+    expect(weeks().classList).not.toContain('is-refreshing');
+
+    host.loading.set(false);
+    await fixture.whenStable();
+    expect(cell('2026-10-12').querySelector('.skeleton')).toBeNull();
+    expect(cell('2026-10-12').querySelector('.calendar-mark')).not.toBeNull();
+    expect(weeks().classList).toContain('is-refreshing');
+
+    host.busy.set(false);
+    await fixture.whenStable();
+    expect(grid.hasAttribute('aria-busy')).toBe(false);
+    expect(weeks().classList).not.toContain('is-refreshing');
   });
 
   it('starts the week on Sunday when asked', async () => {

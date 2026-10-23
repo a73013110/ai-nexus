@@ -33,6 +33,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { Panel } from '@shared/ui/panel';
 import { ResourceCard } from '@shared/ui/resource-card';
@@ -65,6 +66,7 @@ import { routeOf } from '@core/api/catalog';
     Field,
     FeaturePage,
     Icon,
+    PendingButton,
     ActionMenu,
     Panel,
     ResourceCard,
@@ -120,7 +122,17 @@ export class KnowledgePage {
   });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly loading = this.collectionsRead.loading;
+  readonly collectionsRefreshing = this.collectionsRead.refreshing;
   readonly loadingDocuments = this.documentsRead.loading;
+  /** 已有文件列時的重讀；輪詢不算（`refreshing` 本來就不含輪詢）。 */
+  readonly documentsRefreshing = computed(
+    () => this.documentsRead.refreshing() && !this.documentsRead.loading(),
+  );
+  readonly refreshing = computed(
+    () => this.collectionsRead.refreshing() || this.documentsRead.refreshing(),
+  );
+  /** 移除或重新索引中的知識庫與文件：只有那一列的選單鈕轉圈。 */
+  readonly working = signal<ReadonlySet<string>>(new Set());
   private readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -150,7 +162,6 @@ export class KnowledgePage {
     );
   });
   readonly uploading = signal(false);
-  readonly uploadLabel = signal('');
   // 篩選、查詢與其結果，都屬於畫面上的那個集合。
   readonly filter = linkedSignal(() => (this.id(), ''));
   readonly query = linkedSignal(() => (this.id(), ''));
@@ -258,9 +269,6 @@ export class KnowledgePage {
       if (valid()) this.saving.set(false);
     }
   }
-  cancel(event: Event) {
-    if (this.saving()) event.preventDefault();
-  }
   action(id: string) {
     const current = this.current();
     if (!current) return;
@@ -291,26 +299,38 @@ export class KnowledgePage {
     this.uploading.set(true);
     this.actionError.set('');
     const controller = new AbortController();
+    // 與檔案庫、專案相同：一則提示從「正在上傳」換成完成；失敗或離開則撤回。
+    const progress = 'knowledge-upload';
+    let done = false;
     try {
       for (const file of candidates) {
         if (!valid()) return;
-        this.uploadLabel.set(`正在上傳 ${file.name}`);
+        this.toast.show({
+          id: progress,
+          tone: 'info',
+          title: '正在上傳 ' + file.name,
+          duration: 0,
+        });
         const uploaded = await this.uploads.upload(file, controller.signal);
         if (!valid()) return;
         this.jobToasts.trackDocument(await this.api.add(collection, uploaded.id));
         if (valid() && this.id() === collection) this.documentsRead.reload();
       }
       if (valid()) {
-        this.toast.success('文件已上傳', '文字辨識與索引會在背景繼續處理。');
+        this.toast.show({
+          id: progress,
+          tone: 'success',
+          title: '文件已上傳',
+          description: '文字辨識與索引會在背景繼續處理。',
+        });
+        done = true;
         this.collectionsRead.reload();
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) {
-        this.uploading.set(false);
-        this.uploadLabel.set('');
-      }
+      if (!done) this.toast.dismiss(progress);
+      if (valid()) this.uploading.set(false);
     }
   }
   async search(event: Event) {
@@ -343,6 +363,7 @@ export class KnowledgePage {
     )
       return;
     this.actionError.set('');
+    this.track(id, true);
     try {
       await (collection ? this.api.removeCollection(id) : this.api.remove(id));
       if (!valid()) return;
@@ -351,11 +372,22 @@ export class KnowledgePage {
       this.load();
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
+    } finally {
+      this.track(id, false);
     }
+  }
+  private track(id: string, active: boolean) {
+    this.working.update((ids) => {
+      const next = new Set(ids);
+      if (active) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
   private async reindex(document: DocumentDto) {
     const valid = this.scope.guard();
     this.actionError.set('');
+    this.track(document.id, true);
     try {
       this.jobToasts.trackDocument(await this.api.reindex(document.id));
       if (valid()) {
@@ -364,6 +396,8 @@ export class KnowledgePage {
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
+    } finally {
+      this.track(document.id, false);
     }
   }
   actions(document: DocumentDto): MenuAction[] {

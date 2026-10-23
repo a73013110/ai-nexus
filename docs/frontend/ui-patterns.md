@@ -7,7 +7,7 @@
 - 功能頁用 `FeaturePage`（預設 compact、wide）。頁首只放標題、一句說明與動作，不加眉標或其他功能的入口。
 - 全頁只有 `.feature-main` 一個捲動區；`.feature-content` 統一內容上限與對齊線。
 - 固定欄位用表格（`layoutMode="data"`、列狀態、查詢與分頁見 [資料工作區](data-workspace.md)），面板裡的小表格也用 `DataTable`；差異大的文件、報告、進度用卡片或專屬閱讀介面。
-- 卡片用 `nxCard`（保留原生語意），空白與載入內容用 `EmptyState`；頁首摘要數字用 `StatGrid`＋`StatTile`。資源的列表與詳細頁見 [資源集合頁](resource-pages.md)。
+- 卡片用 `nxCard`（保留原生語意），沒有資料用 `EmptyState`；頁首摘要數字用 `StatGrid`＋`StatTile`。資源的列表與詳細頁見 [資源集合頁](resource-pages.md)。
 
 ## 導覽
 
@@ -47,7 +47,7 @@
 ## 提示、載入與錯誤
 
 - 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
-- 讀取的載入／錯誤／重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。形狀已知的內容用 `.skeleton` 佔位，容器保留 `role="status"` 與可讀文字。
+- 讀取錯誤與重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)；載入、重讀與送出中見 [載入與送出中](loading.md)。
 - 進度只顯示真實階段（`JobProgress`），未知總量用不定進度；未知金額或用量寫明未知，不顯示為零。
 - 規則與計算方式收進 `InfoPopover`：短說明用 `.form-note-list`；長說明加 `heading`，內容用 `styles/popovers.scss` 的 `.info-*`。
 - 狀態用 `StatusBadge`／`CountBadge`：文字或圓點與顏色並用。數量徽章是裝飾，脈絡由父按鈕的名稱提供，只由一個 contextual status 播報。

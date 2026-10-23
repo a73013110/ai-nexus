@@ -17,6 +17,7 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { MailApi } from '../mail-api';
@@ -37,7 +38,17 @@ const types: Record<string, string> = { text: '文字', number: '整數', flag: 
  */
 @Component({
   selector: 'nx-mail-test-dialog',
-  imports: [Checkbox, CompactDialog, CopyValue, DialogHeader, Field, Notice, Select, StatusBadge],
+  imports: [
+    Checkbox,
+    CompactDialog,
+    CopyValue,
+    DialogHeader,
+    Field,
+    Notice,
+    PendingButton,
+    Select,
+    StatusBadge,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './mail-test-dialog.scss',
   templateUrl: './mail-test-dialog.html',
@@ -77,9 +88,6 @@ export class MailTestDialog {
     requestAnimationFrame(() => this.field().nativeElement.focus());
     // 每次開啟重讀：範例值含操作者與當下時間，也可能剛部署了新的範本。
     void this.load();
-  }
-  cancel(event: Event) {
-    if (this.busy()) event.preventDefault();
   }
   choose(category: string) {
     this.category.set(category);

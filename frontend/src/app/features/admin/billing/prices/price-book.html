@@ -26,7 +26,15 @@
 </div>
 @if (catalogRead.error() && catalogRead.value()) {
   <nx-notice [message]="catalogRead.error()"
-    ><button notice-actions type="button" (click)="catalogRead.reload()">重新載入</button>
+    ><button
+      notice-actions
+      nxPending
+      type="button"
+      [pending]="catalogRead.refreshing()"
+      (click)="catalogRead.reload()"
+    >
+      {{ catalogRead.refreshing() ? '重新載入中…' : '重新載入' }}
+    </button>
   </nx-notice>
 }
 @if (view() === 'current') {
@@ -140,7 +148,7 @@
       [count]="current().length"
       [loading]="loading()"
       [error]="catalogRead.error()"
-      loadingText="正在讀取價格"
+      loadingText="正在載入價格…"
       errorTitle="無法載入價格"
       [emptyTitle]="search() ? '沒有符合的模型或工具' : '尚未設定可計費的模型或工具'"
       [emptyText]="search() ? '' : '系統會明確標示未定價，不會把未知費用算成零。'"
@@ -259,7 +267,7 @@
       [count]="history().length"
       [loading]="loading()"
       [error]="catalogRead.error()"
-      loadingText="正在讀取價格"
+      loadingText="正在載入價格…"
       errorTitle="無法載入價格"
       [emptyTitle]="search() ? '沒有符合的價格版本' : '尚未設定價格'"
       [emptyText]="search() ? '' : '系統會明確標示未定價，不會把未知費用算成零。'"

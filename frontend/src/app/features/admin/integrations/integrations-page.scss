@@ -107,6 +107,20 @@
   border-radius: 50%;
   margin-top: 8px;
 }
+.source-skeleton {
+  height: 5rem;
+  border-radius: var(--radius-item);
+}
+.reading-skeleton {
+  display: grid;
+  gap: var(--p-space-4);
+}
+.reading-skeleton .skeleton {
+  height: 0.875rem;
+}
+.reading-skeleton .skeleton:first-child {
+  height: 1.5rem;
+}
 @include bp.below(tablet) {
   .source-workbench {
     grid-template-columns: 1fr;

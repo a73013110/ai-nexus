@@ -18,6 +18,7 @@ import { DashboardStore } from '../dashboard-store';
     [points]="store.callsDaily()"
     [from]="store.appliedFrom()"
     [through]="store.appliedThrough()"
+    [busy]="store.refreshing()"
   />`,
 })
 export class ActivityWidget {

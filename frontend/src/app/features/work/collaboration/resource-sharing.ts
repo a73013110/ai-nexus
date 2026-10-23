@@ -19,6 +19,7 @@ import { directorySearch } from './directory-search';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { SearchField } from '@shared/ui/search-field';
@@ -35,17 +36,20 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, ChoiceGroups, SearchField],
+  imports: [
+    Notice,
+    CompactDialog,
+    DialogHeader,
+    Icon,
+    PendingButton,
+    Select,
+    ChoiceGroups,
+    SearchField,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './resource-sharing.scss',
-  template: `<dialog
-    nxCompactDialog
-    size="md"
-    #dialog
-    class="platform-dialog"
-    (cancel)="cancel($event)"
-  >
+  template: `<dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving()">
     <nx-dialog-header
       heading="存取權限"
       [detail]="name()"
@@ -57,7 +61,12 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
         <nx-notice tone="danger" [message]="error()" />
       }
       @if (loading()) {
-        <p role="status" class="form-note">正在載入授權…</p>
+        <div class="acl-skeleton" role="status">
+          <span class="sr-only">正在載入授權…</span>
+          <span class="skeleton is-field"></span>
+          <span class="skeleton"></span>
+          <span class="skeleton"></span>
+        </div>
       } @else {
         <div class="platform-form">
           <label class="sharing-search"
@@ -65,6 +74,7 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
               label="尋找要授權的使用者"
               placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
               [value]="people.text()"
+              [busy]="people.loading()"
               (valueChange)="people.find($event)"
           /></label>
           @if (people.searchable()) {
@@ -77,7 +87,11 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
                   ><nx-icon name="plus" />
                 </button>
               } @empty {
-                <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+                @if (people.loading()) {
+                  <p class="form-note" role="status">正在搜尋…</p>
+                } @else {
+                  <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+                }
               }
             </div>
           }
@@ -121,17 +135,27 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
         </div>
       }
     </div>
-    @if (!loading()) {
-      <footer class="dialog-foot">
-        <p class="dialog-note">擁有者保留完整權限</p>
-        <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
-          取消
-        </button>
-        <button class="primary-button sharing-save" [disabled]="saving()" (click)="save()">
-          {{ saving() ? '正在儲存…' : '儲存權限' }}
-        </button>
-      </footer>
-    }
+    <footer class="dialog-foot">
+      <p class="dialog-note">擁有者保留完整權限</p>
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="saving() || null"
+        (click)="saving() || dialog.close()"
+      >
+        取消
+      </button>
+      <button
+        nxPending
+        type="button"
+        class="primary-button sharing-save"
+        [pending]="saving()"
+        [disabled]="loading()"
+        (click)="save()"
+      >
+        {{ saving() ? '儲存中…' : '儲存權限' }}
+      </button>
+    </footer>
   </dialog>`,
 })
 export class ResourceSharing {
@@ -213,11 +237,8 @@ export class ResourceSharing {
       rows.map((item) => (item.userId === id ? { ...item, role } : item)),
     );
   }
-  cancel(event: Event) {
-    if (this.saving()) event.preventDefault();
-  }
   async save() {
-    if (this.saving()) return;
+    if (this.saving() || this.loading()) return;
     const valid = this.scope.guard(),
       kind = this.kind(),
       id = this.resourceId();

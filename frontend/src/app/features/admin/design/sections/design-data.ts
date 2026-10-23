@@ -121,7 +121,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="QueryBar · DataTable · TableState · TablePagination · DetailDrawer · DrawerPager · CopyValue"
-      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；載入、無資料與失敗由 TableState 呈現。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
+      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
       [stacked]="true"
     >
       <nx-query-bar label="示範查詢條件" [state]="query">
@@ -147,7 +147,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
         [value]="tableState()"
         (valueChange)="tableState.set($event)"
       />
-      <nx-data-table label="共用資料表範例" [stacked]="true" [busy]="tableState() === 'loading'">
+      <nx-data-table label="共用資料表範例" [stacked]="true" [busy]="tableBusy()">
         <div table-toolbar class="ui-table-toolbar">
           <h2>事件範例</h2>
         </div>
@@ -194,10 +194,11 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
         <nx-table-state
           [count]="shownRows().length"
           [loading]="tableState() === 'loading'"
+          [retrying]="retrying()"
           [error]="tableState() === 'error' ? '示範：服務暫時無法使用。' : ''"
           emptyTitle="沒有符合條件的事件"
           emptyText="試著擴大時間範圍，或移除部分條件。"
-          (retry)="tableState.set('rows')"
+          (retry)="retry()"
         />
       </nx-data-table>
     </nx-design-section>
@@ -235,15 +236,24 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       class="design-resources ui-density-compact"
       title="資源集合"
       api="ResourceGallery · ResourceCard · Panel"
-      description="檔案庫、知識庫、專案與成果共用：列表是膠囊工具列與卡片格線，詳細頁由 Panel 組成。"
+      description="檔案庫、知識庫、專案與成果共用：列表是膠囊工具列與卡片格線，詳細頁由 Panel 組成。首次載入（loading）是卡片骨架；已有卡片時重讀（busy）保留舊卡片、淡化並在上緣掃過細線，搜尋欄同時轉圈。"
       [stacked]="true"
     >
+      <nx-view-switch
+        class="design-table-states"
+        label="集合狀態示範"
+        [options]="galleryStates"
+        [value]="galleryState()"
+        (valueChange)="galleryState.set($event)"
+      />
       <nx-resource-gallery
         label="範例資源"
         placeholder="尋找範例"
         [filters]="dataViews"
         [filter]="dataView()"
         [search]="term()"
+        [loading]="galleryState() === 'loading'"
+        [busy]="galleryState() === 'refreshing'"
         [empty]="!cards().length"
         (filterChange)="dataView.set($event)"
         (searchChange)="term.set($event)"
@@ -377,6 +387,12 @@ export class DesignData {
     { value: 'success', label: '已完成' },
   ];
   readonly term = signal('');
+  readonly galleryStates = [
+    { value: 'cards', label: '資料' },
+    { value: 'loading', label: '載入' },
+    { value: 'refreshing', label: '重讀' },
+  ];
+  readonly galleryState = signal('cards');
   readonly cards = computed(() =>
     [
       {
@@ -416,10 +432,16 @@ export class DesignData {
   readonly tableStates = [
     { value: 'rows', label: '資料' },
     { value: 'loading', label: '載入' },
+    { value: 'refreshing', label: '重讀' },
     { value: 'empty', label: '無資料' },
     { value: 'error', label: '失敗' },
   ];
   readonly tableState = signal('rows');
+  /** 失敗後按了重試、示範讀取還沒回來。 */
+  readonly retrying = signal(false);
+  readonly tableBusy = computed(
+    () => this.tableState() === 'loading' || this.tableState() === 'refreshing' || this.retrying(),
+  );
   readonly cursorPage = signal(0);
   readonly offsetPage = signal(0);
   readonly traceId = '4bf92f3577b34da6a3ce929d0e0e4736';
@@ -429,7 +451,9 @@ export class DesignData {
       (row) => (view === 'all' || row.tone === 'success') && row.event.includes(event.trim()),
     );
   });
-  readonly shownRows = computed(() => (this.tableState() === 'rows' ? this.visibleRows() : []));
+  readonly shownRows = computed(() =>
+    this.tableState() === 'rows' || this.tableState() === 'refreshing' ? this.visibleRows() : [],
+  );
   readonly selectedIndex = computed(() =>
     this.shownRows().findIndex((row) => row.event === this.selected()),
   );
@@ -545,6 +569,18 @@ export class DesignData {
             : item,
       );
     this.tree.update(walk);
+  }
+  /** 模擬重讀一秒後成功。 */
+  retry() {
+    this.retrying.set(true);
+    this.scope.later(
+      () => {
+        this.retrying.set(false);
+        this.tableState.set('rows');
+      },
+      1000,
+      'design-table-retry',
+    );
   }
   exported() {
     this.toast.success('示範匯出', '實際頁面依已套用的條件匯出。');

@@ -4,6 +4,7 @@
   #dialog
   class="platform-dialog admin-inspector"
   [class.inspector-wide]="store.tab() === 'conversations'"
+  [busy]="!!store.saving()"
   (cancel)="cancel($event)"
   (close)="closing()"
 >

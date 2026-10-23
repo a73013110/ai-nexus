@@ -5,6 +5,7 @@ import type { RepositoryReviewDto } from '@core/api/schema';
 import { formatModelDisplayName, relativeTime } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { jobStatus } from '@features/work/jobs/job-kind';
 import { RepositoriesApi } from '../repositories-api';
@@ -24,7 +25,7 @@ export function reviewScope(review: RepositoryReviewDto) {
 /** 儲存庫的 AI 審查，最新的在前。 */
 @Component({
   selector: 'nx-repository-reviews',
-  imports: [RouterLink, Icon, Notice, StatusBadge, RepositoryReviewDialog],
+  imports: [RouterLink, Icon, Notice, PendingButton, StatusBadge, RepositoryReviewDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-reviews.scss',
   template: `<div class="intro">
@@ -40,7 +41,9 @@ export function reviewScope(review: RepositoryReviewDto) {
     </div>
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @if (reviews(); as reviews) {
@@ -79,9 +82,12 @@ export function reviewScope(review: RepositoryReviewDto) {
         </div>
       }
     } @else if (!error()) {
-      @for (row of [1, 2, 3]; track row) {
-        <span class="skeleton row-skeleton"></span>
-      }
+      <div class="review-skeleton" role="status">
+        <span class="sr-only">正在載入 AI 檢閱…</span>
+        @for (row of [1, 2, 3]; track row) {
+          <span class="skeleton row-skeleton"></span>
+        }
+      </div>
     }
     <nx-repository-review-dialog />`,
 })
@@ -102,6 +108,8 @@ export class RepositoryReviews {
     return read && read.name === this.store.fullName() ? read.rows : null;
   });
   readonly error = this.read.error;
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = this.read.refreshing;
   readonly purpose = purposeName;
   readonly scope = reviewScope;
   readonly model = formatModelDisplayName;

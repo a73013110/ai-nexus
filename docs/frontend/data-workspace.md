@@ -30,12 +30,12 @@
 - 大表（日誌、稽核）用 `TablePagination` 的 `cursor`：上下頁與回到第一頁，不計總數也不跳頁，改以時間範圍與排序定位，因為大表的 COUNT 與深 offset 成本隨資料量成長。有總數的列表（使用者、線上人員、使用者對話、檔案庫）一律用 `offset`，可輸入頁碼，不自做上下頁按鈕。翻頁重設列表位置並關閉舊詳情。
 - 分頁列版型固定：左側範圍與每頁筆數（inline `Select`，手機隱藏），右側一組有外框的翻頁按鈕、頁碼夾在中間；頁面不自訂分頁樣式。
 - 表格工具列（`[table-toolbar]`）只放標題＋必要計數（沒有分頁時的筆數、未定價等需要注意的數量）；表格層級的動作（匯出、驗證）放 `[table-actions]`（「欄位」旁），匯出由伺服器處理整個已套用的查詢，不只已載入的頁。
-  - 下載用 `ApiClient.open` 取回應、`attachmentName`（`frontend/src/app/shared/browser/download.ts`）取伺服器的 `filename*` 中文檔名，再 `downloadBlob`；匯出中按鈕停用並顯示「匯出中…」。
+  - 下載用 `ApiClient.open` 取回應、`attachmentName`（`frontend/src/app/shared/browser/download.ts`）取伺服器的 `filename*` 中文檔名，再 `downloadBlob`；匯出鈕用 `nxPending`，送出中顯示「匯出中…」。
   - 不放說明句：操作提示交給按鈕名稱與 `title`，單位寫在表頭，頁面層級的說明放頁面工具列的 `form-note`。
   - 有 `offset` 分頁時筆數只在頁尾出現；工具列與頁尾不重複筆數、時區或操作提示。
   - 頁首 `page-actions` 放整頁的動作（整頁快照匯出、診斷），不放表格動作，也不放跨功能導覽連結。
   - 不放「重新整理」：同條件再按「查詢」就會重讀第一頁；狀態會變的列表（寄送紀錄、工作）用 `apiResource` 的 `poll` 依進行中的資料自動更新，背景更新不擋操作、不重設捲動，狀態變化交給 `StatusBadge` 的 `state` 動效。
-- 重新讀取鈕用 `button[nxRefresh]`（轉圈至少一圈、`aria-disabled` 擋重複）；已有資料時不換回骨架，表格與樹傳 `busy` 會淡化並在上緣掃過細線，其他區塊加 `.is-refreshing`。`loading` 圖示自己會轉。
+- 首次載入、重新讀取與送出中的樣子見 [載入與送出中](loading.md)；表格的 `busy` 綁 `refreshing()`，不是 `loading()`。
 - 表頭下方的載入、無資料與讀取失敗（附重試）一律用 `nx-table-state`（載入中是列狀骨架），不在 `tbody` 放空白列、不自組空狀態。「欄位」與表格動作固定在框的右上，沒有標題時也一樣。表格沒有資料時讀取失敗只由它顯示；已有資料時重新整理失敗才用頁面的 `Notice`。匯出等動作的失敗另用 `Notice`。系統降級只在異常時以 `Notice` 提示並連到監控，資料頁不另放健康卡。
 
 ## 詳情

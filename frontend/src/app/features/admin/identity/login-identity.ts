@@ -32,7 +32,7 @@ const KINDS: Readonly<Record<string, string>> = {
             class="identity-option"
             [class.is-chosen]="choosing() === identity.id"
             [attr.aria-current]="identity.id === current() ? 'true' : null"
-            [attr.aria-busy]="choosing() === identity.id"
+            [attr.aria-busy]="choosing() === identity.id || null"
             [disabled]="!!choosing()"
             (click)="chosen.emit(identity.id)"
             (keydown)="move($event)"

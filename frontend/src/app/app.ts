@@ -14,6 +14,7 @@ import { IdentityBanner } from '@core/auth/identity-banner';
 import { ReaderDialog } from '@features/work/knowledge/documents/reader-dialog';
 import { NotificationCenter } from '@features/platform/notifications/notification-center';
 import { trackKeyboardInset } from '@core/layout/keyboard-inset';
+import { RouteProgress } from '@core/layout/route-progress';
 import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
 
 @Component({
@@ -24,6 +25,7 @@ import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
     IdentityBanner,
     ReaderDialog,
     NotificationCenter,
+    RouteProgress,
   ],
   // eslint-disable-next-line @angular-eslint/component-selector -- index.html bootstrap element
   selector: 'app-root',

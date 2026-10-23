@@ -9,11 +9,12 @@ import {
 } from '@angular/core';
 import type { VerificationCodeDto } from '@core/api/schema';
 import { Field } from '@shared/ui/field';
+import { Icon } from '@shared/ui/icon';
 import { AccountSecurityStore } from './account-security-store';
 
 const DELIVERY: Readonly<Record<string, string>> = {
   queued: '正在排入寄送…',
-  sending: '寄送中…',
+  sending: '正在寄送…',
   sent: '已寄出，請查看信箱（也請檢查垃圾郵件）。',
   failed: '寄送失敗，請稍後重新寄送；持續失敗請聯絡管理員。',
   cancelled: '這組驗證碼已被新的取代。',
@@ -34,7 +35,7 @@ export function deliveryText(delivery: string) {
  */
 @Component({
   selector: 'nx-verification-code-field',
-  imports: [Field],
+  imports: [Field, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -45,8 +46,16 @@ export function deliveryText(delivery: string) {
       font-family: var(--font-code);
       letter-spacing: 0.3em;
     }
+    .delivery-pending {
+      --icon-size: var(--icon-sm);
+      vertical-align: -0.125em;
+      margin-inline-end: var(--p-space-1);
+    }
   `,
   template: `<p class="form-note" role="status">
+      @if (!settled(current().delivery)) {
+        <nx-icon name="loading" class="delivery-pending" />
+      }
       驗證碼已寄到 {{ current().maskedTarget ?? '你的信箱' }}：{{ text(current().delivery) }}
     </p>
     <label
@@ -69,6 +78,8 @@ export class VerificationCodeField {
   /** 最新的狀態；換一組驗證碼時從新的開始。 */
   readonly current = linkedSignal(() => this.challenge());
   readonly text = deliveryText;
+  /** 排隊與寄送中還會變化，前面轉圈；到了最終狀態就停。 */
+  readonly settled = (delivery: string) => FINAL.has(delivery) || !(delivery in DELIVERY);
 
   constructor() {
     effect((onCleanup) => {

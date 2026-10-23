@@ -26,16 +26,18 @@
       <button
         nxRefresh
         aria-label="重新連線監控"
-        [busy]="store.connection() === 'connecting' || store.connection() === 'reconnecting'"
+        [busy]="connecting()"
         (refresh)="store.refresh()"
       ></button>
       <button
+        nxPending
         type="button"
         class="quiet-button monitor-export"
-        [disabled]="exporting() || !store.snapshot()"
+        [pending]="exporting()"
+        [disabled]="!store.snapshot()"
         (click)="export()"
       >
-        <nx-icon name="download" />匯出快照
+        <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出快照' }}
       </button>
     </div>
   }
@@ -43,7 +45,9 @@
     <nx-notice tone="danger" [message]="actionError()" />
   }
   @if (store.snapshot(); as data) {
-    <div class="monitor-dashboard" [class.is-stale]="store.stale()">
+    <!-- 連線中斷時保留最近快照並淡化（標題列的狀態說明原因，不淡化）；恢復後自動更新。 -->
+    @let stale = store.stale();
+    <div class="monitor-dashboard" [attr.aria-busy]="stale || null">
       <nx-monitoring-hero [data]="data">
         @if (store.issueCount()) {
           <nx-monitoring-issues (selected)="showTarget($event)" />
@@ -68,10 +72,13 @@
           }
         </div>
       }
-      <nx-monitoring-vitals [data]="data" />
-      <nx-monitoring-service-map (selected)="showDependency($event)" />
-      <nx-monitoring-subsystems (selected)="showSubsystem($event)" />
-      <div class="monitor-pair">
+      <nx-monitoring-vitals [class.is-refreshing]="stale" [data]="data" />
+      <nx-monitoring-service-map
+        [class.is-refreshing]="stale"
+        (selected)="showDependency($event)"
+      />
+      <nx-monitoring-subsystems [class.is-refreshing]="stale" (selected)="showSubsystem($event)" />
+      <div class="monitor-pair" [class.is-refreshing]="stale">
         <nx-monitoring-traffic />
         <nx-monitoring-runtime [data]="data" />
       </div>
@@ -79,16 +86,18 @@
         class="monitor-deferred"
         [sessions]="data.sessions"
         [selectedId]="openSessionId()"
+        [busy]="stale"
         [(feature)]="featureFilter"
         (selected)="showSession($event)"
       />
       <nx-monitoring-activity
         class="monitor-deferred"
+        [class.is-refreshing]="stale"
         [activities]="data.activities"
         [endpoints]="data.endpoints"
         [canTrace]="session.has('diagnostics.logs')"
       />
-      <details class="monitor-scope">
+      <details class="monitor-scope" [class.is-refreshing]="stale">
         <summary>
           <nx-icon name="info" />觀測範圍與資料定義<nx-icon
             class="fold-chevron"
@@ -128,12 +137,20 @@
       @if (store.paused()) {
         <nx-icon name="pause" /><strong>監控已暫停</strong>
       } @else {
-        <nx-icon name="loading" /><strong>正在建立監控連線</strong>
+        <nx-icon name="loading" /><strong>正在建立監控連線…</strong>
         <p>等待此執行個體的第一份快照。</p>
       }
       @if (store.error()) {
         <p>{{ store.error() }}</p>
-        <button type="button" class="secondary-button" (click)="store.refresh()">重新連線</button>
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="connecting()"
+          (click)="store.refresh()"
+        >
+          {{ connecting() ? '重新連線中…' : '重新連線' }}
+        </button>
       }
     </div>
   }

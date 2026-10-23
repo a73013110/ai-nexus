@@ -61,3 +61,11 @@
 .cards-history-period {
   font-variant-numeric: tabular-nums;
 }
+.cards-history-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: var(--p-space-2) 0;
+}
+.cards-history-skeleton .skeleton {
+  height: 2.75rem;
+}

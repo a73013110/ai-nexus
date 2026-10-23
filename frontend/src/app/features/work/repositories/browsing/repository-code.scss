@@ -51,10 +51,6 @@
   border-radius: var(--tile-radius);
   background: var(--surface);
   box-shadow: var(--tile-shadow);
-  transition: opacity var(--motion) var(--ease);
-  &.stale {
-    opacity: 0.55;
-  }
 }
 .row {
   display: flex;

@@ -36,17 +36,38 @@ import { emailState, signInMethods } from './user-account-fields';
         <nx-user-units [userId]="user.id" />
         <div class="summary-relations"><ng-content /></div>
       </div>
-      <div class="inspector-stats" role="group" aria-label="最近三十天 AI 用量">
+      <div
+        class="inspector-stats"
+        role="group"
+        aria-label="最近三十天 AI 用量"
+        [class.is-refreshing]="store.overviewRefreshing() && !!store.overview()"
+        [attr.aria-busy]="store.overviewRefreshing() || null"
+      >
+        @if (pending()) {
+          <span class="sr-only" role="status">正在載入用量…</span>
+        }
         <div class="summary-stat">
           <span>30 天生成</span>
-          <strong><nx-number-ticker [value]="usage()?.requests" /></strong>
+          <strong>
+            @if (pending()) {
+              <span class="skeleton summary-skeleton"></span>
+            } @else {
+              <nx-number-ticker [value]="usage()?.requests" />
+            }
+          </strong>
           <small>{{
-            usage() ? usage()!.completed + ' 完成 · ' + usage()!.failed + ' 失敗' : '讀取中…'
+            usage() ? usage()!.completed + ' 完成 · ' + usage()!.failed + ' 失敗' : '完成與失敗'
           }}</small>
         </div>
         <div class="summary-stat">
           <span>回報 tokens</span>
-          <strong><nx-number-ticker [value]="tokens()" /></strong>
+          <strong>
+            @if (pending()) {
+              <span class="skeleton summary-skeleton"></span>
+            } @else {
+              <nx-number-ticker [value]="tokens()" />
+            }
+          </strong>
           <small>{{
             usage()
               ? '輸入 ' + format(usage()!.inputTokens) + ' · 輸出 ' + format(usage()!.outputTokens)
@@ -55,7 +76,13 @@ import { emailState, signInMethods } from './user-account-fields';
         </div>
         <div class="summary-stat">
           <span>對話與附件</span>
-          <strong><nx-number-ticker [value]="store.overview()?.conversations" /><em>段</em></strong>
+          <strong>
+            @if (pending()) {
+              <span class="skeleton summary-skeleton"></span>
+            } @else {
+              <nx-number-ticker [value]="store.overview()?.conversations" /><em>段</em>
+            }
+          </strong>
           <small>{{
             usage() ? '附件 ' + bytes(usage()!.storage.usedBytes) : '含封存與已刪除'
           }}</small>
@@ -71,6 +98,8 @@ export class AdminUserSummary {
   readonly store = inject(AdminUserStore);
   private readonly admin = inject(AccessControlStore);
   readonly usage = computed(() => this.store.overview()?.usage ?? null);
+  /** 還沒有詳情且正在讀：數字畫骨架，不先顯示「—」。讀取失敗時才是「—」。 */
+  readonly pending = computed(() => !this.store.overview() && this.store.overviewRefreshing());
   readonly tokens = computed(() => {
     const usage = this.usage();
     return usage ? usage.inputTokens + usage.outputTokens : null;

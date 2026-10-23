@@ -14,6 +14,7 @@ import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { TreeView } from '@shared/ui/tree-view';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
@@ -46,6 +47,7 @@ type Step = 'select' | 'preview' | 'result';
     DirectoryPeopleTable,
     DirectoryPersonCard,
     Notice,
+    PendingButton,
     StatGrid,
     StatTile,
     TreeView,
@@ -64,7 +66,9 @@ export class DirectoryImportDialog {
   readonly step = signal<Step>('select');
   readonly includeDisabled = signal(false);
   readonly outcomes = signal<DirectoryOutcomeDto[]>([]);
-  readonly busy = signal(false);
+  /** 進行中的寫入：重新預覽與匯入各自的按鈕轉圈，兩者都擋下關閉與其他操作。 */
+  readonly task = signal<'preview' | 'import' | null>(null);
+  readonly busy = computed(() => this.task() !== null);
   readonly error = signal('');
   /** 預覽的那一批人；確認時只匯入這一批，預覽中途改了勾選也不會匯入沒看過的人。 */
   private previewed: string[] = [];
@@ -123,7 +127,7 @@ export class DirectoryImportDialog {
       includeDisabled === this.includeDisabled() || !this.previewed.length
         ? [...this.store.selection().keys()]
         : this.previewed;
-    await this.run(async () => {
+    await this.run('preview', async () => {
       const result = await this.api.previewDirectoryImport({ sids, includeDisabled });
       this.previewed = sids;
       this.includeDisabled.set(includeDisabled);
@@ -140,7 +144,7 @@ export class DirectoryImportDialog {
   }
   async confirm() {
     if (!this.pending() || this.busy()) return;
-    await this.run(async () => {
+    await this.run('import', async () => {
       const result = await this.api.importDirectoryUsers({
         sids: this.previewed,
         includeDisabled: this.includeDisabled(),
@@ -157,15 +161,15 @@ export class DirectoryImportDialog {
     this.includeDisabled.set(false);
     this.back();
   }
-  private async run(work: () => Promise<void>) {
-    this.busy.set(true);
+  private async run(task: 'preview' | 'import', work: () => Promise<void>) {
+    this.task.set(task);
     this.error.set('');
     try {
       await work();
     } catch (error) {
       this.error.set(safeMessage(error));
     } finally {
-      this.busy.set(false);
+      this.task.set(null);
     }
   }
 }

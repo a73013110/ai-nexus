@@ -16,6 +16,7 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { MailApi } from '../mail-api';
@@ -32,7 +33,16 @@ import {
  */
 @Component({
   selector: 'nx-mail-diagnosis-dialog',
-  imports: [CompactDialog, CopyValue, DialogHeader, Field, Notice, StatusBadge, ViewMotion],
+  imports: [
+    CompactDialog,
+    CopyValue,
+    DialogHeader,
+    Field,
+    Notice,
+    PendingButton,
+    StatusBadge,
+    ViewMotion,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './mail-diagnosis-dialog.scss',
   templateUrl: './mail-diagnosis-dialog.html',
@@ -71,9 +81,6 @@ export class MailDiagnosisDialog {
     this.error.set('');
     this.result.set(null);
     this.dialog().nativeElement.showModal();
-  }
-  cancel(event: Event) {
-    if (this.busy()) event.preventDefault();
   }
   async run(event: Event) {
     event.preventDefault();

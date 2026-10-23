@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { below } from '@shared/browser/breakpoints';
 import { mediaQuery } from '@shared/browser/media-query';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { DashboardStore } from './dashboard-store';
@@ -13,7 +14,7 @@ import { DashboardStore } from './dashboard-store';
  */
 @Component({
   selector: 'nx-dashboard-toolbar',
-  imports: [DateTimePicker, Icon, Select, ViewSwitch],
+  imports: [DateTimePicker, Icon, PendingButton, Select, ViewSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './dashboard-toolbar.scss',
   host: { role: 'group', 'aria-label': '總覽條件' },
@@ -51,24 +52,28 @@ import { DashboardStore } from './dashboard-store';
       <span class="toolbar-period">{{ store.appliedFrom() }} – {{ store.appliedThrough() }}</span>
     }
     <div class="toolbar-end">
-      @if (store.units().length) {
+      <!-- 幣別來自讀取結果：首次載入時先佔位並轉圈，不在資料到了才冒出來。 -->
+      @if (store.units().length || firstLoad()) {
         <nx-select
           class="toolbar-unit"
           appearance="pill"
           label="顯示的費用幣別與類型"
           [options]="store.units()"
+          [loading]="firstLoad()"
           [value]="store.unit()"
           (valueChange)="store.unit.set($event)"
         />
       }
       @if (store.scope() === 'platform') {
         <button
+          nxPending
           type="button"
           class="toolbar-pill toolbar-button"
-          [disabled]="store.exporting() || store.refreshing()"
+          [pending]="store.exporting()"
+          [disabled]="store.refreshing() && !store.exporting()"
           (click)="store.export()"
         >
-          <nx-icon name="download" />匯出費用
+          <nx-icon name="download" />{{ store.exporting() ? '匯出中…' : '匯出費用' }}
         </button>
       }
     </div>`,
@@ -77,4 +82,5 @@ export class DashboardToolbar {
   readonly store = inject(DashboardStore);
   /** 在手機上期間選項平分整個寬度，就像 iOS 的分段控制一樣。 */
   readonly phone = mediaQuery(below('phone'));
+  protected readonly firstLoad = computed(() => this.store.loading() && !this.store.data());
 }

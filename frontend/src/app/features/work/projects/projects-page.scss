@@ -19,6 +19,14 @@ nx-notice {
   height: 16rem;
   border-radius: var(--tile-radius);
 }
+.panel-skeleton {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--p-space-2);
+}
+.panel-skeleton .skeleton {
+  height: 2.75rem;
+}
 .template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));

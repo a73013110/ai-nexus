@@ -28,7 +28,8 @@ const EFFORT_LABELS: Record<string, string> = {
         label="選擇模型"
         [placeholder]="modelPlaceholder()"
         [value]="modelId()"
-        [disabled]="disabled() || loading() || !models().length"
+        [disabled]="disabled()"
+        [loading]="loading()"
         [options]="modelOptions()"
         [searchable]="true"
         [searchFrom]="8"
@@ -94,7 +95,7 @@ const EFFORT_LABELS: Record<string, string> = {
             viewBox="0 0 24 24"
             class="context-ring"
             [class.warning]="usage()?.budgetExceeded"
-            [class.pending]="usagePending()"
+            [class.is-refreshing]="usagePending()"
             aria-hidden="true"
           >
             <circle class="context-ring-track" cx="12" cy="12" r="8" />

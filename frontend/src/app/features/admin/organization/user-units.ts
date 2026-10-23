@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import { routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { PendingButton } from '@shared/ui/pending-button';
 import { OrganizationApi } from './organization-api';
 
 /**
@@ -11,7 +12,7 @@ import { OrganizationApi } from './organization-api';
  */
 @Component({
   selector: 'nx-user-units',
-  imports: [RouterLink],
+  imports: [PendingButton, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="resource-badges" aria-label="所屬單位">
     @for (unit of units(); track unit.unitId) {
@@ -22,6 +23,21 @@ import { OrganizationApi } from './organization-api';
     } @empty {
       @if (loaded()) {
         <small class="form-note">尚未分派單位</small>
+      } @else if (error()) {
+        <small class="form-note">{{ error() }}</small>
+        <button
+          nxPending
+          type="button"
+          class="quiet-button"
+          [pending]="refreshing()"
+          (click)="reload()"
+        >
+          {{ refreshing() ? '重新載入中…' : '重新載入' }}
+        </button>
+      } @else {
+        <span class="skeleton unit-skeleton" role="status"
+          ><span class="sr-only">正在載入所屬單位…</span></span
+        >
       }
     }
     @if (session.has('organization')) {
@@ -31,6 +47,10 @@ import { OrganizationApi } from './organization-api';
   styles: `
     .is-muted {
       color: var(--secondary);
+    }
+    .unit-skeleton {
+      width: 6rem;
+      height: 1.25rem;
     }
   `,
 })
@@ -49,4 +69,9 @@ export class UserUnits {
     return loaded && loaded.id === this.userId() ? loaded.units : [];
   });
   readonly loaded = computed(() => this.read.value()?.id === this.userId());
+  readonly error = this.read.error;
+  readonly refreshing = this.read.refreshing;
+  reload() {
+    this.read.reload();
+  }
 }

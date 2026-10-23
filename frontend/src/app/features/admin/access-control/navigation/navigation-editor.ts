@@ -20,10 +20,11 @@ import { ThemeService } from '@core/preferences/theme-service';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
-import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { EXTRA_ICONS, ICON_NAMES, Icon } from '@shared/ui/icon';
 import { MenuPanel } from '@shared/ui/menu-panel';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AccessControlApi } from '../access-control-api';
@@ -85,8 +86,10 @@ const SCROLL_SPEED = 12;
     DialogHeader,
     Icon,
     MenuPanel,
+    PendingButton,
     Select,
     StatusBadge,
+    TableState,
   ],
   providers: [{ provide: EXTRA_ICONS, useValue: { grip: GripVertical } }],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -112,6 +115,8 @@ export class NavigationEditor {
     icon,
   }));
   readonly saving = signal(false);
+  /** 刪除中的節點：確認後選單已關閉，由該列的操作鈕轉圈；其他列照常可操作選單（寫入仍由 `busy` 擋）。 */
+  readonly deleting = signal<string | null>(null);
   readonly dragging = signal<string | null>(null);
   /** 拖曳中的暫定位置（只改畫面）；放手才送出。 */
   private readonly draft = signal<Placement | null>(null);
@@ -348,6 +353,7 @@ export class NavigationEditor {
     });
     if (!confirmed) return;
     this.saving.set(true);
+    this.deleting.set(row.item.id);
     this.store.actionError.set('');
     try {
       await this.api.deleteNavigationItem(row.item.id);
@@ -359,6 +365,7 @@ export class NavigationEditor {
       this.store.actionError.set(safeMessage(error));
     } finally {
       this.saving.set(false);
+      this.deleting.set(null);
     }
   }
 

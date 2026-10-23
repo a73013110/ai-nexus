@@ -6,6 +6,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatDate } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AttendanceApi } from '../attendance-api';
 import { cardKindLabel } from '../attendance-presentation';
@@ -18,7 +19,7 @@ import { covers } from './attendance-cards-store';
  */
 @Component({
   selector: 'nx-attendance-user-cards',
-  imports: [Notice, RouterLink, StatusBadge],
+  imports: [Notice, PendingButton, RouterLink, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -45,6 +46,13 @@ import { covers } from './attendance-cards-store';
       font-family: var(--font-code);
       font-variant-numeric: tabular-nums;
     }
+    .user-cards-skeleton {
+      display: grid;
+      gap: var(--p-space-2);
+    }
+    .user-cards-skeleton .skeleton {
+      height: 2.25rem;
+    }
     .user-cards-period {
       margin-inline-start: auto;
       color: var(--secondary);
@@ -62,18 +70,28 @@ import { covers } from './attendance-cards-store';
           @if (read.error()) {
             <nx-notice tone="danger" [message]="read.error()"
               ><button
+                nxPending
                 notice-actions
                 type="button"
                 class="secondary-button"
+                [pending]="read.refreshing()"
                 (click)="read.reload()"
               >
-                重試
+                {{ read.refreshing() ? '重試中…' : '重試' }}
               </button></nx-notice
             >
           } @else if (periods() === null) {
-            <p class="form-note" role="status">正在取得卡號…</p>
+            <div class="user-cards-skeleton" role="status">
+              <span class="skeleton"></span><span class="skeleton"></span>
+              <span class="sr-only">正在載入出勤卡號…</span>
+            </div>
           } @else {
-            <ul class="user-cards" aria-label="持有期間">
+            <ul
+              class="user-cards"
+              aria-label="持有期間"
+              [class.is-refreshing]="read.refreshing()"
+              [attr.aria-busy]="read.refreshing() || null"
+            >
               @for (entry of periods(); track entry.item.id) {
                 <li>
                   <strong class="user-cards-number">{{ entry.item.cardNumber }}</strong>

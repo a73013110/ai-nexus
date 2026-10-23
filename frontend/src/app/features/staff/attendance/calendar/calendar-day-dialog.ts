@@ -62,6 +62,7 @@ const same = (a: DayDraft, b: DayDraft) =>
       #dayDialog
       class="platform-dialog"
       size="sm"
+      [busy]="saving()"
       (cancel)="cancel($event)"
     >
       @if (day()) {

@@ -21,6 +21,7 @@ import {
 import { Icon } from '@shared/ui/icon';
 import { CalendarDayTemplate, MonthCalendar, type CalendarDay } from '@shared/ui/month-calendar';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { queryState, type QueryStateOptions } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
@@ -101,6 +102,7 @@ interface HolidayCell extends CalendarDay {
     Icon,
     MonthCalendar,
     Notice,
+    PendingButton,
     StatusBadge,
     TableState,
     ViewSwitch,
@@ -135,7 +137,10 @@ export class AttendanceCalendarPage {
       }
     },
   });
+  /** 換月或首次讀取：這個月還沒有資料，格子畫骨架。 */
   readonly loading = this.read.loading;
+  /** 使用者感覺得到的讀取（含換月與重試）；已有內容時淡化。 */
+  readonly refreshing = this.read.refreshing;
   readonly readError = computed(() => this.read.error() || this.loaded()?.problem || '');
   /** 目前月份的讀取結果；換月時舊月份不會短暫顯示在新標題下。 */
   readonly loaded = computed(() => {

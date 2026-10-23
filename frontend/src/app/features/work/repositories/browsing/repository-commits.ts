@@ -14,6 +14,7 @@ import type { RepositoryCommitDto, RepositoryCommitPageDto } from '@core/api/sch
 import { APP_TIME_ZONE, nameInitial, relativeTime } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryStore, shortSha } from '../repository-store';
 
@@ -31,7 +32,7 @@ const dayFormat = new Intl.DateTimeFormat('zh-TW', {
  */
 @Component({
   selector: 'nx-repository-commits',
-  imports: [RouterLink, Icon, Notice],
+  imports: [RouterLink, Icon, Notice, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-commits.scss',
   template: `<p class="hint">
@@ -39,7 +40,9 @@ const dayFormat = new Intl.DateTimeFormat('zh-TW', {
     </p>
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
     @for (day of days(); track day.label) {
@@ -81,16 +84,25 @@ const dayFormat = new Intl.DateTimeFormat('zh-TW', {
       </section>
     } @empty {
       @if (loading()) {
-        @for (row of [1, 2, 3, 4]; track row) {
-          <span class="skeleton row-skeleton"></span>
-        }
+        <div class="commit-skeleton" role="status">
+          <span class="sr-only">正在載入提交紀錄…</span>
+          @for (row of [1, 2, 3, 4]; track row) {
+            <span class="skeleton row-skeleton"></span>
+          }
+        </div>
       } @else if (!error()) {
         <p class="blank">這個版本還沒有提交紀錄。</p>
       }
     }
     @if (hasMore()) {
       <div class="more">
-        <button type="button" class="secondary-button" [disabled]="loading()" (click)="more()">
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="loading()"
+          (click)="more()"
+        >
           {{ loading() ? '載入中…' : '載入更早的提交' }}
         </button>
       </div>
@@ -164,6 +176,8 @@ export class RepositoryCommits {
   });
   readonly hasMore = computed(() => !!this.latest()?.data.hasMore);
   readonly loading = this.read.loading;
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = this.read.refreshing;
   readonly error = this.read.error;
   /** 最多兩個提交；選第三個會取代較舊的那個選擇。 */
   readonly picked = signal<string[]>([]);

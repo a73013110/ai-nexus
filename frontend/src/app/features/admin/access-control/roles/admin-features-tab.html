@@ -4,10 +4,18 @@
     授權固定；這裡調整名稱與啟用。側欄的位置與順序在「選單」頁安排，停用的功能不會出現在任何人的選單。
   </p>
 </div>
-<nx-data-table class="admin-access-table admin-features-table" label="功能列表" [stacked]="true">
+<nx-data-table
+  class="admin-access-table admin-features-table"
+  label="功能列表"
+  [stacked]="true"
+  [busy]="store.refreshing()"
+>
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      功能 <span class="ui-count-label">{{ features().length }} 項</span>
+      功能
+      @if (store.catalog()) {
+        <span class="ui-count-label">{{ features().length }} 項</span>
+      }
     </h2>
   </div>
   <table>
@@ -56,4 +64,10 @@
       }
     </tbody>
   </table>
+  <nx-table-state
+    [count]="features().length"
+    [loading]="store.loading()"
+    loadingText="正在載入功能…"
+    emptyTitle="沒有已註冊的功能"
+  />
 </nx-data-table>

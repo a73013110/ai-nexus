@@ -388,9 +388,10 @@ test("personal prompt library supports creating applying editing and deleting", 
   await page.getByRole("button", { name: "儲存範本" }).click();
   await expect(page.locator(".template-use")).toContainText("會議摘要");
   await page.getByRole("button", { name: "編輯範本：會議摘要" }).click();
-  await page
-    .getByRole("textbox", { name: "提示詞內容" })
-    .fill("整理會議並列出負責人：");
+  const content = page.getByRole("textbox", { name: "提示詞內容" });
+  // 等編輯器帶入原內容再改；否則帶入的值會在 fill 全選之後才寫入，新文字被接在後面。
+  await expect(content).toHaveValue("整理以下會議，列出決議與待辦：");
+  await content.fill("整理會議並列出負責人：");
   await page.getByRole("button", { name: "儲存範本" }).click();
   await expect
     .poll(() => fixture.prompts[0]?.content)

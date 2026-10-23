@@ -23,6 +23,7 @@ import { ReaderNavigation, type ReaderOrigin } from '@shared/browser/reader-navi
 import type { Command } from '@shared/ui/command-palette';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ProductTour } from '@shared/ui/product-tour';
 import { ShareDialog } from '@features/work/sharing/share-dialog';
 import type { ConversationAction } from '@features/work/conversations/conversation-actions';
@@ -58,6 +59,7 @@ import { routeOf } from '@core/api/catalog';
     FileDrop,
     Icon,
     Notice,
+    PendingButton,
     PromptLibraryDialog,
     ShareDialog,
     SidebarPanelContent,

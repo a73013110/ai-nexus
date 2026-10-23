@@ -45,7 +45,11 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
           (valueChange)="metric.set($event)"
         />
       </div>
-      <nx-trend-chart [points]="points()" [label]="'每日 ' + metricLabel() + ' Tokens'" />
+      <nx-trend-chart
+        [points]="points()"
+        [label]="'每日 ' + metricLabel() + ' Tokens'"
+        [busy]="busy()"
+      />
       <div class="token-totals">
         <span
           >輸入 <strong>{{ number(totals().input) }}</strong></span
@@ -62,7 +66,12 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
       @if (models().length) {
         <details class="token-models">
           <summary>依模型檢視 Token 分布（{{ models().length }}）</summary>
-          <nx-data-table class="token-table" label="各模型 Token 使用量" [stacked]="true">
+          <nx-data-table
+            class="token-table"
+            label="各模型 Token 使用量"
+            [stacked]="true"
+            [busy]="busy()"
+          >
             <table>
               <thead>
                 <tr>
@@ -171,6 +180,8 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
 })
 export class TokenUsageChart {
   readonly usage = input<TokenUsageDto | null | undefined>(null);
+  /** 呼叫端重讀中（換期間、重新整理）：保留目前的圖與表並淡化。 */
+  readonly busy = input(false);
   readonly model = signal('all');
   readonly metric = signal('total');
   readonly modelName = formatModelDisplayName;

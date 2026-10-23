@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import type { AdminGroupDto } from '@core/api/schema';
 import { storageLimitGb } from '@shared/browser/storage-limit';
-import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { AccessControlStore } from '../access-control-store';
 import { FeatureSummary } from './feature-summary';
@@ -10,7 +10,7 @@ import { AccessStatus } from './access-status';
 /** 功能群組授予功能、模型與儲存空間。 */
 @Component({
   selector: 'nx-admin-groups-tab',
-  imports: [Icon, DataTable, DataTableRow, AccessStatus, FeatureSummary],
+  imports: [Icon, DataTable, DataTableRow, TableState, AccessStatus, FeatureSummary],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: '../../../../shared/ui/management-table-page.scss',
   template: `
@@ -18,7 +18,7 @@ import { AccessStatus } from './access-status';
       <p class="form-note">
         功能與模型授權取各群組聯集；模型 token 額度取授權群組最高值，無上限優先。個人政策另行套用。
       </p>
-      <button class="primary-button" (click)="edit.emit(undefined)">
+      <button class="primary-button" [disabled]="!store.catalog()" (click)="edit.emit(undefined)">
         <nx-icon name="plus" />新增功能群組
       </button>
     </div>
@@ -26,10 +26,14 @@ import { AccessStatus } from './access-status';
       class="admin-access-table admin-groups-table"
       label="功能群組列表"
       [stacked]="true"
+      [busy]="store.refreshing()"
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>
-          功能群組 <span class="ui-count-label">{{ groups().length }} 個</span>
+          功能群組
+          @if (store.catalog()) {
+            <span class="ui-count-label">{{ groups().length }} 個</span>
+          }
         </h2>
       </div>
       <table>
@@ -86,6 +90,12 @@ import { AccessStatus } from './access-status';
           }
         </tbody>
       </table>
+      <nx-table-state
+        [count]="groups().length"
+        [loading]="store.loading()"
+        loadingText="正在載入功能群組…"
+        emptyTitle="還沒有功能群組"
+      />
     </nx-data-table>
   `,
 })

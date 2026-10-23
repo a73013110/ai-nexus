@@ -19,6 +19,7 @@ import { FileDrop } from '@shared/browser/file-drop';
 import { formatBytes } from '@shared/browser/format';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Icon } from '@shared/ui/icon';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { NameDialog } from '@shared/ui/name-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -39,6 +40,7 @@ import { filesTour } from './files-tour';
     ResourceGallery,
     FeaturePage,
     Icon,
+    PendingButton,
     Select,
     FileDrop,
     FileBrowser,
@@ -65,7 +67,8 @@ export class FilesPage {
   private readonly policyRead = apiResource({ loader: () => this.api.policy() });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly uploading = signal(false);
-  readonly busy = signal(false);
+  /** 刪除中的檔案：只有那張卡片的選單鈕轉圈，其他卡片照常可操作。 */
+  readonly deleting = signal<string | null>(null);
   readonly actionError = signal('');
   readonly error = computed(
     () => this.actionError() || this.policyRead.error() || this.store.error(),
@@ -157,7 +160,7 @@ export class FilesPage {
     }
   }
   async remove(item: LibraryFileDto) {
-    if (this.busy() || !item.canDelete) return;
+    if (this.deleting() || !item.canDelete) return;
     const valid = this.scope.guard();
     if (
       !(await this.confirm().ask({
@@ -169,7 +172,7 @@ export class FilesPage {
       !valid()
     )
       return;
-    this.busy.set(true);
+    this.deleting.set(item.file.id);
     this.actionError.set('');
     try {
       await this.api.removeFile(item.file.id);
@@ -181,11 +184,11 @@ export class FilesPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.deleting.set(null);
     }
   }
   rename(item: LibraryFileDto) {
-    if (this.busy()) return;
+    if (this.deleting() === item.file.id) return;
     const valid = this.scope.guard();
     this.names().open({
       title: '重新命名檔案',

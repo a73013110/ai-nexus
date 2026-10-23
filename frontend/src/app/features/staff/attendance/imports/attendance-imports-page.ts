@@ -26,6 +26,7 @@ import {
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -64,6 +65,7 @@ interface ImportsPageRequest {
     Field,
     Icon,
     Notice,
+    PendingButton,
     QueryBar,
     ReimportDialog,
     StatusBadge,
@@ -135,7 +137,10 @@ export class AttendanceImportsPage {
     const page = this.pageRead.value();
     return !!page && page.rows.length === page.request.take;
   });
+  /** 首次載入、換條件或翻頁：還沒有這次請求的列。 */
   readonly loading = this.pageRead.loading;
+  /** 使用者感覺得到的讀取（含重試）：表格淡化、查詢與分頁擋住。 */
+  readonly refreshing = this.pageRead.refreshing;
   readonly readError = this.pageRead.error;
   readonly columns: TableColumn[] = [
     { id: 'time', label: '時間', hideable: false },
@@ -182,13 +187,13 @@ export class AttendanceImportsPage {
   }
   changePageSize(size: number) {
     const request = this.request();
-    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
+    if (this.refreshing() || !request || !PAGE_SIZES.includes(size)) return;
     this.pageSize.set(size);
     this.read(request.filters, undefined, 0);
   }
   private goTo(index: number, before: string | undefined) {
     const request = this.request();
-    if (this.loading() || !request) return;
+    if (this.refreshing() || !request) return;
     this.read(request.filters, before, index);
   }
   private read(filters: PunchImportFilters, before: string | undefined, index: number) {

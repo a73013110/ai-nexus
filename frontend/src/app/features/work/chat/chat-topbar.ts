@@ -36,7 +36,7 @@ export class ChatTopbar {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   readonly store = inject(ChatStore);
-  private readonly conversations = inject(ChatConversations);
+  readonly conversations = inject(ChatConversations);
   private readonly router = inject(Router);
   readonly tour = input.required<ProductTourDefinition>();
   readonly action = output<ConversationAction>();

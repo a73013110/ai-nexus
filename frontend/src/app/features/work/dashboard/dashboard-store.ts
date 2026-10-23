@@ -73,6 +73,8 @@ export class DashboardStore {
   readonly refreshing = this.resource.refreshing;
   readonly formError = signal('');
   readonly exportError = signal('');
+  /** 讀取本身的失敗（不含表單與匯出）；表格的重試只對它有意義。 */
+  readonly loadError = this.resource.error;
   readonly error = computed(() => this.formError() || this.resource.error() || this.exportError());
   readonly exporting = signal(false);
   readonly appliedFrom = computed(() => this.resource.value()?.query.from ?? this.from());

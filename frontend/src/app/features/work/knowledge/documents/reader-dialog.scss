@@ -4,3 +4,13 @@
   background: rgba(17, 29, 44, 0.7607843137);
   backdrop-filter: blur(4px);
 }
+// @defer 的佔位與其他「形狀未知」的讀取相同：一行轉圈加狀態文字。
+.reader-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-2);
+  margin: auto;
+  padding: var(--p-space-6);
+  color: var(--secondary);
+}

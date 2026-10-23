@@ -18,10 +18,12 @@
       </button>
       @if (session.has('mail.messages.resend') && status(); as current) {
         <button
+          nxPending
           type="button"
           class="quiet-button mail-auto-retry"
           [attr.aria-pressed]="current.autoRetry"
-          [disabled]="savingSettings() || session.testing()"
+          [pending]="savingSettings()"
+          [disabled]="session.testing()"
           [title]="
             session.testing()
               ? session.testingNote()
@@ -33,9 +35,7 @@
           "
           (click)="toggleAutoRetry(!current.autoRetry)"
         >
-          <nx-icon [name]="savingSettings() ? 'loading' : 'repeat'" />自動重試：{{
-            current.autoRetry ? '開' : '關'
-          }}
+          <nx-icon name="repeat" />自動重試：{{ current.autoRetry ? '開' : '關' }}
         </button>
       }
       <button
@@ -142,7 +142,8 @@
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>寄送紀錄</h2>
-        @if (loading()) {
+        <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀（背景更新不算）。 -->
+        @if (loading() && rows().length) {
           <span class="sr-only" role="status">正在載入寄送紀錄…</span>
         }
       </div>
@@ -202,8 +203,8 @@
                   [attr.aria-label]="'檢視郵件：' + row.message.subject + '，' + row.date"
                   [attr.aria-controls]="drawer()?.id"
                   [attr.aria-expanded]="selectedId() === row.message.id"
-                  [disabled]="loading()"
-                  (click)="openDetails(row.message.id)"
+                  [attr.aria-disabled]="loading() || null"
+                  (click)="loading() || openDetails(row.message.id)"
                 >
                   {{ row.message.subject }}
                 </button>
@@ -222,7 +223,7 @@
         [count]="rows().length"
         [loading]="loading()"
         [error]="readError()"
-        loadingText="正在取得寄送紀錄"
+        loadingText="正在載入寄送紀錄…"
         errorTitle="無法取得寄送紀錄"
         emptyTitle="沒有符合條件的信件"
         emptyText="試著擴大時間範圍，或移除部分條件。"
@@ -262,7 +263,18 @@
         }
       </div>
       @if (detailError()) {
-        <nx-notice tone="danger" [message]="detailError()" />
+        <nx-notice tone="danger" [message]="detailError()"
+          ><button
+            notice-actions
+            nxPending
+            type="button"
+            class="secondary-button"
+            [pending]="detailRefreshing()"
+            (click)="reloadDetail()"
+          >
+            {{ detailRefreshing() ? '重新載入中…' : '重新載入' }}
+          </button></nx-notice
+        >
       } @else if (detail(); as view) {
         <section aria-label="郵件寄送資訊">
           @if (actionError()) {
@@ -272,30 +284,30 @@
             @if (view.detail.message.status === 'queued') {
               <div class="mail-actions">
                 <button
+                  nxPending
                   type="button"
                   class="secondary-button mail-retry"
-                  [disabled]="retrying() || session.testing()"
+                  [pending]="retrying()"
+                  [disabled]="session.testing()"
                   [title]="session.testing() ? session.testingNote() : ''"
                   (click)="retry()"
                 >
-                  <nx-icon [name]="retrying() ? 'loading' : 'play'" />{{
-                    retrying() ? '正在排入…' : '立即重試'
-                  }}
+                  <nx-icon name="play" />{{ retrying() ? '排入中…' : '立即重試' }}
                 </button>
                 <p class="form-note">不等下次嘗試時間，現在就寄這一封；暫停寄送中也會一併恢復。</p>
               </div>
             } @else if (view.detail.canResend) {
               <div class="mail-actions">
                 <button
+                  nxPending
                   type="button"
                   class="secondary-button mail-resend"
-                  [disabled]="resending() || session.testing()"
+                  [pending]="resending()"
+                  [disabled]="session.testing()"
                   [title]="session.testing() ? session.testingNote() : ''"
                   (click)="resend()"
                 >
-                  <nx-icon [name]="resending() ? 'loading' : 'repeat'" />{{
-                    resending() ? '正在重寄…' : '重寄'
-                  }}
+                  <nx-icon name="repeat" />{{ resending() ? '重寄中…' : '重寄' }}
                 </button>
                 <p class="form-note">以原內容建立一封新信，原紀錄不變。</p>
               </div>
@@ -437,7 +449,12 @@
           }
         </section>
       } @else if (detailLoading()) {
-        <p class="form-note" role="status">正在取得郵件詳情…</p>
+        <div class="mail-detail-skeleton" role="status">
+          @for (width of skeleton; track $index) {
+            <span class="skeleton" [style.width.%]="width"></span>
+          }
+          <span class="sr-only">正在載入郵件詳情…</span>
+        </div>
       }
     </nx-detail-drawer>
     <nx-mail-test-dialog [from]="status()?.fromAddress ?? ''" (sent)="testSent($event)" />

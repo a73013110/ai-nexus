@@ -114,3 +114,10 @@
 .member-row.is-inactive strong {
   color: var(--secondary);
 }
+.organization-skeleton {
+  display: grid;
+  gap: var(--p-space-4);
+}
+.organization-skeleton .skeleton {
+  height: 0.875rem;
+}

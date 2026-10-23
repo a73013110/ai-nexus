@@ -84,3 +84,11 @@
 .notification-actions time {
   margin-right: auto;
 }
+.notification-skeleton {
+  display: grid;
+  gap: var(--p-space-4);
+  padding: var(--p-space-3);
+}
+.notification-skeleton .skeleton {
+  height: 0.875rem;
+}

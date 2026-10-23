@@ -4,11 +4,16 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 /**
  * 字詞大小的趨勢線，使用 `currentColor`，由左至右繪出。它是裝飾：
  * 所附的數字才承載意義，因此只有單獨出現時才給 `label`。
+ * 首次載入（`loading`）畫成同高的骨架；已有線時重讀（`busy`）淡化。
  */
 @Component({
   selector: 'nx-sparkline',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'sparkline' },
+  host: {
+    class: 'sparkline',
+    '[class.is-refreshing]': 'busy() && !loading() && points().length > 0',
+    '[attr.aria-busy]': '(busy() || loading()) && label() ? true : null',
+  },
   styles: `
     :host {
       display: block;
@@ -34,33 +39,49 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
     .end {
       fill: currentColor;
     }
+    .skeleton {
+      height: 100%;
+    }
   `,
-  template: `<svg
-    viewBox="0 0 100 32"
-    preserveAspectRatio="none"
-    [attr.role]="label() ? 'img' : null"
-    [attr.aria-label]="label() || null"
-    [attr.aria-hidden]="label() ? null : 'true'"
-  >
-    @if (area()) {
-      <defs>
-        <linearGradient [id]="id" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="currentColor" stop-opacity="0.28" />
-          <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
-        </linearGradient>
-      </defs>
-      <path [attr.d]="fill()" [attr.fill]="'url(#' + id + ')'" />
-    }
-    <path class="line" [attr.d]="path()" />
-    @if (points().length) {
-      <circle class="end" r="1.6" [attr.cx]="last().x" [attr.cy]="last().y" />
-    }
-  </svg>`,
+  template: `@if (loading()) {
+      <span
+        class="skeleton"
+        [attr.role]="label() ? 'status' : null"
+        [attr.aria-label]="label() ? '正在載入' + label() : null"
+        [attr.aria-hidden]="label() ? null : 'true'"
+      ></span>
+    } @else {
+      <svg
+        viewBox="0 0 100 32"
+        preserveAspectRatio="none"
+        [attr.role]="label() ? 'img' : null"
+        [attr.aria-label]="label() || null"
+        [attr.aria-hidden]="label() ? null : 'true'"
+      >
+        @if (area()) {
+          <defs>
+            <linearGradient [id]="id" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="currentColor" stop-opacity="0.28" />
+              <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <path [attr.d]="fill()" [attr.fill]="'url(#' + id + ')'" />
+        }
+        <path class="line" [attr.d]="path()" />
+        @if (points().length) {
+          <circle class="end" r="1.6" [attr.cx]="last().x" [attr.cy]="last().y" />
+        }
+      </svg>
+    }`,
 })
 export class Sparkline {
   readonly values = input.required<readonly number[]>();
   readonly area = input(true);
   readonly label = input('');
+  /** 首次載入：還沒有數值，畫骨架。 */
+  readonly loading = input(false);
+  /** 重新讀取：已有線時淡化。 */
+  readonly busy = input(false);
   readonly id = uniqueId('nx-sparkline');
   readonly points = computed(() => {
     const values = this.values();

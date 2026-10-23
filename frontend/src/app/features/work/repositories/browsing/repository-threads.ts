@@ -17,6 +17,7 @@ import { relativeTime } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { RepositoriesApi } from '../repositories-api';
@@ -46,7 +47,7 @@ interface ThreadRow {
 /** 儲存庫的議題或拉取請求，依狀態篩選；議題也可搜尋。 */
 @Component({
   selector: 'nx-repository-threads',
-  imports: [RouterLink, Icon, Notice, SearchField, ViewSwitch],
+  imports: [RouterLink, Icon, Notice, PendingButton, SearchField, ViewSwitch],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-threads.scss',
@@ -64,16 +65,19 @@ interface ThreadRow {
           label="搜尋議題"
           placeholder="搜尋標題或內容"
           [value]="search()"
+          [busy]="stale()"
           (valueChange)="type($event)"
         />
       }
     </div>
     @if (error()) {
       <nx-notice [message]="error()"
-        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
+          {{ refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
       >
     }
-    <ol class="list" [class.stale]="stale()">
+    <ol class="list" [class.is-refreshing]="stale()" [attr.aria-busy]="stale() || null">
       @for (row of rows(); track row.number; let i = $index) {
         <li [style.--i]="i < 12 ? i : 12">
           <a class="row" [routerLink]="store.link(kind(), row.number)">
@@ -107,8 +111,12 @@ interface ThreadRow {
         </li>
       } @empty {
         @if (loading()) {
-          @for (row of [1, 2, 3]; track row) {
-            <li><span class="skeleton row-skeleton"></span></li>
+          <li role="status">
+            <span class="sr-only">正在載入{{ kind() === 'pulls' ? ' Pull Request' : '議題' }}…</span
+            ><span class="skeleton row-skeleton"></span>
+          </li>
+          @for (row of [2, 3]; track row) {
+            <li aria-hidden="true"><span class="skeleton row-skeleton"></span></li>
           }
         } @else if (!error()) {
           <li class="blank">
@@ -120,7 +128,13 @@ interface ThreadRow {
     </ol>
     @if (hasMore()) {
       <div class="more">
-        <button type="button" class="secondary-button" [disabled]="loading()" (click)="more()">
+        <button
+          nxPending
+          type="button"
+          class="secondary-button"
+          [pending]="loading()"
+          (click)="more()"
+        >
           {{ loading() ? '載入中…' : '載入更多' }}
         </button>
       </div>
@@ -184,6 +198,8 @@ export class RepositoryThreads {
   });
   readonly hasMore = computed(() => !!this.latest()?.data.hasMore);
   readonly loading = this.read.loading;
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = this.read.refreshing;
   readonly error = this.read.error;
   readonly emptyText = computed(() => {
     const thing = this.kind() === 'pulls' ? 'Pull Request' : '議題';

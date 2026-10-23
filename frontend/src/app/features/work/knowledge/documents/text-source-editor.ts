@@ -20,13 +20,14 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { KnowledgeApi } from '../knowledge-api';
 import { JobToasts } from '@features/work/jobs/job-toasts';
 import { formatNumber } from '@shared/browser/format';
+import { PendingButton } from '@shared/ui/pending-button';
 
 /** 與後端 `TextDocuments.MaxCharacters` 一致；輸入上限與字數提示共用。 */
 const MAX_TEXT = 64000;
 
 @Component({
   selector: 'nx-text-source-editor',
-  imports: [Notice, CompactDialog, DialogHeader, Field, ConfirmDialog],
+  imports: [Notice, CompactDialog, DialogHeader, Field, ConfirmDialog, PendingButton],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -35,6 +36,7 @@ const MAX_TEXT = 64000;
       #dialog
       class="platform-dialog"
       aria-label="純文字來源編輯器"
+      [busy]="busy()"
       (cancel)="cancel($event)"
     >
       <form class="dialog-form" (submit)="save($event)">
@@ -42,29 +44,34 @@ const MAX_TEXT = 64000;
         <div class="dialog-body">
           <p class="form-note">貼上筆記或文字內容。儲存後會在背景建立索引，完成即可供對話查詢。</p>
           @if (loading()) {
-            <p role="status">正在讀取內容…</p>
+            <div class="source-skeleton" role="status">
+              <span class="sr-only">正在載入文字內容…</span>
+              <span class="skeleton is-title"></span>
+              <span class="skeleton is-text"></span>
+            </div>
+          } @else {
+            <label
+              >來源名稱<input
+                nxField
+                required
+                maxlength="120"
+                [readOnly]="busy()"
+                [value]="title()"
+                (input)="title.set($any($event.target).value)"
+            /></label>
+            <label
+              >純文字內容<textarea
+                nxField
+                required
+                rows="15"
+                [maxLength]="maxText"
+                [readOnly]="busy()"
+                [value]="text()"
+                placeholder="將文字貼在這裡…"
+                (input)="text.set($any($event.target).value)"
+              ></textarea>
+            </label>
           }
-          <label
-            >來源名稱<input
-              nxField
-              required
-              maxlength="120"
-              [readOnly]="busy() || loading()"
-              [value]="title()"
-              (input)="title.set($any($event.target).value)"
-          /></label>
-          <label
-            >純文字內容<textarea
-              nxField
-              required
-              rows="15"
-              [maxLength]="maxText"
-              [readOnly]="busy() || loading()"
-              [value]="text()"
-              placeholder="將文字貼在這裡…"
-              (input)="text.set($any($event.target).value)"
-            ></textarea>
-          </label>
           @if (error()) {
             <nx-notice tone="danger" [message]="error()" />
           }
@@ -73,20 +80,37 @@ const MAX_TEXT = 64000;
           <p class="dialog-note">
             {{ count(text().length) }} / {{ count(maxText) }} 字元 · 原始內容會保留為文字檔
           </p>
-          <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
+          <button
+            type="button"
+            class="secondary-button"
+            [attr.aria-disabled]="busy() || null"
+            (click)="close()"
+          >
             取消
           </button>
           <button
+            nxPending
             class="primary-button"
-            [disabled]="busy() || loading() || !title().trim() || !text().trim()"
+            [pending]="busy()"
+            [disabled]="loading() || !title().trim() || !text().trim()"
           >
-            {{ busy() ? '正在儲存…' : '儲存並建立索引' }}
+            {{ busy() ? '儲存中…' : '儲存並建立索引' }}
           </button>
         </footer>
       </form>
     </dialog>
     <nx-confirm-dialog />`,
   styles: `
+    .source-skeleton {
+      display: grid;
+      gap: var(--p-space-3);
+    }
+    .source-skeleton .is-title {
+      height: 2.5rem;
+    }
+    .source-skeleton .is-text {
+      height: 240px;
+    }
     textarea {
       resize: vertical;
       min-height: 240px;

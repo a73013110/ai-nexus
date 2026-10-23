@@ -17,7 +17,12 @@
     (valueChange)="setFilter('feature', $event)"
   />
 </div>
-<nx-data-table label="在線瀏覽器工作階段" class="monitor-sessions-table" [stacked]="true">
+<nx-data-table
+  label="在線瀏覽器工作階段"
+  class="monitor-sessions-table"
+  [stacked]="true"
+  [busy]="busy()"
+>
   <table class="monitor-table">
     <thead>
       <tr>

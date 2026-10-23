@@ -4,7 +4,7 @@
   #dialog
   class="platform-dialog"
   aria-label="寄信測試"
-  (cancel)="cancel($event)"
+  [busy]="busy()"
 >
   <form class="dialog-form" (submit)="send($event)">
     <nx-dialog-header heading="寄信測試" closeLabel="關閉寄信測試" />
@@ -30,10 +30,11 @@
       <label
         >郵件範本<nx-select
           label="郵件範本"
-          [placeholder]="loading() ? '正在讀取…' : '選擇郵件範本'"
+          placeholder="選擇郵件範本"
           [options]="options()"
           [value]="category()"
-          [disabled]="busy() || loading()"
+          [loading]="loading()"
+          [disabled]="busy()"
           (valueChange)="choose($event)"
       /></label>
       @if (sample(); as current) {
@@ -106,14 +107,21 @@
       }
     </div>
     <footer class="dialog-foot">
-      <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="busy() || null"
+        (click)="busy() || dialog.close()"
+      >
         取消
       </button>
       <button
+        nxPending
         class="primary-button"
-        [disabled]="busy() || !to().trim() || !sample() || !!invalid()"
+        [pending]="busy()"
+        [disabled]="!to().trim() || !sample() || !!invalid()"
       >
-        {{ busy() ? '正在送出…' : '寄出測試信' }}
+        {{ busy() ? '寄出中…' : '寄出測試信' }}
       </button>
     </footer>
   </form>

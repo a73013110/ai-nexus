@@ -3,6 +3,7 @@
     label="搜尋使用者"
     placeholder="搜尋姓名、登入帳號或信箱"
     [value]="store.search()"
+    [busy]="store.loadingUsers()"
     (valueChange)="store.find($event)"
   />
   <div class="page-actions">
@@ -15,7 +16,11 @@
         <nx-icon name="import" />從 AD 匯入
       </button>
     }
-    <button class="primary-button" [disabled]="session.testing()" (click)="createDialog().open()">
+    <button
+      class="primary-button"
+      [disabled]="session.testing() || !store.access.catalog()"
+      (click)="createDialog().open()"
+    >
       <nx-icon name="plus" />新增使用者
     </button>
   </div>
@@ -128,6 +133,7 @@
             <nx-action-menu
               [label]="'使用者操作：' + user.displayName"
               [items]="actions(user)"
+              [busy]="acting() === user.id"
               (action)="userAction($event, user)"
             />
           </td>
@@ -139,7 +145,7 @@
     [count]="store.users()?.users?.length || 0"
     [loading]="store.loadingUsers()"
     [error]="store.usersRead.error()"
-    loadingText="正在讀取使用者"
+    loadingText="正在載入使用者…"
     errorTitle="無法載入使用者"
     emptyTitle="沒有符合的使用者"
     emptyText="可手動建立使用者，或在第一次 AD 登入時自動建立。"

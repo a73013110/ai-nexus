@@ -45,7 +45,7 @@ const idle: Signal<string> = signal('').asReadonly();
     [class.search-current]="currentMatch()"
     [attr.data-message-id]="message().id"
     [attr.aria-label]="message().role === 'user' ? '你的提問' : 'AI 回覆'"
-    [attr.aria-busy]="active()"
+    [attr.aria-busy]="active() || null"
     [animate.enter]="enter() ? 'message-enter' : ''"
   >
     <!-- The bubble already marks the user's turn; only answers name who wrote them and how. -->

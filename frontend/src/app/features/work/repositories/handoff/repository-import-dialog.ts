@@ -15,6 +15,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ToastService } from '@shared/ui/toast-service';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
@@ -26,15 +27,10 @@ import { routeOf } from '@core/api/catalog';
 /** 以釘選的提交，把資料夾下的文字檔匯入知識庫集合。 */
 @Component({
   selector: 'nx-repository-import-dialog',
-  imports: [RouterLink, CompactDialog, DialogHeader, Notice, Select],
+  imports: [RouterLink, CompactDialog, DialogHeader, Notice, PendingButton, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog
-    nxCompactDialog
-    #dialog
-    class="platform-dialog"
-    (cancel)="saving() ? $event.preventDefault() : null"
-  >
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving()">
     <nx-dialog-header heading="匯入知識庫" closeLabel="關閉匯入知識庫" />
     <div class="dialog-body">
       <p class="form-note">
@@ -44,39 +40,43 @@ import { routeOf } from '@core/api/catalog';
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
       }
-      @if (loading()) {
-        <p class="form-note" role="status">正在載入可編輯的知識庫…</p>
-      } @else if (!choices().length) {
-        <p>目前沒有可加入的知識庫。</p>
-        <a class="secondary-button" [routerLink]="routeOf('knowledge')" (click)="dialog.close()"
-          >前往建立知識庫</a
-        >
+      @if (!loading() && !choices().length) {
+        @if (!error()) {
+          <p>目前沒有可加入的知識庫。</p>
+          <a class="secondary-button" [routerLink]="routeOf('knowledge')" (click)="dialog.close()"
+            >前往建立知識庫</a
+          >
+        }
       } @else {
         <nx-select
           label="目標知識庫"
           [options]="choices()"
           [value]="selected()"
+          [loading]="loading()"
+          [disabled]="saving()"
           (valueChange)="selected.set($event)"
         />
       }
     </div>
-    @if (!loading() && choices().length) {
+    @if (loading() || choices().length) {
       <footer class="dialog-foot">
         <button
           type="button"
           class="secondary-button"
-          [disabled]="saving()"
-          (click)="dialog.close()"
+          [attr.aria-disabled]="saving() || null"
+          (click)="saving() || dialog.close()"
         >
           取消
         </button>
         <button
+          nxPending
           type="button"
           class="primary-button"
-          [disabled]="saving() || !selected()"
+          [pending]="saving()"
+          [disabled]="loading() || !selected()"
           (click)="save()"
         >
-          {{ saving() ? '正在安排…' : '開始匯入' }}
+          {{ saving() ? '安排中…' : '開始匯入' }}
         </button>
       </footer>
     }
@@ -131,7 +131,7 @@ export class RepositoryImportDialog {
   async save() {
     const key = this.store.key(),
       collection = this.choices().find((item) => item.value === this.selected());
-    if (!key || !collection || this.saving()) return;
+    if (!key || !collection || this.saving() || this.loading()) return;
     const valid = this.scope.guard();
     this.saving.set(true);
     this.saveError.set('');

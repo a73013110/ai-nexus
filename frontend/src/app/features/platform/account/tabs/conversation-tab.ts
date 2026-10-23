@@ -5,13 +5,14 @@ import { formatModelName } from '@shared/browser/format';
 import { keyText } from '@shared/browser/hotkeys';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { SettingsStore } from '../settings-store';
 
 /** 輸入與跟隨的習慣、新對話的模型與思考強度，以及這個部署是否能搜尋網路。 */
 @Component({
   selector: 'nx-conversation-tab',
-  imports: [Icon, Notice, SettingGroup, SettingRow],
+  imports: [Icon, Notice, PendingButton, SettingGroup, SettingRow],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -30,7 +31,15 @@ import { SettingsStore } from '../settings-store';
   `,
   template: `@if (error()) {
       <nx-notice [message]="error()"
-        ><button type="button" notice-actions (click)="store.reload()">重新載入</button>
+        ><button
+          nxPending
+          type="button"
+          notice-actions
+          [pending]="reloading()"
+          (click)="store.reload()"
+        >
+          {{ reloading() ? '重新載入中…' : '重新載入' }}
+        </button>
       </nx-notice>
     }
     <nx-setting-group class="conversation-input" heading="輸入與瀏覽">
@@ -52,12 +61,14 @@ import { SettingsStore } from '../settings-store';
       />
     </nx-setting-group>
     <nx-setting-group class="conversation-defaults" heading="新對話預設">
-      @if (models()?.policy?.allowModelSelection) {
+      <!-- 模型還沒讀到時先佔住這一列並轉圈，不等到讀完才冒出來。 -->
+      @if (models()?.policy?.allowModelSelection || modelsPending()) {
         <nx-setting-row
           label="預設模型"
           description="只列出管理員允許你使用的模型。"
           [options]="modelOptions()"
           [value]="store.draft().appearance.defaultModelId || ''"
+          [loading]="modelsRead.refreshing()"
           (valueChange)="store.appearance('defaultModelId', $event || null)"
         />
       } @else if (models()) {
@@ -94,7 +105,7 @@ export class ConversationTab {
   readonly store = inject(SettingsStore);
   private readonly api = inject(WorkspaceApi);
   private readonly chat = computed(() => this.store.session.has('chat'));
-  private readonly modelsRead = apiResource({
+  protected readonly modelsRead = apiResource({
     params: () => this.store.version(),
     loader: () => (this.chat() ? this.api.models() : Promise.resolve(null)),
   });
@@ -104,8 +115,15 @@ export class ConversationTab {
     loader: () => (this.chat() ? this.api.webSearchStatus() : Promise.resolve(null)),
   });
   readonly models = computed(() => this.modelsRead.value() ?? null);
+  /** 還不知道能不能選模型（首次讀取中）。 */
+  readonly modelsPending = computed(
+    () => this.chat() && this.modelsRead.loading() && !this.models(),
+  );
   readonly webSearch = computed(() => this.webSearchRead.value() ?? null);
   readonly error = computed(() => this.modelsRead.error() || this.webSearchRead.error());
+  readonly reloading = computed(
+    () => this.modelsRead.refreshing() || this.webSearchRead.refreshing(),
+  );
   readonly sendKeys = keyText('mod+enter');
   readonly efforts = [
     { value: 'auto', label: '依模型預設' },

@@ -4,7 +4,7 @@
   class="platform-dialog"
   aria-label="郵件連線診斷"
   [size]="result() ? 'lg' : 'md'"
-  (cancel)="cancel($event)"
+  [busy]="busy()"
 >
   <form class="dialog-form" (submit)="run($event)">
     <nx-dialog-header heading="郵件連線診斷" closeLabel="關閉連線診斷" />
@@ -31,7 +31,13 @@
       }
       @if (view(); as current) {
         <nx-notice [tone]="current.verdict.tone" [message]="current.verdict.message" />
-        <ol class="diagnosis-steps" aria-label="診斷步驟">
+        <!-- 再診斷一次時保留上次的結果並淡化，直到新結果回來。 -->
+        <ol
+          class="diagnosis-steps"
+          aria-label="診斷步驟"
+          [class.is-refreshing]="busy()"
+          [attr.aria-busy]="busy() || null"
+        >
           @for (item of current.steps; track item.step.id) {
             <li [attr.data-status]="item.step.status">
               <div class="diagnosis-step-head">
@@ -103,11 +109,16 @@
       }
     </div>
     <footer class="dialog-foot">
-      <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-disabled]="busy() || null"
+        (click)="busy() || dialog.close()"
+      >
         關閉
       </button>
-      <button class="primary-button" [disabled]="busy()">
-        {{ busy() ? '正在診斷…' : result() ? '再診斷一次' : '開始診斷' }}
+      <button nxPending class="primary-button" [pending]="busy()">
+        {{ busy() ? '診斷中…' : result() ? '再診斷一次' : '開始診斷' }}
       </button>
     </footer>
   </form>

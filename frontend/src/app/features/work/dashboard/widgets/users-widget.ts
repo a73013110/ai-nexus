@@ -94,7 +94,10 @@ import { DashboardStore } from '../dashboard-store';
       <nx-table-state
         [count]="users().length"
         [loading]="store.loading()"
+        [retrying]="store.refreshing()"
+        [error]="store.loadError()"
         emptyTitle="此期間尚無符合條件的費用紀錄"
+        (retry)="store.load()"
       />
     </nx-data-table>`,
 })

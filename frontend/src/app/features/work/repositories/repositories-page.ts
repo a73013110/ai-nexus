@@ -20,6 +20,7 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ToastService } from '@shared/ui/toast-service';
 import { RepositoriesApi } from './repositories-api';
 import { repositoriesTour, repositoryTour } from './repositories-tour';
@@ -43,6 +44,7 @@ import { routeOf } from '@core/api/catalog';
     EmptyState,
     Icon,
     Notice,
+    PendingButton,
     RepositoryConnect,
     RepositoryDetail,
     RepositoryList,
@@ -60,13 +62,15 @@ import { routeOf } from '@core/api/catalog';
         @if (status()?.connected && !reconnecting()) {
           @if (store.detail(); as detail) {
             <button
+              nxPending
               type="button"
               class="icon-button pin-toggle"
               [class.pinned]="detail.repository.pinned"
               [attr.aria-pressed]="detail.repository.pinned"
               [attr.aria-label]="detail.repository.pinned ? '取消釘選' : '釘選到列表上方'"
               [title]="detail.repository.pinned ? '取消釘選' : '釘選到列表上方'"
-              [disabled]="busy()"
+              [pending]="working() === 'pin'"
+              [disabled]="working() === 'disconnect'"
               (click)="togglePin()"
             >
               <nx-icon name="pin" />
@@ -89,13 +93,22 @@ import { routeOf } from '@core/api/catalog';
             label="Gitea 連線"
             [heading]="{ title: status()!.login || 'Gitea', detail: status()!.baseUrl }"
             [items]="accountActions"
+            [busy]="working() === 'disconnect'"
             (action)="account($event)"
           />
         }
       </div>
       @if (error()) {
         <nx-notice [message]="error()"
-          ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+          ><button
+            notice-actions
+            nxPending
+            type="button"
+            [pending]="refreshing()"
+            (click)="reload()"
+          >
+            {{ refreshing() ? '重試中…' : '重試' }}
+          </button></nx-notice
         >
       }
       @if (status(); as connection) {
@@ -118,7 +131,8 @@ import { routeOf } from '@core/api/catalog';
           <nx-repository-list />
         }
       } @else if (statusLoading()) {
-        <div class="page-skeleton" role="status" aria-label="正在載入程式庫">
+        <div class="page-skeleton" role="status">
+          <span class="sr-only">正在載入程式庫…</span>
           <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
         </div>
       }
@@ -147,7 +161,11 @@ export class RepositoriesPage {
   readonly status = computed<RepositoryStatusDto | null>(() => this.statusRead.value() ?? null);
   readonly statusLoading = this.statusRead.loading;
   readonly reconnecting = signal(false);
-  readonly busy = signal(false);
+  /** 進行中的寫入：釘選（樂觀更新，按鈕轉圈擋重複切換）或中斷連線（帳號選單鈕轉圈）。 */
+  readonly working = signal<'pin' | 'disconnect' | null>(null);
+  readonly busy = computed(() => this.working() !== null);
+  /** 使用者看得到的重讀（重試）。 */
+  readonly refreshing = computed(() => this.statusRead.refreshing() || this.store.refreshing());
   private readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -230,7 +248,7 @@ export class RepositoriesPage {
     });
     if (!confirmed || this.busy()) return;
     const valid = this.scope.guard();
-    this.busy.set(true);
+    this.working.set('disconnect');
     try {
       await this.api.disconnect();
       if (!valid()) return;
@@ -241,7 +259,7 @@ export class RepositoriesPage {
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
 
@@ -250,7 +268,7 @@ export class RepositoriesPage {
       pinned = this.store.detail()?.repository.pinned;
     if (!key || this.busy()) return;
     const valid = this.scope.guard();
-    this.busy.set(true);
+    this.working.set('pin');
     this.store.setPinned(!pinned);
     try {
       if (pinned) await this.api.unpin(key);
@@ -262,7 +280,7 @@ export class RepositoriesPage {
       this.store.setPinned(!!pinned);
       this.actionError.set(this.scope.message(error));
     } finally {
-      if (valid()) this.busy.set(false);
+      if (valid()) this.working.set(null);
     }
   }
 

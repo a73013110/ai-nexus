@@ -87,6 +87,43 @@ describe('notification store', () => {
     expect(store.items().map((item) => item.id)).toEqual([]);
   });
 
+  it('polls quietly and only shows reads the user started', async () => {
+    const { store, api, settle } = setup();
+    let finish!: () => void;
+    api.list.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ items: [notification('a')], unread: 1, hasMore: false });
+        }),
+    );
+    await settle();
+    // 登入後的第一次讀取是輪詢：不轉圈、不淡化。
+    expect(api.list).toHaveBeenCalledTimes(1);
+    expect(store.loading()).toBe(false);
+    finish();
+    await settle();
+    const reading = store.refresh();
+    expect(store.loading()).toBe(true);
+    expect(store.loadingMore()).toBe(false);
+    await reading;
+    expect(store.loading()).toBe(false);
+  });
+
+  it('marks only the pressed write as working', async () => {
+    const { store, api, settle } = setup();
+    await settle();
+    let finish!: () => void;
+    api.read.mockImplementationOnce(
+      () => new Promise<undefined>((resolve) => (finish = () => resolve(undefined))),
+    );
+    const reading = store.read(store.items()[0]);
+    expect(store.isWorking('read:a')).toBe(true);
+    expect(store.isWorking('read:b')).toBe(false);
+    finish();
+    await reading;
+    expect(store.isWorking('read:a')).toBe(false);
+  });
+
   it('keeps the list when marking read fails and reports why', async () => {
     const { store, api, settle } = setup();
     await settle();

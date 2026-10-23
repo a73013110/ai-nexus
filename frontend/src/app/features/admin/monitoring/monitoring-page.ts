@@ -1,3 +1,4 @@
+import { PendingButton } from '@shared/ui/pending-button';
 import { RefreshButton } from '@shared/ui/refresh-button';
 import {
   ChangeDetectionStrategy,
@@ -48,6 +49,7 @@ const DRAWER_TITLES = {
 @Component({
   selector: 'nx-monitoring-page',
   imports: [
+    PendingButton,
     RefreshButton,
     DetailDrawer,
     DrawerPager,
@@ -86,6 +88,15 @@ export class MonitoringPage {
   readonly featureFilter = signal('all');
   readonly selection = signal<Selection | null>(null);
   readonly exporting = signal(false);
+  /**
+   * 正在建立或恢復連線：重新連線鈕轉圈。失敗後狀態仍是 `reconnecting`（等退避再自動重試），
+   * 這段期間帶著錯誤、不算進行中，使用者才能按「重新連線」立刻重試。
+   */
+  readonly connecting = computed(
+    () =>
+      !this.store.error() &&
+      (this.store.connection() === 'connecting' || this.store.connection() === 'reconnecting'),
+  );
   readonly actionError = signal('');
   private readonly drawer = viewChild.required(DetailDrawer);
   private readonly people = viewChild(MonitoringPeople);

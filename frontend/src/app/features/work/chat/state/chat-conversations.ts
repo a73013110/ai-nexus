@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { WorkspaceApi } from '@core/api/workspace-api';
 import type {
@@ -8,8 +8,10 @@ import type {
 } from '@core/api/schema';
 import { downloadFile } from '@shared/browser/download';
 import { pickFile } from '@shared/browser/pick-file';
+import { ToastService } from '@shared/ui/toast-service';
 import { ProjectsApi } from '@features/work/projects/projects-api';
 import { ConversationsApi } from '@features/work/conversations/conversations-api';
+import type { ConversationAction } from '@features/work/conversations/conversation-actions';
 import { ChatApi } from '../chat-api';
 import { ChatStore } from '../chat-store';
 import { routeOf } from '@core/api/catalog';
@@ -26,6 +28,9 @@ export class ChatConversations {
   private readonly chat = inject(ChatApi);
   private readonly projectsApi = inject(ProjectsApi);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  /** 進行中的選單動作（副本、文字備份）；觸發它的選單鈕轉圈並擋下重複送出。 */
+  readonly working = signal<{ id: string; action: ConversationAction } | null>(null);
   async assignProject(conversation: ConversationDto, projectId: string | null) {
     if (this.store.busy()) return false;
     const current = this.store.auth.guard();
@@ -104,7 +109,8 @@ export class ChatConversations {
   async duplicate() {
     const current = this.store.auth.guard();
     const selected = this.store.selected();
-    if (!selected || this.store.busy()) return;
+    if (!selected || this.store.busy() || this.working()) return;
+    this.working.set({ id: selected.id, action: 'duplicate' });
     try {
       const copy = await this.chat.duplicate(selected.id);
       if (!current()) return;
@@ -113,18 +119,23 @@ export class ChatConversations {
       await this.router.navigate([routeOf('chat'), copy.id]);
     } catch (error) {
       if (current()) this.store.report(error);
+    } finally {
+      this.working.set(null);
     }
   }
   async exportBackup() {
     const current = this.store.auth.guard();
     const selected = this.store.selected();
-    if (!selected || this.store.busy()) return;
+    if (!selected || this.store.busy() || this.working()) return;
+    this.working.set({ id: selected.id, action: 'backup' });
     try {
       const backup = await this.chat.export(selected.id);
       if (!current()) return;
       downloadFile(JSON.stringify(backup, null, 2), selected.title, 'json');
     } catch (error) {
       if (current()) this.store.report(error);
+    } finally {
+      this.working.set(null);
     }
   }
   /** 要求備份檔；須在點擊中呼叫，瀏覽器才會允許開啟檔案選擇器。 */
@@ -138,6 +149,9 @@ export class ChatConversations {
       this.store.error.set('文字備份最多 8 MB。');
       return;
     }
+    // 匯入從快捷指令發起，沒有按鈕可轉圈，所以進行中以提示表示；完成後換到匯入的對話即是結果。
+    const progress = 'conversation-import';
+    this.toast.show({ id: progress, tone: 'info', title: '正在匯入對話備份…', duration: 0 });
     try {
       const body = JSON.parse(await file.text()) as ConversationBackup;
       if (!current()) return;
@@ -152,6 +166,8 @@ export class ChatConversations {
       this.store.report(
         error instanceof SyntaxError ? new Error('備份不是有效的 JSON 格式。') : error,
       );
+    } finally {
+      this.toast.dismiss(progress);
     }
   }
   private find(id: string) {

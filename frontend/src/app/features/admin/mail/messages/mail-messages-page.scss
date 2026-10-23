@@ -82,3 +82,10 @@ code {
 .mail-attempt {
   animation: issue-arrive var(--motion-morph) var(--ease-spring) both;
 }
+.mail-detail-skeleton {
+  display: grid;
+  gap: var(--p-space-4);
+}
+.mail-detail-skeleton .skeleton {
+  height: 0.875rem;
+}

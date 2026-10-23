@@ -26,7 +26,7 @@
       (dismissed)="failure.set('')"
     />
   }
-  <nx-query-bar label="匯入紀錄查詢條件" [state]="query" [busy]="loading()">
+  <nx-query-bar label="匯入紀錄查詢條件" [state]="query" [busy]="refreshing()">
     <nx-view-switch
       query-lead
       label="匯入結果"
@@ -55,22 +55,30 @@
   </nx-query-bar>
   @if (readError() && rows().length) {
     <nx-notice tone="danger" [message]="readError()"
-      ><button notice-actions type="button" class="secondary-button" (click)="reload()">
-        重試
+      ><button
+        nxPending
+        notice-actions
+        type="button"
+        class="secondary-button"
+        [pending]="refreshing()"
+        (click)="reload()"
+      >
+        {{ refreshing() ? '重試中…' : '重試' }}
       </button></nx-notice
     >
   }
   <nx-data-table
     class="imports-table"
     label="打卡匯入紀錄"
-    [busy]="loading()"
+    [busy]="refreshing()"
     [columns]="columns"
     [stacked]="true"
     preferenceKey="staff-attendance-imports"
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>匯入紀錄</h2>
-      @if (loading()) {
+      <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
+      @if (refreshing() && rows().length) {
         <span class="sr-only" role="status">正在載入匯入紀錄…</span>
       }
     </div>
@@ -128,7 +136,7 @@
       [count]="rows().length"
       [loading]="loading()"
       [error]="rows().length ? '' : readError()"
-      loadingText="正在取得匯入紀錄"
+      loadingText="正在載入匯入紀錄…"
       errorTitle="無法取得匯入紀錄"
       emptyTitle="沒有符合條件的匯入紀錄"
       emptyText="試著擴大時間範圍，或移除部分條件。"
@@ -140,7 +148,7 @@
         [pageSize]="pageSize()"
         [count]="rows().length"
         [hasNext]="hasNext()"
-        [busy]="loading()"
+        [busy]="refreshing()"
         (pageChange)="changePage($event)"
         (pageSelect)="firstPage()"
         (pageSizeChange)="changePageSize($event)"

@@ -7,7 +7,11 @@
     <nx-notice tone="danger" [message]="error()" />
   }
   @if (loading()) {
-    <p role="status">正在載入資料來源…</p>
+    <div class="source-catalog" role="status">
+      <span class="skeleton source-skeleton"></span>
+      <span class="skeleton source-skeleton"></span>
+      <span class="sr-only">正在載入資料來源…</span>
+    </div>
   } @else {
     <div class="source-catalog" role="group" aria-label="資料來源">
       @for (source of sources(); track source.id) {
@@ -60,9 +64,11 @@
                 (valueChange)="kind.set($event)"
                 [disabled]="locked()"
               /><button
+                nxPending
                 class="primary-button"
                 type="submit"
-                [disabled]="locked() || query().trim().length < 2"
+                [pending]="searching()"
+                [disabled]="busy() || query().trim().length < 2"
               >
                 <nx-icon name="search" />{{ searching() ? '查詢中…' : '查詢' }}
               </button>
@@ -83,18 +89,38 @@
                   ><small>{{ row.id }} · {{ row.revision }}</small>
                 </button>
               } @empty {
-                <p class="form-note">
-                  {{ searched() ? '沒有符合且你有權限閱讀的資料。' : '輸入兩個字以上開始搜尋。' }}
-                </p>
+                @if (searching()) {
+                  <div class="source-result-list" role="status">
+                    <span class="skeleton source-skeleton"></span>
+                    <span class="skeleton source-skeleton"></span>
+                    <span class="skeleton source-skeleton"></span>
+                    <span class="sr-only">正在搜尋…</span>
+                  </div>
+                } @else {
+                  <p class="form-note">
+                    {{ searched() ? '沒有符合且你有權限閱讀的資料。' : '輸入兩個字以上開始搜尋。' }}
+                  </p>
+                }
               }
             </div>
             @if (rows().length) {
               <p class="form-note">依更新時間排序；搜尋範圍由來源權限決定。</p>
             }
           </aside>
-          <section nxCard class="source-reading" aria-label="來源內容">
+          <section
+            nxCard
+            class="source-reading"
+            aria-label="來源內容"
+            [class.is-refreshing]="refreshingDetail() && !!detail()"
+            [attr.aria-busy]="refreshingDetail() || null"
+          >
             @if (reading()) {
-              <p role="status">正在取得最新資料與授權…</p>
+              <div class="reading-skeleton" role="status">
+                @for (width of skeleton; track $index) {
+                  <span class="skeleton" [style.width.%]="width"></span>
+                }
+                <span class="sr-only">正在載入最新資料與授權…</span>
+              </div>
             } @else if (detail(); as view) {
               <header class="resource-heading">
                 <div>
@@ -110,30 +136,34 @@
                 <div class="page-actions">
                   @if (session.has('chat')) {
                     <button
+                      nxPending
                       class="primary-button source-chat"
                       (click)="use('chat')"
-                      [disabled]="busy()"
+                      [pending]="acting() === 'chat'"
+                      [disabled]="acting() === 'import'"
                     >
-                      <nx-icon name="lines" />帶入對話
+                      <nx-icon name="lines" />{{ acting() === 'chat' ? '帶入中…' : '帶入對話' }}
                     </button>
                   }
                   @if (session.has('artifacts')) {
                     <button
+                      nxPending
                       class="secondary-button source-snapshot"
                       (click)="use('import')"
-                      [disabled]="busy()"
+                      [pending]="acting() === 'import'"
+                      [disabled]="acting() === 'chat'"
                     >
-                      <nx-icon name="document" />儲存個人快照
+                      <nx-icon name="document" />{{
+                        acting() === 'import' ? '儲存中…' : '儲存個人快照'
+                      }}
                     </button>
                   }
                   <button
-                    class="icon-button"
+                    nxRefresh
                     aria-label="重新載入來源"
-                    (click)="read(view.record.id)"
-                    [disabled]="busy()"
-                  >
-                    <nx-icon name="repeat" />
-                  </button>
+                    [busy]="refreshingDetail()"
+                    (refresh)="read(view.record.id)"
+                  ></button>
                 </div>
               </header>
               <p class="form-note">

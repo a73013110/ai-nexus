@@ -24,6 +24,7 @@ import {
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
@@ -55,6 +56,7 @@ import { CARD_SEARCH_MAX, cardsQueryOptions } from './cards-query';
     Field,
     Icon,
     Notice,
+    PendingButton,
     QueryBar,
     Select,
     StatusBadge,
@@ -132,6 +134,8 @@ export class AttendanceCardsPage {
       last: formatDate(item.lastPunchedAt),
     })),
   );
+  /** 持有歷史骨架的寬度（%）。 */
+  protected readonly historySkeleton = [72, 54, 64];
   readonly history = computed(() => {
     const now = Date.now();
     return (this.store.assignments() ?? []).map((item) => ({

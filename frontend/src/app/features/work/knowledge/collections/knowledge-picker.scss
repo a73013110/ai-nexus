@@ -51,3 +51,11 @@
     display: none;
   }
 }
+.knowledge-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+  padding: var(--p-space-2) 0;
+}
+.knowledge-skeleton .skeleton {
+  height: 2rem;
+}

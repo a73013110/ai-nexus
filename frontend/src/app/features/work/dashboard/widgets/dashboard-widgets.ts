@@ -33,6 +33,8 @@ export interface DashboardWidget {
   tall?: boolean;
   component: Type<unknown>;
   inputs?: Record<string, unknown>;
+  /** 小工具的圖表或表格自己顯示重讀（`busy`）；磚塊就不再整塊淡化，免得疊成兩層。 */
+  refreshes?: boolean;
 }
 
 export interface WidgetContext {
@@ -95,6 +97,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'money',
       size: 'w',
       component: SpendWidget,
+      refreshes: true,
     },
     {
       id: 'activity',
@@ -102,6 +105,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'calendar',
       size: 'm',
       component: ActivityWidget,
+      refreshes: true,
     },
     {
       id: 'flow',
@@ -123,6 +127,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'chart',
       size: 'm',
       component: MixWidget,
+      refreshes: true,
     },
     {
       id: 'tokens',
@@ -130,6 +135,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'database',
       size: 'l',
       component: TokensWidget,
+      refreshes: true,
     },
     ...context.sections.map((section): DashboardWidget => ({
       id: 'section:' + section.id,
@@ -147,6 +153,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'user',
       size: 'xl',
       component: UsersWidget,
+      refreshes: true,
     });
   const rank = (id: string) => {
     const index = ORDER.indexOf(id);

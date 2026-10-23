@@ -5,6 +5,7 @@ import {
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import type { AdminUserDto } from '@core/api/schema';
@@ -116,6 +117,8 @@ export class AdminUsersTab {
       },
     ];
   }
+  /** 從選單發起、正在送出的使用者（從 AD 更新、刪除）；只有那一列的選單鈕轉圈。 */
+  readonly acting = signal<string | null>(null);
   async userAction(action: string, user: AdminUserDto) {
     if (action === 'sync') await this.sync(user);
     if (action === 'test') this.testDialog().open(user);
@@ -130,17 +133,21 @@ export class AdminUsersTab {
         }))
       )
         return;
+      this.acting.set(user.id);
       try {
         await this.api.deleteUser(user.id);
         this.store.readUsers(0);
         this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
       } catch (error) {
         this.store.actionError.set(safeMessage(error));
+      } finally {
+        this.acting.set(null);
       }
     }
   }
   /** 單人「從 AD 更新」直接執行，結果以 toast 告知；AD 找不到或已停用時用警告語氣並說明不會自動停用。 */
   private async sync(user: AdminUserDto) {
+    this.acting.set(user.id);
     try {
       const [item] = (await this.api.syncDirectoryUsers([user.id])).items;
       this.store.readUsers();
@@ -160,6 +167,8 @@ export class AdminUsersTab {
         });
     } catch (error) {
       this.store.actionError.set(safeMessage(error));
+    } finally {
+      this.acting.set(null);
     }
   }
 }

@@ -68,7 +68,11 @@ import { TILE_SIZES, type TileSize } from '../widgets/dashboard-widgets';
         </div>
       }
     </header>
-    <div class="tile-body" [attr.inert]="editing() ? '' : null">
+    <div
+      class="tile-body"
+      [class.is-refreshing]="busy() && !tile().widget.refreshes"
+      [attr.inert]="editing() ? '' : null"
+    >
       <ng-container
         [ngComponentOutlet]="tile().widget.component"
         [ngComponentOutletInputs]="tile().widget.inputs ?? {}"
@@ -78,6 +82,8 @@ import { TILE_SIZES, type TileSize } from '../widgets/dashboard-widgets';
 export class DashboardTile {
   readonly tile = input.required<PlacedTile>();
   readonly editing = input(false);
+  /** 總覽重讀中（不含輪詢）：沒有自己重讀狀態的小工具整塊淡化，舊數字保留。 */
+  readonly busy = input(false);
   readonly sizes = TILE_SIZES;
   readonly grab = output<PointerEvent>();
   readonly nudge = output<number | 'first' | 'last'>();

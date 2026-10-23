@@ -5,13 +5,29 @@ export interface TrendPoint {
   label: string;
   value: number;
 }
+/**
+ * 每日或逐點的面積趨勢圖，附可鍵盤檢視的滑桿與數據表。首次載入（`loading`）畫成同高的骨架，
+ * 已有資料時重讀（`busy`）保留舊線並淡化；讀取中不顯示「此期間尚無資料」。
+ */
 @Component({
   selector: 'nx-trend-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './trend-chart.scss',
-  template: `<figure class="trend-chart">
+  template: `<figure
+    class="trend-chart"
+    [class.is-refreshing]="refreshing()"
+    [attr.aria-busy]="busy() || loading() || null"
+  >
     <figcaption>{{ label() }}</figcaption>
-    @if (points().length) {
+    @if (placeholder()) {
+      <div class="trend-loading" role="status">
+        <span class="skeleton trend-skeleton"></span>
+        <span class="trend-axis" aria-hidden="true"
+          ><i class="skeleton"></i><i class="skeleton"></i
+        ></span>
+        <span class="sr-only">正在載入{{ label() }}…</span>
+      </div>
+    } @else if (points().length) {
       <div class="trend-plot" (pointermove)="inspect($event)" (pointerleave)="active.set(null)">
         <svg
           viewBox="0 0 800 180"
@@ -96,6 +112,14 @@ export class TrendChart {
   readonly currency = input('');
   readonly unit = input('');
   readonly granularity = input<'daily' | 'interval'>('daily');
+  /** 首次載入：還沒有資料，畫骨架。 */
+  readonly loading = input(false);
+  /** 重新讀取（換期間、重讀）：已有資料時淡化；沒有資料時同首次載入。 */
+  readonly busy = input(false);
+  protected readonly placeholder = computed(
+    () => this.loading() || (this.busy() && !this.points().length),
+  );
+  protected readonly refreshing = computed(() => this.busy() && !this.placeholder());
   readonly id = uniqueId('nx-trend');
   readonly Math = Math;
   readonly active = signal<number | null>(null);

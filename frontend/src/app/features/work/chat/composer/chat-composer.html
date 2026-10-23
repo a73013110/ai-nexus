@@ -25,12 +25,13 @@
         <span>知識來源尚未載入，重新載入後即可送出訊息。</span>
         <button
           notice-actions
+          nxPending
           type="button"
           class="quiet-button"
-          [disabled]="store.knowledge.saving()"
+          [pending]="store.knowledge.saving()"
           (click)="store.knowledge.reload()"
         >
-          <nx-icon name="repeat" />重新載入來源
+          <nx-icon name="repeat" />{{ store.knowledge.saving() ? '重新載入中…' : '重新載入來源' }}
         </button>
       </nx-notice>
     }

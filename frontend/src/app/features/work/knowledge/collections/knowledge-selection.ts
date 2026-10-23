@@ -11,7 +11,12 @@ export class KnowledgeSelection {
   private readonly auth = inject(AuthService);
   readonly collections = signal<CollectionDto[]>([]);
   readonly ids = signal<string[]>([]);
+  /** 讀取或儲存選取中；期間擋下其他切換。 */
   readonly saving = signal(false);
+  /** 正在儲存的那個知識庫（勾選旁轉圈）；讀取選取時為 null。 */
+  readonly toggling = signal<string | null>(null);
+  /** 可選的知識庫清單讀取中；沒有清單時畫骨架，不先說「沒有符合的知識庫」。 */
+  readonly listing = signal(false);
   readonly loadFailed = signal(false);
   readonly error = signal('');
   readonly revision = signal(0);
@@ -29,17 +34,24 @@ export class KnowledgeSelection {
     this.collections.set([]);
     this.ids.set([]);
     this.saving.set(false);
+    this.toggling.set(null);
+    this.listing.set(false);
     this.loadFailed.set(false);
     this.error.set('');
     this.revision.update((item) => item + 1);
   }
   async initialize() {
-    const current = this.guard();
+    const current = this.guard(),
+      session = this.auth.guard();
+    this.listing.set(true);
     try {
       const rows = await this.api.collections();
       if (current()) this.collections.set(rows);
     } catch (error) {
       if (current()) this.error.set(safeMessage(error));
+    } finally {
+      // 較新的 load() 會讓 current 失效，但清單讀取與它無關，仍要解除；換帳號時由 reset() 處理。
+      if (session()) this.listing.set(false);
     }
   }
   async load(conversation: string | null) {
@@ -80,6 +92,7 @@ export class KnowledgeSelection {
     this.ids.set(next);
     this.error.set('');
     this.saving.set(true);
+    this.toggling.set(id);
     try {
       if (this.conversation) await this.api.select(this.conversation, next);
     } catch (error) {
@@ -90,6 +103,7 @@ export class KnowledgeSelection {
     } finally {
       if (current()) {
         this.saving.set(false);
+        this.toggling.set(null);
         this.revision.update((item) => item + 1);
       }
     }

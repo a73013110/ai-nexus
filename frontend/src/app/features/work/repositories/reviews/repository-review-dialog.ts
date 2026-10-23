@@ -17,6 +17,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { JobToasts } from '@features/work/jobs/job-toasts';
@@ -40,7 +41,7 @@ const purposes = {
 /** 啟動背景審查；對話框與頁面關閉後它仍會繼續執行。 */
 @Component({
   selector: 'nx-repository-review-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Icon, Notice, Select, ViewSwitch],
+  imports: [CompactDialog, DialogHeader, Field, Icon, Notice, PendingButton, Select, ViewSwitch],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -65,12 +66,7 @@ const purposes = {
       gap: var(--p-space-2);
     }
   `,
-  template: `<dialog
-    nxCompactDialog
-    #dialog
-    class="platform-dialog"
-    (cancel)="saving() ? $event.preventDefault() : null"
-  >
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving()">
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header heading="交給 AI 初檢" />
       <div class="dialog-body">
@@ -86,11 +82,13 @@ const purposes = {
           />
           <p class="form-note">{{ purposeNote() }}</p>
         </div>
-        @if (models()?.policy?.allowModelSelection && choices().length > 1) {
+        @if (showModels()) {
           <nx-select
             label="模型"
             [options]="choices()"
             [value]="model()"
+            [loading]="modelsLoading()"
+            [disabled]="saving()"
             (valueChange)="model.set($event)"
           />
         }
@@ -102,6 +100,7 @@ const purposes = {
             nxField
             rows="2"
             maxlength="2000"
+            [readOnly]="saving()"
             [value]="note()"
             placeholder="例如：只看權限判斷，或確認金額計算"
             (input)="note.set($any($event.target).value)"
@@ -116,13 +115,18 @@ const purposes = {
         <button
           type="button"
           class="secondary-button"
-          [disabled]="saving()"
-          (click)="dialog.close()"
+          [attr.aria-disabled]="saving() || null"
+          (click)="saving() || dialog.close()"
         >
           取消
         </button>
-        <button class="primary-button" [disabled]="saving() || !model()">
-          {{ saving() ? '正在安排…' : '開始' }}
+        <button
+          nxPending
+          class="primary-button"
+          [pending]="saving()"
+          [disabled]="modelsLoading() || !model()"
+        >
+          {{ saving() ? '安排中…' : '開始' }}
         </button>
       </footer>
     </form>
@@ -153,6 +157,14 @@ export class RepositoryReviewDialog {
   readonly choices = computed(
     () => this.models()?.models.map((item) => ({ value: item.id, label: item.displayName })) ?? [],
   );
+  /** 每次開啟都重讀模型清單；讀取中模型下拉轉圈，開始鈕等它。 */
+  readonly modelsLoading = this.modelsRead.refreshing;
+  /** 第一次讀取時還不知道能不能選模型，先顯示讀取中的下拉；之後依政策與可選數量決定。 */
+  readonly showModels = computed(() => {
+    const models = this.models();
+    if (!models) return this.modelsLoading();
+    return models.policy.allowModelSelection && this.choices().length > 1;
+  });
   readonly model = linkedSignal(() => {
     const models = this.models();
     return models?.policy.defaultModelId || models?.models[0]?.id || '';

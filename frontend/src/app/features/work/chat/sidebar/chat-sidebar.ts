@@ -18,6 +18,7 @@ import { rovingIndex } from '@shared/browser/roving-index';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { MenuPanel } from '@shared/ui/menu-panel';
+import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { NotificationStore } from '@features/platform/notifications/notification-store';
@@ -36,7 +37,7 @@ import { routeOf } from '@core/api/catalog';
  */
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, MenuPanel, ViewSwitch],
+  imports: [RouterLink, FormField, Icon, Select, MenuPanel, PendingButton, ViewSwitch],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
@@ -67,6 +68,20 @@ export class ChatSidebar {
     { value: 'favorites', label: '收藏' },
     { value: 'archived', label: '封存' },
   ];
+  /** 輸入後還在防抖等待；與重讀合起來是搜尋框的轉圈。 */
+  private readonly typing = signal(false);
+  /** 搜尋、換檢視或標籤後的重讀（含防抖等待）。 */
+  readonly searching = computed(() => this.typing() || this.store.history.refreshing());
+  /** 還沒有任何列時讀取：畫骨架清單，不先說「沒有符合的對話」。 */
+  readonly firstLoad = computed(
+    () => (this.store.loading() || this.searching()) && !this.store.conversations().length,
+  );
+  /** 已有列時重讀：保留舊列並淡化。 */
+  readonly listRefreshing = computed(
+    () => (this.store.loading() || this.searching()) && this.store.conversations().length > 0,
+  );
+  /** 骨架列的寬度（%），長短交錯才像標題。 */
+  protected readonly skeleton = [86, 64, 78, 52, 70, 60];
   private readonly today = currentDay();
   readonly groups = computed(() => historyGroups(this.store.conversations(), this.today()));
   readonly menu = viewChild.required(MenuPanel);
@@ -94,12 +109,21 @@ export class ChatSidebar {
       this.morph.arm('conversation-title', title);
   }
   searchChanged() {
-    this.scope.later(() => void this.store.searchHistory(this.searchModel().query), 250, 'search');
+    this.typing.set(true);
+    this.scope.later(
+      () => {
+        this.typing.set(false);
+        void this.store.searchHistory(this.searchModel().query);
+      },
+      250,
+      'search',
+    );
   }
   selectLabel(value: string) {
     void this.conversations.filterHistory(undefined, value);
   }
   async loadMore() {
+    if (this.store.history.loadingMore()) return;
     try {
       await this.store.refreshHistory(true);
     } catch (error) {

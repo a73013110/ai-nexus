@@ -27,6 +27,7 @@ import { Icon } from '@shared/ui/icon';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { Panel } from '@shared/ui/panel';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -49,6 +50,7 @@ import { routeOf } from '@core/api/catalog';
     MessageContent,
     ActionMenu,
     Panel,
+    PendingButton,
     ResourceCard,
     ResourceGallery,
     StatusBadge,
@@ -103,6 +105,9 @@ export class SharedPage {
   });
   private readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
   readonly listLoading = this.listRead.loading;
+  readonly listRefreshing = this.listRead.refreshing;
+  /** 使用者看得到的重讀（重試）；分享到期前的輪詢不算。 */
+  readonly refreshing = computed(() => this.contentRead.refreshing() || this.listRead.refreshing());
   readonly contentLoading = this.contentRead.loading;
   readonly term = signal('');
   readonly scopes = [
@@ -134,7 +139,8 @@ export class SharedPage {
       cards: !this.listLoading() && this.visible().length > 0,
     });
   });
-  private readonly busy = signal(false);
+  /** 撤銷進行中：分享選單鈕轉圈。 */
+  readonly busy = signal(false);
   private readonly actionError = signal('');
   readonly error = computed(
     () => this.actionError() || this.contentRead.error() || this.listRead.error(),

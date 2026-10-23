@@ -16,6 +16,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AttendanceApi } from '../attendance-api';
@@ -102,7 +103,15 @@ export function reimportOutcome(result: PunchReimportResult): {
  */
 @Component({
   selector: 'nx-reimport-dialog',
-  imports: [CompactDialog, DateTimePicker, DialogHeader, Notice, ViewMotion, ViewSwitch],
+  imports: [
+    CompactDialog,
+    DateTimePicker,
+    DialogHeader,
+    Notice,
+    PendingButton,
+    ViewMotion,
+    ViewSwitch,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .reimport-range {
@@ -119,6 +128,7 @@ export function reimportOutcome(result: PunchReimportResult): {
     #reimportDialog
     class="platform-dialog"
     size="sm"
+    [busy]="running()"
     (cancel)="cancel($event)"
   >
     <form class="dialog-form" novalidate (submit)="submit($event)">
@@ -180,13 +190,20 @@ export function reimportOutcome(result: PunchReimportResult): {
         @if (session.testing()) {
           <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
         }
-        <button type="button" class="secondary-button" [disabled]="running()" (click)="close()">
+        <button
+          type="button"
+          class="secondary-button"
+          [attr.aria-disabled]="running() || null"
+          (click)="close()"
+        >
           取消
         </button>
         <button
+          nxPending
           type="submit"
           class="primary-button"
-          [disabled]="running() || session.testing() || !range()"
+          [pending]="running()"
+          [disabled]="!running() && (session.testing() || !range())"
         >
           {{ running() ? '重匯中…' : '重匯' }}
         </button>

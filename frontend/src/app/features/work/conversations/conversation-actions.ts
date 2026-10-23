@@ -77,22 +77,30 @@ export function conversationMenu(
         <nx-icon name="search" />
       </button>
     }
-    <nx-action-menu label="對話操作" [items]="items()" (action)="choose($event)" />
+    <nx-action-menu
+      label="對話操作"
+      [items]="items()"
+      [busy]="!!working()"
+      (action)="choose($event)"
+    />
   </div>`,
 })
 export class ConversationActions {
   readonly conversation = input.required<ConversationDto>();
   readonly busy = input(false);
+  /** 正在處理的選單動作（例如 `backup`）：選單鈕轉圈、該項目標示進行中，完成前不再開啟。 */
+  readonly working = input<ConversationAction | null>(null);
   readonly sharing = input(false);
   /** 手機只保留選單：搜尋、專案連結與花費（`spend` 標籤）會併入其中。 */
   readonly compact = input(false);
   readonly spend = input<string | null>(null);
   readonly action = output<ConversationAction>();
   readonly items = computed(() => {
+    const working = this.working();
     const items = conversationMenu(this.conversation(), {
       busy: this.busy(),
       sharing: this.sharing(),
-    });
+    }).map((item) => (item.id === working ? { ...item, busy: true } : item));
     if (!this.compact()) return items;
     const spend = this.spend();
     const at = items.findIndex((item) => item.id === 'favorite') + 1;

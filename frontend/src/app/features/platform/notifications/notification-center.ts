@@ -27,6 +27,7 @@ import { ToastHistory } from '@shared/ui/toast-history';
 import { ToastService } from '@shared/ui/toast-service';
 import { FrameMotion, ViewMotion } from '@shared/ui/view-motion';
 import { NotificationFeed } from './notification-feed';
+import { PendingButton } from '@shared/ui/pending-button';
 
 /**
  * 伺服器收件匣，以及旁邊此分頁的提示：收件匣才會保留，工作階段列表只用來找讀取前就消失的確認訊息。
@@ -42,6 +43,7 @@ import { NotificationFeed } from './notification-feed';
     NgTemplateOutlet,
     NotificationFeed,
     Icon,
+    PendingButton,
     Tabs,
     ToastHistory,
     ViewMotion,
@@ -65,12 +67,15 @@ import { NotificationFeed } from './notification-feed';
           >
             只看未讀
           </button>
+          <!-- 送出中不用 disabled（寫入後的重讀也算在內），焦點才留在這顆；完成後沒有未讀才停用。 -->
           <button
+            nxPending
             type="button"
             class="icon-button"
             aria-label="全部標為已讀"
             title="全部標為已讀"
-            [disabled]="!store.unread() || store.loading()"
+            [pending]="store.isWorking('all')"
+            [disabled]="!store.unread() && !store.isWorking('all')"
             (click)="store.readAll()"
           >
             <nx-icon name="check" />
@@ -112,7 +117,7 @@ import { NotificationFeed } from './notification-feed';
           @defer (when store.opened()) {
             <nx-notification-feed />
           } @loading {
-            <p class="form-note" role="status">正在載入通知...</p>
+            <p class="form-note" role="status">正在載入通知…</p>
           } @error {
             <nx-notice message="通知介面暫時無法載入，請重新整理頁面。" />
           }

@@ -30,10 +30,6 @@
 
 // 月曆格子：放假的半天鋪上 --accent 的淡色（上半＝上午、下半＝下午），半天之間留一條虛線，
 // 文字只標放假與週末上班；窄容器只留底色與未建立的圓點。
-.holiday-calendar.is-loading {
-  opacity: 0.6;
-  transition: opacity var(--motion) var(--ease);
-}
 .holiday-shade {
   --holiday-tint: color-mix(in srgb, var(--accent) 11%, transparent);
   --holiday-edge: 1px dashed color-mix(in srgb, var(--accent) 32%, transparent);

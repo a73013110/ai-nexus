@@ -76,6 +76,8 @@ export class AdminUserStore {
     return loaded && loaded.key === this.key() ? loaded.data : null;
   });
   readonly overviewError = this.overviewRead.error;
+  /** 詳情讀取中（含寫入後重讀）；還沒有詳情時摘要的數字畫骨架。 */
+  readonly overviewRefreshing = this.overviewRead.refreshing;
   /** 已儲存的使用者：詳情讀取回來前用列表的資料。 */
   readonly current = computed(() => this.overview()?.user ?? this.user());
 
@@ -125,6 +127,8 @@ export class AdminUserStore {
     return loaded && loaded.key === this.key() ? loaded.data : null;
   });
   readonly loadingModels = this.modelsRead.loading;
+  /** 重新載入模型政策（失敗後重試）中。 */
+  readonly refreshingModels = this.modelsRead.refreshing;
   readonly modelsError = this.modelsRead.error;
   private readonly savedModels = linkedSignal<ModelPolicyDraft, ModelPolicyDraft>({
     source: () => modelPolicyDraft(this.modelPolicy()?.personal),

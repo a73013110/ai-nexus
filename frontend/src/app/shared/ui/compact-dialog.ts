@@ -26,13 +26,21 @@ export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
     '[class.ui-density-compact]': 'compact()',
     '[attr.data-size]': 'size()',
     '[attr.data-maximized]': 'maximized() ? "" : null',
+    '[attr.aria-busy]': 'busy() || null',
     '(beforetoggle)': 'label($event)',
+    '(cancel)': 'hold($event)',
+    '(keydown.escape)': 'hold($event)',
   },
 })
 export class CompactDialog {
   readonly compact = input(true, { alias: 'nxCompactDialog', transform: booleanAttribute });
   /** 寬度與密度：sm 與 md 沒有邊框，lg 與 full 會加上分隔線（dialogs.scss）。 */
   readonly size = input<DialogSize>('md');
+  /**
+   * 送出中：擋下 Esc 與瀏覽器的關閉要求，完成或失敗後才解除（失敗訊息留在對話框內）。
+   * 對話框裡的「取消」鈕、欄位唯讀與送出鈕的 `nxPending` 仍由呼叫端處理。
+   */
+  readonly busy = input(false);
   readonly opened = signal(false);
   readonly maximized = signal(false);
   private readonly element = inject<ElementRef<HTMLDialogElement>>(ElementRef);
@@ -44,6 +52,13 @@ export class CompactDialog {
       if (previous && shape !== previous) frame.morph();
       previous = shape;
     });
+  }
+  /**
+   * 只擋 `cancel` 不夠：瀏覽器在沒有新的使用者操作時，第二次 Esc 不再理會 `cancel` 的 preventDefault；
+   * 先取消 Esc 的 keydown，關閉要求就不會發出。
+   */
+  hold(event: Event) {
+    if (this.busy()) event.preventDefault();
   }
   label(event: Event) {
     this.opened.set((event as ToggleEvent).newState === 'open');

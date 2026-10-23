@@ -26,6 +26,7 @@ import { InferenceSignal } from '@shared/ui/inference-signal';
 import { Island } from '@shared/ui/island';
 import { IslandService } from '@shared/ui/island-service';
 import { Notice } from '@shared/ui/notice';
+import { PendingButton } from '@shared/ui/pending-button';
 import { AttachmentList } from '@features/work/files/attachment-list';
 import { LibraryPicker } from '@features/work/files/file-library/library-picker';
 import { KnowledgePicker } from '@features/work/knowledge/collections/knowledge-picker';
@@ -74,6 +75,7 @@ const SUGGESTIONS = [
     LibraryPicker,
     Island,
     Notice,
+    PendingButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../chat-column.scss', './chat-composer.scss', './chat-start.scss'],
