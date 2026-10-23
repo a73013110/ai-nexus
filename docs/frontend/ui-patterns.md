@@ -36,7 +36,7 @@
 - 用原生 `<dialog class="platform-dialog" nxCompactDialog size="…">`：`sm` 確認與單欄、`md` 表單（預設）、`lg` 清單與檢視器、`full`。不接管 focus、Escape 或業務狀態。
 - 結構：`<nx-dialog-header heading detail>`（關閉鈕也經 `cancel`，忙碌與未儲存的攔截照常生效）＋ `.dialog-body`（唯一捲動區，欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`；表單可用 `form.dialog-form` 包住三者。
 - 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出，不佔版面。
-- 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套規則（`shared/ui/idle-chrome.ts`）。開啟、換文件時短暫出現；滑鼠只有移近或停在上面才出現，在內容上閱讀時移動不喚回；觸控點一下內容切換；Tab 喚回、鍵盤焦點或展開的選單在內不淡出；Esc 或閒置 2 秒淡出。
+- 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套出現與淡出規則（`shared/ui/idle-chrome.ts`），鍵盤焦點或展開的選單在內不淡出。
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明；測試身分不能寫入時 `note` 用 `WorkspaceSession.testingNote`），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
@@ -49,6 +49,7 @@
 - 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
 - 讀取的載入／錯誤／重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。形狀已知的內容用 `.skeleton` 佔位，容器保留 `role="status"` 與可讀文字。
 - 進度只顯示真實階段（`JobProgress`），未知總量用不定進度；未知金額或用量寫明未知，不顯示為零。
+- 規則與計算方式收進 `InfoPopover`：短說明用 `.form-note-list`；長說明加 `heading`，內容用 `styles/popovers.scss` 的 `.info-*`。
 - 狀態用 `StatusBadge`／`CountBadge`：文字或圓點與顏色並用。數量徽章是裝飾，脈絡由父按鈕的名稱提供，只由一個 contextual status 播報。
 
 ## 鍵盤與焦點

@@ -87,45 +87,6 @@ tr.is-weekend > td:first-child {
 .records-none {
   color: var(--secondary);
 }
-// 判定規則面板：上下班時間是小表格，規則是「標題＋說明」的條列；字級沿用面板的說明字級。
-.records-rules-schedule {
-  width: 100%;
-  margin-bottom: var(--p-space-3);
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.records-rules-schedule caption {
-  margin-bottom: var(--p-space-1);
-  color: var(--ink);
-  font-weight: 600;
-  text-align: left;
-}
-.records-rules-schedule th,
-.records-rules-schedule td {
-  padding: 2px var(--p-space-2) 2px 0;
-  text-align: left;
-  white-space: nowrap;
-}
-.records-rules-schedule thead th {
-  font-weight: 400;
-}
-.records-rules-schedule tbody th {
-  color: var(--ink);
-  font-weight: 600;
-}
-.records-rules-list {
-  display: grid;
-  gap: var(--p-space-2);
-  margin: 0;
-}
-.records-rules-list dt {
-  color: var(--ink);
-  font-weight: 600;
-}
-.records-rules-list dd {
-  margin: 0;
-  line-height: 1.5;
-}
 .records-excluded {
   align-self: end;
 }

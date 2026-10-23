@@ -9,9 +9,6 @@
   gap: var(--p-space-1);
   border-radius: var(--radius-item);
 }
-.profile-trigger.icon-button[aria-expanded='true'] {
-  background: var(--hover);
-}
 :host-context(.is-compact) .profile-trigger.icon-button {
   justify-content: center;
 }

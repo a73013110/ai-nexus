@@ -37,13 +37,14 @@
 }
 // The Context panel is an InfoPopover in the top layer, so the composer's clipping never hides it.
 nx-info-popover {
-  --info-popover-trigger-padding: var(--p-space-1) var(--p-space-2);
   flex: none;
 }
+// 與旁邊的模型鎖、搜尋開關同為說明字級，不用 quiet-button 的標籤字級。
 .context-trigger {
   display: inline-flex;
   align-items: center;
   gap: var(--p-space-1);
+  font-size: var(--text-caption);
 }
 .context-ring {
   width: 1.5rem;

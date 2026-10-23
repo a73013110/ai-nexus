@@ -5,18 +5,20 @@
     [value]="store.search()"
     (valueChange)="store.find($event)"
   />
-  @if (session.has('identity.users.import')) {
-    <button
-      class="secondary-button directory-import-button"
-      [disabled]="session.testing()"
-      (click)="importDialog()?.open()"
-    >
-      <nx-icon name="upload" />從 AD 匯入
+  <div class="page-actions">
+    @if (session.has('identity.users.import')) {
+      <button
+        class="secondary-button directory-import-button"
+        [disabled]="session.testing()"
+        (click)="importDialog()?.open()"
+      >
+        <nx-icon name="import" />從 AD 匯入
+      </button>
+    }
+    <button class="primary-button" [disabled]="session.testing()" (click)="createDialog().open()">
+      <nx-icon name="plus" />新增使用者
     </button>
-  }
-  <button class="primary-button" [disabled]="session.testing()" (click)="createDialog().open()">
-    <nx-icon name="plus" />新增使用者
-  </button>
+  </div>
 </div>
 <nx-data-table
   #userTable

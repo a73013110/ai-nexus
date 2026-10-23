@@ -21,6 +21,12 @@
 .quiet-button nx-icon {
   --icon-size: var(--icon-sm);
 }
+// 開著選單、資訊面板等浮層的觸發鈕維持 hover 底色並轉為主文字色，看得出面板屬於哪顆鈕；
+// 只看 aria-haspopup，展開／收合區塊的 aria-expanded 不受影響。
+:is(.quiet-button, .icon-button)[aria-haspopup][aria-expanded='true'] {
+  background: var(--hover);
+  color: var(--ink);
+}
 kbd {
   font: inherit;
 }

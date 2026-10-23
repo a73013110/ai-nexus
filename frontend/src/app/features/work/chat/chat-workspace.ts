@@ -114,7 +114,7 @@ export class ChatWorkspace {
       id: 'import',
       label: '匯入對話文字備份',
       detail: '從 AI Nexus JSON 備份還原',
-      icon: 'upload',
+      icon: 'import',
     },
     {
       id: 'theme',

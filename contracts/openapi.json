@@ -53319,7 +53319,7 @@
         "kind": "page",
         "module": "attendance",
         "name": "打卡匯入紀錄",
-        "icon": "upload",
+        "icon": "import",
         "route": "/staff/attendance/imports",
         "scopes": [ ],
         "managerScope": null
@@ -53369,7 +53369,7 @@
         "kind": "action",
         "module": "identity",
         "name": "從 AD 匯入使用者",
-        "icon": "upload",
+        "icon": "import",
         "route": null,
         "scopes": [ ],
         "managerScope": null

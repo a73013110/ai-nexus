@@ -5,9 +5,10 @@ import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
 /**
- * 原生最上層中的非模態資訊面板，供精簡指標共用。觸發器預設是圖示加標籤；
- * 若要自訂圖形（例如脈絡環），請在 `[popover-trigger]` 中放入專案內容。位於最上層，
- * 面板不會被捲動的父層裁切。
+ * 原生最上層中的非模態資訊面板，供精簡指標與「規則／計算方式」說明共用。觸發器是 quiet-button
+ * （圖示加標籤），hover、按下與開啟狀態沿用全站按鈕規則；若要自訂圖形（例如脈絡環），請在
+ * `[popover-trigger]` 中放入專案內容。位於最上層，面板不會被捲動的父層裁切。
+ * 面板內容用 `popovers.scss` 的 `.info-section`、`.info-table`、`.info-terms`（短條列用 `.form-note-list`）。
  * 有 `anchor` 時沒有觸發器：由其他控制項（例如溢出選單項目）呼叫 `toggle()`。
  */
 @Component({
@@ -18,7 +19,7 @@ import { positionPopover } from '../browser/popover-position';
       <button
         #trigger
         type="button"
-        class="info-popover-trigger"
+        class="quiet-button info-popover-trigger"
         [attr.aria-label]="description() || label()"
         [attr.title]="hint() || null"
         aria-haspopup="dialog"
@@ -38,10 +39,14 @@ import { positionPopover } from '../browser/popover-position';
       role="dialog"
       popover="auto"
       tabindex="-1"
-      [attr.aria-label]="panelLabel() || description() || label()"
+      [attr.aria-label]="heading() ? null : panelLabel() || description() || label()"
+      [attr.aria-labelledby]="heading() ? id + '-heading' : null"
       (toggle)="popover.sync($event)"
       (keydown.escape)="close($event)"
     >
+      @if (heading()) {
+        <h2 class="info-popover-heading" [id]="id + '-heading'">{{ heading() }}</h2>
+      }
       <ng-content />
     </div>`,
   styles: `
@@ -49,34 +54,35 @@ import { positionPopover } from '../browser/popover-position';
       display: inline-block;
       min-width: 0;
     }
+    /* 外框、hover 與開啟狀態來自 .quiet-button；只留觸控面積內的留白可由呼叫端調整。 */
     .info-popover-trigger {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      min-height: var(--button-target);
-      padding: var(--info-popover-trigger-padding, 0);
+      padding: var(--info-popover-trigger-padding, var(--p-space-1) var(--p-space-2));
       white-space: nowrap;
-      font-size: var(--text-caption);
-      color: var(--secondary);
-      border-radius: var(--radius-action);
-    }
-    .info-popover-trigger nx-icon {
-      --icon-size: var(--icon-md);
-    }
-    .info-popover-trigger:hover {
-      color: var(--signal);
-    }
-    .info-popover-trigger[aria-expanded='true'] {
-      background: var(--hover);
-      color: var(--ink);
     }
     .info-popover-panel {
-      padding: var(--section-padding);
+      --info-popover-padding: var(--p-space-4);
+      padding: var(--info-popover-padding);
       color: var(--secondary);
       overflow: auto;
       text-align: left;
       font-size: var(--text-caption);
+      line-height: 1.6;
       outline: none;
+    }
+    /* 長面板捲動時標題固定在頂端，看得出正在讀哪一份說明。 */
+    .info-popover-heading {
+      position: sticky;
+      top: calc(-1 * var(--info-popover-padding));
+      z-index: 1;
+      margin: calc(-1 * var(--info-popover-padding)) calc(-1 * var(--info-popover-padding))
+        var(--p-space-3);
+      padding: var(--p-space-3) var(--info-popover-padding);
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: var(--text-label);
+      font-weight: 600;
+      line-height: var(--line-ui);
     }
   `,
 })
@@ -87,8 +93,12 @@ export class InfoPopover {
   readonly align = input<'left' | 'right'>('left');
   /** 面板的名稱，與觸發器不同時使用（觸發器可能帶有即時值）。 */
   readonly panelLabel = input('');
+  /** 面板頂端看得見的標題（捲動時固定），同時是面板名稱；短說明不需要。 */
+  readonly heading = input('');
   readonly hint = input('');
   readonly width = input(320);
+  /** 面板的最大高度（px），超過時面板內捲動；仍受視窗高度限制。 */
+  readonly maxHeight = input(420);
   /** 把面板對齊到此元素，而不是渲染觸發器。 */
   readonly anchor = input<HTMLElement | null>(null);
   readonly id = uniqueId('nx-info');
@@ -104,7 +114,7 @@ export class InfoPopover {
         panel,
         this.width(),
         this.align(),
-        420,
+        this.maxHeight(),
       ),
   });
   readonly opened = this.popover.opened;

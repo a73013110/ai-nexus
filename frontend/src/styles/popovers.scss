@@ -46,3 +46,58 @@
     interactivity: inert;
   }
 }
+
+// 資訊面板（InfoPopover）的內容：分段（.info-section，段間細線）、段標題（h3）、小型對照表
+// （.info-table，數字等寬、列間細線）與「名詞＋說明」條列（.info-terms）。面板本身已是說明字級
+// 與次要文字色，這裡只把表格內容與名詞提到主文字色，層次靠字重與細線，不另加底色。
+.info-section + .info-section {
+  margin-top: var(--p-space-3);
+  padding-top: var(--p-space-3);
+  border-top: 1px solid var(--line);
+}
+// 段標題是分組標籤：比名詞小一級、次要文字色，層次才不會和 .info-terms 的名詞擠在一起。
+.info-section > h3 {
+  margin: 0 0 var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.info-table :is(th, td) {
+  padding: var(--p-space-1) var(--p-space-3) var(--p-space-1) 0;
+  text-align: left;
+  white-space: nowrap;
+}
+.info-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+.info-table thead th {
+  border-bottom: 1px solid var(--line);
+  font-weight: 400;
+}
+.info-table tbody tr + tr > * {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+.info-table tbody :is(th, td) {
+  color: var(--ink);
+}
+.info-table tbody th {
+  font-weight: 600;
+}
+.info-terms {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: 0;
+}
+.info-terms dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+.info-terms dd {
+  margin: var(--p-space-1) 0 0;
+}

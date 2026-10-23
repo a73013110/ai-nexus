@@ -76,6 +76,10 @@
   flex-wrap: wrap;
   gap: var(--p-space-3);
 }
+// 費用鈕的文字對齊回答的左緣，hover 底色往外留白。
+.message-charges > nx-charge-label:first-child {
+  margin-inline-start: calc(-1 * var(--p-space-2));
+}
 .message-actions {
   display: flex;
   align-items: center;

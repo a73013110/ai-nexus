@@ -9,42 +9,46 @@
     page-actions
     class="records-rules"
     label="判定規則"
-    panelLabel="出勤判定規則"
+    heading="出勤判定規則"
     align="right"
     [width]="440"
+    [maxHeight]="560"
   >
     @if (rules(); as rules) {
-      <table class="records-rules-schedule">
-        <caption>
-          上下班時間（台北）
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">日型</th>
-            <th scope="col">表定</th>
-            <th scope="col">彈性上班</th>
-            <th scope="col">應下班</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (schedule of rules.schedules; track schedule.dayType) {
+      <section class="info-section">
+        <h3>上下班時間（台北）</h3>
+        <table class="info-table">
+          <thead>
             <tr>
-              <th scope="row">{{ schedule.dayType }}</th>
-              <td>{{ schedule.scheduled }}</td>
-              <td>{{ schedule.flex }}</td>
-              <td>{{ schedule.clockOut }}</td>
+              <th scope="col">日型</th>
+              <th scope="col">表定</th>
+              <th scope="col">彈性上班</th>
+              <th scope="col">應下班</th>
             </tr>
+          </thead>
+          <tbody>
+            @for (schedule of rules.schedules; track schedule.dayType) {
+              <tr>
+                <th scope="row">{{ schedule.dayType }}</th>
+                <td>{{ schedule.scheduled }}</td>
+                <td>{{ schedule.flex }}</td>
+                <td>{{ schedule.clockOut }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+      <section class="info-section">
+        <h3>判定方式</h3>
+        <dl class="info-terms">
+          @for (rule of rules.items; track rule.title) {
+            <div>
+              <dt>{{ rule.title }}</dt>
+              <dd>{{ rule.text }}</dd>
+            </div>
           }
-        </tbody>
-      </table>
-      <dl class="records-rules-list">
-        @for (rule of rules.items; track rule.title) {
-          <div>
-            <dt>{{ rule.title }}</dt>
-            <dd>{{ rule.text }}</dd>
-          </div>
-        }
-      </dl>
+        </dl>
+      </section>
     } @else if (rulesError()) {
       <p>無法取得判定規則：{{ rulesError() }}</p>
     } @else {

@@ -27,7 +27,7 @@
         [disabled]="busy()"
         (click)="importInput.click()"
       >
-        <nx-icon name="upload" />匯入題庫
+        <nx-icon name="import" />匯入題庫
       </button>
       <input #importInput type="file" accept=".json" hidden (change)="importSet($event)" />
     }

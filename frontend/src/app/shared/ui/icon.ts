@@ -19,6 +19,7 @@ import {
   Archive,
   ArchiveRestore,
   Upload,
+  Import,
   Paperclip,
   Library,
   PanelsTopLeft,
@@ -107,7 +108,10 @@ const icons: Record<string, IconNode> = {
   star: Star,
   archive: Archive,
   restore: ArchiveRestore,
+  // upload 是把檔案放進平台（檔案庫、知識庫、專案文件）；import 是把外部資料轉成平台紀錄
+  // （AD 使用者、打卡、備份、題庫），download 留給匯出與下載。
   upload: Upload,
+  import: Import,
   paperclip: Paperclip,
   library: Library,
   command: SquareTerminal,

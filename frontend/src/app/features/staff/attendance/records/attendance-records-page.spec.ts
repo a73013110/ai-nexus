@@ -208,12 +208,12 @@ describe('AttendanceRecordsPage', () => {
     const { fixture, root, api } = setup(async () => records());
     await fixture.whenStable();
     expect(api.rules).toHaveBeenCalledOnce();
-    const schedule = root.querySelector('.records-rules-schedule')!;
+    const schedule = root.querySelector('.records-rules .info-table')!;
     expect(schedule.textContent).toContain('上班日');
     expect(schedule.textContent).toContain('08:30–18:00');
     expect(schedule.textContent).toContain('08:00–09:00');
     expect(schedule.textContent).toContain('上班＋9.5 小時');
-    expect(root.querySelector('.records-rules-list')?.textContent).toContain(
+    expect(root.querySelector('.records-rules .info-terms')?.textContent).toContain(
       '09:10 到，遲到 10 分',
     );
   });
