@@ -24,28 +24,49 @@ public static class LdapConnections
     /// </summary>
     public static ExternalServiceException PlatformUnavailable() => Unavailable("ad_platform_unavailable", "此部署的 AD 登入需要 Windows 主機。");
 
+    /// <summary>
+    /// 加密交握與 bind 一次只做一條連線。Windows 的 LDAP 用戶端（wldap32）在多條連線上同時 StartTLS／bind 會隨機失敗
+    /// （LDAP 90「記憶體不足」）：目錄頁同時讀節點、人員與屬性，或多人同時登入時就會變成 503。交握很短，排隊的代價小；
+    /// bind 之後的查詢仍可並行。
+    /// </summary>
+    private static readonly Lock Handshake = new();
+
     /// <summary>以服務帳號 bind；失敗時釋放連線並拋出 <c>ad_bind_unavailable</c>，不把 LDAP 訊息帶進回應。</summary>
     public static LdapConnection BindService(AdAuthenticationOptions settings)
     {
         var service = Connect(settings, settings.BindName, settings.BindPassword);
-        try { service.Bind(); return service; }
+        try { Bind(service, settings); return service; }
         catch (LdapException error) { service.Dispose(); throw Unavailable("ad_bind_unavailable", "AD 服務帳號連線失敗，請確認 Server、BindUser 與 BindPassword。", error); }
+        catch { service.Dispose(); throw; }
     }
 
-    /// <summary>建立尚未 bind 的連線：LDAP v3、不追 referral（避免被導到設定以外的主機），LDAPS 或 StartTLS 二選一，絕不明文。</summary>
+    /// <summary>建立尚未加密、尚未 bind 的連線：LDAP v3、不追 referral（避免被導到設定以外的主機）。加密在 <see cref="Bind"/> 建立。</summary>
     public static LdapConnection Connect(AdAuthenticationOptions settings, string user, string password)
     {
         var identifier = new LdapDirectoryIdentifier(settings.Host, settings.Port);
         var connection = new LdapConnection(identifier, new NetworkCredential(user, password), AuthType.Basic) { Timeout = TimeSpan.FromSeconds(5) };
-        try
+        connection.SessionOptions.ProtocolVersion = 3;
+        connection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
+        if (settings.UseLdaps) connection.SessionOptions.SecureSocketLayer = true;
+        return connection;
+    }
+
+    /// <summary>
+    /// 先加密再 bind（LDAPS 在連線時、否則 StartTLS），絕不明文送出密碼。加密失敗拋 <c>ad_tls_unavailable</c>；
+    /// bind 的 <see cref="LdapException"/> 原樣往外拋，由呼叫端分辨帳密錯誤（49）與服務異常。
+    /// </summary>
+    public static void Bind(LdapConnection connection, AdAuthenticationOptions settings)
+    {
+        lock (Handshake)
         {
-            connection.SessionOptions.ProtocolVersion = 3;
-            connection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
-            if (settings.UseLdaps) connection.SessionOptions.SecureSocketLayer = true;
-            else connection.SessionOptions.StartTransportLayerSecurity(null);
-            return connection;
+            if (!settings.UseLdaps)
+            {
+                try { connection.SessionOptions.StartTransportLayerSecurity(null); }
+                catch (Exception error) when (error is DirectoryException or InvalidOperationException)
+                { throw Unavailable("ad_tls_unavailable", "無法建立 AD 加密連線，請確認 StartTLS／LDAPS 與憑證設定。", error); }
+            }
+            connection.Bind();
         }
-        catch { connection.Dispose(); throw Unavailable("ad_tls_unavailable", "無法建立 AD 加密連線，請確認 StartTLS／LDAPS 與憑證設定。"); }
     }
 
     /// <summary>依 RFC 4515 跳脫 LDAP 篩選器中的特殊字元，避免帳號名稱或搜尋字被注入成額外的查詢條件。</summary>

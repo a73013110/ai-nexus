@@ -139,7 +139,6 @@
   color: var(--signal);
 }
 .history-state.is-running {
-  animation: orbit-turn var(--motion-spin) linear infinite;
   color: var(--activity);
 }
 .sidebar-note {

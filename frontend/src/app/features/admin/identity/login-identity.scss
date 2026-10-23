@@ -96,19 +96,8 @@ h2 {
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-.identity-spinner {
-  animation: orbit-turn var(--motion-spin) linear infinite;
-}
 .identity-back {
   width: 100%;
   min-height: 46px;
   margin-top: var(--login-space, 24px);
-}
-@media (prefers-reduced-motion: reduce) {
-  .identity-spinner {
-    animation: none;
-  }
-}
-:host-context([data-reduced-motion='true']) .identity-spinner {
-  animation: none;
 }

@@ -49,7 +49,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         if (Disabled(entry)) return IdentityErrors.AdInvalidCredentials;
         ct.ThrowIfCancellationRequested();
         using var user = Connect(settings, entry.DistinguishedName, password);
-        try { user.Bind(); }
+        try { Bind(user, settings); }
         // 錯誤碼 49 為 invalid credentials；其他 LDAP 錯誤代表服務異常，不可當成帳密錯誤，否則會誤導使用者與稽核。
         catch (LdapException ex) when (ex.ErrorCode == 49) { return IdentityErrors.AdInvalidCredentials; }
         catch (LdapException error) { throw Unavailable("ad_unavailable", "AD 服務暫時無法使用，請稍後重試。", error); }

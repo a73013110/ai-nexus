@@ -24,14 +24,11 @@
         }}
       </button>
       <button
-        type="button"
-        class="icon-button"
+        nxRefresh
         aria-label="重新連線監控"
-        title="重新連線監控"
-        (click)="store.refresh()"
-      >
-        <nx-icon name="refresh" />
-      </button>
+        [busy]="store.connection() === 'connecting' || store.connection() === 'reconnecting'"
+        (refresh)="store.refresh()"
+      ></button>
       <button
         type="button"
         class="quiet-button monitor-export"

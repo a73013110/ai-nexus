@@ -89,10 +89,8 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-// 減少動態時由全域規則停下旋轉與展開動畫。
 .ui-tree-spinner {
   color: var(--muted);
-  animation: orbit-turn var(--motion-spin) linear infinite;
 }
 // 第一層還沒讀到時的骨架：形狀與節點列相同，高度不跳動。
 .ui-tree-skeleton {

@@ -12,7 +12,7 @@ import {
 @Component({
   selector: 'nx-data-table-host',
   imports: [DataTable, DataTableColumn, DataTableRow],
-  template: `<nx-data-table label="範例" [stacked]="stacked()" [columns]="columns">
+  template: `<nx-data-table label="範例" [stacked]="stacked()" [busy]="busy()" [columns]="columns">
     <table>
       <tbody>
         <tr nxTableRow (rowActivate)="opened.set(opened() + 1)">
@@ -31,6 +31,7 @@ import {
 })
 class Host {
   readonly stacked = signal(false);
+  readonly busy = signal(false);
   readonly opened = signal(0);
   readonly columns = [
     { id: 'name', label: '名稱', hideable: false },
@@ -50,6 +51,21 @@ describe('DataTable', () => {
     fixture.componentInstance.stacked.set(true);
     fixture.detectChanges();
     expect(table.classList).toContain('ui-table-stack');
+  });
+
+  it('keeps the rows on screen while reading again, dimmed under a sweeping line', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const line = element.querySelector('.refresh-line')!;
+    const scroll = element.querySelector('.ui-table-scroll')!;
+    expect(line.classList).not.toContain('is-active');
+    fixture.componentInstance.busy.set(true);
+    fixture.detectChanges();
+    expect(element.querySelector('nx-data-table')!.getAttribute('aria-busy')).toBe('true');
+    expect(line.classList).toContain('is-active');
+    expect(scroll.classList).toContain('is-refreshing');
+    expect(element.querySelectorAll('tbody tr')).toHaveLength(2);
   });
 
   it('keeps row activation and column visibility in the stacked mode', () => {

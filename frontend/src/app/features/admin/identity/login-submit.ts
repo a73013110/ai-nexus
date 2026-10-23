@@ -12,9 +12,7 @@ export type SubmitPhase = 'idle' | 'loading' | 'success';
   host: { class: 'primary-button login-submit', '[attr.data-phase]': 'phase()' },
   template: `@switch (phase()) {
     @case ('loading') {
-      <span class="submit-state"
-        ><nx-icon name="loading" class="submit-spinner" />{{ busy() }}</span
-      >
+      <span class="submit-state"><nx-icon name="loading" />{{ busy() }}</span>
     }
     @case ('success') {
       <span class="submit-state"

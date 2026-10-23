@@ -27,14 +27,3 @@
   gap: var(--p-space-2);
   animation: arrive var(--motion) var(--ease-spring) both;
 }
-.submit-spinner {
-  animation: orbit-turn var(--motion-spin) linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .submit-spinner {
-    animation: none;
-  }
-}
-:host-context([data-reduced-motion='true']) .submit-spinner {
-  animation: none;
-}

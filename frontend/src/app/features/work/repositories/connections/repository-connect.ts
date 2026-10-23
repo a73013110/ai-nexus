@@ -88,7 +88,7 @@ import { RepositoriesApi } from '../repositories-api';
               [disabled]="busy() || !token().trim()"
             >
               @if (busy()) {
-                <nx-icon name="loading" class="spin" />驗證中…
+                <nx-icon class="verifying-icon" name="loading" />驗證中…
               } @else {
                 {{ reconnecting() ? '更新授權' : '連線 Gitea' }}
               }

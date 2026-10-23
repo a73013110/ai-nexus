@@ -95,7 +95,14 @@ export type TableSortDirection = 'asc' | 'desc';
         <nx-icon name="reset" />還原預設欄位
       </button>
     </div>
-    <div class="ui-table-scroll" role="region" tabindex="0" [attr.aria-label]="label()">
+    <span class="refresh-line" [class.is-active]="busy()" aria-hidden="true"></span>
+    <div
+      class="ui-table-scroll"
+      role="region"
+      tabindex="0"
+      [attr.aria-label]="label()"
+      [class.is-refreshing]="busy()"
+    >
       <ng-content select="table" />
       <ng-content select="nx-table-state" />
     </div>

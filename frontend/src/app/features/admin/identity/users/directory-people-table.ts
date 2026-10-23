@@ -121,7 +121,7 @@ export class DirectoryPeopleTable {
         const side = this.host.nativeElement.ownerDocument.getElementById(this.panelId);
         const rect = side?.getBoundingClientRect();
         if (side && rect && (rect.top >= window.innerHeight || rect.bottom <= 0))
-          side.scrollIntoView({ block: 'start' });
+          side.scrollIntoView?.({ block: 'start' });
       },
       { injector: this.injector },
     );

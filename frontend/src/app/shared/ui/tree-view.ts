@@ -56,7 +56,15 @@ interface TreeRow {
         }
       </div>
     }
-    <ul class="ui-tree" role="tree" [attr.aria-label]="label()" [hidden]="!rows().length">
+    <span class="refresh-line" [class.is-active]="refreshing()" aria-hidden="true"></span>
+    <ul
+      class="ui-tree"
+      role="tree"
+      [attr.aria-label]="label()"
+      [attr.aria-busy]="refreshing() || null"
+      [class.is-refreshing]="refreshing()"
+      [hidden]="!rows().length"
+    >
       @for (row of rows(); track row.item.id) {
         <li
           role="treeitem"
@@ -113,8 +121,11 @@ export class TreeView {
   readonly items = input.required<readonly TreeItem[]>();
   readonly selected = input<string | null>(null);
   readonly expanded = input<ReadonlySet<string>>(new Set());
-  /** 第一層還在載入：沒有節點時顯示骨架。下層的載入用節點自己的 `loading`。 */
+  /**
+   * 讀取中：還沒有節點時顯示骨架，已有節點（重新讀取）時保留舊樹並淡化。下層的載入用節點自己的 `loading`。
+   */
   readonly busy = input(false);
+  protected readonly refreshing = computed(() => this.busy() && this.items().length > 0);
   protected readonly skeleton = [
     { level: 0, width: 70 },
     { level: 1, width: 82 },

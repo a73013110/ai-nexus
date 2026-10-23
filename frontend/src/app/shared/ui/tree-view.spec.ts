@@ -64,7 +64,7 @@ function setup() {
 describe('TreeView', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('shows a skeleton in place of the first level while it loads', () => {
+  it('shows a skeleton while the first level loads and dims the tree when it reads again', () => {
     const fixture = TestBed.createComponent(TreeView);
     fixture.componentRef.setInput('label', '組織單位');
     fixture.componentRef.setInput('items', []);
@@ -78,10 +78,19 @@ describe('TreeView', () => {
     expect(root.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
     expect(tree().hidden).toBe(true);
 
+    // 已有節點時再讀（重新讀取）：保留舊樹、淡化，不換回骨架。
     fixture.componentRef.setInput('items', items);
     fixture.detectChanges();
     expect(root.querySelector('[role="status"]')).toBeNull();
     expect(tree().hidden).toBe(false);
+    expect(tree().getAttribute('aria-busy')).toBe('true');
+    expect(tree().classList).toContain('is-refreshing');
+    expect(root.querySelector('.refresh-line')!.classList).toContain('is-active');
+
+    fixture.componentRef.setInput('busy', false);
+    fixture.detectChanges();
+    expect(tree().hasAttribute('aria-busy')).toBe(false);
+    expect(root.querySelector('.refresh-line')!.classList).not.toContain('is-active');
   });
 
   it('renders the open branches as an ARIA tree with one tab stop on the selected node', () => {

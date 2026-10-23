@@ -185,14 +185,18 @@ const icons: Record<string, IconNode> = {
 export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(icons));
 /** 選用的功能圖示留在它們的延遲載入功能套件中。 */
 export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
-/** 呼叫端以 `--icon-size`（`--icon-*` token）決定大小，而非 width 與 height。 */
+/**
+ * 呼叫端以 `--icon-size`（`--icon-*` token）決定大小，而非 width 與 height。
+ * `loading` 一律自己旋轉，呼叫端只換名稱、不另加動畫（減少動態時由全域規則停下）。
+ */
 @Component({
   selector: 'nx-icon',
   imports: [LucideDynamicIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.is-spinning]': "name() === 'loading'" },
   template: '<svg [lucideIcon]="icon()" [size]="20" [strokeWidth]="1.65" aria-hidden="true"></svg>',
   styles:
-    ':host{display:inline-flex;align-items:center;justify-content:center;width:var(--icon-size,var(--icon-xl,1.25rem));height:var(--icon-size,var(--icon-xl,1.25rem));flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%;fill:var(--icon-fill,none)}',
+    ':host{display:inline-flex;align-items:center;justify-content:center;width:var(--icon-size,var(--icon-xl,1.25rem));height:var(--icon-size,var(--icon-xl,1.25rem));flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%;fill:var(--icon-fill,none)}:host(.is-spinning) svg{animation:orbit-turn var(--motion-spin) linear infinite}',
 })
 export class Icon {
   private readonly extra = inject(EXTRA_ICONS, { optional: true });

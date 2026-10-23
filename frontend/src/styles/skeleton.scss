@@ -14,6 +14,34 @@
     var(--hover);
   animation: skeleton-shimmer var(--motion-signal) var(--ease) infinite;
 }
+// 已有內容、正在重讀：保留舊內容（不換回骨架、不閃爍），內容略淡；資料表與樹的上緣另有一條細線掃過。
+// 線是獨立元素並以負邊距抵銷高度，出現與消失都不推動版面；減少動態時線停在框外，只留淡化。
+.refresh-line {
+  display: block;
+  height: 2px;
+  margin-block-end: -2px;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.refresh-line.is-active {
+  background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 40% 100%
+    no-repeat;
+  animation: refresh-sweep var(--motion-signal) var(--ease) infinite;
+}
+.is-refreshing {
+  opacity: 0.6;
+  cursor: progress;
+  transition: opacity var(--motion) var(--ease);
+}
+@keyframes refresh-sweep {
+  from {
+    background-position: -70% 0;
+  }
+  to {
+    background-position: 170% 0;
+  }
+}
 @keyframes skeleton-shimmer {
   from {
     background-position:

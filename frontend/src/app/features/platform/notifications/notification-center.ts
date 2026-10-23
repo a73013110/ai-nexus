@@ -1,4 +1,5 @@
 import { Notice } from '@shared/ui/notice';
+import { RefreshButton } from '@shared/ui/refresh-button';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
@@ -34,6 +35,7 @@ import { NotificationFeed } from './notification-feed';
 @Component({
   selector: 'nx-notification-center',
   imports: [
+    RefreshButton,
     Notice,
     CompactDialog,
     FrameMotion,
@@ -74,15 +76,11 @@ import { NotificationFeed } from './notification-feed';
             <nx-icon name="check" />
           </button>
           <button
-            type="button"
-            class="icon-button"
+            nxRefresh
             aria-label="重新整理通知"
-            title="重新整理"
-            [disabled]="store.loading()"
-            (click)="store.refresh()"
-          >
-            <nx-icon name="refresh" />
-          </button>
+            [busy]="store.loading()"
+            (refresh)="store.refresh()"
+          ></button>
         }
         <button
           autofocus

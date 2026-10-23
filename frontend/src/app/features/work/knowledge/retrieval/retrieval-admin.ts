@@ -1,3 +1,4 @@
+import { RefreshButton } from '@shared/ui/refresh-button';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -60,6 +61,7 @@ const BENCH_COLLECTIONS = 3;
 @Component({
   selector: 'nx-retrieval-admin',
   imports: [
+    RefreshButton,
     Card,
     Checkbox,
     ConfirmDialog,

@@ -1,3 +1,4 @@
+import { RefreshButton } from '@shared/ui/refresh-button';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -47,6 +48,7 @@ const DRAWER_TITLES = {
 @Component({
   selector: 'nx-monitoring-page',
   imports: [
+    RefreshButton,
     DetailDrawer,
     DrawerPager,
     EmptyState,

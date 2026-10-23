@@ -55,10 +55,7 @@ const KINDS: Readonly<Record<string, string>> = {
                 }
               </small></span
             >
-            <nx-icon
-              [name]="choosing() === identity.id ? 'loading' : 'chevron'"
-              [class.identity-spinner]="choosing() === identity.id"
-            />
+            <nx-icon [name]="choosing() === identity.id ? 'loading' : 'chevron'" />
           </button>
         </li>
       }

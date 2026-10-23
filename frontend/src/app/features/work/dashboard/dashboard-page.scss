@@ -17,10 +17,6 @@
 .dashboard {
   display: grid;
   gap: var(--board-gap);
-  transition: opacity var(--motion) var(--ease);
-}
-.dashboard.is-refreshing {
-  opacity: 0.8;
 }
 .dashboard-skeleton {
   display: grid;

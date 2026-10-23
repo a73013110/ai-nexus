@@ -19,15 +19,12 @@
       <nx-icon name="layout" />{{ layout.editing() ? '完成' : '自訂版面' }}
     </button>
     <button
-      type="button"
-      class="icon-button dashboard-refresh"
+      class="dashboard-refresh"
+      nxRefresh
       aria-label="重新整理總覽"
-      title="重新整理總覽"
-      [disabled]="store.refreshing()"
-      (click)="store.load()"
-    >
-      <nx-icon name="refresh" />
-    </button>
+      [busy]="store.refreshing()"
+      (refresh)="store.load()"
+    ></button>
   </div>
   <nx-dashboard-toolbar />
   @if (store.error()) {

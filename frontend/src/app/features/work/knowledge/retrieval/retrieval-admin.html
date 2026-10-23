@@ -5,15 +5,11 @@
   </p>
   <div class="page-actions">
     <button
-      type="button"
-      class="icon-button"
+      nxRefresh
       aria-label="重新整理檢索狀態"
-      title="重新整理檢索狀態"
-      [disabled]="profilesRead.refreshing()"
-      (click)="load()"
-    >
-      <nx-icon [name]="profilesRead.refreshing() ? 'loading' : 'refresh'" />
-    </button>
+      [busy]="profilesRead.refreshing() || capabilitiesRead.refreshing()"
+      (refresh)="load()"
+    ></button>
   </div>
 </div>
 @if (error()) {

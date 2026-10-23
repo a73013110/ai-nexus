@@ -43,7 +43,12 @@ import { fieldChanges, stateLabel, stateTone } from './directory-outcomes';
         </section>
       }
       @if (store.inspectedDetail()) {
-        <nx-property-list label="AD 屬性" [groups]="groups()" />
+        <nx-property-list
+          label="AD 屬性"
+          [groups]="groups()"
+          [class.is-refreshing]="store.detail.refreshing() || store.refreshing()"
+          [attr.aria-busy]="store.detail.refreshing() || store.refreshing() || null"
+        />
       } @else if (store.detailError()) {
         <nx-notice tone="danger" [message]="error()" />
         <button type="button" class="secondary-button" (click)="store.detail.reload()">

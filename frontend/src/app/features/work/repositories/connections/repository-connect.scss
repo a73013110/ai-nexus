@@ -116,7 +116,6 @@ form {
   justify-content: flex-end;
   gap: var(--p-space-2);
 }
-.spin {
-  animation: orbit-turn var(--motion-spin) linear infinite;
+.verifying-icon {
   --icon-size: var(--icon-sm);
 }

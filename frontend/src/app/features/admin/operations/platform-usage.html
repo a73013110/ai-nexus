@@ -8,15 +8,11 @@
   </p>
   <div class="page-actions">
     <button
-      type="button"
-      class="icon-button"
+      nxRefresh
       aria-label="更新用量"
-      title="更新用量"
-      [disabled]="read.refreshing()"
-      (click)="read.reload()"
-    >
-      <nx-icon [name]="read.refreshing() ? 'loading' : 'refresh'" />
-    </button>
+      [busy]="read.refreshing()"
+      (refresh)="read.reload()"
+    ></button>
   </div>
 </div>
 @if (read.error() && stats()) {

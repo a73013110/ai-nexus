@@ -1,3 +1,4 @@
+import { RefreshButton } from '@shared/ui/refresh-button';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +13,6 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
-import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { TreeView } from '@shared/ui/tree-view';
@@ -37,6 +37,7 @@ type Step = 'select' | 'preview' | 'result';
 @Component({
   selector: 'nx-directory-import-dialog',
   imports: [
+    RefreshButton,
     Checkbox,
     CompactDialog,
     DialogHeader,
@@ -44,7 +45,6 @@ type Step = 'select' | 'preview' | 'result';
     DirectoryOutcomeTable,
     DirectoryPeopleTable,
     DirectoryPersonCard,
-    Icon,
     Notice,
     StatGrid,
     StatTile,

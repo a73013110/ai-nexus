@@ -19,25 +19,18 @@
           <div class="directory-pane-head">
             <span class="panel-eyebrow">目錄</span>
             <button
-              type="button"
-              class="icon-button"
+              nxRefresh
               aria-label="重新讀取目錄"
-              title="重新讀取目錄"
-              [attr.aria-disabled]="store.refreshing() || null"
-              (click)="store.refresh()"
-            >
-              <nx-icon
-                [class.directory-spin]="store.refreshing()"
-                [name]="store.refreshing() ? 'loading' : 'refresh'"
-              />
-            </button>
+              [busy]="store.refreshing()"
+              (refresh)="store.refresh()"
+            ></button>
           </div>
           @if (store.treeError()) {
             <nx-notice tone="danger" [message]="store.treeError()" />
           }
           <nx-tree-view
             label="組織單位"
-            [busy]="!store.root() && !store.treeError()"
+            [busy]="(!store.root() && !store.treeError()) || store.refreshing()"
             [items]="store.treeItems()"
             [selected]="store.node()"
             [expanded]="store.expanded()"

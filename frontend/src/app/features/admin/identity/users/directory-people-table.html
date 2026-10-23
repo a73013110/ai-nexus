@@ -70,7 +70,7 @@
   class="directory-people"
   label="節點人員"
   preferenceKey="identity.directory-people"
-  [busy]="store.people.loading()"
+  [busy]="store.people.refreshing() || store.refreshing()"
   [columns]="columns"
 >
   <table>

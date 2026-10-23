@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RefreshButton } from '@shared/ui/refresh-button';
 import { EyeOff, Gauge, GripVertical, LayoutGrid, RotateCcw } from 'lucide';
 import { FeaturePage } from '@core/layout/feature-page';
 import { ViewScope } from '@shared/browser/view-scope';
@@ -18,7 +19,16 @@ import { DASHBOARD_TOUR } from './dashboard-tour';
  */
 @Component({
   selector: 'nx-dashboard-page',
-  imports: [DashboardBoard, DashboardEditBar, DashboardToolbar, FeaturePage, Icon, Notice, Select],
+  imports: [
+    RefreshButton,
+    DashboardBoard,
+    DashboardEditBar,
+    DashboardToolbar,
+    FeaturePage,
+    Icon,
+    Notice,
+    Select,
+  ],
   providers: [
     ViewScope,
     DashboardStore,
