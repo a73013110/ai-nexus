@@ -70,8 +70,9 @@
 .directory-error {
   color: var(--danger-text);
 }
+// 逐人清單吃掉摘要下方剩下的高度、自己捲動；與資料頁一樣至少留 18rem，視窗再矮才改由 body 捲動。
 nx-directory-outcome-table {
-  min-height: 0;
+  flex: 1 0 18rem;
 }
 @include bp.below(tablet) {
   .directory-panes {

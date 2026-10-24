@@ -36,9 +36,6 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
       padding: 0;
       list-style: none;
     }
-    nx-directory-outcome-table {
-      --table-max-height: min(52dvh, 30rem);
-    }
   `,
   template: `
     <dialog

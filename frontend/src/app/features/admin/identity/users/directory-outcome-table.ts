@@ -69,10 +69,13 @@ import {
     </table>
     <nx-table-state [count]="items().length" emptyTitle="沒有選取的人員" />
   </nx-data-table>`,
+  // host 要是 flex 欄才把對話框 body 剩下的高度交給表格：表格內捲動、表頭固定，不必設 --table-max-height。
   styles: `
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
       min-width: 0;
+      min-height: 0;
     }
     nx-change-list + small {
       display: block;
