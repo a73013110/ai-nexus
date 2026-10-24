@@ -76,6 +76,12 @@ const WEEKDAYS = '日一二三四五六';
 /** `YYYY-MM-DD` 的星期（「一」）；日期本身沒有時區，以 UTC 計算才不會差一天。 */
 export const weekday = (date: string) => WEEKDAYS[new Date(date + 'T00:00:00Z').getUTCDay()];
 export const isWeekend = (date: string) => /[日六]/.test(weekday(date));
+/** `YYYY-MM-DD` 那一週的週一（同樣以 UTC 計算）；用來在換週的列畫分隔線。 */
+export function weekOf(date: string): string {
+  const day = new Date(date + 'T00:00:00Z');
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return day.toISOString().slice(0, 10);
+}
 
 /** 台北今天的 `YYYY-MM-DD`；出勤日與 GD 行事曆都以台灣日期為準，不用瀏覽器的時區。 */
 export const taipeiToday = (now = Date.now()) => formatDateTimeInput(new Date(now)).slice(0, 10);
@@ -134,6 +140,16 @@ export function presentSchedule(schedule: AttendanceScheduleDto) {
   };
 }
 
+/**
+ * 公文系統的流程狀態（只取送出、決行、結案三種）換成舊系統報表的字樣，與匯出 Excel 的備註相同：
+ * 還在簽核是「流程中」，決行與結案是「核准」。
+ */
+export const LEAVE_FLOW: Record<string, string> = {
+  Send: '流程中',
+  Decide: '核准',
+  Finish: '核准',
+};
+
 /** 單據起訖（台北）的「MM/DD HH:mm」。 */
 const sheetTime = (value: string) => {
   const text = formatDateTimeInput(new Date(value));
@@ -160,10 +176,13 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
     expected: clockTime(day.expectedClockOut),
     late: formatSeconds(day.lateSeconds),
     early: formatSeconds(day.earlyLeaveSeconds),
+    /** 沒有刷卡也沒有假單：上下班格直接標「未刷卡」，不只在狀態欄說明。 */
+    missing: day.reason === 'NoPunchOrLeave',
     leaveUnavailable: day.leave === 'Unavailable',
     sheets: day.sheets.map((sheet) => ({
       sheet,
       kind: LEAVE_SHEET_KIND[sheet.kind] ?? sheet.kind,
+      flow: LEAVE_FLOW[sheet.flowStatus] ?? sheet.flowStatus,
       time: `${sheetTime(sheet.startsAt)} – ${sheetTime(sheet.endsAt)}`,
     })),
   };

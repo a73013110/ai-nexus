@@ -135,8 +135,11 @@ public static class Spreadsheet
         };
     }
 
-    /// <summary>移除 XML 1.0 不允許的字元（Tab、換行以外的控制字元、單獨的代理字元），並截在 Excel 單格上限內。</summary>
-    internal static string Clean(string text)
+    /// <summary>
+    /// 移除 XML 1.0 不允許的字元（Tab、換行以外的控制字元、單獨的代理字元），並截在 Excel 單格上限內。
+    /// 版面固定、不走 <see cref="Write"/> 的匯出（例如照舊系統格式重現的報表）寫文字時也要先經過這裡。
+    /// </summary>
+    public static string Clean(string text)
     {
         var builder = new StringBuilder(Math.Min(text.Length, MaxCellText));
         for (var i = 0; i < text.Length && builder.Length < MaxCellText; i++)

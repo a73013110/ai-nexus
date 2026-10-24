@@ -182,6 +182,15 @@ describe('AttendanceRecordsPage', () => {
     expect(rows[0].textContent).toContain('12 分 5 秒');
     expect(rows[1].textContent).toContain('異常');
     expect(rows[1].textContent).toContain('沒有刷卡，也沒有假單');
+    // 人員欄只在第一天出現、跨過他的每一天，並列出遲到、早退與異常天數（0 天也列）。
+    const person = rows[0].querySelector('.records-person-cell')!;
+    expect(person.getAttribute('rowspan')).toBe('2');
+    expect(person.textContent).toContain('王小明');
+    expect(person.textContent).toContain('早退 0 天');
+    expect(rows[1].querySelector('.records-person-cell')).toBeNull();
+    // 遲到的上班直接標色；沒刷卡也沒假單在上下班格標「未刷卡」。
+    expect(rows[0].querySelector('.records-time-flag')?.textContent).toContain('08:59:03');
+    expect(rows[1].querySelectorAll('.records-missing')).toHaveLength(2);
     expect(root.querySelector('.records-leave-unavailable')).toBeNull();
     expect(root.querySelector('.records-calendar-unavailable')).toBeNull();
     // 查詢列只有區間與含放假日（只看得到自己時沒有人員選單）。

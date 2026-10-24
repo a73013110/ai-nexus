@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
   ChangeDetectionStrategy,
@@ -35,7 +36,12 @@ import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitNodes } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
-import { attendanceProblem, presentRecord, presentSchedule } from '../attendance-presentation';
+import {
+  attendanceProblem,
+  presentRecord,
+  presentSchedule,
+  weekOf,
+} from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
 import { RECORD_RANGES, cardKey, recordFilters, recordsQueryOptions } from './records-query';
 
@@ -49,8 +55,10 @@ const DEFAULT_PAGE_SIZE = 20;
  * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單。
  * 沒有刷卡也沒有假單的放假日預設不列（勾「含放假日」才列），放假日附假日設定的備註。
  * 單位清單只有組織管理權限讀得到，沒有時不提供單位選單（連結帶入的單位照樣查詢）。
- * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供，與 Excel 匯出的「說明」工作表同一份。
- * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生整段、全部人的 .xlsx（不分頁）。
+ * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供。
+ * 每人一段：最左的人員欄跨過那個人的每一天、捲動時黏住，段落交替底色，看任何一列都知道是誰；
+ * 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字），遲到、早退欄照樣列出時數。手機卡片改用段首的姓名列。
+ * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生與舊系統「出缺勤計算」一模一樣的 .xlsx（整段、全部人）。
  */
 @Component({
   selector: 'nx-attendance-records-page',
@@ -61,6 +69,7 @@ const DEFAULT_PAGE_SIZE = 20;
     FeaturePage,
     Icon,
     InfoPopover,
+    NgTemplateOutlet,
     Notice,
     PendingButton,
     QueryBar,
@@ -188,7 +197,11 @@ export class AttendanceRecordsPage {
       anomalies: person.days.filter((day) => day.status === 'Anomaly').length,
       late: person.days.filter((day) => day.lateSeconds > 0).length,
       early: person.days.filter((day) => day.earlyLeaveSeconds > 0).length,
-      days: person.days.map((day) => presentRecord(day, data.today)),
+      // 換週的那一列上緣加分隔線；放假日不列時週一可能不在，所以比的是「哪一週」而不是星期幾。
+      days: person.days.map((day, index, days) => ({
+        ...presentRecord(day, data.today),
+        weekStart: index > 0 && weekOf(day.date) !== weekOf(days[index - 1].date),
+      })),
     }));
   });
   readonly period = computed(() => {
@@ -234,7 +247,7 @@ export class AttendanceRecordsPage {
     this.exportError.set('');
     try {
       const response = await this.api.exportRecords(filters);
-      const name = attachmentName(response, { title: '出勤紀錄', extension: 'xlsx' });
+      const name = attachmentName(response, { title: '出缺勤計算', extension: 'xlsx' });
       const blob = await response.blob();
       if (guard()) downloadBlob(blob, name.title, name.extension);
     } catch (error) {

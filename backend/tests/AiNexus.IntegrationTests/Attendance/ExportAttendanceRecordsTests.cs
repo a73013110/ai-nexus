@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
@@ -25,6 +24,7 @@ public sealed class ExportAttendanceRecordsTests
         await session.HoldAsync(bob, "A1");
         session.Gd.AddKind("A", "特休");
         session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 9, 0, 0), "Finish");
+        session.Gd.AddLeave("L-2", GdId("bob"), "A", new(2026, 10, 20, 7, 0, 0), new(2026, 10, 20, 7, 30, 0), "Send");
         await session.PunchAsync("A1", At(19, 9, 5), At(19, 18, 0), At(20, 8, 30), At(20, 17, 45), At(21, 8, 20));
         using var client = await session.Factory.SignedInAsync("bob");
         var person = Assert.Single((await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People);
@@ -33,37 +33,37 @@ public sealed class ExportAttendanceRecordsTests
 
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         Assert.Equal(Spreadsheet.ContentType, response.Content.Headers.ContentType!.MediaType);
-        // 中文檔名以 RFC 5987 的 filename* 傳遞；時間是固定時鐘的台灣時間。
-        Assert.Equal("出勤紀錄_20261019-20261021_20261022_100000.xlsx", response.Content.Headers.ContentDisposition!.FileNameStar);
+        // 檔名與舊系統相同；中文檔名以 RFC 5987 的 filename* 傳遞，時間是固定時鐘的台灣時間。
+        Assert.Equal("出缺勤計算_20261022_100000(20261019to20261021).xlsx", response.Content.Headers.ContentDisposition!.FileNameStar);
         Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
 
         using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
-        Assert.Equal(["出勤紀錄", "統計", "說明"], workbook.WorkbookPart!.Workbook!.Sheets!.Elements<Sheet>().Select(x => x.Name!.Value));
+        Assert.Equal(["出缺勤計算"], workbook.WorkbookPart!.Workbook!.Sheets!.Elements<Sheet>().Select(x => x.Name!.Value));
 
-        var days = Rows(workbook, "出勤紀錄");
-        Assert.Equal(["姓名", "帳號或卡號", "日期", "星期", "日型", "行事曆備註", "狀態", "上班", "下班", "應下班", "遲到", "早退", "說明", "假單與出差"], days[0].Select(x => x.Text));
-        Assert.Equal(4, days.Count);
-        var late = days[1];
-        Assert.Equal((person.DisplayName, person.Account, new DateTime(2026, 10, 19), "一", "上班日", "出勤"), (late[0].Text, late[1].Text, DateTime.FromOADate(late[2].Number), late[3].Text, late[4].Text, late[6].Text));
-        Assert.Equal((new TimeSpan(9, 5, 0), new TimeSpan(18, 0, 0), new TimeSpan(18, 0, 0), TimeSpan.FromMinutes(5)), (late[7].Time, late[8].Time, late[9].Time, late[10].Time));
-        Assert.True(late[7].Danger);
-        Assert.False(late[8].Danger);
-        Assert.Equal("假單：特休（10/19 08:30–10/19 09:00，Finish，L-1）", late[13].Text);
-        var early = days[2];
-        Assert.Equal((TimeSpan.FromMinutes(15), true, ""), (early[11].Time, early[8].Danger, early[10].Text));
-        // 只有一筆刷卡：異常、列在上班，下班空白，不算遲到早退。
-        var single = days[3];
-        Assert.Equal(("異常", true, new TimeSpan(8, 20, 0), "", "只有一筆刷卡，分不出上班或下班"), (single[6].Text, single[6].Danger, single[7].Time, single[8].Text, single[12].Text));
+        // 與舊系統逐格相同：前兩欄是姓名與卡號、下方三列是小計；遲到的上班與早退的下班紅字並打「＊」；只有一筆刷卡是異常、只寫在上班。
+        var rows = Rows(workbook);
+        Assert.Equal(["", "", "日期", "上班打卡", "下班打卡", "遲到", "早退", "異常", "備註"], rows[0].Select(x => x.Text));
+        Assert.Equal(
+        [
+            [person.DisplayName, "A1", "2026/10/19 星期一", "09:05:00", "18:00:00", "＊", "", "", "【核准】【特休】L-1〔2026-10-19 08:30:00 ~ 2026-10-19 09:00:00〕"],
+            ["遲到(計)", "1", "2026/10/20 星期二", "08:30:00", "17:45:00", "", "＊", "", "【流程中】【特休】L-2〔2026-10-20 07:00:00 ~ 2026-10-20 07:30:00〕"],
+            ["早退(計)", "1", "2026/10/21 星期三", "08:20:00", "", "", "", "＊", ""],
+            // 不到四天時補一列放「異常(計)」，之後每人空兩列。
+            ["異常(計)", "1", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", "", ""]
+        ], rows.Skip(1).Select(x => x.Select(c => c.Text).ToArray()));
+        Assert.Equal((true, false, false, true), (rows[1][3].Red, rows[1][4].Red, rows[2][3].Red, rows[2][4].Red));
 
-        var summary = Rows(workbook, "統計");
-        Assert.Equal(2, summary.Count);
-        Assert.Equal((person.DisplayName, 3d, 2d, 1d, 1d, TimeSpan.FromMinutes(5), 1d, TimeSpan.FromMinutes(15)),
-            (summary[1][0].Text, summary[1][2].Number, summary[1][3].Number, summary[1][6].Number, summary[1][8].Number, summary[1][9].Time, summary[1][10].Number, summary[1][11].Time));
-
-        var notes = Rows(workbook, "說明").Select(x => string.Join("｜", x.Select(c => c.Text))).ToList();
-        Assert.Contains("查詢區間｜2026/10/19～2026/10/21（出勤日，台灣時間）", notes);
-        Assert.Contains(notes, x => x.StartsWith("上班日｜表定 08:30～18:00，彈性上班 08:00～09:00，應下班＝上班＋9.5 小時", StringComparison.Ordinal));
-        Assert.Contains(notes, x => x.StartsWith("遲到｜", StringComparison.Ordinal) && x.Contains("09:10 到，遲到 10 分，應下班 18:00", StringComparison.Ordinal));
+        // 版面照舊檔：標楷體 13.875 點、列高 19.5、欄寬與對齊（備註靠左、其餘置中），沒有凍結窗格與篩選。
+        var sheet = Worksheet(workbook);
+        Assert.Equal([13.9296875, 7.9296875, 24.9296875, 13.9296875, 13.9296875, 7.9296875, 7.9296875, 7.9296875, 35.9296875],
+            sheet.Descendants<Column>().Select(x => x.Width!.Value));
+        Assert.All(sheet.Descendants<Row>(), x => Assert.Equal((19.5, true), (x.Height!.Value, x.CustomHeight!.Value)));
+        Assert.Empty(sheet.Descendants<Pane>());
+        Assert.Empty(sheet.Descendants<AutoFilter>());
+        Assert.All(rows.Skip(1).Take(4).SelectMany(x => x), x => Assert.Equal(("標楷體", 13.875), (x.Font, x.Size)));
+        Assert.Equal(["center", "center", "center", "center", "center", "center", "center", "center", "left"], rows[1].Select(x => x.Alignment));
 
         var audit = Assert.Single(await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"));
         Assert.Equal("read", audit.Result);
@@ -100,12 +100,10 @@ public sealed class ExportAttendanceRecordsTests
         await session.PunchAsync("A2", At(19, 9, 0), At(19, 18, 0));
         using var client = await session.Factory.SignedInAsync("hr");
 
-        // 只有姓名的持有人：「帳號或卡號」欄寫卡號，統計註明假單無法取得。
-        var response = await client.GetAsync($"{Export}?{Week}");
-        using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
-        var rows = Rows(workbook, "出勤紀錄").Skip(1).ToList();
-        Assert.Equal([("新進同仁", "A2")], rows.Select(x => (x[0].Text, x[1].Text)).Distinct());
-        Assert.Contains(Rows(workbook, "統計"), x => x[0].Text == "新進同仁" && x[^1].Text.Contains("尚未綁帳號"));
+        // 只有姓名的持有人：第二欄寫它依附的卡號；對不到公文帳號，備註寫假單無法取得。
+        var rows = await ExportAsync(client, Week);
+        Assert.Equal(("新進同仁", "A2"), (rows[1][0].Text, rows[1][1].Text));
+        Assert.All(DayRows(rows), x => Assert.Equal("無法取得", x[8].Text));
     }
 
     [Fact]
@@ -144,48 +142,55 @@ public sealed class ExportAttendanceRecordsTests
         Assert.Empty(await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"));
     }
 
-    /// <summary>匯出檔「出勤紀錄」工作表上不重複的姓名，依出現順序。</summary>
+    /// <summary>匯出檔每段開頭的姓名，依出現順序。</summary>
     private static async Task<string[]> PeopleAsync(HttpClient client, string query)
     {
-        var response = await client.GetAsync($"{Export}?{query}");
-        Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
-        using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
-        return [.. Rows(workbook, "出勤紀錄").Skip(1).Select(x => x[0].Text).Distinct()];
+        var rows = await ExportAsync(client, query);
+        return [.. rows.Skip(1).Select(x => x[0].Text).Where(x => x != "" && !x.EndsWith("(計)", StringComparison.Ordinal))];
     }
 
-    /// <summary>匯出檔「出勤紀錄」工作表的資料列數（每人每天一列）。</summary>
-    private static async Task<int> DayCountAsync(HttpClient client, string query)
+    /// <summary>匯出檔的出勤日列數（每人每天一列，不含小計補列與段間空列）。</summary>
+    private static async Task<int> DayCountAsync(HttpClient client, string query) => DayRows(await ExportAsync(client, query)).Count();
+
+    private static IEnumerable<Value[]> DayRows(List<Value[]> rows) => rows.Skip(1).Where(x => x[2].Text != "");
+
+    private static async Task<List<Value[]>> ExportAsync(HttpClient client, string query)
     {
         var response = await client.GetAsync($"{Export}?{query}");
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
-        return Rows(workbook, "出勤紀錄").Count - 1;
+        return Rows(workbook);
     }
 
-    /// <summary>儲存格的值：文字、數字（日期、時刻、時數是 Excel 的天數）與是否以警示色標示。</summary>
-    private sealed record Value(string Text, bool Danger)
-    {
-        public double Number => double.Parse(Text, CultureInfo.InvariantCulture);
-        public TimeSpan Time => TimeSpan.FromSeconds(Math.Round(Number * 86400));
-    }
+    /// <summary>儲存格的文字（數字照存值）、是否紅字，以及字型、字級與水平對齊。</summary>
+    private sealed record Value(string Text, bool Red, string Font, double Size, string Alignment);
 
-    /// <summary>一張工作表的每一列，依欄位補齊空白儲存格。</summary>
-    private static List<Value[]> Rows(SpreadsheetDocument workbook, string name)
+    private static Worksheet Worksheet(SpreadsheetDocument workbook)
     {
         var part = workbook.WorkbookPart!;
-        var id = part.Workbook!.Sheets!.Elements<Sheet>().Single(x => x.Name == name).Id!.Value!;
-        var worksheet = ((WorksheetPart)part.GetPartById(id)).Worksheet!;
+        var id = part.Workbook!.Sheets!.Elements<Sheet>().Single().Id!.Value!;
+        return ((WorksheetPart)part.GetPartById(id)).Worksheet!;
+    }
+
+    /// <summary>工作表的每一列，依欄位補齊空白儲存格。</summary>
+    private static List<Value[]> Rows(SpreadsheetDocument workbook)
+    {
+        var worksheet = Worksheet(workbook);
         var width = worksheet.Descendants<Column>().Count();
-        var formats = part.WorkbookStylesPart!.Stylesheet!.CellFormats!.Elements<CellFormat>().ToList();
-        var fonts = part.WorkbookStylesPart.Stylesheet!.Fonts!.Elements<Font>().ToList();
+        var styles = workbook.WorkbookPart!.WorkbookStylesPart!.Stylesheet!;
+        var formats = styles.CellFormats!.Elements<CellFormat>().ToList();
+        var fonts = styles.Fonts!.Elements<Font>().ToList();
         return [.. worksheet.Descendants<Row>().Select(row =>
         {
-            var values = Enumerable.Repeat(new Value("", false), width).ToArray();
+            var values = Enumerable.Repeat(new Value("", false, "", 0, ""), width).ToArray();
             foreach (var cell in row.Elements<Cell>())
             {
                 var column = cell.CellReference!.Value!.TakeWhile(char.IsLetter).Aggregate(0, (n, c) => n * 26 + c - 'A' + 1) - 1;
-                var font = fonts[(int)formats[(int)(cell.StyleIndex?.Value ?? 0)].FontId!.Value];
-                values[column] = new(cell.InlineString?.InnerText ?? cell.CellValue?.Text ?? "", font.Color?.Rgb?.Value == "FFC00000");
+                var format = formats[(int)(cell.StyleIndex?.Value ?? 0)];
+                var font = fonts[(int)format.FontId!.Value];
+                values[column] = new(cell.InlineString?.InnerText ?? cell.CellValue?.Text ?? "", font.Color?.Rgb?.Value == "FFFF0000",
+                    font.GetFirstChild<FontName>()!.Val!.Value!, font.GetFirstChild<FontSize>()!.Val!.Value,
+                    format.Alignment?.Horizontal?.ToString() ?? "");
             }
             return values;
         })];

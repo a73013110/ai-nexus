@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@core/errors/safe-errors';
 import {
+  LEAVE_FLOW,
   attendanceProblem,
   clockTime,
   formatSeconds,
@@ -8,6 +9,7 @@ import {
   presentRecord,
   shiftMonth,
   taipeiToday,
+  weekOf,
   weekday,
 } from './attendance-presentation';
 
@@ -72,7 +74,7 @@ describe('attendance presentation', () => {
             title: '客戶拜訪',
             startsAt: '2026-10-05T01:00:00Z',
             endsAt: '2026-10-05T09:00:00Z',
-            flowStatus: '已核准',
+            flowStatus: 'Decide',
           },
         ],
       },
@@ -82,6 +84,20 @@ describe('attendance presentation', () => {
     expect(travel.singlePunch).toBe(true);
     expect(travel.sheets[0].kind).toBe('出差單');
     expect(travel.sheets[0].time).toBe('10/05 09:00 – 10/05 17:00');
+    // 流程狀態用舊系統報表的字樣（與匯出 Excel 相同），不認得的照原值。
+    expect(travel.sheets[0].flow).toBe('核准');
+    expect(LEAVE_FLOW['Send']).toBe('流程中');
+    expect(
+      presentRecord({ ...travel.day, sheets: [{ ...travel.day.sheets[0], flowStatus: 'Odd' }] }, '')
+        .sheets[0].flow,
+    ).toBe('Odd');
+  });
+
+  it('groups dates by the Monday of their week', () => {
+    expect(weekOf('2026-10-05')).toBe('2026-10-05');
+    expect(weekOf('2026-10-11')).toBe('2026-10-05');
+    expect(weekOf('2026-10-12')).toBe('2026-10-12');
+    expect(weekOf('2026-11-01')).toBe('2026-10-26');
   });
 
   it('explains document-system outages instead of the generic contact-admin message', () => {

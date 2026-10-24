@@ -1,8 +1,14 @@
 @use 'breakpoints' as bp;
 
+// 最小寬度交給 stacked 表格（--table-min-width）：寬版橫向捲動，手機卡片不受它撐寬。
+.records-table {
+  --table-min-width: 68rem;
+}
 .records-table table {
   table-layout: fixed;
-  min-width: 60rem;
+}
+.records-person-column {
+  width: 8.5rem;
 }
 .records-date-column {
   width: 7.5rem;
@@ -22,7 +28,83 @@
 .records-time {
   font-variant-numeric: tabular-nums;
 }
-// 每個人一組：組首列是姓名與當段的異常摘要，捲動時不固定（表頭已固定）。
+// 每個人一段：寬版的人員欄跨過他的每一天，往右捲時黏在左邊、往下捲時內容黏在表頭下，
+// 看到哪一列都知道是誰；段落交替底色、段與段之間加粗分隔。手機卡片不排欄，改顯示段首的姓名列。
+.records-table .records-person-row {
+  display: none;
+}
+.records-person-group:nth-of-type(even) {
+  // --surface-subtle 在白底上幾乎看不出來；從 --ink 混一點，深淺主題都分得出相鄰兩個人。
+  --records-group-surface: color-mix(in srgb, var(--ink) 3.5%, var(--surface));
+  background: var(--records-group-surface);
+}
+.records-person-group + .records-person-group > tr:nth-child(2) > * {
+  border-top: 2px solid var(--line);
+}
+.records-table th.records-person-head {
+  left: 0;
+  z-index: 2;
+}
+.records-table th.records-person-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  vertical-align: top;
+  background: var(--records-group-surface, var(--surface));
+  border-inline-end: 1px solid var(--line);
+  font-weight: 400;
+}
+// 表頭高度＝一行字＋上下內距：人員資訊黏在表頭下方，捲到段尾才跟著離開。
+.records-person-card {
+  position: sticky;
+  top: calc(var(--text-ui) * var(--line-ui) + 2 * var(--table-cell-padding-block) + 1px);
+  display: grid;
+  justify-items: start;
+  gap: var(--p-space-1);
+}
+.records-person-card .records-person-name {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.records-person-card .records-person-name small {
+  margin-inline-start: 0;
+}
+.records-person-card .records-person-summary {
+  display: grid;
+  margin-top: var(--p-space-1);
+}
+.records-person-card .records-person-summary > span + span::before {
+  content: none;
+}
+.records-count-warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+.records-count-danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+// 換週的那一列與上一週隔一條線（加上原本的列線就是兩倍粗）。
+tr.records-week-start > td {
+  border-top: 1px solid var(--line);
+}
+// 遲到的上班、早退的下班：在時間本身標色，對應舊系統的紅字。
+.records-time-flag {
+  margin-inline: -0.3em;
+  padding: 0.0625rem 0.3em;
+  border-radius: var(--radius-mark);
+  background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+  color: var(--warning);
+  font-weight: 600;
+}
+.records-missing {
+  padding: 0 0.3em;
+  border: 1px dashed var(--danger);
+  border-radius: var(--radius-mark);
+  color: var(--danger);
+  font-size: var(--p-font-xs);
+}
 .records-person-row > th {
   background: var(--surface-subtle);
   font-weight: 400;
@@ -98,6 +180,20 @@ tr.is-weekend > td:first-child {
 @include bp.below(narrow) {
   .records-person-group {
     contain-intrinsic-size: auto 80rem;
+  }
+  .records-table .records-person-row {
+    display: grid;
+  }
+  .records-person-row > th {
+    white-space: normal;
+  }
+  .records-table th.records-person-cell {
+    display: none;
+  }
+  // 卡片的儲存格是直排的區塊，換週與換人的上緣線只留給寬版的表格列。
+  tr.records-week-start > td,
+  .records-person-group + .records-person-group > tr:nth-child(2) > * {
+    border-top: 0;
   }
 }
 .records-rules-loading {

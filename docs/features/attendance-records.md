@@ -34,19 +34,19 @@
 
 ## 規則說明
 
-- `GET /api/v1/attendance-rules`（授權同 `attendance.records`；全公司一套、不含個人資料，不套資料範圍）回傳每種日型的上下班時間與逐條規則。時間取自 `Attendance:Workday` 的目前設定，畫面不寫死；頁面與匯出的「說明」工作表用同一份。
+- `GET /api/v1/attendance-rules`（授權同 `attendance.records`；全公司一套、不含個人資料，不套資料範圍）回傳每種日型的上下班時間與逐條規則。時間取自 `Attendance:Workday` 的目前設定，畫面不寫死。
 - 條文只寫在 [AttendanceRules](../../backend/src/AiNexus.Features/Office/Attendance/Records/AttendanceRules.cs)，舉例的應下班由 `AttendanceEvaluator` 算出；改判定時一併改條文（`AttendanceRulesTests`）。
 - 涵蓋：最早／最晚刷卡為上下班、出勤日依刷卡日期（過午夜算隔天）、彈性上班、遲到從彈性終點起算並改為表定下班、早退以秒計且沒有寬限、只有一筆刷卡、假單只並列不抵銷、日型來自公文系統行事曆、無法判定的情況、只列持卡日。
 
 ## 匯出 Excel
 
 - `GET /api/v1/attendance-records/export`，參數與查詢相同（不含分頁）。handler 直接呼叫 `ListAttendanceRecords` 並取全部的人：區間上限、資料範圍、篩選、放假日與判定都同一份，看不到的人匯不出來；不另寫 procedure，查詢次數本來就固定。
-- 回 `.xlsx`，檔名 `出勤紀錄_起日-迄日_匯出時間.xlsx`（台灣時間，`filename*` UTF-8）；`/api` 回應一律不快取。
-- 工作表：
-  - **出勤紀錄**：每人每天一列，姓名、帳號或卡號每列都有（可篩選），日型旁是行事曆備註；日期、時刻與遲到早退時數是 Excel 的日期時間值（可加總）。遲到的上班、早退的下班、異常以深紅色標示，列印時每人一頁。
-  - **統計**：每人的天數、各狀態天數、遲到與早退的天數與合計。
-  - **說明**：查詢區間、匯出時間、條件（含是否列出放假日）、GD 無法取得的提示，以及上方的規則說明。
-- 對照舊系統 EmpClock「出缺勤計算」：上班、下班、遲到、早退照舊，遲到早退由「＊」改為時數；異常併入「狀態」，備註拆成「說明」（判定原因）與「假單與出差」；舊版只在每人第一列寫姓名、下方塞「遲到(計)」等小計列與空白列，篩選後看不出是誰，改為平面表格加「統計」工作表。卡號改為帳號（一人可能多張卡）。
+- 回 `.xlsx`，檔名與舊系統相同：`出缺勤計算_匯出時間(起日to迄日).xlsx`（台灣時間，`filename*` UTF-8）；`/api` 回應一律不快取。
+- 檔案與舊系統 EmpClock 的「出缺勤計算」一模一樣，HR 核對、列印與轉交的習慣不變；版面寫在 [AttendanceReportWorkbook](../../backend/src/AiNexus.Features/Office/Attendance/Records/AttendanceReportWorkbook.cs)，`ExportAttendanceRecordsTests` 逐格比對。
+  - 單一工作表「出缺勤計算」，標楷體 13.875 點、置中（備註靠左）、列高 19.5、舊檔欄寬；沒有凍結窗格與篩選，時間與日期是文字。
+  - 每人一段、每天一列，段後空兩列；段首寫姓名與卡號（使用者寫區間內持有的卡，換過卡以「、」相連），下面三列是「遲到(計)」「早退(計)」「異常(計)」天數，不到四天的人補列放小計。
+  - 遲到的上班、早退的下班紅字，遲到、早退、異常欄打「＊」；備註是 `【核准】【特休假】單號〔起 ~ 迄〕`，出差寫【出差單】，多筆以「、」相連。流程狀態 `Send` 寫「流程中」，`Decide`、`Finish` 寫「核准」（畫面同一套字樣）。
+- 與舊檔不同的只有資料本身：列哪些日子、怎麼判遲到早退異常都照畫面（含放假日勾選、未來的日子不列、只有一筆刷卡只寫在上班）；假單無法取得時備註寫「無法取得」。
 - 不另設 `attendance.records.export`：匯出的就是畫面看得到的資料，分權只會讓主管與本人多一道設定；大量帶出靠稽核與每人每分鐘 5 次的 rate limit 控制。
 - 稽核：先寫 `attendance.records.export`（「查閱與匯出」分類，記區間、人員或卡號、單位、是否含放假日、人數，不記名單）再產生檔案，寫不進去就不匯出；被拒絕的區間與權限不留紀錄。
-- 試算表由共用的 [Spreadsheet](../../backend/src/AiNexus.Platform/Export/Spreadsheet.cs) 產生（標題列凍結與篩選、欄寬、日期時間格式、分頁、列印重複標題、微軟正黑體），其他列表匯出 Excel 時沿用。
+- 版面固定，不走共用的 [Spreadsheet](../../backend/src/AiNexus.Platform/Export/Spreadsheet.cs)（它固定加標題樣式、凍結、篩選與微軟正黑體）；文字仍經它的 `Clean` 移除 XML 不允許的字元。

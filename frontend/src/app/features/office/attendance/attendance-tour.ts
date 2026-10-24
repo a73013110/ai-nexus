@@ -290,8 +290,7 @@ export function attendanceRecordsTour(options: {
       {
         target: `${RECORDS} .records-rules`,
         title: '判定規則',
-        description:
-          '表定與彈性上班、應下班怎麼算，以及遲到、早退與異常的條件；內容依目前設定，與匯出檔的「說明」工作表相同。',
+        description: '表定與彈性上班、應下班怎麼算，以及遲到、早退與異常的條件；內容依目前設定。',
         side: 'bottom',
       },
       queryBarStep(RECORDS, {
@@ -301,14 +300,14 @@ export function attendanceRecordsTour(options: {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:
-          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號不列，到卡號對應頁補指派。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
+          '每人一段、每天一列，最左的人員欄捲動時固定，並列出遲到、早退與異常天數；遲到的上班與早退的下班直接在時間上標色。人多時依姓名分頁。只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號不列，到卡號對應頁補指派。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
         side: 'bottom',
       },
       {
         target: `${RECORDS} .records-export`,
         title: '匯出 Excel',
         description:
-          '由伺服器依已套用的條件產生整段的 .xlsx，不分頁、包含所有人，「本月」等預設區間以按下時重算；沒有人可列時停用。',
+          '由伺服器依已套用的條件產生整段的 .xlsx，格式與舊系統的「出缺勤計算」相同；不分頁、包含所有人，「本月」等預設區間以按下時重算；沒有人可列時停用。',
         side: 'bottom',
       },
     ],
