@@ -70,7 +70,6 @@ import type { QueryChip, QueryState } from './query-state';
       [id]="id + '-more'"
       aria-label="更多條件"
       (toggle)="morePopover.sync($event)"
-      (focusout)="leaveMore($event)"
       (keydown.escape)="closeMore($event)"
     >
       <h3>更多條件</h3>
@@ -128,6 +127,8 @@ export class QueryBar {
   private readonly morePanel = viewChild.required<ElementRef<HTMLElement>>('morePanel');
   protected readonly morePopover = anchoredPopover({
     panel: () => this.morePanel().nativeElement,
+    trigger: () => this.moreTrigger()?.nativeElement,
+    closeOnFocusOut: true,
     place: (panel) => {
       const trigger = this.moreTrigger()?.nativeElement;
       if (trigger) positionPopover(trigger, panel, 320, 'left', 480);
@@ -162,24 +163,13 @@ export class QueryBar {
   toggleMore() {
     if (this.moreOpen()) this.closeMore();
     else {
-      this.morePopover.show(this.moreTrigger()?.nativeElement);
+      this.morePopover.show();
       requestAnimationFrame(() =>
         this.morePanel()
           .nativeElement.querySelector<HTMLElement>('input, button, [tabindex="0"]')
           ?.focus(),
       );
     }
-  }
-  /** Tab 離開 popover 時關閉；popover="auto" 只處理點擊外面與 Escape。 */
-  leaveMore(event: FocusEvent) {
-    const next = event.relatedTarget as Node | null;
-    if (
-      this.moreOpen() &&
-      next &&
-      !this.morePanel().nativeElement.contains(next) &&
-      next !== this.moreTrigger()?.nativeElement
-    )
-      this.morePopover.hide();
   }
   closeMore(event?: Event) {
     event?.preventDefault();

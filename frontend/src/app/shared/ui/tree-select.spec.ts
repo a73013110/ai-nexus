@@ -1,3 +1,4 @@
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TreeSelect, type TreeSelectNode, type TreeSelectStatus } from './tree-select';
@@ -10,6 +11,23 @@ const nodes: TreeSelectNode[] = [
   { value: 'old-qa', label: '測試組', parent: 'old' },
   { value: 'lab', label: '測試據點', inactive: true },
 ];
+
+// 表單常把選擇器包在欄位 <label> 裡（「位置」「上層單位」）。
+@Component({
+  imports: [TreeSelect],
+  template: `<label
+    >位置<nx-tree-select
+      label="位置"
+      allLabel="最上層"
+      [nodes]="nodes"
+      [value]="value()"
+      (valueChange)="value.set($event)"
+  /></label>`,
+})
+class LabelledHost {
+  readonly nodes = nodes;
+  readonly value = signal('');
+}
 
 describe('TreeSelect', () => {
   beforeEach(() => {
@@ -163,5 +181,28 @@ describe('TreeSelect', () => {
     key(trigger, '平');
     expect(select.opened()).toBe(true);
     expect(select.query()).toBe('平');
+  });
+
+  // jsdom 把有 tabindex 的元素當成互動內容，不會重現 Chrome 的 label 轉送，這裡直接看點擊有沒有被攔下。
+  it('keeps a wrapping field label from turning clicks on rows into a trigger click', () => {
+    const fixture = TestBed.createComponent(LabelledHost);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const trigger = host.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+    const click = (target: Element) => {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      fixture.detectChanges();
+      return event.defaultPrevented;
+    };
+    host.querySelector('label')!.click();
+    fixture.detectChanges();
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    const hq = host.querySelectorAll<HTMLElement>('[role="treeitem"]')[1];
+    expect(click(hq.querySelector('.tree-select-twisty')!)).toBe(true);
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(click(hq)).toBe(true);
+    expect(fixture.componentInstance.value()).toBe('hq');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 });

@@ -4,6 +4,8 @@
 // until the exit ends. Placement (shared/browser/popover-position.ts) sets data-side and
 // transform-origin after measuring, so the entry is a keyframe: var() in keyframes re-resolves
 // once the side is known, whereas @starting-style values are fixed at the first measurement.
+// 元件的 `:popover-open` 只寫 `display`，flex-direction、gap 等排版寫在外面：退場期間
+// `display` 仍保留，其餘屬性卻立即失效，內容會在消失前一瞬間跑版。
 .popover-panel {
   --popover-shift: 0 -0.25rem;
   position: fixed;

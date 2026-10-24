@@ -94,7 +94,6 @@ interface TreeSelectRow {
       [attr.role]="search() ? 'dialog' : null"
       [attr.aria-label]="label()"
       (toggle)="popover.sync($event)"
-      (focusout)="leave($event)"
       (keydown.escape)="dismiss($event)"
     >
       @if (search()) {
@@ -323,6 +322,8 @@ export class TreeSelect {
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
   protected readonly popover = anchoredPopover({
     panel: () => this.panel().nativeElement,
+    trigger: () => this.trigger().nativeElement,
+    closeOnFocusOut: true,
     place: (panel) => positionPopover(this.trigger().nativeElement, panel, 300, 'left', 420),
   });
   readonly opened = this.popover.opened;
@@ -481,16 +482,6 @@ export class TreeSelect {
     this.popover.reposition();
   }
 
-  leave(event: FocusEvent) {
-    const next = event.relatedTarget as Node | null;
-    if (
-      this.opened() &&
-      next &&
-      !this.panel().nativeElement.contains(next) &&
-      next !== this.trigger().nativeElement
-    )
-      this.close();
-  }
   dismiss(event: Event) {
     event.preventDefault();
     this.close();

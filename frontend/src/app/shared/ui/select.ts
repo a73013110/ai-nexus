@@ -83,7 +83,6 @@ export interface SelectOption {
       [attr.role]="search() ? 'dialog' : null"
       [attr.aria-label]="label()"
       (toggle)="popover.sync($event)"
-      (focusout)="leave($event)"
       (keydown.escape)="dismiss($event)"
     >
       @if (search()) {
@@ -212,6 +211,8 @@ export class Select {
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   protected readonly popover = anchoredPopover({
     panel: () => this.panel().nativeElement,
+    trigger: () => this.trigger().nativeElement,
+    closeOnFocusOut: true,
     place: (panel) =>
       positionPopover(this.trigger().nativeElement, panel, this.search() ? 360 : 240),
   });
@@ -319,16 +320,6 @@ export class Select {
       footer.querySelector<HTMLElement>('input:enabled, button:enabled');
     target?.focus();
     return !!target;
-  }
-  leave(event: FocusEvent) {
-    const next = event.relatedTarget as Node | null;
-    if (
-      this.opened() &&
-      next &&
-      !this.panel().nativeElement.contains(next) &&
-      next !== this.trigger().nativeElement
-    )
-      this.close();
   }
   /** footer 控制項上的 Escape；trigger 與搜尋框自己處理。 */
   dismiss(event: Event) {

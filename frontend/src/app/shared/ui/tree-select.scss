@@ -61,10 +61,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-// 搜尋與底部勾選固定，中間捲動。
+// 搜尋與底部勾選固定，中間捲動。排版寫在 :popover-open 外：關閉動畫期間 `display` 仍保留，
+// 其餘屬性卻立即失效，底部勾選會在退場那一瞬間跑到右邊。
+.tree-select-panel {
+  flex-direction: column;
+}
 .tree-select-panel:popover-open {
   display: flex;
-  flex-direction: column;
 }
 .tree-select-search {
   display: flex;

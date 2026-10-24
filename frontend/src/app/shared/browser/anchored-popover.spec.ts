@@ -101,3 +101,70 @@ describe('anchoredPopover', () => {
     expect(escape.defaultPrevented).toBe(true);
   });
 });
+
+@Component({
+  selector: 'nx-anchored-popover-label-host',
+  template: `<label
+      >欄位<button #trigger type="button">觸發</button>
+      <div #panel popover="auto">
+        <p>說明文字</p>
+        <label><input type="checkbox" />內層選項</label>
+      </div></label
+    ><button id="outside" type="button">外部</button>`,
+})
+class LabelHost {
+  readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
+  readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
+  readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    trigger: () => this.trigger().nativeElement,
+    closeOnFocusOut: true,
+    place: () => undefined,
+  });
+}
+
+describe('anchoredPopover inside a label', () => {
+  afterEach(() => TestBed.resetTestingModule());
+  const setup = () => {
+    const fixture = TestBed.createComponent(LabelHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const panel = host.panel().nativeElement;
+    panel.showPopover = vi.fn();
+    panel.hidePopover = vi.fn();
+    host.popover.show();
+    return { fixture, host, panel };
+  };
+  const click = (target: Element) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  it('uses the trigger as the source and keeps clicks on the panel focus inside it', () => {
+    const { host, panel } = setup();
+    expect(panel.showPopover).toHaveBeenCalledWith({ source: host.trigger().nativeElement });
+    expect(panel.tabIndex).toBe(-1);
+  });
+
+  it('stops the wrapping label from clicking the trigger, but not an inner label', () => {
+    const { panel } = setup();
+    expect(click(panel.querySelector('p')!).defaultPrevented).toBe(true);
+    expect(click(panel.querySelector('label')!).defaultPrevented).toBe(false);
+    expect(click(panel.querySelector('input')!).defaultPrevented).toBe(false);
+  });
+
+  it('closes when focus leaves the panel and its trigger', () => {
+    const { fixture, host, panel } = setup();
+    const input = panel.querySelector('input')!;
+    const leave = (relatedTarget: EventTarget | null) =>
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget }));
+    leave(panel);
+    leave(host.trigger().nativeElement);
+    leave(null);
+    expect(host.popover.opened()).toBe(true);
+    leave(fixture.nativeElement.querySelector('#outside'));
+    expect(host.popover.opened()).toBe(false);
+    expect(panel.hidePopover).toHaveBeenCalled();
+  });
+});

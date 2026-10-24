@@ -203,6 +203,7 @@ export class TimeRangePicker {
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   protected readonly popover = anchoredPopover({
     panel: () => this.panel().nativeElement,
+    trigger: () => this.trigger().nativeElement,
     place: (panel) => positionPopover(this.trigger().nativeElement, panel, 340, 'left', 560),
   });
   readonly opened = this.popover.opened;
@@ -225,7 +226,7 @@ export class TimeRangePicker {
       this.from.set(typeof bounds === 'string' ? '' : local(bounds.from));
       this.to.set(typeof bounds === 'string' ? '' : local(bounds.to));
     }
-    this.popover.show(this.trigger().nativeElement);
+    this.popover.show();
     requestAnimationFrame(() =>
       this.panel()
         .nativeElement.querySelector<HTMLButtonElement>(
