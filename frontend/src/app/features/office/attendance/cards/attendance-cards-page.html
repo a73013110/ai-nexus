@@ -69,7 +69,7 @@
     </div>
     <table>
       <caption class="sr-only">
-        打卡卡號；待指派依最近一筆沒有持有人的刷卡排序，其餘依卡號排序。
+        打卡卡號，依卡號排序。
       </caption>
       <colgroup>
         <col nxTableColumn="number" class="cards-number-column" />
@@ -178,7 +178,7 @@
     }
   </div>
   @if (store.selected(); as card) {
-    <section aria-label="目前持有人與持有歷史">
+    <div class="ui-drawer-sections">
       @if (drawerError()) {
         <nx-notice
           tone="danger"
@@ -187,10 +187,31 @@
           (dismissed)="drawerError.set('')"
         />
       }
-      <div class="cards-holder" role="group" aria-labelledby="cards-holder-label">
-        <p class="cards-holder-label" id="cards-holder-label">目前持有人</p>
-        @if (card.current; as current) {
-          <div class="cards-holder-person">
+      @if (pending(); as gap) {
+        <nx-notice
+          class="cards-pending"
+          tone="warning"
+          [message]="gap.count + ' 筆刷卡沒有持有人（' + gap.span + '），不會出現在出勤紀錄。'"
+        >
+          @if (store.canMaintain()) {
+            <button
+              notice-actions
+              type="button"
+              class="secondary-button cards-assign-pending"
+              [disabled]="store.locked() || store.assignments() === null"
+              [title]="session.testing() ? session.testingNote() : ''"
+              (click)="assignPending(card)"
+            >
+              補指派
+            </button>
+          }
+        </nx-notice>
+      }
+      <!-- 持有人與「在出勤紀錄顯示」是這張卡的兩個設定，放同一張卡片，以設定列的分隔線隔開。 -->
+      <section class="cards-holder" aria-labelledby="cards-holder-label">
+        <h3 class="cards-holder-label" id="cards-holder-label">目前持有人</h3>
+        <div class="cards-holder-person">
+          @if (card.current; as current) {
             <span class="avatar" [class.is-name]="!current.userId" aria-hidden="true">{{
               initial(holderName(current))
             }}</span>
@@ -207,10 +228,14 @@
               </p>
               <p class="cards-holder-meta">{{ tenure(current) }}</p>
             </div>
-          </div>
-        } @else {
-          <p class="cards-holder-empty">目前無人持有</p>
-        }
+          } @else {
+            <span class="avatar is-name" aria-hidden="true"><nx-icon name="user" /></span>
+            <div>
+              <p class="cards-holder-name"><strong>無人持有</strong></p>
+              <p class="cards-holder-meta">{{ idleMeta() }}</p>
+            </div>
+          }
+        </div>
         @if (store.canMaintain()) {
           <div class="cards-actions">
             <button
@@ -236,110 +261,168 @@
             }
           </div>
         }
-      </div>
-      @if (pending(); as gap) {
-        <nx-notice
-          class="cards-pending"
-          tone="warning"
-          [message]="gap.count + ' 筆刷卡沒有持有人（' + gap.span + '），不會出現在出勤紀錄。'"
-        >
-          @if (store.canMaintain()) {
-            <button
+        <nx-setting-row
+          class="cards-visibility"
+          label="在出勤紀錄顯示"
+          description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
+          [checked]="!card.hiddenFromRecords"
+          [disabled]="!store.canMaintain() || session.testing()"
+          [pending]="store.working() === 'hidden:' + card.id"
+          (checkedChange)="setVisible(card, $event)"
+        />
+      </section>
+      <section aria-labelledby="cards-history-heading">
+        <h3 class="ui-section-heading" id="cards-history-heading">
+          持有歷史
+          @if (history().length) {
+            <span class="ui-count-label">{{ history().length }} 段</span>
+          }
+        </h3>
+        @if (store.assignmentsError()) {
+          <nx-notice tone="danger" [message]="store.assignmentsError()"
+            ><button
+              nxPending
               notice-actions
               type="button"
-              class="secondary-button cards-assign-pending"
-              [disabled]="store.locked() || store.assignments() === null"
-              [title]="session.testing() ? session.testingNote() : ''"
-              (click)="assignPending(card)"
+              class="secondary-button"
+              [pending]="store.assignmentsRefreshing()"
+              (click)="store.reloadAssignments()"
             >
-              補指派
+              {{ store.assignmentsRefreshing() ? '重試中…' : '重試' }}
+            </button></nx-notice
+          >
+        } @else if (store.assignments() === null) {
+          <div class="cards-skeleton" role="status">
+            @for (width of skeleton; track $index) {
+              <span class="skeleton" [style.width.%]="width"></span>
+            }
+            <span class="sr-only">正在載入持有歷史…</span>
+          </div>
+        } @else if (!history().length) {
+          <p class="form-note">這張卡還沒有指派過持有人。</p>
+        } @else {
+          <ol
+            class="cards-history"
+            [class.is-refreshing]="store.assignmentsRefreshing()"
+            [attr.aria-busy]="store.assignmentsRefreshing() || null"
+          >
+            @for (entry of history(); track entry.item.id) {
+              <li [class.is-current]="entry.current">
+                <div class="cards-history-head">
+                  <strong>{{ entry.holder }}</strong>
+                  @if (entry.unbound) {
+                    <nx-status-badge
+                      tone="warning"
+                      title="只有姓名的期間不歸戶到帳號，綁定帳號後才會出現在出勤紀錄"
+                      >尚無帳號</nx-status-badge
+                    >
+                  }
+                  @if (entry.current) {
+                    <nx-status-badge tone="success">持有中</nx-status-badge>
+                  }
+                  @if (store.canMaintain()) {
+                    <nx-action-menu
+                      class="cards-history-menu"
+                      [label]="entry.holder + '的持有期間操作'"
+                      [items]="entry.actions"
+                      [busy]="store.working() === 'assignment:' + entry.item.id"
+                      (action)="entryAction(entry.item, $event)"
+                    />
+                  }
+                </div>
+                <p class="cards-history-period">
+                  <time [attr.datetime]="entry.item.startsAt">{{ entry.starts }}</time> –
+                  @if (entry.ends) {
+                    <time [attr.datetime]="entry.item.endsAt">{{ entry.ends }}</time>
+                  } @else {
+                    <span>現在</span>
+                  }
+                </p>
+                @if (entry.item.note) {
+                  <p class="cards-history-note">{{ entry.item.note }}</p>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </section>
+      <section class="cards-punches" aria-labelledby="cards-punches-heading">
+        <h3 class="ui-section-heading" id="cards-punches-heading">刷卡紀錄</h3>
+        @if (store.punchesError()) {
+          <nx-notice tone="danger" [message]="store.punchesError()"
+            ><button
+              nxPending
+              notice-actions
+              type="button"
+              class="secondary-button"
+              [pending]="store.punchesRefreshing() || store.punchesLoadingMore()"
+              (click)="store.reloadPunches()"
+            >
+              {{ store.punchesRefreshing() || store.punchesLoadingMore() ? '重試中…' : '重試' }}
+            </button></nx-notice
+          >
+        }
+        @if (store.punches() === null) {
+          @if (!store.punchesError()) {
+            <div class="cards-skeleton" role="status">
+              @for (width of skeleton; track $index) {
+                <span class="skeleton" [style.width.%]="width"></span>
+              }
+              <span class="sr-only">正在載入刷卡紀錄…</span>
+            </div>
+          }
+        } @else if (!punchDays().length) {
+          <p class="form-note">這張卡還沒有刷卡紀錄。</p>
+        } @else {
+          <div
+            class="cards-punch-days"
+            [class.is-refreshing]="store.punchesRefreshing()"
+            [attr.aria-busy]="store.punchesRefreshing() || null"
+          >
+            @for (day of punchDays(); track day.date) {
+              <section class="cards-punch-day" [attr.aria-labelledby]="'cards-punch-' + day.date">
+                <h4 [id]="'cards-punch-' + day.date">
+                  <time [attr.datetime]="day.date">{{ day.label }}</time>
+                </h4>
+                <ol>
+                  @for (row of day.punches; track row.punch.id) {
+                    <li>
+                      <time class="cards-punch-time" [attr.datetime]="row.punch.punchedAt">{{
+                        row.time
+                      }}</time>
+                      @if (row.punch.unattributed) {
+                        <span class="cards-punch-holder"
+                          ><nx-status-badge tone="warning">無持有人</nx-status-badge></span
+                        >
+                      } @else {
+                        <span class="cards-punch-holder ui-truncate" [title]="row.punch.holder">{{
+                          row.punch.holder
+                        }}</span>
+                      }
+                      <span class="cards-punch-codes" [title]="row.codesTitle">{{
+                        row.codes
+                      }}</span>
+                    </li>
+                  }
+                </ol>
+              </section>
+            }
+          </div>
+          @if (store.punchesHasMore()) {
+            <button
+              nxPending
+              type="button"
+              class="secondary-button cards-punches-more"
+              [pending]="store.punchesLoadingMore()"
+              [disabled]="store.punchesRefreshing()"
+              (click)="store.morePunches()"
+            >
+              {{ store.punchesLoadingMore() ? '載入中…' : '載入更早的刷卡' }}
             </button>
           }
-        </nx-notice>
-      }
-      <nx-setting-row
-        class="cards-visibility"
-        label="在出勤紀錄顯示"
-        description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
-        [checked]="!card.hiddenFromRecords"
-        [disabled]="!store.canMaintain() || session.testing()"
-        [pending]="store.working() === 'hidden:' + card.id"
-        (checkedChange)="setVisible(card, $event)"
-      />
-      <h3 class="ui-section-heading">
-        持有歷史
-        @if (history().length) {
-          <span class="ui-count-label">{{ history().length }} 段</span>
         }
-      </h3>
-      @if (store.assignmentsError()) {
-        <nx-notice tone="danger" [message]="store.assignmentsError()"
-          ><button
-            nxPending
-            notice-actions
-            type="button"
-            class="secondary-button"
-            [pending]="store.assignmentsRefreshing()"
-            (click)="store.reloadAssignments()"
-          >
-            {{ store.assignmentsRefreshing() ? '重試中…' : '重試' }}
-          </button></nx-notice
-        >
-      } @else if (store.assignments() === null) {
-        <div class="cards-history-skeleton" role="status">
-          @for (width of historySkeleton; track $index) {
-            <span class="skeleton" [style.width.%]="width"></span>
-          }
-          <span class="sr-only">正在載入持有歷史…</span>
-        </div>
-      } @else {
-        <ol
-          class="cards-history"
-          [class.is-refreshing]="store.assignmentsRefreshing()"
-          [attr.aria-busy]="store.assignmentsRefreshing() || null"
-        >
-          @for (entry of history(); track entry.item.id) {
-            <li [class.is-current]="entry.current">
-              <div class="cards-history-head">
-                <strong>{{ entry.holder }}</strong>
-                @if (entry.unbound) {
-                  <nx-status-badge
-                    tone="warning"
-                    title="只有姓名的期間不歸戶到帳號，綁定帳號後才會出現在出勤紀錄"
-                    >尚無帳號</nx-status-badge
-                  >
-                }
-                @if (entry.current) {
-                  <nx-status-badge tone="success">持有中</nx-status-badge>
-                }
-                @if (store.canMaintain()) {
-                  <nx-action-menu
-                    class="cards-history-menu"
-                    [label]="entry.holder + '的持有期間操作'"
-                    [items]="entry.actions"
-                    [busy]="store.working() === 'assignment:' + entry.item.id"
-                    (action)="entryAction(entry.item, $event)"
-                  />
-                }
-              </div>
-              <p class="cards-history-period">
-                <time [attr.datetime]="entry.item.startsAt">{{ entry.starts }}</time> –
-                @if (entry.ends) {
-                  <time [attr.datetime]="entry.item.endsAt">{{ entry.ends }}</time>
-                } @else {
-                  <span>現在</span>
-                }
-              </p>
-              @if (entry.item.note) {
-                <p class="cards-history-note">{{ entry.item.note }}</p>
-              }
-            </li>
-          } @empty {
-            <li class="form-note">這張卡還沒有指派過持有人。</li>
-          }
-        </ol>
-      }
-    </section>
+      </section>
+    </div>
   }
 </nx-detail-drawer>
 <nx-card-dialog (created)="created($event)" />

@@ -100,9 +100,6 @@ interface ImportsPageRequest {
     .imports-file {
       font-family: var(--font-code);
     }
-    nx-view-switch {
-      margin-bottom: 0;
-    }
   `,
   templateUrl: './attendance-imports-page.html',
 })

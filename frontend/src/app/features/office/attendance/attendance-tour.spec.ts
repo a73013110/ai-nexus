@@ -52,6 +52,7 @@ describe('attendanceCardsTour', () => {
       '在出勤紀錄顯示',
       '持有歷史',
       '結束持有',
+      '刷卡紀錄',
     ]);
     expect(copy(cardDetailTour({ maintain: true, testing: false }))).toContain(
       '本人與主管照常看得到',
@@ -60,6 +61,7 @@ describe('attendanceCardsTour', () => {
       '目前持有人',
       '在出勤紀錄顯示',
       '持有歷史',
+      '刷卡紀錄',
     ]);
   });
 

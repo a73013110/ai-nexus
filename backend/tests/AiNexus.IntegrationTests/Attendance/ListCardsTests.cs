@@ -45,8 +45,8 @@ public sealed class ListCardsTests
 
         async Task<string[]> NumbersAsync(string status) => [.. (await hr.GetFromJsonAsync<CardDto[]>($"{Cards}?status={status}"))!.Select(x => x.CardNumber)];
 
-        // 待指派不含隱藏的卡（例如訪客卡），最近有未歸戶刷卡的排最前面。
-        Assert.Equal(["NEW-2", "NEW-1"], await NumbersAsync(CardStatuses.Unassigned));
+        // 待指派不含隱藏的卡（例如訪客卡）；與其他狀態一樣依卡號排序，不依刷卡時間。
+        Assert.Equal(["NEW-1", "NEW-2"], await NumbersAsync(CardStatuses.Unassigned));
         Assert.Equal(["A001"], await NumbersAsync(CardStatuses.Held));
         Assert.Equal(["V-GUEST"], await NumbersAsync(CardStatuses.Hidden));
         await AssertCodeAsync(await hr.GetAsync($"{Cards}?status=guest"), HttpStatusCode.BadRequest, "attendance_filter_invalid");

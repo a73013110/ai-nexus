@@ -109,6 +109,12 @@ export function cardDetailTour(options: WriteAccess): ProductTourDefinition {
           '換卡或離職用「結束持有」，保留歷史；刪除期間會讓這段刷卡變回待指派，只在指派錯誤時使用。',
         side: 'left',
       },
+      {
+        target: `${CARD_DRAWER} .cards-punches`,
+        title: '刷卡紀錄',
+        description:
+          '從卡片的角度看這張卡刷過的每一筆，以及當時歸給誰；「無持有人」的刷卡不會出現在出勤紀錄。不判定遲到早退，那在出勤紀錄看。',
+      },
     ],
   };
 }

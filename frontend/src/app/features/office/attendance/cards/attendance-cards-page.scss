@@ -20,7 +20,7 @@
   font-family: var(--font-code);
   font-variant-numeric: tabular-nums;
 }
-// 目前持有人：抽屜最上方的主角，動作跟著它。
+// 目前持有人與「在出勤紀錄顯示」同一張卡片：設定列自帶上方分隔線，不另畫第二個框。
 .cards-holder {
   display: grid;
   gap: var(--p-space-3);
@@ -33,9 +33,12 @@
   margin: 0;
 }
 .cards-holder-label {
+  margin: 0;
   color: var(--secondary);
   font-size: var(--text-caption);
+  font-weight: 400;
 }
+// 有人與無人持有同一個版型（頭像＋名稱＋一行說明），切換時卡片高度不跳。
 .cards-holder-person {
   display: flex;
   align-items: center;
@@ -46,6 +49,9 @@
   width: 2.25rem;
   height: 2.25rem;
   font-size: var(--text-body);
+}
+.cards-holder-person .avatar nx-icon {
+  --icon-size: var(--icon-sm);
 }
 .cards-holder-name {
   display: flex;
@@ -58,8 +64,7 @@
   font-size: var(--p-font-base);
   font-weight: 600;
 }
-.cards-holder-meta,
-.cards-holder-empty {
+.cards-holder-meta {
   color: var(--secondary);
   font-size: var(--text-caption);
   font-variant-numeric: tabular-nums;
@@ -69,13 +74,6 @@
   flex-wrap: wrap;
   gap: var(--p-space-2);
 }
-// 在出勤紀錄顯示：與目前持有人同一種框，分隔線由框取代。
-.cards-visibility {
-  padding: var(--p-space-3) var(--p-space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-block);
-  background: var(--surface);
-}
 // 持有歷史是時間軸：圓點連成一條線，持有中的點用 signal 色。
 .cards-history {
   display: grid;
@@ -83,14 +81,17 @@
   padding: 0;
   list-style: none;
 }
-.cards-history > li:not(.form-note) {
+.cards-history > li {
   position: relative;
   display: grid;
   gap: 0.125rem;
   padding: 0 0 var(--p-space-4) var(--p-space-5);
   font-size: var(--text-caption);
 }
-.cards-history > li:not(.form-note)::before {
+.cards-history > li:last-child {
+  padding-bottom: 0;
+}
+.cards-history > li::before {
   content: '';
   position: absolute;
   top: 0.45rem;
@@ -101,7 +102,7 @@
   background: var(--surface);
   box-shadow: 0 0 0 1.5px var(--control-line);
 }
-.cards-history > li:not(.form-note, :last-child)::after {
+.cards-history > li:not(:last-child)::after {
   content: '';
   position: absolute;
   top: 1.15rem;
@@ -134,11 +135,52 @@
 .cards-history-period {
   font-variant-numeric: tabular-nums;
 }
-.cards-history-skeleton {
+.cards-skeleton {
   display: grid;
   gap: var(--p-space-3);
-  margin: var(--p-space-2) 0;
 }
-.cards-history-skeleton .skeleton {
+.cards-skeleton .skeleton {
   height: 2.75rem;
+}
+// 刷卡紀錄：依日期分組，每組一個框、列之間細線；時間等寬對齊，代號淡色靠右。
+.cards-punch-days {
+  display: grid;
+  gap: var(--p-space-3);
+}
+.cards-punch-day h4 {
+  margin: 0 0 var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cards-punch-day ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+}
+.cards-punch-day li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-height: 2.25rem;
+  padding: var(--p-space-1) var(--p-space-3);
+  font-size: var(--p-font-data);
+}
+.cards-punch-day li + li {
+  border-top: 1px solid var(--line);
+}
+.cards-punch-time {
+  font-variant-numeric: tabular-nums;
+}
+.cards-punch-codes {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+}
+.cards-punches-more {
+  margin-top: var(--p-space-3);
 }

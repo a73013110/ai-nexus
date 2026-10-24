@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type {
   CardAssignmentCreateRequest,
@@ -6,6 +6,7 @@ import type {
   CardAssignmentUpdateRequest,
   CardCreateRequest,
   CardDto,
+  CardPunchDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -13,6 +14,9 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
 import { errorCode } from '../attendance-presentation';
+
+/** 刷卡紀錄每頁筆數；與後端 `ListCardPunches.PageSize` 相同。 */
+export const PUNCH_PAGE = 50;
 
 /** 寫入的結果：失敗時 `error` 是審核過的訊息；使用者取消接手時兩者皆空。 */
 export type WriteOutcome<T = unknown> = { saved: true; value: T } | { saved: false; error: string };
@@ -70,6 +74,45 @@ export class AttendanceCardsStore {
   readonly assignmentsError = this.assignmentsRead.error;
   /** 寫入後重讀持有歷史：已有的歷史保留並淡化。 */
   readonly assignmentsRefreshing = this.assignmentsRead.refreshing;
+  /** 刷卡紀錄的游標（已載入最後一筆的 ID）；換卡時回到第一頁。 */
+  private readonly punchesBefore = linkedSignal<string | null, number | undefined>({
+    source: this.selectedId,
+    computation: () => undefined,
+  });
+  private readonly punchesRead = apiResource({
+    feature: 'attendance.cards',
+    params: () => {
+      const id = this.selectedId();
+      return id ? { id, before: this.punchesBefore() } : undefined;
+    },
+    loader: async (request, signal) => ({
+      ...request,
+      items: await this.api.cardPunches(request.id, request.before, signal),
+    }),
+  });
+  /** 選取卡片已載入的刷卡（各頁接起來）；還沒讀到這張卡的第一頁時為 null，不顯示上一張的紀錄。 */
+  readonly punches = linkedSignal<
+    { id: string; before?: number; items: CardPunchDto[] } | undefined,
+    CardPunchDto[] | null
+  >({
+    source: () => this.punchesRead.value(),
+    computation: (read, previous) => {
+      if (!read || read.id !== this.selectedId()) return null;
+      if (read.before === undefined) return read.items;
+      const seen = new Set(previous?.value?.map((item) => item.id));
+      return [...(previous?.value ?? []), ...read.items.filter((item) => !seen.has(item.id))];
+    },
+  });
+  /** 游標分頁不算總數：最後一頁滿 50 筆，才表示可能還有更早的刷卡。 */
+  readonly punchesHasMore = computed(() => this.punchesRead.value()?.items.length === PUNCH_PAGE);
+  readonly punchesError = this.punchesRead.error;
+  /** 重讀第一頁（寫入後）：已有的紀錄淡化。載入更多只轉按鈕。 */
+  readonly punchesRefreshing = computed(
+    () => this.punchesRead.refreshing() && this.punchesBefore() === undefined,
+  );
+  readonly punchesLoadingMore = computed(
+    () => this.punchesRead.refreshing() && this.punchesBefore() !== undefined,
+  );
   /** 寫入按鈕只給有 `attendance.cards.maintain` 的人；測試身分看得到但停用（伺服器回 `test_admin_read_only`）。 */
   readonly canMaintain = computed(() => this.session.has('attendance.cards.maintain'));
   readonly busy = signal(false);
@@ -82,6 +125,14 @@ export class AttendanceCardsStore {
   }
   reloadAssignments() {
     this.assignmentsRead.reload();
+  }
+  reloadPunches() {
+    this.punchesRead.reload();
+  }
+  morePunches() {
+    const items = this.punches();
+    if (!items?.length || this.punchesRead.refreshing()) return;
+    this.punchesBefore.set(items[items.length - 1].id);
   }
 
   createCard(body: CardCreateRequest) {
@@ -166,10 +217,12 @@ export class AttendanceCardsStore {
     );
   }
 
-  /** 持有變動會改變目前持有人、待指派筆數與持有歷史，兩份都重讀。 */
+  /** 持有變動會改變目前持有人、待指派筆數、持有歷史與每筆刷卡的歸戶，全部重讀；刷卡回到第一頁。 */
   private afterWrite() {
     this.cardsRead.reload();
     this.assignmentsRead.reload();
+    if (this.punchesBefore() === undefined) this.punchesRead.reload();
+    else this.punchesBefore.set(undefined);
   }
 
   /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */

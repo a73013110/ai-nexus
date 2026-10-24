@@ -23,7 +23,7 @@ public static class CardStatuses
 /// <summary>
 /// 卡號對應頁的卡片清單：打卡檔出現過的卡號都在 <see cref="Card"/>（匯入時建立），所以一張表就涵蓋已指派與待指派的卡。
 /// <c>search</c> 比對卡號、備註，以及任何一段持有期間的持有人姓名或使用者名稱（HR 常從人名找卡）；<c>status</c> 見 <see cref="CardStatuses"/>。
-/// 依卡號排序，待指派依最近一筆未歸戶刷卡排（新出現的卡號在最前面）。卡片數以百計，不分頁。
+/// 一律依卡號排序（HR 是拿著卡號來找卡的，順序不隨狀態改變）。卡片數以百計，不分頁。
 /// </summary>
 internal sealed class ListCards(AppDbContext db, TimeProvider clock)
 {
@@ -76,6 +76,6 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
             return new CardDto(card.Id, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, holders.GetValueOrDefault(card.Id),
                 lastPunches.TryGetValue(card.CardNumber, out var last) ? last : null, gap?.Count ?? 0, gap?.First, gap?.Last);
         });
-        return Result<IReadOnlyList<CardDto>>.Ok(status == CardStatuses.Unassigned ? [.. rows.OrderByDescending(x => x.LastUnattributedAt)] : [.. rows]);
+        return Result<IReadOnlyList<CardDto>>.Ok([.. rows]);
     }
 }

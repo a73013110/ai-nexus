@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardAssignmentDto, CardDto } from '@core/api/schema';
+import type { CardAssignmentDto, CardDto, CardPunchDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
@@ -49,6 +49,16 @@ const fresh: CardDto = {
   firstUnattributedAt: '2026-10-01T00:55:00Z',
   lastUnattributedAt: '2026-10-02T10:01:00Z',
 };
+/** 第 `index` 筆刷卡：2026-10-02 起每小時一筆往前推，新到舊。 */
+const punch = (index: number, unattributed = false): CardPunchDto => ({
+  id: 1000 - index,
+  punchedAt: new Date(Date.parse('2026-10-02T10:00:00Z') - index * 3_600_000).toISOString(),
+  machineCode: '001',
+  eventCode: '11',
+  unattributed,
+  userId: unattributed ? null : 'u1',
+  holder: unattributed ? null : '王小明',
+});
 const visitor: CardDto = { ...fresh, id: 'c3', cardNumber: 'V01', hiddenFromRecords: true };
 
 function setup() {
@@ -71,6 +81,7 @@ function setup() {
     cards: vi.fn(async () => [card, fresh, visitor]),
     assignments: vi.fn(async (id: string) => (id === card.id ? [held] : [])),
     updateCard: vi.fn(async () => undefined),
+    cardPunches: vi.fn(async (_id: string, _before?: number): Promise<CardPunchDto[]> => []),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -187,5 +198,33 @@ describe('AttendanceCardsPage', () => {
     toggle.click();
     await settle();
     expect(api.updateCard).toHaveBeenCalledWith(card.id, { hiddenFromRecords: true, note: null });
+  });
+
+  it('lists the card punches by Taipei day and loads earlier ones from the last punch', async () => {
+    const { host, page, api, settle } = setup();
+    const first = [...Array(50).keys()].map((index) => punch(index, index === 49));
+    api.cardPunches.mockImplementation(async (_id, before) => (before ? [punch(50)] : first));
+    await settle();
+    page.store.selectedId.set(card.id);
+    await settle();
+    await settle();
+    const days = [...host.querySelectorAll('nx-detail-drawer .cards-punch-day')];
+    // 台北時間：2026-10-02 18:00 往前 50 小時，跨了三個日期。
+    expect(days.map((day) => day.querySelector('h4')?.textContent?.trim())).toEqual([
+      '2026/10/02（五）',
+      '2026/10/01（四）',
+      '2026/09/30（三）',
+    ]);
+    expect(days[0].querySelector('li')?.textContent).toContain('18:00:00');
+    expect(days[0].querySelector('li')?.textContent).toContain('王小明');
+    expect(days.at(-1)!.querySelector('li:last-child')?.textContent).toContain('無持有人');
+
+    host.querySelector<HTMLButtonElement>('nx-detail-drawer .cards-punches-more')!.click();
+    await settle();
+    await settle();
+    expect(api.cardPunches).toHaveBeenLastCalledWith(card.id, punch(49).id, expect.anything());
+    expect(host.querySelectorAll('nx-detail-drawer .cards-punch-day li')).toHaveLength(51);
+    // 最後一頁不滿 50 筆：沒有更早的刷卡了。
+    expect(host.querySelector('nx-detail-drawer .cards-punches-more')).toBeNull();
   });
 });

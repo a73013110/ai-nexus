@@ -45,6 +45,13 @@ export class AttendanceApi {
   updateCard = (id: string, body: CardUpdateRequest) =>
     this.api.put('/api/v1/attendance-cards/{id}', { path: { id }, body });
   deleteCard = (id: string) => this.api.delete('/api/v1/attendance-cards/{id}', { path: { id } });
+  /** 一張卡的刷卡，新到舊、每頁 50 筆；`before` 是上一頁最後一筆的 ID。 */
+  cardPunches = (id: string, before?: number, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-cards/{id}/punches', {
+      path: { id },
+      query: { before },
+      signal,
+    });
   /** 某張卡的持有歷史，新到舊。 */
   assignments = (cardId: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-card-assignments', { query: { cardId }, signal });

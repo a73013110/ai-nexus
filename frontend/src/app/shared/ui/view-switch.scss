@@ -132,7 +132,9 @@
 :host(.ui-view-switch-segment) button[aria-pressed='true'] {
   color: var(--ink);
 }
+// 放在容器裡時間距由容器的 gap 提供；外距留著會與 gap 疊加，分頁與下方欄位就離得太遠。
 :host-context(.ui-filter-heading),
-:host-context(.ui-filter-panel) {
+:host-context(.ui-filter-panel),
+:host-context(.ui-query-bar) {
   margin-bottom: 0;
 }

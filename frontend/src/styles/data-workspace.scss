@@ -503,9 +503,20 @@ select:where(.ui-input) {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+// 摘要與內文的上下留白都對齊內文的內距（--p-space-4）。摘要下面緊接內文時不留下內距：內文自己有
+// 上內距，兩份疊起來標題與第一個區塊之間會空出一大段；下面接頁籤時保留，頁籤不貼著副標。
 .ui-drawer-summary {
-  padding: var(--p-space-3) var(--p-space-4);
+  padding: var(--p-space-4) var(--p-space-4) var(--p-space-3);
   flex: none;
+}
+.ui-drawer-summary:has(+ .ui-drawer-body) {
+  padding-bottom: 0;
+}
+// 手機上抽屜內文的內距縮成 --p-space-3（detail-drawer.scss），摘要跟著縮，左右才對齊。
+@include bp.below(phone) {
+  .ui-drawer-summary {
+    padding: var(--p-space-3) var(--p-space-3) var(--p-space-2);
+  }
 }
 .ui-drawer-summary > div {
   display: flex;
@@ -523,6 +534,10 @@ select:where(.ui-input) {
   font-size: var(--p-font-base);
   overflow-wrap: anywhere;
 }
+// 沒有狀態列時標題就在最上面，上距交給摘要的內距。
+.ui-drawer-summary h3:first-child {
+  margin-top: 0;
+}
 .ui-section-heading {
   margin: var(--p-space-4) 0 var(--p-space-2);
   font-size: var(--p-font-sm);
@@ -531,6 +546,18 @@ select:where(.ui-input) {
 }
 .ui-section-heading:first-child {
   margin-top: 0;
+}
+// 抽屜主要內容由數個區塊（提示、卡片、帶標題的段落）組成時，區塊間距只由這裡的 gap 提供：
+// 區塊自己的外距歸零，有沒有提示都一樣齊，不會一處疊兩份外距、另一處又貼在一起。
+// 段落內標題與內容的距離仍由 `.ui-section-heading` 的下距決定。
+.ui-drawer-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-5);
+  min-width: 0;
+}
+.ui-drawer-sections > nx-notice {
+  margin-block: 0;
 }
 .ui-message-box {
   margin: 0;

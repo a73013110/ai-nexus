@@ -63,6 +63,7 @@ public sealed class AttendanceModule : IFeatureModule
         CreateCard.Map(cards);
         UpdateCard.Map(cards);
         DeleteCard.Map(cards);
+        ListCardPunches.Map(cards);
 
         var assignments = api.MapGroup("/attendance-card-assignments").RequireAuthorization(Policies.AttendanceCards);
         ListCardAssignments.Map(assignments);
