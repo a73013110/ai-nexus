@@ -1,4 +1,5 @@
 import type { UnitDto } from '@core/api/schema';
+import type { SelectOption } from '@shared/ui/select';
 
 /** 與後端 `UnitRules.MaxDepth` 相同；伺服器仍會以 `organization_depth_exceeded` 拒絕。 */
 export const MAX_DEPTH = 8;
@@ -48,6 +49,24 @@ export function unitRows(units: readonly UnitDto[], collapsed: ReadonlySet<strin
   const roots = units.filter((unit) => !unit.parentId || !ids.has(unit.parentId)).sort(byOrder);
   visit(roots, [], false);
   return rows;
+}
+
+/**
+ * 單位的樹狀選項（`Select` 的 `level`、`path`）：名稱只寫自己，停用的單位加註；`include` 排除不能選的單位。
+ * 單位篩選、上層單位等選單共用，不在各處把路徑接成一長串（名稱前段相同時看不出差別）。
+ */
+export function unitOptions(
+  units: readonly UnitDto[],
+  include: (row: UnitRow) => boolean = () => true,
+): SelectOption[] {
+  return unitRows(units)
+    .filter(include)
+    .map((row) => ({
+      value: row.unit.id,
+      label: row.unit.name + (row.unit.enabled ? '' : '（停用）'),
+      level: row.depth,
+      path: row.path.slice(0, -1),
+    }));
 }
 
 /** 單位與它所有下層的 ID；搬移時這些不能當新的上層。 */

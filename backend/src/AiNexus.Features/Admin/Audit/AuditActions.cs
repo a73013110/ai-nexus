@@ -28,7 +28,7 @@ public static class AuditActions
         ("admin.feature", "功能異動"),
         ("admin.navigation_", "選單異動"),
         ("admin.organization_", "組織異動"),
-        ("admin.attendance_", "出勤卡號異動"),
+        ("admin.attendance_", "出勤卡號與名單異動"),
         ("admin.calendar_", "假日設定異動"),
         ("attendance.records.export", "出勤紀錄匯出"),
         ("admin.mail_", "郵件重寄與測試"),

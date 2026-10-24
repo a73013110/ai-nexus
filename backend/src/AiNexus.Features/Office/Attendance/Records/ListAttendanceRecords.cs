@@ -3,7 +3,6 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Office.Attendance.Leave;
 using AiNexus.Platform.Errors;
@@ -15,19 +14,25 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <summary>
 /// 出勤紀錄查詢結果。<paramref name="Today"/> 是查詢當下的台灣日期：晚於它的日子不回傳，當天不判成異常。
 /// <paramref name="CalendarAvailable"/>、<paramref name="LeaveAvailable"/> 為 false 表示 GD 連不上：日型退回「週末放假、平日無法判定」，假單為無法取得。
+/// <paramref name="Total"/> 是名單的總人數，<paramref name="People"/> 是從 <paramref name="Offset"/> 起的這一頁。
 /// </summary>
-public sealed record AttendanceRecordsDto(DateOnly From, DateOnly To, DateOnly Today, bool CalendarAvailable, bool LeaveAvailable, IReadOnlyList<AttendancePersonDto> People);
+public sealed record AttendanceRecordsDto(DateOnly From, DateOnly To, DateOnly Today, bool CalendarAvailable, bool LeaveAvailable, int Total, int Offset, IReadOnlyList<AttendancePersonDto> People);
 
 /// <summary>
-/// 出勤名單上的一個人。<paramref name="LeaveAvailable"/> 為 false：GD 連不上或這個人對不到公文帳號，他的假單一律是無法取得；
+/// 出勤名單上的一個人。<paramref name="UserId"/> 為 null 是只有姓名、還沒綁帳號的持有人（<paramref name="DisplayName"/> 是持有期間的姓名，<paramref name="Account"/> 為 null）。
+/// <paramref name="LeaveAvailable"/> 為 false：GD 連不上、這個人對不到公文帳號或還沒有帳號，他的假單一律是無法取得；
 /// <paramref name="Excluded"/> 是 HR 標為不列入出勤（只有明確要求或指定這個人時才會出現）。<paramref name="Days"/> 只含他持有員工卡的日子。
 /// </summary>
-public sealed record AttendancePersonDto(Guid UserId, string DisplayName, string Account, bool LeaveAvailable, bool Excluded, IReadOnlyList<AttendanceRecordDto> Days);
+public sealed record AttendancePersonDto(Guid? UserId, string DisplayName, string? Account, bool LeaveAvailable, bool Excluded, IReadOnlyList<AttendanceRecordDto> Days);
 
-/// <summary>一個出勤日：<see cref="AttendanceEvaluation"/> 的判定結果加上當天有交集的假單與出差單（原始起訖，只並列不比對時數）。</summary>
+/// <summary>
+/// 一個出勤日：<see cref="AttendanceEvaluation"/> 的判定結果加上當天有交集的假單與出差單（原始起訖，只並列不比對時數）。
+/// <paramref name="CalendarRemark"/> 是假日設定的備註（例如「國慶日」），沒有時為 null。
+/// </summary>
 public sealed record AttendanceRecordDto(
     DateOnly Date,
     AttendanceDayType DayType,
+    string? CalendarRemark,
     AttendanceStatus Status,
     AttendanceReason? Reason,
     DateTimeOffset? ClockIn,
@@ -39,117 +44,123 @@ public sealed record AttendanceRecordDto(
     IReadOnlyList<LeaveSheet> Sheets);
 
 /// <summary>
-/// 出勤紀錄（ADR 0018）：<c>from</c>～<c>to</c>（出勤日，都含，最多 <see cref="MaxRangeDays"/> 天）內，範圍看得到的人每天的判定結果。
-/// 名單是期間內持有員工卡的使用者；可再以 <c>userId</c>、<c>unitId</c>（含下層單位的目前成員）縮小，與資料範圍取交集。
+/// 出勤紀錄（ADR 0018）：<c>from</c>～<c>to</c>（出勤日，都含，最多 <see cref="AttendanceRecordsFilter.MaxRangeDays"/> 天）內，範圍看得到的人每天的判定結果。
+/// 名單是 <see cref="AttendanceRoster"/>：期間內持有員工卡的人，可再以 <c>userId</c>、<c>holder</c>、<c>unitId</c> 縮小，與資料範圍取交集。
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
-/// <item>不分頁：一次最多一個月，名單是公司在職持卡人（數百人），畫面要整月逐人顯示；資料量是人數 × 天數的小列，GD 也是整批查一次。人數大到回應過大時再依人分頁。</item>
-/// <item>查詢次數固定：持有期間、刷卡（依人與日在資料庫彙總最早、最晚）、行事曆與假單各查一次，不逐人逐日查詢。</item>
+/// <item>依人分頁（<c>offset</c>、<c>limit</c>）：區間最長一年，全公司整年是數萬列，畫面一次只畫一頁的人；匯出以 <see cref="Page.All"/> 不分頁。</item>
+/// <item>查詢次數固定：持有期間、刷卡（依持有期間與日在資料庫彙總最早、最晚）、行事曆與假單各查一次，只查這一頁的人，不逐人逐日查詢。</item>
+/// <item>放假日沒有刷卡也沒有假單時預設不列（<c>includeDaysOff</c> 才列）；有刷卡或假單的放假日一律列出，加班或出差不會被藏起來。</item>
 /// <item>GD 連不上不拒絕整個請求：行事曆與假單各自降級，刷卡照常顯示（ADR 0018）。</item>
 /// </list>
 /// </remarks>
-internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, OrganizationDirectory organization, CalendarReader calendar,
+internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, AttendanceRoster roster, CalendarReader calendar,
     LeaveSheetReader leave, IOptions<AttendanceOptions> options, TimeProvider clock)
 {
-    /// <summary>一個月：畫面一次看一個月；也限制 GD 假單查詢與回應的大小。</summary>
-    public const int MaxRangeDays = 31;
+    /// <summary>每頁人數的預設與上限：一人一年約 250 個上班日，50 人已是上萬列。</summary>
+    public const int DefaultPageSize = 20, MaxPageSize = 50;
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (DateOnly? from, DateOnly? to, Guid? userId, Guid? unitId, bool? includeExcluded, ICurrentUser user, ListAttendanceRecords handler, CancellationToken ct)
-            => handler.HandleAsync(user.Id, from, to, userId, unitId, includeExcluded ?? false, ct).ToHttpResultAsync())
+        .MapGet("", ([AsParameters] AttendanceRecordsFilter filter, int? offset, int? limit, ICurrentUser user, ListAttendanceRecords handler, CancellationToken ct)
+            => handler.HandleAsync(user.Id, filter, new(offset ?? 0, limit ?? DefaultPageSize), ct).ToHttpResultAsync())
         .WithName("ListAttendanceRecords");
 
-    public async Task<Result<AttendanceRecordsDto>> HandleAsync(Guid viewer, DateOnly? from, DateOnly? to, Guid? userId, Guid? unitId, bool includeExcluded, CancellationToken ct)
+    /// <summary>名單的一頁；<see cref="Limit"/> 為 null 是整份名單（匯出）。</summary>
+    public readonly record struct Page(int Offset, int? Limit)
     {
-        if (from is not { } start || to is not { } end || end < start || !CalendarDates.IsSupported(start) || !CalendarDates.IsSupported(end)
-            || end.DayNumber - start.DayNumber >= MaxRangeDays)
-            return AttendanceErrors.RecordsRangeInvalid;
+        public static Page All => new(0, null);
+    }
 
+    public async Task<Result<AttendanceRecordsDto>> HandleAsync(Guid viewer, AttendanceRecordsFilter filter, Page page, CancellationToken ct)
+    {
+        if (filter.Range() is not { } range) return AttendanceErrors.RecordsRangeInvalid;
+        if (!filter.IsValid() || page.Offset < 0 || page.Limit is < 1 or > MaxPageSize) return AttendanceErrors.RecordsFilterInvalid;
+
+        var (start, end) = range;
         var today = TaipeiTime.Today(clock);
         // 未來的日子沒有刷卡也沒有結論，不回傳；名單也只看到今天為止，下週才開始持卡的人不出現。
         var last = end < today ? end : today;
         var scope = await scopes.ForAsync(viewer, FeatureCatalog.AttendanceRecords, ct);
-        if (scope.IsEmpty || last < start) return new AttendanceRecordsDto(start, end, today, true, true, []);
+        if (scope.IsEmpty || last < start) return new AttendanceRecordsDto(start, end, today, true, true, 0, page.Offset, []);
 
-        var unitIds = unitId is { } unit ? await organization.SubtreeAsync([unit], ct) : null;
-        var holdings = HoldingsQuery(viewer, scope, start, last, userId, unitIds,
-            // 「不列入出勤」只是 HR 看全公司時隱藏不重要的人，不是隱私控制（ADR 0018）：只在範圍是 all 時套用；
-            // 本人（own）與主管（unit、unit-tree）照常看得到。指定了某個人，或明確要求含不列入的人時也不隱藏，否則 HR 查不到他。
-            hideExcluded: scope.All && userId is null && !includeExcluded);
-        var rows = await (from a in holdings
-                          join u in db.Users on a.UserId equals u.Id
-                          select new { UserId = u.Id, u.DisplayName, u.Account, a.StartsAt, a.EndsAt, Excluded = db.Set<RosterExclusion>().Any(x => x.UserId == u.Id) })
-            .ToListAsync(ct);
-        var people = rows.Select(x => x.UserId).Distinct().ToList();
+        var holdings = await roster.HoldingsAsync(viewer, scope, filter, (start, last), ct);
+        var everyone = await roster.PeopleAsync(holdings, ct);
+        IReadOnlyList<RosterPerson> people = page.Limit is { } limit ? [.. everyone.Skip(page.Offset).Take(limit)] : everyone;
+        if (people.Count == 0) return new AttendanceRecordsDto(start, end, today, true, true, everyone.Count, page.Offset, []);
 
-        // 刷卡與名單同一個子查詢，不把人數展開成參數。view 在持有期間重疊時會重複列，最早與最晚不受影響。
-        var holders = holdings.Select(x => x.UserId);
-        var punches = (await db.Set<AttributedPunch>().AsNoTracking()
-                .Where(x => x.UserId != null && x.AttendanceDate >= start && x.AttendanceDate <= last && holders.Contains(x.UserId))
-                .GroupBy(x => new { x.UserId, x.AttendanceDate })
-                .Select(g => new { g.Key.UserId, g.Key.AttendanceDate, First = g.Min(x => x.PunchedAt), Last = g.Max(x => x.PunchedAt) })
-                .ToListAsync(ct))
-            .ToDictionary(x => (x.UserId!.Value, x.AttendanceDate), x => (x.First, x.Last));
-
+        var punches = await PunchesAsync(holdings, people, people.Count == everyone.Count, start, last, ct);
         var days = await calendar.ReadAsync(start, last, ct);
         var calendarDays = days?.ToDictionary(x => x.Date);
-        var sheets = await leave.ReadAsync(people, start, last, ct);
+        var sheets = await leave.ReadAsync([.. people.Where(x => x.UserId is not null).Select(x => x.UserId!.Value)], start, last, ct);
         var rules = options.Value.Workday;
+        var includeDaysOff = filter.IncludeDaysOff == true;
 
-        var result = rows.GroupBy(x => x.UserId)
-            .Select(person =>
+        var result = people.Select((person, index) =>
+        {
+            // 還沒有帳號的人對不到公文帳號，假單與 GD 連不上時一樣是無法取得。
+            var leaveAvailable = person.UserId is { } userId && sheets.Available && !sheets.Unmapped.Contains(userId);
+            var filedSheets = person.UserId is { } id ? sheets.For(id) : [];
+            var records = new List<AttendanceRecordDto>();
+            for (var date = start; date <= last; date = date.AddDays(1))
             {
-                var first = person.First();
-                var leaveAvailable = sheets.Available && !sheets.Unmapped.Contains(person.Key);
-                var periods = person.Select(x => (x.StartsAt, x.EndsAt)).ToList();
-                var records = new List<AttendanceRecordDto>();
-                for (var date = start; date <= last; date = date.AddDays(1))
-                {
-                    var (dayStart, dayEnd) = (TaipeiTime.At(date, TimeOnly.MinValue), TaipeiTime.At(date.AddDays(1), TimeOnly.MinValue));
-                    // 只回傳持有員工卡的日子：到職前、換卡空窗或離職後沒有卡，判成「沒刷卡」是誤報。
-                    if (!periods.Any(p => p.StartsAt < dayEnd && (p.EndsAt is null || p.EndsAt > dayStart))) continue;
-                    // 單據是原始起訖，與這一天有交集就算當天有假單或出差單（跨日、半天都一樣），時數由 HR 判斷。
-                    IReadOnlyList<LeaveSheet> filed = [.. sheets.For(person.Key).Where(s => s.StartsAt < dayEnd && s.EndsAt > dayStart)];
-                    var state = !leaveAvailable ? LeaveState.Unavailable : filed.Count > 0 ? LeaveState.Filed : LeaveState.None;
-                    DateTimeOffset? clockIn = null, clockOut = null;
-                    if (punches.TryGetValue((person.Key, date), out var punch)) (clockIn, clockOut) = (punch.First, punch.Last);
-                    var dayType = AttendanceEvaluator.DayTypeOf(date, calendarDays?.GetValueOrDefault(date));
-                    var e = AttendanceEvaluator.Evaluate(new(date, dayType, clockIn, clockOut, state), rules, today);
-                    records.Add(new(e.Date, e.DayType, e.Status, e.Reason, e.ClockIn, e.ClockOut, e.ExpectedClockOut, e.LateSeconds, e.EarlyLeaveSeconds, e.Leave, filed));
-                }
-                return new AttendancePersonDto(person.Key, first.DisplayName, first.Account, leaveAvailable, first.Excluded, records);
-            })
-            .OrderBy(x => x.DisplayName, StringComparer.Ordinal).ThenBy(x => x.Account, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.UserId)
-            .ToList();
-        return new AttendanceRecordsDto(start, end, today, days is not null, sheets.Available, result);
+                var (dayStart, dayEnd) = (TaipeiTime.At(date, TimeOnly.MinValue), TaipeiTime.At(date.AddDays(1), TimeOnly.MinValue));
+                // 只回傳持有員工卡的日子：到職前、換卡空窗或離職後沒有卡，判成「沒刷卡」是誤報。
+                if (!person.Holdings.Any(p => p.StartsAt < dayEnd && (p.EndsAt is null || p.EndsAt > dayStart))) continue;
+                // 單據是原始起訖，與這一天有交集就算當天有假單或出差單（跨日、半天都一樣），時數由 HR 判斷。
+                IReadOnlyList<LeaveSheet> filed = [.. filedSheets.Where(s => s.StartsAt < dayEnd && s.EndsAt > dayStart)];
+                DateTimeOffset? clockIn = null, clockOut = null;
+                if (punches.TryGetValue((index, date), out var punch)) (clockIn, clockOut) = punch;
+                var calendarDay = calendarDays?.GetValueOrDefault(date);
+                var dayType = AttendanceEvaluator.DayTypeOf(date, calendarDay);
+                if (!includeDaysOff && dayType == AttendanceDayType.DayOff && clockIn is null && filed.Count == 0) continue;
+                var state = !leaveAvailable ? LeaveState.Unavailable : filed.Count > 0 ? LeaveState.Filed : LeaveState.None;
+                var e = AttendanceEvaluator.Evaluate(new(date, dayType, clockIn, clockOut, state), rules, today);
+                records.Add(new(e.Date, e.DayType, Remark(calendarDay), e.Status, e.Reason,
+                    e.ClockIn, e.ClockOut, e.ExpectedClockOut, e.LateSeconds, e.EarlyLeaveSeconds, e.Leave, filed));
+            }
+            return new AttendancePersonDto(person.UserId, person.DisplayName, person.Account, leaveAvailable, person.Excluded, records);
+        }).ToList();
+        return new AttendanceRecordsDto(start, end, today, days is not null, sheets.Available, everyone.Count, page.Offset, result);
     }
 
     /// <summary>
-    /// 期間內（<paramref name="start"/> 00:00 到 <paramref name="last"/> 隔天 00:00，台灣時間）有交集的員工卡持有期間，已套用資料範圍與篩選。
-    /// 只有姓名、還沒有帳號的持有人不在名單：沒有使用者就沒有範圍可判斷，由 HR 在卡號對應綁上帳號。
+    /// 每人每天最早與最晚的刷卡，鍵是人在 <paramref name="people"/> 裡的位置。資料庫依持有期間與日彙總，同一人同時持有多張卡時再合併。
+    /// 整份名單（<paramref name="everyone"/>）以子查詢比對，不把持有期間展開成參數；分頁時只查這一頁的人的持有期間。
+    /// view 在同一張卡的期間重疊時會重複列，最早與最晚不受影響。
     /// </summary>
-    private IQueryable<CardAssignment> HoldingsQuery(Guid viewer, EffectiveDataScope scope, DateOnly start, DateOnly last, Guid? userId, IReadOnlySet<Guid>? unitIds, bool hideExcluded)
+    private async Task<Dictionary<(int Person, DateOnly Date), (DateTimeOffset First, DateTimeOffset Last)>> PunchesAsync(
+        IQueryable<CardAssignment> holdings, IReadOnlyList<RosterPerson> people, bool everyone, DateOnly start, DateOnly last, CancellationToken ct)
     {
-        var (periodStart, periodEnd) = (TaipeiTime.At(start, TimeOnly.MinValue), TaipeiTime.At(last.AddDays(1), TimeOnly.MinValue));
-        var holdings = from a in db.Set<CardAssignment>()
-                       join c in db.Set<Card>() on a.CardId equals c.Id
-                       where c.Kind == CardKinds.Employee && a.UserId != null && a.StartsAt < periodEnd && (a.EndsAt == null || a.EndsAt > periodStart)
-                       select a;
-        if (!scope.All)
+        var query = db.Set<AttributedPunch>().AsNoTracking().Where(x => x.AttendanceDate >= start && x.AttendanceDate <= last);
+        if (everyone)
         {
-            // 範圍與活動稽核相同：own＝自己，unit／unit-tree＝範圍單位「目前」的成員（組織不存歷史，人調走後由新單位的主管看到）。
-            var own = scope.Own;
-            var members = organization.MemberIds(scope.UnitIds);
-            holdings = holdings.Where(a => own && a.UserId == viewer || members.Contains(a.UserId!.Value));
+            var ids = holdings.Select(x => (Guid?)x.Id);
+            query = query.Where(x => ids.Contains(x.AssignmentId));
         }
-        if (userId is { } person) holdings = holdings.Where(a => a.UserId == person);
-        if (unitIds is not null)
+        else
         {
-            var inUnit = organization.MemberIds(unitIds);
-            holdings = holdings.Where(a => inUnit.Contains(a.UserId!.Value));
+            List<Guid?> ids = [.. people.SelectMany(x => x.Holdings).Select(x => (Guid?)x.Id)];
+            query = query.Where(x => ids.Contains(x.AssignmentId));
         }
-        if (hideExcluded) holdings = holdings.Where(a => !db.Set<RosterExclusion>().Any(x => x.UserId == a.UserId));
-        return holdings;
+        var rows = await query
+            .GroupBy(x => new { x.AssignmentId, x.AttendanceDate })
+            .Select(g => new { g.Key.AssignmentId, g.Key.AttendanceDate, First = g.Min(x => x.PunchedAt), Last = g.Max(x => x.PunchedAt) })
+            .ToListAsync(ct);
+
+        var owner = people.SelectMany((person, index) => person.Holdings.Select(x => (x.Id, index))).ToDictionary(x => x.Id, x => x.index);
+        var result = new Dictionary<(int, DateOnly), (DateTimeOffset, DateTimeOffset)>();
+        foreach (var row in rows)
+        {
+            if (row.AssignmentId is not { } id || !owner.TryGetValue(id, out var person)) continue;
+            var key = (person, row.AttendanceDate);
+            result[key] = result.TryGetValue(key, out var seen) ? (Min(seen.Item1, row.First), Max(seen.Item2, row.Last)) : (row.First, row.Last);
+        }
+        return result;
     }
+
+    private static string? Remark(CalendarDayDto? day) => string.IsNullOrWhiteSpace(day?.Remark) ? null : day.Remark.Trim();
+
+    private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a <= b ? a : b;
+    private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a >= b ? a : b;
 }

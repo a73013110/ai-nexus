@@ -116,3 +116,65 @@ describe('Select loading', () => {
     expect(trigger.disabled).toBe(true);
   });
 });
+
+describe('Select tree', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  const tree = [
+    { value: '', label: '所有單位' },
+    { value: 'c', label: '星河科技', level: 1, path: [] },
+    { value: 'r', label: '研發處', level: 2, path: ['星河科技'] },
+    { value: 'p', label: '平台部', level: 3, path: ['星河科技', '研發處'] },
+  ];
+
+  function setup(value: string) {
+    const fixture = TestBed.createComponent(Select);
+    fixture.componentRef.setInput('label', '單位');
+    fixture.componentRef.setInput('options', tree);
+    fixture.componentRef.setInput('searchable', true);
+    fixture.componentRef.setInput('value', value);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    return { fixture, host };
+  }
+
+  it('indents nested options by level and names only the node itself', () => {
+    const { host } = setup('');
+    const items = [...host.querySelectorAll<HTMLElement>('[role="option"]')];
+    expect(items.map((item) => item.classList.contains('is-tree'))).toEqual([
+      false,
+      true,
+      true,
+      true,
+    ]);
+    expect(items.map((item) => item.classList.contains('is-nested'))).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
+    expect(items[3].style.getPropertyValue('--select-level')).toBe('3');
+    expect(items[3].querySelector('strong')!.textContent).toBe('平台部');
+    expect(host.querySelector('.select-path')).toBeNull();
+  });
+
+  it('flattens while searching and shows where each match sits', () => {
+    const { fixture, host } = setup('');
+    fixture.componentInstance.filter('平台');
+    fixture.detectChanges();
+    const items = host.querySelectorAll<HTMLElement>('[role="option"]');
+    expect(items).toHaveLength(1);
+    expect(items[0].classList.contains('is-nested')).toBe(false);
+    expect(items[0].querySelector('.select-path')!.textContent).toBe('星河科技 › 研發處');
+  });
+
+  it('shows the chosen node by name and its full path as the trigger title', () => {
+    const { host } = setup('p');
+    const trigger = host.querySelector('.select-trigger')!;
+    expect(trigger.textContent).toContain('平台部');
+    expect(trigger.textContent).not.toContain('研發處');
+    expect(trigger.querySelector('[title]')!.getAttribute('title')).toBe(
+      '星河科技 › 研發處 › 平台部',
+    );
+  });
+});

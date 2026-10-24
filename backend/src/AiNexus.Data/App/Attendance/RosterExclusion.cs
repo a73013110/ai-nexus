@@ -10,6 +10,8 @@ namespace AiNexus.Data.App.Attendance;
 /// </summary>
 public sealed class RosterExclusion
 {
+    public const int NoteMaxLength = 200;
+
     public Guid UserId { get; set; }
     public string? Note { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -22,7 +24,7 @@ internal sealed class RosterExclusionConfiguration : IEntityTypeConfiguration<Ro
         exclusion.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         exclusion.ToTable("RosterExclusions", "attendance");
         exclusion.HasKey(x => x.UserId);
-        exclusion.Property(x => x.Note).HasMaxLength(200);
+        exclusion.Property(x => x.Note).HasMaxLength(RosterExclusion.NoteMaxLength);
         exclusion.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }

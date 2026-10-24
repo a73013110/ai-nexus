@@ -23,8 +23,8 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     public const string Action = "attendance.records.export";
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/export", (DateOnly? from, DateOnly? to, Guid? userId, Guid? unitId, bool? includeExcluded, ICurrentUser user, ExportAttendanceRecords handler, CancellationToken ct)
-            => handler.HandleAsync(user.Id, from, to, userId, unitId, includeExcluded ?? false, ct)
+        .MapGet("/export", ([AsParameters] AttendanceRecordsFilter filter, ICurrentUser user, ExportAttendanceRecords handler, CancellationToken ct)
+            => handler.HandleAsync(user.Id, filter, ct)
                 .ToHttpResultAsync(file => TypedResults.File(file.Content, Spreadsheet.ContentType, file.Name)))
         .RequireRateLimiting(AttendanceModule.ExportRateLimit)
         .WithName("ExportAttendanceRecords");
@@ -32,22 +32,27 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     /// <summary>檔名含查詢區間與匯出時間（台灣時間），對應舊系統的「出缺勤計算_匯出時間(起to迄).xlsx」。</summary>
     internal sealed record ExportedFile(string Name, byte[] Content);
 
-    public async Task<Result<ExportedFile>> HandleAsync(Guid viewer, DateOnly? from, DateOnly? to, Guid? userId, Guid? unitId, bool includeExcluded, CancellationToken ct)
+    public async Task<Result<ExportedFile>> HandleAsync(Guid viewer, AttendanceRecordsFilter filter, CancellationToken ct)
     {
-        var read = await records.HandleAsync(viewer, from, to, userId, unitId, includeExcluded, ct);
+        // 不分頁：匯出整份名單，區間上限與畫面相同（一年）。
+        var read = await records.HandleAsync(viewer, filter, ListAttendanceRecords.Page.All, ct);
         if (!read.IsSuccess) return read.Error;
         var data = read.Value;
         // 稽核記查詢條件與人數，不記名單本身；寫入失敗時 SaveChanges 拋例外，檔案不會產生（失敗即拒絕）。
         db.AuditEvents.Add(new()
         {
             OwnerId = viewer, Action = Action, Result = "read",
-            DetailsJson = JsonSerializer.Serialize(new { from = data.From, to = data.To, userId, unitId, includeExcluded, count = data.People.Count })
+            DetailsJson = JsonSerializer.Serialize(new
+            {
+                from = data.From, to = data.To, userId = filter.UserId, holderName = filter.HolderName, unitId = filter.UnitId,
+                includeExcluded = filter.IncludeExcluded == true, includeDaysOff = filter.IncludeDaysOff == true, count = data.People.Count
+            })
         });
         await db.SaveChangesAsync(ct);
 
         var exportedAt = TaipeiTime.Of(clock.GetUtcNow());
         var rules = AttendanceRules.Describe(options.Value.Workday);
-        var content = Spreadsheet.Write([Days(data), Summary(data), Notes(data, rules, exportedAt, userId, unitId, includeExcluded)]);
+        var content = Spreadsheet.Write([Days(data), Summary(data), Notes(data, rules, exportedAt, filter)]);
         return new ExportedFile(Invariant($"出勤紀錄_{data.From:yyyyMMdd}-{data.To:yyyyMMdd}_{exportedAt:yyyyMMdd_HHmmss}.xlsx"), content);
     }
 
@@ -55,7 +60,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     {
         var sheet = new SpreadsheetSheet("出勤紀錄",
         [
-            new("姓名", 12), new("帳號", 18), new("日期", 12), new("星期", 6), new("日型", 10), new("狀態", 10),
+            new("姓名", 12), new("帳號", 18), new("日期", 12), new("星期", 6), new("日型", 10), new("行事曆備註", 16), new("狀態", 10),
             new("上班", 10), new("下班", 10), new("應下班", 10), new("遲到", 10), new("早退", 10), new("說明", 34), new("假單與出差", 60)
         ]);
         foreach (var person in data.People)
@@ -68,7 +73,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
                 // 只有一筆刷卡時上下班是同一筆，與頁面相同只列在上班。
                 var singlePunch = day.ClockIn is not null && day.ClockIn == day.ClockOut;
                 sheet.Add(
-                    person.DisplayName, person.Account, day.Date, Weekday(day.Date), DayTypes[day.DayType],
+                    person.DisplayName, person.Account, day.Date, Weekday(day.Date), DayTypes[day.DayType], day.CalendarRemark,
                     new SpreadsheetCell(Statuses[day.Status], day.Status == AttendanceStatus.Anomaly ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
                     new SpreadsheetCell(Clock(day.ClockIn), late ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
                     new SpreadsheetCell(singlePunch ? null : Clock(day.ClockOut), early ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
@@ -97,7 +102,8 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             var earlyDays = person.Days.Where(x => x.EarlyLeaveSeconds > 0).ToList();
             List<string> notes = [];
             if (person.Excluded) notes.Add("不列入出勤");
-            if (!person.LeaveAvailable && data.LeaveAvailable) notes.Add("對不到公文系統帳號，假單無法取得");
+            if (person.UserId is null) notes.Add("尚未綁帳號（卡號對應只有姓名），假單無法取得");
+            else if (!person.LeaveAvailable && data.LeaveAvailable) notes.Add("對不到公文系統帳號，假單無法取得");
             sheet.Add(
                 person.DisplayName, person.Account, person.Days.Count, Count(AttendanceStatus.Present), Count(AttendanceStatus.OnLeave), Count(AttendanceStatus.DayOff),
                 new SpreadsheetCell(anomalies, anomalies > 0 ? SpreadsheetTone.Danger : SpreadsheetTone.Normal), Count(AttendanceStatus.Undetermined),
@@ -108,17 +114,18 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         return sheet;
     }
 
-    private static SpreadsheetSheet Notes(AttendanceRecordsDto data, AttendanceRulesDto rules, DateTimeOffset exportedAt, Guid? userId, Guid? unitId, bool includeExcluded)
+    private static SpreadsheetSheet Notes(AttendanceRecordsDto data, AttendanceRulesDto rules, DateTimeOffset exportedAt, AttendanceRecordsFilter filter)
     {
         var sheet = new SpreadsheetSheet("說明", [new("項目", 16), new("內容", 110)]) { Filter = false };
         sheet.Add("查詢區間", Invariant($"{data.From:yyyy/MM/dd}～{data.To:yyyy/MM/dd}（出勤日，台灣時間）"));
         sheet.Add("匯出時間", Invariant($"{exportedAt:yyyy/MM/dd HH:mm:ss}（台灣時間）")
             + (data.To >= data.Today ? Invariant($"；今天（{data.Today:yyyy/MM/dd}）尚未判定，之後的日子不列出") : ""));
         List<string> filters = [];
-        if (userId is not null) filters.Add("指定人員");
-        if (unitId is not null) filters.Add("指定單位（含下層）");
-        if (includeExcluded) filters.Add("含不列入出勤的人");
+        if (filter.UserId is not null || filter.HolderName is not null) filters.Add("指定人員");
+        if (filter.UnitId is not null) filters.Add("指定單位（含下層）");
+        if (filter.IncludeExcluded == true) filters.Add("含不列入出勤的人");
         sheet.Add("條件", filters.Count > 0 ? string.Join("、", filters) + $"，共 {data.People.Count} 人" : $"資料範圍內的全部人員，共 {data.People.Count} 人");
+        sheet.Add("放假日", filter.IncludeDaysOff == true ? "全部列出" : "只列有刷卡或假單的放假日；沒有刷卡也沒有假單的放假日不列，也不計入統計");
         if (!data.CalendarAvailable)
             sheet.Add(new SpreadsheetCell("假日行事曆", SpreadsheetTone.Danger), "無法取得：公文系統暫時連不上，週末當放假、平日一律無法判定，也不判遲到、早退與異常。");
         if (!data.LeaveAvailable)

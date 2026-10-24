@@ -87,7 +87,7 @@ tr.is-weekend > td:first-child {
 .records-none {
   color: var(--secondary);
 }
-.records-excluded {
+.records-option {
   align-self: end;
 }
 @include bp.below(narrow) {
@@ -99,4 +99,15 @@ tr.is-weekend > td:first-child {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
+}
+.records-remark {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.records-badge-link {
+  text-decoration: none;
 }

@@ -116,9 +116,9 @@ internal sealed class RecordsSession : IAsyncDisposable
         return (await response.Content.ReadFromJsonAsync<AttendanceRecordsDto>(Json))!;
     }
 
-    /// <summary>名單上的人，依 ID 排序，方便與預期的集合比較。</summary>
+    /// <summary>名單上有帳號的人，依 ID 排序，方便與預期的集合比較；只有姓名的持有人另外檢查。</summary>
     public static async Task<Guid[]> PeopleAsync(HttpClient client, string query = Week)
-        => [.. (await GetAsync(client, query)).People.Select(x => x.UserId).Order()];
+        => [.. (await GetAsync(client, query)).People.Where(x => x.UserId is not null).Select(x => x.UserId!.Value).Order()];
 
     public static AttendanceRecordDto Day(AttendancePersonDto person, int day) => Assert.Single(person.Days, x => x.Date == new DateOnly(2026, 10, day));
 

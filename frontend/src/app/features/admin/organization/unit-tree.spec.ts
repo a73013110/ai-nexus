@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { UnitDto } from '@core/api/schema';
-import { heightOf, moved, subtree, unitRows } from './unit-tree';
+import { heightOf, moved, subtree, unitOptions, unitRows } from './unit-tree';
 
 const unit = (id: string, parentId: string | null, sortOrder: number, enabled = true): UnitDto => ({
   id,
@@ -63,5 +63,18 @@ describe('unit tree', () => {
     expect(moved(units, 'it', -1)).toBeNull();
     expect(moved(units, 'closed', 1)).toBeNull();
     expect(moved(units, 'company', 1)).toBeNull();
+  });
+
+  it('offers units as tree options named by themselves, with the parents as the path', () => {
+    const options = unitOptions(units, (row) => !row.inactive);
+    expect(options.map((option) => [option.label, option.level, option.path])).toEqual([
+      ['company', 1, []],
+      ['it', 2, ['company']],
+      ['systems', 3, ['company', 'it']],
+      ['hr', 2, ['company']],
+    ]);
+    expect(unitOptions(units).find((option) => option.value === 'closed')?.label).toBe(
+      'closed（停用）',
+    );
   });
 });

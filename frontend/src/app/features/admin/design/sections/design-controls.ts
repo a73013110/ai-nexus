@@ -152,7 +152,7 @@ import { DesignSamples } from './design-samples';
       id="design-menus"
       title="選單與下拉"
       api="ActionMenu · Select"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項帶 level 就是樹狀（單位、選單分群）：名稱只寫自己、依層縮排，搜尋時改成平面清單並以 path 標出上層，觸發鈕的提示是完整路徑；單位用 unitOptions() 產生。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -170,6 +170,16 @@ import { DesignSamples } from './design-samples';
           [options]="levels"
           [values]="levelValues()"
           (valuesChange)="levelValues.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="Select tree">
+        <nx-select
+          label="示範單位"
+          placeholder="所有單位"
+          [searchable]="true"
+          [options]="units"
+          [value]="unit()"
+          (valueChange)="unit.set($event)"
         />
       </nx-design-example>
       <nx-design-example label="Select loading">
@@ -397,6 +407,17 @@ export class DesignControls {
     { value: 'overview', label: '概覽' },
     { value: 'properties', label: '屬性' },
   ];
+  /** 名稱前段相同的單位：平面清單看不出差別，樹狀才分得清楚。 */
+  readonly units: SelectOption[] = [
+    { value: '', label: '所有單位' },
+    { value: 'hq', label: '星河科技（總公司）', level: 1, path: [] },
+    { value: 'rd', label: '研發處', level: 2, path: ['星河科技（總公司）'] },
+    { value: 'rd-1', label: '平台部', level: 3, path: ['星河科技（總公司）', '研發處'] },
+    { value: 'rd-2', label: '產品部', level: 3, path: ['星河科技（總公司）', '研發處'] },
+    { value: 'branch', label: '星河科技（台中分公司）', level: 1, path: [] },
+    { value: 'branch-rd', label: '研發處', level: 2, path: ['星河科技（台中分公司）'] },
+  ];
+  readonly unit = signal('rd-1');
   readonly choices: SelectOption[] = [
     { value: 'standard', label: '標準閱讀', description: '清楚留白，適合一般文件' },
     { value: 'wide', label: '寬幅閱讀', description: '為表格與程式碼保留空間' },

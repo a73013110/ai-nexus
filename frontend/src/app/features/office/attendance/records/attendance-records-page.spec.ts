@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
+  AttendancePersonOptionDto,
   AttendanceRecordDto,
   AttendanceRecordsDto,
   AttendanceRulesDto,
@@ -11,12 +12,13 @@ import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { tourSteps } from '@shared/ui/product-tour';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
-import { AttendanceApi } from '../attendance-api';
+import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { AttendanceRecordsPage } from './attendance-records-page';
 
 const day = (date: string, patch: Partial<AttendanceRecordDto> = {}): AttendanceRecordDto => ({
   date,
   dayType: 'FullDay',
+  calendarRemark: null,
   status: 'Present',
   reason: null,
   clockIn: `${date}T08:59:03+08:00`,
@@ -29,33 +31,48 @@ const day = (date: string, patch: Partial<AttendanceRecordDto> = {}): Attendance
   ...patch,
 });
 
-const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDto => ({
-  from: '2026-10-01',
-  to: '2026-10-31',
-  today: '2026-10-22',
-  calendarAvailable: true,
-  leaveAvailable: true,
-  people: [
-    {
-      userId: 'u1',
-      displayName: '王小明',
-      account: 'TEST\\ming',
-      leaveAvailable: true,
-      excluded: false,
-      days: [
-        day('2026-10-01', { lateSeconds: 725 }),
-        day('2026-10-02', {
-          status: 'Anomaly',
-          reason: 'NoPunchOrLeave',
-          clockIn: null,
-          clockOut: null,
-          expectedClockOut: null,
-        }),
-      ],
-    },
-  ],
-  ...patch,
-});
+const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDto => {
+  const data: AttendanceRecordsDto = {
+    from: '2026-10-01',
+    to: '2026-10-31',
+    today: '2026-10-22',
+    calendarAvailable: true,
+    leaveAvailable: true,
+    total: 0,
+    offset: 0,
+    people: [
+      {
+        userId: 'u1',
+        displayName: '王小明',
+        account: 'TEST\\ming',
+        leaveAvailable: true,
+        excluded: false,
+        days: [
+          day('2026-10-01', { lateSeconds: 725 }),
+          day('2026-10-02', {
+            status: 'Anomaly',
+            reason: 'NoPunchOrLeave',
+            clockIn: null,
+            clockOut: null,
+            expectedClockOut: null,
+          }),
+        ],
+      },
+    ],
+    ...patch,
+  };
+  return { ...data, total: patch.total ?? data.people.length };
+};
+
+/** 只看得到自己時，人員選單只有本人。 */
+const self: AttendancePersonOptionDto[] = [
+  { userId: 'u1', displayName: '王小明', account: 'TEST\\ming', excluded: false, holding: true },
+];
+const company: AttendancePersonOptionDto[] = [
+  ...self,
+  { userId: 'u2', displayName: '陳小華', account: 'TEST\\hua', excluded: true, holding: false },
+  { userId: null, displayName: '新進同仁', account: null, excluded: false, holding: true },
+];
 
 const rules: AttendanceRulesDto = {
   schedules: [
@@ -71,7 +88,11 @@ const rules: AttendanceRulesDto = {
   rules: [{ title: '遲到', text: '晚於彈性終點上班為遲到。例：上班日 09:10 到，遲到 10 分。' }],
 };
 
-function setup(read: () => Promise<AttendanceRecordsDto>, features = ['attendance.records']) {
+function setup(
+  read: () => Promise<AttendanceRecordsDto>,
+  features = ['attendance.records'],
+  people = self,
+) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -89,9 +110,10 @@ function setup(read: () => Promise<AttendanceRecordsDto>, features = ['attendanc
     testingNote: signal(''),
   };
   const api = {
-    records: vi.fn((_query: { from?: string; userId?: string }) => read()),
+    records: vi.fn((_query: AttendanceRecordFilters, _offset: number, _limit: number) => read()),
+    people: vi.fn(async () => people),
     rules: vi.fn(async () => rules),
-    exportRecords: vi.fn(async (_query: { from?: string; userId?: string }) => new Response('')),
+    exportRecords: vi.fn(async (_query: AttendanceRecordFilters) => new Response('')),
   };
   const organization = { units: vi.fn(async () => []) };
   TestBed.configureTestingModule({
@@ -202,6 +224,103 @@ describe('AttendanceRecordsPage', () => {
     await fixture.whenStable();
     expect(organization.units).toHaveBeenCalledOnce();
     expect(fixture.componentInstance.unitOptions()?.[0].label).toBe('所有單位');
+  });
+
+  it('lists units as a tree with the name only and the parents as the path', async () => {
+    const { fixture, organization } = setup(
+      async () => records(),
+      ['attendance.records', 'organization'],
+    );
+    const unit = (id: string, name: string, parentId: string | null, sortOrder = 0) => ({
+      id,
+      name,
+      parentId,
+      sortOrder,
+      enabled: true,
+    });
+    organization.units.mockResolvedValueOnce([
+      unit('c', '漢龍資訊科技股份有限公司（總公司）', null),
+      unit('r', '研發處', 'c'),
+      unit('p', '平台部', 'r'),
+    ] as never);
+    await fixture.whenStable();
+    const options = fixture.componentInstance.unitOptions()!;
+    expect(options.slice(1).map((option) => [option.label, option.level, option.path])).toEqual([
+      ['漢龍資訊科技股份有限公司（總公司）', 1, []],
+      ['研發處', 2, ['漢龍資訊科技股份有限公司（總公司）']],
+      ['平台部', 3, ['漢龍資訊科技股份有限公司（總公司）', '研發處']],
+    ]);
+  });
+
+  it('picks people from the roster list, including holders without an account', async () => {
+    const { fixture, root, api } = setup(async () => records(), ['attendance.records'], company);
+    await fixture.whenStable();
+    const options = fixture.componentInstance.personOptions();
+    expect(options.map((option) => option.label)).toEqual([
+      '所有人',
+      '王小明',
+      '陳小華',
+      '新進同仁',
+    ]);
+    expect(options[2].description).toBe('TEST\\hua・已不持卡・不列入出勤');
+    expect(options[3].description).toBe('尚未綁帳號');
+    // 全公司範圍才有作用的「含不列入出勤」，選單有多人時才出現。
+    expect(root.querySelector('.records-excluded')).not.toBeNull();
+
+    fixture.componentInstance.query.commit({ person: options[3].value });
+    await fixture.whenStable();
+    const [query] = api.records.mock.calls.at(-1)!;
+    expect(query.holder).toBe('新進同仁');
+    expect(query.userId).toBeUndefined();
+  });
+
+  it('marks holders without an account and shows the calendar remark of a day off', async () => {
+    const data = records();
+    data.people[0] = {
+      ...data.people[0],
+      userId: null,
+      displayName: '新進同仁',
+      account: null,
+      leaveAvailable: false,
+      days: [
+        day('2026-10-10', {
+          dayType: 'DayOff',
+          calendarRemark: '國慶日',
+          status: 'DayOff',
+          clockIn: null,
+          clockOut: null,
+          expectedClockOut: null,
+        }),
+      ],
+    };
+    const { fixture, root } = setup(async () => data);
+    await fixture.whenStable();
+    const head = root.querySelector('.records-person-row')!;
+    expect(head.textContent).toContain('尚未綁帳號');
+    // 沒有帳號本來就查不到假單，不重複標「假單無法取得」。
+    expect(head.textContent).not.toContain('假單無法取得');
+    expect(root.querySelector('.records-remark')?.textContent).toContain('國慶日');
+  });
+
+  it('pages by person and returns to the first page when the filters change', async () => {
+    const { fixture, root, api } = setup(async () => records({ total: 45 }));
+    await fixture.whenStable();
+    expect(api.records.mock.calls[0].slice(1, 3)).toEqual([0, 20]);
+    expect(root.querySelector('.ui-count-label')?.textContent).toContain('45 人');
+    expect(root.querySelector('nx-table-pagination')).not.toBeNull();
+
+    fixture.componentInstance.changePage(1);
+    await fixture.whenStable();
+    expect(api.records.mock.calls.at(-1)!.slice(1, 3)).toEqual([20, 20]);
+    fixture.componentInstance.changePageSize(50);
+    await fixture.whenStable();
+    expect(api.records.mock.calls.at(-1)!.slice(1, 3)).toEqual([0, 50]);
+
+    fixture.componentInstance.changePage(1);
+    fixture.componentInstance.query.commit({ includeDaysOff: true });
+    await fixture.whenStable();
+    const [query, offset] = api.records.mock.calls.at(-1)!;
+    expect([query.includeDaysOff, offset]).toEqual([true, 0]);
   });
 
   it('shows the judgement rules from the server in the header panel', async () => {

@@ -162,7 +162,12 @@ export class NavigationItemDialog {
         if (node.item.kind !== 'group') continue;
         const path = [...trail, this.store.name(node.item)];
         if (depthOf(items, node.item.id) < MAX_DEPTH)
-          options.push({ value: node.item.id, label: path.join(' › ') });
+          options.push({
+            value: node.item.id,
+            label: path.at(-1)!,
+            level: path.length,
+            path: trail,
+          });
         visit(node.children, path);
       }
     };

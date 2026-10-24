@@ -82,6 +82,15 @@ describe('AttendanceCardsPage tour targets', () => {
               },
             ]),
             assignments: vi.fn(async () => [held]),
+            exclusions: vi.fn(async () => [
+              {
+                userId: 'u9',
+                displayName: '林董事',
+                account: 'TEST\\lin',
+                note: null,
+                createdAt: '2026-10-01T02:00:00Z',
+              },
+            ]),
           },
         },
         { provide: CollaborationApi, useValue: { directory: vi.fn(async () => []) } },
@@ -115,6 +124,12 @@ describe('AttendanceCardsPage tour targets', () => {
     await settle();
     await settle();
     expect(tourSteps(page.tour()).map((step) => step.title)).toContain('指派');
+    expectTargets(page.tour());
+
+    page.query.commit({ view: 'exclusions' });
+    await settle();
+    await settle();
+    expect(tourSteps(page.tour()).map((step) => step.title)).toContain('加入');
     expectTargets(page.tour());
   });
 });

@@ -1,10 +1,10 @@
 # 出勤打卡
 
-結論：**卡號對應**、**刷卡匯入**、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/office/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「公司事務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間（`AttendanceUserCards` 以 `userId` 另查，Identity 不依賴出勤）：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。頁首、詳情與對話框的問號開啟操作導覽。
+結論：**卡號對應**、**刷卡匯入**（見 [刷卡匯入](attendance-imports.md)）、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/office/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「公司事務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間（`AttendanceUserCards` 以 `userId` 另查，Identity 不依賴出勤）：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。頁首、詳情與對話框的問號開啟操作導覽。
 
 ## 授權
 
-- `attendance.cards`：讀卡片、持有歷史、未歸戶卡號。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
+- `attendance.cards`：讀卡片、持有歷史、未歸戶卡號與不列入出勤名單。`attendance.cards.maintain`：新增、修改、刪除卡片、持有期間與不列入出勤，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
 - `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
 - `attendance.records`：資料範圍 `own`、`unit`、`unit-tree`、`all`，組織勾選的主管自動取得所管單位含下層，見 [出勤紀錄](attendance-records.md#資料範圍)。
@@ -30,17 +30,13 @@
 
 ## 刷卡匯入
 
-- **來源**：打卡機每天輸出 `yyyyMMdd.txt` 到共用資料夾；其他檔名一律不匯入。IIS 應用程式集區的身分必須能讀取該資料夾（網路共用要授權給集區身分或電腦帳號）。
-- **設定**：`Attendance:Import`，預設值與說明見 [AttendanceOptions](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceOptions.cs)。重點是 `SourceDirectory`、`ScanIntervalSeconds`（預設 300）、`Enabled`（只管背景掃描，手動重匯不受影響）。開發機讀不到共用時在 `.local/config/appsettings.Local.json` 設 `Enabled` 為 `false`。
-- **掃描**：`PunchImportWorker` 啟動即掃一次，之後依間隔。修改時間或大小與上次成功匯入的不同、從沒匯入過、被標記重匯，或最近一次失敗就匯入；最近一次失敗而檔案沒變，要等 `FailedRetrySeconds`（預設 900）。修改時間距今不到 `SettleSeconds`（預設 30）的檔先等，避免讀到寫到一半的檔。
-- **解析**：每行 `機器代號:卡號:yyyyMMdd:HHmmss:事件代號`，第一欄與最後一欄原樣保存。刷卡時間以 +08:00 存放，出勤日依刷卡時間而非檔名。UTF-8（可有 BOM）或 UTF-16；空行與 Ctrl-Z 檔尾略過。**任何一行格式錯誤整個檔案匯入失敗**，不略過：匯入紀錄沒有略過筆數可記，靜默少一筆刷卡會變成假缺勤。
-- **快照重匯**：一個交易內把該檔列成新內容（只動有差異的列）。新內容裡已屬於別的檔的刷卡不重寫，歸先寫入的檔；`PunchCount` 是該檔實際擁有的筆數。
-- **鄰檔補救**：同一筆刷卡出現在相鄰兩天的檔時屬於先匯入的檔。該檔重匯而新內容沒有這一筆，刪除會讓資料消失，所以刪除刷卡時同一交易內把出勤日前一天、當天與後一天的檔標記為要重匯（清空 `ImportedModifiedAt`、`ImportedSize`），排程同一次掃描最多三輪內補回。
-- **失敗**：交易整個回復，`Punches` 與檔案的已匯入版本維持上次成功；`PunchImports` 的 failed 紀錄在回復之後另一個交易寫入，並更新 `LastImportId`。連失敗紀錄都寫不進去（資料庫不可用）時沒有紀錄，下一輪再試。
-- **並行**：`PunchImportGate` 讓排程與手動重匯一次只匯入一個檔（程序內一把全域鎖，原因見程式註解），手動重匯的檔之間排程可插入。多程序重疊時由 `Punches` 的唯一索引擋下，後到的記為失敗並重試。
-- **手動重匯**：`POST /api/v1/attendance-imports`，body `{ "from": "2026-10-01", "to": "2026-10-22" }`：檔名日期、含頭尾（起訖相同即單一檔），不晚於台灣今天、最多 31 天。請求內同步、由舊到新逐檔重匯，不論有沒有變，記為 `manual` 並帶操作者。回 200：各檔的匯入紀錄（含 failed）與找不到的檔名。整段都沒有檔 `attendance_import_file_not_found`（404）、資料夾讀不到 `attendance_import_source_unavailable`（503），不留紀錄（已完成的檔保留）。不另寫稽核。
-- **查詢**：`GET /api/v1/attendance-imports`，新到舊、游標分頁；可依檔案（`fileId`、`fileName`）、狀態與開始時間期間篩選，帶出檔名與操作者姓名。
-- **監控**：子系統 `attendance-import`，判定見 [監控子系統](../architecture/monitoring-sources.md)。日誌事件 3400–3406；資料夾讀不到與恢復只在轉換時各記一次。
+見 [刷卡匯入](attendance-imports.md)。
+
+## 不列入出勤
+
+- HR 看全公司出勤時隱藏的人（董事、外派、兼任等），取代舊欄位「顯示打卡資料」；不是權限，本人與主管照常看得到，查詢方式見 [出勤紀錄](attendance-records.md#名單)。
+- 管理在卡號對應頁的「不列入出勤」檢視：`GET /api/v1/attendance-roster-exclusions` 要 `attendance.cards`；`PUT`／`DELETE /api/v1/attendance-roster-exclusions/{userId}`（設定或修改原因、恢復列入）另要 `.maintain`。
+- 以使用者為準：只有姓名、還沒綁帳號的持有人要先綁帳號才能加入。原因是選填的自由文字（最多 200 字），不進稽核。
 
 ## 出勤判定
 
@@ -49,4 +45,4 @@
 
 ## 稽核
 
-`admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
+`admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`、`admin.attendance_roster_exclusion`、`admin.attendance_roster_exclusion_delete`，活動稽核以「出勤卡號與名單異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。

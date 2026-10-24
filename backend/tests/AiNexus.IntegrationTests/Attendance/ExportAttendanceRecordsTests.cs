@@ -41,19 +41,19 @@ public sealed class ExportAttendanceRecordsTests
         Assert.Equal(["出勤紀錄", "統計", "說明"], workbook.WorkbookPart!.Workbook!.Sheets!.Elements<Sheet>().Select(x => x.Name!.Value));
 
         var days = Rows(workbook, "出勤紀錄");
-        Assert.Equal(["姓名", "帳號", "日期", "星期", "日型", "狀態", "上班", "下班", "應下班", "遲到", "早退", "說明", "假單與出差"], days[0].Select(x => x.Text));
+        Assert.Equal(["姓名", "帳號", "日期", "星期", "日型", "行事曆備註", "狀態", "上班", "下班", "應下班", "遲到", "早退", "說明", "假單與出差"], days[0].Select(x => x.Text));
         Assert.Equal(4, days.Count);
         var late = days[1];
-        Assert.Equal((person.DisplayName, person.Account, new DateTime(2026, 10, 19), "一", "上班日", "出勤"), (late[0].Text, late[1].Text, DateTime.FromOADate(late[2].Number), late[3].Text, late[4].Text, late[5].Text));
-        Assert.Equal((new TimeSpan(9, 5, 0), new TimeSpan(18, 0, 0), new TimeSpan(18, 0, 0), TimeSpan.FromMinutes(5)), (late[6].Time, late[7].Time, late[8].Time, late[9].Time));
-        Assert.True(late[6].Danger);
-        Assert.False(late[7].Danger);
-        Assert.Equal("假單：特休（10/19 08:30–10/19 09:00，Finish，L-1）", late[12].Text);
+        Assert.Equal((person.DisplayName, person.Account, new DateTime(2026, 10, 19), "一", "上班日", "出勤"), (late[0].Text, late[1].Text, DateTime.FromOADate(late[2].Number), late[3].Text, late[4].Text, late[6].Text));
+        Assert.Equal((new TimeSpan(9, 5, 0), new TimeSpan(18, 0, 0), new TimeSpan(18, 0, 0), TimeSpan.FromMinutes(5)), (late[7].Time, late[8].Time, late[9].Time, late[10].Time));
+        Assert.True(late[7].Danger);
+        Assert.False(late[8].Danger);
+        Assert.Equal("假單：特休（10/19 08:30–10/19 09:00，Finish，L-1）", late[13].Text);
         var early = days[2];
-        Assert.Equal((TimeSpan.FromMinutes(15), true, ""), (early[10].Time, early[7].Danger, early[9].Text));
+        Assert.Equal((TimeSpan.FromMinutes(15), true, ""), (early[11].Time, early[8].Danger, early[10].Text));
         // 只有一筆刷卡：異常、列在上班，下班空白，不算遲到早退。
         var single = days[3];
-        Assert.Equal(("異常", true, new TimeSpan(8, 20, 0), "", "只有一筆刷卡，分不出上班或下班"), (single[5].Text, single[5].Danger, single[6].Time, single[7].Text, single[11].Text));
+        Assert.Equal(("異常", true, new TimeSpan(8, 20, 0), "", "只有一筆刷卡，分不出上班或下班"), (single[6].Text, single[6].Danger, single[7].Time, single[8].Text, single[12].Text));
 
         var summary = Rows(workbook, "統計");
         Assert.Equal(2, summary.Count);
@@ -69,6 +69,25 @@ public sealed class ExportAttendanceRecordsTests
         Assert.Equal("read", audit.Result);
         Assert.Contains("\"from\":\"2026-10-19\"", audit.Details);
         Assert.Contains("\"count\":1", audit.Details);
+        Assert.Contains("\"includeDaysOff\":false", audit.Details);
+    }
+
+    [Fact]
+    public async Task TheExportIsNotPagedAndListsHolidaysOnlyWhenAskedTo()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        await session.GrantAsync(hr, DataScopes.All);
+        foreach (var (account, card) in new[] { ("bob", "A1"), ("carol", "A2"), ("dave", "A3") })
+            await session.HoldAsync(await session.PersonAsync(account), card);
+        using var client = await session.Factory.SignedInAsync("hr");
+
+        // 畫面一頁一人，匯出仍是整份名單。
+        Assert.Single((await GetAsync(client, Week + "&limit=1")).People);
+        Assert.Equal(3, (await PeopleAsync(client, Week)).Length);
+        // 週末沒有刷卡也沒有假單：預設不列，要求才列。
+        Assert.Equal(3 * 4, await DayCountAsync(client, "from=2026-10-17&to=2026-10-22"));
+        Assert.Equal(3 * 6, await DayCountAsync(client, "from=2026-10-17&to=2026-10-22&includeDaysOff=true"));
     }
 
     [Fact]
@@ -98,7 +117,7 @@ public sealed class ExportAttendanceRecordsTests
         await using var session = Create();
         using var client = await session.Factory.SignedInAsync("bob");
 
-        foreach (var query in new[] { "from=2026-10-01", "from=2026-10-31&to=2026-10-01", "from=2026-10-01&to=2026-11-01" })
+        foreach (var query in new[] { "from=2026-10-01", "from=2026-10-31&to=2026-10-01", "from=2025-10-01&to=2026-10-02" })
             await AssertCodeAsync(await client.GetAsync($"{Export}?{query}"), HttpStatusCode.BadRequest, "attendance_records_range_invalid");
 
         await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
@@ -114,6 +133,15 @@ public sealed class ExportAttendanceRecordsTests
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
         return [.. Rows(workbook, "出勤紀錄").Skip(1).Select(x => x[0].Text).Distinct()];
+    }
+
+    /// <summary>匯出檔「出勤紀錄」工作表的資料列數（每人每天一列）。</summary>
+    private static async Task<int> DayCountAsync(HttpClient client, string query)
+    {
+        var response = await client.GetAsync($"{Export}?{query}");
+        Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
+        return Rows(workbook, "出勤紀錄").Count - 1;
     }
 
     /// <summary>儲存格的值：文字、數字（日期、時刻、時數是 Excel 的天數）與是否以警示色標示。</summary>

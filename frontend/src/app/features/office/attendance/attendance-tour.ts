@@ -2,7 +2,6 @@ import { cursorPaginationStep, queryBarStep } from '@shared/ui/data-workspace-to
 import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 import type { CardsQuery } from './cards/cards-query';
 import { MAX_REIMPORT_DAYS } from './imports/imports-query';
-import { MAX_RANGE_DAYS } from './records/records-query';
 
 const CARDS = 'nx-attendance-cards-page';
 const CARD_DRAWER = `${CARDS} nx-detail-drawer`;
@@ -40,6 +39,8 @@ export function attendanceCardsTour(
 ): ProductTourDefinition {
   const write = canWrite(options);
   const cards = options.view === 'cards';
+  const unattributed = options.view === 'unattributed';
+  const exclusions = options.view === 'exclusions';
   return {
     steps: [
       purposeStep(
@@ -50,17 +51,18 @@ export function attendanceCardsTour(
           options,
         ),
       ),
-      write && {
-        target: `${CARDS} .cards-create`,
-        title: '登錄卡片',
-        description: '發卡前先登錄；只有員工卡會歸戶，訪客卡只登錄、不指派持有人。',
-        side: 'bottom',
-      },
+      write &&
+        !exclusions && {
+          target: `${CARDS} .cards-create`,
+          title: '登錄卡片',
+          description: '發卡前先登錄；只有員工卡會歸戶，訪客卡只登錄、不指派持有人。',
+          side: 'bottom',
+        },
       {
         target: `${CARDS} .cards-view`,
-        title: '卡片與未歸戶卡號',
+        title: '卡片、未歸戶與不列入出勤',
         description:
-          '「卡片」管理已登錄的卡與目前持有人；「未歸戶卡號」找出有刷卡卻沒歸到人的卡號，例如新人的卡還沒指派。',
+          '「卡片」管理已登錄的卡與目前持有人；「未歸戶卡號」找出有刷卡卻沒歸到人的卡號，例如新人的卡還沒指派；「不列入出勤」是 HR 看全公司出勤時隱藏的人。',
         side: 'bottom',
       },
       cards && queryBarStep(CARDS, { fields: '卡號、備註或持有人姓名與卡片種類' }),
@@ -71,19 +73,34 @@ export function attendanceCardsTour(
           ? '點卡號開啟詳情，可指派持有人、結束持有或修正期間。'
           : '點卡號開啟詳情，查看這張卡歷任的持有人與期間。',
       },
-      !cards && {
+      unattributed && {
         target: `${CARDS} .cards-unattributed-note`,
         title: '為什麼會未歸戶',
         description:
           '刷卡當下沒有持有期間涵蓋，這些刷卡就不會出現在任何人的出勤紀錄；「未登錄」表示打卡機出現過、但還沒登錄的卡號。',
         side: 'bottom',
       },
-      !cards &&
+      unattributed &&
         write && {
           target: `${CARDS} .cards-assign-unattributed`,
           title: '指派',
           description:
             '開始時間預設為第一筆未歸戶刷卡，指派後這段刷卡就歸到持有人；未登錄的卡號會先登錄成員工卡。',
+          side: 'left',
+        },
+      exclusions && {
+        target: `${CARDS} .cards-exclusions-note`,
+        title: '不是權限',
+        description:
+          '名單只讓出勤紀錄的全公司查詢與匯出預設略過這些人（例如董事、外派）；本人與主管照常看得到，HR 勾「含不列入出勤的人」也看得到。',
+        side: 'bottom',
+      },
+      exclusions &&
+        write && {
+          target: `${CARDS} .exclusions-add`,
+          title: '加入',
+          description:
+            '從目錄搜尋使用者並填原因；只填姓名、還沒綁帳號的持卡人要先綁帳號才能加入。改原因或恢復列入在每列的選單。',
           side: 'left',
         },
     ],
@@ -304,20 +321,20 @@ export function attendanceRecordsTour(options: {
         side: 'bottom',
       },
       queryBarStep(RECORDS, {
-        fields: `區間（最長 ${MAX_RANGE_DAYS} 天）、人員${options.units ? '與單位（含下層）' : ''}`,
+        fields: `區間（最長一年）、人員${options.units ? '、單位（含下層）' : ''}與是否含放假日`,
       }),
       {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:
-          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；公文系統連不上時改為無法判定，不算異常。',
+          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
         side: 'bottom',
       },
       {
         target: `${RECORDS} .records-export`,
         title: '匯出 Excel',
         description:
-          '由伺服器依已套用的條件產生整段的 .xlsx，「本月」等預設區間以按下時重算；沒有人可列時停用。',
+          '由伺服器依已套用的條件產生整段的 .xlsx，不分頁、包含所有人，「本月」等預設區間以按下時重算；沒有人可列時停用。',
         side: 'bottom',
       },
     ],

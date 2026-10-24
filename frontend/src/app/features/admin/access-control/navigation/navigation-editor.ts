@@ -317,7 +317,9 @@ export class NavigationEditor {
         const path = [...trail, this.store.name(node.item)];
         options.push({
           value: node.item.id,
-          label: path.join(' › '),
+          label: path.at(-1)!,
+          level: path.length,
+          path: trail,
           disabled: !canPlace(items, id, node.item.id),
         });
         visit(node.children, path);

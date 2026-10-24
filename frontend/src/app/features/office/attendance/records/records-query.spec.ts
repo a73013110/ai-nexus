@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CUSTOM_RANGE } from '@shared/ui/time-range-picker';
 import {
   emptyRecordsQuery,
+  holderKey,
   recordFilters,
   recordsQueryOptions,
   recordsRange,
@@ -11,30 +12,48 @@ import {
 // 2026-10-31 20:00 台北＝當天 UTC 12:00；瀏覽器在別的時區也以台北日期換算。
 const NOW = Date.parse('2026-10-31T12:00:00Z');
 const options = recordsQueryOptions({ person: () => '王小明', unit: () => undefined });
+const preset = (value: string) => ({ preset: value, from: '', to: '' });
 
 describe('records query', () => {
   it('turns presets into Taipei dates when applied', () => {
-    expect(recordsRange({ preset: 'month', from: '', to: '' }, NOW)).toEqual({
-      from: '2026-10-01',
-      to: '2026-10-31',
-    });
-    expect(recordsRange({ preset: 'last-month', from: '', to: '' }, NOW)).toEqual({
+    expect(recordsRange(preset('month'), NOW)).toEqual({ from: '2026-10-01', to: '2026-10-31' });
+    expect(recordsRange(preset('last-month'), NOW)).toEqual({
       from: '2026-09-01',
       to: '2026-09-30',
     });
-    expect(recordsRange({ preset: '7d', from: '', to: '' }, NOW)).toEqual({
-      from: '2026-10-25',
-      to: '2026-10-31',
+    expect(recordsRange(preset('7d'), NOW)).toEqual({ from: '2026-10-25', to: '2026-10-31' });
+    expect(recordsRange(preset('quarter'), NOW)).toEqual({ from: '2026-10-01', to: '2026-12-31' });
+    expect(recordsRange(preset('last-quarter'), NOW)).toEqual({
+      from: '2026-07-01',
+      to: '2026-09-30',
+    });
+    expect(recordsRange(preset('year'), NOW)).toEqual({ from: '2026-01-01', to: '2026-12-31' });
+    expect(recordsRange(preset('last-year'), NOW)).toEqual({
+      from: '2025-01-01',
+      to: '2025-12-31',
     });
   });
 
-  it('refuses custom ranges over 31 days or backwards', () => {
-    const custom = (from: string, to: string) => ({ preset: CUSTOM_RANGE, from, to });
-    expect(recordsRange(custom('2026-10-01', '2026-10-31'))).toEqual({
-      from: '2026-10-01',
-      to: '2026-10-31',
+  it('wraps the last quarter back into the previous year', () => {
+    const february = Date.parse('2026-02-10T04:00:00Z');
+    expect(recordsRange(preset('quarter'), february)).toEqual({
+      from: '2026-01-01',
+      to: '2026-03-31',
     });
-    expect(recordsRange(custom('2026-10-01', '2026-11-01'))).toContain('31 天');
+    expect(recordsRange(preset('last-quarter'), february)).toEqual({
+      from: '2025-10-01',
+      to: '2025-12-31',
+    });
+  });
+
+  it('refuses custom ranges over a year or backwards', () => {
+    const custom = (from: string, to: string) => ({ preset: CUSTOM_RANGE, from, to });
+    // 閏年也放得下整年：366 天是上限。
+    expect(recordsRange(custom('2028-01-01', '2028-12-31'))).toEqual({
+      from: '2028-01-01',
+      to: '2028-12-31',
+    });
+    expect(recordsRange(custom('2026-01-01', '2027-01-02'))).toContain('最長一年');
     expect(recordsRange(custom('2026-10-02', '2026-10-01'))).toContain('不能早於');
     expect(recordsRange(custom('2026-10-02', ''))).toContain('起訖');
   });
@@ -43,8 +62,9 @@ describe('records query', () => {
     const query = {
       ...emptyRecordsQuery(),
       range: { preset: CUSTOM_RANGE, from: '2026-09-15', to: '2026-10-14' },
-      userId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+      person: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
       includeExcluded: true,
+      includeDaysOff: true,
     };
     const params = options.toParams!(query);
     expect(params).toEqual({
@@ -52,29 +72,48 @@ describe('records query', () => {
       from: '2026-09-15',
       to: '2026-10-14',
       user: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+      holder: undefined,
       unit: undefined,
       excluded: 'true',
+      holidays: 'true',
     });
     const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value));
     expect(options.fromParams!(convertToParamMap(clean), emptyRecordsQuery())).toEqual(query);
-    expect(options.toParams!(emptyRecordsQuery())).toEqual({
-      range: undefined,
-      from: undefined,
-      to: undefined,
-      user: undefined,
-      unit: undefined,
-      excluded: undefined,
-    });
+    expect(
+      Object.values(options.toParams!(emptyRecordsQuery())).every((value) => value === undefined),
+    ).toBe(true);
     expect(options.chips!(query).map((chip) => chip.label)).toEqual([
       '區間：2026/09/15 — 10/14',
       '人員：王小明',
       '含不列入出勤的人',
+      '含放假日',
     ]);
+  });
+
+  it('sends a holder without an account by name, never as a user', () => {
+    const query = { ...emptyRecordsQuery(), range: preset('year'), person: holderKey('新進同仁') };
+    expect(options.toParams!(query)).toMatchObject({
+      range: 'year',
+      user: undefined,
+      holder: '新進同仁',
+    });
+    expect(
+      options.fromParams!(convertToParamMap({ holder: ' 新進同仁 ' }), emptyRecordsQuery()).person,
+    ).toBe(holderKey('新進同仁'));
+    expect(recordFilters(query, NOW)).toMatchObject({ userId: undefined, holder: '新進同仁' });
+    expect(options.chips!(query).map((chip) => chip.label)).toContain('人員：新進同仁');
   });
 
   it('ignores malformed link parameters', () => {
     const query = options.fromParams!(
-      convertToParamMap({ range: 'year', user: 'not-a-guid', unit: '1', excluded: 'yes' }),
+      convertToParamMap({
+        range: 'decade',
+        user: 'not-a-guid',
+        holder: 'x'.repeat(121),
+        unit: '1',
+        excluded: 'yes',
+        holidays: '1',
+      }),
       emptyRecordsQuery(),
     );
     expect(query).toEqual(emptyRecordsQuery());
@@ -82,8 +121,10 @@ describe('records query', () => {
       from: '2026-10-01',
       to: '2026-10-31',
       userId: undefined,
+      holder: undefined,
       unitId: undefined,
       includeExcluded: undefined,
+      includeDaysOff: undefined,
     });
   });
 });

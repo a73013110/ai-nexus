@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Office.Attendance.Cards;
+using AiNexus.Features.Office.Attendance.Exclusions;
 using AiNexus.Features.Office.Attendance.Gd;
 using AiNexus.Features.Office.Attendance.Imports;
 using AiNexus.Features.Office.Attendance.Leave;
@@ -15,7 +16,7 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Office.Attendance;
 
 /// <summary>
-/// 出勤打卡（ADR 0018）：出勤紀錄（依資料範圍查詢、查詢時判定，可匯出 Excel；規則說明由 <see cref="AttendanceRules"/> 產生）、卡號對應（卡片、持有期間與未歸戶卡號）、刷卡匯入與假日設定。
+/// 出勤打卡（ADR 0018）：出勤紀錄（依資料範圍查詢、查詢時判定，可匯出 Excel；規則說明由 <see cref="AttendanceRules"/> 產生）、卡號對應（卡片、持有期間、未歸戶卡號與不列入出勤）、刷卡匯入與假日設定。
 /// 卡號對應的寫入共用 AccessControl 的 <see cref="AdministrativeAudit"/>：同一個交易、行政寫入鎖與稽核，並發的重疊檢查靠它串行化。
 /// 假單與出差單由 <see cref="LeaveSheetReader"/> 經 Integrations 的 <see cref="GdAccess"/> 唯讀查詢公文系統（GD），連不上時降級而不拋例外；GD 的可用性接到即時監控（<c>gd</c>）。
 /// 假日設定經 <see cref="GdAccess"/> 查詢，經 <see cref="GdCalendarWriter"/> 回寫，兩者用同一個 <c>Databases:Gd</c>；設為 <c>ReadOnly=true</c> 時只停用回寫。
@@ -45,6 +46,7 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddAccountReviewSource<CardAccountReview>();
         // GD 的查詢、帳號對應與監控由 Integrations 註冊（GdAccess、GdAccounts）；出勤只註冊自己的讀取與回寫。
         builder.Services.AddScoped<LeaveSheetReader>();
+        builder.Services.AddScoped<AttendanceRoster>();
         builder.Services.AddSingleton<CalendarReader>();
         builder.Services.AddSingleton<GdCalendarWriter>();
     }
@@ -53,6 +55,7 @@ public sealed class AttendanceModule : IFeatureModule
     {
         var records = api.MapGroup("/attendance-records").RequireAuthorization(Policies.AttendanceRecords);
         ListAttendanceRecords.Map(records);
+        ListAttendancePeople.Map(records);
         ExportAttendanceRecords.Map(records);
         GetAttendanceRules.Map(api.MapGroup("/attendance-rules").RequireAuthorization(Policies.AttendanceRecords));
 
@@ -69,6 +72,11 @@ public sealed class AttendanceModule : IFeatureModule
         DeleteCardAssignment.Map(assignments);
 
         ListUnattributedCards.Map(api.MapGroup("/attendance-unattributed-cards").RequireAuthorization(Policies.AttendanceCards));
+
+        var exclusions = api.MapGroup("/attendance-roster-exclusions").RequireAuthorization(Policies.AttendanceCards);
+        ListRosterExclusions.Map(exclusions);
+        SaveRosterExclusion.Map(exclusions);
+        DeleteRosterExclusion.Map(exclusions);
 
         var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
         ListPunchImports.Map(imports);

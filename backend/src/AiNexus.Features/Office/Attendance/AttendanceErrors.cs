@@ -33,8 +33,14 @@ public static class AttendanceErrors
 
     public static readonly Error PeriodInvalid = Error.Invalid("attendance_period_invalid");
 
-    /// <summary>出勤紀錄的查詢區間不合法：起訖必填、結束不早於開始、最長 31 天（一次一個月，見 <c>ListAttendanceRecords</c>）。</summary>
+    /// <summary>出勤紀錄的查詢區間不合法：起訖必填、結束不早於開始、最長一年（見 <c>AttendanceRecordsFilter</c>）。</summary>
     public static readonly Error RecordsRangeInvalid = Error.Invalid("attendance_records_range_invalid");
+
+    /// <summary>出勤紀錄的其他條件不合法：持有人姓名過長、<c>offset</c> 為負，或每頁人數不在 1～50。</summary>
+    public static readonly Error RecordsFilterInvalid = Error.Invalid("attendance_records_filter_invalid");
+
+    /// <summary>要移除的「不列入出勤」不存在（已移除，或從未設定）。</summary>
+    public static readonly Error RosterExclusionNotFound = Error.NotFound("attendance_roster_exclusion_not_found");
 
     /// <summary>匯入紀錄的查詢條件不合法：狀態不明、期間顛倒、每頁筆數不在允許值內，或游標不存在。</summary>
     public static readonly Error ImportFilterInvalid = Error.Invalid("attendance_import_filter_invalid");

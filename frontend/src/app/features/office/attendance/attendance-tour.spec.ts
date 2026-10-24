@@ -26,16 +26,26 @@ describe('attendanceCardsTour', () => {
     expect(titles(attendanceCardsTour({ view: 'cards', maintain: true, testing: false }))).toEqual([
       '刷卡依持有期間歸戶',
       '登錄卡片',
-      '卡片與未歸戶卡號',
+      '卡片、未歸戶與不列入出勤',
       '查詢條件',
       '持有歷史',
     ]);
     expect(
       titles(attendanceCardsTour({ view: 'unattributed', maintain: true, testing: false })),
-    ).toEqual(['刷卡依持有期間歸戶', '登錄卡片', '卡片與未歸戶卡號', '為什麼會未歸戶', '指派']);
+    ).toEqual([
+      '刷卡依持有期間歸戶',
+      '登錄卡片',
+      '卡片、未歸戶與不列入出勤',
+      '為什麼會未歸戶',
+      '指派',
+    ]);
     expect(
       titles(attendanceCardsTour({ view: 'unattributed', maintain: false, testing: false })),
-    ).toEqual(['刷卡依持有期間歸戶', '卡片與未歸戶卡號', '為什麼會未歸戶']);
+    ).toEqual(['刷卡依持有期間歸戶', '卡片、未歸戶與不列入出勤', '為什麼會未歸戶']);
+    // 名單檢視沒有「登錄卡片」按鈕。
+    expect(
+      titles(attendanceCardsTour({ view: 'exclusions', maintain: true, testing: false })),
+    ).toEqual(['刷卡依持有期間歸戶', '卡片、未歸戶與不列入出勤', '不是權限', '加入']);
   });
 
   it('drops the disabled writes and says read-only while testing an identity', () => {
@@ -166,8 +176,9 @@ describe('attendanceRecordsTour', () => {
       '依人分組',
       '匯出 Excel',
     ]);
-    expect(copy(tour)).toContain('最長 31 天');
+    expect(copy(tour)).toContain('最長一年');
     expect(copy(tour)).toContain('單位（含下層）');
+    expect(copy(tour)).toContain('含放假日');
     expect(copy(attendanceRecordsTour({ units: false }))).not.toContain('單位');
     scoped(tour, 'nx-attendance-records-page');
   });

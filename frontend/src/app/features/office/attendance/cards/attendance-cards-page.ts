@@ -38,9 +38,11 @@ import { attendanceCardsTour, cardDetailTour } from '../attendance-tour';
 import { AssignmentDialog } from './assignment-dialog';
 import { CardDialog } from './card-dialog';
 import { CARD_SEARCH_MAX, cardsQueryOptions } from './cards-query';
+import { RosterExclusions } from '../exclusions/roster-exclusions';
 
 /**
- * 卡號對應（`attendance.cards`）：卡片與持有期間（歸戶依據），以及還沒有持有期間涵蓋的未歸戶卡號。
+ * 卡號對應（`attendance.cards`）：卡片與持有期間（歸戶依據）、還沒有持有期間涵蓋的未歸戶卡號，
+ * 以及 HR 看全公司出勤時隱藏的「不列入出勤」名單（`RosterExclusions` 自己讀寫）。
  * 寫入另需 `attendance.cards.maintain`，沒有時不顯示寫入按鈕；測試身分顯示但停用（伺服器回 `test_admin_read_only`）。
  */
 @Component({
@@ -60,6 +62,7 @@ import { CARD_SEARCH_MAX, cardsQueryOptions } from './cards-query';
     Notice,
     PendingButton,
     QueryBar,
+    RosterExclusions,
     Select,
     StatusBadge,
     TableState,
@@ -83,6 +86,7 @@ export class AttendanceCardsPage {
   readonly views = [
     { value: 'cards', label: '卡片' },
     { value: 'unattributed', label: '未歸戶卡號' },
+    { value: 'exclusions', label: '不列入出勤' },
   ];
   readonly tour = computed(() =>
     attendanceCardsTour({

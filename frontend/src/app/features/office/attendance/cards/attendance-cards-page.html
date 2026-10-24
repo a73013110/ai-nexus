@@ -5,7 +5,7 @@
   layoutMode="data"
   [tour]="tour()"
 >
-  @if (store.canMaintain()) {
+  @if (store.canMaintain() && query.applied().view !== 'exclusions') {
     <button
       page-actions
       type="button"
@@ -30,6 +30,10 @@
     @if (query.applied().view === 'unattributed') {
       <p class="form-note cards-unattributed-note">
         員工卡上沒有持有期間涵蓋的刷卡，依卡號彙總；指派時開始時間預設為第一筆未歸戶刷卡。
+      </p>
+    } @else if (query.applied().view === 'exclusions') {
+      <p class="form-note cards-exclusions-note">
+        HR 看全公司出勤時不列出這些人；本人與主管照常看得到。
       </p>
     }
   </div>
@@ -160,6 +164,8 @@
         (retry)="store.reloadCards()"
       />
     </nx-data-table>
+  } @else if (query.applied().view === 'exclusions') {
+    <nx-roster-exclusions class="ui-table-fill" />
   } @else {
     <nx-data-table
       class="unattributed-table"

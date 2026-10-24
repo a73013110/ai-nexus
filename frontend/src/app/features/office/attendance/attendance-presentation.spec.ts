@@ -40,6 +40,7 @@ describe('attendance presentation', () => {
       {
         date: '2026-10-05',
         dayType: 'FullDay',
+        calendarRemark: null,
         status: 'Undetermined',
         reason: 'LeaveUnavailable',
         clockIn: null,

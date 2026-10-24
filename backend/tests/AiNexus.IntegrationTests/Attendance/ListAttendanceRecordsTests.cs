@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
@@ -93,7 +94,7 @@ public sealed class ListAttendanceRecordsTests
         await session.PunchAsync("A1", At(19, 9, 30), At(19, 18, 0));
         using var client = await session.Factory.SignedInAsync("bob");
 
-        var records = await GetAsync(client, "from=2026-10-17&to=2026-10-21");
+        var records = await GetAsync(client, "from=2026-10-17&to=2026-10-21&includeDaysOff=true");
         var person = Assert.Single(records.People);
 
         Assert.Equal((false, false, false), (records.CalendarAvailable, records.LeaveAvailable, person.LeaveAvailable));
@@ -146,11 +147,106 @@ public sealed class ListAttendanceRecordsTests
 
         var people = (await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People;
 
-        // 到職當天從持有那一刻起算整天都列出；離職（持有結束）後的日子不列，不判成沒刷卡。訪客卡與只有姓名的持有人不在名單。
-        Assert.Equal(new[] { bob, dave }.Order(), people.Select(x => x.UserId).Order());
+        // 到職當天從持有那一刻起算整天都列出；離職（持有結束）後的日子不列，不判成沒刷卡。訪客卡不在名單。
+        Assert.Equal(new[] { bob, dave }.Order(), await PeopleAsync(client, "from=2026-10-19&to=2026-10-21"));
         Assert.Equal([20, 21], Assert.Single(people, x => x.UserId == bob).Days.Select(x => x.Date.Day));
         Assert.Equal([19], Assert.Single(people, x => x.UserId == dave).Days.Select(x => x.Date.Day));
+        // 只有姓名的持有人以姓名列出；沒有帳號就對不到公文帳號，假單無法取得。
+        var unbound = Assert.Single(people, x => x.UserId is null);
+        Assert.Equal(("新進同仁", null, false), (unbound.DisplayName, unbound.Account, unbound.LeaveAvailable));
+        Assert.Equal(3, people.Count);
     }
+
+    [Fact]
+    public async Task HoldersWithoutAnAccountAreVisibleOnlyCompanyWideAndCanBePickedByName()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        var bob = await session.PersonAsync("bob");
+        await session.GrantAsync(hr, DataScopes.All);
+        await session.HoldAsync(bob, "A1");
+        await session.HoldAsync(null, "A2", endsAt: At(20, 0));
+        await session.HoldAsync(null, "A3", startsAt: At(20, 0));
+        await session.PunchAsync("A2", At(19, 8, 40), At(19, 18, 30));
+        await session.PunchAsync("A3", At(21, 8, 50), At(21, 19, 0));
+        using var hrClient = await session.Factory.SignedInAsync("hr");
+        using var bobClient = await session.Factory.SignedInAsync("bob");
+
+        // 同名的兩段持有（換卡）是同一人，兩張卡的刷卡合併；沒有假單可比對，沒刷卡的日子不判異常。
+        var person = Assert.Single((await GetAsync(hrClient, Week + "&holder=%20新進同仁%20")).People);
+        Assert.Equal((null, "新進同仁"), (person.UserId, person.DisplayName));
+        Assert.Equal((At(19, 8, 40), At(19, 18, 30)), (Day(person, 19).ClockIn, Day(person, 19).ClockOut));
+        Assert.Equal((At(21, 8, 50), At(21, 19, 0)), (Day(person, 21).ClockIn, Day(person, 21).ClockOut));
+        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.LeaveUnavailable), (Day(person, 20).Status, Day(person, 20).Reason));
+
+        // 指定使用者或不是全公司範圍時都不在名單：判斷不了他屬於誰。
+        Assert.Empty((await GetAsync(hrClient, Week + $"&holder=新進同仁&userId={bob}")).People);
+        Assert.DoesNotContain((await GetAsync(bobClient)).People, x => x.UserId is null);
+        Assert.Empty((await GetAsync(bobClient, Week + "&holder=新進同仁")).People);
+
+        // 人員選單與名單同一套範圍，不限期間。
+        var options = await OptionsAsync(hrClient);
+        Assert.Contains(options, x => x.UserId is null && x.DisplayName == "新進同仁" && x.Holding);
+        Assert.Contains(options, x => x.UserId == bob && x.Account is not null && x.Holding);
+        Assert.Equal(new Guid?[] { bob }, (await OptionsAsync(bobClient)).Select(x => x.UserId));
+    }
+
+    [Fact]
+    public async Task TheRosterIsPagedByPersonInNameOrder()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        await session.GrantAsync(hr, DataScopes.All);
+        foreach (var (account, card) in new[] { ("bob", "A1"), ("carol", "A2"), ("dave", "A3") })
+            await session.HoldAsync(await session.PersonAsync(account), card);
+        await session.HoldAsync(null, "A4");
+        using var client = await session.Factory.SignedInAsync("hr");
+
+        var all = await GetAsync(client);
+        var first = await GetAsync(client, Week + "&limit=2");
+        var second = await GetAsync(client, Week + "&offset=2&limit=2");
+        var beyond = await GetAsync(client, Week + "&offset=4&limit=2");
+
+        Assert.Equal((4, 4, 4, 4), (all.Total, first.Total, second.Total, beyond.Total));
+        Assert.Equal((0, 2, 4), (first.Offset, second.Offset, beyond.Offset));
+        Assert.Equal(all.People.Select(x => x.DisplayName), first.People.Concat(second.People).Select(x => x.DisplayName));
+        Assert.Empty(beyond.People);
+        Assert.All(second.People, x => Assert.Equal(4, x.Days.Count));
+    }
+
+    [Fact]
+    public async Task DaysOffWithoutPunchesOrSheetsAreHiddenUnlessAskedFor()
+    {
+        await using var session = Create();
+        var bob = await session.PersonAsync("bob");
+        await session.HoldAsync(bob, "A1");
+        session.Gd.AddDay(new(2026, 10, 16), morningOff: true, afternoonOff: true, remark: "補假");
+        // 週日加班有刷卡：放假日照樣列出。
+        await session.PunchAsync("A1", At(18, 10, 0), At(18, 15, 0));
+        using var client = await session.Factory.SignedInAsync("bob");
+
+        var hidden = Assert.Single((await GetAsync(client, "from=2026-10-16&to=2026-10-19")).People);
+        Assert.Equal([18, 19], hidden.Days.Select(x => x.Date.Day));
+        Assert.Equal(AttendanceDayType.DayOff, Day(hidden, 18).DayType);
+
+        var shown = Assert.Single((await GetAsync(client, "from=2026-10-16&to=2026-10-19&includeDaysOff=true")).People);
+        Assert.Equal([16, 17, 18, 19], shown.Days.Select(x => x.Date.Day));
+        Assert.Equal(("補假", AttendanceStatus.DayOff), (Day(shown, 16).CalendarRemark, Day(shown, 16).Status));
+        Assert.Null(Day(shown, 19).CalendarRemark);
+    }
+
+    [Fact]
+    public async Task InvalidPagingOrHolderNamesAreRefused()
+    {
+        await using var session = Create();
+        using var client = await session.Factory.SignedInAsync("bob");
+
+        foreach (var query in new[] { "&limit=0", "&limit=51", "&offset=-1", "&holder=" + new string('名', 121) })
+            await AssertCodeAsync(await client.GetAsync($"{Records}?{Week}{query}"), HttpStatusCode.BadRequest, "attendance_records_filter_invalid");
+    }
+
+    private static async Task<AttendancePersonOptionDto[]> OptionsAsync(HttpClient client)
+        => (await client.GetFromJsonAsync<AttendancePersonOptionDto[]>(Records + "/people"))!;
 
     [Fact]
     public async Task ExcludedPeopleAreHiddenOnlyFromTheCompanyWideView()
@@ -168,7 +264,7 @@ public sealed class ListAttendanceRecordsTests
 
         Assert.Equal([bob], await PeopleAsync(hrClient));
         var all = await GetAsync(hrClient, Week + "&includeExcluded=true");
-        Assert.Equal(new[] { bob, carol }.Order(), all.People.Select(x => x.UserId).Order());
+        Assert.Equal(new[] { bob, carol }.Order(), await PeopleAsync(hrClient, Week + "&includeExcluded=true"));
         Assert.True(Assert.Single(all.People, x => x.UserId == carol).Excluded);
         Assert.Equal([carol], await PeopleAsync(hrClient, Week + $"&userId={carol}"));
         // 不是隱私控制：本人照樣看得到自己。
@@ -181,9 +277,10 @@ public sealed class ListAttendanceRecordsTests
         await using var session = Create();
         using var client = await session.Factory.SignedInAsync("bob");
 
-        foreach (var query in new[] { "from=2026-10-01", "to=2026-10-31", "from=2026-10-31&to=2026-10-01", "from=2026-10-01&to=2026-11-01", "from=1700-01-01&to=1700-01-02" })
+        foreach (var query in new[] { "from=2026-10-01", "to=2026-10-31", "from=2026-10-31&to=2026-10-01", "from=2025-10-01&to=2026-10-02", "from=1700-01-01&to=1700-01-02" })
             await AssertCodeAsync(await client.GetAsync($"{Records}?{query}"), HttpStatusCode.BadRequest, "attendance_records_range_invalid");
-        Assert.Equal(new DateOnly(2026, 10, 31), (await GetAsync(client, "from=2026-10-01&to=2026-10-31")).To);
+        // 最長 366 天：閏年也能查整年。
+        Assert.Equal(new DateOnly(2026, 10, 1), (await GetAsync(client, "from=2025-10-01&to=2026-10-01")).To);
     }
 
     [Fact]

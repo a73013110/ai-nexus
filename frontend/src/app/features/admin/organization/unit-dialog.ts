@@ -23,7 +23,7 @@ import { Select, type SelectOption } from '@shared/ui/select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
 import { unitDialogTour } from './organization-tour';
-import { MAX_DEPTH, heightOf, subtree, unitRows } from './unit-tree';
+import { MAX_DEPTH, heightOf, subtree, unitOptions } from './unit-tree';
 
 interface Draft {
   /** 空字串為最上層。 */
@@ -209,15 +209,10 @@ export class UnitDialog {
     const id = this.editor()?.id;
     const excluded = id ? subtree(units, id) : new Set<string>();
     const height = id ? heightOf(units, id) : 1;
-    const options: SelectOption[] = [{ value: '', label: '最上層' }];
-    for (const row of unitRows(units)) {
-      if (excluded.has(row.unit.id) || row.depth + height > MAX_DEPTH) continue;
-      options.push({
-        value: row.unit.id,
-        label: row.path.join(' › ') + (row.unit.enabled ? '' : '（停用）'),
-      });
-    }
-    return options;
+    return [
+      { value: '', label: '最上層' },
+      ...unitOptions(units, (row) => !excluded.has(row.unit.id) && row.depth + height <= MAX_DEPTH),
+    ];
   });
 
   create(parent: UnitDto | null = null) {

@@ -156,6 +156,8 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
     weekend: isWeekend(day.date),
     today: day.date === today,
     dayType: ATTENDANCE_DAY_TYPE[day.dayType] ?? day.dayType,
+    /** 假日設定的備註（例如「國慶日」）：放假的原因。 */
+    remark: day.calendarRemark ?? '',
     status: ATTENDANCE_STATUS[day.status] ?? { label: day.status, tone: 'neutral' },
     reason: day.reason ? (ATTENDANCE_REASON[day.reason] ?? day.reason) : '',
     clockIn: clockTime(day.clockIn),

@@ -1,3 +1,4 @@
+import { RouterLink } from '@angular/router';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -8,13 +9,19 @@ import {
   untracked,
 } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
-import type { AttendancePersonDto } from '@core/api/schema';
+import { routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { attachmentName, downloadBlob } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
-import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
+import {
+  DataTable,
+  DataTableColumn,
+  TablePagination,
+  TableState,
+  type TableColumn,
+} from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
@@ -25,18 +32,24 @@ import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
-import { unitRows } from '@features/admin/organization/unit-tree';
+import { unitOptions } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { attendanceProblem, presentRecord, presentSchedule } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
-import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-query';
+import { RECORD_RANGES, holderKey, recordFilters, recordsQueryOptions } from './records-query';
+
+/** 每頁人數：一人一年約 250 列，頁面一次只畫這幾個人；上限與後端 `ListAttendanceRecords.MaxPageSize` 相同。 */
+const PAGE_SIZES = [10, 20, 50];
+const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * 出勤紀錄（`attendance.records`）：資料範圍內每人每天的判定、上下班刷卡、應下班、遲到早退與當天的假單。
- * 名單依人分組、不分頁（後端一次回整段，最長 31 天）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
+ * 名單依人分組、依人分頁（區間最長一年，一次只畫一頁的人）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
+ * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單。
+ * 沒有刷卡也沒有假單的放假日預設不列（勾「含放假日」才列），放假日附假日設定的備註。
  * 單位清單只有組織管理權限讀得到，沒有時不提供單位選單（連結帶入的單位照樣查詢）。
  * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供，與 Excel 匯出的「說明」工作表同一份。
- * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生整段的 .xlsx。
+ * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生整段、全部人的 .xlsx（不分頁）。
  */
 @Component({
   selector: 'nx-attendance-records-page',
@@ -51,7 +64,9 @@ import { RECORD_RANGES, recordFilters, recordsQueryOptions } from './records-que
     PendingButton,
     QueryBar,
     Select,
+    RouterLink,
     StatusBadge,
+    TablePagination,
     TableState,
     TimeRangePicker,
   ],
@@ -67,8 +82,9 @@ export class AttendanceRecordsPage {
   private readonly organization = inject(OrganizationApi);
   private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
-  /** 讀過的人（ID → 人）；指定某人之後名單只剩他，選單仍保留先前讀到的其他人。 */
-  private readonly known = signal<ReadonlyMap<string, AttendancePersonDto>>(new Map());
+  readonly pageSizes = PAGE_SIZES;
+  /** 不列入出勤的名單在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
+  readonly exclusionsRoute = routeOf('attendance.cards');
   private readonly unitsRead = apiResource({
     feature: 'organization',
     params: () => (this.session.has('organization') ? true : undefined),
@@ -78,35 +94,58 @@ export class AttendanceRecordsPage {
   readonly unitsLoading = this.unitsRead.refreshing;
   readonly unitOptions = computed<SelectOption[] | null>(() => {
     const units = this.unitsRead.value();
-    if (!units) return null;
-    return [
-      { value: '', label: '所有單位' },
-      ...unitRows(units).map((row) => ({ value: row.unit.id, label: row.path.join(' › ') })),
-    ];
+    return units ? [{ value: '', label: '所有單位' }, ...unitOptions(units)] : null;
   });
+  /** 人員選單：範圍看得到、持有過員工卡的人，與名單同一套範圍（與目前這一頁無關）。 */
+  private readonly peopleRead = apiResource({
+    feature: 'attendance.records',
+    loader: (_: true, signal) => this.api.people(signal),
+  });
+  readonly peopleLoading = this.peopleRead.refreshing;
+  readonly personOptions = computed<SelectOption[]>(() => [
+    { value: '', label: '所有人' },
+    ...(this.peopleRead.value() ?? []).map((person) => ({
+      value: person.userId ?? holderKey(person.displayName),
+      label: person.displayName,
+      description: [
+        person.account ?? '尚未綁帳號',
+        person.holding ? '' : '已不持卡',
+        person.excluded ? '不列入出勤' : '',
+      ]
+        .filter(Boolean)
+        .join('・'),
+    })),
+  ]);
   readonly query = queryState(
     recordsQueryOptions({
-      person: (id) => this.known().get(id)?.displayName,
+      person: (id) => this.peopleRead.value()?.find((person) => person.userId === id)?.displayName,
       unit: (id) => this.unitsRead.value()?.find((unit) => unit.id === id)?.name,
     }),
   );
   readonly draft = this.query.draft;
   readonly tour = computed(() => attendanceRecordsTour({ units: !!this.unitOptions() }));
-  private readonly request = signal<AttendanceRecordFilters | undefined>(undefined);
+  /** 已套用的條件（換算成起訖）；換頁與每頁人數沿用它，不寫進網址。 */
+  private readonly filters = signal<AttendanceRecordFilters | undefined>(undefined);
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(DEFAULT_PAGE_SIZE);
   private readonly recordsRead = apiResource({
     feature: 'attendance.records',
-    params: this.request,
-    loader: (query, signal) => this.api.records(query, signal),
+    params: () => {
+      const filters = this.filters();
+      if (!filters) return undefined;
+      return { filters, offset: this.pageIndex() * this.pageSize(), limit: this.pageSize() };
+    },
+    loader: (request, signal) =>
+      this.api.records(request.filters, request.offset, request.limit, signal),
   });
   readonly records = this.recordsRead.value;
   /** 新條件的第一次讀取（還沒有這次的結果）。 */
   readonly loading = this.recordsRead.loading;
-  /** 使用者感覺得到的讀取（查詢、重試）：表格淡化、查詢鈕轉圈。 */
+  /** 使用者感覺得到的讀取（查詢、換頁、重試）：表格淡化、查詢鈕轉圈。 */
   readonly refreshing = this.recordsRead.refreshing;
-  /** 還沒有任何結果：人員選單（選項來自名單）先佔位轉圈。之後的查詢只淡化表格，選單照舊可選。 */
-  readonly firstLoad = computed(() => this.loading() && !this.records());
   readonly readError = this.recordsRead.error;
   readonly people = computed(() => this.records()?.people ?? []);
+  readonly total = computed(() => this.records()?.total ?? 0);
   private readonly rulesRead = apiResource({
     feature: 'attendance.records',
     loader: (_: true, signal) => this.api.rules(signal),
@@ -119,24 +158,18 @@ export class AttendanceRecordsPage {
   readonly rulesError = this.rulesRead.error;
   readonly exporting = signal(false);
   readonly exportError = signal('');
-  readonly personOptions = computed<SelectOption[]>(() => [
-    { value: '', label: '所有人' },
-    ...[...this.known().values()]
-      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-Hant'))
-      .map((person) => ({
-        value: person.userId,
-        label: person.displayName,
-        description: person.account,
-      })),
-  ]);
+  /** 只看得到自己（選單只有一個人）時不顯示人員選單；已指定某人或讀取中時佔住欄位。 */
+  readonly showPeople = computed(
+    () => this.personOptions().length > 2 || !!this.draft().person || this.peopleLoading(),
+  );
   /**
    * 「含不列入出勤」只在全公司範圍（`all`）有作用，但回應與 `/me` 都沒有帶範圍；
-   * 只看得到自己（一個人）時不顯示，已勾選或名單裡出現不列入的人時一定顯示。
+   * 只看得到自己時不顯示，已勾選或名單裡出現不列入的人時一定顯示。
    */
   readonly showExcluded = computed(
     () =>
       this.query.applied().includeExcluded ||
-      this.people().length > 1 ||
+      this.personOptions().length > 2 ||
       this.people().some((person) => person.excluded),
   );
   readonly columns: TableColumn[] = [
@@ -155,6 +188,7 @@ export class AttendanceRecordsPage {
     if (!data) return [];
     return data.people.map((person) => ({
       person,
+      key: person.userId ?? holderKey(person.displayName),
       anomalies: person.days.filter((day) => day.status === 'Anomaly').length,
       late: person.days.filter((day) => day.lateSeconds > 0).length,
       early: person.days.filter((day) => day.earlyLeaveSeconds > 0).length,
@@ -167,25 +201,24 @@ export class AttendanceRecordsPage {
   });
 
   constructor() {
-    // 每次套用條件都重讀；「本月」以套用當下的台北日期換算。
+    // 每次套用條件都回到第一頁重讀；「本月」以套用當下的台北日期換算。
     effect(() => {
       const query = this.query.applied();
       untracked(() => {
         const filters = recordFilters(query);
-        if (typeof filters !== 'string') this.request.set(filters);
+        if (typeof filters === 'string') return;
+        this.pageIndex.set(0);
+        this.filters.set(filters);
       });
     });
-    effect(() => {
-      const people = this.records()?.people;
-      if (!people?.length) return;
-      untracked(() =>
-        this.known.update((current) => {
-          const next = new Map(current);
-          for (const person of people) next.set(person.userId, person);
-          return next;
-        }),
-      );
-    });
+  }
+
+  changePage(delta: -1 | 1) {
+    this.pageIndex.update((index) => Math.max(0, index + delta));
+  }
+  changePageSize(size: number) {
+    this.pageSize.set(size);
+    this.pageIndex.set(0);
   }
 
   reload() {

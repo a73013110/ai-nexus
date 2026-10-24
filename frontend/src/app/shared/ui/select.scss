@@ -67,6 +67,7 @@
   font-size: var(--text-caption);
 }
 .select-panel {
+  --select-indent: 1.125rem;
   padding: var(--p-space-2);
   overflow: auto;
 }
@@ -81,6 +82,22 @@
   padding: var(--control-padding-block) var(--control-padding-inline);
   border-radius: var(--radius-item);
   color: var(--ink);
+}
+.select-option.is-tree {
+  position: relative;
+  padding-inline-start: calc(
+    var(--control-padding-inline) + (var(--select-level, 1) - 1) * var(--select-indent)
+  );
+}
+// 上一層的引導線：縮排之外再標出它掛在誰底下，長名稱被截斷時仍看得出層級。
+.select-option.is-nested::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(
+    var(--control-padding-inline) + (var(--select-level) - 1.5) * var(--select-indent)
+  );
+  border-inline-start: 1px solid var(--line);
 }
 .select-option.is-active,
 .select-option:hover {
@@ -131,6 +148,11 @@
   font-size: var(--text-caption);
   color: var(--secondary);
   line-height: 1.5;
+}
+.select-option .select-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .select-option > nx-icon {
   color: var(--signal);

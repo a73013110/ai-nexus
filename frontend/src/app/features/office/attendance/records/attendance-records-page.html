@@ -63,8 +63,8 @@
       [value]="draft().range"
       (valueChange)="query.set('range', $event)"
     />
-    <!-- 人員選項來自讀到的名單、單位來自組織；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
-    @if (personOptions().length > 2 || draft().userId || firstLoad()) {
+    <!-- 人員選項來自人員選單、單位來自組織；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
+    @if (showPeople()) {
       <div class="ui-field records-person">
         <span aria-hidden="true">人員</span>
         <nx-select
@@ -73,9 +73,9 @@
           [searchable]="true"
           [searchFrom]="10"
           [options]="personOptions()"
-          [loading]="firstLoad()"
-          [value]="draft().userId"
-          (valueChange)="query.set('userId', $event)"
+          [loading]="peopleLoading()"
+          [value]="draft().person"
+          (valueChange)="query.set('person', $event)"
         />
       </div>
     }
@@ -94,11 +94,18 @@
         />
       </div>
     }
+    <nx-checkbox
+      class="records-option records-days-off"
+      label="含放假日"
+      description="有刷卡或假單的放假日一律列出"
+      [checked]="draft().includeDaysOff"
+      (checkedChange)="query.set('includeDaysOff', $event)"
+    />
     @if (showExcluded()) {
       <nx-checkbox
-        class="records-excluded"
+        class="records-option records-excluded"
         label="含不列入出勤的人"
-        description="只影響全公司範圍的查詢"
+        description="名單在「卡號對應」設定，只影響全公司範圍"
         [checked]="draft().includeExcluded"
         (checkedChange)="query.set('includeExcluded', $event)"
       />
@@ -155,7 +162,7 @@
       <h2>
         出勤紀錄
         @if (records()) {
-          <span class="ui-count-label">{{ people().length }} 人</span>
+          <span class="ui-count-label">{{ total() }} 人</span>
         }
       </h2>
       @if (period()) {
@@ -205,7 +212,7 @@
           <th scope="col" nxTableColumn="sheets">假單與出差</th>
         </tr>
       </thead>
-      @for (group of groups(); track group.person.userId) {
+      @for (group of groups(); track group.key) {
         <tbody class="records-person-group">
           <tr class="records-person-row">
             <th scope="rowgroup" colspan="9">
@@ -213,10 +220,29 @@
                 ><strong>{{ group.person.displayName }}</strong
                 ><small>{{ group.person.account }}</small></span
               >
-              @if (group.person.excluded) {
-                <nx-status-badge tone="neutral">不列入出勤</nx-status-badge>
+              @if (!group.person.userId) {
+                <nx-status-badge
+                  tone="warning"
+                  title="卡號對應只填了姓名；綁上帳號後併入該使用者，才查得到假單"
+                  >尚未綁帳號</nx-status-badge
+                >
               }
-              @if (!group.person.leaveAvailable && records()?.leaveAvailable) {
+              @if (group.person.excluded) {
+                @if (session.has('attendance.cards')) {
+                  <a
+                    class="records-badge-link"
+                    [routerLink]="exclusionsRoute"
+                    [queryParams]="{ view: 'exclusions' }"
+                    title="到卡號對應的「不列入出勤」名單"
+                    ><nx-status-badge tone="neutral">不列入出勤</nx-status-badge></a
+                  >
+                } @else {
+                  <nx-status-badge tone="neutral">不列入出勤</nx-status-badge>
+                }
+              }
+              @if (
+                group.person.userId && !group.person.leaveAvailable && records()?.leaveAvailable
+              ) {
                 <nx-status-badge
                   tone="warning"
                   title="對不到公文系統帳號（沒有 AD 帳號，或公文系統查無此人）"
@@ -244,7 +270,12 @@
                   <small class="records-today">今天</small>
                 }
               </td>
-              <td nxTableColumn="dayType" data-label="日型">{{ row.dayType }}</td>
+              <td nxTableColumn="dayType" data-label="日型">
+                {{ row.dayType }}
+                @if (row.remark) {
+                  <small class="records-remark" [title]="row.remark">{{ row.remark }}</small>
+                }
+              </td>
               <td nxTableColumn="status">
                 <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge>
                 @if (row.reason) {
@@ -297,5 +328,21 @@
       emptyText="只列出期間內持有員工卡的人；未來的日子不列出。"
       (retry)="reload()"
     />
+    @if (total() > pageSizes[0] || pageIndex()) {
+      <div table-footer class="ui-table-footer">
+        <nx-table-pagination
+          mode="offset"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          [pageSizes]="pageSizes"
+          [count]="people().length"
+          [total]="total()"
+          [busy]="refreshing()"
+          (pageChange)="changePage($event)"
+          (pageSelect)="pageIndex.set($event)"
+          (pageSizeChange)="changePageSize($event)"
+        />
+      </div>
+    }
   </nx-data-table>
 </nx-feature-page>
