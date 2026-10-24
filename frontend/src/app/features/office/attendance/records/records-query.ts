@@ -6,7 +6,7 @@ import { monthBounds, shiftMonth, taipeiToday } from '../attendance-presentation
 
 /**
  * 出勤紀錄的查詢條件；區間預設本月，套用當下才換算成起訖（跨月後重新查詢就是新的月份）。
- * `person` 是使用者 ID，或只有姓名、還沒綁帳號的持有人（`holder:姓名`，見 `holderKey`）。
+ * `person` 是使用者 ID，或一張卡上沒有帳號的資料（只有姓名的持有人、未歸戶刷卡；`card:卡號`，見 `cardKey`）。
  */
 export interface RecordsQuery {
   range: TimeRange;
@@ -14,12 +14,13 @@ export interface RecordsQuery {
   unitId: string;
   includeExcluded: boolean;
   includeDaysOff: boolean;
+  includeUnattributed: boolean;
 }
 
 /** 與後端 `AttendanceRecordsFilter.MaxRangeDays` 相同；伺服器仍會以 `attendance_records_range_invalid` 拒絕。 */
 export const MAX_RANGE_DAYS = 366;
-/** 與後端 `CardAssignment.HolderNameMaxLength` 相同。 */
-const HOLDER_MAX = 120;
+/** 與後端 `Card.CardNumberMaxLength` 相同。 */
+const CARD_MAX = 32;
 export const RECORD_RANGES: TimeRangePreset[] = [
   { value: 'month', label: '本月' },
   { value: 'last-month', label: '上個月' },
@@ -32,10 +33,13 @@ export const RECORD_RANGES: TimeRangePreset[] = [
 const DEFAULT_RANGE = 'month';
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const HOLDER = 'holder:';
+const CARD = 'card:';
 
-/** 只有姓名的持有人在人員選單與條件裡的值；與使用者 ID（GUID）不會撞在一起。 */
-export const holderKey = (name: string) => HOLDER + name;
+/** 沒有帳號的資料依附在卡號：人員選單與條件裡的值是 `card:卡號`，與使用者 ID（GUID）不會撞在一起。 */
+export const cardKey = (cardNumber: string) => CARD + cardNumber;
+/** `cardKey` 的卡號；不是卡號時為空字串。 */
+export const cardOf = (person: string) =>
+  person.startsWith(CARD) ? person.slice(CARD.length) : '';
 
 export const emptyRecordsQuery = (): RecordsQuery => ({
   range: { preset: DEFAULT_RANGE, from: '', to: '' },
@@ -43,6 +47,7 @@ export const emptyRecordsQuery = (): RecordsQuery => ({
   unitId: '',
   includeExcluded: false,
   includeDaysOff: false,
+  includeUnattributed: false,
 });
 
 const dayNumber = (date: string) => Date.parse(date + 'T00:00:00Z') / 86_400_000;
@@ -96,29 +101,31 @@ export function recordFilters(
 ): AttendanceRecordFilters | string {
   const range = recordsRange(query.range, now);
   if (typeof range === 'string') return range;
-  const holder = query.person.startsWith(HOLDER) ? query.person.slice(HOLDER.length) : '';
+  const card = cardOf(query.person);
   return {
     ...range,
-    userId: holder ? undefined : query.person || undefined,
-    holder: holder || undefined,
+    userId: card ? undefined : query.person || undefined,
+    card: card || undefined,
     unitId: query.unitId || undefined,
     includeExcluded: query.includeExcluded || undefined,
     includeDaysOff: query.includeDaysOff || undefined,
+    includeUnattributed: query.includeUnattributed || undefined,
   };
 }
 
 function toParams(query: RecordsQuery): Params {
   const custom = query.range.preset === CUSTOM_RANGE;
-  const holder = query.person.startsWith(HOLDER);
+  const card = cardOf(query.person);
   return {
     range: !custom && query.range.preset !== DEFAULT_RANGE ? query.range.preset : undefined,
     from: custom ? query.range.from || undefined : undefined,
     to: custom ? query.range.to || undefined : undefined,
-    user: !holder ? query.person || undefined : undefined,
-    holder: holder ? query.person.slice(HOLDER.length) : undefined,
+    user: !card ? query.person || undefined : undefined,
+    card: card || undefined,
     unit: query.unitId || undefined,
     excluded: query.includeExcluded ? 'true' : undefined,
     holidays: query.includeDaysOff ? 'true' : undefined,
+    unattributed: query.includeUnattributed ? 'true' : undefined,
   };
 }
 
@@ -130,7 +137,7 @@ function fromParams(params: ParamMap, defaults: RecordsQuery): RecordsQuery {
   const from = day('from'),
     to = day('to');
   const preset = params.get('range') ?? '';
-  const holder = (params.get('holder') ?? '').trim();
+  const card = (params.get('card') ?? '').trim();
   return {
     range:
       from || to
@@ -138,10 +145,11 @@ function fromParams(params: ParamMap, defaults: RecordsQuery): RecordsQuery {
         : RECORD_RANGES.some((item) => item.value === preset)
           ? { preset, from: '', to: '' }
           : defaults.range,
-    person: id('user') || (holder && holder.length <= HOLDER_MAX ? holderKey(holder) : ''),
+    person: id('user') || (card && card.length <= CARD_MAX ? cardKey(card) : ''),
     unitId: id('unit'),
     includeExcluded: params.get('excluded') === 'true',
     includeDaysOff: params.get('holidays') === 'true',
+    includeUnattributed: params.get('unattributed') === 'true',
   };
 }
 
@@ -157,8 +165,7 @@ export function recordsRangeLabel(range: TimeRange, now = Date.now()) {
 }
 
 /**
- * 人員與單位 chip 的名稱由頁面提供（人員選單、單位清單）；還不知道名稱時顯示「指定的人員」。
- * 只有姓名的持有人，值本身就是姓名。
+ * 人員與單位 chip 的名稱由頁面提供（人員選單、單位清單）；還不知道名稱時顯示「指定的人員」，卡號則顯示卡號。
  */
 export function recordsQueryOptions(names: {
   person: (id: string) => string | undefined;
@@ -185,9 +192,8 @@ export function recordsQueryOptions(names: {
           id: 'person',
           label:
             '人員：' +
-            (query.person.startsWith(HOLDER)
-              ? query.person.slice(HOLDER.length)
-              : (names.person(query.person) ?? '指定的人員')),
+            (names.person(query.person) ??
+              (cardOf(query.person) ? `卡號 ${cardOf(query.person)}` : '指定的人員')),
           clear: { person: '' },
         });
       if (query.unitId)
@@ -200,6 +206,12 @@ export function recordsQueryOptions(names: {
         list.push({ id: 'excluded', label: '含不列入出勤的人', clear: { includeExcluded: false } });
       if (query.includeDaysOff)
         list.push({ id: 'holidays', label: '含放假日', clear: { includeDaysOff: false } });
+      if (query.includeUnattributed)
+        list.push({
+          id: 'unattributed',
+          label: '含未歸戶卡號',
+          clear: { includeUnattributed: false },
+        });
       return list;
     },
   };

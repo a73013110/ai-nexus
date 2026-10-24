@@ -92,7 +92,7 @@ export function attendanceCardsTour(
         target: `${CARDS} .cards-exclusions-note`,
         title: '不是權限',
         description:
-          '名單只讓出勤紀錄的全公司查詢與匯出預設略過這些人（例如董事、外派）；本人與主管照常看得到，HR 勾「含不列入出勤的人」也看得到。',
+          '名單只讓出勤紀錄的全公司查詢與匯出預設略過這些人或卡號（例如董事、外派、測試卡）；本人與主管照常看得到，HR 勾「含不列入出勤的人」也看得到。',
         side: 'bottom',
       },
       exclusions &&
@@ -100,7 +100,7 @@ export function attendanceCardsTour(
           target: `${CARDS} .exclusions-add`,
           title: '加入',
           description:
-            '從目錄搜尋使用者並填原因；只填姓名、還沒綁帳號的持卡人要先綁帳號才能加入。改原因或恢復列入在每列的選單。',
+            '對象選使用者（從目錄搜尋）或卡號：只有姓名的持卡人與未歸戶卡號依卡號設定，同名同姓不會一起被隱藏。改原因或恢復列入在每列的選單。',
           side: 'left',
         },
     ],
@@ -327,7 +327,7 @@ export function attendanceRecordsTour(options: {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:
-          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
+          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號預設不列，勾「含未歸戶卡號」才列在最後。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
         side: 'bottom',
       },
       {

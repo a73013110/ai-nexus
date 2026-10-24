@@ -77,6 +77,8 @@ public sealed class AttendanceModule : IFeatureModule
         ListRosterExclusions.Map(exclusions);
         SaveRosterExclusion.Map(exclusions);
         DeleteRosterExclusion.Map(exclusions);
+        SaveRosterCardExclusion.Map(exclusions);
+        DeleteRosterCardExclusion.Map(exclusions);
 
         var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
         ListPunchImports.Map(imports);

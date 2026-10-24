@@ -21,7 +21,8 @@ import { attendanceProblem } from '../attendance-presentation';
 import { ExclusionDialog } from './exclusion-dialog';
 
 /**
- * 不列入出勤的名單（卡號對應頁的一個檢視）：HR 看全公司出勤時隱藏的人，例如董事、外派或兼任。
+ * 不列入出勤的名單（卡號對應頁的一個檢視）：HR 看全公司出勤時隱藏的人，例如董事、外派或兼任；
+ * 沒有帳號的資料（只有姓名的持有人、未歸戶卡號）依卡號列入名單。
  * 它不是權限，本人與主管照常看得到；讀取跟卡號對應同一頁授權，新增、修改備註與恢復列入另需 `.maintain`。
  * 名單是少數人，不分頁、不另設查詢。
  */
@@ -99,7 +100,7 @@ import { ExclusionDialog } from './exclusion-dialog';
       }
       <table>
         <caption class="sr-only">
-          不列入出勤的人，依姓名排序。
+          不列入出勤的人與卡號，依名稱排序，沒有持有人的卡號在最後。
         </caption>
         <colgroup>
           <col nxTableColumn="name" class="exclusions-name-column" />
@@ -120,10 +121,10 @@ import { ExclusionDialog } from './exclusion-dialog';
           </tr>
         </thead>
         <tbody>
-          @for (row of rows(); track row.item.userId) {
+          @for (row of rows(); track row.key) {
             <tr>
               <th scope="row" nxTableColumn="name" class="exclusions-name">
-                {{ row.item.displayName }}<small>{{ row.item.account }}</small>
+                {{ row.item.displayName }}<small>{{ row.identity }}</small>
               </th>
               <td nxTableColumn="note" data-label="原因">{{ row.item.note || '—' }}</td>
               <td nxTableColumn="since" data-label="設定日期">{{ row.since }}</td>
@@ -132,7 +133,7 @@ import { ExclusionDialog } from './exclusion-dialog';
                   <nx-action-menu
                     [label]="row.item.displayName + ' 的操作'"
                     [items]="actions()"
-                    [busy]="working() === row.item.userId"
+                    [busy]="working() === row.key"
                     (action)="act(row.item, $event)"
                   />
                 </td>
@@ -148,7 +149,7 @@ import { ExclusionDialog } from './exclusion-dialog';
         loadingText="正在載入不列入出勤的名單…"
         errorTitle="無法取得不列入出勤的名單"
         emptyTitle="每個持卡人都列入出勤"
-        emptyText="HR 看全公司出勤時不想看到的人（例如董事、外派），可在這裡加入。"
+        emptyText="HR 看全公司出勤時不想看到的人（例如董事、外派）或卡號，可在這裡加入。"
         (retry)="reload()"
       />
     </nx-data-table>
@@ -170,7 +171,7 @@ export class RosterExclusions {
   readonly loading = this.read.loading;
   readonly refreshing = this.read.refreshing;
   readonly error = this.read.error;
-  /** 正在恢復列入的人；只讓那一列的選單轉圈。 */
+  /** 正在恢復列入的列（使用者 ID 或 `card:卡號`）；只讓那一列的選單轉圈。 */
   readonly working = signal<string | null>(null);
   readonly actionError = signal('');
   readonly columns: TableColumn[] = [
@@ -179,7 +180,13 @@ export class RosterExclusions {
     { id: 'since', label: '設定日期' },
   ];
   readonly rows = computed(() =>
-    (this.exclusions() ?? []).map((item) => ({ item, since: formatDate(item.createdAt) })),
+    (this.exclusions() ?? []).map((item) => ({
+      item,
+      key: item.userId ?? 'card:' + item.cardNumber,
+      // 使用者寫帳號；卡號列（姓名持有人或未歸戶卡號）寫卡號。
+      identity: item.userId ? item.account : `卡號 ${item.cardNumber}`,
+      since: formatDate(item.createdAt),
+    })),
   );
   readonly actions = computed<MenuAction[]>(() => {
     const disabled = this.session.testing() || !!this.working();
@@ -195,7 +202,9 @@ export class RosterExclusions {
   act(item: RosterExclusionDto, action: string) {
     if (action === 'edit')
       this.dialog().edit(
-        { id: item.userId, displayName: item.displayName, account: item.account },
+        item.userId
+          ? { userId: item.userId, displayName: item.displayName, account: item.account ?? '' }
+          : { cardNumber: item.cardNumber!, displayName: item.displayName },
         item.note,
       );
     else if (action === 'restore') void this.restore(item);
@@ -204,16 +213,21 @@ export class RosterExclusions {
     if (
       !(await this.confirmation().ask({
         title: `恢復列入 ${item.displayName}？`,
-        message: 'HR 看全公司出勤時會再列出這個人。',
+        message: item.userId
+          ? 'HR 看全公司出勤時會再列出這個人。'
+          : 'HR 看全公司出勤時會再列出這張卡上沒有帳號的資料。',
         confirm: '恢復列入',
       }))
     )
       return;
     const guard = this.view.guard();
-    this.working.set(item.userId);
+    const key = item.userId ?? 'card:' + item.cardNumber;
+    this.working.set(key);
     this.actionError.set('');
     try {
-      await this.api.restore(item.userId);
+      await this.api.restore(
+        item.userId ? { userId: item.userId } : { cardNumber: item.cardNumber! },
+      );
       if (guard()) this.reload();
     } catch (error) {
       if (guard()) this.actionError.set(attendanceProblem(error));

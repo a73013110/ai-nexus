@@ -72,7 +72,7 @@
 - 頁面（`FeatureCatalog`）：
   - `attendance.records` 出勤紀錄：範圍 `own`、`unit`、`unit-tree`、`all`；一般人預設 `own`，主管 `unit-tree`，HR `all`。
   - `attendance.cards` 卡號對應（含未歸戶卡號、持有歷史）、`attendance.imports` 匯入紀錄、`attendance.calendar` 假日設定：授權給 HR 群組，HR 不需要使用者管理權限。
-- 出勤名單＝查詢期間持有員工卡的人，扣掉 `attendance.RosterExclusions` 標為不列入的人（取代舊欄位「顯示打卡資料」）。它只是 HR 看全公司時隱藏不重要的人，不是隱私控制；本人與主管仍依範圍看得到。
+- 出勤名單＝查詢期間持有員工卡的人，扣掉標為不列入的人（`attendance.RosterExclusions`）與卡號（`attendance.RosterCardExclusions`，沒有帳號的資料依附在卡號），取代舊欄位「顯示打卡資料」。它只是 HR 看全公司時隱藏不重要的人，不是隱私控制；本人與主管仍依範圍看得到。
 - 選單：`attendance.records` 放「員工服務」分群；管理頁放「系統管理 → 人事與出勤」。使用者詳細頁顯示卡號時由前端另呼叫出勤 API，Identity 不依賴 Attendance。
 
 ## 舊資料轉移

@@ -8,6 +8,9 @@ import type {
   RosterExclusionRequest,
 } from '@core/api/schema';
 
+/** 不列入出勤的對象：使用者，或一張卡上沒有帳號的資料（只有姓名的持有人、未歸戶刷卡）。 */
+export type ExclusionTarget = { userId: string } | { cardNumber: string };
+
 /** 出勤紀錄已套用的條件（`from`、`to` 必填，最長一年），查詢與匯出共用；分頁（`offset`、`limit`）每頁另外加上。 */
 export type AttendanceRecordFilters = Omit<
   ApiQuery<'/api/v1/attendance-records', 'get'>,
@@ -58,14 +61,23 @@ export class AttendanceApi {
     this.api.delete('/api/v1/attendance-card-assignments/{id}', { path: { id } });
   unattributed = (signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-unattributed-cards', { signal });
-  /** 不列入出勤的人：HR 看全公司出勤時隱藏，不是權限。 */
+  /** 不列入出勤的名單（使用者與卡號）：HR 看全公司出勤時隱藏，不是權限。 */
   exclusions = (signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-roster-exclusions', { signal });
-  /** 標為不列入，已標過時只更新備註。 */
-  exclude = (userId: string, body: RosterExclusionRequest) =>
-    this.api.put('/api/v1/attendance-roster-exclusions/{userId}', { path: { userId }, body });
-  restore = (userId: string) =>
-    this.api.delete('/api/v1/attendance-roster-exclusions/{userId}', { path: { userId } });
+  /** 標為不列入，已標過時只更新備註；沒有帳號的資料依卡號標。 */
+  exclude = (target: ExclusionTarget, body: RosterExclusionRequest) =>
+    'userId' in target
+      ? this.api.put('/api/v1/attendance-roster-exclusions/{userId}', { path: target, body })
+      : this.api.put('/api/v1/attendance-roster-exclusions/cards/{cardNumber}', {
+          path: target,
+          body,
+        });
+  restore = (target: ExclusionTarget) =>
+    'userId' in target
+      ? this.api.delete('/api/v1/attendance-roster-exclusions/{userId}', { path: target })
+      : this.api.delete('/api/v1/attendance-roster-exclusions/cards/{cardNumber}', {
+          path: target,
+        });
 
   imports = (filters: PunchImportFilters, take: number, before?: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-imports', { query: { ...filters, take, before }, signal });

@@ -110,6 +110,15 @@
         (checkedChange)="query.set('includeExcluded', $event)"
       />
     }
+    @if (showUnattributed()) {
+      <nx-checkbox
+        class="records-option records-unattributed"
+        label="含未歸戶卡號"
+        description="有刷卡但沒有持有人的卡號，只列有刷卡的日子"
+        [checked]="draft().includeUnattributed"
+        (checkedChange)="query.set('includeUnattributed', $event)"
+      />
+    }
   </nx-query-bar>
   @if (exportError()) {
     <nx-notice
@@ -218,9 +227,23 @@
             <th scope="rowgroup" colspan="9">
               <span class="records-person-name"
                 ><strong>{{ group.person.displayName }}</strong
-                ><small>{{ group.person.account }}</small></span
+                ><small>{{
+                  group.person.userId ? group.person.account : '卡號 ' + group.person.cardNumber
+                }}</small></span
               >
-              @if (!group.person.userId) {
+              @if (group.person.unattributed) {
+                @if (session.has('attendance.cards')) {
+                  <a
+                    class="records-badge-link"
+                    [routerLink]="cardsRoute"
+                    [queryParams]="{ view: 'unattributed' }"
+                    title="刷卡沒有持有期間涵蓋；到卡號對應的「未歸戶卡號」指派持有人"
+                    ><nx-status-badge tone="warning">未歸戶卡號</nx-status-badge></a
+                  >
+                } @else {
+                  <nx-status-badge tone="warning">未歸戶卡號</nx-status-badge>
+                }
+              } @else if (!group.person.userId) {
                 <nx-status-badge
                   tone="warning"
                   title="卡號對應只填了姓名；綁上帳號後併入該使用者，才查得到假單"
@@ -231,7 +254,7 @@
                 @if (session.has('attendance.cards')) {
                   <a
                     class="records-badge-link"
-                    [routerLink]="exclusionsRoute"
+                    [routerLink]="cardsRoute"
                     [queryParams]="{ view: 'exclusions' }"
                     title="到卡號對應的「不列入出勤」名單"
                     ><nx-status-badge tone="neutral">不列入出勤</nx-status-badge></a

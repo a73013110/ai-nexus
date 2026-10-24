@@ -41,7 +41,7 @@ public sealed class ExportAttendanceRecordsTests
         Assert.Equal(["出勤紀錄", "統計", "說明"], workbook.WorkbookPart!.Workbook!.Sheets!.Elements<Sheet>().Select(x => x.Name!.Value));
 
         var days = Rows(workbook, "出勤紀錄");
-        Assert.Equal(["姓名", "帳號", "日期", "星期", "日型", "行事曆備註", "狀態", "上班", "下班", "應下班", "遲到", "早退", "說明", "假單與出差"], days[0].Select(x => x.Text));
+        Assert.Equal(["姓名", "帳號或卡號", "日期", "星期", "日型", "行事曆備註", "狀態", "上班", "下班", "應下班", "遲到", "早退", "說明", "假單與出差"], days[0].Select(x => x.Text));
         Assert.Equal(4, days.Count);
         var late = days[1];
         Assert.Equal((person.DisplayName, person.Account, new DateTime(2026, 10, 19), "一", "上班日", "出勤"), (late[0].Text, late[1].Text, DateTime.FromOADate(late[2].Number), late[3].Text, late[4].Text, late[6].Text));
@@ -88,6 +88,26 @@ public sealed class ExportAttendanceRecordsTests
         // 週末沒有刷卡也沒有假單：預設不列，要求才列。
         Assert.Equal(3 * 4, await DayCountAsync(client, "from=2026-10-17&to=2026-10-22"));
         Assert.Equal(3 * 6, await DayCountAsync(client, "from=2026-10-17&to=2026-10-22&includeDaysOff=true"));
+    }
+
+    [Fact]
+    public async Task DataWithoutAnAccountIsExportedUnderItsCardNumber()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        await session.GrantAsync(hr, DataScopes.All);
+        await session.HoldAsync(null, "A2");
+        await session.PunchAsync("Z9", At(19, 9, 0), At(19, 18, 0));
+        using var client = await session.Factory.SignedInAsync("hr");
+
+        // 未歸戶卡號預設不匯出；要求時排在最後，「帳號或卡號」欄寫卡號。
+        Assert.Equal(["新進同仁"], await PeopleAsync(client, Week));
+        var response = await client.GetAsync($"{Export}?{Week}&includeUnattributed=true");
+        using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
+        var rows = Rows(workbook, "出勤紀錄").Skip(1).ToList();
+        Assert.Equal([("新進同仁", "A2"), ("卡號 Z9", "Z9")], rows.Select(x => (x[0].Text, x[1].Text)).Distinct());
+        Assert.Contains(Rows(workbook, "統計"), x => x[0].Text == "卡號 Z9" && x[^1].Text.Contains("未歸戶卡號"));
+        Assert.Contains("\"includeUnattributed\":true", (await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"))[^1].Details);
     }
 
     [Fact]

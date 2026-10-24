@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import type { DirectoryUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ApiError } from '@core/errors/safe-errors';
 import { nameInitial } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -21,29 +22,45 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { PersonPicker } from '@features/work/collaboration/person-picker';
-import { AttendanceApi } from '../attendance-api';
+import { AttendanceApi, type ExclusionTarget } from '../attendance-api';
 import { attendanceProblem } from '../attendance-presentation';
 
 /** 與後端 `RosterExclusion.NoteMaxLength` 相同；伺服器仍會再檢查。 */
 const NOTE_MAX = 200;
+/** 與後端 `Card.CardNumberMaxLength` 相同。 */
+const CARD_MAX = 32;
 
 interface Person {
   id: string;
   displayName: string;
   account: string;
 }
+/** 修改備註時開啟的對象：使用者，或卡號（`displayName` 是名單上的名稱）。 */
+export type ExclusionSubject =
+  | { userId: string; displayName: string; account: string }
+  | { cardNumber: string; displayName: string };
 interface Editor {
-  /** 修改備註時人已固定，不能更換。 */
+  /** 修改備註時對象已固定，不能更換。 */
   editing: boolean;
+  kind: 'user' | 'card';
   person: Person | null;
+  cardNumber: string;
+  /** 修改時卡號列的名稱（姓名持有人或「卡號 …」）。 */
+  cardName: string;
   note: string;
 }
 
+const KINDS = [
+  { value: 'user', label: '使用者' },
+  { value: 'card', label: '卡號' },
+];
+
 /**
- * 把一個人設為不列入出勤，或修改他的備註。人員以目錄搜尋（只有使用者能標；只有姓名的持有人綁上帳號後再標），
- * 選好後換成 `.form-choice`＋「更換」，與指派持有人同一套。
+ * 設為不列入出勤，或修改原因。對象是使用者（目錄搜尋，選好後換成 `.form-choice`＋「更換」，與指派持有人同一套），
+ * 或卡號：沒有帳號的資料（只有姓名的持有人、未歸戶刷卡）依附在卡號上，同名同姓不會一起被隱藏。
  */
 @Component({
   selector: 'nx-exclusion-dialog',
@@ -56,6 +73,7 @@ interface Editor {
     Notice,
     PendingButton,
     PersonPicker,
+    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -77,13 +95,53 @@ interface Editor {
               <nx-notice tone="danger" [message]="error()" />
             }
             <div class="form-sections">
-              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-person'">
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-target'">
                 <header class="form-section-head">
-                  <h3 [id]="id + '-person'">人員</h3>
+                  <h3 [id]="id + '-target'">對象</h3>
                   <p class="form-note">HR 看全公司出勤時不列出；本人與主管照常看得到。</p>
                 </header>
                 <div class="form-section-body">
-                  @if (e.person; as p) {
+                  @if (!e.editing) {
+                    <nx-view-switch
+                      class="exclusion-kind"
+                      label="對象種類"
+                      appearance="segment"
+                      [options]="kinds"
+                      [value]="e.kind"
+                      [disabled]="locked()"
+                      (valueChange)="switchKind($any($event))"
+                    />
+                  }
+                  @if (e.kind === 'card') {
+                    @if (e.editing) {
+                      <div class="form-choice">
+                        <span class="avatar is-name" aria-hidden="true">{{
+                          initial(e.cardName)
+                        }}</span>
+                        <span class="form-choice-text"
+                          ><strong>{{ e.cardName }}</strong
+                          ><small>卡號 {{ e.cardNumber }}</small></span
+                        >
+                      </div>
+                    } @else {
+                      <label
+                        >卡號<input
+                          #card
+                          nxField
+                          class="exclusion-card"
+                          autocomplete="off"
+                          inputmode="text"
+                          [attr.maxlength]="cardMax"
+                          [attr.aria-invalid]="!!targetError() || null"
+                          [value]="e.cardNumber"
+                          [readOnly]="locked()"
+                          (input)="update({ cardNumber: card.value }); targetError.set('')"
+                      /></label>
+                      <p class="form-note">
+                        只有姓名的持有人與未歸戶卡號依卡號設定；卡上綁了帳號的期間不受影響。
+                      </p>
+                    }
+                  } @else if (e.person; as p) {
                     <div class="form-choice">
                       <span class="avatar" aria-hidden="true">{{ initial(p.displayName) }}</span>
                       <span class="form-choice-text"
@@ -109,8 +167,8 @@ interface Editor {
                       (picked)="choose($event)"
                     />
                   }
-                  @if (personError()) {
-                    <p class="form-note field-error">{{ personError() }}</p>
+                  @if (targetError()) {
+                    <p class="form-note field-error">{{ targetError() }}</p>
                   }
                 </div>
               </section>
@@ -182,17 +240,21 @@ export class ExclusionDialog {
   private readonly api = inject(AttendanceApi);
   private readonly injector = inject(Injector);
   readonly noteMax = NOTE_MAX;
+  readonly cardMax = CARD_MAX;
+  readonly kinds = KINDS;
   protected readonly initial = nameInitial;
   /** 儲存成功，名單要重讀。 */
   readonly saved = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('exclusionDialog');
   private readonly picker = viewChild(PersonPicker);
+  private readonly cardInput = viewChild<ElementRef<HTMLInputElement>>('card');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly editor = signal<Editor | null>(null);
   private readonly opened = signal<Editor | null>(null);
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly personError = signal('');
+  /** 對象（人員或卡號）的欄位錯誤：沒選、找不到卡號或訪客卡。 */
+  readonly targetError = signal('');
   readonly people = directorySearch(
     () => {
       const person = this.editor()?.person;
@@ -207,19 +269,39 @@ export class ExclusionDialog {
     return (
       !!editor &&
       !!opened &&
-      (editor.person?.id !== opened.person?.id || editor.note.trim() !== opened.note.trim())
+      (editor.kind !== opened.kind ||
+        editor.person?.id !== opened.person?.id ||
+        editor.cardNumber.trim() !== opened.cardNumber.trim() ||
+        editor.note.trim() !== opened.note.trim())
     );
   });
 
   create() {
-    this.show({ editing: false, person: null, note: '' });
+    this.show({
+      editing: false,
+      kind: 'user',
+      person: null,
+      cardNumber: '',
+      cardName: '',
+      note: '',
+    });
   }
-  edit(person: Person, note: string | null | undefined) {
-    this.show({ editing: true, person, note: note ?? '' });
+  edit(subject: ExclusionSubject, note: string | null | undefined) {
+    this.show({
+      editing: true,
+      kind: 'userId' in subject ? 'user' : 'card',
+      person:
+        'userId' in subject
+          ? { id: subject.userId, displayName: subject.displayName, account: subject.account }
+          : null,
+      cardNumber: 'cardNumber' in subject ? subject.cardNumber : '',
+      cardName: subject.displayName,
+      note: note ?? '',
+    });
   }
   private show(editor: Editor) {
     this.error.set('');
-    this.personError.set('');
+    this.targetError.set('');
     this.people.clear();
     this.editor.set(editor);
     this.opened.set(editor);
@@ -228,9 +310,13 @@ export class ExclusionDialog {
   update(change: Partial<Editor>) {
     this.editor.update((editor) => (editor ? { ...editor, ...change } : null));
   }
+  switchKind(kind: Editor['kind']) {
+    this.update({ kind });
+    this.targetError.set('');
+  }
   choose(user: DirectoryUserDto) {
     this.update({ person: { id: user.id, displayName: user.displayName, account: user.account } });
-    this.personError.set('');
+    this.targetError.set('');
     this.people.clear();
   }
   /** 清掉人員回到選擇器，焦點交給搜尋框（按下的按鈕會被移除）。 */
@@ -264,22 +350,39 @@ export class ExclusionDialog {
     event.preventDefault();
     const editor = this.editor();
     if (!editor || this.locked() || (editor.editing && !this.dirty())) return;
-    if (!editor.person) {
-      this.personError.set('請選擇人員。');
-      this.picker()?.focus();
-      return;
-    }
+    const target = this.target(editor);
+    if (!target) return;
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.exclude(editor.person.id, { note: editor.note.trim() || null });
+      await this.api.exclude(target, { note: editor.note.trim() || null });
       this.opened.set(editor);
       this.dialog().nativeElement.close();
       this.saved.emit();
     } catch (error) {
-      this.error.set(attendanceProblem(error));
+      // 卡號是手打的：找不到或訪客卡標在欄位上，不用通用的「請重新整理」。
+      if (error instanceof ApiError && error.code === 'attendance_card_not_found')
+        this.targetError.set('卡號對應與刷卡紀錄都找不到這個卡號。');
+      else if (error instanceof ApiError && error.code === 'attendance_card_visitor')
+        this.targetError.set('訪客卡本來就不列入出勤。');
+      else this.error.set(attendanceProblem(error));
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** 送出的對象；沒選人或沒填卡號時標出欄位錯誤並把焦點移過去。 */
+  private target(editor: Editor): ExclusionTarget | null {
+    if (editor.kind === 'card') {
+      const cardNumber = editor.cardNumber.trim();
+      if (cardNumber) return { cardNumber };
+      this.targetError.set('請填寫卡號。');
+      this.cardInput()?.nativeElement.focus();
+      return null;
+    }
+    if (editor.person) return { userId: editor.person.id };
+    this.targetError.set('請選擇人員。');
+    this.picker()?.focus();
+    return null;
   }
 }

@@ -85,6 +85,7 @@ describe('AttendanceCardsPage tour targets', () => {
             exclusions: vi.fn(async () => [
               {
                 userId: 'u9',
+                cardNumber: null,
                 displayName: '林董事',
                 account: 'TEST\\lin',
                 note: null,

@@ -66,7 +66,7 @@ public static class PublicErrorCatalog
         ["attendance_period_invalid"] = "結束日期不能早於開始日期。",
         ["attendance_records_filter_invalid"] = "查詢條件不正確，請重新選擇人員或重新整理頁面。",
         ["attendance_records_range_invalid"] = "查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。",
-        ["attendance_roster_exclusion_not_found"] = "這位使用者已經列入出勤，可能剛被其他人恢復。",
+        ["attendance_roster_exclusion_not_found"] = "已經列入出勤，可能剛被其他人恢復。",
         ["attendance_user_not_found"] = "找不到這位使用者，帳號可能已刪除。",
         ["attachment_total_limit"] = "這次附件總大小超過上限。",
         ["attachment_upload_expired"] = "上傳已失效，請重新上傳。",

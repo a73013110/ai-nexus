@@ -1,4 +1,3 @@
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Office.Attendance.Calendar;
 
 namespace AiNexus.Features.Office.Attendance.Records;
@@ -17,8 +16,10 @@ public sealed class AttendanceRecordsFilter
 
     public Guid? UserId { get; set; }
 
-    /// <summary>只有姓名、還沒綁帳號的持有人（持有期間的 <c>HolderName</c>）；只有全公司範圍查得到。</summary>
-    public string? Holder { get; set; }
+    /// <summary>
+    /// 卡號：這張卡上沒有帳號的資料（只有姓名的持有期間與未歸戶刷卡）。沒有帳號的資料依附在卡號上，同名同姓不會混在一起；只有全公司範圍查得到。
+    /// </summary>
+    public string? Card { get; set; }
 
     /// <summary>該單位及下層的目前成員。</summary>
     public Guid? UnitId { get; set; }
@@ -29,13 +30,19 @@ public sealed class AttendanceRecordsFilter
     /// <summary>含沒有刷卡、也沒有假單的放假日；有刷卡或假單的放假日一律列出。</summary>
     public bool? IncludeDaysOff { get; set; }
 
+    /// <summary>含未歸戶卡號（刷卡沒有持有期間涵蓋）；只影響全公司範圍，指定卡號時一律列出。</summary>
+    public bool? IncludeUnattributed { get; set; }
+
     /// <summary>起訖必填、結束不早於開始、最長 <see cref="MaxRangeDays"/> 天，而且在 GD 行事曆支援的年份內；不合法時為 null。</summary>
     internal (DateOnly Start, DateOnly End)? Range()
         => From is { } start && To is { } end && end >= start && CalendarDates.IsSupported(start) && CalendarDates.IsSupported(end)
             && end.DayNumber - start.DayNumber < MaxRangeDays ? (start, end) : null;
 
-    /// <summary>去掉前後空白的姓名；空白視同沒有指定。</summary>
-    internal string? HolderName => string.IsNullOrWhiteSpace(Holder) ? null : Holder.Trim();
+    /// <summary>去掉前後空白的卡號（與匯入、卡片登錄相同）；空白視同沒有指定。</summary>
+    internal string? CardNumber => string.IsNullOrWhiteSpace(Card) ? null : Card.Trim();
 
-    internal bool IsValid() => HolderName is not { Length: > CardAssignment.HolderNameMaxLength };
+    /// <summary>有指定人（使用者或卡號）：不列入出勤與「含未歸戶」的隱藏都不套用，指定誰就看誰。</summary>
+    internal bool NamesSomeone => UserId is not null || CardNumber is not null;
+
+    internal bool IsValid() => CardNumber is not { Length: > Data.App.Attendance.Card.CardNumberMaxLength } && !(UserId is not null && CardNumber is not null);
 }

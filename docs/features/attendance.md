@@ -34,9 +34,9 @@
 
 ## 不列入出勤
 
-- HR 看全公司出勤時隱藏的人（董事、外派、兼任等），取代舊欄位「顯示打卡資料」；不是權限，本人與主管照常看得到，查詢方式見 [出勤紀錄](attendance-records.md#名單)。
-- 管理在卡號對應頁的「不列入出勤」檢視：`GET /api/v1/attendance-roster-exclusions` 要 `attendance.cards`；`PUT`／`DELETE /api/v1/attendance-roster-exclusions/{userId}`（設定或修改原因、恢復列入）另要 `.maintain`。
-- 以使用者為準：只有姓名、還沒綁帳號的持有人要先綁帳號才能加入。原因是選填的自由文字（最多 200 字），不進稽核。
+- HR 看全公司出勤時隱藏的人或卡號（董事、外派、測試卡等），取代舊欄位「顯示打卡資料」；不是權限，本人與主管照常看得到，查詢方式見 [出勤紀錄](attendance-records.md#名單)。
+- 管理在卡號對應頁的「不列入出勤」檢視：`GET /api/v1/attendance-roster-exclusions` 要 `attendance.cards`；`PUT`／`DELETE /api/v1/attendance-roster-exclusions/{userId}` 與 `.../cards/{cardNumber}`（設定或修改原因、恢復列入）另要 `.maintain`。
+- 對象是使用者或卡號：沒有帳號的資料（只有姓名的持有人、未歸戶刷卡）依附在卡號，依卡號標就不會連同名同姓的人一起隱藏。卡號要登錄過或有刷卡、不能是訪客卡（`attendance_card_not_found`、`attendance_card_visitor`）；綁上帳號後改以該使用者的設定為準。原因是選填的自由文字（最多 200 字），不進稽核。
 
 ## 出勤判定
 

@@ -44,8 +44,9 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             OwnerId = viewer, Action = Action, Result = "read",
             DetailsJson = JsonSerializer.Serialize(new
             {
-                from = data.From, to = data.To, userId = filter.UserId, holderName = filter.HolderName, unitId = filter.UnitId,
-                includeExcluded = filter.IncludeExcluded == true, includeDaysOff = filter.IncludeDaysOff == true, count = data.People.Count
+                from = data.From, to = data.To, userId = filter.UserId, cardNumber = filter.CardNumber, unitId = filter.UnitId,
+                includeExcluded = filter.IncludeExcluded == true, includeDaysOff = filter.IncludeDaysOff == true,
+                includeUnattributed = filter.IncludeUnattributed == true, count = data.People.Count
             })
         });
         await db.SaveChangesAsync(ct);
@@ -60,7 +61,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     {
         var sheet = new SpreadsheetSheet("出勤紀錄",
         [
-            new("姓名", 12), new("帳號", 18), new("日期", 12), new("星期", 6), new("日型", 10), new("行事曆備註", 16), new("狀態", 10),
+            new("姓名", 12), new("帳號或卡號", 18), new("日期", 12), new("星期", 6), new("日型", 10), new("行事曆備註", 16), new("狀態", 10),
             new("上班", 10), new("下班", 10), new("應下班", 10), new("遲到", 10), new("早退", 10), new("說明", 34), new("假單與出差", 60)
         ]);
         foreach (var person in data.People)
@@ -73,7 +74,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
                 // 只有一筆刷卡時上下班是同一筆，與頁面相同只列在上班。
                 var singlePunch = day.ClockIn is not null && day.ClockIn == day.ClockOut;
                 sheet.Add(
-                    person.DisplayName, person.Account, day.Date, Weekday(day.Date), DayTypes[day.DayType], day.CalendarRemark,
+                    person.DisplayName, Identity(person), day.Date, Weekday(day.Date), DayTypes[day.DayType], day.CalendarRemark,
                     new SpreadsheetCell(Statuses[day.Status], day.Status == AttendanceStatus.Anomaly ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
                     new SpreadsheetCell(Clock(day.ClockIn), late ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
                     new SpreadsheetCell(singlePunch ? null : Clock(day.ClockOut), early ? SpreadsheetTone.Danger : SpreadsheetTone.Normal),
@@ -91,7 +92,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     {
         var sheet = new SpreadsheetSheet("統計",
         [
-            new("姓名", 12), new("帳號", 18), new("列出天數", 9), new("出勤", 7), new("請假", 7), new("放假", 7), new("異常", 7), new("無法判定", 9),
+            new("姓名", 12), new("帳號或卡號", 18), new("列出天數", 9), new("出勤", 7), new("請假", 7), new("放假", 7), new("異常", 7), new("無法判定", 9),
             new("遲到天數", 9), new("遲到合計", 10), new("早退天數", 9), new("早退合計", 10), new("備註", 40)
         ]);
         foreach (var person in data.People)
@@ -102,10 +103,11 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             var earlyDays = person.Days.Where(x => x.EarlyLeaveSeconds > 0).ToList();
             List<string> notes = [];
             if (person.Excluded) notes.Add("不列入出勤");
-            if (person.UserId is null) notes.Add("尚未綁帳號（卡號對應只有姓名），假單無法取得");
+            if (person.Unattributed) notes.Add("未歸戶卡號：刷卡沒有持有人，只列有刷卡的日子，假單無法取得");
+            else if (person.UserId is null) notes.Add("尚未綁帳號（卡號對應只有姓名），假單無法取得");
             else if (!person.LeaveAvailable && data.LeaveAvailable) notes.Add("對不到公文系統帳號，假單無法取得");
             sheet.Add(
-                person.DisplayName, person.Account, person.Days.Count, Count(AttendanceStatus.Present), Count(AttendanceStatus.OnLeave), Count(AttendanceStatus.DayOff),
+                person.DisplayName, Identity(person), person.Days.Count, Count(AttendanceStatus.Present), Count(AttendanceStatus.OnLeave), Count(AttendanceStatus.DayOff),
                 new SpreadsheetCell(anomalies, anomalies > 0 ? SpreadsheetTone.Danger : SpreadsheetTone.Normal), Count(AttendanceStatus.Undetermined),
                 lateDays.Count, lateDays.Count > 0 ? TimeSpan.FromSeconds(lateDays.Sum(x => (long)x.LateSeconds)) : null,
                 earlyDays.Count, earlyDays.Count > 0 ? TimeSpan.FromSeconds(earlyDays.Sum(x => (long)x.EarlyLeaveSeconds)) : null,
@@ -121,9 +123,11 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         sheet.Add("匯出時間", Invariant($"{exportedAt:yyyy/MM/dd HH:mm:ss}（台灣時間）")
             + (data.To >= data.Today ? Invariant($"；今天（{data.Today:yyyy/MM/dd}）尚未判定，之後的日子不列出") : ""));
         List<string> filters = [];
-        if (filter.UserId is not null || filter.HolderName is not null) filters.Add("指定人員");
+        if (filter.UserId is not null) filters.Add("指定人員");
+        if (filter.CardNumber is not null) filters.Add($"指定卡號 {filter.CardNumber}");
         if (filter.UnitId is not null) filters.Add("指定單位（含下層）");
         if (filter.IncludeExcluded == true) filters.Add("含不列入出勤的人");
+        if (filter.IncludeUnattributed == true) filters.Add("含未歸戶卡號");
         sheet.Add("條件", filters.Count > 0 ? string.Join("、", filters) + $"，共 {data.People.Count} 人" : $"資料範圍內的全部人員，共 {data.People.Count} 人");
         sheet.Add("放假日", filter.IncludeDaysOff == true ? "全部列出" : "只列有刷卡或假單的放假日；沒有刷卡也沒有假單的放假日不列，也不計入統計");
         if (!data.CalendarAvailable)
@@ -140,6 +144,9 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         foreach (var rule in rules.Rules) sheet.Add(rule.Title, rule.Text);
         return sheet;
     }
+
+    /// <summary>使用者寫帳號；沒有帳號的資料寫它依附的卡號。</summary>
+    private static string? Identity(AttendancePersonDto person) => person.UserId is not null ? person.Account : person.CardNumber;
 
     /// <summary>刷卡與應下班的台灣時刻；判定保證它們都落在出勤日當天。</summary>
     private static TimeOnly? Clock(DateTimeOffset? value) => value is { } at ? TimeOnly.FromTimeSpan(TaipeiTime.Of(at).TimeOfDay) : null;

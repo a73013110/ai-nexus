@@ -18,7 +18,7 @@ internal sealed class RosterExclusionRequestValidator : RequestValidator<RosterE
 }
 
 /// <summary>
-/// 把使用者標為不列入出勤，已標過時只更新備註（PUT 冪等）。只有使用者能標：只有姓名的持有人本來就只是暫時的，綁上帳號後再標。
+/// 把使用者標為不列入出勤，已標過時只更新備註（PUT 冪等）。沒有帳號的資料（只有姓名的持有人、未歸戶卡號）依卡號標，見 <see cref="SaveRosterCardExclusion"/>。
 /// 會稽核（<c>admin.attendance_roster_exclusion</c>），快照只記是否不列入；備註是自由文字，不進稽核。
 /// </summary>
 internal sealed class SaveRosterExclusion(AppDbContext db, AdministrativeAudit audit)

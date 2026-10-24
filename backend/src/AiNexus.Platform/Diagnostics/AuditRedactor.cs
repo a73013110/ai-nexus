@@ -23,8 +23,8 @@ public static class AuditRedactor
         "morningOff", "afternoonOff", "calendarRemark", "gdUserId",
         // 組織從公文系統匯入（admin.organization_import）：前後的單位、已匯入單位與主管數，這次排除的部門數與各類變動的數量；不收部門或人員清單。
         "units", "gdUnits", "managers", "excluded", "created", "adopted", "updated", "disabled", "managersAdded", "managersRemoved", "issues",
-        // 出勤紀錄匯出的查詢條件（區間、人員、單位與姓名持有人用既有欄位；人數用 count）。
-        "includeExcluded", "includeDaysOff"
+        // 出勤紀錄匯出的查詢條件（區間、人員、單位與卡號用既有欄位；人數用 count）。
+        "includeExcluded", "includeDaysOff", "includeUnattributed"
     };
 
     /// <summary>

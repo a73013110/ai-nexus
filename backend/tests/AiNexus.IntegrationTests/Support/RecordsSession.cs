@@ -103,6 +103,13 @@ internal sealed class RecordsSession : IAsyncDisposable
         await db.SaveChangesAsync();
     });
 
+    /// <summary>依卡號標為不列入出勤：這張卡上沒有帳號的資料（姓名持有人、未歸戶刷卡）。</summary>
+    public Task ExcludeCardAsync(string cardNumber) => WithDbAsync(async db =>
+    {
+        db.Add(new RosterCardExclusion { CardNumber = cardNumber, Note = "測試排除" });
+        await db.SaveChangesAsync();
+    });
+
     public async Task WithDbAsync(Func<AppDbContext, Task> action)
     {
         using var scope = Factory.Services.CreateScope();
