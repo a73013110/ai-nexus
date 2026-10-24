@@ -168,12 +168,11 @@
             </header>
             @if (row.unit.gdDepNo != null) {
               <nx-notice
-                class="organization-imported"
                 tone="info"
                 [message]="
                   '來自公文系統（部門編號 ' +
                   row.unit.gdDepNo +
-                  '）：名稱、上層、啟用、順序與主管以公文系統為準，下次匯入會覆蓋這裡的修改；成員與主要所屬不受影響。'
+                  '）：名稱、上層、啟用、順序與主管以公文系統為準，匯入時會覆蓋；成員與主要所屬不受影響。'
                 "
               />
             }
@@ -190,80 +189,98 @@
             @if (store.membersError()) {
               <nx-notice tone="danger" [message]="store.membersError()" />
             }
-            @if (row.unit.enabled) {
-              <div class="member-search">
-                <label
-                  >加入成員<nx-person-picker
-                    label="尋找要加入的使用者"
-                    [search]="people"
+            <section class="organization-members" aria-labelledby="organization-members-title">
+              <header class="organization-members-head">
+                <h3 id="organization-members-title">
+                  直屬成員 <span class="ui-count-label">{{ row.unit.memberCount }} 人</span>
+                </h3>
+                <nx-info-popover label="主要所屬與主管" [width]="300">
+                  <ul class="form-note-list">
+                    <li>
+                      一人可屬多個單位，但只有一個主要所屬；在這裡設為主要所屬，會取消此人在其他單位的主要所屬。
+                    </li>
+                    <li>
+                      來自公文系統的單位，主管以公文系統為準；成員與主要所屬只在這裡維護，匯入不會改動。
+                    </li>
+                  </ul>
+                </nx-info-popover>
+                @if (row.unit.enabled) {
+                  <button
+                    type="button"
+                    class="secondary-button organization-add-members"
                     [disabled]="store.locked()"
-                    [pendingId]="addingId()"
-                    (picked)="add($event)"
-                /></label>
-              </div>
-            }
-            <h3 class="member-heading">
-              直屬成員 <span class="ui-count-label">{{ row.unit.memberCount }} 人</span>
-            </h3>
-            @if (store.membersLoading() && !store.membersError()) {
-              <div class="organization-skeleton" role="status">
-                @for (width of skeleton.slice(0, 3); track $index) {
-                  <span class="skeleton" [style.width.%]="width"></span>
+                    (click)="addMembers()"
+                  >
+                    <nx-icon name="plus" />加入成員
+                  </button>
                 }
-                <span class="sr-only">正在載入成員…</span>
-              </div>
-            } @else if (!store.membersLoading()) {
-              <ul
-                class="member-list"
-                [class.is-refreshing]="store.membersRefreshing()"
-                [attr.aria-busy]="store.membersRefreshing() || null"
-              >
-                @for (member of store.members(); track member.userId) {
-                  <li class="member-row" [class.is-inactive]="!member.active">
-                    <span class="member-name"
-                      ><strong>{{ member.displayName }}</strong
-                      ><small>{{ member.account }}</small>
+              </header>
+              @if (store.membersLoading() && !store.membersError()) {
+                <div class="organization-skeleton" role="status">
+                  @for (width of skeleton.slice(0, 3); track $index) {
+                    <span class="skeleton" [style.width.%]="width"></span>
+                  }
+                  <span class="sr-only">正在載入成員…</span>
+                </div>
+              } @else if (!store.membersLoading()) {
+                <ul
+                  class="person-list"
+                  [class.is-refreshing]="store.membersRefreshing()"
+                  [attr.aria-busy]="store.membersRefreshing() || null"
+                >
+                  @for (member of store.members(); track member.userId) {
+                    <li class="person-row" [class.is-inactive]="!member.active">
+                      <span class="avatar" aria-hidden="true">{{
+                        initial(member.displayName)
+                      }}</span>
+                      <span class="person-row-text"
+                        ><strong>{{ member.displayName }}</strong
+                        ><small>{{ member.account }}</small></span
+                      >
                       @if (!member.active) {
                         <nx-status-badge tone="neutral">帳號已停用</nx-status-badge>
                       }
-                    </span>
-                    @let primary = store.memberPending('primary:' + member.userId);
-                    @let manager = store.memberPending('manager:' + member.userId);
-                    @let removing = store.memberPending('remove:' + member.userId);
-                    <nx-checkbox
-                      label="主要所屬"
-                      [checked]="member.isPrimary"
-                      [pending]="primary"
-                      [disabled]="store.membersLocked() && !primary"
-                      (checkedChange)="setPrimary(member, $event)"
-                    />
-                    <nx-checkbox
-                      label="主管"
-                      [checked]="member.isManager"
-                      [pending]="manager"
-                      [disabled]="store.membersLocked() && !manager"
-                      (checkedChange)="setManager(member, $event)"
-                    />
-                    <button
-                      nxPending
-                      type="button"
-                      class="icon-button"
-                      [attr.aria-label]="'將 ' + member.displayName + ' 移出單位'"
-                      [pending]="removing"
-                      [disabled]="store.membersLocked() && !removing"
-                      (click)="removeMember(member)"
-                    >
-                      <nx-icon name="close" />
-                    </button>
-                  </li>
-                } @empty {
-                  <li class="form-note">這個單位還沒有直屬成員。</li>
-                }
-              </ul>
-              <p class="form-note">
-                一人可屬多個單位，但只有一個主要所屬；在這裡設為主要所屬，會取消此人在其他單位的主要所屬。
-              </p>
-            }
+                      @let primary = store.memberPending('primary:' + member.userId);
+                      @let manager = store.memberPending('manager:' + member.userId);
+                      @let removing = store.memberPending('remove:' + member.userId);
+                      <nx-checkbox
+                        label="主要所屬"
+                        [checked]="member.isPrimary"
+                        [pending]="primary"
+                        [disabled]="store.membersLocked() && !primary"
+                        (checkedChange)="setPrimary(member, $event)"
+                      />
+                      <nx-checkbox
+                        label="主管"
+                        [checked]="member.isManager"
+                        [pending]="manager"
+                        [disabled]="store.membersLocked() && !manager"
+                        (checkedChange)="setManager(member, $event)"
+                      />
+                      <button
+                        nxPending
+                        type="button"
+                        class="icon-button"
+                        [attr.aria-label]="'將 ' + member.displayName + ' 移出單位'"
+                        [pending]="removing"
+                        [disabled]="store.membersLocked() && !removing"
+                        (click)="removeMember(member)"
+                      >
+                        <nx-icon name="close" />
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="form-note">
+                      {{
+                        row.unit.enabled
+                          ? '還沒有直屬成員；按「加入成員」從名單挑選。'
+                          : '這個單位沒有直屬成員。'
+                      }}
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
           } @else {
             <nx-empty-state>
               <h2 id="organization-detail-title">選擇單位</h2>
@@ -277,5 +294,6 @@
 </nx-feature-page>
 <nx-menu-panel label="單位操作" [items]="actions()" (action)="act($event)" />
 <nx-unit-dialog />
+<nx-member-dialog />
 <nx-unit-import-dialog (applied)="imported($event)" />
 <nx-confirm-dialog />

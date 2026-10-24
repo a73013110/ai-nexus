@@ -121,6 +121,42 @@ public sealed class ImportUnitsTests
     }
 
     [Fact]
+    public async Task ExcludedDepartmentsStayAsTheyAreForThisImportOnly()
+    {
+        await using var session = await ImportSession.CreateAsync();
+        var gd = session.Gd;
+        await session.PersonAsync("bob", "G-BOB");
+        gd.AddDepartment(1, "總公司");
+        gd.AddDepartment(2, "業務部", parent: 1);
+        gd.AddDepartment(3, "倉儲部", parent: 1);
+        gd.AddDepartment(4, "研發部", parent: 1);
+        await ImportAsync(session.Admin);
+        var before = (await ListUnitsAsync(session.Admin)).ToDictionary(x => x.GdDepNo ?? 0);
+        // 管理員在本地停用業務部，不想被公文系統重新啟用。
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "業務部", false))).EnsureSuccessStatusCode();
+        gd.UpdateDepartment(2, "DEP_CHIEF = 'G-BOB'");
+        gd.RemoveDepartment(3);
+        gd.AddDepartment(5, "新事業部", parent: 1);
+        gd.AddDepartment(6, "新事業一課", parent: 5);
+
+        var preview = await PreviewImportAsync(session.Admin);
+        Assert.Equal([2, 3, 4, 5, 6], preview.Units.Select(x => x.GdDepNo).Order());
+        var response = await session.Admin.PostAsJsonAsync(Import, new UnitImportRequest(preview.Fingerprint, [2, 3, 5]));
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+
+        var after = await ListUnitsAsync(session.Admin);
+        Assert.False(after.Single(x => x.Id == before[2].Id).Enabled);
+        Assert.True(after.Single(x => x.Id == before[3].Id).Enabled);
+        // 排除的新部門不建立，掛在它底下的新部門無處可掛，一併略過。
+        Assert.DoesNotContain(after, x => x.GdDepNo is 5 or 6);
+        Assert.Empty(await MembersAsync(session.Admin, before[2].Id));
+        Assert.Contains(await AttendanceApi.AuditAsync(session.Factory, AuditAction), x => x.Details.Contains("\"excluded\":3"));
+
+        // 排除只限這一次：下次預覽仍列出。
+        Assert.Equal([2, 3, 4, 5, 6], (await PreviewImportAsync(session.Admin)).Units.Select(x => x.GdDepNo).Order());
+    }
+
+    [Fact]
     public async Task TheFirstImportAdoptsManualUnitsWithTheSameNameUnderTheSameParent()
     {
         await using var session = await ImportSession.CreateAsync();

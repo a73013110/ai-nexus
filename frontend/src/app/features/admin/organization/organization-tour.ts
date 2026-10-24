@@ -57,13 +57,14 @@ export function organizationTour(options: {
       side: 'bottom',
     },
     !options.testing && {
-      target: 'nx-organization-page .member-search',
+      target: 'nx-organization-page .organization-add-members',
       title: '加入成員',
-      description: '輸入至少兩個字搜尋帳號或姓名；只列出登入過平台的使用者，停用的單位不能加入。',
+      description:
+        '開啟全部在職使用者的名單，依主要所屬分組、可篩選，勾選多人一次加入；尚未分派部門的人排在最前面。停用的單位不能加入。',
       side: 'bottom',
     },
     {
-      target: 'nx-organization-page .member-list',
+      target: 'nx-organization-page .organization-members .person-list',
       title: '主要所屬與主管',
       description: options.testing
         ? '列出直屬成員、主要所屬與主管；測試身分期間只能查看。'
@@ -89,7 +90,7 @@ export function unitDialogTour(options: {
         target: 'nx-unit-dialog .unit-imported',
         title: '下次匯入會改回',
         description:
-          '這個單位由公文系統管理：這裡的修改只維持到下次匯入，臨時調整可以，長期請改公文系統。',
+          '這個單位由公文系統管理：這裡的修改只維持到下次匯入。要保留（例如停用），匯入時不勾選這個部門；長期請改公文系統。',
         side: 'bottom',
       },
       {
@@ -146,15 +147,9 @@ export function unitImportTour(options: {
       },
       {
         target: `${IMPORT} .import-units`,
-        title: '單位變動',
+        title: '勾選要套用的部門',
         description:
-          '每列標示新增、綁定（同一層的同名手建單位改由公文系統管理）、更新或停用，並註明改了哪些欄位或原本的位置。',
-      },
-      {
-        target: `${IMPORT} .import-managers`,
-        title: '主管變動',
-        description:
-          '正副主管都設為主管；不是成員的主管會加入為成員，公文系統不再列為主管的人只取消主管、保留成員資格。',
+          '依新增、綁定（同一層的同名手建單位改由公文系統管理）、更新、停用分組，每個部門註明改了什麼與主管的變動。未勾選的部門這次不動、下次仍會列出；本地已停用、套用會重新啟用的部門預設不勾。',
       },
       {
         target: `${IMPORT} .import-issues`,

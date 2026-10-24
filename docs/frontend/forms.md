@@ -22,6 +22,8 @@
 
 - 選人用 `PersonPicker`（搭配 `directorySearch`），結果浮在欄位下方。還沒有帳號、可以只記姓名時給 `nameHint`，最後一列是「使用姓名」。
 - 只選一個對象時，選好後把搜尋框換成 `.form-choice` 一列（頭像＋名稱＋帳號＋「更換」），不留著已填的搜尋框；可選多個時，已選的放在搜尋框下方的 `.form-chips`／`.form-chip` 膠囊（頭像＋名稱，按下移除）。只有姓名、沒有帳號的人，頭像加 `.is-name`（虛線）。
+- 要從整份名單挑人（看到才認得出來，例如把部門同事加入單位）用 `PersonBrowser`：依分組列出、文字與分組篩選、可多選，名單由呼叫端載入。已知道要找誰時用 `PersonPicker`。
+- 已加入的人（成員、授權對象）一人一列：`ul.person-list` ＞ `li.person-row`（頭像＋`.person-row-text`＋右側勾選或下拉、移除），樣式在 `platform.scss`，不在元件裡另寫。
 - 部門、檔案等其他對象沿用同一套互動；還沒有共用元件時先抽一個，見 [共用元件](shared-components.md)。
 
 ## 控制項

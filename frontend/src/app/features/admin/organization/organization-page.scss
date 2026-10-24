@@ -31,8 +31,7 @@
   min-width: 0;
 }
 .organization-title small,
-.unit-name small,
-.member-name small {
+.unit-name small {
   color: var(--secondary);
   font-size: var(--text-caption);
 }
@@ -41,8 +40,7 @@
   flex-wrap: wrap;
   gap: var(--p-space-2);
 }
-.unit-list,
-.member-list {
+.unit-list {
   display: grid;
   gap: var(--p-space-1);
   margin: 0;
@@ -87,32 +85,23 @@
 .unit-name:hover {
   background: var(--hover);
 }
-.member-search {
+.organization-members {
   display: grid;
-  gap: var(--p-space-2);
+  gap: var(--p-space-3);
+  min-width: 0;
 }
-.member-heading {
+// 標題、說明與「加入成員」同一列；按鈕靠右，放不下時換行。
+.organization-members-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  align-items: center;
+}
+.organization-members-head h3 {
   margin: 0;
 }
-.member-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-3);
-  align-items: center;
-  padding: var(--p-space-2) var(--p-space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-item);
-}
-.member-name {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  align-items: baseline;
-  min-width: 10rem;
-}
-.member-row.is-inactive strong {
-  color: var(--secondary);
+.organization-add-members {
+  margin-inline-start: auto;
 }
 .organization-skeleton {
   display: grid;

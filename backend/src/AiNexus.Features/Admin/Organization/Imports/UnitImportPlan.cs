@@ -18,6 +18,7 @@ namespace AiNexus.Features.Admin.Organization.Imports;
 /// <item>名稱、成環、深度等問題不讓整批失敗：該列略過、照舊（已綁定的維持原樣，新的不建立，其下層若無處可掛也略過），並列入問題。
 /// 略過會改變其他列的位置，所以反覆檢查到沒有新的略過為止；每輪至少多略過一列，一定會停。</item>
 /// <item>主管以來源為準，只動 <c>IsManager</c>：新主管不是成員就加入（不設主要所屬），不再是主管的人保留成員資格。停用的單位不同步主管。</item>
+/// <item>管理員可排除部分部門（<see cref="Excluding"/>）：排除的列這次不動，已綁定的維持原樣（含公文系統已沒有的不停用），新的不建立、其下層無處可掛也略過，主管也不同步。</item>
 /// </list>
 /// </remarks>
 internal sealed class UnitImportPlan
@@ -26,17 +27,17 @@ internal sealed class UnitImportPlan
 
     private readonly IReadOnlyList<UnitTarget> units;
     private readonly IReadOnlyList<MemberTarget> members;
+    private readonly Inputs inputs;
     private readonly IReadOnlyDictionary<Guid, Unit> loadedUnits;
-    private readonly IReadOnlyList<UnitMember> loadedMembers;
 
     private UnitImportPlan(UnitImportPreviewDto preview, IReadOnlyList<UnitTarget> units, IReadOnlyList<MemberTarget> members,
-        IReadOnlyDictionary<Guid, Unit> loadedUnits, IReadOnlyList<UnitMember> loadedMembers)
+        Inputs inputs, IReadOnlyDictionary<Guid, Unit> loadedUnits)
     {
         Preview = preview;
         this.units = units;
         this.members = members;
+        this.inputs = inputs;
         this.loadedUnits = loadedUnits;
-        this.loadedMembers = loadedMembers;
     }
 
     public UnitImportPreviewDto Preview { get; }
@@ -57,8 +58,11 @@ internal sealed class UnitImportPlan
             .Concat(members.Where(x => x.IsManager).Select(x => x.UserId)).ToHashSet();
         var users = await db.Users.AsNoTracking().Where(x => userIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, x => (x.Account, x.DisplayName), ct);
-        return Build(source, units, members, users);
+        return Build(new(source, units, members, users), new HashSet<int>());
     }
+
+    /// <summary>同一份輸入、排除 <paramref name="keys"/>（來源主鍵）後重算；預覽的指紋仍以完整計畫比對，這份只用來套用。</summary>
+    public Result<UnitImportPlan> Excluding(IReadOnlySet<int> keys) => keys.Count == 0 ? this : Build(inputs, keys);
 
     /// <summary>
     /// 套用到 <see cref="CreateAsync"/>（tracking）載入的實體；呼叫端負責交易與最後的 <c>SaveChanges</c>。
@@ -80,7 +84,7 @@ internal sealed class UnitImportPlan
         }
         foreach (var target in members)
         {
-            var member = loadedMembers.SingleOrDefault(x => x.UnitId == target.UnitId && x.UserId == target.UserId);
+            var member = inputs.Members.SingleOrDefault(x => x.UnitId == target.UnitId && x.UserId == target.UserId);
             if (member is null) db.Add(new UnitMember { UnitId = target.UnitId, UserId = target.UserId, IsPrimary = false, IsManager = target.IsManager });
             else member.IsManager = target.IsManager;
         }
@@ -89,9 +93,9 @@ internal sealed class UnitImportPlan
             changes[UnitImportAction.Disable].Count(), Preview.Managers.Count(x => x.Added), Preview.Managers.Count(x => !x.Added), Preview.Issues.Count);
     }
 
-    private static Result<UnitImportPlan> Build(IReadOnlyList<SourceUnit> source, IReadOnlyList<Unit> loaded, IReadOnlyList<UnitMember> members,
-        IReadOnlyDictionary<Guid, (string Account, string DisplayName)> users)
+    private static Result<UnitImportPlan> Build(Inputs inputs, IReadOnlySet<int> excluded)
     {
+        var (source, loaded, members, users) = inputs;
         var rows = source.DistinctBy(x => x.Key).ToDictionary(x => x.Key);
         var local = loaded.ToDictionary(x => x.Id);
         var bound = loaded.Where(x => x.GdDepNo is not null).ToDictionary(x => x.GdDepNo!.Value);
@@ -140,7 +144,7 @@ internal sealed class UnitImportPlan
 
             void Visit(SourceUnit row)
             {
-                if (applied.ContainsKey(row.Key) || skipped.ContainsKey(row.Key)) return;
+                if (applied.ContainsKey(row.Key) || skipped.ContainsKey(row.Key) || excluded.Contains(row.Key)) return;
                 Guid? parentId = null;
                 if (ParentKey(row) is { } parentKey)
                 {
@@ -173,7 +177,7 @@ internal sealed class UnitImportPlan
             }
 
             foreach (var (key, unit) in bound)
-                if (!rows.ContainsKey(key)) nodes[unit.Id].Enabled = false;
+                if (!rows.ContainsKey(key) && !excluded.Contains(key)) nodes[unit.Id].Enabled = false;
 
             // 同層依來源順序重新編號：沒有順序的排在有順序之後，再以 DEP_NO 決定先後。
             // 不直接沿用來源的值：本地同值時依名稱排，DEP_NO 就不再是穩定次序；重新編號也自然落在 0～10000。
@@ -244,13 +248,13 @@ internal sealed class UnitImportPlan
                 var previous = fields.Contains(UnitImportField.Name) || fields.Contains(UnitImportField.Parent) ? PathOf(original, id) : null;
                 changes.Add(new(key, id, adopt ? UnitImportAction.Adopt : UnitImportAction.Update, PathOf(nodes, id), previous, node.Enabled, fields));
             }
-            foreach (var (key, unit) in bound.Where(x => !rows.ContainsKey(x.Key) && x.Value.Enabled))
+            foreach (var (key, unit) in bound.Where(x => !rows.ContainsKey(x.Key) && !excluded.Contains(x.Key) && x.Value.Enabled))
             {
                 targets.Add(nodes[unit.Id].ToTarget(isNew: false));
                 changes.Add(new(key, unit.Id, UnitImportAction.Disable, PathOf(nodes, unit.Id), null, false, [UnitImportField.Enabled]));
             }
 
-            var issues = skipped.Select(x => new UnitImportIssueDto(x.Key, names[x.Key], x.Value, null)).ToList();
+            var issues = skipped.Where(x => !excluded.Contains(x.Key)).Select(x => new UnitImportIssueDto(x.Key, names[x.Key], x.Value, null)).ToList();
             var memberTargets = new List<MemberTarget>();
             var managers = new List<UnitImportManagerDto>();
             var byUnit = members.ToLookup(x => x.UnitId);
@@ -286,7 +290,7 @@ internal sealed class UnitImportPlan
             // 指紋涵蓋預覽的全部內容（新單位沒有 ID，以 DEP_NO 表示）：只要使用者看到的任何一項會不同，套用就拒絕。
             var content = JsonSerializer.SerializeToUtf8Bytes(new { source = rows.Count, sortedUnits, sortedManagers, sortedIssues }, Json);
             var fingerprint = Convert.ToHexStringLower(SHA256.HashData(content));
-            return new(new(fingerprint, rows.Count, sortedUnits, sortedManagers, sortedIssues), targets, memberTargets, local, members);
+            return new(new(fingerprint, rows.Count, sortedUnits, sortedManagers, sortedIssues), targets, memberTargets, inputs, local);
         }
 
         UnitImportManagerDto Manager(int key, Guid? unitId, IReadOnlyList<string> path, Guid userId, bool added, bool deputy, bool joins)
@@ -325,6 +329,10 @@ internal sealed class UnitImportPlan
         SourceAccountIssue.UserAmbiguous => UnitImportIssueCode.UserAmbiguous,
         _ => UnitImportIssueCode.UserNotFound,
     };
+
+    /// <summary>計算的輸入：來源列、本地單位與成員、主管對到的使用者。排除部分部門時以同一份重算。</summary>
+    private sealed record Inputs(IReadOnlyList<SourceUnit> Source, IReadOnlyList<Unit> Units, IReadOnlyList<UnitMember> Members,
+        IReadOnlyDictionary<Guid, (string Account, string DisplayName)> Users);
 
     /// <summary>一輪安排的結果：全部單位（本地＋新增）的匯入後狀態，與每個套用的來源列對到的單位 ID。</summary>
     private sealed record Attempt(Dictionary<Guid, Node> Nodes, Dictionary<int, Guid> Applied);

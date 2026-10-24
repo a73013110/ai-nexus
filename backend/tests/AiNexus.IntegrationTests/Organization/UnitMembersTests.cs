@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Audit;
 using AiNexus.Features.Admin.Organization;
+using AiNexus.Features.Admin.Organization.Members;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
@@ -66,6 +67,32 @@ public sealed class UnitMembersTests
         await AssertCodeAsync(await SaveMemberAsync(admin, open.Id, carol), HttpStatusCode.NotFound, "organization_user_not_found");
         await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{open.Id}/members/{carol}"), HttpStatusCode.NotFound, "organization_member_not_found");
         await AssertCodeAsync(await admin.GetAsync($"{Units}/{Guid.NewGuid()}/members"), HttpStatusCode.NotFound, "organization_unit_not_found");
+    }
+
+    [Fact]
+    public async Task CandidatesAreActiveUsersWithTheirPrimaryUnit()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        var alice = await UserIdAsync(factory, "alice");
+        var bob = await UserIdAsync(factory, "bob");
+        var carol = await UserIdAsync(factory, "carol");
+        var dave = await UserIdAsync(factory, "dave");
+        var it = await CreateUnitAsync(admin, "資訊處");
+        var hr = await CreateUnitAsync(admin, "人資處");
+        (await SaveMemberAsync(admin, it.Id, bob, primary: true)).EnsureSuccessStatusCode();
+        (await SaveMemberAsync(admin, hr.Id, bob)).EnsureSuccessStatusCode();
+        (await SaveMemberAsync(admin, hr.Id, carol)).EnsureSuccessStatusCode();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Users.Where(x => x.Id == dave).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        }
+
+        var candidates = (await admin.GetFromJsonAsync<UnitCandidateDto[]>($"{Units}/candidates"))!;
+        // 停用＝離職，不列出；沒有主要所屬的人 PrimaryUnitId 為 null。
+        Assert.Equal([(alice, null), (bob, it.Id), (carol, null)], candidates.Select(x => (x.Id, x.PrimaryUnitId)));
+        using var member = await factory.SignedInAsync("erin");
+        await AssertCodeAsync(await member.GetAsync($"{Units}/candidates"), HttpStatusCode.Forbidden, "feature_forbidden");
     }
 
     [Fact]

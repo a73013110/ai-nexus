@@ -4,7 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Admin.Organization;
+namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>把使用者移出單位。移除主要所屬後不會自動指定另一個單位，由管理員決定。會稽核。</summary>
 internal sealed class RemoveUnitMember(AppDbContext db, AdministrativeAudit audit)

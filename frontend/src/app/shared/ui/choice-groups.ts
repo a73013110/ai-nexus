@@ -26,12 +26,17 @@ export interface ChoiceGroup {
   imports: [Checkbox, PendingButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './choice-groups.scss',
-  host: { role: 'group', '[attr.aria-label]': 'label()', '[attr.aria-busy]': 'pending() || null' },
+  host: {
+    role: 'group',
+    '[attr.aria-label]': 'label()',
+    '[attr.aria-busy]': 'pending() || null',
+    '[class.is-stacked]': 'stacked()',
+  },
   template: `@for (group of summary(); track group.id) {
     <section
       class="choice-group"
       role="group"
-      [class.is-wide]="group.options.length > wideAfter"
+      [class.is-wide]="stacked() || group.options.length > wideAfter"
       [attr.aria-labelledby]="id + '-' + group.id"
     >
       <header class="choice-group-head">
@@ -85,6 +90,8 @@ export class ChoiceGroups {
   protected readonly changed = signal<string | null>(null);
   /** 顯示每個群組的全選／全不選按鈕。 */
   readonly batch = input(true);
+  /** 選項一列一個、卡片都佔滿整列：給標籤與說明較長的選項（例如部門路徑加變動說明）。 */
+  readonly stacked = input(false);
   readonly selectedChange = output<string[]>();
   /** 超過這個數量的卡片獨佔一列：半欄寬只排得下一欄選項，再多就會比旁邊的卡片長出一截。 */
   readonly wideAfter = 6;

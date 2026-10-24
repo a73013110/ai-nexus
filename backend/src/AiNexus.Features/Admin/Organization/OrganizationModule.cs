@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Organization.Imports;
+using AiNexus.Features.Admin.Organization.Members;
 using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Modules;
 
@@ -31,7 +32,8 @@ public sealed class OrganizationModule : IFeatureModule
         var units = api.MapGroup("/admin/organization-units").RequireAuthorization(Policies.Organization);
         ListUnits.Map(units);
         CreateUnit.Map(units);
-        // 字面路徑 /order、/import 與 /{id:guid} 不會互相攔截：後者限定 GUID。
+        // 字面路徑 /order、/import、/candidates 與 /{id:guid} 不會互相攔截：後者限定 GUID。
+        ListUnitCandidates.Map(units);
         ReorderUnits.Map(units);
         PreviewUnitImport.Map(units);
         ApplyUnitImport.Map(units);

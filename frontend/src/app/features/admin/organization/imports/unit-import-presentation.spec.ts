@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { UnitImportChangeDto, UnitImportPreviewDto } from '@core/api/schema';
-import { changeNote, hasChanges, importCounts, resultSummary } from './unit-import-presentation';
+import {
+  changeNote,
+  hasChanges,
+  importChoices,
+  importCounts,
+  importDepartments,
+  resultSummary,
+} from './unit-import-presentation';
 
 const change = (overrides: Partial<UnitImportChangeDto>): UnitImportChangeDto => ({
   gdDepNo: 2,
@@ -22,7 +29,52 @@ const preview = (overrides: Partial<UnitImportPreviewDto> = {}): UnitImportPrevi
   ...overrides,
 });
 
+const manager = {
+  gdDepNo: 2,
+  unitId: 'sales',
+  path: ['總公司', '業務一部'],
+  userId: 'bob',
+  account: 'bob',
+  displayName: '王小明',
+  added: true,
+  deputy: false,
+  joinsUnit: true,
+};
+
 describe('unit import presentation', () => {
+  it('lists one choice per department and leaves re-enabling a locally disabled unit unchecked', () => {
+    const departments = importDepartments(
+      preview({
+        units: [
+          change({ gdDepNo: 3, action: 'Disable', path: ['總公司', '倉儲部'], enabled: false }),
+          change({ gdDepNo: 2, fields: ['Enabled'] }),
+          change({ gdDepNo: 4, action: 'Create', path: ['總公司', '研發部'] }),
+        ],
+        managers: [
+          manager,
+          { ...manager, gdDepNo: 1, unitId: 'hq', path: ['總公司'], added: false },
+        ],
+      }),
+    );
+    expect(departments.map((item) => [item.id, item.group, item.reenables])).toEqual([
+      ['4', 'Create', false],
+      ['2', 'Update', true],
+      ['3', 'Disable', false],
+      ['1', 'Managers', false],
+    ]);
+    expect(departments[1].description).toBe(
+      '這裡已停用，套用會重新啟用；啟用狀態依公文系統更新；王小明 設為主管並加入為成員',
+    );
+    expect(departments[3].description).toBe('王小明 取消主管（保留成員）');
+    expect(importChoices(departments).map((group) => [group.name, group.options.length])).toEqual([
+      ['新增', 1],
+      ['綁定手建單位', 0],
+      ['更新', 1],
+      ['停用', 1],
+      ['只有主管變動', 1],
+    ]);
+  });
+
   it('counts each kind of change for the summary', () => {
     const counts = importCounts(
       preview({

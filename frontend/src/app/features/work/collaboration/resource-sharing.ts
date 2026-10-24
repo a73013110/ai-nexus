@@ -24,6 +24,7 @@ import { Select } from '@shared/ui/select';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
 import { PersonPicker } from './person-picker';
 import { nameInitial } from '@shared/browser/format';
+import { uniqueId } from '@shared/browser/unique-id';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { resourceSharingTour } from './resource-sharing-tour';
 
@@ -69,51 +70,68 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
           <span class="skeleton"></span>
         </div>
       } @else {
-        <div class="platform-form">
-          <label class="sharing-search"
-            >加入使用者<nx-person-picker
-              label="尋找要授權的使用者"
-              placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
-              [search]="people"
-              (picked)="add($event)"
-          /></label>
-          <fieldset>
-            <legend>具名成員</legend>
-            <div class="acl-members">
-              @for (member of members(); track member.userId) {
-                <div class="acl-member">
-                  <span class="avatar" aria-hidden="true">{{ initial(member.displayName) }}</span>
-                  <span class="acl-member-name"
-                    ><strong>{{ member.displayName }}</strong
-                    ><small>{{ member.account }}</small></span
-                  ><nx-select
-                    [label]="member.displayName + '的權限'"
-                    [options]="roles"
-                    [value]="member.role"
-                    (valueChange)="role(member.userId, $event)"
-                  /><button
-                    class="icon-button member-remove"
-                    [attr.aria-label]="'移除成員：' + member.displayName"
-                    (click)="remove(member.userId)"
-                  >
-                    <nx-icon name="close" />
-                  </button>
-                </div>
-              } @empty {
-                <p class="form-note">目前僅擁有者可以存取。</p>
-              }
+        <div class="form-sections">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-members'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-members'">具名成員</h3>
+              <p class="form-note">可檢視只能閱讀；可編輯還能修改內容。</p>
+            </header>
+            <div class="form-section-body">
+              <nx-person-picker
+                class="sharing-search"
+                label="尋找要授權的使用者"
+                placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
+                [search]="people"
+                (picked)="add($event)"
+              />
+              <ul class="person-list acl-members">
+                @for (member of members(); track member.userId) {
+                  <li class="person-row">
+                    <span class="avatar" aria-hidden="true">{{ initial(member.displayName) }}</span>
+                    <span class="person-row-text"
+                      ><strong>{{ member.displayName }}</strong
+                      ><small>{{ member.account }}</small></span
+                    ><nx-select
+                      [label]="member.displayName + '的權限'"
+                      [options]="roles"
+                      [value]="member.role"
+                      (valueChange)="role(member.userId, $event)"
+                    /><button
+                      type="button"
+                      class="icon-button member-remove"
+                      [attr.aria-label]="'移除成員：' + member.displayName"
+                      (click)="remove(member.userId)"
+                    >
+                      <nx-icon name="close" />
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="form-note">目前僅擁有者可以存取。</li>
+                }
+              </ul>
             </div>
-          </fieldset>
+          </section>
           @if (allowGroups() && groups().length) {
-            <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
-            <nx-choice-groups
-              class="sharing-groups"
-              label="可檢視的群組"
-              [groups]="groupChoices()"
-              [selected]="groupIds()"
-              [disabled]="saving()"
-              (selectedChange)="groupIds.set($event)"
-            />
+            <section
+              class="form-section form-section-wide"
+              role="group"
+              [attr.aria-labelledby]="id + '-groups'"
+            >
+              <header class="form-section-head">
+                <h3 [id]="id + '-groups'">群組</h3>
+                <p class="form-note">群組授權只允許閱讀；協作編輯請加入具名成員。</p>
+              </header>
+              <div class="form-section-body">
+                <nx-choice-groups
+                  class="sharing-groups"
+                  label="可檢視的群組"
+                  [groups]="groupChoices()"
+                  [selected]="groupIds()"
+                  [disabled]="saving()"
+                  (selectedChange)="groupIds.set($event)"
+                />
+              </div>
+            </section>
           }
         </div>
       }
@@ -178,6 +196,7 @@ export class ResourceSharing {
   ]);
   readonly people = directorySearch(() => this.members().map((item) => item.userId));
   protected readonly initial = nameInitial;
+  readonly id = uniqueId('nx-resource-sharing');
   readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
   readonly loading = this.aclRead.loading;

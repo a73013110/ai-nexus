@@ -42,7 +42,7 @@ export function resourceSharingTour(options: {
           : `目前只有你能存取這個${noun}；加入的成員會列在這裡，最多 50 位。`,
       },
       options.members && {
-        target: 'nx-resource-sharing .acl-member nx-select',
+        target: 'nx-resource-sharing .acl-members nx-select',
         title: '可檢視與可編輯',
         description: `可檢視只能閱讀；可編輯還能修改${noun}的內容。兩者都不能管理存取權限或刪除${noun}，那只屬於擁有者。`,
         side: 'left',

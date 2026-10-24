@@ -61,9 +61,6 @@ async function organization(page: Page, canImport = false) {
     for (const unit of units)
       unit.memberCount = members.get(unit.id)?.length ?? 0;
   };
-  await page.route("**/api/v1/directory?**", (route) =>
-    route.fulfill({ json: [bob] }),
-  );
   await page.route(
     "**/api/v1/admin/organization-units**",
     async (route: Route) => {
@@ -79,15 +76,27 @@ async function organization(page: Page, canImport = false) {
         return route.fulfill({ json: units });
       if (path === "/import" && method === "GET")
         return route.fulfill({ json: importPreview(company, it) });
+      if (method === "GET" && path === "/candidates")
+        return route.fulfill({
+          json: [
+            {
+              id: bob.id,
+              account: bob.account,
+              displayName: bob.displayName,
+              primaryUnitId: null,
+            },
+          ],
+        });
       if (path === "/import" && method === "POST") {
-        // 套用：總公司綁定公文系統的部門 1，資訊處改名。
-        units[0].gdDepNo = 1;
+        // 套用：總公司綁定公文系統的部門 1（取消勾選時不動），資訊處改名。
+        const excluded = (body!["excluded"] as number[]) ?? [];
+        if (!excluded.includes(1)) units[0].gdDepNo = 1;
         units[1].gdDepNo = 2;
         units[1].name = "資訊部";
         return route.fulfill({
           json: {
             created: 0,
-            adopted: 1,
+            adopted: excluded.includes(1) ? 0 : 1,
             updated: 1,
             disabled: 0,
             managersAdded: 1,
@@ -263,12 +272,15 @@ test("組織頁以樹狀列出單位，可新增下層、排序並維護成員",
   await page
     .getByRole("button", { name: "總公司 › 資訊處", exact: true })
     .click();
-  await page.getByRole("combobox", { name: "尋找要加入的使用者" }).fill("王小");
-  await page.getByRole("option", { name: /王小明/ }).click();
+  await page.getByRole("button", { name: "加入成員", exact: true }).click();
+  const members = page.getByRole("dialog", { name: "加入成員" });
+  await members.getByRole("checkbox", { name: /王小明/ }).check();
+  await members.getByRole("button", { name: "加入 1 人" }).click();
+  await expect(members).toBeHidden();
   await expect(
-    toasts(page).filter({ hasText: "已加入「資訊處」" }),
+    toasts(page).filter({ hasText: "已將 1 人加入「資訊處」" }),
   ).toBeVisible();
-  const row = page.locator(".member-row").filter({ hasText: "王小明" });
+  const row = page.locator(".person-row").filter({ hasText: "王小明" });
   await row.getByRole("checkbox", { name: "主要所屬" }).check();
   await expect(row.getByRole("checkbox", { name: "主要所屬" })).toBeChecked();
   await row.getByRole("checkbox", { name: "主管" }).check();
@@ -296,7 +308,7 @@ test("組織頁以樹狀列出單位，可新增下層、排序並維護成員",
     .getByRole("dialog", { name: /移出「資訊處」/ })
     .getByRole("button", { name: "移出" })
     .click();
-  await expect(page.locator(".member-row")).toHaveCount(0);
+  await expect(page.locator(".person-row")).toHaveCount(0);
 });
 
 test("停用的單位不能加入成員，編輯時上層不列出自己與下層", async ({ page }) => {
@@ -307,7 +319,7 @@ test("停用的單位不能加入成員，編輯時上層不列出自己與下�
     .click();
   await expect(page.getByText(/單位已停用/)).toBeVisible();
   await expect(
-    page.getByRole("combobox", { name: "尋找要加入的使用者" }),
+    page.getByRole("button", { name: "加入成員", exact: true }),
   ).toHaveCount(0);
 
   await page.getByRole("button", { name: "總公司", exact: true }).click();
@@ -333,35 +345,40 @@ test("手機版單位樹與成員改為上下排列，不產生橫向捲動", as
   await expectViewportContained(page);
 });
 
-test("從公文系統匯入先預覽變動與問題，套用後標示來源", async ({ page }) => {
+test("從公文系統匯入先預覽變動與問題，只套用勾選的部門", async ({ page }) => {
   const state = await organization(page, true);
   await page.goto(routeOf("organization"));
   await page
     .getByRole("button", { name: "從公文系統匯入", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "從公文系統匯入" });
-  await expect(dialog.getByText("總公司 › 資訊部")).toHaveCount(2);
+  // 一個部門一個勾選項，單位與主管的變動寫在同一列說明。
+  const departments = dialog.getByRole("group", { name: "要套用的部門" });
   await expect(
-    dialog.getByText("名稱依公文系統更新；原為 總公司 › 資訊處"),
+    departments.getByText(
+      "名稱依公文系統更新；原為 總公司 › 資訊處；陳小華 設為主管（副主管）並加入為成員",
+    ),
   ).toBeVisible();
-  await expect(dialog.getByText("設為主管（副主管）")).toBeVisible();
   await expect(dialog.getByText("名稱空白，略過")).toBeVisible();
-  // 預覽本身不寫入；套用送回指紋。
+  // 預覽本身不寫入；取消勾選的部門以 excluded 送出，與指紋一起。
   expect(state.writes).toEqual([]);
-  await dialog.getByRole("button", { name: "套用匯入" }).click();
+  await departments
+    .getByRole("checkbox", { name: "總公司", exact: true })
+    .uncheck();
+  await dialog.getByRole("button", { name: "套用 1 個部門" }).click();
   await expect(dialog).toBeHidden();
   expect(state.writes.at(-1)).toEqual({
     method: "POST",
     path: "/import",
-    body: { fingerprint: "a".repeat(64) },
+    body: { fingerprint: "a".repeat(64), excluded: [1] },
   });
   await expect(
-    toasts(page).filter({ hasText: "已從公文系統匯入：單位綁定 1、更新 1 個" }),
+    toasts(page).filter({ hasText: "已從公文系統匯入：單位更新 1 個" }),
   ).toBeVisible();
   await expect(tree(page)).toHaveText(["總公司", "資訊部", "人資處"]);
   await expect(
     page.locator(".unit-row").filter({ hasText: "公文" }),
-  ).toHaveCount(2);
+  ).toHaveCount(1);
 
   await page
     .getByRole("button", { name: "總公司 › 資訊部", exact: true })

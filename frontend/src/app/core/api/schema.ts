@@ -8550,6 +8550,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/organization-units/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListOrganizationUnitCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/organization-units/order": {
         parameters: {
             query?: never;
@@ -12363,6 +12379,14 @@ export interface components {
             /** Format: date-time */
             lastPunchedAt: string;
         };
+        UnitCandidateDto: {
+            /** Format: uuid */
+            id: string;
+            account: string;
+            displayName: string;
+            /** Format: uuid */
+            primaryUnitId: null | string;
+        };
         UnitCreateRequest: {
             /** Format: uuid */
             parentId: null | string;
@@ -12431,6 +12455,7 @@ export interface components {
         };
         UnitImportRequest: {
             fingerprint: string;
+            excluded?: null | number[];
         };
         UnitImportResultDto: {
             /** Format: int32 */
@@ -12919,6 +12944,7 @@ export type TrafficPoint = components['schemas']['TrafficPoint'];
 export type TransformTextDto = components['schemas']['TransformTextDto'];
 export type TransformTextRequest = components['schemas']['TransformTextRequest'];
 export type UnattributedCardDto = components['schemas']['UnattributedCardDto'];
+export type UnitCandidateDto = components['schemas']['UnitCandidateDto'];
 export type UnitCreateRequest = components['schemas']['UnitCreateRequest'];
 export type UnitDto = components['schemas']['UnitDto'];
 export type UnitImportAction = components['schemas']['UnitImportAction'];
@@ -32185,6 +32211,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnitDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListOrganizationUnitCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitCandidateDto"][];
                 };
             };
             /** @description Bad Request */

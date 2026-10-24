@@ -6,7 +6,6 @@ import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ClientIssues } from '@core/errors/client-issues';
 import { ProductTour, tourSteps } from '@shared/ui/product-tour';
-import { CollaborationApi } from '@features/work/collaboration/collaboration-api';
 import { OrganizationApi } from './organization-api';
 import { OrganizationPage } from './organization-page';
 import { organizationTour, unitDialogTour, unitImportTour } from './organization-tour';
@@ -95,8 +94,7 @@ describe('unitImportTour', () => {
     expect(titles(unitImportTour({ testing: false }))).toEqual([
       '先看變動摘要',
       '以公文系統為準',
-      '單位變動',
-      '主管變動',
+      '勾選要套用的部門',
       '略過的問題',
       '套用匯入',
     ]);
@@ -197,7 +195,6 @@ describe('organization tour targets', () => {
             ]),
           },
         },
-        { provide: CollaborationApi, useValue: { directory: vi.fn(async () => []) } },
         {
           provide: WorkspaceSession,
           useValue: {

@@ -109,8 +109,11 @@ public enum UnitImportIssueCode
 /// </summary>
 public sealed record UnitImportIssueDto(int GdDepNo, string? Name, UnitImportIssueCode Code, string? GdUserId);
 
-/// <summary>套用前送回預覽的 <c>Fingerprint</c>。</summary>
-public sealed record UnitImportRequest(string Fingerprint);
+/// <summary>
+/// 套用前送回預覽的 <c>Fingerprint</c>；<c>Excluded</c> 是這次不套用的部門（<c>GdDepNo</c>），例如本地刻意停用、不想被公文系統重新啟用的單位。
+/// 排除只限這一次，下次匯入仍會列出。
+/// </summary>
+public sealed record UnitImportRequest(string Fingerprint, IReadOnlyList<int>? Excluded = null);
 
 /// <summary>套用的結果摘要（數量），給提示與稽核。</summary>
 public sealed record UnitImportResultDto(int Created, int Adopted, int Updated, int Disabled, int ManagersAdded, int ManagersRemoved, int Issues);

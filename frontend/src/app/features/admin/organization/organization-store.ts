@@ -113,15 +113,15 @@ export class OrganizationStore {
       `unit:${unit.id}`,
     );
   }
-  /** `key` 標出觸發寫入的控制項（例：`primary:<userId>`），讓它轉圈。 */
-  saveMember(userId: string, isPrimary: boolean, isManager: boolean, added = false, key = '') {
+  /** 修改成員的主要所屬或主管；`key` 標出觸發寫入的控制項（例：`primary:<userId>`），讓它轉圈。加入成員見 `MemberDialog`。 */
+  saveMember(userId: string, isPrimary: boolean, isManager: boolean, key = '') {
     const unit = this.selected();
     if (!unit) return Promise.resolve(false);
     return this.run(
       () => this.api.saveMember(unit.id, userId, { isPrimary, isManager }),
-      added ? `已加入「${unit.name}」` : '',
-      () => this.memberChanged(),
-      key || (added ? `add:${userId}` : ''),
+      '',
+      () => this.membersChanged(),
+      key,
     );
   }
   removeMember(member: UnitMemberDto) {
@@ -130,11 +130,12 @@ export class OrganizationStore {
     return this.run(
       () => this.api.removeMember(unit.id, member.userId),
       `已將 ${member.displayName} 移出「${unit.name}」`,
-      () => this.memberChanged(),
+      () => this.membersChanged(),
       `remove:${member.userId}`,
     );
   }
-  private memberChanged() {
+  /** 成員已寫入（含對話框）：重讀成員與單位，成員數跟著更新。 */
+  membersChanged() {
     this.membersRead.reload();
     this.unitsRead.reload();
   }

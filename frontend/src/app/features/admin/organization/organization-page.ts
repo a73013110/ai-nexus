@@ -6,24 +6,24 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { DirectoryUserDto, UnitMemberDto } from '@core/api/schema';
+import type { UnitImportResultDto, UnitMemberDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
+import { nameInitial } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Card } from '@shared/ui/card';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
+import { InfoPopover } from '@shared/ui/info-popover';
 import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
-import type { UnitImportResultDto } from '@core/api/schema';
-import { directorySearch } from '@features/work/collaboration/directory-search';
-import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { UnitImportDialog } from './imports/unit-import-dialog';
 import { resultSummary } from './imports/unit-import-presentation';
+import { MemberDialog } from './member-dialog';
 import { OrganizationStore } from './organization-store';
 import { organizationTour } from './organization-tour';
 import { UnitDialog } from './unit-dialog';
@@ -42,10 +42,11 @@ import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
     EmptyState,
     FeaturePage,
     Icon,
+    InfoPopover,
+    MemberDialog,
     MenuPanel,
     Notice,
     PendingButton,
-    PersonPicker,
     StatusBadge,
     UnitDialog,
     UnitImportDialog,
@@ -67,11 +68,8 @@ export class OrganizationPage {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly dialog = viewChild.required(UnitDialog);
   private readonly importDialog = viewChild.required(UnitImportDialog);
-  readonly people = directorySearch(() => (this.store.members() ?? []).map((m) => m.userId), {
-    includeSelf: true,
-  });
-  /** 正在加入的使用者；選擇器在那一列轉圈。 */
-  readonly addingId = computed(() => this.store.working()?.match(/^add:(.+)$/)?.[1] ?? null);
+  private readonly memberDialog = viewChild.required(MemberDialog);
+  protected readonly initial = nameInitial;
   /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
   protected readonly skeleton = [72, 56, 64, 48, 60];
   /** 開啟操作選單的那一列。 */
@@ -157,27 +155,15 @@ export class OrganizationPage {
       await this.store.remove(row.unit);
   }
 
-  async add(user: DirectoryUserDto) {
-    // 還沒有主要所屬的人通常是第一次分派部門，由管理員自行勾選，不自動設定。
-    if (await this.store.saveMember(user.id, false, false, true)) this.people.clear();
+  addMembers() {
+    const unit = this.store.selected();
+    if (unit) this.memberDialog().open(unit);
   }
   setPrimary(member: UnitMemberDto, value: boolean) {
-    void this.store.saveMember(
-      member.userId,
-      value,
-      member.isManager,
-      false,
-      `primary:${member.userId}`,
-    );
+    void this.store.saveMember(member.userId, value, member.isManager, `primary:${member.userId}`);
   }
   setManager(member: UnitMemberDto, value: boolean) {
-    void this.store.saveMember(
-      member.userId,
-      member.isPrimary,
-      value,
-      false,
-      `manager:${member.userId}`,
-    );
+    void this.store.saveMember(member.userId, member.isPrimary, value, `manager:${member.userId}`);
   }
   async removeMember(member: UnitMemberDto) {
     const unit = this.store.selected();

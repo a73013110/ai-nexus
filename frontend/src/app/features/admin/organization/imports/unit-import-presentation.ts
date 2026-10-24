@@ -4,24 +4,26 @@ import type {
   UnitImportField,
   UnitImportIssueCode,
   UnitImportIssueDto,
+  UnitImportManagerDto,
   UnitImportPreviewDto,
   UnitImportResultDto,
 } from '@core/api/schema';
-import type { BadgeTone } from '@shared/ui/count-badge';
+import type { ChoiceGroup } from '@shared/ui/choice-groups';
 
-export const ACTION_LABELS: Record<UnitImportAction, string> = {
+const ACTION_LABELS: Record<UnitImportAction, string> = {
   Create: '新增',
   Adopt: '綁定手建單位',
   Update: '更新',
   Disable: '停用',
 };
-
-export const ACTION_TONES: Record<UnitImportAction, BadgeTone> = {
-  Create: 'success',
-  Adopt: 'info',
-  Update: 'info',
-  Disable: 'warning',
-};
+/** 勾選清單的分組順序；只有主管變動、單位本身不變的部門排最後。 */
+const GROUPS: readonly (UnitImportAction | 'Managers')[] = [
+  'Create',
+  'Adopt',
+  'Update',
+  'Disable',
+  'Managers',
+];
 
 const FIELD_LABELS: Record<UnitImportField, string> = {
   Name: '名稱',
@@ -74,6 +76,71 @@ export function changeNote(change: UnitImportChangeDto) {
   if (!change.enabled && change.action !== 'Disable') parts.push('公文系統已關閉此部門');
   if (change.action === 'Disable') parts.push('公文系統已沒有此部門，保留成員與歷史');
   return parts.join('；');
+}
+
+/** 匯入預覽裡的一個部門：單位變動與主管變動合成一個可勾選項目，`id` 是 `gdDepNo`。 */
+export interface ImportDepartment {
+  id: string;
+  group: UnitImportAction | 'Managers';
+  label: string;
+  description: string;
+  /** 本地已停用、公文系統仍啟用：套用會重新啟用，預設不勾選。 */
+  reenables: boolean;
+}
+
+function managerNote(manager: UnitImportManagerDto) {
+  const name = manager.displayName || manager.account;
+  if (!manager.added) return `${name} 取消主管（保留成員）`;
+  return `${name} 設為${manager.deputy ? '主管（副主管）' : '主管'}${manager.joinsUnit ? '並加入為成員' : ''}`;
+}
+
+/** 依部門整理預覽：一個部門一項，順序依分組、再依預覽原本的排列。 */
+export function importDepartments(preview: UnitImportPreviewDto): ImportDepartment[] {
+  const managers = new Map<number, UnitImportManagerDto[]>();
+  for (const manager of preview.managers)
+    managers.set(manager.gdDepNo, [...(managers.get(manager.gdDepNo) ?? []), manager]);
+  const items: ImportDepartment[] = preview.units.map((change) => {
+    const reenables =
+      (change.action === 'Update' || change.action === 'Adopt') &&
+      change.enabled &&
+      change.fields.includes('Enabled');
+    return {
+      id: String(change.gdDepNo),
+      group: change.action,
+      label: change.path.join(' › '),
+      description: [
+        reenables ? '這裡已停用，套用會重新啟用' : '',
+        changeNote(change),
+        ...(managers.get(change.gdDepNo) ?? []).map(managerNote),
+      ]
+        .filter(Boolean)
+        .join('；'),
+      reenables,
+    };
+  });
+  const listed = new Set(preview.units.map((change) => change.gdDepNo));
+  for (const [key, list] of managers) {
+    if (listed.has(key)) continue;
+    items.push({
+      id: String(key),
+      group: 'Managers',
+      label: list[0].path.join(' › '),
+      description: list.map(managerNote).join('；'),
+      reenables: false,
+    });
+  }
+  return GROUPS.flatMap((group) => items.filter((item) => item.group === group));
+}
+
+/** 給 `ChoiceGroups` 的分組；沒有項目的分組由元件略過。 */
+export function importChoices(departments: readonly ImportDepartment[]): ChoiceGroup[] {
+  return GROUPS.map((group) => ({
+    id: group,
+    name: group === 'Managers' ? '只有主管變動' : ACTION_LABELS[group],
+    options: departments
+      .filter((item) => item.group === group)
+      .map(({ id, label, description }) => ({ id, label, description })),
+  }));
 }
 
 export function issueLabel(issue: UnitImportIssueDto) {

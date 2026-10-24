@@ -2,7 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Admin.Organization;
+namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>使用者所屬的一個單位；<c>Path</c> 是由最上層到該單位的名稱，讓同名的下層單位（例如各處的「行政課」）分得出來。</summary>
 public sealed record UserUnitDto(Guid UnitId, IReadOnlyList<string> Path, bool Enabled, bool IsPrimary, bool IsManager);

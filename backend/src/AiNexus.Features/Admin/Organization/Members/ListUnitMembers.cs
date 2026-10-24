@@ -4,7 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Admin.Organization;
+namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>單位的一位直屬成員。<c>Active</c> 為 false 表示帳號已停用或刪除：所屬保留到管理員移除，但不參與資料範圍。</summary>
 public sealed record UnitMemberDto(Guid UserId, string Account, string DisplayName, bool Active, bool IsPrimary, bool IsManager);

@@ -1,0 +1,25 @@
+:host {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+// 文字篩選撐滿，分組下拉固定寬；放不下時換成上下兩列。
+.person-browser-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.person-browser-filters > nx-search-field {
+  flex: 1 1 14rem;
+}
+.person-browser-filters > nx-select {
+  flex: 0 1 16rem;
+  min-width: 10rem;
+}
+.person-browser-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+}
+.person-browser-skeleton .skeleton {
+  height: 2.75rem;
+}

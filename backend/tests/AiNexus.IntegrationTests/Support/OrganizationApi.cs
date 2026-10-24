@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Admin.Organization.Imports;
+using AiNexus.Features.Admin.Organization.Members;
 using AiNexus.Features.Platform.Account;
 
 namespace AiNexus.IntegrationTests.Support;

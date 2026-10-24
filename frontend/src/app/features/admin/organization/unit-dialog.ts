@@ -79,13 +79,13 @@ const sameDraft = (a: Draft, b: Draft) =>
               <nx-notice
                 class="unit-imported"
                 tone="warning"
-                message="這個單位來自公文系統：名稱、上層與啟用狀態可以在這裡改，但下次匯入會改回公文系統的值；要長期調整請在公文系統修改。"
+                message="來自公文系統：這裡的修改會在下次匯入時改回。要保留停用等調整，匯入時不勾選這個部門；長期調整請改公文系統。"
               />
             }
             <div class="form-sections">
-              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-place'">
                 <header class="form-section-head">
-                  <h3 [id]="id + '-basics'">基本資料</h3>
+                  <h3 [id]="id + '-place'">名稱與位置</h3>
                   <p class="form-note">同一個上層底下名稱不可重複；組織最多八層。</p>
                 </header>
                 <div class="form-section-body">
@@ -93,7 +93,6 @@ const sameDraft = (a: Draft, b: Draft) =>
                     >名稱<input
                       #name
                       nxField
-                      aria-label="名稱"
                       required
                       maxlength="120"
                       autocomplete="off"
@@ -115,10 +114,17 @@ const sameDraft = (a: Draft, b: Draft) =>
                       [disabled]="locked()"
                       (valueChange)="update('parentId', $event)"
                   /></label>
+                </div>
+              </section>
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-state'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-state'">狀態</h3>
+                </header>
+                <div class="form-section-body">
                   <nx-checkbox
                     class="unit-enabled"
                     label="啟用"
-                    description="停用的單位保留成員與歷史，但它與所有下層單位都不參與資料範圍，也不能再加入成員。"
+                    description="停用後保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。"
                     [checked]="e.draft.enabled"
                     [disabled]="locked()"
                     (checkedChange)="update('enabled', $event)"

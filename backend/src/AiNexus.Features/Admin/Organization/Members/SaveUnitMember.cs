@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Admin.Organization;
+namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>成員在該單位的身分；設為主要所屬時，會取消該使用者在其他單位的主要所屬。</summary>
 [ValidatedInHandler("Only two booleans; whether the unit and user exist is checked inside the administrative transaction so rejections are audited.")]

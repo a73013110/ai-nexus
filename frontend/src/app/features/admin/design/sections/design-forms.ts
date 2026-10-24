@@ -15,6 +15,7 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InlineTitle } from '@shared/ui/inline-title';
 import { KeyCombo } from '@shared/ui/key-combo';
+import { PersonBrowser, type BrowsePerson } from '@shared/ui/person-browser';
 import { SearchField } from '@shared/ui/search-field';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
@@ -29,6 +30,16 @@ const PEOPLE: DirectoryUserDto[] = [
   { id: 'p2', account: 'lin.jh', displayName: '林建宏' },
   { id: 'p3', account: 'chen.yt', displayName: '陳雅婷' },
   { id: 'p4', account: 'huang.lz', displayName: '黃林志' },
+];
+
+/** 從名單挑人的範例：依主要所屬分組，尚未分派的排最前面（虛構姓名）。 */
+const ROSTER: BrowsePerson[] = [
+  { id: 'r1', name: '張育誠', detail: 'chang.yc', group: '尚未分派部門' },
+  { id: 'r2', name: '林佳穎', detail: 'lin.jy', group: '總公司 › 業務部' },
+  { id: 'r3', name: '林建宏', detail: 'lin.jh', group: '總公司 › 業務部' },
+  { id: 'r4', name: '陳雅婷', detail: 'chen.yt', group: '總公司 › 工程部' },
+  { id: 'r5', name: '黃林志', detail: 'huang.lz', group: '總公司 › 工程部' },
+  { id: 'r6', name: '吳書豪', detail: 'wu.sh', group: '總公司 › 工程部' },
 ];
 
 /** 以本機名單代替 `directorySearch`，排除 `chosen` 已選的人。 */
@@ -64,6 +75,7 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
     Field,
     Icon,
     InlineTitle,
+    PersonBrowser,
     PersonPicker,
     KeyCombo,
     SearchField,
@@ -175,6 +187,38 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
       </nx-design-example>
       <nx-design-example label="停用">
         <nx-person-picker label="示範停用的選人" [search]="idle" [disabled]="true" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-person-browser"
+      title="從名單挑人"
+      api="PersonBrowser · ChoiceGroups"
+      description="名單由呼叫端載入，依分組（例如主要所屬部門）列出全部的人，可用文字或分組篩選、勾選多人；篩選掉的人仍保持勾選。看到才認得出來時用它，已知道要找誰時用人員選擇器。"
+    >
+      <nx-design-example label="勾選多人">
+        <nx-person-browser
+          label="示範可加入的人員"
+          [people]="roster"
+          [selected]="picked()"
+          (selectedChange)="picked.set($event)"
+        />
+        <p class="form-note" role="status">已選 {{ picked().length }} 人</p>
+      </nx-design-example>
+      <nx-design-example label="載入中">
+        <nx-person-browser
+          label="示範載入中的名單"
+          [people]="[]"
+          [selected]="[]"
+          [loading]="true"
+        />
+      </nx-design-example>
+      <nx-design-example label="沒有可選的人">
+        <nx-person-browser
+          label="示範空名單"
+          emptyText="所有在職的使用者都已是這個單位的成員。"
+          [people]="[]"
+          [selected]="[]"
+        />
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
@@ -346,6 +390,8 @@ export class DesignForms {
   readonly members = signal<DirectoryUserDto[]>([PEOPLE[2]]);
   readonly team = sampleDirectory(() => this.members().map((user) => user.id));
   readonly idle = sampleDirectory(() => []);
+  readonly roster = ROSTER;
+  readonly picked = signal<string[]>(['r4']);
   readonly holder = signal<DirectoryUserDto | null>(null);
   readonly holders = sampleDirectory(() => []);
   readonly periodStart = signal('2026-10-08T09:00:00');
