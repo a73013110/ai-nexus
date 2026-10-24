@@ -92,6 +92,8 @@
   color: var(--secondary);
   margin-top: 2px;
   line-height: 1.5;
+  // 帳號、email、id 沒有斷點，窄欄裡會撐出框外；放不下才斷，不截掉（手機沒有 hover 看全文）。
+  overflow-wrap: anywhere;
 }
 .selection-control.is-label-hidden {
   justify-content: center;

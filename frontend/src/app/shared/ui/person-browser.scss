@@ -16,6 +16,10 @@
   flex: 0 1 16rem;
   min-width: 10rem;
 }
+// 說明行是帳號（多為完整 email），11rem 的預設欄寬放不下，會斷成兩行；放寬到常見長度能一行排完。
+nx-choice-groups {
+  --choice-option-min: 15rem;
+}
 .person-browser-skeleton {
   display: grid;
   gap: var(--p-space-3);

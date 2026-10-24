@@ -1,5 +1,5 @@
 // 小卡片共用一列：放得下兩張 20rem 時兩欄（大對話框），否則一欄；選項多的卡片（`.is-wide`）獨佔一列。
-// 卡片內的選項排成放得下的 11rem 欄數。
+// 卡片內的選項排成放得下的 11rem 欄數；說明行較長的（例如帳號）由使用端以 `--choice-option-min` 放寬。
 :host {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
@@ -44,7 +44,7 @@
 }
 .choice-group-options {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--choice-option-min, 11rem)), 1fr));
   gap: 0 var(--p-space-1);
 }
 :host(.is-stacked) .choice-group-options {
