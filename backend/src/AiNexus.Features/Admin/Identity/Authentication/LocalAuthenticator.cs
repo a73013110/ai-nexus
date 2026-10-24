@@ -63,6 +63,6 @@ public sealed class LocalAuthenticator(AppDbContext db, Argon2Passwords password
 
     private bool DirectoryStale(User user, DateTimeOffset now)
         => selfService.Value.DirectoryFreshnessDays > 0
-            && user.AdEnabled && !user.Sid.StartsWith("managed:", StringComparison.Ordinal)
+            && user.AdEnabled && UserAccounts.DirectoryBound(user)
             && (user.DirectoryVerifiedAt is not { } verified || now - verified > TimeSpan.FromDays(selfService.Value.DirectoryFreshnessDays));
 }

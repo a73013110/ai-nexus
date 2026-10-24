@@ -9,9 +9,11 @@ using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Provisioning;
+using AiNexus.Features.Admin.Identity.Reviews;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Admin.Identity;
@@ -69,6 +71,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, ErrorAuthorizationResultHandler>();
         services.AddScoped<IActiveUsers, ActiveUsers>();
+        services.AddAccountReviewSource<DirectoryAccountReview>();
         services.AddSingleton(Argon2Cost.Recommended);
         services.AddSingleton<Argon2Passwords>();
         services.AddScoped<LocalAuthenticator>();
@@ -91,6 +94,7 @@ public sealed class IdentityModule : IFeatureModule
         SetUserRoles.Map(admin);
         SetUserEmail.Map(admin);
         PreviewUserAccess.Map(admin);
+        ListAccountReviews.Map(admin);
         var import = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersImport);
         ListDirectoryNodes.Map(import);
         ListDirectoryPeople.Map(import);

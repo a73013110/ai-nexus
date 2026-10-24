@@ -20,9 +20,12 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Icon } from '@shared/ui/icon';
+import { Notice } from '@shared/ui/notice';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
+import { AdminUsersStore } from '../admin-users-store';
+import { AccountReviewItems } from './account-review-items';
 import { AdminUserConversations } from './admin-user-conversations';
 import { AdminUserSettings } from './admin-user-settings';
 import { AdminUserStore, type UserTab } from './admin-user-store';
@@ -42,6 +45,7 @@ import { userInspectorTour } from '../identity-tour';
   selector: 'nx-admin-user-inspector',
   imports: [
     AccessStatus,
+    AccountReviewItems,
     AdminUserConversations,
     AdminUserSettings,
     AdminUserSummary,
@@ -51,6 +55,7 @@ import { userInspectorTour } from '../identity-tour';
     DialogHeader,
     DrawerPager,
     Icon,
+    Notice,
     RouterLink,
     Tabs,
     ViewMotion,
@@ -71,6 +76,12 @@ export class AdminUserInspector {
   readonly move = output<-1 | 1>();
   readonly store = inject(AdminUserStore);
   readonly session = inject(WorkspaceSession);
+  private readonly users = inject(AdminUsersStore);
+  /** 帳號待辦來自頁面的列表 store，處理後隨列表重讀更新。 */
+  readonly reviews = computed(() => {
+    const id = this.store.current()?.id;
+    return id ? this.users.reviewsOf(id) : [];
+  });
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   /** 每個設定分頁各自儲存，並標示其未儲存的變更。 */

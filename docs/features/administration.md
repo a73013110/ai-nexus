@@ -1,6 +1,6 @@
 # 存取管理
 
-存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者 `/admin/identity/users`（`identity.users`）、角色 `/admin/access-control/roles`（`access-control.roles`）、功能群組與模型 `/admin/access-control/groups`（`access-control.groups`）、功能 `/admin/access-control/features`（`access-control.features`）、選單 `/admin/access-control/navigation`（`access-control.navigation`）。一般登入不會取得管理權。各頁、使用者詳情與編輯對話框右上角的問號可開啟操作導覽。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
+存取管理是五個頁面，各自一個授權（窄螢幕改為卡片列，點卡片開詳情或編輯）：使用者（`identity.users`）、角色（`access-control.roles`）、功能群組與模型（`access-control.groups`）、功能（`access-control.features`）、選單（`access-control.navigation`）。一般登入不會取得管理權。各頁與對話框右上角的問號可開啟操作導覽。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
 部門樹與人員所屬在同一個「身分與權限」分群的 [組織](organization.md) 頁，另有授權。平台用量、檢索管理與價格見 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
@@ -28,6 +28,7 @@
 - 移除是邏輯刪除，保留歷史對話、稽核與登入名稱，防止重建同名帳號接管資料。
 - 本地密碼採 Argon2id PHC 格式（64 MiB、3 iterations、parallelism 1、128-bit salt），API、前端與稽核只顯示「是否已設定」。密碼 12–128 字元；登入有 IP 限流，連續 5 次失敗暫鎖 15 分鐘，管理員重設密碼可解除。本地姓名與 bootstrap 帳號相同也不會取得管理權。
 - 停用、修改登入政策或重設密碼會撤銷舊 cookie。管理員不能移除自己、停用自己目前的登入方式或撤銷自己的管理權。
+- 停用＝離職，只凍結資料、重新啟用即恢復，另會取消他的背景工作；要管理員處理的事（如 AD 已停用、卡號未結束）列在頁首「帳號待辦」與使用者詳情（[ADR 0019](../decisions/0019-account-disable-and-departure.md)）。
 
 ## 授權工作流程
 
@@ -57,4 +58,4 @@
 - 用量由共用的 `UsageReports` 統計 `GenerationRuns` 與 `ModelInvocations`，涵蓋聊天、OCR、文字工具、評測與耗時；期間是最近 30 個 UTC 日期，顯示用台北時區，未回報的 token 不估算。
 - 每次回答可展開總耗時、排隊、執行與輸入／輸出 tokens；執行時間含 Context 準備與等待 provider 容量。
 - 詳情的「對話」頁籤第一次開啟時才列出對話，可搜尋標題與本文，包含封存與已軟刪除的對話；對話每頁 50 段、內容每次 100 則，顯示資料庫保存的所有分支。附件只顯示名稱與大小，不增加下載權限。
-- 唯讀 API：`GET /api/v1/admin/users/{id}/insights`、`.../users/{id}/conversations`、`/api/v1/admin/conversations/{id}`。每次重新檢查 `identity.users`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。
+- 這些唯讀端點每次重新檢查 `identity.users`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。

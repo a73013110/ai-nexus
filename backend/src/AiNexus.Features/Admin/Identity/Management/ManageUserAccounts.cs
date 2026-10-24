@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,12 @@ namespace AiNexus.Features.Admin.Identity.Management;
 public sealed record UserAccountRequest(string DisplayName, bool Enabled, bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, IReadOnlyList<string> RoleIds, string? Password = null);
 
 public sealed record CreatedUserDto(Guid Id);
+
+/// <summary>
+/// 帳號由啟用變成停用（含刪除）。停用＝離職（ADR 0019）：資料一律保留，訂閱端只處理會繼續消耗資源的事，例如取消背景工作。
+/// 重新啟用不另發事件：凍結的資料在讀取時就恢復生效。
+/// </summary>
+public sealed record UserDisabled(Guid UserId, Guid ActorId) : IDomainEvent;
 
 /// <summary>
 /// 登入帳號格式先在此檢查並回傳專屬代碼；名稱衝突、角色與登入方式則之後在 <see cref="ManageUserAccounts"/> 的稽核交易內檢查，順序不可對調。
@@ -31,7 +38,7 @@ internal sealed class UserAccountRequestValidator : RequestValidator<UserAccount
 }
 
 /// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeAudit"/> 稽核。</summary>
-internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, TimeProvider clock)
+internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, DomainEvents events, TimeProvider clock)
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/users", (UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
@@ -62,7 +69,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         var key = id ?? Guid.NewGuid();
         var saved = await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user", key, key.ToString(), token => SnapshotAsync(key, token), async () =>
         {
-            var user = id is null ? new User { Id = key, Sid = "managed:" + key, ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
+            var user = id is null ? new User { Id = key, Sid = UserAccounts.ManagedSid(key), ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
                 await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
             if (user is null) return IdentityErrors.UserNotFound;
             if (request.LocalEnabled && hash is null && user.PasswordHash is null)
@@ -77,10 +84,10 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             // 綁定 AD 帳號時，不可與既有 AD 使用者同名（等於接管他的身分），也不可改動由 AD 同步建立的帳號名稱。
             if (ad is not null)
             {
-                var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
+                var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith(UserAccounts.ManagedSidPrefix)).Select(x => x.Account).ToListAsync(ct);
                 if (accounts.Any(x => string.Equals(UserAccounts.AccountName(x), ad, StringComparison.OrdinalIgnoreCase)))
                     return IdentityErrors.AccountExists;
-                if (!user.Sid.StartsWith("managed:", StringComparison.Ordinal) && !string.Equals(UserAccounts.AccountName(user.Account), ad, StringComparison.OrdinalIgnoreCase))
+                if (UserAccounts.DirectoryBound(user) && !string.Equals(UserAccounts.AccountName(user.Account), ad, StringComparison.OrdinalIgnoreCase))
                     return IdentityErrors.AdBindingImmutable;
             }
             var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
@@ -89,10 +96,11 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
             var credentialsChanged = user.AdAccount != ad || user.LocalAccount != local || hash is not null;
             if (flagsChanged || credentialsChanged) user.SecurityVersion++;
+            if (user.Enabled && !request.Enabled && id is not null) events.Raise(new UserDisabled(key, actor));
             user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
             user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
             user.AdAccount = ad; user.LocalAccount = local;
-            if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) user.Account = local ?? ad!;
+            if (!UserAccounts.DirectoryBound(user)) user.Account = local ?? ad!;
             if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
             await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
             return Result.Success;
@@ -104,6 +112,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         {
             var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
             if (user is null) return IdentityErrors.UserNotFound;
+            if (user.Enabled) events.Raise(new UserDisabled(id, actor));
             user.DeletedAt = clock.GetUtcNow(); user.Enabled = false; user.AdEnabled = false; user.LocalEnabled = false;
             user.PasswordHash = null; user.SecurityVersion++;
             // 只做軟刪除並保留 SID、帳號名與關聯資料：帳號名不會被重新註冊接管，歷史資料也不會連帶遺失。

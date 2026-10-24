@@ -15,11 +15,23 @@ using AiNexus.Features.Work.Sharing.Management;
 using AiNexus.Features.Work.Sharing.Viewing;
 using AiNexus.Features.Work.Artifacts.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
+using static AiNexus.IntegrationTests.Support.IdentityApi;
+using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 
 namespace AiNexus.IntegrationTests.Sharing;
 
 public sealed class CreateShareTests
 {
+    [Fact]
+    public async Task DisabledRecipientsAreRejected()
+    {
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        var user = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var conversation = await CreateConversation(owner);
+        await DisableAsync(f, user);
+        await AssertCodeAsync(await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user])), HttpStatusCode.BadRequest, "share_recipient_unknown");
+    }
+
     [Fact]
     public async Task AttachmentGrantIsExplicitBranchBoundAndRemovedOnRevoke()
     {

@@ -27,6 +27,10 @@ function setup() {
       total: 1,
       offset,
     })),
+    accountReviews: vi.fn(async () => ({
+      users: [{ id: 'u1', items: [{ code: 'attendance.card_held', title: '仍持有卡號' }] }],
+      notices: [],
+    })),
   };
   const session = {
     auth: { generation },
@@ -80,8 +84,28 @@ describe('admin users store', () => {
     store.saved('已儲存');
     await settle();
     expect(api.users.mock.calls.length).toBe(reads + 1);
+    expect(api.accountReviews).toHaveBeenCalledTimes(2);
     expect(access.catalog).toHaveBeenCalledTimes(2);
     expect(session.load).toHaveBeenCalledWith(true);
     expect(store.toast.toasts()[0]).toMatchObject({ tone: 'success', title: '已儲存' });
+  });
+
+  it('reads account reviews without waiting for the catalog and finds them by user', async () => {
+    const { store, access, api } = setup();
+    // 目錄一直沒讀到：應用不會穩定，只能等一下。
+    access.catalog.mockImplementation(() => new Promise(() => undefined));
+    await pause(20);
+    expect(api.accountReviews).toHaveBeenCalledTimes(1);
+    expect(api.users).not.toHaveBeenCalled();
+    expect(store.reviewsOf('u1').map((item) => item.code)).toEqual(['attendance.card_held']);
+    expect(store.reviewsOf('u2')).toEqual([]);
+  });
+
+  it('reads the reviews again with the given page after an account change', async () => {
+    const { store, api, settle } = setup();
+    await settle();
+    store.changed(0);
+    await settle();
+    expect(api.accountReviews).toHaveBeenCalledTimes(2);
   });
 });

@@ -77,7 +77,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             else if (!UserAccounts.IsValid(person.AccountName)) state = DirectoryPersonStates.InvalidAccount;
             else if (named.TryGetValue(UserAccounts.Normalize(person.AccountName)!, out var holder))
             {
-                state = holder.Sid.StartsWith("managed:", StringComparison.Ordinal) ? DirectoryPersonStates.Prebuilt : DirectoryPersonStates.Conflict;
+                state = holder.Sid.StartsWith(UserAccounts.ManagedSidPrefix, StringComparison.Ordinal) ? DirectoryPersonStates.Prebuilt : DirectoryPersonStates.Conflict;
                 id = holder.Id;
             }
             else state = DirectoryPersonStates.New;

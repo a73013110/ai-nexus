@@ -177,7 +177,7 @@ function setup({ render = false, users = usersPeople(), capped = false } = {}) {
       ],
     })),
   };
-  const usersStore = { readUsers: vi.fn(), toast: { success: vi.fn() } };
+  const usersStore = { changed: vi.fn(), toast: { success: vi.fn() } };
   TestBed.configureTestingModule({
     providers: [
       { provide: IdentityApi, useValue: api },
@@ -383,7 +383,7 @@ describe('DirectoryImportDialog', () => {
       sids: ['A', 'B', 'F'],
       includeDisabled: true,
     });
-    expect(users.readUsers).toHaveBeenCalled();
+    expect(users.changed).toHaveBeenCalled();
     expect(dialog.step()).toBe('result');
     expect(dialog.failed()).toBe(false);
     expect(dialog.tally()).toEqual({ created: 2, updated: 1, skipped: 0 });

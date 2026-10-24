@@ -66,6 +66,15 @@ public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUs
             .OrderBy(x => x.UserId).Select(x => x.UserId).ToListAsync(ct);
     }
 
+    /// <summary>單位目前是否有有效主管（帳號啟用且未刪除）；無效的單位一律回 false。帳號待辦據此判斷停用的主管是否留下空缺。</summary>
+    internal async Task<IReadOnlyDictionary<Guid, Unit>> ActiveUnitsWithoutManagerAsync(CancellationToken ct)
+    {
+        var active = await ActiveUnitsAsync(ct);
+        var managed = await ActiveMembers().Where(x => x.IsManager).Select(x => x.UnitId).Distinct().ToListAsync(ct);
+        foreach (var unit in managed) active.Remove(unit);
+        return active;
+    }
+
     private async Task<Dictionary<Guid, Unit>> ActiveUnitsAsync(CancellationToken ct)
     {
         var units = await db.Set<Unit>().AsNoTracking().ToDictionaryAsync(x => x.Id, ct);

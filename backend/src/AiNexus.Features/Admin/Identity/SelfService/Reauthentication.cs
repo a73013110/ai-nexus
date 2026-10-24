@@ -50,7 +50,7 @@ public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthentica
     /// </summary>
     public bool PasswordAvailable(HttpContext http, User user) => Method(http) == "local"
         ? user.LocalEnabled && user.LocalAccount is not null && user.PasswordHash is not null
-        : user.AdEnabled && ad.Value.Configured && !user.Sid.StartsWith("managed:", StringComparison.Ordinal);
+        : user.AdEnabled && ad.Value.Configured && UserAccounts.DirectoryBound(user);
 
     /// <summary>
     /// 以目前登入方式的密碼驗證本人。本地密碼沿用 <see cref="LocalAuthenticator"/> 的失敗計數與鎖定；AD 密碼必須驗出同一個 SID，

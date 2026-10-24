@@ -10,6 +10,7 @@ using System.Text.Json;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
@@ -44,7 +45,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 }
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
-internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
+internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -55,7 +56,8 @@ internal sealed class CreateShare(AppDbContext db, ResourceAccess access, ShareA
 
     public async Task<Result<ShareDto>> HandleAsync(Guid actor, CreateShareRequest request, CancellationToken ct)
     {
-        var recipientCount = await db.Users.CountAsync(x => request.RecipientIds.Contains(x.Id), ct);
+        // 收件者只能是啟用中的人；已發出的分享不因收件者停用而撤銷（ADR 0019）。
+        var recipientCount = await activeUsers.Ids.CountAsync(x => request.RecipientIds.Contains(x), ct);
         if (recipientCount != request.RecipientIds.Count) return SharingErrors.RecipientUnknown;
 
         await writes.Gate.WaitAsync(ct);

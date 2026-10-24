@@ -1,14 +1,14 @@
 # 模組邊界
 
 - 模組之間可以互相依賴，但**不可形成循環**。目標是能由下往上讀懂、測試與修改，不是零依賴。
-- `ModuleBoundaryTests.ModuleDependenciesHaveNoCycles` 以 NetArchTest 計算 `AiNexus.Features` 各模組命名空間之間的依賴；出現循環時列出最短路徑，以及每一段由哪些型別造成。
+- `ModuleBoundaryTests.ModuleDependenciesHaveNoCycles` 以 NetArchTest 計算 `AiNexus.Features` 各模組命名空間之間的依賴；出現循環時列出最短路徑與造成每一段的型別。
 - 模組以命名空間的「區.模組」辨識（`AiNexus.Features.Admin.AccessControl`）。區（Work、Admin、Platform）只是資料夾，不是依賴邊界：依賴規則不分區，跨區照樣依下表使用（[ADR 0016](../decisions/0016-areas-urls-and-navigation.md)）。
 - 資料表不屬於任何模組的程式碼：實體、組態與 `AppDbContext` 在 `AiNexus.Data`（只依賴 Platform），所以跨模組外鍵直接寫在子表的組態，不會形成模組循環。寫入仍只由擁有該 schema 的模組執行（[ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)）。設定的 Options 類別（`InferenceOptions` 等）放在擁有該設定的模組。
 - 每個模組資料夾的根目錄有 `<Module>Module.cs`（唯一的註冊點）；有預期失敗時也有 `<Module>Errors.cs`。兩者都由 `ModuleBoundaryTests` 檢查。
 
 ## 目前的分層
 
-上層可以使用下層，反過來不行。測試只檢查沒有循環，下表是現況的概略位置，方便判斷新程式碼該放哪裡：
+上層可以使用下層，反過來不行。測試只檢查沒有循環，下表是現況的概略位置，供判斷新程式碼放哪裡：
 
 | 層 | 模組 | 說明 |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 
 `Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除。OpenAPI tag 一律＝模組名，由 `FeatureModules` 掛載模組時加上，端點不自己寫 tag。
 
-整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Files、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、標籤、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
+整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Files、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
 
 `Operations` 是管理端的組合層：使用者清單、使用者洞察、管理目錄、群組儲存與平台用量的回應內嵌 Inference、Billing、Files、Account 的 DTO，放進 AccessControl 或 Identity 會成環。各模組的管理端點在自己的 `MapEndpoints` 掛載。
 
@@ -41,10 +41,10 @@
 3. **domain event**：「A 發生後 B 跟著處理」，A 不需要結果。例：`UserSignedOut` 由 Monitoring 移除線上連線；`ContainerDeleted` 由 Conversations、Artifacts 解除專案連結。寫法見 [後端撰寫慣例](backend-conventions.md)。
 4. **只是參數**：下層方法不要收上層的 request 型別，改收自己定義的參數。例：`ConversationTurn` 取代 `CreateRunRequest`。
 
-另外三個固定做法：
+另外三個做法：
 
-- 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、即時監控的 `IMonitoringSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring 屬基礎能力層，只透過 `IMonitoringSource` 讀上層模組的狀態，不引用它們。
-- 共用的識別字放在下層模組，例如功能 ID 的 `FeatureCatalog` 與 `Policies` 在 AccessControl，其他模組的管理端點直接引用。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
+- 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、監控的 `IMonitoringSource`、[帳號待辦](../decisions/0019-account-disable-and-departure.md#帳號待辦)的 `IAccountReviewSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring、Identity 因此不必引用上層模組。
+- 共用的識別字放在下層模組，例如功能 ID 的 `FeatureCatalog` 與 `Policies` 在 AccessControl，其他模組的管理端點直接引用。常數不產生依賴，放下層是為了不誤導讀者。
 - 管理寫入的 `AdministrativeAudit.MutateAsync` 在 AccessControl，由呼叫端傳入 actor 與前後快照的委派；快照由擁有資料的 slice 提供，AccessControl 因此不必認得各模組的資料形狀。
 
 ## 直接呼叫或 domain event

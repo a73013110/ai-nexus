@@ -26,6 +26,7 @@ import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
+import { AccountReviews } from './account-reviews';
 import { AdminUserCreateDialog } from './admin-user-create-dialog';
 import { emailState, signInMethods } from './user-account-fields';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
@@ -45,6 +46,7 @@ import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directo
     Icon,
     SearchField,
     AccessStatus,
+    AccountReviews,
     ActionMenu,
     ConfirmDialog,
     TestIdentityDialog,
@@ -136,7 +138,7 @@ export class AdminUsersTab {
       this.acting.set(user.id);
       try {
         await this.api.deleteUser(user.id);
-        this.store.readUsers(0);
+        this.store.changed(0);
         this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
       } catch (error) {
         this.store.actionError.set(safeMessage(error));
@@ -150,7 +152,7 @@ export class AdminUsersTab {
     this.acting.set(user.id);
     try {
       const [item] = (await this.api.syncDirectoryUsers([user.id])).items;
-      this.store.readUsers();
+      this.store.changed();
       if (!item) return;
       if (writesUser(item))
         this.store.toast.success(

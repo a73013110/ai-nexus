@@ -6,6 +6,14 @@ namespace AiNexus.Features.Admin.Identity.Users;
 
 public static class UserAccounts
 {
+    /// <summary>還沒以 SID 綁定 AD 的帳號（管理員手建或預建）的 SID 前綴；AD 驗證或匯入對上 <c>AdAccount</c> 後改寫成真正的 SID。</summary>
+    public const string ManagedSidPrefix = "managed:";
+
+    public static string ManagedSid(Guid id) => ManagedSidPrefix + id;
+
+    /// <summary>是否已以 SID 綁定 AD；查詢裡用 <c>x.Sid.StartsWith(ManagedSidPrefix)</c>。</summary>
+    public static bool DirectoryBound(User user) => !user.Sid.StartsWith(ManagedSidPrefix, StringComparison.Ordinal);
+
     /// <summary>去掉網域前綴（<c>DOMAIN\</c>）與 UPN 後綴（<c>@domain</c>）後的目錄帳號名。</summary>
     public static string AccountName(string account) => account.Trim().Split('\\').Last().Split('@')[0];
 

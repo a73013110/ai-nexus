@@ -8326,6 +8326,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/account-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListAccountReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/directory-nodes": {
         parameters: {
             query?: never;
@@ -9571,6 +9587,25 @@ export interface components {
         AccessItemDto: {
             id: string;
             name: string;
+        };
+        AccountReviewsDto: {
+            users: components["schemas"]["AccountReviewUserDto"][];
+            notices: string[];
+        };
+        AccountReviewTaskDto: {
+            code: string;
+            title: string;
+            detail: null | string;
+            route: null | string;
+        };
+        AccountReviewUserDto: {
+            /** Format: uuid */
+            id: string;
+            account: string;
+            displayName: string;
+            enabled: boolean;
+            deleted: boolean;
+            items: components["schemas"]["AccountReviewTaskDto"][];
         };
         AccountSecurityChangeDto: {
             security: components["schemas"]["AccountSecurityDto"];
@@ -12582,6 +12617,9 @@ export interface components {
 }
 export type AccessDto = components['schemas']['AccessDto'];
 export type AccessItemDto = components['schemas']['AccessItemDto'];
+export type AccountReviewsDto = components['schemas']['AccountReviewsDto'];
+export type AccountReviewTaskDto = components['schemas']['AccountReviewTaskDto'];
+export type AccountReviewUserDto = components['schemas']['AccountReviewUserDto'];
 export type AccountSecurityChangeDto = components['schemas']['AccountSecurityChangeDto'];
 export type AccountSecurityDto = components['schemas']['AccountSecurityDto'];
 export type AddDocumentRequest = components['schemas']['AddDocumentRequest'];
@@ -29614,6 +29652,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccessDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListAccountReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountReviewsDto"];
                 };
             };
             /** @description Bad Request */

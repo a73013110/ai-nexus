@@ -9,6 +9,7 @@ using AiNexus.Features.Staff.Attendance.Leave;
 using AiNexus.Features.Staff.Attendance.Records;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Staff.Attendance;
@@ -41,6 +42,7 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddScoped<PunchImporter>();
         builder.Services.AddHostedService<PunchImportWorker>();
         builder.Services.AddMonitoringSource<PunchImportMonitoring>();
+        builder.Services.AddAccountReviewSource<CardAccountReview>();
         // GD 的查詢、帳號對應與監控由 Integrations 註冊（GdAccess、GdAccounts）；出勤只註冊自己的讀取與回寫。
         builder.Services.AddScoped<LeaveSheetReader>();
         builder.Services.AddSingleton<CalendarReader>();

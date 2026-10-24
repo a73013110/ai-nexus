@@ -1,5 +1,7 @@
 using AiNexus.Platform.Dashboard;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Monitoring;
 
@@ -17,6 +19,7 @@ public sealed class JobsModule : IFeatureModule
         builder.Services.AddMonitoringSource<JobsMonitoring>();
         builder.Services.AddScoped<JobService>();
         builder.Services.AddHostedService<BackgroundJobWorker>();
+        builder.Services.AddDomainEventHandler<UserDisabled, CancelDisabledOwnerJobs>();
         builder.Services.AddFeaturePolicy(FeatureCatalog.Jobs);
     }
 

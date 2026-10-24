@@ -40,7 +40,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
             // Cookie 驗證剛讀過這一列，直接追蹤那份副本，避免再查一次。
             var linked = Track(SessionIdentity.ValidatedUser(accessor.HttpContext!, userId)) ?? await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
             var testing = SessionIdentity.IsTest(principal);
-            if (linked is null || !SessionIdentity.Available(linked)
+            if (linked is null || !ActiveUsers.IsActive(linked)
                 || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version))
                 || (!testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method))))
                 return IdentityErrors.SessionRevoked;

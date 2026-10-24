@@ -25,6 +25,10 @@ internal static class CardAssignmentQueries
     public static IQueryable<CardAssignment> CoveringAt(this IQueryable<CardAssignment> assignments, DateTimeOffset at)
         => assignments.Where(x => x.StartsAt <= at && (x.EndsAt == null || x.EndsAt > at));
 
+    /// <summary>在 <paramref name="at"/> 還沒結束的持有期間（持有中或尚未開始）。</summary>
+    public static IQueryable<CardAssignment> UnendedAt(this IQueryable<CardAssignment> assignments, DateTimeOffset at)
+        => assignments.Where(x => x.EndsAt == null || x.EndsAt > at);
+
     /// <summary>持有期間連同卡號與使用者顯示名稱；使用者可能沒有（只有姓名的持有人），所以是 left join。</summary>
     public static IQueryable<CardAssignmentDto> ToDtos(this IQueryable<CardAssignment> assignments, AppDbContext db)
         => from a in assignments

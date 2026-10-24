@@ -24,7 +24,7 @@ public sealed class ResourceWriteLock
 }
 
 /// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
-public sealed class ResourceAccess(AppDbContext db, AccessService access, ResourceWriteLock writes, TimeProvider clock)
+public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiveUsers activeUsers, ResourceWriteLock writes, TimeProvider clock)
 {
     public async Task<IQueryable<Resource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
     {
@@ -107,10 +107,12 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, Resour
             var resource = owned.Value;
             if (request.Members.Any(x => x.UserId == resource.OwnerId)) return CollaborationErrors.OwnerIsImplicit;
             var users = request.Members.Select(x => x.UserId).ToArray();
-            if (await db.Users.CountAsync(x => users.Contains(x.Id), ct) != users.Length || await db.Set<RoleGroup>().CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
+            var oldMembers = await db.Set<ResourceMember>().Where(x => x.ResourceId == id).ToListAsync(ct);
+            // 新加入的成員必須是啟用中的人；已是成員的停用者可以留著（ADR 0019：停用只凍結，復職即恢復），所以只檢查新加的。
+            var added = users.Except(oldMembers.Select(x => x.UserId)).ToArray();
+            if (await activeUsers.Ids.CountAsync(x => added.Contains(x), ct) != added.Length || await db.Set<RoleGroup>().CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
                 return CollaborationErrors.UnknownMember;
             // 群組授權刻意只給唯讀；可編輯者必須是具名成員，不能靠群組取得編輯權。
-            var oldMembers = await db.Set<ResourceMember>().Where(x => x.ResourceId == id).ToListAsync(ct);
             db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
             foreach (var item in request.Members)
             {

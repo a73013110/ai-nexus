@@ -149,7 +149,7 @@ export class DirectoryImportDialog {
         sids: this.previewed,
         includeDisabled: this.includeDisabled(),
       });
-      this.users.readUsers();
+      this.users.changed();
       this.outcomes.set(result.items);
       this.step.set('result');
     });

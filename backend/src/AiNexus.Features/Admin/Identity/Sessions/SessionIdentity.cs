@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -57,8 +58,7 @@ public static class SessionIdentity
         return new(new ClaimsIdentity(claims, AuthEndpoints.CookieScheme));
     }
 
-    public static bool Available(User user) => user.Enabled && user.DeletedAt is null;
-    public static bool Allows(User user, string? method) => Available(user) && (method switch
+    public static bool Allows(User user, string? method) => ActiveUsers.IsActive(user) && (method switch
     {
         "local" => user.LocalEnabled && user.PasswordHash is not null,
         "ad" or "windows" => user.AdEnabled,
@@ -112,7 +112,7 @@ public static class SessionIdentity
             }
             var ended = await TestEndedAsync(db, actorId, testId, ct);
             var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
-            if (ended || expired || user is null || !Available(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
+            if (ended || expired || user is null || !ActiveUsers.IsActive(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
             {
                 // 只切回仍有權限的原管理者，且絕不延長測試身分的有效期。
                 context.ReplacePrincipal(Principal(actor!, principal.FindFirstValue(ActorMethod)!)); context.ShouldRenew = true;

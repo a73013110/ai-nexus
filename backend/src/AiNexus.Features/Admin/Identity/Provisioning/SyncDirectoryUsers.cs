@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -34,7 +35,7 @@ internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory
     public async Task<Result<DirectoryOutcomesDto>> HandleAsync(Guid actor, DirectorySyncRequest request, CancellationToken ct)
     {
         var users = await db.Users.AsNoTracking().Where(x => request.UserIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-        var linked = users.Values.Where(x => x.DeletedAt is null && !x.Sid.StartsWith("managed:", StringComparison.Ordinal)).Select(x => x.Sid).ToArray();
+        var linked = users.Values.Where(x => x.DeletedAt is null && UserAccounts.DirectoryBound(x)).Select(x => x.Sid).ToArray();
         var people = (await directory.FindAsync(linked, ct)).ToDictionary(x => x.Sid, StringComparer.OrdinalIgnoreCase);
         var items = new List<DirectoryOutcomeDto>();
         // 不存在的 ID 直接略過：列表上的使用者只會軟刪除，查不到代表請求不是從列表來的。
@@ -42,7 +43,7 @@ internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory
         {
             if (!users.TryGetValue(id, out var user)) continue;
             if (user.DeletedAt is not null) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.Deleted));
-            else if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.NotLinked));
+            else if (!UserAccounts.DirectoryBound(user)) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.NotLinked));
             else if (!people.TryGetValue(user.Sid, out var person)) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.NotFound));
             else items.Add(await provisioning.ApplyAsync(actor, FeatureCatalog.IdentityUsersSync, Action, person, includeDisabled: true, allowCreate: false, ct));
         }

@@ -39,6 +39,11 @@
       }
     }
   </nx-admin-user-summary>
+  @if (reviews().length) {
+    <nx-notice class="inspector-reviews" tone="warning" icon="tasks">
+      <nx-account-review-items [items]="reviews()" (navigate)="close()" />
+    </nx-notice>
+  }
   <!-- 頁籤固定在面板上方；每個設定頁籤是各自儲存的表單，面板含自己的頁尾。 -->
   <nx-tabs
     #sections

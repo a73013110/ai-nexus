@@ -158,7 +158,7 @@ export class DirectorySyncDialog {
         .map((user) => user.id)
         .filter((id) => this.selected().has(id));
       this.outcomes.set((await this.api.syncDirectoryUsers(ids)).items);
-      this.store.readUsers();
+      this.store.changed();
     } catch (error) {
       this.error.set(safeMessage(error));
     } finally {

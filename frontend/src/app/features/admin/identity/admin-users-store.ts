@@ -26,6 +26,15 @@ export class AdminUsersStore {
     loader: ({ search, offset }) => this.api.users(search, offset),
   });
   readonly users = computed(() => this.usersRead.value() ?? null);
+  /** 帳號待辦不需要角色名稱，不等目錄；帳號有異動時跟著列表重讀。 */
+  readonly reviewsRead = apiResource({
+    feature: 'identity.users',
+    loader: () => this.api.accountReviews(),
+  });
+  readonly reviews = computed(() => this.reviewsRead.value() ?? null);
+  private readonly reviewsById = computed(
+    () => new Map((this.reviews()?.users ?? []).map((user) => [user.id, user.items])),
+  );
   readonly loading = this.access.loading;
   /**
    * 表格的讀取狀態：搜尋的防抖等待、重讀，以及列表還在等目錄（目錄讀到前列表不會開始讀）。
@@ -44,6 +53,11 @@ export class AdminUsersStore {
   load() {
     this.access.load();
     this.usersRead.reload();
+    this.reviewsRead.reload();
+  }
+  /** 這位使用者的帳號待辦；沒有時為空陣列。 */
+  reviewsOf(id: string) {
+    return this.reviewsById().get(id) ?? [];
   }
   find(value: string) {
     this.search.set(value);
@@ -63,10 +77,15 @@ export class AdminUsersStore {
     if (offset === this.offset()) this.usersRead.reload();
     else this.offset.set(offset);
   }
-  /** 授權已改變：重新讀取目錄、顯示中的使用者與此帳號的授權。 */
+  /** 帳號或 AD 資料已寫入：重新讀取顯示中的使用者與帳號待辦。 */
+  changed(offset = this.offset()) {
+    this.readUsers(offset);
+    this.reviewsRead.reload();
+  }
+  /** 授權已改變：重新讀取目錄、顯示中的使用者、帳號待辦與此帳號的授權。 */
   saved(title: string, description?: string) {
     this.access.saved(title, description);
-    this.usersRead.reload();
+    this.changed();
   }
   roleNames(ids: string[]) {
     return this.access.roleNames(ids);

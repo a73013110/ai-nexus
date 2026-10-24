@@ -34,7 +34,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         var adAccount = UserAccounts.Normalize(name);
         user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
         if (user is null) return new DirectoryMatch(null, false);
-        if (!user.Sid.StartsWith("managed:", StringComparison.Ordinal)) return IdentityErrors.AdBindingConflict;
+        if (UserAccounts.DirectoryBound(user)) return IdentityErrors.AdBindingConflict;
         user.Sid = sid; user.Account = account;
         return new DirectoryMatch(user, true);
     }

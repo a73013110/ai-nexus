@@ -7,7 +7,7 @@ import type {
 } from '@core/api/schema';
 
 /**
- * 使用者頁（`identity.users`）的端點：帳號、通知信箱、角色指派、附件容量、個人模型政策、洞察與稽核式讀取對話。
+ * 使用者頁（`identity.users`）的端點：帳號、通知信箱、角色指派、附件容量、個人模型政策、帳號待辦、洞察與稽核式讀取對話。
  * 後端分散在 Identity、Operations、Inference、Files、Conversations，授權都是使用者頁，所以集中在這裡。
  */
 @Injectable({ providedIn: 'root' })
@@ -52,6 +52,8 @@ export class IdentityApi {
     this.api.post('/api/v1/admin/directory-imports/preview', { body });
   importDirectoryUsers = (body: DirectoryImportRequest) =>
     this.api.post('/api/v1/admin/directory-imports', { body });
+  /** 各模組列出的帳號待辦（ADR 0019）；每次重新查詢，處理完的項目自然消失。 */
+  accountReviews = () => this.api.get('/api/v1/admin/account-reviews');
   syncDirectoryUsers = (userIds: string[]) =>
     this.api.post('/api/v1/admin/directory-syncs', { body: { userIds } });
 }

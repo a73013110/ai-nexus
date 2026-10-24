@@ -12,6 +12,11 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+// 帳號待辦夾在摘要與頁籤之間，左右與摘要對齊。
+.inspector-reviews {
+  flex: none;
+  margin: 0 var(--p-space-5) var(--p-space-3);
+}
 .inspector-audit {
   flex: none;
   min-height: 1.75rem;

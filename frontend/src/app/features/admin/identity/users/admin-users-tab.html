@@ -7,6 +7,7 @@
     (valueChange)="store.find($event)"
   />
   <div class="page-actions">
+    <nx-account-reviews />
     @if (session.has('identity.users.import')) {
       <button
         class="secondary-button directory-import-button"

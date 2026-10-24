@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.Features.Admin.Identity.Sessions;
 
@@ -50,7 +51,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
         if (!resolved.IsSuccess) return resolved.Error;
         var actor = resolved.Value;
         if (!await access.HoldsAsync(actor.Id, FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.FeatureForbidden;
-        var target = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == body.UserId && x.Enabled && x.DeletedAt == null, ct);
+        var target = await db.Users.AsNoTracking().Where(ActiveUsers.Active).SingleOrDefaultAsync(x => x.Id == body.UserId, ct);
         if (target is null) return IdentityErrors.UserNotFound;
         if (target.Id == actor.Id) return IdentityErrors.TestIdentitySame;
         var now = clock.GetUtcNow();

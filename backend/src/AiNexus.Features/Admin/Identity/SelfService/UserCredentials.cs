@@ -64,7 +64,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         user.PasswordChangedAt = clock.GetUtcNow();
         user.LocalEnabled = true; user.FailedLogins = 0; user.LockedUntil = null;
         // 尚未綁定 AD 的預建帳號以本地帳號顯示，與管理端建立帳號的規則相同。
-        if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) user.Account = name;
+        if (!UserAccounts.DirectoryBound(user)) user.Account = name;
         user.SecurityVersion++;
         return new LocalLoginChange(enabled, renamed && !enabled, !enabled);
     }
@@ -83,7 +83,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
     {
         if (await db.Users.AnyAsync(x => x.Id != user.Id && (x.LocalAccount == name || x.AdAccount == name), ct)) return true;
         // 較早由 AD 首次登入自動建立的使用者沒有 AdAccount，要比對完整帳號的短名（與管理端建立帳號同一規則）。
-        var accounts = await db.Users.AsNoTracking().Where(x => x.Id != user.Id && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
+        var accounts = await db.Users.AsNoTracking().Where(x => x.Id != user.Id && x.AdAccount == null && !x.Sid.StartsWith(UserAccounts.ManagedSidPrefix)).Select(x => x.Account).ToListAsync(ct);
         return accounts.Any(x => string.Equals(UserAccounts.AccountName(x), name, StringComparison.OrdinalIgnoreCase));
     }
 }
