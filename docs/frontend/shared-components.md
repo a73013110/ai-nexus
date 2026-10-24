@@ -19,6 +19,10 @@
 - 需要某模組的 API 或查詢狀態：放該模組資料夾並由呼叫端以 `@features` 別名引用；查詢狀態由呼叫端建立後傳入（例：`directorySearch` → `PersonPicker` 的 `search`），元件只負責呈現與鍵盤。
 - 共用元件不接管驗證、草稿或寫入；選取結果以 output 交給呼叫端。
 
+## 現有的選擇器
+
+- 選人 `PersonPicker`、從名單挑人 `PersonBrowser`、平面清單 `Select`、階層（單位、分群）`TreeSelect`；用法見 [表單](forms.md)「選擇對象」。
+
 ## 完成的條件
 
 - `/admin/design` 有範例：一個 `DesignSection`，涵蓋空、載入、停用、錯誤等狀態；資料用本機假資料與虛構姓名，不呼叫 API。

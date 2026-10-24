@@ -24,13 +24,16 @@
 - 只選一個對象時，選好後把搜尋框換成 `.form-choice` 一列（頭像＋名稱＋帳號＋「更換」），不留著已填的搜尋框；可選多個時，已選的放在搜尋框下方的 `.form-chips`／`.form-chip` 膠囊（頭像＋名稱，按下移除）。只有姓名、沒有帳號的人，頭像加 `.is-name`（虛線）。
 - 要從整份名單挑人（看到才認得出來，例如把部門同事加入單位）用 `PersonBrowser`：依分組列出、文字與分組篩選、可多選，名單由呼叫端載入。已知道要找誰時用 `PersonPicker`。
 - 已加入的人（成員、授權對象）一人一列：`ul.person-list` ＞ `li.person-row`（頭像＋`.person-row-text`＋右側勾選或下拉、移除），樣式在 `platform.scss`，不在元件裡另寫。
-- 從固定清單選一個單位（篩選、上層單位）用樹狀 `Select`：選項由 `unitOptions()`（`features/admin/organization/unit-tree.ts`）產生，名稱只寫自己、依層縮排，搜尋時標出上層路徑；不要把整條路徑接成選項名稱，名稱前段相同時分不出來。其他階層清單（選單分群）同樣給選項 `level`、`path`。
+- 從階層選一個（單位、選單分群）用 `TreeSelect`，不用 `Select`：
+  - 單位的節點由 `unitNodes()`（`features/admin/organization/unit-tree.ts`）產生；節點名稱只寫自己，不要把路徑接進名稱。觸發鈕顯示「上層路徑 › 名稱」，放不下先截路徑；搜尋時改成平面清單並標出所屬路徑。
+  - 「所有單位」「最上層」這類值為空的選項用 `allLabel`，不放進節點；不能選的用節點的 `disabled`／`allDisabled`（列出但不能選，例如放不下的位置），整個排除用 `unitNodes()` 的 `include`（下層一併排除）。
+  - 可選的狀態由開發者用 `status` 指定，使用者不能改：`any`（預設；停用的收起，面板底部「顯示停用的單位」可列出）、`active`（只列啟用的，例如指派新成員）、`inactive`（只能選停用的，啟用的上層只當路徑）。篩選歷史資料用 `any`。
 - 部門、檔案等其他對象沿用同一套互動；還沒有共用元件時先抽一個，見 [共用元件](shared-components.md)。
 
 ## 控制項
 
 - 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
-- 多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色。
+- 多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色；不用原生勾選框的外觀，對齊見 [並排對齊](alignment.md)。
 - 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。
 - 文字輸入：IME 組字中（含 keyCode 229）的 Enter 不送出，Shift+Enter 換行；長草稿自動增高。
 

@@ -1,4 +1,5 @@
 import { rovingIndex } from '../browser/roving-index';
+import { Checkbox } from './checkbox';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -44,7 +45,7 @@ export type TableSortDirection = 'asc' | 'desc';
  */
 @Component({
   selector: 'nx-data-table',
-  imports: [Icon],
+  imports: [Checkbox, Icon],
   styleUrl: './data-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -83,15 +84,12 @@ export type TableSortDirection = 'asc' | 'desc';
     >
       <h3>顯示欄位</h3>
       @for (column of columns(); track column.id) {
-        <label
-          ><input
-            type="checkbox"
-            [checked]="isVisible(column.id)"
-            [disabled]="column.hideable === false"
-            (change)="toggleColumn(column.id)"
-          />
-          {{ column.label }}</label
-        >
+        <nx-checkbox
+          [label]="column.label"
+          [checked]="isVisible(column.id)"
+          [disabled]="column.hideable === false"
+          (checkedChange)="toggleColumn(column.id)"
+        />
       }
       <button type="button" class="quiet-button" (click)="resetColumns()">
         <nx-icon name="reset" />還原預設欄位

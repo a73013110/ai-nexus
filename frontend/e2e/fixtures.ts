@@ -195,6 +195,17 @@ export async function chooseSelect(
   // The panel stays painted while it leaves; wait so the next lookup cannot match it.
   await expect(list).toBeHidden();
 }
+/** 在 TreeSelect 選一個節點；`path` 是由最上層起的完整路徑（「系統管理 › 報表」），同名節點也分得開。 */
+export async function chooseTreeNode(
+  page: import("@playwright/test").Page,
+  label: string,
+  path: string,
+) {
+  await page.getByRole("combobox", { name: label, exact: true }).click();
+  const tree = page.getByRole("tree", { name: label, exact: true });
+  await tree.locator(`[role="treeitem"][title="${path}"]`).click();
+  await expect(tree).toBeHidden();
+}
 /** 多選 Select 的 trigger：名稱是欄位名稱加上已選內容（aria-labelledby）。 */
 export function multiSelect(
   page: import("@playwright/test").Page,

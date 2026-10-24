@@ -239,10 +239,10 @@ describe('AttendanceRecordsPage', () => {
     );
     await fixture.whenStable();
     expect(organization.units).toHaveBeenCalledOnce();
-    expect(fixture.componentInstance.unitOptions()?.[0].label).toBe('所有單位');
+    expect(fixture.componentInstance.unitNodes()).not.toBeNull();
   });
 
-  it('lists units as a tree with the name only and the parents as the path', async () => {
+  it('picks units from the tree, all units first and the parents as the trigger path', async () => {
     const { fixture, organization } = setup(
       async () => records(),
       ['attendance.records', 'organization'],
@@ -255,17 +255,25 @@ describe('AttendanceRecordsPage', () => {
       enabled: true,
     });
     organization.units.mockResolvedValueOnce([
-      unit('c', '漢龍資訊科技股份有限公司（總公司）', null),
+      unit('c', '星河科技股份有限公司（總公司）', null),
       unit('r', '研發處', 'c'),
       unit('p', '平台部', 'r'),
     ] as never);
     await fixture.whenStable();
-    const options = fixture.componentInstance.unitOptions()!;
-    expect(options.slice(1).map((option) => [option.label, option.level, option.path])).toEqual([
-      ['漢龍資訊科技股份有限公司（總公司）', 1, []],
-      ['研發處', 2, ['漢龍資訊科技股份有限公司（總公司）']],
-      ['平台部', 3, ['漢龍資訊科技股份有限公司（總公司）', '研發處']],
-    ]);
+    expect(fixture.componentInstance.unitNodes()!.map((node) => [node.label, node.parent])).toEqual(
+      [
+        ['星河科技股份有限公司（總公司）', null],
+        ['研發處', 'c'],
+        ['平台部', 'r'],
+      ],
+    );
+    fixture.componentInstance.query.set('unitId', 'p');
+    fixture.detectChanges();
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector(
+      '.records-unit [role="combobox"]',
+    )!;
+    expect(trigger.getAttribute('aria-label')).toBe('單位（含下層）');
+    expect(trigger.getAttribute('title')).toBe('星河科技股份有限公司（總公司） › 研發處 › 平台部');
   });
 
   it('picks people from the roster list, including holders without an account', async () => {

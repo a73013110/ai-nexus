@@ -13,6 +13,7 @@ import {
   chooseOptions,
   multiSelect,
   chooseSelect,
+  chooseTreeNode,
   openSettings,
   expectViewportContained,
   toasts,
@@ -901,7 +902,7 @@ test("選單可新增分群、頁面與外部連結，錯誤代碼留在對話�
   );
   await expect(dialog.getByLabel("名稱", { exact: true })).toBeFocused();
   await dialog.getByLabel("名稱", { exact: true }).fill("報表");
-  await chooseSelect(page, "位置", "系統管理");
+  await chooseTreeNode(page, "位置", "系統管理");
   await dialog.getByRole("button", { name: "建立分群", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(posts().at(-1)).toEqual({
@@ -925,13 +926,13 @@ test("選單可新增分群、頁面與外部連結，錯誤代碼留在對話�
     .getByRole("listbox", { name: "頁面", exact: true })
     .getByRole("option", { name: /^活動稽核/ })
     .click();
-  await chooseSelect(page, "位置", "系統管理 › 監控與紀錄");
+  await chooseTreeNode(page, "位置", "系統管理 › 監控與紀錄");
   await dialog.getByRole("button", { name: "建立頁面", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText(
     "同一層已經有這個頁面。",
   );
   await expect(dialog).toBeVisible();
-  await chooseSelect(page, "位置", "系統管理 › 報表");
+  await chooseTreeNode(page, "位置", "系統管理 › 報表");
   await dialog.getByRole("button", { name: "建立頁面", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(posts().at(-1)).toMatchObject({

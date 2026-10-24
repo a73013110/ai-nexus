@@ -25,7 +25,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { EXTRA_ICONS, ICON_NAMES, Icon } from '@shared/ui/icon';
 import { MenuPanel } from '@shared/ui/menu-panel';
 import { PendingButton } from '@shared/ui/pending-button';
-import { Select, type SelectOption } from '@shared/ui/select';
+import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AccessControlApi } from '../access-control-api';
 import { AccessControlStore } from '../access-control-store';
@@ -87,7 +87,7 @@ const SCROLL_SPEED = 12;
     Icon,
     MenuPanel,
     PendingButton,
-    Select,
+    TreeSelect,
     StatusBadge,
     TableState,
   ],
@@ -303,30 +303,31 @@ export class NavigationEditor {
 
   // ── 移到… ──
   readonly moving = signal<{ row: NavigationRow; parentId: string } | null>(null);
-  readonly destinations = computed<SelectOption[]>(() => {
+  /** 可移到的分群（自己與下層不列出）；放不下的列出但不能選。「最上層」由選單釘在最上方。 */
+  readonly destinations = computed<TreeSelectNode[]>(() => {
     const moving = this.moving();
     if (!moving) return [];
     const items = this.store.items(),
       id = moving.row.item.id;
-    const options: SelectOption[] = [
-      { value: '', label: '最上層', disabled: !canPlace(items, id, null) },
-    ];
-    const visit = (nodes: EditorNode[], trail: string[]) => {
-      for (const node of nodes) {
+    const nodes: TreeSelectNode[] = [];
+    const visit = (children: EditorNode[], parent: string | null) => {
+      for (const node of children) {
         if (node.item.kind !== 'group' || node.item.id === id) continue;
-        const path = [...trail, this.store.name(node.item)];
-        options.push({
+        nodes.push({
           value: node.item.id,
-          label: path.at(-1)!,
-          level: path.length,
-          path: trail,
+          label: this.store.name(node.item),
+          parent,
           disabled: !canPlace(items, id, node.item.id),
         });
-        visit(node.children, path);
+        visit(node.children, node.item.id);
       }
     };
-    visit(editorTree(items), []);
-    return options;
+    visit(editorTree(items), null);
+    return nodes;
+  });
+  readonly topDisabled = computed(() => {
+    const moving = this.moving();
+    return !!moving && !canPlace(this.store.items(), moving.row.item.id, null);
   });
   openMove(row: NavigationRow) {
     this.moving.set({ row, parentId: row.parentId ?? '' });

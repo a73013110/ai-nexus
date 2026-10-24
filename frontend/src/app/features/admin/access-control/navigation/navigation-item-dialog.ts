@@ -25,6 +25,7 @@ import { ICON_NAMES } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
+import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AccessControlApi } from '../access-control-api';
 import { accessPageNames, navigationItemTour } from '../access-control-tour';
@@ -101,6 +102,7 @@ function sameDraft(first: Draft, second: Draft) {
     Notice,
     PendingButton,
     Select,
+    TreeSelect,
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -152,27 +154,25 @@ export class NavigationItemDialog {
     });
   });
   /**
-   * 新增的位置：最上層或任一分群（以路徑顯示）。新節點是葉節點，所以分群本身已在第四層時不能再放。
+   * 新增的位置：任一分群（「最上層」由選單釘在最上方）。新節點是葉節點，所以第四層的分群列出但不能選。
    */
-  readonly parents = computed<SelectOption[]>(() => {
+  readonly parents = computed<TreeSelectNode[]>(() => {
     const items = this.store.items();
-    const options: SelectOption[] = [{ value: '', label: '最上層' }];
-    const visit = (nodes: EditorNode[], trail: string[]) => {
-      for (const node of nodes) {
+    const nodes: TreeSelectNode[] = [];
+    const visit = (children: EditorNode[], parent: string | null) => {
+      for (const node of children) {
         if (node.item.kind !== 'group') continue;
-        const path = [...trail, this.store.name(node.item)];
-        if (depthOf(items, node.item.id) < MAX_DEPTH)
-          options.push({
-            value: node.item.id,
-            label: path.at(-1)!,
-            level: path.length,
-            path: trail,
-          });
-        visit(node.children, path);
+        nodes.push({
+          value: node.item.id,
+          label: this.store.name(node.item),
+          parent,
+          disabled: depthOf(items, node.item.id) >= MAX_DEPTH,
+        });
+        visit(node.children, node.item.id);
       }
     };
-    visit(editorTree(items), []);
-    return options;
+    visit(editorTree(items), null);
+    return nodes;
   });
   readonly icons: SelectOption[] = [
     { value: '', label: '不設定' },

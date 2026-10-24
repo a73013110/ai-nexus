@@ -48,9 +48,11 @@
                   (valueChange)="update('kind', $any($event))"
                 />
                 <label class="form-field-short navigation-parent"
-                  >位置<nx-select
+                  >位置<nx-tree-select
                     label="位置"
-                    [options]="parents()"
+                    allLabel="最上層"
+                    noun="分群"
+                    [nodes]="parents()"
                     [value]="e.draft.parentId"
                     [disabled]="locked()"
                     (valueChange)="update('parentId', $event)"

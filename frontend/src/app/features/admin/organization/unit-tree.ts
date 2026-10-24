@@ -1,5 +1,5 @@
 import type { UnitDto } from '@core/api/schema';
-import type { SelectOption } from '@shared/ui/select';
+import type { TreeSelectNode } from '@shared/ui/tree-select';
 
 /** 與後端 `UnitRules.MaxDepth` 相同；伺服器仍會以 `organization_depth_exceeded` 拒絕。 */
 export const MAX_DEPTH = 8;
@@ -52,21 +52,23 @@ export function unitRows(units: readonly UnitDto[], collapsed: ReadonlySet<strin
 }
 
 /**
- * 單位的樹狀選項（`Select` 的 `level`、`path`）：名稱只寫自己，停用的單位加註；`include` 排除不能選的單位。
- * 單位篩選、上層單位等選單共用，不在各處把路徑接成一長串（名稱前段相同時看不出差別）。
+ * 單位的 `TreeSelect` 節點：先序排列、停用的標 `inactive`（下層由元件繼承）；`include` 排除不能選的單位，
+ * 被排除單位的下層一併排除，不會變成最上層。單位篩選、上層單位等選單共用。
  */
-export function unitOptions(
+export function unitNodes(
   units: readonly UnitDto[],
   include: (row: UnitRow) => boolean = () => true,
-): SelectOption[] {
-  return unitRows(units)
-    .filter(include)
-    .map((row) => ({
-      value: row.unit.id,
-      label: row.unit.name + (row.unit.enabled ? '' : '（停用）'),
-      level: row.depth,
-      path: row.path.slice(0, -1),
-    }));
+): TreeSelectNode[] {
+  const ids = new Set(units.map((unit) => unit.id));
+  const kept = new Set<string>();
+  const nodes: TreeSelectNode[] = [];
+  for (const row of unitRows(units)) {
+    const parent = row.unit.parentId && ids.has(row.unit.parentId) ? row.unit.parentId : null;
+    if ((parent && !kept.has(parent)) || !include(row)) continue;
+    kept.add(row.unit.id);
+    nodes.push({ value: row.unit.id, label: row.unit.name, parent, inactive: !row.unit.enabled });
+  }
+  return nodes;
 }
 
 /** 單位與它所有下層的 ID；搬移時這些不能當新的上層。 */

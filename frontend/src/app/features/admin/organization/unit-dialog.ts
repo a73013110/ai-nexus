@@ -19,11 +19,11 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { Select, type SelectOption } from '@shared/ui/select';
+import { TreeSelect } from '@shared/ui/tree-select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
 import { unitDialogTour } from './organization-tour';
-import { MAX_DEPTH, heightOf, subtree, unitOptions } from './unit-tree';
+import { MAX_DEPTH, heightOf, subtree, unitNodes } from './unit-tree';
 
 interface Draft {
   /** 空字串為最上層。 */
@@ -57,7 +57,7 @@ const sameDraft = (a: Draft, b: Draft) =>
     Field,
     Notice,
     PendingButton,
-    Select,
+    TreeSelect,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -106,10 +106,11 @@ const sameDraft = (a: Draft, b: Draft) =>
                     <p class="form-note field-error" [id]="id + '-error'">{{ nameError() }}</p>
                   }
                   <label class="form-field-short unit-parent-field"
-                    >上層單位<nx-select
+                    >上層單位<nx-tree-select
                       label="上層單位"
-                      [searchable]="true"
-                      [options]="parents()"
+                      allLabel="最上層"
+                      noun="單位"
+                      [nodes]="parents()"
                       [value]="e.draft.parentId"
                       [disabled]="locked()"
                       (valueChange)="update('parentId', $event)"
@@ -203,16 +204,13 @@ export class UnitDialog {
       opened = this.opened();
     return !!editor && !!opened && !sameDraft(editor.draft, opened);
   });
-  /** 可選的上層：排除自己與下層，以及放進去後整棵子樹會超過上限的單位。 */
-  readonly parents = computed<SelectOption[]>(() => {
+  /** 可選的上層：排除自己與下層，以及放進去後整棵子樹會超過上限的單位；「最上層」由選單釘在最上方。 */
+  readonly parents = computed(() => {
     const units = this.store.units();
     const id = this.editor()?.id;
     const excluded = id ? subtree(units, id) : new Set<string>();
     const height = id ? heightOf(units, id) : 1;
-    return [
-      { value: '', label: '最上層' },
-      ...unitOptions(units, (row) => !excluded.has(row.unit.id) && row.depth + height <= MAX_DEPTH),
-    ];
+    return unitNodes(units, (row) => !excluded.has(row.unit.id) && row.depth + height <= MAX_DEPTH);
   });
 
   create(parent: UnitDto | null = null) {

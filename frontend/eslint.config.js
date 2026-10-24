@@ -122,6 +122,7 @@ module.exports = tseslint.config(
         {
           controlComponents: [
             'nx-select',
+            'nx-tree-select',
             'nx-search-field',
             'nx-person-picker',
             'nx-date-time-picker',

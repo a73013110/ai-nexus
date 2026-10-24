@@ -101,9 +101,8 @@ describe('NavigationItemDialog', () => {
     const chat = dialog.pages().find((option) => option.value === 'chat');
     expect(chat?.label).toBe('聊天（停用）');
     expect(dialog.pages().some((option) => option.value === 'diagnostics.logs.export')).toBe(false);
-    expect(dialog.parents().map((option) => [option.value, option.label])).toEqual([
-      ['', '最上層'],
-      ['system', '系統管理'],
+    expect(dialog.parents().map((node) => [node.value, node.label, node.parent])).toEqual([
+      ['system', '系統管理', null],
     ]);
   });
 

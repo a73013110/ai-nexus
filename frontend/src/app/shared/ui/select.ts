@@ -22,10 +22,6 @@ export interface SelectOption {
   label: string;
   description?: string;
   disabled?: boolean;
-  /** 樹狀選項的層級（最上層為 1）：依層縮排並畫出上層的引導線；選項須依樹的先序排列。 */
-  level?: number;
-  /** 由最上層到上一層的名稱；搜尋結果不縮排，改在名稱上方顯示這條路徑，觸發鈕的提示也帶完整路徑。 */
-  path?: readonly string[];
 }
 
 /**
@@ -39,7 +35,7 @@ export interface SelectOption {
  * 焦點離開面板即關閉。
  * 選項來自 API 時傳 `loading`：觸發鈕轉圈、還對不到選項的值顯示「正在載入…」而不是 placeholder
  * （看起來會像沒選）；載入中仍可打開，選單裡是「正在載入選項…」而不是「沒有符合的選項」。
- * 選項帶 `level` 就是樹狀（單位、選單分群）：名稱只寫自己，不重複上層的路徑；搜尋時改成平面清單並以 `path` 標出位置。
+ * 階層選項（單位）用 `TreeSelect`。
  */
 @Component({
   selector: 'nx-select',
@@ -127,9 +123,6 @@ export interface SelectOption {
             [attr.aria-disabled]="!!option.disabled"
             [disabled]="option.disabled"
             [class.is-active]="active() === i"
-            [class.is-tree]="!!option.level && !query()"
-            [class.is-nested]="(option.level ?? 1) > 1 && !query()"
-            [style.--select-level]="query() ? null : option.level"
             (pointermove)="active.set(i)"
             (mousedown)="$event.preventDefault()"
             (click)="choose(i)"
@@ -142,9 +135,6 @@ export interface SelectOption {
               </span>
             }
             <span>
-              @if (query() && option.path?.length) {
-                <small class="select-path">{{ option.path!.join(' › ') }}</small>
-              }
               <strong [attr.title]="option.label">{{ option.label }}</strong>
               @if (option.description) {
                 <small>{{ option.description }}</small>
@@ -214,9 +204,7 @@ export class Select {
       return this.chosen()
         .map((option) => option.label)
         .join('、');
-    // 樹狀選項的名稱只有自己，同名的單位要靠路徑分辨。
-    const path = this.multiple() ? undefined : this.selected()?.path;
-    return path?.length ? [...path, this.summary()].join(' › ') : this.summary();
+    return this.summary();
   });
   readonly active = signal(-1);
   readonly id = uniqueId('nx-select');

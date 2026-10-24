@@ -29,10 +29,11 @@ import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
+import { TreeSelect } from '@shared/ui/tree-select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
-import { unitOptions } from '@features/admin/organization/unit-tree';
+import { unitNodes } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { attendanceProblem, presentRecord, presentSchedule } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
@@ -69,6 +70,7 @@ const DEFAULT_PAGE_SIZE = 20;
     TablePagination,
     TableState,
     TimeRangePicker,
+    TreeSelect,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ViewScope],
@@ -92,9 +94,10 @@ export class AttendanceRecordsPage {
   });
   /** 單位清單讀取中（有組織權限才會讀）；選單先佔位轉圈。 */
   readonly unitsLoading = this.unitsRead.refreshing;
-  readonly unitOptions = computed<SelectOption[] | null>(() => {
+  /** 停用的單位也能篩（看它過去的出勤），預設收起、面板底部可勾選列出。 */
+  readonly unitNodes = computed(() => {
     const units = this.unitsRead.value();
-    return units ? [{ value: '', label: '所有單位' }, ...unitOptions(units)] : null;
+    return units ? unitNodes(units) : null;
   });
   /** 人員選單：範圍看得到、持有過卡的人，與名單同一套範圍（與目前這一頁無關）。 */
   private readonly peopleRead = apiResource({
@@ -125,7 +128,7 @@ export class AttendanceRecordsPage {
     }),
   );
   readonly draft = this.query.draft;
-  readonly tour = computed(() => attendanceRecordsTour({ units: !!this.unitOptions() }));
+  readonly tour = computed(() => attendanceRecordsTour({ units: !!this.unitNodes() }));
   /** 已套用的條件（換算成起訖）；換頁與每頁人數沿用它，不寫進網址。 */
   private readonly filters = signal<AttendanceRecordFilters | undefined>(undefined);
   readonly pageIndex = signal(0);

@@ -154,9 +154,12 @@
       <nx-dialog-header [heading]="'移動：' + m.row.name" closeLabel="關閉移動" />
       <div class="dialog-body">
         <label
-          >移到<nx-select
+          >移到<nx-tree-select
             label="移到"
-            [options]="destinations()"
+            allLabel="最上層"
+            noun="分群"
+            [allDisabled]="topDisabled()"
+            [nodes]="destinations()"
             [value]="m.parentId"
             (valueChange)="moving.set({ row: m.row, parentId: $event })"
         /></label>

@@ -198,8 +198,8 @@ describe('NavigationEditor', () => {
     const { editor, api } = setup();
     editor.openMove(row(editor, 'work'));
     // 分群不能移到自己底下；也不出現在清單中。
-    expect(editor.destinations().map((option) => [option.label, !!option.disabled])).toEqual([
-      ['最上層', false],
+    expect(editor.topDisabled()).toBe(false);
+    expect(editor.destinations().map((node) => [node.label, !!node.disabled])).toEqual([
       ['系統管理', false],
     ]);
     editor.moving.set({ row: row(editor, 'work'), parentId: 'system' });

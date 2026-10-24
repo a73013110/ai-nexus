@@ -1,3 +1,5 @@
+@use 'optical';
+
 :host {
   display: block;
   min-width: 0;
@@ -67,7 +69,6 @@
   font-size: var(--text-caption);
 }
 .select-panel {
-  --select-indent: 1.125rem;
   padding: var(--p-space-2);
   overflow: auto;
 }
@@ -83,22 +84,6 @@
   border-radius: var(--radius-item);
   color: var(--ink);
 }
-.select-option.is-tree {
-  position: relative;
-  padding-inline-start: calc(
-    var(--control-padding-inline) + (var(--select-level, 1) - 1) * var(--select-indent)
-  );
-}
-// 上一層的引導線：縮排之外再標出它掛在誰底下，長名稱被截斷時仍看得出層級。
-.select-option.is-nested::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: calc(
-    var(--control-padding-inline) + (var(--select-level) - 1.5) * var(--select-indent)
-  );
-  border-inline-start: 1px solid var(--line);
-}
 .select-option.is-active,
 .select-option:hover {
   background: var(--hover);
@@ -107,14 +92,15 @@
   color: var(--accent);
 }
 .select-option strong {
+  @include optical.label-line-truncate;
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: 500;
   font-size: var(--control-font-size);
 }
+// 名稱修到字高（右側勾號、左側方框對齊字的中線），說明以 gap 隔開。
 .select-option > span:not(.select-check) {
+  display: grid;
+  gap: var(--p-space-1);
   min-width: 0;
   flex: 1;
 }
@@ -148,11 +134,6 @@
   font-size: var(--text-caption);
   color: var(--secondary);
   line-height: 1.5;
-}
-.select-option .select-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .select-option > nx-icon {
   color: var(--signal);

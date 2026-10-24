@@ -327,7 +327,7 @@ test("停用的單位不能加入成員，編輯時上層不列出自己與下�
   const dialog = page.getByRole("dialog", { name: "編輯單位：總公司" });
   await dialog.getByRole("combobox", { name: "上層單位" }).click();
   await expect(
-    page.getByRole("listbox", { name: "上層單位" }).getByRole("option"),
+    page.getByRole("tree", { name: "上層單位" }).getByRole("treeitem"),
   ).toHaveText(["最上層"]);
   await page.keyboard.press("Escape");
   await dialog.getByRole("button", { name: "關閉單位編輯" }).click();

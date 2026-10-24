@@ -67,13 +67,13 @@
     background: var(--hover);
   }
 }
+// 共用勾選框只留方框；資料夾列以同寬的空位對齊。
 .pick {
+  --selection-control-height: auto;
+  --selection-control-padding: 0;
   flex: none;
-  width: 1rem;
-  height: 1rem;
-  margin: 0 0 0 var(--p-space-4);
-  accent-color: var(--accent);
-  cursor: pointer;
+  width: 1.25rem;
+  margin-inline-start: var(--p-space-4);
 }
 .entry {
   display: flex;

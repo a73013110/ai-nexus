@@ -1,0 +1,207 @@
+@use 'optical';
+
+:host {
+  display: block;
+  min-width: 0;
+}
+// 觸發鈕與 Select 的 field 外觀相同；上層路徑淡色、先被截短，名稱完整保留。
+.tree-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  width: 100%;
+  min-height: var(--button-target);
+  padding: var(--control-padding-block) var(--control-padding-inline);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-field);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--control-font-size);
+  text-align: left;
+  &:hover:not(:disabled) {
+    background: var(--hover);
+  }
+  &[aria-busy='true'] {
+    cursor: progress;
+  }
+  > nx-icon {
+    --icon-size: var(--icon-md);
+    color: var(--secondary);
+    transition: rotate var(--motion) var(--ease);
+  }
+  > .tree-select-chevron {
+    rotate: 90deg;
+  }
+  &[aria-expanded='true'] > .tree-select-chevron {
+    rotate: -90deg;
+  }
+}
+.tree-select-value {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+.tree-select-path {
+  min-width: 1.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.tree-select-sep {
+  flex: none;
+  margin-inline: var(--p-space-1);
+  color: var(--muted);
+}
+.tree-select-name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+// 搜尋與底部勾選固定，中間捲動。
+.tree-select-panel:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.tree-select-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-1) var(--p-space-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--secondary);
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--control-height-compact);
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: var(--text-ui);
+    outline: none;
+  }
+}
+.tree-select-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--p-space-1);
+  overscroll-behavior: contain;
+}
+.tree-select-footer {
+  --selection-control-height: var(--control-height-compact);
+  --selection-control-padding: var(--p-space-1) var(--p-space-2);
+  flex: none;
+  padding: var(--p-space-1);
+  border-top: 1px solid var(--line);
+}
+.tree-select-divider {
+  height: 1px;
+  margin: var(--p-space-1) var(--p-space-2);
+  background: var(--line);
+}
+.tree-select-empty {
+  margin: var(--p-space-3);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+// 列：名稱修到字高（optical），左側箭頭與右側勾號對齊字的中線。
+.tree-select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--control-height-compact);
+  padding-inline: calc(var(--p-space-2) + (var(--tree-depth, 1) - 1) * 1.25rem) var(--p-space-2);
+  border-radius: var(--radius-item);
+  color: var(--ink);
+  font-size: var(--text-label);
+  cursor: pointer;
+  @media (pointer: coarse) {
+    min-height: var(--button-target);
+  }
+  &.is-active {
+    background: var(--hover);
+  }
+  &[aria-selected='true'] {
+    background: var(--accent-soft);
+  }
+  &:is(.is-inactive, .is-context) strong {
+    color: var(--muted);
+  }
+  // 看得到、不能選：`disabled` 的節點，或 `status="inactive"` 時只當路徑的啟用上層。
+  &.is-context {
+    cursor: default;
+  }
+}
+.tree-select-label {
+  display: grid;
+  flex: 1;
+  gap: var(--p-space-1);
+  min-width: 0;
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--secondary);
+    font-size: var(--text-caption);
+  }
+  strong {
+    @include optical.label-line-truncate;
+    font-weight: 400;
+  }
+  &:has(small) {
+    padding-block: var(--p-space-2);
+  }
+  mark {
+    background: none;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline var(--signal);
+    text-underline-offset: 3px;
+  }
+}
+.tree-select-row.is-root strong,
+.tree-select-row[aria-selected='true'] strong {
+  font-weight: 500;
+}
+.tree-select-twisty {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-mark);
+  color: var(--muted);
+  &:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+  nx-icon {
+    --icon-size: var(--icon-sm);
+    transition: rotate var(--motion) var(--ease);
+  }
+  &.is-open nx-icon {
+    rotate: 90deg;
+  }
+  &.is-leaf {
+    visibility: hidden;
+  }
+}
+.tree-select-tag {
+  flex: none;
+  padding: 0 var(--p-space-2);
+  border-radius: var(--radius-full);
+  background: var(--hover);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  line-height: 1.6;
+}
+.tree-select-check {
+  --icon-size: var(--icon-md);
+  flex: none;
+  color: var(--signal);
+}

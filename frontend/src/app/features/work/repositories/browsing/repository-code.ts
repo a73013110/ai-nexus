@@ -15,6 +15,7 @@ import type { RepositoryEntryDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatBytes } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
+import { Checkbox } from '@shared/ui/checkbox';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -33,7 +34,15 @@ const chatLimit = 20;
  */
 @Component({
   selector: 'nx-repository-code',
-  imports: [RouterLink, Icon, Notice, PendingButton, RepositoryFile, RepositoryImportDialog],
+  imports: [
+    RouterLink,
+    Checkbox,
+    Icon,
+    Notice,
+    PendingButton,
+    RepositoryFile,
+    RepositoryImportDialog,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-code.scss',
@@ -111,13 +120,13 @@ const chatLimit = 20;
             >
               @if (canChat()) {
                 @if (entry.kind === 'file') {
-                  <input
-                    type="checkbox"
+                  <nx-checkbox
                     class="pick"
-                    [attr.aria-label]="'選取 ' + entry.name"
+                    hideLabel
+                    [label]="'選取 ' + entry.name"
                     [checked]="picked().has(entry.path)"
                     [disabled]="!picked().has(entry.path) && picked().size >= limit"
-                    (change)="toggle(entry.path)"
+                    (checkedChange)="toggle(entry.path)"
                   />
                 } @else {
                   <span class="pick" aria-hidden="true"></span>

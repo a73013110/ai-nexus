@@ -15,8 +15,9 @@ paths:
 - 兩組以上欄位用 `.form-sections` 分段（段落標題＋最多一句說明），不是一串 `<label>` 直接疊在 `.dialog-body`。
 - 欄位間距只靠共用 gap：元件裡不寫欄位 margin，也不留沒內容時仍存在的空容器。
 - 成對欄位用 `.form-row`；選填寫「（選填）」；placeholder 不重複標籤。
-- 選一個對象（人、部門）選好後換成 `.form-choice`＋「更換」；多個用 `.form-chips`。要從名單挑人用 `PersonBrowser`；已加入的人一人一列用 `.person-list`／`.person-row`。
+- 選一個對象（人、部門）選好後換成 `.form-choice`＋「更換」；多個用 `.form-chips`。要從名單挑人用 `PersonBrowser`；已加入的人一人一列用 `.person-list`／`.person-row`。從階層選一個（單位、選單分群）用 `TreeSelect`，能選啟用或停用的由 `status` 指定。
 - 只在段落說明放一句；其餘規則收進標題旁的 `InfoPopover`，長篇提示（`nx-notice`）只留會影響操作的事。
+- 勾選一律 `nx-checkbox`（不留原生 `input[type=checkbox]` 外觀）；方框、圓點、圖示旁的單行標題用 `optical` mixin 對齊字的中線（[並排對齊](../../docs/frontend/alignment.md)）。
 - 範本：`frontend/src/app/features/office/attendance/cards/assignment-dialog.ts`。
 
 ## 共用元件（[共用元件](../../docs/frontend/shared-components.md)）

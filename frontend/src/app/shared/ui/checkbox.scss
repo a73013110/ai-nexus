@@ -1,3 +1,5 @@
+@use 'optical';
+
 :host {
   display: block;
   min-width: 0;
@@ -9,11 +11,14 @@
 .selection-box input:is(:checked, :indeterminate) + .selection-indicator nx-icon {
   opacity: 1;
 }
+// 方框與標題同一列、說明在標題下方：方框只對齊標題那一行，說明多長都不會把它往下拉。
 .selection-control {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--p-space-3);
-  min-height: var(--button-target);
+  align-content: center;
+  gap: var(--p-space-1) var(--p-space-3);
+  min-height: var(--selection-control-height, var(--button-target));
   margin: 0;
   padding: var(
     --selection-control-padding,
@@ -28,6 +33,7 @@
   background: var(--hover);
 }
 .selection-box {
+  grid-row: 1;
   position: relative;
   display: block;
   width: 20px;
@@ -69,7 +75,7 @@
 }
 .selection-pending {
   --icon-size: var(--icon-sm);
-  margin-inline-start: auto;
+  grid-area: 1 / 3;
   color: var(--secondary);
 }
 .selection-control.is-disabled {
@@ -77,24 +83,28 @@
   cursor: not-allowed;
 }
 .selection-copy {
-  min-width: 0;
+  display: contents;
 }
 .selection-copy strong {
-  display: block;
+  @include optical.label-line;
+  grid-column: 2;
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--line-ui);
   overflow-wrap: anywhere;
 }
 .selection-copy small {
-  display: block;
+  grid-column: 2;
   font-size: var(--text-caption);
   color: var(--secondary);
-  margin-top: 2px;
   line-height: 1.5;
   // 帳號、email、id 沒有斷點，窄欄裡會撐出框外；放不下才斷，不截掉（手機沒有 hover 看全文）。
   overflow-wrap: anywhere;
 }
 .selection-control.is-label-hidden {
+  grid-template-columns: auto;
   justify-content: center;
+}
+.selection-control.is-label-hidden .selection-pending {
+  grid-column: 2;
 }

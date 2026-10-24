@@ -1,0 +1,20 @@
+// 文字與方框、圓點、圖示並排時的光學對齊（docs/frontend/alignment.md）。
+//
+// Segoe UI 的上緣比下緣高，行框置中時字會比旁邊的方框低約 0.7px（13px），中文字也一樣；
+// 把行框修到大寫字高與基線，flex／grid 置中對齊的就是字的中線。中文字的筆畫上下各超出大寫字高
+// 約 0.07em，中線仍落在同一處。不支援 text-box 的瀏覽器維持原本的行框置中，只差這不到 1px。
+
+/// 與指示物並排的單行標題（勾選框、單選、選項的名稱）。修剪後沒有行距，下面接說明時用 gap 隔開。
+@mixin label-line {
+  text-box: trim-both cap alphabetic;
+}
+
+/// 同上，但放不下時以刪節號截斷。修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與
+/// 下伸部（g、y）；改用 `clip` 並把裁切邊界往外放，只截斷行尾、不切字的上下緣。
+@mixin label-line-truncate {
+  @include label-line;
+  overflow: clip;
+  overflow-clip-margin: 0.5em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

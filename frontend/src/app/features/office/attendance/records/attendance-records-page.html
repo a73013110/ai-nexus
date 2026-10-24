@@ -79,15 +79,14 @@
         />
       </div>
     }
-    @if (unitOptions() || unitsLoading()) {
+    @if (unitNodes() || unitsLoading()) {
       <div class="ui-field records-unit">
         <span aria-hidden="true">單位</span>
-        <nx-select
+        <nx-tree-select
           label="單位（含下層）"
-          placeholder="所有單位"
-          [searchable]="true"
-          [searchFrom]="10"
-          [options]="unitOptions() ?? []"
+          allLabel="所有單位"
+          noun="單位"
+          [nodes]="unitNodes() ?? []"
           [loading]="unitsLoading()"
           [value]="draft().unitId"
           (valueChange)="query.set('unitId', $event)"

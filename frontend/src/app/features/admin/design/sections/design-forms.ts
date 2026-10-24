@@ -19,6 +19,7 @@ import { PersonBrowser, type BrowsePerson } from '@shared/ui/person-browser';
 import { SearchField } from '@shared/ui/search-field';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
+import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
 import type { DirectorySearch } from '@features/work/collaboration/directory-search';
 import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { DesignExample, DesignSection } from './design-section';
@@ -66,6 +67,23 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
 }
 
 /** 文字欄位、搜尋、選人、表單段落、日期與原地編輯。 */
+/** 名稱前段相同、含停用（與停用上層之下）的單位：平面清單看不出差別，樹狀才分得清楚。 */
+const UNITS: TreeSelectNode[] = [
+  { value: 'hq', label: '星河科技股份有限公司（總公司）' },
+  { value: 'sales', label: '業務／技服部', parent: 'hq' },
+  { value: 'sales-n', label: '北區業務組', parent: 'sales' },
+  { value: 'sales-s', label: '南區業務組', parent: 'sales' },
+  { value: 'sw', label: '軟體工程部', parent: 'hq', inactive: true },
+  { value: 'sw-qa', label: '測試組', parent: 'sw' },
+  { value: 'eng', label: '工程部', parent: 'hq' },
+  { value: 'eng-p', label: '平台組', parent: 'eng' },
+  { value: 'eng-q', label: '品質組', parent: 'eng' },
+  { value: 'gm', label: '總經理室', parent: 'hq' },
+  { value: 'tc', label: '星河科技股份有限公司（台中分公司）' },
+  { value: 'tc-rd', label: '研發處', parent: 'tc' },
+  { value: 'lab', label: '星河測試據點', inactive: true },
+];
+
 @Component({
   selector: 'nx-design-forms',
   imports: [
@@ -82,6 +100,7 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
     SettingGroup,
     SettingRow,
     TimeRangePicker,
+    TreeSelect,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -218,6 +237,53 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
           emptyText="所有在職的使用者都已是這個單位的成員。"
           [people]="[]"
           [selected]="[]"
+        />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-tree-select"
+      title="階層選擇器"
+      api="TreeSelect · unitNodes()"
+      description="從階層挑一個（單位用 unitNodes() 轉換）。觸發鈕是「上層路徑 › 名稱」，放不下先截路徑；面板可展開收合，搜尋時改成平面清單並標出所屬路徑；allLabel 釘在最上方。可選的狀態由 status 指定、使用者不能改：any 都可選（停用的預設收起，底部可勾選列出）、active 只列啟用的、inactive 只能選停用的（啟用的上層只當路徑）。"
+    >
+      <nx-design-example label="status any（預設）">
+        <nx-tree-select
+          label="示範單位"
+          allLabel="所有單位"
+          noun="單位"
+          [nodes]="units"
+          [value]="unitAny()"
+          (valueChange)="unitAny.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="status active">
+        <nx-tree-select
+          label="示範啟用的單位"
+          noun="單位"
+          placeholder="選擇單位"
+          status="active"
+          [nodes]="units"
+          [value]="unitActive()"
+          (valueChange)="unitActive.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="status inactive">
+        <nx-tree-select
+          label="示範停用的單位"
+          noun="單位"
+          placeholder="選擇停用的單位"
+          status="inactive"
+          [nodes]="units"
+          [value]="unitInactive()"
+          (valueChange)="unitInactive.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="載入中">
+        <nx-tree-select
+          label="示範載入中的單位"
+          allLabel="所有單位"
+          [nodes]="[]"
+          [loading]="true"
         />
       </nx-design-example>
     </nx-design-section>
@@ -392,6 +458,10 @@ export class DesignForms {
   readonly idle = sampleDirectory(() => []);
   readonly roster = ROSTER;
   readonly picked = signal<string[]>(['r4']);
+  readonly units = UNITS;
+  readonly unitAny = signal('eng');
+  readonly unitActive = signal('');
+  readonly unitInactive = signal('');
   readonly holder = signal<DirectoryUserDto | null>(null);
   readonly holders = sampleDirectory(() => []);
   readonly periodStart = signal('2026-10-08T09:00:00');
