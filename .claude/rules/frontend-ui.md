@@ -16,7 +16,7 @@ paths:
 - 欄位間距只靠共用 gap：元件裡不寫欄位 margin，也不留沒內容時仍存在的空容器。
 - 成對欄位用 `.form-row`；選填寫「（選填）」；placeholder 不重複標籤。
 - 選一個對象（人、部門）選好後換成 `.form-choice`＋「更換」；多個用 `.form-chips`。
-- 範本：`frontend/src/app/features/staff/attendance/cards/assignment-dialog.ts`。
+- 範本：`frontend/src/app/features/office/attendance/cards/assignment-dialog.ts`。
 
 ## 共用元件（[共用元件](../../docs/frontend/shared-components.md)）
 

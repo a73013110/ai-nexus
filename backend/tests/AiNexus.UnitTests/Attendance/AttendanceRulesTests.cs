@@ -1,5 +1,5 @@
-using AiNexus.Features.Staff.Attendance;
-using AiNexus.Features.Staff.Attendance.Records;
+using AiNexus.Features.Office.Attendance;
+using AiNexus.Features.Office.Attendance.Records;
 
 namespace AiNexus.UnitTests.Attendance;
 

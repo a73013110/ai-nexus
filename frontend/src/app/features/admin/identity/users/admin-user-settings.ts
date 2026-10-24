@@ -10,7 +10,7 @@ import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { StorageUsage } from '@features/work/files/file-library/storage-usage';
 import { ModelPolicyEditor } from '@features/platform/inference/model-policies/model-policy-editor';
-import { AttendanceUserCards } from '@features/staff/attendance/cards/attendance-user-cards';
+import { AttendanceUserCards } from '@features/office/attendance/cards/attendance-user-cards';
 import { AdminUserStore, type UserSettingsTab } from './admin-user-store';
 import { DirectoryBinding } from './directory-binding';
 import { UserAccountFields, emailState } from './user-account-fields';

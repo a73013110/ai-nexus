@@ -90,10 +90,10 @@ public static class FeatureCatalog
     public const string Design = "design";
 
     public static readonly AreaDefinition Work = new("work", "AI 工作台");
-    public static readonly AreaDefinition Staff = new("staff", "員工服務");
+    public static readonly AreaDefinition Office = new("office", "公司事務");
     public static readonly AreaDefinition Admin = new("admin", "系統管理");
 
-    public static IReadOnlyList<AreaDefinition> Areas { get; } = [Work, Staff, Admin];
+    public static IReadOnlyList<AreaDefinition> Areas { get; } = [Work, Office, Admin];
 
     // 模組 ID 與單頁功能相同時引用同一個常數，避免同一個字面值寫兩次。
     private static readonly ModuleDefinition DashboardModule = new(Dashboard, Work, "總覽");
@@ -105,7 +105,7 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition SharingModule = new(Sharing, Work, "分享");
     private static readonly ModuleDefinition JobsModule = new(Jobs, Work, "背景任務");
     private static readonly ModuleDefinition RepositoriesModule = new(Repositories, Work, "程式庫");
-    private static readonly ModuleDefinition AttendanceModule = new("attendance", Staff, "出勤");
+    private static readonly ModuleDefinition AttendanceModule = new("attendance", Office, "出勤");
     private static readonly ModuleDefinition IdentityModule = new("identity", Admin, "身分");
     private static readonly ModuleDefinition AccessControlModule = new("access-control", Admin, "存取控制");
     private static readonly ModuleDefinition OrganizationModule = new(Organization, Admin, "組織");
@@ -142,7 +142,7 @@ public static class FeatureCatalog
         new(SharingReader, FeatureKind.Reader, SharingModule, "分享閱讀器", "share"),
         new(Jobs, FeatureKind.Page, JobsModule, "背景任務", "tasks"),
         new(Repositories, FeatureKind.Page, RepositoriesModule, "程式庫", "git"),
-        // 出勤紀錄是員工自助頁，管理頁（卡號對應、匯入紀錄、假日設定）給 HR；管理頁的網址仍在 /staff/attendance，選單才放進系統管理（ADR 0018）。
+        // 出勤紀錄是員工自助頁，管理頁（卡號對應、匯入紀錄、假日設定）給 HR；管理頁的網址仍在 /office/attendance，選單才放進系統管理（ADR 0018）。
         new(AttendanceRecords, FeatureKind.Page, AttendanceModule, "出勤紀錄", "clock") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All], ManagerScope = DataScopes.UnitTree },
         new(AttendanceCards, FeatureKind.Page, AttendanceModule, "卡號對應", "tag"),
         new(AttendanceCardsMaintain, FeatureKind.Action, AttendanceModule, "維護卡片與持有期間", "edit"),

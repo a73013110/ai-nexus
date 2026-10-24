@@ -6,7 +6,7 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Integrations.Sources;
-using AiNexus.Features.Staff.Attendance.Records;
+using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

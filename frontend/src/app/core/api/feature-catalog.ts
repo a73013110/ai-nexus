@@ -5,7 +5,7 @@
 
 export const CATALOG_AREAS = [
   { id: 'work', name: 'AI 工作台' },
-  { id: 'staff', name: '員工服務' },
+  { id: 'office', name: '公司事務' },
   { id: 'admin', name: '系統管理' },
 ] as const;
 
@@ -19,7 +19,7 @@ export const CATALOG_MODULES = [
   { id: 'sharing', area: 'work', name: '分享' },
   { id: 'jobs', area: 'work', name: '背景任務' },
   { id: 'repositories', area: 'work', name: '程式庫' },
-  { id: 'attendance', area: 'staff', name: '出勤' },
+  { id: 'attendance', area: 'office', name: '出勤' },
   { id: 'identity', area: 'admin', name: '身分' },
   { id: 'access-control', area: 'admin', name: '存取控制' },
   { id: 'organization', area: 'admin', name: '組織' },
@@ -171,7 +171,7 @@ export const CATALOG_FEATURES = [
     module: 'attendance',
     name: '出勤紀錄',
     icon: 'clock',
-    route: '/staff/attendance/records',
+    route: '/office/attendance/records',
     scopes: ['own', 'unit', 'unit-tree', 'all'],
     managerScope: 'unit-tree',
   },
@@ -181,7 +181,7 @@ export const CATALOG_FEATURES = [
     module: 'attendance',
     name: '卡號對應',
     icon: 'tag',
-    route: '/staff/attendance/cards',
+    route: '/office/attendance/cards',
     scopes: [],
     managerScope: null,
   },
@@ -201,7 +201,7 @@ export const CATALOG_FEATURES = [
     module: 'attendance',
     name: '打卡匯入紀錄',
     icon: 'import',
-    route: '/staff/attendance/imports',
+    route: '/office/attendance/imports',
     scopes: [],
     managerScope: null,
   },
@@ -221,7 +221,7 @@ export const CATALOG_FEATURES = [
     module: 'attendance',
     name: '假日設定',
     icon: 'calendar',
-    route: '/staff/attendance/calendar',
+    route: '/office/attendance/calendar',
     scopes: [],
     managerScope: null,
   },

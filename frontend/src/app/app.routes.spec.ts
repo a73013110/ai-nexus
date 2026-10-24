@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { UrlSegment, type Route, type Routes, type UrlSegmentGroup } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import {
+  provideRouter,
+  Router,
+  UrlSegment,
+  type ActivatedRouteSnapshot,
+  type Route,
+  type Routes,
+  type UrlSegmentGroup,
+  type UrlTree,
+} from '@angular/router';
 import { CATALOG_FEATURES } from '@core/api/feature-catalog';
 import { catalogFeature } from '@core/api/catalog';
 import { featureGuard } from '@core/auth/feature-guard';
@@ -112,5 +122,19 @@ describe('routes and the feature catalog', () => {
         path === 'settings';
       expect(allowed, `沒有 data.feature 的路由：/${path}`).toBe(true);
     }
+  });
+
+  it('redirects the old staff area to office, keeping the rest of the path and the query', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const legacy = (await collect(routes)).find((item) => item.segments.join('/') === 'staff/**');
+    const redirect = legacy?.route.redirectTo;
+    expect(typeof redirect, '/staff/** 要轉址').toBe('function');
+    const tree = TestBed.runInInjectionContext(() =>
+      (redirect as (route: Partial<ActivatedRouteSnapshot>) => UrlTree)({
+        url: [new UrlSegment('attendance', {}), new UrlSegment('records', {})],
+        queryParams: { user: '7' },
+      }),
+    );
+    expect(TestBed.inject(Router).serializeUrl(tree)).toBe('/office/attendance/records?user=7');
   });
 });

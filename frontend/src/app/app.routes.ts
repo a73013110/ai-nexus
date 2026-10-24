@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { authenticated } from '@core/auth/auth-guard';
 import { WORKSPACE_HOME } from '@core/layout/workspace-home';
 
@@ -26,8 +27,21 @@ export const routes: Routes = [
         loadChildren: () => import('./work.routes').then((module) => module.workRoutes),
       },
       {
+        path: 'office',
+        loadChildren: () => import('./office.routes').then((module) => module.officeRoutes),
+      },
+      {
+        // 區 staff 已改名為 office（ADR 0016）；舊書籤與通知連結轉到同一頁，保留其餘路徑段與查詢參數。
         path: 'staff',
-        loadChildren: () => import('./staff.routes').then((module) => module.staffRoutes),
+        children: [
+          {
+            path: '**',
+            redirectTo: ({ url, queryParams }) =>
+              inject(Router).createUrlTree(['/office', ...url.map((segment) => segment.path)], {
+                queryParams,
+              }),
+          },
+        ],
       },
       {
         path: 'admin',

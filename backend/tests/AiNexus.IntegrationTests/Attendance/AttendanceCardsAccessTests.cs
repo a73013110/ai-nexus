@@ -4,7 +4,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.Identity.Sessions;
-using AiNexus.Features.Staff.Attendance.Cards;
+using AiNexus.Features.Office.Attendance.Cards;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;

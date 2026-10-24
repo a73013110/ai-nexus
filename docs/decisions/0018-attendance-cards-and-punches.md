@@ -3,7 +3,7 @@
 - **狀態**：採用（2026-10-22）
 - **實作**：完成，見 [出勤打卡](../features/attendance.md)；「不列入出勤」目前只能直接改資料表，管理介面未做。取代舊系統 ADAuthentication 的員工卡號與打卡功能。
 - **決定**：
-  - 新增 `Attendance` 模組（區 `staff`、schema `attendance`），員工以 `identity.Users.Id` 識別，不再用職號。
+  - 新增 `Attendance` 模組（區 `office`、schema `attendance`），員工以 `identity.Users.Id` 識別，不再用職號。
   - 卡號對應改為「持有期間」；刷卡原始資料不寫人，讀取時依刷卡時間歸戶。
   - 看得到誰的出勤由資料範圍決定；「列入出勤」只是 HR 的檢視篩選。
   - 打卡檔由排程自動匯入；假日與假單讀公文系統 GD，假日例外允許回寫。

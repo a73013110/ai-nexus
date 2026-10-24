@@ -1,6 +1,6 @@
 # 出勤與公文系統 GD
 
-結論：出勤從公文系統 GD 讀取假日、假單與出差單，並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；三者與 [公文與校務系統整合](integrations.md) 共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 Integrations 的 [`GdAccess`](../../backend/src/AiNexus.Features/Admin/Integrations/Gd/GdAccess.cs)（帳號對應在同一資料夾的 `GdAccounts`），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Staff/Attendance/Gd/GdCalendarWriter.cs) 並向 `GdAccess` 取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
+結論：出勤從公文系統 GD 讀取假日、假單與出差單，並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；三者與 [公文與校務系統整合](integrations.md) 共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 Integrations 的 [`GdAccess`](../../backend/src/AiNexus.Features/Admin/Integrations/Gd/GdAccess.cs)（帳號對應在同一資料夾的 `GdAccounts`），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Office/Attendance/Gd/GdCalendarWriter.cs) 並向 `GdAccess` 取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
 
 ## 連線與帳號權限
 

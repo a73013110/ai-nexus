@@ -24,7 +24,7 @@ using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Admin.Quality;
 using AiNexus.Features.Work.Repositories;
-using AiNexus.Features.Staff.Attendance;
+using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Work.Sharing;
 using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Diagnostics;

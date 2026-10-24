@@ -54235,8 +54235,8 @@
         "name": "AI 工作台"
       },
       {
-        "id": "staff",
-        "name": "員工服務"
+        "id": "office",
+        "name": "公司事務"
       },
       {
         "id": "admin",
@@ -54291,7 +54291,7 @@
       },
       {
         "id": "attendance",
-        "area": "staff",
+        "area": "office",
         "name": "出勤"
       },
       {
@@ -54492,7 +54492,7 @@
         "module": "attendance",
         "name": "出勤紀錄",
         "icon": "clock",
-        "route": "/staff/attendance/records",
+        "route": "/office/attendance/records",
         "scopes": [
           "own",
           "unit",
@@ -54507,7 +54507,7 @@
         "module": "attendance",
         "name": "卡號對應",
         "icon": "tag",
-        "route": "/staff/attendance/cards",
+        "route": "/office/attendance/cards",
         "scopes": [ ],
         "managerScope": null
       },
@@ -54527,7 +54527,7 @@
         "module": "attendance",
         "name": "打卡匯入紀錄",
         "icon": "import",
-        "route": "/staff/attendance/imports",
+        "route": "/office/attendance/imports",
         "scopes": [ ],
         "managerScope": null
       },
@@ -54547,7 +54547,7 @@
         "module": "attendance",
         "name": "假日設定",
         "icon": "calendar",
-        "route": "/staff/attendance/calendar",
+        "route": "/office/attendance/calendar",
         "scopes": [ ],
         "managerScope": null
       },

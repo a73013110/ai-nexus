@@ -32,7 +32,7 @@
 ## 規則說明
 
 - `GET /api/v1/attendance-rules`（授權同 `attendance.records`；全公司一套、不含個人資料，不套資料範圍）回傳每種日型的上下班時間與逐條規則。時間取自 `Attendance:Workday` 的目前設定，畫面不寫死；頁面與匯出的「說明」工作表用同一份。
-- 條文只寫在 [AttendanceRules](../../backend/src/AiNexus.Features/Staff/Attendance/Records/AttendanceRules.cs)，舉例的應下班由 `AttendanceEvaluator` 算出；改判定時一併改條文（`AttendanceRulesTests`）。
+- 條文只寫在 [AttendanceRules](../../backend/src/AiNexus.Features/Office/Attendance/Records/AttendanceRules.cs)，舉例的應下班由 `AttendanceEvaluator` 算出；改判定時一併改條文（`AttendanceRulesTests`）。
 - 涵蓋：最早／最晚刷卡為上下班、出勤日依刷卡日期（過午夜算隔天）、彈性上班、遲到從彈性終點起算並改為表定下班、早退以秒計且沒有寬限、只有一筆刷卡、假單只並列不抵銷、日型來自公文系統行事曆、無法判定的情況、只列持卡日。
 
 ## 匯出 Excel

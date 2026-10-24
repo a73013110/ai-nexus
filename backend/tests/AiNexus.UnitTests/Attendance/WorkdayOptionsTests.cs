@@ -1,4 +1,4 @@
-using AiNexus.Features.Staff.Attendance;
+using AiNexus.Features.Office.Attendance;
 using Microsoft.Extensions.Configuration;
 
 namespace AiNexus.UnitTests.Attendance;

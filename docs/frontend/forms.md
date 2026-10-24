@@ -1,6 +1,6 @@
 # 表單
 
-結論：兩組以上欄位的表單（設定頁、`md` 表單對話框）一律用 `.form-sections` 分段，間距、分隔線與寬度交給共用樣式，不在元件裡寫 margin。範本是卡號的 [`assignment-dialog.ts`](../../frontend/src/app/features/staff/attendance/cards/assignment-dialog.ts)，即時範例在 `/admin/design`「表單段落」。
+結論：兩組以上欄位的表單（設定頁、`md` 表單對話框）一律用 `.form-sections` 分段，間距、分隔線與寬度交給共用樣式，不在元件裡寫 margin。範本是卡號的 [`assignment-dialog.ts`](../../frontend/src/app/features/office/attendance/cards/assignment-dialog.ts)，即時範例在 `/admin/design`「表單段落」。
 
 ## 段落排版
 

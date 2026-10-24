@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Integrations.Gd;
-using AiNexus.Features.Staff.Attendance.Calendar;
+using AiNexus.Features.Office.Attendance.Calendar;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;

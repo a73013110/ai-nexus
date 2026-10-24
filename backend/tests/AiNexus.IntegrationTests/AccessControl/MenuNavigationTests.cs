@@ -20,7 +20,7 @@ public sealed class MenuNavigationTests
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
         // 成員在系統管理只看得到「評測與開發」的兩個評測頁：其他子分群沒有可見頁面而被修剪，系統管理只剩這個子分群，仍保留兩層分群。
         // 員工服務只有出勤紀錄一頁（卡號對應等管理頁屬於人事與出勤，沒有授權就修剪），分群照常顯示。
-        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "staff", BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
+        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "office", BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
         var dashboard = tree[0];
         Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));
         Assert.Equal(["work.chat", "work.projects", "work.files", "work.knowledge", "work.artifacts"], tree[1].Children.Select(x => x.Id));

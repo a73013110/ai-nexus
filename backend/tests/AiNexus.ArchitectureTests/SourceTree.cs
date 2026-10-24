@@ -25,9 +25,9 @@ internal static partial class SourceTree
 
     /// <summary>
     /// 允許的區（小寫，ADR 0016）。區只是資料夾、不是依賴邊界；新增區要先修訂 ADR。
-    /// <c>staff</c>（員工服務）由 Attendance 使用。
+    /// <c>office</c>（公司事務）由 Attendance 使用，之後的公文、客服也放這裡。
     /// </summary>
-    public static readonly IReadOnlySet<string> AllowedAreas = new HashSet<string>(["work", "staff", "admin", "platform"], StringComparer.Ordinal);
+    public static readonly IReadOnlySet<string> AllowedAreas = new HashSet<string>(["work", "office", "admin", "platform"], StringComparer.Ordinal);
 
     /// <summary>AiNexus.Features 底下的區資料夾名稱（排除建置輸出）。</summary>
     public static IReadOnlyList<string> Areas() => [.. Directory.EnumerateDirectories(FeaturesRoot)
