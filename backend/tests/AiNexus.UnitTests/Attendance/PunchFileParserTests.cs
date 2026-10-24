@@ -28,6 +28,19 @@ public sealed class PunchFileParserTests
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 15, 58, 0, TimeSpan.Zero), punches[0].PunchedAt);
     }
 
+    [Theory]
+    [InlineData("\"001:5145:20261022:173735:11\"")]
+    [InlineData("\"001\":\"5145\":\"20261022\":\"173735\":\"11\"")]
+    [InlineData(" \" 001 : 5145 : 20261022 : 173735 : 11 \" ")]
+    public void QuotesWrappingTheLineOrAFieldAreNotPartOfTheValues(string line)
+    {
+        // 打卡機實際輸出是整行包雙引號；留著引號會存成 "001 與 11"，跟舊系統轉入的 001 變成兩筆刷卡。
+        var punch = Assert.Single(PunchFileParser.Parse(line + "\r\n"));
+
+        Assert.Equal(("5145", "001", "11"), (punch.CardNumber, punch.MachineCode, punch.EventCode));
+        Assert.Equal(new DateTimeOffset(2026, 10, 22, 17, 37, 35, Taipei), punch.PunchedAt);
+    }
+
     [Fact]
     public void BlankLinesCarriageReturnsAndTheDosEndOfFileMarkAreIgnored()
     {
@@ -57,6 +70,9 @@ public sealed class PunchFileParserTests
     [InlineData("001:A1:20261001:0800:11", "時間")]
     [InlineData("001:A1:20261001:08:00:00:11", "欄位數")]
     [InlineData("001:A1\u0007:20261001:080000:11", "卡號")]
+    [InlineData("\"001:A1:20261001:080000:11", "機器代號")]
+    [InlineData("001:A1:20261001:080000:11\"", "事件代號")]
+    [InlineData("001:A\"1:20261001:080000:11", "卡號")]
     public void AMalformedLineFailsTheWholeFileAndNamesTheLine(string bad, string reason)
     {
         var error = Assert.Throws<PunchFileFormatException>(() => PunchFileParser.Parse("001:ZZ0:20261001:075900:11\n" + bad + "\n001:A2:20261001:080100:11\n"));
