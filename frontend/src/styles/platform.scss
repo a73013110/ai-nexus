@@ -247,38 +247,6 @@
   margin-top: calc(-1 * var(--p-space-2));
   padding-inline-start: calc(1.25rem + var(--p-space-3));
 }
-// 人員選擇器（`directorySearch`）的搜尋結果清單，分享對話框、資源共用與組織成員共用。
-.person-picker-results {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-block);
-  overflow: auto;
-  max-height: 15rem;
-}
-.person-picker-user {
-  display: flex;
-  gap: var(--p-space-3);
-  align-items: center;
-  width: 100%;
-  min-height: var(--button-target);
-  padding: var(--p-space-3);
-  text-align: left;
-}
-.person-picker-user > span {
-  flex: 1;
-  min-width: 0;
-}
-.person-picker-user strong,
-.person-picker-user small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.person-picker-user small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.person-picker-user:hover {
-  background: var(--hover);
-}
 @container form-sections (min-width: 40rem) {
   .form-section {
     grid-template-columns: 12rem minmax(0, 1fr);

@@ -32,12 +32,12 @@ test("knowledge upload, source query and named reader permissions are direct and
   await page.getByRole("button", { name: "知識庫操作", exact: true }).click();
   await page.getByRole("menuitem", { name: "存取權限" }).click();
   const dialog = page.getByRole("dialog");
-  const directory = dialog.getByRole("searchbox", {
+  const directory = dialog.getByRole("combobox", {
     name: "尋找要授權的使用者",
   });
   await directory.click();
   await directory.fill("同事");
-  await dialog.getByRole("button", { name: /林同事/ }).click();
+  await dialog.getByRole("option", { name: /林同事/ }).click();
   await chooseSelect(page, "林同事的權限", "可編輯");
   await dialog.getByRole("checkbox", { name: "基本工作區" }).check();
   await dialog.getByRole("button", { name: "儲存權限" }).click();

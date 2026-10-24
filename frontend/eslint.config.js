@@ -120,7 +120,13 @@ module.exports = tseslint.config(
       '@angular-eslint/template/label-has-associated-control': [
         'error',
         {
-          controlComponents: ['nx-select', 'nx-search-field', 'nx-date-time-picker', 'nx-checkbox'],
+          controlComponents: [
+            'nx-select',
+            'nx-search-field',
+            'nx-person-picker',
+            'nx-date-time-picker',
+            'nx-checkbox',
+          ],
         },
       ],
       // NavigationEntry renders the icon and name into its host and sets aria-label itself.

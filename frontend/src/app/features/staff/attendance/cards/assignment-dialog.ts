@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
@@ -9,18 +11,17 @@ import {
 } from '@angular/core';
 import type { CardAssignmentDto, DirectoryUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { formatDateTimeInput, parseDateTimeInput } from '@shared/browser/format';
+import { formatDateTimeInput, nameInitial, parseDateTimeInput } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
-import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { SearchField } from '@shared/ui/search-field';
 import { directorySearch } from '@features/work/collaboration/directory-search';
+import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { AttendanceCardsStore } from './attendance-cards-store';
 
 /** 持有人：使用者（有帳號）或只有姓名（新進員工尚無帳號），至少一個。 */
@@ -45,6 +46,8 @@ interface Editor {
   title: string;
   /** 「結束持有」：以修改送出，提示文字不同。 */
   ending: boolean;
+  /** 新增時卡片目前的持有人：標題改為「轉給其他人」，接手時不再另外確認。 */
+  transferFrom: string | null;
   draft: AssignmentDraft;
 }
 
@@ -65,7 +68,9 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
 
 /**
  * 新增、修改或結束一段持有期間 `[開始, 結束)`。新增時卡片已有人持有，伺服器回 409，
- * 由 store 找出目前持有人並在這裡確認接手；修改既有期間時重疊一律拒絕，不接手。
+ * 由 store 找出目前持有人並在這裡確認接手（從「轉給其他人」開啟、對象就是畫面上寫明的人時不再問）；
+ * 修改既有期間時重疊一律拒絕，不接手。
+ * 持有人是使用者或只有姓名二擇一：選擇器找不到帳號時，最後一列「使用姓名」記下輸入的姓名。
  */
 @Component({
   selector: 'nx-assignment-dialog',
@@ -75,10 +80,9 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
     DateTimePicker,
     DialogHeader,
     Field,
-    Icon,
     Notice,
     PendingButton,
-    SearchField,
+    PersonPicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -107,70 +111,47 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-holder'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-holder'">持有人</h3>
-                  <p class="form-note">選擇使用者，或在尚無帳號時只填姓名；之後可再綁上帳號。</p>
                 </header>
                 <div class="form-section-body">
-                  @if (e.draft.user; as user) {
-                    <div class="assignment-user">
-                      <span
-                        ><strong>{{ user.displayName }}</strong
-                        ><small>{{ user.account }}</small></span
+                  @if (holder(); as h) {
+                    <div class="assignment-holder">
+                      <span class="avatar" [class.is-name]="!h.bound" aria-hidden="true">{{
+                        initial(h.name)
+                      }}</span>
+                      <span class="assignment-holder-name"
+                        ><strong>{{ h.name }}</strong
+                        ><small>{{ h.detail }}</small></span
                       >
-                      <button
-                        type="button"
-                        class="icon-button"
-                        [attr.aria-label]="'移除使用者 ' + user.displayName"
-                        [disabled]="locked()"
-                        (click)="update('user', null)"
-                      >
-                        <nx-icon name="close" />
-                      </button>
+                      @if (!e.ending) {
+                        <button
+                          type="button"
+                          class="secondary-button"
+                          [disabled]="locked()"
+                          (click)="changeHolder()"
+                        >
+                          {{ h.bound ? '更換' : '綁定帳號' }}
+                        </button>
+                      }
                     </div>
                   } @else {
-                    <label
-                      >使用者<nx-search-field
-                        label="尋找持有人帳號"
-                        placeholder="輸入至少兩個字，搜尋帳號或姓名"
-                        [value]="people.text()"
-                        [busy]="people.loading()"
-                        [disabled]="locked()"
-                        (valueChange)="people.find($event)"
-                    /></label>
-                    @if (people.searchable()) {
-                      <div class="person-picker-results" role="region" aria-label="符合的使用者">
-                        @for (user of people.results(); track user.id) {
-                          <button type="button" class="person-picker-user" (click)="choose(user)">
-                            <span
-                              ><strong>{{ user.displayName }}</strong
-                              ><small>{{ user.account }}</small></span
-                            ><nx-icon name="plus" />
-                          </button>
-                        } @empty {
-                          <!-- 防抖等待與查詢途中還沒有答案，不先說「尚無符合」。 -->
-                          @if (people.loading()) {
-                            <p class="form-note" role="status">正在搜尋…</p>
-                          } @else {
-                            <p class="form-note">尚無符合帳號；新進員工可先只填姓名。</p>
-                          }
-                        }
-                      </div>
-                    }
+                    <nx-person-picker
+                      label="尋找持有人"
+                      emptyText="沒有符合的帳號；新進員工可直接使用姓名。"
+                      nameHint="尚無帳號時只記姓名，之後可再綁定帳號"
+                      [search]="people"
+                      [disabled]="locked()"
+                      (picked)="choose($event)"
+                      (named)="useName($event)"
+                    />
                   }
-                  <label class="form-field-short"
-                    >姓名（尚無帳號時）<input
-                      #name
-                      nxField
-                      autocomplete="off"
-                      [attr.maxlength]="nameMax"
-                      [attr.aria-invalid]="holderError() ? true : null"
-                      [attr.aria-describedby]="holderError() ? id + '-holder-error' : null"
-                      [value]="e.draft.holderName"
-                      [readOnly]="locked()"
-                      (input)="update('holderName', name.value)"
-                  /></label>
                   @if (holderError()) {
                     <p class="form-note field-error" [id]="id + '-holder-error'">
                       {{ holderError() }}
+                    </p>
+                  }
+                  @if (e.transferFrom && !e.id) {
+                    <p class="form-note">
+                      {{ e.transferFrom }} 的持有期間會在下方開始時間結束，歷史仍會保留。
                     </p>
                   }
                 </div>
@@ -178,30 +159,30 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-period'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-period'">期間</h3>
-                  <p class="form-note">
-                    台北時間；結束留空表示持有中。開始時間之後的刷卡才歸戶給這位持有人。
-                  </p>
+                  <p class="form-note">台北時間；開始時間之後的刷卡才歸戶給這位持有人。</p>
                 </header>
                 <div class="form-section-body">
-                  <nx-date-time-picker
-                    label="開始時間"
-                    [value]="e.draft.startsAt"
-                    [disabled]="locked()"
-                    (valueChange)="update('startsAt', $event)"
-                  />
-                  <nx-date-time-picker
-                    label="結束時間"
-                    [required]="false"
-                    [min]="e.draft.startsAt"
-                    [value]="e.draft.endsAt"
-                    [disabled]="locked()"
-                    (valueChange)="update('endsAt', $event)"
-                  />
+                  <div class="assignment-period">
+                    <nx-date-time-picker
+                      label="開始時間"
+                      [value]="e.draft.startsAt"
+                      [disabled]="locked()"
+                      (valueChange)="update('startsAt', $event)"
+                    />
+                    <nx-date-time-picker
+                      label="結束時間（留空＝持有中）"
+                      [required]="false"
+                      [min]="e.draft.startsAt"
+                      [value]="e.draft.endsAt"
+                      [disabled]="locked()"
+                      (valueChange)="update('endsAt', $event)"
+                    />
+                  </div>
                   @if (periodError()) {
                     <p class="form-note field-error">{{ periodError() }}</p>
                   }
                   <label
-                    >備註<input
+                    >備註（選填）<input
                       #note
                       nxField
                       autocomplete="off"
@@ -239,12 +220,16 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                     ? '結束中…'
                     : e.id
                       ? '儲存中…'
-                      : '指派中…'
+                      : e.transferFrom
+                        ? '轉交中…'
+                        : '指派中…'
                   : e.ending
                     ? '結束持有'
                     : e.id
                       ? '儲存'
-                      : '指派'
+                      : e.transferFrom
+                        ? '轉交'
+                        : '指派'
               }}
             </button>
           </footer>
@@ -256,18 +241,35 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
     .field-error {
       color: var(--error);
     }
-    .assignment-user {
+    .assignment-holder {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: var(--p-space-2);
-      padding: var(--p-space-2) var(--p-space-3);
+      gap: var(--p-space-3);
+      padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-3);
       border: 1px solid var(--line);
       border-radius: var(--radius-block);
     }
-    .assignment-user small {
-      margin-inline-start: var(--p-space-2);
+    .assignment-holder-name {
+      display: grid;
+      flex: 1;
+      min-width: 0;
+    }
+    .assignment-holder-name strong {
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+    .assignment-holder-name small {
       color: var(--secondary);
+      font-size: var(--text-caption);
+    }
+    .avatar.is-name {
+      border-style: dashed;
+      color: var(--secondary);
+    }
+    .assignment-period {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+      gap: var(--p-space-3);
     }
   `,
 })
@@ -277,6 +279,9 @@ export class AssignmentDialog {
   readonly store = inject(AttendanceCardsStore);
   readonly nameMax = NAME_MAX;
   readonly noteMax = NOTE_MAX;
+  protected readonly initial = nameInitial;
+  private readonly injector = inject(Injector);
+  private readonly picker = viewChild(PersonPicker);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('assignmentDialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly editor = signal<Editor | null>(null);
@@ -291,6 +296,18 @@ export class AssignmentDialog {
     },
     { includeSelf: true },
   );
+  /** 已決定的持有人；沒有時顯示選擇器。使用者優先，舊資料兩者都有時姓名只是備援。 */
+  readonly holder = computed(() => {
+    const draft = this.editor()?.draft;
+    if (draft?.user)
+      return {
+        bound: true,
+        name: draft.user.displayName,
+        detail: draft.user.account || '平台帳號',
+      };
+    const name = draft?.holderName.trim();
+    return name ? { bound: false, name, detail: '尚無帳號，只記姓名' } : null;
+  });
   readonly locked = computed(() => this.store.busy() || this.session.testing());
   readonly dirty = computed(() => {
     const editor = this.editor(),
@@ -298,14 +315,21 @@ export class AssignmentDialog {
     return !!editor && !!opened && !same(editor.draft, opened);
   });
 
-  /** 新增；未歸戶卡號帶入第一筆未歸戶刷卡當起始時間，之後的刷卡才會全部歸戶。 */
-  create(card: { id: string | null; cardNumber: string }, startsAt?: string) {
+  /**
+   * 新增；未歸戶卡號帶入第一筆未歸戶刷卡當起始時間，之後的刷卡才會全部歸戶。
+   * `holder` 是卡片目前的持有人，有值時就是轉給其他人。
+   */
+  create(
+    card: { id: string | null; cardNumber: string; holder?: string | null },
+    startsAt?: string,
+  ) {
     this.show({
       id: null,
       cardId: card.id,
       cardNumber: card.cardNumber,
-      title: '指派持有人',
+      title: card.holder ? '轉給其他人' : '指派持有人',
       ending: false,
+      transferFrom: card.holder ?? null,
       draft: {
         user: null,
         holderName: '',
@@ -333,6 +357,7 @@ export class AssignmentDialog {
         cardNumber: item.cardNumber,
         title: ending ? '結束持有' : '編輯持有期間',
         ending,
+        transferFrom: null,
         draft,
       },
       ending ? { ...draft, endsAt: wall(new Date().toISOString()) } : undefined,
@@ -355,7 +380,21 @@ export class AssignmentDialog {
     if (key === 'startsAt' || key === 'endsAt') this.periodError.set('');
   }
   choose(user: DirectoryUserDto) {
-    this.update('user', { id: user.id, displayName: user.displayName, account: user.account });
+    this.setHolder({ id: user.id, displayName: user.displayName, account: user.account }, '');
+  }
+  useName(name: string) {
+    this.setHolder(null, name.slice(0, NAME_MAX));
+  }
+  /** 清掉持有人回到選擇器，焦點交給搜尋框（按下的按鈕會被移除）。 */
+  changeHolder() {
+    this.setHolder(null, '');
+    afterNextRender(() => this.picker()?.focus(), { injector: this.injector });
+  }
+  private setHolder(user: Holder | null, holderName: string) {
+    this.editor.update((editor) =>
+      editor ? { ...editor, draft: { ...editor.draft, user, holderName } } : null,
+    );
+    this.holderError.set('');
     this.people.clear();
   }
   cancel(event: Event) {
@@ -414,11 +453,13 @@ export class AssignmentDialog {
       : await this.store.assign(
           { ...body, cardId: editor.cardId, cardNumber: editor.cardNumber },
           (holder) =>
-            this.confirmation().ask({
-              title: '由新持有人接手？',
-              message: `卡號 ${editor.cardNumber} 在開始時間仍由 ${holder} 持有。接手後，${holder} 的持有期間會在新期間開始時結束。`,
-              confirm: '接手',
-            }),
+            holder === editor.transferFrom
+              ? Promise.resolve(true)
+              : this.confirmation().ask({
+                  title: '由新持有人接手？',
+                  message: `卡號 ${editor.cardNumber} 在開始時間仍由 ${holder} 持有。接手後，${holder} 的持有期間會在新期間開始時結束。`,
+                  confirm: '接手',
+                }),
         );
     if (!outcome.saved) {
       this.error.set(outcome.error);

@@ -11,8 +11,9 @@ import {
 import type { CardAssignmentDto, CardDto, UnattributedCardDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { formatDate } from '@shared/browser/format';
+import { formatDate, formatDay, nameInitial } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import {
   DataTable,
@@ -45,6 +46,7 @@ import { CARD_SEARCH_MAX, cardsQueryOptions } from './cards-query';
 @Component({
   selector: 'nx-attendance-cards-page',
   imports: [
+    ActionMenu,
     AssignmentDialog,
     CardDialog,
     ConfirmDialog,
@@ -76,6 +78,7 @@ export class AttendanceCardsPage {
   readonly draft = this.query.draft;
   readonly searchMax = CARD_SEARCH_MAX;
   readonly holderName = holderName;
+  protected readonly initial = nameInitial;
   readonly kindOptions: SelectOption[] = [{ value: '', label: '全部種類' }, ...CARD_KINDS];
   readonly views = [
     { value: 'cards', label: '卡片' },
@@ -145,7 +148,25 @@ export class AttendanceCardsPage {
       starts: formatDate(item.startsAt),
       ends: item.endsAt ? formatDate(item.endsAt) : '',
       current: Date.parse(item.startsAt) <= now && (!item.endsAt || Date.parse(item.endsAt) > now),
+      actions: this.entryActions(item),
     }));
+  });
+
+  /** 抽屜標題列的卡片操作；有持有歷史的卡不能刪，選單直接寫明原因。 */
+  readonly cardActions = computed<MenuAction[]>(() => {
+    const locked = this.store.locked(),
+      held = !!this.history().length;
+    return [
+      { id: 'edit', label: '編輯卡片', icon: 'edit', disabled: locked },
+      {
+        id: 'delete',
+        label: held ? '刪除卡片（已有持有歷史）' : '刪除卡片',
+        icon: 'trash',
+        danger: true,
+        // 持有歷史還沒讀到前不知道能不能刪，先停用。
+        disabled: locked || this.store.assignments() === null || held,
+      },
+    ];
   });
 
   constructor() {
@@ -194,8 +215,49 @@ export class AttendanceCardsPage {
     if (outcome.saved) this.drawer()?.close();
     else this.drawerError.set(outcome.error);
   }
+  cardAction(card: CardDto, action: string) {
+    if (action === 'edit') this.editCard(card);
+    else if (action === 'delete') void this.deleteCard(card);
+  }
+  /** 卡片目前有人持有時就是轉給其他人，對話框會寫明前一位的期間在何時結束。 */
   assign(card: CardDto) {
-    this.assignmentDialog().create({ id: card.id, cardNumber: card.cardNumber });
+    this.assignmentDialog().create({
+      id: card.id,
+      cardNumber: card.cardNumber,
+      holder: card.current ? holderName(card.current) : null,
+    });
+  }
+  /** 「自 2023/08/01 起・已持有 3 年 2 個月」；開始時間在未來時寫明尚未開始。 */
+  tenure(item: CardAssignmentDto) {
+    const start = new Date(item.startsAt),
+      now = new Date();
+    const ends = item.endsAt ? `，${formatDay(item.endsAt)} 結束` : '';
+    if (start > now) return `${formatDay(item.startsAt)} 起${ends}（尚未開始）`;
+    const months =
+      (now.getFullYear() - start.getFullYear()) * 12 +
+      now.getMonth() -
+      start.getMonth() -
+      (now.getDate() < start.getDate() ? 1 : 0);
+    const days = Math.floor((now.getTime() - start.getTime()) / 86_400_000);
+    const span =
+      months >= 12
+        ? `${Math.floor(months / 12)} 年${months % 12 ? ` ${months % 12} 個月` : ''}`
+        : months >= 1
+          ? `${months} 個月`
+          : `${days} 天`;
+    return `${formatDay(item.startsAt)} 起・已持有 ${span}${ends}`;
+  }
+  private entryActions(item: CardAssignmentDto): MenuAction[] {
+    const disabled = this.store.locked();
+    return [
+      ...(item.endsAt ? [] : [{ id: 'end', label: '結束持有', icon: 'clock', disabled }]),
+      { id: 'edit', label: '編輯期間', icon: 'edit', disabled },
+      { id: 'delete', label: '刪除期間', icon: 'trash', danger: true, disabled },
+    ];
+  }
+  entryAction(item: CardAssignmentDto, action: string) {
+    if (action === 'delete') void this.deleteAssignment(item);
+    else this.editAssignment(item, action === 'end');
   }
   /** 從未歸戶卡號指派：起始時間預設第一筆未歸戶刷卡，之後的刷卡都會歸戶。 */
   assignUnattributed(item: UnattributedCardDto) {

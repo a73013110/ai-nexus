@@ -1,0 +1,115 @@
+:host {
+  display: block;
+  width: min(100%, 28rem);
+  min-width: 0;
+}
+// 與 SearchField 同一個外觀，結果改浮在下方。
+.person-picker-field {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: 0 var(--p-space-3);
+  background: var(--surface);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-action);
+}
+.person-picker-field:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 12%, transparent);
+}
+.person-picker-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--button-target);
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--control-font-size);
+}
+.person-picker-field > nx-icon {
+  --icon-size: var(--icon-lg);
+  color: var(--muted);
+}
+.person-picker-field > nx-icon.is-busy {
+  color: var(--secondary);
+}
+.person-picker-field .icon-button {
+  width: var(--button-target);
+  height: var(--button-target);
+  margin-right: -0.5rem;
+}
+:host(.is-disabled) .person-picker-field {
+  background: var(--surface-subtle);
+  color: var(--secondary);
+}
+.person-picker-panel {
+  padding: var(--p-space-1);
+  overflow: auto;
+}
+.person-picker-option {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  width: 100%;
+  min-height: var(--button-target);
+  padding: var(--p-space-2);
+  border-radius: var(--radius-item);
+  color: var(--ink);
+  text-align: left;
+}
+.person-picker-option.is-active {
+  background: var(--hover);
+}
+.person-picker-option[aria-busy='true'] {
+  cursor: progress;
+}
+// 頭像比側欄小一階，名稱與帳號同列才不會撐高清單。
+.person-picker-option .avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.person-picker-option.is-name {
+  margin-top: var(--p-space-1);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-item) var(--radius-item);
+}
+.person-picker-option.is-name:first-child {
+  margin-top: 0;
+  border-top: 0;
+  border-radius: var(--radius-item);
+}
+.person-picker-option.is-name .avatar {
+  border-style: dashed;
+  color: var(--secondary);
+  --icon-size: var(--icon-sm);
+}
+.person-picker-text {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--p-space-2);
+  min-width: 0;
+}
+.person-picker-text strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.person-picker-text small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  overflow-wrap: anywhere;
+}
+.person-picker-pending {
+  color: var(--secondary);
+}
+.person-picker-empty {
+  margin: 0;
+  padding: var(--p-space-2) var(--p-space-3);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}

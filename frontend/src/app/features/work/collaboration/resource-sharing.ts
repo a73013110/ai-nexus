@@ -22,7 +22,8 @@ import { Icon } from '@shared/ui/icon';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
-import { SearchField } from '@shared/ui/search-field';
+import { PersonPicker } from './person-picker';
+import { nameInitial } from '@shared/browser/format';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { resourceSharingTour } from './resource-sharing-tour';
 
@@ -44,7 +45,7 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
     PendingButton,
     Select,
     ChoiceGroups,
-    SearchField,
+    PersonPicker,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,37 +71,19 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
       } @else {
         <div class="platform-form">
           <label class="sharing-search"
-            >加入使用者<nx-search-field
+            >加入使用者<nx-person-picker
               label="尋找要授權的使用者"
               placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
-              [value]="people.text()"
-              [busy]="people.loading()"
-              (valueChange)="people.find($event)"
+              [search]="people"
+              (picked)="add($event)"
           /></label>
-          @if (people.searchable()) {
-            <div class="person-picker-results" role="region" aria-label="符合的使用者">
-              @for (user of people.results(); track user.id) {
-                <button class="person-picker-user" (click)="add(user)">
-                  <span
-                    ><strong>{{ user.displayName }}</strong
-                    ><small>{{ user.account }}</small></span
-                  ><nx-icon name="plus" />
-                </button>
-              } @empty {
-                @if (people.loading()) {
-                  <p class="form-note" role="status">正在搜尋…</p>
-                } @else {
-                  <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
-                }
-              }
-            </div>
-          }
           <fieldset>
             <legend>具名成員</legend>
             <div class="acl-members">
               @for (member of members(); track member.userId) {
                 <div class="acl-member">
-                  <span
+                  <span class="avatar" aria-hidden="true">{{ initial(member.displayName) }}</span>
+                  <span class="acl-member-name"
                     ><strong>{{ member.displayName }}</strong
                     ><small>{{ member.account }}</small></span
                   ><nx-select
@@ -194,6 +177,7 @@ export class ResourceSharing {
     },
   ]);
   readonly people = directorySearch(() => this.members().map((item) => item.userId));
+  protected readonly initial = nameInitial;
   readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
   readonly loading = this.aclRead.loading;

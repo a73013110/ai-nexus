@@ -263,10 +263,8 @@ test("組織頁以樹狀列出單位，可新增下層、排序並維護成員",
   await page
     .getByRole("button", { name: "總公司 › 資訊處", exact: true })
     .click();
-  await page
-    .getByRole("searchbox", { name: "尋找要加入的使用者" })
-    .fill("王小");
-  await page.getByRole("button", { name: /王小明/ }).click();
+  await page.getByRole("combobox", { name: "尋找要加入的使用者" }).fill("王小");
+  await page.getByRole("option", { name: /王小明/ }).click();
   await expect(
     toasts(page).filter({ hasText: "已加入「資訊處」" }),
   ).toBeVisible();
@@ -309,7 +307,7 @@ test("停用的單位不能加入成員，編輯時上層不列出自己與下�
     .click();
   await expect(page.getByText(/單位已停用/)).toBeVisible();
   await expect(
-    page.getByRole("searchbox", { name: "尋找要加入的使用者" }),
+    page.getByRole("combobox", { name: "尋找要加入的使用者" }),
   ).toHaveCount(0);
 
   await page.getByRole("button", { name: "總公司", exact: true }).click();

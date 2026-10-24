@@ -21,7 +21,8 @@ import { SharingApi } from './sharing-api';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { Checkbox } from '@shared/ui/checkbox';
 import { PendingButton } from '@shared/ui/pending-button';
-import { SearchField } from '@shared/ui/search-field';
+import { PersonPicker } from '@features/work/collaboration/person-picker';
+import { nameInitial } from '@shared/browser/format';
 import { routeOf } from '@core/api/catalog';
 
 type ShareKind = 'conversation' | 'artifact';
@@ -41,7 +42,7 @@ export function shareLink(id: string, base = document.baseURI) {
     CompactDialog,
     DialogHeader,
     PendingButton,
-    SearchField,
+    PersonPicker,
     Select,
     Icon,
     RouterLink,
@@ -77,39 +78,29 @@ export function shareLink(id: string, base = document.baseURI) {
           }}。收件者只能閱讀，無法修改原始內容；需要更新時請建立新的分享。
         </nx-notice>
         <label
-          >收件者<nx-search-field
+          >收件者<nx-person-picker
             label="搜尋分享收件者"
             placeholder="輸入至少兩個字，搜尋公司帳號"
-            [value]="people.text()"
-            [busy]="people.loading()"
-            [disabled]="busy()"
-            (valueChange)="people.find($event)"
+            emptyText="沒有符合且未加入的帳號。"
+            [search]="people"
+            [disabled]="busy() || full()"
+            (picked)="add($event)"
         /></label>
         <div class="share-recipients">
           @for (user of recipients(); track user.id) {
-            <button class="share-recipient" [disabled]="busy()" (click)="remove(user.id)">
-              {{ user.displayName }}<nx-icon name="close" />
+            <button
+              type="button"
+              class="share-recipient"
+              [attr.aria-label]="'移除收件者 ' + user.displayName"
+              [title]="user.account"
+              [disabled]="busy()"
+              (click)="remove(user.id)"
+            >
+              <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span
+              >{{ user.displayName }}<nx-icon name="close" />
             </button>
           }
         </div>
-        @if (people.searchable()) {
-          <div class="person-picker-results">
-            @for (user of people.results(); track user.id) {
-              <button class="person-picker-user" [disabled]="busy() || full()" (click)="add(user)">
-                <span
-                  ><strong>{{ user.displayName }}</strong
-                  ><small>{{ user.account }}</small></span
-                ><nx-icon name="plus" />
-              </button>
-            } @empty {
-              @if (people.loading()) {
-                <p class="form-note" role="status">正在搜尋…</p>
-              } @else {
-                <p class="form-note">尚無符合且未加入的帳號。</p>
-              }
-            }
-          </div>
-        }
         <label
           >有效期限<nx-select
             label="分享有效期限"
@@ -168,6 +159,7 @@ export class ShareDialog {
   readonly recipients = signal<DirectoryUserDto[]>([]);
   readonly full = computed(() => this.recipients().length >= MAX_RECIPIENTS);
   readonly people = directorySearch(() => this.recipients().map((item) => item.id));
+  protected readonly initial = nameInitial;
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);

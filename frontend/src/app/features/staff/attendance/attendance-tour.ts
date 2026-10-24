@@ -96,8 +96,8 @@ export function cardDetailTour(options: WriteAccess & { visitor: boolean }): Pro
   return {
     steps: [
       {
-        target: `${CARD_DRAWER} .ui-drawer-summary`,
-        title: '卡片與目前持有人',
+        target: `${CARD_DRAWER} .cards-holder`,
+        title: '目前持有人',
         description: options.visitor
           ? '訪客卡不歸戶，不能指派持有人。'
           : readOnly('目前持有人是今天落在持有期間內的人。', options),
@@ -106,16 +106,16 @@ export function cardDetailTour(options: WriteAccess & { visitor: boolean }): Pro
       write &&
         !options.visitor && {
           target: `${CARD_DRAWER} .cards-assign`,
-          title: '指派持有人',
+          title: '指派或轉給其他人',
           description:
-            '可指派給平台使用者，或先只填姓名；開始時間落在別人的持有期間內時會詢問是否接手，前一段在新開始時間結束。',
+            '搜尋平台使用者；新進員工還沒有帳號時選「使用姓名」。卡片已有人持有時是轉給其他人，前一段在新開始時間結束。',
           side: 'bottom',
         },
       {
         target: `${CARD_DRAWER} .cards-history`,
         title: '持有歷史',
         description:
-          '同一張卡的期間不可重疊。「尚無帳號」是只填姓名的期間，綁上使用者後這段刷卡才會出現在出勤紀錄。',
+          '同一張卡的期間不可重疊。「尚無帳號」是只填姓名的期間，綁定帳號後這段刷卡才會出現在出勤紀錄；每段的「⋯」可編輯或刪除。',
       },
       write && {
         target: `${CARD_DRAWER} .cards-end`,

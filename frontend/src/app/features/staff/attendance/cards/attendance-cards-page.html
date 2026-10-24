@@ -251,6 +251,15 @@
   }
 </nx-feature-page>
 <nx-detail-drawer title="卡片詳情" [tour]="drawerTour()" (closed)="closed()">
+  @if (store.canMaintain() && store.selected(); as card) {
+    <nx-action-menu
+      drawer-actions
+      label="卡片操作"
+      [items]="cardActions()"
+      [busy]="store.working() === 'card:' + card.id"
+      (action)="cardAction(card, $event)"
+    />
+  }
   <div drawer-summary class="ui-drawer-summary">
     @if (store.selected(); as card) {
       <div>
@@ -259,13 +268,13 @@
         }}</nx-status-badge>
       </div>
       <h3 class="cards-number">{{ card.cardNumber }}</h3>
-      <span class="ui-drawer-subtitle">{{
-        card.current ? '目前由 ' + holderName(card.current) + ' 持有' : '目前無人持有'
-      }}</span>
+      @if (card.note) {
+        <span class="ui-drawer-subtitle">{{ card.note }}</span>
+      }
     }
   </div>
   @if (store.selected(); as card) {
-    <section aria-label="卡片與持有歷史">
+    <section aria-label="目前持有人與持有歷史">
       @if (drawerError()) {
         <nx-notice
           tone="danger"
@@ -274,51 +283,64 @@
           (dismissed)="drawerError.set('')"
         />
       }
-      @if (store.canMaintain()) {
-        <div class="cards-actions">
-          <button
-            type="button"
-            class="primary-button cards-assign"
-            [disabled]="store.locked() || card.kind === 'visitor'"
-            [title]="
-              session.testing()
-                ? session.testingNote()
-                : card.kind === 'visitor'
-                  ? '訪客卡不歸戶，不能指派持有人。'
-                  : ''
-            "
-            (click)="assign(card)"
-          >
-            <nx-icon name="user" />指派持有人
-          </button>
-          <button
-            type="button"
-            class="secondary-button"
-            [disabled]="store.locked()"
-            (click)="editCard(card)"
-          >
-            <nx-icon name="edit" />編輯
-          </button>
-          <!-- 持有歷史還沒讀到前不知道能不能刪，先停用；自己刪除中不停用，焦點才留在這顆。 -->
-          @let deleting = store.working() === 'card:' + card.id;
-          <button
-            nxPending
-            type="button"
-            class="quiet-button cards-delete"
-            [pending]="deleting"
-            [disabled]="
-              !deleting && (store.locked() || store.assignments() === null || !!history().length)
-            "
-            [title]="
-              history().length ? '已有持有期間的卡不能刪除；不再使用時結束持有期間即可。' : ''
-            "
-            (click)="deleteCard(card)"
-          >
-            <nx-icon name="trash" />{{ deleting ? '刪除中…' : '刪除' }}
-          </button>
-        </div>
-      }
-      <h3 class="ui-section-heading">持有歷史</h3>
+      <div class="cards-holder" role="group" aria-labelledby="cards-holder-label">
+        <p class="cards-holder-label" id="cards-holder-label">目前持有人</p>
+        @if (card.current; as current) {
+          <div class="cards-holder-person">
+            <span class="avatar" [class.is-name]="!current.userId" aria-hidden="true">{{
+              initial(holderName(current))
+            }}</span>
+            <div>
+              <p class="cards-holder-name">
+                <strong>{{ holderName(current) }}</strong>
+                @if (!current.userId) {
+                  <nx-status-badge
+                    tone="warning"
+                    title="只有姓名的期間不歸戶到帳號，綁定帳號後才會出現在出勤紀錄"
+                    >尚無帳號</nx-status-badge
+                  >
+                }
+              </p>
+              <p class="cards-holder-meta">{{ tenure(current) }}</p>
+            </div>
+          </div>
+        } @else {
+          <p class="cards-holder-empty">
+            {{ card.kind === 'visitor' ? '訪客卡不歸戶，不指派持有人。' : '目前無人持有' }}
+          </p>
+        }
+        @if (store.canMaintain() && card.kind !== 'visitor') {
+          <div class="cards-actions">
+            <button
+              type="button"
+              class="primary-button cards-assign"
+              [disabled]="store.locked()"
+              [title]="session.testing() ? session.testingNote() : ''"
+              (click)="assign(card)"
+            >
+              <nx-icon [name]="card.current ? 'repeat' : 'user'" />{{
+                card.current ? '轉給其他人' : '指派持有人'
+              }}
+            </button>
+            @if (card.current; as current) {
+              <button
+                type="button"
+                class="secondary-button cards-end"
+                [disabled]="store.locked()"
+                (click)="editAssignment(current, true)"
+              >
+                結束持有
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <h3 class="ui-section-heading">
+        持有歷史
+        @if (history().length) {
+          <span class="ui-count-label">{{ history().length }} 段</span>
+        }
+      </h3>
       @if (store.assignmentsError()) {
         <nx-notice tone="danger" [message]="store.assignmentsError()"
           ><button
@@ -352,12 +374,21 @@
                 @if (entry.unbound) {
                   <nx-status-badge
                     tone="warning"
-                    title="只有姓名的期間不歸戶到帳號，綁上使用者後才會出現在出勤紀錄"
+                    title="只有姓名的期間不歸戶到帳號，綁定帳號後才會出現在出勤紀錄"
                     >尚無帳號</nx-status-badge
                   >
                 }
                 @if (entry.current) {
                   <nx-status-badge tone="success">持有中</nx-status-badge>
+                }
+                @if (store.canMaintain()) {
+                  <nx-action-menu
+                    class="cards-history-menu"
+                    [label]="entry.holder + '的持有期間操作'"
+                    [items]="entry.actions"
+                    [busy]="store.working() === 'assignment:' + entry.item.id"
+                    (action)="entryAction(entry.item, $event)"
+                  />
                 }
               </div>
               <p class="cards-history-period">
@@ -365,54 +396,17 @@
                 @if (entry.ends) {
                   <time [attr.datetime]="entry.item.endsAt">{{ entry.ends }}</time>
                 } @else {
-                  <span>持有中</span>
+                  <span>現在</span>
                 }
               </p>
               @if (entry.item.note) {
                 <p class="cards-history-note">{{ entry.item.note }}</p>
-              }
-              @if (store.canMaintain()) {
-                <div class="cards-history-actions">
-                  @if (!entry.item.endsAt) {
-                    <button
-                      type="button"
-                      class="quiet-button cards-end"
-                      [disabled]="store.locked()"
-                      (click)="editAssignment(entry.item, true)"
-                    >
-                      結束持有
-                    </button>
-                  }
-                  <button
-                    type="button"
-                    class="quiet-button"
-                    [disabled]="store.locked()"
-                    (click)="editAssignment(entry.item)"
-                  >
-                    編輯
-                  </button>
-                  @let removing = store.working() === 'assignment:' + entry.item.id;
-                  <button
-                    nxPending
-                    type="button"
-                    class="quiet-button"
-                    [pending]="removing"
-                    [disabled]="!removing && store.locked()"
-                    (click)="deleteAssignment(entry.item)"
-                  >
-                    {{ removing ? '刪除中…' : '刪除' }}
-                  </button>
-                </div>
               }
             </li>
           } @empty {
             <li class="form-note">這張卡還沒有指派過持有人。</li>
           }
         </ol>
-      }
-      @if (card.note) {
-        <h3 class="ui-section-heading">備註</h3>
-        <p class="cards-history-note">{{ card.note }}</p>
       }
     </section>
   }

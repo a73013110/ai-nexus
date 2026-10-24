@@ -22,35 +22,107 @@
   font-family: var(--font-code);
   font-variant-numeric: tabular-nums;
 }
-.cards-actions,
-.cards-history-actions {
+// 目前持有人：抽屜最上方的主角，動作跟著它。
+.cards-holder {
+  display: grid;
+  gap: var(--p-space-3);
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
+}
+.cards-holder p {
+  margin: 0;
+}
+.cards-holder-label {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.cards-holder-person {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.cards-holder-person .avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--text-body);
+}
+.avatar.is-name {
+  border-style: dashed;
+  color: var(--secondary);
+}
+.cards-holder-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+  overflow-wrap: anywhere;
+}
+.cards-holder-name strong {
+  font-size: var(--p-font-base);
+  font-weight: 600;
+}
+.cards-holder-meta,
+.cards-holder-empty {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.cards-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--p-space-2);
 }
-.cards-actions {
-  margin-bottom: var(--p-space-3);
-}
+// 持有歷史是時間軸：圓點連成一條線，持有中的點用 signal 色。
 .cards-history {
   display: grid;
-  gap: var(--p-space-2);
-  margin: var(--p-space-2) 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .cards-history > li:not(.form-note) {
+  position: relative;
   display: grid;
-  gap: var(--p-space-1);
-  padding: 10px 12px;
-  background: var(--canvas);
-  border-radius: var(--radius-block);
+  gap: 0.125rem;
+  padding: 0 0 var(--p-space-4) var(--p-space-5);
   font-size: var(--text-caption);
+}
+.cards-history > li:not(.form-note)::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  left: 0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--control-line);
+}
+.cards-history > li:not(.form-note, :last-child)::after {
+  content: '';
+  position: absolute;
+  top: 1.15rem;
+  bottom: 0.15rem;
+  left: calc(0.5rem - 0.5px);
+  width: 1px;
+  background: var(--line);
+}
+.cards-history > li.is-current::before {
+  background: var(--signal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 20%, transparent);
 }
 .cards-history-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--p-space-2);
+  min-height: 1.5rem;
+  font-size: var(--text-label);
+}
+.cards-history-menu {
+  margin: -0.375rem -0.375rem -0.375rem auto;
 }
 .cards-history-period,
 .cards-history-note {

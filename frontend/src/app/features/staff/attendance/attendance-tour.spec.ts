@@ -47,16 +47,16 @@ describe('attendanceCardsTour', () => {
 
   it('introduces assigning in the drawer except for visitor cards', () => {
     expect(titles(cardDetailTour({ visitor: false, maintain: true, testing: false }))).toEqual([
-      '卡片與目前持有人',
-      '指派持有人',
+      '目前持有人',
+      '指派或轉給其他人',
       '持有歷史',
       '結束持有',
     ]);
     const visitor = tourSteps(cardDetailTour({ visitor: true, maintain: true, testing: false }));
-    expect(visitor.map((step) => step.title)).not.toContain('指派持有人');
+    expect(visitor.map((step) => step.title)).not.toContain('指派或轉給其他人');
     expect(visitor[0].description).toContain('訪客卡不歸戶');
     expect(titles(cardDetailTour({ visitor: false, maintain: true, testing: true }))).toEqual([
-      '卡片與目前持有人',
+      '目前持有人',
       '持有歷史',
     ]);
   });

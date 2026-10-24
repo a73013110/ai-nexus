@@ -23,7 +23,7 @@
 
 ## 表單
 
-- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
+- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`，找人用 `PersonPicker`（`directorySearch` 的浮動結果；只填姓名的列用 `nameHint`）。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
 - 驗證說明靠近欄位，不放頁面提示。
 - 段落用單層輕量外框（legend 在框線上），框內不疊框。多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色。
 - 設定表單（例：使用者管理、角色與功能群組）用 `.form-sections`（`frontend/src/styles/platform.scss`）：段落以細線分隔、不加框，標題下最多一句說明。填欄位需要的限制寫在欄位旁，其餘規則收進標題旁的 `InfoPopover`；勾選框對齊欄位左緣，依附欄位用 `.form-subfields`，短欄位加 `.form-field-short`。

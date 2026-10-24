@@ -193,40 +193,13 @@
             @if (row.unit.enabled) {
               <div class="member-search">
                 <label
-                  >加入成員<nx-search-field
+                  >加入成員<nx-person-picker
                     label="尋找要加入的使用者"
-                    placeholder="輸入至少兩個字，搜尋帳號或姓名"
-                    [value]="people.text()"
+                    [search]="people"
                     [disabled]="store.locked()"
-                    [busy]="people.loading()"
-                    (valueChange)="people.find($event)"
+                    [pendingId]="addingId()"
+                    (picked)="add($event)"
                 /></label>
-                @if (people.searchable()) {
-                  <div class="person-picker-results" role="region" aria-label="符合的使用者">
-                    @for (user of people.results(); track user.id) {
-                      @let adding = store.working() === 'add:' + user.id;
-                      <!-- 名稱在前、圖示在後的列：送出中把結尾的 + 換成轉圈（store 擋重複寫入）。 -->
-                      <button
-                        type="button"
-                        class="person-picker-user"
-                        [attr.aria-busy]="adding || null"
-                        [disabled]="store.locked() && !adding"
-                        (click)="add(user)"
-                      >
-                        <span
-                          ><strong>{{ user.displayName }}</strong
-                          ><small>{{ user.account }}</small></span
-                        ><nx-icon [name]="adding ? 'loading' : 'plus'" />
-                      </button>
-                    } @empty {
-                      @if (people.loading()) {
-                        <p class="form-note" role="status">正在搜尋…</p>
-                      } @else {
-                        <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
-                      }
-                    }
-                  </div>
-                }
               </div>
             }
             <h3 class="member-heading">

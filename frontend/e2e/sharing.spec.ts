@@ -91,8 +91,8 @@ test("named read-only sharing is created beside a conversation and can be revoke
   await expect(page.getByRole("table")).toBeVisible();
   await page.getByRole("button", { name: "分享此對話", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("searchbox", { name: "搜尋分享收件者" }).fill("同事");
-  await dialog.getByRole("button", { name: /林同事.*TEST/ }).click();
+  await dialog.getByRole("combobox", { name: "搜尋分享收件者" }).fill("同事");
+  await dialog.getByRole("option", { name: /林同事.*TEST/ }).click();
   await chooseSelect(page, "分享有效期限", "1 天");
   await dialog.getByRole("button", { name: "建立分享", exact: true }).click();
   await expect(dialog).toContainText("分享已建立");

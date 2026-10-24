@@ -18,10 +18,10 @@ import { Icon } from '@shared/ui/icon';
 import { MenuPanel, type MenuAction } from '@shared/ui/menu-panel';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import type { UnitImportResultDto } from '@core/api/schema';
 import { directorySearch } from '@features/work/collaboration/directory-search';
+import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { UnitImportDialog } from './imports/unit-import-dialog';
 import { resultSummary } from './imports/unit-import-presentation';
 import { OrganizationStore } from './organization-store';
@@ -45,7 +45,7 @@ import { MAX_DEPTH, moved, type UnitRow } from './unit-tree';
     MenuPanel,
     Notice,
     PendingButton,
-    SearchField,
+    PersonPicker,
     StatusBadge,
     UnitDialog,
     UnitImportDialog,
@@ -70,6 +70,8 @@ export class OrganizationPage {
   readonly people = directorySearch(() => (this.store.members() ?? []).map((m) => m.userId), {
     includeSelf: true,
   });
+  /** 正在加入的使用者；選擇器在那一列轉圈。 */
+  readonly addingId = computed(() => this.store.working()?.match(/^add:(.+)$/)?.[1] ?? null);
   /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
   protected readonly skeleton = [72, 56, 64, 48, 60];
   /** 開啟操作選單的那一列。 */
