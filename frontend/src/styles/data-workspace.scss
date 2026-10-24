@@ -335,6 +335,17 @@ select:where(.ui-input) {
   // when the rows overflow (data changes, not interaction, so the columns do not shift under use).
   scrollbar-gutter: auto;
   scroll-padding-block-start: 2.5rem;
+  // The scrollbar sits beside the sticky header: a fixed band (it does not scroll with the rows)
+  // carries the header's fill and bottom line under the transparent track, and the track starts
+  // below the header. DataTable measures `--table-head-size`; without it both are zero.
+  background:
+    linear-gradient(var(--line), var(--line)) 0 calc(var(--table-head-size, 0px) - 1px) / 100% 1px
+      no-repeat,
+    linear-gradient(var(--surface-subtle), var(--surface-subtle)) 0 0 / 100%
+      var(--table-head-size, 0px) no-repeat;
+}
+.ui-table-scroll::-webkit-scrollbar-track {
+  margin-top: var(--table-head-size, var(--p-space-2));
 }
 .ui-table-scroll > table {
   width: 100%;

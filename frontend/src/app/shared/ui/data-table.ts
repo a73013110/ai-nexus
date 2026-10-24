@@ -2,8 +2,10 @@ import { rovingIndex } from '../browser/roving-index';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   Directive,
   ElementRef,
+  afterNextRender,
   computed,
   contentChild,
   effect,
@@ -165,6 +167,21 @@ export class DataTable {
         }
       }
       untracked(() => this.hidden.set(hidden));
+    });
+    // 表頭固定時捲軸在它旁邊：量出表頭高度交給 CSS，捲軸從表頭下方開始、表頭底色與底線延伸到外框。
+    // 表頭高度跟著字級、密度與勾選框改變，CSS 算不出來；沒有 ResizeObserver（單元測試）時維持原樣。
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const scroll = this.host.nativeElement.querySelector<HTMLElement>('.ui-table-scroll');
+      const head = scroll?.querySelector(':scope > table > thead');
+      if (!scroll || !head || typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(([entry]) => {
+        const size = entry.borderBoxSize?.[0]?.blockSize ?? 0;
+        if (size > 1) scroll.style.setProperty('--table-head-size', `${size}px`);
+        else scroll.style.removeProperty('--table-head-size');
+      });
+      observer.observe(head);
+      destroyRef.onDestroy(() => observer.disconnect());
     });
   }
   isVisible(id: string) {
