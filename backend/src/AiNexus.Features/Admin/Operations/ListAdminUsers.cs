@@ -44,7 +44,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
 
     /// <summary>procedure 第二個結果集的一列；欄位名稱與 procedure 的輸出一致，只在執行時對應（整合測試涵蓋）。</summary>
     private sealed record Row(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, bool Enabled,
-        bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, bool HasLocalPassword,
+        bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, bool HasLocalPassword, bool DirectoryBound,
         string? Email, string? EmailSource, DateTimeOffset? EmailVerifiedAt,
         int Requests, int Completed, int Failed, int Cancelled, long InputTokens, long OutputTokens, int RequestsWithUsage,
         long TotalDurationMilliseconds, int TimedRequests, int Conversations,
@@ -53,7 +53,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
         public AdminUserDto ToDto(IReadOnlyList<string> roleIds) => new(Id, Account, DisplayName, LastSeenAt, roleIds,
             new(new(Requests, Completed, Failed, Cancelled, InputTokens, OutputTokens, RequestsWithUsage, TotalDurationMilliseconds, TimedRequests), Conversations),
             Enabled,
-            new(AdEnabled, LocalEnabled, AdAccount, LocalAccount, HasLocalPassword),
+            new(AdEnabled, LocalEnabled, AdAccount, LocalAccount, HasLocalPassword, DirectoryBound),
             new(UsedBytes, LimitBytes, RemainingBytes, PersonalLimitBytes, GroupLimitBytes, DefaultLimitBytes, LimitSource),
             Email, EmailSource, EmailVerifiedAt);
     }

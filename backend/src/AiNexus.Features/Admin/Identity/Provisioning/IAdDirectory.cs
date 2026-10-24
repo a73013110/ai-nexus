@@ -77,6 +77,9 @@ public interface IAdDirectory
     /// <summary>依 SID 查人；目錄裡找不到（已刪除或不在搜尋根之下）的 SID 不出現在結果中。</summary>
     Task<IReadOnlyList<DirectoryPerson>> FindAsync(IReadOnlyCollection<string> sids, CancellationToken ct);
 
+    /// <summary>依 <c>sAMAccountName</c> 精確查人（不分大小寫）；找不到時回 null。改綁 AD 帳號時以管理員輸入的短帳號取得 SID。</summary>
+    Task<DirectoryPerson?> FindAccountAsync(string accountName, CancellationToken ct);
+
     /// <summary>一位人員的完整屬性；目錄裡找不到這個 SID 時回 null。</summary>
     Task<DirectoryPersonDetail?> DetailAsync(string sid, CancellationToken ct);
 }

@@ -32,6 +32,9 @@ internal static class IdentityErrors
     public static readonly Error UserNotFound = Error.NotFound("user_not_found");
     public static readonly Error AccountExists = Error.Conflict("account_exists");
     public static readonly Error AdBindingImmutable = Error.Conflict("ad_binding_immutable");
+    // 管理員解除或改綁 AD（ADR 0019）：帳號本來就沒有綁定，或目標 SID 已綁定另一位使用者（含已刪除者，SID 唯一）。
+    public static readonly Error AdNotBound = Error.Conflict("ad_not_bound");
+    public static readonly Error AdBindingTaken = Error.Conflict("ad_binding_taken");
     public static readonly Error DirectoryVerificationRequired = Error.Forbidden("directory_verification_required");
     public static readonly Error ReauthenticationRequired = Error.Forbidden("reauthentication_required");
     public static readonly Error ReauthenticationUnavailable = Error.Conflict("reauthentication_unavailable");

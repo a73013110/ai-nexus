@@ -6,6 +6,7 @@
 --              @Since 與 @DefaultAttachmentLimitBytes 由程式傳入（TimeProvider 與設定），不用資料庫時鐘。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
 -- Modify:      2026-10-21 Yikai 改讀共用函式 udf_UsageEntries、udf_AttachmentStorage
+-- Modify:      2026-10-24 Yikai 多回傳是否已以 SID 綁定 AD（DirectoryBound）
 -- =============================================
 CREATE   PROCEDURE [operations].[usp_ListAdminUsers]
     @Search                      NVARCHAR (120) = NULL,
@@ -64,6 +65,8 @@ BEGIN
     )
     SELECT u.Id, u.Account, u.DisplayName, u.LastSeenAt, u.Enabled,
            u.AdEnabled, u.LocalEnabled, u.AdAccount, u.LocalAccount, CAST(IIF(u.PasswordHash IS NULL, 0, 1) AS BIT) AS HasLocalPassword,
+           -- 尚未綁定的帳號（管理員預建或解除綁定）SID 是 managed: 開頭，與程式的 UserAccounts.ManagedSidPrefix 一致。
+           CAST(IIF(u.Sid LIKE N'managed:%', 0, 1) AS BIT) AS DirectoryBound,
            u.Email, u.EmailSource, u.EmailVerifiedAt,
            ISNULL(t.Requests, 0) AS Requests, ISNULL(t.Completed, 0) AS Completed, ISNULL(t.Failed, 0) AS Failed, ISNULL(t.Cancelled, 0) AS Cancelled,
            ISNULL(t.InputTokens, 0) AS InputTokens, ISNULL(t.OutputTokens, 0) AS OutputTokens, ISNULL(t.RequestsWithUsage, 0) AS RequestsWithUsage,

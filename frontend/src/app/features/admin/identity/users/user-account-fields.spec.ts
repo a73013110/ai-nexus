@@ -53,6 +53,7 @@ describe('user account form', () => {
           adAccount: 'wang',
           localAccount: 'wang',
           hasLocalPassword: true,
+          directoryBound: true,
         },
       }),
     ).toBe('AD · 本地密碼');

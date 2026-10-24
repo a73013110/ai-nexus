@@ -59,8 +59,13 @@ export class AdminUserStore {
     source: this.key,
     computation: () => ({}),
   });
-  /** 分頁儲存中或測試其他身分時，欄位唯讀。 */
-  readonly locked = computed(() => !!this.saving() || this.session.testing());
+  /** 改綁或解除 AD 綁定送出中；不經帳號表單的儲存，錯誤顯示在帳號分頁。 */
+  readonly binding = linkedSignal<string | undefined, 'rebind' | 'unbind' | null>({
+    source: this.key,
+    computation: () => null,
+  });
+  /** 分頁儲存中、AD 綁定送出中或測試其他身分時，欄位唯讀。 */
+  readonly locked = computed(() => !!this.saving() || !!this.binding() || this.session.testing());
 
   private readonly request = computed(() => {
     const key = this.key(),
@@ -244,6 +249,47 @@ export class AdminUserStore {
         this.admin.readUsers();
       },
     );
+  }
+  rebind(adAccount: string) {
+    return this.bind(
+      'rebind',
+      (id) => this.api.rebindDirectory(id, adAccount),
+      'AD 帳號已改綁',
+      '角色與歷史資料沿用；舊的工作階段已失效。',
+    );
+  }
+  unbind() {
+    return this.bind(
+      'unbind',
+      (id) => this.api.unbindDirectory(id),
+      'AD 綁定已解除',
+      '下次以 AD 帳號驗證或從 AD 匯入時重新綁定。',
+    );
+  }
+  /** 成功回傳 true，呼叫端據此清空輸入；失敗訊息放在帳號分頁。 */
+  private async bind(
+    action: 'rebind' | 'unbind',
+    work: (id: string) => Promise<unknown>,
+    title: string,
+    description: string,
+  ) {
+    const key = this.key(),
+      id = this.user()?.id,
+      alive = this.scope.guard(),
+      valid = () => alive() && this.key() === key;
+    if (!id || this.locked()) return false;
+    this.binding.set(action);
+    this.errors.update((errors) => ({ ...errors, account: '' }));
+    try {
+      await work(id);
+      if (valid()) this.changed(title, description);
+      return valid();
+    } catch (error) {
+      if (valid()) this.errors.update((errors) => ({ ...errors, account: safeMessage(error) }));
+      return false;
+    } finally {
+      if (valid()) this.binding.set(null);
+    }
   }
   /** 帳號與角色的授權變更：目錄、列表與自己的工作階段會重新讀取。 */
   private changed(title: string, description: string) {

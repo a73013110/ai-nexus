@@ -11,6 +11,10 @@ public sealed class LdapDirectoryTests
             LdapDirectory.SidFilter(["S-1-5-21-1-2-3-1101", "S-1-5-21-1-2-3-1102"]));
 
     [Fact]
+    public void AccountFilterMatchesTheExactEscapedAccountName()
+        => Assert.Equal("(&(&(objectCategory=person)(objectClass=user))(sAMAccountName=carol\\2a))", LdapDirectory.AccountFilter(" carol* "));
+
+    [Fact]
     public void PeopleFilterEscapesTheQueryAndSearchesTheListedFields()
     {
         Assert.Equal(LdapDirectory.PersonFilter, LdapDirectory.PeopleFilter("  "));

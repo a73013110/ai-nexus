@@ -83,6 +83,12 @@ public sealed class FixtureAdDirectory : IAdDirectory
         lock (gate) return Task.FromResult<IReadOnlyList<DirectoryPerson>>([.. people.Where(x => sids.Contains(x.Sid, StringComparer.OrdinalIgnoreCase))]);
     }
 
+    public Task<DirectoryPerson?> FindAccountAsync(string accountName, CancellationToken ct)
+    {
+        Fail();
+        lock (gate) return Task.FromResult(people.FirstOrDefault(x => x.AccountName.Equals(accountName.Trim(), StringComparison.OrdinalIgnoreCase)));
+    }
+
     /// <summary>完整屬性由清單欄位推得，其他屬性是固定的虛構值；停用的人帶停用位元。</summary>
     public Task<DirectoryPersonDetail?> DetailAsync(string sid, CancellationToken ct)
     {

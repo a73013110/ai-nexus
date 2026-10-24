@@ -31,6 +31,8 @@ const actions: Record<string, string> = {
   'admin.user_email': '設定使用者信箱',
   'admin.user_import': '從 AD 匯入使用者',
   'admin.user_sync': '從 AD 更新使用者',
+  'admin.user_ad_bind': '改綁使用者 AD 帳號',
+  'admin.user_ad_unbind': '解除使用者 AD 綁定',
   'admin.user_model_policy': '設定個人模型政策',
   'admin.user_storage': '調整使用者容量',
   'admin.user': '建立或調整使用者',

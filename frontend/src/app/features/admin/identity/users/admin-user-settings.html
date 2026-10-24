@@ -9,6 +9,7 @@
             [disabled]="store.locked()"
             (valueChange)="store.account.set($event)"
           />
+          <nx-directory-binding />
           @if (store.current(); as user) {
             <nx-attendance-user-cards [userId]="user.id" [displayName]="user.displayName" />
           }

@@ -91,6 +91,8 @@ public sealed class IdentityModule : IFeatureModule
         ManageUserAccounts.MapCreate(admin);
         ManageUserAccounts.MapUpdate(admin);
         ManageUserAccounts.MapDelete(admin);
+        RebindDirectoryAccount.Map(admin);
+        UnbindDirectoryAccount.Map(admin);
         SetUserRoles.Map(admin);
         SetUserEmail.Map(admin);
         PreviewUserAccess.Map(admin);

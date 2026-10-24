@@ -28,6 +28,10 @@ function setup(testing = false) {
       saved = { ...saved, displayName: body.displayName };
     }),
     roles: vi.fn(async () => undefined),
+    rebindDirectory: vi.fn(async (_id: string, adAccount: string) => {
+      if (adAccount === 'taken') throw new Error('ad_binding_taken');
+    }),
+    unbindDirectory: vi.fn(async () => undefined),
     email: vi.fn(async (_id: string, email: string | null) => {
       saved = { ...saved, email, emailSource: email ? 'admin' : null, emailVerifiedAt: null };
     }),
@@ -72,6 +76,21 @@ describe('admin user store', () => {
     expect(admin.saved).toHaveBeenCalled();
     await settle();
     expect(store.current()?.displayName).toBe('王大明');
+  });
+
+  it('rebinds and unbinds AD at once, reporting failures on the account tab', async () => {
+    const { store, api, admin, settle } = setup();
+    store.open(user);
+    await settle();
+    expect(await store.rebind('wang.new')).toBe(true);
+    expect(api.rebindDirectory).toHaveBeenCalledWith('u1', 'wang.new');
+    expect(admin.saved).toHaveBeenCalledWith('AD 帳號已改綁', expect.any(String));
+    expect(store.binding()).toBeNull();
+    expect(await store.rebind('taken')).toBe(false);
+    expect(store.errors().account).toBeTruthy();
+    expect(await store.unbind()).toBe(true);
+    expect(api.unbindDirectory).toHaveBeenCalledWith('u1');
+    expect(store.errors().account).toBe('');
   });
 
   it('saves roles on their own and reverts a draft to the saved values', async () => {

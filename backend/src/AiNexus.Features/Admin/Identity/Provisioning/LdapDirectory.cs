@@ -87,6 +87,16 @@ public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> opti
         }, ct);
     }
 
+    public Task<DirectoryPerson?> FindAccountAsync(string accountName, CancellationToken ct) => RunAsync((connection, settings) =>
+    {
+        if (!OperatingSystem.IsWindows()) throw PlatformUnavailable();
+        var response = (SearchResponse)connection.SendRequest(Request(settings.Base, AccountFilter(accountName), SearchScope.Subtree, Attributes));
+        return Read(response.Entries.Cast<SearchResultEntry>()).FirstOrDefault();
+    }, ct);
+
+    /// <summary>以 <c>sAMAccountName</c> 精確比對（AD 不分大小寫，網域內唯一）；輸入一律跳脫，<c>*</c> 不會變成萬用字元。</summary>
+    public static string AccountFilter(string accountName) => $"(&{PersonFilter}(sAMAccountName={EscapeFilter(accountName.Trim())}))";
+
     public Task<DirectoryPersonDetail?> DetailAsync(string sid, CancellationToken ct)
     {
         if (!SidPattern().IsMatch(sid)) return Task.FromResult<DirectoryPersonDetail?>(null);

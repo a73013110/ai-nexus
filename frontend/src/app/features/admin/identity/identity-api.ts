@@ -38,6 +38,11 @@ export class IdentityApi {
   updateUser = (id: string, body: UserAccountRequest) =>
     this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
   deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
+  /** 依 AD 短帳號查 SID 後改綁（ADR 0019）；解除後回到預建，下次以同名 AD 帳號驗證或匯入時綁定。 */
+  rebindDirectory = (id: string, adAccount: string) =>
+    this.api.put('/api/v1/admin/users/{id}/ad-binding', { path: { id }, body: { adAccount } });
+  unbindDirectory = (id: string) =>
+    this.api.delete('/api/v1/admin/users/{id}/ad-binding', { path: { id } });
   /** 瀏覽 AD 與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。未指定 `parent` 時是搜尋根。 */
   directoryNodes = (parent: string | undefined, signal?: AbortSignal) =>
     this.api.get('/api/v1/admin/directory-nodes', { query: { parent }, signal });
