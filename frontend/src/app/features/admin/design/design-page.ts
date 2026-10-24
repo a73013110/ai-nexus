@@ -55,6 +55,8 @@ const INDEX = [
     sections: [
       { id: 'design-fields', name: '欄位與搜尋' },
       { id: 'design-search-bare', name: '列內搜尋' },
+      { id: 'design-person-picker', name: '人員選擇器' },
+      { id: 'design-form-sections', name: '表單段落' },
       { id: 'design-dates', name: '日期與時間' },
       { id: 'design-inline', name: '直接編輯' },
       { id: 'design-settings', name: '偏好設定列' },

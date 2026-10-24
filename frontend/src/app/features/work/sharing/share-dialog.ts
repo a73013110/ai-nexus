@@ -23,6 +23,7 @@ import { Checkbox } from '@shared/ui/checkbox';
 import { PendingButton } from '@shared/ui/pending-button';
 import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { nameInitial } from '@shared/browser/format';
+import { uniqueId } from '@shared/browser/unique-id';
 import { routeOf } from '@core/api/catalog';
 
 type ShareKind = 'conversation' | 'artifact';
@@ -77,47 +78,64 @@ export function shareLink(id: string, base = document.baseURI) {
             kind() === 'artifact' ? '分享選取的已儲存成果版本' : '分享目前可見的對話分支'
           }}。收件者只能閱讀，無法修改原始內容；需要更新時請建立新的分享。
         </nx-notice>
-        <label
-          >收件者<nx-person-picker
-            label="搜尋分享收件者"
-            placeholder="輸入至少兩個字，搜尋公司帳號"
-            emptyText="沒有符合且未加入的帳號。"
-            [search]="people"
-            [disabled]="busy() || full()"
-            (picked)="add($event)"
-        /></label>
-        <div class="share-recipients">
-          @for (user of recipients(); track user.id) {
-            <button
-              type="button"
-              class="share-recipient"
-              [attr.aria-label]="'移除收件者 ' + user.displayName"
-              [title]="user.account"
-              [disabled]="busy()"
-              (click)="remove(user.id)"
-            >
-              <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span
-              >{{ user.displayName }}<nx-icon name="close" />
-            </button>
-          }
+        <div class="form-sections">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-recipients'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-recipients'">收件者</h3>
+            </header>
+            <div class="form-section-body">
+              <nx-person-picker
+                label="搜尋分享收件者"
+                placeholder="輸入至少兩個字，搜尋公司帳號"
+                emptyText="沒有符合且未加入的帳號。"
+                [search]="people"
+                [disabled]="busy() || full()"
+                (picked)="add($event)"
+              />
+              @if (recipients().length) {
+                <div class="form-chips">
+                  @for (user of recipients(); track user.id) {
+                    <button
+                      type="button"
+                      class="form-chip"
+                      [attr.aria-label]="'移除收件者 ' + user.displayName"
+                      [title]="user.account"
+                      [disabled]="busy()"
+                      (click)="remove(user.id)"
+                    >
+                      <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span
+                      >{{ user.displayName }}<nx-icon name="close" />
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-access'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-access'">存取</h3>
+            </header>
+            <div class="form-section-body">
+              <label class="form-field-short"
+                >有效期限<nx-select
+                  label="分享有效期限"
+                  [options]="durations"
+                  [value]="hours()"
+                  [disabled]="busy()"
+                  (valueChange)="hours.set($event)"
+              /></label>
+              @if (kind() === 'conversation') {
+                <nx-checkbox
+                  label="包含此分支的附件"
+                  description="收件者可下載；到期或撤銷後停止存取。"
+                  [checked]="includeAttachments()"
+                  [disabled]="busy()"
+                  (checkedChange)="includeAttachments.set($event)"
+                />
+              }
+            </div>
+          </section>
         </div>
-        <label
-          >有效期限<nx-select
-            label="分享有效期限"
-            [options]="durations"
-            [value]="hours()"
-            [disabled]="busy()"
-            (valueChange)="hours.set($event)"
-        /></label>
-        @if (kind() === 'conversation') {
-          <nx-checkbox
-            label="包含此分支的附件"
-            description="收件者可下載；到期或撤銷後停止存取。"
-            [checked]="includeAttachments()"
-            [disabled]="busy()"
-            (checkedChange)="includeAttachments.set($event)"
-          />
-        }
       }
     </div>
     @if (!created()) {
@@ -160,6 +178,7 @@ export class ShareDialog {
   readonly full = computed(() => this.recipients().length >= MAX_RECIPIENTS);
   readonly people = directorySearch(() => this.recipients().map((item) => item.id));
   protected readonly initial = nameInitial;
+  readonly id = uniqueId('nx-share-dialog');
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);

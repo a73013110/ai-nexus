@@ -10,18 +10,18 @@ const users: DirectoryUserDto[] = [
   { id: 'u2', account: 'wang.xh', displayName: '王小華' },
 ];
 
-/** 只留選擇器讀到的部分；查詢結果由測試直接給。 */
-function fakeSearch(results: DirectoryUserDto[]) {
+/** 查詢結果由測試直接給，不經過目錄 API。 */
+function fakeSearch(results: DirectoryUserDto[]): DirectorySearch {
   const text = signal('');
   return {
     text,
     searchable: computed(() => text().trim().length >= 2),
     results: signal(results),
     loading: signal(false),
-    error: signal(null),
+    error: signal(''),
     find: (value: string) => text.set(value),
     clear: () => text.set(''),
-  } as unknown as DirectorySearch;
+  };
 }
 
 describe('PersonPicker', () => {

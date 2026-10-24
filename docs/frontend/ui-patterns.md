@@ -1,6 +1,6 @@
 # 共用介面模式
 
-結論：新頁面組合 `shared/ui` 與 `core/layout` 的現有元件，不自建側欄、提示、表格、抽屜或切換樣式。系統日誌是緊湊資料介面的基準頁；聊天與文件正文保留個人閱讀設定。元件用法見原始碼與 [`/admin/design`](design-system.md#元件工作臺-design)。
+結論：新頁面組合 `shared/ui` 與 `core/layout` 的現有元件，不自建側欄、提示、表格、抽屜或切換樣式；同一種 UI 第二次出現就抽成共用元件（[共用元件](shared-components.md)）。系統日誌是緊湊資料介面的基準頁；聊天與文件正文保留個人閱讀設定。元件用法見原始碼與 [`/admin/design`](design-system.md#元件工作臺-design)。
 
 ## 頁面版面
 
@@ -23,13 +23,7 @@
 
 ## 表單
 
-- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`，找人用 `PersonPicker`（`directorySearch` 的浮動結果；只填姓名的列用 `nameHint`）。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
-- 驗證說明靠近欄位，不放頁面提示。
-- 段落用單層輕量外框（legend 在框線上），框內不疊框。多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色。
-- 設定表單（例：使用者管理、角色與功能群組）用 `.form-sections`（`frontend/src/styles/platform.scss`）：段落以細線分隔、不加框，標題下最多一句說明。填欄位需要的限制寫在欄位旁，其餘規則收進標題旁的 `InfoPopover`；勾選框對齊欄位左緣，依附欄位用 `.form-subfields`，短欄位加 `.form-field-short`。
-- 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。
-- 有未儲存變更的頁面實作 `canLeave()`，路由加 `pendingChanges` guard；對話框切頁籤或關閉前用 `ConfirmDialog` 確認。
-- 文字輸入：IME 組字中（含 keyCode 229）的 Enter 不送出，Shift+Enter 換行；長草稿自動增高。
+欄位、段落排版、選人與日期見 [表單](forms.md)；共用元件何時抽、放哪裡見 [共用元件](shared-components.md)。
 
 ## 對話框與抽屜
 

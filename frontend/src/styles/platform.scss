@@ -240,6 +240,63 @@
 .form-field-short {
   max-width: 24rem;
 }
+// 已選定的單一對象（人、部門）：頭像＋名稱與一行說明＋「更換」，取代已填的搜尋框。
+.form-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  max-width: 28rem;
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+}
+.form-choice-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.form-choice-text strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.form-choice-text small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+// 已選的多個對象：頭像＋名稱的膠囊排在搜尋框下方，整顆按下即移除。
+.form-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.form-chip {
+  --icon-size: var(--icon-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-1);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+}
+.form-chip:hover:not(:disabled) {
+  background: var(--hover);
+}
+.form-chip .avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.form-chip > nx-icon {
+  color: var(--secondary);
+}
+// 成對的短欄位（起訖時間、數量與單位）並排；放不下兩欄時自動換成一欄。
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--p-space-3);
+  min-width: 0;
+}
 .form-subfields {
   display: grid;
   gap: var(--p-space-3);

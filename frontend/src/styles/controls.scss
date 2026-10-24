@@ -121,6 +121,11 @@ kbd {
   font-size: var(--text-caption);
   font-weight: 600;
 }
+// 只有姓名、沒有帳號的人用虛線外框，與有帳號的人區分。
+.avatar.is-name {
+  border-style: dashed;
+  color: var(--secondary);
+}
 // Meters and progress bars: a --line track and a --meter-color fill (default --accent) in every
 // theme, never the browser's green or grey. Each vendor pseudo-element is its own rule, so an
 // unknown one does not drop the others.

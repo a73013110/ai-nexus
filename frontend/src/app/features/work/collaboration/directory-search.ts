@@ -1,4 +1,4 @@
-import { computed, inject, signal } from '@angular/core';
+import { computed, inject, signal, type Signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { DirectoryUserDto } from '@core/api/schema';
@@ -7,7 +7,16 @@ import { CollaborationApi } from './collaboration-api';
 
 const MIN_QUERY_LENGTH = 2;
 
-export type DirectorySearch = ReturnType<typeof directorySearch>;
+/** 選人元件（`PersonPicker`）讀的查詢狀態；介面讓範例與測試可用本機資料代替目錄 API。 */
+export interface DirectorySearch {
+  readonly text: Signal<string>;
+  readonly searchable: Signal<boolean>;
+  readonly results: Signal<DirectoryUserDto[]>;
+  readonly loading: Signal<boolean>;
+  readonly error: Signal<string>;
+  find(value: string): void;
+  clear(): void;
+}
 
 /**
  * 人員選擇器的查詢：輸入暫停後才搜尋目錄，從兩個字元起算。
@@ -15,7 +24,10 @@ export type DirectorySearch = ReturnType<typeof directorySearch>;
  * `loading` 涵蓋防抖等待與請求進行中：結果為空且 `loading()` 時顯示「正在搜尋…」，不是「沒有符合的帳號」。
  * 需要 `ViewScope`。
  */
-export function directorySearch(chosen: () => string[], options: { includeSelf?: boolean } = {}) {
+export function directorySearch(
+  chosen: () => string[],
+  options: { includeSelf?: boolean } = {},
+): DirectorySearch {
   const api = inject(CollaborationApi);
   const scope = inject(ViewScope);
   const session = inject(WorkspaceSession);

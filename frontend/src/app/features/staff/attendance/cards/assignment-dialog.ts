@@ -114,11 +114,11 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                 </header>
                 <div class="form-section-body">
                   @if (holder(); as h) {
-                    <div class="assignment-holder">
+                    <div class="form-choice">
                       <span class="avatar" [class.is-name]="!h.bound" aria-hidden="true">{{
                         initial(h.name)
                       }}</span>
-                      <span class="assignment-holder-name"
+                      <span class="form-choice-text"
                         ><strong>{{ h.name }}</strong
                         ><small>{{ h.detail }}</small></span
                       >
@@ -162,7 +162,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                   <p class="form-note">台北時間；開始時間之後的刷卡才歸戶給這位持有人。</p>
                 </header>
                 <div class="form-section-body">
-                  <div class="assignment-period">
+                  <div class="form-row">
                     <nx-date-time-picker
                       label="開始時間"
                       [value]="e.draft.startsAt"
@@ -240,36 +240,6 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
   styles: `
     .field-error {
       color: var(--error);
-    }
-    .assignment-holder {
-      display: flex;
-      align-items: center;
-      gap: var(--p-space-3);
-      padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-3);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-block);
-    }
-    .assignment-holder-name {
-      display: grid;
-      flex: 1;
-      min-width: 0;
-    }
-    .assignment-holder-name strong {
-      font-weight: 500;
-      overflow-wrap: anywhere;
-    }
-    .assignment-holder-name small {
-      color: var(--secondary);
-      font-size: var(--text-caption);
-    }
-    .avatar.is-name {
-      border-style: dashed;
-      color: var(--secondary);
-    }
-    .assignment-period {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-      gap: var(--p-space-3);
     }
   `,
 })

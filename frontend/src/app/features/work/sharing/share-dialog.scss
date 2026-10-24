@@ -2,33 +2,6 @@
   color: var(--signal);
   --icon-size: var(--icon-4xl);
 }
-.share-recipients {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-}
-// 已選收件者：頭像＋姓名的膠囊，整顆按下即移除。
-.share-recipient {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-1);
-  min-height: var(--button-target);
-  background: var(--surface);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-full);
-  --icon-size: var(--icon-sm);
-}
-.share-recipient:hover:not(:disabled) {
-  background: var(--hover);
-}
-.share-recipient .avatar {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-.share-recipient > nx-icon {
-  color: var(--secondary);
-}
 .share-created {
   text-align: center;
   padding: var(--p-space-5);

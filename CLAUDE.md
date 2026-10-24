@@ -27,6 +27,8 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |
 | 前端 UI、樣式 | `docs/frontend/ui-patterns.md`、`docs/frontend/design-system.md`、`docs/frontend/shapes.md`、`docs/frontend/lines.md`、`docs/frontend/materials.md` |
+| 表單、對話框欄位排版、選人 | `docs/frontend/forms.md` |
+| 共用元件、`/admin/design` 範例 | `docs/frontend/shared-components.md` |
 | 檔案庫、知識庫、專案、成果等列表／詳細頁 | `docs/frontend/resource-pages.md` |
 | 資料表、查詢與分頁（稽核、日誌、管理列表） | `docs/frontend/data-workspace.md` |
 | 載入骨架、重新讀取、送出中、下拉與搜尋的等待 | `docs/frontend/loading.md` |
@@ -94,4 +96,4 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | 文件 | `docs/<讀者>/` 下小寫 kebab-case.md；ADR 為 `docs/decisions/<四位編號>-kebab-case.md`；根目錄 `README.md`、`CLAUDE.md` 固定大寫 | `architecture/backend-conventions.md` |
 | commit | Conventional Commits，說明用繁體中文 | `perf(inference): 串流只寫入增量` |
 
-改 `docs/` 或任何 Markdown 時，另依 `.claude/rules/docs.md`。
+改 `docs/` 或任何 Markdown 時，另依 `.claude/rules/docs.md`；改前端畫面時，另依 `.claude/rules/frontend-ui.md`。

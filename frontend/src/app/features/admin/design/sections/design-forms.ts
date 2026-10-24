@@ -1,23 +1,60 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   signal,
   untracked,
   viewChild,
 } from '@angular/core';
+import type { DirectoryUserDto } from '@core/api/schema';
+import { nameInitial } from '@shared/browser/format';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { Field } from '@shared/ui/field';
+import { Icon } from '@shared/ui/icon';
 import { InlineTitle } from '@shared/ui/inline-title';
 import { KeyCombo } from '@shared/ui/key-combo';
 import { SearchField } from '@shared/ui/search-field';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
+import type { DirectorySearch } from '@features/work/collaboration/directory-search';
+import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 
-/** 文字欄位、搜尋、日期與原地編輯。 */
+/** 範例用的虛構同事；工作臺不呼叫目錄 API。 */
+const PEOPLE: DirectoryUserDto[] = [
+  { id: 'p1', account: 'lin.jy', displayName: '林佳穎' },
+  { id: 'p2', account: 'lin.jh', displayName: '林建宏' },
+  { id: 'p3', account: 'chen.yt', displayName: '陳雅婷' },
+  { id: 'p4', account: 'huang.lz', displayName: '黃林志' },
+];
+
+/** 以本機名單代替 `directorySearch`，排除 `chosen` 已選的人。 */
+function sampleDirectory(chosen: () => string[]): DirectorySearch {
+  const text = signal('');
+  const searchable = computed(() => text().trim().length >= 2);
+  return {
+    text,
+    searchable,
+    results: computed(() => {
+      const query = text().trim().toLowerCase();
+      if (!searchable()) return [];
+      return PEOPLE.filter(
+        (user) =>
+          !chosen().includes(user.id) &&
+          `${user.displayName} ${user.account}`.toLowerCase().includes(query),
+      );
+    }),
+    loading: signal(false),
+    error: signal(''),
+    find: (value) => text.set(value),
+    clear: () => text.set(''),
+  };
+}
+
+/** 文字欄位、搜尋、選人、表單段落、日期與原地編輯。 */
 @Component({
   selector: 'nx-design-forms',
   imports: [
@@ -25,7 +62,9 @@ import { DesignSamples } from './design-samples';
     DesignExample,
     DesignSection,
     Field,
+    Icon,
     InlineTitle,
+    PersonPicker,
     KeyCombo,
     SearchField,
     SettingGroup,
@@ -43,6 +82,13 @@ import { DesignSamples } from './design-samples';
     }
     nx-design-example > * {
       width: 100%;
+    }
+    .design-picker {
+      display: grid;
+      gap: var(--p-space-3);
+    }
+    .design-form {
+      width: min(100%, 36rem);
     }
     .design-settings {
       width: min(100%, 40rem);
@@ -100,6 +146,99 @@ import { DesignSamples } from './design-samples';
         </div>
         <p>{{ bareSearch() ? '搜尋：' + bareSearch() : '結果列在標題列下方。' }}</p>
       </div>
+    </nx-design-section>
+    <nx-design-section
+      id="design-person-picker"
+      title="人員選擇器"
+      api="PersonPicker · directorySearch · .form-chips"
+      description="輸入兩個字起搜尋，結果浮在欄位下方（↑↓ 移動、Enter 選取、Esc 收起）。查詢狀態由呼叫端的 directorySearch 管理，選取後要不要清空由呼叫端決定。可選多人時已選的排成膠囊；nameHint 讓沒有帳號的人只記姓名。試試輸入「林佳」或「lin」。"
+    >
+      <nx-design-example label="加入多人">
+        <div class="design-picker">
+          <nx-person-picker label="示範加入成員" [search]="team" (picked)="addMember($event)" />
+          @if (members().length) {
+            <div class="form-chips">
+              @for (user of members(); track user.id) {
+                <button
+                  type="button"
+                  class="form-chip"
+                  [attr.aria-label]="'移除示範成員 ' + user.displayName"
+                  (click)="removeMember(user.id)"
+                >
+                  <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span
+                  >{{ user.displayName }}<nx-icon name="close" />
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </nx-design-example>
+      <nx-design-example label="停用">
+        <nx-person-picker label="示範停用的選人" [search]="idle" [disabled]="true" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-form-sections"
+      title="表單段落"
+      api=".form-sections · .form-choice · .form-row"
+      description="兩組以上欄位的表單（設定頁、md 表單對話框）依填的人怎麼想分段：段落標題加最多一句說明，細線分隔，間距只靠共用 gap。選定單一對象後換成一列加「更換」；成對欄位並排；選填寫在標籤裡。範本是卡號的指派持有人對話框。"
+    >
+      <form class="design-form" novalidate (submit)="$event.preventDefault()">
+        <div class="form-sections">
+          <section class="form-section" role="group" aria-labelledby="design-form-holder">
+            <header class="form-section-head">
+              <h3 id="design-form-holder">持有人</h3>
+            </header>
+            <div class="form-section-body">
+              @if (holder(); as h) {
+                <div class="form-choice">
+                  <span class="avatar" [class.is-name]="!h.account" aria-hidden="true">{{
+                    initial(h.displayName)
+                  }}</span>
+                  <span class="form-choice-text"
+                    ><strong>{{ h.displayName }}</strong
+                    ><small>{{ h.account || '尚無帳號，只記姓名' }}</small></span
+                  >
+                  <button type="button" class="secondary-button" (click)="holder.set(null)">
+                    更換
+                  </button>
+                </div>
+              } @else {
+                <nx-person-picker
+                  label="示範尋找持有人"
+                  nameHint="尚無帳號時只記姓名，之後可再綁定帳號"
+                  [search]="holders"
+                  (picked)="chooseHolder($event)"
+                  (named)="chooseName($event)"
+                />
+              }
+            </div>
+          </section>
+          <section class="form-section" role="group" aria-labelledby="design-form-period">
+            <header class="form-section-head">
+              <h3 id="design-form-period">期間</h3>
+              <p class="form-note">台北時間；開始時間之後的紀錄才算這位持有人。</p>
+            </header>
+            <div class="form-section-body">
+              <div class="form-row">
+                <nx-date-time-picker
+                  label="開始時間"
+                  [value]="periodStart()"
+                  (valueChange)="periodStart.set($event)"
+                />
+                <nx-date-time-picker
+                  label="結束時間（留空＝持有中）"
+                  [required]="false"
+                  [min]="periodStart()"
+                  [value]="periodEnd()"
+                  (valueChange)="periodEnd.set($event)"
+                />
+              </div>
+              <label>備註（選填）<input nxField autocomplete="off" /></label>
+            </div>
+          </section>
+        </div>
+      </form>
     </nx-design-section>
     <nx-design-section
       id="design-dates"
@@ -203,6 +342,14 @@ import { DesignSamples } from './design-samples';
 })
 export class DesignForms {
   readonly samples = inject(DesignSamples);
+  protected readonly initial = nameInitial;
+  readonly members = signal<DirectoryUserDto[]>([PEOPLE[2]]);
+  readonly team = sampleDirectory(() => this.members().map((user) => user.id));
+  readonly idle = sampleDirectory(() => []);
+  readonly holder = signal<DirectoryUserDto | null>(null);
+  readonly holders = sampleDirectory(() => []);
+  readonly periodStart = signal('2026-10-08T09:00:00');
+  readonly periodEnd = signal('');
   private readonly title = viewChild.required(InlineTitle);
   readonly search = signal('');
   readonly bareSearch = signal('');
@@ -224,6 +371,20 @@ export class DesignForms {
   ];
   readonly theme = signal('system');
   readonly reduced = signal(false);
+  addMember(user: DirectoryUserDto) {
+    this.members.update((all) => [...all, user]);
+    this.team.clear();
+  }
+  removeMember(id: string) {
+    this.members.update((all) => all.filter((user) => user.id !== id));
+  }
+  chooseHolder(user: DirectoryUserDto) {
+    this.holder.set(user);
+    this.holders.clear();
+  }
+  chooseName(name: string) {
+    this.chooseHolder({ id: '', account: '', displayName: name });
+  }
   readonly saveTitle = async (value: string) => {
     this.samples.title.set(value);
     return true;
