@@ -1,22 +1,20 @@
-.cards-table table,
-.unattributed-table table {
+.cards-table table {
   table-layout: fixed;
-  min-width: 48rem;
+  min-width: 52rem;
 }
 .cards-number-column {
   width: 11rem;
 }
-.cards-kind-column {
-  width: 6.5rem;
-}
 .cards-time-column {
-  width: 11rem;
+  width: 10rem;
 }
-.cards-count-column {
-  width: 7rem;
+.cards-status-column {
+  width: 9.5rem;
 }
-.cards-action-column {
-  width: 5.5rem;
+.cards-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
 }
 .cards-number {
   font-family: var(--font-code);
@@ -70,6 +68,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--p-space-2);
+}
+// 在出勤紀錄顯示：與目前持有人同一種框，分隔線由框取代。
+.cards-visibility {
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
 }
 // 持有歷史是時間軸：圓點連成一條線，持有中的點用 signal 色。
 .cards-history {

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Office.Attendance.Leave;
@@ -131,7 +130,7 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task TheRosterIsEmployeeCardHoldersOnTheDaysTheyHoldACard()
+    public async Task TheRosterIsCardHoldersOnTheDaysTheyHoldACard()
     {
         await using var session = Create();
         var hr = await session.PersonAsync("hr");
@@ -141,13 +140,14 @@ public sealed class ListAttendanceRecordsTests
         await session.GrantAsync(hr, DataScopes.All);
         await session.HoldAsync(bob, "A1", startsAt: At(20, 10));
         await session.HoldAsync(dave, "A2", endsAt: At(20, 0));
-        await session.HoldAsync(carol, "V1", kind: CardKinds.Visitor);
+        await session.HoldAsync(carol, "V1");
+        await session.HideAsync("V1");
         await session.HoldAsync(null, "A3");
         using var client = await session.Factory.SignedInAsync("hr");
 
         var people = (await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People;
 
-        // 到職當天從持有那一刻起算整天都列出；離職（持有結束）後的日子不列，不判成沒刷卡。訪客卡不在名單。
+        // 到職當天從持有那一刻起算整天都列出；離職（持有結束）後的日子不列，不判成沒刷卡。隱藏的卡（例如訪客卡）不在名單。
         Assert.Equal(new[] { bob, dave }.Order(), await PeopleAsync(client, "from=2026-10-19&to=2026-10-21"));
         Assert.Equal([20, 21], Assert.Single(people, x => x.UserId == bob).Days.Select(x => x.Date.Day));
         Assert.Equal([19], Assert.Single(people, x => x.UserId == dave).Days.Select(x => x.Date.Day));
@@ -176,7 +176,7 @@ public sealed class ListAttendanceRecordsTests
         var all = await GetAsync(hrClient);
         Assert.Equal([("新進同仁", "A2"), ("新進同仁", "A3")], all.People.Where(x => x.UserId is null).Select(x => (x.DisplayName, x.CardNumber!)));
         var person = Assert.Single((await GetAsync(hrClient, Week + "&card=%20A2%20")).People);
-        Assert.Equal((null, "A2", "新進同仁", false), (person.UserId, person.CardNumber, person.DisplayName, person.Unattributed));
+        Assert.Equal((null, "A2", "新進同仁", false), (person.UserId, person.CardNumber, person.DisplayName, person.Hidden));
         Assert.Equal((At(19, 8, 40), At(19, 18, 30)), (Day(person, 19).ClockIn, Day(person, 19).ClockOut));
         Assert.Equal([new DateOnly(2026, 10, 19)], person.Days.Select(x => x.Date));
         // 沒有假單可比對，沒刷卡的日子不判異常。
@@ -189,66 +189,39 @@ public sealed class ListAttendanceRecordsTests
         Assert.DoesNotContain((await GetAsync(bobClient)).People, x => x.UserId is null);
         Assert.Empty((await GetAsync(bobClient, Week + "&card=A2")).People);
 
-        // 依卡號標為不列入出勤：只隱藏那張卡，同名的另一張卡照常列出。
-        await session.ExcludeCardAsync("A2");
+        // 隱藏卡號：只略過那張卡，同名的另一張卡照常列出；指定卡號時照常出現並標為隱藏。
+        await session.HideAsync("A2");
         Assert.Equal(["A3"], (await GetAsync(hrClient)).People.Where(x => x.UserId is null).Select(x => x.CardNumber!));
-        Assert.True(Assert.Single((await GetAsync(hrClient, Week + "&card=A2")).People).Excluded);
+        Assert.True(Assert.Single((await GetAsync(hrClient, Week + "&card=A2")).People).Hidden);
 
         // 人員選單與名單同一套範圍，不限期間；沒有帳號的資料以卡號為選項。
         var options = await OptionsAsync(hrClient);
-        Assert.Contains(options, x => x is { UserId: null, CardNumber: "A2", DisplayName: "新進同仁", Holding: false, Excluded: true, Unattributed: false });
+        Assert.Contains(options, x => x is { UserId: null, CardNumber: "A2", DisplayName: "新進同仁", Holding: false, Hidden: true });
         Assert.Contains(options, x => x is { UserId: null, CardNumber: "A3", Holding: true });
         Assert.Contains(options, x => x.UserId == bob && x.Account is not null && x.Holding);
         Assert.Equal(new Guid?[] { bob }, (await OptionsAsync(bobClient)).Select(x => x.UserId));
     }
 
     [Fact]
-    public async Task UnattributedCardsAreListedOnlyWhenAskedForAndOnlyOnDaysWithPunches()
+    public async Task PunchesNoPeriodCoversAreNotOnTheRoster()
     {
         await using var session = Create();
         var hr = await session.PersonAsync("hr");
         var bob = await session.PersonAsync("bob");
         await session.GrantAsync(hr, DataScopes.All);
         await session.HoldAsync(bob, "A1");
-        // A2 從 20 日起才有姓名持有人：19 日的刷卡未歸戶，與持有人是不同列。Z9 從沒登錄。
+        // A2 從 20 日起才有姓名持有人：19 日的刷卡沒有持有人。Z9 從沒指派。
         await session.HoldAsync(null, "A2", startsAt: At(20, 0));
         await session.PunchAsync("A2", At(19, 9, 0), At(19, 18, 0), At(20, 8, 50));
-        await session.PunchAsync("Z9", At(19, 9, 10, 30), At(19, 19, 0), At(21, 12, 0));
+        await session.PunchAsync("Z9", At(19, 9, 10), At(21, 12, 0));
         using var hrClient = await session.Factory.SignedInAsync("hr");
-        using var bobClient = await session.Factory.SignedInAsync("bob");
 
-        Assert.DoesNotContain((await GetAsync(hrClient)).People, x => x.Unattributed);
-        var listed = await GetAsync(hrClient, Week + "&includeUnattributed=true");
-        Assert.Equal(
-            [(bob, null, false), (null, "A2", false), (null, "A2", true), (null, "Z9", true)],
-            listed.People.Select(x => (x.UserId, x.CardNumber, x.Unattributed)));
-        Assert.Equal(4, listed.Total);
-        var z9 = listed.People[^1];
-        Assert.Equal(("卡號 Z9", false, false), (z9.DisplayName, z9.LeaveAvailable, z9.Excluded));
-        // 沒有持有人就無從判斷缺勤：只列有刷卡的日子，刷卡照常判定遲到。
-        Assert.Equal([19, 21], z9.Days.Select(x => x.Date.Day));
-        Assert.True(Day(z9, 19).LateSeconds > 0);
-        Assert.Equal([19], listed.People[2].Days.Select(x => x.Date.Day));
+        // 沒有持有人的刷卡不屬於任何人，在卡號對應頁以「待指派」處理，不在出勤名單。
+        var listed = await GetAsync(hrClient);
+        Assert.Equal([(bob, null), (null, "A2")], listed.People.Select(x => (x.UserId, x.CardNumber)));
         Assert.Equal([20, 21, 22], listed.People[1].Days.Select(x => x.Date.Day));
-
-        // 指定卡號時一律列出該卡沒有帳號的資料；分頁只查這一頁的卡。
-        Assert.Equal([false, true], (await GetAsync(hrClient, Week + "&card=A2")).People.Select(x => x.Unattributed));
-        var page = await GetAsync(hrClient, Week + "&includeUnattributed=true&offset=3&limit=1");
-        Assert.Equal([19, 21], Assert.Single(page.People).Days.Select(x => x.Date.Day));
-
-        // 依卡號不列入出勤時，未歸戶刷卡也一起隱藏；指定或要求含不列入時照常出現。
-        await session.ExcludeCardAsync("Z9");
-        Assert.DoesNotContain((await GetAsync(hrClient, Week + "&includeUnattributed=true")).People, x => x.CardNumber == "Z9");
-        Assert.True(Assert.Single((await GetAsync(hrClient, Week + "&card=Z9")).People).Excluded);
-        Assert.Contains((await GetAsync(hrClient, Week + "&includeUnattributed=true&includeExcluded=true")).People, x => x.CardNumber == "Z9");
-
-        // 只有全公司範圍看得到，指定使用者時也不列。
-        Assert.DoesNotContain((await GetAsync(bobClient, Week + "&includeUnattributed=true")).People, x => x.UserId is null);
-        Assert.DoesNotContain((await GetAsync(hrClient, Week + $"&includeUnattributed=true&userId={bob}")).People, x => x.UserId is null);
-
-        var options = await OptionsAsync(hrClient);
-        Assert.Contains(options, x => x is { CardNumber: "Z9", DisplayName: "卡號 Z9", Unattributed: true, Holding: false, Excluded: true });
-        Assert.Single(options, x => x.CardNumber == "A2" && x.DisplayName == "新進同仁" && !x.Unattributed);
+        Assert.Empty((await GetAsync(hrClient, Week + "&card=Z9")).People);
+        Assert.DoesNotContain(await OptionsAsync(hrClient), x => x.CardNumber == "Z9");
     }
 
     [Fact]
@@ -309,7 +282,7 @@ public sealed class ListAttendanceRecordsTests
         => (await client.GetFromJsonAsync<AttendancePersonOptionDto[]>(Records + "/people"))!;
 
     [Fact]
-    public async Task ExcludedPeopleAreHiddenOnlyFromTheCompanyWideView()
+    public async Task HiddenCardsAreSkippedOnlyInTheCompanyWideView()
     {
         await using var session = Create();
         var hr = await session.PersonAsync("hr");
@@ -317,16 +290,16 @@ public sealed class ListAttendanceRecordsTests
         var carol = await session.PersonAsync("carol");
         await session.HoldAsync(bob, "A1");
         await session.HoldAsync(carol, "A2");
-        await session.ExcludeAsync(carol);
+        await session.HideAsync("A2");
         await session.GrantAsync(hr, DataScopes.All);
         using var hrClient = await session.Factory.SignedInAsync("hr");
         using var carolClient = await session.Factory.SignedInAsync("carol");
 
         Assert.Equal([bob], await PeopleAsync(hrClient));
-        var all = await GetAsync(hrClient, Week + "&includeExcluded=true");
-        Assert.Equal(new[] { bob, carol }.Order(), await PeopleAsync(hrClient, Week + "&includeExcluded=true"));
-        Assert.True(Assert.Single(all.People, x => x.UserId == carol).Excluded);
-        Assert.Equal([carol], await PeopleAsync(hrClient, Week + $"&userId={carol}"));
+        // 指定人時照常列出並標為隱藏，人員選單也找得到。
+        var named = Assert.Single((await GetAsync(hrClient, Week + $"&userId={carol}")).People);
+        Assert.Equal((carol, true, 4), (named.UserId!.Value, named.Hidden, named.Days.Count));
+        Assert.Contains(await OptionsAsync(hrClient), x => x.UserId == carol && x.Hidden);
         // 不是隱私控制：本人照樣看得到自己。
         Assert.Equal([carol], await PeopleAsync(carolClient));
     }

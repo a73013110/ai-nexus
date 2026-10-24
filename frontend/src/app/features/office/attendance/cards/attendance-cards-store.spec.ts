@@ -25,14 +25,17 @@ const held: CardAssignmentDto = {
 const card: CardDto = {
   id: 'c1',
   cardNumber: '0012345',
-  kind: 'employee',
+  hiddenFromRecords: false,
   note: null,
   createdAt: '2026-01-01T00:00:00Z',
   current: held,
+  lastPunchedAt: null,
+  unattributedCount: 0,
+  firstUnattributedAt: null,
+  lastUnattributedAt: null,
 };
 const request: AssignRequest = {
   cardId: 'c1',
-  cardNumber: '0012345',
   userId: null,
   holderName: '新進同仁',
   startsAt: '2026-10-01T00:00:00.000Z',
@@ -53,9 +56,8 @@ function setup({ maintain = true, testing = false } = {}) {
   });
   const api = {
     cards: vi.fn(async () => [card]),
-    unattributed: vi.fn(async () => []),
     assignments: vi.fn(async () => [held]),
-    createCard: vi.fn(async () => ({ ...card, id: 'c9', cardNumber: '0099999', current: null })),
+    updateCard: vi.fn(async () => undefined),
     createAssignment: vi.fn(async (body: CardAssignmentCreateRequest) => {
       if (!body.takeOver && body.cardId === 'c1')
         throw new ApiError(409, 'attendance_card_held', undefined, 'NX-' + '0'.repeat(32));
@@ -84,7 +86,7 @@ function setup({ maintain = true, testing = false } = {}) {
     ],
   });
   const store = TestBed.inject(AttendanceCardsStore);
-  store.filters.set({ search: '', kind: '' });
+  store.filters.set({ search: '', status: '' });
   const settle = () => TestBed.inject(ApplicationRef).whenStable();
   return { store, api, toast, settle };
 }
@@ -120,22 +122,21 @@ describe('AttendanceCardsStore', () => {
     expect(store.busy()).toBe(false);
   });
 
-  it('registers an unknown card number as an employee card before assigning it', async () => {
-    const { store, api, settle } = setup();
+  it('saves the hidden flag with the current note and spins only the switch', async () => {
+    const { store, api, toast, settle } = setup();
     await settle();
-    const confirm = vi.fn(async () => true);
-    const outcome = await store.assign(
-      { ...request, cardId: null, cardNumber: '0099999' },
-      confirm,
-    );
-    expect(api.createCard).toHaveBeenCalledWith({
-      cardNumber: '0099999',
-      kind: 'employee',
-      note: null,
+    const saving = store.setHidden({ ...card, note: '訪客' }, true);
+    expect(store.working()).toBe('hidden:c1');
+    expect((await saving).saved).toBe(true);
+    expect(api.updateCard).toHaveBeenCalledWith('c1', { hiddenFromRecords: true, note: '訪客' });
+    expect(toast.success).toHaveBeenCalledWith('卡號 0012345 已在出勤紀錄隱藏');
+    expect(store.working()).toBe('');
+    // 改備註時隱藏旗標照舊送回。
+    await store.saveNote({ ...card, hiddenFromRecords: true }, '董事');
+    expect(api.updateCard).toHaveBeenLastCalledWith('c1', {
+      hiddenFromRecords: true,
+      note: '董事',
     });
-    expect(api.createAssignment.mock.calls[0][0]).toMatchObject({ cardId: 'c9', takeOver: false });
-    expect(confirm).not.toHaveBeenCalled();
-    expect(outcome.saved).toBe(true);
   });
 
   it('turns other refusals into a reviewed message and never writes under a test identity', async () => {

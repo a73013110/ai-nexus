@@ -41,7 +41,7 @@ export interface AssignmentDraft {
 interface Editor {
   /** 修改既有期間時的 ID；新增時為 null。 */
   id: string | null;
-  cardId: string | null;
+  cardId: string;
   cardNumber: string;
   title: string;
   /** 「結束持有」：以修改送出，提示文字不同。 */
@@ -103,9 +103,6 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
           <div class="dialog-body">
             @if (error()) {
               <nx-notice tone="danger" [message]="error()" />
-            }
-            @if (!e.cardId) {
-              <nx-notice tone="info" message="這個卡號尚未登錄，儲存時會先登錄為員工卡再指派。" />
             }
             <div class="form-sections">
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-holder'">
@@ -286,12 +283,13 @@ export class AssignmentDialog {
   });
 
   /**
-   * 新增；未歸戶卡號帶入第一筆未歸戶刷卡當起始時間，之後的刷卡才會全部歸戶。
-   * `holder` 是卡片目前的持有人，有值時就是轉給其他人。
+   * 新增；`holder` 是卡片目前的持有人，有值時就是轉給其他人。
+   * 補指派待指派的刷卡時帶入第一筆沒有持有人的刷卡當開始、下一段期間的開始當結束，期間才不會與既有的重疊。
    */
   create(
-    card: { id: string | null; cardNumber: string; holder?: string | null },
+    card: { id: string; cardNumber: string; holder?: string | null },
     startsAt?: string,
+    endsAt?: string | null,
   ) {
     this.show({
       id: null,
@@ -304,7 +302,7 @@ export class AssignmentDialog {
         user: null,
         holderName: '',
         startsAt: wall(startsAt ?? new Date().toISOString()),
-        endsAt: '',
+        endsAt: wall(endsAt),
         note: '',
       },
     });
@@ -420,16 +418,14 @@ export class AssignmentDialog {
           body,
           editor.ending ? '已結束持有' : '已儲存持有期間',
         )
-      : await this.store.assign(
-          { ...body, cardId: editor.cardId, cardNumber: editor.cardNumber },
-          (holder) =>
-            holder === editor.transferFrom
-              ? Promise.resolve(true)
-              : this.confirmation().ask({
-                  title: '由新持有人接手？',
-                  message: `卡號 ${editor.cardNumber} 在開始時間仍由 ${holder} 持有。接手後，${holder} 的持有期間會在新期間開始時結束。`,
-                  confirm: '接手',
-                }),
+      : await this.store.assign({ ...body, cardId: editor.cardId }, (holder) =>
+          holder === editor.transferFrom
+            ? Promise.resolve(true)
+            : this.confirmation().ask({
+                title: '由新持有人接手？',
+                message: `卡號 ${editor.cardNumber} 在開始時間仍由 ${holder} 持有。接手後，${holder} 的持有期間會在新期間開始時結束。`,
+                confirm: '接手',
+              }),
         );
     if (!outcome.saved) {
       this.error.set(outcome.error);

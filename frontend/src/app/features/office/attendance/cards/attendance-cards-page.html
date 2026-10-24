@@ -1,11 +1,11 @@
 <nx-feature-page
   [title]="session.featureName('attendance.cards')"
-  description="登錄打卡卡號並指派持有人；刷卡依持有期間歸戶到人。"
+  description="指派打卡卡號的持有人；刷卡依持有期間歸戶到人。打卡檔出現的新卡號會自動列入待指派。"
   density="compact"
   layoutMode="data"
   [tour]="tour()"
 >
-  @if (store.canMaintain() && query.applied().view !== 'exclusions') {
+  @if (store.canMaintain()) {
     <button
       page-actions
       type="button"
@@ -14,247 +14,145 @@
       [title]="session.testing() ? session.testingNote() : ''"
       (click)="createCard()"
     >
-      <nx-icon name="plus" />登錄卡片
+      <nx-icon name="plus" />新增卡號
     </button>
   }
-  <!-- 頁內分頁與該分頁的說明同一列，間距交給 page-toolbar。 -->
-  <div class="page-toolbar">
+  <nx-query-bar label="卡號查詢條件" [state]="query" [busy]="store.cardsRefreshing()">
     <nx-view-switch
-      class="cards-view"
-      label="卡號集合"
-      appearance="segment"
-      [options]="views"
-      [value]="query.applied().view"
-      (valueChange)="query.commit({ view: $any($event) })"
+      query-lead
+      class="cards-status"
+      label="卡片狀態"
+      [options]="statuses"
+      [value]="query.applied().status"
+      (valueChange)="query.commit({ status: $any($event) })"
     />
-    @if (query.applied().view === 'unattributed') {
-      <p class="form-note cards-unattributed-note">
-        員工卡上沒有持有期間涵蓋的刷卡，依卡號彙總；指派時開始時間預設為第一筆未歸戶刷卡。
-      </p>
-    } @else if (query.applied().view === 'exclusions') {
-      <p class="form-note cards-exclusions-note">
-        HR 看全公司出勤時不列出這些人；本人與主管照常看得到。
-      </p>
-    }
-  </div>
-  @if (query.applied().view === 'cards') {
-    <nx-query-bar label="卡片查詢條件" [state]="query" [busy]="store.cardsRefreshing()">
-      <label class="ui-field ui-query-wide"
-        >搜尋<input
-          nxField
-          type="search"
-          autocomplete="off"
-          placeholder="卡號、備註或持有人姓名"
-          [attr.maxlength]="searchMax"
-          [value]="draft().search"
-          (input)="query.set('search', $any($event.target).value)"
-      /></label>
-      <div class="ui-field">
-        <span aria-hidden="true">種類</span>
-        <nx-select
-          label="卡片種類"
-          placeholder="全部種類"
-          [options]="kindOptions"
-          [value]="draft().kind"
-          (valueChange)="query.set('kind', $event)"
-        />
-      </div>
-    </nx-query-bar>
-    @if (store.cardsError() && store.cardsLoaded()) {
-      <nx-notice tone="danger" [message]="store.cardsError()"
-        ><button
-          nxPending
-          notice-actions
-          type="button"
-          class="secondary-button"
-          [pending]="store.cardsRefreshing()"
-          (click)="store.reloadCards()"
-        >
-          {{ store.cardsRefreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
+    <label class="ui-field ui-query-wide"
+      >搜尋<input
+        nxField
+        type="search"
+        autocomplete="off"
+        placeholder="卡號、備註或持有人姓名"
+        [attr.maxlength]="searchMax"
+        [value]="draft().search"
+        (input)="query.set('search', $any($event.target).value)"
+    /></label>
+  </nx-query-bar>
+  @if (store.cardsError() && store.cardsLoaded()) {
+    <nx-notice tone="danger" [message]="store.cardsError()"
+      ><button
+        nxPending
+        notice-actions
+        type="button"
+        class="secondary-button"
+        [pending]="store.cardsRefreshing()"
+        (click)="store.reloadCards()"
       >
-    }
-    <nx-data-table
-      class="cards-table"
-      label="卡片列表"
-      [busy]="store.cardsRefreshing()"
-      [columns]="cardColumns"
-      [stacked]="true"
-      preferenceKey="office-attendance-cards"
+        {{ store.cardsRefreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
     >
-      <div table-toolbar class="ui-table-toolbar">
-        <h2>
-          卡片
-          @if (store.cardsLoaded()) {
-            <span class="ui-count-label">{{ rows().length }} 張</span>
-          }
-        </h2>
-      </div>
-      <table>
-        <caption class="sr-only">
-          打卡卡片，依卡號排序。
-        </caption>
-        <colgroup>
-          <col nxTableColumn="number" class="cards-number-column" />
-          <col nxTableColumn="kind" class="cards-kind-column" />
-          <col nxTableColumn="holder" />
-          <col nxTableColumn="since" class="cards-time-column" />
-          <col nxTableColumn="note" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" nxTableColumn="number">卡號</th>
-            <th scope="col" nxTableColumn="kind">種類</th>
-            <th scope="col" nxTableColumn="holder">目前持有人</th>
-            <th scope="col" nxTableColumn="since">持有起</th>
-            <th scope="col" nxTableColumn="note">備註</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.card.id) {
-            <tr
-              nxTableRow
-              [class.is-selected]="store.selectedId() === row.card.id"
-              (rowActivate)="open(row.card)"
-            >
-              <td nxTableColumn="number">
-                <button
-                  type="button"
-                  class="ui-table-link ui-truncate cards-number"
-                  data-row-action
-                  aria-haspopup="dialog"
-                  [attr.aria-label]="'檢視卡號 ' + row.card.cardNumber"
-                  [attr.aria-controls]="drawer()?.id"
-                  [attr.aria-expanded]="store.selectedId() === row.card.id"
-                  (click)="open(row.card)"
-                >
-                  {{ row.card.cardNumber }}
-                </button>
-              </td>
-              <td nxTableColumn="kind" data-label="種類">
-                <nx-status-badge [tone]="row.card.kind === 'visitor' ? 'neutral' : 'info'">{{
-                  row.kind
-                }}</nx-status-badge>
-              </td>
-              <td nxTableColumn="holder" data-label="持有人">
-                @if (row.holder) {
-                  <span class="ui-truncate" [title]="row.holder">{{ row.holder }}</span>
-                } @else {
-                  <span class="form-note">無人持有</span>
-                }
-              </td>
-              <td nxTableColumn="since" data-label="持有起">{{ row.since || '—' }}</td>
-              <td nxTableColumn="note" data-label="備註">
-                <span class="ui-truncate" [title]="row.card.note ?? ''">{{
-                  row.card.note || '—'
-                }}</span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-      <nx-table-state
-        [count]="rows().length"
-        [loading]="store.cardsLoading()"
-        [error]="store.cardsLoaded() ? '' : store.cardsError()"
-        loadingText="正在載入卡片…"
-        errorTitle="無法取得卡片"
-        emptyTitle="沒有符合條件的卡片"
-        emptyText="移除部分條件，或從「未歸戶卡號」登錄打卡機出現過的卡號。"
-        (retry)="store.reloadCards()"
-      />
-    </nx-data-table>
-  } @else if (query.applied().view === 'exclusions') {
-    <nx-roster-exclusions class="ui-table-fill" />
-  } @else {
-    <nx-data-table
-      class="unattributed-table"
-      label="未歸戶卡號"
-      [busy]="store.unattributedRefreshing()"
-      [columns]="unattributedColumns"
-      [stacked]="true"
-      preferenceKey="office-attendance-unattributed"
-    >
-      <div table-toolbar class="ui-table-toolbar">
-        <h2>
-          未歸戶卡號
-          @if (!store.unattributedLoading()) {
-            <span class="ui-count-label">{{ unattributedRows().length }} 個</span>
-          }
-        </h2>
-      </div>
-      <table>
-        <caption class="sr-only">
-          未歸戶卡號，最近有刷卡的排最前面。
-        </caption>
-        <colgroup>
-          <col nxTableColumn="number" class="cards-number-column" />
-          <col nxTableColumn="count" class="cards-count-column" />
-          <col nxTableColumn="first" class="cards-time-column" />
-          <col nxTableColumn="last" class="cards-time-column" />
-          <col nxTableColumn="registered" class="cards-kind-column" />
-          @if (store.canMaintain()) {
-            <col class="cards-action-column" />
-          }
-        </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" nxTableColumn="number">卡號</th>
-            <th scope="col" nxTableColumn="count" class="ui-table-numeric">未歸戶刷卡</th>
-            <th scope="col" nxTableColumn="first">第一筆</th>
-            <th scope="col" nxTableColumn="last">最後一筆</th>
-            <th scope="col" nxTableColumn="registered">登錄</th>
-            @if (store.canMaintain()) {
-              <th scope="col"><span class="sr-only">動作</span></th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of unattributedRows(); track row.item.cardNumber) {
-            <tr>
-              <th scope="row" nxTableColumn="number" class="cards-number">
-                {{ row.item.cardNumber }}
-              </th>
-              <td nxTableColumn="count" class="ui-table-numeric" data-label="未歸戶刷卡">
-                {{ row.item.punchCount }} 筆
-              </td>
-              <td nxTableColumn="first" data-label="第一筆">{{ row.first }}</td>
-              <td nxTableColumn="last" data-label="最後一筆">{{ row.last }}</td>
-              <td nxTableColumn="registered" data-label="登錄">
-                <nx-status-badge [tone]="row.item.cardId ? 'info' : 'warning'">{{
-                  row.item.cardId ? '已登錄' : '未登錄'
-                }}</nx-status-badge>
-              </td>
-              @if (store.canMaintain()) {
-                <td data-stack="end">
-                  <button
-                    type="button"
-                    class="secondary-button cards-assign-unattributed"
-                    [disabled]="store.locked()"
-                    [title]="session.testing() ? session.testingNote() : ''"
-                    [attr.aria-label]="'指派卡號 ' + row.item.cardNumber"
-                    (click)="assignUnattributed(row.item)"
-                  >
-                    指派
-                  </button>
-                </td>
-              }
-            </tr>
-          }
-        </tbody>
-      </table>
-      <nx-table-state
-        [count]="unattributedRows().length"
-        [loading]="store.unattributedLoading()"
-        [error]="store.unattributedError()"
-        loadingText="正在載入未歸戶卡號…"
-        errorTitle="無法取得未歸戶卡號"
-        emptyTitle="沒有未歸戶的刷卡"
-        emptyText="所有員工卡的刷卡都已歸戶到持有人。"
-        (retry)="store.reloadUnattributed()"
-      />
-    </nx-data-table>
   }
+  <nx-data-table
+    class="cards-table"
+    label="卡號列表"
+    [busy]="store.cardsRefreshing()"
+    [columns]="columns"
+    [stacked]="true"
+    preferenceKey="office-attendance-cards"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        卡號
+        @if (store.cardsLoaded()) {
+          <span class="ui-count-label">{{ rows().length }} 張</span>
+        }
+      </h2>
+    </div>
+    <table>
+      <caption class="sr-only">
+        打卡卡號；待指派依最近一筆沒有持有人的刷卡排序，其餘依卡號排序。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="number" class="cards-number-column" />
+        <col nxTableColumn="holder" />
+        <col nxTableColumn="since" class="cards-time-column" />
+        <col nxTableColumn="punched" class="cards-time-column" />
+        <col nxTableColumn="status" class="cards-status-column" />
+        <col nxTableColumn="note" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col" nxTableColumn="number">卡號</th>
+          <th scope="col" nxTableColumn="holder">目前持有人</th>
+          <th scope="col" nxTableColumn="since">持有起</th>
+          <th scope="col" nxTableColumn="punched">最後刷卡</th>
+          <th scope="col" nxTableColumn="status">狀態</th>
+          <th scope="col" nxTableColumn="note">備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.card.id) {
+          <tr
+            nxTableRow
+            [class.is-selected]="store.selectedId() === row.card.id"
+            (rowActivate)="open(row.card)"
+          >
+            <td nxTableColumn="number">
+              <button
+                type="button"
+                class="ui-table-link ui-truncate cards-number"
+                data-row-action
+                aria-haspopup="dialog"
+                [attr.aria-label]="'檢視卡號 ' + row.card.cardNumber"
+                [attr.aria-controls]="drawer()?.id"
+                [attr.aria-expanded]="store.selectedId() === row.card.id"
+                (click)="open(row.card)"
+              >
+                {{ row.card.cardNumber }}
+              </button>
+            </td>
+            <td nxTableColumn="holder" data-label="持有人">
+              @if (row.holder) {
+                <span class="ui-truncate" [title]="row.holder">{{ row.holder }}</span>
+              } @else {
+                <span class="form-note">無人持有</span>
+              }
+            </td>
+            <td nxTableColumn="since" data-label="持有起">{{ row.since || '—' }}</td>
+            <td nxTableColumn="punched" data-label="最後刷卡">{{ row.punched || '—' }}</td>
+            <td nxTableColumn="status" data-label="狀態">
+              @if (row.pending || row.card.hiddenFromRecords) {
+                <span class="cards-badges">
+                  @if (row.pending) {
+                    <nx-status-badge tone="warning">待指派 {{ row.pending }} 筆</nx-status-badge>
+                  }
+                  @if (row.card.hiddenFromRecords) {
+                    <nx-status-badge tone="neutral">隱藏</nx-status-badge>
+                  }
+                </span>
+              } @else {
+                —
+              }
+            </td>
+            <td nxTableColumn="note" data-label="備註">
+              <span class="ui-truncate" [title]="row.card.note ?? ''">{{
+                row.card.note || '—'
+              }}</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      [count]="rows().length"
+      [loading]="store.cardsLoading()"
+      [error]="store.cardsLoaded() ? '' : store.cardsError()"
+      loadingText="正在載入卡號…"
+      errorTitle="無法取得卡號"
+      emptyTitle="沒有符合條件的卡號"
+      [emptyText]="emptyText()"
+      (retry)="store.reloadCards()"
+    />
+  </nx-data-table>
 </nx-feature-page>
 <nx-detail-drawer title="卡片詳情" [tour]="drawerTour()" (closed)="closed()">
   @if (store.canMaintain() && store.selected(); as card) {
@@ -268,11 +166,11 @@
   }
   <div drawer-summary class="ui-drawer-summary">
     @if (store.selected(); as card) {
-      <div>
-        <nx-status-badge [tone]="card.kind === 'visitor' ? 'neutral' : 'info'">{{
-          card.kind === 'visitor' ? '訪客卡' : '員工卡'
-        }}</nx-status-badge>
-      </div>
+      @if (card.hiddenFromRecords) {
+        <div>
+          <nx-status-badge tone="neutral">在出勤紀錄隱藏</nx-status-badge>
+        </div>
+      }
       <h3 class="cards-number">{{ card.cardNumber }}</h3>
       @if (card.note) {
         <span class="ui-drawer-subtitle">{{ card.note }}</span>
@@ -311,11 +209,9 @@
             </div>
           </div>
         } @else {
-          <p class="cards-holder-empty">
-            {{ card.kind === 'visitor' ? '訪客卡不歸戶，不指派持有人。' : '目前無人持有' }}
-          </p>
+          <p class="cards-holder-empty">目前無人持有</p>
         }
-        @if (store.canMaintain() && card.kind !== 'visitor') {
+        @if (store.canMaintain()) {
           <div class="cards-actions">
             <button
               type="button"
@@ -341,6 +237,35 @@
           </div>
         }
       </div>
+      @if (pending(); as gap) {
+        <nx-notice
+          class="cards-pending"
+          tone="warning"
+          [message]="gap.count + ' 筆刷卡沒有持有人（' + gap.span + '），不會出現在出勤紀錄。'"
+        >
+          @if (store.canMaintain()) {
+            <button
+              notice-actions
+              type="button"
+              class="secondary-button cards-assign-pending"
+              [disabled]="store.locked() || store.assignments() === null"
+              [title]="session.testing() ? session.testingNote() : ''"
+              (click)="assignPending(card)"
+            >
+              補指派
+            </button>
+          }
+        </nx-notice>
+      }
+      <nx-setting-row
+        class="cards-visibility"
+        label="在出勤紀錄顯示"
+        description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
+        [checked]="!card.hiddenFromRecords"
+        [disabled]="!store.canMaintain() || session.testing()"
+        [pending]="store.working() === 'hidden:' + card.id"
+        (checkedChange)="setVisible(card, $event)"
+      />
       <h3 class="ui-section-heading">
         持有歷史
         @if (history().length) {

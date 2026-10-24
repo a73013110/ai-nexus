@@ -48,13 +48,6 @@ export const LEAVE_SHEET_KIND: Record<LeaveSheetKind, string> = {
   Travel: '出差單',
 };
 
-export const CARD_KINDS = [
-  { value: 'employee', label: '員工卡' },
-  { value: 'visitor', label: '訪客卡' },
-];
-export const cardKindLabel = (kind: string) =>
-  CARD_KINDS.find((item) => item.value === kind)?.label ?? kind;
-
 export const IMPORT_STATUS: Record<string, Presented> = {
   succeeded: { label: '成功', tone: 'success' },
   failed: { label: '失敗', tone: 'danger' },

@@ -97,17 +97,15 @@ public sealed class ExportAttendanceRecordsTests
         var hr = await session.PersonAsync("hr");
         await session.GrantAsync(hr, DataScopes.All);
         await session.HoldAsync(null, "A2");
-        await session.PunchAsync("Z9", At(19, 9, 0), At(19, 18, 0));
+        await session.PunchAsync("A2", At(19, 9, 0), At(19, 18, 0));
         using var client = await session.Factory.SignedInAsync("hr");
 
-        // 未歸戶卡號預設不匯出；要求時排在最後，「帳號或卡號」欄寫卡號。
-        Assert.Equal(["新進同仁"], await PeopleAsync(client, Week));
-        var response = await client.GetAsync($"{Export}?{Week}&includeUnattributed=true");
+        // 只有姓名的持有人：「帳號或卡號」欄寫卡號，統計註明假單無法取得。
+        var response = await client.GetAsync($"{Export}?{Week}");
         using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
         var rows = Rows(workbook, "出勤紀錄").Skip(1).ToList();
-        Assert.Equal([("新進同仁", "A2"), ("卡號 Z9", "Z9")], rows.Select(x => (x[0].Text, x[1].Text)).Distinct());
-        Assert.Contains(Rows(workbook, "統計"), x => x[0].Text == "卡號 Z9" && x[^1].Text.Contains("未歸戶卡號"));
-        Assert.Contains("\"includeUnattributed\":true", (await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"))[^1].Details);
+        Assert.Equal([("新進同仁", "A2")], rows.Select(x => (x[0].Text, x[1].Text)).Distinct());
+        Assert.Contains(Rows(workbook, "統計"), x => x[0].Text == "新進同仁" && x[^1].Text.Contains("尚未綁帳號"));
     }
 
     [Fact]

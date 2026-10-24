@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Office.Attendance.Cards;
 using Microsoft.EntityFrameworkCore;
@@ -27,9 +26,8 @@ public sealed class AttendanceCardsAccessTests
         {
             await member.GetAsync(Cards),
             await member.GetAsync($"{Assignments}?cardId={session.Card.Id}"),
-            await member.GetAsync(Unattributed),
-            await member.PostAsJsonAsync(Cards, new CardRequest("X1", CardKinds.Employee, null)),
-            await member.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardRequest("X1", CardKinds.Employee, null)),
+            await member.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)),
+            await member.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null)),
             await member.DeleteAsync($"{Cards}/{session.Card.Id}"),
             await AssignAsync(member, session.Card.Id, session.Bob, At(10, 1)),
             await member.PutAsJsonAsync($"{Assignments}/{any}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), null, null)),
@@ -49,12 +47,11 @@ public sealed class AttendanceCardsAccessTests
 
         Assert.Single((await viewer.GetFromJsonAsync<CardDto[]>(Cards))!);
         Assert.Single(await HistoryAsync(viewer, session.Card.Id));
-        Assert.Empty((await viewer.GetFromJsonAsync<UnattributedCardDto[]>(Unattributed))!);
 
         foreach (var response in new[]
         {
-            await viewer.PostAsJsonAsync(Cards, new CardRequest("X1", CardKinds.Employee, null)),
-            await viewer.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardRequest("X1", CardKinds.Employee, null)),
+            await viewer.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)),
+            await viewer.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null)),
             await viewer.DeleteAsync($"{Cards}/{session.Card.Id}"),
             await AssignAsync(viewer, session.Card.Id, session.Carol, At(10, 5), takeOver: true),
             await viewer.PutAsJsonAsync($"{Assignments}/{assignment.Id}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), At(10, 2), null)),
@@ -74,7 +71,7 @@ public sealed class AttendanceCardsAccessTests
         await RevokeAsync(session.Factory, "test-hr");
 
         await AssertCodeAsync(await session.Hr.GetAsync(Cards), HttpStatusCode.Forbidden, "feature_forbidden");
-        await AssertCodeAsync(await session.Hr.PostAsJsonAsync(Cards, new CardRequest("X1", CardKinds.Employee, null)), HttpStatusCode.Forbidden, "feature_forbidden");
+        await AssertCodeAsync(await session.Hr.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)), HttpStatusCode.Forbidden, "feature_forbidden");
     }
 
     [Fact]
@@ -90,7 +87,7 @@ public sealed class AttendanceCardsAccessTests
 
         // 卡號對應是管理頁：測試身分可以讀取以重現畫面，但寫入一律拒絕，不論目標使用者有沒有維護權限。
         Assert.Empty((await admin.GetFromJsonAsync<CardDto[]>(Cards))!);
-        await AssertCodeAsync(await admin.PostAsJsonAsync(Cards, new CardRequest("X1", CardKinds.Employee, null)), HttpStatusCode.Forbidden, "test_admin_read_only");
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)), HttpStatusCode.Forbidden, "test_admin_read_only");
         await AssertCodeAsync(await AssignAsync(admin, Guid.NewGuid(), hrId, At(10, 1)), HttpStatusCode.Forbidden, "test_admin_read_only");
     }
 

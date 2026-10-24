@@ -18,7 +18,6 @@ internal static class AttendanceApi
 {
     internal const string Cards = "/api/v1/attendance-cards";
     internal const string Assignments = "/api/v1/attendance-card-assignments";
-    internal const string Unattributed = "/api/v1/attendance-unattributed-cards";
 
     /// <summary>打卡機的時區：刷卡時間固定 +08:00。</summary>
     internal static readonly TimeSpan Taipei = TimeSpan.FromHours(8);
@@ -30,9 +29,9 @@ internal static class AttendanceApi
         => maintain ? GrantAsync(factory, userId, "test-hr", FeatureCatalog.AttendanceCards, FeatureCatalog.AttendanceCardsMaintain)
             : GrantAsync(factory, userId, "test-hr-readonly", FeatureCatalog.AttendanceCards);
 
-    internal static async Task<CardDto> CreateCardAsync(HttpClient client, string number, string kind = CardKinds.Employee, string? note = null)
+    internal static async Task<CardDto> CreateCardAsync(HttpClient client, string number, bool hidden = false, string? note = null)
     {
-        var response = await client.PostAsJsonAsync(Cards, new CardRequest(number, kind, note));
+        var response = await client.PostAsJsonAsync(Cards, new CardCreateRequest(number, hidden, note));
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return (await response.Content.ReadFromJsonAsync<CardDto>())!;
     }
@@ -77,7 +76,7 @@ internal static class AttendanceApi
         await db.SaveChangesAsync();
     }
 
-    /// <summary>直接寫入刷卡、略過匯入（歸戶測試只關心刷卡本身）；每個測試資料庫共用一個檔案列。</summary>
+    /// <summary>直接寫入刷卡、略過匯入（歸戶測試只關心刷卡本身），沒有卡片的卡號與匯入一樣補建；每個測試資料庫共用一個檔案列。</summary>
     internal static async Task AddPunchesAsync(AppFactory factory, params (string Card, DateTimeOffset At)[] punches)
     {
         using var scope = factory.Services.CreateScope();
@@ -98,6 +97,9 @@ internal static class AttendanceApi
             MachineCode = "001",
             EventCode = "11",
         }));
+        var numbers = punches.Select(x => x.Card).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var known = await db.Set<Card>().Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync();
+        db.AddRange(numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }));
         await db.SaveChangesAsync();
     }
 

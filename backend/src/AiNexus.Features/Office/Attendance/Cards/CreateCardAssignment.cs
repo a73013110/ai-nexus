@@ -50,9 +50,7 @@ internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeAudit 
         };
         var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment", assignment.Id, assignment.Id.ToString(), token => AssignmentRules.SnapshotAsync(db, request.CardId, token), async () =>
         {
-            var kind = await db.Set<Card>().Where(x => x.Id == request.CardId).Select(x => x.Kind).SingleOrDefaultAsync(ct);
-            if (kind is null) return AttendanceErrors.CardNotFound;
-            if (kind == CardKinds.Visitor) return AttendanceErrors.CardIsVisitor;
+            if (!await db.Set<Card>().AnyAsync(x => x.Id == request.CardId, ct)) return AttendanceErrors.CardNotFound;
             if (request.UserId is { } userId && !await AssignmentRules.HolderExistsAsync(db, userId, ct)) return AttendanceErrors.UserNotFound;
             // 追蹤中的實體：接手時 Place 改掉前一段的 EndsAt，與新段在同一次 SaveChanges 寫入、同一筆稽核。
             var existing = await db.Set<CardAssignment>().Where(x => x.CardId == request.CardId).ToListAsync(ct);

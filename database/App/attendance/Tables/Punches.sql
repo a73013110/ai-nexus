@@ -34,7 +34,7 @@ CREATE UNIQUE NONCLUSTERED INDEX [ux_Punches_CardNumber_PunchedAt_MachineCode]
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'打卡機的原始刷卡，每行一筆。不保存持有人，也不對 Cards 設外鍵：打卡檔可能出現尚未登錄的卡號，匯入不能因此失敗或建假卡；持有人由 vw_AttributedPunches 依持有期間在讀取時計算。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'Punches';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'打卡機的原始刷卡，每行一筆。不保存持有人；卡號以字串對應 Cards，不設外鍵（匯入在同一個交易補建缺少的卡號，不靠外鍵擋）。持有人由 vw_AttributedPunches 依持有期間在讀取時計算。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'Punches';
 
 
 GO
@@ -44,7 +44,7 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'出勤日�
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'打卡檔的卡號原始字串；不對應 Cards 外鍵，與 Cards.CardNumber 以相同字串比對。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'Punches', @level2type = N'COLUMN', @level2name = N'CardNumber';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'打卡檔的卡號原始字串，與 Cards.CardNumber 以相同字串比對；匯入時缺少的卡號會建立在 Cards。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'Punches', @level2type = N'COLUMN', @level2name = N'CardNumber';
 
 
 GO

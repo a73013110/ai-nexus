@@ -167,11 +167,25 @@ public sealed partial class PunchImporter(
         }).ToList();
         db.RemoveRange(dropped);
         db.AddRange(added);
+        await RegisterCardsAsync(added, ct);
         var requeued = await RequeueNeighboursAsync(file, dropped, ct);
 
         var import = await RecordAsync(file, attempt, owned.Count - dropped.Count + added.Count, null, ct);
         await transaction.CommitAsync(ct);
         return (import, requeued);
+    }
+
+    /// <summary>
+    /// 新刷卡的卡號沒有卡片時建立（不隱藏），卡號對應頁因此是一張完整的表：已指派與待指派的卡都在裡面。
+    /// 與刷卡同一個交易，匯入失敗就一起回復。HR 剛好同時手動新增同一個卡號時唯一索引會擋下，這次匯入失敗、下一輪掃描重匯。
+    /// </summary>
+    private async Task RegisterCardsAsync(List<Punch> added, CancellationToken ct)
+    {
+        // 卡號比對與資料庫定序一致（不分大小寫）。
+        var numbers = added.Select(x => x.CardNumber).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (numbers.Count == 0) return;
+        var known = await db.Set<Card>().Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync(ct);
+        db.AddRange(numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }));
     }
 
     /// <summary>

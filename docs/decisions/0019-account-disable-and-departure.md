@@ -28,7 +28,7 @@
 
 ## 帳號待辦
 
-- 待辦是**查詢結果**，不另存狀態：條件成立就出現，處理完（例如卡號已結束持有）自動消失，同「未歸戶卡號」的做法，不會有待辦與實際資料不同步。
+- 待辦是**查詢結果**，不另存狀態：條件成立就出現，處理完（例如卡號已結束持有）自動消失，同卡號對應「待指派」的做法，不會有待辦與實際資料不同步。
 - 擴充點 [`IAccountReviewSource`](../../backend/src/AiNexus.Platform/Accounts/IAccountReviewSource.cs) 放在 Platform，同 `IDashboardSource`：各模組實作、回傳該模組的項目（說明＋處理頁的功能 ID 與查詢字串），Identity 彙整成 `GET /api/v1/admin/account-reviews`，處理頁連結只給檢視者有權限的。新模組只加實作，不改 Identity。
 - 來源讀不到時（例如 AD 不能用）回傳說明而不是失敗，其他來源照常列出。
 - 使用者頁工具列「帳號待辦」依人分組；使用者管理對話框也列出該人的待辦。

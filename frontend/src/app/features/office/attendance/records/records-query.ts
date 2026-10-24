@@ -6,15 +6,13 @@ import { monthBounds, shiftMonth, taipeiToday } from '../attendance-presentation
 
 /**
  * 出勤紀錄的查詢條件；區間預設本月，套用當下才換算成起訖（跨月後重新查詢就是新的月份）。
- * `person` 是使用者 ID，或一張卡上沒有帳號的資料（只有姓名的持有人、未歸戶刷卡；`card:卡號`，見 `cardKey`）。
+ * `person` 是使用者 ID，或一張卡上只有姓名的持有人（`card:卡號`，見 `cardKey`）。
  */
 export interface RecordsQuery {
   range: TimeRange;
   person: string;
   unitId: string;
-  includeExcluded: boolean;
   includeDaysOff: boolean;
-  includeUnattributed: boolean;
 }
 
 /** 與後端 `AttendanceRecordsFilter.MaxRangeDays` 相同；伺服器仍會以 `attendance_records_range_invalid` 拒絕。 */
@@ -45,9 +43,7 @@ export const emptyRecordsQuery = (): RecordsQuery => ({
   range: { preset: DEFAULT_RANGE, from: '', to: '' },
   person: '',
   unitId: '',
-  includeExcluded: false,
   includeDaysOff: false,
-  includeUnattributed: false,
 });
 
 const dayNumber = (date: string) => Date.parse(date + 'T00:00:00Z') / 86_400_000;
@@ -107,9 +103,7 @@ export function recordFilters(
     userId: card ? undefined : query.person || undefined,
     card: card || undefined,
     unitId: query.unitId || undefined,
-    includeExcluded: query.includeExcluded || undefined,
     includeDaysOff: query.includeDaysOff || undefined,
-    includeUnattributed: query.includeUnattributed || undefined,
   };
 }
 
@@ -123,9 +117,7 @@ function toParams(query: RecordsQuery): Params {
     user: !card ? query.person || undefined : undefined,
     card: card || undefined,
     unit: query.unitId || undefined,
-    excluded: query.includeExcluded ? 'true' : undefined,
     holidays: query.includeDaysOff ? 'true' : undefined,
-    unattributed: query.includeUnattributed ? 'true' : undefined,
   };
 }
 
@@ -147,9 +139,7 @@ function fromParams(params: ParamMap, defaults: RecordsQuery): RecordsQuery {
           : defaults.range,
     person: id('user') || (card && card.length <= CARD_MAX ? cardKey(card) : ''),
     unitId: id('unit'),
-    includeExcluded: params.get('excluded') === 'true',
     includeDaysOff: params.get('holidays') === 'true',
-    includeUnattributed: params.get('unattributed') === 'true',
   };
 }
 
@@ -202,16 +192,8 @@ export function recordsQueryOptions(names: {
           label: '單位：' + (names.unit(query.unitId) ?? '指定的單位（含下層）'),
           clear: { unitId: '' },
         });
-      if (query.includeExcluded)
-        list.push({ id: 'excluded', label: '含不列入出勤的人', clear: { includeExcluded: false } });
       if (query.includeDaysOff)
         list.push({ id: 'holidays', label: '含放假日', clear: { includeDaysOff: false } });
-      if (query.includeUnattributed)
-        list.push({
-          id: 'unattributed',
-          label: '含未歸戶卡號',
-          clear: { includeUnattributed: false },
-        });
       return list;
     },
   };

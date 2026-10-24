@@ -9,7 +9,6 @@ import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AttendanceApi } from '../attendance-api';
-import { cardKindLabel } from '../attendance-presentation';
 import { covers } from './attendance-cards-store';
 
 /**
@@ -95,7 +94,6 @@ import { covers } from './attendance-cards-store';
               @for (entry of periods(); track entry.item.id) {
                 <li>
                   <strong class="user-cards-number">{{ entry.item.cardNumber }}</strong>
-                  <nx-status-badge tone="info">{{ entry.kind }}</nx-status-badge>
                   @if (entry.current) {
                     <nx-status-badge tone="success">持有中</nx-status-badge>
                   }
@@ -150,9 +148,6 @@ export class AttendanceUserCards {
       .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))
       .map((item) => ({
         item,
-        // 持有期間只能指派在員工卡上，有持有期間的卡也不能改成訪客卡（`CreateCardAssignment`、`UpdateCard`），
-        // 所以持有期間的卡一定是員工卡；回應不帶種類，以此顯示。
-        kind: cardKindLabel('employee'),
         current: covers(item, now),
         starts: formatDate(item.startsAt),
         ends: item.endsAt ? formatDate(item.endsAt) : '',

@@ -50,7 +50,7 @@ function setup({ features = ['attendance.cards'], items = [] as CardAssignmentDt
 describe('AttendanceUserCards', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('lists the periods newest first with card number, kind and the current one marked', async () => {
+  it('lists the periods newest first with card number and the current one marked', async () => {
     const { fixture, root, api } = setup({
       items: [
         period('1', { startsAt: '2025-03-01T00:00:00Z', endsAt: '2025-12-31T16:00:00Z' }),
@@ -63,8 +63,7 @@ describe('AttendanceUserCards', () => {
     expect(rows.map((row) => row.querySelector('.user-cards-number')?.textContent?.trim())).toEqual(
       ['0002', '0001'],
     );
-    expect(rows[0].textContent).toContain('員工卡');
-    expect(rows[0].querySelectorAll('nx-status-badge')[1]?.textContent).toContain('持有中');
+    expect(rows[0].querySelector('nx-status-badge')?.textContent).toContain('持有中');
     expect(rows[1].textContent).toContain('2025');
     expect(rows[1].textContent).not.toContain('持有中');
     expect(root.querySelector('.user-cards-manage')).toBeNull();

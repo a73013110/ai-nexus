@@ -8,11 +8,11 @@ public static class AttendanceErrors
     public static readonly Error CardNotFound = Error.NotFound("attendance_card_not_found");
     public static readonly Error CardNumberDuplicate = Error.Conflict("attendance_card_number_duplicate");
 
-    /// <summary>已有持有期間的卡不能刪除、也不能改成訪客卡：歷史會斷掉，或讓既有的歸戶靜默失效。</summary>
-    public static readonly Error CardHasAssignments = Error.Conflict("attendance_card_has_assignments");
-
-    /// <summary>訪客卡不歸戶（view 只看員工卡的持有期間），指派了也不會生效，所以直接拒絕。</summary>
-    public static readonly Error CardIsVisitor = Error.Conflict("attendance_card_visitor");
+    /// <summary>
+    /// 有刷卡或持有期間的卡不能刪除：持有期間是歸戶的依據，刷卡則會在下次匯入又建回這個卡號。只刪手動建立錯誤、從沒用過的卡；
+    /// 不想在出勤紀錄看到的卡改為隱藏。
+    /// </summary>
+    public static readonly Error CardInUse = Error.Conflict("attendance_card_in_use");
 
     public static readonly Error AssignmentNotFound = Error.NotFound("attendance_assignment_not_found");
 
@@ -28,19 +28,14 @@ public static class AttendanceErrors
     /// <summary>新段開始時間不晚於它重疊的既有持有期間的開始時間；接手只會結束前一段的尾端，這種情況不論有沒有旗標都不能處理。</summary>
     public static readonly Error StartsNotAfterPrevious = Error.Conflict("attendance_assignment_starts_not_after_previous");
 
-    /// <summary>查詢條件不合法：種類不明，或查持有歷史時沒有指定卡片或使用者（不開放整張表）。</summary>
+    /// <summary>查詢條件不合法：卡片狀態不明，或查持有歷史時沒有指定卡片或使用者（不開放整張表）。</summary>
     public static readonly Error FilterInvalid = Error.Invalid("attendance_filter_invalid");
-
-    public static readonly Error PeriodInvalid = Error.Invalid("attendance_period_invalid");
 
     /// <summary>出勤紀錄的查詢區間不合法：起訖必填、結束不早於開始、最長一年（見 <c>AttendanceRecordsFilter</c>）。</summary>
     public static readonly Error RecordsRangeInvalid = Error.Invalid("attendance_records_range_invalid");
 
     /// <summary>出勤紀錄的其他條件不合法：持有人姓名過長、<c>offset</c> 為負，或每頁人數不在 1～50。</summary>
     public static readonly Error RecordsFilterInvalid = Error.Invalid("attendance_records_filter_invalid");
-
-    /// <summary>要移除的「不列入出勤」不存在（已移除，或從未設定）。</summary>
-    public static readonly Error RosterExclusionNotFound = Error.NotFound("attendance_roster_exclusion_not_found");
 
     /// <summary>匯入紀錄的查詢條件不合法：狀態不明、期間顛倒、每頁筆數不在允許值內，或游標不存在。</summary>
     public static readonly Error ImportFilterInvalid = Error.Invalid("attendance_import_filter_invalid");

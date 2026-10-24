@@ -1,6 +1,5 @@
 import { cursorPaginationStep, queryBarStep } from '@shared/ui/data-workspace-tour';
 import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
-import type { CardsQuery } from './cards/cards-query';
 import { MAX_REIMPORT_DAYS } from './imports/imports-query';
 
 const CARDS = 'nx-attendance-cards-page';
@@ -33,112 +32,81 @@ const canWrite = (access: WriteAccess) => access.maintain && !access.testing;
 const readOnly = (description: string, access: WriteAccess) =>
   access.maintain && access.testing ? `${description}測試身分期間只能查看。` : description;
 
-/** 卡號對應頁：步驟依目前的頁內分頁切換（另一個分頁的表格不在畫面上）。 */
-export function attendanceCardsTour(
-  options: WriteAccess & { view: CardsQuery['view'] },
-): ProductTourDefinition {
+/** 卡號對應頁：一張卡號清單，狀態切換篩待指派、持有中或隱藏。 */
+export function attendanceCardsTour(options: WriteAccess): ProductTourDefinition {
   const write = canWrite(options);
-  const cards = options.view === 'cards';
-  const unattributed = options.view === 'unattributed';
-  const exclusions = options.view === 'exclusions';
   return {
     steps: [
       purposeStep(
         CARDS,
         '刷卡依持有期間歸戶',
         readOnly(
-          '打卡機只記卡號；卡片指派了持有人與期間，期間內的刷卡才算到這個人的出勤。',
+          '打卡機只記卡號；卡號指派了持有人與期間，期間內的刷卡才算到這個人的出勤。打卡檔出現的新卡號會自動列進來。',
           options,
         ),
       ),
-      write &&
-        !exclusions && {
-          target: `${CARDS} .cards-create`,
-          title: '登錄卡片',
-          description: '發卡前先登錄；只有員工卡會歸戶，訪客卡只登錄、不指派持有人。',
-          side: 'bottom',
-        },
-      {
-        target: `${CARDS} .cards-view`,
-        title: '卡片、未歸戶與不列入出勤',
+      write && {
+        target: `${CARDS} .cards-create`,
+        title: '新增卡號',
         description:
-          '「卡片」管理已登錄的卡與目前持有人；「未歸戶卡號」找出有刷卡卻沒歸到人的卡號，例如新人的卡還沒指派；「不列入出勤」是 HR 看全公司出勤時隱藏的人。',
+          '刷過的卡號匯入時會自動出現；先發卡再報到時，可以先新增還沒刷過的卡並指派持有人。',
         side: 'bottom',
       },
-      cards && queryBarStep(CARDS, { fields: '卡號、備註或持有人姓名與卡片種類' }),
-      cards && {
+      {
+        target: `${CARDS} .cards-status`,
+        title: '待指派、持有中與隱藏',
+        description:
+          '「待指派」是有刷卡卻沒有持有人的卡號，例如新人的卡還沒指派，這些刷卡不會出現在任何人的出勤紀錄；「隱藏」是 HR 看全公司出勤時略過的卡，例如訪客卡。',
+        side: 'bottom',
+      },
+      queryBarStep(CARDS, { fields: '卡號、備註或持有人姓名' }),
+      {
         target: `${CARDS} .cards-table .cards-number`,
-        title: '持有歷史',
+        title: '卡片詳情',
         description: write
-          ? '點卡號開啟詳情，可指派持有人、結束持有或修正期間。'
+          ? '點卡號開啟詳情，可指派持有人、補指派沒有持有人的刷卡、設定是否在出勤紀錄顯示。'
           : '點卡號開啟詳情，查看這張卡歷任的持有人與期間。',
       },
-      unattributed && {
-        target: `${CARDS} .cards-unattributed-note`,
-        title: '為什麼會未歸戶',
-        description:
-          '刷卡當下沒有持有期間涵蓋，這些刷卡就不會出現在任何人的出勤紀錄；「未登錄」表示打卡機出現過、但還沒登錄的卡號。',
-        side: 'bottom',
-      },
-      unattributed &&
-        write && {
-          target: `${CARDS} .cards-assign-unattributed`,
-          title: '指派',
-          description:
-            '開始時間預設為第一筆未歸戶刷卡，指派後這段刷卡就歸到持有人；未登錄的卡號會先登錄成員工卡。',
-          side: 'left',
-        },
-      exclusions && {
-        target: `${CARDS} .cards-exclusions-note`,
-        title: '不是權限',
-        description:
-          '名單只讓出勤紀錄的全公司查詢與匯出預設略過這些人或卡號（例如董事、外派、測試卡）；本人與主管照常看得到，HR 勾「含不列入出勤的人」也看得到。',
-        side: 'bottom',
-      },
-      exclusions &&
-        write && {
-          target: `${CARDS} .exclusions-add`,
-          title: '加入',
-          description:
-            '對象選使用者（從目錄搜尋）或卡號：只有姓名的持卡人與未歸戶卡號依卡號設定，同名同姓不會一起被隱藏。改原因或恢復列入在每列的選單。',
-          side: 'left',
-        },
     ],
   };
 }
 
-/** 卡片詳情抽屜：寫入步驟只在有維護權限且不是測試身分時出現；訪客卡不能指派。 */
-export function cardDetailTour(options: WriteAccess & { visitor: boolean }): ProductTourDefinition {
+/** 卡片詳情抽屜：寫入步驟只在有維護權限且不是測試身分時出現。 */
+export function cardDetailTour(options: WriteAccess): ProductTourDefinition {
   const write = canWrite(options);
   return {
     steps: [
       {
         target: `${CARD_DRAWER} .cards-holder`,
         title: '目前持有人',
-        description: options.visitor
-          ? '訪客卡不歸戶，不能指派持有人。'
-          : readOnly('目前持有人是今天落在持有期間內的人。', options),
+        description: readOnly('目前持有人是今天落在持有期間內的人。', options),
         side: 'bottom',
       },
-      write &&
-        !options.visitor && {
-          target: `${CARD_DRAWER} .cards-assign`,
-          title: '指派或轉給其他人',
-          description:
-            '搜尋平台使用者；新進員工還沒有帳號時選「使用姓名」。卡片已有人持有時是轉給其他人，前一段在新開始時間結束。',
-          side: 'bottom',
-        },
+      write && {
+        target: `${CARD_DRAWER} .cards-assign`,
+        title: '指派或轉給其他人',
+        description:
+          '搜尋平台使用者；新進員工還沒有帳號時選「使用姓名」。卡片已有人持有時是轉給其他人，前一段在新開始時間結束。',
+        side: 'bottom',
+      },
+      {
+        target: `${CARD_DRAWER} .cards-visibility`,
+        title: '在出勤紀錄顯示',
+        description:
+          '關閉後 HR 看全公司出勤與匯出時略過這張卡（例如訪客卡、董事）；不是權限，本人與主管照常看得到，指定這個人或卡號時也查得到。',
+        side: 'bottom',
+      },
       {
         target: `${CARD_DRAWER} .cards-history`,
         title: '持有歷史',
         description:
-          '同一張卡的期間不可重疊。「尚無帳號」是只填姓名的期間，綁定帳號後這段刷卡才會出現在出勤紀錄；每段的「⋯」可編輯或刪除。',
+          '同一張卡的期間不可重疊。「尚無帳號」是只填姓名的期間，綁定帳號後才比對得到假單；每段的「⋯」可編輯或刪除。',
       },
       write && {
         target: `${CARD_DRAWER} .cards-end`,
         title: '結束持有',
         description:
-          '換卡或離職用「結束持有」，保留歷史；刪除期間會讓這段刷卡變回未歸戶，只在登錄錯誤時使用。',
+          '換卡或離職用「結束持有」，保留歷史；刪除期間會讓這段刷卡變回待指派，只在指派錯誤時使用。',
         side: 'left',
       },
     ],
@@ -311,7 +279,7 @@ export function attendanceRecordsTour(options: {
       purposeStep(
         RECORDS,
         '每天的出勤判定',
-        '依刷卡、假日行事曆與假單逐日判定；只列出期間內持有員工卡的人，看得到誰依你的資料範圍而定。',
+        '依刷卡、假日行事曆與假單逐日判定；只列出期間內持有卡的人，看得到誰依你的資料範圍而定。',
       ),
       {
         target: `${RECORDS} .records-rules`,
@@ -327,7 +295,7 @@ export function attendanceRecordsTour(options: {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:
-          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號預設不列，勾「含未歸戶卡號」才列在最後。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
+          '每人一組、每天一列，組頭彙總異常、遲到與早退天數；人多時依姓名分頁。只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號不列，到卡號對應頁補指派。沒刷卡也沒假單的放假日預設不列，勾「含放假日」可看行事曆備註。公文系統連不上時改為無法判定，不算異常。',
         side: 'bottom',
       },
       {

@@ -19,15 +19,14 @@ public sealed class AttributedPunch
     public string MachineCode { get; init; } = "";
     public string EventCode { get; init; } = "";
 
-    /// <summary>卡號沒有登錄在 <see cref="Card"/> 時為 null。</summary>
+    /// <summary><see cref="Card"/> 沒有這個卡號時為 null（匯入會補建，正常不會發生）。</summary>
     public Guid? CardId { get; init; }
 
-    public string? CardKind { get; init; }
     public Guid? AssignmentId { get; init; }
     public Guid? UserId { get; init; }
     public string? HolderName { get; init; }
 
-    /// <summary>沒有持有期間涵蓋且不是訪客卡；沒登錄的卡號也算。view 以 <c>ISNULL</c> 保證 NOT NULL。</summary>
+    /// <summary>沒有持有期間涵蓋；<see cref="Card"/> 沒有這個卡號也算。view 以 <c>ISNULL</c> 保證 NOT NULL。</summary>
     public bool IsUnattributed { get; init; }
 }
 
@@ -40,7 +39,6 @@ internal sealed class AttributedPunchConfiguration : IEntityTypeConfiguration<At
         punch.Property(x => x.CardNumber).HasMaxLength(Card.CardNumberMaxLength);
         punch.Property(x => x.MachineCode).HasMaxLength(Punch.CodeMaxLength);
         punch.Property(x => x.EventCode).HasMaxLength(Punch.CodeMaxLength);
-        punch.Property(x => x.CardKind).HasMaxLength(16);
         punch.Property(x => x.HolderName).HasMaxLength(CardAssignment.HolderNameMaxLength);
     }
 }

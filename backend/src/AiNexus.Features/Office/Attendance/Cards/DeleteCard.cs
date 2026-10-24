@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Office.Attendance.Cards;
 
 /// <summary>
-/// 刪除登錄錯誤的卡片。只允許沒有任何持有期間的卡：持有期間是歸戶的依據，連同卡片一起刪會讓歷史刷卡全部變成未歸戶，
-/// 外鍵也不級聯；不再使用的卡把持有期間結束即可。刷卡原始資料不受影響（它們不參照卡片）。會稽核（<c>admin.attendance_card_delete</c>）。
+/// 刪除手動建立錯誤、從沒用過的卡。有持有期間（歸戶依據，外鍵不級聯）或刷卡（下次匯入又會建回來，期間的刷卡也會從清單消失）時拒絕；
+/// 不再使用的卡把持有期間結束即可，不想在出勤紀錄看到的改為隱藏。會稽核（<c>admin.attendance_card_delete</c>）。
 /// </summary>
 internal sealed class DeleteCard(AppDbContext db, AdministrativeAudit audit)
 {
@@ -22,7 +22,8 @@ internal sealed class DeleteCard(AppDbContext db, AdministrativeAudit audit)
     {
         var card = await db.Set<Card>().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;
-        if (await db.Set<CardAssignment>().AnyAsync(x => x.CardId == id, ct)) return AttendanceErrors.CardHasAssignments;
+        if (await db.Set<CardAssignment>().AnyAsync(x => x.CardId == id, ct) || await db.Set<Punch>().AnyAsync(x => x.CardNumber == card.CardNumber, ct))
+            return AttendanceErrors.CardInUse;
         db.Remove(card);
         return Result.Success;
     }, ct);

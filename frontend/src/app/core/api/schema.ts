@@ -9446,70 +9446,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/attendance-unattributed-cards": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListUnattributedAttendanceCards"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attendance-roster-exclusions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListAttendanceRosterExclusions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attendance-roster-exclusions/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SaveAttendanceRosterExclusion"];
-        post?: never;
-        delete: operations["DeleteAttendanceRosterExclusion"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attendance-roster-exclusions/cards/{cardNumber}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SaveAttendanceRosterCardExclusion"];
-        post?: never;
-        delete: operations["DeleteAttendanceRosterCardExclusion"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/attendance-imports": {
         parameters: {
             query?: never;
@@ -9972,8 +9908,7 @@ export interface components {
             displayName: string;
             account: null | string;
             leaveAvailable: boolean;
-            excluded: boolean;
-            unattributed: boolean;
+            hidden: boolean;
             days: components["schemas"]["AttendanceRecordDto"][];
         };
         AttendancePersonOptionDto: {
@@ -9982,9 +9917,8 @@ export interface components {
             cardNumber: null | string;
             displayName: string;
             account: null | string;
-            excluded: boolean;
+            hidden: boolean;
             holding: boolean;
-            unattributed: boolean;
         };
         /** @enum {unknown} */
         AttendanceReason: "NoPunchOrLeave" | "LeaveUnavailable" | "DayTypeUnknown" | "SinglePunch" | "DayInProgress" | null;
@@ -10161,19 +10095,31 @@ export interface components {
             endsAt: null | string;
             note: null | string;
         };
+        CardCreateRequest: {
+            cardNumber: string;
+            hiddenFromRecords: boolean;
+            note: null | string;
+        };
         CardDto: {
             /** Format: uuid */
             id: string;
             cardNumber: string;
-            kind: string;
+            hiddenFromRecords: boolean;
             note: null | string;
             /** Format: date-time */
             createdAt: string;
             current: null | components["schemas"]["CardAssignmentDto"];
+            /** Format: date-time */
+            lastPunchedAt: null | string;
+            /** Format: int32 */
+            unattributedCount: number;
+            /** Format: date-time */
+            firstUnattributedAt: null | string;
+            /** Format: date-time */
+            lastUnattributedAt: null | string;
         };
-        CardRequest: {
-            cardNumber: string;
-            kind: string;
+        CardUpdateRequest: {
+            hiddenFromRecords: boolean;
             note: null | string;
         };
         ChargeDto: {
@@ -12024,19 +11970,6 @@ export interface components {
             enabled: boolean;
             groupIds: string[];
         };
-        RosterExclusionDto: {
-            /** Format: uuid */
-            userId: null | string;
-            cardNumber: null | string;
-            displayName: string;
-            account: null | string;
-            note: null | string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        RosterExclusionRequest: {
-            note: null | string;
-        };
         RunDto: {
             /** Format: uuid */
             id: string;
@@ -12462,17 +12395,6 @@ export interface components {
             /** @default 繁體中文 */
             language: string;
         };
-        UnattributedCardDto: {
-            cardNumber: string;
-            /** Format: uuid */
-            cardId: null | string;
-            /** Format: int32 */
-            punchCount: number;
-            /** Format: date-time */
-            firstPunchedAt: string;
-            /** Format: date-time */
-            lastPunchedAt: string;
-        };
         UnitCandidateDto: {
             /** Format: uuid */
             id: string;
@@ -12806,8 +12728,9 @@ export type CalendarDayRequest = components['schemas']['CalendarDayRequest'];
 export type CardAssignmentCreateRequest = components['schemas']['CardAssignmentCreateRequest'];
 export type CardAssignmentDto = components['schemas']['CardAssignmentDto'];
 export type CardAssignmentUpdateRequest = components['schemas']['CardAssignmentUpdateRequest'];
+export type CardCreateRequest = components['schemas']['CardCreateRequest'];
 export type CardDto = components['schemas']['CardDto'];
-export type CardRequest = components['schemas']['CardRequest'];
+export type CardUpdateRequest = components['schemas']['CardUpdateRequest'];
 export type ChargeDto = components['schemas']['ChargeDto'];
 export type CitationDto = components['schemas']['CitationDto'];
 export type ClientIssueRequest = components['schemas']['ClientIssueRequest'];
@@ -12998,8 +12921,6 @@ export type RetrievalReportDto = components['schemas']['RetrievalReportDto'];
 export type RetrievalSummaryDto = components['schemas']['RetrievalSummaryDto'];
 export type ReviewRequest = components['schemas']['ReviewRequest'];
 export type RoleUpdateRequest = components['schemas']['RoleUpdateRequest'];
-export type RosterExclusionDto = components['schemas']['RosterExclusionDto'];
-export type RosterExclusionRequest = components['schemas']['RosterExclusionRequest'];
 export type RunDto = components['schemas']['RunDto'];
 export type RunEventDto = components['schemas']['RunEventDto'];
 export type RuntimeResources = components['schemas']['RuntimeResources'];
@@ -13040,7 +12961,6 @@ export type TrafficMetrics = components['schemas']['TrafficMetrics'];
 export type TrafficPoint = components['schemas']['TrafficPoint'];
 export type TransformTextDto = components['schemas']['TransformTextDto'];
 export type TransformTextRequest = components['schemas']['TransformTextRequest'];
-export type UnattributedCardDto = components['schemas']['UnattributedCardDto'];
 export type UnitCandidateDto = components['schemas']['UnitCandidateDto'];
 export type UnitCreateRequest = components['schemas']['UnitCreateRequest'];
 export type UnitDto = components['schemas']['UnitDto'];
@@ -40268,9 +40188,7 @@ export interface operations {
                 userId?: string;
                 card?: string;
                 unitId?: string;
-                includeExcluded?: boolean;
                 includeDaysOff?: boolean;
-                includeUnattributed?: boolean;
                 offset?: number;
                 limit?: number;
             };
@@ -40553,9 +40471,7 @@ export interface operations {
                 userId?: string;
                 card?: string;
                 unitId?: string;
-                includeExcluded?: boolean;
                 includeDaysOff?: boolean;
-                includeUnattributed?: boolean;
             };
             header?: never;
             path?: never;
@@ -40823,7 +40739,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
-                kind?: string;
+                status?: string;
             };
             header?: never;
             path?: never;
@@ -40968,7 +40884,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CardRequest"];
+                "application/json": components["schemas"]["CardCreateRequest"];
             };
         };
         responses: {
@@ -41111,7 +41027,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CardRequest"];
+                "application/json": components["schemas"]["CardUpdateRequest"];
             };
         };
         responses: {
@@ -41806,839 +41722,6 @@ export interface operations {
             header?: never;
             path: {
                 id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    ListUnattributedAttendanceCards: {
-        parameters: {
-            query?: {
-                from?: string;
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnattributedCardDto"][];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    ListAttendanceRosterExclusions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RosterExclusionDto"][];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    SaveAttendanceRosterExclusion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RosterExclusionRequest"];
-            };
-        };
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    DeleteAttendanceRosterExclusion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    SaveAttendanceRosterCardExclusion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cardNumber: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RosterExclusionRequest"];
-            };
-        };
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    DeleteAttendanceRosterCardExclusion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cardNumber: string;
             };
             cookie?: never;
         };

@@ -64,7 +64,6 @@ describe('records query', () => {
       ...emptyRecordsQuery(),
       range: { preset: CUSTOM_RANGE, from: '2026-09-15', to: '2026-10-14' },
       person: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-      includeExcluded: true,
       includeDaysOff: true,
     };
     const params = options.toParams!(query);
@@ -75,9 +74,7 @@ describe('records query', () => {
       user: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
       card: undefined,
       unit: undefined,
-      excluded: 'true',
       holidays: 'true',
-      unattributed: undefined,
     });
     const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value));
     expect(options.fromParams!(convertToParamMap(clean), emptyRecordsQuery())).toEqual(query);
@@ -87,7 +84,6 @@ describe('records query', () => {
     expect(options.chips!(query).map((chip) => chip.label)).toEqual([
       '區間：2026/09/15 — 10/14',
       '人員：王小明',
-      '含不列入出勤的人',
       '含放假日',
     ]);
   });
@@ -97,30 +93,21 @@ describe('records query', () => {
       ...emptyRecordsQuery(),
       range: preset('year'),
       person: cardKey('3368'),
-      includeUnattributed: true,
     };
     expect(options.toParams!(query)).toMatchObject({
       range: 'year',
       user: undefined,
       card: '3368',
-      unattributed: 'true',
     });
     expect(
-      options.fromParams!(convertToParamMap({ card: ' 3368 ', unattributed: 'true' }), {
-        ...emptyRecordsQuery(),
-      }),
-    ).toMatchObject({ person: cardKey('3368'), includeUnattributed: true });
-    expect(recordFilters(query, NOW)).toMatchObject({
-      userId: undefined,
-      card: '3368',
-      includeUnattributed: true,
-    });
+      options.fromParams!(convertToParamMap({ card: ' 3368 ' }), { ...emptyRecordsQuery() }),
+    ).toMatchObject({ person: cardKey('3368') });
+    expect(recordFilters(query, NOW)).toMatchObject({ userId: undefined, card: '3368' });
     // 人員選單還沒讀到時，chip 以卡號顯示。
     const unnamed = recordsQueryOptions({ person: () => undefined, unit: () => undefined });
     expect(unnamed.chips!(query).map((chip) => chip.label)).toEqual([
       '區間：今年（' + recordsRangeLabel(preset('year')).split('（')[1],
       '人員：卡號 3368',
-      '含未歸戶卡號',
     ]);
   });
 
@@ -131,9 +118,7 @@ describe('records query', () => {
         user: 'not-a-guid',
         card: '9'.repeat(33),
         unit: '1',
-        excluded: 'yes',
         holidays: '1',
-        unattributed: 'yes',
       }),
       emptyRecordsQuery(),
     );
@@ -144,9 +129,7 @@ describe('records query', () => {
       userId: undefined,
       card: undefined,
       unitId: undefined,
-      includeExcluded: undefined,
       includeDaysOff: undefined,
-      includeUnattributed: undefined,
     });
   });
 });

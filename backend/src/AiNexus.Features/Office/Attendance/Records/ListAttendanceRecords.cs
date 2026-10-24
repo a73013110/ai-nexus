@@ -19,12 +19,11 @@ namespace AiNexus.Features.Office.Attendance.Records;
 public sealed record AttendanceRecordsDto(DateOnly From, DateOnly To, DateOnly Today, bool CalendarAvailable, bool LeaveAvailable, int Total, int Offset, IReadOnlyList<AttendancePersonDto> People);
 
 /// <summary>
-/// 出勤名單上的一列。<paramref name="UserId"/> 為 null 是沒有帳號的資料，依附在 <paramref name="CardNumber"/>：
-/// 只有姓名的持有人（<paramref name="DisplayName"/> 是持有期間的姓名），或 <paramref name="Unattributed"/> 的未歸戶卡號（只列有刷卡的日子）。
+/// 出勤名單上的一列。<paramref name="UserId"/> 為 null 是只有姓名、還沒綁帳號的持有人，依附在 <paramref name="CardNumber"/>（<paramref name="DisplayName"/> 是持有期間的姓名）。
 /// <paramref name="LeaveAvailable"/> 為 false：GD 連不上、這個人對不到公文帳號或沒有帳號，他的假單一律是無法取得；
-/// <paramref name="Excluded"/> 是 HR 標為不列入出勤（只有明確要求或指定時才會出現）。<paramref name="Days"/> 只含持有員工卡（未歸戶卡號是有刷卡）的日子。
+/// <paramref name="Hidden"/> 是他的卡全部在出勤紀錄隱藏（只有指定這個人時才會出現）。<paramref name="Days"/> 只含持有卡的日子。
 /// </summary>
-public sealed record AttendancePersonDto(Guid? UserId, string? CardNumber, string DisplayName, string? Account, bool LeaveAvailable, bool Excluded, bool Unattributed,
+public sealed record AttendancePersonDto(Guid? UserId, string? CardNumber, string DisplayName, string? Account, bool LeaveAvailable, bool Hidden,
     IReadOnlyList<AttendanceRecordDto> Days);
 
 /// <summary>
@@ -47,7 +46,7 @@ public sealed record AttendanceRecordDto(
 
 /// <summary>
 /// 出勤紀錄（ADR 0018）：<c>from</c>～<c>to</c>（出勤日，都含，最多 <see cref="AttendanceRecordsFilter.MaxRangeDays"/> 天）內，範圍看得到的人每天的判定結果。
-/// 名單是 <see cref="AttendanceRoster"/>：期間內持有員工卡的人（全公司範圍可含未歸戶卡號），可再以 <c>userId</c>、<c>card</c>、<c>unitId</c> 縮小，與資料範圍取交集。
+/// 名單是 <see cref="AttendanceRoster"/>：期間內持有卡的人，可再以 <c>userId</c>、<c>card</c>、<c>unitId</c> 縮小，與資料範圍取交集。
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
@@ -86,12 +85,12 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
         var scope = await scopes.ForAsync(viewer, FeatureCatalog.AttendanceRecords, ct);
         if (scope.IsEmpty || last < start) return new AttendanceRecordsDto(start, end, today, true, true, 0, page.Offset, []);
 
-        var source = await roster.SourceAsync(viewer, scope, filter, (start, last), ct);
-        var everyone = await roster.PeopleAsync(source, ct);
+        var holdings = await roster.HoldingsAsync(viewer, scope, filter, (start, last), includeHidden: false, ct);
+        var everyone = await roster.PeopleAsync(holdings, ct);
         IReadOnlyList<RosterPerson> people = page.Limit is { } limit ? [.. everyone.Skip(page.Offset).Take(limit)] : everyone;
         if (people.Count == 0) return new AttendanceRecordsDto(start, end, today, true, true, everyone.Count, page.Offset, []);
 
-        var punches = await PunchesAsync(source, people, people.Count == everyone.Count, start, last, ct);
+        var punches = await PunchesAsync(holdings, people, people.Count == everyone.Count, start, last, ct);
         var days = await calendar.ReadAsync(start, last, ct);
         var calendarDays = days?.ToDictionary(x => x.Date);
         var sheets = await leave.ReadAsync([.. people.Where(x => x.UserId is not null).Select(x => x.UserId!.Value)], start, last, ct);
@@ -107,9 +106,8 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
             for (var date = start; date <= last; date = date.AddDays(1))
             {
                 var (dayStart, dayEnd) = (TaipeiTime.At(date, TimeOnly.MinValue), TaipeiTime.At(date.AddDays(1), TimeOnly.MinValue));
-                // 只回傳持有員工卡的日子：到職前、換卡空窗或離職後沒有卡，判成「沒刷卡」是誤報。未歸戶卡號沒有持有人，只列有刷卡的日子。
-                if (person.Unattributed ? !punches.ContainsKey((index, date)) : !person.Holdings.Any(p => p.StartsAt < dayEnd && (p.EndsAt is null || p.EndsAt > dayStart)))
-                    continue;
+                // 只回傳持有卡的日子：到職前、換卡空窗或離職後沒有卡，判成「沒刷卡」是誤報。
+                if (!person.Holdings.Any(p => p.StartsAt < dayEnd && (p.EndsAt is null || p.EndsAt > dayStart))) continue;
                 // 單據是原始起訖，與這一天有交集就算當天有假單或出差單（跨日、半天都一樣），時數由 HR 判斷。
                 IReadOnlyList<LeaveSheet> filed = [.. filedSheets.Where(s => s.StartsAt < dayEnd && s.EndsAt > dayStart)];
                 DateTimeOffset? clockIn = null, clockOut = null;
@@ -122,23 +120,23 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
                 records.Add(new(e.Date, e.DayType, Remark(calendarDay), e.Status, e.Reason,
                     e.ClockIn, e.ClockOut, e.ExpectedClockOut, e.LateSeconds, e.EarlyLeaveSeconds, e.Leave, filed));
             }
-            return new AttendancePersonDto(person.UserId, person.CardNumber, person.DisplayName, person.Account, leaveAvailable, person.Excluded, person.Unattributed, records);
+            return new AttendancePersonDto(person.UserId, person.CardNumber, person.DisplayName, person.Account, leaveAvailable, person.Hidden, records);
         }).ToList();
         return new AttendanceRecordsDto(start, end, today, days is not null, sheets.Available, everyone.Count, page.Offset, result);
     }
 
     /// <summary>
-    /// 每人每天最早與最晚的刷卡，鍵是人在 <paramref name="people"/> 裡的位置。資料庫依持有期間（未歸戶卡號依卡號）與日彙總，同一人同時持有多張卡時再合併。
+    /// 每人每天最早與最晚的刷卡，鍵是人在 <paramref name="people"/> 裡的位置。資料庫依持有期間與日彙總，同一人同時持有多張卡時再合併。
     /// 整份名單（<paramref name="everyone"/>）以子查詢比對，不把持有期間展開成參數；分頁時只查這一頁的人。
     /// view 在同一張卡的期間重疊時會重複列，最早與最晚不受影響。
     /// </summary>
     private async Task<Dictionary<(int Person, DateOnly Date), (DateTimeOffset First, DateTimeOffset Last)>> PunchesAsync(
-        RosterSource source, IReadOnlyList<RosterPerson> people, bool everyone, DateOnly start, DateOnly last, CancellationToken ct)
+        IQueryable<CardAssignment> holdings, IReadOnlyList<RosterPerson> people, bool everyone, DateOnly start, DateOnly last, CancellationToken ct)
     {
         var held = db.Set<AttributedPunch>().AsNoTracking().Where(x => x.AttendanceDate >= start && x.AttendanceDate <= last);
         if (everyone)
         {
-            var ids = source.Holdings.Select(x => (Guid?)x.Id);
+            var ids = holdings.Select(x => (Guid?)x.Id);
             held = held.Where(x => ids.Contains(x.AssignmentId));
         }
         else
@@ -153,30 +151,12 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
 
         var owner = people.SelectMany((person, index) => person.Holdings.Select(x => (x.Id, index))).ToDictionary(x => x.Id, x => x.index);
         var result = new Dictionary<(int, DateOnly), (DateTimeOffset, DateTimeOffset)>();
-        void Add(int person, DateOnly date, DateTimeOffset first, DateTimeOffset latest)
-        {
-            var key = (person, date);
-            result[key] = result.TryGetValue(key, out var seen) ? (Min(seen.Item1, first), Max(seen.Item2, latest)) : (first, latest);
-        }
         foreach (var row in rows)
-            if (row.AssignmentId is { } id && owner.TryGetValue(id, out var person)) Add(person, row.AttendanceDate, row.First, row.Last);
-
-        // 卡號比對與資料庫定序一致（不分大小寫），對回名單時也不分大小寫。
-        var cardOwner = people.Select((person, index) => (person, index)).Where(x => x.person.Unattributed)
-            .ToDictionary(x => x.person.CardNumber!, x => x.index, StringComparer.OrdinalIgnoreCase);
-        if (source.Unattributed is null || cardOwner.Count == 0) return result;
-        var unattributed = source.Unattributed;
-        if (!everyone)
         {
-            List<string> numbers = [.. cardOwner.Keys];
-            unattributed = unattributed.Where(x => numbers.Contains(x.CardNumber));
+            if (row.AssignmentId is not { } id || !owner.TryGetValue(id, out var person)) continue;
+            var key = (person, row.AttendanceDate);
+            result[key] = result.TryGetValue(key, out var seen) ? (Min(seen.Item1, row.First), Max(seen.Item2, row.Last)) : (row.First, row.Last);
         }
-        var cards = await unattributed
-            .GroupBy(x => new { x.CardNumber, x.AttendanceDate })
-            .Select(g => new { g.Key.CardNumber, g.Key.AttendanceDate, First = g.Min(x => x.PunchedAt), Last = g.Max(x => x.PunchedAt) })
-            .ToListAsync(ct);
-        foreach (var row in cards)
-            if (cardOwner.TryGetValue(row.CardNumber, out var person)) Add(person, row.AttendanceDate, row.First, row.Last);
         return result;
     }
 

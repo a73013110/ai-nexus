@@ -22,63 +22,51 @@ const scoped = (definition: ProductTourDefinition, host: string) => {
 };
 
 describe('attendanceCardsTour', () => {
-  it('follows the current tab and offers the write steps only to maintainers', () => {
-    expect(titles(attendanceCardsTour({ view: 'cards', maintain: true, testing: false }))).toEqual([
+  it('offers the write steps only to maintainers', () => {
+    expect(titles(attendanceCardsTour({ maintain: true, testing: false }))).toEqual([
       '刷卡依持有期間歸戶',
-      '登錄卡片',
-      '卡片、未歸戶與不列入出勤',
+      '新增卡號',
+      '待指派、持有中與隱藏',
       '查詢條件',
-      '持有歷史',
+      '卡片詳情',
     ]);
-    expect(
-      titles(attendanceCardsTour({ view: 'unattributed', maintain: true, testing: false })),
-    ).toEqual([
+    expect(titles(attendanceCardsTour({ maintain: false, testing: false }))).toEqual([
       '刷卡依持有期間歸戶',
-      '登錄卡片',
-      '卡片、未歸戶與不列入出勤',
-      '為什麼會未歸戶',
-      '指派',
+      '待指派、持有中與隱藏',
+      '查詢條件',
+      '卡片詳情',
     ]);
-    expect(
-      titles(attendanceCardsTour({ view: 'unattributed', maintain: false, testing: false })),
-    ).toEqual(['刷卡依持有期間歸戶', '卡片、未歸戶與不列入出勤', '為什麼會未歸戶']);
-    // 名單檢視沒有「登錄卡片」按鈕。
-    expect(
-      titles(attendanceCardsTour({ view: 'exclusions', maintain: true, testing: false })),
-    ).toEqual(['刷卡依持有期間歸戶', '卡片、未歸戶與不列入出勤', '不是權限', '加入']);
   });
 
   it('drops the disabled writes and says read-only while testing an identity', () => {
-    const steps = tourSteps(attendanceCardsTour({ view: 'cards', maintain: true, testing: true }));
-    expect(steps.map((step) => step.title)).not.toContain('登錄卡片');
+    const steps = tourSteps(attendanceCardsTour({ maintain: true, testing: true }));
+    expect(steps.map((step) => step.title)).not.toContain('新增卡號');
     expect(steps[0].description).toContain('只能查看');
     expect(steps.at(-1)?.description).not.toContain('指派持有人');
   });
 
-  it('introduces assigning in the drawer except for visitor cards', () => {
-    expect(titles(cardDetailTour({ visitor: false, maintain: true, testing: false }))).toEqual([
+  it('introduces assigning and hiding in the drawer', () => {
+    expect(titles(cardDetailTour({ maintain: true, testing: false }))).toEqual([
       '目前持有人',
       '指派或轉給其他人',
+      '在出勤紀錄顯示',
       '持有歷史',
       '結束持有',
     ]);
-    const visitor = tourSteps(cardDetailTour({ visitor: true, maintain: true, testing: false }));
-    expect(visitor.map((step) => step.title)).not.toContain('指派或轉給其他人');
-    expect(visitor[0].description).toContain('訪客卡不歸戶');
-    expect(titles(cardDetailTour({ visitor: false, maintain: true, testing: true }))).toEqual([
+    expect(copy(cardDetailTour({ maintain: true, testing: false }))).toContain(
+      '本人與主管照常看得到',
+    );
+    expect(titles(cardDetailTour({ maintain: true, testing: true }))).toEqual([
       '目前持有人',
+      '在出勤紀錄顯示',
       '持有歷史',
     ]);
   });
 
   it('scopes page steps to the page and drawer steps to the drawer', () => {
-    for (const view of ['cards', 'unattributed'] as const)
-      scoped(
-        attendanceCardsTour({ view, maintain: true, testing: false }),
-        'nx-attendance-cards-page',
-      );
+    scoped(attendanceCardsTour({ maintain: true, testing: false }), 'nx-attendance-cards-page');
     scoped(
-      cardDetailTour({ visitor: false, maintain: true, testing: false }),
+      cardDetailTour({ maintain: true, testing: false }),
       'nx-attendance-cards-page nx-detail-drawer',
     );
   });

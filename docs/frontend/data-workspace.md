@@ -18,7 +18,7 @@
 ## 查詢
 
 - 條件用 `QueryBar`＋`queryState()`：欄位改的是草稿，按「查詢」（或欄位內 Enter）才套用；有未套用的變更就提示。已套用的條件成為可逐一移除的 chip，並寫入 URL：重新整理、分享連結與側欄重新進入都以 URL 為準。分類 `ViewSwitch` 與移除 chip 立即套用（`commit`），不帶走其他未套用的草稿。連結的條件驗證不過時不查詢：結果維持預設、條件留在草稿並顯示原因。
-- 分類 `ViewSwitch` 只篩同一份資料時放 `QueryBar` 的 `[query-lead]`；切換成另一份資料（各有自己的查詢或沒有查詢，例：卡號對應的「卡片／未歸戶卡號」）時，segment `ViewSwitch` 放在 `.page-toolbar`，該頁的一句說明以 `.form-note` 放同一列，放不下自動換列。間距由容器提供，頁面不替 `ViewSwitch` 或說明補 margin。
+- 分類 `ViewSwitch` 只篩同一份資料時放 `QueryBar` 的 `[query-lead]`；切換成另一份資料（各有自己的查詢或沒有查詢，例：價格表的「目前價格／價格歷史」）時，segment `ViewSwitch` 放在 `.page-toolbar`，該頁的一句說明以 `.form-note` 放同一列，放不下自動換列。間距由容器提供，頁面不替 `ViewSwitch` 或說明補 margin。
 - `.page-toolbar` 只分左右兩端：左邊搜尋或說明，右邊的多顆動作包進 `.page-actions`；手機上動作鈕只留圖示。
 - 換頁、排序與每頁筆數沿用已套用的條件，不寫進 URL；預設區間（「最近 24 小時」）在套用當下換算成起訖。匯出也用已套用的條件，但預設區間在按下匯出時重算，與標籤一致。
 - 讀取中的查詢、分頁與上下筆按鈕用 `aria-disabled` 而非 `disabled`，剛按下的按鈕不會因停用而讓焦點掉回 body。

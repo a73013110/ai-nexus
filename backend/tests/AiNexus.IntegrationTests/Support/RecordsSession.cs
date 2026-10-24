@@ -59,14 +59,14 @@ internal sealed class RecordsSession : IAsyncDisposable
 
     public static string GdId(string account) => "G-" + account;
 
-    /// <summary>登錄卡片並建立一段持有期間（預設 10/1 起持有中）；<paramref name="userId"/> 為 null 時持有人只有姓名。</summary>
-    public Task HoldAsync(Guid? userId, string card, DateTimeOffset? startsAt = null, DateTimeOffset? endsAt = null, string kind = CardKinds.Employee)
+    /// <summary>建立卡片（已有就沿用）並建立一段持有期間（預設 10/1 起持有中）；<paramref name="userId"/> 為 null 時持有人只有姓名。</summary>
+    public Task HoldAsync(Guid? userId, string card, DateTimeOffset? startsAt = null, DateTimeOffset? endsAt = null)
         => WithDbAsync(async db =>
         {
             var entity = await db.Set<Card>().SingleOrDefaultAsync(x => x.CardNumber == card);
             if (entity is null)
             {
-                entity = new Card { CardNumber = card, Kind = kind };
+                entity = new Card { CardNumber = card };
                 db.Add(entity);
             }
             db.Add(new CardAssignment
@@ -97,18 +97,9 @@ internal sealed class RecordsSession : IAsyncDisposable
         await db.SaveChangesAsync();
     });
 
-    public Task ExcludeAsync(Guid userId) => WithDbAsync(async db =>
-    {
-        db.Add(new RosterExclusion { UserId = userId, Note = "測試排除" });
-        await db.SaveChangesAsync();
-    });
-
-    /// <summary>依卡號標為不列入出勤：這張卡上沒有帳號的資料（姓名持有人、未歸戶刷卡）。</summary>
-    public Task ExcludeCardAsync(string cardNumber) => WithDbAsync(async db =>
-    {
-        db.Add(new RosterCardExclusion { CardNumber = cardNumber, Note = "測試排除" });
-        await db.SaveChangesAsync();
-    });
+    /// <summary>把卡片設為在出勤紀錄隱藏。</summary>
+    public Task HideAsync(string cardNumber) => WithDbAsync(db =>
+        db.Set<Card>().Where(x => x.CardNumber == cardNumber).ExecuteUpdateAsync(x => x.SetProperty(c => c.HiddenFromRecords, true)));
 
     public async Task WithDbAsync(Func<AppDbContext, Task> action)
     {

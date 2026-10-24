@@ -4,12 +4,9 @@ import type {
   CalendarDayRequest,
   CardAssignmentCreateRequest,
   CardAssignmentUpdateRequest,
-  CardRequest,
-  RosterExclusionRequest,
+  CardCreateRequest,
+  CardUpdateRequest,
 } from '@core/api/schema';
-
-/** 不列入出勤的對象：使用者，或一張卡上沒有帳號的資料（只有姓名的持有人、未歸戶刷卡）。 */
-export type ExclusionTarget = { userId: string } | { cardNumber: string };
 
 /** 出勤紀錄已套用的條件（`from`、`to` 必填，最長一年），查詢與匯出共用；分頁（`offset`、`limit`）每頁另外加上。 */
 export type AttendanceRecordFilters = Omit<
@@ -23,7 +20,7 @@ export type PunchImportFilters = Omit<
 >;
 
 /**
- * 出勤模組的端點：出勤紀錄（`attendance.records`）、卡號對應與不列入出勤（`attendance.cards`，寫入另需 `.maintain`）、
+ * 出勤模組的端點：出勤紀錄（`attendance.records`）、卡號對應（`attendance.cards`，寫入另需 `.maintain`）、
  * 打卡匯入紀錄（`attendance.imports`，重匯另需 `.reimport`）與假日設定（`attendance.calendar`，回寫另需 `.maintain`）。
  */
 @Injectable({ providedIn: 'root' })
@@ -32,7 +29,7 @@ export class AttendanceApi {
   /** 依人分頁：`offset` 起的 `limit` 人，回應帶總人數。 */
   records = (query: AttendanceRecordFilters, offset: number, limit: number, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-records', { query: { ...query, offset, limit }, signal });
-  /** 人員選單：範圍看得到、持有過員工卡的人（含只有姓名、還沒綁帳號的持有人），不限期間。 */
+  /** 人員選單：範圍看得到、持有過卡的人（含只有姓名、還沒綁帳號的持有人），不限期間。 */
   people = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-records/people', { signal });
   /** 與 `records` 同一組條件匯出 .xlsx；回應是檔案，檔名在 `Content-Disposition`。 */
   exportRecords = (query: AttendanceRecordFilters) =>
@@ -40,10 +37,12 @@ export class AttendanceApi {
   /** 判定規則的說明，時間是伺服器目前的設定值。 */
   rules = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-rules', { signal });
 
+  /** 卡號清單：打卡檔出現過的卡號匯入時自動建立，與 HR 新增的卡在同一份清單；`status` 篩待指派、持有中或隱藏。 */
   cards = (query: ApiQuery<'/api/v1/attendance-cards', 'get'>, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-cards', { query, signal });
-  createCard = (body: CardRequest) => this.api.post('/api/v1/attendance-cards', { body });
-  updateCard = (id: string, body: CardRequest) =>
+  createCard = (body: CardCreateRequest) => this.api.post('/api/v1/attendance-cards', { body });
+  /** 卡號建立後不改；只改是否在出勤紀錄隱藏與備註。 */
+  updateCard = (id: string, body: CardUpdateRequest) =>
     this.api.put('/api/v1/attendance-cards/{id}', { path: { id }, body });
   deleteCard = (id: string) => this.api.delete('/api/v1/attendance-cards/{id}', { path: { id } });
   /** 某張卡的持有歷史，新到舊。 */
@@ -59,25 +58,6 @@ export class AttendanceApi {
     this.api.put('/api/v1/attendance-card-assignments/{id}', { path: { id }, body });
   deleteAssignment = (id: string) =>
     this.api.delete('/api/v1/attendance-card-assignments/{id}', { path: { id } });
-  unattributed = (signal?: AbortSignal) =>
-    this.api.get('/api/v1/attendance-unattributed-cards', { signal });
-  /** 不列入出勤的名單（使用者與卡號）：HR 看全公司出勤時隱藏，不是權限。 */
-  exclusions = (signal?: AbortSignal) =>
-    this.api.get('/api/v1/attendance-roster-exclusions', { signal });
-  /** 標為不列入，已標過時只更新備註；沒有帳號的資料依卡號標。 */
-  exclude = (target: ExclusionTarget, body: RosterExclusionRequest) =>
-    'userId' in target
-      ? this.api.put('/api/v1/attendance-roster-exclusions/{userId}', { path: target, body })
-      : this.api.put('/api/v1/attendance-roster-exclusions/cards/{cardNumber}', {
-          path: target,
-          body,
-        });
-  restore = (target: ExclusionTarget) =>
-    'userId' in target
-      ? this.api.delete('/api/v1/attendance-roster-exclusions/{userId}', { path: target })
-      : this.api.delete('/api/v1/attendance-roster-exclusions/cards/{cardNumber}', {
-          path: target,
-        });
 
   imports = (filters: PunchImportFilters, take: number, before?: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-imports', { query: { ...filters, take, before }, signal });

@@ -83,7 +83,7 @@ export class AttendanceRecordsPage {
   private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
   readonly pageSizes = PAGE_SIZES;
-  /** 不列入出勤的名單與未歸戶卡號都在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
+  /** 隱藏的卡在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
   readonly cardsRoute = routeOf('attendance.cards');
   private readonly unitsRead = apiResource({
     feature: 'organization',
@@ -96,7 +96,7 @@ export class AttendanceRecordsPage {
     const units = this.unitsRead.value();
     return units ? [{ value: '', label: '所有單位' }, ...unitOptions(units)] : null;
   });
-  /** 人員選單：範圍看得到、持有過員工卡的人，與名單同一套範圍（與目前這一頁無關）。 */
+  /** 人員選單：範圍看得到、持有過卡的人，與名單同一套範圍（與目前這一頁無關）。 */
   private readonly peopleRead = apiResource({
     feature: 'attendance.records',
     loader: (_: true, signal) => this.api.people(signal),
@@ -110,9 +110,9 @@ export class AttendanceRecordsPage {
       label: person.displayName,
       description: [
         person.userId ? person.account : `卡號 ${person.cardNumber}`,
-        person.userId ? '' : person.unattributed ? '未歸戶' : '尚未綁帳號',
-        person.holding || person.unattributed ? '' : '已不持卡',
-        person.excluded ? '不列入出勤' : '',
+        person.userId ? '' : '尚未綁帳號',
+        person.holding ? '' : '已不持卡',
+        person.hidden ? '已隱藏' : '',
       ]
         .filter(Boolean)
         .join('・'),
@@ -164,22 +164,6 @@ export class AttendanceRecordsPage {
   readonly showPeople = computed(
     () => this.personOptions().length > 2 || !!this.draft().person || this.peopleLoading(),
   );
-  /**
-   * 「含不列入出勤」只在全公司範圍（`all`）有作用，但回應與 `/me` 都沒有帶範圍；
-   * 只看得到自己時不顯示，已勾選或名單裡出現不列入的人時一定顯示。
-   */
-  readonly showExcluded = computed(
-    () =>
-      this.query.applied().includeExcluded ||
-      this.personOptions().length > 2 ||
-      this.people().some((person) => person.excluded),
-  );
-  /** 「含未歸戶卡號」只在全公司範圍有作用：人員選單出現未歸戶卡號（只有全公司範圍才有）或已勾選時才顯示。 */
-  readonly showUnattributed = computed(
-    () =>
-      this.query.applied().includeUnattributed ||
-      (this.peopleRead.value() ?? []).some((person) => person.unattributed),
-  );
   readonly columns: TableColumn[] = [
     { id: 'date', label: '日期', hideable: false },
     { id: 'dayType', label: '日型' },
@@ -196,10 +180,8 @@ export class AttendanceRecordsPage {
     if (!data) return [];
     return data.people.map((person) => ({
       person,
-      // 同一張卡可能同時有姓名持有人與未歸戶刷卡兩列。
-      key:
-        person.userId ??
-        `${cardKey(person.cardNumber!)}:${person.unattributed ? '' : person.displayName}`,
+      // 同一張卡先後有兩位只有姓名的持有人時是兩列。
+      key: person.userId ?? `${cardKey(person.cardNumber!)}:${person.displayName}`,
       anomalies: person.days.filter((day) => day.status === 'Anomaly').length,
       late: person.days.filter((day) => day.lateSeconds > 0).length,
       early: person.days.filter((day) => day.earlyLeaveSeconds > 0).length,

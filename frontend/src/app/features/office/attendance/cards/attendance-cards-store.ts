@@ -4,8 +4,8 @@ import type {
   CardAssignmentCreateRequest,
   CardAssignmentDto,
   CardAssignmentUpdateRequest,
+  CardCreateRequest,
   CardDto,
-  CardRequest,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -17,11 +17,8 @@ import { errorCode } from '../attendance-presentation';
 /** 寫入的結果：失敗時 `error` 是審核過的訊息；使用者取消接手時兩者皆空。 */
 export type WriteOutcome<T = unknown> = { saved: true; value: T } | { saved: false; error: string };
 
-/** 新增持有期間；`cardId` 為 null 表示卡號尚未登錄（未歸戶卡號），儲存時先登錄成員工卡。 */
-export type AssignRequest = Omit<CardAssignmentCreateRequest, 'cardId' | 'takeOver'> & {
-  cardId: string | null;
-  cardNumber: string;
-};
+/** 新增持有期間；接手旗標由 `assign` 在使用者確認後才帶上。 */
+export type AssignRequest = Omit<CardAssignmentCreateRequest, 'takeOver'>;
 
 /** 持有期間 `[startsAt, endsAt)` 是否涵蓋某個時間點。 */
 export const covers = (item: CardAssignmentDto, at: number) =>
@@ -30,8 +27,8 @@ export const holderName = (item: CardAssignmentDto) =>
   item.userDisplayName ?? item.holderName ?? '（未填持有人）';
 
 /**
- * 卡號對應頁提供（`providers`）的狀態：卡片清單、選取卡片的持有歷史與未歸戶卡號，以及寫入。
- * 寫入成功後重讀伺服器的值（目前持有人、未歸戶都會跟著變）；持有歷史以卡片 ID 為鍵，切換卡片時不會短暫顯示上一張的歷史。
+ * 卡號對應頁提供（`providers`）的狀態：卡號清單、選取卡片的持有歷史，以及寫入。
+ * 寫入成功後重讀伺服器的值（目前持有人、待指派筆數都會跟著變）；持有歷史以卡片 ID 為鍵，切換卡片時不會短暫顯示上一張的歷史。
  */
 @Injectable()
 export class AttendanceCardsStore {
@@ -40,13 +37,13 @@ export class AttendanceCardsStore {
   private readonly session = inject(WorkspaceSession);
   private readonly toast = inject(ToastService);
   /** 已套用的卡片篩選；頁面依網址設定，`undefined` 時不讀。 */
-  readonly filters = signal<{ search: string; kind: string } | undefined>(undefined);
+  readonly filters = signal<{ search: string; status: string } | undefined>(undefined);
   private readonly cardsRead = apiResource({
     feature: 'attendance.cards',
     params: this.filters,
     loader: (filters, signal) =>
       this.api.cards(
-        { search: filters.search.trim() || undefined, kind: filters.kind || undefined },
+        { search: filters.search.trim() || undefined, status: filters.status || undefined },
         signal,
       ),
   });
@@ -56,17 +53,6 @@ export class AttendanceCardsStore {
   /** 查詢、重試與寫入後的重讀：表格淡化、查詢鈕轉圈。 */
   readonly cardsRefreshing = this.cardsRead.refreshing;
   readonly cardsError = this.cardsRead.error;
-  /** 切到未歸戶卡號時才讀。 */
-  readonly showUnattributed = signal(false);
-  private readonly unattributedRead = apiResource({
-    feature: 'attendance.cards',
-    params: () => (this.showUnattributed() ? true : undefined),
-    loader: (_params, signal) => this.api.unattributed(signal),
-  });
-  readonly unattributed = computed(() => this.unattributedRead.value() ?? []);
-  readonly unattributedLoading = this.unattributedRead.loading;
-  readonly unattributedRefreshing = this.unattributedRead.refreshing;
-  readonly unattributedError = this.unattributedRead.error;
   readonly selectedId = signal<string | null>(null);
   /** 選取的卡片；被別人刪除或不在目前篩選結果時變成 null。 */
   readonly selected = computed(
@@ -89,24 +75,32 @@ export class AttendanceCardsStore {
   readonly busy = signal(false);
   /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `locked` 停用。 */
   readonly working = signal('');
-  readonly actionError = signal('');
   readonly locked = computed(() => this.busy() || this.session.testing());
 
   reloadCards() {
-    this.actionError.set('');
     this.cardsRead.reload();
-  }
-  reloadUnattributed() {
-    this.unattributedRead.reload();
   }
   reloadAssignments() {
     this.assignmentsRead.reload();
   }
 
-  saveCard(id: string | null, body: CardRequest) {
+  createCard(body: CardCreateRequest) {
+    return this.write(() => this.api.createCard(body), `已新增卡號 ${body.cardNumber.trim()}`);
+  }
+  saveNote(card: CardDto, note: string | null) {
     return this.write(
-      () => (id ? this.api.updateCard(id, body) : this.api.createCard(body)),
-      id ? '已儲存卡片' : `已登錄卡號 ${body.cardNumber.trim()}`,
+      () => this.api.updateCard(card.id, { hiddenFromRecords: card.hiddenFromRecords, note }),
+      '已儲存備註',
+    );
+  }
+  /** 切換是否在出勤紀錄顯示；開關旁轉圈（`working` 為 `hidden:<id>`），備註照舊送回。 */
+  setHidden(card: CardDto, hidden: boolean) {
+    return this.write(
+      () => this.api.updateCard(card.id, { hiddenFromRecords: hidden, note: card.note ?? null }),
+      hidden
+        ? `卡號 ${card.cardNumber} 已在出勤紀錄隱藏`
+        : `卡號 ${card.cardNumber} 已在出勤紀錄顯示`,
+      `hidden:${card.id}`,
     );
   }
   async deleteCard(card: CardDto) {
@@ -131,32 +125,13 @@ export class AttendanceCardsStore {
     const alive = this.scope.guard();
     this.busy.set(true);
     try {
-      let cardId = request.cardId;
-      if (!cardId) {
-        // 未登錄的卡號先登錄成員工卡；之後指派失敗時卡片仍保留，清單會顯示為已登錄。
-        cardId = (
-          await this.api.createCard({
-            cardNumber: request.cardNumber,
-            kind: 'employee',
-            note: null,
-          })
-        ).id;
-      }
-      const body: CardAssignmentCreateRequest = {
-        cardId,
-        userId: request.userId,
-        holderName: request.holderName,
-        startsAt: request.startsAt,
-        endsAt: request.endsAt,
-        note: request.note,
-        takeOver: false,
-      };
+      const body: CardAssignmentCreateRequest = { ...request, takeOver: false };
       let saved: CardAssignmentDto;
       try {
         saved = await this.api.createAssignment(body);
       } catch (error) {
         if (errorCode(error) !== 'attendance_card_held' || !alive()) throw error;
-        const history = await this.api.assignments(cardId);
+        const history = await this.api.assignments(body.cardId);
         const at = Date.parse(body.startsAt);
         const current = history.find((item) => covers(item, at));
         this.busy.set(false);
@@ -191,11 +166,10 @@ export class AttendanceCardsStore {
     );
   }
 
-  /** 持有變動會改變目前持有人、持有歷史與未歸戶卡號，三者都重讀。 */
+  /** 持有變動會改變目前持有人、待指派筆數與持有歷史，兩份都重讀。 */
   private afterWrite() {
     this.cardsRead.reload();
     this.assignmentsRead.reload();
-    if (this.showUnattributed()) this.unattributedRead.reload();
   }
 
   /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */

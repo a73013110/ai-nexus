@@ -47,8 +47,7 @@ const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDt
         displayName: '王小明',
         account: 'TEST\\ming',
         leaveAvailable: true,
-        excluded: false,
-        unattributed: false,
+        hidden: false,
         days: [
           day('2026-10-01', { lateSeconds: 725 }),
           day('2026-10-02', {
@@ -72,24 +71,22 @@ const option = (patch: Partial<AttendancePersonOptionDto>): AttendancePersonOpti
   cardNumber: null,
   displayName: '',
   account: null,
-  excluded: false,
+  hidden: false,
   holding: true,
-  unattributed: false,
   ...patch,
 });
 const self = [option({ userId: 'u1', displayName: '王小明', account: 'TEST\\ming' })];
-/** 全公司範圍：含不持卡、不列入的人，只有姓名的持有人與未歸戶卡號（依卡號）。 */
+/** 全公司範圍：含不持卡、卡已隱藏的人，以及只有姓名的持有人（依卡號）。 */
 const company = [
   ...self,
   option({
     userId: 'u2',
     displayName: '陳小華',
     account: 'TEST\\hua',
-    excluded: true,
+    hidden: true,
     holding: false,
   }),
   option({ cardNumber: '3368', displayName: '陳怡君' }),
-  option({ cardNumber: '3444', displayName: '卡號 3444', holding: false, unattributed: true }),
 ];
 
 const rules: AttendanceRulesDto = {
@@ -187,9 +184,8 @@ describe('AttendanceRecordsPage', () => {
     expect(rows[1].textContent).toContain('沒有刷卡，也沒有假單');
     expect(root.querySelector('.records-leave-unavailable')).toBeNull();
     expect(root.querySelector('.records-calendar-unavailable')).toBeNull();
-    // 只看得到自己時，「含不列入出勤」沒有作用，不顯示。
-    expect(root.querySelector('.records-excluded')).toBeNull();
-    expect(root.querySelector('.records-unattributed')).toBeNull();
+    // 查詢列只有區間與含放假日（只看得到自己時沒有人員選單）。
+    expect(root.querySelectorAll('nx-query-bar nx-checkbox')).toHaveLength(1);
   });
 
   it('marks leave and calendar as unavailable when the document system is down', async () => {
@@ -222,7 +218,7 @@ describe('AttendanceRecordsPage', () => {
       displayName: '陳小華',
       account: 'TEST\\hua',
       leaveAvailable: false,
-      excluded: true,
+      hidden: true,
       days: [day('2026-10-01', { leave: 'Unavailable' })],
     });
     const { fixture, root } = setup(async () => data);
@@ -230,9 +226,10 @@ describe('AttendanceRecordsPage', () => {
     const groups = root.querySelectorAll('.records-person-row');
     expect(groups[0].textContent).not.toContain('假單無法取得');
     expect(groups[1].textContent).toContain('假單無法取得');
-    expect(groups[1].textContent).toContain('不列入出勤');
+    expect(groups[1].textContent).toContain('已隱藏');
+    // 沒有卡號對應頁的權限時只標示，不給連結。
+    expect(groups[1].querySelector('a.records-badge-link')).toBeNull();
     expect(root.querySelector('.records-leave-unavailable')).toBeNull();
-    expect(root.querySelector('.records-excluded')).not.toBeNull();
   });
 
   it('offers units only to accounts that can read the organization', async () => {
@@ -275,19 +272,9 @@ describe('AttendanceRecordsPage', () => {
     const { fixture, root, api } = setup(async () => records(), ['attendance.records'], company);
     await fixture.whenStable();
     const options = fixture.componentInstance.personOptions();
-    expect(options.map((option) => option.label)).toEqual([
-      '所有人',
-      '王小明',
-      '陳小華',
-      '陳怡君',
-      '卡號 3444',
-    ]);
-    expect(options[2].description).toBe('TEST\\hua・已不持卡・不列入出勤');
+    expect(options.map((option) => option.label)).toEqual(['所有人', '王小明', '陳小華', '陳怡君']);
+    expect(options[2].description).toBe('TEST\\hua・已不持卡・已隱藏');
     expect(options[3].description).toBe('卡號 3368・尚未綁帳號');
-    expect(options[4].description).toBe('卡號 3444・未歸戶');
-    // 全公司範圍才有作用的「含不列入出勤」「含未歸戶卡號」，選單出現全公司才有的人時才顯示。
-    expect(root.querySelector('.records-excluded')).not.toBeNull();
-    expect(root.querySelector('.records-unattributed')).not.toBeNull();
 
     fixture.componentInstance.query.commit({ person: options[3].value });
     await fixture.whenStable();
@@ -327,25 +314,15 @@ describe('AttendanceRecordsPage', () => {
     expect(root.querySelector('.records-remark')?.textContent).toContain('國慶日');
   });
 
-  it('marks an unattributed card and links to assigning it when the cards page is granted', async () => {
+  it('marks a person on hidden cards and links to them when the cards page is granted', async () => {
     const data = records();
-    data.people[0] = {
-      ...data.people[0],
-      userId: null,
-      cardNumber: '3444',
-      displayName: '卡號 3444',
-      account: null,
-      leaveAvailable: false,
-      unattributed: true,
-    };
+    data.people[0] = { ...data.people[0], hidden: true };
     const { fixture, root } = setup(async () => data, ['attendance.records', 'attendance.cards']);
     await fixture.whenStable();
-    const head = root.querySelector('.records-person-row')!;
-    expect(head.textContent).toContain('未歸戶卡號');
-    expect(head.textContent).not.toContain('尚未綁帳號');
-    expect(head.querySelector('a.records-badge-link')?.getAttribute('href')).toContain(
-      'view=unattributed',
-    );
+    const link = root.querySelector('.records-person-row a.records-badge-link')!;
+    expect(link.textContent).toContain('已隱藏');
+    expect(link.getAttribute('href')).toContain('status=hidden');
+    expect(link.getAttribute('href')).toContain('search=');
   });
 
   it('pages by person and returns to the first page when the filters change', async () => {

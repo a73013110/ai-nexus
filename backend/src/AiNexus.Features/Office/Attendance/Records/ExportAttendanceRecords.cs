@@ -45,8 +45,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             DetailsJson = JsonSerializer.Serialize(new
             {
                 from = data.From, to = data.To, userId = filter.UserId, cardNumber = filter.CardNumber, unitId = filter.UnitId,
-                includeExcluded = filter.IncludeExcluded == true, includeDaysOff = filter.IncludeDaysOff == true,
-                includeUnattributed = filter.IncludeUnattributed == true, count = data.People.Count
+                includeDaysOff = filter.IncludeDaysOff == true, count = data.People.Count
             })
         });
         await db.SaveChangesAsync(ct);
@@ -102,9 +101,8 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             var lateDays = person.Days.Where(x => x.LateSeconds > 0).ToList();
             var earlyDays = person.Days.Where(x => x.EarlyLeaveSeconds > 0).ToList();
             List<string> notes = [];
-            if (person.Excluded) notes.Add("不列入出勤");
-            if (person.Unattributed) notes.Add("未歸戶卡號：刷卡沒有持有人，只列有刷卡的日子，假單無法取得");
-            else if (person.UserId is null) notes.Add("尚未綁帳號（卡號對應只有姓名），假單無法取得");
+            if (person.Hidden) notes.Add("卡號在出勤紀錄隱藏");
+            if (person.UserId is null) notes.Add("尚未綁帳號（卡號對應只有姓名），假單無法取得");
             else if (!person.LeaveAvailable && data.LeaveAvailable) notes.Add("對不到公文系統帳號，假單無法取得");
             sheet.Add(
                 person.DisplayName, Identity(person), person.Days.Count, Count(AttendanceStatus.Present), Count(AttendanceStatus.OnLeave), Count(AttendanceStatus.DayOff),
@@ -126,8 +124,6 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         if (filter.UserId is not null) filters.Add("指定人員");
         if (filter.CardNumber is not null) filters.Add($"指定卡號 {filter.CardNumber}");
         if (filter.UnitId is not null) filters.Add("指定單位（含下層）");
-        if (filter.IncludeExcluded == true) filters.Add("含不列入出勤的人");
-        if (filter.IncludeUnattributed == true) filters.Add("含未歸戶卡號");
         sheet.Add("條件", filters.Count > 0 ? string.Join("、", filters) + $"，共 {data.People.Count} 人" : $"資料範圍內的全部人員，共 {data.People.Count} 人");
         sheet.Add("放假日", filter.IncludeDaysOff == true ? "全部列出" : "只列有刷卡或假單的放假日；沒有刷卡也沒有假單的放假日不列，也不計入統計");
         if (!data.CalendarAvailable)

@@ -4,7 +4,7 @@
 
 ## 授權
 
-- `attendance.cards`：讀卡片、持有歷史、未歸戶卡號與不列入出勤名單。`attendance.cards.maintain`：新增、修改、刪除卡片、持有期間與不列入出勤，寫入端點兩者都要有。
+- `attendance.cards`：讀卡號清單與持有歷史。`attendance.cards.maintain`：新增、修改、刪除卡片與持有期間，寫入端點兩者都要有。
 - `attendance.imports`：讀匯入紀錄。`attendance.imports.reimport`：手動重匯，端點兩者都要有。
 - `attendance.records` 以外的出勤功能（卡號對應、匯入紀錄、假日設定與其動作）列在 `AdministrativeFeatures`：管理員以測試身分扮成 HR 時可讀，寫入回 403 `test_admin_read_only`，免得紀錄把被扮演的人當成操作者。
 - `attendance.records`：資料範圍 `own`、`unit`、`unit-tree`、`all`，組織勾選的主管自動取得所管單位含下層，見 [出勤紀錄](attendance-records.md#資料範圍)。
@@ -12,9 +12,15 @@
 
 ## 卡片
 
-- 卡號去掉前後空白後存入，不補零；唯一（不分大小寫），重複回 `attendance_card_number_duplicate`。
-- 員工卡才歸戶。訪客卡不能指派持有期間（`attendance_card_visitor`），也不能把已有持有期間的卡改成訪客卡。
-- 只有沒有任何持有期間的卡可以刪除（`attendance_card_has_assignments`）：持有期間是歸戶依據，不級聯；不再使用的卡把持有期間結束即可。
+- 一張卡號清單：打卡檔出現過的卡號匯入時自動建立（與刷卡同一個交易），HR 只在先發卡、還沒刷過時手動新增。卡號去掉前後空白後存入，不補零；唯一（不分大小寫），重複回 `attendance_card_number_duplicate`。
+- 卡號建立後不改（刷卡以卡號字串對應）；可改的只有備註與「在出勤紀錄隱藏」（`HiddenFromRecords`）。
+- 狀態篩選（`status`）：`unassigned` 待指派＝有沒有持有期間涵蓋的刷卡、且沒有隱藏，依最近一筆這類刷卡排序；`held` 持有中；`hidden` 隱藏。每張卡帶最後刷卡時間與待指派的筆數、第一筆與最後一筆，詳情的「補指派」以第一筆為開始、下一段期間的開始為結束。
+- 只有沒刷過卡、也沒有持有期間的卡可以刪除（`attendance_card_in_use`）：持有期間是歸戶依據，不級聯；有刷卡的卡刪了下次匯入又會建回來。不再使用的卡把持有期間結束，不想看到的改為隱藏。
+
+## 在出勤紀錄隱藏
+
+- HR 看全公司出勤時略過的卡（訪客卡、公務卡、董事的卡等），取代舊欄位「顯示打卡資料」與先前的卡片種類（員工／訪客）。不是權限：本人與主管照常看得到，指定人或卡號時也查得到，見 [出勤紀錄](attendance-records.md#名單)。
+- 設在卡片上而不是人：同名同姓或只有姓名的持有人不會被一起隱藏；隱藏的卡也能指派持有人，所以換手後不必重設。
 
 ## 持有期間
 
@@ -24,19 +30,9 @@
 - 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
 - 檢查與寫入在 `AdministrativeAudit` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
 
-## 未歸戶卡號
-
-員工卡上沒有持有期間涵蓋的刷卡（含尚未登錄的卡號），依卡號彙總筆數、第一筆與最後一筆刷卡，可依出勤日篩選。指派時起始時間預設為第一筆未歸戶刷卡。
-
 ## 刷卡匯入
 
 見 [刷卡匯入](attendance-imports.md)。
-
-## 不列入出勤
-
-- HR 看全公司出勤時隱藏的人或卡號（董事、外派、測試卡等），取代舊欄位「顯示打卡資料」；不是權限，本人與主管照常看得到，查詢方式見 [出勤紀錄](attendance-records.md#名單)。
-- 管理在卡號對應頁的「不列入出勤」檢視：`GET /api/v1/attendance-roster-exclusions` 要 `attendance.cards`；`PUT`／`DELETE /api/v1/attendance-roster-exclusions/{userId}` 與 `.../cards/{cardNumber}`（設定或修改原因、恢復列入）另要 `.maintain`。
-- 對象是使用者或卡號：沒有帳號的資料（只有姓名的持有人、未歸戶刷卡）依附在卡號，依卡號標就不會連同名同姓的人一起隱藏。卡號要登錄過或有刷卡、不能是訪客卡（`attendance_card_not_found`、`attendance_card_visitor`）；綁上帳號後改以該使用者的設定為準。原因是選填的自由文字（最多 200 字），不進稽核。
 
 ## 出勤判定
 
@@ -45,4 +41,4 @@
 
 ## 稽核
 
-`admin.attendance_card`、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`、`admin.attendance_roster_exclusion`、`admin.attendance_roster_exclusion_delete`，活動稽核以「出勤卡號與名單異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
+`admin.attendance_card`（快照含前後的隱藏旗標）、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號與名單異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。

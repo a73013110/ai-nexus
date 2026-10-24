@@ -87,8 +87,13 @@ tr.is-weekend > td:first-child {
 .records-none {
   color: var(--secondary);
 }
+// 核取方塊不需要欄位寬度：不參與欄位的伸縮，與控制項底部對齊並在同高度內垂直置中。
 .records-option {
+  display: flex;
+  flex: none;
   align-self: end;
+  align-items: center;
+  min-height: var(--button-target);
 }
 @include bp.below(narrow) {
   .records-person-group {

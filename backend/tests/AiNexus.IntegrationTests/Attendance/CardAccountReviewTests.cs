@@ -1,8 +1,7 @@
 using System.Globalization;
-using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
+using System.Net.Http.Json;
 using AiNexus.Features.Admin.AccessControl;
-using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Office.Attendance.Cards;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 
@@ -42,12 +41,8 @@ public sealed class CardAccountReviewTests
         Assert.Contains("上次持有卡號 B002", lost.Detail);
         Assert.Contains("這張卡目前由", lost.Detail);
 
-        // 不列入出勤的人本來就不在出勤紀錄，不提示。
-        using (var scope = f.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Add(new RosterExclusion { UserId = session.Carol }); await db.SaveChangesAsync();
-        }
+        // 上次持有的卡已在出勤紀錄隱藏（例如董事、外派），HR 本來就不看，不提示。
+        (await hr.PutAsJsonAsync($"{Cards}/{returned.Id}", new CardUpdateRequest(true, null))).EnsureSuccessStatusCode();
         Assert.Empty(await ReviewCodesAsync(admin, session.Carol));
     }
 }

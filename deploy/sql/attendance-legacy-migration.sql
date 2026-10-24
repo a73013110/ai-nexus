@@ -148,10 +148,9 @@ WHERE AdAccount IS NOT NULL;
 IF OBJECT_ID('tempdb..#TargetCards') IS NOT NULL DROP TABLE #TargetCards;
 CREATE TABLE #TargetCards (
     Id         UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-    CardNumber NVARCHAR(32) COLLATE Chinese_Taiwan_Stroke_CI_AS NOT NULL UNIQUE,
-    Kind       NVARCHAR(16) COLLATE Chinese_Taiwan_Stroke_CI_AS NOT NULL
+    CardNumber NVARCHAR(32) COLLATE Chinese_Taiwan_Stroke_CI_AS NOT NULL UNIQUE
 );
-INSERT #TargetCards SELECT Id, CardNumber, Kind FROM [$(TargetServer)].[$(TargetDatabase)].[attendance].[Cards];
+INSERT #TargetCards SELECT Id, CardNumber FROM [$(TargetServer)].[$(TargetDatabase)].[attendance].[Cards];
 
 IF OBJECT_ID('tempdb..#TargetAssignments') IS NOT NULL DROP TABLE #TargetAssignments;
 CREATE TABLE #TargetAssignments (
@@ -191,7 +190,7 @@ GO
 --    EmpClock.EmpNo 是匯入當下的持有人（換人時舊系統改寫為新職號），所以它就是歸戶的答案。
 --    同一張卡依時間排序，職號連續相同的一段刷卡＝一段持有（gaps and islands）。
 --    卡沒有輪回同一人時，結果等於規格的「（卡號、職號）最早與最晚刷卡」；A→B→A 輪回則切成三段，避免 A 的一段蓋住 B。
---    UNKNOWN_ 也是一段：它把前後隔開但不轉，那段刷卡留在未歸戶。
+--    UNKNOWN_ 也是一段：它把前後隔開但不轉，那段刷卡沒有持有人，在卡號對應頁列為待指派。
 -- ============================================================================
 IF OBJECT_ID('tempdb..#Runs') IS NOT NULL DROP TABLE #Runs;
 CREATE TABLE #Runs (
@@ -324,13 +323,15 @@ GO
 
 -- ============================================================================
 -- 5. 卡片與候選期間的狀態
---    Cards：舊系統認得持有人的卡（刷卡段或現行對應）都登錄為員工卡；只出現在 UNKNOWN_ 的卡不登錄，
---    它們以未登錄卡號出現在未歸戶清單（ADR 0018），HR 登錄時才決定是員工卡還是訪客卡。
+--    Cards：與每日匯入相同，刷卡出現過的卡號都建立（含只出現在 UNKNOWN_ 的卡），再加上現行對應的卡。
+--    沒有持有期間涵蓋的刷卡在卡號對應頁列為「待指派」（ADR 0018），訪客卡由 HR 改為在出勤紀錄隱藏。
 -- ============================================================================
 IF OBJECT_ID('tempdb..#NewCards') IS NOT NULL DROP TABLE #NewCards;
 SELECT s.CardNumber, NEWID() AS Id
 INTO #NewCards
-FROM (SELECT CardNumber FROM #Cand UNION SELECT CardNumber FROM #CurrentCard WHERE Problem IS NULL) AS s
+FROM (SELECT CardNumber FROM #Cand
+      UNION SELECT CardNumber FROM #CurrentCard WHERE Problem IS NULL
+      UNION SELECT CardNumber FROM #Clock WHERE Problem IS NULL) AS s
 WHERE NOT EXISTS (SELECT 1 FROM #TargetCards AS t WHERE t.CardNumber = s.CardNumber);
 
 UPDATE c SET CardId = COALESCE(t.Id, n.Id)
@@ -348,7 +349,6 @@ FROM #Cand AS c JOIN #Emp AS e ON e.EmpNo = c.EmpNo;
 DECLARE @max DATETIMEOFFSET(7) = '9999-12-31T23:59:59.9999999+00:00';
 UPDATE c SET Status =
     CASE WHEN c.UserId IS NULL AND c.HolderName IS NULL THEN N'unmatched'
-         WHEN EXISTS (SELECT 1 FROM #TargetCards AS t WHERE t.Id = c.CardId AND t.Kind = N'visitor') THEN N'visitor'
          WHEN EXISTS (SELECT 1 FROM #TargetAssignments AS a WHERE a.CardId = c.CardId AND a.StartsAt = c.StartsAt) THEN N'exists'
          WHEN o.Id IS NOT NULL THEN N'overlap'
          ELSE N'new' END,
@@ -392,7 +392,7 @@ FROM (VALUES
     (9, N'  其中只有姓名（UnmatchedAsHolderName）', (SELECT COUNT(*) FROM #Cand WHERE Status = N'new' AND UserId IS NULL)),
     (10, N'已存在的持有期間（略過）', (SELECT COUNT(*) FROM #Cand WHERE Status = N'exists')),
     (11, N'對不上使用者的持有期間（不寫）', (SELECT COUNT(*) FROM #Cand WHERE Status = N'unmatched')),
-    (12, N'重疊或訪客卡的持有期間（不寫）', (SELECT COUNT(*) FROM #Cand WHERE Status IN (N'overlap', N'visitor')))
+    (12, N'重疊的持有期間（不寫）', (SELECT COUNT(*) FROM #Cand WHERE Status = N'overlap'))
 ) AS x(n, [項目], [數量])
 ORDER BY x.n;
 
@@ -405,16 +405,16 @@ WHERE e.UserId IS NULL
 GROUP BY c.EmpNo, e.EmpName, e.GdId, e.AdAccount, c.CardNumber, e.Reason
 ORDER BY e.Reason, c.EmpNo, c.CardNumber;
 
--- 無法寫入的持有期間：重疊、訪客卡、舊系統一卡多人。
+-- 無法寫入的持有期間：重疊、舊系統一卡多人。
 SELECT N'無法寫入的持有期間' AS [清單], x.[卡號], x.[職號], x.[姓名], x.[起始], x.[結束], x.[原因], x.[衝突的既有期間]
 FROM (
     SELECT c.CardNumber AS [卡號], c.EmpNo AS [職號], e.EmpName AS [姓名], c.StartsAt AS [起始], c.EndsAt AS [結束],
-           CASE c.Status WHEN N'overlap' THEN N'與目標既有持有期間重疊' ELSE N'目標已登錄為訪客卡' END AS [原因],
+           N'與目標既有持有期間重疊' AS [原因],
            CASE WHEN a.Id IS NOT NULL THEN CONVERT(NVARCHAR(36), a.Id) + N' ' + CONVERT(NVARCHAR(40), a.StartsAt, 126) + N' ~ ' + ISNULL(CONVERT(NVARCHAR(40), a.EndsAt, 126), N'持有中') END AS [衝突的既有期間]
     FROM #Cand AS c
     JOIN #Emp AS e ON e.EmpNo = c.EmpNo
     LEFT JOIN #TargetAssignments AS a ON a.Id = c.ConflictId
-    WHERE c.Status IN (N'overlap', N'visitor')
+    WHERE c.Status = N'overlap'
     UNION ALL
     SELECT CardNumber, NULL, NULL, NULL, NULL,
            CASE WHEN Problem IS NOT NULL THEN N'EmpCard 的卡號無效：' + Problem
@@ -465,8 +465,8 @@ DECLARE @now DATETIMEOFFSET(7) = SWITCHOFFSET(SYSDATETIMEOFFSET(), '+00:00');
 DECLARE @runStart DATETIMEOFFSET(7) = (SELECT StartedAt FROM #RunInfo);
 DECLARE @n INT;
 
-INSERT INTO [$(TargetServer)].[$(TargetDatabase)].[attendance].[Cards] (Id, CardNumber, Kind, Note, CreatedAt)
-SELECT Id, CardNumber, N'employee', N'舊系統 ADAuthentication 轉入', @now FROM #NewCards;
+INSERT INTO [$(TargetServer)].[$(TargetDatabase)].[attendance].[Cards] (Id, CardNumber, Note, CreatedAt)
+SELECT Id, CardNumber, N'舊系統 ADAuthentication 轉入', @now FROM #NewCards;
 SET @n = @@ROWCOUNT;
 RAISERROR(N'Cards 新增 %d 筆', 0, 1, @n) WITH NOWAIT;
 

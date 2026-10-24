@@ -119,8 +119,8 @@ public sealed class AssignCardTests
         Assert.Equal((null, "王新進"), (named.UserId, named.HolderName));
         await AddPunchesAsync(factory, ("A001", At(10, 2, 8, 55)), ("A001", At(10, 3, 18, 5)));
 
-        // 只有姓名也算已歸戶：還沒有帳號的人，刷卡不會出現在未歸戶清單。
-        Assert.Empty((await hr.GetFromJsonAsync<UnattributedCardDto[]>(Unattributed))!);
+        // 只有姓名也算已歸戶：還沒有帳號的人，刷卡不算待指派。
+        Assert.Equal(0, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
         Assert.Equal([(Guid?)null, null], await HolderIdsAsync(factory));
 
         (await hr.PutAsJsonAsync($"{Assignments}/{named.Id}", new CardAssignmentUpdateRequest(dave, "王新進", At(10, 1), null, null))).EnsureSuccessStatusCode();
@@ -158,11 +158,10 @@ public sealed class AssignCardTests
     }
 
     [Fact]
-    public async Task AssignmentsNeedAHolderAValidPeriodAnExistingEmployeeCardAndAnExistingUser()
+    public async Task AssignmentsNeedAHolderAValidPeriodAnExistingCardAndAnExistingUser()
     {
         await using var session = await HrSession.CreateAsync();
         var (factory, hr, bob, card) = (session.Factory, session.Hr, session.Bob, session.Card);
-        var visitor = await CreateCardAsync(hr, "V001", CardKinds.Visitor);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await AssignAsync(hr, card.Id, null, At(10, 1))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await AssignAsync(hr, card.Id, null, At(10, 1), holderName: "   ")).StatusCode);
@@ -172,7 +171,6 @@ public sealed class AssignCardTests
         Assert.Equal(HttpStatusCode.BadRequest, (await AssignAsync(hr, Guid.Empty, bob, At(10, 1))).StatusCode);
         await AssertCodeAsync(await AssignAsync(hr, Guid.NewGuid(), bob, At(10, 1)), HttpStatusCode.NotFound, "attendance_card_not_found");
         await AssertCodeAsync(await AssignAsync(hr, card.Id, Guid.NewGuid(), At(10, 1)), HttpStatusCode.NotFound, "attendance_user_not_found");
-        await AssertCodeAsync(await AssignAsync(hr, visitor.Id, bob, At(10, 1)), HttpStatusCode.Conflict, "attendance_card_visitor");
         Assert.Empty(await HistoryAsync(hr, card.Id));
         await AssertCodeAsync(await hr.GetAsync(Assignments), HttpStatusCode.BadRequest, "attendance_filter_invalid");
     }
@@ -184,11 +182,11 @@ public sealed class AssignCardTests
         var (factory, hr, bob, card) = (session.Factory, session.Hr, session.Bob, session.Card);
         var period = await AssignOkAsync(hr, card.Id, bob, At(10, 1));
         await AddPunchesAsync(factory, ("A001", At(10, 2)));
-        Assert.Empty((await hr.GetFromJsonAsync<UnattributedCardDto[]>(Unattributed))!);
+        Assert.Equal(0, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
 
         Assert.Equal(HttpStatusCode.NoContent, (await hr.DeleteAsync($"{Assignments}/{period.Id}")).StatusCode);
         Assert.Empty(await HistoryAsync(hr, card.Id));
-        Assert.Equal(["A001"], (await hr.GetFromJsonAsync<UnattributedCardDto[]>(Unattributed))!.Select(x => x.CardNumber));
+        Assert.Equal(1, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
         await AssertCodeAsync(await hr.DeleteAsync($"{Assignments}/{period.Id}"), HttpStatusCode.NotFound, "attendance_assignment_not_found");
     }
 
