@@ -323,9 +323,11 @@ test("200 percent text scaling keeps composer controls operable without page ove
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("放大文字測試");
   // 36rem doubles with the text, so the composer folds reasoning effort into the model panel.
   await page.getByRole("combobox", { name: "選擇模型" }).click();
-  // The enlarged panel scrolls; the effort section stays reachable inside it.
+  // 放大後面板會捲動，思考強度要能在面板內捲到。像使用者一樣把面板捲到底：scrollIntoViewIfNeeded
+  // 會把群組置中在 200% rem 的小數位置，scrollTop 取整後裁掉不到一像素，ratio 1 就判失敗。
   const effort = page.getByRole("group", { name: "思考強度", exact: true });
-  await effort.scrollIntoViewIfNeeded();
+  await effort.hover();
+  await page.mouse.wheel(0, 1000);
   await expect(effort).toBeInViewport({ ratio: 1 });
   await page.keyboard.press("Escape");
   const send = page.getByRole("button", { name: "送出訊息" });

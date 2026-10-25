@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
+/** 依查詢字詞標出文字中的命中片段。 */
 @Component({
   selector: 'nx-text-highlight',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles:
     'mark { background: var(--accent-soft); color: var(--ink); outline: 1px solid var(--signal) }',
+  // 未命中的片段也包在 ng-container 裡：裸露的插值會把換行縮排收成前後空白，畫面與無障礙名稱就變成「林 同事」。
   template: `@for (part of parts(); track $index) {
     @if (part.match) {
       <mark>{{ part.text }}</mark>
     } @else {
-      {{ part.text }}
+      <ng-container>{{ part.text }}</ng-container>
     }
   }`,
 })

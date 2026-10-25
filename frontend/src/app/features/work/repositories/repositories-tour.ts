@@ -163,7 +163,7 @@ function sectionSteps(options: {
               description: '點資料夾往下、點檔案看行號與語法上色；資料夾的 README 顯示在清單下方。',
             },
             chat && {
-              target: 'nx-repository-code input.pick',
+              target: 'nx-repository-code nx-checkbox.pick',
               title: '勾選檔案帶入對話',
               description:
                 '可跨資料夾勾選最多 20 個檔案，打包成一個附件放進新對話的草稿，不會自動送出。',
