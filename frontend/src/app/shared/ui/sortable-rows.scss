@@ -1,0 +1,72 @@
+// 把手與位置編號（SortHandle、SortRank 共用）；列本身的拖曳樣式在全域 styles/sortable.scss。
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.sort-handle {
+  color: var(--secondary);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    color var(--motion-fast),
+    background var(--motion-fast);
+}
+.sort-handle:hover:not([aria-disabled='true']) {
+  color: var(--ink);
+}
+:host-context(.is-dragging) .sort-handle {
+  color: var(--accent);
+  cursor: grabbing;
+}
+.sort-handle[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.4;
+}
+// 位置編號：平常是安靜的數字，滑過或聚焦時浮出外框，點了換成輸入框。
+.sort-rank {
+  box-sizing: border-box;
+  width: 3rem;
+  min-height: 1.875rem;
+  padding: 0 var(--p-space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast),
+    color var(--motion-fast);
+}
+button.sort-rank:not(:disabled) {
+  cursor: text;
+}
+button.sort-rank:hover:not(:disabled),
+button.sort-rank:focus-visible {
+  border-color: var(--control-line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.sort-rank.is-unsorted {
+  color: var(--secondary);
+  font-weight: 400;
+}
+.sort-rank-input {
+  border-color: var(--accent);
+  background: var(--surface);
+  appearance: textfield;
+}
+.sort-rank-input::-webkit-inner-spin-button {
+  appearance: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sort-handle,
+  .sort-rank {
+    transition: none;
+  }
+}

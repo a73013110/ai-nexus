@@ -1,5 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
+import type { AdminUserDto } from '@core/api/schema';
+import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { IdentityApi } from './identity-api';
@@ -87,7 +89,68 @@ export class AdminUsersStore {
     this.access.saved(title, description);
     this.changed();
   }
+  /** 正在寫入順序；期間不能再拖，避免第二次移動以舊的位置計算。 */
+  readonly ordering = signal(false);
+  /** 未搜尋時本頁是整份名單連續的一段，可以先在本頁換序；搜尋時只能等重讀。 */
+  readonly reorderable = computed(() => !this.query() && !this.typing());
+  /**
+   * 把使用者移到整份名單第 `position` 位：先在本頁換序（畫面立即反應，`SortableRows` 接著播放落定動畫），
+   * 寫入後重讀本頁取得伺服器算出的排序值與編號；失敗時換回原本的列並提示。
+   */
+  async move(id: string, position: number) {
+    const page = this.users();
+    if (!page || this.ordering()) return;
+    if (this.reorderable()) this.usersRead.value.set(reordered(page, id, position));
+    this.ordering.set(true);
+    try {
+      await this.api.moveUser(id, position);
+    } catch (error) {
+      this.usersRead.value.set(page);
+      this.actionError.set(safeMessage(error));
+    } finally {
+      this.ordering.set(false);
+      this.usersRead.reload();
+    }
+  }
+  /** 清除所有人的順序，回到依姓名、帳號排列。 */
+  async resetOrder() {
+    this.ordering.set(true);
+    try {
+      await this.api.resetUserOrder();
+      this.toast.success('已清除使用者順序', '出勤紀錄等列表改回依姓名排列。');
+    } catch (error) {
+      this.actionError.set(safeMessage(error));
+    } finally {
+      this.ordering.set(false);
+      this.usersRead.reload();
+    }
+  }
   roleNames(ids: string[]) {
     return this.access.roleNames(ids);
   }
+}
+
+/**
+ * 本頁的樂觀換序：未搜尋時本頁的編號連續（`offset + 1` 起），移到頁外的人先從本頁拿掉。
+ * 被移動的人與它越過的未排序者先標成已排序（值由伺服器決定，重讀後換成真的值）。
+ */
+function reordered(
+  page: { users: AdminUserDto[]; offset: number; sorted: number; total: number },
+  id: string,
+  position: number,
+) {
+  const users = [...page.users];
+  const from = users.findIndex((user) => user.id === id);
+  if (from < 0) return page;
+  const [moved] = users.splice(from, 1);
+  const index = position - page.offset - 1;
+  if (index >= 0 && index <= users.length) users.splice(index, 0, moved);
+  let sorted = page.sorted;
+  const at = users.indexOf(moved);
+  const next = users.map((user, i) => {
+    const passed = at >= 0 && i <= at && user.sortOrder == null;
+    if (passed) sorted++;
+    return { ...user, position: page.offset + i + 1, sortOrder: passed ? 0 : user.sortOrder };
+  });
+  return { ...page, users: next, sorted };
 }

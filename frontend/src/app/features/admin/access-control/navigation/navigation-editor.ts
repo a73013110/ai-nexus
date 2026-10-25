@@ -17,6 +17,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { featureIcon, type NavigationKind } from '@core/layout/navigation-tree';
 import { ThemeService } from '@core/preferences/theme-service';
+import { edgeScrollSpeed, flipRows, layoutBox, settleMotion } from '@shared/browser/reorder-motion';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -66,9 +67,6 @@ interface Drag {
   last: PointerEvent;
   scroll: number;
 }
-const SCROLL_EDGE = 48;
-const SCROLL_SPEED = 12;
-
 /**
  * 選單樹的編輯表：每列一個節點，依層級內縮。位置直接在表上調整：拖曳把手（放在列的上半或下半＝插到它前後，
  * 拖到分群列的中段＝移入該分群），或在把手上按 ↑↓（Home／End）在同層移動、← 移出分群、→ 移入上方的分群；
@@ -455,7 +453,8 @@ export class NavigationEditor {
     const items = this.store.items();
     for (const row of this.rows()) {
       if (row.item.id === drag.id) continue;
-      const box = this.row(row.item.id)?.getBoundingClientRect();
+      const element = this.row(row.item.id);
+      const box = element && layoutBox(element);
       if (!box || pointY < box.top || pointY > box.bottom) continue;
       const ratio = (pointY - box.top) / (box.height || 1);
       const group = row.item.kind === 'group';
@@ -498,18 +497,11 @@ export class NavigationEditor {
     drag.scroll = 0;
     const scroller = drag.row.closest<HTMLElement>('.ui-table-scroll');
     if (!scroller) return;
-    const box = scroller.getBoundingClientRect(),
-      pointY = drag.last.clientY;
-    const speed =
-      pointY < box.top + SCROLL_EDGE
-        ? -SCROLL_SPEED
-        : pointY > box.bottom - SCROLL_EDGE
-          ? SCROLL_SPEED
-          : 0;
+    const speed = edgeScrollSpeed(scroller.getBoundingClientRect(), drag.last.clientY);
     const before = scroller.scrollTop;
     scroller.scrollTop += speed;
     if (scroller.scrollTop === before) return;
-    this.step(drag, pointY);
+    this.step(drag, drag.last.clientY);
     drag.scroll = requestAnimationFrame(() => this.autoscroll());
   }
 
@@ -522,7 +514,7 @@ export class NavigationEditor {
     const row = this.rows().find((item) => item.item.id === drag.id);
     this.end();
     if (!this.theme.reducedMotion())
-      drag.row.animate([{ translate: from }, { translate: '0 0' }], motion());
+      drag.row.animate([{ translate: from }, { translate: '0 0' }], settleMotion());
     if (!row) return this.draft.set(null);
     if (into) void this.place(row, into, level(this.store.items(), into).length, false);
     else if (draft) {
@@ -552,22 +544,15 @@ export class NavigationEditor {
 
   /** 執行位置變更，並讓其他列從舊位置滑到新位置。 */
   private flip(change: () => void, except?: string) {
-    const rows = [...this.host.querySelectorAll<HTMLElement>('tr[data-item]')];
-    const before = new Map(rows.map((row) => [row.dataset['item'], row.getBoundingClientRect()]));
-    change();
-    this.app.tick();
-    if (this.theme.reducedMotion()) return;
-    for (const row of this.host.querySelectorAll<HTMLElement>('tr[data-item]')) {
-      const id = row.dataset['item'],
-        old = before.get(id);
-      if (!old || id === except) continue;
-      const dy = old.top - row.getBoundingClientRect().top;
-      if (Math.abs(dy) >= 1)
-        row.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], {
-          ...motion(),
-          composite: 'add',
-        });
-    }
+    flipRows(
+      () => this.host.querySelectorAll<HTMLElement>('tr[data-item]'),
+      (row) => row.dataset['item'],
+      () => {
+        change();
+        this.app.tick();
+      },
+      { reduced: this.theme.reducedMotion(), except },
+    );
   }
 
   private row(id: string) {
@@ -576,13 +561,4 @@ export class NavigationEditor {
   private handle(id: string) {
     return this.host.querySelector<HTMLElement>(`[data-handle="${CSS.escape(id)}"]`);
   }
-}
-
-/** 落定移動列的彈簧參數，取自動效權杖。 */
-function motion(): KeyframeAnimationOptions {
-  const style = getComputedStyle(document.documentElement);
-  return {
-    duration: parseFloat(style.getPropertyValue('--motion-morph')) || 460,
-    easing: style.getPropertyValue('--ease-spring').trim() || 'ease-out',
-  };
 }

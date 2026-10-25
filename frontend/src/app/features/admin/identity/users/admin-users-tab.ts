@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -24,6 +25,7 @@ import {
 } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
+import { SortableRows, SortHandle, SortRank, type RowMove } from '@shared/ui/sortable-rows';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
 import { AccountReviews } from './account-reviews';
@@ -53,6 +55,9 @@ import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directo
     AdminUserCreateDialog,
     DirectoryImportDialog,
     DirectorySyncDialog,
+    SortableRows,
+    SortHandle,
+    SortRank,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: '../../../../shared/ui/management-table-page.scss',
@@ -84,6 +89,41 @@ export class AdminUsersTab {
   readonly format = formatNumber;
   readonly methods = signInMethods;
   readonly emailState = emailState;
+  readonly ids = computed(() => (this.store.users()?.users ?? []).map((user) => user.id));
+  /** 拖曳與方向鍵只在看得到鄰居時（未搜尋）可用；寫入中不能再移動。位置編號在搜尋時也能用。 */
+  readonly sortable = computed(
+    () => this.store.reorderable() && !this.store.ordering() && !this.session.testing(),
+  );
+  readonly lockedHint = computed(() =>
+    this.session.testing()
+      ? '測試身分中不能調整順序'
+      : this.store.ordering()
+        ? '正在儲存順序…'
+        : '清除搜尋後可拖曳；或按編號輸入位置',
+  );
+  readonly nameOf = (id: string) =>
+    this.store.users()?.users.find((user) => user.id === id)?.displayName ?? '';
+  /** 已排序與未排序的分界畫在第一個未排序的人上方；全部未排序或搜尋中不畫。 */
+  firstUnsorted(user: AdminUserDto) {
+    const sorted = this.store.users()?.sorted ?? 0;
+    return this.store.reorderable() && sorted > 0 && user.position === sorted + 1;
+  }
+  moved(move: RowMove) {
+    this.store.move(move.id, (this.store.users()?.offset ?? 0) + move.index + 1);
+  }
+  async resetOrder() {
+    const sorted = this.store.users()?.sorted ?? 0;
+    if (
+      !(await this.confirmation().ask({
+        title: '清除使用者順序',
+        message: `${sorted} 位已排序的使用者會改回依姓名排列，出勤紀錄等列表跟著改變。清除前的順序會記在稽核紀錄。`,
+        confirm: '清除順序',
+        danger: true,
+      }))
+    )
+      return;
+    await this.store.resetOrder();
+  }
   constructor() {
     effect(() => {
       if (this.store.users()) this.userTable()?.resetScroll();

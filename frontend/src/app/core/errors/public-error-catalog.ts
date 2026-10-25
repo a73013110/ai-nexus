@@ -169,6 +169,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   test_identity_nested: '請先返回原管理者，再切換其他身分。',
   test_reason_required: '請填寫 4–240 字元的測試目的。',
   user_not_found: '找不到可測試的使用者。',
+  user_order_stale: '名單剛被別人調整過，請重新整理後再排序。',
   test_identity_same: '請選擇另一位使用者。',
   test_source_revoked: '原管理者登入或權限已失效，請重新登入。',
   test_session_invalid: '測試登入已失效。',
@@ -187,6 +188,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   invalid_account:
     '登入帳號需為 1–64 個字元，只能使用字母、數字、點、底線與連字號。AD 請填目錄中的帳號，不含網域。',
   invalid_user: '請輸入姓名與有效角色。',
+  invalid_user_order: '排序位置不正確，請輸入 1 以上的編號。',
   invalid_login_methods: '請至少設定一種登入方式，並填寫對應的登入帳號。',
   local_password_required: '首次啟用本地登入時，請設定密碼。',
   account_exists: '此登入帳號已由其他使用者使用或保留。',

@@ -30,6 +30,9 @@ internal static class IdentityErrors
     public static readonly Error LocalPasswordRequired = Error.Invalid("local_password_required");
     public static readonly Error InvalidRoles = Error.Invalid("invalid_roles");
     public static readonly Error UserNotFound = Error.NotFound("user_not_found");
+    public static readonly Error InvalidUserOrder = Error.Invalid("invalid_user_order");
+    // 排序對話框開著時有人被刪除：整批拒絕，重新讀名單後再排。
+    public static readonly Error UserOrderStale = Error.Conflict("user_order_stale");
     public static readonly Error AccountExists = Error.Conflict("account_exists");
     public static readonly Error AdBindingImmutable = Error.Conflict("ad_binding_immutable");
     // 管理員解除或改綁 AD（ADR 0019）：帳號本來就沒有綁定，或目標 SID 已綁定另一位使用者（含已刪除者，SID 唯一）。

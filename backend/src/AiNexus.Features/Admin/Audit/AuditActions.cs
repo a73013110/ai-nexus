@@ -23,6 +23,7 @@ public static class AuditActions
         ("admin.user_ad_", "使用者 AD 綁定"),
         ("admin.user_model_policy", "個人模型政策"),
         ("admin.user_storage", "使用者容量上限"),
+        ("admin.user_order", "使用者排序"),
         ("admin.role", "角色授權"),
         ("admin.group", "群組與模型政策"),
         ("admin.feature", "功能異動"),

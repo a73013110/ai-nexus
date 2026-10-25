@@ -248,6 +248,36 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
+    public async Task TheRosterFollowsTheUserOrderThenNames()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        await session.GrantAsync(hr, DataScopes.All);
+        Dictionary<string, Guid> people = [];
+        foreach (var (account, card) in new[] { ("bob", "A1"), ("carol", "A2"), ("dave", "A3") })
+        {
+            people[account] = await session.PersonAsync(account);
+            await session.HoldAsync(people[account], card);
+        }
+        await session.HoldAsync(null, "A4");
+        // dave、bob 有排序；carol 與只有姓名的持有人沒有，接在後面依姓名。
+        await session.WithDbAsync(async db =>
+        {
+            await db.Users.Where(x => x.Id == people["dave"]).ExecuteUpdateAsync(x => x.SetProperty(u => u.SortOrder, 10));
+            await db.Users.Where(x => x.Id == people["bob"]).ExecuteUpdateAsync(x => x.SetProperty(u => u.SortOrder, 20));
+        });
+        using var client = await session.Factory.SignedInAsync("hr");
+
+        var roster = (await GetAsync(client)).People;
+        Assert.Equal([people["dave"], people["bob"]], roster.Take(2).Select(x => x.UserId!.Value));
+        var rest = roster.Skip(2).Select(x => x.DisplayName).ToArray();
+        Assert.Equal(2, rest.Length);
+        Assert.Equal(rest.Order(StringComparer.Ordinal), rest);
+        // 人員選單與名單同一個順序。
+        Assert.Equal(roster.Select(x => (x.UserId, x.CardNumber)), (await OptionsAsync(client)).Select(x => (x.UserId, x.CardNumber)));
+    }
+
+    [Fact]
     public async Task DaysOffWithoutPunchesOrSheetsAreHiddenUnlessAskedFor()
     {
         await using var session = Create();

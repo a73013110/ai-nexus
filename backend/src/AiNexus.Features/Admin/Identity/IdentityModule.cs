@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
+using AiNexus.Features.Admin.Identity.Ordering;
 using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Reviews;
 using AiNexus.Features.Admin.Identity.SelfService;
@@ -97,6 +98,8 @@ public sealed class IdentityModule : IFeatureModule
         SetUserEmail.Map(admin);
         PreviewUserAccess.Map(admin);
         ListAccountReviews.Map(admin);
+        MoveUser.Map(admin);
+        ResetUserOrder.Map(admin);
         var import = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersImport);
         ListDirectoryNodes.Map(import);
         ListDirectoryPeople.Map(import);

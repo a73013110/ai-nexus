@@ -177,6 +177,8 @@ describe('users tour targets', () => {
       email: null,
       emailSource: null,
       emailVerifiedAt: null,
+      sortOrder: null,
+      position: 1,
     };
     TestBed.configureTestingModule({
       providers: [

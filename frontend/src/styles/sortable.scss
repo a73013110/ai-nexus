@@ -1,0 +1,24 @@
+// 手動排序的列（SortableRows，docs/architecture/manual-ordering.md）。指令沒有自己的樣式，列可能是 tr 或 li，
+// 所以規則放全域：拖曳中的列浮起（陰影，不放大：表格會因此冒出橫向捲軸）跟著指標，其他列以彈簧讓位；放手後由 FLIP 落定。
+.sortable-rows.is-sorting {
+  cursor: grabbing;
+  user-select: none;
+}
+.sortable-rows.is-sorting > [data-sort-id]:not(.is-dragging) {
+  transition: translate var(--motion-morph) var(--ease-spring);
+}
+.sortable-rows > .is-dragging {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: var(--shadow-floating), var(--selected-ring);
+}
+// 已排序與未排序的分界：第一個未排序的列上緣畫虛線（呼叫端標 `is-first-unsorted`）。
+.sortable-rows > .is-first-unsorted > :is(td, th) {
+  border-top: 1px dashed var(--control-line);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sortable-rows.is-sorting > [data-sort-id]:not(.is-dragging) {
+    transition: none;
+  }
+}

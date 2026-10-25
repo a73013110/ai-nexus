@@ -21,9 +21,11 @@ CREATE TABLE [identity].[Users] (
     [EmailVerifiedAt]      DATETIMEOFFSET (7) NULL,
     [DirectoryVerifiedAt]  DATETIMEOFFSET (7) NULL,
     [PasswordChangedAt]    DATETIMEOFFSET (7) NULL,
+    [SortOrder]            INT                NULL,
     CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.)),
-    CONSTRAINT [ck_Users_EmailSource] CHECK ([Email] IS NULL AND [EmailSource] IS NULL AND [EmailVerifiedAt] IS NULL OR [Email] IS NOT NULL AND ([EmailSource]=N'admin' OR [EmailSource]=N'user' OR [EmailSource]=N'directory'))
+    CONSTRAINT [ck_Users_EmailSource] CHECK ([Email] IS NULL AND [EmailSource] IS NULL AND [EmailVerifiedAt] IS NULL OR [Email] IS NOT NULL AND ([EmailSource]=N'admin' OR [EmailSource]=N'user' OR [EmailSource]=N'directory')),
+    CONSTRAINT [ck_Users_SortOrder] CHECK ([SortOrder] IS NULL OR [SortOrder]>=(0) AND [SortOrder]<=(1000000))
 );
 
 
@@ -164,6 +166,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'登入政�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'AD 的不可變 SID；尚未綁定 AD 的手動帳號使用 managed: 識別碼。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Sid';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'依人分組的列表（出勤紀錄、匯出）中的順序，小的在前；空值表示未排序，排在已排序者之後並依姓名、帳號排列。管理者在使用者頁拖曳設定，值之間保留間隔。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'SortOrder';
 
 
 GO

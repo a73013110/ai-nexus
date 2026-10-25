@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ViewScope } from '@shared/browser/view-scope';
+import { applySortWrites, bySortOrder, sortWrites } from '@shared/browser/sort-order';
 import { CodeBlock } from '@shared/markdown/code-block';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { ChangeList, FieldChange } from '@shared/ui/change-list';
@@ -23,6 +24,8 @@ import { Panel } from '@shared/ui/panel';
 import { PropertyGroup, PropertyList } from '@shared/ui/property-list';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { SearchField } from '@shared/ui/search-field';
+import { SortableRows, SortHandle, SortRank, type RowMove } from '@shared/ui/sortable-rows';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
@@ -79,6 +82,10 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     QueryBar,
     ResourceCard,
     ResourceGallery,
+    SearchField,
+    SortableRows,
+    SortHandle,
+    SortRank,
     StatusBadge,
     TablePagination,
     TableState,
@@ -296,6 +303,71 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
+      id="design-sortable"
+      title="手動排序"
+      api="SortableRows、SortHandle、SortRank"
+      description="使用者、選單這類由管理者決定先後的列：直接在表格上拖曳把手、在把手上按方向鍵，或按編號輸入第幾位；值依 sortWrites（伺服器 ManualOrder）計算，通常只寫被移動的那一筆。未排序的在虛線之下、編號淡化。搜尋時只能輸入編號。"
+    >
+      <nx-design-example label="已排序、未排序與搜尋">
+        <nx-search-field
+          label="搜尋示範名單"
+          placeholder="姓名"
+          [value]="sortFilter()"
+          (valueChange)="sortFilter.set($event)"
+        />
+        <div class="ui-table-frame design-sort-table">
+          <div class="ui-table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">順序</th>
+                  <th scope="col">姓名</th>
+                  <th scope="col">排序值</th>
+                </tr>
+              </thead>
+              <tbody
+                [nxSortableRows]="sortIds()"
+                [sortDisabled]="!!sortFilter().trim()"
+                [sortName]="sortName"
+                (sortMove)="sortMove($event)"
+              >
+                @for (person of sortPeople(); track person.id; let index = $index) {
+                  <tr
+                    [attr.data-sort-id]="person.id"
+                    [hidden]="!sortMatch(person)"
+                    [class.is-first-unsorted]="
+                      !sortFilter().trim() &&
+                      person.sortOrder === null &&
+                      index > 0 &&
+                      sortPeople()[index - 1].sortOrder !== null
+                    "
+                  >
+                    <td>
+                      <nx-sort-handle
+                        [id]="person.id"
+                        [name]="person.name"
+                        [position]="index + 1"
+                        [count]="sortPeople().length"
+                        [locked]="!!sortFilter().trim()"
+                      /><nx-sort-rank
+                        [name]="person.name"
+                        [position]="index + 1"
+                        [count]="sortPeople().length"
+                        [unsorted]="person.sortOrder === null"
+                        (place)="sortMove({ id: person.id, index: $event - 1 })"
+                      />
+                    </td>
+                    <td>{{ person.name }}</td>
+                    <td>{{ person.sortOrder ?? '未排序' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
       id="design-changes"
       title="欄位變更"
       api="ChangeList"
@@ -459,6 +531,30 @@ export class DesignData {
   );
   private readonly toast = inject(ToastService);
   private readonly scope = inject(ViewScope);
+  /** 手動排序的示範名單（虛構姓名）；移動時照實際頁面套用 `sortWrites`。 */
+  readonly sortPeople = signal([
+    { id: 's1', name: '周雅婷', sortOrder: 10 as number | null },
+    { id: 's2', name: '吳志明', sortOrder: 20 as number | null },
+    { id: 's3', name: '李佳蓉', sortOrder: null as number | null },
+    { id: 's4', name: '黃建宏', sortOrder: null as number | null },
+    { id: 's5', name: '許怡君', sortOrder: null as number | null },
+  ]);
+  readonly sortFilter = signal('');
+  readonly sortIds = computed(() => this.sortPeople().map((person) => person.id));
+  readonly sortName = (id: string) =>
+    this.sortPeople().find((person) => person.id === id)?.name ?? '';
+  sortMatch(person: { name: string }) {
+    return person.name.includes(this.sortFilter().trim());
+  }
+  sortMove({ id, index }: RowMove) {
+    const people = this.sortPeople();
+    const writes = sortWrites(people, id, index, 1_000_000);
+    this.sortPeople.set(
+      applySortWrites(people, writes).sort(
+        bySortOrder((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+      ),
+    );
+  }
   readonly tree = signal<readonly TreeItem[]>([
     {
       id: 'org',

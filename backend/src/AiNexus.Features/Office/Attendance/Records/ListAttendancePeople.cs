@@ -13,7 +13,7 @@ namespace AiNexus.Features.Office.Attendance.Records;
 public sealed record AttendancePersonOptionDto(Guid? UserId, string? CardNumber, string DisplayName, string? Account, bool Hidden, bool Holding);
 
 /// <summary>
-/// 出勤紀錄的人員選單：範圍看得到、持有過卡的人，不限期間，依姓名排序。與 <see cref="ListAttendanceRecords"/> 用同一份 <see cref="AttendanceRoster"/>，
+/// 出勤紀錄的人員選單：範圍看得到、持有過卡的人，不限期間，順序與出勤紀錄相同（使用者順序）。與 <see cref="ListAttendanceRecords"/> 用同一份 <see cref="AttendanceRoster"/>，
 /// 選得到的就查得到；隱藏的卡的持有人也列出（附旗標），指定時照常顯示。同一張卡先後的姓名持有人合成一個選項。
 /// 一次回整份：名單是公司持卡人（數百人），選單在前端搜尋。
 /// </summary>

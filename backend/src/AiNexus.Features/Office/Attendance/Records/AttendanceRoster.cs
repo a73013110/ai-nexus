@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Organization;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +63,7 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
         return holdings.Select(x => x.Assignment);
     }
 
-    /// <summary>依人分組並依姓名、帳號排序（與畫面、匯出的順序相同）；分頁在這份清單上做。</summary>
+    /// <summary>依人分組並依使用者順序（<see cref="UserOrder"/>：管理者設定的排序，未排序的依姓名、帳號）排列，與畫面、匯出的順序相同；分頁在這份清單上做。</summary>
     public async Task<IReadOnlyList<RosterPerson>> PeopleAsync(IQueryable<CardAssignment> holdings, CancellationToken ct)
     {
         var rows = await holdings
@@ -70,7 +71,7 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
             .LeftJoin(db.Users, x => x.a.UserId, u => (Guid?)u.Id, (x, u) => new
             {
                 x.a.Id, x.a.UserId, x.a.HolderName, x.CardNumber, x.HiddenFromRecords, DisplayName = u == null ? null : u.DisplayName, Account = u == null ? null : u.Account,
-                x.a.StartsAt, x.a.EndsAt,
+                SortOrder = u == null ? null : u.SortOrder, x.a.StartsAt, x.a.EndsAt,
             })
             .ToListAsync(ct);
         return
@@ -81,11 +82,12 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
                 .Select(g =>
                 {
                     var first = g.First();
-                    return new RosterPerson(g.Key.UserId, g.Key.Card, first.DisplayName ?? first.HolderName ?? "", first.Account, g.All(x => x.HiddenFromRecords),
-                        [.. g.Select(x => new RosterHolding(x.Id, x.StartsAt, x.EndsAt))]);
+                    return (first.SortOrder, Person: new RosterPerson(g.Key.UserId, g.Key.Card, first.DisplayName ?? first.HolderName ?? "", first.Account, g.All(x => x.HiddenFromRecords),
+                        [.. g.Select(x => new RosterHolding(x.Id, x.StartsAt, x.EndsAt))]));
                 })
-                .OrderBy(x => x.DisplayName, StringComparer.Ordinal).ThenBy(x => x.Account, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(x => x.CardNumber, StringComparer.Ordinal).ThenBy(x => x.UserId)
+                .InUserOrder(x => x.SortOrder, x => x.Person.DisplayName, x => x.Person.Account)
+                .ThenBy(x => x.Person.CardNumber, StringComparer.Ordinal).ThenBy(x => x.Person.UserId)
+                .Select(x => x.Person)
         ];
     }
 

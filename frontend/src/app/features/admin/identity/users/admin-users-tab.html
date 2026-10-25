@@ -36,10 +36,30 @@
   preferenceKey="admin-users"
 >
   <div table-toolbar class="ui-table-toolbar">
-    <h2>使用者</h2>
+    <h2>
+      使用者
+      @if (store.users()?.sorted; as sorted) {
+        <span
+          class="ui-count-label user-order-count"
+          title="出勤紀錄等依人列出的資料依此順序；未排序的人接在後面，依姓名排列"
+          >已排序 {{ sorted }} 位</span
+        >
+      }
+    </h2>
   </div>
-  @if (session.has('identity.users.sync')) {
-    <div table-actions>
+  <div table-actions>
+    @if (store.users()?.sorted) {
+      <button
+        type="button"
+        class="quiet-button user-order-reset"
+        title="清除所有人的順序，回到依姓名排列"
+        [disabled]="session.testing() || store.ordering()"
+        (click)="resetOrder()"
+      >
+        <nx-icon name="order" />清除順序
+      </button>
+    }
+    @if (session.has('identity.users.sync')) {
       <button
         type="button"
         class="quiet-button directory-sync-button"
@@ -49,10 +69,11 @@
       >
         <nx-icon name="repeat" />從 AD 更新
       </button>
-    </div>
-  }
+    }
+  </div>
   <table>
     <colgroup>
+      <col class="user-order-column" />
       <col nxTableColumn="name" />
       <col nxTableColumn="email" />
       <col nxTableColumn="authentication" class="admin-status-column" />
@@ -63,6 +84,7 @@
     </colgroup>
     <thead>
       <tr>
+        <th scope="col" title="出勤紀錄等依人列出的資料依此順序；拖曳把手或按編號輸入位置">順序</th>
         <th scope="col" nxTableColumn="name">使用者</th>
         <th scope="col" nxTableColumn="email">通知信箱</th>
         <th scope="col" nxTableColumn="authentication">登入與狀態</th>
@@ -72,13 +94,37 @@
         <th scope="col"><span class="sr-only">操作</span></th>
       </tr>
     </thead>
-    <tbody>
+    <tbody
+      [nxSortableRows]="ids()"
+      [sortDisabled]="!sortable()"
+      [sortName]="nameOf"
+      (sortMove)="moved($event)"
+    >
       @for (user of store.users()?.users || []; track user.id) {
         <tr
           nxTableRow
+          [attr.data-sort-id]="user.id"
           [class.is-selected]="selectedId() === user.id"
+          [class.is-first-unsorted]="firstUnsorted(user)"
           (rowActivate)="inspect.emit(user)"
         >
+          <td class="user-order-cell" data-stack="hide">
+            <nx-sort-handle
+              [id]="user.id"
+              [name]="user.displayName"
+              [position]="user.position || 0"
+              [count]="store.users()?.total || 0"
+              [locked]="!sortable()"
+              [lockedHint]="lockedHint()"
+            /><nx-sort-rank
+              [name]="user.displayName"
+              [position]="user.position || 0"
+              [count]="store.reorderable() ? store.users()?.total || 0 : null"
+              [unsorted]="user.sortOrder == null"
+              [disabled]="session.testing() || store.ordering()"
+              (place)="store.move(user.id, $event)"
+            />
+          </td>
           <td nxTableColumn="name">
             <button
               type="button"

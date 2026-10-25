@@ -1,10 +1,10 @@
 import type { NavigationItemDto, NavigationOrderItem } from '@core/api/schema';
+import { sortWrites } from '@shared/browser/sort-order';
 
-export type OrderShift = number | 'first' | 'last';
+export { shiftId, type OrderShift } from '@shared/browser/sort-order';
 
-/** 伺服器接受的最大 `sortOrder` 與預設間隔（見後端 `NavigationRules`）。 */
+/** 伺服器接受的最大 `sortOrder`（見後端 `NavigationRules`）。 */
 export const MAX_SORT_ORDER = 10000;
-const STEP = 10;
 /** 選單最多幾層，最上層算第 1 層（後端 `NavigationTree.MaxDepth`）。 */
 export const MAX_DEPTH = 4;
 
@@ -133,26 +133,9 @@ export function canPlace(
   );
 }
 
-/** 把 `id` 往前或往後移動 `shift` 個位置（或直接移到兩端），並限制在列表範圍內。 */
-export function shiftId(ids: readonly string[], id: string, shift: OrderShift): string[] {
-  const from = ids.indexOf(id);
-  if (from < 0) return [...ids];
-  const to =
-    shift === 'first'
-      ? 0
-      : shift === 'last'
-        ? ids.length - 1
-        : Math.max(0, Math.min(ids.length - 1, from + shift));
-  const next = ids.filter((item) => item !== id);
-  next.splice(to, 0, id);
-  return next;
-}
-
 /**
  * 把 `id` 移到 `parentId` 之下第 `index` 個（不含它自己的位置）所需的批次寫入（`PUT .../order`）。
- * 其他節點保留原值，因此一次移動通常只有一筆：移動的節點取落點間隙的中間值，超出末端時取 10 之外的值。
- * 沒有空間（相鄰值相同、間隙為 1、0–10000 範圍）時，目標層重新編號為 10、20、30…，之後的移動又放得下。
- * 位置沒變時回傳空陣列。
+ * 值的取法見 `sortWrites`：通常只有移動的那一筆，沒有空間時目標層重新編號。位置沒變時回傳空陣列。
  */
 export function moveWrites(
   items: readonly NavigationItemDto[],
@@ -160,26 +143,11 @@ export function moveWrites(
   parentId: string | null,
   index: number,
 ): NavigationOrderItem[] {
-  const moved = items.find((item) => item.id === id);
-  if (!moved) return [];
-  const current = level(items, parentId);
-  const siblings = current.filter((item) => item.id !== id);
-  const at = Math.max(0, Math.min(index, siblings.length));
-  if ((moved.parentId ?? null) === parentId && current.findIndex((item) => item.id === id) === at)
-    return [];
-  const before = at > 0 ? siblings[at - 1].sortOrder : null;
-  const after = at < siblings.length ? siblings[at].sortOrder : null;
-  const value = between(before, after);
-  const ordered = [...siblings];
-  ordered.splice(at, 0, moved);
-  const next =
-    value === null
-      ? ordered.map((item, position) => ({ id: item.id, sortOrder: (position + 1) * STEP }))
-      : [{ id, sortOrder: value }];
-  const values = new Map(siblings.map((item) => [item.id, item.sortOrder]));
-  return next
-    .filter((write) => write.id === id || values.get(write.id) !== write.sortOrder)
-    .map((write) => ({ ...write, parentId }));
+  if (!items.some((item) => item.id === id)) return [];
+  return sortWrites(level(items, parentId), id, index, MAX_SORT_ORDER).map((write) => ({
+    ...write,
+    parentId,
+  }));
 }
 
 /** 套用批次寫入後的平面清單，讓畫面先顯示新位置（失敗時換回原值）。 */
@@ -192,15 +160,4 @@ export function applyWrites(
     const write = changes.get(item.id);
     return write ? { ...item, parentId: write.parentId, sortOrder: write.sortOrder } : item;
   });
-}
-
-function between(before: number | null, after: number | null): number | null {
-  if (before === null && after === null) return null;
-  const value =
-    before === null
-      ? Math.max(0, after! - STEP)
-      : after === null
-        ? Math.min(MAX_SORT_ORDER, before + STEP)
-        : Math.floor((before + after) / 2);
-  return (before === null || value > before) && (after === null || value < after) ? value : null;
 }

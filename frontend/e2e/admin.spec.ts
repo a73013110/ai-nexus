@@ -29,6 +29,7 @@ import type {
   AuditDto,
   AdminUserDto,
 } from "../src/app/core/api/schema";
+import { sortWrites } from "../src/app/shared/browser/sort-order";
 
 test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", async ({ page }) => {
   await administration(page);
@@ -863,6 +864,143 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
   expect(orders()).toHaveLength(5);
 });
 
+test("使用者表上直接以方向鍵、輸入位置或拖曳調整順序，失敗時換回原本的列", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  for (const [displayName, account] of [
+    ["陳大文", "AD\\chen"],
+    ["林小華", "AD\\lin"],
+    ["張美玲", "AD\\chang"],
+  ])
+    state.managedUsers.push({
+      ...state.bob,
+      id: randomUUID(),
+      displayName,
+      account,
+    });
+  const moves = () =>
+    state.userOrderWrites
+      .filter((write) => write.method === "PUT")
+      .map(({ id, body }) => ({ id, body }));
+  await page.goto(routeOf("identity.users"));
+  const table = page.locator(".admin-users-table");
+  const rows = table.locator("tbody tr[data-sort-id]");
+  const names = () => rows.locator(".ui-table-link strong").allTextContents();
+  const handle = (name: string) =>
+    table.getByRole("button", { name: new RegExp(`^移動「${name}」`) });
+  const live = page.locator("body > p[aria-live]");
+  const byName = (name: string) =>
+    state.managedUsers.find((user) => user.displayName === name)!.id;
+  // 全部未排序：依姓名（ordinal），沒有分界線與清除鈕。
+  await expect
+    .poll(names)
+    .toEqual(["張美玲", "林小華", "測試使用者", "王小明", "陳大文"]);
+  await expect(table.locator(".is-first-unsorted")).toHaveCount(0);
+  await expect(table.getByRole("button", { name: "清除順序" })).toHaveCount(0);
+
+  // Home：移到最前，只送出「移到第 1 位」；分界線畫在下一位上方。
+  await handle("陳大文").focus();
+  await handle("陳大文").press("Home");
+  await expect
+    .poll(names)
+    .toEqual(["陳大文", "張美玲", "林小華", "測試使用者", "王小明"]);
+  await expect(handle("陳大文")).toBeFocused();
+  await expect(live).toHaveText("「陳大文」移到第 1 列，共 5 列");
+  expect(moves()).toEqual([{ id: byName("陳大文"), body: { position: 1 } }]);
+  await expect(table.locator(".user-order-count")).toHaveText("已排序 1 位");
+  await expect(table.locator(".is-first-unsorted")).toContainText("張美玲");
+
+  // 按編號輸入第 2 位：未排序的編號淡化，輸入後接在最後一個已排序者之後。
+  await table
+    .getByRole("button", { name: "第 5 位（未排序），輸入新位置：王小明" })
+    .click();
+  const rank = table.getByRole("spinbutton", {
+    name: /把「王小明」移到第幾位/,
+  });
+  await rank.fill("2");
+  await rank.press("Enter");
+  await expect
+    .poll(names)
+    .toEqual(["陳大文", "王小明", "張美玲", "林小華", "測試使用者"]);
+  expect(moves().at(-1)).toEqual({ id: state.bob.id, body: { position: 2 } });
+
+  // 拖曳林小華到王小明之上。
+  await expect(table).not.toHaveAttribute("aria-busy");
+  const from = (await handle("林小華").boundingBox())!;
+  const target = (await rows.filter({ hasText: "王小明" }).boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    from.x + from.width / 2,
+    target.y + target.height * 0.3,
+    { steps: 12 },
+  );
+  await expect(table.locator("tr.is-dragging")).toHaveCount(1);
+  await page.mouse.up();
+  await expect
+    .poll(names)
+    .toEqual(["陳大文", "林小華", "王小明", "張美玲", "測試使用者"]);
+  expect(moves().at(-1)).toEqual({
+    id: byName("林小華"),
+    body: { position: 2 },
+  });
+
+  // 拖曳中按 Esc：放回原位，不送出。
+  await expect(table).not.toHaveAttribute("aria-busy");
+  const writes = moves().length;
+  const lin = (await handle("林小華").boundingBox())!;
+  await page.mouse.move(lin.x + lin.width / 2, lin.y + lin.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(lin.x + lin.width / 2, lin.y + lin.height * 6, {
+    steps: 8,
+  });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(live).toHaveText("已取消移動");
+  await expect
+    .poll(names)
+    .toEqual(["陳大文", "林小華", "王小明", "張美玲", "測試使用者"]);
+  expect(moves()).toHaveLength(writes);
+
+  // 搜尋時編號仍是整份名單的位置；拖曳把手停用，只能輸入編號。
+  await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("王");
+  await expect.poll(names).toEqual(["王小明"]);
+  await expect(
+    table.getByRole("button", { name: "第 3 位，輸入新位置：王小明" }),
+  ).toBeVisible();
+  await expect(handle("王小明")).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("");
+  await expect.poll(names).toHaveLength(5);
+
+  // 伺服器拒絕：換回原本的列並提示。
+  await page.route("**/api/v1/admin/users/*/position", (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: "application/problem+json",
+      body: JSON.stringify({ title: "Conflict", code: "user_order_stale" }),
+    }),
+  );
+  await expect(table).not.toHaveAttribute("aria-busy");
+  await handle("陳大文").press("ArrowDown");
+  await expect(page.getByRole("alert")).toContainText("名單剛被別人調整過");
+  await expect
+    .poll(names)
+    .toEqual(["陳大文", "林小華", "王小明", "張美玲", "測試使用者"]);
+  await page.unroute("**/api/v1/admin/users/*/position");
+
+  // 清除所有順序：確認後全部回到依姓名。
+  await table.getByRole("button", { name: "清除順序" }).click();
+  await page
+    .getByRole("dialog", { name: "清除使用者順序" })
+    .getByRole("button", { name: "清除順序" })
+    .click();
+  await expect
+    .poll(names)
+    .toEqual(["張美玲", "林小華", "測試使用者", "王小明", "陳大文"]);
+  expect(state.userOrderWrites.at(-1)?.method).toBe("DELETE");
+});
+
 test("選單可新增分群、頁面與外部連結，錯誤代碼留在對話框，非空分群不能刪除", async ({
   page,
 }) => {
@@ -1170,6 +1308,24 @@ async function administration(page: Page) {
   const audit: AuditDto[] = [];
   const auditExports: URL[] = [];
   const navigationWrites: { method: string; id: string; body: unknown }[] = [];
+  // 使用者順序：值依 id 存，列表照伺服器規則排（已排序的依值、未排序的在後依姓名），移動照 sortWrites 算值。
+  const userOrder = new Map<string, number>();
+  const userOrderWrites: {
+    method: string;
+    id: string | null;
+    body: unknown;
+  }[] = [];
+  const ordinal = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const orderedUsers = () =>
+    managedUsers
+      .map((user) => ({ ...user, sortOrder: userOrder.get(user.id) ?? null }))
+      .sort(
+        (a, b) =>
+          Number(a.sortOrder === null) - Number(b.sortOrder === null) ||
+          (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+          ordinal(a.displayName, b.displayName),
+      )
+      .map((user, index) => ({ ...user, position: index + 1 }));
   const conversationId = randomUUID();
   const recordRead = (action: string, resourceId: string) =>
     audit.unshift({
@@ -1335,6 +1491,24 @@ async function administration(page: Page) {
         },
       });
     }
+    if (path === "/users/order") {
+      userOrderWrites.push({ method, id: null, body: null });
+      userOrder.clear();
+      return route.fulfill({ status: 204 });
+    }
+    if (/^\/users\/[^/]+\/position$/.test(path)) {
+      const id = path.split("/")[2];
+      const body = route.request().postDataJSON();
+      userOrderWrites.push({ method, id, body });
+      for (const write of sortWrites(
+        orderedUsers(),
+        id,
+        body.position - 1,
+        1_000_000,
+      ))
+        userOrder.set(write.id, write.sortOrder);
+      return route.fulfill({ status: 204 });
+    }
     if (path === "/users") {
       if (route.request().method() === "POST") {
         const body = route.request().postDataJSON();
@@ -1357,7 +1531,7 @@ async function administration(page: Page) {
         return json({ id: user.id }, 201);
       }
       const search = url.searchParams.get("search") || "";
-      const users = managedUsers.filter((x) =>
+      const users = orderedUsers().filter((x) =>
         (x.displayName + x.account).includes(search),
       );
       const offset = Number(url.searchParams.get("offset") || 0);
@@ -1365,6 +1539,7 @@ async function administration(page: Page) {
         users: users.slice(offset, offset + 100),
         total: users.length,
         offset,
+        sorted: userOrder.size,
       });
     }
     if (/^\/users\/[^/]+$/.test(path)) {
@@ -1631,6 +1806,7 @@ async function administration(page: Page) {
     auditExports,
     conversationId,
     navigationWrites,
+    userOrderWrites,
   };
 }
 test("administrators edit roles with effective access preview and an audit trail", async ({

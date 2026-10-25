@@ -30,6 +30,8 @@ public sealed class User
     /// <summary>最近一次 AD／Windows 驗證成功的時間；AD 綁定使用者的本地密碼登入要求它在期限內。</summary>
     public DateTimeOffset? DirectoryVerifiedAt { get; set; }
     public DateTimeOffset? PasswordChangedAt { get; set; }
+    /// <summary>依人分組的列表中的順序（小的在前）；null 是未排序，排在後面。比較規則見 <see cref="UserOrder"/>。</summary>
+    public int? SortOrder { get; set; }
     public UserPreferences Preferences { get; set; } = new();
 }
 

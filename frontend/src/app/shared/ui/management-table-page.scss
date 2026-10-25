@@ -34,3 +34,10 @@
     margin-inline-start: var(--p-space-2);
   }
 }
+// 使用者表的順序欄：拖曳把手＋位置編號（SortableRows），寬度剛好放下兩者。
+.user-order-column {
+  width: 5.75rem;
+}
+.user-order-cell {
+  white-space: nowrap;
+}

@@ -23,6 +23,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 設定、秘密 | `docs/development/configuration.md` |
 | 授權、功能 grant、選單 | `docs/architecture/access-control.md` |
 | 資料範圍、`IDataScope`、依部門切資料 | `docs/architecture/data-scopes.md` |
+| 手動排序（`SortOrder`、拖曳排序列） | `docs/architecture/manual-ordering.md` |
 | 腳本、建置、驗證 | `docs/development/development.md` |
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |

@@ -38,6 +38,12 @@ export class IdentityApi {
   updateUser = (id: string, body: UserAccountRequest) =>
     this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
   deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
+  /**
+   * 使用者順序（出勤紀錄等依人分組的列表）：移到整份名單第 `position` 位（從 1 起算，值由伺服器計算），或清除全部。
+   */
+  moveUser = (id: string, position: number) =>
+    this.api.put('/api/v1/admin/users/{id}/position', { path: { id }, body: { position } });
+  resetUserOrder = () => this.api.delete('/api/v1/admin/users/order');
   /** 依 AD 短帳號查 SID 後改綁（ADR 0019）；解除後回到預建，下次以同名 AD 帳號驗證或匯入時綁定。 */
   rebindDirectory = (id: string, adAccount: string) =>
     this.api.put('/api/v1/admin/users/{id}/ad-binding', { path: { id }, body: { adAccount } });
