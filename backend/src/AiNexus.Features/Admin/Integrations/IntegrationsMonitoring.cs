@@ -1,6 +1,4 @@
 using AiNexus.Features.Admin.Integrations.Sources;
-using AiNexus.Features.Work.Repositories;
-using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
@@ -11,8 +9,7 @@ namespace AiNexus.Features.Admin.Integrations;
 /// 外部整合的執行期監控，只依設定判斷、不實際連線（實際呼叫會以 dependency 形式另外出現）。
 /// 已啟用但設定不完整即為 degraded；全部未啟用則為 idle。
 /// </summary>
-internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, IOptions<GiteaOptions> gitea, IOptions<IntegrationsOptions> sources,
-    IOptions<DatabasesOptions> databases) : IMonitoringSource
+internal sealed class IntegrationsMonitoring(IOptions<IntegrationsOptions> sources, IOptions<DatabasesOptions> databases) : IMonitoringSource
 {
     public string Id => "integrations";
     public string Name => "外部整合";
@@ -24,9 +21,6 @@ internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, 
         var facts = new List<SubsystemFact>();
         var enabled = 0;
         var incomplete = new List<string>();
-        var web = WebSearchService.StatusOf(search.Value);
-        Add("web_search", "連網搜尋", search.Value.Enabled, web.Available);
-        Add("gitea", "Gitea 程式庫", gitea.Value.Enabled, gitea.Value.Enabled);
         foreach (var (id, name, database) in SourceGateway.Sources)
         {
             var option = sources.Value.For(id);

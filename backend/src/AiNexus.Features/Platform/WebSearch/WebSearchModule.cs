@@ -1,6 +1,7 @@
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Platform.WebSearch;
 
@@ -13,6 +14,7 @@ public sealed class WebSearchModule : IFeatureModule
         builder.Services.AddSettings<WebSearchOptions, WebSearchOptionsValidator>(WebSearchOptions.Section);
         builder.Services.AddScoped<WebSearchService>();
         builder.Services.AddScoped<IWebSearchProvider, WebSearchProvider>();
+        builder.Services.AddMonitoringSource<WebSearchMonitoring>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => GetWebSearchStatus.Map(api);
