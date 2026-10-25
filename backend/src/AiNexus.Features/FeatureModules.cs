@@ -13,7 +13,6 @@ using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Features.Platform.Inference;
-using AiNexus.Features.Admin.Integrations;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge;
@@ -59,7 +58,6 @@ public static class FeatureModules
         Add<DashboardModule>(builder);
         Add<OperationsModule>(builder);
         Add<QualityModule>(builder);
-        Add<IntegrationsModule>(builder);
         Add<CollaborationModule>(builder);
         Add<NotificationsModule>(builder);
         Add<MailModule>(builder);
@@ -111,7 +109,6 @@ public static class FeatureModules
         Map<SharingModule>(api);
         Map<NotificationsModule>(api);
         Map<QualityModule>(api);
-        Map<IntegrationsModule>(api);
         Map<OperationsModule>(api);
         Map<IdentityModule>(api);
         Map<AccessControlModule>(api);

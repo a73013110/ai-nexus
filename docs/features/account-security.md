@@ -4,7 +4,6 @@
 
 - 帳號只有兩個欄位：`AdAccount`（AD 短帳號 `sAMAccountName`，不含網域）與 `LocalAccount`（本地登入帳號），至少一個（`ck_Users_LoginName`）。畫面、搜尋、排序與稽核顯示的帳號是 AD 帳號，沒有才用本地帳號。
 - 帳號保留目錄或使用者輸入的大小寫，比對一律不分大小寫（資料庫定序 CI 與唯一索引）；只改大小寫不算改名。
-- 外部系統需要完整帳號時才組成 `AdAccount@<Identity:ActiveDirectory:Domain>`（例如[外部來源](integrations.md)的 `ActorAccount`），不存進資料表；它不是 UPN，也**不是 email**。
 - AD 表單登入只用帳號名（`sAMAccountName`）。輸入 `DOMAIN\chen`、`chen@<AD 網域>` 或 `Identity:ActiveDirectory:AccountSuffixes` 列出的後綴時會自動去掉；其他 `@` 輸入與帳密錯誤同一回應。
 - 通知信箱 `Users.Email` 只用來寄驗證碼與帳號安全通知，不是登入識別、不唯一（共用信箱、別名）。來源 `EmailSource`：
 

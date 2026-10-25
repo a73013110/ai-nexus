@@ -1,6 +1,6 @@
 # 出勤與公文系統 GD
 
-結論：出勤從公文系統 GD 讀取假日、假單與出差單，並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；三者與 [公文與校務系統整合](integrations.md) 共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 `ExternalDatabase<GdDatabase>`（[外部資料庫](../architecture/external-databases.md)；定義與帳號對應 `GdAccounts` 在 [`Platform/Gd`](../../backend/src/AiNexus.Features/Platform/Gd/GdModule.cs) 模組），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Office/Attendance/Gd/GdCalendarWriter.cs) 並向它取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
+結論：出勤從公文系統 GD 讀取假日、假單與出差單，並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；兩者共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 `ExternalDatabase<GdDatabase>`（[外部資料庫](../architecture/external-databases.md)；定義與帳號對應 `GdAccounts` 在 [`Platform/Gd`](../../backend/src/AiNexus.Features/Platform/Gd/GdModule.cs) 模組），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Office/Attendance/Gd/GdCalendarWriter.cs) 並向它取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
 
 ## 連線與帳號權限
 
@@ -11,9 +11,8 @@
 - 另建最小權限帳號時的最低需求如下；不給 `db_datareader`、其他表、INSERT、DELETE 或 procedure：
 
 ```sql
--- Integrations：授權 view，契約與角色見 deploy/sql/authorized-views.sql
-GRANT SELECT ON OBJECT::ainexus.AuthorizedRecords TO ainexus_reader;
-GRANT SELECT ON OBJECT::ainexus.AuthorizedRecordHistory TO ainexus_reader;
+-- 讀取角色（名稱自訂）：DBA 另建專用帳號，只加入這個角色
+CREATE ROLE ainexus_reader;
 -- 出勤與組織匯入：假日、帳號對應（主管也經它對到使用者）、假單（含跨區間與假別）、出差單
 GRANT SELECT ON dbo.Pub_Days TO ainexus_reader;
 GRANT SELECT ON dbo.Sys_User TO ainexus_reader;

@@ -827,7 +827,6 @@ async function navigationWorkspace(page: Page) {
     { id: "quality", name: "品質評測", route: "/admin/quality" },
     { id: "repositories", name: "程式庫", route: "/work/repositories" },
     { id: "jobs", name: "背景任務", route: "/work/jobs" },
-    { id: "integrations", name: "資料來源", route: "/admin/integrations" },
     { id: "monitoring", name: "即時監控", route: "/admin/monitoring" },
     {
       id: "diagnostics.logs",

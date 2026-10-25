@@ -59,7 +59,7 @@
 ## 假日與假單（公文系統）
 
 - 公文系統 GD（舊系統稱 eDoc）是假日行事曆（`Pub_Days`）、假單與出差單的來源。資料庫 `GD_HL_EF`：正式在 CARD（與 IIS 同機），測試在 192.168.2.207；庫名只寫在 `Databases` 設定。
-- 程式統稱 GD（取代 Integrations 的 `Gdweb`），識別字依 repo 慣例（同 `AdAccount`）寫成 `Gd`，如 `GdDatabase`、`Databases:Gd`。
+- 程式統稱 GD（取代舊稱 `Gdweb`），識別字依 repo 慣例（同 `AdAccount`）寫成 `Gd`，如 `GdDatabase`、`Databases:Gd`。
 - 假日由公文系統維護，但 HR 要在這裡快速設定節假日與彈性放假，因此允許回寫：
   - 只 `UPDATE` 既有日期的 `AM`、`PM`、`hReMark` 與修改者，不新增、不刪除。
   - 讀寫共用 `Databases:Gd`，寫入範圍由程式限定；唯讀是選用設定（`ReadOnly=true` 停用回寫）。

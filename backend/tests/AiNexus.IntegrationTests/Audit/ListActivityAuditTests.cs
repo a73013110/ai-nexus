@@ -60,7 +60,7 @@ public sealed class ListActivityAuditTests
         var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         const string trace = "1234567890abcdef1234567890abcdef";
         string[] actions = ["identity.login", "admin.user_roles", "resource.acl.updated", "system.diagnostics.configuration", "billing.price.created",
-            "logs.query", "admin.conversation_read", "billing.report.export", "dashboard.platform.read", "integration.record.read", "conversation.created"];
+            "logs.query", "admin.conversation_read", "billing.report.export", "dashboard.platform.read", "conversation.created"];
         await SeedAsync(factory, actions.Select(action => new AuditEvent { OwnerId = owner, Action = action, TraceId = trace, Result = action == "billing.report.export" ? "csv" : "saved" }));
         foreach (var category in AuditCategories.Values)
         {
@@ -132,7 +132,6 @@ public sealed class ListActivityAuditTests
         Assert.Equal(["access"], Assert.Single(catalog.Actions, x => x.Value == "audit.export").Categories);
         // 前綴同時涵蓋自身分類，以及其下的管理讀取動作。
         Assert.Equal(["administration", "access"], Assert.Single(catalog.Actions, x => x.Value == "admin.").Categories);
-        Assert.Equal(["activity", "access"], Assert.Single(catalog.Actions, x => x.Value == "integration.").Categories);
         // 卡號與名單、假日回寫各自一項，前綴互不涵蓋。
         string[] attendance = ["admin.attendance_card", "admin.attendance_card_delete", "admin.attendance_assignment", "admin.attendance_assignment_delete",
             "admin.attendance_roster_exclusion", "admin.attendance_roster_exclusion_delete", "admin.calendar_day"];

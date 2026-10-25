@@ -79,7 +79,6 @@ class LogFixture {
       { id: "quality", name: "品質評測", route: "/admin/quality" },
       { id: "repositories", name: "程式庫", route: "/work/repositories" },
       { id: "jobs", name: "背景任務", route: "/work/jobs" },
-      { id: "integrations", name: "資料來源", route: "/admin/integrations" },
       {
         id: "diagnostics.logs",
         name: "系統日誌",

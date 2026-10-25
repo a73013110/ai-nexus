@@ -23,7 +23,7 @@
 | 使用者定義型別／資料表值參數 | `udt_`／`tvp_` | `dbo.tvp_IdList` |
 | 觸發程序 | `tr_<表>_<時機>` | `tr_Users_AfterUpdate` |
 | 檢視 | `vw_` | `billing.vw_DailyUsage` |
-| 同義字 | `syn_<來源庫><物件>` | `integrations.syn_GdOrders` |
+| 同義字 | `syn_<來源庫><物件>` | `attendance.syn_GdPubDays` |
 | 主鍵 | `pk_<表>` | `pk_Users` |
 | 外鍵 | `fk_<子表>_<父表>`；同一對表多條時 `fk_<子表>_<欄位>` | `fk_UserRoles_Users` |
 | 索引 | `ix_<表>_<欄位>[_<欄位>]` | `ix_Users_LastSeenAt` |

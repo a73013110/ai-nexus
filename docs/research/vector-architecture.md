@@ -14,7 +14,7 @@
   → IRerankClient → 文件多樣性／相鄰合併 → ContextTokens → 來源再授權
 ```
 
-各元件透過 DI 替換；公文、校務 adapter 匯入授權知識庫後可共用此管線，不直接繞過來源 ACL。`KnowledgeRetrieval` 委派 `RetrievalPipeline`，對話、搜尋測試與品質評測使用同一套處理。
+各元件透過 DI 替換。`KnowledgeRetrieval` 委派 `RetrievalPipeline`，對話、搜尋測試與品質評測使用同一套處理。
 
 `StructuredChunker` 先找標題、中文條文、段落及句界，再做硬切；維護標題階層，允許跨頁，引用顯示起訖頁。預設目標 450、上限 700、最小 80 tokens、句界重疊 12%。CJK 約每字一 token，其他文字約四字元一 token；這是估算。表格按完整列處理，超過硬上限的單列明確失敗，不悄悄截斷。UTF-16 surrogate pair 保持完整。
 

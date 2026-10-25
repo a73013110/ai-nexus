@@ -1,10 +1,10 @@
 # 後端撰寫慣例
 
-本文件說明 `AiNexus.Features/<Area>/<Module>/` 內一個 use case（slice）的寫法。範本：`Prompts`（最小）、`Notifications`、`Integrations`（含授權閘道）、`Billing`（validator 注入服務）。
+本文件說明 `AiNexus.Features/<Area>/<Module>/` 內一個 use case（slice）的寫法。範本：`Prompts`（最小）、`Notifications`、`Sharing`（含授權閘道 `ShareAccess`、能力子資料夾）、`Billing`（validator 注入服務）。
 
 ## 檔案與命名
 
-- 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseSources.cs`）。
+- 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseProjects.cs`）。
 - 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。
 - 檔名＝檔內主要型別名，namespace＝資料夾（`SourceLayoutTests` 檢查）。
 - 實體與組態不在 Features：一表一檔放在 `AiNexus.Data/App/<Module>/`（不分區），見 [資料庫](database.md)。模組端的查詢擴充方法（`<Entity>Queries`）與 DTO 對應（`ToDto` 擴充方法）放在模組內。

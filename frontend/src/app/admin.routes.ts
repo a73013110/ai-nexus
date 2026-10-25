@@ -27,11 +27,6 @@ export const adminRoutes: Routes = [
   moduleRoute('billing', () =>
     import('@features/admin/billing/billing.routes').then((module) => module.billingRoutes),
   ),
-  moduleRoute('integrations', () =>
-    import('@features/admin/integrations/integrations.routes').then(
-      (module) => module.integrationsRoutes,
-    ),
-  ),
   moduleRoute('monitoring', () =>
     import('@features/admin/monitoring/monitoring.routes').then(
       (module) => module.monitoringRoutes,

@@ -17,9 +17,8 @@ flowchart LR
     Modules --> Jobs[Jobs durable 任務]
     Jobs --> Tasks[Inference 共用配額與模型任務]
     Tasks --> Models[Google AI／Ollama]
-    Modules --> Sources[Integrations 來源政策]
-    Sources --> Dapper[ISqlDatabase／固定參數化 SELECT]
-    Dapper --> Legacy[(獨立公文／校務授權 view)]
+    Modules --> External[ExternalDatabase／固定參數化 SQL]
+    External --> Gd[(公文系統 GD)]
 ```
 
 ## 四個專案
@@ -57,7 +56,6 @@ flowchart LR
 | Admin | Audit | 活動稽核查詢與分類（寫入由各模組在同一交易加入 `AuditEvent`） |
 | Admin | Diagnostics | 系統日誌查詢、詳情、匯出、健康資訊與前端錯誤回報 |
 | Admin | Monitoring | 在線人員、工作階段、API／SQL／HTTP 負載的即時觀測 |
-| Admin | Integrations | 來源政策、固定授權 view、唯讀搜尋與歷程、明確匯入 |
 | Admin | Quality | 私人回饋、固定評測、設定快照、逐題結果與人工評分 |
 | Admin | Billing | 追加價格版本、呼叫價格快照、實際用量計費、報表與 CSV；不以 Context 預估冒充帳單 |
 | Platform | Account | 登入者本人的資料、偏好、閱讀設定與個人用量 |
@@ -65,17 +63,16 @@ flowchart LR
 | Platform | WebSearch | 搜尋 provider、本人配額與冪等紀錄、可核對來源；不爬取結果網站 |
 | Platform | Notifications | owner 範圍的 durable 通知與目標連結，與觸發事件同交易 |
 
-## 三種權限
+## 兩種權限
 
 1. **平台功能**：每個 request 由 SQL 計算有效的角色、群組與功能；UI 導覽只是呈現，撤銷影響下一次操作。
 2. **平台資料**：私人對話驗 owner；專案、知識、成果、評測驗資源 ACL，子文件與成果繼承專案 ACL。具名分享另存快照、收件人與期限。
-3. **來源資料**：公文／校務先驗功能與允許來源的群組，再以登入者 SID／帳號查來源的授權 view；平台管理員不自動取得外部資料權限。
 
-擁有者與具名 editor 可寫，群組只授予閱讀；專案成員看不到彼此的私人對話；分享不是匿名連結，也不是原資源的 editor 權限。詳見 [身分與授權](access-control.md)、[專案](../features/projects.md)、[分享](../features/sharing.md)、[資料來源](../features/integrations.md)。
+擁有者與具名 editor 可寫，群組只授予閱讀；專案成員看不到彼此的私人對話；分享不是匿名連結，也不是原資源的 editor 權限。詳見 [身分與授權](access-control.md)、[專案](../features/projects.md)、[分享](../features/sharing.md)。
 
 ## 資料層
 
-結構以 `database/App/` 為準，EF Core 只負責 mapping、關聯與跨模組交易（見 [資料庫](database.md)）。EF 表達不了的 SQL（全文、原生向量、伺服器狀態）用 `ISqlDatabase<AppDbContext>`，走同一條連線並加入目前的交易；來源 adapter 只用固定 SQL 與參數。原檔不進資料庫，由 `IAttachmentStorage` 存在站外目錄。
+結構以 `database/App/` 為準，EF Core 只負責 mapping、關聯與跨模組交易（見 [資料庫](database.md)）。EF 表達不了的 SQL（全文、原生向量、伺服器狀態）用 `ISqlDatabase<AppDbContext>`，走同一條連線並加入目前的交易；其他系統的資料庫（GD）經 `ExternalDatabase<T>`，只用固定 SQL 與參數（見 [外部資料庫](external-databases.md)）。原檔不進資料庫，由 `IAttachmentStorage` 存在站外目錄。
 
 ## 新增功能
 

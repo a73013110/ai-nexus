@@ -47,7 +47,6 @@ public static class AuditActions
         ("evaluation.", "評測資源"),
         ("quality.", "評測與回饋"),
         ("run.", "AI 生成"),
-        ("integration.", "外部資料查閱"),
         ("resource.acl", "資源授權"),
     }.Select(x => new AuditActionDto(x.Value, x.Label, AuditCategories.Covering(x.Value))).ToArray();
 }

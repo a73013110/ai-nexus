@@ -57,7 +57,7 @@
 
 - `ISqlDatabase<AppDbContext>`：主資料庫，共用 `AppDbContext` 的連線與目前交易。
 - `ISqlDatabase<MasterDatabase>`：建庫用，以 `Databases:App` 連 `master`。
-- `ISqlDatabase<GdDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次自開連線。`MeihoDatabase` 宣告唯讀，設定須 `ReadOnly=true`；`GdDatabase` 要回寫假日，不宣告，唯讀是選用設定。`ReadOnly` 只加連線意圖，不取代 SQL 端權限。
+- `ISqlDatabase<GdDatabase>`：外部來源，每次自開連線。`GdDatabase` 要回寫假日，不宣告唯讀，唯讀是選用設定；宣告唯讀的來源，設定須 `ReadOnly=true`。`ReadOnly` 只加連線意圖，不取代 SQL 端權限。
 
 連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增外部來源＝在擁有它的模組加 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。
 

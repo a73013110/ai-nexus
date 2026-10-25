@@ -13,7 +13,6 @@ const features = [
   { id: "jobs", name: "背景任務", route: "/work/jobs" },
   { id: "quality", name: "品質評測", route: "/admin/quality" },
   { id: "sharing", name: "分享", route: "/work/sharing" },
-  { id: "integrations", name: "資料來源", route: "/admin/integrations" },
 ];
 async function gallery(page: Page) {
   const fixture = new ApiFixture();
@@ -298,7 +297,7 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   // Open replaces the page's panel, so the toggle raises the selected chip.
   await expect(launcher).not.toHaveCSS("box-shadow", "none");
   // 管理員的存取管理與平台營運各拆成多頁（使用者、角色…、選單、用量、價格、檢索），連結比拆分前多 6 個。
-  await expect(nav.getByRole("link")).toHaveCount(21);
+  await expect(nav.getByRole("link")).toHaveCount(20);
   await expect(
     nav.getByRole("link", { name: "檔案庫", exact: true }).last(),
   ).toBeVisible();

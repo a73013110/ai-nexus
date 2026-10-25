@@ -17,7 +17,7 @@
 | 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Prompts | 模型、通知、監控；Inference 只依賴身分與授權 |
 | 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
 | 資料延伸 | Files、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
-| 內容 | Knowledge、Projects、Quality、Repositories、Integrations | 組合上述資料的功能 |
+| 內容 | Knowledge、Projects、Quality、Repositories | 組合上述資料的功能 |
 | 組合 | Chat、Sharing、Account、Operations、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 
 `Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除。OpenAPI tag 一律＝模組名，由 `FeatureModules` 掛載模組時加上，端點不自己寫 tag。

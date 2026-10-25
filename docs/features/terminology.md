@@ -16,7 +16,6 @@
 | jobs | 背景任務 | `/work/jobs` | 文件文字擷取、索引與評測的持久任務 |
 | repositories | 程式庫 | `/work/repositories` | 依個人 Gitea 權限閱讀程式與議題 |
 | quality | 品質評測 | `/admin/quality` | 回覆回饋、固定題庫與模型／指令比較 |
-| integrations | 資料來源 | `/admin/integrations` | 依來源權限查詢外部公文、校務資料 |
 | identity.users、access-control.* | 使用者、角色、功能群組與模型、功能、選單 | `/admin/identity/users` 等 | 見 [存取管理](administration.md) |
 | operations.usage、billing.prices、knowledge.retrieval | 平台用量、模型與工具價格、檢索管理 | 見 [平台營運](operations.md) | 全平台用量、價格、知識檢索索引 |
 

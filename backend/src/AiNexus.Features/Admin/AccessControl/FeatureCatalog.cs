@@ -77,7 +77,6 @@ public static class FeatureCatalog
     public const string OrganizationImport = "organization.import";
     public const string OperationsUsage = "operations.usage";
     public const string BillingPrices = "billing.prices";
-    public const string Integrations = "integrations";
     public const string Monitoring = "monitoring";
     public const string Audit = "audit";
     public const string DiagnosticsLogs = "diagnostics.logs";
@@ -111,7 +110,6 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition OrganizationModule = new(Organization, Admin, "組織");
     private static readonly ModuleDefinition OperationsModule = new("operations", Admin, "平台營運");
     private static readonly ModuleDefinition BillingModule = new("billing", Admin, "計費");
-    private static readonly ModuleDefinition IntegrationsModule = new(Integrations, Admin, "資料來源");
     private static readonly ModuleDefinition MonitoringModule = new(Monitoring, Admin, "即時監控");
     private static readonly ModuleDefinition AuditModule = new(Audit, Admin, "活動稽核");
     private static readonly ModuleDefinition DiagnosticsModule = new("diagnostics", Admin, "診斷");
@@ -122,7 +120,7 @@ public static class FeatureCatalog
     public static IReadOnlyList<ModuleDefinition> Modules { get; } =
     [
         DashboardModule, ChatModule, ProjectsModule, FilesModule, KnowledgeModule, ArtifactsModule, SharingModule, JobsModule, RepositoriesModule, AttendanceModule,
-        IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, IntegrationsModule, MonitoringModule, AuditModule, DiagnosticsModule,
+        IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, MonitoringModule, AuditModule, DiagnosticsModule,
         MailModule, QualityModule, DesignModule,
     ];
 
@@ -162,7 +160,6 @@ public static class FeatureCatalog
         new(OrganizationImport, FeatureKind.Action, OrganizationModule, "從公文系統匯入部門", "repeat"),
         new(OperationsUsage, FeatureKind.Page, OperationsModule, "平台用量", "chart"),
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
-        new(Integrations, FeatureKind.Page, IntegrationsModule, "資料來源", "integrations"),
         new(Monitoring, FeatureKind.Page, MonitoringModule, "即時監控", "activity"),
         new(Audit, FeatureKind.Page, AuditModule, "活動稽核", "audit") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All] },
         new(DiagnosticsLogs, FeatureKind.Page, DiagnosticsModule, "系統日誌", "logs"),

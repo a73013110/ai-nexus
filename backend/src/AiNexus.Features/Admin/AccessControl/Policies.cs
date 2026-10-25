@@ -17,7 +17,6 @@ public static class Policies
     public const string Knowledge = Prefix + FeatureCatalog.Knowledge;
     public const string KnowledgeRetrieval = Prefix + FeatureCatalog.KnowledgeRetrieval;
     public const string Jobs = Prefix + FeatureCatalog.Jobs;
-    public const string Integrations = Prefix + FeatureCatalog.Integrations;
     public const string Files = Prefix + FeatureCatalog.Files;
     public const string Dashboard = Prefix + FeatureCatalog.Dashboard;
     public const string Repositories = Prefix + FeatureCatalog.Repositories;

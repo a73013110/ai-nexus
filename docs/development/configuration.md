@@ -24,7 +24,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
-| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gd`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
+| `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`App`、`Gd`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditOptions.cs) | — |
 | `Identity.Bootstrap` | [`AdminBootstrapOptions`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/AdminBootstrapOptions.cs) | — |
@@ -33,7 +33,6 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
 | `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
 | `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
-| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Admin/Integrations/IntegrationsOptions.cs) | — |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
@@ -58,7 +57,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 ## 程式碼表達不了的注意事項
 
-- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Meiho` 必須設，`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。
+- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。
 - **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用。[SqlClient 說明](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
 - **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不會出現在模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。

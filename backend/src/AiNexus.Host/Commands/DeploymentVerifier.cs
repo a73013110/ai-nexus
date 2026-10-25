@@ -6,7 +6,6 @@ using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
-using AiNexus.Features.Admin.Integrations;
 using AiNexus.Features.Work.Knowledge;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Repositories;
@@ -56,7 +55,6 @@ public static class DeploymentVerifier
             }
 
             _ = scope.ServiceProvider.GetRequiredService<IOptions<ExportOptions>>().Value;
-            _ = scope.ServiceProvider.GetRequiredService<IOptions<IntegrationsOptions>>().Value;
             var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchOptions>>().Value;
             var gitea = scope.ServiceProvider.GetRequiredService<IOptions<GiteaOptions>>().Value;
             var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(AppDbContext.DatabaseName));

@@ -85,12 +85,11 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public void EveryDatabaseEntryIsDeclaredByAModuleAndReadOnlySourcesStayReadOnly()
+    public void EveryDatabaseEntryIsDeclaredByAModule()
     {
-        using var services = Settings(new() { ["Databases:LegacyGd:Server"] = "sql", ["Databases:Meiho:ReadOnly"] = "false" });
+        using var services = Settings(new() { ["Databases:LegacyGd:Server"] = "sql" });
         var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        Assert.Contains("Databases:LegacyGd is not a database of this application. Known: App, Gd, Meiho.", error.Message, StringComparison.Ordinal);
-        Assert.Contains("Databases:Meiho:ReadOnly must be true", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:LegacyGd is not a database of this application. Known: App, Gd.", error.Message, StringComparison.Ordinal);
     }
 
     /// <summary>GD 要回寫假日，不宣告唯讀；只想讀的部署設 <c>ReadOnly=true</c>，不設就可寫入。</summary>

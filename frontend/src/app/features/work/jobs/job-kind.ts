@@ -23,7 +23,6 @@ const KINDS: Record<string, { name: string; icon: string }> = {
   evaluation: { name: '品質評測', icon: 'lines' },
   'repository-review': { name: '程式碼 Review', icon: 'git' },
   'repository-import': { name: '程式庫匯入', icon: 'git' },
-  'integration-import': { name: '資料來源匯入', icon: 'integrations' },
 };
 
 /** 使用者閱讀的背景工作類型名稱。 */

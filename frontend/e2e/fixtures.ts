@@ -102,7 +102,7 @@ export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
   ...(
     [
       ["system.usage", "用量與計費", ["operations.usage", "billing.prices"]],
-      ["system.data", "資料與檢索", ["integrations", "knowledge.retrieval"]],
+      ["system.data", "資料與檢索", ["knowledge.retrieval"]],
       [
         "system.observability",
         "監控與紀錄",

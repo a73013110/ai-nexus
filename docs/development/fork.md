@@ -42,5 +42,5 @@ git init
 
 - **品牌圖形**：`frontend/public/brand.svg`、`frontend/src/app/shared/graphics/brand-logo.ts`（標誌外框）、聊天訊息的 `N` 標記；Angular selector 前綴 `nx` 是內部前綴，可保留。
 - **組織設定**：`appsettings.json` 的 AD 網域、Gitea 網址與資料庫伺服器，見 [設定與秘密](configuration.md)。
-- **用不到的整合**：公文／校務來源（[整合](../features/integrations.md)）等功能依需要移除。
+- **用不到的整合**：公文系統 GD（[出勤與公文系統 GD](../features/attendance-gd.md)）等外部系統的功能依需要移除。
 - `docs/decisions/` 保留公版的決策紀錄，裡面的舊型別名是歷史，不必改。

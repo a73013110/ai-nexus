@@ -50,12 +50,6 @@ public static class UserAccounts
     /// <summary>畫面、搜尋、排序、稽核與工作階段用的帳號：AD 帳號優先，沒有才用本地帳號（資料表保證至少有一個）。查詢裡寫 <c>x.AdAccount ?? x.LocalAccount</c>。</summary>
     public static string LoginName(User user) => user.AdAccount ?? user.LocalAccount ?? "";
 
-    /// <summary>
-    /// 外部系統用的完整 AD 帳號 <c>帳號@網域</c>（例如外部來源的 <c>ActorAccount</c>）；沒有 AD 帳號或沒設定網域時為 <see langword="null"/>。
-    /// 網域取自設定，不是 AD 的 UPN，也不是信箱。
-    /// </summary>
-    public static string? DirectoryAccount(User user, string? domain) => user.AdAccount is null || string.IsNullOrWhiteSpace(domain) ? null : $"{user.AdAccount}@{domain.Trim()}";
-
     /// <summary>判斷 <see cref="Normalize"/> 是否接受此帳號；空白代表「未設定」，同樣視為有效。</summary>
     public static bool IsValid(string? account) => string.IsNullOrWhiteSpace(account) || Matches(account.Trim().Normalize(NormalizationForm.FormC));
 
