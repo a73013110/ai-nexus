@@ -11,6 +11,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Work.Dashboard;
 using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Platform.Gd;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Admin.Integrations;
 using AiNexus.Features.Admin.Mail;
@@ -49,6 +50,7 @@ public static class FeatureModules
         Add<AccessControlModule>(builder);
         Add<IdentityModule>(builder);
         Add<OrganizationModule>(builder);
+        Add<GdModule>(builder);
         Add<AccountModule>(builder);
         Add<DiagnosticsModule>(builder);
         Add<BillingModule>(builder);

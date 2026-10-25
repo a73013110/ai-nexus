@@ -1,6 +1,6 @@
-using AiNexus.Features.Admin.Integrations.Gd;
+using AiNexus.Features.Platform.Gd;
 
-namespace AiNexus.IntegrationTests.Integrations;
+namespace AiNexus.IntegrationTests.Gd;
 
 public sealed class GdAccountsTests
 {

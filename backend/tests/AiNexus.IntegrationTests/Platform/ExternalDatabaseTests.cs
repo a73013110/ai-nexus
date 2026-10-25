@@ -1,22 +1,23 @@
-using AiNexus.Features.Admin.Integrations.Gd;
-using AiNexus.Features.Admin.Integrations.Sources;
+using AiNexus.Features.Platform.Gd;
+using AiNexus.Platform.Data.External;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 
-namespace AiNexus.IntegrationTests.Integrations;
+namespace AiNexus.IntegrationTests.Platform;
 
-public sealed class GdAccessTests
+/// <summary>外部資料庫的共用存取，以假 GD 為對象：降級、失敗分類、日誌只記狀態轉換、探測與分批。</summary>
+public sealed class ExternalDatabaseTests
 {
     private const string UsersSql = "SELECT [ID] FROM [dbo].[Sys_User]";
     private const string MissingTableSql = "SELECT [ID] FROM [dbo].[Missing]";
 
     [Fact]
-    public async Task AnUnreachableGdIsLoggedOnceAndTheRestorationOnceMore()
+    public async Task AnUnreachableDatabaseIsLoggedOnceAndTheRestorationOnceMore()
     {
         using var gd = FakeGd.Create();
         gd.AddUser("G001", "alice");
         var options = FakeGd.Unreachable();
-        var log = new LogRecorder<GdAccess>();
+        var log = new LogRecorder<ExternalDatabase<GdDatabase>>();
         var access = FakeGd.AccessTo(options, log);
         var ct = TestContext.Current.CancellationToken;
 
@@ -35,9 +36,9 @@ public sealed class GdAccessTests
     }
 
     [Fact]
-    public async Task AGdThatIsNotConfiguredIsUnavailable()
+    public async Task ADatabaseThatIsNotConfiguredIsUnavailable()
     {
-        var log = new LogRecorder<GdAccess>();
+        var log = new LogRecorder<ExternalDatabase<GdDatabase>>();
 
         var rows = await FakeGd.AccessTo(FakeGd.NotConfigured(), log).QueryAsync<string>(UsersSql, null, TestContext.Current.CancellationToken);
 
@@ -46,7 +47,7 @@ public sealed class GdAccessTests
     }
 
     [Fact]
-    public async Task AQueryGdRejectsIsUnavailableToo()
+    public async Task ARejectedQueryIsUnavailableToo()
     {
         using var gd = FakeGd.Create();
 
@@ -62,11 +63,11 @@ public sealed class GdAccessTests
         var options = FakeGd.Unreachable();
         var access = FakeGd.AccessTo(options, clock: clock);
         var ct = TestContext.Current.CancellationToken;
-        Assert.Equal(GdAvailability.Unknown, access.Availability);
+        Assert.Equal(ExternalAvailability.Unknown, access.Availability);
 
         await access.QueryAsync<string>(UsersSql, null, ct);
         var down = access.Availability;
-        Assert.Equal((GdFailure.Unavailable, GdFailure.Unavailable, clock.GetUtcNow()), (down.Outage, down.LastFailure, down.LastFailureAt));
+        Assert.Equal((ExternalFailure.Unavailable, ExternalFailure.Unavailable, clock.GetUtcNow()), (down.Outage, down.LastFailure, down.LastFailureAt));
         Assert.Null(down.LastSuccessAt);
 
         clock.Advance(TimeSpan.FromMinutes(1));
@@ -77,7 +78,7 @@ public sealed class GdAccessTests
         Assert.Equal(clock.GetUtcNow(), up.LastSuccessAt);
         Assert.Equal(clock.GetUtcNow(), up.LastAttemptAt);
         // 最近一次失敗留著給監控顯示，但已不算中斷。
-        Assert.Equal(GdFailure.Unavailable, up.LastFailure);
+        Assert.Equal(ExternalFailure.Unavailable, up.LastFailure);
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class GdAccessTests
     {
         using var gd = FakeGd.Create();
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 22, 2, 0, 0, TimeSpan.Zero));
-        var log = new LogRecorder<GdAccess>();
+        var log = new LogRecorder<ExternalDatabase<GdDatabase>>();
         var access = gd.Access(log, clock);
         var ct = TestContext.Current.CancellationToken;
 
@@ -96,10 +97,10 @@ public sealed class GdAccessTests
         Assert.NotNull(await access.QueryAsync<string>(UsersSql, null, ct));
         Assert.Equal([(3411, LogLevel.Warning)], log.Recorded);
         Assert.Null(access.Availability.Outage);
-        Assert.Equal((GdFailure.Rejected, clock.GetUtcNow()), (access.Availability.LastFailure, access.Availability.LastRejectedAt));
+        Assert.Equal((ExternalFailure.Rejected, clock.GetUtcNow()), (access.Availability.LastFailure, access.Availability.LastRejectedAt));
 
         // 距上一次被拒超過一小時才算新的一段。
-        clock.Advance(GdAvailability.RejectedWindow);
+        clock.Advance(ExternalAvailability.RejectedWindow);
         Assert.Null(await access.QueryAsync<string>(MissingTableSql, null, ct));
         Assert.Equal([3411, 3411], log.Recorded.Select(x => x.Id));
     }
@@ -109,12 +110,12 @@ public sealed class GdAccessTests
     {
         using var gd = FakeGd.Create();
         var options = FakeGd.Unreachable();
-        var log = new LogRecorder<GdAccess>();
+        var log = new LogRecorder<ExternalDatabase<GdDatabase>>();
         var access = FakeGd.AccessTo(options, log);
         var ct = TestContext.Current.CancellationToken;
 
         await access.ProbeAsync(TimeSpan.FromSeconds(3), ct);
-        Assert.Equal(GdFailure.Unavailable, access.Availability.Outage);
+        Assert.Equal(ExternalFailure.Unavailable, access.Availability.Outage);
 
         options[GdDatabase.Name].Name = gd.Name;
         await access.ProbeAsync(TimeSpan.FromSeconds(3), ct);
@@ -126,7 +127,7 @@ public sealed class GdAccessTests
     public async Task ACancelledQueryIsNotTreatedAsUnavailable()
     {
         using var gd = FakeGd.Create();
-        var log = new LogRecorder<GdAccess>();
+        var log = new LogRecorder<ExternalDatabase<GdDatabase>>();
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
 

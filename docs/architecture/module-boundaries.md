@@ -12,7 +12,8 @@
 
 | 層 | 模組 | 說明 |
 | --- | --- | --- |
-| 身分 | AccessControl、Identity、Organization | 授權資料與登入；Organization（部門樹）只依賴 AccessControl 的授權目錄與行政稽核 |
+| 外部系統 | Gd | [外部資料庫](external-databases.md)的定義與共用知識；只依賴 Platform 與 `AiNexus.Data`，不依賴任何模組 |
+| 身分 | AccessControl、Identity、Organization | 授權資料與登入；Organization（部門樹）依賴 AccessControl 的授權目錄與行政稽核，匯入部門時用 Gd |
 | 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Prompts | 模型、通知、監控；Inference 只依賴身分與授權 |
 | 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
 | 資料延伸 | Files、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
@@ -34,7 +35,6 @@
    - `IActiveUsers`（AccessControl 讀啟用中的使用者，Identity 實作）
    - `IRequestActor`（AccessControl 的管理端點取得執行者，Identity 的 `CurrentUser` 實作）
    - `IUnitMembership`（AccessControl 的資料範圍計算所屬單位，Organization 實作）
-   - `IUnitSource`（Organization 從公文系統匯入部門，Integrations 以 GD 實作；Integrations 依賴對話、成果等業務模組，反過來依賴它，業務模組日後用組織範圍就會成環）
    - `IModelCallMeter`（Inference 的模型任務計費，Billing 實作）
    - `IPrivateReaders`（Files 清理草稿時辨識私人閱讀文件，Knowledge 實作）
    - `ServiceModel`（Knowledge 登記向量模型，Inference／Billing 用來顯示名稱與價格目標）

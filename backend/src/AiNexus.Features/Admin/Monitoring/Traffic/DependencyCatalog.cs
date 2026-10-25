@@ -8,11 +8,6 @@ public sealed class DependencyCatalog
 {
     private readonly List<(string Host, int Port, string Id)> http = [];
     private readonly List<(string Server, string Database, string Id)> sql = [];
-    /// <summary>已知 <c>Databases</c> 項目的顯示名稱；其餘已設定的項目以原名列出。</summary>
-    private static readonly Dictionary<string, string> DatabaseLabels = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["App"] = "主資料庫", ["Gd"] = "公文資料庫", ["Meiho"] = "校務資料庫"
-    };
 
     public DependencyCatalog(IConfiguration config, IOptions<DatabasesOptions> databases, RuntimeTraffic traffic)
     {
@@ -26,7 +21,7 @@ public sealed class DependencyCatalog
         {
             var id = "sql." + name.ToLowerInvariant();
             sql.Add((database.Server, database.Name, id));
-            traffic.RegisterDependency(id, DatabaseLabels.GetValueOrDefault(name, name), "database");
+            traffic.RegisterDependency(id, databases.Value.Label(name), "database");
         }
         traffic.RegisterDependency("http.other", "其他 HTTP 服務", "http");
         traffic.RegisterDependency("sql.other", "其他 SQL 資料庫", "database");

@@ -1,22 +1,7 @@
-using AiNexus.Platform.Errors;
-
 namespace AiNexus.Features.Admin.Organization.Imports;
 
 /// <summary>
-/// 匯入部門的來源（公文系統 GD 的部門表，由 Integrations 實作）。Organization 定義、上層實作：GD 的連線、帳號對應與錯誤分類都在 Integrations，
-/// 而 Integrations 依賴對話、成果等業務模組；反過來讓 Organization 依賴它，業務模組日後要用組織範圍就會成環（docs/architecture/module-boundaries.md）。
-/// </summary>
-public interface IUnitSource
-{
-    /// <summary>
-    /// 讀取來源的全部部門，主管已對到使用者。來源不可用時回 <see cref="OrganizationErrors.ImportNotConfigured"/>、
-    /// <see cref="OrganizationErrors.ImportUnavailable"/> 或 <see cref="OrganizationErrors.ImportRejected"/>，不拋例外。
-    /// </summary>
-    Task<Result<IReadOnlyList<SourceUnit>>> ReadAsync(CancellationToken ct);
-}
-
-/// <summary>
-/// 來源的一個部門，原樣帶回（名稱未去空白、上層可能是 0 或不存在的編號），規則由 <see cref="UnitImportPlan"/> 統一判斷。
+/// 來源（<see cref="GdUnitSource"/>）的一個部門，原樣帶回（名稱未去空白、上層可能是 0 或不存在的編號），規則由 <see cref="UnitImportPlan"/> 統一判斷。
 /// </summary>
 /// <param name="Key">來源主鍵（GD 的 <c>DEP_NO</c>），存進 <c>Units.GdDepNo</c>。</param>
 /// <param name="Name">名稱，未去空白，可能是 null。</param>

@@ -2,7 +2,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 
 /// <summary>
 /// 來源資料夾讀不到的狀態，供監控判為 failing：這種失敗沒有檔案可記，不會出現在匯入紀錄裡。只存在記憶體，重啟後歸零，所以註冊為單例。
-/// 與 <see cref="Admin.Integrations.Gd.GdAccess"/> 一樣只在狀態轉換時回報，讓掃描只記一次日誌，不在中斷期間每個週期洗版。
+/// 與 <see cref="AiNexus.Platform.Data.External.ExternalDatabase{TDatabase}"/> 一樣只在狀態轉換時回報，讓掃描只記一次日誌，不在中斷期間每個週期洗版。
 /// </summary>
 public sealed class PunchImportState
 {

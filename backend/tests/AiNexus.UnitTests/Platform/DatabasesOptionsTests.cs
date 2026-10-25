@@ -13,13 +13,13 @@ public sealed class DatabasesOptionsTests
     [Fact]
     public void SqlLoginsUseTheConnectionStringBuilderAlwaysEncryptedWithoutPersistedSecrets()
     {
-        var databases = new DatabasesOptions { ["App"] = new() { Server = "sql.fixture.test", Name = "AiNexus", User = "login", Password = "fixture;\"password", TrustServerCertificate = true, ConnectTimeoutSeconds = 7 } };
+        var databases = new DatabasesOptions { ["App"] = new() { Server = "sql.fixture.test", Name = "AiNexus", User = "login", Password = "fixture;\"password", TrustServerCertificate = true, ConnectTimeoutSeconds = 7, CommandTimeoutSeconds = 12 } };
         var connection = new SqlConnectionStringBuilder(databases.ConnectionString("app"));
         Assert.Equal("sql.fixture.test", connection.DataSource); Assert.Equal("AiNexus", connection.InitialCatalog);
         Assert.Equal("login", connection.UserID); Assert.Equal("fixture;\"password", connection.Password);
         Assert.Equal(SqlConnectionEncryptOption.Mandatory, connection.Encrypt); Assert.True(connection.TrustServerCertificate);
         Assert.False(connection.PersistSecurityInfo); Assert.False(connection.IntegratedSecurity);
-        Assert.Equal(7, connection.ConnectTimeout); Assert.Equal(ApplicationIntent.ReadWrite, connection.ApplicationIntent);
+        Assert.Equal(7, connection.ConnectTimeout); Assert.Equal(12, connection.CommandTimeout); Assert.Equal(ApplicationIntent.ReadWrite, connection.ApplicationIntent);
     }
 
     [Fact]
@@ -66,12 +66,23 @@ public sealed class DatabasesOptionsTests
         var databases = services.GetRequiredService<IOptions<DatabasesOptions>>().Value;
         Assert.True(databases.For("App").Configured);
         Assert.Equal(ApplicationIntent.ReadOnly, new SqlConnectionStringBuilder(databases.ConnectionString(SourceDatabase.Name)).ApplicationIntent);
+        // 沒有另外設定時，命令逾時與 SqlClient 的預設相同。
+        Assert.Equal(30, new SqlConnectionStringBuilder(databases.ConnectionString("App")).CommandTimeout);
+    }
+
+    [Fact]
+    public void DeclaredLabelsNameTheDatabaseAndUndeclaredOnesFallBackToTheKey()
+    {
+        using var services = Services([]);
+        var databases = services.GetRequiredService<IOptions<DatabasesOptions>>().Value;
+        Assert.Equal(("來源系統", "App", "Other"), (databases.Label("source"), databases.Label("App"), databases.Label("Other")));
     }
 
     [Theory]
     [InlineData("Databases:Nexsu:Server", "sql", "Databases:Nexsu is not a database")]
     [InlineData("Databases:App:User", "login", "Databases:App:Password is missing")]
     [InlineData("Databases:App:ConnectTimeoutSeconds", "0", "Databases:App:ConnectTimeoutSeconds must be")]
+    [InlineData("Databases:App:CommandTimeoutSeconds", "601", "Databases:App:CommandTimeoutSeconds must be")]
     [InlineData("Databases:Source:ReadOnly", "false", "Databases:Source:ReadOnly must be true")]
     public void InvalidEntriesFailAndNameTheKey(string key, string value, string message)
     {
@@ -105,6 +116,7 @@ public sealed class DatabasesOptionsTests
         services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
         services.AddDatabase("App");
         services.AddSqlDatabase<SourceDatabase>();
+        services.AddDatabase(SourceDatabase.Name, label: "來源系統");
         return services.BuildServiceProvider();
     }
 

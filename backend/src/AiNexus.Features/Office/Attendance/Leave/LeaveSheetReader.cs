@@ -1,4 +1,5 @@
-using AiNexus.Features.Admin.Integrations.Gd;
+using AiNexus.Features.Platform.Gd;
+using AiNexus.Platform.Data.External;
 
 namespace AiNexus.Features.Office.Attendance.Leave;
 
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Office.Attendance.Leave;
 /// 不是實際請假的時段，改取 <c>Form_Leave_Group</c> 同單號的各列（舊系統做法），每一列一筆 <see cref="LeaveSheet"/>。
 /// 期間與查詢區間相交才取出，起訖保留原值、不裁切到區間；結束剛好等於區間起點、或開始剛好等於區間終點的不算。
 /// </remarks>
-public sealed class LeaveSheetReader(GdAccounts accounts, GdAccess gd)
+public sealed class LeaveSheetReader(GdAccounts accounts, ExternalDatabase<GdDatabase> gd)
 {
     // SQL Server 比較字串時忽略尾端空白，所以只有空白的 DayOfWeek 也算空。排序留給呼叫端（分批查詢後本來就要重排）。
     private const string Sql = """

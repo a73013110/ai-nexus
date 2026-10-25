@@ -1,13 +1,14 @@
-using AiNexus.Features.Admin.Integrations.Gd;
-using AiNexus.Features.Admin.Integrations.Sources;
+using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
-namespace AiNexus.IntegrationTests.Integrations;
+namespace AiNexus.IntegrationTests.Platform;
 
-public sealed class GdMonitoringTests
+/// <summary>外部資料庫的監控卡片，以假 GD（<c>gd</c>）為對象。</summary>
+public sealed class ExternalDatabaseMonitoringTests
 {
     private static readonly TimeSpan ProbeInterval = TimeSpan.FromSeconds(30);
 
@@ -30,7 +31,7 @@ public sealed class GdMonitoringTests
             return new() { Gd = gd, Factory = factory, Clock = clock };
         }
 
-        public GdAccess Access => Factory.Services.GetRequiredService<GdAccess>();
+        public ExternalDatabase<GdDatabase> Access => Factory.Services.GetRequiredService<ExternalDatabase<GdDatabase>>();
 
         public void BreakGd() => Connection.Name = "AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N");
 
@@ -39,10 +40,10 @@ public sealed class GdMonitoringTests
         /// <summary>以監控子系統實際使用的方式讀取：註冊的來源型別、全新的 DI scope。</summary>
         public async Task<SubsystemReading> ReadAsync()
         {
-            var registration = Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.Name == "GdMonitoring");
+            var registration = Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.GenericTypeArguments is [var database] && database == typeof(GdDatabase));
             using var scope = Factory.Services.CreateScope();
             var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(registration.Type);
-            Assert.Equal("gd", source.Id);
+            Assert.Equal(("gd", "公文系統 GD"), (source.Id, source.Name));
             return await source.ReadAsync(TestContext.Current.CancellationToken);
         }
 
@@ -83,7 +84,7 @@ public sealed class GdMonitoringTests
         var failing = await session.ReadAsync();
         Assert.Equal(SubsystemStates.Failing, failing.Status);
         Assert.Equal(("連不上", "連不上"), (Text(failing, "connection"), Text(failing, "last_failure")));
-        Assert.Contains("連不上公文系統 GD", failing.Summary);
+        Assert.Contains("連不上，假單、出差單、假日與組織匯入暫時無法使用", failing.Summary);
 
         session.RestoreGd();
         Assert.Equal(SubsystemStates.Failing, (await session.ReadAsync()).Status);
@@ -120,14 +121,14 @@ public sealed class GdMonitoringTests
         Assert.Equal(SubsystemStates.Degraded, (await session.ReadAsync()).Status);
         Assert.Equal(session.Clock.GetUtcNow(), session.Access.Availability.LastSuccessAt);
 
-        session.Clock.Advance(GdAvailability.RejectedWindow);
+        session.Clock.Advance(ExternalAvailability.RejectedWindow);
         Assert.Equal(SubsystemStates.Healthy, (await session.ReadAsync()).Status);
     }
 
     [Theory]
     [InlineData(false, "可寫入")]
     [InlineData(true, "唯讀")]
-    public async Task TheCalendarWritebackFactFollowsReadOnly(bool readOnly, string expected)
+    public async Task TheWritesFactFollowsReadOnly(bool readOnly, string expected)
     {
         await using var session = Session.Create();
         session.Connection.ReadOnly = readOnly;
@@ -135,7 +136,7 @@ public sealed class GdMonitoringTests
         var reading = await session.ReadAsync();
 
         Assert.Equal(SubsystemStates.Healthy, reading.Status);
-        Assert.Equal(expected, Text(reading, "calendar_writeback"));
+        Assert.Equal(expected, Text(reading, "writes"));
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public sealed class GdMonitoringTests
         var reading = await session.ReadAsync();
 
         Assert.Equal(SubsystemStates.Idle, reading.Status);
-        Assert.Contains("未設定", reading.Summary);
-        Assert.Equal(("未設定", "未設定"), (Text(reading, "connection"), Text(reading, "calendar_writeback")));
+        Assert.Contains("未設定連線（Databases:Gd）", reading.Summary);
+        Assert.Equal(("未設定", "未設定"), (Text(reading, "connection"), Text(reading, "writes")));
         Assert.Null(session.Access.Availability.LastAttemptAt);
     }
 }

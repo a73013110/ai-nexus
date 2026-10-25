@@ -2,8 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity.Sessions;
-using AiNexus.Features.Admin.Integrations.Gd;
 using AiNexus.Features.Office.Attendance.Calendar;
+using AiNexus.Features.Platform.Gd;
+using AiNexus.Platform.Data.External;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
@@ -182,7 +183,7 @@ public sealed class CalendarDaysTests
         await using var session = await CalendarSession.CreateAsync();
         session.Gd.AddDay(NationalDay);
 
-        Assert.False(session.Factory.Services.GetRequiredService<GdAccess>().ReadOnly);
+        Assert.False(session.Factory.Services.GetRequiredService<ExternalDatabase<GdDatabase>>().ReadOnly);
         (await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, false, null), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
 
         Assert.Equal(new GdDay(true, false, null, CalendarSession.HrGdId), session.Gd.Day(NationalDay));

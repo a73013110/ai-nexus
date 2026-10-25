@@ -15,7 +15,7 @@ public sealed class AppDatabaseModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDomainEvents();
-        services.AddDatabase(AppDbContext.DatabaseName);
+        services.AddDatabase(AppDbContext.DatabaseName, label: "主資料庫");
 
         // 即使尚未設定連線字串也照常註冊，由 UseStorageReadiness 在請求層擋下，而不是讓啟動失敗。
         services.AddDbContext<AppDbContext>((scope, options) => options

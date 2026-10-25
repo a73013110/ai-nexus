@@ -14,6 +14,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
+| 讀寫其他系統的資料庫（GD 等）、新增外部資料庫 | `docs/architecture/external-databases.md` |
 | 郵件寄送、outbox | `docs/architecture/mail-outbox.md`（設定、重試、保存見 `docs/features/mail.md`） |
 | 後端測試、`AppFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
@@ -76,6 +77,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 |---|---|---|
 | C# 型別、方法、屬性、檔名 | PascalCase，檔名＝主要型別名 | `SavePromptTemplate.cs` |
 | C# 參數、區域變數 | camelCase；私有欄位不加 `_` | `ownerId` |
+| 縮寫（含兩個字母） | 識別字、設定鍵只大寫首字母；說明文字與畫面照常寫大寫 | `AdAccount`、`GdDatabase`、`Databases:Gd`；文字寫「GD」 |
 | use case 類別 | 動詞＋名詞 | `ListNotifications`、`DeleteArtifact` |
 | 非同步方法 | 加 `Async` | `HandleAsync` |
 | 介面 | `I` 開頭 | `ICurrentUser` |

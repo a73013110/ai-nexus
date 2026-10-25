@@ -9,11 +9,11 @@ public static class SqlDatabaseServices
 {
     /// <summary>
     /// 宣告模組要使用 <c>Databases:&lt;name&gt;</c> 的連線設定。只有宣告過的項目能通過啟動驗證；
-    /// <paramref name="readOnly"/> 為 true 時，對應設定必須有 <c>ReadOnly=true</c>。
+    /// <paramref name="readOnly"/> 為 true 時，對應設定必須有 <c>ReadOnly=true</c>；<paramref name="label"/> 是畫面上的名稱。
     /// </summary>
-    public static IServiceCollection AddDatabase(this IServiceCollection services, string name, bool readOnly = false)
+    public static IServiceCollection AddDatabase(this IServiceCollection services, string name, bool readOnly = false, string? label = null)
     {
-        services.PostConfigure<DatabasesOptions>(databases => databases.Declare(name, readOnly));
+        services.PostConfigure<DatabasesOptions>(databases => databases.Declare(name, readOnly, label));
         return services;
     }
 

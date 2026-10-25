@@ -1,7 +1,8 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Data.External;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Admin.Integrations.Gd;
+namespace AiNexus.Features.Platform.Gd;
 
 /// <summary>
 /// 使用者對到的公文帳號（<c>Sys_User.ID</c>）。<paramref name="GdIds"/> 只含對得到的使用者；同一個 AD 帳號在 <c>Sys_User</c> 有多筆時只列候選（見 <see cref="GdAccounts"/>），候選仍有多筆就全部列出，由呼叫端決定。
@@ -33,7 +34,7 @@ public sealed record GdUserMatch(string GdId, Guid? UserId, GdAccountIssue? Issu
 /// 讀假單與回寫假日（換算操作者）用使用者查公文帳號；組織匯入（部門主管）反過來用公文帳號查使用者（<see cref="UsersOfAsync"/>）。
 /// GD 不可用時回傳 <see langword="null"/>（或失敗原因），不能當成所有人都對不到。
 /// </summary>
-public sealed class GdAccounts(AppDbContext db, GdAccess gd)
+public sealed class GdAccounts(AppDbContext db, ExternalDatabase<GdDatabase> gd)
 {
     private const string Sql = "SELECT [ID] AS GdId, [ACCOUNT] AS Account, [Disable] AS Disabled FROM [dbo].[Sys_User] WHERE [ACCOUNT] IN @Accounts";
     private const string ByIdSql = "SELECT [ID] AS GdId, [ACCOUNT] AS Account, [Disable] AS Disabled FROM [dbo].[Sys_User] WHERE [ID] IN @Ids";
@@ -64,7 +65,7 @@ public sealed class GdAccounts(AppDbContext db, GdAccess gd)
     /// 反向對應：公文帳號 → <c>Sys_User.ACCOUNT</c> → 未刪除使用者的 <c>Users.AdAccount</c>（去空白、不分大小寫）。每個不重複的 ID（去空白、不分大小寫）回一筆，
     /// 依輸入的先後。停用的公文帳號不對應：部門資料可能還掛著離職者，把他當主管會讓他取得主管範圍。帳號停用（未刪除）的使用者照樣對應，由組織的有效成員規則排除。
     /// </summary>
-    public async Task<GdRead<GdUserMatch>> UsersOfAsync(IEnumerable<string> gdIds, CancellationToken ct)
+    public async Task<ExternalRead<GdUserMatch>> UsersOfAsync(IEnumerable<string> gdIds, CancellationToken ct)
     {
         var ids = gdIds.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (ids.Count == 0) return new([], null);

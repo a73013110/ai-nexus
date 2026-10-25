@@ -13,6 +13,7 @@ public sealed class DatabasesOptions() : Dictionary<string, DatabaseOptions>(Str
     public const string Section = "Databases";
 
     private readonly Dictionary<string, bool> declared = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> labels = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>取得指定名稱的連線設定；沒有該名稱時回傳未設定的空白項目。</summary>
     public DatabaseOptions For(string name) => TryGetValue(name, out var database) ? database : new();
@@ -20,8 +21,15 @@ public sealed class DatabasesOptions() : Dictionary<string, DatabaseOptions>(Str
     /// <inheritdoc cref="DatabaseOptions.ConnectionString"/>
     public string ConnectionString(string name, string? catalog = null) => For(name).ConnectionString(catalog);
 
+    /// <summary>宣告時給的顯示名稱（例如「公文系統 GD」），供監控等畫面使用；沒有給就是設定鍵名稱。</summary>
+    public string Label(string name) => labels.GetValueOrDefault(name, name);
+
     /// <summary>模組宣告使用此資料庫；<paramref name="readOnly"/> 為 true 時，該設定必須明確設 <c>ReadOnly=true</c>。</summary>
-    internal void Declare(string name, bool readOnly) => declared[name] = readOnly || declared.GetValueOrDefault(name);
+    internal void Declare(string name, bool readOnly, string? label)
+    {
+        declared[name] = readOnly || declared.GetValueOrDefault(name);
+        if (label is not null) labels[name] = label;
+    }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

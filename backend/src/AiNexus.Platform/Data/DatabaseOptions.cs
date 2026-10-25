@@ -12,6 +12,8 @@ public sealed class DatabaseOptions
 {
     public const int MinConnectTimeoutSeconds = 1;
     public const int MaxConnectTimeoutSeconds = 120;
+    public const int MinCommandTimeoutSeconds = 1;
+    public const int MaxCommandTimeoutSeconds = 600;
 
     /// <summary>伺服器位址，格式為 <c>主機</c> 或 <c>主機\執行個體</c>；非預設埠時以 <c>,port</c> 指定。</summary>
     public string Server { get; set; } = "";
@@ -24,6 +26,11 @@ public sealed class DatabaseOptions
     /// <summary>只略過伺服器憑證鏈的驗證，連線仍全程加密。</summary>
     public bool TrustServerCertificate { get; set; }
     public int ConnectTimeoutSeconds { get; set; } = 10;
+    /// <summary>
+    /// 每個命令的預設逾時，寫進連線字串的 <c>Command Timeout</c>：EF Core、Dapper 與直接建立的 <c>SqlCommand</c> 沒有另外指定時都用它。
+    /// 預設 30 秒與 SqlClient 相同；外部系統（如 GD）連不上時要早點放棄、讓呼叫端降級，所以設得比較短。
+    /// </summary>
+    public int CommandTimeoutSeconds { get; set; } = 30;
     /// <summary>連線字串會附加 <c>ApplicationIntent=ReadOnly</c>，但它無法取代 SQL Server 端的唯讀權限設定。</summary>
     public bool ReadOnly { get; set; }
 
@@ -40,7 +47,7 @@ public sealed class DatabaseOptions
         {
             DataSource = Server, InitialCatalog = catalog ?? Name,
             Encrypt = SqlConnectionEncryptOption.Mandatory, TrustServerCertificate = TrustServerCertificate,
-            ConnectTimeout = ConnectTimeoutSeconds, PersistSecurityInfo = false
+            ConnectTimeout = ConnectTimeoutSeconds, CommandTimeout = CommandTimeoutSeconds, PersistSecurityInfo = false
         };
         if (IntegratedSecurity) connection.IntegratedSecurity = true;
         else { connection.UserID = User; connection.Password = Password; }
@@ -53,6 +60,8 @@ public sealed class DatabaseOptions
     {
         if (ConnectTimeoutSeconds is < MinConnectTimeoutSeconds or > MaxConnectTimeoutSeconds)
             yield return new($"{key}:{nameof(ConnectTimeoutSeconds)} must be {MinConnectTimeoutSeconds}–{MaxConnectTimeoutSeconds}.", [key]);
+        if (CommandTimeoutSeconds is < MinCommandTimeoutSeconds or > MaxCommandTimeoutSeconds)
+            yield return new($"{key}:{nameof(CommandTimeoutSeconds)} must be {MinCommandTimeoutSeconds}–{MaxCommandTimeoutSeconds}.", [key]);
         var hasUser = !string.IsNullOrWhiteSpace(User);
         var hasPassword = !string.IsNullOrEmpty(Password);
         if (IntegratedSecurity && (hasUser || hasPassword))

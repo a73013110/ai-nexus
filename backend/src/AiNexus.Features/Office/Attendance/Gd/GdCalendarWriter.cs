@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
-using AiNexus.Features.Admin.Integrations.Gd;
+using AiNexus.Features.Platform.Gd;
+using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.SqlClient;
 
@@ -10,7 +11,7 @@ namespace AiNexus.Features.Office.Attendance.Gd;
 public sealed record GdCalendarValues(bool MorningOff, bool AfternoonOff, string? Remark);
 
 /// <summary>
-/// 回寫 GD 假日的唯一入口（ADR 0018 的例外寫入），連線、逾時與唯讀設定都取自查詢用的 <see cref="GdAccess"/>（同一個 <c>Databases:Gd</c>）。
+/// 回寫 GD 假日的唯一入口（ADR 0018 的例外寫入），連線、命令逾時與唯讀設定都取自查詢用的 <see cref="ExternalDatabase{TDatabase}"/>（同一個 <c>Databases:Gd</c>）。
 /// 寫入範圍由這裡的 SQL 保證，不靠資料庫帳號：只 <c>UPDATE</c> 既有日期的 <c>AM</c>、<c>PM</c>、<c>hReMark</c> 與 <c>UserId</c>，不新增、不刪除。
 /// 回傳的 <see cref="GdCalendarEdit"/> 仍持有交易與列鎖，呼叫端寫完本系統的稽核才提交，見 <see cref="GdCalendarEdit"/>。
 /// </summary>
@@ -18,7 +19,7 @@ public sealed record GdCalendarValues(bool MorningOff, bool AfternoonOff, string
 /// <c>ISqlDatabase</c> 每次呼叫各開一條連線、不支援跨命令的交易，
 /// 而「鎖定讀前值 → 更新 → 讀回 → 等稽核寫完再提交」必須在同一條連線、同一個交易，所以這裡直接用 SqlClient。
 /// </remarks>
-public sealed partial class GdCalendarWriter(GdAccess gd, ILogger<GdCalendarWriter> logger)
+public sealed partial class GdCalendarWriter(ExternalDatabase<GdDatabase> gd, ILogger<GdCalendarWriter> logger)
 {
     // hDate 是 datetime，以整天的區間比對：公文系統寫入的日期理應是午夜，萬一帶了時間也不會漏掉。同一天有多列時一起更新，前值取第一列。
     // UPDLOCK＋HOLDLOCK 鎖住這一天到提交為止：並發的兩次修改依序進行，各自的稽核前值都是真正的前一個狀態。
@@ -117,9 +118,10 @@ public sealed partial class GdCalendarWriter(GdAccess gd, ILogger<GdCalendarWrit
 
     internal void CommitFailed(DbException ex) => LogCommitFailed(logger, ex.GetType().Name, (ex as SqlException)?.Number ?? 0);
 
-    private SqlCommand Command(string sql, SqlConnection connection, SqlTransaction transaction, DateOnly day)
+    private static SqlCommand Command(string sql, SqlConnection connection, SqlTransaction transaction, DateOnly day)
     {
-        var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = gd.CommandTimeoutSeconds };
+        // 逾時取連線字串的 Command Timeout（Databases:Gd:CommandTimeoutSeconds），等不到公文系統的鎖也算逾時。
+        var command = new SqlCommand(sql, connection, transaction);
         command.Parameters.Add("@Day", SqlDbType.DateTime).Value = day.ToDateTime(TimeOnly.MinValue);
         command.Parameters.Add("@Next", SqlDbType.DateTime).Value = day.AddDays(1).ToDateTime(TimeOnly.MinValue);
         return command;
