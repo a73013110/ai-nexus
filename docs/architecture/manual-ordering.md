@@ -6,7 +6,7 @@
 
 - 欄位 `SortOrder INT NULL`，加 `ck_<表>_SortOrder` 限制範圍（使用者：0 至 1,000,000，程式常數 `UserOrder.MaxSortOrder`）。不加唯一約束：同值時依後面的條件排，不會出錯。
 - 順序規則：有值的在前、依值；null（未排序）在後；再依名稱（ordinal）、帳號（不分大小寫）、Id。程式用 [`UserOrder.InUserOrder`](../../backend/src/AiNexus.Data/App/Identity/UserOrder.cs)，SQL 用 `COLLATE Latin1_General_100_BIN2`（見 `operations.usp_ListAdminUsers`），兩邊結果必須一致。
-- 新資料預設 null，不必知道其他人的值；清除排序就是全部設回 null。
+- 新資料接在最後一位已排序者之後（同一套值計算），不混進依名稱排列的未排序區；還沒有人排序時維持 null，否則新資料會變成唯一已排序的而排到最前面。使用者的管理員新增、從 AD 匯入、AD 首次登入都走 [`NewUserOrder`](../../backend/src/AiNexus.Features/Admin/Identity/Ordering/NewUserOrder.cs)。清除排序就是全部設回 null。
 
 ## 值怎麼算
 

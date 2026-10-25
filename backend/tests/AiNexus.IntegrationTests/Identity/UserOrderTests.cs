@@ -68,6 +68,45 @@ public sealed class UserOrderTests
     }
 
     [Fact]
+    public async Task NewUsersJoinTheEndOfTheSortedUsersOnceThereIsAnOrder()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        // 還沒有人排序：新人維持未排序，不會變成唯一已排序的人而排到最前面。
+        var first = await IdentityApi.CreateUser(admin, IdentityApi.LocalAccount("first"));
+        Assert.Null((await ListAsync(admin)).Users.Single(x => x.Id == first).SortOrder);
+
+        var bob = await OrganizationApi.UserIdAsync(factory, "bob");
+        (await MoveAsync(admin, bob, 1)).EnsureSuccessStatusCode();
+        var second = await IdentityApi.CreateUser(admin, IdentityApi.LocalAccount("second"));
+
+        var list = await ListAsync(admin);
+        Assert.Equal(2, list.Sorted);
+        Assert.Equal([bob, second], list.Users.Take(2).Select(x => x.Id));
+        Assert.Equal([(int?)10, 20], list.Users.Take(2).Select(x => x.SortOrder));
+        Assert.Null(list.Users.Single(x => x.Id == first).SortOrder);
+    }
+
+    [Fact]
+    public async Task DirectoryImportAndFirstSignInAlsoJoinTheEnd()
+    {
+        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
+        using var admin = factory.CreateClient();
+        var alice = (await IdentityApi.Login(admin, "alice")).Id;
+        // 還沒有人排序時匯入的人維持未排序。
+        var carol = Assert.Single(await DirectoryApi.Import(admin, FixtureAdDirectory.Carol)).UserId!.Value;
+        Assert.Equal(0, (await ListAsync(admin)).Sorted);
+        (await MoveAsync(admin, carol, 1)).EnsureSuccessStatusCode();
+
+        using var bobClient = factory.CreateClient();
+        var bob = (await IdentityApi.Login(bobClient, "bob")).Id;
+        var erin = Assert.Single(await DirectoryApi.Import(admin, FixtureAdDirectory.Erin)).UserId!.Value;
+
+        var list = await ListAsync(admin);
+        Assert.Equal([carol, bob, erin, alice], list.Users.Select(x => x.Id));
+        Assert.Equal([(int?)10, 20, 30, null], list.Users.Select(x => x.SortOrder));
+    }
+
+    [Fact]
     public async Task DeletedOrUnknownUsersAndBadPositionsAreRejected()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();

@@ -70,7 +70,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
             var now = clock.GetUtcNow();
             if (user is null)
             {
-                user = accounts.Create(Guid.NewGuid(), sid, account, profile, now);
+                user = await accounts.CreateAsync(Guid.NewGuid(), sid, account, profile, now, ct);
                 // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據；管理員匯入的帳號則留空，直到本人登入。
                 user.DirectoryVerifiedAt = now;
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });

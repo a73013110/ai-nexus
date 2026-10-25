@@ -111,7 +111,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
                 var fresh = await PlanAsync(person, includeDisabled, allowCreate, ct);
                 if (!fresh.Writes || fresh.Outcome != plan.Outcome || (fresh.User is not null && fresh.User.Id != id)) return IdentityErrors.DirectoryChanged;
                 var now = clock.GetUtcNow();
-                if (fresh.Outcome == DirectoryOutcomes.Create) fresh = fresh with { User = accounts.Create(id, person.Sid, fresh.Account, Profile(person), now) };
+                if (fresh.Outcome == DirectoryOutcomes.Create) fresh = fresh with { User = await accounts.CreateAsync(id, person.Sid, fresh.Account, Profile(person), now, ct) };
                 else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
                 applied = fresh;
                 return Result.Success;

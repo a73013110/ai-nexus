@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.Identity.Ordering;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,14 +42,15 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
 
     /// <summary>
     /// 新增 AD 使用者與 <c>member</c> 角色（不儲存）。AdAccount 寫入與管理端預建相同的正規化值：出勤以它對應公文帳號，留空就查不到假單。
-    /// 呼叫端已以 <see cref="MatchAsync"/> 確認沒有其他使用者佔用這個 AdAccount。
+    /// 呼叫端已以 <see cref="MatchAsync"/> 確認沒有其他使用者佔用這個 AdAccount。順序接在已排序者之後（<see cref="NewUserOrder"/>）。
     /// </summary>
-    public User Create(Guid id, string sid, string account, DirectoryProfile profile, DateTimeOffset now)
+    public async Task<User> CreateAsync(Guid id, string sid, string account, DirectoryProfile profile, DateTimeOffset now, CancellationToken ct)
     {
         var user = new User { Id = id, Sid = sid, Account = account, AdAccount = UserAccounts.Normalize(UserAccounts.AccountName(account)), DisplayName = profile.DisplayName, LastSeenAt = now };
         if (DirectoryEmail(profile.Email) is { } email) { user.Email = email; user.EmailSource = EmailSources.Directory; user.EmailVerifiedAt = now; }
         db.Users.Add(user);
         db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
+        await NewUserOrder.AppendAsync(db, user, ct);
         return user;
     }
 

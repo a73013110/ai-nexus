@@ -3,6 +3,7 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Ordering;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
@@ -92,7 +93,11 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             }
             var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
             if (validRoles != request.RoleIds.Count) return IdentityErrors.InvalidRoles;
-            if (id is null) db.Users.Add(user);
+            if (id is null)
+            {
+                db.Users.Add(user);
+                await NewUserOrder.AppendAsync(db, user, ct);
+            }
             var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
             var credentialsChanged = user.AdAccount != ad || user.LocalAccount != local || hash is not null;
             if (flagsChanged || credentialsChanged) user.SecurityVersion++;
