@@ -22,9 +22,16 @@ export class AdminUsersStore {
   readonly offset = signal(0);
   /** 伺服器固定每頁 100 筆（`ListAdminUsers`），分頁只能照它換算。 */
   readonly pageSize = 100;
+  /**
+   * 目前要看的那一頁（搜尋字與起點）；目錄讀到前為 undefined。換條件或換頁才會變，
+   * 同一頁重讀（排序寫入後、帳號異動後）不變，表格據此只在換頁或換條件時捲回頂端。
+   */
+  readonly request = computed(() =>
+    this.ready() ? { search: this.query(), offset: this.offset() } : undefined,
+  );
   readonly usersRead = apiResource({
     feature: 'identity.users',
-    params: () => (this.ready() ? { search: this.query(), offset: this.offset() } : undefined),
+    params: this.request,
     loader: ({ search, offset }) => this.api.users(search, offset),
   });
   readonly users = computed(() => this.usersRead.value() ?? null);

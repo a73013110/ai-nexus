@@ -44,14 +44,22 @@ export function flipRows(
 }
 
 /**
- * 元素在版面上的上下緣（視窗座標），不含 FLIP 動畫中的位移：拖曳時判斷指標在哪一列要用它，
+ * 元素在版面上的上下緣（視窗座標），不含 `translate`（拖曳的位移與 FLIP 動畫）：拖曳時判斷指標在哪一列要用它，
  * 否則讓位中的列位置一直在變，落點會隨動畫進度來回跳。
+ * 用畫面位置扣掉計算後的 `translate`（含動畫），不用 `offsetTop`：列一旦 `position: relative`（被拖曳的列要浮起），
+ * `offsetParent` 就從 `table` 跳到捲動容器外的祖先，`offsetTop` 不含容器的捲動量，捲動後算出的位置會差一整段。
+ * 只認 px 的 `translate`（拖曳與 FLIP 都只寫 px）。
  */
 export function layoutBox(element: HTMLElement) {
-  const parent = element.offsetParent as HTMLElement | null;
-  const origin = parent ? parent.getBoundingClientRect().top + parent.clientTop : 0;
-  const top = origin + element.offsetTop;
-  return { top, bottom: top + element.offsetHeight, height: element.offsetHeight };
+  const box = element.getBoundingClientRect();
+  const top = box.top - translateY(getComputedStyle(element).translate);
+  return { top, bottom: top + box.height, height: box.height };
+}
+
+/** 計算後 `translate`（`none`、`x` 或 `x y`）的 y 位移，單位 px。 */
+function translateY(value: string) {
+  const [, y] = value.split(' ');
+  return y ? parseFloat(y) || 0 : 0;
 }
 
 /** 列內最近的可捲動容器（拖到邊緣時自動捲動用）；找不到時回傳 null。 */

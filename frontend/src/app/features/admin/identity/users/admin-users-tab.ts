@@ -125,8 +125,9 @@ export class AdminUsersTab {
     await this.store.resetOrder();
   }
   constructor() {
+    // 換頁或換條件才回到頂端；同一頁重讀（拖曳排序、編輯帳號後）保留捲動位置，才能接著往下調整。
     effect(() => {
-      if (this.store.users()) this.userTable()?.resetScroll();
+      if (this.store.request()) this.userTable()?.resetScroll();
     });
   }
   /** 只有檢視器沒有持有的部分：從 AD 更新、切換身分與移除。 */

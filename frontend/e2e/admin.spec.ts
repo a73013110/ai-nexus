@@ -1001,6 +1001,54 @@ test("使用者表上直接以方向鍵、輸入位置或拖曳調整順序，�
   expect(state.userOrderWrites.at(-1)?.method).toBe("DELETE");
 });
 
+test("表格捲動後拖曳使用者，浮起的列仍在指標下，放開後不捲回頂端", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  for (let index = 0; index < 40; index++)
+    state.managedUsers.push({
+      ...state.bob,
+      id: randomUUID(),
+      displayName: `範例人員 ${String(index).padStart(2, "0")}`,
+      account: `AD\\sample${index}`,
+    });
+  await page.goto(routeOf("identity.users"));
+  const table = page.locator(".admin-users-table");
+  const row = table.locator('tbody tr[data-sort-id]:has-text("範例人員 30")');
+  // 置中：指標離捲動區上下緣夠遠，拖曳時不會觸發邊緣自動捲動。
+  await row.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  // 捲的是表格自己的捲動容器，不是整頁：被拖曳的列 position: relative 後 offsetParent 會跳出這個容器。
+  const scrolled = () =>
+    row.evaluate((element) => {
+      for (let node = element.parentElement; node; node = node.parentElement)
+        if (node.scrollTop > 0 && node !== document.scrollingElement)
+          return node.scrollTop;
+      return 0;
+    });
+  const scrollTop = await scrolled();
+  expect(scrollTop).toBeGreaterThan(0);
+  const handle = table.getByRole("button", { name: /^移動「範例人員 30」/ });
+  const grip = (await handle.boundingBox())!;
+  const start = (await row.boundingBox())!;
+  const x = grip.x + grip.width / 2;
+  const y = grip.y + grip.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 20, { steps: 4 });
+  await expect(table.locator("tr.is-dragging")).toHaveCount(1);
+  const lifted = (await table.locator("tr.is-dragging").boundingBox())!;
+  expect(Math.abs(lifted.y - (start.y + 20))).toBeLessThan(2);
+
+  // 放到下一位之後：寫入、重讀本頁後仍停在原本的捲動位置，可以接著往下調整。
+  await page.mouse.move(x, y + start.height * 1.6, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(() => state.userOrderWrites.filter((w) => w.method === "PUT").length)
+    .toBe(1);
+  await expect(table).not.toHaveAttribute("aria-busy");
+  expect(await scrolled()).toBe(scrollTop);
+});
+
 test("選單可新增分群、頁面與外部連結，錯誤代碼留在對話框，非空分群不能刪除", async ({
   page,
 }) => {
