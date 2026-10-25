@@ -166,7 +166,7 @@ describe('users tour targets', () => {
     const generation = signal(1);
     const user: AdminUserDto = {
       id: 'u1',
-      account: 'TEST\\alice',
+      account: 'alice',
       displayName: 'Alice',
       lastSeenAt: '2026-10-01T00:00:00Z',
       roleIds: ['member'],

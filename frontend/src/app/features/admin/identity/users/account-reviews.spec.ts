@@ -10,7 +10,7 @@ const reviews: AccountReviewsDto = {
   users: [
     {
       id: 'u1',
-      account: 'CORP\\wang',
+      account: 'wang',
       displayName: '王小明',
       enabled: false,
       deleted: false,
@@ -31,7 +31,7 @@ const reviews: AccountReviewsDto = {
     },
     {
       id: 'u2',
-      account: 'CORP\\lin',
+      account: 'lin',
       displayName: '林小華',
       enabled: false,
       deleted: true,
@@ -87,7 +87,7 @@ describe('account reviews', () => {
   it('searches the list for a user by account', () => {
     const { host, store } = setup();
     host.querySelector<HTMLButtonElement>('section button')!.click();
-    expect(store.find).toHaveBeenCalledWith('CORP\\wang');
+    expect(store.find).toHaveBeenCalledWith('wang');
   });
 
   it('says there is nothing to review only after reading', () => {

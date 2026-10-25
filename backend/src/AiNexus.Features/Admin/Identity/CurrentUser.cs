@@ -58,7 +58,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         // 綁定是依帳號跨 SID 進行，且本地登入與管理員匯入寫的也是同一批資料列，所以鎖必須共用。
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad")) return IdentityErrors.LoginMethodDisabled;
-        if (existing is not null && !Stale(existing, account, profile) && !await PendingGrantAsync(existing, ct))
+        if (existing is not null && !Stale(existing, profile) && !await PendingGrantAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try
@@ -76,7 +76,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
                 await db.SaveChangesAsync(ct);
             }
-            else if (Stale(user, account, profile) || db.Entry(user).State == EntityState.Modified)
+            else if (Stale(user, profile) || db.Entry(user).State == EntityState.Modified)
             {
                 DirectoryAccounts.Apply(user, await accounts.ChangesAsync(user, account, profile, ct), now);
                 user.LastSeenAt = now; user.DirectoryVerifiedAt = now;
@@ -95,8 +95,8 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         return false;
     }
 
-    private bool Stale(User user, string account, DirectoryProfile profile)
-        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || user.DirectoryVerifiedAt is null || DirectoryAccounts.Differs(user, account, profile);
+    private bool Stale(User user, DirectoryProfile profile)
+        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || user.DirectoryVerifiedAt is null || DirectoryAccounts.Differs(user, profile);
 
     /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
     private User? Track(User? user)

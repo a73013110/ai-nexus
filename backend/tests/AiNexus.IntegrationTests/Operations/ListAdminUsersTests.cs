@@ -50,7 +50,7 @@ public sealed class ListAdminUsersTests
         }
 
         var page = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users"))!;
-        Assert.Equal([@"TEST\alice", @"TEST\bob", @"TEST\carol"], page.Users.Select(x => x.Account));
+        Assert.Equal(["alice", "bob", "carol"], page.Users.Select(x => x.Account));
         Assert.Equal(3, page.Total);
         using (var scope = factory.Services.CreateScope())
         {
@@ -73,7 +73,7 @@ public sealed class ListAdminUsersTests
         var carolRow = page.Users.Single(x => x.Id == carolId);
         Assert.Equal(("group", 7000L), (carolRow.Storage!.LimitSource, carolRow.Storage.LimitBytes));
         Assert.Contains("storage-probe", carolRow.RoleIds);
-        Assert.Equal("default", page.Users.Single(x => x.Account == @"TEST\alice").Storage!.LimitSource);
+        Assert.Equal("default", page.Users.Single(x => x.Account == "alice").Storage!.LimitSource);
 
         var found = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?search=BO"))!;
         Assert.Equal((1, bobId), (found.Total, Assert.Single(found.Users).Id));

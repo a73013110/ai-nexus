@@ -2,6 +2,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Integrations.Sources;
 
+/// <summary>外部來源授權用的身分：AD SID 與完整帳號（<c>帳號@網域</c>，對應外部 view 的 <c>ActorSid</c>、<c>ActorAccount</c>）。</summary>
 public sealed record SourceActor(string Sid, string Account);
 
 public sealed record SourceSearchRequest(string Query, string Kind = "all");

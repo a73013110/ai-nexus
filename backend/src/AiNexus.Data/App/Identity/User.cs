@@ -7,14 +7,15 @@ public sealed class User
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Sid { get; set; } = "";
-    public string Account { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public bool Enabled { get; set; } = true;
     public long? AttachmentLimitBytes { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
     public bool AdEnabled { get; set; } = true;
     public bool LocalEnabled { get; set; }
+    /// <summary>AD 短帳號（sAMAccountName，保留目錄的大小寫）；比對不分大小寫，由資料庫定序與唯一索引負責。</summary>
     public string? AdAccount { get; set; }
+    /// <summary>本地登入帳號（保留使用者輸入的大小寫）；與 <see cref="AdAccount"/> 至少有一個（<c>ck_Users_LoginName</c>）。</summary>
     public string? LocalAccount { get; set; }
     public string? PasswordHash { get; set; }
     public int SecurityVersion { get; set; }
@@ -42,7 +43,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         user.ToTable("Users", "identity");
         user.HasKey(x => x.Id);
         user.Property(x => x.Sid).HasMaxLength(184);
-        user.Property(x => x.Account).HasMaxLength(256);
         user.Property(x => x.DisplayName).HasMaxLength(256);
         user.Property(x => x.AdAccount).HasMaxLength(64);
         user.Property(x => x.LocalAccount).HasMaxLength(64);

@@ -123,7 +123,7 @@ public sealed class SqlServerRetrievalTests
 
     private static async Task<(Guid Collection, Chunk[] Chunks)> Seed(AppDbContext db)
     {
-        var actor = new User { Sid = "sql-retrieval-fixture", Account = "fixture", DisplayName = "測試使用者" }; db.Add(actor);
+        var actor = new User { Sid = "sql-retrieval-fixture", AdAccount = "sql-retrieval", DisplayName = "測試使用者" }; db.Add(actor);
         var allowed = new Resource { OwnerId = actor.Id, Kind = "knowledge", Name = "授權知識庫" }; var denied = new Resource { OwnerId = actor.Id, Kind = "knowledge", Name = "範圍外知識庫" };
         db.AddRange(allowed, denied); db.AddRange(new Collection { Id = allowed.Id }, new Collection { Id = denied.Id });
         var docs = new[] { new Resource { OwnerId = actor.Id, Kind = "document", Name = "授權文件", ParentId = allowed.Id }, new Resource { OwnerId = actor.Id, Kind = "document", Name = "範圍外文件", ParentId = denied.Id } };

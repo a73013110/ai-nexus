@@ -63,7 +63,7 @@ public sealed class LoginTests
     {
         var id = Guid.NewGuid();
         await using var factory = new AppFactory(seed: db => db.Users.Add(new User {
-            Id = id, Sid = "managed:" + id, Account = "tester", DisplayName = "tester", LocalAccount = "TESTER",
+            Id = id, Sid = "managed:" + id, DisplayName = "tester", LocalAccount = "tester",
             LocalEnabled = true, AdEnabled = false, PasswordHash = "old-format-hash", SecurityVersion = 1
         }));
         using var loginScope = factory.Services.CreateScope(); using var resetScope = factory.Services.CreateScope();

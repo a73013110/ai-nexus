@@ -82,15 +82,9 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             if (key == actor && disablesSelf) return AccessControlErrors.Lockout;
             if (await db.Users.AnyAsync(x => x.Id != key && ((local != null && x.LocalAccount == local) || (ad != null && x.AdAccount == ad)), ct))
                 return IdentityErrors.AccountExists;
-            // 綁定 AD 帳號時，不可與既有 AD 使用者同名（等於接管他的身分），也不可改動由 AD 同步建立的帳號名稱。
-            if (ad is not null)
-            {
-                var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith(UserAccounts.ManagedSidPrefix)).Select(x => x.Account).ToListAsync(ct);
-                if (accounts.Any(x => string.Equals(UserAccounts.AccountName(x), ad, StringComparison.OrdinalIgnoreCase)))
-                    return IdentityErrors.AccountExists;
-                if (UserAccounts.DirectoryBound(user) && !string.Equals(UserAccounts.AccountName(user.Account), ad, StringComparison.OrdinalIgnoreCase))
-                    return IdentityErrors.AdBindingImmutable;
-            }
+            // 已以 SID 綁定 AD 的使用者，AD 帳號名跟著目錄（改名用「改綁」）；只改大小寫不算改名。
+            if (ad is not null && UserAccounts.DirectoryBound(user) && !UserAccounts.Same(user.AdAccount, ad))
+                return IdentityErrors.AdBindingImmutable;
             var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
             if (validRoles != request.RoleIds.Count) return IdentityErrors.InvalidRoles;
             if (id is null)
@@ -99,13 +93,12 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
                 await NewUserOrder.AppendAsync(db, user, ct);
             }
             var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
-            var credentialsChanged = user.AdAccount != ad || user.LocalAccount != local || hash is not null;
+            var credentialsChanged = !UserAccounts.Same(user.AdAccount, ad) || !UserAccounts.Same(user.LocalAccount, local) || hash is not null;
             if (flagsChanged || credentialsChanged) user.SecurityVersion++;
             if (user.Enabled && !request.Enabled && id is not null) events.Raise(new UserDisabled(key, actor));
             user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
             user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
             user.AdAccount = ad; user.LocalAccount = local;
-            if (!UserAccounts.DirectoryBound(user)) user.Account = local ?? ad!;
             if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
             await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
             return Result.Success;
@@ -132,7 +125,6 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         var roleIds = await SetUserRoles.RoleIdsAsync(db, id, ct);
         return new
         {
-            user.Account,
             user.DisplayName,
             user.Enabled,
             user.DeletedAt,

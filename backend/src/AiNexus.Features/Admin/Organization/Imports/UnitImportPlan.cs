@@ -57,7 +57,7 @@ internal sealed class UnitImportPlan
         var userIds = source.SelectMany(x => x.Managers).Where(x => x.UserId is not null).Select(x => x.UserId!.Value)
             .Concat(members.Where(x => x.IsManager).Select(x => x.UserId)).ToHashSet();
         var users = await db.Users.AsNoTracking().Where(x => userIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => (x.Account, x.DisplayName), ct);
+            .ToDictionaryAsync(x => x.Id, x => (Account: x.AdAccount ?? x.LocalAccount ?? "", x.DisplayName), ct);
         return Build(new(source, units, members, users), new HashSet<int>());
     }
 

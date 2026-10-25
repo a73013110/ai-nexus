@@ -19,8 +19,8 @@ internal sealed class ListUnitCandidates(AppDbContext db, IActiveUsers activeUse
         .WithName("ListOrganizationUnitCandidates");
 
     public async Task<IReadOnlyList<UnitCandidateDto>> HandleAsync(CancellationToken ct)
-        => await db.Users.AsNoTracking().Where(x => activeUsers.Ids.Contains(x.Id)).OrderBy(x => x.Account)
-            .Select(x => new UnitCandidateDto(x.Id, x.Account, x.DisplayName,
+        => await db.Users.AsNoTracking().Where(x => activeUsers.Ids.Contains(x.Id)).OrderBy(x => x.AdAccount ?? x.LocalAccount)
+            .Select(x => new UnitCandidateDto(x.Id, x.AdAccount ?? x.LocalAccount ?? "", x.DisplayName,
                 db.Set<UnitMember>().Where(y => y.UserId == x.Id && y.IsPrimary).Select(y => (Guid?)y.UnitId).FirstOrDefault()))
             .ToListAsync(ct);
 }

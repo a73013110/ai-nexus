@@ -12,7 +12,7 @@ import { AdminUserStore } from './admin-user-store';
 const user = {
   id: 'u1',
   displayName: '王小明',
-  account: 'CORP\\wang',
+  account: 'wang',
   enabled: true,
   roleIds: ['member'],
   authentication: null,

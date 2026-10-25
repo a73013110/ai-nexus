@@ -45,7 +45,7 @@ const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDt
         userId: 'u1',
         cardNumber: null,
         displayName: '王小明',
-        account: 'TEST\\ming',
+        account: 'ming',
         leaveAvailable: true,
         hidden: false,
         days: [
@@ -75,14 +75,14 @@ const option = (patch: Partial<AttendancePersonOptionDto>): AttendancePersonOpti
   holding: true,
   ...patch,
 });
-const self = [option({ userId: 'u1', displayName: '王小明', account: 'TEST\\ming' })];
+const self = [option({ userId: 'u1', displayName: '王小明', account: 'ming' })];
 /** 全公司範圍：含不持卡、卡已隱藏的人，以及只有姓名的持有人（依卡號）。 */
 const company = [
   ...self,
   option({
     userId: 'u2',
     displayName: '陳小華',
-    account: 'TEST\\hua',
+    account: 'hua',
     hidden: true,
     holding: false,
   }),
@@ -225,7 +225,7 @@ describe('AttendanceRecordsPage', () => {
       ...data.people[0],
       userId: 'u2',
       displayName: '陳小華',
-      account: 'TEST\\hua',
+      account: 'hua',
       leaveAvailable: false,
       hidden: true,
       days: [day('2026-10-01', { leave: 'Unavailable' })],
@@ -290,7 +290,7 @@ describe('AttendanceRecordsPage', () => {
     await fixture.whenStable();
     const options = fixture.componentInstance.personOptions();
     expect(options.map((option) => option.label)).toEqual(['所有人', '王小明', '陳小華', '陳怡君']);
-    expect(options[2].description).toBe('TEST\\hua・已不持卡・已隱藏');
+    expect(options[2].description).toBe('hua・已不持卡・已隱藏');
     expect(options[3].description).toBe('卡號 3368・尚未綁帳號');
 
     fixture.componentInstance.query.commit({ person: options[3].value });

@@ -40,11 +40,16 @@ internal sealed class CalendarSession : IAsyncDisposable
         return new() { Gd = gd, Factory = factory, Hr = await factory.SignedInAsync("hr"), HrId = hrId };
     }
 
-    /// <summary>測試登入建立的使用者沒有 AD 帳號，直接寫入；之後的登入以 SID 對應，不會改掉它。</summary>
+    /// <summary>
+    /// 直接改寫 AD 帳號（與測試登入名不同）；登入的快速路徑不比對改名，5 分鐘內的登入不會改回。
+    /// 清空時補上本地帳號：資料表要求 AD 帳號與本地帳號至少一個。
+    /// </summary>
     public static async Task SetAdAccountAsync(AppFactory factory, Guid userId, string? adAccount)
     {
         using var scope = factory.Services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Where(x => x.Id == userId).ExecuteUpdateAsync(x => x.SetProperty(u => u.AdAccount, adAccount));
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Where(x => x.Id == userId).ExecuteUpdateAsync(x => x
+            .SetProperty(u => u.LocalAccount, u => adAccount == null ? u.LocalAccount ?? "no-ad-account" : u.LocalAccount)
+            .SetProperty(u => u.AdAccount, adAccount));
     }
 
     public async ValueTask DisposeAsync()

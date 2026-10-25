@@ -60,7 +60,6 @@ export const groupOf = (person: Pick<DirectoryPersonDto, 'state'>): DirectoryGro
       : 'blocked';
 
 const fields: Record<string, string> = {
-  account: '完整帳號',
   adAccount: 'AD 帳號',
   displayName: '姓名',
   email: '通知信箱',

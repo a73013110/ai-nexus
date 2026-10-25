@@ -1,12 +1,10 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
 
@@ -39,7 +37,7 @@ public static class DirectoryPersonStates
 /// 登入只取身分鎖，所以不會互相等待成死結。
 /// </summary>
 internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeAudit audit, IdentityWriteLock writeLock,
-    IOptions<AdAuthenticationOptions> options, TimeProvider clock, ILogger<DirectoryProvisioning> logger)
+    TimeProvider clock, ILogger<DirectoryProvisioning> logger)
 {
     /// <summary>單次匯入、預覽或更新的人數上限：每人一個 Serializable 交易，上限讓一次操作維持在數秒內。</summary>
     public const int MaxBatch = 100;
@@ -57,7 +55,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
         var linked = (await db.Users.AsNoTracking().Where(x => sids.Contains(x.Sid)).ToListAsync(ct)).ToDictionary(x => x.Sid, StringComparer.OrdinalIgnoreCase);
         var names = people.Select(x => UserAccounts.IsValid(x.AccountName) ? UserAccounts.Normalize(x.AccountName) : null).OfType<string>().Distinct().ToArray();
         var named = (await db.Users.AsNoTracking().Where(x => x.AdAccount != null && names.Contains(x.AdAccount)).Select(x => new { x.Id, x.Sid, x.AdAccount }).ToListAsync(ct))
-            .ToDictionary(x => x.AdAccount!, StringComparer.Ordinal);
+            .ToDictionary(x => x.AdAccount!, StringComparer.OrdinalIgnoreCase);
         return [.. people.Select(person =>
         {
             IReadOnlyList<DirectoryChange> changes = [];
@@ -68,9 +66,8 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
                 if (user.DeletedAt is not null) state = DirectoryPersonStates.Deleted;
                 else
                 {
-                    var account = AccountOf(person, user);
-                    var taken = DirectoryAccounts.RenamedAdAccount(user, account) is { } renamed && named.TryGetValue(renamed, out var holder) && holder.Id != user.Id;
-                    changes = DirectoryAccounts.Changes(user, account, Profile(person), taken);
+                    var taken = DirectoryAccounts.RenamedAdAccount(user, person.AccountName) is { } renamed && named.TryGetValue(renamed, out var holder) && holder.Id != user.Id;
+                    changes = DirectoryAccounts.Changes(user, person.AccountName, Profile(person), taken);
                     state = changes.Count > 0 ? DirectoryPersonStates.Changed : DirectoryPersonStates.Synced;
                 }
             }
@@ -127,7 +124,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
 
     /// <summary>沒有目錄資料可比對的使用者（目錄找不到、沒有綁定 AD、已刪除）：以平台資料回報。</summary>
     public static DirectoryOutcomeDto Unmatched(User user, string outcome)
-        => new(user.Sid, user.Id, UserAccounts.AccountName(user.Account), user.DisplayName, null, "", false, user.Enabled, outcome, []);
+        => new(user.Sid, user.Id, UserAccounts.LoginName(user), user.DisplayName, null, "", false, user.Enabled, outcome, []);
 
     /// <summary>選取時還在、送出時目錄已找不到的 SID；姓名由畫面沿用選取時的資料顯示。</summary>
     public static DirectoryOutcomeDto Missing(string sid) => new(sid, null, "", "", null, "", false, null, DirectoryOutcomes.NotFound, []);
@@ -141,13 +138,12 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
 
     /// <summary>
     /// 規劃一位人員會發生什麼事。先清空追蹤狀態：<see cref="DirectoryAccounts.MatchAsync"/> 綁定預建帳號時會改追蹤中的 SID，
-    /// 殘留到下一次規劃會被誤判為衝突。完整帳號沿用既有的寫法（Windows 模式是 <c>DOMAIN\sam</c>），只在帳號名改了才改成 <c>sam@Domain</c>，
-    /// 避免與登入互相改來改去。
+    /// 殘留到下一次規劃會被誤判為衝突。
     /// </summary>
     private async Task<Plan> PlanAsync(DirectoryPerson person, bool includeDisabled, bool allowCreate, CancellationToken ct)
     {
         db.ChangeTracker.Clear();
-        var account = $"{person.AccountName}@{options.Value.Domain}";
+        var account = person.AccountName;
         var match = await accounts.MatchAsync(person.Sid, account, ct);
         if (!match.IsSuccess)
             return new(person, match.Error.Code == IdentityErrors.AdBindingConflict.Code ? DirectoryOutcomes.Conflict : DirectoryOutcomes.InvalidAccount, null, account, []);
@@ -159,15 +155,10 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
         }
         if (user.DeletedAt is not null) return new(person, DirectoryOutcomes.Deleted, user, account, []);
         if (match.Value.Bound && person.Disabled && !includeDisabled) return new(person, DirectoryOutcomes.Disabled, user, account, []);
-        if (!match.Value.Bound) account = AccountOf(person, user);
         var changes = await accounts.ChangesAsync(user, account, Profile(person), ct);
         var outcome = match.Value.Bound ? DirectoryOutcomes.Bind : changes.Count > 0 ? DirectoryOutcomes.Update : DirectoryOutcomes.Unchanged;
         return new(person, outcome, user, account, changes);
     }
-
-    /// <summary>已連結的帳號沿用原本的完整帳號寫法，只有帳號名改了才換成 <c>sam@Domain</c>。</summary>
-    private string AccountOf(DirectoryPerson person, User user)
-        => string.Equals(UserAccounts.AccountName(user.Account), person.AccountName, StringComparison.OrdinalIgnoreCase) ? user.Account : $"{person.AccountName}@{options.Value.Domain}";
 
     private static DirectoryProfile Profile(DirectoryPerson person) => new(person.DisplayName, person.Email);
 
@@ -181,7 +172,6 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
         if (user is null) return null;
         return new
         {
-            user.Account,
             user.AdAccount,
             user.DisplayName,
             user.Enabled,

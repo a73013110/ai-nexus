@@ -21,7 +21,7 @@ public sealed class SessionTests
         using var alice = factory.CreateClient(); using var bob = factory.CreateClient();
         await Login(alice, "alice"); await Login(bob, "bob");
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        Assert.Equal("alice@fixture.test", me.Account);
+        Assert.Equal("alice", me.Account);
         var conversation = await ChatApi.CreateConversation(alice);
         Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/conversations/{conversation.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await alice.PostAsync("/api/v1/auth/logout", null)).StatusCode);
@@ -61,7 +61,7 @@ public sealed class SessionTests
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync(x => x.Id == me.Id);
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([
-            new(System.Security.Claims.ClaimTypes.PrimarySid, user.Sid), new(System.Security.Claims.ClaimTypes.Name, user.Account)
+            new(System.Security.Claims.ClaimTypes.PrimarySid, user.Sid), new(System.Security.Claims.ClaimTypes.Name, user.AdAccount!)
         ], AuthEndpoints.CookieScheme));
         using var legacy = CookieClient(f, principal);
         var session = (await legacy.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!;
@@ -80,7 +80,7 @@ public sealed class SessionTests
         (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"))).EnsureSuccessStatusCode();
         var queries = factory.Services.GetRequiredService<RequestQueries>(); queries.Clear();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        Assert.Equal("alice", me.Account.Split('@')[0]);
+        Assert.Equal("alice", me.Account);
         // Cookie 驗證已讀取該筆 session；目前使用者重用這個結果，而不是再單獨讀一次。
         Assert.Equal(1, queries.Count("/api/v1/me", "FROM [identity].[Users] AS", "TOP(2)"));
     }

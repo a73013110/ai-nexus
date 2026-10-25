@@ -1,13 +1,11 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Management;
 
@@ -28,7 +26,7 @@ internal sealed class DirectoryBindingRequestValidator : RequestValidator<Direct
 /// UserId、角色、部門與歷史資料沿用，不另建使用者。同時寫入新的 <c>AdAccount</c> 並開啟 AD 驗證；姓名與信箱留給「從 AD 更新」。
 /// SID 已綁定其他使用者（含已刪除者）或帳號名已被他人使用時拒絕，避免接管別人的身分。遞增 <c>SecurityVersion</c>，舊工作階段失效。
 /// </summary>
-internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudit audit, IdentityWriteLock writeLock, IAdDirectory directory, IOptions<AdAuthenticationOptions> options)
+internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudit audit, IdentityWriteLock writeLock, IAdDirectory directory)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/ad-binding", (Guid id, DirectoryBindingRequest body, ICurrentUser user, RebindDirectoryAccount handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
@@ -50,14 +48,8 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudi
                 if (id == actor) return AccessControlErrors.Lockout;
                 if (await db.Users.AnyAsync(x => x.Id != id && x.Sid == person.Sid, ct)) return IdentityErrors.AdBindingTaken;
                 if (await db.Users.AnyAsync(x => x.Id != id && x.AdAccount == adAccount, ct)) return IdentityErrors.AccountExists;
-                // 同 ManageUserAccounts：早期以 AD 登入、沒有 AdAccount 的使用者以完整帳號判斷同名。
-                var legacy = await db.Users.AsNoTracking().Where(x => x.Id != id && x.AdAccount == null && !x.Sid.StartsWith(UserAccounts.ManagedSidPrefix)).Select(x => x.Account).ToListAsync(ct);
-                if (legacy.Any(x => string.Equals(UserAccounts.AccountName(x), person.AccountName, StringComparison.OrdinalIgnoreCase))) return IdentityErrors.AccountExists;
                 if (user.Sid == person.Sid && user.AdAccount == adAccount && user.AdEnabled) return Result.Success;
                 user.Sid = person.Sid;
-                // 完整帳號寫法同匯入：帳號名沒變時沿用（Windows 模式是 DOMAIN\sam），改了才換成 sam@Domain。
-                if (!string.Equals(UserAccounts.AccountName(user.Account), person.AccountName, StringComparison.OrdinalIgnoreCase))
-                    user.Account = $"{person.AccountName}@{options.Value.Domain}";
                 user.AdAccount = adAccount;
                 user.AdEnabled = true;
                 user.SecurityVersion++;
@@ -70,5 +62,5 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudi
     /// <summary>改綁與解除綁定共用的稽核快照（<c>admin.user_ad_bind</c>、<c>admin.user_ad_unbind</c>）：SID 記完整值，舊 SID 才查得回來。</summary>
     public static async Task<object?> SnapshotAsync(AppDbContext db, Guid id, CancellationToken ct)
         => await db.Users.AsNoTracking().Where(x => x.Id == id)
-            .Select(x => new { x.Sid, x.Account, x.AdAccount, x.AdEnabled, x.SecurityVersion }).SingleOrDefaultAsync(ct);
+            .Select(x => new { x.Sid, x.AdAccount, x.AdEnabled, x.SecurityVersion }).SingleOrDefaultAsync(ct);
 }

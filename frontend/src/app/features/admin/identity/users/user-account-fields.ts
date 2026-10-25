@@ -24,7 +24,7 @@ export function userAccountDraft(user?: AdminUserDto | null): UserAccountDraft {
     enabled: user?.enabled ?? true,
     adEnabled: login?.adEnabled ?? !!user,
     localEnabled: login?.localEnabled ?? !user,
-    adAccount: login?.adAccount ?? user?.account.split('\\').at(-1)?.split('@')[0] ?? '',
+    adAccount: login?.adAccount ?? '',
     localAccount: login?.localAccount ?? '',
     password: '',
     hasLocalPassword: login?.hasLocalPassword ?? false,

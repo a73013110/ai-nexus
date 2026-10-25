@@ -35,18 +35,18 @@ public sealed class CurrentUserTests
         finally { gate.Release(); }
         (await pending).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
-            Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Account == "TEST\\alice")).LastSeenAt > DateTimeOffset.UtcNow.AddMinutes(-1));
+            Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.AdAccount == "alice")).LastSeenAt > DateTimeOffset.UtcNow.AddMinutes(-1));
     }
 
     [Fact]
-    public async Task FirstWindowsLoginStoresTheShortAdAccountInTheSameFormAsPreProvisionedUsers()
+    public async Task FirstWindowsLoginStoresTheShortAdAccountWithTheDirectoryCase()
     {
         await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync("Carol.Lin");
         using var scope = factory.Services.CreateScope();
-        var user = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Account == "TEST\\Carol.Lin");
-        Assert.Equal("CAROL.LIN", user.AdAccount);
-        Assert.Equal(UserAccounts.Normalize("carol.lin"), user.AdAccount);
+        var user = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.AdAccount == "carol.lin");
+        Assert.Equal("Carol.Lin", user.AdAccount);
+        Assert.Equal(UserAccounts.Normalize(" Carol.Lin "), user.AdAccount);
     }
 
     [Fact]
@@ -57,8 +57,7 @@ public sealed class CurrentUserTests
         var me = await Login(client, "bob");
         using var scope = factory.Services.CreateScope();
         var user = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Id == me.Id);
-        Assert.Equal("bob@fixture.test", user.Account);
-        Assert.Equal("BOB", user.AdAccount);
+        Assert.Equal("bob", user.AdAccount);
     }
 
     [Fact]
@@ -68,7 +67,7 @@ public sealed class CurrentUserTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Users.Add(new User { Sid = "S-1-5-21-test-dave-old", Account = "TEST\\dave", DisplayName = "dave", AdAccount = "DAVE", LastSeenAt = DateTimeOffset.UtcNow });
+            db.Users.Add(new User { Sid = "S-1-5-21-test-dave-old", DisplayName = "dave", AdAccount = "DAVE", LastSeenAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
         using var client = factory.CreateClient();
@@ -77,25 +76,26 @@ public sealed class CurrentUserTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Contains("ad_binding_conflict", await response.Content.ReadAsStringAsync());
         using var check = factory.Services.CreateScope();
-        Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().Users.CountAsync(x => x.Account == "TEST\\dave"));
+        Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().Users.CountAsync(x => x.AdAccount == "dave"));
     }
 
     [Fact]
-    public async Task UsersCreatedBeforeAdAccountWasStoredStillResolveByTheirSid()
+    public async Task ExistingUsersResolveByTheirSidAndFollowTheDirectoryCase()
     {
         await using var factory = new AppFactory();
         Guid id;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var legacy = new User { Sid = "S-1-5-21-test-erin", Account = "TEST\\erin", DisplayName = "erin", LastSeenAt = DateTimeOffset.UtcNow.AddHours(-1) };
-            db.Users.Add(legacy);
+            var existing = new User { Sid = "S-1-5-21-test-erin", AdAccount = "ERIN", DisplayName = "erin", LastSeenAt = DateTimeOffset.UtcNow.AddHours(-1) };
+            db.Users.Add(existing);
             await db.SaveChangesAsync();
-            id = legacy.Id;
+            id = existing.Id;
         }
         using var client = await factory.SignedInAsync("erin");
         using var check = factory.Services.CreateScope();
-        var users = await check.ServiceProvider.GetRequiredService<AppDbContext>().Users.Where(x => x.Account == "TEST\\erin").ToListAsync();
-        Assert.Equal(id, Assert.Single(users).Id);
+        var users = await check.ServiceProvider.GetRequiredService<AppDbContext>().Users.Where(x => x.AdAccount == "erin").ToListAsync();
+        var user = Assert.Single(users);
+        Assert.Equal((id, "erin"), (user.Id, user.AdAccount));
     }
 }

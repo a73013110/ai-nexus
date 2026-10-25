@@ -25,7 +25,7 @@ public sealed class DirectoryFreshnessTests
         var hash = await passwords.HashAsync(Password, CancellationToken.None);
         await using var f = new AppFactory(ldap: true, seed: db => db.Users.Add(new User
         {
-            Sid = "S-1-5-21-fixture-carol", Account = "carol@fixture.test", DisplayName = "carol", AdEnabled = adEnabled, LocalEnabled = true,
+            Sid = "S-1-5-21-fixture-carol", AdAccount = "carol", DisplayName = "carol", AdEnabled = adEnabled, LocalEnabled = true,
             LocalAccount = "CAROL", PasswordHash = hash, LastSeenAt = DateTimeOffset.UtcNow,
             DirectoryVerifiedAt = daysAgo is { } days ? DateTimeOffset.UtcNow.AddDays(-days) : null,
         }), services: s => s.PostConfigure<SelfServiceOptions>(o => o.DirectoryFreshnessDays = freshnessDays));

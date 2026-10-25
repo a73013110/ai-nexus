@@ -51,7 +51,7 @@ internal sealed class MoveUser(AppDbContext db, AdministrativeAudit audit)
     private async Task<IReadOnlyList<(Guid Id, int SortOrder)>?> PlanAsync(Guid id, int position, CancellationToken ct)
     {
         var users = await db.Users.AsNoTracking().Where(x => x.DeletedAt == null)
-            .Select(x => new { x.Id, x.SortOrder, x.DisplayName, x.Account })
+            .Select(x => new { x.Id, x.SortOrder, x.DisplayName, Account = x.AdAccount ?? x.LocalAccount })
             .ToListAsync(ct);
         if (!users.Any(x => x.Id == id)) return null;
         var ordered = users.InUserOrder(x => x.SortOrder, x => x.DisplayName, x => x.Account).ThenBy(x => x.Id)

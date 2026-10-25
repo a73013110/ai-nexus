@@ -32,14 +32,29 @@ public static class UserAccounts
         return string.Equals(suffix, domain, StringComparison.OrdinalIgnoreCase) || suffixes.Contains(suffix, StringComparer.OrdinalIgnoreCase) ? value[..at] : value;
     }
 
-    /// <summary>通過 <see cref="IsValid"/> 的帳號所對應的儲存形式（去空白、Unicode FormC、大寫）；未設定時回傳 <see langword="null"/>。</summary>
+    /// <summary>
+    /// 通過 <see cref="IsValid"/> 的帳號所對應的儲存形式（去空白、Unicode FormC，保留原本大小寫）；未設定時回傳 <see langword="null"/>。
+    /// 帳號不分大小寫：資料庫比對交給定序（CI），記憶體比對一律用 <see cref="Same"/> 或 <see cref="StringComparer.OrdinalIgnoreCase"/>。
+    /// </summary>
     public static string? Normalize(string? account)
     {
         if (string.IsNullOrWhiteSpace(account)) return null;
         var value = account.Trim().Normalize(NormalizationForm.FormC);
         if (!Matches(value)) throw new ArgumentException("Validate the account with IsValid first.", nameof(account));
-        return value.ToUpperInvariant();
+        return value;
     }
+
+    /// <summary>兩個帳號是否為同一個（不分大小寫）；只差大小寫時仍是同一個帳號，不算改名。</summary>
+    public static bool Same(string? left, string? right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>畫面、搜尋、排序、稽核與工作階段用的帳號：AD 帳號優先，沒有才用本地帳號（資料表保證至少有一個）。查詢裡寫 <c>x.AdAccount ?? x.LocalAccount</c>。</summary>
+    public static string LoginName(User user) => user.AdAccount ?? user.LocalAccount ?? "";
+
+    /// <summary>
+    /// 外部系統用的完整 AD 帳號 <c>帳號@網域</c>（例如外部來源的 <c>ActorAccount</c>）；沒有 AD 帳號或沒設定網域時為 <see langword="null"/>。
+    /// 網域取自設定，不是 AD 的 UPN，也不是信箱。
+    /// </summary>
+    public static string? DirectoryAccount(User user, string? domain) => user.AdAccount is null || string.IsNullOrWhiteSpace(domain) ? null : $"{user.AdAccount}@{domain.Trim()}";
 
     /// <summary>判斷 <see cref="Normalize"/> 是否接受此帳號；空白代表「未設定」，同樣視為有效。</summary>
     public static bool IsValid(string? account) => string.IsNullOrWhiteSpace(account) || Matches(account.Trim().Normalize(NormalizationForm.FormC));

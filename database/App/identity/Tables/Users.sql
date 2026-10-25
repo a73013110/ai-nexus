@@ -1,7 +1,6 @@
 CREATE TABLE [identity].[Users] (
     [Id]                   UNIQUEIDENTIFIER   NOT NULL,
     [Sid]                  NVARCHAR (184)     NOT NULL,
-    [Account]              NVARCHAR (256)     NOT NULL,
     [DisplayName]          NVARCHAR (256)     NOT NULL,
     [Enabled]              BIT                DEFAULT (CONVERT([bit],(1))) NOT NULL,
     [AttachmentLimitBytes] BIGINT             NULL,
@@ -25,6 +24,7 @@ CREATE TABLE [identity].[Users] (
     CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.)),
     CONSTRAINT [ck_Users_EmailSource] CHECK ([Email] IS NULL AND [EmailSource] IS NULL AND [EmailVerifiedAt] IS NULL OR [Email] IS NOT NULL AND ([EmailSource]=N'admin' OR [EmailSource]=N'user' OR [EmailSource]=N'directory')),
+    CONSTRAINT [ck_Users_LoginName] CHECK ([AdAccount] IS NOT NULL OR [LocalAccount] IS NOT NULL),
     CONSTRAINT [ck_Users_SortOrder] CHECK ([SortOrder] IS NULL OR [SortOrder]>=(0) AND [SortOrder]<=(1000000))
 );
 
@@ -60,12 +60,7 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者�
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'完整帳號：AD 使用者為 sam@Domain（Windows 模式為 DOMAIN\sam），本地帳號為本地帳號名；顯示、搜尋與外部來源授權用，不是 email。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'Account';
-
-
-GO
-
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'AD 帳號正規化值（不含網域）；管理者預先配置或 AD 登入時補上，唯一，驗證成功後以 SID 固定綁定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdAccount';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'AD 短帳號（sAMAccountName，保留目錄的大小寫，不含網域）；管理者預先配置或 AD 登入時補上，唯一且不分大小寫，驗證成功後以 SID 固定綁定。畫面顯示的帳號以它優先。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'AdAccount';
 
 
 GO
@@ -130,7 +125,7 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'使用者�
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地登入帳號正規化值；唯一且不區分大小寫。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LocalAccount';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地登入帳號（保留使用者輸入的大小寫）；唯一且不分大小寫。沒有 AD 帳號時畫面以它顯示。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'LocalAccount';
 
 
 GO

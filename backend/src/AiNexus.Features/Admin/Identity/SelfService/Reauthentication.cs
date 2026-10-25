@@ -65,8 +65,8 @@ public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthentica
             var verified = await local.AuthenticateAsync(user.LocalAccount!, password, ct);
             return verified.IsSuccess && verified.Value.Id == user.Id ? Result.Success : IdentityErrors.ReauthenticationFailed;
         }
-        var account = user.AdAccount ?? UserAccounts.AccountName(user.Account);
-        var identity = await directory.AuthenticateAsync(account, password, ct);
+        if (user.AdAccount is null) return IdentityErrors.ReauthenticationFailed;
+        var identity = await directory.AuthenticateAsync(user.AdAccount, password, ct);
         if (!identity.IsSuccess || identity.Value.Sid != user.Sid) return IdentityErrors.ReauthenticationFailed;
         user.DirectoryVerifiedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);

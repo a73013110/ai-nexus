@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Users;
 
-/// <summary>目錄資料會改動的一個欄位：<c>account</c>、<c>adAccount</c>、<c>displayName</c> 或 <c>email</c>。</summary>
+/// <summary>目錄資料會改動的一個欄位：<c>adAccount</c>、<c>displayName</c> 或 <c>email</c>。</summary>
 public sealed record DirectoryChange(string Field, string? Before, string? After);
 
 /// <summary>SID 對應的結果：<paramref name="Existing"/> 為 null 表示要新建；預建帳號已在追蹤中改好 SID，儲存後即綁定。</summary>
@@ -16,7 +16,7 @@ public sealed record DirectoryMatch(User? Existing, bool Bound);
 
 /// <summary>
 /// AD 身分與平台使用者的對應與同步規則。首次登入（<see cref="CurrentUser"/>）、管理員匯入與「從 AD 更新」共用這一份，
-/// 三條路徑建立的帳號（AdAccount、member 角色）與同步的欄位（帳號、姓名、信箱）因此一致。
+/// 三條路徑建立的帳號（AdAccount、member 角色）與同步的欄位（AD 帳號、姓名、信箱）因此一致。
 /// 呼叫端負責取 <see cref="IdentityWriteLock"/>、寫稽核與儲存。
 /// </summary>
 public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<DirectoryAccounts> logger)
@@ -36,7 +36,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
         if (user is null) return new DirectoryMatch(null, false);
         if (UserAccounts.DirectoryBound(user)) return IdentityErrors.AdBindingConflict;
-        user.Sid = sid; user.Account = account;
+        user.Sid = sid;
         return new DirectoryMatch(user, true);
     }
 
@@ -46,7 +46,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     /// </summary>
     public async Task<User> CreateAsync(Guid id, string sid, string account, DirectoryProfile profile, DateTimeOffset now, CancellationToken ct)
     {
-        var user = new User { Id = id, Sid = sid, Account = account, AdAccount = UserAccounts.Normalize(UserAccounts.AccountName(account)), DisplayName = profile.DisplayName, LastSeenAt = now };
+        var user = new User { Id = id, Sid = sid, AdAccount = UserAccounts.Normalize(UserAccounts.AccountName(account)), DisplayName = profile.DisplayName, LastSeenAt = now };
         if (DirectoryEmail(profile.Email) is { } email) { user.Email = email; user.EmailSource = EmailSources.Directory; user.EmailVerifiedAt = now; }
         db.Users.Add(user);
         db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
@@ -56,7 +56,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
 
     /// <summary>
     /// 目錄資料會改動哪些欄位（不寫入）；<see cref="Apply"/> 依同一份結果寫入，所以預覽與實際更新一致。
-    /// 規則：帳號照目錄；AD 帳號名改了就更新 AdAccount（新名稱已被他人使用時保留舊值並記警告）；
+    /// 規則：AD 帳號名改了（含只改大小寫）就更新 AdAccount（新名稱已被他人使用時保留舊值並記警告）；
     /// 管理者維護個人資料（ProfileManaged）時不動姓名與信箱；信箱只覆寫空的或來源是目錄的值。
     /// </summary>
     public async Task<IReadOnlyList<DirectoryChange>> ChangesAsync(User user, string account, DirectoryProfile profile, CancellationToken ct)
@@ -67,7 +67,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         return Changes(user, account, profile, taken);
     }
 
-    /// <summary>AD 帳號名改了時的新 AdAccount（正規化後）；沒改或名稱不符平台規則時為 null。</summary>
+    /// <summary>AD 帳號名改了時的新 AdAccount（正規化後）；只改大小寫也算，讓畫面跟著目錄。沒改或名稱不符平台規則時為 null。</summary>
     public static string? RenamedAdAccount(User user, string account)
     {
         var name = UserAccounts.AccountName(account);
@@ -80,14 +80,9 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     public static IReadOnlyList<DirectoryChange> Changes(User user, string account, DirectoryProfile profile, bool renameTaken)
     {
         var changes = new List<DirectoryChange>();
-        if (RenamedAdAccount(user, account) is { } renamed)
-        {
-            // 新名稱已被另一位使用者佔用（通常是已離職、名稱被 AD 重新配發的舊帳號）：帳號與 AdAccount 都維持原值，
-            // 否則完整帳號與 AdAccount 會指向不同的人，之後管理端編輯也會被 ad_binding_immutable 擋下。
-            if (renameTaken) account = user.Account;
-            else changes.Add(new("adAccount", user.AdAccount, renamed));
-        }
-        if (user.Account != account) changes.Insert(0, new("account", user.Account, account));
+        // 新名稱已被另一位使用者佔用（通常是已離職、名稱被 AD 重新配發的舊帳號）：AdAccount 維持原值，
+        // 否則兩位使用者會指向同一個 AD 帳號，之後管理端編輯也會被 ad_binding_immutable 擋下。
+        if (RenamedAdAccount(user, account) is { } renamed && !renameTaken) changes.Add(new("adAccount", user.AdAccount, renamed));
         if (user.ProfileManaged) return changes;
         if (user.DisplayName != profile.DisplayName) changes.Add(new("displayName", user.DisplayName, profile.DisplayName));
         var email = DirectoryEmail(profile.Email);
@@ -102,7 +97,6 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         {
             switch (change.Field)
             {
-                case "account": user.Account = change.After!; break;
                 case "adAccount": user.AdAccount = change.After; break;
                 case "displayName": user.DisplayName = change.After!; break;
                 case "email":
@@ -115,10 +109,9 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         }
     }
 
-    /// <summary>登入的快速路徑用：目錄資料與資料列是否不同（不查資料庫，所以不含 AdAccount 改名，改名由 5 分鐘一次的完整同步處理）。</summary>
-    public static bool Differs(User user, string account, DirectoryProfile profile)
-        => user.Account != account
-            || (!user.ProfileManaged && (user.DisplayName != profile.DisplayName || (OwnsEmail(user) && user.Email != DirectoryEmail(profile.Email))));
+    /// <summary>登入的快速路徑用：姓名或信箱與目錄是否不同（不查資料庫，所以不含 AdAccount 改名，改名由 5 分鐘一次的完整同步處理）。</summary>
+    public static bool Differs(User user, DirectoryProfile profile)
+        => (!user.ProfileManaged && (user.DisplayName != profile.DisplayName || (OwnsEmail(user) && user.Email != DirectoryEmail(profile.Email))));
 
     /// <summary>目錄只管理「沒有信箱」或「來源就是目錄」的信箱；本人驗證或管理者設定的值，以及管理者維護個人資料的使用者，目錄都不覆寫。</summary>
     public static bool OwnsEmail(User user) => user.EmailSource is null or EmailSources.Directory;

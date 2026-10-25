@@ -18,7 +18,7 @@ internal static class NewUserOrder
     {
         var sorted = await db.Users.AsNoTracking()
             .Where(x => x.DeletedAt == null && x.SortOrder != null && x.Id != user.Id)
-            .Select(x => new { x.Id, x.SortOrder, x.DisplayName, x.Account })
+            .Select(x => new { x.Id, x.SortOrder, x.DisplayName, Account = x.AdAccount ?? x.LocalAccount })
             .ToListAsync(ct);
         if (sorted.Count == 0) return;
         var ordered = sorted.InUserOrder(x => x.SortOrder, x => x.DisplayName, x => x.Account).ThenBy(x => x.Id)

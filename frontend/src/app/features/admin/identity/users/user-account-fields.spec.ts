@@ -11,10 +11,17 @@ import { userFeatures } from './user-role-fields';
 const user = {
   id: 'u1',
   displayName: '王小明',
-  account: 'CORP\\wang',
+  account: 'wang',
   enabled: true,
   roleIds: ['member'],
-  authentication: null,
+  authentication: {
+    adEnabled: true,
+    localEnabled: false,
+    adAccount: 'wang',
+    localAccount: null,
+    hasLocalPassword: false,
+    directoryBound: true,
+  },
 } as unknown as AdminUserDto;
 
 describe('user account form', () => {

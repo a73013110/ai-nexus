@@ -11,7 +11,7 @@ public sealed class RuntimeTrafficTests
 {
     private static RuntimeTraffic Traffic(FakeTimeProvider clock, int capacity = 2000) => new(Options.Create(new MonitoringOptions { MaxSessions = capacity }), clock);
 
-    private static User User(string name = "Alice") => new() { DisplayName = name, Account = "CORP\\" + name };
+    private static User User(string name = "Alice") => new() { DisplayName = name, AdAccount = name };
 
     private static void Heartbeat(RuntimeTraffic traffic, User user, Guid tab, string state = "active") => traffic.Presence(user, new(tab, "chat", state), "10.1.2.3", "Edge", "Windows", "ad", false);
 

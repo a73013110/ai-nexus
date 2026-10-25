@@ -13,7 +13,7 @@ public sealed class VerificationChallengeTests
 
     private static AppFactory Factory(FakeTimeProvider clock) => new(clock: clock, seed: db => db.Users.Add(new User
     {
-        Id = UserId, Sid = "managed:" + UserId, Account = "tester", DisplayName = "tester", AdEnabled = false, LastSeenAt = DateTimeOffset.UtcNow,
+        Id = UserId, Sid = "managed:" + UserId, LocalAccount = "tester", DisplayName = "tester", AdEnabled = false, LastSeenAt = DateTimeOffset.UtcNow,
     }));
 
     [Fact]

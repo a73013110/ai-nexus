@@ -1,3 +1,4 @@
+
 -- =============================================
 -- Author:      Yikai
 -- Create date: 2026-10-21
@@ -5,6 +6,7 @@
 --              結果集依序為：摘要、合計、每日、各模型、各使用者（@IncludeUsers = 1 才有資料列）。
 --              期間與 @Offset 由程式傳入（SpendPeriod），不用資料庫時鐘；模型只依 Provider、ModelId 分組，顯示名稱與隱藏由程式決定。
 --              Amount 為 NULL 是未知費用，但待結算（pending）的呼叫不算未知；舊版執行紀錄沒有費用紀錄，只計入呼叫次數。
+-- Modify:      2026-10-25 Yikai 移除 Users.Account，帳號改回傳 AD 帳號（沒有時為本地帳號）
 -- =============================================
 CREATE   PROCEDURE [billing].[usp_GetSpendReport]
     @OwnerId      UNIQUEIDENTIFIER = NULL,
@@ -78,13 +80,14 @@ BEGIN
     ORDER BY SUM(Requests) DESC, Provider, ModelId, Currency, Kind;
 
     -- 匯出 CSV 也用這份清單，所以不分頁；包含已刪除的使用者，費用仍算在他們名下。
-    SELECT u.Id AS OwnerId, u.DisplayName, u.Account, c.Currency, c.Kind,
+    -- 帳號：AD 帳號優先，否則本地帳號（與程式的 UserAccounts.LoginName 相同）。
+    SELECT u.Id AS OwnerId, u.DisplayName, COALESCE(u.AdAccount, u.LocalAccount) AS Account, c.Currency, c.Kind,
            SUM(c.Amount) AS Amount, SUM(c.Requests) AS Requests, SUM(c.UnknownCalls) AS UnknownCalls
     FROM #charges AS c
     JOIN [identity].[Users] AS u ON u.Id = c.OwnerId
     WHERE @IncludeUsers = 1
-    GROUP BY u.Id, u.DisplayName, u.Account, c.Currency, c.Kind
-    ORDER BY SUM(c.Requests) DESC, u.Account, u.Id, c.Currency, c.Kind;
+    GROUP BY u.Id, u.DisplayName, u.AdAccount, u.LocalAccount, c.Currency, c.Kind
+    ORDER BY SUM(c.Requests) DESC, COALESCE(u.AdAccount, u.LocalAccount), u.Id, c.Currency, c.Kind;
 END;
 
 GO

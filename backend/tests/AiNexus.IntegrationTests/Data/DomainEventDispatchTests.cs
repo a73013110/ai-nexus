@@ -137,7 +137,7 @@ public sealed class DomainEventDispatchTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "failed"));
             // 發布者自己的寫入在 handler 的批次更新已執行後才失敗。
-            db.Users.Add(new User { Id = owner, Sid = "S-1-5-21-duplicate", Account = "duplicate", DisplayName = "duplicate" });
+            db.Users.Add(new User { Id = owner, Sid = "S-1-5-21-duplicate", AdAccount = "duplicate", DisplayName = "duplicate" });
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
             Assert.NotNull(Assert.Single(recorder.Transactions));
             Assert.Null(db.Database.CurrentTransaction);

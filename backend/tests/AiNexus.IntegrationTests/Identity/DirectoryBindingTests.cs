@@ -42,7 +42,7 @@ public sealed class DirectoryBindingTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId);
-            Assert.Equal((FixtureAdDirectory.Erin, "erin.chen@fixture.internal", "ERIN.CHEN", true), (user.Sid, user.Account, user.AdAccount, user.AdEnabled));
+            Assert.Equal((FixtureAdDirectory.Erin, "erin.chen", true), (user.Sid, user.AdAccount, user.AdEnabled));
             Assert.Equal(version + 1, user.SecurityVersion);
             Assert.Equal(["administrator", "member"], await db.Set<UserRole>().Where(x => x.UserId == bobId).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToListAsync());
             Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_ad_bind" && x.ResourceId == bobId && x.Result == "saved"));
@@ -50,7 +50,7 @@ public sealed class DirectoryBindingTests
         // 以舊 SID 建立的工作階段失效。
         Assert.Equal(HttpStatusCode.Unauthorized, (await bob.GetAsync("/api/v1/me")).StatusCode);
         var row = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?search=erin"))!.Users.Single();
-        Assert.Equal((bobId, true, "ERIN.CHEN"), (row.Id, row.Authentication!.DirectoryBound, row.Authentication.AdAccount));
+        Assert.Equal((bobId, true, "erin.chen"), (row.Id, row.Authentication!.DirectoryBound, row.Authentication.AdAccount));
         // 新 SID 已對到原本的使用者：匯入不會另建一位。
         var imported = await Import(admin, FixtureAdDirectory.Erin);
         Assert.Equal(bobId, imported.Single().UserId);
@@ -94,7 +94,7 @@ public sealed class DirectoryBindingTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId);
-            Assert.Equal((UserAccounts.ManagedSid(bobId), "BOB", true), (user.Sid, user.AdAccount, user.AdEnabled));
+            Assert.Equal((UserAccounts.ManagedSid(bobId), "bob", true), (user.Sid, user.AdAccount, user.AdEnabled));
             Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_ad_unbind" && x.ResourceId == bobId && x.Result == "saved"));
         }
         Assert.Equal(HttpStatusCode.Unauthorized, (await bob.GetAsync("/api/v1/me")).StatusCode);

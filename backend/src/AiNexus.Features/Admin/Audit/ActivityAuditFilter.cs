@@ -54,12 +54,12 @@ public sealed class ActivityAuditFilter
         {
             var search = Search;
             if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || (x.actor != null && x.actor.Id == resource) || (x.subject != null && x.subject.Id == resource));
-            else query = query.Where(x => (x.actor != null && (x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search))) || (x.subject != null && x.subject.Account.Contains(search)) || x.entry.Action.Contains(search) || x.entry.TraceId == search || x.entry.IssueCode == search || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
+            else query = query.Where(x => (x.actor != null && ((x.actor.AdAccount ?? x.actor.LocalAccount ?? "").Contains(search) || x.actor.DisplayName.Contains(search))) || (x.subject != null && (x.subject.AdAccount ?? x.subject.LocalAccount ?? "").Contains(search)) || x.entry.Action.Contains(search) || x.entry.TraceId == search || x.entry.IssueCode == search || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
         }
         // 依 ID 排序而非時間：ID 唯一且遞增，游標不會因同一時間的多筆紀錄而重複或漏掉。
         // 沒有對應使用者時，登入失敗顯示「未驗證」（帳號尚未驗證），其他視為系統動作。
         return query.OrderByDescending(x => x.entry.Id)
-            .Select(x => new AuditDto(x.entry.Id, x.actor == null ? x.entry.Action == "identity.login" && x.entry.Result == "failed" ? "未驗證" : "system" : x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId && x.subject != null ? x.subject.Account : null,
+            .Select(x => new AuditDto(x.entry.Id, x.actor == null ? x.entry.Action == "identity.login" && x.entry.Result == "failed" ? "未驗證" : "system" : x.actor.AdAccount ?? x.actor.LocalAccount ?? "", x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId && x.subject != null ? x.subject.AdAccount ?? x.subject.LocalAccount : null,
                 null, x.entry.TraceId, x.entry.OperationId, x.entry.IssueCode));
     }
 

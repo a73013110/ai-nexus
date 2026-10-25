@@ -24,8 +24,7 @@ internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthen
         if (reauthentication.PasswordAvailable(http, user)) methods.Add("password");
         if (CodeAvailable(user)) methods.Add("code");
         var until = reauthentication.FreshUntil(http);
-        var managed = !UserAccounts.DirectoryBound(user);
-        return new(user.DisplayName, user.Account, user.AdAccount ?? (managed ? null : UserAccounts.AccountName(user.Account)), user.Email, user.EmailSource, user.EmailVerifiedAt,
+        return new(user.DisplayName, UserAccounts.LoginName(user), user.AdAccount, user.Email, user.EmailSource, user.EmailVerifiedAt,
             UserCredentials.EmailEditable(user),
             new(credentials.LocalLoginEditable, user.LocalEnabled && user.PasswordHash is not null, user.LocalAccount, user.PasswordChangedAt, !user.AdEnabled),
             reauthentication.Method(http), methods, until is null, until == DateTimeOffset.MaxValue ? null : until, outbox.Available,

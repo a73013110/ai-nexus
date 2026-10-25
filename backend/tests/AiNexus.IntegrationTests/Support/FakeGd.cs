@@ -66,7 +66,8 @@ internal sealed class FakeGd : IDisposable
     public static Guid AddAppUser(AppDbContext db, string? adAccount)
     {
         var key = Guid.NewGuid().ToString("N");
-        var user = new User { Sid = "gd-" + key, Account = "gd-" + key, DisplayName = adAccount ?? "no-account", AdAccount = adAccount, LastSeenAt = DateTimeOffset.UtcNow };
+        // 沒有 AD 帳號時給本地帳號：資料表要求兩者至少有一個。
+        var user = new User { Sid = "gd-" + key, DisplayName = adAccount ?? "no-account", AdAccount = adAccount, LocalAccount = adAccount is null ? "gd-" + key : null, LastSeenAt = DateTimeOffset.UtcNow };
         db.Users.Add(user);
         db.SaveChanges();
         return user.Id;

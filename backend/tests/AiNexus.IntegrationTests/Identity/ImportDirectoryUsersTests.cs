@@ -31,7 +31,7 @@ public sealed class ImportDirectoryUsersTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var carol = await db.Users.AsNoTracking().SingleAsync(x => x.Id == carolId);
-            Assert.Equal((FixtureAdDirectory.Carol, "carol.lin@fixture.internal", "CAROL.LIN", "林可蘿"), (carol.Sid, carol.Account, carol.AdAccount, carol.DisplayName));
+            Assert.Equal((FixtureAdDirectory.Carol, "carol.lin", "林可蘿"), (carol.Sid, carol.AdAccount, carol.DisplayName));
             Assert.Equal(("carol.lin@example.test", EmailSources.Directory), (carol.Email, carol.EmailSource));
             Assert.NotNull(carol.EmailVerifiedAt);
             Assert.True(carol.Enabled && carol.AdEnabled && !carol.LocalEnabled && !carol.ProfileManaged);
@@ -93,14 +93,14 @@ public sealed class ImportDirectoryUsersTests
         f.AdDirectory.Put(f.AdDirectory.Get(FixtureAdDirectory.Carol) with { AccountName = "carol.wang", DisplayName = "王可蘿" });
         var renamed = Assert.Single(await Import(admin, FixtureAdDirectory.Carol));
         Assert.Equal((DirectoryOutcomes.Update, (Guid?)carolId), (renamed.Outcome, renamed.UserId));
-        Assert.Equal(["account", "adAccount", "displayName"], renamed.Changes.Select(x => x.Field));
+        Assert.Equal(["adAccount", "displayName"], renamed.Changes.Select(x => x.Field));
 
         // 管理員預建、尚未登入的同名帳號：匯入綁定 SID，保留管理員填的姓名。
         var prebuiltId = await CreateUser(admin, new UserAccountRequest("陳艾琳（預建）", true, true, false, "erin.chen", null, ["member"]));
         var bound = Assert.Single(await Import(admin, FixtureAdDirectory.Erin));
         Assert.Equal((DirectoryOutcomes.Bind, (Guid?)prebuiltId), (bound.Outcome, bound.UserId));
 
-        // 同名但不同 SID 的人不能接管已連結的帳號；改名撞到別人已用的 AD 帳號時，帳號與 AdAccount 都保留原值。
+        // 同名但不同 SID 的人不能接管已連結的帳號；改名撞到別人已用的 AD 帳號時，AdAccount 保留原值。
         const string impostor = "S-1-5-21-1000-2000-3000-1104";
         f.AdDirectory.Put(new(impostor, "CN=王可蘿二號,OU=業務處," + FixtureAdDirectory.Root, "carol.wang", "王可蘿二號", null, null, null, false));
         Assert.Equal(DirectoryOutcomes.Conflict, Assert.Single(await Import(admin, impostor)).Outcome);
@@ -109,7 +109,7 @@ public sealed class ImportDirectoryUsersTests
 
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var carol = await db.Users.AsNoTracking().SingleAsync(x => x.Id == carolId);
-        Assert.Equal(("carol.wang@fixture.internal", "CAROL.WANG", "王可蘿"), (carol.Account, carol.AdAccount, carol.DisplayName));
+        Assert.Equal(("carol.wang", "王可蘿"), (carol.AdAccount, carol.DisplayName));
         var erin = await db.Users.AsNoTracking().SingleAsync(x => x.Id == prebuiltId);
         Assert.Equal((FixtureAdDirectory.Erin, "陳艾琳（預建）", true), (erin.Sid, erin.DisplayName, erin.ProfileManaged));
         Assert.False(await db.Users.AnyAsync(x => x.Sid == impostor));

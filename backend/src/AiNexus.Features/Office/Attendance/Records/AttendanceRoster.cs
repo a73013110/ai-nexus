@@ -70,7 +70,7 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
             .Join(db.Set<Card>(), a => a.CardId, c => c.Id, (a, c) => new { a, c.CardNumber, c.HiddenFromRecords })
             .LeftJoin(db.Users, x => x.a.UserId, u => (Guid?)u.Id, (x, u) => new
             {
-                x.a.Id, x.a.UserId, x.a.HolderName, x.CardNumber, x.HiddenFromRecords, DisplayName = u == null ? null : u.DisplayName, Account = u == null ? null : u.Account,
+                x.a.Id, x.a.UserId, x.a.HolderName, x.CardNumber, x.HiddenFromRecords, DisplayName = u == null ? null : u.DisplayName, Account = u == null ? null : u.AdAccount ?? u.LocalAccount,
                 SortOrder = u == null ? null : u.SortOrder, x.a.StartsAt, x.a.EndsAt,
             })
             .ToListAsync(ct);

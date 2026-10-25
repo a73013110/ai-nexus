@@ -11,14 +11,14 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// <summary>依 <see cref="AdminBootstrapOptions.Administrators"/> 所列的帳號，一次性授予管理者角色。</summary>
 public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptions<AdminBootstrapOptions> options) : ISignInGrant
 {
-    private bool Applies(string account) => options.Value.Administrators.Contains(UserAccounts.AccountName(account), StringComparer.OrdinalIgnoreCase);
+    private bool Applies(User user) => options.Value.Administrators.Contains(UserAccounts.LoginName(user), StringComparer.OrdinalIgnoreCase);
 
     public async Task<bool> PendingAsync(User user, CancellationToken ct)
-        => Applies(user.Account) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
+        => Applies(user) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
     // 永久標記（AdministratorBootstrap）確保管理員權限被撤銷後，下次登入不會再被自動補回。
     public async Task ApplyAsync(User user, CancellationToken ct)
     {
-        if (!Applies(user.Account) ||
+        if (!Applies(user) ||
             await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct)) return;
         if (!await db.Set<UserRole>().AnyAsync(x => x.UserId == user.Id && x.RoleId == BuiltInAccess.AdministratorRole, ct))
             db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.AdministratorRole });

@@ -62,7 +62,7 @@ public sealed class DiagnosticStoreTests
             var store = new DiagnosticStore(provider.GetRequiredService<IServiceScopeFactory>(), options, health, TimeProvider.System);
             var code = Issues.NewCode();
             var row = new DiagnosticEvent { IssueCode = code, Level = LogLevel.Error, At = DateTimeOffset.UtcNow, TraceId = new string('a', 32) };
-            var user = new User { Sid = "diagnostic-rollback", Account = "rollback", DisplayName = "fixture" };
+            var user = new User { Sid = "diagnostic-rollback", AdAccount = "rollback", DisplayName = "fixture" };
             await using (var transaction = await db.Database.BeginTransactionAsync()) {
                 db.Add(user); await db.SaveChangesAsync(); await store.WriteAsync([row, row], CancellationToken.None); await transaction.RollbackAsync();
             }

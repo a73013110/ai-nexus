@@ -51,6 +51,6 @@ internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadA
         var audited = await reads.RecordAsync(actor, "admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
         if (!audited.IsSuccess) return audited.Error;
         var conversation = new AdminConversationDto(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total);
-        return new AdminConversationDetailDto(conversation, owner.Account, owner.DisplayName, value.SystemInstruction, messages, offset, total);
+        return new AdminConversationDetailDto(conversation, owner.AdAccount ?? owner.LocalAccount ?? "", owner.DisplayName, value.SystemInstruction, messages, offset, total);
     }
 }

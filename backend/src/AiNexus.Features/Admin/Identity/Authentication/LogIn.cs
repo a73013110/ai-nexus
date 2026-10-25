@@ -44,7 +44,7 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
             return user.Error.ToProblem(issue);
         }
         await AuthSession.EndExistingTestAsync(previous, db, "signed_in", ct);
-        await audit.WriteAsync("identity.login", user.Value.Id, user.Value.Account, body.Method, "success", ct);
+        await audit.WriteAsync("identity.login", user.Value.Id, UserAccounts.LoginName(user.Value), body.Method, "success", ct);
         var principal = SessionIdentity.Principal(user.Value, body.Method);
         await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
         http.User = principal;

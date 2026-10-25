@@ -19,7 +19,7 @@ public sealed class RunRecoveryTests
         var interruptedId = Guid.NewGuid();
         await using var factory = new AppFactory(db =>
         {
-            var owner = new User { Sid = "S-1-5-21-test-alice", Account = "TEST\\alice", DisplayName = "alice", LastSeenAt = DateTimeOffset.UtcNow };
+            var owner = new User { Sid = "S-1-5-21-test-alice", AdAccount = "alice", DisplayName = "alice", LastSeenAt = DateTimeOffset.UtcNow };
             var conversation = new Conversation { OwnerId = owner.Id };
             var user = new Message { ConversationId = conversation.Id, Content = "原始訊息" };
             var answer = new Message { ConversationId = conversation.Id, ParentId = user.Id, Role = "assistant", Status = RunStates.Running, Content = "既有部分回答", RunId = interruptedId };

@@ -14,7 +14,7 @@ const units = [
 ];
 const member = {
   userId: 'bob',
-  account: 'TEST\\bob',
+  account: 'bob',
   displayName: 'Bob',
   active: true,
   isPrimary: false,

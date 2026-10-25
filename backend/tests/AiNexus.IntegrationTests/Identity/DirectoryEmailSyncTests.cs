@@ -44,7 +44,7 @@ public sealed class DirectoryEmailSyncTests
     public async Task DirectoryLoginAcceptsTheDomainPrefixOrSuffix(string account)
     {
         await using var f = new AppFactory(ldap: true);
-        Assert.Equal("alice@fixture.test", (await Login(f.CreateClient(), account)).Account);
+        Assert.Equal("alice", (await Login(f.CreateClient(), account)).Account);
     }
 
     private static async Task<User> UserAsync(AppFactory f, Guid id)

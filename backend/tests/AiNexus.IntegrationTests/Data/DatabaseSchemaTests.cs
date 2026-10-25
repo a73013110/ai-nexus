@@ -21,7 +21,7 @@ public sealed class DatabaseSchemaTests
             Assert.True(await new DatabaseSchema(db, sql, logs).ReadCommittedSnapshotAsync(CancellationToken.None));
             Assert.Empty(logs.EventIds);
 
-            var user = new User { Sid = "rcsi-fixture", Account = "rcsi", DisplayName = "已提交" };
+            var user = new User { Sid = "rcsi-fixture", AdAccount = "rcsi", DisplayName = "已提交" };
             db.Add(user); await db.SaveChangesAsync();
             var connection = db.Database.GetConnectionString()!;
             await using var writer = new SqlConnection(connection); await writer.OpenAsync();

@@ -95,7 +95,7 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
         var owned = await OwnerAsync(actor, id, kind, ct);
         if (!owned.IsSuccess) return owned.Error;
         var members = await (from link in db.Set<ResourceMember>() join user in db.Users on link.UserId equals user.Id where link.ResourceId == id
-            select new ResourceMemberDto(user.Id, user.Account, user.DisplayName, link.Role)).ToListAsync(ct);
+            select new ResourceMemberDto(user.Id, user.AdAccount ?? user.LocalAccount ?? "", user.DisplayName, link.Role)).ToListAsync(ct);
         return new ResourceAclDto(members, await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).Select(x => x.GroupId).ToListAsync(ct));
     }
     public async Task<Result> SetAclAsync(Guid actor, Guid id, string kind, ResourceAclRequest request, CancellationToken ct)

@@ -14,7 +14,7 @@ import { deliveryText } from './verification-code-field';
 
 const security = (patch: Partial<AccountSecurityDto> = {}): AccountSecurityDto => ({
   displayName: '陳',
-  account: 'chen@company.internal',
+  account: 'chen',
   adAccount: 'chen',
   email: null,
   emailSource: null,

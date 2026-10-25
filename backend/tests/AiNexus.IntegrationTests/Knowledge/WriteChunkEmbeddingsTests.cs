@@ -92,7 +92,7 @@ public sealed class WriteChunkEmbeddingsTests
 
     private static async Task<Chunk[]> SeedChunks(AppDbContext db, int count)
     {
-        var owner = new User { Sid = "embedding-write-fixture", Account = "fixture", DisplayName = "測試使用者" };
+        var owner = new User { Sid = "embedding-write-fixture", AdAccount = "embedding-write", DisplayName = "測試使用者" };
         var collection = new Resource { OwnerId = owner.Id, Kind = "knowledge", Name = "知識庫" };
         var document = new Resource { OwnerId = owner.Id, Kind = "document", Name = "文件", ParentId = collection.Id };
         db.AddRange(owner, collection, document, new Collection { Id = collection.Id });

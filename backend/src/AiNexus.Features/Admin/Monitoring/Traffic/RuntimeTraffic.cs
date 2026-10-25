@@ -59,7 +59,7 @@ public sealed class RuntimeTraffic : IDisposable
                 if (sessions.Count >= options.Value.MaxSessions) { droppedSessions++; return; }
                 session = new(key, user.Id, now); sessions.Add(key, session);
             }
-            session.Account = user.Account; session.Name = user.DisplayName;
+            session.Account = user.AdAccount ?? user.LocalAccount ?? ""; session.Name = user.DisplayName;
             session.Address = address; session.Browser = browser; session.Device = device; session.Authentication = authentication;
             session.Feature = request.Feature; session.State = request.State; session.LastSeen = now; session.Testing = testing;
         }

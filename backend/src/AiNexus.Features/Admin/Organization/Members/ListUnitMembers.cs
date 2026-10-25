@@ -21,8 +21,8 @@ internal sealed class ListUnitMembers(AppDbContext db, IActiveUsers activeUsers)
         if (!await db.Set<Unit>().AnyAsync(x => x.Id == id, ct)) return OrganizationErrors.UnitNotFound;
         return await db.Set<UnitMember>().AsNoTracking().Where(x => x.UnitId == id)
             .Join(db.Users, x => x.UserId, x => x.Id, (member, user) => new { member, user })
-            .OrderByDescending(x => x.member.IsManager).ThenBy(x => x.user.Account)
-            .Select(x => new UnitMemberDto(x.user.Id, x.user.Account, x.user.DisplayName, activeUsers.Ids.Contains(x.user.Id), x.member.IsPrimary, x.member.IsManager))
+            .OrderByDescending(x => x.member.IsManager).ThenBy(x => x.user.AdAccount ?? x.user.LocalAccount)
+            .Select(x => new UnitMemberDto(x.user.Id, x.user.AdAccount ?? x.user.LocalAccount ?? "", x.user.DisplayName, activeUsers.Ids.Contains(x.user.Id), x.member.IsPrimary, x.member.IsManager))
             .ToListAsync(ct);
     }
 }

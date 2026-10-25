@@ -49,7 +49,7 @@
 
 ## View 契約與查詢
 
-`AuthorizedRecords` 必須對每個允許的 AD SID／完整帳號／RecordId 提供唯一一列。欄位為 ActorSid、ActorAccount、RecordId（160）、RecordKind、Title（120）、Status、Revision（160）、ModifiedAt（datetimeoffset）、Body（最多 16,000 字元）。公文 kind=`document`；校務第一階段 kind=`reference` 或 `organization`。Revision 必須在本文／可讀內容修改時改變。不得把用戶密碼、憑證或非核准欄位放到 Body。
+`AuthorizedRecords` 必須對每個允許的 AD SID／完整帳號（`AdAccount@<AD 網域>`，由程式組成；只有本地帳號或尚未綁定 AD 的使用者回 `source_identity_missing`）／RecordId 提供唯一一列。欄位為 ActorSid、ActorAccount、RecordId（160）、RecordKind、Title（120）、Status、Revision（160）、ModifiedAt（datetimeoffset）、Body（最多 16,000 字元）。公文 kind=`document`；校務第一階段 kind=`reference` 或 `organization`。Revision 必須在本文／可讀內容修改時改變。不得把用戶密碼、憑證或非核准欄位放到 Body。
 
 `AuthorizedRecordHistory` 提供相同身分與 RecordId 的歷程，包含 EventId、At、Kind、Actor、Description、Revision，**必須套用與主資料相同的來源授權**。最多顯示最近 100 筆，超過會標示可至原系統閱讀。讀取歷程後再確認主資料 grant 與版本。
 

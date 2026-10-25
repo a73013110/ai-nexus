@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Sessions;
+using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.Features.Admin.Identity.Authentication;
 
@@ -35,7 +36,7 @@ internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IA
             await audit.WriteAsync("identity.login", null, http.User.Identity?.Name, "windows", "failed", ct, user.Error.Code, issue);
             return user.Error.ToProblem(issue);
         }
-        await audit.WriteAsync("identity.login", user.Value.Id, user.Value.Account, "windows", "success", ct);
+        await audit.WriteAsync("identity.login", user.Value.Id, UserAccounts.LoginName(user.Value), "windows", "success", ct);
         return TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
     }
 }

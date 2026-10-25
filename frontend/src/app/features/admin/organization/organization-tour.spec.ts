@@ -147,7 +147,7 @@ describe('organization tour targets', () => {
           unitId: 'it',
           path: ['總公司', '資訊處'],
           userId: 'bob',
-          account: 'TEST\\bob',
+          account: 'bob',
           displayName: 'Bob',
           added: true,
           deputy: false,
@@ -186,7 +186,7 @@ describe('organization tour targets', () => {
             members: vi.fn(async () => [
               {
                 userId: 'bob',
-                account: 'TEST\\bob',
+                account: 'bob',
                 displayName: 'Bob',
                 active: true,
                 isPrimary: true,

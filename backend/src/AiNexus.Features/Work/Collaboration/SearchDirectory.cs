@@ -25,7 +25,7 @@ internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers)
     {
         var term = search.Trim();
         if (term.Length is < 2 or > 120) return [];
-        return await db.Users.AsNoTracking().Where(x => activeUsers.Ids.Contains(x.Id) && (x.Account.Contains(term) || x.DisplayName.Contains(term))).OrderBy(x => x.Account).Take(20).Select(x => new DirectoryUserDto(x.Id, x.Account, x.DisplayName)).ToListAsync(ct);
+        return await db.Users.AsNoTracking().Where(x => activeUsers.Ids.Contains(x.Id) && ((x.AdAccount ?? x.LocalAccount ?? "").Contains(term) || x.DisplayName.Contains(term))).OrderBy(x => x.AdAccount ?? x.LocalAccount).Take(20).Select(x => new DirectoryUserDto(x.Id, x.AdAccount ?? x.LocalAccount ?? "", x.DisplayName)).ToListAsync(ct);
     }
 
     public async Task<IReadOnlyList<DirectoryGroupDto>> GroupsAsync(CancellationToken ct)

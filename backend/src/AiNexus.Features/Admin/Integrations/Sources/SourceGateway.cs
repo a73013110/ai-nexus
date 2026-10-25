@@ -2,6 +2,8 @@ using AiNexus.Data.App;
 using System.Data.Common;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +15,7 @@ namespace AiNexus.Features.Admin.Integrations.Sources;
 /// 讀取舊系統唯讀來源的唯一入口。每次查詢前後都檢查授權，查詢期間被撤銷的授權不會讓資料外流；每次讀取都寫入稽核。
 /// </summary>
 internal sealed class SourceGateway(AppDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
-    IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
+    IOptions<AdAuthenticationOptions> directory, IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
 {
     private static readonly SourceEntry[] Catalog = [
         new("gd", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdDatabase.Name),
@@ -134,9 +136,10 @@ internal sealed class SourceGateway(AppDbContext db, AccessService access, IOpti
         if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
         if (!value.Enabled || !value.AclContractConfirmed || !databases.Value.For(item.Database).Configured) return IntegrationsErrors.NotConfigured;
         if (!Admits(value, grants)) return IntegrationsErrors.SourceForbidden;
+        // 外部 view 以 AD SID＋完整帳號（帳號@網域）授權：只有本地帳號、或還沒以 SID 綁定 AD 的使用者沒有可用的身分。
         var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == actor, ct);
-        if (string.IsNullOrWhiteSpace(user.Sid) || string.IsNullOrWhiteSpace(user.Account)) return IntegrationsErrors.IdentityMissing;
-        return new Target(item, adapters.Single(x => x.Id == source), value, new(user.Sid, user.Account));
+        if (!UserAccounts.DirectoryBound(user) || UserAccounts.DirectoryAccount(user, directory.Value.Domain) is not { } account) return IntegrationsErrors.IdentityMissing;
+        return new Target(item, adapters.Single(x => x.Id == source), value, new(user.Sid, account));
     }
 
     // 外部系統的連線失敗屬於基礎設施故障而非預期結果，因此維持拋出例外，不轉成 Result。

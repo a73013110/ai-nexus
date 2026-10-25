@@ -39,7 +39,7 @@ public sealed class SourceGatewayTests
             b.ConfigureServices(s => { s.RemoveAll<IControlledSourceAdapter>(); s.AddSingleton<IControlledSourceAdapter>(adapter); s.PostConfigure<IntegrationsOptions>(o => { o.Gd.Enabled = true; o.Gd.AclContractConfirmed = true; o.Gd.AllowedGroupIds = ["workspace"]; }); });
         });
         using var owner = await SignIn(f, "alice"); using var other = await SignIn(f, "bob");
-        var list = await owner.GetFromJsonAsync<List<SourceRecordDto>>("/api/v1/integrations/gd/records?query=通知&actorSid=spoof"); Assert.Single(list!); Assert.Equal("S-1-5-21-test-alice", adapter.Actor!.Sid); Assert.Equal("TEST\\alice", adapter.Actor.Account);
+        var list = await owner.GetFromJsonAsync<List<SourceRecordDto>>("/api/v1/integrations/gd/records?query=通知&actorSid=spoof"); Assert.Single(list!); Assert.Equal("S-1-5-21-test-alice", adapter.Actor!.Sid); Assert.Equal("alice@fixture.internal", adapter.Actor.Account);
         Assert.Empty((await other.GetFromJsonAsync<List<SourceRecordDto>>("/api/v1/integrations/gd/records?query=通知"))!);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync("/api/v1/integrations/gd/record?id=doc-1")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsJsonAsync("/api/v1/integrations/gd/import", new SourceImportRequest("doc-1", "old"))).StatusCode);

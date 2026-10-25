@@ -55,16 +55,15 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         if (string.IsNullOrWhiteSpace(requested) || !UserAccounts.IsValid(requested)) return IdentityErrors.InvalidAccount;
         var name = UserAccounts.Normalize(requested)!;
         if (password is null || !Argon2Passwords.IsAcceptable(password)) return IdentityErrors.InvalidPassword;
-        if (!PasswordPolicy.IsStrong(password, name, user.AdAccount, UserAccounts.AccountName(user.Account))) return IdentityErrors.PasswordWeak;
-        var renamed = name != user.LocalAccount;
+        if (!PasswordPolicy.IsStrong(password, name, user.AdAccount)) return IdentityErrors.PasswordWeak;
+        // 只改大小寫也寫入（畫面照使用者輸入），但不算改名：不查撞名、不另發改名通知。
+        var renamed = !UserAccounts.Same(name, user.LocalAccount);
         if (renamed && await TakenAsync(user, name, ct)) return IdentityErrors.AccountExists;
         var enabled = !user.LocalEnabled || user.PasswordHash is null;
         user.LocalAccount = name;
         user.PasswordHash = await passwords.HashAsync(password, ct);
         user.PasswordChangedAt = clock.GetUtcNow();
         user.LocalEnabled = true; user.FailedLogins = 0; user.LockedUntil = null;
-        // 尚未綁定 AD 的預建帳號以本地帳號顯示，與管理端建立帳號的規則相同。
-        if (!UserAccounts.DirectoryBound(user)) user.Account = name;
         user.SecurityVersion++;
         return new LocalLoginChange(enabled, renamed && !enabled, !enabled);
     }
@@ -79,11 +78,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         return true;
     }
 
-    private async Task<bool> TakenAsync(User user, string name, CancellationToken ct)
-    {
-        if (await db.Users.AnyAsync(x => x.Id != user.Id && (x.LocalAccount == name || x.AdAccount == name), ct)) return true;
-        // 較早由 AD 首次登入自動建立的使用者沒有 AdAccount，要比對完整帳號的短名（與管理端建立帳號同一規則）。
-        var accounts = await db.Users.AsNoTracking().Where(x => x.Id != user.Id && x.AdAccount == null && !x.Sid.StartsWith(UserAccounts.ManagedSidPrefix)).Select(x => x.Account).ToListAsync(ct);
-        return accounts.Any(x => string.Equals(UserAccounts.AccountName(x), name, StringComparison.OrdinalIgnoreCase));
-    }
+    // 比對交給資料庫定序（不分大小寫）。
+    private Task<bool> TakenAsync(User user, string name, CancellationToken ct)
+        => db.Users.AnyAsync(x => x.Id != user.Id && (x.LocalAccount == name || x.AdAccount == name), ct);
 }

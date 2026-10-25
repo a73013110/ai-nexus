@@ -36,7 +36,7 @@ public sealed class AccountSecurityTests
 
         var changed = await PutLocalLoginAsync(client, new LocalLoginRequest("bob", Strong));
         Assert.True(changed.Security.LocalLogin.Enabled);
-        Assert.Equal("BOB", changed.Security.LocalLogin.Account);
+        Assert.Equal("bob", changed.Security.LocalLogin.Account);
         var user = await UserAsync(f, me.Id);
         Assert.NotNull(user.PasswordChangedAt);
         Assert.Equal(1, user.SecurityVersion);

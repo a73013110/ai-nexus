@@ -32,7 +32,7 @@ public sealed class TestIdentityTests
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
         await Csrf(admin); Assert.Equal(actor.Id, (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit"))!;
-        Assert.Contains(audit, x => x.Action == "project.created" && x.Actor == "alice@fixture.test" && x.ActingAs == "TESTER");
+        Assert.Contains(audit, x => x.Action == "project.created" && x.Actor == "alice" && x.ActingAs == "tester");
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var entry = await db.AuditEvents.SingleAsync(x => x.Action == "project.created");
         Assert.Equal(actor.Id, entry.ActorId); Assert.Equal(id, entry.OwnerId);

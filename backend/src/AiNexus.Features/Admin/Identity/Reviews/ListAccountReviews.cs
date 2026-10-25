@@ -41,7 +41,7 @@ internal sealed class ListAccountReviews(AppDbContext db, AccessService access, 
 
         var ids = items.Select(x => x.UserId).Distinct().ToArray();
         var users = await db.Users.AsNoTracking().Where(x => ids.Contains(x.Id))
-            .Select(x => new { x.Id, x.Account, x.DisplayName, x.Enabled, Deleted = x.DeletedAt != null }).ToDictionaryAsync(x => x.Id, ct);
+            .Select(x => new { x.Id, Account = x.AdAccount ?? x.LocalAccount ?? "", x.DisplayName, x.Enabled, Deleted = x.DeletedAt != null }).ToDictionaryAsync(x => x.Id, ct);
         var grouped = items.Where(x => users.ContainsKey(x.UserId)).GroupBy(x => x.UserId).Select(group =>
         {
             var user = users[group.Key];

@@ -46,7 +46,7 @@ public static class SessionIdentity
         var claims = new List<Claim>
         {
             new(UserId, user.Id.ToString()), new(Version, user.SecurityVersion.ToString(CultureInfo.InvariantCulture)),
-            new(Method, method), new(ClaimTypes.PrimarySid, user.Sid), new(ClaimTypes.Name, user.Account), new(DisplayName, user.DisplayName)
+            new(Method, method), new(ClaimTypes.PrimarySid, user.Sid), new(ClaimTypes.Name, UserAccounts.LoginName(user)), new(DisplayName, user.DisplayName)
         };
         if (actor is not null)
         {
