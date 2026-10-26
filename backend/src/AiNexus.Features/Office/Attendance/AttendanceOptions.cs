@@ -26,6 +26,12 @@ public sealed class WorkdayOptions : IValidatableObject
     [ValidateObjectMembers] public WorkdayRule AfternoonOff { get; set; } = new() { ScheduledStart = new(8, 30), ScheduledEnd = new(12, 0), FlexStart = new(8, 0), FlexEnd = new(9, 0), WorkHours = 3.5 };
 
     /// <summary>
+    /// 遲到、早退比對刷卡到秒還是到分，所有日型共用。舊系統（EmpClock，彈性間隔 1 分鐘）是 <see cref="PunchPrecision.Minute"/>；
+    /// 只影響判定，畫面與匯出的刷卡時間照樣到秒。
+    /// </summary>
+    [EnumDataType(typeof(PunchPrecision))] public PunchPrecision PunchPrecision { get; set; } = PunchPrecision.Second;
+
+    /// <summary>
     /// 跨欄位規則在這裡逐一檢查而不是放在 <see cref="WorkdayRule"/>：產生的驗證器不會替巢狀物件的 <see cref="IValidatableObject"/> 結果加上路徑，
     /// 三份規則欄位同名，訊息必須指出是哪一個日型。新增日型時一併加進來。
     /// </summary>
@@ -37,6 +43,16 @@ public sealed class WorkdayOptions : IValidatableObject
                 yield return new(message, members.Select(x => $"{nameof(AttendanceOptions.Workday)}.{name}.{x}"));
         }
     }
+}
+
+/// <summary>判定遲到、早退時刷卡時間的精度。</summary>
+public enum PunchPrecision
+{
+    /// <summary>以秒計：09:00:01 到就遲到 1 秒，彈性時段以外沒有寬限。</summary>
+    Second = 0,
+
+    /// <summary>以整分計（同舊系統）：刷卡的秒數捨去後再比，09:00:59 到不算遲到，18:29:59 走（應下班 18:30）算早退 1 分；遲到、早退都是整分。</summary>
+    Minute = 1
 }
 
 /// <summary>

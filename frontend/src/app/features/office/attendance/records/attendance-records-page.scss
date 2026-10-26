@@ -92,7 +92,7 @@
 tr.records-week-start > td {
   border-top: 1px solid var(--line);
 }
-// 缺口的顏色跟著補足狀態（`GAP_COVERAGE` 的 tone）：已補足綠、簽核中黃、未補足紅、無法取得灰。
+// 缺口的顏色跟著補足狀態（`GAP_COVERAGE` 的 tone）：已補足綠、流程中黃、未補足紅、無法取得灰。
 [data-tone='success'] {
   --gap-color: var(--success);
 }

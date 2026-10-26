@@ -17,7 +17,7 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <item>單一工作表「出缺勤計算」：第一列是欄名（前兩欄空白），每人一段、每天一列，段與段之間（最後一人之後也是）空兩列。</item>
 /// <item>每段第一列寫姓名與卡號，下面三列的前兩欄是「遲到(計)」「早退(計)」「異常(計)」與天數；不到四天的人補空列放小計。</item>
 /// <item>遲到的上班、早退的下班以紅字標示；遲到、早退、異常欄在未補足時打「＊」（舊檔的記號），已補足寫「補足」、
-/// 要等簽核中的單才補足時寫「簽核中」，表單無法取得時寫「未知」。小計照舊數所有遲到、早退、異常的天數。備註是當天的假單與出差單，多筆以「、」相連。</item>
+/// 要等流程中的單才補足時寫「流程中」，表單無法取得時寫「未知」。小計照舊數所有遲到、早退、異常的天數。備註是當天的假單與出差單，多筆以「、」相連。</item>
 /// <item>全部是 標楷體 13.875 點、置中（備註靠左）、列高 19.5；時間與日期照舊檔寫成文字。</item>
 /// </list>
 /// 列出哪些日子、怎麼判遲到早退異常，與畫面同一份查詢（<see cref="ListAttendanceRecords"/>），不另照舊系統的規則。
@@ -127,7 +127,7 @@ internal static class AttendanceReportWorkbook
     internal static string Marker(GapCoverage? coverage) => coverage switch
     {
         GapCoverage.Covered => "補足",
-        GapCoverage.Pending => "簽核中",
+        GapCoverage.Pending => "流程中",
         GapCoverage.Unknown => "未知",
         _ => Mark
     };

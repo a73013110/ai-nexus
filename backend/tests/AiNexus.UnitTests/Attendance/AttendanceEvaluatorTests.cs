@@ -175,7 +175,7 @@ public sealed class AttendanceEvaluatorTests
     public void PendingFormsOnlyMarkTheGapAsPending()
     {
         AssertForms(Evaluate(At(9, 10), At(18, 0), forms: Pending(At(8, 30), At(9, 30))), GapCoverage.Pending, Minutes(40), null, 0);
-        // 核准的不夠，加上簽核中的才夠：還差的只看核准的。
+        // 核准的不夠，加上流程中的才夠：還差的只看核准的。
         AssertForms(Evaluate(At(9, 10), At(18, 0), forms: [Approved(At(8, 30), At(9, 0)), Pending(At(9, 0), At(9, 30))]),
             GapCoverage.Pending, Minutes(10), At(18, 10), Minutes(30));
         Assert.Equal(GapCoverage.Unexplained, Evaluate(At(9, 40), At(18, 0), forms: Pending(At(8, 30), At(9, 0))).Coverage);
@@ -321,6 +321,30 @@ public sealed class AttendanceEvaluatorTests
         }
     }
 
+    /// <summary>
+    /// 舊系統 EmpClock（彈性間隔 1 分鐘）的全天判定：刷卡捨去秒、早於彈性起點以起點計，晚於彈性終點為遲到並改為表定下班，否則應下班＝上班＋9.5 小時；
+    /// 下班捨去秒後早於應下班為早退。由 2026/06～10 舊系統與本系統 1,962 個人日逐日比對歸納，有刷卡兩筆以上的日子全部吻合。
+    /// 刷卡剛好在整分時沒有捨去秒的差別，兩套判定必須一字不差，小計才會與舊系統相同；這裡逐分鐘窮舉，免得改規則時悄悄偏離。
+    /// </summary>
+    [Fact]
+    public void WholeMinutePunchesMatchTheLegacyJudgementExactly()
+    {
+        static (bool Late, bool Early, TimeSpan Expected) Legacy(TimeSpan clockIn, TimeSpan clockOut)
+        {
+            var late = clockIn > new TimeSpan(9, 0, 0);
+            var expected = late ? new TimeSpan(18, 0, 0) : (clockIn < new TimeSpan(8, 0, 0) ? new TimeSpan(8, 0, 0) : clockIn) + TimeSpan.FromHours(9.5);
+            return (late, clockOut < expected, expected);
+        }
+
+        for (var clockIn = new TimeSpan(6, 0, 0); clockIn < new TimeSpan(23, 0, 0); clockIn += TimeSpan.FromMinutes(1))
+        for (var clockOut = clockIn + TimeSpan.FromMinutes(1); clockOut < new TimeSpan(24, 0, 0); clockOut += TimeSpan.FromMinutes(1))
+        {
+            var result = Evaluate(At(clockIn.Hours, clockIn.Minutes), At(clockOut.Hours, clockOut.Minutes));
+            var legacy = Legacy(clockIn, clockOut);
+            Assert.Equal((legacy.Late, legacy.Early, TaipeiTime.At(Day, TimeOnly.FromTimeSpan(legacy.Expected))),
+                (result.LateSeconds > 0, result.EarlyLeaveSeconds > 0, result.ExpectedClockOut!.Value));
+        }
+    }
 
     [Fact]
     public void ADayOffIsNotJudgedButStillReturnsThePunches()
@@ -373,6 +397,64 @@ public sealed class AttendanceEvaluatorTests
         var result = Evaluate(At(8, 10, 30), At(17, 40, 29));
         AssertPresent(result, At(17, 40, 30), 0, 1);
         Assert.Equal((At(8, 10, 30), At(17, 40, 29)), (result.ClockIn, result.ClockOut));
+    }
+
+    private static readonly WorkdayOptions MinuteRules = new() { PunchPrecision = PunchPrecision.Minute };
+
+    private static AttendanceEvaluation EvaluateByMinute(DateTimeOffset? first, DateTimeOffset? last, params FormPeriod[] forms)
+        => AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, first, last, forms), MinuteRules);
+
+    /// <summary>整分（舊系統）：秒數捨去後再比，回傳的刷卡照樣到秒。例子是舊系統與本系統以秒計時判得不同的日子。</summary>
+    [Fact]
+    public void WholeMinutePrecisionDropsTheSecondsBeforeComparing()
+    {
+        // 09:00 那一分鐘內到不算遲到，應下班照彈性算 18:30，18:06 走是早退 24 分（以秒計會判成遲到、應下班 18:00、不算早退）。
+        var withinTheMinute = EvaluateByMinute(At(9, 0, 32), At(18, 6, 10));
+        AssertPresent(withinTheMinute, At(18, 30), 0, Minutes(24));
+        Assert.Equal((At(9, 0, 32), At(18, 6, 10)), (withinTheMinute.ClockIn, withinTheMinute.ClockOut));
+        Assert.Equal([new(AttendanceGapKind.EarlyLeave, At(18, 6), At(18, 30))], withinTheMinute.Gaps);
+
+        // 早走 19 秒、同一分鐘內：舊系統不算早退。
+        AssertPresent(EvaluateByMinute(At(8, 41, 30), At(18, 11, 11)), At(18, 11), 0, 0);
+        AssertPresent(Evaluate(At(8, 41, 30), At(18, 11, 11)), At(18, 11, 30), 0, 19);
+
+        AssertPresent(EvaluateByMinute(At(9, 0, 59), At(18, 30)), At(18, 30), 0, 0);
+        AssertPresent(EvaluateByMinute(At(9, 1, 0), At(18, 0)), At(18, 0), Minutes(1), 0);
+        AssertPresent(EvaluateByMinute(At(9, 5, 40), At(17, 59, 59)), At(18, 0), Minutes(5), Minutes(1));
+
+        // 表單補足也用捨去後的時間：09:01:19 視為 09:01，以秒計的差 1857 秒變成 1860 秒，扣表單後 18:01 可走。
+        var withForm = EvaluateByMinute(At(9, 1, 19), At(17, 30, 22), Approved(At(8, 30), At(9, 0)));
+        Assert.Equal((GapCoverage.Unexplained, 1860, At(18, 1)), (withForm.Coverage, withForm.ShortSeconds, withForm.AdjustedClockOut));
+
+        // 同一分鐘內的兩筆仍是兩筆刷卡，不是只有一筆。
+        Assert.Equal(AttendanceStatus.Present, EvaluateByMinute(At(8, 20, 5), At(8, 20, 40)).Status);
+        Assert.Equal(AttendanceReason.SinglePunch, EvaluateByMinute(At(8, 20, 5), At(8, 20, 5)).Reason);
+    }
+
+    /// <summary>
+    /// 整分時，帶秒數的刷卡與捨去秒數的整分刷卡判定完全相同；整分刷卡已由 <see cref="WholeMinutePunchesMatchTheLegacyJudgementExactly"/> 窮舉對過舊系統，
+    /// 兩者合起來等於任何刷卡都與舊系統一致。秒數與時間隨機抽樣（固定種子，失敗可重現）。
+    /// </summary>
+    [Fact]
+    public void WholeMinutePrecisionJudgesAnyPunchLikeItsWholeMinute()
+    {
+        var random = new Random(20261026);
+        for (var i = 0; i < 20000; i++)
+        {
+            var clockIn = new TimeOnly(random.Next(6, 23), random.Next(60));
+            var clockOut = clockIn.AddMinutes(random.Next(1, (int)(new TimeSpan(23, 59, 0) - clockIn.ToTimeSpan()).TotalMinutes + 1));
+            if (clockOut <= clockIn) continue;
+            FormPeriod[] forms = random.Next(3) == 0 ? [Approved(At(8, 30), At(8, 30).AddMinutes(random.Next(1, 600)))] : [];
+            var exact = EvaluateByMinute(At(clockIn.Hour, clockIn.Minute, random.Next(60)), At(clockOut.Hour, clockOut.Minute, random.Next(60)), forms);
+            var whole = EvaluateByMinute(At(clockIn.Hour, clockIn.Minute), At(clockOut.Hour, clockOut.Minute), forms);
+            // Gaps 是清單，record 的相等只比參考，另外逐筆比。
+            Assert.Equal(whole with { ClockIn = exact.ClockIn, ClockOut = exact.ClockOut, Gaps = exact.Gaps }, exact);
+            Assert.Equal(whole.Gaps, exact.Gaps);
+            // 刷卡本來就是整分時，整分與以秒計沒有差別。
+            var bySecond = Evaluate(At(clockIn.Hour, clockIn.Minute), At(clockOut.Hour, clockOut.Minute), forms: forms);
+            Assert.Equal(whole with { Gaps = bySecond.Gaps }, bySecond);
+            Assert.Equal(whole.Gaps, bySecond.Gaps);
+        }
     }
 
     [Fact]

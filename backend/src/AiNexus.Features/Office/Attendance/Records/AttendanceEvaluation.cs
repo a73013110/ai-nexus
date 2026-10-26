@@ -10,8 +10,8 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <item><paramref name="FormSeconds"/>：核准表單抵掉的秒數（截到當天上班時段、扣午休、重疊只算一次）。</item>
 /// <item><paramref name="AdjustedClockOut"/>：扣掉核准表單後的應下班；表單還不夠抵遲到、或已抵掉整天時為 null。</item>
 /// <item><paramref name="Coverage"/>：有遲到、早退或異常時，核准的表單是否補足，沒有缺口與今天為 null；
-/// <paramref name="ShortSeconds"/> 是核准表單還差的秒數（未補足與簽核中才有）。</item>
-/// <item><see cref="Gaps"/>：缺口落在哪些時段，讓 HR 對照簽核中假單的起訖、或通知補哪一段的單。</item>
+/// <paramref name="ShortSeconds"/> 是核准表單還差的秒數（未補足與流程中才有）。</item>
+/// <item><see cref="Gaps"/>：缺口落在哪些時段，讓 HR 對照流程中假單的起訖、或通知補哪一段的單。</item>
 /// </list>
 /// </summary>
 public sealed record AttendanceEvaluation(
@@ -54,14 +54,14 @@ public enum AttendanceGapKind
 
 /// <summary>
 /// 當天的缺口（遲到、早退或異常）有沒有表單補足（規則見 <see cref="AttendanceEvaluator"/>）。只有核准的表單算數；
-/// 要靠簽核中的單才補得足是 <see cref="Pending"/>，讓人知道還在等簽核，不是沒請假。
+/// 要靠流程中的單才補得足是 <see cref="Pending"/>，讓人知道還在等簽核，不是沒請假。
 /// </summary>
 public enum GapCoverage
 {
-    /// <summary>未補足：核准加簽核中的表單都不夠。</summary>
+    /// <summary>未補足：核准加流程中的表單都不夠。</summary>
     Unexplained = 0,
 
-    /// <summary>簽核中：核准的不夠，加上簽核中的才夠。</summary>
+    /// <summary>流程中：核准的不夠，加上流程中的才夠。</summary>
     Pending = 1,
 
     /// <summary>已補足：核准的表單時數夠。</summary>
@@ -93,7 +93,7 @@ public enum AttendanceStatus
 /// <summary><see cref="AttendanceStatus.Anomaly"/> 與 <see cref="AttendanceStatus.Undetermined"/> 的原因。</summary>
 public enum AttendanceReason
 {
-    /// <summary>異常：沒有刷卡，核准的表單也沒補足當天的工時（沒有表單、只請部分時段或還在簽核，見 <see cref="AttendanceEvaluation.Coverage"/>）。</summary>
+    /// <summary>異常：沒有刷卡，核准的表單也沒補足當天的工時（沒有表單、只請部分時段或還在流程中，見 <see cref="AttendanceEvaluation.Coverage"/>）。</summary>
     NoPunchOrLeave = 0,
 
     /// <summary>無法判定：沒有刷卡，表單無法取得。</summary>

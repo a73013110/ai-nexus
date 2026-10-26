@@ -25,6 +25,9 @@ public sealed class AttendanceRulesTests
         Assert.Contains("午休 12:00～13:30 不算在內", Rule(rules, "表單補足"));
         Assert.Contains("已補足", Rule(rules, "補足狀態"));
         Assert.Contains("退回結案是承辦人", Rule(rules, "假單與出差單"));
+        Assert.Contains("都以秒計", Rule(rules, "早退"));
+        Assert.Contains("流程中", Rule(rules, "補足狀態"));
+        Assert.Contains("09:00:59 到不算遲到", Rule(AttendanceRules.Describe(new WorkdayOptions { PunchPrecision = PunchPrecision.Minute }), "早退"));
         Assert.Equal(rules.Rules.Count, rules.Rules.Select(x => x.Title).Distinct().Count());
     }
 

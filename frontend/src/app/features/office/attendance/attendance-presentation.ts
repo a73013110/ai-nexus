@@ -164,7 +164,7 @@ export const GD_FORM_FLOW: Record<GdFormFlowOver, Presented> = {
  */
 export const GAP_COVERAGE: Record<NonNullable<GapCoverage>, Presented> = {
   Covered: { label: '已補足', tone: 'success' },
-  Pending: { label: '簽核中', tone: 'warning' },
+  Pending: { label: '流程中', tone: 'warning' },
   Unexplained: { label: '未補足', tone: 'danger' },
   Unknown: { label: '表單無法取得', tone: 'neutral' },
 };
@@ -213,12 +213,12 @@ export type PresentedForm = ReturnType<typeof presentForm>;
 /** 沒有刷卡時的原因：依表單的狀況說清楚是沒請假、只請了一部分還是還在簽核。 */
 function noPunchReason(day: AttendanceRecordDto) {
   if (!day.forms.length) return ATTENDANCE_REASON.NoPunchOrLeave;
-  return day.coverage === 'Pending' ? '沒有刷卡，表單還在簽核' : '沒有刷卡，核准的表單不足一天';
+  return day.coverage === 'Pending' ? '沒有刷卡，表單還在流程中' : '沒有刷卡，核准的表單不足一天';
 }
 
 /**
  * 狀態欄的標籤：文字寫當天發生什麼事（正常；遲到、早退各一個，兩者都有就兩個；異常分未刷卡、缺一筆刷卡），
- * 顏色跟著補足狀態（已補足綠、簽核中黃、未補足紅、表單無法取得灰），紅黃就是要追的；原因放在 title。
+ * 顏色跟著補足狀態（已補足綠、流程中黃、未補足紅、表單無法取得灰），紅黃就是要追的；原因放在 title。
  * 今天的無法判定只是打卡檔還沒匯入，另寫「今日未結算」並用灰色，不與真的無法判定混在一起。
  */
 function statusesOf(day: AttendanceRecordDto): Presented[] {
@@ -257,8 +257,8 @@ const presentGap = (gap: AttendanceGap) => ({
 });
 
 /**
- * 補足欄：HR 要追的是還差多少、差在哪一段，好通知補單或對照簽核中假單的起訖。狀態（`label`、`tone`）畫成標籤放在最前面。
- * - `short`：核准的表單還差多少（「差 30 分 57 秒」），未補足與簽核中才有；簽核中的差額在單核准後補上。
+ * 補足欄：HR 要追的是還差多少、差在哪一段，好通知補單或對照流程中假單的起訖。狀態（`label`、`tone`）畫成標籤放在最前面。
+ * - `short`：核准的表單還差多少（「差 30 分 57 秒」），未補足與流程中才有；流程中的差額在單核准後補上。
  * - `formHours`：已補足時抵掉的表單時數（「表單 30 分」）。
  * - `gaps`：缺口時段（「遲到 09:00–09:16:13」）；已補足不列。只是參考，補足比時數不比區間，差多少以 `short` 為準。
  * 沒有缺口時為 null。
@@ -327,12 +327,42 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
 }
 export type PresentedRecord = ReturnType<typeof presentRecord>;
 
-/** 一個人的小計：天數照舊系統（遲到、早退、異常各幾天），另數出未補足、簽核中的天數。 */
+/** 小計的順序：正常在前，接著要追的；不在表上的（未知的狀態）排最後。 */
+const SUMMARY_ORDER = [
+  '正常',
+  '遲到',
+  '早退',
+  '未刷卡',
+  '缺一筆刷卡',
+  '請假',
+  '無法判定',
+  '今日未結算',
+  '放假',
+];
+/** 小計裡要追的狀態加強調色；標籤本身的顏色跟著補足狀態，小計不分補足與否，所以另外固定。 */
+const SUMMARY_EMPHASIS: Readonly<Record<string, 'warning' | 'danger'>> = {
+  遲到: 'warning',
+  早退: 'warning',
+  未刷卡: 'danger',
+  缺一筆刷卡: 'danger',
+};
+const summaryRank = (label: string) => {
+  const index = SUMMARY_ORDER.indexOf(label);
+  return index < 0 ? SUMMARY_ORDER.length : index;
+};
+
+/**
+ * 一個人的小計：照狀態欄的標籤數天數（同一套 `statusesOf`，小計與標籤不會各說各話），只列有的；
+ * 遲到又早退的一天兩邊各算一天。另數出未補足、流程中的天數。
+ */
 export function summarizePerson(days: readonly AttendanceRecordDto[]) {
+  const counts = new Map<string, number>();
+  for (const day of days)
+    for (const { label } of statusesOf(day)) counts.set(label, (counts.get(label) ?? 0) + 1);
   return {
-    late: days.filter((day) => day.lateSeconds > 0).length,
-    early: days.filter((day) => day.earlyLeaveSeconds > 0).length,
-    anomalies: days.filter((day) => day.status === 'Anomaly').length,
+    statuses: [...counts]
+      .sort(([a], [b]) => summaryRank(a) - summaryRank(b))
+      .map(([label, count]) => ({ label, count, emphasis: SUMMARY_EMPHASIS[label] ?? null })),
     unexplained: days.filter((day) => day.coverage === 'Unexplained').length,
     pending: days.filter((day) => day.coverage === 'Pending').length,
   };

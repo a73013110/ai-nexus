@@ -41,17 +41,19 @@ public static class AttendanceRules
                     $"{Time(full.ScheduledStart)} 到，應下班 {Time(ExpectedClockOut(full.ScheduledStart, options))}。"),
                 new("遲到", $"晚於彈性終點上班為遲到，從彈性終點起算；遲到時應下班改為表定下班。" +
                     $"例：上班日 {Time(lateArrival)} 到，遲到 10 分，應下班 {Time(ExpectedClockOut(lateArrival, options))}。"),
-                new("早退", "早於應下班離開為早退。遲到與早退都以秒計，彈性時段以外沒有寬限。"),
+                new("早退", "早於應下班離開為早退。" + (options.PunchPrecision == PunchPrecision.Minute
+                    ? $"遲到與早退以整分計：刷卡的秒數捨去後再比（{Time(full.FlexEnd)}:59 到不算遲到），遲到、早退都是整分。"
+                    : "遲到與早退都以秒計，彈性時段以外沒有寬限。")),
                 new("只有一筆刷卡", "判為異常；分不出缺的是上班還是下班，所以不算遲到早退。"),
-                new("沒有刷卡", "核准的假單或出差單補足當天的工時為請假；沒有表單、只請了部分時段或表單還在簽核為異常。"),
-                new("假單與出差單", "取公文系統已核准與簽核中的表單，與當天有交集就列在當天，跨日、半天都一樣；" +
+                new("沒有刷卡", "核准的假單或出差單補足當天的工時為請假；沒有表單、只請了部分時段或表單還在流程中為異常。"),
+                new("假單與出差單", "取公文系統已核准與流程中的表單，與當天有交集就列在當天，跨日、半天都一樣；" +
                     "暫存、退回、銷單與退回結案不算（退回結案是承辦人把退回的單結案存查，不是核准）。"),
                 new("表單補足", $"表單只比時數、不比時段：核准表單的時數從當天的工時（上班日 {Hours(netHours)} 小時）扣掉，" +
                     $"剩下的不多於實際上班的時數就補足；遲到時表單至少要抵掉遲到的部分，晚走不抵遲到。{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。" +
                     $"例：上班日 {Seconds(slightlyLate)} 到、請 {Time(full.ScheduledStart)}～{Time(halfHour)} 的假，" +
                     $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}；" +
                     $"{Time(lateArrival)} 到、{Time(full.ScheduledEnd)} 走，遲到 10 分，但要 {Span(Short(lateArrival, full.ScheduledEnd, options))}的表單才補足（上班時數少了這麼多）。"),
-                new("補足狀態", $"有遲到、早退或異常才標：核准的表單夠為{Label(GapCoverage.Covered)}；加上簽核中的才夠為{Label(GapCoverage.Pending)}；" +
+                new("補足狀態", $"有遲到、早退或異常才標：核准的表單夠為{Label(GapCoverage.Covered)}；加上流程中的才夠為{Label(GapCoverage.Pending)}；" +
                     $"都不夠為{Label(GapCoverage.Unexplained)}，並寫出還差多少。遲到、早退的時間與小計照原本的判定，不因表單改變。"),
                 new("日型", "上班日、上午放假、下午放假與放假依公文系統的假日行事曆；放假整天不判定，刷卡照樣列出。行事曆沒有這一天時，週末當放假、平日無法判定。"),
                 new("無法判定", "公文系統連不上或對不到公文帳號時表單無法取得，沒刷卡的日子列為無法判定，不算異常。" +
@@ -71,7 +73,7 @@ public static class AttendanceRules
     public static string Label(GapCoverage? coverage) => coverage switch
     {
         GapCoverage.Covered => "已補足",
-        GapCoverage.Pending => "簽核中",
+        GapCoverage.Pending => "流程中",
         GapCoverage.Unexplained => "未補足",
         GapCoverage.Unknown => "表單無法取得",
         _ => "沒有缺口"

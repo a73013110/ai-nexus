@@ -38,18 +38,18 @@
 ## 出勤判定
 
 - 規則在 `Attendance:Workday`，`FullDay`、`MorningOff`、`AfternoonOff` 各一份（預設值與驗證見 [AttendanceOptions](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceOptions.cs)）。
-- 判定是 [AttendanceEvaluator](../../backend/src/AiNexus.Features/Office/Attendance/Records/AttendanceEvaluator.cs) 的純函式，遲到與早退以秒計；行事曆缺日時週末當放假、平日無法判定，表單無法取得時沒刷卡的日子無法判定。查詢與今天、GD 連不上的處理見 [出勤紀錄](attendance-records.md)。
+- 判定是 [AttendanceEvaluator](../../backend/src/AiNexus.Features/Office/Attendance/Records/AttendanceEvaluator.cs) 的純函式；遲到早退的精度是 `PunchPrecision`：`Second` 以秒計，`Minute` 捨去秒數（同舊系統）。行事曆缺日時週末當放假、平日無法判定，表單無法取得時沒刷卡的日子無法判定。查詢與今天、GD 連不上的處理見 [出勤紀錄](attendance-records.md)。
 
 ### 表單補足
 
-遲到、早退與異常照舊系統判，不因表單改變（小計同舊系統）；另標一個補足狀態（`GapCoverage`）。規則只寫在 `AttendanceEvaluator` 的 `Shift.Need`（這天要多少秒的表單）與 `Shift.ClockOutWith`（扣表單後的應下班），改規則改這兩處：
+遲到、早退與異常照舊系統判，不因表單改變；另標一個補足狀態（`GapCoverage`）。規則只寫在 `AttendanceEvaluator` 的 `Shift.Need`（這天要多少秒的表單）與 `Shift.ClockOutWith`（扣表單後的應下班），改規則改這兩處：
 
 - **只有核准（`Decide`）的假單與出差單算數**。流程中（`Send`）的單照樣列出，並寫出停在誰，但不算補足；`Finish` 是承辦人把**退回**的單結案存查（`FLOW_BACKUP_*` 看得出先退回），不是核准，與暫存、退回、銷單一樣不讀。
 - **比時數，不比時段**：核准表單的時數從當天的淨工時（上班日 8 小時）扣掉，剩下的不多於實際上班時數就補足；遲到時表單至少要抵掉彈性終點後的遲到，晚走不抵遲到（同舊系統遲到照表定下班）。表單不必對齊缺口。
 - 時數都扣午休（`BreakStart`～`BreakEnd`）；表單只算彈性起點到最晚應下班之間，重疊只算一次，最多一天。設定驗證要求午休在彈性終點之後、最早應下班之前，所以沒有表單時與舊系統的遲到早退同時有、同時沒有缺口。
-- 例：09:01:19 到、請 08:30～09:00，等於 08:31:19 到，扣表單後 18:01:19 可下班，17:30:22 走差 30 分 57 秒；09:00:20 到、請 16:00～18:00，16:30:20 可下班；09:10 到、18:00 走、沒請假，遲到 10 分，但只上了 7 小時 20 分，要 40 分的表單。
+- 例：09:01:19 到、請 08:30～09:00，等於 08:31:19 到，扣表單後 18:01:19 可下班，17:30:22 走差 30 分 57 秒；09:10 到、18:00 走、沒請假，遲到 10 分，但只上了 7 小時 20 分，要 40 分的表單。
 - 沒有刷卡：核准的表單抵掉整天就是請假，否則是異常。只有一筆刷卡仍是異常，上班時數當成 0。
-- 狀態：核准的夠→已補足（`Covered`）；加上簽核中的才夠→簽核中（`Pending`）；都不夠→未補足（`Unexplained`），`ShortSeconds` 是核准表單還差的秒數；表單無法取得→`Unknown`。沒有缺口與今天沒有狀態。`AdjustedClockOut` 是扣核准表單後的應下班，表單不夠抵遲到或已抵掉整天時為 null。`TheFormRuleIsConsistentForEveryPunchTime` 以整天的上下班時間檢查這些性質。`Gaps` 是缺口時段（不扣表單）。
+- 狀態：核准的夠→已補足（`Covered`）；加上流程中的才夠→流程中（`Pending`）；都不夠→未補足（`Unexplained`），`ShortSeconds` 是核准表單還差的秒數；表單無法取得→`Unknown`。沒有缺口與今天沒有狀態。`AdjustedClockOut` 是扣核准表單後的應下班，表單不夠抵遲到或已抵掉整天時為 null。`TheFormRuleIsConsistentForEveryPunchTime` 以整天的上下班時間檢查這些性質。`Gaps` 是缺口時段（不扣表單）。
 
 ## 稽核
 

@@ -46,13 +46,16 @@ public static class AttendanceEvaluator
     /// <list type="bullet">
     /// <item>表單比時數、不比區間：核准表單的時數直接從當天該上的工時扣掉，表單不必蓋在缺口上（09:01 到、請 08:30～09:00，等於 08:31 到）。</item>
     /// <item>補足＝扣掉表單後的工時不多於實際上班時數，且表單至少抵掉彈性終點後的遲到：晚走不抵遲到（同舊系統遲到照表定下班）。</item>
-    /// <item>原始的遲到、早退、應下班不因表單改變（小計同舊系統）；有缺口才判補足，核准的夠為已補足、加上簽核中的才夠為簽核中、都不夠為未補足。</item>
+    /// <item>原始的遲到、早退、應下班不因表單改變（照舊系統的算法）；有缺口才判補足，核准的夠為已補足、加上流程中的才夠為流程中、都不夠為未補足。</item>
     /// <item>整天沒刷卡而核准的表單抵掉整天就是請假（<see cref="AttendanceStatus.OnLeave"/>），不算異常；只有一筆刷卡仍是異常，上班時數當成 0。</item>
+    /// <item>比對前刷卡依 <see cref="WorkdayOptions.PunchPrecision"/> 捨去（整分時 09:00:59 視為 09:00）；回傳的上下班刷卡照樣到秒。</item>
     /// </list>
     /// </remarks>
     public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules)
     {
         var (clockIn, clockOut) = Punches(day.FirstPunch, day.LastPunch);
+        // 只有一筆刷卡仍看到秒的原值：整分比對只是放寬遲到早退，同一分鐘內刷兩次還是兩筆。
+        var (inAt, outAt) = (Judged(clockIn, rules.PunchPrecision), Judged(clockOut, rules.PunchPrecision));
         var unjudged = new AttendanceEvaluation(day.Date, day.DayType, AttendanceStatus.Undetermined, null, clockIn, clockOut, null, 0, 0, day.FormState);
 
         if (day.DayType == AttendanceDayType.DayOff) return unjudged with { Status = AttendanceStatus.DayOff };
@@ -68,7 +71,7 @@ public static class AttendanceEvaluator
         if (clockIn is null && day.Forms is null) return unjudged with { Reason = AttendanceReason.FormsUnavailable };
 
         var shift = new Shift(day.Date, rule);
-        var need = shift.Need(clockIn, clockOut);
+        var need = shift.Need(inAt, outAt);
         var approved = day.Forms is { } forms ? shift.FormSeconds(forms.Where(x => x.Approved)) : 0;
         int? filed = day.Forms is { } all ? shift.FormSeconds(all) : null;
         GapCoverage? coverage = need == 0 ? null
@@ -81,7 +84,7 @@ public static class AttendanceEvaluator
             FormSeconds = approved, Coverage = coverage, ShortSeconds = coverage is GapCoverage.Unexplained or GapCoverage.Pending ? need - approved : 0
         };
 
-        if (clockIn is null || clockOut is null)
+        if (inAt is null || outAt is null)
             return coverage == GapCoverage.Covered
                 ? judged with { Status = AttendanceStatus.OnLeave, Coverage = null }
                 : judged with { Status = AttendanceStatus.Anomaly, Reason = AttendanceReason.NoPunchOrLeave, Gaps = [new(AttendanceGapKind.Absent, shift.ScheduledStart, shift.ScheduledEnd)] };
@@ -91,18 +94,18 @@ public static class AttendanceEvaluator
         if (clockIn == clockOut) return judged with { Status = AttendanceStatus.Anomaly, Reason = AttendanceReason.SinglePunch };
 
         // 遲到從彈性終點起算（彈性內到都不算遲到）；遲到照表定下班，否則上班（早於彈性起點以起點計）＋時數。
-        var late = clockIn.Value > shift.FlexEnd;
-        var expected = late ? shift.ScheduledEnd : shift.ClockOutWith(clockIn.Value, 0)!.Value;
-        var early = clockOut.Value < expected;
+        var late = inAt.Value > shift.FlexEnd;
+        var expected = late ? shift.ScheduledEnd : shift.ClockOutWith(inAt.Value, 0)!.Value;
+        var early = outAt.Value < expected;
         List<AttendanceGap> gaps = [];
-        if (late) gaps.Add(new(AttendanceGapKind.Late, shift.FlexEnd, clockIn.Value));
-        if (early) gaps.Add(new(AttendanceGapKind.EarlyLeave, clockOut.Value, expected));
+        if (late) gaps.Add(new(AttendanceGapKind.Late, shift.FlexEnd, inAt.Value));
+        if (early) gaps.Add(new(AttendanceGapKind.EarlyLeave, outAt.Value, expected));
         return judged with
         {
             Status = AttendanceStatus.Present, ExpectedClockOut = expected,
-            LateSeconds = late ? Seconds(clockIn.Value - shift.FlexEnd) : 0,
-            EarlyLeaveSeconds = early ? Seconds(expected - clockOut.Value) : 0,
-            AdjustedClockOut = approved > 0 ? shift.ClockOutWith(clockIn.Value, approved) : null,
+            LateSeconds = late ? Seconds(inAt.Value - shift.FlexEnd) : 0,
+            EarlyLeaveSeconds = early ? Seconds(expected - outAt.Value) : 0,
+            AdjustedClockOut = approved > 0 ? shift.ClockOutWith(inAt.Value, approved) : null,
             Gaps = gaps
         };
     }
@@ -209,6 +212,10 @@ public static class AttendanceEvaluator
         var local = TaipeiTime.Of(value);
         return local.AddTicks(-(local.Ticks % TimeSpan.TicksPerSecond));
     }
+
+    /// <summary>判定用的刷卡時間：整分時捨去秒數（+08:00 是整點時差，本地與 UTC 捨去結果相同）。</summary>
+    private static DateTimeOffset? Judged(DateTimeOffset? punch, PunchPrecision precision)
+        => precision == PunchPrecision.Minute && punch is { } value ? value.AddTicks(-(value.Ticks % TimeSpan.TicksPerMinute)) : punch;
 
     /// <summary>以秒計、不足一秒捨去。</summary>
     private static int Seconds(TimeSpan span) => (int)Math.Floor(span.TotalSeconds);

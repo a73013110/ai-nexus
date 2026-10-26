@@ -9,7 +9,7 @@ public sealed record AttendanceDay(DateOnly Date, AttendanceDayType DayType, Dat
     public FormState FormState => Forms is null ? FormState.Unavailable : Forms.Count > 0 ? FormState.Filed : FormState.None;
 }
 
-/// <summary>一張假單或出差單的一段期間；<paramref name="Approved"/> 為 false 是還在簽核，不算補足、只算「簽核中」。</summary>
+/// <summary>一張假單或出差單的一段期間；<paramref name="Approved"/> 為 false 是還在流程中，不算補足、只算「流程中」。</summary>
 public sealed record FormPeriod(DateTimeOffset StartsAt, DateTimeOffset EndsAt, bool Approved);
 
 /// <summary>當天的日型，由 GD <c>Pub_Days</c> 的 AM、PM 推得（<see cref="AttendanceEvaluator.DayTypeOf"/>）。</summary>
@@ -29,7 +29,7 @@ public enum FormState
 {
     None = 0,
 
-    /// <summary>當天有假單或出差單（核准或簽核中）；是否補足見 <see cref="GapCoverage"/>。</summary>
+    /// <summary>當天有假單或出差單（核准或流程中）；是否補足見 <see cref="GapCoverage"/>。</summary>
     Filed = 1,
 
     /// <summary>表單無法取得：GD 連不上，或這個人對不到公文帳號（<c>GdFormLookup.Unmapped</c>）；不能當成沒請假。</summary>

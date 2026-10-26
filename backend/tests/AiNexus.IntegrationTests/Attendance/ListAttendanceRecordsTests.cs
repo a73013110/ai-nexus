@@ -160,6 +160,41 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
+    public async Task PunchesBelongToWhoeverHeldTheCardAtThatMomentAndCardChangesMergeIntoOneDay()
+    {
+        await using var session = Create();
+        var hr = await session.PersonAsync("hr");
+        var bob = await session.PersonAsync("bob");
+        var carol = await session.PersonAsync("carol");
+        var dave = await session.PersonAsync("dave");
+        await session.GrantAsync(hr, DataScopes.All);
+        // A1 在 19 日中午由 carol 交給 bob：同一天、同一張卡的刷卡依刷卡當下的持有人分開，不會把 carol 的上班當成 bob 的。
+        await session.HoldAsync(carol, "A1", endsAt: At(19, 12));
+        await session.HoldAsync(bob, "A1", startsAt: At(19, 12));
+        await session.PunchAsync("A1", At(19, 8, 40), At(19, 18, 5), At(20, 8, 30), At(20, 18, 0));
+        // dave 在 20 日下午換卡：兩張卡的刷卡合併成一天，上班取舊卡、下班取新卡，不判成兩次只刷一筆。
+        await session.HoldAsync(dave, "B1", endsAt: At(20, 13));
+        await session.HoldAsync(dave, "B2", startsAt: At(20, 13));
+        await session.PunchAsync("B1", At(20, 8, 50));
+        await session.PunchAsync("B2", At(20, 18, 30));
+        using var client = await session.Factory.SignedInAsync("hr");
+
+        var people = (await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People;
+
+        var before = Assert.Single(people, x => x.UserId == carol);
+        Assert.Equal([19], before.Days.Select(x => x.Date.Day));
+        Assert.Equal((AttendanceStatus.Anomaly, AttendanceReason.SinglePunch, At(19, 8, 40)), (Day(before, 19).Status, Day(before, 19).Reason, Day(before, 19).ClockIn));
+        var after = Assert.Single(people, x => x.UserId == bob);
+        Assert.Equal([19, 20, 21], after.Days.Select(x => x.Date.Day));
+        Assert.Equal((AttendanceStatus.Anomaly, AttendanceReason.SinglePunch, At(19, 18, 5)), (Day(after, 19).Status, Day(after, 19).Reason, Day(after, 19).ClockIn));
+        Assert.Equal((AttendanceStatus.Present, At(20, 8, 30), At(20, 18, 0), 0, 0), (Day(after, 20).Status, Day(after, 20).ClockIn, Day(after, 20).ClockOut, Day(after, 20).LateSeconds, Day(after, 20).EarlyLeaveSeconds));
+
+        var changed = Day(Assert.Single(people, x => x.UserId == dave), 20);
+        Assert.Equal((AttendanceStatus.Present, At(20, 8, 50), At(20, 18, 30), At(20, 18, 20), 0, 0),
+            (changed.Status, changed.ClockIn, changed.ClockOut, changed.ExpectedClockOut, changed.LateSeconds, changed.EarlyLeaveSeconds));
+    }
+
+    [Fact]
     public async Task HoldersWithoutAnAccountHangOnTheirCardAndAreVisibleOnlyCompanyWide()
     {
         await using var session = Create();

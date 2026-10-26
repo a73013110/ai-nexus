@@ -224,13 +224,17 @@
           >表單無法取得</nx-status-badge
         >
       }
-      <!-- 與舊系統姓名下方的「遲到(計)」等小計相同，0 天也列出，一眼比得出誰有狀況。 -->
+      <!-- 照狀態欄的標籤數天數，只列有的；遲到、早退黃，未刷卡、缺一筆刷卡紅。 -->
       <span class="records-person-summary">
-        <span [class.records-count-warning]="group.late">遲到 {{ group.late }} 天</span>
-        <span [class.records-count-warning]="group.early">早退 {{ group.early }} 天</span>
-        <span [class.records-count-danger]="group.anomalies">異常 {{ group.anomalies }} 天</span>
+        @for (status of group.statuses; track status.label) {
+          <span
+            [class.records-count-warning]="status.emphasis === 'warning'"
+            [class.records-count-danger]="status.emphasis === 'danger'"
+            >{{ status.label }} {{ status.count }} 天</span
+          >
+        }
       </span>
-      <!-- 上面是舊系統的天數；這裡只標要追的：表單不夠的、表單還沒核准的。 -->
+      <!-- 上面是各狀態的天數；這裡只標要追的：表單不夠的、表單還沒核准的。 -->
       @if (group.unexplained || group.pending) {
         <span class="records-person-flags">
           @if (group.unexplained) {
@@ -239,8 +243,8 @@
             >
           }
           @if (group.pending) {
-            <nx-status-badge tone="warning" title="表單還在公文系統簽核，核准後才算補足"
-              >簽核中 {{ group.pending }} 天</nx-status-badge
+            <nx-status-badge tone="warning" title="表單還在公文系統流程中，核准後才算補足"
+              >流程中 {{ group.pending }} 天</nx-status-badge
             >
           }
         </span>
@@ -363,7 +367,7 @@
                   >
                 }
               </td>
-              <!-- 遲到、早退的時數照舊系統；顏色跟著當天的補足狀態（已補足綠、簽核中黃、未補足紅）。 -->
+              <!-- 遲到、早退的時數照舊系統；顏色跟著當天的補足狀態（已補足綠、流程中黃、未補足紅）。 -->
               <td nxTableColumn="late" data-label="遲到">
                 @if (row.late) {
                   <span class="records-gap" [attr.data-tone]="row.coverage?.tone">{{
@@ -382,7 +386,7 @@
                   <span class="records-none">—</span>
                 }
               </td>
-              <!-- HR 要追的：狀態標籤在前，接著還差多少（差額整段不斷行）、缺在哪幾段，緊鄰表單欄好對照簽核中假單的起訖。 -->
+              <!-- HR 要追的：狀態標籤在前，接著還差多少（差額整段不斷行）、缺在哪幾段，緊鄰表單欄好對照流程中假單的起訖。 -->
               <td nxTableColumn="coverage" data-label="補足">
                 @if (row.coverage; as coverage) {
                   <div class="records-gap-cell" [attr.data-tone]="coverage.tone">

@@ -181,7 +181,12 @@ describe('AttendanceRecordsPage', () => {
     expect(query.userId).toBeUndefined();
     expect(organization.units).not.toHaveBeenCalled();
     expect(root.querySelector('.records-person-row')?.textContent).toContain('王小明');
-    expect(root.querySelector('.records-person-row')?.textContent).toContain('異常 1 天');
+    // 小計照狀態標籤數天數，只列有的。
+    expect(
+      [...root.querySelector('.records-person-summary')!.children].map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(['遲到 1 天', '未刷卡 1 天']);
     const rows = root.querySelectorAll('.records-person-group tr:not(.records-person-row)');
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('08:59:03');
@@ -194,7 +199,7 @@ describe('AttendanceRecordsPage', () => {
     const person = rows[0].querySelector('.records-person-cell')!;
     expect(person.getAttribute('rowspan')).toBe('2');
     expect(person.textContent).toContain('王小明');
-    expect(person.textContent).toContain('早退 0 天');
+    expect(person.textContent).toContain('未刷卡 1 天');
     expect(rows[1].querySelector('.records-person-cell')).toBeNull();
     // 遲到的上班直接標色；沒刷卡也沒表單補足在上下班格標「未刷卡」。
     expect(rows[0].querySelector('.records-time-flag')?.textContent).toContain('08:59:03');
@@ -564,7 +569,7 @@ describe('AttendanceRecordsPage', () => {
     expect(gap.getAttribute('data-tone')).toBe('warning');
     expect(gap.querySelector('.records-short')?.textContent?.trim()).toBe('差 18 分 6 秒');
     expect(gap.querySelector('.records-gap-head nx-status-badge')?.textContent?.trim()).toBe(
-      '簽核中',
+      '流程中',
     );
     expect(
       [...gap.querySelectorAll('.records-gaps li')].map(
@@ -574,9 +579,9 @@ describe('AttendanceRecordsPage', () => {
     ).toEqual(['遲到 09:00–09:03:06', '早退 17:45–18:00']);
     expect(row.querySelector('.records-adjusted')?.textContent?.trim()).toBe('扣表單 18:03:06');
     expect(row.querySelector('.records-time-flag')?.getAttribute('title')).toBe(
-      '遲到 3 分 6 秒・簽核中',
+      '遲到 3 分 6 秒・流程中',
     );
-    expect(root.querySelector('.records-person-flags')?.textContent).toContain('簽核中 1 天');
+    expect(root.querySelector('.records-person-flags')?.textContent).toContain('流程中 1 天');
   });
 
   it('does not offer an export when nobody is listed', async () => {

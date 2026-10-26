@@ -223,15 +223,18 @@ describe('attendance presentation', () => {
       '',
     );
     expect(pending.coverage?.short).toBe('差 8 小時');
-    expect(pending.reason).toBe('沒有刷卡，表單還在簽核');
+    expect(pending.reason).toBe('沒有刷卡，表單還在流程中');
     expect(pending.statuses).toEqual([{ label: '未刷卡', tone: 'warning' }]);
     expect(pending.coverage?.gaps).toEqual([{ kind: '未刷卡', time: '08:30–18:00' }]);
     // 只有真的無法判定才在標籤下另寫原因。
     expect(pending.note).toBe('');
-    expect(summarizePerson([base.day, covered.day, pending.day])).toEqual({
-      late: 2,
-      early: 2,
-      anomalies: 1,
+    // 小計照狀態標籤數：只列有的、依固定順序（不照出現的先後），遲到又早退的一天兩邊各算一天。
+    expect(summarizePerson([pending.day, base.day, covered.day])).toEqual({
+      statuses: [
+        { label: '遲到', count: 2, emphasis: 'warning' },
+        { label: '早退', count: 2, emphasis: 'warning' },
+        { label: '未刷卡', count: 1, emphasis: 'danger' },
+      ],
       unexplained: 1,
       pending: 1,
     });

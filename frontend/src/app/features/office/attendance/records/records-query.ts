@@ -7,7 +7,7 @@ import { monthBounds, shiftMonth, taipeiToday } from '../attendance-presentation
 /**
  * 出勤紀錄的查詢條件；區間預設本月，套用當下才換算成起訖（跨月後重新查詢就是新的月份）。
  * `person` 是使用者 ID，或一張卡上只有姓名的持有人（`card:卡號`，見 `cardKey`）。
- * `coverage` 是查詢列前方的切換（全部／未補足／簽核中），切換即套用。
+ * `coverage` 是查詢列前方的切換（全部／未補足／流程中），切換即套用。
  */
 export interface RecordsQuery {
   range: TimeRange;
@@ -23,7 +23,7 @@ export const RECORD_COVERAGES: readonly { value: RecordsCoverage; label: string;
   [
     { value: '', label: '全部', param: '' },
     { value: 'Unexplained', label: '未補足', param: 'unexplained' },
-    { value: 'Pending', label: '簽核中', param: 'pending' },
+    { value: 'Pending', label: '流程中', param: 'pending' },
   ];
 
 /** 與後端 `AttendanceRecordsFilter.MaxRangeDays` 相同；伺服器仍會以 `attendance_records_range_invalid` 拒絕。 */
