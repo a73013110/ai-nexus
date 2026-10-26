@@ -3,7 +3,6 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.AccessControl;
 
@@ -11,7 +10,7 @@ namespace AiNexus.Features.Admin.AccessControl;
 /// 有效授權，直接從 SQL 讀取。同一個 HTTP 請求內每位使用者最多讀一次；下一個請求會重新讀，所以撤銷對之後的每個請求都會生效。
 /// 背景工作，以及長駐請求為定期檢查建立的新 scope，都不是該請求自己的 scope，因此每次都重新讀取。
 /// </summary>
-public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHttpContextAccessor http, IServiceProvider scope, IOptions<AccessControlOptions> settings)
+public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHttpContextAccessor http, IServiceProvider scope)
 {
     private readonly Dictionary<Guid, AccessDto> grants = [];
 
@@ -30,17 +29,6 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     /// <summary>使用者目前是否持有 <paramref name="feature"/>（同 <see cref="ForUserAsync"/>，同一請求內共用讀取結果）。</summary>
     public async Task<bool> HoldsAsync(Guid user, string feature, CancellationToken ct)
         => (await ForUserAsync(user, ct)).Features.Any(x => x.Id == feature);
-
-    /// <summary>
-    /// 在 <see cref="ForUserAsync"/> 的結果上加入使用者看得到的選單樹（<see cref="NavigationTree.Build"/>），供 <c>/me</c> 與存取預覽使用；
-    /// 授權檢查直接呼叫 <see cref="ForUserAsync"/>，略過選單查詢。外部連結每次都再比對允許清單：主機移出清單（設定改完、站台重新啟動）後，已存的連結就不再輸出。
-    /// </summary>
-    public async Task<AccessDto> WithNavigationAsync(Guid user, CancellationToken ct)
-    {
-        var access = await ForUserAsync(user, ct);
-        var tree = NavigationTree.Build(await NavigationItemsAsync(ct), access.Features, access.Groups.Select(x => x.Id), settings.Value.NavigationLinkHosts);
-        return access with { Navigation = tree };
-    }
 
     /// <summary>所有選單節點（平面清單、含外部連結的可見群組），同層依 <c>SortOrder</c>、再依 Id；管理端清單與選單樹共用。</summary>
     public async Task<IReadOnlyList<NavigationItemDto>> NavigationItemsAsync(CancellationToken ct)
@@ -75,7 +63,7 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var scopes = granted.Where(x => x.Scope is not null && FeatureCatalog.Find(x.Feature.Id)?.Scopes.Contains(x.Scope) == true)
             .GroupBy(x => x.Feature.Id, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope!).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
-        return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { Scopes = scopes };
+        return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { GrantedScopes = scopes };
     }
 
     // 啟用的使用者經由啟用的角色取得的啟用群組。SQL 報表（儲存上限、管理列表）用同一條規則的 accesscontrol.udf_UserGroups；

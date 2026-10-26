@@ -69,7 +69,7 @@ const DEFAULT_PAGE_SIZE = 20;
  * 名單依人分組、依人分頁（區間最長一年，一次只畫一頁的人）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
  * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單；單位放在人員前面，選了單位後人員選單只列那個單位的人。
  * 沒有刷卡的放假日預設不列（只有表單的也一樣，勾「含放假日」才列），放假日附假日設定的備註。
- * 單位清單只有組織管理權限讀得到，沒有時不提供單位選單（連結帶入的單位照樣查詢）。
+ * 單位與人員選單只給資料範圍看得到別人的人；單位清單另外要組織管理權限。
  * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供。
  * 每人一段：最左的人員欄跨過那個人的每一天、捲動時黏住，段落交替底色，看任何一列都知道是誰；
  * 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字），遲到、早退欄照樣列出時數。手機卡片改用段首的姓名列。
@@ -119,12 +119,16 @@ export class AttendanceRecordsPage {
   readonly coverages = RECORD_COVERAGES;
   /** 隱藏的卡在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
   readonly cardsRoute = routeOf('attendance.cards');
+  /** 資料範圍看得到本人以外的人才有單位與人員篩選；由 `/me` 一進頁面就知道，只看得到自己的人不會先閃出欄位，也不讀這兩份選單。 */
+  readonly seesOthers = computed(() => this.session.seesOthers('attendance.records'));
+  /** 單位清單另外只有組織管理權限讀得到；沒有時不提供單位選單（連結帶入的單位照樣查詢）。 */
+  readonly showUnits = computed(() => this.seesOthers() && this.session.has('organization'));
   private readonly unitsRead = apiResource({
     feature: 'organization',
-    params: () => (this.session.has('organization') ? true : undefined),
+    params: () => (this.showUnits() ? true : undefined),
     loader: () => this.organization.units(),
   });
-  /** 單位清單讀取中（有組織權限才會讀）；選單先佔位轉圈。 */
+  /** 單位清單讀取中；選單先佔位轉圈。 */
   readonly unitsLoading = this.unitsRead.refreshing;
   /** 停用的單位也能篩（看它過去的出勤），預設收起、面板底部可勾選列出。 */
   readonly unitNodes = computed(() => {
@@ -138,9 +142,9 @@ export class AttendanceRecordsPage {
   // 標明型別：讀取依 `query` 的草稿，而 `query` 的 chip 名稱又來自這份選單，推論會繞成一圈。
   private readonly peopleRead: ApiResource<AttendancePersonOptionDto[]> = apiResource({
     feature: 'attendance.records',
-    // 讀取在建構完成後才開始，這時 `query` 已經建立。
-    params: () => ({ unitId: this.query.draft().unitId }),
-    loader: (request, signal) => this.api.people(request.unitId, signal),
+    // 讀取在建構完成後才開始，這時 `query` 已經建立；只回傳單位字串，草稿其他欄位（頁籤、區間）變動不重讀。
+    params: () => (this.seesOthers() ? this.query.draft().unitId : undefined),
+    loader: (unitId, signal) => this.api.people(unitId, signal),
   });
   readonly peopleLoading = this.peopleRead.refreshing;
   /** 使用者以 ID、沒有帳號的資料以卡號（`card:卡號`）為值；說明寫帳號或卡號（搜尋找得到），狀態以標籤列出。 */
@@ -175,7 +179,9 @@ export class AttendanceRecordsPage {
     }),
   );
   readonly draft = this.query.draft;
-  readonly tour = computed(() => attendanceRecordsTour({ units: !!this.unitNodes() }));
+  readonly tour = computed(() =>
+    attendanceRecordsTour({ people: this.seesOthers(), units: this.showUnits() }),
+  );
   /** 已套用的條件（換算成起訖）；換頁與每頁人數沿用它，不寫進網址。 */
   private readonly filters = signal<AttendanceRecordFilters | undefined>(undefined);
   readonly pageIndex = signal(0);
@@ -210,14 +216,6 @@ export class AttendanceRecordsPage {
   readonly rulesError = this.rulesRead.error;
   readonly exporting = signal(false);
   readonly exportError = signal('');
-  /** 只看得到自己（選單只有一個人）時不顯示人員選單；已指定某人、選了單位（單位內可能只剩一人）或讀取中時佔住欄位。 */
-  readonly showPeople = computed(
-    () =>
-      this.personOptions().length > 2 ||
-      !!this.draft().person ||
-      !!this.draft().unitId ||
-      this.peopleLoading(),
-  );
   readonly columns: TableColumn[] = [
     { id: 'date', label: '日期', hideable: false },
     { id: 'dayType', label: '日型' },

@@ -10,6 +10,7 @@ using AiNexus.Features.Work.Chat.Context;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.ProjectApi;
 using AiNexus.Features.Admin.AccessControl.Management;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Operations;
 
@@ -27,6 +28,9 @@ public sealed class FeatureAccessTests
         Assert.Equal("workspace", Assert.Single(me.Access.Groups).Id);
         Assert.Contains(new FeatureDto("chat", "對話", "/work/chat", "chat"), me.Access.Features);
         Assert.Equal(me.Access.Features.Count, me.Access.Features.Select(x => x.Id).Distinct().Count());
+        // 只列宣告了範圍的功能，畫面據此決定版面（只看得到本人時不顯示選人）。
+        Assert.Equal([DataScopes.Own], me.Access.DataScopes[FeatureCatalog.AttendanceRecords]);
+        Assert.DoesNotContain(FeatureCatalog.Chat, me.Access.DataScopes.Keys);
         (await client.GetAsync("/api/v1/models")).EnsureSuccessStatusCode();
     }
 

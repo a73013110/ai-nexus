@@ -35,4 +35,10 @@ public interface IDataScope
     /// 功能在目錄沒有宣告範圍是程式錯誤，直接拋出：宣告範圍才代表管理介面能設定它。
     /// </summary>
     Task<EffectiveDataScope> ForAsync(Guid userId, string featureId, CancellationToken ct);
+
+    /// <summary>
+    /// 使用者每個已授權且宣告了範圍的功能 → 有效範圍代碼（同 <see cref="ForAsync"/> 的 <see cref="EffectiveDataScope.Scopes"/>，由窄到寬），沒有範圍的功能不列。
+    /// 不計算單位：給畫面決定版面（<c>/me</c>），資料仍由查詢以 <see cref="ForAsync"/> 篩選。
+    /// </summary>
+    Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> ScopesAsync(Guid userId, CancellationToken ct);
 }

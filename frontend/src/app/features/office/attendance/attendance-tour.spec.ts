@@ -158,7 +158,7 @@ describe('attendanceCalendarTour', () => {
 
 describe('attendanceRecordsTour', () => {
   it('covers the rules, query, gap summary, grouped list and Excel export', () => {
-    const tour = attendanceRecordsTour({ units: true });
+    const tour = attendanceRecordsTour({ people: true, units: true });
     expect(titles(tour)).toEqual([
       '每天的出勤判定',
       '判定規則',
@@ -171,7 +171,13 @@ describe('attendanceRecordsTour', () => {
     expect(copy(tour)).toContain('單位（含下層）');
     expect(copy(tour)).toContain('含放假日');
     expect(copy(tour)).toContain('已補足');
-    expect(copy(attendanceRecordsTour({ units: false }))).not.toContain('單位');
+    const people = copy(attendanceRecordsTour({ people: true, units: false }));
+    expect(people).not.toContain('單位');
+    expect(people).toContain('區間（最長一年）、人員與是否含放假日');
+    // 只看得到自己時查詢列沒有人員。
+    expect(copy(attendanceRecordsTour({ people: false, units: false }))).toContain(
+      '區間（最長一年）與是否含放假日',
+    );
     scoped(tour, 'nx-attendance-records-page');
   });
 });

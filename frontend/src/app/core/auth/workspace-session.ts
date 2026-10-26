@@ -4,6 +4,7 @@ import { WorkspaceApi } from '../api/workspace-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
 import { catalogFeature, type FeatureId } from '../api/catalog';
+import type { DataScopeId } from '../api/feature-catalog';
 
 /** 管理寫入因帳號正在測試其他身分而被拒絕時顯示。 */
 export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
@@ -48,6 +49,14 @@ export class WorkspaceSession {
   }
   has(id: FeatureId) {
     return this.me()?.access.features?.some((item) => item.id === id) ?? false;
+  }
+  /** 功能的有效資料範圍（含主管範圍，由窄到寬）；未授權或功能沒有範圍時為空。只拿來決定版面，資料一律由伺服器依範圍篩選。 */
+  scopes(id: FeatureId): readonly DataScopeId[] {
+    return (this.me()?.access.dataScopes[id] ?? []) as DataScopeId[];
+  }
+  /** 看得到本人以外的資料：決定要不要顯示選人、選單位等篩選，讓只看得到自己的人一進頁面就是最終版面。 */
+  seesOthers(id: FeatureId) {
+    return this.scopes(id).some((scope) => scope !== 'own');
   }
   /**
    * 管理員在 `/me` 覆寫的名稱優先，其次是目錄的預設名稱（載入前、未授予的功能、閱讀器）。

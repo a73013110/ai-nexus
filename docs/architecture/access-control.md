@@ -26,7 +26,7 @@ AD login → Users（SID）→ UserRoles → Roles
                                                    → RoleGroupFeatures（含範圍）→ Features
 ```
 
-登入後前端自動呼叫 `/api/v1/me`，收到 `access.roles`、`access.groups`、`access.features` 與 `access.navigation`（已修剪的[選單](#選單)樹），以此顯示可用入口與帳號授權資訊。沒有 chat 的使用者仍能取得身分與偏好，聊天送出停用。
+登入後前端自動呼叫 `/api/v1/me`，收到 `access` 的角色、群組、功能、已修剪的[選單](#選單)樹與[資料範圍](data-scopes.md#畫面)，以此顯示可用入口與帳號授權資訊。沒有 chat 的使用者仍能取得身分與偏好，聊天送出停用。
 
 後端 conversations、models、context、runs、取消與 SSE 全部要求 `feature:chat` policy。AuthorizationHandler 每個 request 查 SQL 的有效 grant，同一 request 內的授權處理、資源 ACL 與模型政策共用這次讀取（管理異動與遠端呼叫後的複查會重新讀取）；撤銷在下一次 request 生效，不等待 cookie 過期。已建立的生成會按原工作生命週期完成；已開啟的 SSE 訂閱不持續重驗授權。要立即中斷既有工作／訂閱需另增加撤銷事件機制。
 

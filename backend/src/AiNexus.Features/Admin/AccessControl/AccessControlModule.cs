@@ -19,6 +19,7 @@ public sealed class AccessControlModule : IFeatureModule
         services.AddScoped<AccessService>();
         // IUnitMembership 由 Organization 註冊（AccessControl 不依賴它）。
         services.AddScoped<IDataScope, DataScopeService>();
+        services.AddScoped<AccessView>();
         services.AddScoped<AdministrativeAudit>();
         services.AddAccountReviewSource<RoleHolderAccountReview>();
         services.AddScoped<AdministrativeReadAudit>();

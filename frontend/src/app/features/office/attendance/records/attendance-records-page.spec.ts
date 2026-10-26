@@ -113,6 +113,7 @@ function setup(
   read: () => Promise<AttendanceRecordsDto>,
   features = ['attendance.records'],
   people = self,
+  scopes = ['own'],
 ) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
@@ -126,6 +127,7 @@ function setup(
     load: vi.fn(async () => true),
     me: signal({ id: 'u1' }),
     has: (feature: string) => features.includes(feature),
+    seesOthers: () => scopes.some((scope) => scope !== 'own'),
     featureName: (id: string) => (id === 'attendance.records' ? '出勤紀錄' : id),
     testing: signal(false),
     testingNote: signal(''),
@@ -210,6 +212,37 @@ describe('AttendanceRecordsPage', () => {
     expect(root.querySelectorAll('nx-query-bar nx-checkbox')).toHaveLength(1);
   });
 
+  it('never shows unit or person filters to an account that only sees itself', async () => {
+    const { fixture, root, api, organization } = setup(
+      async () => records(),
+      ['attendance.records', 'organization'],
+    );
+    // 第一次畫面（讀取中）就是最終版面：不先佔位再消失，也不讀兩份選單。
+    fixture.detectChanges();
+    expect(root.querySelector('.records-person, .records-unit')).toBeNull();
+    await fixture.whenStable();
+    fixture.componentInstance.query.set('includeDaysOff', true);
+    fixture.detectChanges();
+    expect(root.querySelector('.records-person, .records-unit')).toBeNull();
+    expect(api.people).not.toHaveBeenCalled();
+    expect(organization.units).not.toHaveBeenCalled();
+  });
+
+  it('keeps the person list when only unrelated query fields change', async () => {
+    const { fixture, root, api } = setup(async () => records(), ['attendance.records'], self, [
+      'own',
+      'unit',
+    ]);
+    // 看得到別人時一開始就有人員欄位，即使單位內只有自己。
+    fixture.detectChanges();
+    expect(root.querySelector('.records-person')).not.toBeNull();
+    await fixture.whenStable();
+    fixture.componentInstance.showCoverage('Pending');
+    await fixture.whenStable();
+    expect(api.people).toHaveBeenCalledOnce();
+    expect(root.querySelector('.records-person')).not.toBeNull();
+  });
+
   it('marks forms and calendar as unavailable when the document system is down', async () => {
     const down = records({ calendarAvailable: false, formsAvailable: false });
     down.people[0].formsAvailable = false;
@@ -258,6 +291,8 @@ describe('AttendanceRecordsPage', () => {
     const { fixture, organization } = setup(
       async () => records(),
       ['attendance.records', 'organization'],
+      self,
+      ['all'],
     );
     await fixture.whenStable();
     expect(organization.units).toHaveBeenCalledOnce();
@@ -268,6 +303,8 @@ describe('AttendanceRecordsPage', () => {
     const { fixture, organization } = setup(
       async () => records(),
       ['attendance.records', 'organization'],
+      self,
+      ['all'],
     );
     const unit = (id: string, name: string, parentId: string | null, sortOrder = 0) => ({
       id,
@@ -299,7 +336,9 @@ describe('AttendanceRecordsPage', () => {
   });
 
   it('picks people from the roster list, including holders without an account', async () => {
-    const { fixture, root, api } = setup(async () => records(), ['attendance.records'], company);
+    const { fixture, root, api } = setup(async () => records(), ['attendance.records'], company, [
+      'all',
+    ]);
     await fixture.whenStable();
     const options = fixture.componentInstance.personOptions();
     expect(options.map((option) => option.label)).toEqual(['所有人', '王小明', '陳小華', '陳怡君']);
@@ -322,6 +361,7 @@ describe('AttendanceRecordsPage', () => {
       async () => records(),
       ['attendance.records', 'organization'],
       company,
+      ['all'],
     );
     await fixture.whenStable();
     const fields = [...root.querySelectorAll('nx-query-bar .ui-field')].map((field) =>
@@ -472,7 +512,12 @@ describe('AttendanceRecordsPage', () => {
   });
 
   it('finds every tour target and mentions units only when they can be chosen', async () => {
-    const { fixture, root } = setup(async () => records(), ['attendance.records', 'organization']);
+    const { fixture, root } = setup(
+      async () => records(),
+      ['attendance.records', 'organization'],
+      self,
+      ['all'],
+    );
     await fixture.whenStable();
     const tour = fixture.componentInstance.tour();
     expect(root.querySelector('nx-feature-page nx-product-tour-button')).not.toBeNull();

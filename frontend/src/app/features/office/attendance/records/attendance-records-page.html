@@ -73,8 +73,8 @@
       [value]="draft().range"
       (valueChange)="query.set('range', $event)"
     />
-    <!-- 單位來自組織、放在人員前面：先選單位，人員選單只剩那個單位的人。 -->
-    @if (unitNodes() || unitsLoading()) {
+    <!-- 單位與人員依權限一開始就決定顯示與否；單位來自組織、放在人員前面：先選單位，人員選單只剩那個單位的人。 -->
+    @if (showUnits()) {
       <div class="ui-field records-unit" nxQueryField="unitId">
         <span aria-hidden="true">單位</span>
         <nx-tree-select
@@ -88,8 +88,8 @@
         />
       </div>
     }
-    <!-- 人員選項來自人員選單（依單位重讀，換單位會清掉已選的人）；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
-    @if (showPeople()) {
+    <!-- 人員選項來自人員選單（依單位重讀，換單位會清掉已選的人）；讀取中轉圈。 -->
+    @if (seesOthers()) {
       <div class="ui-field records-person" nxQueryField="person">
         <span aria-hidden="true">人員</span>
         <nx-select

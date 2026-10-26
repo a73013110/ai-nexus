@@ -57,6 +57,32 @@ describe('apiResource', () => {
     expect(read.error()).not.toBe('');
   });
 
+  it('reads again only when the params value changes, by reference', async () => {
+    const draft = signal({ unitId: '', tab: 'all' });
+    const loader = vi.fn(async (params: unknown) => params);
+    const { read, settle } = setup({ params: () => draft().unitId, loader });
+    await settle();
+    // 草稿換了沒用到的欄位：參數同一個值，不重讀、不算讀取中。
+    draft.set({ unitId: '', tab: 'pending' });
+    TestBed.tick();
+    expect(read.refreshing()).toBe(false);
+    await settle();
+    expect(loader).toHaveBeenCalledTimes(1);
+    draft.set({ unitId: 'unit-1', tab: 'pending' });
+    await settle();
+    expect(read.value()).toBe('unit-1');
+
+    // 物件參數換了參考就是新請求：重新套用同樣的條件也要重讀。
+    const filters = signal({ from: '2026-10-01' });
+    const reads = vi.fn(async (params: unknown) => params);
+    TestBed.resetTestingModule();
+    const again = setup({ params: () => filters(), loader: reads });
+    await again.settle();
+    filters.set({ from: '2026-10-01' });
+    await again.settle();
+    expect(reads).toHaveBeenCalledTimes(2);
+  });
+
   it('reads again after the first load when reloaded while it is in flight', async () => {
     let version = 1;
     let release: () => void = () => undefined;

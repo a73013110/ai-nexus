@@ -42884,7 +42884,8 @@
           "roles",
           "groups",
           "features",
-          "navigation"
+          "navigation",
+          "dataScopes"
         ],
         "type": "object",
         "properties": {
@@ -42910,6 +42911,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NavigationNodeDto"
+            }
+          },
+          "dataScopes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         }

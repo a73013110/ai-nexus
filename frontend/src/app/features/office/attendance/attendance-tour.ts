@@ -275,11 +275,18 @@ export const CALENDAR_DAY_TOUR: ProductTourDefinition = {
   ],
 };
 
-/** 出勤紀錄頁：查詢條件依授權出現（單位要能讀組織），步驟文字跟著調整。 */
+/** 出勤紀錄頁：查詢條件依授權出現（看得到別人才有人員，單位還要能讀組織），步驟文字跟著調整。 */
 export function attendanceRecordsTour(options: {
-  /** 有組織讀取權，查詢列有單位選單。 */
+  /** 資料範圍看得到本人以外的人，查詢列有人員選單。 */
+  people: boolean;
+  /** 另有組織讀取權，人員前面還有單位選單。 */
   units: boolean;
 }): ProductTourDefinition {
+  const fields = [
+    '區間（最長一年）',
+    ...(options.units ? ['單位（含下層）', '人員（選了單位只列該單位的人）'] : []),
+    ...(options.people && !options.units ? ['人員'] : []),
+  ];
   return {
     steps: [
       purposeStep(
@@ -294,7 +301,7 @@ export function attendanceRecordsTour(options: {
         side: 'bottom',
       },
       queryBarStep(RECORDS, {
-        fields: `區間（最長一年）、${options.units ? '單位（含下層）、人員（選了單位只列該單位的人）' : '人員'}與是否含放假日`,
+        fields: `${fields.join('、')}與是否含放假日`,
       }),
       {
         target: `${RECORDS} .records-coverage`,

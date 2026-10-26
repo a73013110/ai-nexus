@@ -47,6 +47,7 @@ public sealed class DataScopeTests
         await db.Set<RoleGroupFeature>().Where(x => x.GroupId == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, DataScopes.All));
         var all = await scopes.ForAsync(bob, FeatureCatalog.Audit, default);
         Assert.True(all.All); Assert.Empty(all.UnitIds);
+        Assert.Equal([DataScopes.UnitTree, DataScopes.All], (await scopes.ScopesAsync(bob, default))[FeatureCatalog.Audit]);
 
         // 群組停用、功能停用都等於沒有範圍；沒有宣告範圍的功能不能查範圍。
         await db.Set<RoleGroup>().Where(x => x.Id == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
@@ -81,6 +82,10 @@ public sealed class DataScopeTests
         var managed = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
         Assert.Equal(new HashSet<string> { DataScopes.Own, DataScopes.UnitTree }, managed.Scopes);
         Assert.Equal(new HashSet<Guid> { it, systems }, managed.UnitIds);
+        // 給畫面的代碼與 ForAsync 一致（由窄到寬），沒有範圍的功能不列。
+        var codes = await scopes.ScopesAsync(bob, default);
+        Assert.Equal([DataScopes.Own, DataScopes.UnitTree], codes[FeatureCatalog.AttendanceRecords]);
+        Assert.DoesNotContain(FeatureCatalog.Audit, codes.Keys);
 
         // 沒宣告主管範圍的功能不受影響（bob 預設沒有稽核授權；給 own 也只有 own）。
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).IsEmpty);
@@ -108,6 +113,7 @@ public sealed class DataScopeTests
         // 取消主管勾選就失效。
         await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false));
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
+        Assert.DoesNotContain(FeatureCatalog.AttendanceRecords, (await scopes.ScopesAsync(bob, default)).Keys);
         await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, true));
 
         // 主管範圍不授予功能：沒有授權就沒有範圍；帳號停用也一樣。

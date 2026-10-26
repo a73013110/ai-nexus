@@ -15,7 +15,7 @@ internal sealed class DataScopeService(AccessService access, IUnitMembership uni
         var grants = await access.ForUserAsync(userId, ct);
         // 主管範圍不授予功能本身：沒有授權（含功能、群組停用）就沒有範圍，policy 照樣回 403。
         if (!grants.Features.Any(x => x.Id == featureId)) return EffectiveDataScope.None;
-        var granted = grants.Scopes.GetValueOrDefault(featureId) ?? NoScopes;
+        var granted = grants.GrantedScopes.GetValueOrDefault(featureId) ?? NoScopes;
         if (granted.Contains(DataScopes.All)) return new(granted, EffectiveDataScope.None.UnitIds);
 
         var tree = granted.Contains(DataScopes.UnitTree);
@@ -33,5 +33,23 @@ internal sealed class DataScopeService(AccessService access, IUnitMembership uni
         if (roots.Count > 0) flat.UnionWith(await units.SubtreeAsync(roots, ct));
         var scopes = managed.Count == 0 ? granted : new HashSet<string>(granted, StringComparer.Ordinal) { manager! };
         return scopes.Count == 0 ? EffectiveDataScope.None : new(scopes, flat);
+    }
+
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> ScopesAsync(Guid userId, CancellationToken ct)
+    {
+        var grants = await access.ForUserAsync(userId, ct);
+        var features = grants.Features.Select(x => FeatureCatalog.Find(x.Id)).OfType<FeatureDefinition>().Where(x => x.Scopes.Count > 0)
+            .Select(x => (Definition: x, Granted: grants.GrantedScopes.GetValueOrDefault(x.Id) ?? NoScopes)).ToList();
+        // 與 ForAsync 同一條規則：已有 all 時不加主管範圍。這裡只需知道有沒有任主管的單位，所有功能共用一次讀取。
+        var managing = features.Any(x => x.Definition.ManagerScope is not null && !x.Granted.Contains(DataScopes.All))
+            && (await units.UnitsOfAsync(userId, ct)).ManagedUnitIds.Count > 0;
+        Dictionary<string, IReadOnlyList<string>> result = new(StringComparer.Ordinal);
+        foreach (var (definition, granted) in features)
+        {
+            var manager = managing && !granted.Contains(DataScopes.All) ? definition.ManagerScope : null;
+            List<string> codes = [.. DataScopes.Definitions.Select(x => x.Id).Where(id => granted.Contains(id) || id == manager)];
+            if (codes.Count > 0) result[definition.Id] = codes;
+        }
+        return result;
     }
 }

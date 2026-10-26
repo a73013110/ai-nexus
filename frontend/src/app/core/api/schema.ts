@@ -8914,6 +8914,9 @@ export interface components {
             groups: components["schemas"]["AccessItemDto"][];
             features: components["schemas"]["FeatureDto"][];
             navigation: components["schemas"]["NavigationNodeDto"][];
+            dataScopes: {
+                [key: string]: string[];
+            };
         };
         AccessItemDto: {
             id: string;

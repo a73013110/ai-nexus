@@ -21,6 +21,10 @@
 
 單位由 AccessControl 定義的 [`IUnitMembership`](../../backend/src/AiNexus.Features/Admin/AccessControl/Scopes/IUnitMembership.cs) 計算，Organization 的 `OrganizationDirectory` 實作；AccessControl 不依賴 Organization（`ModuleBoundaryTests`）。
 
+## 畫面
+
+`/me` 與存取預覽的 `access.dataScopes` 列出每個已授權、有範圍的功能的有效代碼（`IDataScope.ScopesAsync`，含主管範圍、不算單位）。前端用 `WorkspaceSession.seesOthers(功能)` 在第一次渲染就決定版面：只看得到本人時不顯示選人、選單位，也不讀那些選單，而不是等名單讀回來再推論（會先閃出欄位再消失）。它只決定版面，資料仍由查詢依範圍篩選。
+
 ## 主管範圍
 
 範圍原則上只來自群組授權；例外是功能在目錄宣告 `ManagerScope`，讓組織管理勾選為主管（`organization.UnitMembers.IsManager`）的人自動取得範圍，不必另建主管群組。理由與取捨見 [ADR 0017](../decisions/0017-organization-units-and-data-scopes.md#主管範圍)。

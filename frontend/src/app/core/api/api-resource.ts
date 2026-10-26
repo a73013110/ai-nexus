@@ -21,7 +21,11 @@ export interface ApiResourceOptions<T, P> {
   feature?: FeatureId | readonly FeatureId[];
   /** 重新讀取帳號而不沿用快取，供顯示權限的頁面使用。 */
   freshAccount?: boolean;
-  /** 響應式請求；`undefined` 讓資源保持閒置。省略時每次登入只讀一次。 */
+  /**
+   * 響應式請求；`undefined` 讓資源保持閒置。省略時每次登入只讀一次。
+   * 以參考比較：回傳新物件就是新請求（重新套用同樣條件會重讀），回傳同一個值則不重讀。只需要較大 signal（查詢草稿）的
+   * 某個欄位時，直接回傳那個值，不要包成 `{ 欄位 }`，否則草稿任何欄位一變就重讀。
+   */
   params?: () => P | undefined;
   /** 請求改變或檢視被銷毀時，`signal` 會中止請求。 */
   loader: (params: P, signal: AbortSignal) => Promise<T>;
@@ -60,11 +64,18 @@ export interface ApiResource<T> {
  */
 export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): ApiResource<T> {
   const session = inject(WorkspaceSession);
-  const request = computed(() => {
-    const generation = session.auth.generation();
-    const params = options.params ? options.params() : (true as P);
-    return params === undefined ? undefined : { generation, params };
-  });
+  // 包裝物件每次重算都是新的：只比較身分與參數本身（參考），參數沒變就不重讀。
+  const request = computed(
+    () => {
+      const generation = session.auth.generation();
+      const params = options.params ? options.params() : (true as P);
+      return params === undefined ? undefined : { generation, params };
+    },
+    {
+      equal: (a, b) =>
+        a === b || (!!a && !!b && a.generation === b.generation && Object.is(a.params, b.params)),
+    },
+  );
   const ref = resource({
     params: request,
     loader: async ({ params, abortSignal }) => {
