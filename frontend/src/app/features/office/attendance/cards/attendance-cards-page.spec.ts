@@ -153,10 +153,10 @@ describe('AttendanceCardsPage', () => {
     expect(rows[2].textContent).toContain('隱藏');
     expect(rows[2].textContent).not.toContain('待指派');
 
-    page.query.commit({ status: 'unassigned' });
+    page.query.commit({ status: 'unheld' });
     await settle();
     expect(api.cards).toHaveBeenLastCalledWith(
-      { search: undefined, status: 'unassigned' },
+      { search: undefined, status: 'unheld' },
       expect.anything(),
     );
   });

@@ -26,13 +26,13 @@ describe('attendanceCardsTour', () => {
     expect(titles(attendanceCardsTour({ maintain: true, testing: false }))).toEqual([
       '刷卡依持有期間歸戶',
       '新增卡號',
-      '待指派、持有中與隱藏',
+      '持有中、無人持有與隱藏',
       '查詢條件',
       '卡片詳情',
     ]);
     expect(titles(attendanceCardsTour({ maintain: false, testing: false }))).toEqual([
       '刷卡依持有期間歸戶',
-      '待指派、持有中與隱藏',
+      '持有中、無人持有與隱藏',
       '查詢條件',
       '卡片詳情',
     ]);

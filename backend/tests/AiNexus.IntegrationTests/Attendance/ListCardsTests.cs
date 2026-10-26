@@ -41,32 +41,36 @@ public sealed class ListCardsTests
         var (factory, hr) = (session.Factory, session.Hr);
         await AssignOkAsync(hr, session.Card.Id, session.Bob, At(10, 1));
         await CreateCardAsync(hr, "V-GUEST", hidden: true);
-        await AddPunchesAsync(factory, ("V-GUEST", At(10, 2, 9)), ("NEW-1", At(10, 3, 9)), ("NEW-2", At(10, 5, 9)));
+        var ended = await CreateCardAsync(hr, "E-ENDED");
+        await AssignOkAsync(hr, ended.Id, session.Carol, At(10, 1), At(10, 3));
+        await AddPunchesAsync(factory, ("V-GUEST", At(10, 2, 9)), ("NEW-1", At(10, 3, 9)), ("NEW-2", At(10, 5, 9)), ("E-ENDED", At(10, 2, 9)));
 
         async Task<string[]> NumbersAsync(string status) => [.. (await hr.GetFromJsonAsync<CardDto[]>($"{Cards}?status={status}"))!.Select(x => x.CardNumber)];
 
-        // 待指派不含隱藏的卡（例如訪客卡）；與其他狀態一樣依卡號排序，不依刷卡時間。
-        Assert.Equal(["NEW-1", "NEW-2"], await NumbersAsync(CardStatuses.Unassigned));
+        // 無人持有看的是現在：刷卡全在舊期間內的卡（E-ENDED）也在；不含隱藏的卡（例如訪客卡）。
+        // 與其他狀態一樣依卡號排序，不依刷卡時間。
+        Assert.Equal(["E-ENDED", "NEW-1", "NEW-2"], await NumbersAsync(CardStatuses.Unheld));
         Assert.Equal(["A001"], await NumbersAsync(CardStatuses.Held));
         Assert.Equal(["V-GUEST"], await NumbersAsync(CardStatuses.Hidden));
         await AssertCodeAsync(await hr.GetAsync($"{Cards}?status=guest"), HttpStatusCode.BadRequest, "attendance_filter_invalid");
     }
 
     [Fact]
-    public async Task AssigningFromTheFirstUnattributedPunchClearsTheCardFromUnassigned()
+    public async Task AssigningFromTheFirstUnattributedPunchClearsThePendingCount()
     {
         await using var session = await HrSession.CreateAsync();
         var (factory, hr) = (session.Factory, session.Hr);
         await AddPunchesAsync(factory, ("A001", At(10, 2, 8, 50)), ("A001", At(10, 2, 18, 10)), ("A001", At(10, 3, 8, 45)));
-        var listed = Assert.Single((await hr.GetFromJsonAsync<CardDto[]>($"{Cards}?status={CardStatuses.Unassigned}"))!);
+        async Task<CardDto> CardAsync() => Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!);
+        var listed = await CardAsync();
         Assert.Equal((session.Card.Id, 3), (listed.Id, listed.UnattributedCount));
 
         var period = await AssignOkAsync(hr, session.Card.Id, session.Bob, listed.FirstUnattributedAt!.Value);
-        Assert.Empty((await hr.GetFromJsonAsync<CardDto[]>($"{Cards}?status={CardStatuses.Unassigned}"))!);
+        Assert.Equal(0, (await CardAsync()).UnattributedCount);
 
         // 期間在最後一筆刷卡之前結束時，之後的刷卡又會變成待指派。
         (await hr.PutAsJsonAsync($"{Assignments}/{period.Id}", new CardAssignmentUpdateRequest(session.Bob, null, period.StartsAt, At(10, 3), null))).EnsureSuccessStatusCode();
-        var again = Assert.Single((await hr.GetFromJsonAsync<CardDto[]>($"{Cards}?status={CardStatuses.Unassigned}"))!);
+        var again = await CardAsync();
         Assert.Equal((1, At(10, 3, 8, 45)), (again.UnattributedCount, again.FirstUnattributedAt));
     }
 }

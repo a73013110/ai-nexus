@@ -41,8 +41,8 @@ import { CARD_SEARCH_MAX, CARD_STATUSES, type CardStatus, cardsQueryOptions } fr
 
 const EMPTY_TEXT: Record<CardStatus, string> = {
   '': '移除搜尋條件，或新增還沒刷過的新卡。',
-  unassigned: '所有刷卡都已有持有人。',
   held: '目前沒有人持有卡片。',
+  unheld: '每張卡都有人持有。',
   hidden: '沒有在出勤紀錄隱藏的卡。',
 };
 

@@ -41,7 +41,7 @@ export class AttendanceApi {
   /** 判定規則的說明，時間是伺服器目前的設定值。 */
   rules = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-rules', { signal });
 
-  /** 卡號清單：打卡檔出現過的卡號匯入時自動建立，與 HR 新增的卡在同一份清單；`status` 篩待指派、持有中或隱藏。 */
+  /** 卡號清單：打卡檔出現過的卡號匯入時自動建立，與 HR 新增的卡在同一份清單；`status` 篩持有中、無人持有或隱藏。 */
   cards = (query: ApiQuery<'/api/v1/attendance-cards', 'get'>, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-cards', { query, signal });
   createCard = (body: CardCreateRequest) => this.api.post('/api/v1/attendance-cards', { body });

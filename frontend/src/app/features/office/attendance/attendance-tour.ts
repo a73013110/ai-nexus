@@ -32,7 +32,7 @@ const canWrite = (access: WriteAccess) => access.maintain && !access.testing;
 const readOnly = (description: string, access: WriteAccess) =>
   access.maintain && access.testing ? `${description}測試身分期間只能查看。` : description;
 
-/** 卡號對應頁：一張卡號清單，狀態切換篩待指派、持有中或隱藏。 */
+/** 卡號對應頁：一張卡號清單，狀態切換篩持有中、無人持有或隱藏。 */
 export function attendanceCardsTour(options: WriteAccess): ProductTourDefinition {
   const write = canWrite(options);
   return {
@@ -54,9 +54,9 @@ export function attendanceCardsTour(options: WriteAccess): ProductTourDefinition
       },
       {
         target: `${CARDS} .cards-status`,
-        title: '待指派、持有中與隱藏',
+        title: '持有中、無人持有與隱藏',
         description:
-          '「待指派」是有刷卡卻沒有持有人的卡號，例如新人的卡還沒指派，這些刷卡不會出現在任何人的出勤紀錄；「隱藏」是 HR 看全公司出勤時略過的卡，例如訪客卡。',
+          '「無人持有」是現在沒有持有人的卡號，例如新人的卡還沒指派或前一位已結束持有；列上標「待指派」的是有刷卡卻沒有持有人，這些刷卡不會出現在任何人的出勤紀錄。「隱藏」是 HR 看全公司出勤時略過的卡，例如訪客卡。',
         side: 'bottom',
       },
       queryBarStep(CARDS, { fields: '卡號、備註或持有人姓名' }),

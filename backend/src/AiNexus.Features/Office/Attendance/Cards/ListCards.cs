@@ -8,16 +8,20 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// <summary>卡號對應頁的狀態篩選；不帶表示全部。</summary>
 public static class CardStatuses
 {
-    /// <summary>待指派：有沒有持有期間涵蓋的刷卡，而且沒有隱藏（隱藏的卡是 HR 刻意不管的，例如訪客卡）。</summary>
-    public const string Unassigned = "unassigned";
-
     /// <summary>現在有人持有。</summary>
     public const string Held = "held";
+
+    /// <summary>
+    /// 現在沒人持有，而且沒有隱藏（隱藏的卡是 HR 刻意不管的，例如訪客卡）。
+    /// 以「現在」判斷而不是「有沒有未歸戶的刷卡」：HR 看到某張卡無人持有就會來這裡找，
+    /// 卡上的刷卡全在舊持有期間內時也要找得到；未歸戶的刷卡改以每列的筆數提示。
+    /// </summary>
+    public const string Unheld = "unheld";
 
     /// <summary>在出勤紀錄隱藏。</summary>
     public const string Hidden = "hidden";
 
-    public static bool IsDefined(string? status) => status is Unassigned or Held or Hidden;
+    public static bool IsDefined(string? status) => status is Held or Unheld or Hidden;
 }
 
 /// <summary>
@@ -39,10 +43,11 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
         var now = clock.GetUtcNow();
         var assignments = db.Set<CardAssignment>();
         var unattributed = db.Set<AttributedPunch>().Where(p => p.IsUnattributed);
+        var covering = assignments.CoveringAt(now);
         var query = status switch
         {
-            CardStatuses.Unassigned => db.Set<Card>().Where(c => !c.HiddenFromRecords && unattributed.Any(p => p.CardId == c.Id)),
-            CardStatuses.Held => db.Set<Card>().Where(c => assignments.Any(a => a.CardId == c.Id && a.StartsAt <= now && (a.EndsAt == null || a.EndsAt > now))),
+            CardStatuses.Held => db.Set<Card>().Where(c => covering.Any(a => a.CardId == c.Id)),
+            CardStatuses.Unheld => db.Set<Card>().Where(c => !c.HiddenFromRecords && !covering.Any(a => a.CardId == c.Id)),
             CardStatuses.Hidden => db.Set<Card>().Where(c => c.HiddenFromRecords),
             _ => db.Set<Card>(),
         };

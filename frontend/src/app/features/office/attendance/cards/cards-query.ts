@@ -8,11 +8,11 @@ export interface CardsQuery {
 }
 
 /** 與後端 `CardStatuses` 相同；空字串為全部。 */
-export type CardStatus = '' | 'unassigned' | 'held' | 'hidden';
+export type CardStatus = '' | 'held' | 'unheld' | 'hidden';
 export const CARD_STATUSES: readonly { value: CardStatus; label: string }[] = [
   { value: '', label: '全部' },
-  { value: 'unassigned', label: '待指派' },
   { value: 'held', label: '持有中' },
+  { value: 'unheld', label: '無人持有' },
   { value: 'hidden', label: '隱藏' },
 ];
 
