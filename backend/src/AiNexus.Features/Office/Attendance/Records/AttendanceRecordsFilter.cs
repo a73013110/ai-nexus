@@ -27,6 +27,12 @@ public sealed class AttendanceRecordsFilter
     /// <summary>含沒有刷卡、也沒有假單的放假日；有刷卡或假單的放假日一律列出。</summary>
     public bool? IncludeDaysOff { get; set; }
 
+    /// <summary>
+    /// 只列補足狀態是這個的日子（與有這種日子的人）：<see cref="GapCoverage.Unexplained"/> 找表單不夠的，
+    /// <see cref="GapCoverage.Pending"/> 找表單還在簽核的。只接受這兩種。
+    /// </summary>
+    public GapCoverage? Coverage { get; set; }
+
     /// <summary>起訖必填、結束不早於開始、最長 <see cref="MaxRangeDays"/> 天，而且在 GD 行事曆支援的年份內；不合法時為 null。</summary>
     internal (DateOnly Start, DateOnly End)? Range()
         => From is { } start && To is { } end && end >= start && CalendarDates.IsSupported(start) && CalendarDates.IsSupported(end)
@@ -38,5 +44,6 @@ public sealed class AttendanceRecordsFilter
     /// <summary>有指定人（使用者或卡號）：在出勤紀錄隱藏的卡照常列出，指定誰就看誰。</summary>
     internal bool NamesSomeone => UserId is not null || CardNumber is not null;
 
-    internal bool IsValid() => CardNumber is not { Length: > Data.App.Attendance.Card.CardNumberMaxLength } && !(UserId is not null && CardNumber is not null);
+    internal bool IsValid() => CardNumber is not { Length: > Data.App.Attendance.Card.CardNumberMaxLength } && !(UserId is not null && CardNumber is not null)
+        && Coverage is null or GapCoverage.Unexplained or GapCoverage.Pending;
 }

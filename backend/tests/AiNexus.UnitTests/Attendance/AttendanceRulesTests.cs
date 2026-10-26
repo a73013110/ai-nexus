@@ -18,6 +18,13 @@ public sealed class AttendanceRulesTests
         Assert.Contains("08:00 前到，應下班 17:30", Rule(rules, "彈性上班"));
         Assert.Contains("08:30 到，應下班 18:00", Rule(rules, "彈性上班"));
         Assert.Contains("09:10 到，遲到 10 分，應下班 18:00", Rule(rules, "遲到"));
+        // 補足的例子也由判定算出：09:01:19 到、請 08:30～09:00，等於 08:31:19 到；09:10 到、18:00 走只上了 7 小時 20 分。
+        Assert.Contains("工時（上班日 8 小時）", Rule(rules, "表單補足"));
+        Assert.Contains("09:01:19 到、請 08:30～09:00 的假，扣表單後應下班 18:01:19", Rule(rules, "表單補足"));
+        Assert.Contains("09:10 到、18:00 走，遲到 10 分，但要 40 分的表單才補足", Rule(rules, "表單補足"));
+        Assert.Contains("午休 12:00～13:30 不算在內", Rule(rules, "表單補足"));
+        Assert.Contains("已補足", Rule(rules, "補足狀態"));
+        Assert.Contains("退回結案是承辦人", Rule(rules, "假單與出差單"));
         Assert.Equal(rules.Rules.Count, rules.Rules.Select(x => x.Title).Distinct().Count());
     }
 
@@ -36,6 +43,9 @@ public sealed class AttendanceRulesTests
         Assert.Equal(9, rules.Schedules[0].WorkHours);
         Assert.Contains("07:30 前到，應下班 16:30", Rule(rules, "彈性上班"));
         Assert.Contains("09:40 到，遲到 10 分，應下班 17:30", Rule(rules, "遲到"));
+        Assert.Contains("工時（上班日 7.5 小時）", Rule(rules, "表單補足"));
+        Assert.Contains("09:31:19 到、請 08:00～08:30 的假，扣表單後應下班 18:01:19", Rule(rules, "表單補足"));
+        Assert.Contains("09:40 到、17:30 走，遲到 10 分，但要 1 小時 10 分的表單才補足", Rule(rules, "表單補足"));
         Assert.Equal("9.5", AttendanceRules.Hours(9.5));
         Assert.Equal("9", AttendanceRules.Hours(9));
     }

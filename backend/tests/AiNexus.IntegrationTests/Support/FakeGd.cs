@@ -27,6 +27,8 @@ internal sealed class FakeGd : IDisposable
         CREATE TABLE [dbo].[Form_Leave_Group] (DesNo nvarchar(20) NULL, LeaveSDate datetime NULL, LeaveEDate datetime NULL, DayOfWeek nvarchar(20) NULL);
         CREATE TABLE [dbo].[Form_Travel] (DesNo varchar(20) NOT NULL PRIMARY KEY, ChargeName varchar(50) NULL, ChargeDepName int NULL,
             TravelSDate smalldatetime NULL, TravelEDate smalldatetime NULL, TravelTime float NULL, TravelMain nvarchar(1000) NULL, Place nvarchar(100) NULL, FlowOver varchar(20) NOT NULL);
+        CREATE TABLE [dbo].[FLOW_CURRENT] (KEY_ID varchar(20) NOT NULL, FLOW_NO varchar(10) NOT NULL, TIMERECORD varchar(20) NULL, STATUS varchar(20) NULL,
+            PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, CONSTRAINT PK_FLOW_CURRENT PRIMARY KEY (KEY_ID, FLOW_NO));
         CREATE TABLE [dbo].[Pub_Days] (hDate datetime NOT NULL, UserId varchar(20) NOT NULL, AM bit NOT NULL, PM bit NOT NULL, hReMark varchar(255) NULL);
         CREATE TABLE [dbo].[Sys_User_DEPT_BAS] (DEP_NO int NOT NULL PRIMARY KEY, DEP_NAME nvarchar(200) NULL, DEP_CHIEF varchar(20) NULL, DEP_ACHIEF varchar(100) NULL,
             DEP_EMAIL varchar(50) NULL, PARENT_NO int NULL, UnitClass varchar(10) NULL, ACCOUNT_CODE varchar(10) NULL, DEP_WORD nvarchar(100) NULL, InWord nvarchar(100) NULL,
@@ -89,8 +91,13 @@ internal sealed class FakeGd : IDisposable
     public ExternalDatabase<GdDatabase> Access(ILogger<ExternalDatabase<GdDatabase>>? logger = null, TimeProvider? clock = null) => AccessTo(Databases, logger, clock);
 
     /// <summary>加一個公文帳號；<paramref name="disabled"/> 寫進 <c>Disable</c>，null 模擬正式資料中未填的列。</summary>
-    public void AddUser(string id, string? account, bool? disabled = false)
-        => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME, [Disable]) VALUES (@id, @account, @id, @disabled)", new { id, account, disabled });
+    public void AddUser(string id, string? account, bool? disabled = false, string? name = null)
+        => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME, [Disable]) VALUES (@id, @account, @name, @disabled)",
+            new { id, account, disabled, name = new DbString { Value = name ?? id, IsAnsi = false, Length = 50 } });
+
+    /// <summary>表單目前停在哪一關：<paramref name="person"/> 照 GD 的寫法是「部門_公文帳號」。</summary>
+    public void AddFlowStep(string desNo, string flowNo, string person, string status)
+        => Execute("INSERT [dbo].[FLOW_CURRENT] (KEY_ID, FLOW_NO, PERSON_ID, STATUS) VALUES (@desNo, @flowNo, @person, @status)", new { desNo, flowNo, person, status });
 
     /// <summary>加一個部門；<paramref name="parent"/> 照 GD 的寫法，0 表示最上層。<paramref name="deputies"/> 是 <c>DEP_ACHIEF</c> 的原始字串。</summary>
     public void AddDepartment(int no, string? name, int? parent = 0, string? chief = null, string? deputies = null, int? order = null, bool disabled = false)

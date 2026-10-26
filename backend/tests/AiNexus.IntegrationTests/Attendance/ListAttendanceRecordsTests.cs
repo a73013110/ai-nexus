@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
-using AiNexus.Features.Office.Attendance.Leave;
+using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Office.Attendance.Records;
 using Microsoft.EntityFrameworkCore;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
@@ -31,7 +31,7 @@ public sealed class ListAttendanceRecordsTests
         Assert.Equal((AttendanceStatus.Present, 0, 900), (early.Status, early.LateSeconds, early.EarlyLeaveSeconds));
         var single = Day(person, 21);
         Assert.Equal((AttendanceStatus.Anomaly, AttendanceReason.SinglePunch), (single.Status, single.Reason));
-        Assert.Equal((LeaveState.None, 0), (single.Leave, single.Sheets.Count));
+        Assert.Equal((FormState.None, 0), (single.FormState, single.Forms.Count));
     }
 
     [Fact]
@@ -57,14 +57,16 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task SheetsAreListedOnEveryDayTheyOverlapWithoutOffsettingLateness()
+    public async Task FormsAreListedOnEveryDayTheyOverlapAndApprovedOnesOffsetLateness()
     {
         await using var session = Create();
         var bob = await session.PersonAsync("bob");
         await session.HoldAsync(bob, "A1");
         session.Gd.AddKind("A", "特休");
-        // 上午請假、下午才到：照樣算遲到（從彈性終點 09:00 起算），假單並列給 HR 判斷。
-        session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 12, 0, 0), "Finish");
+        // 上午請假、下午才到：遲到照樣從彈性終點 09:00 起算，核准的假單加上下午的工時補足 8 小時，判為已補足。
+        session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 12, 0, 0), "Decide");
+        // 退回結案的單不是有效表單，不列出。
+        session.Gd.AddLeave("L-0", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 18, 0, 0), "Finish");
         await session.PunchAsync("A1", At(19, 13, 30), At(19, 18, 0));
         session.Gd.AddTravel("T-1", GdId("bob"), new(2026, 10, 20, 9, 0, 0), new(2026, 10, 21, 18, 0, 0), "拜訪南部客戶", "Decide");
         using var client = await session.Factory.SignedInAsync("bob");
@@ -72,20 +74,21 @@ public sealed class ListAttendanceRecordsTests
         var person = Assert.Single((await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People);
 
         var halfDay = Day(person, 19);
-        Assert.Equal((AttendanceStatus.Present, 4 * 3600 + 1800, LeaveState.Filed), (halfDay.Status, halfDay.LateSeconds, halfDay.Leave));
-        var sheet = Assert.Single(halfDay.Sheets);
-        Assert.Equal(("L-1", LeaveSheetKind.Leave, "特休", At(19, 8, 30), At(19, 12, 0)), (sheet.DesNo, sheet.Kind, sheet.Title, sheet.StartsAt, sheet.EndsAt));
+        Assert.Equal((AttendanceStatus.Present, 4 * 3600 + 1800, FormState.Filed, GapCoverage.Covered),
+            (halfDay.Status, halfDay.LateSeconds, halfDay.FormState, halfDay.Coverage));
+        var form = Assert.Single(halfDay.Forms);
+        Assert.Equal(("L-1", GdFormKind.Leave, "特休", At(19, 8, 30), At(19, 12, 0)), (form.DesNo, form.Kind, form.Title, form.StartsAt, form.EndsAt));
         // 跨兩天的出差單兩天都列出，沒刷卡的日子是出差而不是異常。
         foreach (var day in new[] { 20, 21 })
         {
             var travel = Day(person, day);
-            Assert.Equal((AttendanceStatus.OnLeave, LeaveState.Filed), (travel.Status, travel.Leave));
-            Assert.Equal(("T-1", LeaveSheetKind.Travel, "拜訪南部客戶"), (travel.Sheets[0].DesNo, travel.Sheets[0].Kind, travel.Sheets[0].Title));
+            Assert.Equal((AttendanceStatus.OnLeave, FormState.Filed), (travel.Status, travel.FormState));
+            Assert.Equal(("T-1", GdFormKind.Travel, "拜訪南部客戶"), (travel.Forms[0].DesNo, travel.Forms[0].Kind, travel.Forms[0].Title));
         }
     }
 
     [Fact]
-    public async Task AnUnreachableGdMarksLeaveUnavailableAndJudgesNoDayAsAnAnomaly()
+    public async Task AnUnreachableGdMarksFormsUnavailableAndJudgesNoDayAsAnAnomaly()
     {
         await using var session = Create(gdReachable: false);
         var bob = await session.PersonAsync("bob");
@@ -96,8 +99,8 @@ public sealed class ListAttendanceRecordsTests
         var records = await GetAsync(client, "from=2026-10-17&to=2026-10-21&includeDaysOff=true");
         var person = Assert.Single(records.People);
 
-        Assert.Equal((false, false, false), (records.CalendarAvailable, records.LeaveAvailable, person.LeaveAvailable));
-        Assert.All(person.Days, x => Assert.Equal(LeaveState.Unavailable, x.Leave));
+        Assert.Equal((false, false, false), (records.CalendarAvailable, records.FormsAvailable, person.FormsAvailable));
+        Assert.All(person.Days, x => Assert.Equal(FormState.Unavailable, x.FormState));
         Assert.DoesNotContain(person.Days, x => x.Status == AttendanceStatus.Anomaly);
         // 行事曆讀不到：週末照常當放假，平日不知道日型、不判定，有刷卡也不算遲到。
         Assert.Equal([AttendanceStatus.DayOff, AttendanceStatus.DayOff], person.Days.Where(x => x.Date.Day is 17 or 18).Select(x => x.Status));
@@ -106,7 +109,7 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task APersonWithoutAGdAccountHasLeaveUnavailableWhileOthersAreJudged()
+    public async Task APersonWithoutAGdAccountHasFormsUnavailableWhileOthersAreJudged()
     {
         await using var session = Create();
         var hr = await session.PersonAsync("hr");
@@ -119,14 +122,14 @@ public sealed class ListAttendanceRecordsTests
 
         var records = await GetAsync(client, "from=2026-10-21&to=2026-10-21");
 
-        Assert.True(records.LeaveAvailable);
+        Assert.True(records.FormsAvailable);
         var mapped = Assert.Single(records.People, x => x.UserId == bob);
-        Assert.True(mapped.LeaveAvailable);
-        Assert.Equal((AttendanceStatus.Anomaly, LeaveState.None), (Day(mapped, 21).Status, Day(mapped, 21).Leave));
+        Assert.True(mapped.FormsAvailable);
+        Assert.Equal((AttendanceStatus.Anomaly, FormState.None), (Day(mapped, 21).Status, Day(mapped, 21).FormState));
         var unmapped = Assert.Single(records.People, x => x.UserId == carol);
-        Assert.False(unmapped.LeaveAvailable);
+        Assert.False(unmapped.FormsAvailable);
         var day = Day(unmapped, 21);
-        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.LeaveUnavailable, LeaveState.Unavailable), (day.Status, day.Reason, day.Leave));
+        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.FormsUnavailable, FormState.Unavailable), (day.Status, day.Reason, day.FormState));
     }
 
     [Fact]
@@ -151,9 +154,9 @@ public sealed class ListAttendanceRecordsTests
         Assert.Equal(new[] { bob, dave }.Order(), await PeopleAsync(client, "from=2026-10-19&to=2026-10-21"));
         Assert.Equal([20, 21], Assert.Single(people, x => x.UserId == bob).Days.Select(x => x.Date.Day));
         Assert.Equal([19], Assert.Single(people, x => x.UserId == dave).Days.Select(x => x.Date.Day));
-        // 只有姓名的持有人以姓名列出；沒有帳號就對不到公文帳號，假單無法取得。
+        // 只有姓名的持有人以姓名列出；沒有帳號就對不到公文帳號，表單無法取得。
         var unbound = Assert.Single(people, x => x.UserId is null);
-        Assert.Equal(("新進同仁", null, false), (unbound.DisplayName, unbound.Account, unbound.LeaveAvailable));
+        Assert.Equal(("新進同仁", null, false), (unbound.DisplayName, unbound.Account, unbound.FormsAvailable));
         Assert.Equal(3, people.Count);
     }
 
@@ -182,7 +185,7 @@ public sealed class ListAttendanceRecordsTests
         // 沒有假單可比對，沒刷卡的日子不判異常。
         var later = Assert.Single((await GetAsync(hrClient, Week + "&card=A3")).People);
         Assert.Equal((At(21, 8, 50), At(21, 19, 0)), (Day(later, 21).ClockIn, Day(later, 21).ClockOut));
-        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.LeaveUnavailable), (Day(later, 20).Status, Day(later, 20).Reason));
+        Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.FormsUnavailable), (Day(later, 20).Status, Day(later, 20).Reason));
 
         // 卡號只看沒有帳號的資料：指定 bob 的卡不列出他；不是全公司範圍時判斷不了屬於誰，也不在名單。
         Assert.Empty((await GetAsync(hrClient, Week + "&card=A1")).People);
@@ -278,7 +281,7 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task DaysOffWithoutPunchesOrSheetsAreHiddenUnlessAskedFor()
+    public async Task DaysOffWithoutPunchesOrFormsAreHiddenUnlessAskedFor()
     {
         await using var session = Create();
         var bob = await session.PersonAsync("bob");

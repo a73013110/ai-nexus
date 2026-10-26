@@ -28,6 +28,9 @@ public sealed class WorkdayOptionsTests
             (workday.FullDay.ScheduledStart, workday.FullDay.ScheduledEnd, workday.FullDay.FlexStart, workday.FullDay.FlexEnd, workday.FullDay.WorkHours));
         Assert.Equal((new TimeOnly(13, 30), new TimeOnly(18, 0), 4.5), (workday.MorningOff.ScheduledStart, workday.MorningOff.ScheduledEnd, workday.MorningOff.WorkHours));
         Assert.Equal((new TimeOnly(8, 30), new TimeOnly(12, 0), 3.5), (workday.AfternoonOff.ScheduledStart, workday.AfternoonOff.ScheduledEnd, workday.AfternoonOff.WorkHours));
+        // 只有全天有午休；半天的日型沒有。
+        Assert.Equal((new TimeOnly(12, 0), new TimeOnly(13, 30)), (workday.FullDay.BreakStart, workday.FullDay.BreakEnd));
+        Assert.Equal((null, null), (workday.MorningOff.BreakStart, workday.AfternoonOff.BreakEnd));
         Assert.Null(Failure([]));
     }
 
@@ -45,6 +48,10 @@ public sealed class WorkdayOptionsTests
     [InlineData("Attendance:Workday:AfternoonOff:ScheduledEnd", "08:00", "ScheduledEnd must be later than ScheduledStart")]
     [InlineData("Attendance:Workday:FullDay:WorkHours", "0", "WorkHours")]
     [InlineData("Attendance:Workday:MorningOff:WorkHours", "11", "FlexEnd + WorkHours must stay within the same day")]
+    [InlineData("Attendance:Workday:MorningOff:BreakStart", "15:00", "BreakStart and BreakEnd must be set together")]
+    [InlineData("Attendance:Workday:FullDay:BreakEnd", "11:00", "FlexEnd < BreakStart < BreakEnd <= ScheduledEnd")]
+    [InlineData("Attendance:Workday:FullDay:BreakStart", "09:00", "FlexEnd < BreakStart < BreakEnd <= ScheduledEnd")]
+    [InlineData("Attendance:Workday:FullDay:WorkHours", "5", "BreakEnd must be earlier than FlexStart + WorkHours")]
     public void InvalidRulesFailAndNameTheKey(string key, string value, string message)
     {
         var failure = Failure(new() { [key] = value });

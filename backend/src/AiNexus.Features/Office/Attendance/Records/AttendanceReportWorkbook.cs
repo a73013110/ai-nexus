@@ -1,5 +1,6 @@
 using System.Globalization;
-using AiNexus.Features.Office.Attendance.Leave;
+using AiNexus.Features.Office.Attendance.Forms;
+using AiNexus.Features.Platform.Gd;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -15,7 +16,8 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <list type="bullet">
 /// <item>單一工作表「出缺勤計算」：第一列是欄名（前兩欄空白），每人一段、每天一列，段與段之間（最後一人之後也是）空兩列。</item>
 /// <item>每段第一列寫姓名與卡號，下面三列的前兩欄是「遲到(計)」「早退(計)」「異常(計)」與天數；不到四天的人補空列放小計。</item>
-/// <item>遲到的上班、早退的下班以紅字標示，遲到、早退、異常欄打「＊」；備註是當天的假單與出差單，多筆以「、」相連。</item>
+/// <item>遲到的上班、早退的下班以紅字標示；遲到、早退、異常欄在未補足時打「＊」（舊檔的記號），已補足寫「補足」、
+/// 要等簽核中的單才補足時寫「簽核中」，表單無法取得時寫「未知」。小計照舊數所有遲到、早退、異常的天數。備註是當天的假單與出差單，多筆以「、」相連。</item>
 /// <item>全部是 標楷體 13.875 點、置中（備註靠左）、列高 19.5；時間與日期照舊檔寫成文字。</item>
 /// </list>
 /// 列出哪些日子、怎麼判遲到早退異常，與畫面同一份查詢（<see cref="ListAttendanceRecords"/>），不另照舊系統的規則。
@@ -104,28 +106,34 @@ internal static class AttendanceReportWorkbook
             Str(Invariant($"{day.Date:yyyy/MM/dd} 星期{"日一二三四五六"[(int)day.Date.DayOfWeek]}"), Center),
             Clock(day.ClockIn, late),
             singlePunch ? Blank() : Clock(day.ClockOut, early),
-            late ? Str(Mark, Center) : Blank(),
-            early ? Str(Mark, Center) : Blank(),
-            day.Status == AttendanceStatus.Anomaly ? Str(Mark, Center) : Blank(),
+            late ? Str(Marker(day.Coverage), Center) : Blank(),
+            early ? Str(Marker(day.Coverage), Center) : Blank(),
+            day.Status == AttendanceStatus.Anomaly ? Str(Marker(day.Coverage), Center) : Blank(),
             Str(Remark(day), Left)
         ];
     }
 
-    /// <summary>舊檔的備註：【流程】【假別或出差單】單號〔起 ~ 迄〕，起訖是單據原值（台灣時間）。</summary>
+    /// <summary>舊檔的備註：【流程】【假別或出差單】單號〔起 ~ 迄〕，起訖是表單原值（台灣時間）。</summary>
     internal static string Remark(AttendanceRecordDto day)
     {
-        if (day.Leave == LeaveState.Unavailable) return "無法取得";
-        return string.Join("、", day.Sheets.Select(x => Invariant(
-            $"【{Flow(x.FlowStatus)}】【{(x.Kind == LeaveSheetKind.Travel ? "出差單" : x.Title)}】{x.DesNo}〔{TaipeiTime.Of(x.StartsAt):yyyy-MM-dd HH:mm:ss} ~ {TaipeiTime.Of(x.EndsAt):yyyy-MM-dd HH:mm:ss}〕")));
+        if (day.FormState == FormState.Unavailable) return "無法取得";
+        return string.Join("、", day.Forms.Select(x => Invariant(
+            $"【{Flow(x.FlowStatus)}】【{(x.Kind == GdFormKind.Travel ? "出差單" : x.Title)}】{x.DesNo}〔{TaipeiTime.Of(x.StartsAt):yyyy-MM-dd HH:mm:ss} ~ {TaipeiTime.Of(x.EndsAt):yyyy-MM-dd HH:mm:ss}〕")));
     }
 
-    /// <summary>公文系統的流程狀態換成舊檔的字樣：送出還在簽核是「流程中」，決行與結案是「核准」。</summary>
-    internal static string Flow(string status) => status switch
+    /// <summary>
+    /// 遲到、早退、異常欄的記號（當天的補足狀態）：未補足照舊打「＊」，其他寫兩三個字，列印出來不必對照說明；欄寬（舊檔 7.93）放得下三個字。
+    /// </summary>
+    internal static string Marker(GapCoverage? coverage) => coverage switch
     {
-        "Send" => "流程中",
-        "Decide" or "Finish" => "核准",
-        _ => status
+        GapCoverage.Covered => "補足",
+        GapCoverage.Pending => "簽核中",
+        GapCoverage.Unknown => "未知",
+        _ => Mark
     };
+
+    /// <summary>公文系統的流程狀態用 GD 畫面的字樣（流程中、核准）；只讀這兩種，見 <see cref="GdFormReader"/>。</summary>
+    internal static string Flow(GdFormFlowOver status) => GdFlowOver.Label(status);
 
     private static Cell Clock(DateTimeOffset? at, bool flagged)
         => at is { } value ? Str(Invariant($"{TaipeiTime.Of(value):HH:mm:ss}"), flagged ? Red : Center) : Blank();

@@ -23,9 +23,9 @@ public sealed class ExportAttendanceRecordsTests
         var bob = await session.PersonAsync("bob");
         await session.HoldAsync(bob, "A1");
         session.Gd.AddKind("A", "特休");
-        session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 9, 0, 0), "Finish");
-        session.Gd.AddLeave("L-2", GdId("bob"), "A", new(2026, 10, 20, 7, 0, 0), new(2026, 10, 20, 7, 30, 0), "Send");
-        await session.PunchAsync("A1", At(19, 9, 5), At(19, 18, 0), At(20, 8, 30), At(20, 17, 45), At(21, 8, 20));
+        session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 9, 0, 0), "Decide");
+        session.Gd.AddLeave("L-2", GdId("bob"), "A", new(2026, 10, 20, 17, 45, 0), new(2026, 10, 20, 18, 0, 0), "Send");
+        await session.PunchAsync("A1", At(19, 9, 5), At(19, 18, 5), At(20, 8, 30), At(20, 17, 45), At(21, 8, 20));
         using var client = await session.Factory.SignedInAsync("bob");
         var person = Assert.Single((await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People);
 
@@ -40,13 +40,14 @@ public sealed class ExportAttendanceRecordsTests
         using var workbook = SpreadsheetDocument.Open(new MemoryStream(await response.Content.ReadAsByteArrayAsync()), false);
         Assert.Equal(["出缺勤計算"], workbook.WorkbookPart!.Workbook!.Sheets!.Elements<Sheet>().Select(x => x.Name!.Value));
 
-        // 與舊系統逐格相同：前兩欄是姓名與卡號、下方三列是小計；遲到的上班與早退的下班紅字並打「＊」；只有一筆刷卡是異常、只寫在上班。
+        // 與舊系統逐格相同：前兩欄是姓名與卡號、下方三列是小計；遲到的上班與早退的下班紅字；只有一筆刷卡是異常、只寫在上班。
+        // 記號：核准的假補足寫「補足」（遲到 5 分、請 30 分、晚走 5 分）、簽核中的單才補足寫「簽核中」、未補足照舊「＊」。
         var rows = Rows(workbook);
         Assert.Equal(["", "", "日期", "上班打卡", "下班打卡", "遲到", "早退", "異常", "備註"], rows[0].Select(x => x.Text));
         Assert.Equal(
         [
-            [person.DisplayName, "A1", "2026/10/19 星期一", "09:05:00", "18:00:00", "＊", "", "", "【核准】【特休】L-1〔2026-10-19 08:30:00 ~ 2026-10-19 09:00:00〕"],
-            ["遲到(計)", "1", "2026/10/20 星期二", "08:30:00", "17:45:00", "", "＊", "", "【流程中】【特休】L-2〔2026-10-20 07:00:00 ~ 2026-10-20 07:30:00〕"],
+            [person.DisplayName, "A1", "2026/10/19 星期一", "09:05:00", "18:05:00", "補足", "", "", "【核准】【特休】L-1〔2026-10-19 08:30:00 ~ 2026-10-19 09:00:00〕"],
+            ["遲到(計)", "1", "2026/10/20 星期二", "08:30:00", "17:45:00", "", "簽核中", "", "【流程中】【特休】L-2〔2026-10-20 17:45:00 ~ 2026-10-20 18:00:00〕"],
             ["早退(計)", "1", "2026/10/21 星期三", "08:20:00", "", "", "", "＊", ""],
             // 不到四天時補一列放「異常(計)」，之後每人空兩列。
             ["異常(計)", "1", "", "", "", "", "", "", ""],
@@ -100,7 +101,7 @@ public sealed class ExportAttendanceRecordsTests
         await session.PunchAsync("A2", At(19, 9, 0), At(19, 18, 0));
         using var client = await session.Factory.SignedInAsync("hr");
 
-        // 只有姓名的持有人：第二欄寫它依附的卡號；對不到公文帳號，備註寫假單無法取得。
+        // 只有姓名的持有人：第二欄寫它依附的卡號；對不到公文帳號，備註寫表單無法取得。
         var rows = await ExportAsync(client, Week);
         Assert.Equal(("新進同仁", "A2"), (rows[1][0].Text, rows[1][1].Text));
         Assert.All(DayRows(rows), x => Assert.Equal("無法取得", x[8].Text));

@@ -56,6 +56,15 @@
     }
   </nx-info-popover>
   <nx-query-bar label="出勤紀錄查詢條件" [state]="query" [busy]="refreshing()">
+    <!-- 只看表單未補足或還在簽核的日子；切換即套用。 -->
+    <nx-view-switch
+      query-lead
+      class="records-coverage"
+      label="缺口"
+      [options]="coverages"
+      [value]="query.applied().coverage"
+      (valueChange)="showCoverage($any($event))"
+    />
     <nx-time-range-picker
       label="區間"
       [presets]="ranges"
@@ -118,11 +127,11 @@
         message="假日行事曆無法取得：公文系統暫時連不上，週末當放假、平日一律無法判定，也不判遲到、早退與異常。"
       />
     }
-    @if (!data.leaveAvailable) {
+    @if (!data.formsAvailable) {
       <nx-notice
-        class="records-leave-unavailable"
+        class="records-forms-unavailable"
         tone="warning"
-        message="假單無法取得：公文系統暫時連不上，沒刷卡的日子改為無法判定，假單欄顯示「無法取得」。"
+        message="表單無法取得：公文系統暫時連不上，沒刷卡的日子改為無法判定，表單欄顯示「無法取得」。"
       />
     }
     @if (readError()) {
@@ -185,7 +194,7 @@
       @if (!group.person.userId) {
         <nx-status-badge
           tone="warning"
-          title="卡號對應只填了姓名；綁上帳號後併入該使用者，才查得到假單"
+          title="卡號對應只填了姓名；綁上帳號後併入該使用者，才查得到表單"
           >尚未綁帳號</nx-status-badge
         >
       }
@@ -205,11 +214,11 @@
           <nx-status-badge tone="neutral">已隱藏</nx-status-badge>
         }
       }
-      @if (group.person.userId && !group.person.leaveAvailable && records()?.leaveAvailable) {
+      @if (group.person.userId && !group.person.formsAvailable && records()?.formsAvailable) {
         <nx-status-badge
           tone="warning"
           title="對不到公文系統帳號（沒有 AD 帳號，或公文系統查無此人）"
-          >假單無法取得</nx-status-badge
+          >表單無法取得</nx-status-badge
         >
       }
       <!-- 與舊系統姓名下方的「遲到(計)」等小計相同，0 天也列出，一眼比得出誰有狀況。 -->
@@ -218,6 +227,21 @@
         <span [class.records-count-warning]="group.early">早退 {{ group.early }} 天</span>
         <span [class.records-count-danger]="group.anomalies">異常 {{ group.anomalies }} 天</span>
       </span>
+      <!-- 上面是舊系統的天數；這裡只標要追的：表單不夠的、表單還沒核准的。 -->
+      @if (group.unexplained || group.pending) {
+        <span class="records-person-flags">
+          @if (group.unexplained) {
+            <nx-status-badge tone="danger" title="遲到、早退或異常，核准的表單時數不夠"
+              >未補足 {{ group.unexplained }} 天</nx-status-badge
+            >
+          }
+          @if (group.pending) {
+            <nx-status-badge tone="warning" title="表單還在公文系統簽核，核准後才算補足"
+              >簽核中 {{ group.pending }} 天</nx-status-badge
+            >
+          }
+        </span>
+      }
     </ng-template>
     <table>
       <caption class="sr-only">
@@ -233,7 +257,7 @@
         <col nxTableColumn="expected" class="records-time-column" />
         <col nxTableColumn="late" class="records-duration-column" />
         <col nxTableColumn="early" class="records-duration-column" />
-        <col nxTableColumn="sheets" />
+        <col nxTableColumn="forms" />
       </colgroup>
       <thead>
         <tr>
@@ -246,7 +270,7 @@
           <th scope="col" nxTableColumn="expected">應下班</th>
           <th scope="col" nxTableColumn="late">遲到</th>
           <th scope="col" nxTableColumn="early">早退</th>
-          <th scope="col" nxTableColumn="sheets">假單與出差</th>
+          <th scope="col" nxTableColumn="forms">表單</th>
         </tr>
       </thead>
       @for (group of groups(); track group.key) {
@@ -285,16 +309,26 @@
               </td>
               <td nxTableColumn="status">
                 <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge>
+                @if (row.coverage; as coverage) {
+                  <!-- 差額整段不斷行，窄欄時換到下一行。 -->
+                  <span class="records-coverage-tag" [attr.data-tone]="coverage.tone"
+                    >{{ coverage.label }}
+                    @if (coverage.short) {
+                      <span class="records-short">{{ coverage.short }}</span>
+                    }
+                  </span>
+                }
                 @if (row.reason) {
                   <small class="records-reason">{{ row.reason }}</small>
                 }
               </td>
-              <!-- 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字）；沒刷卡也沒假單標「未刷卡」。 -->
+              <!-- 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字，顏色跟著補足狀態）；沒刷卡也沒表單補足標「未刷卡」。 -->
               <td nxTableColumn="clockIn" class="records-time" data-label="上班">
                 @if (row.clockIn) {
                   <span
                     [class.records-time-flag]="row.late"
-                    [attr.title]="row.late ? '遲到 ' + row.late : null"
+                    [attr.data-tone]="row.coverage?.tone"
+                    [attr.title]="row.lateNote || null"
                     >{{ row.clockIn }}</span
                   >
                 } @else if (row.missing) {
@@ -307,7 +341,8 @@
                 @if (row.clockOut && !row.singlePunch) {
                   <span
                     [class.records-time-flag]="row.early"
-                    [attr.title]="row.early ? '早退 ' + row.early : null"
+                    [attr.data-tone]="row.coverage?.tone"
+                    [attr.title]="row.earlyNote || null"
                     >{{ row.clockOut }}</span
                   >
                 } @else if (row.missing) {
@@ -318,27 +353,37 @@
               </td>
               <td nxTableColumn="expected" class="records-time" data-label="應下班">
                 {{ row.expected || '—' }}
+                <!-- 原本的應下班照舊系統；扣掉核准表單後的時間另起一行，走在它之後就補足。 -->
+                @if (row.adjusted) {
+                  <small class="records-adjusted" title="扣掉核准表單時數後的應下班"
+                    >扣表單 {{ row.adjusted }}</small
+                  >
+                }
               </td>
-              <td nxTableColumn="late" data-label="遲到" [class.records-flag]="row.late">
-                {{ row.late || '—' }}
+              <!-- 遲到、早退的時數照舊系統；顏色跟著當天的補足狀態（已補足綠、簽核中黃、未補足紅）。 -->
+              <td nxTableColumn="late" data-label="遲到">
+                @if (row.late) {
+                  <span class="records-gap" [attr.data-tone]="row.coverage?.tone">{{
+                    row.late
+                  }}</span>
+                } @else {
+                  <span class="records-none">—</span>
+                }
               </td>
-              <td nxTableColumn="early" data-label="早退" [class.records-flag]="row.early">
-                {{ row.early || '—' }}
+              <td nxTableColumn="early" data-label="早退">
+                @if (row.early) {
+                  <span class="records-gap" [attr.data-tone]="row.coverage?.tone">{{
+                    row.early
+                  }}</span>
+                } @else {
+                  <span class="records-none">—</span>
+                }
               </td>
-              <td nxTableColumn="sheets" data-label="假單與出差">
-                @if (row.leaveUnavailable) {
+              <td nxTableColumn="forms" data-label="表單">
+                @if (row.formsUnavailable) {
                   <span class="records-unavailable">無法取得</span>
                 } @else {
-                  <ul class="records-sheets">
-                    @for (item of row.sheets; track item.sheet.desNo) {
-                      <li [title]="item.sheet.title + '（' + item.sheet.desNo + '）'">
-                        <strong>{{ item.kind }}</strong> {{ item.sheet.title }}
-                        <small>{{ item.time }} · {{ item.flow }}</small>
-                      </li>
-                    } @empty {
-                      <li class="records-none">—</li>
-                    }
-                  </ul>
+                  <nx-gd-form-list [forms]="row.forms" />
                 }
               </td>
             </tr>

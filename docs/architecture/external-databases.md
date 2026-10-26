@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Platform | 通用存取、監控、註冊，寫一次 | `ExternalDatabase<T>`、`ExternalDatabaseMonitoring<T>`、`AddExternalDatabase<T>()` |
 | 系統模組 `Features/Platform/<系統>/` | 資料庫定義，以及**多個模組共用**的該系統知識 | `GdDatabase`、`GdAccounts`（使用者 ↔ 公文帳號） |
-| 使用端模組 | 自己的業務 SQL | 出勤的 `LeaveSheetReader`、`GdCalendarWriter`；組織的 `GdUnitSource` |
+| 使用端模組 | 自己的業務 SQL | 出勤的 `GdFormReader`、`GdCalendarWriter`；組織的 `GdUnitSource` |
 
 使用端不注入 `ISqlDatabase<T>`，只用 `ExternalDatabase<T>`，否則降級與監控會漏掉那條路。
 

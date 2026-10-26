@@ -2,7 +2,7 @@
 
 // 最小寬度交給 stacked 表格（--table-min-width）：寬版橫向捲動，手機卡片不受它撐寬。
 .records-table {
-  --table-min-width: 68rem;
+  --table-min-width: 72rem;
 }
 .records-table table {
   table-layout: fixed;
@@ -11,13 +11,13 @@
   width: 8.5rem;
 }
 .records-date-column {
-  width: 7.5rem;
+  width: 6.5rem;
 }
 .records-day-type-column {
-  width: 5.5rem;
+  width: 4.5rem;
 }
 .records-status-column {
-  width: 10rem;
+  width: 8.5rem;
 }
 .records-time-column {
   width: 5.5rem;
@@ -89,14 +89,49 @@
 tr.records-week-start > td {
   border-top: 1px solid var(--line);
 }
+// 缺口的顏色跟著補足狀態（`GAP_COVERAGE` 的 tone）：已補足綠、簽核中黃、未補足紅、無法取得灰。
+[data-tone='success'] {
+  --gap-color: var(--success);
+}
+[data-tone='warning'] {
+  --gap-color: var(--warning);
+}
+[data-tone='danger'] {
+  --gap-color: var(--danger);
+}
+[data-tone='neutral'] {
+  --gap-color: var(--secondary);
+}
 // 遲到的上班、早退的下班：在時間本身標色，對應舊系統的紅字。
 .records-time-flag {
   margin-inline: -0.3em;
   padding: 0.0625rem 0.3em;
   border-radius: var(--radius-mark);
-  background: color-mix(in srgb, var(--warning) 14%, var(--surface));
-  color: var(--warning);
+  background: color-mix(in srgb, var(--gap-color, var(--warning)) 14%, var(--surface));
+  color: var(--gap-color, var(--warning));
   font-weight: 600;
+}
+.records-gap {
+  color: var(--gap-color, var(--warning));
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+// 狀態欄徽章下的補足狀態、應下班下的扣表單時間。
+.records-coverage-tag,
+.records-adjusted {
+  display: block;
+  color: var(--gap-color, var(--secondary));
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+}
+.records-short {
+  display: inline-block;
+  white-space: nowrap;
+}
+.records-person-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
 }
 .records-missing {
   padding: 0 0.3em;
@@ -118,8 +153,7 @@ tr.records-week-start > td {
 .records-person-name small,
 .records-person-summary,
 .records-reason,
-.records-today,
-.records-sheets small {
+.records-today {
   color: var(--secondary);
   font-size: var(--p-font-xs);
 }
@@ -145,26 +179,9 @@ tr.records-week-start > td {
 tr.is-weekend > td:first-child {
   color: var(--secondary);
 }
-.records-flag {
-  color: var(--warning);
-  font-weight: 600;
-}
 .records-unavailable {
   color: var(--warning);
   font-weight: 600;
-}
-.records-sheets {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.records-sheets li {
-  overflow-wrap: anywhere;
-}
-.records-sheets small {
-  display: block;
 }
 .records-none {
   color: var(--secondary);

@@ -19,7 +19,7 @@ public sealed class AttendanceOptions
 /// </summary>
 public sealed class WorkdayOptions : IValidatableObject
 {
-    [ValidateObjectMembers] public WorkdayRule FullDay { get; set; } = new() { ScheduledStart = new(8, 30), ScheduledEnd = new(18, 0), FlexStart = new(8, 0), FlexEnd = new(9, 0), WorkHours = 9.5 };
+    [ValidateObjectMembers] public WorkdayRule FullDay { get; set; } = new() { ScheduledStart = new(8, 30), ScheduledEnd = new(18, 0), FlexStart = new(8, 0), FlexEnd = new(9, 0), WorkHours = 9.5, BreakStart = new(12, 0), BreakEnd = new(13, 30) };
 
     [ValidateObjectMembers] public WorkdayRule MorningOff { get; set; } = new() { ScheduledStart = new(13, 30), ScheduledEnd = new(18, 0), FlexStart = new(13, 0), FlexEnd = new(14, 0), WorkHours = 4.5 };
 
@@ -58,6 +58,17 @@ public sealed class WorkdayRule
     /// <summary>上班到應下班的時數，含午休（全天 9.5＝8 小時工時＋1.5 小時午休）。</summary>
     [Range(0.5, 16)] public double WorkHours { get; set; }
 
+    /// <summary>
+    /// 午休起訖：表單補足時，工時、上班時數、遲到與表單時數都扣掉這段（中午才到不會多算 1.5 小時遲到）；原始的遲到早退照舊不扣。
+    /// 兩者都不填表示沒有午休（半天的日型）。
+    /// </summary>
+    public TimeOnly? BreakStart { get; set; }
+
+    public TimeOnly? BreakEnd { get; set; }
+
+    /// <summary>午休的長度；沒有午休為 0。</summary>
+    internal TimeSpan BreakLength => BreakStart is { } start && BreakEnd is { } end ? end - start : TimeSpan.Zero;
+
     /// <summary>跨欄位的錯誤（訊息、相關欄位），由 <see cref="WorkdayOptions"/> 加上日型路徑。</summary>
     internal IEnumerable<(string Message, string[] Members)> Problems()
     {
@@ -68,6 +79,14 @@ public sealed class WorkdayRule
         // 刷卡依刷卡時間歸到出勤日，應下班跨過午夜就落到隔天的刷卡，判定會錯；最晚的應下班是彈性終點上班＋時數。
         if (FlexEnd.ToTimeSpan() + TimeSpan.FromHours(WorkHours) >= TimeSpan.FromDays(1))
             yield return ($"{nameof(FlexEnd)} + {nameof(WorkHours)} must stay within the same day.", [nameof(FlexEnd), nameof(WorkHours)]);
+        if (BreakStart is null != BreakEnd is null)
+            yield return ($"{nameof(BreakStart)} and {nameof(BreakEnd)} must be set together.", [nameof(BreakStart), nameof(BreakEnd)]);
+        // 午休要落在每一種上班時間的上班～應下班之間（彈性終點之後、最早的應下班之前），扣午休的工時與「上班＋時數」才會一致，
+        // 表單補足與舊系統的遲到早退也才會同時有、同時沒有缺口（AttendanceEvaluator）。
+        else if (BreakStart is { } start && BreakEnd is { } end && !(FlexEnd < start && start < end && end <= ScheduledEnd))
+            yield return ($"{nameof(FlexEnd)} < {nameof(BreakStart)} < {nameof(BreakEnd)} <= {nameof(ScheduledEnd)} is required.", [nameof(BreakStart), nameof(BreakEnd)]);
+        else if (BreakEnd is { } breakEnd && breakEnd.ToTimeSpan() >= FlexStart.ToTimeSpan() + TimeSpan.FromHours(WorkHours))
+            yield return ($"{nameof(BreakEnd)} must be earlier than {nameof(FlexStart)} + {nameof(WorkHours)}.", [nameof(BreakEnd), nameof(FlexStart), nameof(WorkHours)]);
     }
 }
 

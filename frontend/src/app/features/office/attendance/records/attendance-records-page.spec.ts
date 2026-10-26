@@ -26,8 +26,12 @@ const day = (date: string, patch: Partial<AttendanceRecordDto> = {}): Attendance
   expectedClockOut: `${date}T18:00:00+08:00`,
   lateSeconds: 0,
   earlyLeaveSeconds: 0,
-  leave: 'None',
-  sheets: [],
+  formState: 'None',
+  formSeconds: 0,
+  adjustedClockOut: null,
+  coverage: null,
+  shortSeconds: 0,
+  forms: [],
   ...patch,
 });
 
@@ -37,7 +41,7 @@ const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDt
     to: '2026-10-31',
     today: '2026-10-22',
     calendarAvailable: true,
-    leaveAvailable: true,
+    formsAvailable: true,
     total: 0,
     offset: 0,
     people: [
@@ -46,16 +50,17 @@ const records = (patch: Partial<AttendanceRecordsDto> = {}): AttendanceRecordsDt
         cardNumber: null,
         displayName: '王小明',
         account: 'ming',
-        leaveAvailable: true,
+        formsAvailable: true,
         hidden: false,
         days: [
-          day('2026-10-01', { lateSeconds: 725 }),
+          day('2026-10-01', { lateSeconds: 725, coverage: 'Unexplained' }),
           day('2026-10-02', {
             status: 'Anomaly',
             reason: 'NoPunchOrLeave',
             clockIn: null,
             clockOut: null,
             expectedClockOut: null,
+            coverage: 'Unexplained',
           }),
         ],
       },
@@ -188,29 +193,29 @@ describe('AttendanceRecordsPage', () => {
     expect(person.textContent).toContain('王小明');
     expect(person.textContent).toContain('早退 0 天');
     expect(rows[1].querySelector('.records-person-cell')).toBeNull();
-    // 遲到的上班直接標色；沒刷卡也沒假單在上下班格標「未刷卡」。
+    // 遲到的上班直接標色；沒刷卡也沒表單補足在上下班格標「未刷卡」。
     expect(rows[0].querySelector('.records-time-flag')?.textContent).toContain('08:59:03');
     expect(rows[1].querySelectorAll('.records-missing')).toHaveLength(2);
-    expect(root.querySelector('.records-leave-unavailable')).toBeNull();
+    expect(root.querySelector('.records-forms-unavailable')).toBeNull();
     expect(root.querySelector('.records-calendar-unavailable')).toBeNull();
     // 查詢列只有區間與含放假日（只看得到自己時沒有人員選單）。
     expect(root.querySelectorAll('nx-query-bar nx-checkbox')).toHaveLength(1);
   });
 
-  it('marks leave and calendar as unavailable when the document system is down', async () => {
-    const down = records({ calendarAvailable: false, leaveAvailable: false });
-    down.people[0].leaveAvailable = false;
+  it('marks forms and calendar as unavailable when the document system is down', async () => {
+    const down = records({ calendarAvailable: false, formsAvailable: false });
+    down.people[0].formsAvailable = false;
     down.people[0].days = [
       day('2026-10-05', {
         dayType: 'Unknown',
         status: 'Undetermined',
         reason: 'DayTypeUnknown',
-        leave: 'Unavailable',
+        formState: 'Unavailable',
       }),
     ];
     const { fixture, root } = setup(async () => down);
     await fixture.whenStable();
-    expect(root.querySelector('.records-leave-unavailable')?.textContent).toContain('假單無法取得');
+    expect(root.querySelector('.records-forms-unavailable')?.textContent).toContain('表單無法取得');
     expect(root.querySelector('.records-calendar-unavailable')?.textContent).toContain(
       '假日行事曆無法取得',
     );
@@ -219,26 +224,26 @@ describe('AttendanceRecordsPage', () => {
     expect(row.querySelector('.records-unavailable')?.textContent).toContain('無法取得');
   });
 
-  it('flags a person whose leave cannot be matched while the rest are available', async () => {
+  it('flags a person whose forms cannot be matched while the rest are available', async () => {
     const data = records();
     data.people.push({
       ...data.people[0],
       userId: 'u2',
       displayName: '陳小華',
       account: 'hua',
-      leaveAvailable: false,
+      formsAvailable: false,
       hidden: true,
-      days: [day('2026-10-01', { leave: 'Unavailable' })],
+      days: [day('2026-10-01', { formState: 'Unavailable' })],
     });
     const { fixture, root } = setup(async () => data);
     await fixture.whenStable();
     const groups = root.querySelectorAll('.records-person-row');
-    expect(groups[0].textContent).not.toContain('假單無法取得');
-    expect(groups[1].textContent).toContain('假單無法取得');
+    expect(groups[0].textContent).not.toContain('表單無法取得');
+    expect(groups[1].textContent).toContain('表單無法取得');
     expect(groups[1].textContent).toContain('已隱藏');
     // 沒有卡號對應頁的權限時只標示，不給連結。
     expect(groups[1].querySelector('a.records-badge-link')).toBeNull();
-    expect(root.querySelector('.records-leave-unavailable')).toBeNull();
+    expect(root.querySelector('.records-forms-unavailable')).toBeNull();
   });
 
   it('offers units only to accounts that can read the organization', async () => {
@@ -309,7 +314,7 @@ describe('AttendanceRecordsPage', () => {
       cardNumber: '3368',
       displayName: '陳怡君',
       account: null,
-      leaveAvailable: false,
+      formsAvailable: false,
       days: [
         day('2026-10-10', {
           dayType: 'DayOff',
@@ -326,8 +331,8 @@ describe('AttendanceRecordsPage', () => {
     const head = root.querySelector('.records-person-row')!;
     expect(head.textContent).toContain('尚未綁帳號');
     expect(head.textContent).toContain('卡號 3368');
-    // 沒有帳號本來就查不到假單，不重複標「假單無法取得」。
-    expect(head.textContent).not.toContain('假單無法取得');
+    // 沒有帳號本來就查不到表單，不重複標「表單無法取得」。
+    expect(head.textContent).not.toContain('表單無法取得');
     expect(root.querySelector('.records-remark')?.textContent).toContain('國慶日');
   });
 
@@ -441,6 +446,79 @@ describe('AttendanceRecordsPage', () => {
         root.querySelector(step.target.replace(/^nx-attendance-records-page /, '')),
         step.target,
       ).not.toBeNull();
+  });
+
+  it('narrows the table to unexplained days from the switch before the query fields', async () => {
+    const { fixture, root, api } = setup(async () => records());
+    await fixture.whenStable();
+    expect(api.records.mock.calls[0][0].coverage).toBeUndefined();
+    expect(root.querySelector('.records-person-flags')?.textContent).toContain('未補足 2 天');
+
+    const unexplained = [
+      ...root.querySelectorAll<HTMLButtonElement>('.records-coverage button'),
+    ].find((button) => button.textContent?.includes('未補足'))!;
+    unexplained.click();
+    await fixture.whenStable();
+    expect(api.records.mock.calls.at(-1)![0].coverage).toBe('Unexplained');
+  });
+
+  it('shows each form as a card and the day as waiting on a form', async () => {
+    const data = records();
+    data.people[0].days = [
+      day('2026-10-05', {
+        clockIn: '2026-10-05T09:03:06+08:00',
+        lateSeconds: 186,
+        earlyLeaveSeconds: 900,
+        clockOut: '2026-10-05T17:45:00+08:00',
+        expectedClockOut: '2026-10-05T18:00:00+08:00',
+        formState: 'Filed',
+        formSeconds: 1800,
+        adjustedClockOut: '2026-10-05T18:03:06+08:00',
+        coverage: 'Pending',
+        shortSeconds: 1086,
+        forms: [
+          {
+            desNo: 'L-1',
+            kind: 'Leave',
+            title: '特休',
+            startsAt: '2026-10-05T08:30:00+08:00',
+            endsAt: '2026-10-05T09:00:00+08:00',
+            flowStatus: 'Decide',
+            currentSigner: null,
+            currentStep: null,
+            approved: true,
+          },
+          {
+            desNo: 'L-2',
+            kind: 'Leave',
+            title: '事假',
+            startsAt: '2026-10-05T17:45:00+08:00',
+            endsAt: '2026-10-05T18:30:00+08:00',
+            flowStatus: 'Send',
+            currentSigner: '林雅婷',
+            currentStep: '主管',
+            approved: false,
+          },
+        ],
+      }),
+    ];
+    const { fixture, root } = setup(async () => data);
+    await fixture.whenStable();
+    const row = root.querySelector('.records-person-group tr:not(.records-person-row)')!;
+    const forms = row.querySelectorAll('nx-gd-form-list li');
+    expect([...forms].map((form) => form.getAttribute('data-flow'))).toEqual(['Decide', 'Send']);
+    expect(forms[0].textContent).toContain('L-1');
+    expect(forms[0].textContent).toContain('08:30–09:00');
+    expect(forms[1].textContent).toContain('等待 林雅婷（主管）');
+    const tags = [...row.querySelectorAll('.records-coverage-tag')].map((tag) =>
+      tag.textContent?.replace(/s+/g, ' ').trim(),
+    );
+    expect(tags).toEqual(['簽核中 差 18 分 6 秒']);
+    expect(row.querySelector('.records-adjusted')?.textContent?.trim()).toBe('扣表單 18:03:06');
+    expect(row.querySelector('.records-time-flag')?.getAttribute('title')).toBe(
+      '遲到 3 分 6 秒・簽核中',
+    );
+    expect(root.querySelector('.records-person-flags')?.textContent).toContain('簽核中 1 天');
   });
 
   it('does not offer an export when nobody is listed', async () => {

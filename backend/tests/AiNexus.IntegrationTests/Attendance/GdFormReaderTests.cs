@@ -1,12 +1,12 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Office.Attendance.Leave;
+using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Attendance;
 
-public sealed class LeaveSheetReaderTests
+public sealed class GdFormReaderTests
 {
     private static readonly DateOnly Oct6 = new(2026, 10, 6);
     private static readonly DateOnly Oct8 = new(2026, 10, 8);
@@ -22,10 +22,10 @@ public sealed class LeaveSheetReaderTests
 
         public Guid AddUser(string? adAccount) => FakeGd.AddAppUser(db, adAccount);
 
-        public Task<LeaveLookup> ReadAsync(DateOnly from, DateOnly to, DatabasesOptions? source = null, params Guid[] users)
+        public Task<GdFormLookup> ReadAsync(DateOnly from, DateOnly to, DatabasesOptions? source = null, params Guid[] users)
         {
             var access = source is null ? Gd.Access() : FakeGd.AccessTo(source);
-            return new LeaveSheetReader(new GdAccounts(db, access), access).ReadAsync(users, from, to, TestContext.Current.CancellationToken);
+            return new GdFormReader(new GdAccounts(db, access), access).ReadAsync(users, from, to, TestContext.Current.CancellationToken);
         }
     }
 
@@ -37,7 +37,7 @@ public sealed class LeaveSheetReaderTests
     });
 
     [Fact]
-    public async Task OnlySentDecidedAndFinishedSheetsAreReturned()
+    public async Task OnlyApprovedAndInFlowFormsAreReturned()
     {
         await RunAsync(async s =>
         {
@@ -45,67 +45,91 @@ public sealed class LeaveSheetReaderTests
             s.Gd.AddKind("A", "特休");
             foreach (var flow in new[] { "Temp", "Back", "Cancel", "Send", "Decide", "Finish" })
                 s.Gd.AddLeave("L-" + flow, "G001", "A", At(6, 9), At(6, 12), flow);
-            foreach (var flow in new[] { "Temp", "Cancel", "Finish" }) s.Gd.AddTravel("T-" + flow, "G001", At(7, 9), At(7, 17), "拜訪客戶", flow);
+            // Finish 是退回結案（承辦人把退回的單結案存查），不是核准，也不算有效表單。
+            foreach (var flow in new[] { "Temp", "Cancel", "Finish", "Decide" }) s.Gd.AddTravel("T-" + flow, "G001", At(7, 9), At(7, 17), "拜訪客戶", flow);
 
             var lookup = await s.ReadAsync(Oct6, Oct8, users: alice);
 
             Assert.True(lookup.Available);
-            Assert.Equal(["L-Decide", "L-Finish", "L-Send", "T-Finish"], lookup.For(alice).Select(x => x.DesNo).Order(StringComparer.Ordinal));
-            Assert.Equal(["Decide", "Finish", "Finish", "Send"], lookup.For(alice).Select(x => x.FlowStatus).Order(StringComparer.Ordinal));
+            Assert.Equal(["L-Decide", "L-Send", "T-Decide"], lookup.For(alice).Select(x => x.DesNo).Order(StringComparer.Ordinal));
+            Assert.Equal([GdFormFlowOver.Decide, GdFormFlowOver.Send, GdFormFlowOver.Decide], lookup.For(alice).OrderBy(x => x.DesNo, StringComparer.Ordinal).Select(x => x.FlowStatus));
+            Assert.Equal([true, false, true], lookup.For(alice).OrderBy(x => x.DesNo, StringComparer.Ordinal).Select(x => x.Approved));
         });
     }
 
     [Fact]
-    public async Task ALeaveSheetCarriesTheKindNameAndTaipeiTimes()
+    public async Task AnInFlowFormCarriesItsCurrentSignerAndStep()
+    {
+        await RunAsync(async s =>
+        {
+            var alice = s.AddUser("alice");
+            s.Gd.AddUser("G009", "carol", name: "王小明");
+            s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Send");
+            s.Gd.AddFlowStep("L-1", "003", "2_G002", "請假代理人");
+            // 同一單停在多關時取最後一關。
+            s.Gd.AddFlowStep("L-1", "004", "7_G009", "核准關卡");
+            s.Gd.AddLeave("L-2", "G001", "A", At(7, 9), At(7, 12), "Send");
+            // 核准的單不帶目前關卡，即使 FLOW_CURRENT 還留著列。
+            s.Gd.AddLeave("L-3", "G001", "A", At(8, 9), At(8, 12), "Decide");
+            s.Gd.AddFlowStep("L-3", "009", "7_G009", "流程終結");
+
+            var forms = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
+
+            Assert.Equal([("王小明", "核准關卡"), (null, null), (null, null)], forms.Select(x => (x.CurrentSigner, x.CurrentStep)));
+        });
+    }
+
+    [Fact]
+    public async Task ALeaveFormCarriesTheKindNameAndTaipeiTimes()
     {
         await RunAsync(async s =>
         {
             var alice = s.AddUser("alice");
             s.Gd.AddKind("A", "特休");
-            s.Gd.AddLeave("L-1", "G001", "A", At(6, 8, 30), At(6, 12), "Finish");
+            s.Gd.AddLeave("L-1", "G001", "A", At(6, 8, 30), At(6, 12), "Decide");
             s.Gd.AddLeave("L-2", "G001", "Z", At(7, 13, 30), At(7, 18), "Send");
 
-            var sheets = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
+            var forms = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
 
-            Assert.Equal(new LeaveSheet("L-1", LeaveSheetKind.Leave, "特休", Taipei(6, 8, 30), Taipei(6, 12), "Finish"), sheets[0]);
+            Assert.Equal(new GdForm("L-1", GdFormKind.Leave, "特休", Taipei(6, 8, 30), Taipei(6, 12), GdFormFlowOver.Decide), forms[0]);
             // 假別代碼不在 Form_LeaveKind 時退回代碼，不留空白。
-            Assert.Equal(new LeaveSheet("L-2", LeaveSheetKind.Leave, "Z", Taipei(7, 13, 30), Taipei(7, 18), "Send"), sheets[1]);
-            Assert.Equal(TimeSpan.FromHours(8), sheets[0].StartsAt.Offset);
+            Assert.Equal(new GdForm("L-2", GdFormKind.Leave, "Z", Taipei(7, 13, 30), Taipei(7, 18), GdFormFlowOver.Send), forms[1]);
+            Assert.Equal(TimeSpan.FromHours(8), forms[0].StartsAt.Offset);
         });
     }
 
     [Fact]
-    public async Task ATravelSheetUsesTheTravelPurposeAsItsTitle()
+    public async Task ATravelFormUsesTheTravelPurposeAsItsTitle()
     {
         await RunAsync(async s =>
         {
             var alice = s.AddUser("alice");
             s.Gd.AddTravel("T-1", "G001", At(7, 9), At(7, 17), "拜訪南部客戶", "Decide");
 
-            var sheet = Assert.Single((await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice));
+            var form = Assert.Single((await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice));
 
-            Assert.Equal(new LeaveSheet("T-1", LeaveSheetKind.Travel, "拜訪南部客戶", Taipei(7, 9), Taipei(7, 17), "Decide"), sheet);
+            Assert.Equal(new GdForm("T-1", GdFormKind.Travel, "拜訪南部客戶", Taipei(7, 9), Taipei(7, 17), GdFormFlowOver.Decide), form);
         });
     }
 
     [Fact]
-    public async Task OnlySheetsOverlappingTheRangeAreReturned()
+    public async Task OnlyFormsOverlappingTheRangeAreReturned()
     {
         await RunAsync(async s =>
         {
             var alice = s.AddUser("alice");
             s.Gd.AddKind("A", "特休");
-            s.Gd.AddLeave("before", "G001", "A", At(5, 9), At(5, 18), "Finish");
-            s.Gd.AddLeave("ends-at-start", "G001", "A", At(5, 13), At(6), "Finish");
-            s.Gd.AddLeave("crosses-start", "G001", "A", At(5, 13), At(6, 10), "Finish");
-            s.Gd.AddLeave("inside", "G001", "A", At(7, 9), At(7, 12), "Finish");
-            s.Gd.AddLeave("crosses-end", "G001", "A", At(8, 13), At(9, 10), "Finish");
-            s.Gd.AddLeave("starts-at-end", "G001", "A", At(9), At(9, 12), "Finish");
-            s.Gd.AddLeave("after", "G001", "A", At(12, 9), At(12, 18), "Finish");
+            s.Gd.AddLeave("before", "G001", "A", At(5, 9), At(5, 18), "Decide");
+            s.Gd.AddLeave("ends-at-start", "G001", "A", At(5, 13), At(6), "Decide");
+            s.Gd.AddLeave("crosses-start", "G001", "A", At(5, 13), At(6, 10), "Decide");
+            s.Gd.AddLeave("inside", "G001", "A", At(7, 9), At(7, 12), "Decide");
+            s.Gd.AddLeave("crosses-end", "G001", "A", At(8, 13), At(9, 10), "Decide");
+            s.Gd.AddLeave("starts-at-end", "G001", "A", At(9), At(9, 12), "Decide");
+            s.Gd.AddLeave("after", "G001", "A", At(12, 9), At(12, 18), "Decide");
 
-            var sheets = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
+            var forms = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
 
-            Assert.Equal(["crosses-start", "inside", "crosses-end"], sheets.Select(x => x.DesNo));
+            Assert.Equal(["crosses-start", "inside", "crosses-end"], forms.Select(x => x.DesNo));
         });
     }
 
@@ -117,10 +141,10 @@ public sealed class LeaveSheetReaderTests
             var alice = s.AddUser("alice");
             s.Gd.AddKind("A", "特休");
             // 十月整月的主單，實際只有 6 日與 20 日請假；主單的起訖不能拿來判斷。
-            s.Gd.AddLeave("L-multi", "G001", "A", At(1, 8, 30), At(30, 18), "Finish", dayOfWeek: "2,2");
+            s.Gd.AddLeave("L-multi", "G001", "A", At(1, 8, 30), At(30, 18), "Decide", dayOfWeek: "2,2");
             s.Gd.AddLeaveGroup("L-multi", At(6, 8, 30), At(6, 18), "2");
             s.Gd.AddLeaveGroup("L-multi", At(20, 8, 30), At(20, 18), "2");
-            s.Gd.AddLeave("L-plain", "G001", "A", At(7, 9), At(7, 12), "Finish", dayOfWeek: "  ");
+            s.Gd.AddLeave("L-plain", "G001", "A", At(7, 9), At(7, 12), "Decide", dayOfWeek: "  ");
             // 抽單的跨區間假單，各段也不算。
             s.Gd.AddLeave("L-cancelled", "G001", "A", At(1, 8, 30), At(30, 18), "Cancel", dayOfWeek: "3");
             s.Gd.AddLeaveGroup("L-cancelled", At(7, 13, 30), At(7, 18), "3");
@@ -134,7 +158,7 @@ public sealed class LeaveSheetReaderTests
     }
 
     [Fact]
-    public async Task EachUserGetsOnlyTheirOwnSheetsAndUnmappedUsersAreReported()
+    public async Task EachUserGetsOnlyTheirOwnFormsAndUnmappedUsersAreReported()
     {
         await RunAsync(async s =>
         {
@@ -144,8 +168,8 @@ public sealed class LeaveSheetReaderTests
             var notInGd = s.AddUser("carol");
             var unknown = Guid.NewGuid();
             s.Gd.AddKind("A", "特休");
-            s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Finish");
-            s.Gd.AddLeave("L-2", "G002", "A", At(7, 9), At(7, 12), "Finish");
+            s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Decide");
+            s.Gd.AddLeave("L-2", "G002", "A", At(7, 9), At(7, 12), "Decide");
 
             var lookup = await s.ReadAsync(Oct6, Oct8, users: [alice, bob, noAccount, notInGd, unknown]);
 
@@ -158,15 +182,15 @@ public sealed class LeaveSheetReaderTests
     }
 
     [Fact]
-    public async Task AUserWhoseAdAccountHasSeveralGdAccountsGetsAllTheirSheets()
+    public async Task AUserWhoseAdAccountHasSeveralGdAccountsGetsAllTheirForms()
     {
         await RunAsync(async s =>
         {
             var alice = s.AddUser("alice");
             s.Gd.AddUser("G003", "alice");
             s.Gd.AddKind("A", "特休");
-            s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Finish");
-            s.Gd.AddLeave("L-3", "G003", "A", At(7, 9), At(7, 12), "Finish");
+            s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Decide");
+            s.Gd.AddLeave("L-3", "G003", "A", At(7, 9), At(7, 12), "Decide");
 
             var lookup = await s.ReadAsync(Oct6, Oct8, users: alice);
 
@@ -185,9 +209,9 @@ public sealed class LeaveSheetReaderTests
             s.Gd.AddUser("G011", "dave", disabled: true);
             s.Gd.AddUser("G012", "dave");
             s.Gd.AddKind("A", "特休");
-            s.Gd.AddLeave("L-10", "G010", "A", At(6, 9), At(6, 12), "Finish");
-            s.Gd.AddLeave("L-11", "G011", "A", At(6, 9), At(6, 12), "Finish");
-            s.Gd.AddLeave("L-12", "G012", "A", At(7, 9), At(7, 12), "Finish");
+            s.Gd.AddLeave("L-10", "G010", "A", At(6, 9), At(6, 12), "Decide");
+            s.Gd.AddLeave("L-11", "G011", "A", At(6, 9), At(6, 12), "Decide");
+            s.Gd.AddLeave("L-12", "G012", "A", At(7, 9), At(7, 12), "Decide");
 
             var lookup = await s.ReadAsync(Oct6, Oct8, users: [carol, dave]);
 
@@ -199,7 +223,7 @@ public sealed class LeaveSheetReaderTests
     }
 
     [Fact]
-    public async Task AMappedUserWithoutSheetsIsNotUnmapped()
+    public async Task AMappedUserWithoutFormsIsNotUnmapped()
     {
         await RunAsync(async s =>
         {
@@ -225,7 +249,7 @@ public sealed class LeaveSheetReaderTests
                 var lookup = await s.ReadAsync(Oct6, Oct8, source, alice);
 
                 Assert.False(lookup.Available);
-                Assert.Empty(lookup.Sheets);
+                Assert.Empty(lookup.Forms);
                 Assert.Empty(lookup.Unmapped);
             }
         });
@@ -250,7 +274,7 @@ public sealed class LeaveSheetReaderTests
         using var scope = factory.Services.CreateScope();
         var alice = FakeGd.AddAppUser(scope.ServiceProvider.GetRequiredService<AppDbContext>(), "alice");
 
-        var lookup = await scope.ServiceProvider.GetRequiredService<LeaveSheetReader>().ReadAsync([alice], Oct6, Oct8, TestContext.Current.CancellationToken);
+        var lookup = await scope.ServiceProvider.GetRequiredService<GdFormReader>().ReadAsync([alice], Oct6, Oct8, TestContext.Current.CancellationToken);
 
         Assert.False(lookup.Available);
     }

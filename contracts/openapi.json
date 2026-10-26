@@ -38635,6 +38635,13 @@
             }
           },
           {
+            "name": "coverage",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/GapCoverage"
+            }
+          },
+          {
             "name": "offset",
             "in": "query",
             "schema": {
@@ -38999,6 +39006,13 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "coverage",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/GapCoverage"
             }
           }
         ],
@@ -43688,7 +43702,7 @@
           "cardNumber",
           "displayName",
           "account",
-          "leaveAvailable",
+          "formsAvailable",
           "hidden",
           "days"
         ],
@@ -43716,7 +43730,7 @@
               "string"
             ]
           },
-          "leaveAvailable": {
+          "formsAvailable": {
             "type": "boolean"
           },
           "hidden": {
@@ -43774,7 +43788,7 @@
       "AttendanceReason": {
         "enum": [
           "NoPunchOrLeave",
-          "LeaveUnavailable",
+          "FormsUnavailable",
           "DayTypeUnknown",
           "SinglePunch",
           "DayInProgress",
@@ -43793,8 +43807,12 @@
           "expectedClockOut",
           "lateSeconds",
           "earlyLeaveSeconds",
-          "leave",
-          "sheets"
+          "formState",
+          "formSeconds",
+          "adjustedClockOut",
+          "coverage",
+          "shortSeconds",
+          "forms"
         ],
         "type": "object",
         "properties": {
@@ -43853,13 +43871,38 @@
             "type": "integer",
             "format": "int32"
           },
-          "leave": {
-            "$ref": "#/components/schemas/LeaveState"
+          "formState": {
+            "$ref": "#/components/schemas/FormState"
           },
-          "sheets": {
+          "formSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "adjustedClockOut": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "coverage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GapCoverage"
+              }
+            ]
+          },
+          "shortSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "forms": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/LeaveSheet"
+              "$ref": "#/components/schemas/GdForm"
             }
           }
         }
@@ -43870,7 +43913,7 @@
           "to",
           "today",
           "calendarAvailable",
-          "leaveAvailable",
+          "formsAvailable",
           "total",
           "offset",
           "people"
@@ -43892,7 +43935,7 @@
           "calendarAvailable": {
             "type": "boolean"
           },
-          "leaveAvailable": {
+          "formsAvailable": {
             "type": "boolean"
           },
           "total": {
@@ -47305,6 +47348,89 @@
           }
         }
       },
+      "FormState": {
+        "enum": [
+          "None",
+          "Filed",
+          "Unavailable"
+        ]
+      },
+      "GapCoverage": {
+        "enum": [
+          "Unexplained",
+          "Pending",
+          "Covered",
+          "Unknown",
+          null
+        ]
+      },
+      "GdForm": {
+        "required": [
+          "desNo",
+          "kind",
+          "title",
+          "startsAt",
+          "endsAt",
+          "flowStatus",
+          "currentSigner",
+          "currentStep",
+          "approved"
+        ],
+        "type": "object",
+        "properties": {
+          "desNo": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GdFormKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "flowStatus": {
+            "$ref": "#/components/schemas/GdFormFlowOver"
+          },
+          "currentSigner": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentStep": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GdFormFlowOver": {
+        "enum": [
+          "Temp",
+          "Send",
+          "Back",
+          "Decide",
+          "Cancel",
+          "Finish"
+        ]
+      },
+      "GdFormKind": {
+        "enum": [
+          "Leave",
+          "Travel"
+        ]
+      },
       "GroupPolicyRequest": {
         "type": "object",
         "properties": {
@@ -47695,52 +47821,6 @@
             }
           }
         }
-      },
-      "LeaveSheet": {
-        "required": [
-          "desNo",
-          "kind",
-          "title",
-          "startsAt",
-          "endsAt",
-          "flowStatus"
-        ],
-        "type": "object",
-        "properties": {
-          "desNo": {
-            "type": "string"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/LeaveSheetKind"
-          },
-          "title": {
-            "type": "string"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "flowStatus": {
-            "type": "string"
-          }
-        }
-      },
-      "LeaveSheetKind": {
-        "enum": [
-          "Leave",
-          "Travel"
-        ]
-      },
-      "LeaveState": {
-        "enum": [
-          "None",
-          "Filed",
-          "Unavailable"
-        ]
       },
       "LibraryFileDto": {
         "required": [

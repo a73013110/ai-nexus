@@ -1,0 +1,82 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+ul {
+  display: grid;
+  gap: var(--p-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+li:not(.form-none) {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: var(--p-space-1) var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
+  line-height: 1.45;
+}
+// 流程中的單還不算數：虛線框，與核准的實線框分得開。
+li[data-flow='Send'] {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
+}
+.form-head,
+.form-body {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.form-head {
+  justify-content: space-between;
+}
+// 之後會改成開啟表單的按鈕：先照連結的外觀（強調色、虛線底線）。
+.form-no {
+  overflow: hidden;
+  color: var(--accent);
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+  text-decoration: underline dotted;
+  text-overflow: ellipsis;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.form-body {
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--p-space-2);
+  row-gap: 0;
+}
+.form-body strong {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+time {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.form-note,
+.form-waiting {
+  overflow: hidden;
+  font-size: var(--p-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.form-note {
+  color: var(--secondary);
+}
+.form-waiting {
+  color: var(--warning);
+}
+.form-none {
+  color: var(--secondary);
+}

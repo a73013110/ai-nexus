@@ -7,13 +7,24 @@ import { monthBounds, shiftMonth, taipeiToday } from '../attendance-presentation
 /**
  * 出勤紀錄的查詢條件；區間預設本月，套用當下才換算成起訖（跨月後重新查詢就是新的月份）。
  * `person` 是使用者 ID，或一張卡上只有姓名的持有人（`card:卡號`，見 `cardKey`）。
+ * `coverage` 是查詢列前方的切換（全部／未補足／簽核中），切換即套用。
  */
 export interface RecordsQuery {
   range: TimeRange;
   person: string;
   unitId: string;
   includeDaysOff: boolean;
+  coverage: RecordsCoverage;
 }
+
+/** 只看遲到、早退或異常是這個狀態的日子；與後端 `AttendanceRecordsFilter.Coverage` 接受的值相同，空字串為全部。 */
+export type RecordsCoverage = '' | 'Unexplained' | 'Pending';
+export const RECORD_COVERAGES: readonly { value: RecordsCoverage; label: string; param: string }[] =
+  [
+    { value: '', label: '全部', param: '' },
+    { value: 'Unexplained', label: '未補足', param: 'unexplained' },
+    { value: 'Pending', label: '簽核中', param: 'pending' },
+  ];
 
 /** 與後端 `AttendanceRecordsFilter.MaxRangeDays` 相同；伺服器仍會以 `attendance_records_range_invalid` 拒絕。 */
 export const MAX_RANGE_DAYS = 366;
@@ -44,6 +55,7 @@ export const emptyRecordsQuery = (): RecordsQuery => ({
   person: '',
   unitId: '',
   includeDaysOff: false,
+  coverage: '',
 });
 
 const dayNumber = (date: string) => Date.parse(date + 'T00:00:00Z') / 86_400_000;
@@ -104,6 +116,7 @@ export function recordFilters(
     card: card || undefined,
     unitId: query.unitId || undefined,
     includeDaysOff: query.includeDaysOff || undefined,
+    coverage: query.coverage || undefined,
   };
 }
 
@@ -118,6 +131,7 @@ function toParams(query: RecordsQuery): Params {
     card: card || undefined,
     unit: query.unitId || undefined,
     holidays: query.includeDaysOff ? 'true' : undefined,
+    coverage: RECORD_COVERAGES.find((item) => item.value === query.coverage)?.param || undefined,
   };
 }
 
@@ -140,6 +154,9 @@ function fromParams(params: ParamMap, defaults: RecordsQuery): RecordsQuery {
     person: id('user') || (card && card.length <= CARD_MAX ? cardKey(card) : ''),
     unitId: id('unit'),
     includeDaysOff: params.get('holidays') === 'true',
+    coverage:
+      RECORD_COVERAGES.find((item) => item.param && item.param === params.get('coverage'))?.value ??
+      '',
   };
 }
 

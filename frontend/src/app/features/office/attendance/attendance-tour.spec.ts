@@ -157,18 +157,20 @@ describe('attendanceCalendarTour', () => {
 });
 
 describe('attendanceRecordsTour', () => {
-  it('covers the rules, query, grouped list and Excel export', () => {
+  it('covers the rules, query, gap summary, grouped list and Excel export', () => {
     const tour = attendanceRecordsTour({ units: true });
     expect(titles(tour)).toEqual([
       '每天的出勤判定',
       '判定規則',
       '查詢條件',
+      '表單補足',
       '依人分組',
       '匯出 Excel',
     ]);
     expect(copy(tour)).toContain('最長一年');
     expect(copy(tour)).toContain('單位（含下層）');
     expect(copy(tour)).toContain('含放假日');
+    expect(copy(tour)).toContain('已補足');
     expect(copy(attendanceRecordsTour({ units: false }))).not.toContain('單位');
     scoped(tour, 'nx-attendance-records-page');
   });

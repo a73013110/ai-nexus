@@ -33,6 +33,7 @@ import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect } from '@shared/ui/tree-select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitNodes } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
@@ -40,10 +41,19 @@ import {
   attendanceProblem,
   presentRecord,
   presentSchedule,
+  summarizePerson,
   weekOf,
 } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
-import { RECORD_RANGES, cardKey, recordFilters, recordsQueryOptions } from './records-query';
+import { GdFormList } from './gd-form-list';
+import {
+  RECORD_COVERAGES,
+  RECORD_RANGES,
+  cardKey,
+  recordFilters,
+  recordsQueryOptions,
+  type RecordsCoverage,
+} from './records-query';
 
 /** 每頁人數：一人一年約 250 列，頁面一次只畫這幾個人；上限與後端 `ListAttendanceRecords.MaxPageSize` 相同。 */
 const PAGE_SIZES = [10, 20, 50];
@@ -59,6 +69,8 @@ const DEFAULT_PAGE_SIZE = 20;
  * 每人一段：最左的人員欄跨過那個人的每一天、捲動時黏住，段落交替底色，看任何一列都知道是誰；
  * 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字），遲到、早退欄照樣列出時數。手機卡片改用段首的姓名列。
  * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生與舊系統「出缺勤計算」一模一樣的 .xlsx（整段、全部人）。
+ * 查詢列前方切換只看表單未補足或簽核中的日子，段首標出每人有幾天要追；
+ * 狀態欄標出當天的表單是否補足與還差多少、應下班下另列扣表單後的時間，表單欄每張單一張卡片（單號、假別、起訖、流程狀態與目前簽核人）。
  */
 @Component({
   selector: 'nx-attendance-records-page',
@@ -69,6 +81,7 @@ const DEFAULT_PAGE_SIZE = 20;
     FeaturePage,
     Icon,
     InfoPopover,
+    GdFormList,
     NgTemplateOutlet,
     Notice,
     PendingButton,
@@ -80,6 +93,7 @@ const DEFAULT_PAGE_SIZE = 20;
     TableState,
     TimeRangePicker,
     TreeSelect,
+    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ViewScope],
@@ -94,6 +108,7 @@ export class AttendanceRecordsPage {
   private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
   readonly pageSizes = PAGE_SIZES;
+  readonly coverages = RECORD_COVERAGES;
   /** 隱藏的卡在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
   readonly cardsRoute = routeOf('attendance.cards');
   private readonly unitsRead = apiResource({
@@ -185,7 +200,7 @@ export class AttendanceRecordsPage {
     { id: 'expected', label: '應下班' },
     { id: 'late', label: '遲到' },
     { id: 'early', label: '早退' },
-    { id: 'sheets', label: '假單與出差' },
+    { id: 'forms', label: '表單' },
   ];
   readonly groups = computed(() => {
     const data = this.records();
@@ -194,9 +209,7 @@ export class AttendanceRecordsPage {
       person,
       // 同一張卡先後有兩位只有姓名的持有人時是兩列。
       key: person.userId ?? `${cardKey(person.cardNumber!)}:${person.displayName}`,
-      anomalies: person.days.filter((day) => day.status === 'Anomaly').length,
-      late: person.days.filter((day) => day.lateSeconds > 0).length,
-      early: person.days.filter((day) => day.earlyLeaveSeconds > 0).length,
+      ...summarizePerson(person.days),
       // 換週的那一列上緣加分隔線；放假日不列時週一可能不在，所以比的是「哪一週」而不是星期幾。
       days: person.days.map((day, index, days) => ({
         ...presentRecord(day, data.today),
@@ -220,6 +233,11 @@ export class AttendanceRecordsPage {
         this.filters.set(filters);
       });
     });
+  }
+
+  /** 摘要磚塊與查詢列前方的切換共用：切換即套用，回到第一頁。 */
+  showCoverage(coverage: RecordsCoverage) {
+    this.query.commit({ coverage });
   }
 
   changePage(delta: -1 | 1) {

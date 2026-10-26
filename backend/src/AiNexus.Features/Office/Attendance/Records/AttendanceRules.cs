@@ -26,6 +26,11 @@ public static class AttendanceRules
         // 設定驗證保證彈性終點＋時數不跨午夜，所以這兩個例子都落在同一天。
         var earlyArrival = full.FlexStart >= new TimeOnly(0, 10) ? full.FlexStart.AddMinutes(-10) : full.FlexStart;
         var lateArrival = full.FlexEnd.AddMinutes(10);
+        // 補足的例子（全天）：09:01:19 到、請 08:30～09:00，扣表單後 18:01:19 可下班；遲到 10 分、表定下班就走，要補的不只 10 分。
+        var slightlyLate = full.FlexEnd.Add(new TimeSpan(0, 1, 19));
+        var halfHour = full.ScheduledStart.AddMinutes(30);
+        var netHours = full.WorkHours - full.BreakLength.TotalHours;
+        var lunch = full.BreakStart is { } breakStart && full.BreakEnd is { } breakEnd ? $"午休 {Time(breakStart)}～{Time(breakEnd)} 不算在內；" : "";
 
         return new(
             [Schedule(AttendanceDayType.FullDay, full), Schedule(AttendanceDayType.MorningOff, options.MorningOff), Schedule(AttendanceDayType.AfternoonOff, options.AfternoonOff)],
@@ -38,11 +43,18 @@ public static class AttendanceRules
                     $"例：上班日 {Time(lateArrival)} 到，遲到 10 分，應下班 {Time(ExpectedClockOut(lateArrival, options))}。"),
                 new("早退", "早於應下班離開為早退。遲到與早退都以秒計，彈性時段以外沒有寬限。"),
                 new("只有一筆刷卡", "判為異常；分不出缺的是上班還是下班，所以不算遲到早退。"),
-                new("沒有刷卡", "當天有假單或出差單為請假，都沒有為異常。"),
-                new("假單與出差單", "取公文系統已送出的單據（暫存、退回、取消不算），與當天有交集就列在當天，跨日、半天都一樣。" +
-                    "只並列、不抵銷遲到早退，也不比對時數，由人事判斷：上午請假、下午才到照樣算遲到。"),
+                new("沒有刷卡", "核准的假單或出差單補足當天的工時為請假；沒有表單、只請了部分時段或表單還在簽核為異常。"),
+                new("假單與出差單", "取公文系統已核准與簽核中的表單，與當天有交集就列在當天，跨日、半天都一樣；" +
+                    "暫存、退回、銷單與退回結案不算（退回結案是承辦人把退回的單結案存查，不是核准）。"),
+                new("表單補足", $"表單只比時數、不比時段：核准表單的時數從當天的工時（上班日 {Hours(netHours)} 小時）扣掉，" +
+                    $"剩下的不多於實際上班的時數就補足；遲到時表單至少要抵掉遲到的部分，晚走不抵遲到。{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。" +
+                    $"例：上班日 {Seconds(slightlyLate)} 到、請 {Time(full.ScheduledStart)}～{Time(halfHour)} 的假，" +
+                    $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}；" +
+                    $"{Time(lateArrival)} 到、{Time(full.ScheduledEnd)} 走，遲到 10 分，但要 {Span(Short(lateArrival, full.ScheduledEnd, options))}的表單才補足（上班時數少了這麼多）。"),
+                new("補足狀態", $"有遲到、早退或異常才標：核准的表單夠為{Label(GapCoverage.Covered)}；加上簽核中的才夠為{Label(GapCoverage.Pending)}；" +
+                    $"都不夠為{Label(GapCoverage.Unexplained)}，並寫出還差多少。遲到、早退的時間與小計照原本的判定，不因表單改變。"),
                 new("日型", "上班日、上午放假、下午放假與放假依公文系統的假日行事曆；放假整天不判定，刷卡照樣列出。行事曆沒有這一天時，週末當放假、平日無法判定。"),
-                new("無法判定", "公文系統連不上或對不到公文帳號時假單無法取得，沒刷卡的日子列為無法判定，不算異常。" +
+                new("無法判定", "公文系統連不上或對不到公文帳號時表單無法取得，沒刷卡的日子列為無法判定，不算異常。" +
                     "今天還沒結束（打卡檔晚上才匯入），出勤與異常一律先列為無法判定，也不算遲到。"),
                 new("列出的日子", "只列持有卡的日子：到職前、換卡空窗與離職後不列，未來的日子也不列。"),
             ]);
@@ -53,12 +65,42 @@ public static class AttendanceRules
 
     public static string Time(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
 
-    /// <summary>舉例用：由判定本身算出某個上班時間的應下班，說明的數字才不會與判定各算各的。</summary>
-    private static TimeOnly ExpectedClockOut(TimeOnly arrival, WorkdayOptions options)
+    private static string Seconds(TimeOnly time) => time.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
+    /// <summary>補足狀態的字樣，與畫面相同。</summary>
+    public static string Label(GapCoverage? coverage) => coverage switch
     {
-        var date = new DateOnly(2026, 1, 5);
-        var day = new AttendanceDay(date, AttendanceDayType.FullDay, TaipeiTime.At(date, arrival), TaipeiTime.At(date, new TimeOnly(23, 59, 59)), LeaveState.None);
-        var expected = AttendanceEvaluator.Evaluate(day, options).ExpectedClockOut!.Value;
-        return TimeOnly.FromTimeSpan(TaipeiTime.Of(expected).TimeOfDay);
+        GapCoverage.Covered => "已補足",
+        GapCoverage.Pending => "簽核中",
+        GapCoverage.Unexplained => "未補足",
+        GapCoverage.Unknown => "表單無法取得",
+        _ => "沒有缺口"
+    };
+
+    /// <summary>「1 小時 30 分」「40 分」這類時長；說明裡的例子都是整分。</summary>
+    private static string Span(int seconds)
+    {
+        var span = TimeSpan.FromSeconds(seconds);
+        return ((span.Hours > 0 ? $"{span.Hours} 小時 " : "") + (span.Minutes > 0 ? $"{span.Minutes} 分" : "")).TrimEnd();
     }
+
+    // 以下舉例都由判定本身算出，說明的數字才不會與判定各算各的。日期是任意一個上班日。
+    private static readonly DateOnly ExampleDate = new(2026, 1, 5);
+
+    private static AttendanceEvaluation Example(TimeOnly arrival, TimeOnly leaving, WorkdayOptions options, params FormPeriod[] forms)
+        => AttendanceEvaluator.Evaluate(new(ExampleDate, AttendanceDayType.FullDay, TaipeiTime.At(ExampleDate, arrival), TaipeiTime.At(ExampleDate, leaving), forms), options);
+
+    private static TimeOnly ClockTime(DateTimeOffset? value) => TimeOnly.FromTimeSpan(TaipeiTime.Of(value!.Value).TimeOfDay);
+
+    /// <summary>某個上班時間的應下班（不看表單）。</summary>
+    private static TimeOnly ExpectedClockOut(TimeOnly arrival, WorkdayOptions options)
+        => ClockTime(Example(arrival, new TimeOnly(23, 59, 59), options).ExpectedClockOut);
+
+    /// <summary>某時間到、請了一段核准的假，扣表單後的應下班。</summary>
+    private static TimeOnly AdjustedClockOut(TimeOnly arrival, TimeOnly formStart, TimeOnly formEnd, WorkdayOptions options)
+        => ClockTime(Example(arrival, new TimeOnly(23, 59, 59), options,
+            new FormPeriod(TaipeiTime.At(ExampleDate, formStart), TaipeiTime.At(ExampleDate, formEnd), Approved: true)).AdjustedClockOut);
+
+    /// <summary>沒有表單時還差多少秒的表單。</summary>
+    private static int Short(TimeOnly arrival, TimeOnly leaving, WorkdayOptions options) => Example(arrival, leaving, options).ShortSeconds;
 }

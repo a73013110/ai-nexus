@@ -4,7 +4,7 @@ using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Office.Attendance.Cards;
 using AiNexus.Features.Office.Attendance.Gd;
 using AiNexus.Features.Office.Attendance.Imports;
-using AiNexus.Features.Office.Attendance.Leave;
+using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Accounts;
@@ -17,7 +17,7 @@ namespace AiNexus.Features.Office.Attendance;
 /// <summary>
 /// 出勤打卡（ADR 0018）：出勤紀錄（依資料範圍查詢、查詢時判定，可匯出 Excel；規則說明由 <see cref="AttendanceRules"/> 產生）、卡號對應（卡片、持有期間與在出勤紀錄隱藏）、刷卡匯入與假日設定。
 /// 卡號對應的寫入共用 AccessControl 的 <see cref="AdministrativeAudit"/>：同一個交易、行政寫入鎖與稽核，並發的重疊檢查靠它串行化。
-/// 假單與出差單由 <see cref="LeaveSheetReader"/> 經 Gd 模組的 <see cref="GdAccounts"/> 與 <c>ExternalDatabase&lt;GdDatabase&gt;</c> 唯讀查詢公文系統（GD），連不上時降級而不拋例外；GD 的可用性接到即時監控（<c>gd</c>）。
+/// 假單與出差單由 <see cref="GdFormReader"/> 經 Gd 模組的 <see cref="GdAccounts"/> 與 <c>ExternalDatabase&lt;GdDatabase&gt;</c> 唯讀查詢公文系統（GD），連不上時降級而不拋例外；GD 的可用性接到即時監控（<c>gd</c>）。
 /// 假日設定經同一個 <c>ExternalDatabase&lt;GdDatabase&gt;</c> 查詢，經 <see cref="GdCalendarWriter"/> 回寫，兩者用同一個 <c>Databases:Gd</c>；設為 <c>ReadOnly=true</c> 時只停用回寫。
 /// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期區間重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
 /// </summary>
@@ -44,7 +44,7 @@ public sealed class AttendanceModule : IFeatureModule
         builder.Services.AddMonitoringSource<PunchImportMonitoring>();
         builder.Services.AddAccountReviewSource<CardAccountReview>();
         // GD 的連線、帳號對應與監控由 Gd 模組註冊；出勤只註冊自己的讀取與回寫。
-        builder.Services.AddScoped<LeaveSheetReader>();
+        builder.Services.AddScoped<GdFormReader>();
         builder.Services.AddScoped<AttendanceRoster>();
         builder.Services.AddSingleton<CalendarReader>();
         builder.Services.AddSingleton<GdCalendarWriter>();

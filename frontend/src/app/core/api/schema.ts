@@ -9180,7 +9180,7 @@ export interface components {
             cardNumber: null | string;
             displayName: string;
             account: null | string;
-            leaveAvailable: boolean;
+            formsAvailable: boolean;
             hidden: boolean;
             days: components["schemas"]["AttendanceRecordDto"][];
         };
@@ -9194,7 +9194,7 @@ export interface components {
             holding: boolean;
         };
         /** @enum {unknown} */
-        AttendanceReason: "NoPunchOrLeave" | "LeaveUnavailable" | "DayTypeUnknown" | "SinglePunch" | "DayInProgress" | null;
+        AttendanceReason: "NoPunchOrLeave" | "FormsUnavailable" | "DayTypeUnknown" | "SinglePunch" | "DayInProgress" | null;
         AttendanceRecordDto: {
             /** Format: date */
             date: string;
@@ -9212,8 +9212,15 @@ export interface components {
             lateSeconds: number;
             /** Format: int32 */
             earlyLeaveSeconds: number;
-            leave: components["schemas"]["LeaveState"];
-            sheets: components["schemas"]["LeaveSheet"][];
+            formState: components["schemas"]["FormState"];
+            /** Format: int32 */
+            formSeconds: number;
+            /** Format: date-time */
+            adjustedClockOut: null | string;
+            coverage: null | components["schemas"]["GapCoverage"];
+            /** Format: int32 */
+            shortSeconds: number;
+            forms: components["schemas"]["GdForm"][];
         };
         AttendanceRecordsDto: {
             /** Format: date */
@@ -9223,7 +9230,7 @@ export interface components {
             /** Format: date */
             today: string;
             calendarAvailable: boolean;
-            leaveAvailable: boolean;
+            formsAvailable: boolean;
             /** Format: int32 */
             total: number;
             /** Format: int32 */
@@ -10084,6 +10091,27 @@ export interface components {
             documentId: null | string;
             status: null | string;
         };
+        /** @enum {unknown} */
+        FormState: "None" | "Filed" | "Unavailable";
+        /** @enum {unknown} */
+        GapCoverage: "Unexplained" | "Pending" | "Covered" | "Unknown" | null;
+        GdForm: {
+            desNo: string;
+            kind: components["schemas"]["GdFormKind"];
+            title: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            flowStatus: components["schemas"]["GdFormFlowOver"];
+            currentSigner: null | string;
+            currentStep: null | string;
+            approved: boolean;
+        };
+        /** @enum {unknown} */
+        GdFormFlowOver: "Temp" | "Send" | "Back" | "Decide" | "Cancel" | "Finish";
+        /** @enum {unknown} */
+        GdFormKind: "Leave" | "Travel";
         GroupPolicyRequest: {
             allowedModelIds?: null | string[];
             dailyTokenLimits?: null | {
@@ -10207,20 +10235,6 @@ export interface components {
         KnowledgeSelectionDto: {
             collectionIds: string[];
         };
-        LeaveSheet: {
-            desNo: string;
-            kind: components["schemas"]["LeaveSheetKind"];
-            title: string;
-            /** Format: date-time */
-            startsAt: string;
-            /** Format: date-time */
-            endsAt: string;
-            flowStatus: string;
-        };
-        /** @enum {unknown} */
-        LeaveSheetKind: "Leave" | "Travel";
-        /** @enum {unknown} */
-        LeaveState: "None" | "Filed" | "Unavailable";
         LibraryFileDto: {
             file: components["schemas"]["AttachmentDto"];
             /** Format: date-time */
@@ -12051,6 +12065,11 @@ export type FeedbackDto = components['schemas']['FeedbackDto'];
 export type FeedbackRequest = components['schemas']['FeedbackRequest'];
 export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
 export type FileUsageDto = components['schemas']['FileUsageDto'];
+export type FormState = components['schemas']['FormState'];
+export type GapCoverage = components['schemas']['GapCoverage'];
+export type GdForm = components['schemas']['GdForm'];
+export type GdFormFlowOver = components['schemas']['GdFormFlowOver'];
+export type GdFormKind = components['schemas']['GdFormKind'];
 export type GroupPolicyRequest = components['schemas']['GroupPolicyRequest'];
 export type GroupUpdateRequest = components['schemas']['GroupUpdateRequest'];
 export type HealthIssue = components['schemas']['HealthIssue'];
@@ -12061,9 +12080,6 @@ export type KnowledgeHitDto = components['schemas']['KnowledgeHitDto'];
 export type KnowledgeSearchDto = components['schemas']['KnowledgeSearchDto'];
 export type KnowledgeSearchRequest = components['schemas']['KnowledgeSearchRequest'];
 export type KnowledgeSelectionDto = components['schemas']['KnowledgeSelectionDto'];
-export type LeaveSheet = components['schemas']['LeaveSheet'];
-export type LeaveSheetKind = components['schemas']['LeaveSheetKind'];
-export type LeaveState = components['schemas']['LeaveState'];
 export type LibraryFileDto = components['schemas']['LibraryFileDto'];
 export type LocalLoginDto = components['schemas']['LocalLoginDto'];
 export type LocalLoginRequest = components['schemas']['LocalLoginRequest'];
@@ -39709,6 +39725,7 @@ export interface operations {
                 card?: string;
                 unitId?: string;
                 includeDaysOff?: boolean;
+                coverage?: components["schemas"]["GapCoverage"];
                 offset?: number;
                 limit?: number;
             };
@@ -39992,6 +40009,7 @@ export interface operations {
                 card?: string;
                 unitId?: string;
                 includeDaysOff?: boolean;
+                coverage?: components["schemas"]["GapCoverage"];
             };
             header?: never;
             path?: never;

@@ -4,7 +4,10 @@ import type {
   AttendanceReason,
   AttendanceScheduleDto,
   AttendanceStatus,
-  LeaveSheetKind,
+  GapCoverage,
+  GdFormFlowOver,
+  GdForm,
+  GdFormKind,
 } from '@core/api/schema';
 import { publicErrorHints } from '@core/errors/public-error-catalog';
 import { ApiError, safeMessage, validIssueCode } from '@core/errors/safe-errors';
@@ -30,7 +33,7 @@ export const ATTENDANCE_STATUS: Record<AttendanceStatus, Presented> = {
 export const ATTENDANCE_REASON: Record<NonNullable<AttendanceReason>, string> = {
   NoPunchOrLeave: '沒有刷卡，也沒有假單',
   SinglePunch: '只有一筆刷卡，分不出上班或下班',
-  LeaveUnavailable: '假單無法取得，沒刷卡的日子不判異常',
+  FormsUnavailable: '表單無法取得，沒刷卡的日子不判異常',
   DayTypeUnknown: '假日行事曆無法取得，不確定是否上班日',
   DayInProgress: '今天尚未結束，打卡檔晚上才匯入',
 };
@@ -43,7 +46,7 @@ export const ATTENDANCE_DAY_TYPE: Record<AttendanceDayType, string> = {
   Unknown: '未知',
 };
 
-export const LEAVE_SHEET_KIND: Record<LeaveSheetKind, string> = {
+export const GD_FORM_KIND: Record<GdFormKind, string> = {
   Leave: '假單',
   Travel: '出差單',
 };
@@ -141,20 +144,86 @@ export function presentSchedule(schedule: AttendanceScheduleDto) {
 }
 
 /**
- * 公文系統的流程狀態（只取送出、決行、結案三種）換成舊系統報表的字樣，與匯出 Excel 的備註相同：
- * 還在簽核是「流程中」，決行與結案是「核准」。
+ * 公文系統的流程狀態（`FlowOver`）：字樣與 GD 畫面、匯出 Excel 的備註相同。出勤只讀核准與流程中兩種；
+ * 其他狀態列出來是為了未知值也有可讀的字樣（後端 `GdFlowOver.Label`）。
  */
-export const LEAVE_FLOW: Record<string, string> = {
-  Send: '流程中',
-  Decide: '核准',
-  Finish: '核准',
+export const GD_FORM_FLOW: Record<GdFormFlowOver, Presented> = {
+  Decide: { label: '核准', tone: 'success' },
+  Send: { label: '流程中', tone: 'warning' },
+  Temp: { label: '暫存', tone: 'neutral' },
+  Back: { label: '退回', tone: 'neutral' },
+  Cancel: { label: '銷單', tone: 'neutral' },
+  Finish: { label: '退回結案', tone: 'neutral' },
 };
 
-/** 單據起訖（台北）的「MM/DD HH:mm」。 */
-const sheetTime = (value: string) => {
-  const text = formatDateTimeInput(new Date(value));
-  return `${text.slice(5, 10).replace('-', '/')} ${text.slice(11, 16)}`;
+/**
+ * 當天的遲到、早退或異常有沒有被表單補足（後端 `GapCoverage`，規則在 `AttendanceRules` 的「表單補足」）。
+ * 已補足是綠、還在等簽核是黃、不夠是紅；表單無法取得是灰，不當成沒請假。
+ */
+export const GAP_COVERAGE: Record<NonNullable<GapCoverage>, Presented> = {
+  Covered: { label: '已補足', tone: 'success' },
+  Pending: { label: '簽核中', tone: 'warning' },
+  Unexplained: { label: '未補足', tone: 'danger' },
+  Unknown: { label: '表單無法取得', tone: 'neutral' },
 };
+const coverage = (value: GapCoverage | undefined) => (value ? GAP_COVERAGE[value] : null);
+/** 時間格標色時的提示：「遲到 12 分 5 秒・未補足」；沒有缺口時為空字串。 */
+const gapNote = (label: string, seconds: number, value: GapCoverage | undefined) =>
+  seconds > 0
+    ? [`${label} ${formatSeconds(seconds)}`, coverage(value)?.label].filter(Boolean).join('・')
+    : '';
+
+/** 台北時間的「MM/DD」與「HH:mm」。 */
+const formParts = (value: string) => {
+  const text = formatDateTimeInput(new Date(value));
+  return {
+    date: text.slice(0, 10),
+    day: text.slice(5, 10).replace('-', '/'),
+    time: text.slice(11, 16),
+  };
+};
+
+/**
+ * 表單在某一天的顯示值。起訖都在這一天只寫時間（「08:30–12:00」），跨日才帶日期，同一天多張單時一眼比得出時段。
+ * 流程中的單附上目前停在誰（GD `FLOW_CURRENT`），查不到時只寫「等待簽核」。
+ */
+export function presentForm(form: GdForm, date: string) {
+  const start = formParts(form.startsAt);
+  const end = formParts(form.endsAt);
+  const sameDay = start.date === date && end.date === date;
+  const signer = form.currentSigner
+    ? `等待 ${form.currentSigner}${form.currentStep ? `（${form.currentStep}）` : ''}`
+    : '等待簽核';
+  return {
+    form,
+    kind: GD_FORM_KIND[form.kind] ?? form.kind,
+    flow: GD_FORM_FLOW[form.flowStatus] ?? { label: form.flowStatus, tone: 'neutral' },
+    time: sameDay
+      ? `${start.time}–${end.time}`
+      : `${start.day} ${start.time} – ${end.day} ${end.time}`,
+    /** 完整起訖，放在 title 與報讀文字。 */
+    span: `${start.day} ${start.time} – ${end.day} ${end.time}`,
+    waiting: form.flowStatus === 'Send' ? signer : '',
+  };
+}
+export type PresentedForm = ReturnType<typeof presentForm>;
+
+/** 沒有刷卡時的原因：依表單的狀況說清楚是沒請假、只請了一部分還是還在簽核。 */
+function noPunchReason(day: AttendanceRecordDto) {
+  if (!day.forms.length) return ATTENDANCE_REASON.NoPunchOrLeave;
+  return day.coverage === 'Pending' ? '沒有刷卡，表單還在簽核' : '沒有刷卡，核准的表單不足一天';
+}
+
+/**
+ * 補足狀態加上核准的表單還差多少（`short`：「差 30 分 57 秒」，未補足與簽核中才有；簽核中的差額在單核准後補上）。
+ * 沒有缺口時為 null。
+ */
+function coverageOf(day: AttendanceRecordDto) {
+  const value = coverage(day.coverage);
+  if (!value) return null;
+  const short = formatSeconds(day.shortSeconds);
+  return { ...value, short: short ? `差 ${short}` : '' };
+}
 
 /** 出勤紀錄一天的顯示值；範本只讀這些欄位，不自己查對照表。 */
 export function presentRecord(day: AttendanceRecordDto, today: string) {
@@ -168,23 +237,45 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
     /** 假日設定的備註（例如「國慶日」）：放假的原因。 */
     remark: day.calendarRemark ?? '',
     status: ATTENDANCE_STATUS[day.status] ?? { label: day.status, tone: 'neutral' },
-    reason: day.reason ? (ATTENDANCE_REASON[day.reason] ?? day.reason) : '',
+    reason:
+      day.reason === 'NoPunchOrLeave'
+        ? noPunchReason(day)
+        : day.reason
+          ? (ATTENDANCE_REASON[day.reason] ?? day.reason)
+          : '',
     clockIn: clockTime(day.clockIn),
     clockOut: clockTime(day.clockOut),
     /** 只有一筆刷卡時上下班是同一筆，只顯示一次。 */
     singlePunch: !!day.clockIn && day.clockIn === day.clockOut,
     expected: clockTime(day.expectedClockOut),
+    /** 扣掉核准表單後的應下班；與原本的應下班相同時不重複顯示。 */
+    adjusted:
+      day.adjustedClockOut && day.adjustedClockOut !== day.expectedClockOut
+        ? clockTime(day.adjustedClockOut)
+        : '',
+    /** 核准表單抵掉的時數（「2 小時」）。 */
+    formHours: formatSeconds(day.formSeconds),
     late: formatSeconds(day.lateSeconds),
     early: formatSeconds(day.earlyLeaveSeconds),
-    /** 沒有刷卡也沒有假單：上下班格直接標「未刷卡」，不只在狀態欄說明。 */
+    /** 當天的補足狀態（遲到、早退、異常合在一起看）；沒有缺口時為 null。 */
+    coverage: coverageOf(day),
+    lateNote: gapNote('遲到', day.lateSeconds, day.coverage),
+    earlyNote: gapNote('早退', day.earlyLeaveSeconds, day.coverage),
+    /** 沒有刷卡、表單也沒補足：上下班格直接標「未刷卡」，不只在狀態欄說明。 */
     missing: day.reason === 'NoPunchOrLeave',
-    leaveUnavailable: day.leave === 'Unavailable',
-    sheets: day.sheets.map((sheet) => ({
-      sheet,
-      kind: LEAVE_SHEET_KIND[sheet.kind] ?? sheet.kind,
-      flow: LEAVE_FLOW[sheet.flowStatus] ?? sheet.flowStatus,
-      time: `${sheetTime(sheet.startsAt)} – ${sheetTime(sheet.endsAt)}`,
-    })),
+    formsUnavailable: day.formState === 'Unavailable',
+    forms: day.forms.map((form) => presentForm(form, day.date)),
   };
 }
 export type PresentedRecord = ReturnType<typeof presentRecord>;
+
+/** 一個人的小計：天數照舊系統（遲到、早退、異常各幾天），另數出未補足、簽核中的天數。 */
+export function summarizePerson(days: readonly AttendanceRecordDto[]) {
+  return {
+    late: days.filter((day) => day.lateSeconds > 0).length,
+    early: days.filter((day) => day.earlyLeaveSeconds > 0).length,
+    anomalies: days.filter((day) => day.status === 'Anomaly').length,
+    unexplained: days.filter((day) => day.coverage === 'Unexplained').length,
+    pending: days.filter((day) => day.coverage === 'Pending').length,
+  };
+}

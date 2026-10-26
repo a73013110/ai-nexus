@@ -297,6 +297,13 @@ export function attendanceRecordsTour(options: {
         fields: `區間（最長一年）、人員${options.units ? '、單位（含下層）' : ''}與是否含放假日`,
       }),
       {
+        target: `${RECORDS} .records-coverage`,
+        title: '表單補足',
+        description:
+          '表單只比時數：核准的假單、出差單時數從當天工時扣掉，實際上班補得滿剩下的就「已補足」，應下班下方列出扣表單後幾點可走；不夠是「未補足」並寫出還差多少，要等簽核中的單才夠是「簽核中」。切到「未補足」或「簽核中」只列要追的日子。',
+        side: 'bottom',
+      },
+      {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:

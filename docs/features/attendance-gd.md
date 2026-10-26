@@ -20,13 +20,15 @@ GRANT SELECT ON dbo.Form_Leave TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Leave_Group TO ainexus_reader;
 GRANT SELECT ON dbo.Form_LeaveKind TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Travel TO ainexus_reader;
+GRANT SELECT ON dbo.FLOW_CURRENT TO ainexus_reader;
 -- 組織匯入：只給用到的欄位，登記桌 Email、機關等不讀
 GRANT SELECT (DEP_NO, DEP_NAME, DEP_CHIEF, DEP_ACHIEF, PARENT_NO, OrderBy, [Disable]) ON dbo.Sys_User_DEPT_BAS TO ainexus_reader;
 -- 假日回寫（設 ReadOnly=true 時不需要）：直接給 GD 帳號（名稱自訂），不放進讀取角色
 GRANT UPDATE (AM, PM, hReMark, UserId) ON dbo.Pub_Days TO ainexus_gd;
 ```
 
-- `Sys_User` 是公文系統的帳號表，帳號對應讀 `ID`、`ACCOUNT`、`Disable`（排除停用帳號），整表授權。
+- `Sys_User` 是公文系統的帳號表，帳號對應讀 `ID`、`ACCOUNT`、`Disable`（排除停用帳號），流程中的假單另讀簽核人的 `NAME`；整表授權。
+- `FLOW_CURRENT` 是表單目前停在的關卡（`PERSON_ID` 是「部門_帳號」），只為流程中的假單與出差單寫出「等待 誰（關卡）」。少了這項授權整個假單查詢會被拒，出勤改為表單無法取得。
 - 只用其中一個功能時，可只給該段。少了需要的讀取授權，該查詢被拒（日誌 3411），監控轉為 degraded，組織匯入回 503 `organization_import_rejected`；少了 UPDATE，回寫回 503 `attendance_gd_unavailable`（日誌 3409）。新增讀寫的表時同步更新這份清單。
 - 這組回寫權限曾在本機以同結構驗證過讀前值（含鎖定提示）、更新與讀回；INSERT、DELETE、改 `hDate` 都被拒。
 

@@ -65,6 +65,7 @@ describe('records query', () => {
       range: { preset: CUSTOM_RANGE, from: '2026-09-15', to: '2026-10-14' },
       person: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
       includeDaysOff: true,
+      coverage: 'Unexplained' as const,
     };
     const params = options.toParams!(query);
     expect(params).toEqual({
@@ -75,9 +76,12 @@ describe('records query', () => {
       card: undefined,
       unit: undefined,
       holidays: 'true',
+      coverage: 'unexplained',
     });
     const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value));
     expect(options.fromParams!(convertToParamMap(clean), emptyRecordsQuery())).toEqual(query);
+    // 缺口切換不是 chip（查詢列前方已看得到），但一樣送給伺服器並寫進網址。
+    expect(recordFilters(query, NOW)).toMatchObject({ coverage: 'Unexplained' });
     expect(
       Object.values(options.toParams!(emptyRecordsQuery())).every((value) => value === undefined),
     ).toBe(true);
@@ -119,6 +123,7 @@ describe('records query', () => {
         card: '9'.repeat(33),
         unit: '1',
         holidays: '1',
+        coverage: 'Covered',
       }),
       emptyRecordsQuery(),
     );

@@ -41,7 +41,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
             DetailsJson = JsonSerializer.Serialize(new
             {
                 from = data.From, to = data.To, userId = filter.UserId, cardNumber = filter.CardNumber, unitId = filter.UnitId,
-                includeDaysOff = filter.IncludeDaysOff == true, count = data.People.Count
+                includeDaysOff = filter.IncludeDaysOff == true, coverage = filter.Coverage?.ToString(), count = data.People.Count
             })
         });
         await db.SaveChangesAsync(ct);
