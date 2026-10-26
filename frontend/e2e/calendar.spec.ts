@@ -44,7 +44,7 @@ test("日曆月份使用共用選單，巢狀浮層支援鍵盤、取消和手�
       .getByRole("button", { name: "上個月", exact: true })
       .boundingBox())!.height,
   ).toBeGreaterThanOrEqual(44);
-  const label = month.locator("span");
+  const label = month.locator(".select-value");
   await expect
     .poll(() => label.evaluate((el) => el.scrollWidth <= el.clientWidth))
     .toBe(true);

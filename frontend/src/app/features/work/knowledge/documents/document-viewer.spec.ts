@@ -1,4 +1,4 @@
-import { Component, type DebugElement, signal } from '@angular/core';
+import { Component, type DebugElement, type Type, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
@@ -34,6 +34,19 @@ const info = {
 })
 class Host {}
 
+@Component({
+  selector: 'nx-remote-viewer-host',
+  imports: [DocumentViewer],
+  template: `<nx-document-viewer
+    [target]="{
+      id: 't1',
+      attachment: false,
+      remote: { ticket: 'ticket+1', fileName: '照片.jpg', contentType: 'image/jpeg' },
+    }"
+  />`,
+})
+class RemoteHost {}
+
 const failedJob = {
   id: 'j1',
   kind: 'document-ingest',
@@ -58,6 +71,7 @@ async function setup(
     document?: object;
     job?: () => Promise<object>;
     control?: (id: string, retry: boolean) => Promise<object>;
+    host?: Type<unknown>;
   } = {},
 ) {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -96,7 +110,7 @@ async function setup(
       { provide: ClientIssues, useValue: {} },
     ],
   });
-  const fixture = TestBed.createComponent(Host);
+  const fixture = TestBed.createComponent(overrides.host ?? Host);
   const root = fixture.nativeElement as HTMLElement;
   await vi.waitFor(async () => {
     await fixture.whenStable();
@@ -121,6 +135,21 @@ describe('DocumentViewer', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.unstubAllGlobals();
+  });
+
+  it('previews a remote file from its ticket without text modes', async () => {
+    const { root } = await setup((root) => !!root.querySelector('.reader-original img'), {
+      host: RemoteHost,
+    });
+    expect(root.querySelector('.reader-original img')!.getAttribute('src')).toBe(
+      '/api/v1/remote-files/content?ticket=ticket%2B1',
+    );
+    expect(root.querySelector('.viewer-download')!.getAttribute('href')).toBe(
+      '/api/v1/remote-files/content?ticket=ticket%2B1&download=true',
+    );
+    expect(root.querySelector('.viewer-new-tab')).toBeNull();
+    expect(root.querySelector('nx-view-switch')).toBeNull();
+    expect(root.querySelector('h1')!.textContent).toBe('照片.jpg');
   });
 
   it('offers a tour whose steps match an HTML document', async () => {

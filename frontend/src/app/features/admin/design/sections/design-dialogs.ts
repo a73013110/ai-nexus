@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TESTING_IDENTITY_NOTE } from '@core/auth/workspace-session';
 import { CompactDialog } from '@shared/ui/compact-dialog';
+import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
+import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
 import { DesignExample, DesignSection } from './design-section';
@@ -26,6 +28,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
   selector: 'nx-design-dialogs',
   imports: [
     CompactDialog,
+    CopyValue,
     DesignExample,
     DesignSection,
     DialogHeader,
@@ -33,6 +36,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
     Field,
     Icon,
     SearchField,
+    StatusBadge,
     Tabs,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,6 +99,11 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       <nx-design-example label="lg · 工具列加清單">
         <button type="button" class="secondary-button" (click)="show(picker)">
           <nx-icon name="files" />開啟 lg
+        </button>
+      </nx-design-example>
+      <nx-design-example label="lg · 單筆紀錄（icon＋dialog-subtitle）">
+        <button type="button" class="secondary-button" (click)="show(record)">
+          <nx-icon name="calendar" />開啟紀錄
         </button>
       </nx-design-example>
     </nx-design-section>
@@ -175,6 +184,19 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
           <button class="primary-button">建立</button>
         </footer>
       </form>
+    </dialog>
+    <dialog nxCompactDialog size="lg" #record class="platform-dialog">
+      <nx-dialog-header heading="病假" icon="calendar" closeLabel="關閉示範紀錄">
+        <nx-status-badge dialog-title tone="warning">流程中</nx-status-badge>
+        <p dialog-subtitle class="dialog-subtitle">
+          <span>請假單</span>
+          <nx-copy-value label="單號" value="L115102201" />
+          <span>2026/10/22（四）08:45 申請</span>
+        </p>
+      </nx-dialog-header>
+      <div class="dialog-body">
+        <p>標題列左側是種類圖示，第二行寫種類、單號（可複製）與時間；工具與關閉鈕對齊第一行。</p>
+      </div>
     </dialog>
     <dialog nxCompactDialog size="lg" #picker class="platform-dialog">
       <nx-dialog-header

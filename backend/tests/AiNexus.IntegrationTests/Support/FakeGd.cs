@@ -20,15 +20,25 @@ namespace AiNexus.IntegrationTests.Support;
 internal sealed class FakeGd : IDisposable
 {
     private const string Schema = """
-        CREATE TABLE [dbo].[Sys_User] (ID varchar(20) NOT NULL PRIMARY KEY, ACCOUNT varchar(50) NULL, NAME nvarchar(50) NULL, [Disable] bit NULL);
+        CREATE TABLE [dbo].[Sys_User] (ID varchar(20) NOT NULL PRIMARY KEY, ACCOUNT varchar(50) NULL, NAME nvarchar(50) NULL, [Disable] bit NULL, TelNum varchar(20) NULL, SubTelNum varchar(10) NULL);
+        CREATE TABLE [dbo].[Sys_User_DEPT] (DEP_NO int NOT NULL, ID varchar(20) NOT NULL, TitleCode varchar(10) NULL);
+        CREATE TABLE [dbo].[Sys_User_Title] (TitleID varchar(10) NOT NULL PRIMARY KEY, TitleName nvarchar(50) NULL);
         CREATE TABLE [dbo].[Form_LeaveKind] (LeaveId varchar(10) NOT NULL PRIMARY KEY, LeaveKind varchar(20) NULL, isLeave bit NOT NULL DEFAULT 1, isShow bit NOT NULL DEFAULT 1);
         CREATE TABLE [dbo].[Form_Leave] (DesNo varchar(20) NOT NULL PRIMARY KEY, LeaveUserId varchar(20) NULL, LeaveDepNO int NULL, LeaveKind varchar(10) NULL,
-            LeaveSDate datetime NULL, LeaveEDate datetime NULL, LeaveTime float NULL, DayOfWeek varchar(20) NULL, FlowOver varchar(20) NULL);
+            LeaveSDate datetime NULL, LeaveEDate datetime NULL, LeaveTime float NULL, DayOfWeek varchar(20) NULL, FlowOver varchar(20) NULL,
+            SendDate datetime NULL, LeaveDesc nvarchar(2000) NULL, AttKind nvarchar(200) NULL, AttDesc nvarchar(500) NULL, AgentDepNo int NULL, AgentUserId varchar(20) NULL, BereaveType varchar(5) NULL);
         CREATE TABLE [dbo].[Form_Leave_Group] (DesNo nvarchar(20) NULL, LeaveSDate datetime NULL, LeaveEDate datetime NULL, DayOfWeek nvarchar(20) NULL);
         CREATE TABLE [dbo].[Form_Travel] (DesNo varchar(20) NOT NULL PRIMARY KEY, ChargeName varchar(50) NULL, ChargeDepName int NULL,
-            TravelSDate smalldatetime NULL, TravelEDate smalldatetime NULL, TravelTime float NULL, TravelMain nvarchar(1000) NULL, Place nvarchar(100) NULL, FlowOver varchar(20) NOT NULL);
+            TravelSDate smalldatetime NULL, TravelEDate smalldatetime NULL, TravelTime float NULL, TravelMain nvarchar(1000) NULL, Place nvarchar(100) NULL, FlowOver varchar(20) NOT NULL,
+            SendDate datetime NULL, AgentDepNo int NULL, AgentUserId varchar(20) NULL, StudyMode bit NULL, StudyKind varchar(5) NULL, TravelDesc nvarchar(500) NULL, AttDesc nvarchar(500) NULL);
         CREATE TABLE [dbo].[FLOW_CURRENT] (KEY_ID varchar(20) NOT NULL, FLOW_NO varchar(10) NOT NULL, TIMERECORD varchar(20) NULL, STATUS varchar(20) NULL,
-            PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, CONSTRAINT PK_FLOW_CURRENT PRIMARY KEY (KEY_ID, FLOW_NO));
+            PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, MEMO text NULL, ADDITION varchar(255) NULL, CONSTRAINT PK_FLOW_CURRENT PRIMARY KEY (KEY_ID, FLOW_NO));
+        CREATE TABLE [dbo].[FLOW_HISTORY] (KEY_ID varchar(20) NOT NULL, FLOW_NO varchar(10) NOT NULL, TIMERECORD varchar(20) NULL, STATUS varchar(20) NULL,
+            PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, MEMO text NULL, ADDITION varchar(255) NULL);
+        CREATE TABLE [dbo].[FLOW_NEXT] (KEY_ID varchar(20) NOT NULL, FLOW_NO varchar(10) NOT NULL, TIMERECORD varchar(20) NULL, STATUS varchar(20) NULL,
+            PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, MEMO text NULL, ADDITION varchar(255) NULL);
+        CREATE TABLE [dbo].[Frm_All_attFile] (id int IDENTITY NOT NULL, DesNo varchar(20) NULL, [Type] varchar(2) NULL, attNo varchar(50) NULL, attFileName nvarchar(200) NULL,
+            attFilePath varchar(100) NULL, attMemo nvarchar(200) NULL, Owner varchar(20) NULL);
         CREATE TABLE [dbo].[Pub_Days] (hDate datetime NOT NULL, UserId varchar(20) NOT NULL, AM bit NOT NULL, PM bit NOT NULL, hReMark varchar(255) NULL);
         CREATE TABLE [dbo].[Sys_User_DEPT_BAS] (DEP_NO int NOT NULL PRIMARY KEY, DEP_NAME nvarchar(200) NULL, DEP_CHIEF varchar(20) NULL, DEP_ACHIEF varchar(100) NULL,
             DEP_EMAIL varchar(50) NULL, PARENT_NO int NULL, UnitClass varchar(10) NULL, ACCOUNT_CODE varchar(10) NULL, DEP_WORD nvarchar(100) NULL, InWord nvarchar(100) NULL,
@@ -95,9 +105,35 @@ internal sealed class FakeGd : IDisposable
         => Execute("INSERT [dbo].[Sys_User] (ID, ACCOUNT, NAME, [Disable]) VALUES (@id, @account, @name, @disabled)",
             new { id, account, disabled, name = new DbString { Value = name ?? id, IsAnsi = false, Length = 50 } });
 
-    /// <summary>表單目前停在哪一關：<paramref name="person"/> 照 GD 的寫法是「部門_公文帳號」。</summary>
-    public void AddFlowStep(string desNo, string flowNo, string person, string status)
-        => Execute("INSERT [dbo].[FLOW_CURRENT] (KEY_ID, FLOW_NO, PERSON_ID, STATUS) VALUES (@desNo, @flowNo, @person, @status)", new { desNo, flowNo, person, status });
+    /// <summary>
+    /// 流程表的一列：<paramref name="table"/> 是 <c>FLOW_HISTORY</c>、<c>FLOW_CURRENT</c>、<c>FLOW_NEXT</c> 或 <see cref="AddBackupTable"/> 建的備份表；
+    /// <paramref name="person"/> 照 GD 的寫法是「部門_公文帳號」，<paramref name="time"/> 是 GD 寫入的字串格式。
+    /// </summary>
+    public void AddFlow(string table, string desNo, string flowNo, string person, string status, string? time = null, string? memo = null, string? origin = "")
+        => Execute($"INSERT [dbo].[{table}] (KEY_ID, FLOW_NO, PERSON_ID, STATUS, TIMERECORD, MEMO, ORIGIN_ID) VALUES (@desNo, @flowNo, @person, @status, @time, @memo, @origin)",
+            new { desNo, flowNo, person, status, time, memo, origin });
+
+    /// <summary>建一張流程備份表（<c>FLOW_BACKUP_&lt;民國年&gt;</c>），結構同其他流程表。</summary>
+    public void AddBackupTable(string year)
+        => Execute($"""
+            CREATE TABLE [dbo].[FLOW_BACKUP_{year}] (KEY_ID varchar(20) NOT NULL, FLOW_NO varchar(10) NOT NULL, TIMERECORD varchar(20) NULL, STATUS varchar(20) NULL,
+                PERSON_ID varchar(24) NULL, ORIGIN_ID varchar(100) NULL, MEMO text NULL, ADDITION varchar(255) NULL)
+            """);
+
+    /// <summary>公文帳號在某部門的職稱（<c>Sys_User_DEPT</c>＋<c>Sys_User_Title</c>）；職稱代碼不存在時一併建立。</summary>
+    public void AddMembership(int depNo, string id, string titleCode, string titleName)
+        => Execute("""
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[Sys_User_Title] WHERE TitleID = @titleCode) INSERT [dbo].[Sys_User_Title] (TitleID, TitleName) VALUES (@titleCode, @titleName);
+            INSERT [dbo].[Sys_User_DEPT] (DEP_NO, ID, TitleCode) VALUES (@depNo, @id, @titleCode);
+            """, new { depNo, id, titleCode, titleName = new DbString { Value = titleName, IsAnsi = false, Length = 50 } });
+
+    public void AddAttachment(string desNo, string storedName, string folder, string fileName, string? owner = null, string? memo = null)
+        => Execute("INSERT [dbo].[Frm_All_attFile] (DesNo, [Type], attNo, attFileName, attFilePath, attMemo, Owner) VALUES (@desNo, '1', @storedName, @fileName, @folder, @memo, @owner)",
+            new { desNo, storedName, folder, owner, fileName = new DbString { Value = fileName, IsAnsi = false, Length = 200 }, memo = new DbString { Value = memo, IsAnsi = false, Length = 200 } });
+
+    /// <summary>直接改表單或帳號的欄位（不經被測程式），補上 <see cref="AddLeave"/>、<see cref="AddTravel"/> 沒有的欄位。</summary>
+    public void Update(string table, string desNo, string set, object? parameters = null)
+        => Execute($"UPDATE [dbo].[{table}] SET {set} WHERE {(table == "Sys_User" ? "ID" : "DesNo")} = '{desNo}'", parameters);
 
     /// <summary>加一個部門；<paramref name="parent"/> 照 GD 的寫法，0 表示最上層。<paramref name="deputies"/> 是 <c>DEP_ACHIEF</c> 的原始字串。</summary>
     public void AddDepartment(int no, string? name, int? parent = 0, string? chief = null, string? deputies = null, int? order = null, bool disabled = false)

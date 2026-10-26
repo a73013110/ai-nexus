@@ -8633,6 +8633,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance-forms/{desNo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetGdForm"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance-cards": {
         parameters: {
             query?: never;
@@ -8754,6 +8770,22 @@ export interface paths {
         };
         get?: never;
         put: operations["UpdateAttendanceCalendarDay"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/remote-files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadRemoteFile"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -10105,6 +10137,17 @@ export interface components {
         FormState: "None" | "Filed" | "Unavailable";
         /** @enum {unknown} */
         GapCoverage: "Unexplained" | "Pending" | "Covered" | "Unknown" | null;
+        GdFlowStep: {
+            state: components["schemas"]["GdFlowStepState"];
+            action: string;
+            person: null | components["schemas"]["GdPerson"];
+            agent: null | string;
+            /** Format: date-time */
+            at: null | string;
+            memo: null | string;
+        };
+        /** @enum {unknown} */
+        GdFlowStepState: "Done" | "Current" | "Pending";
         GdForm: {
             desNo: string;
             kind: components["schemas"]["GdFormKind"];
@@ -10118,10 +10161,59 @@ export interface components {
             currentStep: null | string;
             approved: boolean;
         };
+        GdFormAttachmentDto: {
+            file: components["schemas"]["RemoteFileDto"];
+            memo: null | string;
+            uploader: null | string;
+        };
+        GdFormDetailDto: {
+            desNo: string;
+            kind: components["schemas"]["GdFormKind"];
+            flowStatus: components["schemas"]["GdFormFlowOver"];
+            title: string;
+            /** Format: date-time */
+            submittedAt: null | string;
+            applicant: null | components["schemas"]["GdPerson"];
+            agent: null | components["schemas"]["GdPerson"];
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: double */
+            hours: null | number;
+            segments: components["schemas"]["GdFormPeriod"][];
+            reason: null | string;
+            attachmentNote: null | string;
+            leave: null | components["schemas"]["GdLeaveDetail"];
+            travel: null | components["schemas"]["GdTravelDetail"];
+            steps: null | components["schemas"]["GdFlowStep"][];
+            attachments: null | components["schemas"]["GdFormAttachmentDto"][];
+        };
         /** @enum {unknown} */
         GdFormFlowOver: "Temp" | "Send" | "Back" | "Decide" | "Cancel" | "Finish";
         /** @enum {unknown} */
         GdFormKind: "Leave" | "Travel";
+        GdFormPeriod: {
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+        };
+        GdLeaveDetail: {
+            relation: null | string;
+            attachmentKinds: string[];
+        };
+        GdPerson: {
+            name: null | string;
+            unit: null | string;
+            title: null | string;
+        };
+        GdTravelDetail: {
+            place: null | string;
+            transport: null | string;
+            studyKind: null | string;
+            phone: null | string;
+        };
         GroupPolicyRequest: {
             allowedModelIds?: null | string[];
             dailyTokenLimits?: null | {
@@ -10882,6 +10974,12 @@ export interface components {
             /** Format: uuid */
             challengeId?: null | string;
             code?: null | string;
+        };
+        RemoteFileDto: {
+            ticket: string;
+            fileName: string;
+            contentType: string;
+            isImage: boolean;
         };
         RenameConversationRequest: {
             title: string;
@@ -12079,9 +12177,17 @@ export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
 export type FileUsageDto = components['schemas']['FileUsageDto'];
 export type FormState = components['schemas']['FormState'];
 export type GapCoverage = components['schemas']['GapCoverage'];
+export type GdFlowStep = components['schemas']['GdFlowStep'];
+export type GdFlowStepState = components['schemas']['GdFlowStepState'];
 export type GdForm = components['schemas']['GdForm'];
+export type GdFormAttachmentDto = components['schemas']['GdFormAttachmentDto'];
+export type GdFormDetailDto = components['schemas']['GdFormDetailDto'];
 export type GdFormFlowOver = components['schemas']['GdFormFlowOver'];
 export type GdFormKind = components['schemas']['GdFormKind'];
+export type GdFormPeriod = components['schemas']['GdFormPeriod'];
+export type GdLeaveDetail = components['schemas']['GdLeaveDetail'];
+export type GdPerson = components['schemas']['GdPerson'];
+export type GdTravelDetail = components['schemas']['GdTravelDetail'];
 export type GroupPolicyRequest = components['schemas']['GroupPolicyRequest'];
 export type GroupUpdateRequest = components['schemas']['GroupUpdateRequest'];
 export type HealthIssue = components['schemas']['HealthIssue'];
@@ -12152,6 +12258,7 @@ export type PunchReimportRequest = components['schemas']['PunchReimportRequest']
 export type PunchReimportResult = components['schemas']['PunchReimportResult'];
 export type ReadNotificationsRequest = components['schemas']['ReadNotificationsRequest'];
 export type ReauthenticationRequest = components['schemas']['ReauthenticationRequest'];
+export type RemoteFileDto = components['schemas']['RemoteFileDto'];
 export type RenameConversationRequest = components['schemas']['RenameConversationRequest'];
 export type RenameLibraryFileRequest = components['schemas']['RenameLibraryFileRequest'];
 export type RepositoryChatDto = components['schemas']['RepositoryChatDto'];
@@ -40287,6 +40394,145 @@ export interface operations {
             };
         };
     };
+    GetGdForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                desNo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GdFormDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
     ListAttendanceCards: {
         parameters: {
             query?: {
@@ -41996,6 +42242,137 @@ export interface operations {
                     "application/json": components["schemas"]["CalendarDayDto"];
                 };
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    DownloadRemoteFile: {
+        parameters: {
+            query: {
+                ticket: string;
+                download?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description Bad Request */
             400: {
                 headers: {

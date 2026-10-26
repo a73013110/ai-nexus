@@ -417,7 +417,10 @@
                 @if (row.formsUnavailable) {
                   <span class="records-unavailable">無法取得</span>
                 } @else {
-                  <nx-gd-form-list [forms]="row.forms" />
+                  <nx-gd-form-list
+                    [forms]="row.forms"
+                    (open)="formDialog.open($event, row.day.date)"
+                  />
                 }
               </td>
             </tr>
@@ -466,3 +469,4 @@
     }
   </nx-data-table>
 </nx-feature-page>
+<nx-gd-form-dialog #formDialog />

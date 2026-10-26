@@ -21,7 +21,7 @@ public sealed class DatabasesOptions() : Dictionary<string, DatabaseOptions>(Str
     /// <inheritdoc cref="DatabaseOptions.ConnectionString"/>
     public string ConnectionString(string name, string? catalog = null) => For(name).ConnectionString(catalog);
 
-    /// <summary>宣告時給的顯示名稱（例如「公文系統 GD」），供監控等畫面使用；沒有給就是設定鍵名稱。</summary>
+    /// <summary>宣告時給的顯示名稱（例如「公文系統」），供監控等畫面使用；沒有給就是設定鍵名稱。</summary>
     public string Label(string name) => labels.GetValueOrDefault(name, name);
 
     /// <summary>模組宣告使用此資料庫；<paramref name="readOnly"/> 為 true 時，該設定必須明確設 <c>ReadOnly=true</c>。</summary>

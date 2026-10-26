@@ -36,9 +36,10 @@ import { jobFailure } from '@features/work/jobs/job-kind';
 import { Island } from '@shared/ui/island';
 import { IslandService, type IslandItem } from '@shared/ui/island-service';
 import { KnowledgeApi } from '../knowledge-api';
-import { readerUrl, type ReaderTarget } from '@shared/browser/reader-overlay';
+import { readerUrl, remoteFileContent, type ReaderTarget } from '@shared/browser/reader-overlay';
 import { SharingApi } from '@features/work/sharing/sharing-api';
 import { attachmentContent, FilesApi } from '@features/work/files/files-api';
+import { RemoteFilesApi } from '@features/platform/remote-files/remote-files-api';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { below } from '@shared/browser/breakpoints';
 import { mediaQuery } from '@shared/browser/media-query';
@@ -50,7 +51,7 @@ import { documentBusy } from './document-status';
 import { documentReaderTour } from './document-reader-tour';
 import { ProductTourButton } from '@shared/ui/product-tour-button';
 
-/** 不屬於知識庫的原檔（預覽圖片、分享檔案）以已就緒文件的形狀顯示，沒有工作也不能編輯。 */
+/** 不屬於知識庫的原檔（預覽圖片、分享檔案、遠端檔案）以已就緒文件的形狀顯示，沒有工作也不能編輯。 */
 const readyDocument = (
   id: string,
   file: { fileName: string; contentType: string },
@@ -102,6 +103,7 @@ export class DocumentViewer {
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly uploads = inject(FilesApi);
+  private readonly remoteFiles = inject(RemoteFilesApi);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   readonly target = input.required<ReaderTarget>();
@@ -190,6 +192,10 @@ export class DocumentViewer {
       (this.isPdf() || this.isImage() || this.isRich() || this.paged() || this.hasText()),
   );
   readonly rawImage = signal(false);
+  /** 遠端檔案只有原檔：沒有擷取文字，也就沒有檢視方式可切換。 */
+  readonly switchable = computed(
+    () => !this.target().remote && (this.isPdf() || this.isImage() || this.isRich()),
+  );
   readonly modeOptions = computed(() =>
     this.isRich()
       ? [
@@ -209,12 +215,17 @@ export class DocumentViewer {
     },
   ]);
   readonly contentUrl = computed(() => {
-    const { id, shareId } = this.target();
+    const { id, shareId, remote } = this.target();
+    if (remote) return remoteFileContent(remote.ticket);
     if (shareId)
       return apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: shareId, file: id } });
     return this.rawImage()
       ? attachmentContent(id)
       : apiHref('/api/v1/documents/{id}/content', { path: { id: this.document()?.id || '' } });
+  });
+  readonly downloadUrl = computed(() => {
+    const remote = this.target().remote;
+    return remote ? remoteFileContent(remote.ticket, true) : this.contentUrl() + '?download=true';
   });
   readonly htmlUrl = computed(() => {
     const { id, shareId } = this.target();
@@ -237,9 +248,13 @@ export class DocumentViewer {
       embedded: this.embedded(),
     });
   });
-  readonly standaloneUrl = computed(() => readerUrl(this.target(), this.page()));
+  /** 遠端檔案沒有閱讀器網址，新分頁直接開原檔。 */
+  readonly standaloneUrl = computed(() =>
+    this.target().remote ? this.contentUrl() : readerUrl(this.target(), this.page()),
+  );
   /** 這頁沒有擷取文字時的說明；工作已失敗或停止就不說「會自動顯示」。 */
   readonly missingText = computed(() => {
+    if (this.target().remote) return '這種檔案無法在這裡預覽，請下載原檔。';
     if (this.target().shareId) return '這份分享尚無此頁的擷取文字。可預覽原檔或下載。';
     if (this.busy()) return '正在建立文字辨識工作…';
     const status = this.job()?.status;
@@ -406,6 +421,7 @@ export class DocumentViewer {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
+      if (target.remote) return await this.loadRemote(target.remote, valid);
       if (attachment && !target.shareId) {
         const file = await this.uploads.attachment(id);
         if (!valid()) return;
@@ -442,39 +458,59 @@ export class DocumentViewer {
         this.pages.set(shared.pages);
         this.watchShare(target, valid);
       } else await this.refresh(info.id, valid);
-      if (info.contentType === 'application/pdf') {
-        const response = await (target.shareId
+      if (info.contentType === 'application/pdf')
+        await this.openPdf(
+          target.shareId
             ? this.shares.original(target.shareId, id, this.controller.signal)
-            : this.api.original(info.id, this.controller.signal)),
-          bytes = await response.arrayBuffer();
-        if (!valid()) return;
-        const lib = await import('pdfjs-dist');
-        if (!valid()) return;
-        lib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
-        const task = (this.pdfLoad = lib.getDocument({
-          data: new Uint8Array(bytes),
-          useWasm: false,
-          disableFontFace: true,
-          cMapUrl: '/vendor/pdfjs/cmaps/',
-          cMapPacked: true,
-          standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
-          wasmUrl: '/vendor/pdfjs/wasm/',
-        }));
-        const pdf = await task.promise;
-        if (!valid()) {
-          await task.destroy();
-          return;
-        }
-        this.pdf = pdf;
-        this.pdfPages.set(pdf.numPages);
-        this.page.set(Math.max(1, Math.min(this.page(), pdf.numPages)));
-        this.pdfRevision.update((item) => item + 1);
-      }
+            : this.api.original(info.id, this.controller.signal),
+          valid,
+        );
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));
     } finally {
       if (valid()) this.loading.set(false);
     }
+  }
+  /**
+   * 遠端檔案（例如公文系統的附件）：只有原檔，PDF 以 pdf.js 繪製、圖片直接載入；其他種類只提供下載。
+   * 憑證過期或原系統暫時取不到時，錯誤訊息進動態島，「重新載入」無法換新憑證，所以訊息請使用者重開表單。
+   */
+  private async loadRemote(remote: NonNullable<ReaderTarget['remote']>, valid: () => boolean) {
+    const info = readyDocument(remote.ticket, remote);
+    this.document.set(info);
+    const pdf = info.contentType === 'application/pdf',
+      image = info.contentType.startsWith('image/');
+    this.mode.set(pdf || image ? 'original' : 'text');
+    this.imageLoading.set(image);
+    if (!pdf) return;
+    this.loading.set(false);
+    await this.openPdf(this.remoteFiles.content(remote.ticket, this.controller?.signal), valid);
+  }
+  /** 以 pdf.js 開啟 PDF 原檔，開好後由 `afterRenderEffect` 繪製目前頁。 */
+  private async openPdf(source: Promise<Response>, valid: () => boolean) {
+    const bytes = await (await source).arrayBuffer();
+    if (!valid()) return;
+    const lib = await import('pdfjs-dist');
+    if (!valid()) return;
+    lib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+    const task = (this.pdfLoad = lib.getDocument({
+      data: new Uint8Array(bytes),
+      useWasm: false,
+      disableFontFace: true,
+      cMapUrl: '/vendor/pdfjs/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+      wasmUrl: '/vendor/pdfjs/wasm/',
+    }));
+    const pdf = await task.promise;
+    if (!valid()) {
+      await task.destroy();
+      return;
+    }
+    this.pdf = pdf;
+    this.pdfPages.set(pdf.numPages);
+    this.page.set(Math.max(1, Math.min(this.page(), pdf.numPages)));
+    this.pdfRevision.update((item) => item + 1);
   }
   /** Markdown 預覽與 HTML 腳本檢查使用的原始文字（同源 GET）。 */
   private async loadRaw(

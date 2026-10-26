@@ -34,6 +34,8 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
 | `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
+| `Gd` | [`GdOptions`](../../backend/src/AiNexus.Features/Platform/Gd/GdOptions.cs) | — |
+| `RemoteFiles` | [`RemoteFilesOptions`](../../backend/src/AiNexus.Features/Platform/RemoteFiles/RemoteFilesOptions.cs) | — |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
 | `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
@@ -49,7 +51,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 - **不合法的值**：訊息含類別與屬性，例如 `KnowledgeOptions.Retrieval.TopK` 超出範圍，或 `Model 'ollama/qwen3:8b': ContextTokens must be ...`。
 - `SettingsTests` 確保每個區段有產生的驗證器、預設值加三份範本都能綁定，且公開檔的秘密欄位為空。
 
-新增設定時在模組的 Options 類別加 `public const string Section`、屬性與驗證屬性，跨欄位規則寫在 `IValidatableObject.Validate`；同時在 `appsettings.json` 補上預設值。
+新增設定時在 Options 類別加 `public const string Section`、屬性與驗證屬性，跨欄位規則寫在 `IValidatableObject.Validate`，並在 `appsettings.json` 補預設值。
 
 ## 第一次設定
 
@@ -58,10 +60,10 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 ## 程式碼表達不了的注意事項
 
 - **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。
-- **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用。[SqlClient 說明](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
-- **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不會出現在模型清單。
+- **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用。
+- **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不列入模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
-- **主機位置**：IIS 與 GPU 不在同一台時，`Inference.Providers.Ollama.Endpoint` 的 localhost 指的是 IIS 主機，要改成 GPU 主機位址。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
+- **主機位置**：IIS 與 GPU 不同台時，`Inference.Providers.Ollama.Endpoint` 要改成 GPU 主機位址（localhost 指 IIS 主機）。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
 - **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（none 只用全文檢索，SQL Server 需安裝全文元件）。
 - **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](../research/vector-architecture.md)。
 - **附件路徑**：`Files.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Files__StoragePath` 覆寫。

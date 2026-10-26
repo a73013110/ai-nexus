@@ -1,0 +1,74 @@
+:host {
+  container-type: inline-size;
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+}
+.span-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.75rem minmax(0, 1fr) 7.5rem;
+  align-items: center;
+  padding: var(--p-space-4) var(--p-space-5);
+}
+.span-point {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.span-label {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.span-point :is(time, strong) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+// 日期與時間各自不斷行；欄寬不夠時整段時間換到下一行，不會把日期拆開。
+.span-point time {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.375em;
+}
+.span-point time span {
+  white-space: nowrap;
+}
+.span-point time span + span {
+  color: var(--accent);
+}
+.span-point small {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+}
+.span-arrow {
+  justify-self: center;
+  color: var(--muted);
+}
+.span-hours {
+  align-self: stretch;
+  align-content: center;
+  padding-inline-start: var(--p-space-5);
+  border-inline-start: 1px solid var(--line);
+}
+.span-periods {
+  padding: var(--p-space-4) var(--p-space-5) var(--p-space-5);
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, var(--surface));
+}
+// 窄版：開始、結束上下排，時數另起一列。
+@container (max-width: 32rem) {
+  .span-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-space-3);
+  }
+  .span-arrow {
+    display: none;
+  }
+  .span-hours {
+    padding: var(--p-space-3) 0 0;
+    border-inline-start: 0;
+    border-top: 1px solid var(--line);
+  }
+}

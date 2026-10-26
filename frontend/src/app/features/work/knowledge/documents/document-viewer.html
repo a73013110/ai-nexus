@@ -10,7 +10,7 @@
   @if (document()?.hasOriginal) {
     <a
       class="icon-button viewer-download"
-      [href]="contentUrl() + '?download=true'"
+      [href]="downloadUrl()"
       aria-label="下載原檔"
       title="下載原檔"
       ><nx-icon name="download"
@@ -55,7 +55,7 @@
   <nx-island class="viewer-status" />
   @if (hasTools()) {
     <nx-floating-toolbar label="檢視工具" [pinned]="!!query()">
-      @if (isPdf() || isImage() || isRich()) {
+      @if (switchable()) {
         <nx-view-switch
           label="文件檢視方式"
           appearance="segment"

@@ -34,8 +34,13 @@ li[data-flow='Send'] {
 .form-head {
   justify-content: space-between;
 }
-// 之後會改成開啟表單的按鈕：先照連結的外觀（強調色、虛線底線）。
+// 開啟表單的按鈕，外觀是連結（強調色、虛線底線），格子很窄所以不加按鈕框。
 .form-no {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
   overflow: hidden;
   color: var(--accent);
   font-family: var(--font-code);
@@ -79,4 +84,9 @@ time {
 }
 .form-none {
   color: var(--secondary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .form-no:hover {
+    text-decoration-style: solid;
+  }
 }

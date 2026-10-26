@@ -1,12 +1,31 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { apiHref } from '@core/api/api-client';
 import { routeOf } from '@core/api/catalog';
 import { AuthService } from '@core/auth/auth-service';
+
+/**
+ * 其他系統的檔案（例如公文系統的附件）：後端發的短期憑證，內容由 `/api/v1/remote-files/content` 代為取回，
+ * 前端看不到原系統的網址。只能預覽 PDF 與圖片，沒有擷取文字。
+ */
+export interface RemoteReaderFile {
+  ticket: string;
+  fileName: string;
+  contentType: string;
+}
 
 export interface ReaderTarget {
   id: string;
   attachment: boolean;
   page?: number | null;
   shareId?: string | null;
+  remote?: RemoteReaderFile | null;
+}
+
+/** 遠端檔案的內容網址；憑證放查詢字串（太長，放不進 IIS 的路徑段）。 */
+export function remoteFileContent(ticket: string, download = false) {
+  return apiHref('/api/v1/remote-files/content', {
+    query: download ? { ticket, download: true } : { ticket },
+  });
 }
 
 /**

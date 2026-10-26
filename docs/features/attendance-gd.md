@@ -1,6 +1,6 @@
 # 出勤與公文系統 GD
 
-結論：出勤從公文系統 GD 讀取假日、假單與出差單，並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；兩者共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 `ExternalDatabase<GdDatabase>`（[外部資料庫](../architecture/external-databases.md)；定義與帳號對應 `GdAccounts` 在 [`Platform/Gd`](../../backend/src/AiNexus.Features/Platform/Gd/GdModule.cs) 模組），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Office/Attendance/Gd/GdCalendarWriter.cs) 並向它取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
+結論：出勤從公文系統 GD 讀取假日、假單與出差單（含[單據內容、簽核流程與附件](attendance-forms.md)），並回寫假日；[組織](organization.md#從公文系統匯入)從 GD 匯入部門與主管；兩者共用同一個 `Databases:Gd`。以程式查詢 GD 一律經 `ExternalDatabase<GdDatabase>`（[外部資料庫](../architecture/external-databases.md)；定義與帳號對應 `GdAccounts` 在 [`Platform/Gd`](../../backend/src/AiNexus.Features/Platform/Gd/GdModule.cs) 模組），回寫經出勤的 [`GdCalendarWriter`](../../backend/src/AiNexus.Features/Office/Attendance/Gd/GdCalendarWriter.cs) 並向它取連線，GD 未設定或不能用時降級、不拋例外。GD 的可用性是即時監控的子系統 `gd`。為什麼讀寫 GD 見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md#假日與假單公文系統)，回寫的規則見 [假日設定](attendance-calendar.md)。
 
 ## 連線與帳號權限
 
@@ -21,6 +21,13 @@ GRANT SELECT ON dbo.Form_Leave_Group TO ainexus_reader;
 GRANT SELECT ON dbo.Form_LeaveKind TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Travel TO ainexus_reader;
 GRANT SELECT ON dbo.FLOW_CURRENT TO ainexus_reader;
+-- 單據內容：簽核流程、職稱、附件清單；FLOW_BACKUP_<民國年> 每年一張，新年度的表要補授權
+GRANT SELECT ON dbo.FLOW_HISTORY TO ainexus_reader;
+GRANT SELECT ON dbo.FLOW_NEXT TO ainexus_reader;
+GRANT SELECT ON dbo.FLOW_BACKUP_115 TO ainexus_reader;
+GRANT SELECT ON dbo.Sys_User_DEPT TO ainexus_reader;
+GRANT SELECT ON dbo.Sys_User_Title TO ainexus_reader;
+GRANT SELECT ON dbo.Frm_All_attFile TO ainexus_reader;
 -- 組織匯入：只給用到的欄位，登記桌 Email、機關等不讀
 GRANT SELECT (DEP_NO, DEP_NAME, DEP_CHIEF, DEP_ACHIEF, PARENT_NO, OrderBy, [Disable]) ON dbo.Sys_User_DEPT_BAS TO ainexus_reader;
 -- 假日回寫（設 ReadOnly=true 時不需要）：直接給 GD 帳號（名稱自訂），不放進讀取角色
@@ -29,6 +36,8 @@ GRANT UPDATE (AM, PM, hReMark, UserId) ON dbo.Pub_Days TO ainexus_gd;
 
 - `Sys_User` 是公文系統的帳號表，帳號對應讀 `ID`、`ACCOUNT`、`Disable`（排除停用帳號），流程中的假單另讀簽核人的 `NAME`；整表授權。
 - `FLOW_CURRENT` 是表單目前停在的關卡（`PERSON_ID` 是「部門_帳號」），只為流程中的假單與出差單寫出「等待 誰（關卡）」。少了這項授權整個假單查詢會被拒，出勤改為表單無法取得。
+- 單據內容：申請人、代理人與簽核人的職稱都讀 `Sys_User_DEPT`、`Sys_User_Title`，少了它們整張單回 503；少了 `FLOW_HISTORY`、`FLOW_NEXT` 只是流程讀不到，少了 `Frm_All_attFile` 只是附件讀不到，表單其他內容照常顯示；少了某年的 `FLOW_BACKUP_<年>` 授權等同沒有那張表，該年結案的單只剩 `FLOW_HISTORY` 的部分。
+- 附件內容不在資料庫：後端向 `Gd:WebBaseUrl`（公文系統網站，預設正式站）的 `servlets/fileservlet` 取檔，IIS 主機要能連到它；那個網址沒有權限檢查，所以只在後端使用，瀏覽器拿的是短期憑證（[ADR 0021](../decisions/0021-remote-file-tickets.md)）。
 - 只用其中一個功能時，可只給該段。少了需要的讀取授權，該查詢被拒（日誌 3411），監控轉為 degraded，組織匯入回 503 `organization_import_rejected`；少了 UPDATE，回寫回 503 `attendance_gd_unavailable`（日誌 3409）。新增讀寫的表時同步更新這份清單。
 - 這組回寫權限曾在本機以同結構驗證過讀前值（含鎖定提示）、更新與讀回；INSERT、DELETE、改 `hDate` 都被拒。
 

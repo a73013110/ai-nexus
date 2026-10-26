@@ -1,0 +1,147 @@
+:host {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.ui-approval-top {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.ui-approval-heading {
+  margin: 0;
+  font-size: var(--p-font-data);
+  font-weight: 600;
+}
+.ui-approval-progress {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  white-space: nowrap;
+}
+// 已完成一段（訊號色）接目前關卡一段（強調色），其餘是底色；比例由元件算好。
+.ui-approval-meter {
+  display: flex;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--line) 70%, var(--surface));
+}
+.ui-approval-meter .is-done {
+  background: var(--signal);
+}
+.ui-approval-meter .is-current {
+  background: var(--accent);
+}
+.ui-approval {
+  --approval-mark: 1.25rem;
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ui-approval-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  column-gap: var(--p-space-3);
+  padding-bottom: var(--p-space-3);
+  font-size: var(--p-font-data);
+  line-height: 1.25rem;
+}
+.ui-approval-step:last-child {
+  padding-bottom: 0;
+}
+// 關卡之間的連線：從圓點下緣接到下一關的圓點；已完成的那段是淡訊號色，其餘是線條色。
+.ui-approval-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--approval-mark) + 4px);
+  bottom: 4px;
+  left: calc(0.75rem - 1px);
+  width: 2px;
+  background: var(--line);
+}
+.ui-approval-step[data-state='done']:not(:last-child)::before {
+  background: color-mix(in srgb, var(--signal) 40%, var(--surface));
+}
+.ui-approval-mark {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  box-sizing: border-box;
+  width: var(--approval-mark);
+  height: var(--approval-mark);
+  border-radius: 50%;
+  --icon-size: 0.75rem;
+}
+[data-state='done'] > .ui-approval-mark {
+  background: var(--signal);
+  color: var(--status-on-color);
+}
+[data-state='current'] > .ui-approval-mark {
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+[data-state='current'] > .ui-approval-mark > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+[data-state='pending'] > .ui-approval-mark {
+  border: 2px solid var(--control-line);
+  background: var(--surface);
+}
+.ui-approval-body {
+  display: grid;
+  gap: var(--p-space-1);
+  min-width: 0;
+}
+.ui-approval-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--p-space-2);
+  min-width: 0;
+}
+.ui-approval-head strong {
+  font-weight: 600;
+}
+.ui-approval-detail {
+  color: var(--muted);
+}
+.ui-approval-kind {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+[data-state='current'] .ui-approval-kind.is-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+[data-state='pending'] .ui-approval-head strong {
+  font-weight: 400;
+}
+.ui-approval-end {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ui-approval-waiting {
+  color: var(--warning);
+  font-weight: 600;
+}
+.ui-approval-memo {
+  margin: 0;
+  padding: var(--p-space-1) var(--p-space-3);
+  border-radius: var(--radius-block);
+  background: var(--tile-inset);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.ui-approval-empty {
+  color: var(--secondary);
+}

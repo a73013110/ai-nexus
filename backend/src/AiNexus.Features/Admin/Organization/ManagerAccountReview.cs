@@ -23,7 +23,7 @@ internal sealed class ManagerAccountReview(AppDbContext db, OrganizationDirector
         return new([.. managers.Where(x => vacant.ContainsKey(x.UnitId)).GroupBy(x => x.UserId).Select(x =>
         {
             var units = x.Select(y => vacant[y.UnitId]).OrderBy(y => y.SortOrder).ThenBy(y => y.Name, StringComparer.CurrentCulture).ToList();
-            var detail = string.Join("、", units.Select(y => y.Name)) + (units.Any(y => y.GdDepNo is not null) ? "。公文系統匯入的單位請在 GD 更正主管。" : "。");
+            var detail = string.Join("、", units.Select(y => y.Name)) + (units.Any(y => y.GdDepNo is not null) ? "。公文系統匯入的單位請在公文系統更正主管。" : "。");
             return new AccountReviewItem(x.Key, Vacant, "帳號已停用，任主管的單位沒有其他有效主管", detail, FeatureCatalog.Organization);
         })]);
     }

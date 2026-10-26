@@ -61,6 +61,11 @@ public static class AttendanceErrors
     /// </summary>
     public static readonly Error GdAccountUnmapped = Error.Forbidden("attendance_gd_account_unmapped");
 
+    /// <summary>
+    /// 表單不存在、不是流程中或核准的單，或申請人不在看的人的出勤紀錄範圍內。三者不分開回報：分開等於讓人以單號試出別人有沒有請假。
+    /// </summary>
+    public static readonly Error GdFormNotFound = Error.NotFound("attendance_gd_form_not_found");
+
     /// <summary>假日查詢區間不合法：起訖必填、結束不早於開始、不超過一年（GD 是別人的系統，不開放整張表）。</summary>
     public static readonly Error CalendarRangeInvalid = Error.Invalid("attendance_calendar_range_invalid");
 

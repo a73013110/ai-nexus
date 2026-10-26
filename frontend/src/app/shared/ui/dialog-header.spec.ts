@@ -27,6 +27,17 @@ class Host {}
 class ProjectionHost {}
 
 @Component({
+  selector: 'nx-dialog-header-record-host',
+  imports: [DialogHeader],
+  template: `<dialog>
+    <nx-dialog-header heading="病假" icon="calendar">
+      <p dialog-subtitle class="dialog-subtitle"><span>請假單</span><span>L115102201</span></p>
+    </nx-dialog-header>
+  </dialog>`,
+})
+class RecordHost {}
+
+@Component({
   selector: 'nx-dialog-header-maximize-host',
   imports: [DialogHeader, CompactDialog, IdleChrome],
   template: `<dialog nxCompactDialog nxIdleChrome size="full">
@@ -79,10 +90,26 @@ describe('DialogHeader', () => {
     expect(root.querySelector('h2')?.textContent).toBe('王小明');
     const bar = root.querySelector('nx-dialog-header')!;
     expect([...bar.children].map((item) => item.className)).toEqual([
-      'dialog-title',
+      'dialog-heading',
       'tool',
       'icon-button',
     ]);
+    expect(bar.classList).not.toContain('is-record');
+  });
+
+  it('shows a record icon and a subtitle line under the heading', () => {
+    const fixture = TestBed.createComponent(RecordHost);
+    fixture.detectChanges();
+    const bar = (fixture.nativeElement as HTMLElement).querySelector('nx-dialog-header')!;
+    expect(bar.classList).toContain('is-record');
+    expect(bar.firstElementChild?.className).toBe('dialog-icon');
+    expect(bar.querySelector('.dialog-icon')?.getAttribute('aria-hidden')).toBe('true');
+    const heading = bar.querySelector('.dialog-heading')!;
+    expect([...heading.children].map((item) => item.className)).toEqual([
+      'dialog-title',
+      'dialog-subtitle',
+    ]);
+    expect(bar.querySelector('h2')?.textContent).toBe('病假');
   });
 
   it('shows the compact tour trigger before the close button only when a tour is given', () => {

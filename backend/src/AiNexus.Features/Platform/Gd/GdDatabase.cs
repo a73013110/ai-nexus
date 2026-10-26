@@ -11,6 +11,6 @@ public sealed class GdDatabase : IExternalDatabaseDefinition
     private GdDatabase() { }
 
     public static string Name => "Gd";
-    public static string DisplayName => "公文系統 GD";
+    public static string DisplayName => "公文系統";
     public static string Dependents => "假單、出差單、假日與組織匯入";
 }

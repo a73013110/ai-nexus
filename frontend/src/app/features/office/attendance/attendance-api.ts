@@ -38,6 +38,9 @@ export class AttendanceApi {
   /** 與 `records` 同一組條件匯出 .xlsx；回應是檔案，檔名在 `Content-Disposition`。 */
   exportRecords = (query: AttendanceRecordFilters) =>
     this.api.open('/api/v1/attendance-records/export', { query });
+  /** 公文系統的一張假單或出差單（出勤紀錄點單號開啟）：內容、簽核流程與附件憑證；範圍外與不存在同樣回 404。 */
+  form = (desNo: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-forms/{desNo}', { path: { desNo }, signal });
   /** 判定規則的說明，時間是伺服器目前的設定值。 */
   rules = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-rules', { signal });
 

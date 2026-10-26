@@ -43,7 +43,7 @@ public sealed class ExternalDatabaseMonitoringTests
             var registration = Factory.Services.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.GenericTypeArguments is [var database] && database == typeof(GdDatabase));
             using var scope = Factory.Services.CreateScope();
             var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(registration.Type);
-            Assert.Equal(("gd", "公文系統 GD"), (source.Id, source.Name));
+            Assert.Equal(("gd", "公文系統"), (source.Id, source.Name));
             return await source.ReadAsync(TestContext.Current.CancellationToken);
         }
 

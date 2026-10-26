@@ -91,7 +91,7 @@ test("library files can be searched, previewed, reused in chat and added to know
   await expectViewportContained(page);
   const sourceLabel = page
     .getByRole("combobox", { name: "檔案來源", exact: true })
-    .locator("span");
+    .locator(".select-value");
   await expect(sourceLabel).toHaveText("全部來源");
   await expect
     .poll(() =>

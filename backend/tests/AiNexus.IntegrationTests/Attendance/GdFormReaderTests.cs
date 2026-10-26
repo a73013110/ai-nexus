@@ -65,13 +65,13 @@ public sealed class GdFormReaderTests
             var alice = s.AddUser("alice");
             s.Gd.AddUser("G009", "carol", name: "王小明");
             s.Gd.AddLeave("L-1", "G001", "A", At(6, 9), At(6, 12), "Send");
-            s.Gd.AddFlowStep("L-1", "003", "2_G002", "請假代理人");
+            s.Gd.AddFlow("FLOW_CURRENT", "L-1", "003", "2_G002", "請假代理人");
             // 同一單停在多關時取最後一關。
-            s.Gd.AddFlowStep("L-1", "004", "7_G009", "核准關卡");
+            s.Gd.AddFlow("FLOW_CURRENT", "L-1", "004", "7_G009", "核准關卡");
             s.Gd.AddLeave("L-2", "G001", "A", At(7, 9), At(7, 12), "Send");
             // 核准的單不帶目前關卡，即使 FLOW_CURRENT 還留著列。
             s.Gd.AddLeave("L-3", "G001", "A", At(8, 9), At(8, 12), "Decide");
-            s.Gd.AddFlowStep("L-3", "009", "7_G009", "流程終結");
+            s.Gd.AddFlow("FLOW_CURRENT", "L-3", "009", "7_G009", "流程終結");
 
             var forms = (await s.ReadAsync(Oct6, Oct8, users: alice)).For(alice);
 

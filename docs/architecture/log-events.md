@@ -42,6 +42,7 @@
 | 5003 / 5004 / 5005 | `database.read_committed_snapshot_off` / `database.schema_mismatch` / `database.schema_drift` | `AiNexus.Data/App/DatabaseSchema.cs` |
 | 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
+| 6201 | `gd.file_unavailable` | `Platform/Gd/GdFileSource.cs` |
 | 7001 | `identity.directory_rename_skipped` | `Identity/Users/DirectoryAccounts.cs` |
 | 7002 | `identity.directory_provisioned` | `Identity/Provisioning/DirectoryProvisioning.cs` |
 
@@ -62,7 +63,7 @@ public sealed partial class ConnectorClient(ILogger<ConnectorClient> logger)
         LogRetry(logger, transient, attempt);
     }
 
-    [LoggerMessage(EventId = 6201, EventName = "connector.retry", Level = LogLevel.Warning, Message = "External operation will retry at attempt {Attempt}.")]
+    [LoggerMessage(EventId = 6901, EventName = "connector.retry", Level = LogLevel.Warning, Message = "External operation will retry at attempt {Attempt}.")]
     private static partial void LogRetry(ILogger logger, Exception exception, int attempt);
 }
 ```

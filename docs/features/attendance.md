@@ -1,6 +1,6 @@
 # 出勤打卡
 
-結論：**卡號對應**、**刷卡匯入**（見 [刷卡匯入](attendance-imports.md)）、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/office/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「公司事務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間（`AttendanceUserCards` 以 `userId` 另查，Identity 不依賴出勤）：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。頁首、詳情與對話框的問號開啟操作導覽。
+結論：**卡號對應**、**刷卡匯入**（見 [刷卡匯入](attendance-imports.md)）、**假日設定**（見 [假日設定](attendance-calendar.md)）與**出勤紀錄**查詢（見 [出勤紀錄](attendance-records.md)）已完成，公文系統 GD 的連線、權限與監控見 [出勤與公文系統 GD](attendance-gd.md)；決定與取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。頁面網址在 `/office/attendance/`，管理頁（`attendance.cards`、`attendance.imports`、`attendance.calendar`）在選單放「系統管理 → 人事與出勤」，`attendance.records` 放「公司事務」。使用者管理檢視器的「帳號」分頁列出該人的持有期間：有 `attendance.cards` 才顯示，有 `.maintain` 另附以姓名搜尋的卡號對應頁連結。舊資料轉移見 [出勤舊資料轉移](../operations/attendance-migration.md)。
 
 ## 授權
 
@@ -32,10 +32,6 @@
 - 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
 - 檢查與寫入在 `AdministrativeAudit` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
 
-## 刷卡匯入
-
-見 [刷卡匯入](attendance-imports.md)。
-
 ## 出勤判定
 
 - 規則在 `Attendance:Workday`，`FullDay`、`MorningOff`、`AfternoonOff` 各一份（預設值與驗證見 [AttendanceOptions](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceOptions.cs)）。
@@ -50,7 +46,7 @@
 - 時數都扣午休（`BreakStart`～`BreakEnd`）；表單只算彈性起點到最晚應下班之間，重疊只算一次，最多一天。設定驗證要求午休在彈性終點之後、最早應下班之前，所以沒有表單時與舊系統的遲到早退同時有、同時沒有缺口。
 - 例：09:01:19 到、請 08:30～09:00，等於 08:31:19 到，扣表單後 18:01:19 可下班，17:30:22 走差 30 分 57 秒；09:10 到、18:00 走、沒請假，遲到 10 分，但只上了 7 小時 20 分，要 40 分的表單。
 - 沒有刷卡：核准的表單抵掉整天就是請假，否則是異常。只有一筆刷卡仍是異常，上班時數當成 0。
-- 狀態：核准的夠→已補足（`Covered`）；加上流程中的才夠→流程中（`Pending`）；都不夠→未補足（`Unexplained`），`ShortSeconds` 是核准表單還差的秒數；表單無法取得→`Unknown`。沒有缺口與今天沒有狀態。`AdjustedClockOut` 是扣核准表單後的應下班，表單不夠抵遲到或已抵掉整天時為 null。`TheFormRuleIsConsistentForEveryPunchTime` 以整天的上下班時間檢查這些性質。`Gaps` 是缺口時段（不扣表單）。
+- 狀態：核准的夠→已補足（`Covered`）；加上流程中的才夠→流程中（`Pending`）；都不夠→未補足（`Unexplained`），`ShortSeconds` 是核准表單還差的秒數；表單無法取得→`Unknown`。沒有缺口與今天沒有狀態。`AdjustedClockOut` 是扣核准表單後的應下班，表單不夠抵遲到或已抵掉整天時為 null。`Gaps` 是缺口時段（不扣表單）。
 
 ## 稽核
 

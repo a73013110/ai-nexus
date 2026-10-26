@@ -11,12 +11,14 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { applySortWrites, bySortOrder, sortWrites } from '@shared/browser/sort-order';
 import { CodeBlock } from '@shared/markdown/code-block';
 import { MarkdownView } from '@shared/markdown/markdown-view';
+import { ApprovalStep, ApprovalTimeline } from '@shared/ui/approval-timeline';
 import { ChangeList, FieldChange } from '@shared/ui/change-list';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
+import { FileList, FileListItem } from '@shared/ui/file-list';
 import { Icon } from '@shared/ui/icon';
 import { QueryBar, QueryField } from '@shared/ui/query-bar';
 import { QueryState } from '@shared/ui/query-state';
@@ -65,6 +67,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
 @Component({
   selector: 'nx-design-data',
   imports: [
+    ApprovalTimeline,
     ChangeList,
     CodeBlock,
     CopyValue,
@@ -75,6 +78,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     DetailDrawer,
     DrawerPager,
     Field,
+    FileList,
     Icon,
     MarkdownView,
     Panel,
@@ -379,6 +383,29 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
+      id="design-files"
+      title="檔案清單"
+      api="FileList"
+      description="附件、分享檔案與其他系統的檔案共用：點卡片在閱讀器預覽，右側下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。"
+    >
+      <nx-design-example label="可移除的附件">
+        <nx-file-list [files]="files" [editable]="true" />
+      </nx-design-example>
+      <nx-design-example label="stacked · 單據的附件一檔一列">
+        <nx-file-list [files]="files" [stacked]="true" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-approval"
+      title="簽核流程"
+      api="ApprovalTimeline"
+      description="直式時間軸，上方是進度（summary）：已完成實心打勾、目前關卡外圈光暈並寫已等候多久、未到的空心；每關一行寫處理人、單位、關卡與時間，狀態另有報讀文字。簽核意見放在該關之下。"
+    >
+      <nx-design-example label="已送出、會簽中、待決行">
+        <nx-approval-timeline [steps]="approvals" summary="第 2 關，共 3 關" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
       id="design-properties"
       title="屬性清單"
       api="PropertyList"
@@ -583,6 +610,47 @@ export class DesignData {
     { label: '姓名', before: '林可柔', after: '林可蘿' },
     { label: '電子郵件', before: null, after: 'carol@example.test' },
     { label: '分機', before: '2051', after: null },
+  ];
+  // 範例檔案沒有真的內容：預覽會顯示找不到檔案，下載連結不會離開本頁。
+  readonly files: FileListItem[] = [
+    {
+      key: 'sample-pdf',
+      fileName: '研習證明.pdf',
+      detail: '312 KB · 文字分析',
+      reader: { id: 'sample-pdf', attachment: true },
+      downloadUrl: '#design-files',
+    },
+    {
+      key: 'sample-note',
+      fileName: '會議紀錄草稿（第二版）.docx',
+      detail: '陳品睿 上傳',
+      reader: { id: 'sample-note', attachment: true },
+      downloadUrl: '#design-files',
+    },
+  ];
+  readonly approvals: ApprovalStep[] = [
+    {
+      key: '1',
+      state: 'done',
+      title: '送出',
+      person: '林予安',
+      detail: '資訊組 · 專員',
+      time: '10/20（二）09:30',
+      dateTime: '2026-10-20T09:30:00+08:00',
+    },
+    {
+      key: '2',
+      state: 'current',
+      title: '會簽',
+      person: '張文彥',
+      detail: '人事室 · 組長',
+      note: '代理：吳思妤',
+      waiting: '已等候 2 天',
+      time: '10/20（二）09:31',
+      dateTime: '2026-10-20T09:31:00+08:00',
+      memo: '請補附研習證明。',
+    },
+    { key: '3', state: 'pending', title: '決行', person: '陳品睿', detail: '秘書室 · 主任' },
   ];
   readonly propertyGroups: PropertyGroup[] = [
     {

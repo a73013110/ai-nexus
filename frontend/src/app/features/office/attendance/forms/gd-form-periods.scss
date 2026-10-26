@@ -1,0 +1,138 @@
+:host {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.period-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.period-rules {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.period-rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: 1.625rem;
+  padding: 0 var(--p-space-3);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.period-legend {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+}
+// 規則前的小方塊與月曆格同一套畫法：上緣色條是上午、下緣是下午。
+.period-swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  background: var(--accent-soft);
+  outline: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+// 四個月並排、平分寬度（每月至少 8rem，窄螢幕改為兩個多月）；更多時橫向捲動，高度固定在一列月曆。
+.period-months {
+  --period-gap: var(--p-space-3);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max(8rem, calc((100% - 3 * var(--period-gap)) / 4));
+  gap: var(--period-gap);
+  // 留出加框那天的外框，不被捲動區切掉。
+  margin: -3px;
+  padding: 3px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+.period-month {
+  display: grid;
+  gap: var(--p-space-1);
+  align-content: start;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.period-month h4 {
+  margin: 0;
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+}
+.period-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.period-weekday {
+  color: var(--muted);
+  font-size: 0.625rem;
+  text-align: center;
+}
+.period-cell {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  color: var(--secondary);
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+}
+.period-cell.is-weekend {
+  color: var(--muted);
+}
+.period-cell.is-outside {
+  visibility: hidden;
+}
+// 上午、下午各一條內陰影：上緣是上午、下緣是下午，整天就是上下都有。
+:is(.period-cell, .period-swatch):is([data-morning], [data-afternoon]) {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+:is(.period-cell, .period-swatch)[data-morning] {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+:is(.period-cell, .period-swatch)[data-afternoon] {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+:is(.period-cell, .period-swatch)[data-morning][data-afternoon] {
+  box-shadow:
+    inset 0 3px 0 var(--accent),
+    inset 0 -3px 0 var(--accent);
+}
+.period-cell.is-focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+// 說明列：淺底一條，前面那格與月曆上的格子同一套畫法。
+.period-focus {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  margin: 0;
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--radius-block);
+  background: var(--tile-inset);
+  font-size: var(--p-font-data);
+}
+.period-focus .period-cell {
+  flex: none;
+  width: 1.5rem;
+  font-size: var(--p-font-xs);
+}
+.period-focus strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

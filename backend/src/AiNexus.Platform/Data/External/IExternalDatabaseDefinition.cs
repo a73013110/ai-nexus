@@ -8,7 +8,7 @@ namespace AiNexus.Platform.Data.External;
 /// </summary>
 public interface IExternalDatabaseDefinition : ISqlDatabaseDefinition
 {
-    /// <summary>監控卡片與流量相依的名稱，例如「公文系統 GD」。</summary>
+    /// <summary>監控卡片與流量相依的名稱，例如「公文系統」。</summary>
     static abstract string DisplayName { get; }
 
     /// <summary>依賴它的功能，接在監控摘要的「……暫時無法使用」前面，例如「假單、出差單、假日與組織匯入」。</summary>

@@ -19,6 +19,7 @@ using AiNexus.Features.Work.Knowledge;
 using AiNexus.Features.Work.Prompts;
 using AiNexus.Features.Admin.Monitoring;
 using AiNexus.Features.Platform.Notifications;
+using AiNexus.Features.Platform.RemoteFiles;
 using AiNexus.Features.Admin.Operations;
 using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Work.Projects;
@@ -50,6 +51,7 @@ public static class FeatureModules
         Add<IdentityModule>(builder);
         Add<OrganizationModule>(builder);
         Add<GdModule>(builder);
+        Add<RemoteFilesModule>(builder);
         Add<AccountModule>(builder);
         Add<DiagnosticsModule>(builder);
         Add<BillingModule>(builder);
@@ -120,6 +122,7 @@ public static class FeatureModules
         Map<MonitoringModule>(api);
         Map<MailModule>(api);
         Map<AttendanceModule>(api);
+        Map<RemoteFilesModule>(api);
 
         IdentityModule.MapPublicEndpoints(app.MapGroup("").WithTags(Tag<IdentityModule>()));
         return app;

@@ -117,6 +117,64 @@ form.dialog-form {
 .dialog-title h2 {
   max-width: 100%;
 }
+// 標題與選用的第二行（dialog-subtitle）；沒有第二行時與單獨的 .dialog-title 一樣。
+.dialog-heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+// 單筆紀錄（表單、單據）的標題列：左側圖示方塊、較大的標題、第二行寫種類與單號；工具與關閉鈕對齊第一行。
+.dialog-bar.is-record {
+  align-items: flex-start;
+  gap: var(--p-space-3);
+  // 蓋過 lg、full 的單行標題列內距（下方 :is([data-size='lg'], …) .dialog-bar）。
+  .platform-dialog[data-size] & {
+    padding: var(--p-space-4) var(--p-space-3) var(--p-space-4) var(--p-space-5);
+  }
+  .dialog-title h2 {
+    font-size: var(--p-font-xl);
+    line-height: 1.4;
+  }
+}
+.dialog-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-block);
+  background: var(--accent-soft);
+  color: var(--accent);
+  --icon-size: 1.25rem;
+}
+// 第二行各項之間的「·」由樣式畫（不報讀），畫在每項左側的間距裡；整行往左退一個間距並把那段裁掉，
+// 位於行首的那一項（含換行後的第一項）的點就被裁掉，不會懸在行尾或行首。
+.dialog-subtitle {
+  --subtitle-gap: 1.125rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  margin: 0 0 0 calc(-1 * var(--subtitle-gap));
+  clip-path: inset(-4px -4px -4px var(--subtitle-gap));
+  color: var(--secondary);
+  font-size: var(--p-font-data);
+}
+.dialog-subtitle > * {
+  position: relative;
+  margin-inline-start: var(--subtitle-gap);
+  white-space: nowrap;
+}
+.dialog-subtitle > *::before {
+  content: '·' / '';
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--subtitle-gap));
+  width: var(--subtitle-gap);
+  color: var(--muted);
+  text-align: center;
+}
 // The detail gives way first (basis 0), so a long one never squeezes the title onto two lines.
 .dialog-title small {
   flex: 1 1 0;

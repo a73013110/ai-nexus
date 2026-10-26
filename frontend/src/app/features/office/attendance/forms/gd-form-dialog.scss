@@ -1,0 +1,167 @@
+// 主欄與側欄依對話框本身的寬度切換，不看視窗：同一個視窗寬度下對話框可能放大或縮成底部面板。
+// body 不留內距（dialog-body-flush），側欄的底色與左線才能貼齊對話框邊緣、撐滿高度。
+.dialog-body {
+  container-type: inline-size;
+}
+.form-state {
+  padding: var(--p-space-5);
+}
+.form-layout {
+  --side-width: 17.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-width);
+  flex: 1 0 auto;
+  // 側欄的底色與左線畫在版面上，側欄本身才能黏在頂端：長的簽核流程往下捲時，申請人與代理人仍看得到。
+  background: linear-gradient(
+    to right,
+    transparent calc(100% - var(--side-width) - 1px),
+    var(--line) 0 calc(100% - var(--side-width)),
+    var(--surface-subtle) 0
+  );
+}
+// 唯讀的紀錄不是表單：段落之間比對話框預設的 --section-gap 寬，掃讀時各塊分得開。
+.form-main {
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-5);
+  min-width: 0;
+  padding: var(--p-space-5);
+}
+.form-heading {
+  margin: 0;
+  font-size: var(--p-font-data);
+  font-weight: 600;
+}
+.form-block {
+  display: grid;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.form-text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: var(--p-font-sm);
+  line-height: 1.6;
+}
+.form-missing {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-data);
+}
+
+// 出差的地點、交通工具：兩欄並排的短欄位。
+.form-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-space-4) var(--p-space-6);
+  margin: 0;
+}
+.form-facts div {
+  display: grid;
+  gap: var(--p-space-1);
+  min-width: 0;
+}
+.form-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--p-font-sm);
+}
+.form-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.form-chips li {
+  padding: 2px var(--p-space-3);
+  border-radius: var(--radius-full);
+  background: var(--hover);
+  font-size: var(--p-font-xs);
+}
+
+// 側欄：與主欄同一個捲動區，黏在頂端。
+.form-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-5);
+  padding: var(--p-space-5);
+}
+.form-side hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.form-props {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: 0;
+}
+.form-props > div {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--p-space-3);
+  align-items: start;
+  font-size: var(--p-font-data);
+  line-height: 1.25rem;
+}
+.form-props dt {
+  color: var(--muted);
+}
+.form-props dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.form-person {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.form-person .avatar {
+  --sidebar-avatar-size: 1.5rem;
+  font-size: var(--p-font-xs);
+}
+.form-person > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.form-person small {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+}
+
+.form-skeleton {
+  display: grid;
+  gap: var(--p-space-3);
+}
+.form-skeleton .skeleton {
+  height: 3.5rem;
+  border-radius: var(--radius-block);
+}
+.form-skeleton .skeleton:first-of-type {
+  height: 5.5rem;
+}
+
+@container (max-width: 44rem) {
+  .form-layout {
+    grid-template-columns: minmax(0, 1fr);
+    background: none;
+  }
+  .form-side {
+    position: static;
+    border-top: 1px solid var(--line);
+    background: var(--surface-subtle);
+  }
+}
+@container (max-width: 34rem) {
+  .form-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

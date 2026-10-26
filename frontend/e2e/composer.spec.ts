@@ -224,7 +224,9 @@ test("narrow composers fold reasoning effort into the model panel", async ({
   ).toBeHidden();
   // The model name keeps the row: nothing beside it truncates it.
   expect(
-    await model.locator("span").evaluate((x) => x.scrollWidth <= x.clientWidth),
+    await model
+      .locator(".select-value")
+      .evaluate((x) => x.scrollWidth <= x.clientWidth),
   ).toBe(true);
   await model.focus();
   await page.keyboard.press("ArrowDown");

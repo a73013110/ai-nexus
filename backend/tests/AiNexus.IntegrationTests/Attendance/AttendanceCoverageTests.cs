@@ -27,7 +27,7 @@ public sealed class AttendanceCoverageTests
         session.Gd.AddUser("G-boss", "boss", name: "林主任");
         session.Gd.AddLeave("L-1", GdId("bob"), "A", new(2026, 10, 19, 8, 30, 0), new(2026, 10, 19, 9, 0, 0), "Decide");
         session.Gd.AddLeave("L-2", GdId("bob"), "A", new(2026, 10, 20, 8, 30, 0), new(2026, 10, 20, 10, 0, 0), "Send");
-        session.Gd.AddFlowStep("L-2", "002", "3_G-boss", "核准關卡");
+        session.Gd.AddFlow("FLOW_CURRENT", "L-2", "002", "3_G-boss", "核准關卡");
         await session.PunchAsync("A1", At(19, 9, 3, 6), At(19, 18, 10), At(20, 9, 40), At(20, 18, 0));
         await session.PunchAsync("A2", At(19, 8, 30), At(19, 18, 0), At(20, 8, 30), At(20, 18, 0), At(21, 8, 30), At(21, 18, 0));
         return (session, bob, carol, await session.Factory.SignedInAsync("hr"));

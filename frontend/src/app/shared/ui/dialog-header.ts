@@ -19,6 +19,8 @@ import type { ProductTourDefinition } from './product-tour';
  * `.platform-dialog` 的標題列：標題、可選的細節與工具，以及關閉鈕。
  * 標記為 `dialog-title` 的內容（例如狀態徽章）會放在標題旁邊、h2 之外，讓對話框的無障礙名稱只剩標題；
  * 其他內容則放在關閉鈕之前。
+ * 開啟單筆紀錄（表單、單據）時可加 `icon`（標題左側的圖示方塊）與標記為 `dialog-subtitle` 的第二行（種類、單號、時間，各項一個子元素、分隔點由樣式畫），
+ * 標題列改為兩行、標題放大。
  * `maximizable` adds the 放大視窗 toggle of `CompactDialog.maximized`; while maximized inside an
  * `nxIdleChrome` 的檢視者會讓標題列浮在內容之上，並隨其工具列淡出（idle-chrome.ts）。
  */
@@ -28,13 +30,23 @@ let headerSequence = 0;
   selector: 'nx-dialog-header',
   imports: [Icon, ProductTourButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'dialog-bar', '[attr.data-chrome]': 'chrome()' },
-  template: `<div class="dialog-title">
-      <h2 [id]="titleId">{{ heading() }}</h2>
-      <ng-content select="[dialog-title]" />
-      @if (detail()) {
-        <small>{{ detail() }}</small>
-      }
+  host: {
+    class: 'dialog-bar',
+    '[class.is-record]': '!!icon()',
+    '[attr.data-chrome]': 'chrome()',
+  },
+  template: `@if (icon(); as name) {
+      <span class="dialog-icon" aria-hidden="true"><nx-icon [name]="name" /></span>
+    }
+    <div class="dialog-heading">
+      <div class="dialog-title">
+        <h2 [id]="titleId">{{ heading() }}</h2>
+        <ng-content select="[dialog-title]" />
+        @if (detail()) {
+          <small>{{ detail() }}</small>
+        }
+      </div>
+      <ng-content select="[dialog-subtitle]" />
     </div>
     <ng-content />
     @if (maximizable() && dialog) {
@@ -68,6 +80,8 @@ export class DialogHeader {
   readonly detail = input('');
   readonly closable = input(true);
   readonly closeLabel = input('關閉');
+  /** 單筆紀錄的圖示（`nx-icon` 名稱），有值時標題列改為紀錄樣式。 */
+  readonly icon = input<string | null>(null);
   readonly maximizable = input(false, { transform: booleanAttribute });
   /** 對話框內容的導覽；觸發鈕在關閉鈕之前。 */
   readonly tour = input<ProductTourDefinition | null>(null);

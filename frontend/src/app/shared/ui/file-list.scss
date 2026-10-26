@@ -9,6 +9,10 @@
   margin: var(--p-space-3) 0;
   padding: 0;
 }
+:host(.is-stacked) .attachment-list {
+  flex-direction: column;
+  margin: 0;
+}
 :host-context(.composer) .attachment-list {
   margin-top: 0;
   max-height: var(--attachment-list-max);

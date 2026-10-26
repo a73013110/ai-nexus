@@ -16,7 +16,7 @@ namespace AiNexus.Features.Office.Attendance.Forms;
 public sealed class GdFormReader(GdAccounts accounts, ExternalDatabase<GdDatabase> gd)
 {
     // SQL Server 比較字串時忽略尾端空白，所以只有空白的 DayOfWeek 也算空。排序留給呼叫端（分批查詢後本來就要重排）。
-    private const string Sql = $$"""
+    private static readonly string Sql = $$"""
         SELECT s.*, w.[Signer] AS CurrentSigner, w.[Step] AS CurrentStep
         FROM (
             SELECT l.[DesNo], l.[LeaveUserId] AS GdId, 0 AS Kind, COALESCE(k.[LeaveKind], l.[LeaveKind], '') AS Title,
@@ -39,7 +39,7 @@ public sealed class GdFormReader(GdAccounts accounts, ExternalDatabase<GdDatabas
         OUTER APPLY (
             SELECT TOP 1 u.[NAME], c.[STATUS]
             FROM [dbo].[FLOW_CURRENT] c
-            LEFT JOIN [dbo].[Sys_User] u ON u.[ID] = SUBSTRING(c.[PERSON_ID], CHARINDEX('_', c.[PERSON_ID]) + 1, 50)
+            LEFT JOIN [dbo].[Sys_User] u ON u.[ID] = {{GdPeople.UserIdOf("c.[PERSON_ID]")}}
             WHERE c.[KEY_ID] = s.[DesNo] AND s.[FlowStatus] = '{{nameof(GdFormFlowOver.Send)}}'
             ORDER BY c.[FLOW_NO] DESC
         ) w ([Signer], [Step])

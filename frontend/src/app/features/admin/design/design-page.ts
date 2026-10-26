@@ -84,6 +84,8 @@ const INDEX = [
       { id: 'design-tree', name: '樹狀瀏覽' },
       { id: 'design-sortable', name: '手動排序' },
       { id: 'design-changes', name: '欄位變更' },
+      { id: 'design-files', name: '檔案清單' },
+      { id: 'design-approval', name: '簽核流程' },
       { id: 'design-properties', name: '屬性清單' },
       { id: 'design-markdown', name: '內容閱讀' },
     ],

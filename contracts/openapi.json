@@ -39310,6 +39310,166 @@
         }
       }
     },
+    "/api/v1/attendance-forms/{desNo}": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "operationId": "GetGdForm",
+        "parameters": [
+          {
+            "name": "desNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GdFormDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/attendance-cards": {
       "get": {
         "tags": [
@@ -41472,6 +41632,163 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CalendarDayDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/remote-files/content": {
+      "get": {
+        "tags": [
+          "RemoteFiles"
+        ],
+        "operationId": "DownloadRemoteFile",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
                 }
               }
             }
@@ -47409,6 +47726,61 @@
           null
         ]
       },
+      "GdFlowStep": {
+        "required": [
+          "state",
+          "action",
+          "person",
+          "agent",
+          "at",
+          "memo"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/GdFlowStepState"
+          },
+          "action": {
+            "type": "string"
+          },
+          "person": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GdPerson"
+              }
+            ]
+          },
+          "agent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "memo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GdFlowStepState": {
+        "enum": [
+          "Done",
+          "Current",
+          "Pending"
+        ]
+      },
       "GdForm": {
         "required": [
           "desNo",
@@ -47460,6 +47832,165 @@
           }
         }
       },
+      "GdFormAttachmentDto": {
+        "required": [
+          "file",
+          "memo",
+          "uploader"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/RemoteFileDto"
+          },
+          "memo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uploader": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GdFormDetailDto": {
+        "required": [
+          "desNo",
+          "kind",
+          "flowStatus",
+          "title",
+          "submittedAt",
+          "applicant",
+          "agent",
+          "startsAt",
+          "endsAt",
+          "hours",
+          "segments",
+          "reason",
+          "attachmentNote",
+          "leave",
+          "travel",
+          "steps",
+          "attachments"
+        ],
+        "type": "object",
+        "properties": {
+          "desNo": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GdFormKind"
+          },
+          "flowStatus": {
+            "$ref": "#/components/schemas/GdFormFlowOver"
+          },
+          "title": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "applicant": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GdPerson"
+              }
+            ]
+          },
+          "agent": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GdPerson"
+              }
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hours": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GdFormPeriod"
+            }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "leave": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GdLeaveDetail"
+              }
+            ]
+          },
+          "travel": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GdTravelDetail"
+              }
+            ]
+          },
+          "steps": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GdFlowStep"
+            }
+          },
+          "attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GdFormAttachmentDto"
+            }
+          }
+        }
+      },
       "GdFormFlowOver": {
         "enum": [
           "Temp",
@@ -47475,6 +48006,107 @@
           "Leave",
           "Travel"
         ]
+      },
+      "GdFormPeriod": {
+        "required": [
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GdLeaveDetail": {
+        "required": [
+          "relation",
+          "attachmentKinds"
+        ],
+        "type": "object",
+        "properties": {
+          "relation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentKinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GdPerson": {
+        "required": [
+          "name",
+          "unit",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GdTravelDetail": {
+        "required": [
+          "place",
+          "transport",
+          "studyKind",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "place": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transport": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyKind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "GroupPolicyRequest": {
         "type": "object",
@@ -50297,6 +50929,29 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RemoteFileDto": {
+        "required": [
+          "ticket",
+          "fileName",
+          "contentType",
+          "isImage"
+        ],
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "isImage": {
+            "type": "boolean"
           }
         }
       },
@@ -54198,6 +54853,9 @@
     },
     {
       "name": "Attendance"
+    },
+    {
+      "name": "RemoteFiles"
     }
   ],
   "x-feature-catalog": {

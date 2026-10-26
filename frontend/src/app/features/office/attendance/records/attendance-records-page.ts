@@ -49,6 +49,7 @@ import {
   weekOf,
 } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
+import { GdFormDialog } from '../forms/gd-form-dialog';
 import { GdFormList } from './gd-form-list';
 import {
   RECORD_COVERAGES,
@@ -86,6 +87,7 @@ const DEFAULT_PAGE_SIZE = 20;
     FeaturePage,
     Icon,
     InfoPopover,
+    GdFormDialog,
     GdFormList,
     NgTemplateOutlet,
     Notice,

@@ -28,7 +28,7 @@
 ## 對話框與抽屜
 
 - 用原生 `<dialog class="platform-dialog" nxCompactDialog size="…">`：`sm` 確認與單欄、`md` 表單（預設）、`lg` 清單與檢視器、`full`。不接管 focus、Escape 或業務狀態。
-- 結構：`<nx-dialog-header heading detail>`（關閉鈕也經 `cancel`，忙碌與未儲存的攔截照常生效）＋ `.dialog-body`（唯一捲動區，欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`；表單可用 `form.dialog-form` 包住三者。
+- 結構：`<nx-dialog-header heading detail>`（關閉鈕也經 `cancel`，忙碌與未儲存的攔截照常生效）＋ `.dialog-body`（唯一捲動區，欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`；表單可用 `form.dialog-form` 包住三者。開啟單筆紀錄（表單、單據）時標題列加 `icon` 與 `dialog-subtitle`（種類、單號、時間各一個子元素，分隔點由樣式畫）；單據日期一律帶年。
 - 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出，不佔版面。
 - 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套出現與淡出規則（`shared/ui/idle-chrome.ts`），鍵盤焦點或展開的選單在內不淡出。
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
@@ -38,6 +38,7 @@
 - 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`：區塊間距只靠它的 gap，區塊不自帶外距；否則有提示時疊兩份外距、沒提示時又貼在一起。
 - 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」，不必切過去才知道。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
+- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用，呼叫端只負責組 `FileListItem`；其他系統的檔案以 `ReaderTarget.remote` 預覽；唯讀單據加 `stacked` 一檔一列。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
 
 ## 提示、載入與錯誤
 
@@ -58,4 +59,3 @@
 ## 手機
 
 觸控尺寸、底部 sheet、抽屜、滑動關閉與螢幕鍵盤見 [手機](mobile.md)。
-
