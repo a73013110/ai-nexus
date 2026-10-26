@@ -9174,6 +9174,15 @@ export interface components {
         };
         /** @enum {unknown} */
         AttendanceDayType: "FullDay" | "MorningOff" | "AfternoonOff" | "DayOff" | "Unknown";
+        AttendanceGap: {
+            kind: components["schemas"]["AttendanceGapKind"];
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+        };
+        /** @enum {unknown} */
+        AttendanceGapKind: "Late" | "EarlyLeave" | "Absent";
         AttendancePersonDto: {
             /** Format: uuid */
             userId: null | string;
@@ -9220,6 +9229,7 @@ export interface components {
             coverage: null | components["schemas"]["GapCoverage"];
             /** Format: int32 */
             shortSeconds: number;
+            gaps: components["schemas"]["AttendanceGap"][];
             forms: components["schemas"]["GdForm"][];
         };
         AttendanceRecordsDto: {
@@ -11970,6 +11980,8 @@ export type AttachmentPolicyDto = components['schemas']['AttachmentPolicyDto'];
 export type AttachmentStorageDto = components['schemas']['AttachmentStorageDto'];
 export type AttachmentStorageLimitRequest = components['schemas']['AttachmentStorageLimitRequest'];
 export type AttendanceDayType = components['schemas']['AttendanceDayType'];
+export type AttendanceGap = components['schemas']['AttendanceGap'];
+export type AttendanceGapKind = components['schemas']['AttendanceGapKind'];
 export type AttendancePersonDto = components['schemas']['AttendancePersonDto'];
 export type AttendancePersonOptionDto = components['schemas']['AttendancePersonOptionDto'];
 export type AttendanceReason = components['schemas']['AttendanceReason'];
@@ -39865,7 +39877,9 @@ export interface operations {
     };
     ListAttendancePeople: {
         parameters: {
-            query?: never;
+            query?: {
+                unitId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

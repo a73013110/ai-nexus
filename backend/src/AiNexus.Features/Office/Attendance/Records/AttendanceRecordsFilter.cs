@@ -24,7 +24,7 @@ public sealed class AttendanceRecordsFilter
     /// <summary>該單位及下層的目前成員。</summary>
     public Guid? UnitId { get; set; }
 
-    /// <summary>含沒有刷卡、也沒有假單的放假日；有刷卡或假單的放假日一律列出。</summary>
+    /// <summary>含沒有刷卡的放假日（有表單也一樣要勾才列）；有刷卡的放假日一律列出。</summary>
     public bool? IncludeDaysOff { get; set; }
 
     /// <summary>

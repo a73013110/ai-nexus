@@ -1,5 +1,7 @@
 import type {
   AttendanceDayType,
+  AttendanceGap,
+  AttendanceGapKind,
   AttendanceRecordDto,
   AttendanceReason,
   AttendanceScheduleDto,
@@ -215,14 +217,64 @@ function noPunchReason(day: AttendanceRecordDto) {
 }
 
 /**
- * 補足狀態加上核准的表單還差多少（`short`：「差 30 分 57 秒」，未補足與簽核中才有；簽核中的差額在單核准後補上）。
+ * 狀態欄的標籤：文字寫當天發生什麼事（正常；遲到、早退各一個，兩者都有就兩個；異常分未刷卡、缺一筆刷卡），
+ * 顏色跟著補足狀態（已補足綠、簽核中黃、未補足紅、表單無法取得灰），紅黃就是要追的；原因放在 title。
+ * 今天的無法判定只是打卡檔還沒匯入，另寫「今日未結算」並用灰色，不與真的無法判定混在一起。
+ */
+function statusesOf(day: AttendanceRecordDto): Presented[] {
+  const tone = coverage(day.coverage)?.tone;
+  switch (day.status) {
+    case 'Present': {
+      const gaps = [
+        ...(day.lateSeconds > 0 ? ['遲到'] : []),
+        ...(day.earlyLeaveSeconds > 0 ? ['早退'] : []),
+      ];
+      return gaps.length
+        ? gaps.map((label) => ({ label, tone: tone ?? 'warning' }))
+        : [{ label: '正常', tone: 'success' }];
+    }
+    case 'Anomaly':
+      return [
+        { label: day.reason === 'SinglePunch' ? '缺一筆刷卡' : '未刷卡', tone: tone ?? 'danger' },
+      ];
+    case 'Undetermined':
+      if (day.reason === 'DayInProgress') return [{ label: '今日未結算', tone: 'neutral' }];
+      break;
+  }
+  return [ATTENDANCE_STATUS[day.status] ?? { label: day.status, tone: 'neutral' }];
+}
+
+export const GAP_KIND: Record<AttendanceGapKind, string> = {
+  Late: '遲到',
+  EarlyLeave: '早退',
+  Absent: '未刷卡',
+};
+/** 缺口時段的時間：整分只寫「09:00」，有秒數才寫「09:16:13」（遲到算到刷卡的那一秒）。 */
+const gapTime = (value: string) => clockTime(value).replace(/:00$/, '');
+const presentGap = (gap: AttendanceGap) => ({
+  kind: GAP_KIND[gap.kind] ?? gap.kind,
+  time: `${gapTime(gap.startsAt)}–${gapTime(gap.endsAt)}`,
+});
+
+/**
+ * 補足欄：HR 要追的是還差多少、差在哪一段，好通知補單或對照簽核中假單的起訖。狀態（`label`、`tone`）畫成標籤放在最前面。
+ * - `short`：核准的表單還差多少（「差 30 分 57 秒」），未補足與簽核中才有；簽核中的差額在單核准後補上。
+ * - `formHours`：已補足時抵掉的表單時數（「表單 30 分」）。
+ * - `gaps`：缺口時段（「遲到 09:00–09:16:13」）；已補足不列。只是參考，補足比時數不比區間，差多少以 `short` 為準。
  * 沒有缺口時為 null。
  */
 function coverageOf(day: AttendanceRecordDto) {
   const value = coverage(day.coverage);
   if (!value) return null;
   const short = formatSeconds(day.shortSeconds);
-  return { ...value, short: short ? `差 ${short}` : '' };
+  const covered = day.coverage === 'Covered';
+  const formHours = covered ? formatSeconds(day.formSeconds) : '';
+  return {
+    ...value,
+    short: short ? `差 ${short}` : '',
+    formHours: formHours ? `表單 ${formHours}` : '',
+    gaps: covered ? [] : day.gaps.map(presentGap),
+  };
 }
 
 /** 出勤紀錄一天的顯示值；範本只讀這些欄位，不自己查對照表。 */
@@ -236,13 +288,19 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
     dayType: ATTENDANCE_DAY_TYPE[day.dayType] ?? day.dayType,
     /** 假日設定的備註（例如「國慶日」）：放假的原因。 */
     remark: day.calendarRemark ?? '',
-    status: ATTENDANCE_STATUS[day.status] ?? { label: day.status, tone: 'neutral' },
+    statuses: statusesOf(day),
+    /** 判定的原因，放在狀態標籤的 title。 */
     reason:
       day.reason === 'NoPunchOrLeave'
         ? noPunchReason(day)
         : day.reason
           ? (ATTENDANCE_REASON[day.reason] ?? day.reason)
           : '',
+    /** 標籤下另寫一行的原因：只有真的無法判定（行事曆或表單取不到）才要說明，其他的標籤與補足欄已經說清楚。 */
+    note:
+      day.status === 'Undetermined' && day.reason !== 'DayInProgress' && day.reason
+        ? (ATTENDANCE_REASON[day.reason] ?? day.reason)
+        : '',
     clockIn: clockTime(day.clockIn),
     clockOut: clockTime(day.clockOut),
     /** 只有一筆刷卡時上下班是同一筆，只顯示一次。 */

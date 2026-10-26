@@ -38808,6 +38808,16 @@
           "Attendance"
         ],
         "operationId": "ListAttendancePeople",
+        "parameters": [
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "400": {
             "description": "Bad Request",
@@ -43696,6 +43706,34 @@
           "Unknown"
         ]
       },
+      "AttendanceGap": {
+        "required": [
+          "kind",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AttendanceGapKind"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AttendanceGapKind": {
+        "enum": [
+          "Late",
+          "EarlyLeave",
+          "Absent"
+        ]
+      },
       "AttendancePersonDto": {
         "required": [
           "userId",
@@ -43812,6 +43850,7 @@
           "adjustedClockOut",
           "coverage",
           "shortSeconds",
+          "gaps",
           "forms"
         ],
         "type": "object",
@@ -43898,6 +43937,12 @@
           "shortSeconds": {
             "type": "integer",
             "format": "int32"
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceGap"
+            }
           },
           "forms": {
             "type": "array",

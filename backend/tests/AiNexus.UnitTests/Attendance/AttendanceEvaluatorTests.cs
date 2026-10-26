@@ -253,6 +253,24 @@ public sealed class AttendanceEvaluatorTests
         Assert.Null(EvaluateWithoutForms(At(8, 30), At(18, 0)).Coverage);
     }
 
+    [Fact]
+    public void GapsListTheRawLateEarlyAndAbsentPeriodsRegardlessOfForms()
+    {
+        // 遲到從彈性終點算到上班，早退從下班算到應下班（遲到時是表定下班）；表單不改時段，差多少看 ShortSeconds。
+        Assert.Equal(
+            [new(AttendanceGapKind.Late, At(9, 0), At(9, 16, 13)), new(AttendanceGapKind.EarlyLeave, At(17, 45), At(18, 0))],
+            Evaluate(At(9, 16, 13), At(17, 45), forms: Approved(At(9, 0), At(9, 10))).Gaps);
+        Assert.Equal([new(AttendanceGapKind.EarlyLeave, At(17, 0), At(17, 50))], Evaluate(At(8, 20), At(17, 0)).Gaps);
+        Assert.Equal([new(AttendanceGapKind.Absent, At(8, 30), At(18, 0))], Evaluate(null, null, forms: Pending(At(8, 30), At(12, 0))).Gaps);
+        Assert.Equal([new(AttendanceGapKind.Absent, At(13, 30), At(18, 0))], Evaluate(null, null, AttendanceDayType.MorningOff).Gaps);
+
+        // 沒有缺口、請假、只有一筆刷卡（分不出缺哪段）與今天都沒有時段。
+        Assert.Empty(Evaluate(At(8, 30), At(18, 0)).Gaps);
+        Assert.Empty(Evaluate(null, null, forms: Approved(At(8, 30), At(18, 0))).Gaps);
+        Assert.Empty(Evaluate(At(8, 25), At(8, 25)).Gaps);
+        Assert.Empty(AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, At(9, 30), At(18, 0), []), Rules, Day).Gaps);
+    }
+
     /// <summary>
     /// 所有上下班時間（每 7 分 13 秒取一點，涵蓋彈性前、午休中、深夜）配上逐步加長的表單，檢查判定的整體性質，
     /// 免得只驗了幾個例子、別的時間點出錯。
@@ -277,6 +295,9 @@ public sealed class AttendanceEvaluatorTests
             Assert.Equal(plain.LateSeconds > 0 || plain.EarlyLeaveSeconds > 0, plain.Coverage is not null);
             Assert.True(plain.Coverage is null or GapCoverage.Unexplained);
             Assert.Null(plain.AdjustedClockOut);
+            // 缺口時段與遲到、早退秒數一一對應。
+            Assert.Equal(plain.LateSeconds > 0, plain.Gaps.Any(x => x.Kind == AttendanceGapKind.Late));
+            Assert.Equal(plain.EarlyLeaveSeconds > 0, plain.Gaps.Any(x => x.Kind == AttendanceGapKind.EarlyLeave));
 
             var results = forms.Select(x => Evaluate(clockIn, clockOut, type, x)).ToList();
             for (var k = 0; k < results.Count; k++)

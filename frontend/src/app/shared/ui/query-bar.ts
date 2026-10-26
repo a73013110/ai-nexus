@@ -1,9 +1,27 @@
 import { uniqueId } from '../browser/unique-id';
-import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Directive,
+  ElementRef,
+  computed,
+  contentChildren,
+  input,
+  viewChild,
+} from '@angular/core';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 import { Icon } from './icon';
 import type { QueryChip, QueryState } from './query-state';
+
+/**
+ * 查詢列欄位對應的條件鍵（`nxQueryField="unitId"`）：已套用條件的 chip 依這些欄位在範本中的順序排列，
+ * 調整欄位順序時 chip 自動跟著，不必另外維護 `chips` 的順序。
+ */
+@Directive({ selector: '[nxQueryField]' })
+export class QueryField {
+  readonly key = input.required<string>({ alias: 'nxQueryField' });
+}
 
 /**
  * 資料頁的查詢列，搭配 `QueryState`：欄位只改草稿，按「查詢」（或在欄位按 Enter）才套用，「重設」
@@ -14,6 +32,7 @@ import type { QueryChip, QueryState } from './query-state';
  * `[query-more]` 放較少用的欄位，收在「＋條件」popover（需 `more`）。
  * 表單加 `novalidate`：必填欄位可能藏在關閉的 popover 裡，瀏覽器原生驗證會卡住送出，改由 state 的
  * `validate` 判斷。
+ * 欄位標上 `nxQueryField` 時，chip 依欄位順序排列（以 chip 的 `clear` 對應欄位）；對不到欄位的 chip 排在後面、維持原順序。
  * 查詢中的按鈕用 `aria-disabled` 而非 `disabled`：停用的按鈕無法聚焦，剛按下的按鈕或移除 chip
  * 後的焦點目標會讓焦點掉回 body。
  */
@@ -84,15 +103,15 @@ import type { QueryChip, QueryState } from './query-state';
     @if (state().error()) {
       <p class="ui-query-error" role="alert"><nx-icon name="info" />{{ state().error() }}</p>
     }
-    <div class="ui-query-status" [hidden]="!state().dirty() && !state().chips().length">
+    <div class="ui-query-status" [hidden]="!state().dirty() && !chips().length">
       <span class="ui-query-pending" role="status">
         @if (state().dirty()) {
           <nx-icon name="info" />條件已變更，按「查詢」套用
         }
       </span>
-      @if (state().chips().length) {
+      @if (chips().length) {
         <ul class="ui-query-chips" aria-label="已套用條件">
-          @for (chip of state().chips(); track chip.id; let i = $index) {
+          @for (chip of chips(); track chip.id; let i = $index) {
             <li>
               <span [title]="chip.label">{{ chip.label }}</span>
               <button
@@ -122,6 +141,22 @@ export class QueryBar {
   /** popover 中已填的欄位數，顯示在按鈕上。 */
   readonly moreCount = input(0);
   readonly id = uniqueId('nx-query');
+  private readonly fields = contentChildren(QueryField, { descendants: true });
+  /** 已套用條件的 chip，依 `nxQueryField` 欄位的順序。 */
+  readonly chips = computed(() => {
+    const chips = this.state().chips();
+    const keys = this.fields().map((field) => field.key());
+    if (!keys.length) return chips;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
+    const rank = (chip: QueryChip<any>) =>
+      Math.min(
+        keys.length,
+        ...Object.keys(chip.clear)
+          .map((key) => keys.indexOf(key))
+          .filter((index) => index >= 0),
+      );
+    return [...chips].sort((a, b) => rank(a) - rank(b));
+  });
   private readonly form = viewChild.required<ElementRef<HTMLFormElement>>('form');
   private readonly moreTrigger = viewChild<ElementRef<HTMLButtonElement>>('moreTrigger');
   private readonly morePanel = viewChild.required<ElementRef<HTMLElement>>('morePanel');

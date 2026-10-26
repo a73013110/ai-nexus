@@ -7,10 +7,10 @@
 - 起訖是出勤日，都含、必填，最長 366 天（整年含閏年；一次匯出整年或看一個人的整年）；缺一端、顛倒或超過回 400 `attendance_records_range_invalid`。
 - 依人分頁：`offset`、`limit`（預設 20、最多 50），依使用者順序（管理者在使用者頁設定的排序，未排序的人在後、依姓名；見 [手動排序](../architecture/manual-ordering.md)），`total` 是符合條件的人數；一年的區間不分頁會過大，每人的天數不切開。
 - 篩選：`userId`、`card`（沒有帳號的資料，見[名單](#名單)）；`unitId` 是該單位及下層的目前成員。都與資料範圍取交集，範圍外的人只是查不到，不回錯誤。格式不對（卡號過長、分頁超出）回 400 `attendance_records_filter_invalid`。
-- 放假日：沒有刷卡也沒有假單的放假日預設不回傳；`includeDaysOff=true` 才列出。行事曆備註（假日名稱）在 `calendarRemark`。
+- 放假日：沒有刷卡的放假日預設不回傳（只有表單的也是）；`includeDaysOff=true` 才列出。行事曆備註（假日名稱）在 `calendarRemark`。
 - `coverage=Unexplained|Pending`：只列[補足狀態](attendance.md#表單補足)是這個的日子，沒有這種日子的人不列；要先判定整份名單再分頁，`total` 是篩選後的人數。
 - 查詢次數固定：持有期間、刷卡（資料庫依日彙總最早、最晚）、GD 行事曆、GD 假單各一次，只查這一頁的人（有 `coverage` 時查全部），不逐人逐日查。
-- 人員選單：`GET /api/v1/attendance-records/people` 列出範圍內持有過卡的人（含卡已隱藏與已不持卡的人，各有旗標），不分區間，畫面以它填人員下拉。
+- 人員選單：`GET /api/v1/attendance-records/people` 列出範圍內持有過卡的人（含卡已隱藏與已不持卡的人，各有旗標），不分區間，畫面以它填人員下拉。`unitId` 與名單的單位篩選同一套；畫面的單位放在人員前面，選了單位就依它重讀選單，換單位時清掉已選的人。
 
 ## 資料範圍
 

@@ -29,8 +29,12 @@ export class AttendanceApi {
   /** 依人分頁：`offset` 起的 `limit` 人，回應帶總人數。 */
   records = (query: AttendanceRecordFilters, offset: number, limit: number, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-records', { query: { ...query, offset, limit }, signal });
-  /** 人員選單：範圍看得到、持有過卡的人（含只有姓名、還沒綁帳號的持有人），不限期間。 */
-  people = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-records/people', { signal });
+  /** 人員選單：範圍看得到、持有過卡的人（含只有姓名、還沒綁帳號的持有人），不限期間；指定單位時只列該單位及下層的人。 */
+  people = (unitId: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-records/people', {
+      query: { unitId: unitId || undefined },
+      signal,
+    });
   /** 與 `records` 同一組條件匯出 .xlsx；回應是檔案，檔名在 `Content-Disposition`。 */
   exportRecords = (query: AttendanceRecordFilters) =>
     this.api.open('/api/v1/attendance-records/export', { query });

@@ -28,7 +28,7 @@ public sealed record AttendancePersonDto(Guid? UserId, string? CardNumber, strin
 
 /// <summary>
 /// 一個出勤日：<see cref="AttendanceEvaluation"/> 的判定結果（欄位意義見該型別）加上當天有交集的假單與出差單（原始起訖）。
-/// <paramref name="CalendarRemark"/> 是假日設定的備註（例如「國慶日」），沒有時為 null。
+/// <paramref name="CalendarRemark"/> 是假日設定的備註（例如「國慶日」），沒有時為 null。<paramref name="Gaps"/> 是缺口的時段（<see cref="AttendanceEvaluation.Gaps"/>）。
 /// </summary>
 public sealed record AttendanceRecordDto(
     DateOnly Date,
@@ -46,6 +46,7 @@ public sealed record AttendanceRecordDto(
     DateTimeOffset? AdjustedClockOut,
     GapCoverage? Coverage,
     int ShortSeconds,
+    IReadOnlyList<AttendanceGap> Gaps,
     IReadOnlyList<GdForm> Forms);
 
 /// <summary>
@@ -57,7 +58,8 @@ public sealed record AttendanceRecordDto(
 /// <item>依人分頁（<c>offset</c>、<c>limit</c>）：區間最長一年，全公司整年是數萬列，畫面一次只畫一頁的人；匯出以 <see cref="Page.All"/> 不分頁。</item>
 /// <item>查詢次數固定：持有期間、刷卡（依持有期間與日在資料庫彙總最早、最晚）、行事曆與假單各查一次，只查這一頁的人，不逐人逐日查詢。</item>
 /// <item><c>coverage</c> 要先判定才知道誰符合，改為整份名單判定後再分頁（查詢次數不變，量與匯出相同）。</item>
-/// <item>放假日沒有刷卡也沒有假單時預設不列（<c>includeDaysOff</c> 才列）；有刷卡或假單的放假日一律列出，加班或出差不會被藏起來。</item>
+/// <item>放假日沒有刷卡時預設不列（<c>includeDaysOff</c> 才列）；有刷卡的一律列出，加班不會被藏起來。
+/// 只有表單的不算：跨過週末的出差單、長假會讓每個放假日都冒出來，放假日本來就不判定，表單也不影響什麼。</item>
 /// <item>GD 連不上不拒絕整個請求：行事曆與假單各自降級，刷卡照常顯示（ADR 0018）。</item>
 /// </list>
 /// </remarks>
@@ -138,11 +140,11 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
                 if (punches.TryGetValue((index, date), out var punch)) (clockIn, clockOut) = punch;
                 var calendarDay = calendarDays?.GetValueOrDefault(date);
                 var dayType = AttendanceEvaluator.DayTypeOf(date, calendarDay);
-                if (!includeDaysOff && dayType == AttendanceDayType.DayOff && clockIn is null && filed.Count == 0) continue;
+                if (!includeDaysOff && dayType == AttendanceDayType.DayOff && clockIn is null) continue;
                 IReadOnlyList<FormPeriod>? periods = formsAvailable ? [.. filed.Select(s => new FormPeriod(s.StartsAt, s.EndsAt, s.Approved))] : null;
                 var e = AttendanceEvaluator.Evaluate(new(date, dayType, clockIn, clockOut, periods), rules, today);
                 records.Add(new(e.Date, e.DayType, Remark(calendarDay), e.Status, e.Reason, e.ClockIn, e.ClockOut, e.ExpectedClockOut,
-                    e.LateSeconds, e.EarlyLeaveSeconds, e.FormState, e.FormSeconds, e.AdjustedClockOut, e.Coverage, e.ShortSeconds, filed));
+                    e.LateSeconds, e.EarlyLeaveSeconds, e.FormState, e.FormSeconds, e.AdjustedClockOut, e.Coverage, e.ShortSeconds, e.Gaps, filed));
             }
             return new AttendancePersonDto(person.UserId, person.CardNumber, person.DisplayName, person.Account, formsAvailable, person.Hidden, records);
         }).ToList();

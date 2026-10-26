@@ -11,6 +11,7 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <item><paramref name="AdjustedClockOut"/>：扣掉核准表單後的應下班；表單還不夠抵遲到、或已抵掉整天時為 null。</item>
 /// <item><paramref name="Coverage"/>：有遲到、早退或異常時，核准的表單是否補足，沒有缺口與今天為 null；
 /// <paramref name="ShortSeconds"/> 是核准表單還差的秒數（未補足與簽核中才有）。</item>
+/// <item><see cref="Gaps"/>：缺口落在哪些時段，讓 HR 對照簽核中假單的起訖、或通知補哪一段的單。</item>
 /// </list>
 /// </summary>
 public sealed record AttendanceEvaluation(
@@ -27,7 +28,29 @@ public sealed record AttendanceEvaluation(
     int FormSeconds = 0,
     DateTimeOffset? AdjustedClockOut = null,
     GapCoverage? Coverage = null,
-    int ShortSeconds = 0);
+    int ShortSeconds = 0)
+{
+    /// <summary>
+    /// 缺口的時段（原始的遲到、早退與沒刷卡，不扣表單）；沒有缺口、只有一筆刷卡（分不出缺哪一段）與今天為空。
+    /// 只是參考：補足比的是時數不是區間（見 <see cref="AttendanceEvaluator"/>），表單不必蓋在這些時段上，差多少以 <see cref="ShortSeconds"/> 為準。
+    /// </summary>
+    public IReadOnlyList<AttendanceGap> Gaps { get; init; } = [];
+}
+
+/// <summary>一段缺口：<paramref name="StartsAt"/>～<paramref name="EndsAt"/>（+08:00）。</summary>
+public sealed record AttendanceGap(AttendanceGapKind Kind, DateTimeOffset StartsAt, DateTimeOffset EndsAt);
+
+public enum AttendanceGapKind
+{
+    /// <summary>彈性終點到上班刷卡。</summary>
+    Late = 0,
+
+    /// <summary>下班刷卡到應下班。</summary>
+    EarlyLeave = 1,
+
+    /// <summary>整天沒刷卡：表定上班到表定下班。</summary>
+    Absent = 2
+}
 
 /// <summary>
 /// 當天的缺口（遲到、早退或異常）有沒有表單補足（規則見 <see cref="AttendanceEvaluator"/>）。只有核准的表單算數；

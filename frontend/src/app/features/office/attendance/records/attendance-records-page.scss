@@ -2,7 +2,7 @@
 
 // 最小寬度交給 stacked 表格（--table-min-width）：寬版橫向捲動，手機卡片不受它撐寬。
 .records-table {
-  --table-min-width: 72rem;
+  --table-min-width: 82rem;
 }
 .records-table table {
   table-layout: fixed;
@@ -17,7 +17,10 @@
   width: 4.5rem;
 }
 .records-status-column {
-  width: 8.5rem;
+  width: 7rem;
+}
+.records-coverage-column {
+  width: 13rem;
 }
 .records-time-column {
   width: 5.5rem;
@@ -116,17 +119,56 @@ tr.records-week-start > td {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
-// 狀態欄徽章下的補足狀態、應下班下的扣表單時間。
-.records-coverage-tag,
+// 應下班下的扣表單時間。
 .records-adjusted {
   display: block;
   color: var(--gap-color, var(--secondary));
   font-size: var(--p-font-xs);
   font-weight: 600;
 }
+// 補足欄：狀態標籤在前、差額接在後面（窄時換行），下面是缺口時段。狀態欄的多個標籤同樣並排。
+.records-gap-cell {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+.records-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+}
+.records-gap-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--p-space-2);
+}
 .records-short {
-  display: inline-block;
+  color: var(--gap-color);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   white-space: nowrap;
+}
+.records-form-hours {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.records-gaps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.records-gaps li {
+  display: flex;
+  gap: 0.4em;
+  white-space: nowrap;
+}
+.records-gaps span {
+  color: var(--ink);
 }
 .records-person-flags {
   display: flex;

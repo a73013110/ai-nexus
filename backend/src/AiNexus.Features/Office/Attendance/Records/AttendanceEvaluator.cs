@@ -35,7 +35,7 @@ public static class AttendanceEvaluator
             ? result with
             {
                 Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ExpectedClockOut = null, LateSeconds = 0, EarlyLeaveSeconds = 0,
-                AdjustedClockOut = null, Coverage = null, ShortSeconds = 0
+                AdjustedClockOut = null, Coverage = null, ShortSeconds = 0, Gaps = []
             }
             : result;
     }
@@ -84,7 +84,7 @@ public static class AttendanceEvaluator
         if (clockIn is null || clockOut is null)
             return coverage == GapCoverage.Covered
                 ? judged with { Status = AttendanceStatus.OnLeave, Coverage = null }
-                : judged with { Status = AttendanceStatus.Anomaly, Reason = AttendanceReason.NoPunchOrLeave };
+                : judged with { Status = AttendanceStatus.Anomaly, Reason = AttendanceReason.NoPunchOrLeave, Gaps = [new(AttendanceGapKind.Absent, shift.ScheduledStart, shift.ScheduledEnd)] };
 
         // 只有一筆刷卡（打卡檔每張卡只留最早與最晚，兩者相同＝只刷一次）：少了上班或下班其中一次，判異常；
         // 但分不出缺的是哪一次，當成上班會判出大段早退、當成下班會判出大段遲到，所以不算遲到早退，刷卡時間照樣回傳。
@@ -93,12 +93,17 @@ public static class AttendanceEvaluator
         // 遲到從彈性終點起算（彈性內到都不算遲到）；遲到照表定下班，否則上班（早於彈性起點以起點計）＋時數。
         var late = clockIn.Value > shift.FlexEnd;
         var expected = late ? shift.ScheduledEnd : shift.ClockOutWith(clockIn.Value, 0)!.Value;
+        var early = clockOut.Value < expected;
+        List<AttendanceGap> gaps = [];
+        if (late) gaps.Add(new(AttendanceGapKind.Late, shift.FlexEnd, clockIn.Value));
+        if (early) gaps.Add(new(AttendanceGapKind.EarlyLeave, clockOut.Value, expected));
         return judged with
         {
             Status = AttendanceStatus.Present, ExpectedClockOut = expected,
             LateSeconds = late ? Seconds(clockIn.Value - shift.FlexEnd) : 0,
-            EarlyLeaveSeconds = clockOut.Value < expected ? Seconds(expected - clockOut.Value) : 0,
-            AdjustedClockOut = approved > 0 ? shift.ClockOutWith(clockIn.Value, approved) : null
+            EarlyLeaveSeconds = early ? Seconds(expected - clockOut.Value) : 0,
+            AdjustedClockOut = approved > 0 ? shift.ClockOutWith(clockIn.Value, approved) : null,
+            Gaps = gaps
         };
     }
 
@@ -113,6 +118,7 @@ public static class AttendanceEvaluator
 
         public DateTimeOffset FlexStart { get; } = TaipeiTime.At(date, rule.FlexStart);
         public DateTimeOffset FlexEnd { get; } = TaipeiTime.At(date, rule.FlexEnd);
+        public DateTimeOffset ScheduledStart { get; } = TaipeiTime.At(date, rule.ScheduledStart);
         public DateTimeOffset ScheduledEnd { get; } = TaipeiTime.At(date, rule.ScheduledEnd);
 
         /// <summary>一天該上的淨工時（全天 9.5 小時扣午休 1.5 小時＝8 小時）。</summary>

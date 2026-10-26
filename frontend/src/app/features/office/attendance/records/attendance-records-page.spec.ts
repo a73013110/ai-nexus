@@ -31,6 +31,7 @@ const day = (date: string, patch: Partial<AttendanceRecordDto> = {}): Attendance
   adjustedClockOut: null,
   coverage: null,
   shortSeconds: 0,
+  gaps: [],
   forms: [],
   ...patch,
 });
@@ -185,8 +186,10 @@ describe('AttendanceRecordsPage', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('08:59:03');
     expect(rows[0].textContent).toContain('12 分 5 秒');
-    expect(rows[1].textContent).toContain('異常');
-    expect(rows[1].textContent).toContain('沒有刷卡，也沒有假單');
+    // 狀態標籤寫發生什麼事，原因放在 title。
+    const status = rows[1].querySelector('td[nxTableColumn="status"] nx-status-badge')!;
+    expect(status.textContent?.trim()).toBe('未刷卡');
+    expect(status.getAttribute('title')).toBe('沒有刷卡，也沒有假單');
     // 人員欄只在第一天出現、跨過他的每一天，並列出遲到、早退與異常天數（0 天也列）。
     const person = rows[0].querySelector('.records-person-cell')!;
     expect(person.getAttribute('rowspan')).toBe('2');
@@ -304,6 +307,35 @@ describe('AttendanceRecordsPage', () => {
     expect(query.card).toBe('3368');
     expect(query.userId).toBeUndefined();
     expect(root.querySelector('.query-chip, nx-query-bar')?.textContent).toContain('陳怡君');
+  });
+
+  it('puts the unit before the person and lists only the people of the chosen unit', async () => {
+    const { fixture, root, api } = setup(
+      async () => records(),
+      ['attendance.records', 'organization'],
+      company,
+    );
+    await fixture.whenStable();
+    const fields = [...root.querySelectorAll('nx-query-bar .ui-field')].map((field) =>
+      field.classList.contains('records-unit')
+        ? 'unit'
+        : field.classList.contains('records-person')
+          ? 'person'
+          : '',
+    );
+    expect(fields.filter(Boolean)).toEqual(['unit', 'person']);
+    expect(api.people).toHaveBeenLastCalledWith('', expect.anything());
+
+    // 換單位就清掉已選的人並依單位重讀；清回所有單位時保留選的人。
+    const page = fixture.componentInstance;
+    page.query.set('person', 'u2');
+    page.query.set('unitId', 'unit-1');
+    await fixture.whenStable();
+    expect(page.draft().person).toBe('');
+    expect(api.people).toHaveBeenLastCalledWith('unit-1', expect.anything());
+    page.query.set('person', 'u1');
+    page.query.set('unitId', '');
+    expect(page.draft().person).toBe('u1');
   });
 
   it('marks holders without an account and shows the calendar remark of a day off', async () => {
@@ -476,6 +508,18 @@ describe('AttendanceRecordsPage', () => {
         adjustedClockOut: '2026-10-05T18:03:06+08:00',
         coverage: 'Pending',
         shortSeconds: 1086,
+        gaps: [
+          {
+            kind: 'Late',
+            startsAt: '2026-10-05T09:00:00+08:00',
+            endsAt: '2026-10-05T09:03:06+08:00',
+          },
+          {
+            kind: 'EarlyLeave',
+            startsAt: '2026-10-05T17:45:00+08:00',
+            endsAt: '2026-10-05T18:00:00+08:00',
+          },
+        ],
         forms: [
           {
             desNo: 'L-1',
@@ -510,10 +554,24 @@ describe('AttendanceRecordsPage', () => {
     expect(forms[0].textContent).toContain('L-1');
     expect(forms[0].textContent).toContain('08:30–09:00');
     expect(forms[1].textContent).toContain('等待 林雅婷（主管）');
-    const tags = [...row.querySelectorAll('.records-coverage-tag')].map((tag) =>
-      tag.textContent?.replace(/s+/g, ' ').trim(),
+    // 狀態欄只有標籤；補足欄寫差額、狀態與缺口時段，緊鄰表單欄對照。
+    expect(
+      [...row.querySelectorAll('td[nxTableColumn="status"] nx-status-badge')].map((badge) =>
+        badge.textContent?.trim(),
+      ),
+    ).toEqual(['遲到', '早退']);
+    const gap = row.querySelector('.records-gap-cell')!;
+    expect(gap.getAttribute('data-tone')).toBe('warning');
+    expect(gap.querySelector('.records-short')?.textContent?.trim()).toBe('差 18 分 6 秒');
+    expect(gap.querySelector('.records-gap-head nx-status-badge')?.textContent?.trim()).toBe(
+      '簽核中',
     );
-    expect(tags).toEqual(['簽核中 差 18 分 6 秒']);
+    expect(
+      [...gap.querySelectorAll('.records-gaps li')].map(
+        (item) =>
+          `${item.querySelector('span')?.textContent} ${item.querySelector('time')?.textContent}`,
+      ),
+    ).toEqual(['遲到 09:00–09:03:06', '早退 17:45–18:00']);
     expect(row.querySelector('.records-adjusted')?.textContent?.trim()).toBe('扣表單 18:03:06');
     expect(row.querySelector('.records-time-flag')?.getAttribute('title')).toBe(
       '遲到 3 分 6 秒・簽核中',

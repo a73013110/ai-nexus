@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
@@ -281,14 +280,15 @@ public sealed class ListAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task DaysOffWithoutPunchesOrFormsAreHiddenUnlessAskedFor()
+    public async Task DaysOffWithoutPunchesAreHiddenUnlessAskedFor()
     {
         await using var session = Create();
         var bob = await session.PersonAsync("bob");
         await session.HoldAsync(bob, "A1");
         session.Gd.AddDay(new(2026, 10, 16), morningOff: true, afternoonOff: true, remark: "補假");
-        // 週日加班有刷卡：放假日照樣列出。
+        // 週日加班有刷卡：放假日照樣列出。跨過週五補假與週六的出差單不算，沒勾含放假日就不列。
         await session.PunchAsync("A1", At(18, 10, 0), At(18, 15, 0));
+        session.Gd.AddTravel("T-9", GdId("bob"), new(2026, 10, 16, 8, 30, 0), new(2026, 10, 17, 18, 0, 0), "參展", "Decide");
         using var client = await session.Factory.SignedInAsync("bob");
 
         var hidden = Assert.Single((await GetAsync(client, "from=2026-10-16&to=2026-10-19")).People);
@@ -299,6 +299,7 @@ public sealed class ListAttendanceRecordsTests
         Assert.Equal([16, 17, 18, 19], shown.Days.Select(x => x.Date.Day));
         Assert.Equal(("補假", AttendanceStatus.DayOff), (Day(shown, 16).CalendarRemark, Day(shown, 16).Status));
         Assert.Null(Day(shown, 19).CalendarRemark);
+        Assert.Equal("T-9", Assert.Single(Day(shown, 17).Forms).DesNo);
     }
 
     [Fact]
@@ -310,9 +311,6 @@ public sealed class ListAttendanceRecordsTests
         foreach (var query in new[] { "&limit=0", "&limit=51", "&offset=-1", "&card=" + new string('9', 33), $"&card=A1&userId={Guid.NewGuid()}" })
             await AssertCodeAsync(await client.GetAsync($"{Records}?{Week}{query}"), HttpStatusCode.BadRequest, "attendance_records_filter_invalid");
     }
-
-    private static async Task<AttendancePersonOptionDto[]> OptionsAsync(HttpClient client)
-        => (await client.GetFromJsonAsync<AttendancePersonOptionDto[]>(Records + "/people"))!;
 
     [Fact]
     public async Task HiddenCardsAreSkippedOnlyInTheCompanyWideView()

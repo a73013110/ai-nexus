@@ -182,6 +182,8 @@ export function recordsQueryOptions(names: {
     defaults: emptyRecordsQuery,
     toParams,
     fromParams,
+    // 人員選單依單位重讀，換單位時原本選的人可能不在新單位。
+    dependents: { unitId: ['person'] },
     validate: (query) => {
       const range = recordsRange(query.range);
       return typeof range === 'string' ? range : '';
@@ -194,6 +196,12 @@ export function recordsQueryOptions(names: {
           label: '區間：' + recordsRangeLabel(query.range),
           clear: { range: emptyRecordsQuery().range },
         });
+      if (query.unitId)
+        list.push({
+          id: 'unit',
+          label: '單位：' + (names.unit(query.unitId) ?? '指定的單位（含下層）'),
+          clear: { unitId: '' },
+        });
       if (query.person)
         list.push({
           id: 'person',
@@ -202,12 +210,6 @@ export function recordsQueryOptions(names: {
             (names.person(query.person) ??
               (cardOf(query.person) ? `卡號 ${cardOf(query.person)}` : '指定的人員')),
           clear: { person: '' },
-        });
-      if (query.unitId)
-        list.push({
-          id: 'unit',
-          label: '單位：' + (names.unit(query.unitId) ?? '指定的單位（含下層）'),
-          clear: { unitId: '' },
         });
       if (query.includeDaysOff)
         list.push({ id: 'holidays', label: '含放假日', clear: { includeDaysOff: false } });

@@ -49,6 +49,29 @@ describe('QueryState', () => {
     expect(state.applied().text).toBe('');
   });
 
+  it('clears dependent conditions when their parent changes to another value', () => {
+    const state = new QueryState<{ unit: string; person: string; text: string }>({
+      defaults: () => ({ unit: '', person: '', text: '' }),
+      dependents: { unit: ['person'] },
+    });
+    state.set('person', 'amy');
+    state.set('unit', 'it');
+    expect(state.draft()).toEqual({ unit: 'it', person: '', text: '' });
+    state.set('person', 'bob');
+    // 同一個值、其他欄位、清回預設（範圍變大）都不影響下層。
+    state.set('unit', 'it');
+    state.set('text', 'x');
+    state.set('unit', '');
+    expect(state.draft().person).toBe('bob');
+    state.apply();
+    // 立即套用的上層同樣清掉已套用與草稿裡的下層；一起指定的下層保留。
+    state.commit({ unit: 'hr' });
+    expect(state.applied().person).toBe('');
+    expect(state.draft().person).toBe('');
+    state.commit({ unit: 'it', person: 'amy' });
+    expect(state.applied()).toEqual({ unit: 'it', person: 'amy', text: 'x' });
+  });
+
   it('commits and removes one condition while other edits stay pending', () => {
     const state = new QueryState(options);
     state.set('text', 'timeout');

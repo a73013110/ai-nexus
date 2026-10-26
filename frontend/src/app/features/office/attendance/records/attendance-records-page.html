@@ -66,15 +66,31 @@
       (valueChange)="showCoverage($any($event))"
     />
     <nx-time-range-picker
+      nxQueryField="range"
       label="區間"
       [presets]="ranges"
       [withTime]="false"
       [value]="draft().range"
       (valueChange)="query.set('range', $event)"
     />
-    <!-- 人員選項來自人員選單、單位來自組織；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
+    <!-- 單位來自組織、放在人員前面：先選單位，人員選單只剩那個單位的人。 -->
+    @if (unitNodes() || unitsLoading()) {
+      <div class="ui-field records-unit" nxQueryField="unitId">
+        <span aria-hidden="true">單位</span>
+        <nx-tree-select
+          label="單位（含下層）"
+          allLabel="所有單位"
+          noun="單位"
+          [nodes]="unitNodes() ?? []"
+          [loading]="unitsLoading()"
+          [value]="draft().unitId"
+          (valueChange)="query.set('unitId', $event)"
+        />
+      </div>
+    }
+    <!-- 人員選項來自人員選單（依單位重讀，換單位會清掉已選的人）；讀取中先佔住欄位並轉圈，不等讀完才冒出來。 -->
     @if (showPeople()) {
-      <div class="ui-field records-person">
+      <div class="ui-field records-person" nxQueryField="person">
         <span aria-hidden="true">人員</span>
         <nx-select
           label="人員"
@@ -88,22 +104,9 @@
         />
       </div>
     }
-    @if (unitNodes() || unitsLoading()) {
-      <div class="ui-field records-unit">
-        <span aria-hidden="true">單位</span>
-        <nx-tree-select
-          label="單位（含下層）"
-          allLabel="所有單位"
-          noun="單位"
-          [nodes]="unitNodes() ?? []"
-          [loading]="unitsLoading()"
-          [value]="draft().unitId"
-          (valueChange)="query.set('unitId', $event)"
-        />
-      </div>
-    }
-    <!-- 有刷卡或假單的放假日一律列出；勾選後連沒有資料的放假日也列出，說明在導覽與判定規則。 -->
+    <!-- 有刷卡的放假日一律列出；勾選後連沒刷卡的放假日（含只有出差單、假單的）也列出，說明在導覽。 -->
     <nx-checkbox
+      nxQueryField="includeDaysOff"
       class="records-option records-days-off"
       label="含放假日"
       [checked]="draft().includeDaysOff"
@@ -257,6 +260,7 @@
         <col nxTableColumn="expected" class="records-time-column" />
         <col nxTableColumn="late" class="records-duration-column" />
         <col nxTableColumn="early" class="records-duration-column" />
+        <col nxTableColumn="coverage" class="records-coverage-column" />
         <col nxTableColumn="forms" />
       </colgroup>
       <thead>
@@ -270,13 +274,14 @@
           <th scope="col" nxTableColumn="expected">應下班</th>
           <th scope="col" nxTableColumn="late">遲到</th>
           <th scope="col" nxTableColumn="early">早退</th>
+          <th scope="col" nxTableColumn="coverage">補足</th>
           <th scope="col" nxTableColumn="forms">表單</th>
         </tr>
       </thead>
       @for (group of groups(); track group.key) {
         <tbody class="records-person-group">
           <tr class="records-person-row">
-            <th scope="rowgroup" colspan="10">
+            <th scope="rowgroup" colspan="11">
               <ng-container
                 [ngTemplateOutlet]="personInfo"
                 [ngTemplateOutletContext]="{ $implicit: group }"
@@ -307,19 +312,17 @@
                   <small class="records-remark" [title]="row.remark">{{ row.remark }}</small>
                 }
               </td>
+              <!-- 標籤寫發生什麼事、顏色跟著補足狀態；原因在 title，只有真的無法判定才另寫一行。 -->
               <td nxTableColumn="status">
-                <nx-status-badge [tone]="row.status.tone">{{ row.status.label }}</nx-status-badge>
-                @if (row.coverage; as coverage) {
-                  <!-- 差額整段不斷行，窄欄時換到下一行。 -->
-                  <span class="records-coverage-tag" [attr.data-tone]="coverage.tone"
-                    >{{ coverage.label }}
-                    @if (coverage.short) {
-                      <span class="records-short">{{ coverage.short }}</span>
-                    }
-                  </span>
-                }
-                @if (row.reason) {
-                  <small class="records-reason">{{ row.reason }}</small>
+                <span class="records-badges">
+                  @for (status of row.statuses; track status.label) {
+                    <nx-status-badge [tone]="status.tone" [attr.title]="row.reason || null">{{
+                      status.label
+                    }}</nx-status-badge>
+                  }
+                </span>
+                @if (row.note) {
+                  <small class="records-reason">{{ row.note }}</small>
                 }
               </td>
               <!-- 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字，顏色跟著補足狀態）；沒刷卡也沒表單補足標「未刷卡」。 -->
@@ -379,6 +382,33 @@
                   <span class="records-none">—</span>
                 }
               </td>
+              <!-- HR 要追的：狀態標籤在前，接著還差多少（差額整段不斷行）、缺在哪幾段，緊鄰表單欄好對照簽核中假單的起訖。 -->
+              <td nxTableColumn="coverage" data-label="補足">
+                @if (row.coverage; as coverage) {
+                  <div class="records-gap-cell" [attr.data-tone]="coverage.tone">
+                    <span class="records-gap-head">
+                      <nx-status-badge [tone]="coverage.tone">{{ coverage.label }}</nx-status-badge>
+                      @if (coverage.short) {
+                        <strong class="records-short">{{ coverage.short }}</strong>
+                      } @else if (coverage.formHours) {
+                        <span class="records-form-hours">{{ coverage.formHours }}</span>
+                      }
+                    </span>
+                    @if (coverage.gaps.length) {
+                      <ul class="records-gaps" aria-label="缺口時段">
+                        @for (gap of coverage.gaps; track gap.kind) {
+                          <li>
+                            <span>{{ gap.kind }}</span
+                            ><time>{{ gap.time }}</time>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                } @else {
+                  <span class="records-none">—</span>
+                }
+              </td>
               <td nxTableColumn="forms" data-label="表單">
                 @if (row.formsUnavailable) {
                   <span class="records-unavailable">無法取得</span>
@@ -398,7 +428,7 @@
                   />
                 </div>
               </th>
-              <td colspan="9" class="records-none">這段期間沒有要列出的日子</td>
+              <td colspan="10" class="records-none">這段期間沒有要列出的日子</td>
             </tr>
           }
         </tbody>

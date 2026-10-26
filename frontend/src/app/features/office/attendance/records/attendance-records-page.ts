@@ -6,10 +6,13 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
+  type Signal,
 } from '@angular/core';
-import { apiResource } from '@core/api/api-resource';
+import { apiResource, type ApiResource } from '@core/api/api-resource';
+import type { AttendancePersonOptionDto } from '@core/api/schema';
 import { routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -27,7 +30,7 @@ import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { QueryBar } from '@shared/ui/query-bar';
+import { QueryBar, QueryField } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect } from '@shared/ui/tree-select';
@@ -62,15 +65,16 @@ const DEFAULT_PAGE_SIZE = 20;
 /**
  * 出勤紀錄（`attendance.records`）：資料範圍內每人每天的判定、上下班刷卡、應下班、遲到早退與當天的假單。
  * 名單依人分組、依人分頁（區間最長一年，一次只畫一頁的人）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
- * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單。
- * 沒有刷卡也沒有假單的放假日預設不列（勾「含放假日」才列），放假日附假日設定的備註。
+ * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單；單位放在人員前面，選了單位後人員選單只列那個單位的人。
+ * 沒有刷卡的放假日預設不列（只有表單的也一樣，勾「含放假日」才列），放假日附假日設定的備註。
  * 單位清單只有組織管理權限讀得到，沒有時不提供單位選單（連結帶入的單位照樣查詢）。
  * 判定規則放在頁首的說明面板，文字與時間由後端（`AttendanceRules`，依目前設定）提供。
  * 每人一段：最左的人員欄跨過那個人的每一天、捲動時黏住，段落交替底色，看任何一列都知道是誰；
  * 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字），遲到、早退欄照樣列出時數。手機卡片改用段首的姓名列。
  * 匯出用已套用的條件，預設區間在按下時重算（與 chip 標籤一致），由伺服器產生與舊系統「出缺勤計算」一模一樣的 .xlsx（整段、全部人）。
  * 查詢列前方切換只看表單未補足或簽核中的日子，段首標出每人有幾天要追；
- * 狀態欄標出當天的表單是否補足與還差多少、應下班下另列扣表單後的時間，表單欄每張單一張卡片（單號、假別、起訖、流程狀態與目前簽核人）。
+ * 狀態欄以標籤寫當天發生什麼事（正常、遲到、早退、未刷卡…，可並列），顏色跟著補足狀態；補足欄緊鄰表單欄，以標籤寫補足狀態，接著還差多少與缺口時段，
+ * 好通知補單或對照簽核中假單的起訖。應下班下另列扣表單後的時間，表單欄每張單一張卡片（單號、假別、起訖、流程狀態與目前簽核人）。
  */
 @Component({
   selector: 'nx-attendance-records-page',
@@ -86,6 +90,7 @@ const DEFAULT_PAGE_SIZE = 20;
     Notice,
     PendingButton,
     QueryBar,
+    QueryField,
     Select,
     RouterLink,
     StatusBadge,
@@ -123,15 +128,21 @@ export class AttendanceRecordsPage {
     const units = this.unitsRead.value();
     return units ? unitNodes(units) : null;
   });
-  /** 人員選單：範圍看得到、持有過卡的人，與名單同一套範圍（與目前這一頁無關）。 */
-  private readonly peopleRead = apiResource({
+  /**
+   * 人員選單：範圍看得到、持有過卡的人，與名單同一套範圍（與目前這一頁無關）。跟著草稿的單位重讀（選單位就縮小、還沒按查詢也一樣），
+   * 換單位時已選的人由查詢條件的連動清掉（`records-query` 的 `dependents`）。
+   */
+  // 標明型別：讀取依 `query` 的草稿，而 `query` 的 chip 名稱又來自這份選單，推論會繞成一圈。
+  private readonly peopleRead: ApiResource<AttendancePersonOptionDto[]> = apiResource({
     feature: 'attendance.records',
-    loader: (_: true, signal) => this.api.people(signal),
+    // 讀取在建構完成後才開始，這時 `query` 已經建立。
+    params: () => ({ unitId: this.query.draft().unitId }),
+    loader: (request, signal) => this.api.people(request.unitId, signal),
   });
   readonly peopleLoading = this.peopleRead.refreshing;
   /** 使用者以 ID、沒有帳號的資料以卡號（`card:卡號`）為值；說明列出卡號與狀態，搜尋也找得到卡號。 */
-  readonly personOptions = computed<SelectOption[]>(() => [
-    { value: '', label: '所有人' },
+  readonly personOptions: Signal<SelectOption[]> = computed(() => [
+    { value: '', label: this.query.draft().unitId ? '單位內所有人' : '所有人' },
     ...(this.peopleRead.value() ?? []).map((person) => ({
       value: person.userId ?? cardKey(person.cardNumber!),
       label: person.displayName,
@@ -145,9 +156,20 @@ export class AttendanceRecordsPage {
         .join('・'),
     })),
   ]);
+  /** 讀過的人員名稱：已套用的人不在目前單位的選單裡時（草稿換了單位、還沒查詢），chip 仍寫得出名字。 */
+  private readonly personNames = linkedSignal<SelectOption[], ReadonlyMap<string, string>>({
+    source: this.personOptions,
+    computation: (options, previous) =>
+      new Map([
+        ...(previous?.value ?? []),
+        ...options
+          .filter((option) => option.value)
+          .map((option) => [option.value, option.label] as const),
+      ]),
+  });
   readonly query = queryState(
     recordsQueryOptions({
-      person: (value) => this.personOptions().find((option) => option.value === value)?.label,
+      person: (value) => this.personNames().get(value),
       unit: (id) => this.unitsRead.value()?.find((unit) => unit.id === id)?.name,
     }),
   );
@@ -187,9 +209,13 @@ export class AttendanceRecordsPage {
   readonly rulesError = this.rulesRead.error;
   readonly exporting = signal(false);
   readonly exportError = signal('');
-  /** 只看得到自己（選單只有一個人）時不顯示人員選單；已指定某人或讀取中時佔住欄位。 */
+  /** 只看得到自己（選單只有一個人）時不顯示人員選單；已指定某人、選了單位（單位內可能只剩一人）或讀取中時佔住欄位。 */
   readonly showPeople = computed(
-    () => this.personOptions().length > 2 || !!this.draft().person || this.peopleLoading(),
+    () =>
+      this.personOptions().length > 2 ||
+      !!this.draft().person ||
+      !!this.draft().unitId ||
+      this.peopleLoading(),
   );
   readonly columns: TableColumn[] = [
     { id: 'date', label: '日期', hideable: false },
@@ -200,6 +226,7 @@ export class AttendanceRecordsPage {
     { id: 'expected', label: '應下班' },
     { id: 'late', label: '遲到' },
     { id: 'early', label: '早退' },
+    { id: 'coverage', label: '補足' },
     { id: 'forms', label: '表單' },
   ];
   readonly groups = computed(() => {

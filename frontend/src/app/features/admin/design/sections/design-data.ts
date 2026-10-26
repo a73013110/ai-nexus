@@ -18,7 +18,7 @@ import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
-import { QueryBar } from '@shared/ui/query-bar';
+import { QueryBar, QueryField } from '@shared/ui/query-bar';
 import { QueryState } from '@shared/ui/query-state';
 import { Panel } from '@shared/ui/panel';
 import { PropertyGroup, PropertyList } from '@shared/ui/property-list';
@@ -80,6 +80,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     Panel,
     PropertyList,
     QueryBar,
+    QueryField,
     ResourceCard,
     ResourceGallery,
     SearchField,
@@ -128,7 +129,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="QueryBar · DataTable · TableState · TablePagination · DetailDrawer · DrawerPager · CopyValue"
-      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
+      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip，欄位標上 nxQueryField 時 chip 依欄位順序排列。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
       [stacked]="true"
     >
       <nx-query-bar label="示範查詢條件" [state]="query">
@@ -139,7 +140,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
           [value]="query.applied().view"
           (valueChange)="query.commit({ view: $event })"
         />
-        <label class="ui-field ui-query-wide"
+        <label class="ui-field ui-query-wide" nxQueryField="event"
           >事件名稱<input
             nxField
             placeholder="依事件名稱查詢"

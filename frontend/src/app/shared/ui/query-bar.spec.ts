@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryBar } from './query-bar';
+import { QueryBar, QueryField } from './query-bar';
 import { QueryState } from './query-state';
 
 interface Sample {
@@ -131,5 +131,39 @@ describe('QueryBar', () => {
     fixture.detectChanges();
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(trigger);
+  });
+});
+
+@Component({
+  imports: [QueryBar, QueryField],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<nx-query-bar [state]="state">
+    <input nxQueryField="tag" aria-label="標籤" />
+    <input nxQueryField="text" aria-label="文字" />
+  </nx-query-bar>`,
+})
+class OrderedHost {
+  // chips 先列文字，欄位卻是標籤在前：chip 要跟著欄位。
+  readonly state = new QueryState<Sample & { extra: string }>({
+    defaults: () => ({ text: '', tag: '', extra: '' }),
+    chips: (value) => [
+      ...(value.extra ? [{ id: 'extra', label: '其他', clear: { extra: '' } }] : []),
+      ...(value.text ? [{ id: 'text', label: '文字', clear: { text: '' } }] : []),
+      ...(value.tag ? [{ id: 'tag', label: '標籤', clear: { tag: '' } }] : []),
+    ],
+  });
+}
+
+describe('QueryBar chip order', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('orders chips like the marked fields and keeps unmatched chips last', () => {
+    const fixture = TestBed.createComponent(OrderedHost);
+    fixture.componentInstance.state.commit({ text: 'a', tag: 'b', extra: 'c' });
+    fixture.detectChanges();
+    const labels = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.ui-query-chips li > span'),
+    ].map((item) => item.textContent);
+    expect(labels).toEqual(['標籤', '文字', '其他']);
   });
 });

@@ -27,6 +27,11 @@ export interface QueryStateOptions<T> {
   chips?: (value: T) => QueryChip<T>[];
   /** 無法查詢的原因；可以查詢時回傳空字串。 */
   validate?: (value: T) => string;
+  /**
+   * 連動的條件：上層改成另一個值時，下層回到預設值（`{ unitId: ['person'] }`：換單位就清掉選的人，人員選項另依單位重讀）。
+   * 上層清回預設值只是範圍變大，原本選的下層照樣成立，保留。同一次一起指定的下層（連結、`commit`）不清。
+   */
+  dependents?: { readonly [K in keyof T]?: readonly (keyof T)[] };
 }
 
 /**
@@ -66,7 +71,7 @@ export class QueryState<T extends object> {
   }
 
   set<K extends keyof T>(key: K, value: T[K]) {
-    this.draft.update((draft) => ({ ...draft, [key]: value }));
+    this.draft.update((draft) => this.cascade(draft, { [key]: value } as unknown as Partial<T>));
   }
   /** 以草稿查詢；驗證不過時設定 `error`、回傳 false，結果維持不變。 */
   apply(): boolean {
@@ -79,8 +84,8 @@ export class QueryState<T extends object> {
   }
   /** 只把這幾個值立即套用（分類切換、移除 chip）；草稿裡其他未送出的修改仍留在草稿。 */
   commit(values: Partial<T>) {
-    const value = { ...this.current(), ...values };
-    this.draft.update((draft) => ({ ...draft, ...values }));
+    const value = this.cascade(this.current(), values);
+    this.draft.update((draft) => this.cascade(draft, values));
     this.error.set('');
     this.write(value);
   }
@@ -116,6 +121,20 @@ export class QueryState<T extends object> {
       applied: this.options.defaults(),
       error: '連結的條件無法查詢，目前顯示預設條件：' + error,
     };
+  }
+  /** 套上 `values`，再清掉上層換了值的下層（`dependents`）。 */
+  private cascade(base: T, values: Partial<T>): T {
+    const next = { ...base, ...values };
+    const dependents = this.options.dependents;
+    if (!dependents) return next;
+    const defaults = this.options.defaults();
+    for (const key of Object.keys(values) as (keyof T)[]) {
+      const changed = stableJson(base[key]) !== stableJson(next[key]);
+      if (!changed || stableJson(next[key]) === stableJson(defaults[key])) continue;
+      for (const dependent of dependents[key] ?? [])
+        if (!Object.hasOwn(values, dependent)) next[dependent] = defaults[dependent];
+    }
+    return next;
   }
   private write(value: T) {
     this.current.set(value);

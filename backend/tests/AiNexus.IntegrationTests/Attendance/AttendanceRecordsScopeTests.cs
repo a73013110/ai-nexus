@@ -59,11 +59,14 @@ public sealed class AttendanceRecordsScopeTests
         // 部門篩選含下層單位，與範圍取交集。
         Assert.Equal(Sorted(bob, frank, carol), await PeopleAsync(client, Week + $"&unitId={it}"));
         Assert.Equal([dave], await PeopleAsync(client, Week + $"&userId={dave}"));
+        // 人員選單的單位篩選與名單同一套：選了單位，選單只列選得到、查得到的人。
+        Assert.Equal(Sorted(bob, frank, carol), (await OptionsAsync(client, it)).Select(x => x.UserId!.Value).Order().ToArray());
 
         // 指定範圍外的人只是查不到，不透露他有沒有出勤資料。
         await SetScopeAsync(session, DataScopes.Unit);
         Assert.Empty(await PeopleAsync(client, Week + $"&userId={dave}"));
         Assert.Empty(await PeopleAsync(client, Week + $"&unitId={hr}"));
+        Assert.Empty(await OptionsAsync(client, hr));
     }
 
     [Fact]

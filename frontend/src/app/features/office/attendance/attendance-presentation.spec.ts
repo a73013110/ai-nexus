@@ -71,12 +71,17 @@ describe('attendance presentation', () => {
         adjustedClockOut: null,
         coverage: null,
         shortSeconds: 0,
+        gaps: [],
         forms: [],
       },
       '2026-10-05',
     );
-    expect(row.status).toEqual({ label: '無法判定', tone: 'warning' });
+    expect(row.statuses).toEqual([{ label: '無法判定', tone: 'warning' }]);
     expect(row.reason).toContain('表單無法取得');
+    expect(row.note).toBe(row.reason);
+    // 今天的無法判定只是還沒匯入：另一個灰色標籤，不另寫原因。
+    const today = presentRecord({ ...row.day, reason: 'DayInProgress' }, '2026-10-05');
+    expect([today.statuses, today.note]).toEqual([[{ label: '今日未結算', tone: 'neutral' }], '']);
     expect(row.formsUnavailable).toBe(true);
     expect(row.today).toBe(true);
     const travel = presentRecord(
@@ -103,7 +108,7 @@ describe('attendance presentation', () => {
       },
       '2026-10-06',
     );
-    expect(travel.status.label).toBe('請假');
+    expect(travel.statuses.map((status) => status.label)).toEqual(['請假']);
     expect(travel.singlePunch).toBe(true);
     expect(travel.forms[0].kind).toBe('出差單');
     // 起訖都在這一天只寫時間；完整起訖留給 title 與報讀。
@@ -149,6 +154,10 @@ describe('attendance presentation', () => {
         adjustedClockOut: '2026-10-05T10:01:19Z',
         coverage: 'Unexplained',
         shortSeconds: 1857,
+        gaps: [
+          { kind: 'Late', startsAt: '2026-10-05T01:00:00Z', endsAt: '2026-10-05T01:01:19Z' },
+          { kind: 'EarlyLeave', startsAt: '2026-10-05T09:30:22Z', endsAt: '2026-10-05T10:00:00Z' },
+        ],
         forms: [],
       },
       '',
@@ -156,7 +165,18 @@ describe('attendance presentation', () => {
     expect(base.coverage).toEqual({
       ...GAP_COVERAGE.Unexplained,
       short: '差 30 分 57 秒',
+      gaps: [
+        { kind: '遲到', time: '09:00–09:01:19' },
+        { kind: '早退', time: '17:30:22–18:00' },
+      ],
+      formHours: '',
     });
+    // 狀態標籤寫發生什麼事，顏色跟著補足狀態。
+    // 遲到、早退各一個標籤，顏色跟著補足狀態。
+    expect(base.statuses).toEqual([
+      { label: '遲到', tone: 'danger' },
+      { label: '早退', tone: 'danger' },
+    ]);
     expect(base.formHours).toBe('30 分');
     expect([base.expected, base.adjusted]).toEqual(['18:00:00', '18:01:19']);
     expect(base.lateNote).toBe('遲到 1 分 19 秒・未補足');
@@ -172,6 +192,14 @@ describe('attendance presentation', () => {
       '',
     );
     expect([covered.coverage?.short, covered.adjusted]).toEqual(['', '']);
+    // 已補足不列缺口時段，改寫抵掉的表單時數；標籤轉綠。
+    expect([covered.coverage?.gaps, covered.coverage?.formHours]).toEqual([[], '表單 30 分']);
+    expect(covered.statuses.map((status) => status.tone)).toEqual(['success', 'success']);
+    // 沒有缺口是一個「正常」。
+    expect(
+      presentRecord({ ...base.day, lateSeconds: 0, earlyLeaveSeconds: 0, coverage: null }, '')
+        .statuses,
+    ).toEqual([{ label: '正常', tone: 'success' }]);
     // 沒有刷卡時依表單說明原因：表單還在簽核就說簽核。
     const pending = presentRecord(
       {
@@ -187,12 +215,19 @@ describe('attendance presentation', () => {
         formSeconds: 0,
         coverage: 'Pending',
         shortSeconds: 28800,
+        gaps: [
+          { kind: 'Absent', startsAt: '2026-10-05T00:30:00Z', endsAt: '2026-10-05T10:00:00Z' },
+        ],
         forms: [pendingForm],
       },
       '',
     );
     expect(pending.coverage?.short).toBe('差 8 小時');
     expect(pending.reason).toBe('沒有刷卡，表單還在簽核');
+    expect(pending.statuses).toEqual([{ label: '未刷卡', tone: 'warning' }]);
+    expect(pending.coverage?.gaps).toEqual([{ kind: '未刷卡', time: '08:30–18:00' }]);
+    // 只有真的無法判定才在標籤下另寫原因。
+    expect(pending.note).toBe('');
     expect(summarizePerson([base.day, covered.day, pending.day])).toEqual({
       late: 2,
       early: 2,

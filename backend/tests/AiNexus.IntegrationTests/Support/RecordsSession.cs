@@ -118,6 +118,10 @@ internal sealed class RecordsSession : IAsyncDisposable
     public static async Task<Guid[]> PeopleAsync(HttpClient client, string query = Week)
         => [.. (await GetAsync(client, query)).People.Where(x => x.UserId is not null).Select(x => x.UserId!.Value).Order()];
 
+    /// <summary>人員選單；<paramref name="unitId"/> 只列該單位及下層的人。</summary>
+    public static async Task<AttendancePersonOptionDto[]> OptionsAsync(HttpClient client, Guid? unitId = null)
+        => (await client.GetFromJsonAsync<AttendancePersonOptionDto[]>(Records + "/people" + (unitId is { } unit ? $"?unitId={unit}" : "")))!;
+
     public static AttendanceRecordDto Day(AttendancePersonDto person, int day) => Assert.Single(person.Days, x => x.Date == new DateOnly(2026, 10, day));
 
     public async ValueTask DisposeAsync()
