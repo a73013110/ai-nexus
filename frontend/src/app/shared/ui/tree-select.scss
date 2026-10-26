@@ -61,6 +61,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.tree-select-value nx-option-tags {
+  align-self: center;
+  margin-inline-start: var(--p-space-2);
+}
 // 搜尋與底部勾選固定，中間捲動。排版寫在 :popover-open 外：關閉動畫期間 `display` 仍保留，
 // 其餘屬性卻立即失效，底部勾選會在退場那一瞬間跑到右邊。
 .tree-select-panel {
@@ -193,15 +197,6 @@
   &.is-leaf {
     visibility: hidden;
   }
-}
-.tree-select-tag {
-  flex: none;
-  padding: 0 var(--p-space-2);
-  border-radius: var(--radius-full);
-  background: var(--hover);
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
-  line-height: 1.6;
 }
 .tree-select-check {
   --icon-size: var(--icon-md);

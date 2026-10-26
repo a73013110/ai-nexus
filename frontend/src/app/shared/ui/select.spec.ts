@@ -116,3 +116,38 @@ describe('Select loading', () => {
     expect(trigger.disabled).toBe(true);
   });
 });
+
+describe('Select tags', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  const people = [
+    { value: 'a', label: '林小安', description: 'lin', tags: [{ label: '已隱藏' }] },
+    { value: 'b', label: '陳大文', description: 'chen' },
+  ];
+
+  function setup(value: string) {
+    const fixture = TestBed.createComponent(Select);
+    fixture.componentRef.setInput('label', '人員');
+    fixture.componentRef.setInput('options', people);
+    fixture.componentRef.setInput('searchable', true);
+    fixture.componentRef.setInput('value', value);
+    fixture.detectChanges();
+    return { fixture, host: fixture.nativeElement as HTMLElement };
+  }
+
+  it('shows tags beside the option and the chosen value, and finds options by tag', () => {
+    const { fixture, host } = setup('a');
+    const tags = (root: Element) =>
+      [...root.querySelectorAll('.option-tag')].map((tag) => tag.textContent!.trim());
+    const options = host.querySelectorAll('[role="option"]');
+    expect(tags(options[0])).toEqual(['已隱藏']);
+    expect(tags(options[1])).toEqual([]);
+    expect(options[0].querySelector('small')!.textContent).toBe('lin');
+    expect(tags(host.querySelector('.select-trigger')!)).toEqual(['已隱藏']);
+
+    fixture.componentInstance.filter('隱藏');
+    expect(fixture.componentInstance.visibleOptions().map(({ option }) => option.value)).toEqual([
+      'a',
+    ]);
+  });
+});

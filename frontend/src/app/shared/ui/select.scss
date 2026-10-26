@@ -19,7 +19,14 @@
   text-align: left;
   font-size: var(--control-font-size);
 }
-.select-trigger > span {
+// 名稱放不下時截名稱，標籤完整保留。
+.select-value {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.select-value > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

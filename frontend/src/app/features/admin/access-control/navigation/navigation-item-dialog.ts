@@ -23,6 +23,7 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
 import { ICON_NAMES } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { optionTags } from '@shared/ui/option-tags';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
@@ -148,8 +149,9 @@ export class NavigationItemDialog {
       const feature = features.get(item.id);
       return {
         value: item.id,
-        label: (feature?.name || item.name) + (feature?.enabled === false ? '（停用）' : ''),
+        label: feature?.name || item.name,
         description: item.id,
+        tags: optionTags(feature?.enabled === false && '停用'),
       };
     });
   });

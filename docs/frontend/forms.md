@@ -28,6 +28,7 @@
   - 單位的節點由 `unitNodes()`（`features/admin/organization/unit-tree.ts`）產生；節點名稱只寫自己，不要把路徑接進名稱。觸發鈕顯示「上層路徑 › 名稱」，放不下先截路徑；搜尋時改成平面清單並標出所屬路徑。
   - 「所有單位」「最上層」這類值為空的選項用 `allLabel`，不放進節點；不能選的用節點的 `disabled`／`allDisabled`（列出但不能選，例如放不下的位置），整個排除用 `unitNodes()` 的 `include`（下層一併排除）。
   - 可選的狀態由開發者用 `status` 指定，使用者不能改：`any`（預設；停用的收起，面板底部「顯示停用的單位」可列出）、`active`（只列啟用的，例如指派新成員）、`inactive`（只能選停用的，啟用的上層只當路徑）。篩選歷史資料用 `any`。
+- 選項的狀態（停用、已隱藏、尚未綁帳號）放 `Select` 選項或 `TreeSelect` 節點的 `tags`，用 `optionTags()`（`frontend/src/app/shared/ui/option-tags.ts`）組淡灰標籤，不接進名稱或說明；說明只寫帳號、代碼這類識別資訊。`TreeSelect` 的 `inactive` 自動標「停用」。
 - 部門、檔案等其他對象沿用同一套互動；還沒有共用元件時先抽一個，見 [共用元件](shared-components.md)。
 
 ## 控制項

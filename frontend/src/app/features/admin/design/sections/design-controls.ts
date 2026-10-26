@@ -16,6 +16,7 @@ import { Icon } from '@shared/ui/icon';
 import { IdleChrome } from '@shared/ui/idle-chrome';
 import { NameDialog } from '@shared/ui/name-dialog';
 import { PendingButton } from '@shared/ui/pending-button';
+import { optionTags } from '@shared/ui/option-tags';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
@@ -151,8 +152,8 @@ import { DesignSamples } from './design-samples';
     <nx-design-section
       id="design-menus"
       title="選單與下拉"
-      api="ActionMenu · Select"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
+      api="ActionMenu · Select · OptionTags"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項的狀態（停用、已隱藏）用 tags（optionTags()）標在名稱旁，已選時觸發鈕也標，不接進名稱或說明。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -170,6 +171,15 @@ import { DesignSamples } from './design-samples';
           [options]="levels"
           [values]="levelValues()"
           (valuesChange)="levelValues.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="Select tags">
+        <nx-select
+          label="示範人員"
+          [searchable]="true"
+          [value]="person()"
+          [options]="people"
+          (valueChange)="person.set($event)"
         />
       </nx-design-example>
       <nx-design-example label="Select loading">
@@ -345,6 +355,18 @@ export class DesignControls {
     label: value,
   }));
   readonly levelValues = signal(['Warning', 'Error']);
+  readonly person = signal('lin');
+  readonly people: SelectOption[] = [
+    { value: 'lin', label: '林小安', description: 'lin', tags: optionTags('已隱藏') },
+    { value: 'chen', label: '陳大文', description: 'chen' },
+    { value: 'wang', label: '王美玲', description: 'wang', tags: optionTags('已不持卡') },
+    {
+      value: 'card:3368',
+      label: '張志明',
+      description: '卡號 3368',
+      tags: [{ label: '尚未綁帳號', tone: 'warning' }],
+    },
+  ];
   readonly chosen = signal(['chat', 'files']);
   readonly choiceGroups: ChoiceGroup[] = [
     {

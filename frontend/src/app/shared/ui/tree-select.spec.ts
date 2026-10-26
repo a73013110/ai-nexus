@@ -9,7 +9,7 @@ const nodes: TreeSelectNode[] = [
   { value: 'pf', label: '平台部', parent: 'rd' },
   { value: 'old', label: '舊研發處', parent: 'hq', inactive: true },
   { value: 'old-qa', label: '測試組', parent: 'old' },
-  { value: 'lab', label: '測試據點', inactive: true },
+  { value: 'lab', label: '測試據點', inactive: true, tags: [{ label: '租用' }] },
 ];
 
 // 表單常把選擇器包在欄位 <label> 裡（「位置」「上層單位」）。
@@ -94,10 +94,22 @@ describe('TreeSelect', () => {
       '測試組',
       '測試據點',
     ]);
-    expect(items()[4].querySelector('.tree-select-tag')!.textContent).toBe('停用');
+    expect(items()[4].querySelector('.option-tag')!.textContent).toBe('停用');
     // 停用的下層繼承停用：淡色，但不另外標籤。
     expect(items()[5].classList).toContain('is-inactive');
-    expect(items()[5].querySelector('.tree-select-tag')).toBeNull();
+    expect(items()[5].querySelector('.option-tag')).toBeNull();
+  });
+
+  it('tags an inactive node as such before its own tags, in the list and on the trigger', () => {
+    const { open, items, trigger, fixture } = setup('pf');
+    const tags = (root: Element) =>
+      [...root.querySelectorAll('.option-tag')].map((tag) => tag.textContent!.trim());
+    expect(tags(trigger)).toEqual([]);
+    fixture.componentRef.setInput('value', 'lab');
+    fixture.detectChanges();
+    expect(tags(trigger)).toEqual(['停用', '租用']);
+    open();
+    expect(tags(items().at(-1)!)).toEqual(['停用', '租用']);
   });
 
   it('opens with inactive nodes listed when the chosen one is inactive', () => {

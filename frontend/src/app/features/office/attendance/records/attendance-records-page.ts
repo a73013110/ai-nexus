@@ -32,6 +32,7 @@ import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar, QueryField } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
+import { optionTags } from '@shared/ui/option-tags';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect } from '@shared/ui/tree-select';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -140,20 +141,18 @@ export class AttendanceRecordsPage {
     loader: (request, signal) => this.api.people(request.unitId, signal),
   });
   readonly peopleLoading = this.peopleRead.refreshing;
-  /** 使用者以 ID、沒有帳號的資料以卡號（`card:卡號`）為值；說明列出卡號與狀態，搜尋也找得到卡號。 */
+  /** 使用者以 ID、沒有帳號的資料以卡號（`card:卡號`）為值；說明寫帳號或卡號（搜尋找得到），狀態以標籤列出。 */
   readonly personOptions: Signal<SelectOption[]> = computed(() => [
     { value: '', label: this.query.draft().unitId ? '單位內所有人' : '所有人' },
     ...(this.peopleRead.value() ?? []).map((person) => ({
       value: person.userId ?? cardKey(person.cardNumber!),
       label: person.displayName,
-      description: [
-        person.userId ? person.account : `卡號 ${person.cardNumber}`,
-        person.userId ? '' : '尚未綁帳號',
-        person.holding ? '' : '已不持卡',
-        person.hidden ? '已隱藏' : '',
-      ]
-        .filter(Boolean)
-        .join('・'),
+      description: person.userId ? (person.account ?? undefined) : `卡號 ${person.cardNumber}`,
+      tags: optionTags(
+        !person.userId && '尚未綁帳號',
+        !person.holding && '已不持卡',
+        person.hidden && '已隱藏',
+      ),
     })),
   ]);
   /** 讀過的人員名稱：已套用的人不在目前單位的選單裡時（草稿換了單位、還沒查詢），chip 仍寫得出名字。 */

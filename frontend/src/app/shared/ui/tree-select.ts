@@ -16,6 +16,7 @@ import { positionPopover } from '../browser/popover-position';
 import { uniqueId } from '../browser/unique-id';
 import { Checkbox } from './checkbox';
 import { Icon } from './icon';
+import { OptionTags, type OptionTag } from './option-tags';
 
 /** 樹的一個節點；清單依同層順序排列，`parent` 不在清單裡的當成最上層。 */
 export interface TreeSelectNode {
@@ -26,7 +27,11 @@ export interface TreeSelectNode {
   inactive?: boolean;
   /** 列出但不能選（例如放不下的位置）；不影響下層。 */
   disabled?: boolean;
+  /** 名稱旁的其他狀態標籤；`inactive` 自動標「停用」，不必再給。 */
+  tags?: readonly OptionTag[];
 }
+
+const INACTIVE_TAG: OptionTag = { label: '停用' };
 
 /**
  * 可選的節點狀態，由開發者決定、使用者不能改：`any` 都可選（停用的預設收起，面板底部可勾選列出）、
@@ -40,6 +45,8 @@ interface TreeSelectRow {
   /** 由最上層到上一層的名稱。 */
   path: string[];
   inactive: boolean;
+  /** 自己停用的標「停用」（繼承停用的只淡色）＋節點的 `tags`。 */
+  tags: readonly OptionTag[];
   selectable: boolean;
   children: number;
 }
@@ -52,7 +59,7 @@ interface TreeSelectRow {
  */
 @Component({
   selector: 'nx-tree-select',
-  imports: [Checkbox, Icon],
+  imports: [Checkbox, Icon, OptionTags],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './tree-select.scss',
   template: `<button
@@ -77,6 +84,9 @@ interface TreeSelectRow {
           ><span class="tree-select-sep" aria-hidden="true">›</span>
         }
         <span class="tree-select-name">{{ summary().name }}</span>
+        @if (summary().tags.length) {
+          <nx-option-tags [tags]="summary().tags" />
+        }
       </span>
       @if (loading()) {
         <nx-icon name="loading" />
@@ -163,8 +173,8 @@ interface TreeSelectRow {
                 >{{ parts.after }}</strong
               >
             </span>
-            @if (row?.node?.inactive) {
-              <span class="tree-select-tag">停用</span>
+            @if (row?.tags?.length) {
+              <nx-option-tags [tags]="row.tags" />
             }
             @if (isSelected(entry)) {
               <nx-icon class="tree-select-check" name="check" />
@@ -244,7 +254,16 @@ export class TreeSelect {
         if (seen.has(node.value)) continue;
         const off = inactive || !!node.inactive;
         const selectable = !node.disabled && (status === 'any' || (status === 'inactive') === off);
-        rows.push({ node, depth: path.length + 1, path, inactive: off, selectable, children: 0 });
+        const tags = [...(node.inactive ? [INACTIVE_TAG] : []), ...(node.tags ?? [])];
+        rows.push({
+          node,
+          depth: path.length + 1,
+          path,
+          inactive: off,
+          tags,
+          selectable,
+          children: 0,
+        });
         // `seen` 擋掉資料錯誤造成的循環（A 的上層是 B、B 的上層是 A）。
         visit(node.value, [...path, node.label], off, new Set(seen).add(node.value));
       }
@@ -306,6 +325,7 @@ export class TreeSelect {
         path: row.path.join(' › '),
         name: row.node.label,
         title: [...row.path, row.node.label].join(' › '),
+        tags: row.tags,
       };
     const name =
       !this.value() && this.allLabel()
@@ -313,7 +333,7 @@ export class TreeSelect {
         : this.loading()
           ? '正在載入…'
           : this.placeholder();
-    return { path: '', name, title: name };
+    return { path: '', name, title: name, tags: [] as readonly OptionTag[] };
   });
   readonly activeId = computed(() => (this.active() >= 0 ? `${this.id}-${this.active()}` : null));
 

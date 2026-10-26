@@ -14,13 +14,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { OptionTags, type OptionTag } from './option-tags';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
 export interface SelectOption {
   value: string;
   label: string;
+  /** 第二行的識別資訊（帳號、代碼）；狀態放 `tags`。 */
   description?: string;
+  /** 名稱旁的狀態標籤，已選時也顯示在觸發鈕；搜尋找得到標籤文字。 */
+  tags?: readonly OptionTag[];
   disabled?: boolean;
 }
 
@@ -39,7 +43,7 @@ export interface SelectOption {
  */
 @Component({
   selector: 'nx-select',
-  imports: [Icon],
+  imports: [Icon, OptionTags],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './select.scss',
   host: {
@@ -62,7 +66,13 @@ export interface SelectOption {
       (click)="toggle()"
       (keydown)="key($event)"
     >
-      <span [attr.title]="title()">{{ summary() }}</span>
+      <span class="select-value" [attr.title]="title()">
+        <span>{{ summary() }}</span>
+        @let tags = multiple() ? undefined : selected()?.tags;
+        @if (tags?.length) {
+          <nx-option-tags [tags]="tags" />
+        }
+      </span>
       @if (loading()) {
         <nx-icon name="loading" class="select-loading" />
       } @else {
@@ -139,6 +149,9 @@ export interface SelectOption {
                 <small>{{ option.description }}</small>
               }
             </span>
+            @if (option.tags?.length) {
+              <nx-option-tags [tags]="option.tags" />
+            }
             @if (!multiple() && option.value === value()) {
               <nx-icon name="check" />
             }
@@ -176,7 +189,8 @@ export class Select {
     this.options()
       .map((option, index) => ({ option, index }))
       .filter(({ option }) =>
-        `${option.label} ${option.description || ''}`
+        [option.label, option.description, ...(option.tags ?? []).map((tag) => tag.label)]
+          .join(' ')
           .toLocaleLowerCase()
           .includes(this.query().trim().toLocaleLowerCase()),
       ),

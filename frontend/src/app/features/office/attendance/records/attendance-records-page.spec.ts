@@ -303,8 +303,11 @@ describe('AttendanceRecordsPage', () => {
     await fixture.whenStable();
     const options = fixture.componentInstance.personOptions();
     expect(options.map((option) => option.label)).toEqual(['所有人', '王小明', '陳小華', '陳怡君']);
-    expect(options[2].description).toBe('hua・已不持卡・已隱藏');
-    expect(options[3].description).toBe('卡號 3368・尚未綁帳號');
+    expect(options.slice(1).map((option) => [option.description, option.tags])).toEqual([
+      ['ming', []],
+      ['hua', [{ label: '已不持卡' }, { label: '已隱藏' }]],
+      ['卡號 3368', [{ label: '尚未綁帳號' }]],
+    ]);
 
     fixture.componentInstance.query.commit({ person: options[3].value });
     await fixture.whenStable();

@@ -99,7 +99,8 @@ describe('NavigationItemDialog', () => {
   it('offers catalog pages with their overridden names and groups by path as places', () => {
     const { dialog } = setup();
     const chat = dialog.pages().find((option) => option.value === 'chat');
-    expect(chat?.label).toBe('聊天（停用）');
+    expect(chat?.label).toBe('聊天');
+    expect(chat?.tags).toEqual([{ label: '停用' }]);
     expect(dialog.pages().some((option) => option.value === 'diagnostics.logs.export')).toBe(false);
     expect(dialog.parents().map((node) => [node.value, node.label, node.parent])).toEqual([
       ['system', '系統管理', null],
