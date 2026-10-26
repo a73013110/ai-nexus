@@ -4,9 +4,10 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-block);
 }
+// 開始、箭頭、結束依內容寬度靠左排，箭頭兩側等距；剩下的空間留在結束與時數之間。
 .span-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1.75rem minmax(0, 1fr) 7.5rem;
+  grid-template-columns: auto auto minmax(0, 1fr) 7.5rem;
   align-items: center;
   padding: var(--p-space-4) var(--p-space-5);
 }
@@ -44,7 +45,7 @@
   font-size: var(--p-font-xs);
 }
 .span-arrow {
-  justify-self: center;
+  margin-inline: var(--p-space-5);
   color: var(--muted);
 }
 .span-hours {
