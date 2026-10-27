@@ -7,7 +7,7 @@
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
 --              2026-10-27 Yikai 移除 procedure 內的稽核，建立時間改由參數傳入
 -- =============================================
-CREATE   PROCEDURE [billing].[usp_CreateModelPrice]
+CREATE PROCEDURE [billing].[usp_CreateModelPrice]
     @Id                    UNIQUEIDENTIFIER,
     @Provider              NVARCHAR (32),
     @ModelId               NVARCHAR (160),

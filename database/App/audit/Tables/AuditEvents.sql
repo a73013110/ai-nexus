@@ -39,6 +39,12 @@ CREATE NONCLUSTERED INDEX [IX_AuditEvents_At]
 
 GO
 
+CREATE NONCLUSTERED INDEX [IX_AuditEvents_ResourceId_Id]
+    ON [audit].[AuditEvents]([ResourceId] ASC, [Id] ASC);
+
+
+GO
+
 CREATE NONCLUSTERED INDEX [ix_AuditEvents_Category_Id]
     ON [audit].[AuditEvents]([Category] ASC, [Id] ASC);
 
@@ -54,12 +60,6 @@ GO
 
 CREATE NONCLUSTERED INDEX [ix_AuditEvents_OwnerId_Id]
     ON [audit].[AuditEvents]([OwnerId] ASC, [Id] ASC);
-
-
-GO
-
-CREATE NONCLUSTERED INDEX [IX_AuditEvents_ResourceId_Id]
-    ON [audit].[AuditEvents]([ResourceId] ASC, [Id] ASC);
 
 
 GO
