@@ -40,7 +40,7 @@
 .period-swatch {
   width: 0.625rem;
   height: 0.625rem;
-  border-radius: 2px;
+  border-radius: var(--radius-data);
   background: var(--accent-soft);
   outline: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
 }
@@ -84,7 +84,7 @@
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: var(--radius-data);
   color: var(--secondary);
   font-size: 0.625rem;
   font-variant-numeric: tabular-nums;
