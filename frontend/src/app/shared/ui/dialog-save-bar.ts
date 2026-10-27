@@ -11,7 +11,7 @@ import { PendingButton } from './pending-button';
 /**
  * 編輯已儲存內容的設定表單底部：備註 | 還原 | 儲存。按鈕保持位置；沒有任何變更時兩者都是靜止狀態，
  * 備註也會說明。
- * `note` 會取代它（例如寫入被拒絕時）。放在 `form` 內，其送出即為儲存。
+ * `note` 會取代它（例如儲存結果）。放在 `form` 內，其送出即為儲存。
  */
 @Component({
   selector: 'nx-dialog-save-bar',
@@ -46,7 +46,7 @@ export class DialogSaveBar {
   /** The save button's text, e.g. 「儲存角色」. */
   readonly label = input.required<string>();
   readonly saving = input(false);
-  /** 儲存被拒絕（例如測試其他身分時）；還原仍可使用。 */
+  /** 還不能儲存（例如必填欄位未完成）；還原仍可使用。 */
   readonly disabled = input(false);
   readonly note = input('');
   readonly revert = output<void>();

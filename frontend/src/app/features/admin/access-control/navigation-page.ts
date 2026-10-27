@@ -51,7 +51,6 @@ export class NavigationPage {
   readonly tour = computed(() =>
     navigationTour({
       names: accessPageNames((id) => this.session.featureName(id)),
-      testing: this.session.testing(),
     }),
   );
 }

@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { PunchReimportResult } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatNumber } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -187,9 +186,6 @@ export function reimportOutcome(result: PunchReimportResult): {
         </p>
       </div>
       <footer class="dialog-foot">
-        @if (session.testing()) {
-          <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-        }
         <button
           type="button"
           class="secondary-button"
@@ -203,7 +199,7 @@ export function reimportOutcome(result: PunchReimportResult): {
           type="submit"
           class="primary-button"
           [pending]="running()"
-          [disabled]="!running() && (session.testing() || !range())"
+          [disabled]="!running() && !range()"
         >
           {{ running() ? '重匯中…' : '重匯' }}
         </button>
@@ -212,7 +208,6 @@ export function reimportOutcome(result: PunchReimportResult): {
   </dialog>`,
 })
 export class ReimportDialog {
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(AttendanceApi);
   private readonly scope = inject(ViewScope);
   readonly imported = output<PunchReimportResult>();
@@ -279,7 +274,7 @@ export class ReimportDialog {
   async submit(event: Event) {
     event.preventDefault();
     const range = this.range();
-    if (this.running() || this.session.testing() || !range) return;
+    if (this.running() || !range) return;
     const alive = this.scope.guard();
     this.running.set(true);
     this.error.set('');

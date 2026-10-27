@@ -5,7 +5,6 @@
 ## 授權
 
 - `attendance.calendar`：查詢。`attendance.calendar.maintain`：回寫，端點兩者都要有。
-- 兩者都在 `AdministrativeFeatures`：測試身分可以查詢，回寫回 403 `test_admin_read_only`。
 
 ## 查詢
 

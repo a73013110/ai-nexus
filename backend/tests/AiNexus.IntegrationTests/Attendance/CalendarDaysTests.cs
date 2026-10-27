@@ -1,13 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
-using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 
@@ -159,22 +157,6 @@ public sealed class CalendarDaysTests
         await AssertCodeAsync(await viewer.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, null), ct), HttpStatusCode.Forbidden, "feature_forbidden");
 
         Assert.Equal(new GdDay(false, false, null, "sys"), session.Gd.Day(NationalDay));
-    }
-
-    [Fact]
-    public async Task ATestIdentityReadsTheCalendarButCannotWriteGd()
-    {
-        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
-        using var admin = factory.CreateClient();
-        await Login(admin, "alice");
-        var hrId = await CreateUser(admin, LocalAccount());
-        await GrantCalendarAsync(factory, hrId);
-        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(hrId, "重現人資看到的假日設定"), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
-        await Csrf(admin);
-
-        // 讀取通過授權（GD 未設定所以是 503，不是 403）；寫入在授權就被擋下，碰不到 GD。
-        await AssertCodeAsync(await admin.GetAsync($"{Calendar}?from=2026-10-01&to=2026-10-31", TestContext.Current.CancellationToken), HttpStatusCode.ServiceUnavailable, "attendance_gd_unavailable");
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, true, null), TestContext.Current.CancellationToken), HttpStatusCode.Forbidden, "test_admin_read_only");
     }
 
     [Fact]

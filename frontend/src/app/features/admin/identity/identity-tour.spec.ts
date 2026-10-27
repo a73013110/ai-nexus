@@ -17,7 +17,7 @@ const titles = (definition: Parameters<typeof tourSteps>[0]) =>
 
 describe('usersTour', () => {
   it('covers creating and row actions for administrators', () => {
-    expect(titles(usersTour({ testing: false }))).toEqual([
+    expect(titles(usersTour({}))).toEqual([
       '管理身分與 AI 政策',
       '找到使用者',
       '新增使用者',
@@ -27,13 +27,13 @@ describe('usersTour', () => {
     ]);
   });
 
-  it('introduces the AD import only with the import grant and outside test identities', () => {
-    expect(titles(usersTour({ testing: false, directoryImport: true }))).toContain('從 AD 匯入');
-    expect(titles(usersTour({ testing: true, directoryImport: true }))).not.toContain('從 AD 匯入');
+  it('introduces the AD import only with the import grant', () => {
+    expect(titles(usersTour({ directoryImport: true }))).toContain('從 AD 匯入');
+    expect(titles(usersTour({}))).not.toContain('從 AD 匯入');
   });
 
   it('introduces AD import before creating and AD update with the sync grant', () => {
-    const tour = usersTour({ testing: false, directoryImport: true, directorySync: true });
+    const tour = usersTour({ directoryImport: true, directorySync: true });
     expect(titles(tour)).toEqual([
       '管理身分與 AI 政策',
       '找到使用者',
@@ -45,29 +45,11 @@ describe('usersTour', () => {
       '測試身分與刪除',
     ]);
     expect(tourSteps(tour).at(-1)?.description).toContain('「從 AD 更新」只更新這一位');
-    expect(
-      titles(usersTour({ testing: true, directoryImport: true, directorySync: true })),
-    ).not.toContain('從 AD 更新');
-    expect(tourSteps(usersTour({ testing: false })).at(-1)?.description).not.toContain(
-      '從 AD 更新',
-    );
-  });
-
-  it('drops the disabled actions and explains read-only while testing an identity', () => {
-    const steps = tourSteps(usersTour({ testing: true }));
-    expect(steps.map((step) => step.title)).toEqual([
-      '管理身分與 AI 政策',
-      '找到使用者',
-      '最近 30 天用量',
-      '開啟使用者詳情',
-    ]);
-    expect(steps.at(-1)?.description).toContain('唯讀');
+    expect(tourSteps(usersTour({})).at(-1)?.description).not.toContain('從 AD 更新');
   });
 
   it('scopes every target to the page', () => {
-    for (const step of tourSteps(
-      usersTour({ testing: false, directoryImport: true, directorySync: true }),
-    ))
+    for (const step of tourSteps(usersTour({ directoryImport: true, directorySync: true })))
       expect(step.target).toMatch(/^nx-users-page /);
   });
 });
@@ -105,45 +87,37 @@ describe('directoryImportTour', () => {
 
 describe('userInspectorTour', () => {
   it('introduces the summary, tabs and pager outside the conversations tab', () => {
-    expect(
-      titles(userInspectorTour({ audit: true, testing: false, conversations: false })),
-    ).toEqual(['這位使用者的概況', '反查活動稽核', '依頁籤管理', '上一位、下一位']);
+    expect(titles(userInspectorTour({ audit: true, conversations: false }))).toEqual([
+      '這位使用者的概況',
+      '反查活動稽核',
+      '依頁籤管理',
+      '上一位、下一位',
+    ]);
   });
 
   it('omits the audit lookup without the audit grant', () => {
-    expect(
-      titles(userInspectorTour({ audit: false, testing: false, conversations: false })),
-    ).not.toContain('反查活動稽核');
-    expect(
-      titles(userInspectorTour({ audit: false, testing: false, conversations: true })),
-    ).not.toContain('反查活動稽核');
-  });
-
-  it('switches to the audited read-only view on the conversations tab', () => {
-    expect(titles(userInspectorTour({ audit: true, testing: false, conversations: true }))).toEqual(
-      [
-        '受稽核的唯讀檢視',
-        '搜尋對話',
-        '包含已刪除對話',
-        '切換對話',
-        '完整的對話內容',
-        '反查活動稽核',
-      ],
+    expect(titles(userInspectorTour({ audit: false, conversations: false }))).not.toContain(
+      '反查活動稽核',
+    );
+    expect(titles(userInspectorTour({ audit: false, conversations: true }))).not.toContain(
+      '反查活動稽核',
     );
   });
 
-  it('says the tabs are read-only while testing an identity', () => {
-    const tabs = tourSteps(
-      userInspectorTour({ audit: false, testing: true, conversations: false }),
-    ).find((step) => step.title === '依頁籤管理');
-    expect(tabs?.description).toContain('唯讀');
+  it('switches to the audited read-only view on the conversations tab', () => {
+    expect(titles(userInspectorTour({ audit: true, conversations: true }))).toEqual([
+      '受稽核的唯讀檢視',
+      '搜尋對話',
+      '包含已刪除對話',
+      '切換對話',
+      '完整的對話內容',
+      '反查活動稽核',
+    ]);
   });
 
   it('scopes every target to the inspector', () => {
     for (const conversations of [false, true])
-      for (const step of tourSteps(
-        userInspectorTour({ audit: true, testing: false, conversations }),
-      ))
+      for (const step of tourSteps(userInspectorTour({ audit: true, conversations })))
         expect(step.target).toMatch(/^nx-admin-user-inspector /);
   });
 });
@@ -192,7 +166,6 @@ describe('users tour targets', () => {
             has: (feature: string) => feature.startsWith('identity.users'),
             featureName: () => '使用者',
             testing: signal(false),
-            testingNote: signal(''),
           },
         },
         { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },

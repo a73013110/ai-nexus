@@ -47,9 +47,6 @@
     @if (loaded()?.days) {
       <span class="ui-count-label calendar-off-days">放假 {{ offDays() }} 天</span>
     }
-    @if (canMaintain() && session.testing()) {
-      <span class="form-note">{{ session.testingNote() }}</span>
-    }
     <nx-view-switch
       class="calendar-view-switch"
       label="檢視方式"

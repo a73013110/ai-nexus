@@ -33,7 +33,7 @@
 - **主管**：`DEP_CHIEF` 與 `DEP_ACHIEF`（「、」或全形、半形逗號分隔）都設為主管，不分正副：兩者對資料範圍的意義相同（[主管範圍](../architecture/data-scopes.md#主管範圍)），預覽仍標示副主管。公文帳號經 `Sys_User.ACCOUNT` 對到未刪除使用者的 AD 帳號；公文帳號停用、對不到或對到多人的列為問題。不是成員的主管加入為成員（不設主要所屬）；GD 不再列為主管的人只取消主管，保留成員資格。停用的單位不同步主管。
 - **勾選要套用的部門**：預覽以部門為單位列出（單位與主管的變動合在一起），未勾選的部門這次不動：已綁定的維持原樣（含 GD 已沒有的不停用）、新的不建立（其下層無處可掛也略過）、主管不同步，下次預覽仍會列出。本地已停用、套用會重新啟用的部門預設不勾，避免刻意停用的單位被打開。
 - **預覽與套用一致**：預覽附內容的指紋。套用時重讀 GD、在行政交易內重讀組織並重算完整預覽，指紋不同（期間 GD 或組織有人改過）回 409 `organization_import_stale`，請重新預覽，不會套用沒看過的變更。
-- GD 未設定、連不上或逾時、查詢被拒分別回 503 `organization_import_not_configured`、`organization_import_unavailable`、`organization_import_rejected`。測試身分可預覽、不能套用。
+- GD 未設定、連不上或逾時、查詢被拒分別回 503 `organization_import_not_configured`、`organization_import_unavailable`、`organization_import_rejected`。
 - 目前只讀用得到的欄位；登記桌 Email（`DEP_EMAIL`）、`UnitClass`、`Attach` 等日後需要時再加。
 
 ## 給其他模組
@@ -42,4 +42,4 @@
 
 ## 稽核
 
-`admin.organization_unit`、`admin.organization_unit_delete`、`admin.organization_order`、`admin.organization_member`、`admin.organization_member_delete`、`admin.organization_import`，在活動稽核以「組織異動」篩選；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。匯入只記數量（前後的單位、已匯入單位與主管數，排除的部門數與各類變動數），完整清單在預覽。測試身分只能讀取。
+`admin.organization_unit`、`admin.organization_unit_delete`、`admin.organization_order`、`admin.organization_member`、`admin.organization_member_delete`、`admin.organization_import`，在活動稽核以「組織異動」篩選；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。匯入只記數量（前後的單位、已匯入單位與主管數，排除的部門數與各類變動數），完整清單在預覽。

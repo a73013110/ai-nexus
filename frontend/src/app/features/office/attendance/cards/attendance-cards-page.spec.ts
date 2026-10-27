@@ -94,8 +94,6 @@ function setup() {
           me: signal({ id: 'u1' }),
           has: (feature: string) => feature.startsWith('attendance.cards'),
           featureName: () => '卡號對應',
-          testing: signal(false),
-          testingNote: signal(''),
         },
       },
       { provide: AuthService, useValue: { generation, guard: () => () => true } },

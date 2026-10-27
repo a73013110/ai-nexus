@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { CardDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -84,7 +83,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                   autocomplete="off"
                   [attr.maxlength]="noteMax"
                   [value]="e.draft.note"
-                  [readOnly]="locked()"
+                  [readOnly]="store.busy()"
                   (input)="update('note', note.value)"
               /></label>
             } @else {
@@ -108,7 +107,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                         [attr.aria-invalid]="numberError() ? true : null"
                         [attr.aria-describedby]="numberError() ? id + '-error' : null"
                         [value]="e.draft.cardNumber"
-                        [readOnly]="locked()"
+                        [readOnly]="store.busy()"
                         (input)="update('cardNumber', number.value)"
                     /></label>
                     @if (numberError()) {
@@ -121,7 +120,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                         autocomplete="off"
                         [attr.maxlength]="noteMax"
                         [value]="e.draft.note"
-                        [readOnly]="locked()"
+                        [readOnly]="store.busy()"
                         (input)="update('note', note.value)"
                     /></label>
                   </div>
@@ -135,7 +134,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                       label="在出勤紀錄隱藏"
                       description="例如訪客卡、公務卡；HR 看全公司出勤時不列出，本人與主管照常看得到。"
                       [checked]="e.draft.hidden"
-                      [disabled]="locked()"
+                      [disabled]="store.busy()"
                       (checkedChange)="update('hidden', $event)"
                     />
                   </div>
@@ -145,9 +144,6 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
           </div>
           @if (!e.card) {
             <footer class="dialog-foot">
-              @if (session.testing()) {
-                <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-              }
               <button
                 type="button"
                 class="secondary-button"
@@ -156,13 +152,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
               >
                 取消
               </button>
-              <button
-                nxPending
-                type="submit"
-                class="primary-button"
-                [pending]="store.busy()"
-                [disabled]="session.testing()"
-              >
+              <button nxPending type="submit" class="primary-button" [pending]="store.busy()">
                 {{ store.busy() ? '新增中…' : '新增卡號' }}
               </button>
             </footer>
@@ -171,8 +161,6 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
               label="儲存備註"
               [dirty]="dirty()"
               [saving]="store.busy()"
-              [disabled]="session.testing()"
-              [note]="session.testingNote()"
               (revert)="revert()"
             />
           }
@@ -188,7 +176,6 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
 })
 export class CardDialog {
   readonly id = uniqueId('nx-card-dialog');
-  readonly session = inject(WorkspaceSession);
   readonly store = inject(AttendanceCardsStore);
   readonly numberMax = NUMBER_MAX;
   readonly noteMax = NOTE_MAX;
@@ -201,7 +188,6 @@ export class CardDialog {
   private readonly opened = signal<CardDraft | null>(null);
   readonly error = signal('');
   readonly numberError = signal('');
-  readonly locked = computed(() => this.store.busy() || this.session.testing());
   readonly dirty = computed(() => {
     const editor = this.editor(),
       opened = this.opened();
@@ -261,7 +247,7 @@ export class CardDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor();
-    if (!editor || this.locked() || (editor.card && !this.dirty())) return;
+    if (!editor || this.store.busy() || (editor.card && !this.dirty())) return;
     const draft = editor.draft;
     const note = draft.note.trim() || null;
     this.error.set('');

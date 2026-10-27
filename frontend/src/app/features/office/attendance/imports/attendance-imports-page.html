@@ -10,8 +10,6 @@
       page-actions
       type="button"
       class="secondary-button imports-reimport"
-      [disabled]="session.testing()"
-      [title]="session.testing() ? session.testingNote() : ''"
       (click)="openReimport()"
     >
       <nx-icon name="repeat" />手動重匯

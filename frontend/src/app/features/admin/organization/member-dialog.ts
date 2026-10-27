@@ -8,7 +8,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitCandidateDto, UnitDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -60,9 +59,7 @@ const UNASSIGNED = '尚未分派部門';
         />
       </div>
       <footer class="dialog-foot">
-        <span class="dialog-note" role="status">{{
-          session.testing() ? session.testingNote() : '加入後再於成員列勾選主要所屬或主管。'
-        }}</span>
+        <span class="dialog-note" role="status">加入後再於成員列勾選主要所屬或主管。</span>
         <button
           type="button"
           class="secondary-button"
@@ -76,7 +73,7 @@ const UNASSIGNED = '尚未分派部門';
           type="button"
           class="primary-button"
           [pending]="saving()"
-          [disabled]="!saving() && (!selected().length || session.testing())"
+          [disabled]="!saving() && !selected().length"
           (click)="save()"
         >
           {{ saving() ? '加入中…' : '加入 ' + selected().length + ' 人' }}
@@ -86,7 +83,6 @@ const UNASSIGNED = '尚未分派部門';
   </dialog>`,
 })
 export class MemberDialog {
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(OrganizationApi);
   private readonly store = inject(OrganizationStore);
   private readonly scope = inject(ViewScope);
@@ -143,7 +139,7 @@ export class MemberDialog {
   async save() {
     const unit = this.unit();
     const ids = this.selected();
-    if (!unit || !ids.length || this.saving() || this.session.testing()) return;
+    if (!unit || !ids.length || this.saving()) return;
     const alive = this.scope.guard();
     this.saving.set(true);
     this.error.set('');

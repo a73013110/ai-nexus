@@ -25,7 +25,7 @@
 
 ## API
 
-- `GET`／`PUT /api/v1/admin/users/{id}/model-policy`：個人與有效政策；PUT 接收 `allowedModelIds`、`dailyTokenLimits`（模型路由 → 整數 tokens），保存 `admin.user_model_policy` 前後快照。測試身分不可寫入。
+- `GET`／`PUT /api/v1/admin/users/{id}/model-policy`：個人與有效政策；PUT 接收 `allowedModelIds`、`dailyTokenLimits`（模型路由 → 整數 tokens），保存 `admin.user_model_policy` 前後快照。
 - `GET /api/v1/settings/model-policy`：本人各模型的實際回報、預留、剩餘與來源；隱藏模型使用公開別名，不揭露原生名稱。
 
 ## 附件容量

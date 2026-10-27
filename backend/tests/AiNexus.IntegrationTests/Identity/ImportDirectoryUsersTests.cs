@@ -5,7 +5,6 @@ using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Provisioning;
-using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.DirectoryApi;
@@ -116,7 +115,7 @@ public sealed class ImportDirectoryUsersTests
     }
 
     [Fact]
-    public async Task ImportIsLimitedToGrantedAdministratorsOutsideTestIdentityAndWritesNothingWithoutTheDirectory()
+    public async Task ImportIsLimitedToGrantedAdministratorsAndWritesNothingWithoutTheDirectory()
     {
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var member = f.CreateClient(); await Login(member, "bob");
@@ -137,15 +136,5 @@ public sealed class ImportDirectoryUsersTests
         var carolId = Assert.Single(await Import(admin, FixtureAdDirectory.Carol)).UserId!.Value;
         (await admin.DeleteAsync($"/api/v1/admin/users/{carolId}")).EnsureSuccessStatusCode();
         Assert.Equal(DirectoryOutcomes.Deleted, Assert.Single(await Import(admin, FixtureAdDirectory.Carol)).Outcome);
-
-        var target = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"]));
-        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(target, "檢查匯入權限"))).EnsureSuccessStatusCode();
-        await Csrf(admin);
-        (await admin.GetAsync(People + "?node=" + Uri.EscapeDataString(FixtureAdDirectory.Root) + "&subtree=true")).EnsureSuccessStatusCode();
-        await AssertCodeAsync(await admin.PostAsJsonAsync(Imports, new DirectoryImportRequest([FixtureAdDirectory.Erin])), HttpStatusCode.Forbidden, "test_admin_read_only");
-        await AssertCodeAsync(await admin.PostAsJsonAsync(Syncs, new DirectorySyncRequest([target])), HttpStatusCode.Forbidden, "test_admin_read_only");
-
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.False(await db.Users.AnyAsync(x => x.Sid == FixtureAdDirectory.Erin));
     }
 }

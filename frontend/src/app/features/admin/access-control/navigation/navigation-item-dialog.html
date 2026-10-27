@@ -44,7 +44,7 @@
                   appearance="segment"
                   [options]="kinds"
                   [value]="e.draft.kind"
-                  [disabled]="locked()"
+                  [disabled]="saving()"
                   (valueChange)="update('kind', $any($event))"
                 />
                 <label class="form-field-short navigation-parent"
@@ -54,7 +54,7 @@
                     noun="分群"
                     [nodes]="parents()"
                     [value]="e.draft.parentId"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (valueChange)="update('parentId', $event)"
                 /></label>
               }
@@ -66,7 +66,7 @@
                     [searchable]="true"
                     [options]="pages()"
                     [value]="e.draft.featureId"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (valueChange)="update('featureId', $event)"
                 /></label>
               } @else {
@@ -81,7 +81,7 @@
                     [attr.aria-invalid]="fieldError()?.field === 'name' ? true : null"
                     [attr.aria-describedby]="fieldError()?.field === 'name' ? id + '-error' : null"
                     [value]="e.draft.name"
-                    [readOnly]="locked()"
+                    [readOnly]="saving()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
               }
@@ -106,7 +106,7 @@
                       id + '-url-hint' + (fieldError()?.field === 'url' ? ' ' + id + '-error' : '')
                     "
                     [value]="e.draft.url"
-                    [readOnly]="locked()"
+                    [readOnly]="saving()"
                     (input)="update('url', $any($event.target).value)"
                 /></label>
                 @if (fieldError()?.field === 'url') {
@@ -121,7 +121,7 @@
                   label="在新分頁開啟"
                   description="取消勾選則在目前分頁離開本站。"
                   [checked]="e.draft.openInNewTab"
-                  [disabled]="locked()"
+                  [disabled]="saving()"
                   (checkedChange)="update('openInNewTab', $event)"
                 />
               }
@@ -132,7 +132,7 @@
                     [searchable]="true"
                     [options]="icons"
                     [value]="e.draft.icon"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (valueChange)="update('icon', $event)"
                 /></label>
                 <p class="form-note">
@@ -162,7 +162,7 @@
                   label="可見群組"
                   [groups]="audiences()"
                   [selected]="e.draft.audienceGroupIds"
-                  [disabled]="locked()"
+                  [disabled]="saving()"
                   (selectedChange)="update('audienceGroupIds', $event)"
                 />
               </div>
@@ -172,9 +172,6 @@
       </div>
       @if (!e.id) {
         <footer class="dialog-foot">
-          @if (session.testing()) {
-            <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-          }
           <button
             type="button"
             class="secondary-button"
@@ -183,13 +180,7 @@
           >
             取消
           </button>
-          <button
-            nxPending
-            type="submit"
-            class="primary-button"
-            [pending]="saving()"
-            [disabled]="session.testing()"
-          >
+          <button nxPending type="submit" class="primary-button" [pending]="saving()">
             {{ saving() ? '建立中…' : '建立' + label(e.draft.kind) }}
           </button>
         </footer>
@@ -198,8 +189,6 @@
           [label]="'儲存' + label(e.draft.kind)"
           [dirty]="dirty()"
           [saving]="saving()"
-          [disabled]="session.testing()"
-          [note]="session.testingNote()"
           (revert)="revert()"
         />
       }

@@ -35,7 +35,6 @@ function setup() {
   };
   const session = {
     auth: { generation },
-    testing: signal(false),
     load: vi.fn(async () => true),
     has: (feature: string) => feature === 'organization',
   };

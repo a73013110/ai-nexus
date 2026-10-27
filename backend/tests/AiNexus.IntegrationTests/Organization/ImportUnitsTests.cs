@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Admin.Organization.Imports;
 using AiNexus.Features.Platform.Gd;
@@ -270,23 +269,6 @@ public sealed class ImportUnitsTests
         Assert.Empty(await ListUnitsAsync(viewer));
         await AssertCodeAsync(await viewer.GetAsync(Import), HttpStatusCode.Forbidden, "feature_forbidden");
         await AssertCodeAsync(await ApplyImportAsync(viewer, new string('0', 64)), HttpStatusCode.Forbidden, "feature_forbidden");
-    }
-
-    [Fact]
-    public async Task ATestIdentityCanPreviewButNotApply()
-    {
-        await using var session = await ImportSession.CreateAsync(ldap: true);
-        session.Gd.AddDepartment(1, "總公司");
-        var admin = session.Admin;
-        var importerId = await CreateUser(admin, LocalAccount("importer"));
-        await AttendanceApi.GrantAsync(session.Factory, importerId, "test-organization-import", FeatureCatalog.Organization, FeatureCatalog.OrganizationImport);
-        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(importerId, "重現匯入的預覽"))).EnsureSuccessStatusCode();
-        await Csrf(admin);
-
-        var preview = await PreviewImportAsync(admin);
-        Assert.Equal(UnitImportAction.Create, Assert.Single(preview.Units).Action);
-        await AssertCodeAsync(await ApplyImportAsync(admin, preview.Fingerprint), HttpStatusCode.Forbidden, "test_admin_read_only");
-        Assert.Empty(await ListUnitsAsync(admin));
     }
 
     /// <summary>一個假 GD、一個 host 與登入的管理員 alice；參數模擬 GD 未設定或連不上。</summary>

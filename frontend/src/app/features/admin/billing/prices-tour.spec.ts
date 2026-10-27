@@ -15,7 +15,7 @@ const titles = (definition: Parameters<typeof tourSteps>[0]) =>
 
 describe('pricesTour', () => {
   it('covers unpriced items, effective times and adjusting on the current tab', () => {
-    expect(titles(pricesTour({ view: 'current', testing: false }))).toEqual([
+    expect(titles(pricesTour({ view: 'current' }))).toEqual([
       '費用依當時的價格計算',
       '目前價格與價格歷史',
       '新增價格版本',
@@ -26,7 +26,7 @@ describe('pricesTour', () => {
   });
 
   it('switches to version states and reusing on the history tab', () => {
-    expect(titles(pricesTour({ view: 'history', testing: false }))).toEqual([
+    expect(titles(pricesTour({ view: 'history' }))).toEqual([
       '費用依當時的價格計算',
       '目前價格與價格歷史',
       '新增價格版本',
@@ -35,33 +35,17 @@ describe('pricesTour', () => {
     ]);
   });
 
-  it('drops the disabled write steps and explains read-only while testing an identity', () => {
-    const current = tourSteps(pricesTour({ view: 'current', testing: true }));
-    expect(current.map((step) => step.title)).toEqual([
-      '費用依當時的價格計算',
-      '目前價格與價格歷史',
-      '未定價的項目',
-      '生效時間',
-    ]);
-    expect(current[1].description).toContain('只能查看');
-    expect(titles(pricesTour({ view: 'history', testing: true }))).toEqual([
-      '費用依當時的價格計算',
-      '目前價格與價格歷史',
-      '版本狀態',
-    ]);
-  });
-
   it('scopes every target to the page', () => {
     for (const view of ['current', 'history'] as const)
-      for (const step of tourSteps(pricesTour({ view, testing: false })))
+      for (const step of tourSteps(pricesTour({ view })))
         expect(step.target).toMatch(/^nx-prices-page /);
   });
 });
 
 describe('priceVersionTour', () => {
   it('says a copied version is saved as a new one', () => {
-    const copied = tourSteps(priceVersionTour({ copied: true, testing: false }));
-    const blank = tourSteps(priceVersionTour({ copied: false, testing: false }));
+    const copied = tourSteps(priceVersionTour({ copied: true }));
+    const blank = tourSteps(priceVersionTour({ copied: false }));
     expect(copied.map((step) => step.title)).toEqual([
       '計費對象',
       '幣別與費用類型',
@@ -74,15 +58,9 @@ describe('priceVersionTour', () => {
     expect(blank[0].description).toContain('原生識別碼');
   });
 
-  it('notes saving is refused while testing an identity', () => {
-    expect(tourSteps(priceVersionTour({ copied: false, testing: true }))[0].description).toContain(
-      '不能儲存',
-    );
-  });
-
   it('scopes every target to the dialog', () => {
     for (const copied of [false, true])
-      for (const step of tourSteps(priceVersionTour({ copied, testing: false })))
+      for (const step of tourSteps(priceVersionTour({ copied })))
         expect(step.target).toMatch(/^nx-price-version-dialog /);
   });
 });
@@ -135,8 +113,6 @@ describe('prices tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) => feature === 'billing.prices',
@@ -174,7 +150,7 @@ describe('prices tour targets', () => {
     await settle();
     const dialog = host.querySelector('dialog.price-dialog')!;
     expect(dialog.querySelector('nx-product-tour-button')).not.toBeNull();
-    for (const step of tourSteps(priceVersionTour({ copied: true, testing: false })))
+    for (const step of tourSteps(priceVersionTour({ copied: true })))
       expect(host.querySelector(step.target), step.target).not.toBeNull();
   });
 });

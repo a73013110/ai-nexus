@@ -15,7 +15,7 @@ const titles = (definition: Parameters<typeof tourSteps>[0]) =>
 
 describe('organizationTour', () => {
   it('covers creating, tree actions, editing and members for administrators', () => {
-    expect(titles(organizationTour({ testing: false }))).toEqual([
+    expect(titles(organizationTour({}))).toEqual([
       '部門決定資料範圍',
       '新增單位',
       '瀏覽部門樹',
@@ -27,71 +27,47 @@ describe('organizationTour', () => {
     ]);
   });
 
-  it('adds the import step only with the import grant, read-only while testing', () => {
-    expect(titles(organizationTour({ testing: false, canImport: true }))).toContain(
-      '從公文系統匯入',
-    );
-    const testing = tourSteps(organizationTour({ testing: true, canImport: true }));
-    expect(testing.find((step) => step.title === '從公文系統匯入')?.description).toContain(
-      '不能套用',
-    );
-  });
-
-  it('drops the disabled write steps and explains read-only while testing an identity', () => {
-    const steps = tourSteps(organizationTour({ testing: true }));
-    expect(steps.map((step) => step.title)).toEqual([
-      '部門決定資料範圍',
-      '瀏覽部門樹',
-      '標「公文」的單位',
-      '主要所屬與主管',
-    ]);
-    expect(steps.at(-1)?.description).toContain('只能查看');
+  it('adds the import step only with the import grant', () => {
+    expect(titles(organizationTour({ canImport: true }))).toContain('從公文系統匯入');
+    expect(titles(organizationTour({}))).not.toContain('從公文系統匯入');
   });
 
   it('scopes every target to the page', () => {
-    for (const step of tourSteps(organizationTour({ testing: false, canImport: true })))
+    for (const step of tourSteps(organizationTour({ canImport: true })))
       expect(step.target).toMatch(/^nx-organization-page /);
   });
 });
 
 describe('unitDialogTour', () => {
   it('describes the parent as a move only when editing', () => {
-    const editing = tourSteps(unitDialogTour({ editing: true, testing: false }));
-    const creating = tourSteps(unitDialogTour({ editing: false, testing: false }));
+    const editing = tourSteps(unitDialogTour({ editing: true }));
+    const creating = tourSteps(unitDialogTour({ editing: false }));
     expect(editing.map((step) => step.title)).toEqual(['單位名稱', '搬到其他上層', '啟用與停用']);
     expect(creating.map((step) => step.title)).toEqual(['單位名稱', '放在哪個上層', '啟用與停用']);
     expect(editing[1].description).toContain('整棵下層跟著搬');
   });
 
-  it('notes read-only while testing an identity', () => {
-    expect(tourSteps(unitDialogTour({ editing: true, testing: true }))[0].description).toContain(
-      '只能查看',
-    );
-  });
-
   it('warns first that an imported unit is reverted by the next import', () => {
-    const steps = tourSteps(unitDialogTour({ editing: true, testing: false, imported: true }));
+    const steps = tourSteps(unitDialogTour({ editing: true, imported: true }));
     expect(steps.map((step) => step.title)).toEqual([
       '下次匯入會改回',
       '單位名稱',
       '搬到其他上層',
       '啟用與停用',
     ]);
-    expect(titles(unitDialogTour({ editing: true, testing: false }))).not.toContain(
-      '下次匯入會改回',
-    );
+    expect(titles(unitDialogTour({ editing: true }))).not.toContain('下次匯入會改回');
   });
 
   it('scopes every target to the dialog', () => {
     for (const editing of [false, true])
-      for (const step of tourSteps(unitDialogTour({ editing, testing: false, imported: true })))
+      for (const step of tourSteps(unitDialogTour({ editing, imported: true })))
         expect(step.target).toMatch(/^nx-unit-dialog /);
   });
 });
 
 describe('unitImportTour', () => {
   it('walks the preview from the summary to applying', () => {
-    expect(titles(unitImportTour({ testing: false }))).toEqual([
+    expect(titles(unitImportTour())).toEqual([
       '先看變動摘要',
       '以公文系統為準',
       '勾選要套用的部門',
@@ -100,12 +76,8 @@ describe('unitImportTour', () => {
     ]);
   });
 
-  it('says applying is not possible while testing an identity', () => {
-    expect(tourSteps(unitImportTour({ testing: true })).at(-1)?.description).toContain('不能套用');
-  });
-
   it('scopes every target to the dialog', () => {
-    for (const step of tourSteps(unitImportTour({ testing: false })))
+    for (const step of tourSteps(unitImportTour()))
       expect(step.target).toMatch(/^nx-unit-import-dialog /);
   });
 });
@@ -199,8 +171,6 @@ describe('organization tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) =>
@@ -229,12 +199,12 @@ describe('organization tour targets', () => {
     }
     page.editSelected();
     await settle();
-    for (const step of tourSteps(unitDialogTour({ editing: true, testing: false, imported: true })))
+    for (const step of tourSteps(unitDialogTour({ editing: true, imported: true })))
       expect(host.querySelector(step.target), step.target).not.toBeNull();
     page.openImport();
     await settle();
     expect(host.querySelector('nx-unit-import-dialog nx-product-tour-button')).not.toBeNull();
-    for (const step of tourSteps(unitImportTour({ testing: false })))
+    for (const step of tourSteps(unitImportTour()))
       expect(host.querySelector(step.target), step.target).not.toBeNull();
   });
 });

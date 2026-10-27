@@ -16,7 +16,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 - **資料庫**：`accesscontrol.Features` 只存可授予的功能（頁面＋動作）、Enabled 與名稱覆寫（null＝目錄預設）。`FeatureCatalogSeedTests` 在範本資料庫上雙向比對目錄與 Seed；資料庫有、目錄不認得的列仍是授權，只是不出現在選單。功能清單（`/me`、管理與稽核目錄）一律依目錄的宣告順序。
 - **前端**：OpenAPI 以目錄的授權輸出 `FeatureId` 列舉，並在文件根的 `x-feature-catalog` 輸出整份目錄；`npm run contracts` 由它產生 `feature-catalog.ts`。路由、守衛、麵包屑與預設名稱都從這裡來（[前端邊界](../frontend/frontend-boundaries.md)）。
 - **後端產生的前端連結**（總覽、通知）用 `FeatureCatalog.RouteOf`，不寫死路徑。
-- 角色、群組、預設選單分群節點與預設關聯的 ID 在 `BuiltInAccess`。測試身分不可寫入的管理功能列在 `AdministrativeFeatures`（`Policies.cs`）。
+- 角色、群組、預設選單分群節點與預設關聯的 ID 在 `BuiltInAccess`。
 
 模型授權與逐模型額度也由有效群組合併，下一次請求重新計算，見 [模型政策與配額](../features/model-policy.md)。
 

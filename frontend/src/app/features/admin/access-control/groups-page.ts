@@ -46,7 +46,6 @@ export class GroupsPage {
   readonly tour = computed(() =>
     groupsTour({
       names: accessPageNames((id) => this.session.featureName(id)),
-      testing: this.session.testing(),
     }),
   );
 }

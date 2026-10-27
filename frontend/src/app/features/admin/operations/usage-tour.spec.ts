@@ -105,8 +105,6 @@ describe('usage tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) => ['operations.usage', 'dashboard'].includes(feature),

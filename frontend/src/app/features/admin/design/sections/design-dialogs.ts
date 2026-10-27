@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { TESTING_IDENTITY_NOTE } from '@core/auth/workspace-session';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -111,7 +110,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       id="design-save-bar"
       title="儲存列"
       api="nx-dialog-save-bar · TabItem.dirty"
-      description="編輯已儲存內容的頁尾：說明｜還原｜儲存，按鈕位置固定。未變更時兩鈕停用；有變更時說明轉色，所在頁籤加圓點（名稱加「有未儲存的變更」）；不能寫入時 note 取代說明，儲存停用、還原仍可用。"
+      description="編輯已儲存內容的頁尾：說明｜還原｜儲存，按鈕位置固定。未變更時兩鈕停用；有變更時說明轉色，所在頁籤加圓點（名稱加「有未儲存的變更」）；note 可取代說明（例如儲存結果）；disabled 只停用儲存，還原仍可用。"
     >
       <nx-design-example label="未變更 → 有變更">
         <form class="design-save-frame" (submit)="save($event)">
@@ -145,19 +144,6 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
             }
           </div>
           <nx-dialog-save-bar label="儲存角色" [dirty]="dirty()" (revert)="draft.set(saved())" />
-        </form>
-      </nx-design-example>
-      <nx-design-example label="不能寫入（測試身分）">
-        <form class="design-save-frame" (submit)="$event.preventDefault()">
-          <div class="dialog-body">
-            <label>角色名稱<input nxField value="已修改的名稱" readonly /></label>
-          </div>
-          <nx-dialog-save-bar
-            label="儲存角色"
-            [dirty]="true"
-            [disabled]="true"
-            [note]="lockedNote"
-          />
         </form>
       </nx-design-example>
     </nx-design-section>
@@ -230,7 +216,6 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
 })
 export class DesignDialogs {
   private readonly toast = inject(ToastService);
-  readonly lockedNote = TESTING_IDENTITY_NOTE;
   readonly saved = signal(SAVED);
   readonly draft = signal(SAVED);
   readonly tab = signal('name');

@@ -91,15 +91,9 @@ export class AdminUsersTab {
   readonly emailState = emailState;
   readonly ids = computed(() => (this.store.users()?.users ?? []).map((user) => user.id));
   /** 拖曳與方向鍵只在看得到鄰居時（未搜尋）可用；寫入中不能再移動。位置編號在搜尋時也能用。 */
-  readonly sortable = computed(
-    () => this.store.reorderable() && !this.store.ordering() && !this.session.testing(),
-  );
+  readonly sortable = computed(() => this.store.reorderable() && !this.store.ordering());
   readonly lockedHint = computed(() =>
-    this.session.testing()
-      ? '測試身分中不能調整順序'
-      : this.store.ordering()
-        ? '正在儲存順序…'
-        : '清除搜尋後可拖曳；或按編號輸入位置',
+    this.store.ordering() ? '正在儲存順序…' : '清除搜尋後可拖曳；或按編號輸入位置',
   );
   readonly nameOf = (id: string) =>
     this.store.users()?.users.find((user) => user.id === id)?.displayName ?? '';
@@ -132,14 +126,13 @@ export class AdminUsersTab {
   }
   /** 只有檢視器沒有持有的部分：從 AD 更新、切換身分與移除。 */
   actions(user: AdminUserDto): MenuAction[] {
-    const testing = this.session.testing();
     const sync: MenuAction[] = this.session.has('identity.users.sync')
       ? [
           {
             id: 'sync',
             label: '從 AD 更新',
             icon: 'repeat',
-            disabled: testing || !user.authentication?.adEnabled,
+            disabled: !user.authentication?.adEnabled,
           },
         ]
       : [];
@@ -149,14 +142,16 @@ export class AdminUsersTab {
         id: 'test',
         label: '以此身分測試',
         icon: 'shield',
-        disabled: testing || user.id === this.session.me()?.id || user.enabled === false,
+        // 伺服器不允許巢狀切換（test_identity_nested），測試身分期間直接停用。
+        disabled:
+          this.session.testing() || user.id === this.session.me()?.id || user.enabled === false,
       },
       {
         id: 'delete',
         label: '刪除使用者',
         icon: 'trash',
         danger: true,
-        disabled: testing || user.id === this.session.me()?.id,
+        disabled: user.id === this.session.me()?.id,
       },
     ];
   }

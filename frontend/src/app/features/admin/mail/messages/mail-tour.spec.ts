@@ -21,7 +21,7 @@ const copy = (definition: ProductTourDefinition) =>
 
 describe('mailMessagesTour', () => {
   it('walks diagnosis, test, status, query, table and paging for readers', () => {
-    const reader = mailMessagesTour({ resend: false, testing: false, logs: null });
+    const reader = mailMessagesTour({ resend: false, logs: null });
     expect(titles(reader)).toEqual([
       '寄送紀錄回答什麼',
       '連線診斷',
@@ -38,21 +38,16 @@ describe('mailMessagesTour', () => {
   });
 
   it('adds the auto-retry switch and detail actions with the resend grant', () => {
-    const operator = mailMessagesTour({ resend: true, testing: false, logs: null });
+    const operator = mailMessagesTour({ resend: true, logs: null });
     expect(titles(operator)).toContain('自動重試');
     expect(copy(operator)).toContain('可立即重試或重寄');
   });
 
-  it('names system logs only when granted and warns test identities', () => {
-    expect(copy(mailMessagesTour({ resend: false, testing: false, logs: '系統日誌' }))).toContain(
+  it('names system logs only when granted', () => {
+    expect(copy(mailMessagesTour({ resend: false, logs: '系統日誌' }))).toContain(
       '到「系統日誌」查',
     );
-    const denied = copy(mailMessagesTour({ resend: false, testing: true, logs: null }));
-    expect(denied).not.toContain('日誌');
-    expect(denied).toContain('測試身分，只能查看');
-    expect(copy(mailMessagesTour({ resend: false, testing: false, logs: null }))).not.toContain(
-      '測試身分',
-    );
+    expect(copy(mailMessagesTour({ resend: false, logs: null }))).not.toContain('日誌');
   });
 
   it('shows at most one detail action, chosen by the message state', () => {
@@ -80,7 +75,7 @@ describe('mailMessagesTour', () => {
   });
 
   it('scopes page steps to the page and drawer steps to the drawer', () => {
-    for (const step of tourSteps(mailMessagesTour({ resend: true, testing: true, logs: 'x' })))
+    for (const step of tourSteps(mailMessagesTour({ resend: true, logs: 'x' })))
       expect(step.target).toMatch(/^nx-mail-messages-page /);
     for (const action of ['retry', 'resend'] as const)
       for (const step of tourSteps(mailDetailTour({ action, attempts: true, logs: 'x' })))
@@ -201,8 +196,6 @@ describe('mail messages tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) => granted.has(feature),

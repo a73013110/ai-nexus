@@ -114,7 +114,6 @@ export class AttendanceImportsPage {
   readonly tour = computed(() =>
     attendanceImportsTour({
       maintain: this.session.has('attendance.imports.reimport'),
-      testing: this.session.testing(),
     }),
   );
   readonly pageSize = signal(50);

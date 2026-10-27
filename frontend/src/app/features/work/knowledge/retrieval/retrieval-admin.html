@@ -99,11 +99,7 @@
                     type="button"
                     class="primary-button retrieval-activate"
                     [pending]="isWorking(profile, 'activate')"
-                    [disabled]="
-                      blocked(profile, 'activate') ||
-                      session.testing() ||
-                      !profile.coverage.complete
-                    "
+                    [disabled]="blocked(profile, 'activate') || !profile.coverage.complete"
                     [title]="
                       profile.coverage.complete ? '' : '覆蓋率達 100% 且文件全部就緒後才能啟用'
                     "
@@ -118,11 +114,7 @@
                     type="button"
                     class="danger-button retrieval-clear"
                     [pending]="isWorking(profile, 'clear')"
-                    [disabled]="
-                      blocked(profile, 'clear') ||
-                      session.testing() ||
-                      profile.coverage.completedChunks === 0
-                    "
+                    [disabled]="blocked(profile, 'clear') || profile.coverage.completedChunks === 0"
                     (click)="operate(profile, 'clear')"
                   >
                     {{ isWorking(profile, 'clear') ? '清除中…' : '清除退役向量' }}
@@ -135,9 +127,7 @@
                   type="button"
                   class="secondary-button retrieval-rebuild"
                   [pending]="isWorking(profile, 'rebuild')"
-                  [disabled]="
-                    blocked(profile, 'rebuild') || session.testing() || jobActive(profile)
-                  "
+                  [disabled]="blocked(profile, 'rebuild') || jobActive(profile)"
                   (click)="operate(profile, 'rebuild')"
                 >
                   {{ isWorking(profile, 'rebuild') ? '重建中…' : '開始重建' }}
@@ -177,7 +167,7 @@
     class="quiet-button retrieval-probe"
     title="驗證只傳送合成資料，會計入檢索模型呼叫配額"
     [pending]="probing()"
-    [disabled]="!probing() && (session.testing() || !capabilities().length)"
+    [disabled]="!probing() && !capabilities().length"
     (click)="probe()"
   >
     <nx-icon name="check" />{{ probing() ? '驗證中…' : '驗證檢索模型' }}

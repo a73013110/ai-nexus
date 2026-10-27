@@ -36,7 +36,7 @@ const hosts = (definition: ProductTourDefinition, host: string) => {
 
 describe('access control page tours', () => {
   it('explains roles as groups and points at the groups and users pages', () => {
-    const steps = tourSteps(rolesTour({ names, testing: false, assign: true }));
+    const steps = tourSteps(rolesTour({ names, assign: true }));
     expect(steps.map((step) => step.title)).toEqual([
       '角色是授權的入口',
       '新增角色',
@@ -49,36 +49,16 @@ describe('access control page tours', () => {
   });
 
   it('says who assigns roles when the viewer cannot open the users page', () => {
-    const steps = tourSteps(rolesTour({ names, testing: false, assign: false }));
+    const steps = tourSteps(rolesTour({ names, assign: false }));
     expect(steps[3].description).toContain('由有「〔identity.users〕」頁授權的管理員');
   });
 
-  it('drops create steps and explains read-only while testing an identity', () => {
-    for (const definition of [
-      rolesTour({ names, testing: true, assign: true }),
-      groupsTour({ names, testing: true }),
-      featuresTour({ names, testing: true }),
-    ]) {
-      const steps = tourSteps(definition);
-      expect(steps.map((step) => step.title)).not.toContain('新增角色');
-      expect(steps.map((step) => step.title)).not.toContain('新增功能群組');
-      expect(steps.at(-1)?.description).toContain('只能查看');
-    }
-    expect(titles(navigationTour({ names, testing: true }))).toEqual([
-      '選單是資料',
-      '每個人看到的不同',
-      '編輯項目',
-    ]);
-  });
-
   it('links each concept to the next page in the chain', () => {
-    expect(tourSteps(groupsTour({ names, testing: false }))[0].description).toContain(
-      '〔access-control.roles〕',
-    );
-    expect(tourSteps(featuresTour({ names, testing: false }))[0].description).toContain(
+    expect(tourSteps(groupsTour({ names }))[0].description).toContain('〔access-control.roles〕');
+    expect(tourSteps(featuresTour({ names }))[0].description).toContain(
       '〔access-control.groups〕',
     );
-    const navigation = tourSteps(navigationTour({ names, testing: false }));
+    const navigation = tourSteps(navigationTour({ names }));
     expect(navigation.map((step) => step.title)).toEqual([
       '選單是資料',
       '新增項目',
@@ -91,10 +71,10 @@ describe('access control page tours', () => {
   });
 
   it('scopes every target to its page', () => {
-    hosts(rolesTour({ names, testing: false, assign: true }), 'nx-roles-page');
-    hosts(groupsTour({ names, testing: false }), 'nx-groups-page');
-    hosts(featuresTour({ names, testing: false }), 'nx-features-page');
-    hosts(navigationTour({ names, testing: false }), 'nx-navigation-page');
+    hosts(rolesTour({ names, assign: true }), 'nx-roles-page');
+    hosts(groupsTour({ names }), 'nx-groups-page');
+    hosts(featuresTour({ names }), 'nx-features-page');
+    hosts(navigationTour({ names }), 'nx-navigation-page');
   });
 });
 
@@ -105,7 +85,6 @@ describe('access control dialog tours', () => {
       kind: 'role',
       creating: false,
       models: false,
-      testing: false,
       ...options,
     });
 
@@ -132,9 +111,7 @@ describe('access control dialog tours', () => {
 
   it('only offers kind and position while creating a navigation item', () => {
     const tour = (options: Partial<Parameters<typeof navigationItemTour>[0]>) =>
-      titles(
-        navigationItemTour({ names, kind: 'link', creating: false, testing: false, ...options }),
-      );
+      titles(navigationItemTour({ names, kind: 'link', creating: false, ...options }));
     expect(tour({ creating: true })).toEqual([
       '選擇種類',
       '放在哪裡',
@@ -146,22 +123,12 @@ describe('access control dialog tours', () => {
     expect(tour({ kind: 'group' })).toEqual(['分群名稱']);
   });
 
-  it('ends with a read-only note while testing an identity', () => {
-    expect(titles(editor({ testing: true })).at(-1)).toBe('測試身分唯讀');
-    expect(
-      titles(navigationItemTour({ names, kind: 'group', creating: false, testing: true })).at(-1),
-    ).toBe('測試身分唯讀');
-  });
-
   it('scopes every target to its dialog', () => {
     for (const kind of ['role', 'group', 'feature'] as const)
       for (const models of [false, true])
-        hosts(editor({ kind, models, creating: true, testing: true }), 'nx-access-editor-dialog');
+        hosts(editor({ kind, models, creating: true }), 'nx-access-editor-dialog');
     for (const kind of ['group', 'page', 'link'] as const)
-      hosts(
-        navigationItemTour({ names, kind, creating: true, testing: true }),
-        'nx-navigation-item-dialog',
-      );
+      hosts(navigationItemTour({ names, kind, creating: true }), 'nx-navigation-item-dialog');
   });
 });
 
@@ -241,8 +208,6 @@ describe('access control tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: () => true,
@@ -285,7 +250,7 @@ describe('access control tour targets', () => {
     expectTargets(dialog.tour());
   });
 
-  it('finds the groups page and both group editor tabs, including the read-only save bar', async () => {
+  it('finds the groups page and both group editor tabs', async () => {
     const { fixture, settle, expectTargets } = await render(GroupsPage);
     expectTargets(fixture.componentInstance.tour(), /^nx-groups-page /);
     const dialog = fixture.debugElement.query(By.directive(AccessEditorDialog))
@@ -293,9 +258,6 @@ describe('access control tour targets', () => {
     dialog.open('group', catalog.groups[0] as unknown as AdminGroupDto);
     await settle();
     expectTargets(dialog.tour());
-    expectTargets(
-      accessEditorTour({ names, kind: 'group', creating: false, models: false, testing: true }),
-    );
     dialog.groupSection.set('models');
     await settle();
     expectTargets(dialog.tour());
@@ -319,6 +281,5 @@ describe('access control tour targets', () => {
     dialog.create('link', null);
     await settle();
     expectTargets(dialog.tour());
-    expectTargets(navigationItemTour({ names, kind: 'link', creating: true, testing: true }));
   });
 });

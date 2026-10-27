@@ -49,8 +49,6 @@ function setup({
     me: signal({ id: 'u1' }),
     has: (feature: string) => features.includes(feature),
     featureName: () => '打卡匯入紀錄',
-    testing: signal(false),
-    testingNote: signal(''),
   };
   const api = {
     imports: vi.fn(async (_filters: object, _take: number, _before?: string) => [

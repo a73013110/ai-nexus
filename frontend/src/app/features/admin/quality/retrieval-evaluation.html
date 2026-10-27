@@ -57,7 +57,7 @@
                 nxPending
                 class="quiet-button"
                 [pending]="working() === 'retry'"
-                [disabled]="(busy() && working() !== 'retry') || session.testing()"
+                [disabled]="busy() && working() !== 'retry'"
                 (click)="control('retry')"
               >
                 <nx-icon name="repeat" />{{ working() === 'retry' ? '續跑中…' : '續跑評測' }}
@@ -231,12 +231,7 @@
             type="submit"
             class="primary-button retrieval-start"
             [pending]="working() === 'start'"
-            [disabled]="
-              (busy() && working() !== 'start') ||
-              form.invalid ||
-              !selected().length ||
-              session.testing()
-            "
+            [disabled]="(busy() && working() !== 'start') || form.invalid || !selected().length"
           >
             <nx-icon name="play" />{{ working() === 'start' ? '排入中…' : '開始四模式評測' }}
           </button>

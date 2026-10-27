@@ -18,7 +18,7 @@
     page-actions
     type="button"
     class="primary-button organization-create"
-    [disabled]="store.locked()"
+    [disabled]="store.busy()"
     (click)="create()"
   >
     <nx-icon name="plus" />新增單位
@@ -58,7 +58,7 @@
           從最上層（例如公司）開始建立，再逐層加入處、部、課；也可以從公文系統匯入部門與主管。部門不從
           AD 同步。
         </p>
-        <button type="button" class="primary-button" [disabled]="store.locked()" (click)="create()">
+        <button type="button" class="primary-button" [disabled]="store.busy()" (click)="create()">
           新增單位
         </button>
       </nx-empty-state>
@@ -151,7 +151,7 @@
                 <button
                   type="button"
                   class="secondary-button"
-                  [disabled]="store.locked()"
+                  [disabled]="store.busy()"
                   (click)="editSelected()"
                 >
                   <nx-icon name="edit" />編輯
@@ -159,7 +159,7 @@
                 <button
                   type="button"
                   class="secondary-button"
-                  [disabled]="store.locked() || row.depth >= maxDepth"
+                  [disabled]="store.busy() || row.depth >= maxDepth"
                   (click)="create(true)"
                 >
                   <nx-icon name="plus" />新增下層
@@ -208,7 +208,7 @@
                   <button
                     type="button"
                     class="secondary-button organization-add-members"
-                    [disabled]="store.locked()"
+                    [disabled]="store.busy()"
                     (click)="addMembers()"
                   >
                     <nx-icon name="plus" />加入成員

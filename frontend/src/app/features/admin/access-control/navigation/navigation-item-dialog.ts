@@ -129,7 +129,6 @@ export class NavigationItemDialog {
   readonly saving = signal(false);
   readonly error = signal('');
   readonly fieldError = signal<FieldError | null>(null);
-  readonly locked = computed(() => this.saving() || this.session.testing());
   readonly dirty = computed(() => {
     const editor = this.editor(),
       opened = this.opened();
@@ -195,7 +194,6 @@ export class NavigationItemDialog {
           names: accessPageNames((id) => this.session.featureName(id)),
           kind: editor.draft.kind,
           creating: !editor.id,
-          testing: this.session.testing(),
         })
       : null;
   });
@@ -270,7 +268,7 @@ export class NavigationItemDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor();
-    if (!editor || this.locked() || (editor.id && !this.dirty())) return;
+    if (!editor || this.saving() || (editor.id && !this.dirty())) return;
     const draft = editor.draft;
     const invalid = this.validate(draft);
     if (invalid) {

@@ -102,9 +102,9 @@ describe('AdminUserConversations', () => {
   it('renders every conversation tour target inside the tab', () => {
     const { root } = setup(false);
     const prefix = 'nx-admin-user-inspector nx-admin-user-conversations ';
-    const targets = tourSteps(
-      userInspectorTour({ audit: false, testing: false, conversations: true }),
-    ).map((step) => step.target);
+    const targets = tourSteps(userInspectorTour({ audit: false, conversations: true })).map(
+      (step) => step.target,
+    );
     expect(targets.every((target) => target.startsWith(prefix))).toBe(true);
     for (const target of targets)
       expect(root.querySelector(target.slice(prefix.length)), target).not.toBeNull();

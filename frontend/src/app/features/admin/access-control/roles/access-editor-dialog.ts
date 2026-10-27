@@ -219,7 +219,6 @@ export class AccessEditorDialog {
   });
   readonly saving = signal(false);
   /** 儲存中或測試其他身分時，欄位唯讀。 */
-  readonly locked = computed(() => this.saving() || this.session.testing());
   readonly editorError = signal('');
   /** 功能群組的設定：它的區段頁面與模型政策。 */
   readonly groupSection = signal<GroupSection>('settings');
@@ -305,7 +304,6 @@ export class AccessEditorDialog {
           kind: draft.kind,
           creating: draft.isNew,
           models: this.groupSection() === 'models',
-          testing: this.session.testing(),
         })
       : null;
   });
@@ -401,7 +399,7 @@ export class AccessEditorDialog {
   async save(event: Event) {
     event.preventDefault();
     const draft = this.editor();
-    if (!draft || this.locked() || (!draft.isNew && !this.dirty())) return;
+    if (!draft || this.saving() || (!draft.isNew && !this.dirty())) return;
     // 錯誤會打開含有該欄位的分頁並聚焦（或顯示訊息），
     // 即使欄位位於頁面較下方，修正處也能被看到。
     const fail = (section: GroupSection, message: string, field?: string) => {

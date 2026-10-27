@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
@@ -39,7 +38,6 @@ export class AdminUserStore {
   private readonly admin = inject(AdminUsersStore);
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
-  private readonly session = inject(WorkspaceSession);
   /** 從列表開啟的使用者；對話框退場前保留，避免內容被清空。 */
   readonly user = signal<AdminUserDto | null>(null);
   private readonly visit = signal(0);
@@ -65,7 +63,7 @@ export class AdminUserStore {
     computation: () => null,
   });
   /** 分頁儲存中、AD 綁定送出中或測試其他身分時，欄位唯讀。 */
-  readonly locked = computed(() => !!this.saving() || !!this.binding() || this.session.testing());
+  readonly locked = computed(() => !!this.saving() || !!this.binding());
 
   private readonly request = computed(() => {
     const key = this.key(),

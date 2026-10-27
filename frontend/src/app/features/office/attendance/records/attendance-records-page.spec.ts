@@ -129,8 +129,6 @@ function setup(
     has: (feature: string) => features.includes(feature),
     seesOthers: () => scopes.some((scope) => scope !== 'own'),
     featureName: (id: string) => (id === 'attendance.records' ? '出勤紀錄' : id),
-    testing: signal(false),
-    testingNote: signal(''),
   };
   const api = {
     records: vi.fn((_query: AttendanceRecordFilters, _offset: number, _limit: number) => read()),

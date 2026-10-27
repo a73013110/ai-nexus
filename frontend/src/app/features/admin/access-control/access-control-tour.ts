@@ -24,23 +24,9 @@ export function accessPageNames(name: (id: string) => string): AccessPageNames {
   };
 }
 
-const READ_ONLY = '測試身分期間只能查看。';
-
-/** 測試身分期間對話框的儲存被停用；說明放在儲存列，而不是讓人以為按鈕壞了。 */
-function readOnlyStep(host: string): TourStep {
-  return {
-    target: `${host} nx-dialog-save-bar, ${host} .dialog-foot`,
-    title: '測試身分唯讀',
-    description: '以其他使用者的身分檢視時，欄位唯讀、不能建立或儲存；結束測試身分後再修改。',
-    side: 'top',
-  };
-}
-
 /** 角色頁的導覽；角色在使用者頁指派，沒有該頁授權時改說明由誰指派。 */
 export function rolesTour(options: {
   names: AccessPageNames;
-  /** 正以測試身分檢視，頁面全部唯讀。 */
-  testing: boolean;
   /** 檢視者能開使用者頁，自己就能把角色指派出去。 */
   assign: boolean;
 }): ProductTourDefinition {
@@ -52,7 +38,7 @@ export function rolesTour(options: {
       description: `使用者取得角色，角色由功能群組組成；可用功能是所有角色的群組聯集。群組在「${names.groups}」頁維護。`,
       side: 'bottom',
     },
-    !options.testing && {
+    {
       target: 'nx-roles-page nx-admin-roles-tab .page-toolbar .primary-button',
       title: '新增角色',
       description: '填識別碼與名稱、勾選功能群組；識別碼建立後不能修改。',
@@ -73,20 +59,15 @@ export function rolesTour(options: {
     {
       target: 'nx-roles-page .admin-roles-table .ui-table-link',
       title: '編輯角色',
-      description: options.testing
-        ? `點名稱查看組成與儲存後可用的功能；${READ_ONLY}`
-        : '點名稱調整名稱、啟用與群組，並試算儲存後可用的功能；角色只能停用、不能刪除，以保留授權歷史。',
+      description:
+        '點名稱調整名稱、啟用與群組，並試算儲存後可用的功能；角色只能停用、不能刪除，以保留授權歷史。',
     },
   ];
   return { steps };
 }
 
 /** 功能群組頁的導覽。 */
-export function groupsTour(options: {
-  names: AccessPageNames;
-  /** 正以測試身分檢視，頁面全部唯讀。 */
-  testing: boolean;
-}): ProductTourDefinition {
+export function groupsTour(options: { names: AccessPageNames }): ProductTourDefinition {
   const { names } = options;
   const steps: TourSteps = [
     {
@@ -95,7 +76,7 @@ export function groupsTour(options: {
       description: `群組授予功能、AI 模型與附件容量，但不直接給人；要加入「${names.roles}」頁的角色，擁有該角色的使用者才取得。`,
       side: 'bottom',
     },
-    !options.testing && {
+    {
       target: 'nx-groups-page nx-admin-groups-tab .page-toolbar .primary-button',
       title: '新增功能群組',
       description: '建立後勾選功能並視需要限制模型；之後新增的功能不會自動加進既有群組。',
@@ -115,20 +96,14 @@ export function groupsTour(options: {
     {
       target: 'nx-groups-page .admin-groups-table .ui-table-link',
       title: '編輯群組',
-      description: options.testing
-        ? `點名稱查看功能、資料範圍與模型政策；${READ_ONLY}`
-        : '點名稱調整功能、資料範圍、模型與容量；群組只能停用、不能刪除，以保留授權歷史。',
+      description: '點名稱調整功能、資料範圍、模型與容量；群組只能停用、不能刪除，以保留授權歷史。',
     },
   ];
   return { steps };
 }
 
 /** 功能頁的導覽。 */
-export function featuresTour(options: {
-  names: AccessPageNames;
-  /** 正以測試身分檢視，頁面全部唯讀。 */
-  testing: boolean;
-}): ProductTourDefinition {
+export function featuresTour(options: { names: AccessPageNames }): ProductTourDefinition {
   const { names } = options;
   const steps: TourSteps = [
     {
@@ -152,20 +127,14 @@ export function featuresTour(options: {
     {
       target: 'nx-features-page .admin-features-table .ui-table-link',
       title: '改名或停用',
-      description: options.testing
-        ? `點名稱查看預設名稱與啟用狀態；${READ_ONLY}`
-        : `點名稱改名（留白沿用預設名稱）或停用；新名稱同時用於側欄與頁面標題，側欄位置在「${names.navigation}」頁安排。`,
+      description: `點名稱改名（留白沿用預設名稱）或停用；新名稱同時用於側欄與頁面標題，側欄位置在「${names.navigation}」頁安排。`,
     },
   ];
   return { steps };
 }
 
-/** 選單頁的導覽；測試身分期間新增、移動與列操作都被停用。 */
-export function navigationTour(options: {
-  names: AccessPageNames;
-  /** 正以測試身分檢視，頁面全部唯讀。 */
-  testing: boolean;
-}): ProductTourDefinition {
+/** 選單頁的導覽。 */
+export function navigationTour(options: { names: AccessPageNames }): ProductTourDefinition {
   const { names } = options;
   const steps: TourSteps = [
     {
@@ -174,13 +143,13 @@ export function navigationTour(options: {
       description: `側欄的分群、頁面與外部連結存在資料庫，只決定入口排列、不授予功能；權限仍由「${names.roles}」與「${names.groups}」頁決定。`,
       side: 'bottom',
     },
-    !options.testing && {
+    {
       target: 'nx-navigation-page nx-navigation-editor .page-toolbar nx-action-menu',
       title: '新增項目',
       description: '分群整理側欄，最多四層；頁面從功能目錄挑選；外部連結的網站須在系統允許清單內。',
       side: 'bottom',
     },
-    !options.testing && {
+    {
       target: 'nx-navigation-page .navigation-table .navigation-handle',
       title: '調整順序與層級',
       description:
@@ -193,7 +162,7 @@ export function navigationTour(options: {
       description:
         '使用者只看到有權限且啟用的頁面與可見的連結；沒有可見項目的分群不顯示，只要有一項就照常顯示分群。',
     },
-    !options.testing && {
+    {
       target: 'nx-navigation-page .navigation-table .navigation-row-menu',
       title: '更多操作',
       description: '可編輯、移到其他分群、在分群內新增或刪除；分群要先清空才能刪除。',
@@ -202,9 +171,7 @@ export function navigationTour(options: {
     {
       target: 'nx-navigation-page .navigation-table .ui-table-link',
       title: '編輯項目',
-      description: options.testing
-        ? `點名稱查看設定；${READ_ONLY}`
-        : `點名稱編輯分群或連結；頁面的名稱跟著功能，要改名請到「${names.features}」頁。`,
+      description: `點名稱編輯分群或連結；頁面的名稱跟著功能，要改名請到「${names.features}」頁。`,
     },
   ];
   return { steps };
@@ -218,8 +185,6 @@ export function accessEditorTour(options: {
   creating: boolean;
   /** 功能群組目前在「AI 模型」頁籤。 */
   models: boolean;
-  /** 正以測試身分檢視，欄位唯讀。 */
-  testing: boolean;
 }): ProductTourDefinition {
   const { names, kind } = options;
   const host = 'nx-access-editor-dialog';
@@ -306,7 +271,7 @@ export function accessEditorTour(options: {
         side: 'top',
       },
     ];
-  return { steps: [...steps, options.testing && readOnlyStep(host)] };
+  return { steps };
 }
 
 /** 選單項目對話框的導覽；種類只在新增時可選，各種類的欄位不同。 */
@@ -315,8 +280,6 @@ export function navigationItemTour(options: {
   kind: NavigationKind;
   /** 新增（而非編輯既有項目），可選種類與位置。 */
   creating: boolean;
-  /** 正以測試身分檢視，欄位唯讀。 */
-  testing: boolean;
 }): ProductTourDefinition {
   const { names, kind } = options;
   const host = 'nx-navigation-item-dialog';
@@ -362,7 +325,6 @@ export function navigationItemTour(options: {
         '不勾選＝所有登入者都看得到；勾選後只有屬於其中任一功能群組的人看得到。外部系統仍自行驗證權限。',
       side: 'top',
     },
-    options.testing && readOnlyStep(host),
   ];
   return { steps };
 }

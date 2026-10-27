@@ -53,19 +53,3 @@ public static class Policies
     /// </summary>
     public const string AccessCatalog = Prefix + "access-catalog";
 }
-
-/// <summary>
-/// 原本 <c>admin</c>、<c>operations</c> 兩個管理授權拆出的功能。測試身分可以讀取這些頁面的 API 以重現使用者看到的畫面，
-/// 但不可變更（<c>FeatureAuthorizationHandler</c>）；新增同性質的管理頁時加進這裡。
-/// </summary>
-public static class AdministrativeFeatures
-{
-    public static IReadOnlySet<string> All { get; } = new HashSet<string>(
-    [
-        FeatureCatalog.IdentityUsers, FeatureCatalog.IdentityUsersImport, FeatureCatalog.IdentityUsersSync, FeatureCatalog.AccessControlRoles, FeatureCatalog.AccessControlGroups,
-        FeatureCatalog.AccessControlFeatures, FeatureCatalog.AccessControlNavigation, FeatureCatalog.Organization, FeatureCatalog.OrganizationImport, FeatureCatalog.OperationsUsage,
-        FeatureCatalog.KnowledgeRetrieval, FeatureCatalog.BillingPrices,
-        FeatureCatalog.MailMessages, FeatureCatalog.MailMessagesResend, FeatureCatalog.AttendanceCards, FeatureCatalog.AttendanceCardsMaintain,
-        FeatureCatalog.AttendanceImports, FeatureCatalog.AttendanceImportsReimport, FeatureCatalog.AttendanceCalendar, FeatureCatalog.AttendanceCalendarMaintain,
-    ], StringComparer.Ordinal);
-}

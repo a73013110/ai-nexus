@@ -34,7 +34,7 @@ const catalog = {
 const role = catalog.roles[0] as unknown as AdminRoleDto;
 const group = { ...catalog.groups[1], policy: null } as unknown as AdminGroupDto;
 
-function setup(testing = false) {
+function setup() {
   const api = {
     role: vi.fn(async () => undefined),
     group: vi.fn(async () => undefined),
@@ -49,7 +49,7 @@ function setup(testing = false) {
     providers: [
       { provide: AccessControlApi, useValue: api },
       { provide: AccessControlStore, useValue: store },
-      { provide: WorkspaceSession, useValue: { testing: signal(testing) } },
+      { provide: WorkspaceSession, useValue: {} },
     ],
   });
   // 測試的是編輯器的邏輯；它的範本需要 jsdom 沒有的瀏覽器版面 API。
@@ -344,14 +344,5 @@ describe('AccessEditorDialog', () => {
     ask.mockResolvedValueOnce(true);
     await dialog.requestClose();
     expect(native.open).toBe(false);
-  });
-
-  it('refuses writes while testing another identity', async () => {
-    const { dialog, api } = setup(true);
-    dialog.open('role', role);
-    expect(dialog.locked()).toBe(true);
-    dialog.update('ids', ['basic', 'review']);
-    await dialog.save(new Event('submit'));
-    expect(api.role).not.toHaveBeenCalled();
   });
 });

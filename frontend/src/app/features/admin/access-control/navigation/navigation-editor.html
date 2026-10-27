@@ -61,7 +61,7 @@
               [attr.aria-label]="
                 '移動「' + row.name + '」，上下鍵調整順序，左鍵移出分群，右鍵移入上方分群'
               "
-              [attr.aria-disabled]="busy()"
+              [attr.aria-disabled]="saving()"
               (pointerdown)="grab($event, row)"
               (keydown)="key($event, row)"
             >
@@ -167,13 +167,7 @@
       </div>
       <footer class="dialog-foot">
         <button type="button" class="secondary-button" (click)="moveDialog.close()">取消</button>
-        <button
-          nxPending
-          type="submit"
-          class="primary-button"
-          [pending]="saving()"
-          [disabled]="session.testing()"
-        >
+        <button nxPending type="submit" class="primary-button" [pending]="saving()">
           {{ saving() ? '移動中…' : '移動' }}
         </button>
       </footer>

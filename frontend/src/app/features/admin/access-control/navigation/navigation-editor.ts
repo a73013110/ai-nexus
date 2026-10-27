@@ -13,7 +13,6 @@ import {
 import { GripVertical } from 'lucide';
 import { catalogFeature } from '@core/api/catalog';
 import type { NavigationItemDto, NavigationOrderItem } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { featureIcon, type NavigationKind } from '@core/layout/navigation-tree';
 import { ThemeService } from '@core/preferences/theme-service';
@@ -96,7 +95,6 @@ interface Drag {
 })
 export class NavigationEditor {
   readonly store = inject(NavigationStore);
-  readonly session = inject(WorkspaceSession);
   private readonly access = inject(AccessControlStore);
   private readonly api = inject(AccessControlApi);
   private readonly app = inject(ApplicationRef);
@@ -113,7 +111,7 @@ export class NavigationEditor {
     icon,
   }));
   readonly saving = signal(false);
-  /** 刪除中的節點：確認後選單已關閉，由該列的操作鈕轉圈；其他列照常可操作選單（寫入仍由 `busy` 擋）。 */
+  /** 刪除中的節點：確認後選單已關閉，由該列的操作鈕轉圈；其他列照常可操作選單（寫入仍由 `saving` 擋）。 */
   readonly deleting = signal<string | null>(null);
   readonly dragging = signal<string | null>(null);
   /** 拖曳中的暫定位置（只改畫面）；放手才送出。 */
@@ -122,7 +120,6 @@ export class NavigationEditor {
   readonly dropInto = signal<string | null>(null);
   readonly announcement = signal('');
   private drag: Drag | null = null;
-  readonly busy = computed(() => this.saving() || this.session.testing());
 
   readonly rows = computed<NavigationRow[]>(() => {
     const rows: NavigationRow[] = [];
@@ -173,7 +170,7 @@ export class NavigationEditor {
   readonly actions = computed<MenuAction[]>(() => {
     const row = this.chosen();
     if (!row) return [];
-    const busy = this.busy(),
+    const busy = this.saving(),
       items = this.store.items(),
       id = row.item.id;
     const grandParent = row.parentId
@@ -234,7 +231,7 @@ export class NavigationEditor {
   }
   act(action: string) {
     const row = this.chosen();
-    if (!row || (this.busy() && action !== 'edit')) return;
+    if (!row || (this.saving() && action !== 'edit')) return;
     const shift = ({ up: -1, down: 1, first: 'first', last: 'last' } as const)[
       action as 'up' | 'down' | 'first' | 'last'
     ];
@@ -257,7 +254,7 @@ export class NavigationEditor {
     )[event.key];
     if (shift === undefined && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    if (this.busy()) return;
+    if (this.saving()) return;
     if (shift !== undefined) void this.shift(row, shift, true);
     else if (event.key === 'ArrowLeft') void this.outdent(row, true);
     else void this.indent(row, true);
@@ -414,7 +411,7 @@ export class NavigationEditor {
 
   // ── 拖曳 ──
   grab(event: PointerEvent, row: NavigationRow) {
-    if (event.button !== 0 || this.drag || this.busy() || this.store.items().length < 2) return;
+    if (event.button !== 0 || this.drag || this.saving() || this.store.items().length < 2) return;
     const element = (event.currentTarget as HTMLElement).closest('tr');
     if (!element) return;
     event.preventDefault();

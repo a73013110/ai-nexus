@@ -18,32 +18,21 @@ const purposeStep = (host: string, title: string, description: string): TourStep
   side: 'bottom',
 });
 
-/** 出勤管理頁共用的條件：是否有寫入動作、是否正以測試身分檢視。 */
+/** 出勤管理頁共用的條件：是否有寫入動作。 */
 interface WriteAccess {
   /** 有該頁的寫入動作（例如 `attendance.cards.maintain`）。 */
   maintain: boolean;
-  /** 正以測試身分檢視，寫入按鈕停用。 */
-  testing: boolean;
 }
-
-/** 寫入步驟（按鈕可用）只給有動作且不是測試身分的人。 */
-const canWrite = (access: WriteAccess) => access.maintain && !access.testing;
-/** 測試身分期間寫入按鈕看得到但停用：略過寫入步驟，在留下的步驟說明唯讀。 */
-const readOnly = (description: string, access: WriteAccess) =>
-  access.maintain && access.testing ? `${description}測試身分期間只能查看。` : description;
 
 /** 卡號對應頁：一張卡號清單，狀態切換篩持有中、無人持有或隱藏。 */
 export function attendanceCardsTour(options: WriteAccess): ProductTourDefinition {
-  const write = canWrite(options);
+  const write = options.maintain;
   return {
     steps: [
       purposeStep(
         CARDS,
         '刷卡依持有期間歸戶',
-        readOnly(
-          '打卡機只記卡號；卡號指派了持有人與期間，期間內的刷卡才算到這個人的出勤。打卡檔出現的新卡號會自動列進來。',
-          options,
-        ),
+        '打卡機只記卡號；卡號指派了持有人與期間，期間內的刷卡才算到這個人的出勤。打卡檔出現的新卡號會自動列進來。',
       ),
       write && {
         target: `${CARDS} .cards-create`,
@@ -71,15 +60,15 @@ export function attendanceCardsTour(options: WriteAccess): ProductTourDefinition
   };
 }
 
-/** 卡片詳情抽屜：寫入步驟只在有維護權限且不是測試身分時出現。 */
+/** 卡片詳情抽屜：寫入步驟只在有維護權限時出現。 */
 export function cardDetailTour(options: WriteAccess): ProductTourDefinition {
-  const write = canWrite(options);
+  const write = options.maintain;
   return {
     steps: [
       {
         target: `${CARD_DRAWER} .cards-holder`,
         title: '目前持有人',
-        description: readOnly('目前持有人是今天落在持有期間內的人。', options),
+        description: '目前持有人是今天落在持有期間內的人。',
         side: 'bottom',
       },
       write && {
@@ -119,19 +108,16 @@ export function cardDetailTour(options: WriteAccess): ProductTourDefinition {
   };
 }
 
-/** 打卡匯入紀錄頁：手動重匯步驟只給有 `attendance.imports.reimport` 且不是測試身分的人。 */
+/** 打卡匯入紀錄頁：手動重匯步驟只給有 `attendance.imports.reimport` 的人。 */
 export function attendanceImportsTour(options: WriteAccess): ProductTourDefinition {
   return {
     steps: [
       purposeStep(
         IMPORTS,
         '每天一個打卡檔',
-        readOnly(
-          '系統定時掃描打卡機每天輸出的檔，檔案有變動就重新匯入，每次留一筆紀錄；任何一行格式錯誤整個檔就失敗，刷卡維持上次成功的內容。',
-          options,
-        ),
+        '系統定時掃描打卡機每天輸出的檔，檔案有變動就重新匯入，每次留一筆紀錄；任何一行格式錯誤整個檔就失敗，刷卡維持上次成功的內容。',
       ),
-      canWrite(options) && {
+      options.maintain && {
         target: `${IMPORTS} .imports-reimport`,
         title: '手動重匯',
         description: `修正打卡檔或補放遺漏的檔之後用；可選單一檔案或最多 ${MAX_REIMPORT_DAYS} 天的日期區間，不論檔案有沒有變都會重新匯入。`,
@@ -155,7 +141,7 @@ export function attendanceImportsTour(options: WriteAccess): ProductTourDefiniti
   };
 }
 
-/** 手動重匯對話框：單一檔案與日期區間各自的日期欄位；測試身分期間頁面不開這個對話框。 */
+/** 手動重匯對話框：單一檔案與日期區間各自的日期欄位。 */
 export function reimportTour(options: { mode: 'single' | 'range' }): ProductTourDefinition {
   return {
     steps: [
@@ -189,7 +175,7 @@ export function reimportTour(options: { mode: 'single' | 'range' }): ProductTour
   };
 }
 
-/** 假日設定頁：步驟依月曆或清單切換；能不能點日期修改取決於維護權限、測試身分與公文系統是否唯讀。 */
+/** 假日設定頁：步驟依月曆或清單切換；能不能點日期修改取決於維護權限與公文系統是否唯讀。 */
 export function attendanceCalendarTour(
   options: WriteAccess & {
     view: 'calendar' | 'list';
@@ -198,16 +184,13 @@ export function attendanceCalendarTour(
   },
 ): ProductTourDefinition {
   const calendar = options.view === 'calendar';
-  const editable = canWrite(options) && !options.gdReadOnly;
+  const editable = options.maintain && !options.gdReadOnly;
   return {
     steps: [
       purposeStep(
         CALENDAR,
         '假日來自公文系統',
-        readOnly(
-          '這裡讀寫的是公文系統的假日行事曆，平台不另存一份；出勤判定依每天的上午、下午是否放假。',
-          options,
-        ),
+        '這裡讀寫的是公文系統的假日行事曆，平台不另存一份；出勤判定依每天的上午、下午是否放假。',
       ),
       {
         target: `${CALENDAR} .calendar-nav`,

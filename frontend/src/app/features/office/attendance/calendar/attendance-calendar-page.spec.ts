@@ -41,8 +41,6 @@ function setup({
     has: (feature: string) =>
       feature === 'attendance.calendar' || (maintain && feature === 'attendance.calendar.maintain'),
     featureName: () => '假日設定',
-    testing: signal(false),
-    testingNote: signal(''),
   };
   const api = {
     calendarDays: vi.fn((from: string, _to: string) => read(from)),

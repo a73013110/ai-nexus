@@ -325,7 +325,7 @@ public static class PublicErrorCatalog
         ["template_limit"] = "個人範本最多 100 個。",
         ["template_missing"] = "找不到此範本。",
         ["template_not_found"] = "找不到這個範本。",
-        ["test_admin_read_only"] = "測試身分期間只能檢視管理功能；請先返回管理者再異動帳號與授權。",
+        ["test_account_security_locked"] = "測試身分期間不能變更該使用者的密碼與信箱；請返回管理者後從使用者管理調整。",
         ["test_identity_nested"] = "請先返回原管理者，再切換其他身分。",
         ["test_identity_same"] = "請選擇另一位使用者。",
         ["test_reason_required"] = "請填寫 4–240 字元的測試目的。",

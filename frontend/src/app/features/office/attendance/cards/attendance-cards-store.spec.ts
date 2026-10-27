@@ -43,7 +43,7 @@ const request: AssignRequest = {
   note: null,
 };
 
-function setup({ maintain = true, testing = false } = {}) {
+function setup({ maintain = true } = {}) {
   const generation = signal(1);
   const created = (body: CardAssignmentCreateRequest): CardAssignmentDto => ({
     ...held,
@@ -70,7 +70,6 @@ function setup({ maintain = true, testing = false } = {}) {
   const toast = { success: vi.fn() };
   const session = {
     auth: { generation },
-    testing: signal(testing),
     load: vi.fn(async () => true),
     has: (feature: string) =>
       feature === 'attendance.cards' || (maintain && feature === 'attendance.cards.maintain'),
@@ -139,7 +138,7 @@ describe('AttendanceCardsStore', () => {
     });
   });
 
-  it('turns other refusals into a reviewed message and never writes under a test identity', async () => {
+  it('turns other refusals into a reviewed message', async () => {
     const { store, api, settle } = setup();
     await settle();
     api.createAssignment.mockRejectedValueOnce(
@@ -148,13 +147,6 @@ describe('AttendanceCardsStore', () => {
     const outcome = await store.assign({ ...request, cardId: 'c2' }, async () => true);
     expect(outcome.saved).toBe(false);
     expect(outcome.saved ? '' : outcome.error).toContain('重疊');
-
-    TestBed.resetTestingModule();
-    const readOnly = setup({ testing: true });
-    await readOnly.settle();
-    expect(readOnly.store.locked()).toBe(true);
-    expect((await readOnly.store.assign(request, async () => true)).saved).toBe(false);
-    expect(readOnly.api.createAssignment).not.toHaveBeenCalled();
   });
 
   it('shows write actions only with the maintain action', async () => {

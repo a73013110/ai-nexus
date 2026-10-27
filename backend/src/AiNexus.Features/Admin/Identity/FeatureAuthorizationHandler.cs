@@ -1,7 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
-using AiNexus.Features.Admin.Identity.Sessions;
 
 namespace AiNexus.Features.Admin.Identity;
 
@@ -12,15 +11,6 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, FeatureRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated != true) return;
-        // 測試身分可讀取管理 API（存取管理與平台營運拆出的頁面），但絕不可變更。any-of policy 只要含其中一個就擋。
-        var guardsAdminApi = requirement.FeatureIds.Any(AdministrativeFeatures.All.Contains);
-        var isTestIdentity = SessionIdentity.IsTest(context.User);
-        var isMutation = http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS");
-        if (guardsAdminApi && isTestIdentity && isMutation)
-        {
-            context.Fail(new ErrorFailureReason(this, IdentityErrors.TestAdminReadOnly));
-            return;
-        }
         var ct = http.HttpContext?.RequestAborted ?? CancellationToken.None;
         var user = await current.GetAsync(ct);
         if (!user.IsSuccess) { context.Fail(new ErrorFailureReason(this, user.Error)); return; }

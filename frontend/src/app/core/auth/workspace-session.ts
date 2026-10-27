@@ -6,9 +6,6 @@ import { UserSettingsService } from '../preferences/user-settings';
 import { catalogFeature, type FeatureId } from '../api/catalog';
 import type { DataScopeId } from '../api/feature-catalog';
 
-/** 管理寫入因帳號正在測試其他身分而被拒絕時顯示。 */
-export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
-
 /** 功能頁共用的帳號脈絡；它永遠不載入對話歷史。 */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceSession {
@@ -17,10 +14,8 @@ export class WorkspaceSession {
   private readonly api = inject(WorkspaceApi);
   readonly settings = inject(UserSettingsService);
   private generation = -1;
-  /** 管理員正以其他身分操作；期間管理寫入會被拒絕。 */
+  /** 管理員正以其他身分操作；期間只有帳號安全設定（密碼、信箱）不能變更。 */
   readonly testing = computed(() => !!this.auth.session()?.testing);
-  /** 測試期間為 {@link TESTING_IDENTITY_NOTE}，否則為空（供儲存列的 `note` 使用）。 */
-  readonly testingNote = computed(() => (this.testing() ? TESTING_IDENTITY_NOTE : ''));
   constructor() {
     effect(() => {
       const generation = this.auth.generation();

@@ -62,7 +62,7 @@ function setup() {
           })),
         },
       },
-      { provide: WorkspaceSession, useValue: { testing: signal(false), testingNote: () => '' } },
+      { provide: WorkspaceSession, useValue: {} },
     ],
   });
   // 測試的是對話框的邏輯；範本的共用元件需要 jsdom 沒有的版面 API。

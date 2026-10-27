@@ -9,7 +9,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { PriceDto, PriceRequest, PriceTargetDto } from '@core/api/schema';
 import { formatDate, formatModelDisplayName, parseDateTimeInput } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
@@ -78,7 +77,6 @@ export class PriceVersionDialog {
   private readonly api = inject(BillingApi);
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
-  private readonly session = inject(WorkspaceSession);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild(DateTimePicker);
   private readonly confirmation = viewChild.required(ConfirmDialog);
@@ -92,7 +90,6 @@ export class PriceVersionDialog {
   readonly effective = signal('');
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly locked = this.session.testing;
   readonly dirty = computed(() => !!this.effective() || !samePrice(this.draft(), this.baseline()));
   readonly detail = computed(() => {
     const seed = this.seed();
@@ -103,13 +100,8 @@ export class PriceVersionDialog {
   });
   readonly tour = computed(() => {
     const from = this.seed().from;
-    return priceVersionTour({
-      copied: from === 'current' || from === 'history',
-      testing: this.locked(),
-    });
+    return priceVersionTour({ copied: from === 'current' || from === 'history' });
   });
-  /** 拒絕寫入時，取代儲存列原本的「尚未變更／有未儲存的變更」。 */
-  readonly note = this.session.testingNote;
   readonly rateError = computed(() =>
     this.draft().cachedInputPerMillion > this.draft().inputPerMillion
       ? '快取輸入不得高於一般輸入。'
@@ -117,7 +109,6 @@ export class PriceVersionDialog {
   );
   readonly canSave = computed(
     () =>
-      !this.locked() &&
       !this.saving() &&
       this.dirty() &&
       !!this.draft().modelId.trim() &&

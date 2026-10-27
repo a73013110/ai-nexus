@@ -49,7 +49,7 @@ const EMPTY_TEXT: Record<CardStatus, string> = {
 /**
  * 卡號對應（`attendance.cards`）：一張卡號清單。打卡檔出現過的卡號匯入時自動建立，
  * 有沒有持有人涵蓋的刷卡就是「待指派」；HR 不想在全公司出勤看到的卡（訪客卡、董事）改為隱藏。
- * 寫入另需 `attendance.cards.maintain`，沒有時不顯示寫入按鈕；測試身分顯示但停用（伺服器回 `test_admin_read_only`）。
+ * 寫入另需 `attendance.cards.maintain`，沒有時不顯示寫入按鈕。
  */
 @Component({
   selector: 'nx-attendance-cards-page',
@@ -88,14 +88,10 @@ export class AttendanceCardsPage {
   readonly statuses = CARD_STATUSES;
   readonly holderName = holderName;
   protected readonly initial = nameInitial;
-  readonly tour = computed(() =>
-    attendanceCardsTour({ maintain: this.store.canMaintain(), testing: this.session.testing() }),
-  );
+  readonly tour = computed(() => attendanceCardsTour({ maintain: this.store.canMaintain() }));
   /** 選取卡片時才有抽屜的導覽。 */
   readonly drawerTour = computed(() =>
-    this.store.selected()
-      ? cardDetailTour({ maintain: this.store.canMaintain(), testing: this.session.testing() })
-      : null,
+    this.store.selected() ? cardDetailTour({ maintain: this.store.canMaintain() }) : null,
   );
   readonly drawer = viewChild(DetailDrawer);
   private readonly cardDialog = viewChild.required(CardDialog);
@@ -182,17 +178,17 @@ export class AttendanceCardsPage {
   /** 抽屜標題列的卡片操作；刷過卡或有持有歷史的卡不能刪，選單直接寫明原因。 */
   readonly cardActions = computed<MenuAction[]>(() => {
     const card = this.store.selected(),
-      locked = this.store.locked(),
+      busy = this.store.busy(),
       used = !!this.history().length || !!card?.lastPunchedAt;
     return [
-      { id: 'note', label: '編輯備註', icon: 'edit', disabled: locked },
+      { id: 'note', label: '編輯備註', icon: 'edit', disabled: busy },
       {
         id: 'delete',
         label: used ? '刪除卡片（已有刷卡或持有歷史）' : '刪除卡片',
         icon: 'trash',
         danger: true,
         // 持有歷史還沒讀到前不知道能不能刪，先停用。
-        disabled: locked || this.store.assignments() === null || used,
+        disabled: busy || this.store.assignments() === null || used,
       },
     ];
   });
@@ -286,7 +282,7 @@ export class AttendanceCardsPage {
     return `${formatDay(item.startsAt)} 起・已持有 ${span}${ends}`;
   }
   private entryActions(item: CardAssignmentDto): MenuAction[] {
-    const disabled = this.store.locked();
+    const disabled = this.store.busy();
     return [
       ...(item.endsAt ? [] : [{ id: 'end', label: '結束持有', icon: 'clock', disabled }]),
       { id: 'edit', label: '編輯期間', icon: 'edit', disabled },

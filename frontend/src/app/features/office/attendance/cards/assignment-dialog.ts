@@ -10,7 +10,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { CardAssignmentDto, DirectoryUserDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatDateTimeInput, nameInitial, parseDateTimeInput } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -123,7 +122,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                         <button
                           type="button"
                           class="secondary-button"
-                          [disabled]="locked()"
+                          [disabled]="store.busy()"
                           (click)="changeHolder()"
                         >
                           {{ h.bound ? '更換' : '綁定帳號' }}
@@ -136,7 +135,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                       emptyText="沒有符合的帳號；新進員工可直接使用姓名。"
                       nameHint="尚無帳號時只記姓名，之後可再綁定帳號"
                       [search]="people"
-                      [disabled]="locked()"
+                      [disabled]="store.busy()"
                       (picked)="choose($event)"
                       (named)="useName($event)"
                     />
@@ -163,7 +162,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                     <nx-date-time-picker
                       label="開始時間"
                       [value]="e.draft.startsAt"
-                      [disabled]="locked()"
+                      [disabled]="store.busy()"
                       (valueChange)="update('startsAt', $event)"
                     />
                     <nx-date-time-picker
@@ -171,7 +170,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                       [required]="false"
                       [min]="e.draft.startsAt"
                       [value]="e.draft.endsAt"
-                      [disabled]="locked()"
+                      [disabled]="store.busy()"
                       (valueChange)="update('endsAt', $event)"
                     />
                   </div>
@@ -185,7 +184,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                       autocomplete="off"
                       [attr.maxlength]="noteMax"
                       [value]="e.draft.note"
-                      [readOnly]="locked()"
+                      [readOnly]="store.busy()"
                       (input)="update('note', note.value)"
                   /></label>
                 </div>
@@ -193,9 +192,6 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
             </div>
           </div>
           <footer class="dialog-foot">
-            @if (session.testing()) {
-              <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-            }
             <button
               type="button"
               class="secondary-button"
@@ -209,7 +205,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
               type="submit"
               class="primary-button"
               [pending]="store.busy()"
-              [disabled]="!store.busy() && (session.testing() || (!!e.id && !dirty()))"
+              [disabled]="!store.busy() && !!e.id && !dirty()"
             >
               {{
                 store.busy()
@@ -242,7 +238,6 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
 })
 export class AssignmentDialog {
   readonly id = uniqueId('nx-assignment-dialog');
-  readonly session = inject(WorkspaceSession);
   readonly store = inject(AttendanceCardsStore);
   readonly nameMax = NAME_MAX;
   readonly noteMax = NOTE_MAX;
@@ -275,7 +270,6 @@ export class AssignmentDialog {
     const name = draft?.holderName.trim();
     return name ? { bound: false, name, detail: '尚無帳號，只記姓名' } : null;
   });
-  readonly locked = computed(() => this.store.busy() || this.session.testing());
   readonly dirty = computed(() => {
     const editor = this.editor(),
       opened = this.opened();
@@ -408,7 +402,7 @@ export class AssignmentDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor();
-    if (!editor || this.locked() || (editor.id && !this.dirty())) return;
+    if (!editor || this.store.busy() || (editor.id && !this.dirty())) return;
     const body = this.validate(editor.draft);
     if (!body) return;
     this.error.set('');

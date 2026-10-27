@@ -186,7 +186,6 @@ describe('monitoring tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) => granted.has(feature),

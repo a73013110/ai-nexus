@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { CalendarDayDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { uniqueId } from '@shared/browser/unique-id';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -77,7 +76,7 @@ const same = (a: DayDraft, b: DayDraft) =>
             @if (error()) {
               <nx-notice class="calendar-day-error" tone="danger" [message]="error()" />
             }
-            <fieldset class="day-kind" [disabled]="locked()">
+            <fieldset class="day-kind" [disabled]="saving()">
               <legend>
                 放假時段
                 @if (kind() !== openedKind()) {
@@ -116,7 +115,7 @@ const same = (a: DayDraft, b: DayDraft) =>
                 [attr.maxlength]="remarkMax"
                 [attr.aria-describedby]="id + '-remark-note'"
                 [value]="draft().remark"
-                [readOnly]="locked()"
+                [readOnly]="saving()"
                 (input)="update('remark', remark.value)"
               />
               <p class="day-remark-meta">
@@ -133,8 +132,6 @@ const same = (a: DayDraft, b: DayDraft) =>
             label="儲存至公文系統"
             [dirty]="dirty()"
             [saving]="saving()"
-            [disabled]="session.testing()"
-            [note]="session.testingNote()"
             (revert)="revert()"
           />
         </form>
@@ -144,7 +141,6 @@ const same = (a: DayDraft, b: DayDraft) =>
 })
 export class CalendarDayDialog {
   readonly id = uniqueId('nx-calendar-day');
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(AttendanceApi);
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
@@ -160,7 +156,6 @@ export class CalendarDayDialog {
   private readonly opened = signal<DayDraft | null>(null);
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly locked = computed(() => this.saving() || this.session.testing());
   readonly tour = CALENDAR_DAY_TOUR;
   readonly dirty = computed(() => {
     const opened = this.opened();
@@ -238,7 +233,7 @@ export class CalendarDayDialog {
   async save(event: Event) {
     event.preventDefault();
     const day = this.day();
-    if (!day || this.locked() || !this.dirty()) return;
+    if (!day || this.saving() || !this.dirty()) return;
     const draft = this.draft();
     const alive = this.scope.guard();
     this.saving.set(true);

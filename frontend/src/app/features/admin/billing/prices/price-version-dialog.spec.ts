@@ -1,7 +1,5 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { TESTING_IDENTITY_NOTE, WorkspaceSession } from '@core/auth/workspace-session';
 import type { PriceDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -25,20 +23,13 @@ const version: PriceDto = {
   modelDisplayName: '本地助理',
 };
 
-function setup(testing = false) {
+function setup() {
   const api = { addPrice: vi.fn(async () => version) };
   const toast = { success: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: BillingApi, useValue: api },
       { provide: ToastService, useValue: toast },
-      {
-        provide: WorkspaceSession,
-        useValue: {
-          testing: signal(testing),
-          testingNote: signal(testing ? TESTING_IDENTITY_NOTE : ''),
-        },
-      },
     ],
   });
   // 草稿邏輯由測試覆蓋；表單需要 jsdom 沒有的瀏覽器版面 API。
@@ -116,12 +107,10 @@ describe('PriceVersionDialog', () => {
     expect(native.open).toBe(false);
   });
 
-  it('asks before closing with changes and never saves under a test identity', async () => {
-    const { dialog, native, confirm } = setup(true);
+  it('asks before closing with changes', async () => {
+    const { dialog, native, confirm } = setup();
     dialog.open({ from: 'history', price: version });
     dialog.field('perRequest', 1);
-    expect(dialog.canSave()).toBe(false);
-    expect(dialog.note()).toBe(TESTING_IDENTITY_NOTE);
     const closing = dialog.cancel(new Event('cancel'));
     expect(confirm.value()?.title).toBe('放棄未儲存的變更？');
     confirm.answer(false);

@@ -21,7 +21,5 @@ export class PricesPage {
   readonly session = inject(WorkspaceSession);
   /** 分頁狀態在價格表內；導覽依它決定介紹哪一個表格。 */
   private readonly book = viewChild(PriceBook);
-  readonly tour = computed(() =>
-    pricesTour({ view: this.book()?.view() ?? 'current', testing: this.session.testing() }),
-  );
+  readonly tour = computed(() => pricesTour({ view: this.book()?.view() ?? 'current' }));
 }

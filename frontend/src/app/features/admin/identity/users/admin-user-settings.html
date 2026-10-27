@@ -202,7 +202,6 @@
     [dirty]="!!store.dirty()[tab()]"
     [saving]="!!store.saving()"
     [disabled]="store.locked()"
-    [note]="session.testingNote()"
     (revert)="store.revert(tab())"
   />
 </ng-template>

@@ -30,7 +30,8 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   client_issue_invalid: '問題回報格式不正確。',
   request_too_large: '上傳內容超過大小上限。',
   database_name: '本初始化指令只允許建立或更新 AiNexus 專用資料庫。',
-  test_admin_read_only: '測試身分期間只能檢視管理功能；請先返回管理者再異動帳號與授權。',
+  test_account_security_locked:
+    '測試身分期間不能變更該使用者的密碼與信箱；請返回管理者後從使用者管理調整。',
   feature_forbidden: '你的角色目前沒有使用此功能的權限，請聯絡管理員。',
   invalid_search: '搜尋條件不正確。',
   invalid_storage_limit: '容量上限需為 0 至 1,000,000 GB 的整數 bytes；留空則使用群組或預設容量。',

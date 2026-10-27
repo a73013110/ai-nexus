@@ -15,6 +15,5 @@
 - 三個功能與存取管理各自獨立，互不隱含：可以只給會計人員價格、只給維運人員用量，而不給帳號管理權。
 - 初始只授予 `administrators` 群組；其他群組由管理員在「功能群組與模型」勾選。
 - API 每個 request 重新驗證：`/api/v1/admin/usage`、`/api/v1/admin/billing/spend`、`/api/v1/admin/billing/export` 與總覽的 `scope=platform` 由 `operations.usage` 把關；`/api/v1/admin/billing/prices`、`/api/v1/admin/billing/targets` 由 `billing.prices`；`/api/v1/admin/knowledge/*` 由 `knowledge.retrieval`。
-- 測試身分下只能讀取：GET 以外的請求一律拒絕，包括新增價格、索引操作、服務探測與檢索測試台，見 [測試身分](test-identity.md)。
 - 檢索索引的重建、啟用與清除仍走管理稽核（`admin.embedding_*`），交易內再確認操作者仍持有 `knowledge.retrieval`。
 - 區間費用、使用者排行與 CSV 在總覽切換「整個平台」，需要 `operations.usage`，見 [總覽](dashboard.md)。平台讀取與匯出都留下稽核。

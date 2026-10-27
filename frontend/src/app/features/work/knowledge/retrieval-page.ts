@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { RetrievalAdmin } from './retrieval/retrieval-admin';
@@ -12,12 +12,12 @@ import { retrievalTour } from './retrieval-tour';
   template: `<nx-feature-page
     [title]="session.featureName('knowledge.retrieval')"
     description="管理知識檢索的向量索引，並檢查與試查檢索結果。"
-    [tour]="tour()"
+    [tour]="tour"
   >
     <nx-retrieval-admin />
   </nx-feature-page>`,
 })
 export class RetrievalPage {
   readonly session = inject(WorkspaceSession);
-  readonly tour = computed(() => retrievalTour({ testing: this.session.testing() }));
+  readonly tour = retrievalTour();
 }

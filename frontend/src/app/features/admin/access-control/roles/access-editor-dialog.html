@@ -48,7 +48,7 @@
             [loading]="store.loading()"
             [busy]="store.refreshing()"
             [value]="e.modelPolicy"
-            [disabled]="locked()"
+            [disabled]="saving()"
             (valueChange)="update('modelPolicy', $event)"
           />
         } @else {
@@ -82,7 +82,7 @@
                       autocomplete="off"
                       [attr.aria-describedby]="id + '-id-hint'"
                       [value]="e.id"
-                      [readOnly]="locked()"
+                      [readOnly]="saving()"
                       (input)="update('id', $any($event.target).value)"
                   /></label>
                   <p class="form-note" [id]="id + '-id-hint'">
@@ -98,7 +98,7 @@
                     maxlength="120"
                     [placeholder]="e.defaultName"
                     [value]="e.name"
-                    [readOnly]="locked()"
+                    [readOnly]="saving()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
                 @if (e.kind === 'feature') {
@@ -112,7 +112,7 @@
                   [label]="'啟用' + label(e.kind)"
                   [description]="enabledNote[e.kind]"
                   [checked]="e.enabled"
-                  [disabled]="locked()"
+                  [disabled]="saving()"
                   (checkedChange)="update('enabled', $event)"
                 />
               </div>
@@ -132,7 +132,7 @@
                     label="加入功能群組"
                     [groups]="groupChoices()"
                     [selected]="e.ids"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (selectedChange)="update('ids', $event)"
                   />
                 </div>
@@ -172,7 +172,7 @@
                     label="授予功能"
                     [groups]="featureChoices()"
                     [selected]="e.ids"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (selectedChange)="update('ids', $event)"
                   />
                 </div>
@@ -205,7 +205,7 @@
                               [label]="grant.name + '：所有成員的範圍'"
                               [options]="grant.options"
                               [value]="grant.value"
-                              [disabled]="locked()"
+                              [disabled]="saving()"
                               (valueChange)="updateScope(grant.id, $event)"
                           /></label>
                           @if (grant.manager; as manager) {
@@ -214,7 +214,7 @@
                                 [label]="grant.name + '：主管另可看的範圍'"
                                 [options]="manager.options"
                                 [value]="manager.value"
-                                [disabled]="locked() || manager.included"
+                                [disabled]="saving() || manager.included"
                                 (valueChange)="updateScope(grant.id, $event, 'managerScopes')"
                             /></label>
                           }
@@ -258,7 +258,7 @@
                       placeholder="使用網站預設容量"
                       [attr.aria-describedby]="id + '-storage-hint'"
                       [value]="e.storage"
-                      [readOnly]="locked()"
+                      [readOnly]="saving()"
                       (input)="update('storage', $any($event.target).value)"
                   /></label>
                   <p class="form-note" [id]="id + '-storage-hint'">
@@ -272,9 +272,6 @@
       </ng-template>
       @if (e.isNew) {
         <footer class="dialog-foot">
-          @if (session.testing()) {
-            <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-          }
           <button
             type="button"
             class="secondary-button"
@@ -283,13 +280,7 @@
           >
             取消
           </button>
-          <button
-            nxPending
-            type="submit"
-            class="primary-button"
-            [pending]="saving()"
-            [disabled]="session.testing()"
-          >
+          <button nxPending type="submit" class="primary-button" [pending]="saving()">
             {{ saving() ? '建立中…' : '建立' + label(e.kind) }}
           </button>
         </footer>
@@ -298,8 +289,6 @@
           [label]="'儲存' + label(e.kind)"
           [dirty]="dirty()"
           [saving]="saving()"
-          [disabled]="session.testing()"
-          [note]="session.testingNote()"
           (revert)="revert()"
         />
       }

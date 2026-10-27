@@ -10,8 +10,7 @@
       page-actions
       type="button"
       class="primary-button cards-create"
-      [disabled]="store.locked()"
-      [title]="session.testing() ? session.testingNote() : ''"
+      [disabled]="store.busy()"
       (click)="createCard()"
     >
       <nx-icon name="plus" />新增卡號
@@ -198,8 +197,7 @@
               notice-actions
               type="button"
               class="secondary-button cards-assign-pending"
-              [disabled]="store.locked() || store.assignments() === null"
-              [title]="session.testing() ? session.testingNote() : ''"
+              [disabled]="store.busy() || store.assignments() === null"
               (click)="assignPending(card)"
             >
               補指派
@@ -241,8 +239,7 @@
             <button
               type="button"
               class="primary-button cards-assign"
-              [disabled]="store.locked()"
-              [title]="session.testing() ? session.testingNote() : ''"
+              [disabled]="store.busy()"
               (click)="assign(card)"
             >
               <nx-icon [name]="card.current ? 'repeat' : 'user'" />{{
@@ -253,7 +250,7 @@
               <button
                 type="button"
                 class="secondary-button cards-end"
-                [disabled]="store.locked()"
+                [disabled]="store.busy()"
                 (click)="editAssignment(current, true)"
               >
                 結束持有
@@ -266,7 +263,7 @@
           label="在出勤紀錄顯示"
           description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
           [checked]="!card.hiddenFromRecords"
-          [disabled]="!store.canMaintain() || session.testing()"
+          [disabled]="!store.canMaintain()"
           [pending]="store.working() === 'hidden:' + card.id"
           (checkedChange)="setVisible(card, $event)"
         />

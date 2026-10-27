@@ -15,7 +15,7 @@ internal static class IdentityErrors
     public static readonly Error AdInvalidCredentials = Error.Unauthenticated("ad_invalid_credentials");
     public static readonly Error AdSidRequired = Error.Forbidden("ad_sid_required");
     public static readonly Error AuthenticationModeUnsupported = Error.Invalid("authentication_mode");
-    public static readonly Error TestAdminReadOnly = Error.Forbidden("test_admin_read_only");
+    public static readonly Error TestAccountSecurityLocked = Error.Forbidden("test_account_security_locked");
     public static readonly Error IdentityChanged = Error.Conflict("identity_changed");
     public static readonly Error TestIdentityNested = Error.Conflict("test_identity_nested");
     public static readonly Error TestReasonRequired = Error.Invalid("test_reason_required");

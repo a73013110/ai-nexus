@@ -16,7 +16,7 @@ const titles = (definition: Parameters<typeof tourSteps>[0]) =>
 
 describe('retrievalTour', () => {
   it('covers the index lifecycle, capabilities and the bench', () => {
-    expect(titles(retrievalTour({ testing: false }))).toEqual([
+    expect(titles(retrievalTour())).toEqual([
       'AI 回答的依據從這裡找',
       '檢索索引與覆蓋率',
       '重建索引',
@@ -29,20 +29,8 @@ describe('retrievalTour', () => {
     ]);
   });
 
-  it('drops the disabled write steps and explains read-only while testing an identity', () => {
-    const steps = tourSteps(retrievalTour({ testing: true }));
-    expect(steps.map((step) => step.title)).toEqual([
-      'AI 回答的依據從這裡找',
-      '檢索索引與覆蓋率',
-      '服務能力',
-      '檢索測試台',
-      '命中結果',
-    ]);
-    expect(steps[0].description).toContain('只能查看與試查');
-  });
-
   it('scopes every target to the page', () => {
-    for (const step of tourSteps(retrievalTour({ testing: false })))
+    for (const step of tourSteps(retrievalTour()))
       expect(step.target).toMatch(/^nx-retrieval-page /);
   });
 });
@@ -109,8 +97,6 @@ describe('retrieval tour targets', () => {
           provide: WorkspaceSession,
           useValue: {
             auth: { generation },
-            testing: signal(false),
-            testingNote: signal(''),
             me: signal(null),
             load: vi.fn(async () => true),
             has: (feature: string) => feature === 'knowledge.retrieval',
@@ -143,7 +129,7 @@ describe('retrieval tour targets', () => {
     await settle();
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('nx-product-tour-button')).not.toBeNull();
-    for (const step of tourSteps(fixture.componentInstance.tour())) {
+    for (const step of tourSteps(fixture.componentInstance.tour)) {
       const selector = step.target.replace(/^nx-retrieval-page /, '');
       expect(host.querySelector(selector), step.target).not.toBeNull();
     }

@@ -61,7 +61,6 @@ export class UsersPage {
   readonly inspected = signal<AdminUserDto | null>(null);
   readonly tour = computed(() =>
     usersTour({
-      testing: this.session.testing(),
       directoryImport: this.session.has('identity.users.import'),
       directorySync: this.session.has('identity.users.sync'),
     }),

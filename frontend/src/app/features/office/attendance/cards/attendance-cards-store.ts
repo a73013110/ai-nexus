@@ -113,12 +113,11 @@ export class AttendanceCardsStore {
   readonly punchesLoadingMore = computed(
     () => this.punchesRead.refreshing() && this.punchesBefore() !== undefined,
   );
-  /** 寫入按鈕只給有 `attendance.cards.maintain` 的人；測試身分看得到但停用（伺服器回 `test_admin_read_only`）。 */
+  /** 寫入按鈕只給有 `attendance.cards.maintain` 的人。 */
   readonly canMaintain = computed(() => this.session.has('attendance.cards.maintain'));
   readonly busy = signal(false);
-  /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `locked` 停用。 */
+  /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `busy` 停用。 */
   readonly working = signal('');
-  readonly locked = computed(() => this.busy() || this.session.testing());
 
   reloadCards() {
     this.cardsRead.reload();
@@ -172,7 +171,7 @@ export class AttendanceCardsStore {
     request: AssignRequest,
     confirmTakeOver: (holder: string) => Promise<boolean>,
   ): Promise<WriteOutcome<CardAssignmentDto>> {
-    if (this.locked()) return { saved: false, error: '' };
+    if (this.busy()) return { saved: false, error: '' };
     const alive = this.scope.guard();
     this.busy.set(true);
     try {
@@ -227,7 +226,7 @@ export class AttendanceCardsStore {
 
   /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */
   private async write<T>(run: () => Promise<T>, done: string, key = ''): Promise<WriteOutcome<T>> {
-    if (this.locked()) return { saved: false, error: '' };
+    if (this.busy()) return { saved: false, error: '' };
     const alive = this.scope.guard();
     this.busy.set(true);
     this.working.set(key);

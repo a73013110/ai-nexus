@@ -23,14 +23,14 @@ const scoped = (definition: ProductTourDefinition, host: string) => {
 
 describe('attendanceCardsTour', () => {
   it('offers the write steps only to maintainers', () => {
-    expect(titles(attendanceCardsTour({ maintain: true, testing: false }))).toEqual([
+    expect(titles(attendanceCardsTour({ maintain: true }))).toEqual([
       '刷卡依持有期間歸戶',
       '新增卡號',
       '持有中、無人持有與隱藏',
       '查詢條件',
       '卡片詳情',
     ]);
-    expect(titles(attendanceCardsTour({ maintain: false, testing: false }))).toEqual([
+    expect(titles(attendanceCardsTour({ maintain: false }))).toEqual([
       '刷卡依持有期間歸戶',
       '持有中、無人持有與隱藏',
       '查詢條件',
@@ -38,15 +38,8 @@ describe('attendanceCardsTour', () => {
     ]);
   });
 
-  it('drops the disabled writes and says read-only while testing an identity', () => {
-    const steps = tourSteps(attendanceCardsTour({ maintain: true, testing: true }));
-    expect(steps.map((step) => step.title)).not.toContain('新增卡號');
-    expect(steps[0].description).toContain('只能查看');
-    expect(steps.at(-1)?.description).not.toContain('指派持有人');
-  });
-
   it('introduces assigning and hiding in the drawer', () => {
-    expect(titles(cardDetailTour({ maintain: true, testing: false }))).toEqual([
+    expect(titles(cardDetailTour({ maintain: true }))).toEqual([
       '目前持有人',
       '指派或轉給其他人',
       '在出勤紀錄顯示',
@@ -54,10 +47,8 @@ describe('attendanceCardsTour', () => {
       '結束持有',
       '刷卡紀錄',
     ]);
-    expect(copy(cardDetailTour({ maintain: true, testing: false }))).toContain(
-      '本人與主管照常看得到',
-    );
-    expect(titles(cardDetailTour({ maintain: true, testing: true }))).toEqual([
+    expect(copy(cardDetailTour({ maintain: true }))).toContain('本人與主管照常看得到');
+    expect(titles(cardDetailTour({ maintain: false }))).toEqual([
       '目前持有人',
       '在出勤紀錄顯示',
       '持有歷史',
@@ -66,17 +57,14 @@ describe('attendanceCardsTour', () => {
   });
 
   it('scopes page steps to the page and drawer steps to the drawer', () => {
-    scoped(attendanceCardsTour({ maintain: true, testing: false }), 'nx-attendance-cards-page');
-    scoped(
-      cardDetailTour({ maintain: true, testing: false }),
-      'nx-attendance-cards-page nx-detail-drawer',
-    );
+    scoped(attendanceCardsTour({ maintain: true }), 'nx-attendance-cards-page');
+    scoped(cardDetailTour({ maintain: true }), 'nx-attendance-cards-page nx-detail-drawer');
   });
 });
 
 describe('attendanceImportsTour', () => {
   it('walks purpose, reimport, filters, the list and paging', () => {
-    const tour = attendanceImportsTour({ maintain: true, testing: false });
+    const tour = attendanceImportsTour({ maintain: true });
     expect(titles(tour)).toEqual([
       '每天一個打卡檔',
       '手動重匯',
@@ -92,13 +80,8 @@ describe('attendanceImportsTour', () => {
     scoped(tour, 'nx-attendance-imports-page');
   });
 
-  it('skips reimport without the action or while testing an identity', () => {
-    expect(titles(attendanceImportsTour({ maintain: false, testing: false }))).not.toContain(
-      '手動重匯',
-    );
-    const testing = tourSteps(attendanceImportsTour({ maintain: true, testing: true }));
-    expect(testing.map((step) => step.title)).not.toContain('手動重匯');
-    expect(testing[0].description).toContain('只能查看');
+  it('skips reimport without the action', () => {
+    expect(titles(attendanceImportsTour({ maintain: false }))).not.toContain('手動重匯');
   });
 
   it('introduces the date fields of the chosen reimport mode', () => {
@@ -112,7 +95,7 @@ describe('attendanceImportsTour', () => {
 });
 
 describe('attendanceCalendarTour', () => {
-  const options = { maintain: true, testing: false, gdReadOnly: false };
+  const options = { maintain: true, gdReadOnly: false };
 
   it('explains half days and missing dates on the calendar, and the list as a second view', () => {
     const calendar = attendanceCalendarTour({ ...options, view: 'calendar' });
@@ -137,17 +120,13 @@ describe('attendanceCalendarTour', () => {
 
   it('offers editing only when the day can actually be changed', () => {
     for (const blocked of [
-      { maintain: false, testing: false, gdReadOnly: false },
-      { maintain: true, testing: true, gdReadOnly: false },
-      { maintain: true, testing: false, gdReadOnly: true },
+      { maintain: false, gdReadOnly: false },
+      { maintain: true, gdReadOnly: true },
     ]) {
       const tour = attendanceCalendarTour({ ...blocked, view: 'calendar' });
       expect(titles(tour)).toContain('讀月曆');
       expect(copy(tour)).not.toContain('點日期開啟編輯');
     }
-    expect(
-      tourSteps(attendanceCalendarTour({ ...options, testing: true, view: 'list' }))[0].description,
-    ).toContain('只能查看');
   });
 
   it('walks the day dialog from the four options to saving into the document system', () => {

@@ -2,7 +2,6 @@ import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { NavigationItemDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ApiError } from '@core/errors/safe-errors';
 import { publicErrorHints } from '@core/errors/public-error-catalog';
 import { ThemeService } from '@core/preferences/theme-service';
@@ -42,7 +41,7 @@ const seed = [
   item('wiki', 'system', 20, 'link', { name: '維運手冊', audienceGroupIds: ['administrators'] }),
 ];
 
-function setup(testing = false) {
+function setup() {
   const items = signal(seed.map((entry) => ({ ...entry })));
   const api = {
     orderNavigationItems: vi.fn(async () => undefined),
@@ -67,7 +66,6 @@ function setup(testing = false) {
           catalog: computed(() => ({ groups: [{ id: 'administrators', name: '平台管理' }] })),
         },
       },
-      { provide: WorkspaceSession, useValue: { testing: signal(testing) } },
       { provide: ThemeService, useValue: { reducedMotion: () => true } },
     ],
   });
@@ -223,11 +221,5 @@ describe('NavigationEditor', () => {
     );
     await vi.waitFor(() => expect(store.changed).toHaveBeenCalled());
     expect(editor.rows().some((entry) => entry.item.id === 'wiki')).toBe(false);
-  });
-
-  it('does not move anything while testing another identity', () => {
-    const { editor, api } = setup(true);
-    editor.key(key('ArrowUp'), row(editor, 'files'));
-    expect(api.orderNavigationItems).not.toHaveBeenCalled();
   });
 });

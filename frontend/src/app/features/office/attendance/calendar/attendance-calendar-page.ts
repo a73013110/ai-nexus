@@ -150,14 +150,11 @@ export class AttendanceCalendarPage {
   readonly canMaintain = computed(() => this.session.has('attendance.calendar.maintain'));
   /** 回寫遇到 `attendance_gd_read_only` 後停用編輯，直到重新進入頁面（設定要改並重啟才會恢復）。 */
   readonly readOnly = signal(false);
-  readonly editable = computed(
-    () => this.canMaintain() && !this.readOnly() && !this.session.testing(),
-  );
+  readonly editable = computed(() => this.canMaintain() && !this.readOnly());
   readonly tour = computed(() =>
     attendanceCalendarTour({
       view: this.view(),
       maintain: this.canMaintain(),
-      testing: this.session.testing(),
       gdReadOnly: this.readOnly(),
     }),
   );

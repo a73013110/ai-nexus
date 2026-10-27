@@ -8,7 +8,7 @@ using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Features.Work.Projects.Management;
-using AiNexus.Features.Admin.Billing.Prices;
+using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 using AiNexus.Features.Admin.AccessControl.Management;
 
@@ -41,21 +41,18 @@ public sealed class TestIdentityTests
     }
 
     [Fact]
-    public async Task TestingAnotherAdministratorCannotNestOrWriteManagement()
+    public async Task TestingAnotherAdministratorWritesManagementUnderTheTargetButCannotNest()
     {
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
-        using var admin = f.CreateClient(); await Login(admin, "alice");
+        using var admin = f.CreateClient(); var actor = await Login(admin, "alice");
         var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"])); await Begin(admin, id);
-        (await admin.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", true))).StatusCode);
-        // 平台營運同樣屬於管理權限：測試時可讀取，但永遠不可寫入。
-        (await admin.GetAsync("/api/v1/admin/billing/prices")).EnsureSuccessStatusCode();
-        (await admin.GetAsync("/api/v1/admin/knowledge/profiles")).EnsureSuccessStatusCode();
-        var price = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", DateTimeOffset.UtcNow, "越權");
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/admin/billing/prices", price)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "巢狀切換"))).StatusCode);
+        // 管理 API 與業務 API 一樣依目標的權限執行；稽核以 ActorId 留下實際操作的管理者。
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("測試身分改名", true))).EnsureSuccessStatusCode();
+        await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "巢狀切換")), HttpStatusCode.Conflict, "test_identity_nested");
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var entry = await db.AuditEvents.SingleAsync(x => x.Action == "admin.feature" && x.Result == "saved");
+        Assert.Equal(actor.Id, entry.ActorId); Assert.Equal(id, entry.OwnerId);
     }
 
     [Theory]

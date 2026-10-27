@@ -10,8 +10,7 @@
       <button
         type="button"
         class="quiet-button mail-diagnose"
-        [disabled]="!status()?.enabled || session.testing()"
-        [title]="session.testing() ? session.testingNote() : ''"
+        [disabled]="!status()?.enabled"
         (click)="openDiagnosis()"
       >
         <nx-icon name="activity" />連線診斷
@@ -23,15 +22,12 @@
           class="quiet-button mail-auto-retry"
           [attr.aria-pressed]="current.autoRetry"
           [pending]="savingSettings()"
-          [disabled]="session.testing()"
           [title]="
-            session.testing()
-              ? session.testingNote()
-              : current.autoRetry
-                ? '暫時性失敗會在 1、5、15、30、60 分鐘後自動再寄，最多 ' +
-                  current.giveUpAfterHours +
-                  ' 小時。按下改為失敗即結束。'
-                : '失敗即結束，需要時手動立即重試或重寄。按下恢復自動重試。'
+            current.autoRetry
+              ? '暫時性失敗會在 1、5、15、30、60 分鐘後自動再寄，最多 ' +
+                current.giveUpAfterHours +
+                ' 小時。按下改為失敗即結束。'
+              : '失敗即結束，需要時手動立即重試或重寄。按下恢復自動重試。'
           "
           (click)="toggleAutoRetry(!current.autoRetry)"
         >
@@ -41,8 +37,7 @@
       <button
         type="button"
         class="secondary-button mail-test"
-        [disabled]="!status()?.enabled || session.testing()"
-        [title]="session.testing() ? session.testingNote() : ''"
+        [disabled]="!status()?.enabled"
         (click)="openTest()"
       >
         <nx-icon name="mail" />寄信測試
@@ -288,8 +283,6 @@
                   type="button"
                   class="secondary-button mail-retry"
                   [pending]="retrying()"
-                  [disabled]="session.testing()"
-                  [title]="session.testing() ? session.testingNote() : ''"
                   (click)="retry()"
                 >
                   <nx-icon name="play" />{{ retrying() ? '排入中…' : '立即重試' }}
@@ -303,8 +296,6 @@
                   type="button"
                   class="secondary-button mail-resend"
                   [pending]="resending()"
-                  [disabled]="session.testing()"
-                  [title]="session.testing() ? session.testingNote() : ''"
                   (click)="resend()"
                 >
                   <nx-icon name="repeat" />{{ resending() ? '重寄中…' : '重寄' }}

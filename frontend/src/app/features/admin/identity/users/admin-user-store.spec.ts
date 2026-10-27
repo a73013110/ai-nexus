@@ -19,7 +19,7 @@ const user = {
   storage: { personalLimitBytes: null },
 } as unknown as AdminUserDto;
 
-function setup(testing = false) {
+function setup() {
   const generation = signal(1);
   let saved = user;
   const api = {
@@ -39,7 +39,6 @@ function setup(testing = false) {
   const admin = { saved: vi.fn(), readUsers: vi.fn() };
   const session = {
     auth: { generation },
-    testing: signal(testing),
     load: vi.fn(async () => true),
     has: () => true,
   };
@@ -142,15 +141,5 @@ describe('admin user store', () => {
     store.open(user);
     expect(store.tab()).toBe('account');
     expect(store.account().name).toBe('王小明');
-  });
-
-  it('refuses management writes while testing another identity', async () => {
-    const { store, api, settle } = setup(true);
-    store.open(user);
-    await settle();
-    store.roles.set([]);
-    await store.saveRoles();
-    expect(store.locked()).toBe(true);
-    expect(api.roles).not.toHaveBeenCalled();
   });
 });

@@ -100,7 +100,6 @@ export class AdminUserInspector {
   readonly tour = computed(() =>
     userInspectorTour({
       audit: this.session.has('audit'),
-      testing: this.session.testing(),
       conversations: this.store.tab() === 'conversations',
     }),
   );

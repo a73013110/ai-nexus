@@ -25,7 +25,7 @@ public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthentica
     public string Method(HttpContext http) => http.User.FindFirstValue(SessionIdentity.Method) ?? ad.Value.DirectoryMethod;
 
     /// <summary>測試身分不能改被測者的帳號安全設定；其餘回傳成功。</summary>
-    public static Result Allowed(HttpContext http) => SessionIdentity.IsTest(http.User) ? IdentityErrors.TestAdminReadOnly : Result.Success;
+    public static Result Allowed(HttpContext http) => SessionIdentity.IsTest(http.User) ? IdentityErrors.TestAccountSecurityLocked : Result.Success;
 
     /// <summary>步升有效到何時；Windows 直接驗證的請求回傳 <see cref="DateTimeOffset.MaxValue"/>，沒有步升過為 null。</summary>
     public DateTimeOffset? FreshUntil(HttpContext http)

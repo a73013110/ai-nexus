@@ -61,9 +61,7 @@ export class OrganizationPage {
   readonly store = inject(OrganizationStore);
   readonly maxDepth = MAX_DEPTH;
   readonly canImport = computed(() => this.session.has('organization.import'));
-  readonly tour = computed(() =>
-    organizationTour({ testing: this.session.testing(), canImport: this.canImport() }),
-  );
+  readonly tour = computed(() => organizationTour({ canImport: this.canImport() }));
   private readonly menu = viewChild.required(MenuPanel);
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly dialog = viewChild.required(UnitDialog);
@@ -78,28 +76,28 @@ export class OrganizationPage {
     const row = this.menuRow();
     if (!row) return [];
     const units = this.store.units();
-    const locked = this.store.locked();
+    const busy = this.store.busy();
     return [
-      { id: 'edit', label: '編輯', icon: 'edit', disabled: locked },
+      { id: 'edit', label: '編輯', icon: 'edit', disabled: busy },
       {
         id: 'child',
         label: '新增下層單位',
         icon: 'plus',
-        disabled: locked || row.depth >= MAX_DEPTH,
+        disabled: busy || row.depth >= MAX_DEPTH,
       },
       {
         id: 'up',
         label: '上移',
         icon: 'arrow',
-        disabled: locked || !moved(units, row.unit.id, -1),
+        disabled: busy || !moved(units, row.unit.id, -1),
       },
       {
         id: 'down',
         label: '下移',
         icon: 'down',
-        disabled: locked || !moved(units, row.unit.id, 1),
+        disabled: busy || !moved(units, row.unit.id, 1),
       },
-      { id: 'delete', label: '刪除', icon: 'trash', danger: true, disabled: locked },
+      { id: 'delete', label: '刪除', icon: 'trash', danger: true, disabled: busy },
     ];
   });
 

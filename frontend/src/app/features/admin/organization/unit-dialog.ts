@@ -8,7 +8,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
@@ -99,7 +98,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       [attr.aria-invalid]="nameError() ? true : null"
                       [attr.aria-describedby]="nameError() ? id + '-error' : null"
                       [value]="e.draft.name"
-                      [readOnly]="locked()"
+                      [readOnly]="saving()"
                       (input)="update('name', name.value)"
                   /></label>
                   @if (nameError()) {
@@ -112,7 +111,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       noun="單位"
                       [nodes]="parents()"
                       [value]="e.draft.parentId"
-                      [disabled]="locked()"
+                      [disabled]="saving()"
                       (valueChange)="update('parentId', $event)"
                   /></label>
                 </div>
@@ -127,7 +126,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                     label="啟用"
                     description="停用後保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。"
                     [checked]="e.draft.enabled"
-                    [disabled]="locked()"
+                    [disabled]="saving()"
                     (checkedChange)="update('enabled', $event)"
                   />
                 </div>
@@ -136,9 +135,6 @@ const sameDraft = (a: Draft, b: Draft) =>
           </div>
           @if (!e.id) {
             <footer class="dialog-foot">
-              @if (session.testing()) {
-                <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-              }
               <button
                 type="button"
                 class="secondary-button"
@@ -147,13 +143,7 @@ const sameDraft = (a: Draft, b: Draft) =>
               >
                 取消
               </button>
-              <button
-                nxPending
-                type="submit"
-                class="primary-button"
-                [pending]="saving()"
-                [disabled]="session.testing()"
-              >
+              <button nxPending type="submit" class="primary-button" [pending]="saving()">
                 {{ saving() ? '建立中…' : '建立單位' }}
               </button>
             </footer>
@@ -162,8 +152,6 @@ const sameDraft = (a: Draft, b: Draft) =>
               label="儲存單位"
               [dirty]="dirty()"
               [saving]="saving()"
-              [disabled]="session.testing()"
-              [note]="session.testingNote()"
               (revert)="revert()"
             />
           }
@@ -179,7 +167,6 @@ const sameDraft = (a: Draft, b: Draft) =>
 })
 export class UnitDialog {
   readonly id = uniqueId('nx-unit-dialog');
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(OrganizationApi);
   private readonly store = inject(OrganizationStore);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('unitDialog');
@@ -190,12 +177,10 @@ export class UnitDialog {
   readonly saving = signal(false);
   readonly error = signal('');
   readonly nameError = signal('');
-  readonly locked = computed(() => this.saving() || this.session.testing());
   readonly imported = computed(() => !!this.editor()?.imported);
   readonly tour = computed(() =>
     unitDialogTour({
       editing: !!this.editor()?.id,
-      testing: this.session.testing(),
       imported: this.imported(),
     }),
   );
@@ -271,7 +256,7 @@ export class UnitDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor();
-    if (!editor || this.locked() || (editor.id && !this.dirty())) return;
+    if (!editor || this.saving() || (editor.id && !this.dirty())) return;
     const draft = editor.draft;
     const name = draft.name.trim();
     if (!name || name.length > 120) {

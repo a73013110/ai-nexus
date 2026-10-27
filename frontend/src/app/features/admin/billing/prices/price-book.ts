@@ -7,7 +7,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { PriceDto, PriceTargetDto } from '@core/api/schema';
 import { formatDate, formatDay, formatModelDisplayName } from '@shared/browser/format';
 import type { BadgeTone } from '@shared/ui/count-badge';
@@ -133,7 +132,6 @@ function rank(provider: string) {
   templateUrl: './price-book.html',
 })
 export class PriceBook {
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(BillingApi);
   /** 每次開啟頁面時都會讀取：價格歷史與可定價的模型。 */
   readonly catalogRead = apiResource({

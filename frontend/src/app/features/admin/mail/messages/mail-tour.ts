@@ -4,12 +4,10 @@ import type { ProductTourDefinition } from '@shared/ui/product-tour';
 const PAGE = 'nx-mail-messages-page';
 const DRAWER = `${PAGE} nx-detail-drawer`;
 
-/** 郵件寄送紀錄頁的導覽；重試相關的動作依 `mail.messages.resend` 出現，測試身分只說明可查看。 */
+/** 郵件寄送紀錄頁的導覽；重試相關的動作依 `mail.messages.resend` 出現。 */
 export function mailMessagesTour(options: {
   /** 有 `mail.messages.resend`：可切換自動重試，詳情可立即重試或重寄。 */
   resend: boolean;
-  /** 以測試身分檢視：診斷、寄信測試、重試與重寄都停用。 */
-  testing: boolean;
   /** 系統日誌的顯示名稱；沒有 `diagnostics.logs` 授權時為 null。 */
   logs: string | null;
 }): ProductTourDefinition {
@@ -20,9 +18,7 @@ export function mailMessagesTour(options: {
         title: '寄送紀錄回答什麼',
         description: `系統信都先排入佇列再由背景寄出，這裡逐封記下等待、寄送中、已寄出或失敗與每次嘗試；「已寄出」只代表郵件伺服器已接受，不代表已進收件匣${
           options.logs ? `。非預期失敗的查證代碼可到「${options.logs}」查` : ''
-        }。有進行中的信時自動更新，不必重新整理。${
-          options.testing ? '目前是測試身分，只能查看，不能診斷、寄信測試、重試或重寄。' : ''
-        }`,
+        }。有進行中的信時自動更新，不必重新整理。`,
         side: 'bottom',
       },
       {

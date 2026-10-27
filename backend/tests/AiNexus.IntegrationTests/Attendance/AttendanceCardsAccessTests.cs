@@ -2,12 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Office.Attendance.Cards;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
-using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 
@@ -72,23 +70,6 @@ public sealed class AttendanceCardsAccessTests
 
         await AssertCodeAsync(await session.Hr.GetAsync(Cards), HttpStatusCode.Forbidden, "feature_forbidden");
         await AssertCodeAsync(await session.Hr.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)), HttpStatusCode.Forbidden, "feature_forbidden");
-    }
-
-    [Fact]
-    public async Task ATestIdentityReadsCardsButCannotMaintainThem()
-    {
-        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
-        using var admin = factory.CreateClient();
-        await Login(admin, "alice");
-        var hrId = await CreateUser(admin, LocalAccount());
-        await GrantCardsAsync(factory, hrId);
-        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(hrId, "重現人資看到的卡號對應"))).EnsureSuccessStatusCode();
-        await Csrf(admin);
-
-        // 卡號對應是管理頁：測試身分可以讀取以重現畫面，但寫入一律拒絕，不論目標使用者有沒有維護權限。
-        Assert.Empty((await admin.GetFromJsonAsync<CardDto[]>(Cards))!);
-        await AssertCodeAsync(await admin.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)), HttpStatusCode.Forbidden, "test_admin_read_only");
-        await AssertCodeAsync(await AssignAsync(admin, Guid.NewGuid(), hrId, At(10, 1)), HttpStatusCode.Forbidden, "test_admin_read_only");
     }
 
     private static async Task RevokeAsync(AppFactory factory, string groupId)

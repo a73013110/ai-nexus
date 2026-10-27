@@ -10,7 +10,6 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitImportPreviewDto, UnitImportResultDto } from '@core/api/schema';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ApiError, safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ChoiceGroups } from '@shared/ui/choice-groups';
@@ -33,7 +32,7 @@ import {
  * 從公文系統匯入部門與主管（`organization.import`）：開啟時先預覽（不寫入），勾選要套用的部門後套用。
  * 一個部門的單位與主管變動一起勾選；本地已停用、套用會重新啟用的部門預設不勾。未勾選的這次不動，下次預覽仍會列出。
  * 套用送回預覽的指紋與未勾選的部門，伺服器重算後不同就拒絕（`organization_import_stale`），這時清掉舊預覽、
- * 請使用者重新預覽，不會套用沒看過的變更。測試身分可以預覽，但不能套用。
+ * 請使用者重新預覽，不會套用沒看過的變更。
  */
 @Component({
   selector: 'nx-unit-import-dialog',
@@ -51,7 +50,7 @@ import {
       heading="從公文系統匯入"
       closeLabel="關閉匯入"
       [detail]="detail()"
-      [tour]="tour()"
+      [tour]="tour"
     />
     <div class="dialog-body" [attr.aria-busy]="loading() || null">
       @if (error()) {
@@ -153,9 +152,6 @@ import {
       }
     </div>
     <footer class="dialog-foot">
-      @if (session.testing()) {
-        <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
-      }
       <button
         type="button"
         class="secondary-button"
@@ -225,7 +221,6 @@ import {
   `,
 })
 export class UnitImportDialog {
-  readonly session = inject(WorkspaceSession);
   private readonly api = inject(OrganizationApi);
   private readonly scope = inject(ViewScope);
   /** 套用成功；頁面據此重新載入並提示摘要。 */
@@ -258,10 +253,8 @@ export class UnitImportDialog {
     const preview = this.preview();
     return !!preview && hasChanges(preview);
   });
-  readonly tour = computed(() => unitImportTour({ testing: this.session.testing() }));
-  readonly canApply = computed(
-    () => this.selected().length > 0 && !this.busy() && !this.session.testing(),
-  );
+  readonly tour = unitImportTour();
+  readonly canApply = computed(() => this.selected().length > 0 && !this.busy());
   readonly detail = computed(() => {
     const preview = this.preview();
     return preview ? `公文系統共 ${preview.sourceUnits} 個部門` : '';

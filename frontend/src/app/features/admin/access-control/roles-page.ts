@@ -46,7 +46,6 @@ export class RolesPage {
   readonly tour = computed(() =>
     rolesTour({
       names: accessPageNames((id) => this.session.featureName(id)),
-      testing: this.session.testing(),
       assign: this.session.has('identity.users'),
     }),
   );

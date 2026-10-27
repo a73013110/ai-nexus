@@ -11,7 +11,6 @@ import {
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { apiResource } from '@core/api/api-resource';
 import { isActive } from '@core/api/generation-status';
-import { WorkspaceSession } from '@core/auth/workspace-session';
 import type {
   CollectionDto,
   EmbeddingProfileDto,
@@ -88,7 +87,6 @@ export class RetrievalAdmin {
   private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly jobToasts = inject(JobToasts);
-  readonly session = inject(WorkspaceSession);
   readonly profilesRead = apiResource({
     feature: 'knowledge.retrieval',
     loader: () => this.api.embeddingProfiles(),

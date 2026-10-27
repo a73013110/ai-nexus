@@ -212,7 +212,6 @@ export class MailMessagesPage {
     this.session.has('mail.messages')
       ? mailMessagesTour({
           resend: this.session.has('mail.messages.resend'),
-          testing: this.session.testing(),
           logs: this.logsName(),
         })
       : null,

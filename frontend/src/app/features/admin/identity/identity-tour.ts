@@ -1,15 +1,13 @@
 import type { ProductTourDefinition, TourStep, TourSteps } from '@shared/ui/product-tour';
 
-/** 使用者管理頁的導覽；測試身分期間新增與列操作都被停用，改說明唯讀。 */
+/** 使用者管理頁的導覽。 */
 export function usersTour(options: {
-  /** 正以測試身分檢視，頁面全部唯讀。 */
-  testing: boolean;
   /** 有 `identity.users.import`：頁首有「從 AD 匯入」。 */
   directoryImport?: boolean;
   /** 有 `identity.users.sync`：表格右上與列選單有「從 AD 更新」。 */
   directorySync?: boolean;
 }): ProductTourDefinition {
-  const sync = !options.testing && !!options.directorySync;
+  const sync = !!options.directorySync;
   const steps: TourSteps = [
     {
       target: 'nx-users-page .feature-title',
@@ -24,15 +22,14 @@ export function usersTour(options: {
       description: '輸入姓名、登入帳號或通知信箱的任一段，列表會重新查詢。',
       side: 'bottom',
     },
-    !options.testing &&
-      options.directoryImport && {
-        target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
-        title: '從 AD 匯入',
-        description:
-          '新進人員還沒登入、要先指派角色時用：依 OU 瀏覽公司 AD、跨節點勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
-        side: 'bottom',
-      },
-    !options.testing && {
+    options.directoryImport && {
+      target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
+      title: '從 AD 匯入',
+      description:
+        '新進人員還沒登入、要先指派角色時用：依 OU 瀏覽公司 AD、跨節點勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
+      side: 'bottom',
+    },
+    {
       target: 'nx-users-page nx-admin-users-tab .page-toolbar .primary-button',
       title: '新增使用者',
       description:
@@ -55,11 +52,10 @@ export function usersTour(options: {
     {
       target: 'nx-users-page .admin-users-table .ui-table-link',
       title: '開啟使用者詳情',
-      description: options.testing
-        ? '點姓名可查看帳號、角色、政策與唯讀對話；測試身分期間全部唯讀。'
-        : '點姓名開啟詳情，在頁籤中編輯帳號、通知信箱、角色、AI 模型與附件容量，或查看唯讀對話。',
+      description:
+        '點姓名開啟詳情，在頁籤中編輯帳號、通知信箱、角色、AI 模型與附件容量，或查看唯讀對話。',
     },
-    !options.testing && {
+    {
       target: 'nx-users-page .admin-users-table nx-action-menu',
       title: '測試身分與刪除',
       description: `${
@@ -78,8 +74,6 @@ export function usersTour(options: {
 export function userInspectorTour(options: {
   /** 檢視者有活動稽核授權，摘要列出反查連結。 */
   audit: boolean;
-  /** 正以測試身分檢視，各頁籤唯讀。 */
-  testing: boolean;
   /** 目前在「對話」頁籤。 */
   conversations: boolean;
 }): ProductTourDefinition {
@@ -138,9 +132,8 @@ export function userInspectorTour(options: {
         {
           target: 'nx-admin-user-inspector .admin-inspector nx-tabs',
           title: '依頁籤管理',
-          description: options.testing
-            ? '帳號、通知信箱、角色、AI 模型與附件容量分頁呈現；測試身分期間全部唯讀。'
-            : '每個頁籤各自儲存；切換頁籤、換人或關閉時，未儲存的變更會先確認。「對話」頁籤可唯讀查看他的對話。',
+          description:
+            '每個頁籤各自儲存；切換頁籤、換人或關閉時，未儲存的變更會先確認。「對話」頁籤可唯讀查看他的對話。',
           side: 'bottom',
         },
         {
