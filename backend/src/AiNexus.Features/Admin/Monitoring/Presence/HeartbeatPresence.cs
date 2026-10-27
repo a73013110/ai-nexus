@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Monitoring.Traffic;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -40,9 +41,7 @@ internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
         var ua = http.Request.Headers.UserAgent.ToString();
         var browser = ua.Contains("Edg/", StringComparison.Ordinal) ? "Edge" : ua.Contains("Firefox/", StringComparison.Ordinal) ? "Firefox" : ua.Contains("Chrome/", StringComparison.Ordinal) ? "Chrome" : ua.Contains("Safari/", StringComparison.Ordinal) ? "Safari" : "其他瀏覽器";
         var device = ua.Contains("Android", StringComparison.Ordinal) ? "Android" : ua.Contains("iPhone", StringComparison.Ordinal) || ua.Contains("iPad", StringComparison.Ordinal) ? "iOS" : ua.Contains("Windows", StringComparison.Ordinal) ? "Windows" : ua.Contains("Mac", StringComparison.Ordinal) ? "macOS" : ua.Contains("Linux", StringComparison.Ordinal) ? "Linux" : "未知裝置";
-        // 雙棧監聽時 IPv4 常以 ::ffff: 對映形式出現，先還原成 IPv4 才與一般顯示一致。
-        var ip = http.Connection.RemoteIpAddress; if (ip?.IsIPv4MappedToIPv6 == true) ip = ip.MapToIPv4();
-        traffic.Presence(user, request, ip?.ToString() ?? "未知", browser, device,
+        traffic.Presence(user, request, http.ClientAddress()?.ToString() ?? "未知", browser, device,
             http.User.FindFirstValue(SessionIdentity.Method) is "local" ? "local" : "ad", SessionIdentity.IsTest(http.User));
         // 心跳間隔固定 25 秒，遠小於最短的 60 秒會話逾時，單次遺失不會誤判為離線。
         return new PresenceReceipt(traffic.Enabled, 25);

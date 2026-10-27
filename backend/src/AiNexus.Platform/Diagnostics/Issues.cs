@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Antiforgery;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 
 namespace AiNexus.Platform.Diagnostics;
@@ -213,14 +214,8 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
         http.TraceIdentifier = Guid.NewGuid().ToString("N");
         activity.SetTag("operation.id", operation.ToString());
 
-        var address = http.Connection.RemoteIpAddress;
-        if (address?.IsIPv4MappedToIPv6 == true)
-        {
-            address = address.MapToIPv4();
-        }
-
-        // 連線中繼資料可能已由主機信任的反向代理中介軟體解析過。
-        // 這裡不可重新解析客戶端能任意偽造的 X-Forwarded-For 標頭。
+        // 位址已由 UseReverseProxy 依受信任代理還原；這裡不可重新解析客戶端能任意偽造的 X-Forwarded-For 標頭。
+        var address = http.ClientAddress();
         using var scope = logger.BeginScope(new Dictionary<string, object?>
         {
             ["RequestId"] = http.TraceIdentifier,

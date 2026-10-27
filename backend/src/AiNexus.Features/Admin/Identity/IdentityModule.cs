@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
@@ -58,7 +59,7 @@ public sealed class IdentityModule : IFeatureModule
                 options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, 403, "access_denied");
             });
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
-            http.Connection.RemoteIpAddress?.ToString() ?? "local",
+            http.ClientAddress()?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
             .AddPerUserLimit(DirectoryReadRateLimit, 60).AddPerUserLimit(DirectoryPersonRateLimit, 180).AddPerUserLimit(DirectoryWriteRateLimit, 20));
         services.AddSingleton<IdentityWriteLock>();

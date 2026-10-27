@@ -41,13 +41,14 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
 | `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Admin/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
+| `ReverseProxy` | [`ReverseProxyOptions`](../../backend/src/AiNexus.Platform/Http/ReverseProxyOptions.cs) | — |
 | `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取 | — |
 
 ## 啟動驗證
 
 每個 Options 類別以 `AddSettings<T, TValidator>(區段)`（[`SettingsRegistration`](../../backend/src/AiNexus.Platform/Configuration/SettingsRegistration.cs)）註冊：`BindConfiguration` 綁定、`[OptionsValidator]` source generator 產生的驗證器檢查，`ValidateOnStart` 讓錯誤在接受任何請求前出現。
 
-- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... properties were not found on the instance of ...InferenceOptions: 'Execution'`。
+- **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗。
 - **不合法的值**：訊息含類別與屬性，例如 `KnowledgeOptions.Retrieval.TopK` 超出範圍，或 `Model 'ollama/qwen3:8b': ContextTokens must be ...`。
 - `SettingsTests` 確保每個區段有產生的驗證器、預設值加三份範本都能綁定，且公開檔的秘密欄位為空。
 

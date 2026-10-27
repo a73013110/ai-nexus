@@ -41,7 +41,7 @@ SQL 匯入用新連線（`Enlist=false`、抑制 ambient transaction、有限逾
 
 - 只存 MessageTemplate＋受控 PropertiesJson，讀取時由 `DiagnosticMessage` 展開。列表只代入摘要權限可見的欄位，其他顯示 `[omitted]`；不呼叫原始 `ILogger` formatter。
 - HTTP 完成事件帶 ClientAddress、UserAgent、Protocol、Scheme、RequestOutcome、RequestAborted、ResponseStarted；耗時只量一次，取消合併在完成事件。
-- ClientAddress 只取 `Connection.RemoteIpAddress`，不自行信任 `X-Forwarded-For`；有反向代理時由部署端設定信任網段。User-Agent 是不可信提示，限 240 字元並遮罩。不蒐集完整 header、Cookie、URL、query、body 或瀏覽器指紋。
+- ClientAddress 一律取 `HttpContext.ClientAddress()`（[`ReverseProxy`](../../backend/src/AiNexus.Platform/Http/ReverseProxy.cs)）：只有受信任代理轉送的 `X-Forwarded-For` 會被還原，不自行解析標頭。User-Agent 是不可信提示，限 240 字元並遮罩。不蒐集完整 header、Cookie、URL、query、body 或瀏覽器指紋。
 - 成功的系統日誌查詢已有稽核，不再寫相同的 HTTP 完成事件；錯誤與取消照記。診斷內部的 DB／查詢／清理以 AsyncLocal 抑制，避免日誌迴圈。
 
 ## 保存與多執行個體

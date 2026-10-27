@@ -40,6 +40,7 @@ catch (Exception ex)
 
 if (command.Name is not null) return await command.RunAsync(app);
 
+app.UseReverseProxy();
 app.UseRuntimeTraffic();
 app.UseMiddleware<DiagnosticRequestMiddleware>();
 app.UseStatusCodePages();

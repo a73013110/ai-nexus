@@ -23,6 +23,16 @@
 
 秘密檔填 `Databases.App.User`、`Databases.App.Password`（application pool 以 gMSA 或網域身分登入 SQL 時改設 `Databases.App.IntegratedSecurity=true`，帳密留空）、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。公文系統 GD 另用自己的帳號，預設可讀寫以回寫假日，權限與只讀設定見 [出勤與公文系統 GD](../features/attendance-gd.md#連線與帳號權限)。
 
+## 反向代理與來源 IP
+
+網站前方有防火牆、負載平衡或 ARR 轉送時，IIS 看到的連線來源是代理本身：線上人員、稽核與系統日誌的 IP 全部相同，登入限流也變成所有人共用一個額度。
+
+- 一般設定填 `ReverseProxy.TrustedProxies`：代理的位址或 CIDR 網段，例如 `["192.168.2.10"]`。線上人員面板上大家共用的那個 IP 就是代理位址。
+- 代理必須附上 `X-Forwarded-For`；TLS 在代理終止、以 HTTP 轉給 IIS 時另加 `X-Forwarded-Proto`。只有連線來自清單內或本機時才採信，其他來源送的標頭一律忽略。
+- 只列代理本身，不要列使用者所在網段；`0.0.0.0/0` 啟動即拒絕。範圍太寬等於讓使用者能偽造 IP 繞過限流與稽核。
+- 代理只做 NAT／L4 轉送、不加標頭時，應用程式無法得知原始 IP，須請網管保留來源位址或加上標頭。
+- 環境變數寫成 `ReverseProxy__TrustedProxies__0`。改完回收集區，從兩台電腦登入，線上人員應顯示各自的 IP。
+
 ## 外部連結允許清單
 
 選單的外部連結只能指向一般設定 `AccessControl.NavigationLinkHosts` 列出的主機；預設空陣列＝不允許任何外部連結（失敗即拒絕）。範例見 `backend/src/AiNexus.Host/appsettings.Production.example.json`。

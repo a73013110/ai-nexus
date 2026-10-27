@@ -16,7 +16,7 @@
 
 人由伺服器驗證的 UserId／AD 帳號識別。每個分頁生成隨機 UUID，與 UserId 組成工作階段 key。同一人兩個分頁算一位使用者、兩個工作階段，不能推算兩台電腦。每 25 秒報送白名單功能與 active／idle／background；兩分鐘未互動為 idle，預設 90 秒沒有心跳即離線。登出移除此分頁，其他中斷依租期處理。
 
-IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-For；可能呈現代理位址。OS／瀏覽器由 User-Agent 推定，只作提示。沒有反向 DNS、AD 電腦查詢或端點掃描。
+IP 是請求來源；網站前有代理時需設[信任的代理](../operations/iis-configuration.md#反向代理與來源-ip)。OS／瀏覽器由 User-Agent 推定，僅供參考。沒有反向 DNS、AD 電腦查詢或端點掃描。
 
 | 數據 | 定義 |
 | --- | --- |

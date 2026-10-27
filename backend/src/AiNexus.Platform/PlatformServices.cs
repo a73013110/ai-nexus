@@ -32,6 +32,7 @@ public static class PlatformServices
         services.TryAddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
+        services.AddReverseProxy();
         services.AddCsrfProtection(builder.Environment, builder.Configuration);
 
         // 預設拒絕：端點除非明確標上 AllowAnonymous，否則都必須通過身分驗證。

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 
 namespace AiNexus.Platform.Auditing;
@@ -24,9 +25,7 @@ public sealed class AuditContextSource(TimeProvider clock, IHttpContextAccessor?
     {
         var request = http?.HttpContext;
         var activity = Activity.Current;
-        var address = request?.Connection.RemoteIpAddress;
-        // IPv4 對應的 IPv6（::ffff:10.0.0.1）還原成 IPv4，稽核頁與搜尋才看得到使用者熟悉的寫法。
-        if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
+        var address = request?.ClientAddress();
         return new(
             owner ?? request?.RequestServices.GetService<IRequestUser>()?.ResolvedId,
             Guid.TryParse(request?.User.FindFirst(RequestClaims.ActorId)?.Value, out var actor) ? actor : null,

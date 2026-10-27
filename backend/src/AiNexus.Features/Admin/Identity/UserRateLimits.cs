@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using AiNexus.Features.Admin.Identity.Sessions;
+using AiNexus.Platform.Http;
 
 namespace AiNexus.Features.Admin.Identity;
 
@@ -23,6 +24,6 @@ public static class UserRateLimits
         var id = user.FindFirstValue(SessionIdentity.UserId) ?? user.FindFirstValue(ClaimTypes.PrimarySid);
         if (user.Identity?.IsAuthenticated == true && id is { Length: > 0 })
             return "user:" + id;
-        return "address:" + (http.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        return "address:" + (http.ClientAddress()?.ToString() ?? "unknown");
     }
 }
