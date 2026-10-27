@@ -23,7 +23,12 @@ namespace AiNexus.Features.Admin.Identity;
 /// <summary>身分模組：Cookie 與 Negotiate 驗證、登入速率限制、帳密登入服務的註冊，以及管理端的帳號管理與首次管理員。</summary>
 public sealed class IdentityModule : IFeatureModule
 {
+    /// <summary>帳密登入依來源位址的總上限；主要的防護是 <see cref="Authentication.LoginThrottle"/> 依帳號計算失敗次數。</summary>
     public const string LoginRateLimit = "ad-login";
+    // 寬鬆到整間公司在 NAT 後面同時上班也碰不到，只擋單一來源大量換帳號猜密碼。
+    public const int LoginsPerAddressPerMinute = 120;
+    /// <summary>同一帳號在 <see cref="Authentication.LoginThrottle.Window"/> 內允許的帳密失敗次數；比本地帳號的 5 次鎖定寬，鎖定仍由它先觸發。</summary>
+    public const int LoginFailuresPerAccount = 10;
     /// <summary>匯入對話框瀏覽 AD 目錄樹與節點人員（每展開一層、每選一個節點各一次）。</summary>
     public const string DirectoryReadRateLimit = "directory-read";
     // 單人屬性另計：以方向鍵逐列看屬性很快就會用掉瀏覽的額度，而且每次只查一個物件，成本遠低於子樹計數。
@@ -60,9 +65,10 @@ public sealed class IdentityModule : IFeatureModule
             });
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.ClientAddress()?.ToString() ?? "local",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = LoginsPerAddressPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
             .AddPerUserLimit(DirectoryReadRateLimit, 60).AddPerUserLimit(DirectoryPersonRateLimit, 180).AddPerUserLimit(DirectoryWriteRateLimit, 20));
         services.AddSingleton<IdentityWriteLock>();
+        services.AddSingleton<LoginThrottle>();
         services.AddSingleton<DirectoryProfileCache>();
         services.AddScoped<DirectoryAccounts>();
         services.AddScoped<DirectoryProvisioning>();

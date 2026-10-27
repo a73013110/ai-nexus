@@ -13,6 +13,7 @@ internal static class IdentityErrors
     public static readonly Error InvalidAccount = Error.Invalid("invalid_account");
     public static readonly Error InvalidCredentials = Error.Unauthenticated("invalid_credentials");
     public static readonly Error AdInvalidCredentials = Error.Unauthenticated("ad_invalid_credentials");
+    public static readonly Error LoginRateLimited = Error.RateLimited("login_rate_limited");
     public static readonly Error AdSidRequired = Error.Forbidden("ad_sid_required");
     public static readonly Error AuthenticationModeUnsupported = Error.Invalid("authentication_mode");
     public static readonly Error TestAccountSecurityLocked = Error.Forbidden("test_account_security_locked");

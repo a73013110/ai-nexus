@@ -2,6 +2,8 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Sessions;
 using Microsoft.AspNetCore.Authentication;
@@ -32,6 +34,24 @@ public sealed class LoginTests
         client.DefaultRequestHeaders.Add("X-CSRF-Token", session.CsrfToken);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "wrong"))).StatusCode);
         Assert.False((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
+    }
+
+    [Fact]
+    public async Task RepeatedFailuresThrottleTheAccountWithoutBlockingOthersOnTheSameAddress()
+    {
+        await using var factory = new AppFactory(ldap: true);
+        using var client = factory.CreateClient(); await Csrf(client);
+        // 換網域寫法仍算同一個帳號，否則換個寫法就能多猜幾輪。
+        for (var i = 0; i < IdentityModule.LoginFailuresPerAccount; i++)
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest(i % 2 == 0 ? "alice" : "Alice@fixture.internal", "wrong"))).StatusCode);
+
+        using var limited = await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"));
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        Assert.True(limited.Headers.RetryAfter?.Delta > TimeSpan.Zero);
+        Assert.Equal("login_rate_limited", (await limited.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        // 同一來源位址（NAT 後的同事）的其他帳號照常登入。
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("bob", "fixture-password"))).StatusCode);
     }
 
     [Fact]

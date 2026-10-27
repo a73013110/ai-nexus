@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
+using System.Globalization;
 using System.Security.Claims;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
@@ -19,7 +20,7 @@ public sealed record AdLoginRequest(string Account, string Password, string Meth
 
 /// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
 internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, AppDbContext db, AuthenticationAudit audit, Issues issues,
-    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail)
+    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail, LoginThrottle throttle)
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/login", (AdLoginRequest body, HttpContext http, LogIn handler, CancellationToken ct) => handler.HandleAsync(http, body, ct))
@@ -28,18 +29,30 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
     {
         var previous = http.User;
+        var account = LoginThrottle.Key(body, options.Value);
         Result<User> user;
-        try { user = await AuthenticateAsync(http, body, ct); }
-        catch (Exception error) when (!ct.IsCancellationRequested)
+        // 達上限時連目錄都不查：猜密碼的請求不該再打到 AD，也不會讓 AD 因此鎖住帳號。
+        if (throttle.RetryAfter(account) is { } wait)
         {
-            http.User = previous;
-            var problem = issues.Problem(error);
-            await audit.WriteAsync(IdentityAudit.SignedIn, null, body.Account, body.Method, ct, problem.Code, problem.IssueCode);
-            throw;
+            http.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+            user = IdentityErrors.LoginRateLimited;
+        }
+        else
+        {
+            try { user = await AuthenticateAsync(http, body, ct); }
+            catch (Exception error) when (!ct.IsCancellationRequested)
+            {
+                http.User = previous;
+                var problem = issues.Problem(error);
+                await audit.WriteAsync(IdentityAudit.SignedIn, null, body.Account, body.Method, ct, problem.Code, problem.IssueCode);
+                throw;
+            }
         }
         if (!user.IsSuccess)
         {
             http.User = previous;
+            // 只有帳密類的失敗才計數；目錄連不上等上游錯誤不是猜密碼，不該把使用者鎖在外面。
+            if (user.Error.Kind == ErrorKind.Unauthenticated) throttle.Failed(account);
             var issue = issues.Report(user.Error);
             await audit.WriteAsync(IdentityAudit.SignedIn, null, body.Account, body.Method, ct, user.Error.Code, issue);
             return user.Error.ToProblem(issue);

@@ -187,6 +187,7 @@ public static class PublicErrorCatalog
         ["log_not_found"] = "找不到此日誌。",
         ["log_text_range"] = "文字搜尋限一天內。",
         ["login_method_disabled"] = "此使用者已停用，或未允許 AD 驗證。",
+        ["login_rate_limited"] = "登入失敗次數過多，請幾分鐘後再試。",
         ["mail_address_invalid"] = "收件地址格式不正確，請輸入單一 email 地址（例如 name@company.com）。",
         ["mail_content_unavailable"] = "這封信是敏感信或內文已依保存期限刪除，不能重寄。",
         ["mail_cursor_invalid"] = "分頁已失效，請重新查詢。",

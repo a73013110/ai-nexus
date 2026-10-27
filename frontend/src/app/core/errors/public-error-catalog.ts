@@ -172,6 +172,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   invalid_password: '本地密碼需為 12–128 個字元，可使用長句與密碼管理器。',
   authentication_mode: '此工作區未使用 Windows 整合驗證。',
   invalid_credentials: '帳號、密碼或登入方式不正確，或帳號暫時無法登入。',
+  login_rate_limited: '登入失敗次數過多，請幾分鐘後再試。',
   test_identity_nested: '請先返回原管理者，再切換其他身分。',
   test_reason_required: '請填寫 4–240 字元的測試目的。',
   user_not_found: '找不到可測試的使用者。',
