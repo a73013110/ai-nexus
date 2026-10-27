@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Work.Jobs;
@@ -14,6 +15,7 @@ internal sealed class GetDocumentJob(AppDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/job", (Guid id, ICurrentUser user, GetDocumentJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .NotAudited("文件處理進度的輪詢")
         .WithName("DocumentJob");
 
     public async Task<Result<DocumentJobDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)

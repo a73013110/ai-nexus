@@ -16,6 +16,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +42,7 @@ internal sealed class GetConversation(AppDbContext db, ModelPresentation present
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", async (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(ChatAudit.ConversationRead)
         .WithName("GetConversation");
 
     public async Task<Result<ConversationDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

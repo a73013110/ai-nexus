@@ -5,6 +5,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -14,6 +15,7 @@ internal sealed class ListKnowledgeDocuments(AppDbContext db, ResourceAccess acc
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/collections/{id:guid}/documents", (Guid id, ICurrentUser user, ListKnowledgeDocuments handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.DocumentRead)
         .WithName("ListKnowledgeDocuments");
 
     public async Task<Result<IReadOnlyList<DocumentDto>>> HandleAsync(Guid actor, Guid collection, CancellationToken ct)

@@ -56,6 +56,6 @@ public sealed class RunRecoveryTests
         Assert.Equal("executor_lost", run.ErrorCode); Assert.Null(run.ActiveOwnerId);
         Assert.Equal("partial answer", (await db.Messages.SingleAsync(x => x.Id == run.AssistantMessageId)).Content);
         Assert.Equal(0, await recovery.RecoverAsync(DateTimeOffset.UtcNow, default));
-        Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == run.Id && x.Action == "run.recovered").ToArrayAsync());
+        Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == run.Id && x.Action == "chat.run.recovered").ToArrayAsync());
     }
 }

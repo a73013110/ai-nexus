@@ -30,7 +30,7 @@ public sealed class CreateNavigationItemTests
         var listed = await ListAsync(admin);
         Assert.Equal(before.Length + 3, listed.Length);
         Assert.Contains(listed, x => x.Id == link.Id && x.Url == $"https://{LinkHost}/news?tab=1" && x.AudienceGroupIds.SequenceEqual([BuiltInAccess.WorkspaceGroup]));
-        Assert.Equal(3, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_item&result=saved"))!.Length);
+        Assert.Equal(3, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.created&result=success"))!.Length);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class CreateNavigationItemTests
         await AssertCodeAsync(await admin.PostAsJsonAsync(Items, Page(FeatureCatalog.Jobs, FeatureCatalog.Dashboard)), HttpStatusCode.BadRequest, "navigation_parent_invalid");
         await AssertCodeAsync(await admin.PostAsJsonAsync(Items, Page(FeatureCatalog.Chat, BuiltInAccess.WorkNavigation)), HttpStatusCode.Conflict, "navigation_page_duplicate");
         Assert.Equal(before, (await ListAsync(admin)).Length);
-        Assert.Equal(8, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_item&result=failed"))!.Length);
+        Assert.Equal(8, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.created&result=failed"))!.Length);
         // 同一頁面放在不同層可以。
         await CreateAsync(admin, Page(FeatureCatalog.Chat));
     }

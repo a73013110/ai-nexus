@@ -38,9 +38,9 @@ test("audit-only access keeps deep-link filters and same-page links without requ
           {
             id: 1,
             actor: "reviewer",
-            action: "identity.login",
+            action: "identity.session.signed_in",
             category: "authentication",
-            result: "success",
+            result: "completed",
             at: "2026-10-08T00:00:00Z",
             resourceId: null,
             detailsJson: null,
@@ -150,9 +150,9 @@ test("recorded feature changes read under their menu group", async ({
           {
             id: 7,
             actor: "AD\\admin",
-            action: "admin.group",
+            action: "access-control.group.updated",
             category: "administration",
-            result: "saved",
+            result: "completed",
             at: "2026-10-08T00:00:00Z",
             resourceId: "auditors",
             detailsJson: JSON.stringify({

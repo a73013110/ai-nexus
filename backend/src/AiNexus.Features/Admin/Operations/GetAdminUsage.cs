@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
@@ -17,6 +18,7 @@ internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, U
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/usage", async (GetAdminUsage handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .Audited(OperationsAudit.UsageRead)
         .WithName("GetAdminUsage");
 
     public async Task<AdminUsageDto> HandleAsync(CancellationToken ct)

@@ -3,7 +3,6 @@ using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Identity;
 using System.Globalization;
 using System.Security.Claims;
-using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Security;
@@ -32,7 +31,7 @@ public static class SessionIdentity
     public const string Reauthenticated = "reauthenticated_at";
     public const string Restored = "Identity.Restored";
     /// <summary>測試身分結束的稽核動作；一次測試（<see cref="TestId"/>）最多一筆，也是 cookie 是否已撤銷的判斷依據。</summary>
-    public const string TestEndAction = "identity.test_end";
+    public static readonly string TestEndAction = IdentityAudit.TestIdentityEnded.Name;
     private const string Validated = "Identity.ValidatedUser";
 
     /// <summary>此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。</summary>
@@ -71,19 +70,16 @@ public static class SessionIdentity
         => actor is not null && Allows(actor, principal.FindFirstValue(ActorMethod)) && MatchesVersion(actor, principal.FindFirstValue(ActorVersion))
             && await access.HoldsAsync(actor.Id, FeatureCatalog.IdentityUsers, ct);
 
-    /// <summary>直接用已建索引的 ResourceId 欄位查稽核紀錄判斷測試身分是否已結束，不解析 DetailsJson。</summary>
-    internal static Task<bool> TestEndedAsync(AppDbContext db, Guid actorId, Guid testId, CancellationToken ct)
-        => db.AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == TestEndAction, ct);
+    /// <summary>直接用已建索引的 ResourceId 欄位查稽核紀錄判斷測試身分是否已結束，不解析 DetailsJson。測試識別碼是隨機產生的，不必再比對擁有者。</summary>
+    internal static Task<bool> TestEndedAsync(AppDbContext db, Guid testId, CancellationToken ct)
+        => db.AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.Action == TestEndAction && x.Result == AuditEvent.Completed, ct);
 
-    /// <summary>測試身分結束的稽核事件；<paramref name="result"/> 區分切回管理者（<c>restored</c>）與連同 session 撤銷（<c>revoked</c>）。</summary>
-    internal static AuditEvent TestEnded(Guid actorId, Guid testId, Guid targetId, string result, string reason) => new()
-    {
-        OwnerId = actorId,
-        ResourceId = testId,
-        Action = TestEndAction,
-        Result = result,
-        DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason })
-    };
+    /// <summary>
+    /// 記下測試身分已結束（沒有請求稽核的路徑：cookie 驗證、登入與登出）。擁有者與執行者都是來源管理者、對象是測試識別碼，
+    /// <see cref="TestEndedAsync"/> 依此判斷；<paramref name="reason"/> 區分過期、目標帳號變更、重新登入與登出。
+    /// </summary>
+    internal static void RecordTestEnded(AuditTrail audit, Guid actorId, Guid testId, Guid targetId, string reason)
+        => audit.Record(IdentityAudit.TestIdentityEnded, actorId, testId, targetId, new { testId, userId = targetId, reason }).ActorId = actorId;
 
     public static async Task ValidateAsync(CookieValidatePrincipalContext context)
     {
@@ -110,7 +106,7 @@ public static class SessionIdentity
                 await RejectAsync(context);
                 return;
             }
-            var ended = await TestEndedAsync(db, actorId, testId, ct);
+            var ended = await TestEndedAsync(db, testId, ct);
             var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
             if (ended || expired || user is null || !ActiveUsers.IsActive(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
             {
@@ -120,7 +116,7 @@ public static class SessionIdentity
                 context.Properties.AllowRefresh = true;
                 if (!ended)
                 {
-                    db.AuditEvents.Add(TestEnded(actorId, testId, id, "restored", expired ? "expired" : "target_changed"));
+                    RecordTestEnded(http.RequestServices.GetRequiredService<AuditTrail>(), actorId, testId, id, expired ? "expired" : "target_changed");
                     await db.SaveChangesAsync(ct);
                 }
                 return;

@@ -100,12 +100,7 @@ public sealed class DashboardProcedureTests
     [Fact]
     public async Task OwnerScopeSoftDeletesViewerItemsAndViewerDaysFollowTheSharedRules()
     {
-        var audits = new ProcedureAudits();
-        await using var factory = new AppFactory(administrators: ["alice"], services: services =>
-        {
-            audits.Register(services);
-            services.PostConfigure<GiteaOptions>(o => o.Enabled = true);
-        });
+        await using var factory = new AppFactory(administrators: ["alice"], services: services => services.PostConfigure<GiteaOptions>(o => o.Enabled = true));
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var a = await Me(alice); var b = await Me(bob);
@@ -159,7 +154,6 @@ public sealed class DashboardProcedureTests
         Assert.Equal(new double?[] { 0, 0 }, Values(Section(selected, "repositories"), "running", "reviews"));
         Assert.Single(Section(selected, "repositories").Items);
 
-        foreach (var procedure in Shapes.Keys) audits.AssertReadOnly(procedure);
     }
 
     private static async Task<Guid> Me(HttpClient client) => (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;

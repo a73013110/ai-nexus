@@ -31,7 +31,7 @@
 
 ## 必須知道的陷阱
 
-- **procedure 寫入不會觸發 `SaveChanges` 攔截器**：稽核情境的補值、明細遮罩與 domain event 都不會自動發生。procedure 依 [ADR 0014](0014-procedure-audit.md) 寫稽核；domain event 由程式在 procedure 成功後明確發出。`ExecuteUpdateAsync`／`ExecuteDeleteAsync` 同樣繞過攔截器。
+- **procedure 寫入不會觸發 `SaveChanges` 攔截器**：稽核情境的補值、明細遮罩與 domain event 都不會自動發生。procedure 不寫稽核，由呼叫端的請求稽核記錄（[ADR 0023](0023-audit-standard.md)）；domain event 由程式在 procedure 成功後明確發出。`ExecuteUpdateAsync`／`ExecuteDeleteAsync` 同樣繞過攔截器。
 - procedure 回傳欄位與 DTO 只在執行時對應：每支被程式呼叫的 procedure 至少要有一個整合測試。
 
 ## 交易

@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ internal sealed class ListPunchImports(AppDbContext db)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid? fileId, string? fileName, string? status, DateTimeOffset? from, DateTimeOffset? until, Guid? before, int? take, ListPunchImports handler, CancellationToken ct)
             => handler.HandleAsync(fileId, fileName, status, from, until, before, take, ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.ImportRead)
         .WithName("ListAttendancePunchImports");
 
     public async Task<Result<IReadOnlyList<PunchImportDto>>> HandleAsync(Guid? fileId, string? fileName, string? status, DateTimeOffset? from, DateTimeOffset? until, Guid? before, int? take, CancellationToken ct)

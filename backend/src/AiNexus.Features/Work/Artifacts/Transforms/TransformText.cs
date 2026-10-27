@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.ModelTasks;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -31,7 +32,7 @@ internal sealed class TransformText(ModelTaskService models)
         .MapPost("/text/transform", async (
                 TransformTextRequest request, ICurrentUser user, TransformText handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Text).WithName("TransformText");
+        .RequireAuthorization(Policies.Text).Audited(ArtifactsAudit.TextTransformed).WithName("TransformText");
 
     public async Task<Result<TransformTextDto>> HandleAsync(Guid actor, TransformTextRequest request, CancellationToken ct)
     {

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -19,7 +20,7 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
 }
 
 /// <summary>建立使用者自己的空對話。其他模組經由 <see cref="ConversationService.CreateAsync"/> 建立。</summary>
-internal sealed class CreateConversation(AppDbContext db, TimeProvider clock)
+internal sealed class CreateConversation(AppDbContext db, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>未給標題時的預設值；首次提問時只有仍是這個標題才會自動改成提問摘要。</summary>
     public const string DefaultTitle = "新對話";
@@ -28,6 +29,7 @@ internal sealed class CreateConversation(AppDbContext db, TimeProvider clock)
         .MapPost("", (CreateConversationRequest body, ICurrentUser user, CreateConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body.Title, ct).ToHttpResultAsync(created =>
                 TypedResults.Created($"/api/v1/conversations/{created.Id}", created)))
+        .Audited(ConversationsAudit.ConversationCreated)
         .WithName("CreateConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, string? title, CancellationToken ct)
@@ -37,7 +39,7 @@ internal sealed class CreateConversation(AppDbContext db, TimeProvider clock)
         var now = clock.GetUtcNow();
         var conversation = new Conversation { OwnerId = owner, Title = title, CreatedAt = now, UpdatedAt = now };
         db.Set<Conversation>().Add(conversation);
-        db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.created", ResourceId = conversation.Id });
+        audit.Describe(resource: conversation.Id);
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();
     }

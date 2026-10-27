@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,10 @@ internal sealed class UpdateCard(AppDbContext db, AdministrativeAudit audit)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (Guid id, CardUpdateRequest body, ICurrentUser user, UpdateCard handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.CardUpdated)
         .WithName("UpdateAttendanceCard");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CardUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_card", id, id.ToString(), token => CardRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, CardUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => CardRules.SnapshotAsync(db, id, token), async () =>
     {
         var card = await db.Set<Card>().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;

@@ -49,10 +49,10 @@ public sealed class AdminUserEmailTests
         (await PutEmail(admin, bob.Id, "")).EnsureSuccessStatusCode();
         user = await UserAsync(f, bob.Id);
         Assert.Equal((null, null), (user.Email, user.EmailSource));
-        Assert.Equal(["saved", "saved"], await ResultsAsync(f, bob.Id));
+        Assert.Equal(["completed", "completed"], await ResultsAsync(f, bob.Id));
         using var scope = f.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var details = await db.AuditEvents.AsNoTracking().Where(x => x.Action == "admin.user_email").Select(x => x.DetailsJson).ToListAsync();
+        var details = await db.AuditEvents.AsNoTracking().Where(x => x.Action == "identity.user_email.updated").Select(x => x.DetailsJson).ToListAsync();
         // 快照只記遮罩後的地址（稽核攔截器還會再遮蔽像信箱的片段），不留完整地址。
         Assert.All(details, x => Assert.DoesNotContain("Bob.Smith", x));
         Assert.Contains(details, x => x!.Contains("\"source\":\"admin\""));
@@ -114,7 +114,7 @@ public sealed class AdminUserEmailTests
     {
         using var scope = f.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AsNoTracking()
-            .Where(x => x.ResourceId == id && x.Action == "admin.user_email").OrderBy(x => x.At).Select(x => x.Result!).ToListAsync();
+            .Where(x => x.ResourceId == id && x.Action == "identity.user_email.updated").OrderBy(x => x.At).Select(x => x.Result!).ToListAsync();
     }
 
     private static async Task<bool> NoticeExistsAsync(AppFactory f)

@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,11 +17,13 @@ internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files,
     public static void MapDraft(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, fromLibrary: false, ct)).ToHttpResult())
+        .Audited(FilesAudit.FileDeleted)
         .WithName("RemoveDraftAttachment");
 
     public static void MapLibrary(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, fromLibrary: true, ct)).ToHttpResult())
+        .Audited(FilesAudit.FileDeleted)
         .WithName("DeleteLibraryFile");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, bool fromLibrary, CancellationToken ct)
@@ -46,8 +49,7 @@ internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files,
             await db.Set<Attachment>()
                 .Where(x => x.Id == id)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, false).SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
-            if (fromLibrary) { db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = id, Action = "file.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); }
-            await transaction.CommitAsync(ct);
+                        await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
         await lifecycle.DeletePendingAsync(ct, id);

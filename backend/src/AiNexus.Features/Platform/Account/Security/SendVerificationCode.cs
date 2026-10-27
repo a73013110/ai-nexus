@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,6 +26,7 @@ internal sealed class SendVerificationCode(VerificationChallenges challenges, Ma
         .MapPost("/settings/account/verification-codes", (VerificationCodeRequest body, HttpContext http, ICurrentUser user, SendVerificationCode handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, ct).ToHttpResultAsync())
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
+        .Audited(AccountAudit.VerificationCodeSent)
         .WithName("SendVerificationCode");
 
     public async Task<Result<VerificationCodeDto>> HandleAsync(HttpContext http, User user, CancellationToken ct)

@@ -50,4 +50,4 @@
 
 ## 稽核
 
-`admin.attendance_card`（快照含前後的隱藏旗標）、`admin.attendance_card_delete`、`admin.attendance_assignment`、`admin.attendance_assignment_delete`，活動稽核以「出勤卡號與名單異動」篩選。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。
+`attendance.card.created`／`.updated`（快照含前後的隱藏旗標）／`.deleted`、`attendance.card_assignment.created`／`.updated`／`.deleted`，活動稽核的動作篩選選「出勤（全部）」。持有期間的快照是該卡的全部期間（看得出接手改了前一段）；被拒絕的嘗試也會留下錯誤代碼。備註是自由文字，不進稽核（`AuditRedactor` 白名單不含）。

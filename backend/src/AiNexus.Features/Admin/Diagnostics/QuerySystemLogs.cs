@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Diagnostics;
@@ -8,6 +9,7 @@ internal sealed class QuerySystemLogs(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs
         .MapGet("", ([AsParameters] DiagnosticFilter filter, ICurrentUser user, QuerySystemLogs handler, CancellationToken ct) => handler.HandleAsync(user.Id, filter, ct).ToHttpResultAsync())
+        .Audited(DiagnosticsAudit.LogRead)
         .WithName("QuerySystemLogs");
 
     public Task<Result<DiagnosticPage>> HandleAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct) => query.ListAsync(actor, filter, ct);

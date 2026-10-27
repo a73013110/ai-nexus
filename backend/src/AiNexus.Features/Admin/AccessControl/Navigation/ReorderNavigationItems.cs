@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -38,12 +39,13 @@ internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeAudi
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/navigation-items/order", async (NavigationOrderRequest body, IRequestActor actor, ReorderNavigationItems handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.NavigationReordered)
         .WithName("ReorderNavigationItems");
 
     public Task<Result> HandleAsync(Guid actor, NavigationOrderRequest request, CancellationToken ct)
     {
         var ids = request.Items.Select(x => x.Id).ToArray();
-        return audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, "admin.navigation_order", null, "order", token => SnapshotAsync(ids, token), async () =>
+        return audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, "order", token => SnapshotAsync(ids, token), async () =>
         {
             var items = await db.Set<NavigationItem>().ToListAsync(ct);
             var byId = items.ToDictionary(x => x.Id, StringComparer.Ordinal);

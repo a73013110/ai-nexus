@@ -1,6 +1,6 @@
 # 資料庫
 
-- 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫。**結構以開發庫為準**：DBA 在 SSMS 修改，匯出到 `database/App/` 建成 dacpac；EF Core 只做對應，沒有 migration（[ADR 0010](../decisions/0010-database-first-schema.md)～[0014](../decisions/0014-procedure-audit.md)）。
+- 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫。**結構以開發庫為準**：DBA 在 SSMS 修改，匯出到 `database/App/` 建成 dacpac；EF Core 只做對應，沒有 migration（[ADR 0010](../decisions/0010-database-first-schema.md)～[0013](../decisions/0013-data-project-and-template-naming.md)）。
 - 對應在 `backend/src/AiNexus.Data/App/`，由單一 `AppDbContext` 載入；跨模組外鍵與同一交易可直接使用。
 - **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名；唯一例外 `WebSearches` → `WebSearchRecord`（`WebSearch` 與模組命名空間同名）。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
 - 欄位用到的列舉、狀態常數與值型別（`RunStates`、`UserPreferences`）跟著實體放在 `AiNexus.Data`；`AiNexus.Data` 只依賴 Platform，不能引用模組型別。
@@ -19,7 +19,7 @@
 
 ## Schema 與模組
 
-一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 由 `AuditEventInterceptor` 遮罩與補值。
+一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 只由 `AuditTrail` 寫入，`AuditEventInterceptor` 遮罩與補值（[ADR 0023](../decisions/0023-audit-standard.md)）。
 
 ## 欄位規則
 
@@ -44,7 +44,7 @@
 - `OutboundMessages`：`IdempotencyKey` 唯一防重複，`LeaseToken` 做認領 fencing。
 - `VerificationChallenges`：未結束的 `UserId`＋`Purpose` 唯一。
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
-- `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
+- `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`／`OwnerId`／`Category`／`SubjectUserId`＋`Id` 索引支援日期篩選與遞減游標，`FeatureId`＋`At` 供功能使用量統計；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
 - `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞），腳本在 `database/App/FullText/`：`CREATE FULLTEXT` 不能在交易內執行，也不進 dacpac，部署時在結構更新後執行；缺全文元件或斷詞器時跳過，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
 
 ## 讀取隔離（RCSI）

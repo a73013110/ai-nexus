@@ -116,13 +116,14 @@ public sealed class ManageCardsTests
         await AssertCodeAsync(await hr.PostAsJsonAsync(Cards, new CardCreateRequest("D1", false, null)), HttpStatusCode.Conflict, "attendance_card_number_duplicate");
         (await hr.DeleteAsync($"{Cards}/{card.Id}")).EnsureSuccessStatusCode();
 
-        var saved = await AuditAsync(factory, "admin.attendance_card");
-        Assert.Equal(["saved", "saved", "attendance_card_number_duplicate"], saved.Select(x => x.Result));
+        Assert.Equal(["completed", "attendance_card_number_duplicate"], (await AuditAsync(factory, "attendance.card.created")).Select(x => x.Result));
+        var updated = Assert.Single(await AuditAsync(factory, "attendance.card.updated"));
+        Assert.Equal("completed", updated.Result);
         // 修改的快照有前後的隱藏旗標。
-        Assert.Contains("\"hiddenFromRecords\":false", saved[1].Details, StringComparison.Ordinal);
-        Assert.Contains("\"hiddenFromRecords\":true", saved[1].Details, StringComparison.Ordinal);
+        Assert.Contains("\"hiddenFromRecords\":false", updated.Details, StringComparison.Ordinal);
+        Assert.Contains("\"hiddenFromRecords\":true", updated.Details, StringComparison.Ordinal);
         // 備註是自由文字，不進稽核。
-        Assert.DoesNotContain("外派", saved[1].Details, StringComparison.Ordinal);
-        Assert.Equal(["saved"], (await AuditAsync(factory, "admin.attendance_card_delete")).Select(x => x.Result));
+        Assert.DoesNotContain("外派", updated.Details, StringComparison.Ordinal);
+        Assert.Equal(["completed"], (await AuditAsync(factory, "attendance.card.deleted")).Select(x => x.Result));
     }
 }

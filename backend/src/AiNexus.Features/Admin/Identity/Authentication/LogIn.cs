@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
 using System.Security.Claims;
 using AiNexus.Platform.Diagnostics;
@@ -18,11 +19,11 @@ public sealed record AdLoginRequest(string Account, string Password, string Meth
 
 /// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
 internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, AppDbContext db, AuthenticationAudit audit, Issues issues,
-    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
+    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail)
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/login", (AdLoginRequest body, HttpContext http, LogIn handler, CancellationToken ct) => handler.HandleAsync(http, body, ct))
-        .AllowAnonymous().RequireRateLimiting(IdentityModule.LoginRateLimit).WithName("AdLogin");
+        .AllowAnonymous().RequireRateLimiting(IdentityModule.LoginRateLimit).NotAudited("登入結果由登入稽核記錄").WithName("AdLogin");
 
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
     {
@@ -33,18 +34,18 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
         {
             http.User = previous;
             var problem = issues.Problem(error);
-            await audit.WriteAsync("identity.login", null, body.Account, body.Method, "failed", ct, problem.Code, problem.IssueCode);
+            await audit.WriteAsync(IdentityAudit.SignedIn, null, body.Account, body.Method, ct, problem.Code, problem.IssueCode);
             throw;
         }
         if (!user.IsSuccess)
         {
             http.User = previous;
             var issue = issues.Report(user.Error);
-            await audit.WriteAsync("identity.login", null, body.Account, body.Method, "failed", ct, user.Error.Code, issue);
+            await audit.WriteAsync(IdentityAudit.SignedIn, null, body.Account, body.Method, ct, user.Error.Code, issue);
             return user.Error.ToProblem(issue);
         }
-        await AuthSession.EndExistingTestAsync(previous, db, "signed_in", ct);
-        await audit.WriteAsync("identity.login", user.Value.Id, UserAccounts.LoginName(user.Value), body.Method, "success", ct);
+        await AuthSession.EndExistingTestAsync(previous, db, trail, "signed_in", ct);
+        await audit.WriteAsync(IdentityAudit.SignedIn, user.Value.Id, UserAccounts.LoginName(user.Value), body.Method, ct);
         var principal = SessionIdentity.Principal(user.Value, body.Method);
         await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
         http.User = principal;

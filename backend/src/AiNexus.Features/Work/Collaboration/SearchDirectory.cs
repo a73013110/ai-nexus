@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Collaboration;
@@ -14,10 +15,12 @@ internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers)
 {
     public static RouteHandlerBuilder MapUsers(RouteGroupBuilder api) => api
         .MapGet("/directory", async (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.UsersAsync(search, ct)))
+        .NotAudited("分享對象的選人搜尋")
         .WithName("SearchUserDirectory");
 
     public static RouteHandlerBuilder MapGroups(RouteGroupBuilder api) => api
         .MapGet("/directory/groups", async (ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.GroupsAsync(ct)))
+        .NotAudited("分享對象的群組選項")
         .WithName("ListDirectoryGroups");
 
     /// <summary>最多 20 筆。搜尋字需為 2 到 120 字，帳號或顯示名稱包含即符合；長度不符直接回傳空清單。只列啟用中的人：停用＝離職，不能再被加為成員或收件者。</summary>

@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -18,6 +19,7 @@ internal sealed class CancelRun(
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/runs/{id:guid}/cancel", async (Guid id, ICurrentUser user, CancelRun handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(ChatAudit.RunCancelled)
         .WithName("CancelRun");
 
     /// <summary>

@@ -7,7 +7,7 @@ namespace AiNexus.Features.Admin.Identity;
 
 /// <summary>
 /// <c>/api/v1/auth</c> 下的登入交握端點。此群組不掛 <see cref="CurrentUserResolution.WithCurrentUser"/> 過濾器：這些端點負責建立 session，
-/// 需要時自行解析 <see cref="CurrentUser"/>。
+/// 需要時自行解析 <see cref="CurrentUser"/>。請求稽核照常掛上：宣告稽核的端點（選擇身分、測試身分）都需要已登入的身分。
 /// </summary>
 public static class AuthEndpoints
 {
@@ -16,7 +16,7 @@ public static class AuthEndpoints
     /// <summary>端點註冊順序即 OpenAPI 發布順序。</summary>
     public static void MapAuthenticationEndpoints(this IEndpointRouteBuilder app)
     {
-        var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithRequestValidation();
+        var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithAudit().WithRequestValidation();
         GetAuthSession.Map(auth);
         WindowsLogin.Map(auth);
         LogIn.Map(auth);

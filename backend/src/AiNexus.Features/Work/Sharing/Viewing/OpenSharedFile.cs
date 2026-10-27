@@ -5,6 +5,7 @@ using System.Text.Json;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge.Documents;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
@@ -23,11 +24,14 @@ internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, Attach
     {
         routes.MapGet("/{id:guid}/files/{file:guid}/preview", async (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, CancellationToken ct) =>
                 (await handler.PreviewAsync(user.Id, id, file, ct)).ToHttpResult())
+            .Audited(SharingAudit.SharedFileRead)
             .WithName("PreviewSharedFile");
         routes.MapGet("/{id:guid}/files/{file:guid}", (Guid id, Guid file, bool? download, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
-            handler.OpenAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)));
+            handler.OpenAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
+            .Audited(SharingAudit.SharedFileRead);
         routes.MapGet("/{id:guid}/files/{file:guid}/render", (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
                 handler.RenderAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
+            .Audited(SharingAudit.SharedFileRead)
             .WithName("RenderSharedFileHtml");
     }
 

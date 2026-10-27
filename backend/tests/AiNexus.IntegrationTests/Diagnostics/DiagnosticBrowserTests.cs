@@ -62,7 +62,7 @@ public sealed partial class DiagnosticBrowserTests
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "admin-mobile.png"), FullPage = true });
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= window.innerWidth"), "Only the data table may scroll horizontally on a narrow viewport.");
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "logs.detail"));
+        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "diagnostics.log_detail.read"));
         await page.GetByRole(AriaRole.Button, new() { Name = "關閉診斷詳情", Exact = true }).ClickAsync();
         await page.SetViewportSizeAsync(1440, 1000);
         var noIssue = Issues.NewCode();

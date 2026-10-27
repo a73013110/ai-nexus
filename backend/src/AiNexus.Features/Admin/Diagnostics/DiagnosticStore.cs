@@ -16,7 +16,7 @@ namespace AiNexus.Features.Admin.Diagnostics;
 /// <summary>使用自己的連線與交易寫入，絕不共用呼叫端的業務 DbContext 或交易，避免日誌寫入跟著業務交易一起回滾。</summary>
 public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
 {
-    private const string ConfigurationAction = "system.diagnostics.configuration";
+    private static readonly string ConfigurationAction = DiagnosticsAudit.ConfigurationActivated.Name;
     private static readonly PropertyInfo[] Columns = typeof(DiagnosticEvent).GetProperties();
     private bool configurationRecorded;
     public async Task WriteAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct)
@@ -69,7 +69,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         db.Database.SetCommandTimeout(settings.SqlTimeoutSeconds);
         if (!configurationRecorded)
         {
-            await RecordConfigurationAsync(db, settings, ct);
+            await RecordConfigurationAsync(db, scope.ServiceProvider.GetRequiredService<AuditTrail>(), settings, ct);
             configurationRecorded = true;
         }
         var now = clock.GetUtcNow();
@@ -89,7 +89,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
     /// 設定變更只稽核一次，且要等 SQL 可用後才寫。路徑與匯出端 URL 刻意排除，避免把內部位置寫進稽核；
     /// 版本與實例證據由主機事件提供。
     /// </summary>
-    private static async Task RecordConfigurationAsync(AppDbContext db, DiagnosticOptions o, CancellationToken ct)
+    private static async Task RecordConfigurationAsync(AppDbContext db, AuditTrail audit, DiagnosticOptions o, CancellationToken ct)
     {
         var snapshot = JsonSerializer.Serialize(new {
             serviceName = o.ServiceName, minimumLevel = o.MinimumLevel.ToString(), frameworkMinimumLevel = o.FrameworkMinimumLevel.ToString(),
@@ -107,8 +107,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         // 舊紀錄格式無法解析時視為沒有先前指紋，會多寫一筆稽核，但不會阻擋清理。
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { }
         if (previousFingerprint == fingerprint) return;
-        db.AuditEvents.Add(new() { OwnerId = Guid.Empty, Action = ConfigurationAction, Result = "saved",
-            DetailsJson = JsonSerializer.Serialize(new { fingerprint, after = JsonSerializer.Deserialize<JsonElement>(snapshot) }) });
+        audit.Record(DiagnosticsAudit.ConfigurationActivated, Guid.Empty, details: new { fingerprint, after = JsonSerializer.Deserialize<JsonElement>(snapshot) });
         await db.SaveChangesAsync(ct);
     }
 }

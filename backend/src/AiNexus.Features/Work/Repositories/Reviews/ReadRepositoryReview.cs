@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ internal sealed class ReadRepositoryReview(AppDbContext db, RepositoryReviewServ
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/reviews/{id:guid}", async (Guid id, ICurrentUser user, ReadRepositoryReview handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(RepositoriesAudit.ReviewRead)
         .WithName("ReadRepositoryReview");
 
     public async Task<Result<RepositoryReviewDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

@@ -12,7 +12,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Work.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Conversations.Administration;
 
 namespace AiNexus.IntegrationTests.Inference;
 

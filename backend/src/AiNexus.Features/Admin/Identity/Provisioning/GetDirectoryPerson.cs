@@ -1,3 +1,4 @@
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -19,6 +20,7 @@ internal sealed class GetDirectoryPerson(IAdDirectory directory)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/directory-people/{sid}", (string sid, GetDirectoryPerson handler, CancellationToken ct) => handler.HandleAsync(sid, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryPersonRateLimit)
+        .Audited(IdentityAudit.DirectoryPersonRead)
         .WithName("GetDirectoryPerson");
 
     public async Task<Result<DirectoryPersonDetailDto>> HandleAsync(string sid, CancellationToken ct)

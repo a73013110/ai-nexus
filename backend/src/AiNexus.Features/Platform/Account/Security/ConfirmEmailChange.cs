@@ -2,6 +2,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Platform.Account.Security;
@@ -16,6 +17,7 @@ internal sealed class ConfirmEmailChange(AccountSecurity security, UserCredentia
         .MapPost("/settings/account/email-changes/{id:guid}/confirmation", (Guid id, VerificationCodeConfirmation body, HttpContext http, ICurrentUser user, ConfirmEmailChange handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, id, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
+        .Audited(AccountAudit.EmailConfirmed)
         .WithName("ConfirmEmailChange");
 
     public async Task<Result<AccountSecurityChangeDto>> HandleAsync(HttpContext http, User user, Guid id, VerificationCodeConfirmation body, CancellationToken ct)
@@ -29,7 +31,7 @@ internal sealed class ConfirmEmailChange(AccountSecurity security, UserCredentia
         if (!address.IsSuccess) return address.Error;
         var previous = AccountSecurity.VerifiedEmail(user);
         credentials.SetVerifiedEmail(user, address.Value);
-        security.Audit(user, "account.email_changed", new { from = previous is null ? null : UserEmails.Mask(previous), to = UserEmails.Mask(address.Value) });
+        security.Audit(user, new { from = previous is null ? null : UserEmails.Mask(previous), to = UserEmails.Mask(address.Value) });
         if (previous is not null && !UserEmails.Same(previous, address.Value))
             await security.NotifyAsync(user, previous, "變更了通知信箱", $"新的通知信箱：{UserEmails.Mask(address.Value)}", ct);
         return await security.CommitAsync(http, user, ct);

@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 
@@ -13,7 +14,7 @@ internal sealed class UploadAttachment(AttachmentService files)
     // 應用程式的標頭式防偽造（antiforgery）中介軟體同樣會驗證此上傳。
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", (HttpRequest request, ICurrentUser user, UploadAttachment handler, CancellationToken ct) => handler.HandleAsync(user.Id, request, ct).ToHttpResultAsync())
-        .WithRequestBodyLimit(FilesModule.UploadBodyLimit).RequireRateLimiting(FilesModule.UploadRateLimit).WithName("UploadAttachment");
+        .WithRequestBodyLimit(FilesModule.UploadBodyLimit).RequireRateLimiting(FilesModule.UploadRateLimit).Audited(FilesAudit.FileUploaded).WithName("UploadAttachment");
 
     public async Task<Result<AttachmentDto>> HandleAsync(Guid owner, HttpRequest request, CancellationToken ct)
     {

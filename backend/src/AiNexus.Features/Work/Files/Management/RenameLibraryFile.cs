@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -26,6 +27,7 @@ internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/name", async (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .Audited(FilesAudit.FileRenamed)
         .WithName("RenameLibraryFile");
 
     /// <summary>1 到 180 個字元，不可含路徑、控制字元或保留字元，且不可以點結尾。</summary>
@@ -44,7 +46,6 @@ internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files
         var changed = await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
         if (changed != 1) return FilesErrors.FileNameChanged;
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.renamed", Result = "saved" });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         file.FileName = name;

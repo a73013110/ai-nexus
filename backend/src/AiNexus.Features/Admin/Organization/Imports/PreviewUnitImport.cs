@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Organization.Imports;
@@ -13,6 +14,7 @@ internal sealed class PreviewUnitImport(AppDbContext db, GdUnitSource source)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/import", async (PreviewUnitImport handler, CancellationToken ct) => (await handler.HandleAsync(ct)).ToHttpResult())
         .RequireAuthorization(Policies.OrganizationImport)
+        .Audited(OrganizationAudit.UnitImportRead)
         .WithName("PreviewOrganizationImport");
 
     public async Task<Result<UnitImportPreviewDto>> HandleAsync(CancellationToken ct)

@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Work.Artifacts;
 using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Conversations.Administration;
 using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Platform.Data;

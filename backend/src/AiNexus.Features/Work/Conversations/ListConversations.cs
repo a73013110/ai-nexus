@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,7 @@ internal sealed class ListConversations(AppDbContext db)
         .MapGet("", (
                 string? search, int? offset, string? view, string? label, ICurrentUser user, ListConversations handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, search, offset ?? 0, view ?? "active", label, ct).ToHttpResultAsync())
+        .NotAudited("側欄的自己對話清單")
         .WithName("ListConversations");
 
     public async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(

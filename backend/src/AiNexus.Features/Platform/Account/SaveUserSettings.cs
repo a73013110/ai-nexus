@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -30,6 +31,7 @@ internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/settings", async (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
+        .Audited(AccountAudit.SettingsUpdated)
         .WithName("SaveUserSettings");
 
     public async Task<Result<UserSettingsDto>> HandleAsync(User user, UserSettingsDto value, CancellationToken ct)

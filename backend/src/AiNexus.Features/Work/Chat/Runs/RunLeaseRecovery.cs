@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Inference;
 using AiNexus.Features.Admin.Billing;
 using AiNexus.Features.Work.Conversations;
@@ -24,7 +23,7 @@ public sealed class RunLeaseRecovery(
     BillingService billing,
     Issues issues,
     ILogger<RunLeaseRecovery> logger,
-    NotificationService notifications)
+    NotificationService notifications, AuditTrail audit)
 {
     /// <summary>
     /// 掃描並復原所有租約已超時的活躍生成記錄。
@@ -85,14 +84,7 @@ public sealed class RunLeaseRecovery(
             RunService.AddEvent(db, run, "status");
             await conversations.UpdateAnswerAsync(run, ct);
 
-            db.AuditEvents.Add(new AuditEvent
-            {
-                OwnerId = run.OwnerId,
-                Action = "run.recovered",
-                ResourceId = id,
-                Result = "executor_lost",
-                IssueCode = run.IssueCode
-            });
+            audit.Record(ChatAudit.RunRecovered, run.OwnerId, id, result: "executor_lost").IssueCode = run.IssueCode;
 
             await notifications.PublishAsync(
                 run.OwnerId,

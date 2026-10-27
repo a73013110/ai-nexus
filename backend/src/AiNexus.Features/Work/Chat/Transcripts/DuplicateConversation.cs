@@ -7,6 +7,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,11 +22,12 @@ internal sealed class DuplicateConversation(
     AppDbContext db,
     GenerationScheduler scheduler,
     AttachmentQuota quota,
-    TimeProvider clock)
+    TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/duplicate", async (Guid id, ICurrentUser user, DuplicateConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(ChatAudit.ConversationDuplicated)
         .WithName("DuplicateConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
@@ -110,12 +112,7 @@ internal sealed class DuplicateConversation(
                 });
             }
 
-            db.AuditEvents.Add(new()
-            {
-                OwnerId = owner,
-                Action = "conversation.duplicated",
-                ResourceId = clone.Id
-            });
+            audit.Describe(details: new { conversationId = clone.Id });
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

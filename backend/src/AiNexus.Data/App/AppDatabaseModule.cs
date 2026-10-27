@@ -1,14 +1,16 @@
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Health;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Data.App;
 
-/// <summary>主資料庫的服務註冊：<see cref="AppDbContext"/>、SQL 存取、健康檢查與結構檢查。</summary>
+/// <summary>主資料庫的服務註冊：<see cref="AppDbContext"/>、稽核、SQL 存取、健康檢查與結構檢查。</summary>
 public sealed class AppDatabaseModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
@@ -23,6 +25,10 @@ public sealed class AppDatabaseModule : IFeatureModule
             .AddAppInterceptors(scope));
 
         services.AddDbContextSqlDatabase<AppDbContext>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<AuditContextSource>();
+        services.AddSingleton<RepeatedReads>();
+        services.AddScoped<AuditTrail>();
         services.AddScoped<DatabaseSchema>();
         services.AddScoped<SqlVectorCapabilities>();
         services.AddSingleton<StorageReadiness>();

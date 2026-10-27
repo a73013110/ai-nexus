@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.WebSearch;
 using System.Diagnostics;
@@ -20,6 +19,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -83,7 +83,7 @@ internal sealed class CreateRun(
     ProjectService projects,
     WebSearchService webSearch,
     BillingService billing,
-    TimeProvider clock)
+    TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/runs", async (CreateRunRequest body, HttpContext http, ICurrentUser user, CreateRun handler, CancellationToken ct) =>
@@ -93,6 +93,7 @@ internal sealed class CreateRun(
         })
         .WithRequestBodyLimit(InferenceModule.PromptBodyLimit)
         .RequireRateLimiting(ChatModule.SendRateLimit)
+        .Audited(ChatAudit.RunCreated)
         .WithName("CreateRun");
 
     public async Task<Result<RunDto>> HandleAsync(Guid owner, CreateRunRequest request, string key, CancellationToken ct)
@@ -310,7 +311,7 @@ internal sealed class CreateRun(
 
             db.Runs.Add(run);
             RunService.AddEvent(db, run, "status");
-            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, Action = "run.created", ResourceId = run.Id, Result = run.Status });
+            audit.Describe(resource: run.Id);
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

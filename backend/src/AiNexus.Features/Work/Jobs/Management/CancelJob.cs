@@ -1,10 +1,11 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Work.Jobs;
+namespace AiNexus.Features.Work.Jobs.Management;
 
 /// <summary>要求停止使用者排隊中或執行中的工作；實際停止由 worker 完成，並收尾為 cancelled。</summary>
 internal sealed class CancelJob(AppDbContext db, TimeProvider clock)
@@ -12,6 +13,7 @@ internal sealed class CancelJob(AppDbContext db, TimeProvider clock)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/cancel", (Guid id, ICurrentUser user, CancelJob handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(JobsAudit.JobCancelled)
         .WithName("CancelJob");
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

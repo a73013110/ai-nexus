@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Accounts;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Reviews;
@@ -22,6 +23,7 @@ internal sealed class ListAccountReviews(AppDbContext db, AccessService access, 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/account-reviews", async (ICurrentUser user, ListAccountReviews handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .Audited(IdentityAudit.AccountReviewRead)
         .WithName("ListAccountReviews");
 
     public async Task<AccountReviewsDto> HandleAsync(Guid actor, CancellationToken ct)

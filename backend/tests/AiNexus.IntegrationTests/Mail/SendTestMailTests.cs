@@ -34,7 +34,7 @@ public sealed class SendTestMailTests
         Assert.Contains("郵件設定測試", sent.Message.Subject, StringComparison.Ordinal);
         Assert.Contains("寄件地址：ainexus@fixture.test", sent.Message.TextBody, StringComparison.Ordinal);
 
-        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.mail_test"))!);
+        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=mail.test_message.sent"))!);
         Assert.DoesNotContain("ops@company.com", audit.DetailsJson, StringComparison.Ordinal);
         await AssertCodeAsync(await admin.PostAsJsonAsync(Tests, new MailTestRequest("Ops <ops@company.com>")), HttpStatusCode.BadRequest, MailErrors.AddressInvalid.Code);
         await AssertCodeAsync(await admin.PostAsJsonAsync(Tests, new MailTestRequest("")), HttpStatusCode.BadRequest, "validation_failed");
@@ -82,7 +82,7 @@ public sealed class SendTestMailTests
         Assert.Contains("驗證碼 7 分鐘內有效", sent.Message.TextBody, StringComparison.Ordinal);
         Assert.Contains($"{MailSampleContext.ExampleName} 您好", sent.Message.TextBody, StringComparison.Ordinal);
 
-        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.mail_test"))!);
+        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=mail.test_message.sent"))!);
         Assert.DoesNotContain("654321", audit.DetailsJson, StringComparison.Ordinal);
     }
 

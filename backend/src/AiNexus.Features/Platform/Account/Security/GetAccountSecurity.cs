@@ -1,5 +1,6 @@
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
@@ -8,6 +9,7 @@ internal sealed class GetAccountSecurity(AccountSecurity security)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/settings/account", (HttpContext http, ICurrentUser user, GetAccountSecurity handler) => TypedResults.Ok(handler.Handle(http, user.User)))
+        .NotAudited("使用者自己的帳號安全狀態")
         .WithName("GetAccountSecurity");
 
     public AccountSecurityDto Handle(HttpContext http, User user) => security.Describe(http, user);

@@ -9,6 +9,7 @@ using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Repositories.Browsing;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -39,12 +40,12 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 /// 之後的 push 不會改變這次 review。request key 讓同一請求的重試回傳同一個 review；同一個 key 用於不同請求則為衝突。
 /// </summary>
 internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
-    RepositoryWriteLock writes, ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock)
+    RepositoryWriteLock writes, ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/reviews", (string owner, string name, CreateRepositoryReviewRequest body, ICurrentUser user, CreateRepositoryReview handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct).ToHttpResultAsync())
-        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).WithName("CreateRepositoryReview");
+        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCreated).WithName("CreateRepositoryReview");
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, string repo, CreateRepositoryReviewRequest request, CancellationToken ct)
     {
@@ -110,7 +111,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
             var label = repo + (request.PullRequest is { } pr ? " · PR #" + pr : " · " + head[..10]);
             row.JobId = jobs.Enqueue(owner, null, row.Id, RepositoryReviewHandler.JobKind, label).Id;
             db.Add(row);
-            db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = row.Id, Action = "repository.review.created", Result = "queued" });
+            audit.Describe(resource: row.Id);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return await reviews.DescribeAsync(row, ct);

@@ -74,16 +74,19 @@ describe('activityAuditTour', () => {
 const entry: AuditDto = {
   id: 42,
   actor: 'alice',
-  action: 'accesscontrol.role.save',
+  action: 'access-control.role.updated',
   resourceId: '00000000-0000-0000-0000-0000000000a1',
-  result: 'saved',
+  result: 'completed',
   at: '2026-10-21T04:00:00Z',
   detailsJson: JSON.stringify({
     before: { allowedModelIds: ['a'] },
     after: { allowedModelIds: ['b'] },
   }),
   actingAs: null,
-  category: 'admin',
+  subject: null,
+  feature: 'access-control.roles',
+  clientAddress: '192.0.2.10',
+  category: 'administration',
   traceId: '0123456789abcdef0123456789abcdef',
   operationId: null,
   issueCode: null,
@@ -91,8 +94,16 @@ const entry: AuditDto = {
 const catalog: AuditCatalogDto = {
   features: [],
   models: [],
-  categories: [{ value: 'admin', label: '管理異動' }],
-  actions: [{ value: 'accesscontrol.', label: '存取管理', categories: ['admin'] }],
+  categories: [{ value: 'administration', label: '管理異動' }],
+  modules: [{ value: 'access-control', label: '存取管理' }],
+  actions: [
+    {
+      value: 'access-control.role.updated',
+      label: '調整角色',
+      category: 'administration',
+      module: 'access-control',
+    },
+  ],
   navigationSections: [],
 };
 

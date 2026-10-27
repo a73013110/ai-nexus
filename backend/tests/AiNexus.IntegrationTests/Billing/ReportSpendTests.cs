@@ -12,15 +12,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Billing;
 
+/// <summary>經端點在 LocalDB 實際呼叫 billing.usp_GetSpendReport 與 billing.usp_GetConversationSpend，檢查回傳欄位的對應。</summary>
 public sealed class ReportSpendTests
 {
-    private const string ReportProcedure = "billing.usp_GetSpendReport", ConversationProcedure = "billing.usp_GetConversationSpend";
-
     [Fact]
     public async Task ReportBucketsDaysByViewerOffsetAndCountsUnknownPendingAndLegacyCalls()
     {
-        var audits = new ProcedureAudits();
-        await using var factory = new AppFactory(administrators: ["alice"], services: audits.Register);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         var owner = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var day = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero); var metered = Guid.NewGuid();
@@ -53,14 +51,12 @@ public sealed class ReportSpendTests
         var platform = (await alice.GetFromJsonAsync<SpendReportDto>($"/api/v1/admin/billing/spend?ownerId={owner}&" + Period(480)))!;
         var user = Assert.Single(platform.Users);
         Assert.Equal((owner, 1m, 3, 1), (user.OwnerId, user.Amount, user.Requests, user.UnknownCalls));
-        audits.AssertReadOnly(ReportProcedure);
     }
 
     [Fact]
     public async Task ConversationSpendCountsRunsWithoutChargesAsLegacyAndHidesDeletedConversations()
     {
-        var audits = new ProcedureAudits();
-        await using var factory = new AppFactory(services: audits.Register);
+        await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
         var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var conversation = await ChatApi.CreateConversation(client);
@@ -80,7 +76,6 @@ public sealed class ReportSpendTests
         Assert.Equal(("測試模型", 3, 1), (Assert.Single(spend.Models).Label, spend.Models[0].Requests, spend.Models[0].UnknownCalls));
         (await client.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/conversations/{conversation.Id}/spend")).StatusCode);
-        audits.AssertReadOnly(ConversationProcedure);
     }
 
     [Fact]

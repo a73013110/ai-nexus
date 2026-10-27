@@ -39,7 +39,7 @@ public sealed class SaveFeatureTests
         (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("  ", true))).EnsureSuccessStatusCode();
         Assert.Null(await StoredNameAsync(factory));
         Assert.Contains((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == FeatureCatalog.Jobs && x.Name == "背景任務");
-        Assert.Equal(4, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.feature&result=saved"))!.Length);
+        Assert.Equal(4, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.feature.updated&result=success"))!.Length);
     }
 
     [Fact]

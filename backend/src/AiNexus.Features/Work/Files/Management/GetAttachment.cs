@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Files.Management;
@@ -8,6 +9,7 @@ internal sealed class GetAttachment(AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetAttachment handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(FilesAudit.FileRead)
         .WithName("GetAttachment");
 
     public async Task<Result<AttachmentDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

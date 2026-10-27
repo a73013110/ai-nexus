@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -29,13 +30,14 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/navigation-items", async (NavigationItemCreateRequest body, IRequestActor actor, CreateNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.NavigationCreated)
         .WithName("CreateNavigationItem");
 
     public async Task<Result<NavigationItemDto>> HandleAsync(Guid actor, NavigationItemCreateRequest request, CancellationToken ct)
     {
         var id = Guid.NewGuid().ToString("N");
         var audiences = request.AudienceGroupIds ?? [];
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, "admin.navigation_item", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
         {
             if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
             var items = await db.Set<NavigationItem>().ToListAsync(ct);

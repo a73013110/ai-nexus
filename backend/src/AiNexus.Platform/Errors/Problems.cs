@@ -39,6 +39,9 @@ public static class Problems
         _ => "invalid_request",
     };
 
+    /// <summary>problem 的公開錯誤代碼；稽核以它記錄失敗的結果。</summary>
+    public static string? CodeOf(ProblemDetails details) => details.Extensions.TryGetValue(CodeKey, out var code) ? code as string : null;
+
     public static ProblemHttpResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
         => TypedResults.Problem(Details(Status(error.Kind), error.Code, errors));
 

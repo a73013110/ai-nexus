@@ -34,7 +34,7 @@
           type="search"
           maxlength="120"
           autocomplete="off"
-          placeholder="帳號、動作、資源、Trace ID 或查證代碼"
+          placeholder="帳號、資料主體、動作、資源、Trace ID 或查證代碼"
           [value]="draft().search"
           (input)="query.set('search', $any($event.target).value)"
       /></label>
@@ -110,6 +110,8 @@
           <col nxTableColumn="time" class="audit-time-column" />
           <col nxTableColumn="actor" />
           <col nxTableColumn="action" />
+          <col nxTableColumn="feature" />
+          <col nxTableColumn="subject" />
           <col nxTableColumn="resource" />
           <col nxTableColumn="result" class="audit-result-column" />
         </colgroup>
@@ -118,6 +120,8 @@
             <th scope="col" nxTableColumn="time">時間</th>
             <th scope="col" nxTableColumn="actor">操作者</th>
             <th scope="col" nxTableColumn="action">動作</th>
+            <th scope="col" nxTableColumn="feature">功能</th>
+            <th scope="col" nxTableColumn="subject">資料主體</th>
             <th scope="col" nxTableColumn="resource">資源</th>
             <th scope="col" nxTableColumn="result">結果</th>
           </tr>
@@ -160,6 +164,14 @@
                   {{ row.action }}
                 </button>
                 <small class="ui-truncate">{{ row.category }}</small>
+              </td>
+              <td nxTableColumn="feature">
+                <span class="ui-truncate" [title]="row.feature">{{ row.feature || '—' }}</span>
+              </td>
+              <td nxTableColumn="subject">
+                <span class="ui-truncate" [title]="row.entry.subject ?? ''">{{
+                  row.entry.subject || '—'
+                }}</span>
               </td>
               <td nxTableColumn="resource">
                 <span class="ui-truncate" [title]="row.resource || row.entry.resourceId || ''">{{
@@ -266,6 +278,35 @@
               <dt>分類</dt>
               <dd>{{ row.category }}</dd>
             </div>
+            @if (row.reason) {
+              <div class="ui-description-wide">
+                <dt>失敗原因</dt>
+                <dd>
+                  {{ row.reason }}
+                  @if (row.reason !== row.entry.result) {
+                    <code>{{ row.entry.result }}</code>
+                  }
+                </dd>
+              </div>
+            }
+            @if (row.feature) {
+              <div>
+                <dt>功能</dt>
+                <dd>{{ row.feature }}</dd>
+              </div>
+            }
+            @if (row.entry.subject) {
+              <div>
+                <dt>資料主體</dt>
+                <dd>{{ row.entry.subject }}</dd>
+              </div>
+            }
+            @if (row.entry.clientAddress) {
+              <div>
+                <dt>來源 IP</dt>
+                <dd>{{ row.entry.clientAddress }}</dd>
+              </div>
+            }
             @if (row.entry.actingAs) {
               <div class="ui-description-wide">
                 <dt>測試身分</dt>

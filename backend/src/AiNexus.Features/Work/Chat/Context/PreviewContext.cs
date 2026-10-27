@@ -7,6 +7,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -72,6 +73,7 @@ internal sealed class PreviewContext(
         .MapPost("/context", (ContextPreviewRequest body, ICurrentUser user, PreviewContext handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .WithRequestBodyLimit(InferenceModule.PromptBodyLimit)
+        .NotAudited("送出前估算上下文用量")
         .WithName("PreviewContext");
 
     public async Task<Result<ContextUsageDto>> HandleAsync(Guid owner, ContextPreviewRequest body, CancellationToken ct)

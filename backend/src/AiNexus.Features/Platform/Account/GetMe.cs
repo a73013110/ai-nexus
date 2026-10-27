@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ internal sealed class GetMe(AppDbContext db, IAntiforgery csrf, AccessView acces
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/me", async (HttpContext http, ICurrentUser user, GetMe handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(http, user.User, ct)))
+        .NotAudited("每個頁面載入都會查詢的自身資料")
         .WithName("GetMe");
 
     public async Task<MeDto> HandleAsync(HttpContext http, User user, CancellationToken ct)

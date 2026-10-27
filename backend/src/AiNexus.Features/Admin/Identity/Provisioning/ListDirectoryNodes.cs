@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 
@@ -22,6 +23,7 @@ internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuth
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/directory-nodes", (string? parent, ListDirectoryNodes handler, CancellationToken ct) => handler.HandleAsync(parent, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)
+        .Audited(IdentityAudit.DirectoryRead)
         .WithName("ListDirectoryNodes");
 
     public async Task<Result<DirectoryNodesDto>> HandleAsync(string? parent, CancellationToken ct)

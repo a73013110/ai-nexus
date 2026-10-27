@@ -35,7 +35,7 @@ public sealed class UnitMembersTests
         Assert.Equal([hr.Id, it.Id], units.Select(x => x.UnitId));
         Assert.Equal(["總公司", "人資處"], units[0].Path);
         // 稽核快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。
-        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.organization_member&result=saved"))!;
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit_member.updated&result=success"))!;
         Assert.Equal(3, audit.Length);
         Assert.Contains("memberships", audit[0].DetailsJson);
     }

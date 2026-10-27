@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,7 @@ internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationSer
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("", async (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.ConversationCollectionUpdated)
         .WithName("SaveConversationKnowledge");
 
     public async Task<Result> HandleAsync(Guid actor, Guid conversation, KnowledgeSelectionDto request, CancellationToken ct)

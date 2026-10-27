@@ -24,7 +24,7 @@ public sealed class AdministratorBootstrapTests
             db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         using var again = await factory.SignedInAsync(); Assert.Equal(HttpStatusCode.Forbidden, (await again.GetAsync("/api/v1/admin/catalog")).StatusCode);
-        using var check = factory.Services.CreateScope(); Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.bootstrap"));
+        using var check = factory.Services.CreateScope(); Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.administrator.granted"));
     }
 
     [Fact]

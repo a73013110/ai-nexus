@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,9 +11,10 @@ internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeAudit 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/navigation-items/{id}", async (string id, IRequestActor actor, DeleteNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.NavigationDeleted)
         .WithName("DeleteNavigationItem");
 
-    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, "admin.navigation_item_delete", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
     {
         var item = await db.Set<NavigationItem>().FindAsync([id], ct);
         if (item is null) return AccessControlErrors.NavigationItemNotFound;

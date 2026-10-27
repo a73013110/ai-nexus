@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Repositories;
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,18 +23,22 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
     public static void MapList(RouteGroupBuilder routes) => routes
         .MapGet("", (string? q, int? page, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
             handler.ListAsync(user.Id, q, page ?? 1, ct).ToHttpResultAsync())
+        .Audited(RepositoriesAudit.RepositoryRead)
         .WithName("ListRepositories");
 
     public static void Map(RouteGroupBuilder repository)
     {
         repository.MapGet("", (string owner, string name, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
                 handler.ReadAsync(user.Id, owner + "/" + name, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepository");
         repository.MapGet("/tree", (string owner, string name, string commit, string? path, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
                 handler.TreeAsync(user.Id, owner + "/" + name, commit, path ?? "", ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepositoryTree");
         repository.MapGet("/file", (string owner, string name, string commit, string path, ICurrentUser user, RepositoryService gitea, CancellationToken ct) =>
                 gitea.FileAsync(user.Id, owner + "/" + name, commit, path, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.FileRead)
             .WithName("ReadRepositoryFile");
     }
 

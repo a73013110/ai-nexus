@@ -4,6 +4,7 @@ using AiNexus.Data.App.Quality;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +21,13 @@ internal sealed class BrowseEvaluationRuns(AppDbContext db, ResourceAccess acces
     public static void Map(RouteGroupBuilder routes)
     {
         routes.MapGet("/sets/{id:guid}/runs", (Guid id, ICurrentUser user, BrowseEvaluationRuns handler, CancellationToken ct) => handler.ListAsync(user.Id, id, ct).ToHttpResultAsync())
-            .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.RunRead);
         routes.MapGet("/runs/{id:guid}", (Guid id, ICurrentUser user, BrowseEvaluationRuns handler, HttpContext http, CancellationToken ct) =>
         {
             // 結果含個人回答與人工審閱內容，不可被瀏覽器或中間快取保存。
             http.Response.Headers.CacheControl = "private, no-store";
             return handler.DetailAsync(user.Id, id, ct).ToHttpResultAsync();
-        });
+        }).Audited(QualityAudit.RunRead);
     }
 
     public async Task<Result<IReadOnlyList<EvaluationRunDto>>> ListAsync(Guid actor, Guid setId, CancellationToken ct)

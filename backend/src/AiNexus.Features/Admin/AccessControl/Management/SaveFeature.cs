@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,10 @@ internal sealed class SaveFeature(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/features/{id}", async (string id, FeatureUpdateRequest body, IRequestActor actor, SaveFeature handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.FeatureUpdated)
         .WithName("SaveFeature");
 
-    public Task<Result> HandleAsync(Guid actor, string id, FeatureUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, "admin.feature", null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, FeatureUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, null, id, token => SnapshotAsync(id, token), async () =>
     {
         // 不檢查 id 格式：功能 id 由目錄定義，資料庫也可能有目錄不認得的舊列；查無此 id 就直接回 NotFound。
         var name = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim();

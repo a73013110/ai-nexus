@@ -365,6 +365,16 @@ export const CATALOG_FEATURES = [
     managerScopes: [],
   },
   {
+    id: 'audit.usage',
+    kind: 'page',
+    module: 'audit',
+    name: '功能使用量',
+    icon: 'chart',
+    route: '/admin/audit/usage',
+    scopes: ['own', 'unit', 'unit-tree', 'all'],
+    managerScopes: [],
+  },
+  {
     id: 'diagnostics.logs',
     kind: 'page',
     module: 'diagnostics',

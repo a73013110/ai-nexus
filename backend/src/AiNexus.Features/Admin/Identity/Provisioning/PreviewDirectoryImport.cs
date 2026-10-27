@@ -1,3 +1,4 @@
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -11,6 +12,7 @@ internal sealed class PreviewDirectoryImport(IAdDirectory directory, DirectoryPr
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/directory-imports/preview", (DirectoryImportRequest body, PreviewDirectoryImport handler, CancellationToken ct) => handler.HandleAsync(body, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
+        .Audited(IdentityAudit.DirectoryImportRead)
         .WithName("PreviewDirectoryImport");
 
     public async Task<Result<DirectoryOutcomesDto>> HandleAsync(DirectoryImportRequest request, CancellationToken ct)

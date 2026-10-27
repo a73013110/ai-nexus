@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Management;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -16,9 +17,10 @@ internal sealed class SetUserRoles(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/roles", async (Guid id, UserRolesRequest body, ICurrentUser user, SetUserRoles handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .Audited(IdentityAudit.UserRoleUpdated)
         .WithName("SetUserRoles");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UserRolesRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_roles", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, UserRolesRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
     {
         if (AccessRules.Keys(request.RoleIds) is { } invalid) return invalid;
         if (!await db.Users.AnyAsync(x => x.Id == id, ct)) return IdentityErrors.AdminResourceNotFound;

@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Repositories.Browsing;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -38,7 +39,7 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/chat", (string owner, string name, StartRepositoryChatRequest body, ICurrentUser user, StartRepositoryChat handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct).ToHttpResultAsync())
-        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).WithName("StartRepositoryChat");
+        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ConversationCreated).WithName("StartRepositoryChat");
 
     public async Task<Result<RepositoryChatDto>> HandleAsync(Guid owner, string repo, StartRepositoryChatRequest request, CancellationToken ct)
     {

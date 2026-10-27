@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -27,12 +28,12 @@ internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock)
         {
             await handler.ThroughAsync(user.Id, body.Through, ct);
             return TypedResults.NoContent();
-        }).WithName("ReadNotifications");
+        }).NotAudited("使用者自己的通知").WithName("ReadNotifications");
         routes.MapPost("/{id:guid}/read", async (Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
         {
             await handler.OneAsync(user.Id, id, ct);
             return TypedResults.NoContent();
-        }).WithName("ReadNotification");
+        }).NotAudited("使用者自己的通知").WithName("ReadNotification");
     }
 
     public Task ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => MarkReadAsync(owner, x => x.CreatedAt <= through, ct);

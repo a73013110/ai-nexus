@@ -3,6 +3,7 @@ using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -32,13 +33,13 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 }
 
 /// <summary>建立個人專案（最多 100 個），或儲存使用者可編輯的專案的新版本。</summary>
-internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
+internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult());
+        .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ProjectCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.UpdateAsync(user.Id, id, body, ct)).ToHttpResult());
+        .MapPut("/{id:guid}", async (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.UpdateAsync(user.Id, id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ProjectUpdated);
 
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
@@ -48,7 +49,7 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
         var resource = new Resource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
         db.Add(resource);
         db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });
+        audit.Describe(resource: resource.Id);
         await db.SaveChangesAsync(ct);
         return await access.LoadProjectAsync(db, actor, resource.Id, ct);
     }
@@ -67,7 +68,6 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
             if (count != 1) return ProjectsErrors.Conflict;
             resource.Name = name.Value;
             resource.UpdatedAt = clock.GetUtcNow();
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "project.updated", Result = "saved" });
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
             return await access.LoadProjectAsync(db, actor, id, ct);

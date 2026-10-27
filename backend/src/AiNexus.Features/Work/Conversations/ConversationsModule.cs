@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
+using AiNexus.Features.Work.Conversations.Administration;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 

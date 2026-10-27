@@ -29,7 +29,7 @@ public sealed class ManageUnitsTests
         // 清單少了一個（畫面過期）或多了別層的單位都拒絕，不會只排一部分。
         await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/order", new UnitOrderRequest(company.Id, [it.Id])), HttpStatusCode.Conflict, "organization_order_stale");
         await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/order", new UnitOrderRequest(company.Id, [it.Id, hr.Id, company.Id])), HttpStatusCode.Conflict, "organization_order_stale");
-        Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.organization_order&result=saved"))!);
+        Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.reordered&result=success"))!);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class ManageUnitsTests
         for (var depth = 4; depth <= 8; depth++) parent = (await CreateUnitAsync(admin, $"第{depth}層", parent)).Id;
         await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(parent, "太深", true)), HttpStatusCode.BadRequest, "organization_depth_exceeded");
         // 被拒絕的變更也留下錯誤代碼的稽核。
-        Assert.NotEmpty((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.organization_unit&result=organization_unit_cycle"))!);
+        Assert.NotEmpty((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.&result=organization_unit_cycle"))!);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class ManageUnitsTests
         (await admin.DeleteAsync($"{Units}/{company.Id}")).EnsureSuccessStatusCode();
         Assert.Empty(await ListUnitsAsync(admin));
         await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{company.Id}"), HttpStatusCode.NotFound, "organization_unit_not_found");
-        Assert.Equal(2, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.organization_unit_delete&result=saved"))!.Length);
+        Assert.Equal(2, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.deleted&result=success"))!.Length);
     }
 
     [Fact]

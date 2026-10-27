@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Quality;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.RetrievalEvaluations;
@@ -14,7 +15,7 @@ internal sealed class ListRetrievalEvaluations(AppDbContext db, RetrievalEvaluat
         {
             http.Response.Headers.CacheControl = "private, no-store";
             return TypedResults.Ok(await handler.HandleAsync(user.Id, ct));
-        });
+        }).Audited(QualityAudit.RetrievalRead);
 
     public async Task<IReadOnlyList<RetrievalEvaluationDto>> HandleAsync(Guid actor, CancellationToken ct)
     {

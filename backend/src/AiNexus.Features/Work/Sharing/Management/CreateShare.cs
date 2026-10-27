@@ -16,6 +16,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Platform.Notifications;
 using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -46,11 +47,11 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
 internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
-    GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock)
+    GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (CreateShareRequest body, ICurrentUser user, CreateShare handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult()).Audited(SharingAudit.ShareCreated);
 
     private sealed record SourceSnapshot(string Title, ShareSnapshot Snapshot, Guid[] Files);
 
@@ -97,14 +98,7 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
                 db.Add(share);
                 db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
                 db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
-                db.AuditEvents.Add(new()
-                {
-                    OwnerId = actor,
-                    Action = "share.created",
-                    ResourceId = share.Id,
-                    Result = "created",
-                    DetailsJson = JsonSerializer.Serialize(new { request.Kind, recipients = request.RecipientIds, share.ExpiresAt, request.IncludeAttachments }),
-                });
+                audit.Describe(resource: share.Id, details: new { kind = request.Kind, recipients = request.RecipientIds.Count, expiresAt = share.ExpiresAt, includeAttachments = request.IncludeAttachments });
 
                 foreach (var recipient in request.RecipientIds)
                 {

@@ -4,6 +4,7 @@ using AiNexus.Data.App.Knowledge;
 using System.Globalization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Work.Jobs;
 using Microsoft.EntityFrameworkCore;
@@ -18,18 +19,22 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
 {
     public static void MapList(RouteGroupBuilder routes) => routes
         .MapGet("/profiles", async (ManageEmbeddingProfiles handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(ct)))
+        .Audited(KnowledgeAudit.ProfileRead)
         .WithName("ListEmbeddingProfiles");
 
     public static void MapRebuild(RouteGroupBuilder routes) => routes
         .MapPost("/profiles/{id:int}/rebuild", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) => handler.RebuildAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.ProfileRebuilt)
         .WithName("RebuildEmbeddingProfile");
 
     public static void MapActivate(RouteGroupBuilder routes) => routes
         .MapPost("/profiles/{id:int}/activate", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) => handler.ActivateAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.ProfileActivated)
         .WithName("ActivateEmbeddingProfile");
 
     public static void MapClear(RouteGroupBuilder routes) => routes
         .MapDelete("/profiles/{id:int}/vectors", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) => handler.ClearAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.ProfileCleared)
         .WithName("ClearRetiredEmbeddingVectors");
 
     public Task<IReadOnlyList<EmbeddingProfileDto>> ListAsync(CancellationToken ct) => lifecycle.ListAsync(ct);
@@ -37,7 +42,7 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
     public async Task<Result<JobDto>> RebuildAsync(Guid actor, int id, CancellationToken ct)
     {
         BackgroundJob? job = null;
-        var queued = await LockedAsync(actor, "admin.embedding_rebuild", id, async () =>
+        var queued = await LockedAsync(actor, id, async () =>
         {
             var rebuild = await lifecycle.QueueRebuildAsync(actor, id, ct);
             if (!rebuild.IsSuccess) return rebuild.Error;
@@ -47,14 +52,14 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
         return queued.IsSuccess ? JobService.Describe(job!) : queued.Error;
     }
 
-    public Task<Result> ActivateAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, "admin.embedding_activate", id, () => lifecycle.ActivateCoreAsync(id, ct), ct);
+    public Task<Result> ActivateAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, id, () => lifecycle.ActivateCoreAsync(id, ct), ct);
 
-    public Task<Result> ClearAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, "admin.embedding_clear", id, () => lifecycle.ClearCoreAsync(id, ct), ct);
+    public Task<Result> ClearAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, id, () => lifecycle.ClearCoreAsync(id, ct), ct);
 
-    private async Task<Result> LockedAsync(Guid actor, string action, int id, Func<Task<Result>> mutation, CancellationToken ct)
+    private async Task<Result> LockedAsync(Guid actor, int id, Func<Task<Result>> mutation, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
-        try { return await audit.MutateAsync(actor, FeatureCatalog.KnowledgeRetrieval, action, null, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token), mutation, ct); }
+        try { return await audit.MutateAsync(actor, FeatureCatalog.KnowledgeRetrieval, null, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token), mutation, ct); }
         finally { writes.Gate.Release(); }
     }
 

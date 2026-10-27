@@ -2,6 +2,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Platform.Account.Security;
@@ -12,6 +13,7 @@ internal sealed class GetVerificationCode(VerificationChallenges challenges, Mai
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/settings/account/verification-codes/{id:guid}", (Guid id, ICurrentUser user, GetVerificationCode handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .NotAudited("輪詢驗證碼的寄送狀態")
         .WithName("GetVerificationCode");
 
     public async Task<Result<VerificationCodeDto>> HandleAsync(Guid userId, Guid id, CancellationToken ct)

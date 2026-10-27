@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,12 +18,13 @@ internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, Admi
         .MapPost("/{id:guid}/resend", (Guid id, [FromHeader(Name = "Idempotency-Key")] Guid? requestKey, IRequestActor actor, ResendMailMessage handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, id, requestKey, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.MailMessagesResend)
+        .Audited(MailAudit.MessageSent)
         .WithName("ResendMailMessage");
 
     public async Task<Result<MailEnqueuedDto>> HandleAsync(Guid actor, Guid id, Guid? requestKey, CancellationToken ct)
     {
         MailEnqueuedDto? result = null;
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, "admin.mail_resend", id, id.ToString(),
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, id, id.ToString(),
             token => Snapshot(result?.MessageId, token), async () =>
             {
                 var original = await db.Set<OutboundMessage>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);

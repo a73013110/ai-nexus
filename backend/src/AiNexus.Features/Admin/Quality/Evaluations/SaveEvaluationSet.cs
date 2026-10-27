@@ -4,6 +4,7 @@ using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -43,15 +44,15 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>
-internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
+internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/sets", async (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, null, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/sets/{id:guid}", async (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetUpdated);
 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {
@@ -75,7 +76,7 @@ internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, 
                 resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }
-            db.AuditEvents.Add(new() { OwnerId = actor, Action = "quality.set.saved", ResourceId = resource.Id, Result = "saved" });
+            audit.Describe(resource: resource.Id);
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return await access.LoadSetAsync(db, actor, resource.Id, ct);
         }

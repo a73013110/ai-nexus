@@ -41,7 +41,7 @@ public sealed class UpdateMailSettingsTests
         await Dispatcher(factory).DispatchAsync(CancellationToken.None);
         Assert.Equal(MailStates.Queued, (await MessageAsync(factory, next)).Status);
 
-        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.mail_settings&result=saved"))!;
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=mail.settings.updated&result=success"))!;
         Assert.Equal(2, audit.Length);
         Assert.Contains("\"autoRetry\":false", audit[^1].DetailsJson, StringComparison.Ordinal);
     }

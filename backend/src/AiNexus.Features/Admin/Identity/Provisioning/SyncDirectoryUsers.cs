@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,11 +26,11 @@ internal sealed class DirectorySyncRequestValidator : RequestValidator<Directory
 /// </summary>
 internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory, DirectoryProvisioning provisioning)
 {
-    public const string Action = "admin.user_sync";
 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/directory-syncs", (DirectorySyncRequest body, ICurrentUser user, SyncDirectoryUsers handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
+        .Audited(IdentityAudit.DirectoryBatchSynced)
         .WithName("SyncDirectoryUsers");
 
     public async Task<Result<DirectoryOutcomesDto>> HandleAsync(Guid actor, DirectorySyncRequest request, CancellationToken ct)
@@ -45,7 +46,7 @@ internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory
             if (user.DeletedAt is not null) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.Deleted));
             else if (!UserAccounts.DirectoryBound(user)) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.NotLinked));
             else if (!people.TryGetValue(user.Sid, out var person)) items.Add(DirectoryProvisioning.Unmatched(user, DirectoryOutcomes.NotFound));
-            else items.Add(await provisioning.ApplyAsync(actor, FeatureCatalog.IdentityUsersSync, Action, person, includeDisabled: true, allowCreate: false, ct));
+            else items.Add(await provisioning.ApplyAsync(actor, FeatureCatalog.IdentityUsersSync, IdentityAudit.UserSynced, person, includeDisabled: true, allowCreate: false, ct));
         }
         provisioning.Completed("sync", items);
         return new DirectoryOutcomesDto(items);

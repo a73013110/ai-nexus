@@ -22,7 +22,7 @@ public static class EmbeddingJobs
 }
 
 public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors, KnowledgeWriteLock writes,
-    JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock)
+    JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     private IQueryable<Document> Documents => db.Set<Document>().Where(x => x.CollectionId != null && !x.IsDeleted);
     public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct)
@@ -90,7 +90,7 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
             foreach (var profile in expired)
             {
                 if (await vectors.Rows(profile).AnyAsync(ct)) {
-                    if (!(await ClearCoreAsync(profile.Id, ct)).IsSuccess) continue; db.AuditEvents.Add(new() { OwnerId = Guid.Empty, Action = "system.embedding_retention", Result = "cleared", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { profile.Id }) });
+                    if (!(await ClearCoreAsync(profile.Id, ct)).IsSuccess) continue; audit.Record(KnowledgeAudit.ProfileCleared, Guid.Empty, details: new { profileId = profile.Id, automatic = true });
                 }
             }
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

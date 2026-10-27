@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -26,9 +27,10 @@ internal sealed class ReorderUnits(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/order", async (UnitOrderRequest body, IRequestActor actor, ReorderUnits handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.UnitReordered)
         .WithName("ReorderOrganizationUnits");
 
-    public Task<Result> HandleAsync(Guid actor, UnitOrderRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_order", request.ParentId, request.ParentId?.ToString() ?? "root", token => SnapshotAsync(request.ParentId, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, UnitOrderRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, request.ParentId, request.ParentId?.ToString() ?? "root", token => SnapshotAsync(request.ParentId, token), async () =>
     {
         var siblings = await db.Set<Unit>().Where(x => x.ParentId == request.ParentId).ToListAsync(ct);
         if (siblings.Count != request.UnitIds.Count || siblings.Any(x => !request.UnitIds.Contains(x.Id))) return OrganizationErrors.OrderStale;

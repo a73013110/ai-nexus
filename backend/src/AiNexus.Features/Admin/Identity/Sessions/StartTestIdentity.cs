@@ -1,7 +1,7 @@
 using AiNexus.Data.App;
 using System.Security.Claims;
-using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -34,7 +34,7 @@ internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdenti
 /// <summary>
 /// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
 /// </summary>
-internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock)
+internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, AuditTrail audit)
 {
     public const int MinReasonLength = 4, MaxReasonLength = 240;
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
@@ -42,7 +42,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct)
             => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.IdentityUsers).WithName("StartTestIdentity");
+        .RequireAuthorization(Policies.IdentityUsers).Audited(IdentityAudit.TestIdentityStarted).WithName("StartTestIdentity");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, TestIdentityRequest body, CancellationToken ct)
     {
@@ -58,14 +58,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
         var expiry = now.Add(Lifetime);
         var testId = Guid.NewGuid();
         var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? options.Value.DirectoryMethod;
-        db.AuditEvents.Add(new()
-        {
-            OwnerId = actor.Id,
-            ResourceId = testId,
-            Action = "identity.test_start",
-            Result = "started",
-            DetailsJson = JsonSerializer.Serialize(new { testId, administratorId = actor.Id, userId = target.Id, reason = body.Reason.Trim(), expiresAt = expiry })
-        });
+        audit.Describe(testId, target.Id, new { testId, administratorId = actor.Id, userId = target.Id, reason = body.Reason.Trim(), expiresAt = expiry });
         await db.SaveChangesAsync(ct);
         var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
         var properties = new AuthenticationProperties { IsPersistent = false, AllowRefresh = false, ExpiresUtc = previous.Properties?.ExpiresUtc ?? now.AddHours(8) };

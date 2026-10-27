@@ -42,4 +42,4 @@
 
 ## 稽核
 
-`admin.organization_unit`、`admin.organization_unit_delete`、`admin.organization_order`、`admin.organization_member`、`admin.organization_member_delete`、`admin.organization_import`，在活動稽核以「組織異動」篩選；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。匯入只記數量（前後的單位、已匯入單位與主管數，排除的部門數與各類變動數），完整清單在預覽。
+`organization.unit.created`／`.updated`／`.deleted`／`.reordered`／`.imported`、`organization.unit_member.updated`／`.deleted`，活動稽核的動作篩選選「組織（全部）」；成員異動的快照是該使用者的全部所屬，看得出主要所屬從哪裡移走。匯入只記數量（前後的單位、已匯入單位與主管數，排除的部門數與各類變動數），完整清單在預覽。

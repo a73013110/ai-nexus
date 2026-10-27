@@ -27,7 +27,7 @@ public sealed class UserAccountTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.StartsWith($"$argon2id$v=19$m={AppFactory.PasswordCost.MemoryKiB},t={AppFactory.PasswordCost.Iterations},p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
-            Assert.DoesNotContain(Password, (await db.AuditEvents.SingleAsync(x => x.Action == "admin.user")).DetailsJson);
+            Assert.DoesNotContain(Password, (await db.AuditEvents.SingleAsync(x => x.Action == "identity.user.created")).DetailsJson);
         }
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount() with { DisplayName = "更新姓名", Password = "a replacement password 99!" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Unauthorized, (await local.GetAsync("/api/v1/me")).StatusCode);

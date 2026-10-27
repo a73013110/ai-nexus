@@ -23,7 +23,7 @@ public sealed class DeleteNavigationItemTests
         (await admin.DeleteAsync($"{Items}/work.chat")).EnsureSuccessStatusCode();
         var items = await ListAsync(admin);
         Assert.DoesNotContain(items, x => x.Id == group.Id || x.Id == link.Id || x.Id == "work.chat");
-        Assert.Equal(3, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_item_delete&result=saved"))!.Length);
+        Assert.Equal(3, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.deleted&result=success"))!.Length);
         await AssertCodeAsync(await admin.DeleteAsync($"{Items}/{group.Id}"), HttpStatusCode.NotFound, "navigation_item_not_found");
     }
 

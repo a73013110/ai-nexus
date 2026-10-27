@@ -36,7 +36,7 @@ public sealed class DomainEventDispatchTests
             recorder.Handled.Enqueue("probe:" + e.Name);
             recorder.Transactions.Enqueue(db.Database.CurrentTransaction?.TransactionId);
             await db.Users.Where(x => x.Id == e.OwnerId).ExecuteUpdateAsync(p => p.SetProperty(x => x.DisplayName, e.Name), ct);
-            db.AuditEvents.Add(new() { OwnerId = e.OwnerId, Action = "probe.handled https://secret.example/token", Result = e.Name });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = e.OwnerId, Action = "probe.handled https://secret.example/token", Result = e.Name });
             events.Raise(new Echo(e.OwnerId, e.Name));
         }
     }
@@ -46,7 +46,7 @@ public sealed class DomainEventDispatchTests
         public Task HandleAsync(Echo e, CancellationToken ct)
         {
             recorder.Handled.Enqueue("echo:" + e.Name);
-            db.AuditEvents.Add(new() { OwnerId = e.OwnerId, Action = "echo.handled", Result = e.Name });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = e.OwnerId, Action = "echo.handled", Result = e.Name });
             return Task.CompletedTask;
         }
     }
@@ -101,7 +101,7 @@ public sealed class DomainEventDispatchTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await using var transaction = await db.Database.BeginTransactionAsync();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "rolled-back"));
-            db.AuditEvents.Add(new() { OwnerId = owner, Action = "publisher.saved", Result = "rolled-back" });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = owner, Action = "publisher.saved", Result = "rolled-back" });
             await db.SaveChangesAsync();
             Assert.Equal(transaction.TransactionId, Assert.Single(recorder.Transactions));
             await transaction.RollbackAsync();
@@ -113,7 +113,7 @@ public sealed class DomainEventDispatchTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await using var transaction = await db.Database.BeginTransactionAsync();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "committed"));
-            db.AuditEvents.Add(new() { OwnerId = owner, Action = "publisher.saved", Result = "committed" });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = owner, Action = "publisher.saved", Result = "committed" });
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
         }
@@ -154,12 +154,12 @@ public sealed class DomainEventDispatchTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var events = scope.ServiceProvider.GetRequiredService<DomainEvents>();
             events.Raise(new Unhandled(owner));
-            db.AuditEvents.Add(new() { OwnerId = owner, Action = "plain.saved", Result = "plain" });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = owner, Action = "plain.saved", Result = "plain" });
             await db.SaveChangesAsync();
             Assert.False(events.HasPending);
 
             events.Raise(new Loop(owner));
-            db.AuditEvents.Add(new() { OwnerId = owner, Action = "loop.saved", Result = "failed" });
+            db.AuditEvents.Add(new() { Category = "activity", OwnerId = owner, Action = "loop.saved", Result = "failed" });
             await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
             Assert.Equal(DomainEvents.MaxRounds, recorder.Handled.Count);
             // 失敗的分派不會留下任何東西，影響同一 scope 之後的 save。

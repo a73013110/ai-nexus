@@ -50,7 +50,7 @@
 - **外部連結**：名稱、`https://` 網址、圖示、是否另開分頁與可見群組（留空＝所有登入者）。主機要在維運設定的允許清單內（`navigation_link_host_not_allowed`，見 [IIS 外部設定](../operations/iis-configuration.md#外部連結允許清單)）；清單預設是空的。可見群組只決定入口是否出現，外部系統仍自行驗證權限。
 - **排序與移動**：拖曳或鍵盤調整順序、跨層移動；整批位置一次送出，全部檢查通過才寫入，失敗時畫面回到原狀。成功後重新讀取 `/me`，側欄跟著更新。
 - 沒有可見項目的分群不顯示，只要有一項就照常顯示分群；空分群因此可以先建好再放內容。
-- 稽核動作為 `admin.navigation_item`、`admin.navigation_item_delete`、`admin.navigation_order`，在活動稽核以「選單異動」篩選。
+- 稽核動作為 `access-control.navigation_item.created`／`.updated`／`.deleted`／`.reordered`。
 
 ## 使用者用量與對話
 
@@ -58,4 +58,4 @@
 - 用量由共用的 `UsageReports` 統計 `GenerationRuns` 與 `ModelInvocations`，涵蓋聊天、OCR、文字工具、評測與耗時；期間是最近 30 個 UTC 日期，顯示用台北時區，未回報的 token 不估算。
 - 每次回答可展開總耗時、排隊、執行與輸入／輸出 tokens；執行時間含 Context 準備與等待 provider 容量。
 - 詳情的「對話」頁籤第一次開啟時才列出對話，可搜尋標題與本文，包含封存與已軟刪除的對話；對話每頁 50 段、內容每次 100 則，顯示資料庫保存的所有分支。附件只顯示名稱與大小，不增加下載權限。
-- 這些唯讀端點每次重新檢查 `identity.users`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。
+- 這些唯讀端點每次重新檢查 `identity.users`，回應前先保存 `identity.user_usage.read`、`identity.user_conversation.read` 或 `identity.conversation_content.read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。

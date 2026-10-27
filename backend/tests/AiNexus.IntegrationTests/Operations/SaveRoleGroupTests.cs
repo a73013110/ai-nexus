@@ -41,9 +41,9 @@ public sealed class SaveRoleGroupTests
         Assert.Equal("all", builtIn.Scopes[FeatureCatalog.Audit]);
 
         // 拒絕與變更都留下稽核，快照看得出範圍的前後。
-        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.group"))!;
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.group.updated"))!;
         Assert.Contains(audit, x => x.Result == "invalid_data_scope");
-        Assert.Contains("""{"featureId":"audit","scope":"unit-tree","managerScope":null}""", audit.First(x => x.Result == "saved").DetailsJson);
+        Assert.Contains("""{"featureId":"audit","scope":"unit-tree","managerScope":null}""", audit.First(x => x.Result == "completed").DetailsJson);
     }
 
     [Fact]
@@ -71,8 +71,8 @@ public sealed class SaveRoleGroupTests
         Assert.Empty(catalog.Groups.Single(x => x.Id == BuiltInAccess.AdministratorsGroup).ManagerScopes);
 
         // 稽核快照包含主管範圍的前後。
-        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.group"))!;
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.group.updated"))!;
         Assert.Contains(audit, x => x.Result == "invalid_data_scope");
-        Assert.Contains($$"""{"featureId":"{{Records}}","scope":"own","managerScope":"managed"}""", audit.First(x => x.Result == "saved").DetailsJson);
+        Assert.Contains($$"""{"featureId":"{{Records}}","scope":"own","managerScope":"managed"}""", audit.First(x => x.Result == "completed").DetailsJson);
     }
 }

@@ -24,7 +24,7 @@
 
 ## 寫入、稽核與限制
 
-- 每人一個交易與一筆稽核：`admin.user_import`（匯入，含更新與綁定）、`admin.user_sync`（從 AD 更新），快照記帳號、AD 帳號、姓名、啟用、信箱來源與角色；在活動稽核以「從 AD 匯入使用者」「從 AD 更新使用者」篩選。一人失敗不影響其他人。
+- 每人一個交易與一筆稽核：`identity.user.imported`（匯入，含更新與綁定）、`identity.user.synced`（從 AD 更新），快照記帳號、AD 帳號、姓名、啟用、信箱來源與角色；在活動稽核的動作篩選選「從 AD 匯入使用者」「以 AD 資料更新使用者」。一人失敗不影響其他人。
 - 預覽之後資料被改（同時登入、另一位管理員編輯）的人不寫入，結果為「未完成」（`directory_changed`），重新預覽即可。
 - 單次最多 100 人；瀏覽（樹與人員清單，`directory-read`）每人每分鐘 60 次，預覽、匯入與更新合計 20 次。AD 連不上整批不寫入，回 `directory_unavailable`；未設定服務帳號回 `directory_not_configured`。
 - 每批結束記 `identity.directory_provisioned`（寫入人數）；誰被改了看稽核。

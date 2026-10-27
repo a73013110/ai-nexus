@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,13 @@ internal sealed class DeleteCardAssignment(AppDbContext db, AdministrativeAudit 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteCardAssignment handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.AssignmentDeleted)
         .WithName("DeleteAttendanceCardAssignment");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
-        return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment_delete", id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
+        return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
         {
             var assignment = await db.Set<CardAssignment>().SingleOrDefaultAsync(x => x.Id == id, ct);
             if (assignment is null) return AttendanceErrors.AssignmentNotFound;

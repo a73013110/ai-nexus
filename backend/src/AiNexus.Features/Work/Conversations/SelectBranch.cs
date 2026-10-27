@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ internal sealed class SelectBranch(AppDbContext db, GenerationScheduler schedule
         .MapPatch("/{id:guid}/branch", async (
                 Guid id, SelectBranchRequest body, ICurrentUser user, SelectBranch handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.LeafId, ct)).ToHttpResult())
+        .NotAudited("切換顯示的分支，只影響自己的畫面")
         .WithName("SelectBranch");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, Guid leaf, CancellationToken ct)

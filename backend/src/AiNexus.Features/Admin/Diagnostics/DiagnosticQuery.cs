@@ -44,7 +44,7 @@ public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, str
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
 /// <summary>經過驗證並留有稽核的日誌讀取；列表、詳情與匯出都會先寫稽核，寫不進去就失敗。</summary>
-public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
+public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock, AuditTrail audit)
 {
     private readonly IDataProtector cursorProtector = protection.CreateProtector("AiNexus.Diagnostics.Cursor.v1");
     private const int DefaultTake = 50;
@@ -93,7 +93,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         var range = Validate(filter);
         if (!range.IsSuccess) return range.Error;
         var (from, to) = range.Value;
-        await BeginReadAsync(actor, "logs.query", null, filter, ct);
+        BeginRead(from, to);
         var fingerprint = Fingerprint(filter, from, to);
         var query = Filter(filter, from, to);
         if (filter.Cursor is { Length: > 0 } token)
@@ -127,7 +127,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
     public async Task<Result<DiagnosticDetail>> DetailAsync(Guid actor, Guid id, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
-        await BeginReadAsync(actor, "logs.detail", id, null, ct);
+        BeginRead(null, null);
         var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
         if (item is null) return DiagnosticsErrors.NotFound;
         return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
@@ -139,7 +139,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         if (!range.IsSuccess) return range.Error;
         var (from, to) = range.Value;
         if (filter.Cursor is { Length: > 0 }) return DiagnosticsErrors.ExportCursor;
-        await BeginReadAsync(actor, "logs.export", null, filter, ct);
+        BeginRead(from, to);
         var rows = await Order(Filter(filter, from, to), filter)
             .Select(x => new { x.LogId, x.At, x.Level, x.Category, x.EventName, x.IssueCode, x.TraceId, x.JobId, x.RunId, x.ErrorCode, x.Instance })
             .Take(options.Value.MaxExportRows + 1).ToArrayAsync(ct);
@@ -149,12 +149,13 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         return csv.ToString();
     }
     private static string Csv(object? value) => CsvCell.Quote(DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240));
-    /// <summary>每個讀取入口的共同前置：先寫稽核，再把後續日誌查詢的逾時收斂到設定值。</summary>
-    private async Task BeginReadAsync(Guid actor, string action, Guid? logId, DiagnosticFilter? filter, CancellationToken ct)
+    /// <summary>
+    /// 每個讀取入口的共同前置：在請求稽核補上實際的查詢區間（其他條件由請求稽核從查詢字串記下），再把後續日誌查詢的逾時收斂到設定值。
+    /// 特權讀取採 fail closed：請求稽核寫不進去，資料就不送出。這與診斷事件的抽樣或佇列無關。
+    /// </summary>
+    private void BeginRead(DateTimeOffset? from, DateTimeOffset? to)
     {
-        // 特權讀取採 fail closed：稽核寫不進去就整個失敗。這與診斷事件的抽樣或佇列無關。
-        db.AuditEvents.Add(new() { OwnerId = actor, Action = action, ResourceId = logId, Result = "read", DetailsJson = JsonSerializer.Serialize(new { from = filter?.From, to = filter?.To, issueCode = filter?.IssueCode, traceId = filter?.TraceId, jobId = filter?.JobId, runId = filter?.RunId }) });
-        await db.SaveChangesAsync(ct);
+        if (from is not null) audit.Describe(details: new { from, to });
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
     }
 }

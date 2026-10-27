@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Prompts;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Prompts;
@@ -9,6 +10,7 @@ internal sealed class ListPromptTemplates(AppDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", async (ICurrentUser user, ListPromptTemplates handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .NotAudited("輸入框的範本選單")
         .WithName("ListPromptTemplates");
 
     public async Task<IReadOnlyList<PromptTemplateDto>> HandleAsync(Guid owner, CancellationToken ct)

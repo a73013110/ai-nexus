@@ -1,5 +1,6 @@
 using AiNexus.Features.Work.Artifacts.Management;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Artifacts.Export;
@@ -17,6 +18,7 @@ internal sealed class ExportArtifact(GetArtifact reader, ArtifactExport exporter
                 http.Response.Headers.CacheControl = "private, no-store";
                 return TypedResults.File(exported.File.Data, exported.File.ContentType, exported.FileName);
             }))
+        .Audited(ArtifactsAudit.ArtifactExported)
         .WithName("ExportArtifact");
 
     internal sealed record ExportedArtifact(string FileName, ExportFile File);

@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
+using AiNexus.Platform.Auditing;
 
 namespace AiNexus.Features.Platform.Inference.Models;
 
@@ -13,6 +14,7 @@ internal sealed class ListModels(ModelCatalog models, ModelPolicyService policie
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/models", async (ICurrentUser user, ListModels handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .NotAudited("模型選單")
         .WithName("ListModels");
 
     public async Task<ModelsDto> HandleAsync(Guid owner, CancellationToken ct)

@@ -40,7 +40,9 @@ public sealed class AccountSecurityTests
         var user = await UserAsync(f, me.Id);
         Assert.NotNull(user.PasswordChangedAt);
         Assert.Equal(1, user.SecurityVersion);
-        Assert.Equal(["account.local_login_enabled", "account.reauthentication", "account.reauthentication"], await ActionsAsync(f, me.Id));
+        // 被拒的嘗試（未重新驗證、密碼錯誤）也各留一筆。
+        Assert.Equal(["account.local_login.enabled:reauthentication_required", "account.session.verified:reauthentication_failed",
+            "account.session.verified:completed", "account.local_login.enabled:completed"], await ActionsAsync(f, me.Id));
         // 剛建立的本地密碼可以登入（bob 剛通過 AD 驗證，符合新鮮度規則）。
         Assert.Equal(me.Id, (await Login(f.CreateClient(), "bob", "local", Strong)).Id);
     }
@@ -223,6 +225,6 @@ public sealed class AccountSecurityTests
     {
         using var scope = f.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AsNoTracking()
-            .Where(x => x.OwnerId == id && x.Action.StartsWith("account.")).Select(x => x.Action).OrderBy(x => x).ToListAsync();
+            .Where(x => x.OwnerId == id && x.Action.StartsWith("account.")).OrderBy(x => x.Id).Select(x => x.Action + ":" + x.Result).ToListAsync();
     }
 }

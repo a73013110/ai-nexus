@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Members;
@@ -15,6 +16,7 @@ internal sealed class ListUserUnits(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/organization-units", async (Guid id, ListUserUnits handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(id, ct)))
+        .Audited(OrganizationAudit.MemberRead)
         .WithName("ListUserOrganizationUnits");
 
     public async Task<IReadOnlyList<UserUnitDto>> HandleAsync(Guid userId, CancellationToken ct)

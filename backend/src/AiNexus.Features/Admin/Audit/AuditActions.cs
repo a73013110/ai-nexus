@@ -1,52 +1,50 @@
+using System.Reflection;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
+
 namespace AiNexus.Features.Admin.Audit;
 
-/// <summary>一個動作篩選：完整動作或動作前綴，附上它可能查到的紀錄分類（自身分類排第一）。</summary>
-public sealed record AuditActionDto(string Value, string Label, IReadOnlyList<string> Categories);
+/// <summary>一個稽核動作：名稱、顯示名稱、分類與所屬模組（名稱第一段）。</summary>
+public sealed record AuditActionDto(string Value, string Label, string Category, string Module);
 
-/// <summary>稽核頁的動作選單，依顯示順序排列；分類由 <see cref="AuditCategories"/> 推算，前端不再寫死。</summary>
+/// <summary>稽核動作所屬的模組；動作篩選可只選模組（前綴 <c>&lt;module&gt;.</c>）。</summary>
+public sealed record AuditModuleDto(string Value, string Label);
+
+/// <summary>
+/// 所有宣告的稽核動作：各模組 <c>&lt;Module&gt;Audit</c> 類別裡型別為 <see cref="AuditAction"/> 的公開靜態欄位。
+/// 稽核頁的動作選單、名稱與分類都來自這裡，前端不寫死；新增動作只要在模組裡宣告。依功能目錄的模組順序、再依宣告順序排列。
+/// </summary>
 public static class AuditActions
 {
-    public static readonly IReadOnlyList<AuditActionDto> All = new (string Value, string Label)[]
+    // 不在功能目錄裡的平台模組（沒有自己的頁面）。
+    private static readonly Dictionary<string, string> PlatformModules = new(StringComparer.Ordinal)
     {
-        ("admin.", "平台管理"),
-        ("identity.login", "登入"),
-        ("identity.logout", "登出"),
-        ("logs.", "日誌查閱／匯出"),
-        (ExportActivityAudit.Action, "稽核匯出"),
-        ("admin.user", "使用者設定"),
-        ("identity.test_", "測試身分"),
-        ("account.", "帳號安全"),
-        ("admin.user_roles", "使用者角色"),
-        ("admin.user_email", "使用者信箱"),
-        ("admin.user_import", "從 AD 匯入使用者"),
-        ("admin.user_sync", "從 AD 更新使用者"),
-        ("admin.user_ad_", "使用者 AD 綁定"),
-        ("admin.user_model_policy", "個人模型政策"),
-        ("admin.user_storage", "使用者容量上限"),
-        ("admin.user_order", "使用者排序"),
-        ("admin.role", "角色授權"),
-        ("admin.group", "群組與模型政策"),
-        ("admin.feature", "功能異動"),
-        ("admin.navigation_", "選單異動"),
-        ("admin.organization_", "組織異動"),
-        ("admin.attendance_", "出勤卡號與名單異動"),
-        ("admin.calendar_", "假日設定異動"),
-        ("attendance.records.export", "出勤紀錄匯出"),
-        ("admin.mail_", "郵件重寄與測試"),
-        ("admin.conversation_read", "對話內容檢視"),
-        ("admin.user_usage_read", "使用者用量檢視"),
-        ("project.", "專案與範本"),
-        ("conversation.", "對話管理"),
-        ("artifact.", "成果文件"),
-        ("file.", "檔案庫"),
-        ("share.", "分享"),
-        ("repository.", "程式庫"),
-        ("web.search", "網路搜尋"),
-        ("knowledge.", "知識庫"),
-        ("document.", "文件與索引"),
-        ("evaluation.", "評測資源"),
-        ("quality.", "評測與回饋"),
-        ("run.", "AI 生成"),
-        ("resource.acl", "資源授權"),
-    }.Select(x => new AuditActionDto(x.Value, x.Label, AuditCategories.Covering(x.Value))).ToArray();
+        ["account"] = "帳號",
+        ["remote-files"] = "遠端檔案",
+        ["web-search"] = "網路搜尋",
+    };
+
+    /// <summary>宣告的全部動作；同一個動作被多個類別引用時只列一次。</summary>
+    public static IReadOnlyList<AuditAction> Declared { get; } = [.. typeof(AuditActions).Assembly.GetTypes()
+        .Where(x => x is { IsAbstract: true, IsSealed: true })
+        .OrderBy(x => x.FullName, StringComparer.Ordinal)
+        .SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        .Where(x => x.FieldType == typeof(AuditAction))
+        .Select(x => (AuditAction)x.GetValue(null)!)
+        .DistinctBy(x => x.Name)];
+
+    public static IReadOnlyList<AuditModuleDto> Modules { get; } = [.. Declared.Select(x => x.Module).Distinct().OrderBy(Order).Select(x => new AuditModuleDto(x, ModuleLabel(x)))];
+
+    public static IReadOnlyList<AuditActionDto> All { get; } = [.. Declared
+        .Select((action, index) => (action, index)).OrderBy(x => Order(x.action.Module)).ThenBy(x => x.index)
+        .Select(x => new AuditActionDto(x.action.Name, x.action.Label, AuditAction.Value(x.action.Category), x.action.Module))];
+
+    private static int Order(string module)
+    {
+        var index = FeatureCatalog.Modules.Select(x => x.Id).ToList().IndexOf(module);
+        return index >= 0 ? index : FeatureCatalog.Modules.Count + PlatformModules.Keys.ToList().IndexOf(module);
+    }
+
+    private static string ModuleLabel(string module)
+        => FeatureCatalog.Modules.FirstOrDefault(x => x.Id == module)?.Name ?? PlatformModules.GetValueOrDefault(module, module);
 }

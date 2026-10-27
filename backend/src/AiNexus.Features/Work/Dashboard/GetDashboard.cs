@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Errors;
 
@@ -17,15 +18,15 @@ public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset Ge
     TokenUsageDto Tokens, IReadOnlyList<DashboardSectionDto> Sections);
 
 /// <summary>個人總覽；有平台用量頁（<see cref="FeatureCatalog.OperationsUsage"/>）授權者可看全平台總覽，且每次查看都會留稽核。</summary>
-internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageReports usage, AccessService access,
-    IEnumerable<IDashboardSource> sources, TimeProvider clock)
+internal sealed class GetDashboard(SpendReports reports, UsageReports usage, AccessService access,
+    IEnumerable<IDashboardSource> sources, TimeProvider clock, AuditTrail audit)
 {
     private const string Personal = "personal", Platform = "platform";
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, scope ?? Personal, ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Dashboard).WithName("GetDashboard");
+        .RequireAuthorization(Policies.Dashboard).Audited(DashboardAudit.OverviewRead).WithName("GetDashboard");
 
     public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {
@@ -51,8 +52,7 @@ internal sealed class GetDashboard(AppDbContext db, SpendReports reports, UsageR
         var tokens = await usage.TokensAsync(owner, period, platform, ct);
         if (platform)
         {
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" });
-            await db.SaveChangesAsync(ct);
+            audit.Describe(subject: ownerId, details: new { scope });
         }
         return new DashboardDto(scope, owner, clock.GetUtcNow(), new(window.From, window.Until, window.OffsetMinutes), spend, tokens, sections);
     }

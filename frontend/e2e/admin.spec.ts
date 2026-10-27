@@ -280,9 +280,10 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
     audit.push({
       id,
       actor: "AD\\admin",
-      action: "admin.feature",
+      action: "access-control.feature.updated",
+      category: "administration",
       resourceId: "chat",
-      result: "saved",
+      result: "completed",
       at: "2026-10-04T00:00:00Z",
       detailsJson: JSON.stringify({
         resourceKey: "chat",
@@ -370,14 +371,14 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await firstPage.click();
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(firstPage).toBeDisabled();
-  await chooseSelect(page, "稽核動作", "AI 生成");
+  await chooseSelect(page, "稽核動作", "對話（全部）");
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(page.getByText("條件已變更，按「查詢」套用")).toBeVisible();
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(table.locator(".audit-row")).toHaveCount(0);
   await expect(
     page.getByRole("list", { name: "已套用條件", exact: true }),
-  ).toContainText("動作：AI 生成");
+  ).toContainText("動作：對話（全部）");
   await expect(nextPage).toBeDisabled();
   await page.reload();
   await page.goto("/admin/audit");
@@ -1381,7 +1382,8 @@ async function administration(page: Page) {
       actor: actor.account,
       action,
       resourceId,
-      result: "read",
+      category: "access",
+      result: "completed",
       at: actor.lastSeenAt,
       detailsJson: JSON.stringify({ userId: bob.id }),
     });
@@ -1491,23 +1493,54 @@ async function administration(page: Page) {
           { value: "access", label: "查閱與匯出" },
           { value: "activity", label: "功能操作" },
         ],
+        modules: [
+          { value: "access-control", label: "存取控制" },
+          { value: "identity", label: "身分" },
+          { value: "chat", label: "對話" },
+        ],
         actions: [
           {
-            value: "admin.",
-            label: "平台管理",
-            categories: ["administration", "access"],
+            value: "access-control.feature.updated",
+            label: "調整功能",
+            category: "administration",
+            module: "access-control",
           },
           {
-            value: "identity.login",
-            label: "登入",
-            categories: ["authentication"],
+            value: "access-control.role.updated",
+            label: "調整角色",
+            category: "administration",
+            module: "access-control",
           },
           {
-            value: "admin.conversation_read",
-            label: "對話內容檢視",
-            categories: ["access"],
+            value: "access-control.group.updated",
+            label: "調整功能群組與模型政策",
+            category: "administration",
+            module: "access-control",
           },
-          { value: "run.", label: "AI 生成", categories: ["activity"] },
+          {
+            value: "identity.user_role.updated",
+            label: "調整使用者角色",
+            category: "administration",
+            module: "identity",
+          },
+          {
+            value: "identity.session.signed_in",
+            label: "登入工作區",
+            category: "authentication",
+            module: "identity",
+          },
+          {
+            value: "identity.conversation_content.read",
+            label: "檢視使用者對話內容",
+            category: "access",
+            module: "identity",
+          },
+          {
+            value: "chat.run.created",
+            label: "送出訊息",
+            category: "activity",
+            module: "chat",
+          },
         ],
       });
     if (path.endsWith("/model-policy")) {
@@ -1628,7 +1661,7 @@ async function administration(page: Page) {
     if (path.endsWith("/insights")) {
       const user =
         managedUsers.find((x) => x.id === path.split("/").at(-2)) ?? bob;
-      recordRead("admin.user_usage_read", user.id);
+      recordRead("identity.user_usage.read", user.id);
       return json({
         user: { ...user, activity: null },
         conversations: 1,
@@ -1652,7 +1685,7 @@ async function administration(page: Page) {
       });
     }
     if (path.endsWith("/conversations")) {
-      recordRead("admin.conversations_list", bob.id);
+      recordRead("identity.user_conversation.read", bob.id);
       const items = [
         {
           id: conversationId,
@@ -1671,7 +1704,7 @@ async function administration(page: Page) {
       return json({ items, total: items.length, offset: 0 });
     }
     if (path === `/conversations/${conversationId}`) {
-      recordRead("admin.conversation_read", conversationId);
+      recordRead("identity.conversation_content.read", conversationId);
       return json({
         conversation: {
           id: conversationId,
@@ -1722,7 +1755,7 @@ async function administration(page: Page) {
       auditExports.push(url);
       return route.fulfill({
         contentType: "text/csv",
-        body: "紀錄 ID,動作\n1,admin.role",
+        body: "紀錄 ID,動作\n1,access-control.role.updated",
       });
     }
     if (path === "/audit")
@@ -1732,8 +1765,17 @@ async function administration(page: Page) {
             (x) =>
               (!url.searchParams.get("action") ||
                 x.action.startsWith(url.searchParams.get("action")!)) &&
+              // success／failed 是伺服器端的群組：completed 與其餘錯誤代碼。
               (!url.searchParams.getAll("result").length ||
-                url.searchParams.getAll("result").includes(x.result ?? "")) &&
+                url.searchParams
+                  .getAll("result")
+                  .some((result) =>
+                    result === "success"
+                      ? x.result === "completed"
+                      : result === "failed"
+                        ? x.result !== "completed"
+                        : result === x.result,
+                  )) &&
               (!url.searchParams.get("category") ||
                 x.category === url.searchParams.get("category")) &&
               (!url.searchParams.get("traceId") ||
@@ -1829,9 +1871,12 @@ async function administration(page: Page) {
       audit.unshift({
         id: audit.length + 1,
         actor: "AD\\admin",
-        action: path.includes("/groups/") ? "admin.group" : "admin.user_roles",
+        action: path.includes("/groups/")
+          ? "access-control.group.updated"
+          : "identity.user_role.updated",
+        category: "administration",
         resourceId: bob.id,
-        result: "saved",
+        result: "completed",
         at: "2026-10-04T00:00:00Z",
         detailsJson: JSON.stringify(body),
       });
@@ -1883,7 +1928,9 @@ test("administrators edit roles with effective access preview and an audit trail
   expect(state.bob.roleIds).toContain("administrator");
   await expect(dialog.locator(".summary-roles")).toContainText("平台管理員");
   await page.goto("/admin/audit");
-  await expect(page.getByText("調整使用者角色", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".audit-row", { hasText: "調整使用者角色" }).first(),
+  ).toBeVisible();
   // Reading the user again after the save is audited too; open the save itself.
   await page
     .locator(".audit-row", { hasText: "調整使用者角色" })
@@ -2096,9 +2143,10 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
   audit.push({
     id: 1,
     actor: "AD\\admin",
-    action: "admin.feature",
+    action: "access-control.feature.updated",
+    category: "administration",
     resourceId: "chat",
-    result: "saved",
+    result: "completed",
     at: "2026-10-04T00:00:00Z",
     detailsJson: JSON.stringify({
       featureId: "chat",
@@ -2168,13 +2216,13 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await expect(dialog.getByText("資料範圍", { exact: true })).toHaveCount(0);
   await dialog.getByRole("checkbox", { name: "活動稽核", exact: true }).check();
   const scope = dialog.getByRole("combobox", {
-    name: "活動稽核的資料範圍",
+    name: "活動稽核：所有成員的範圍",
     exact: true,
   });
   await expect(scope).toHaveText("本人");
   await scope.click();
   const scopes = page.getByRole("listbox", {
-    name: "活動稽核的資料範圍",
+    name: "活動稽核：所有成員的範圍",
     exact: true,
   });
   await expect(scopes.getByRole("option")).toHaveText([
@@ -2300,7 +2348,7 @@ test("administrators inspect user usage and deleted conversations through an aud
   expect(
     state.audit.some(
       (x) =>
-        x.action === "admin.conversation_read" &&
+        x.action === "identity.conversation_content.read" &&
         x.resourceId === state.conversationId,
     ),
   ).toBe(true);
@@ -2326,10 +2374,10 @@ test("administrators inspect user usage and deleted conversations through an aud
     .getByRole("button", { name: "關閉使用者管理", exact: true })
     .click();
   await page.goto("/admin/audit");
-  await chooseSelect(page, "稽核動作", "對話內容檢視");
+  await chooseSelect(page, "稽核動作", "檢視使用者對話內容");
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".audit-row")).toHaveCount(1);
-  await expect(page).toHaveURL(/action=admin\.conversation_read/);
+  await expect(page).toHaveURL(/action=identity\.conversation_content\.read/);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "匯出 CSV", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("ai-nexus-audit.csv");
@@ -2342,9 +2390,10 @@ test("audit shows readable before after differences and server filters", async (
   state.audit.push({
     id: 1,
     actor: "AD\\admin",
-    action: "admin.role",
+    action: "access-control.role.updated",
+    category: "administration",
     resourceId: null,
-    result: "saved",
+    result: "completed",
     at: "2026-10-04T00:00:00Z",
     detailsJson: JSON.stringify({
       resourceKey: "analyst",
@@ -2374,11 +2423,13 @@ test("audit shows readable before after differences and server filters", async (
   await expect(
     page.getByRole("dialog", { name: "稽核詳情" }),
   ).not.toBeVisible();
-  await chooseOptions(page, "稽核結果", ["已檢視", "已受理／完成"]);
+  await chooseOptions(page, "稽核結果", ["失敗或拒絕", "完成"]);
   const results = multiSelect(page, "稽核結果");
   await expect(results).toHaveText("已選 2 項");
   // 報讀器讀得到完整的已選內容，不只是「已選 2 項」。
-  await expect(results).toHaveAccessibleName("稽核結果 已受理／完成、已檢視");
+  await expect(results).toHaveAccessibleName("稽核結果 完成、失敗或拒絕");
+  // 只留「失敗或拒絕」：唯一的紀錄是完成的，伺服器端篩選後沒有列。
+  await chooseOptions(page, "稽核結果", ["完成"]);
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".audit-row")).toHaveCount(0);
   await expect(
@@ -2451,19 +2502,18 @@ test("activity audit separates sign-ins and opens a historical trace in system l
     id: 400,
     actor: "未驗證",
     actingAs: null,
-    action: "identity.login",
-    result: "failed",
+    action: "identity.session.signed_in",
+    result: "invalid_credentials",
     resourceId: null,
     at,
     category: "authentication",
+    clientAddress: "203.0.113.8",
     traceId: trace,
     operationId: randomUUID(),
     issueCode: "NX-" + "A".repeat(32),
     detailsJson: JSON.stringify({
       account: "unverified-account",
       authentication: "local",
-      clientAddress: "203.0.113.8",
-      failureCode: "invalid_credentials",
     }),
   });
   const logQueries: URL[] = [];

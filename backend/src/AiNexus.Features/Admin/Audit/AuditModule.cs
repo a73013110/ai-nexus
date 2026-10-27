@@ -6,16 +6,19 @@ using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Admin.Audit;
 
 /// <summary>
-/// 活動稽核：唯讀地查出誰做了什麼。路由在 /admin/audit 下，但權限是獨立功能，不跟 /admin 管理功能綁在一起。
+/// 活動稽核：唯讀地查出誰做了什麼，以及由稽核統計的功能使用量。路由在 /admin/audit 下，但權限是獨立功能，不跟 /admin 管理功能綁在一起；
+/// 使用量另有自己的功能（<see cref="FeatureCatalog.AuditUsage"/>）。
 /// </summary>
 public sealed class AuditModule : IFeatureModule
 {
     public const string Feature = FeatureCatalog.Audit, Policy = Policies.Prefix + Feature;
+    public const string UsagePolicy = Policies.Prefix + FeatureCatalog.AuditUsage;
     public const string ExportRateLimit = "audit-export";
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddFeaturePolicy(Feature);
+        builder.Services.AddFeaturePolicy(FeatureCatalog.AuditUsage);
         builder.Services.AddScoped<AuditDataScope>();
         builder.Services.AddSettings<AuditOptions, AuditOptionsValidator>(AuditOptions.Section);
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
@@ -28,5 +31,6 @@ public sealed class AuditModule : IFeatureModule
         ListActivityAudit.Map(audit);
         GetAuditCatalog.Map(audit);
         ExportActivityAudit.Map(audit);
+        ReportFeatureUsage.Map(api.MapGroup("/admin/audit/usage").RequireAuthorization(UsagePolicy));
     }
 }

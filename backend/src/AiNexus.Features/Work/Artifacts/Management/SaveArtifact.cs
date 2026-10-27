@@ -1,8 +1,8 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Artifacts;
-using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -30,12 +30,13 @@ internal sealed class SaveArtifact(
     ResourceAccess access,
     ResourceWriteLock writes,
     GetArtifact reader,
-    TimeProvider clock)
+    TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", async (
                 Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
+        .Audited(ArtifactsAudit.ArtifactUpdated)
         .WithName("SaveArtifact");
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, Guid id, SaveArtifactRequest request, CancellationToken ct)
@@ -66,14 +67,7 @@ internal sealed class SaveArtifact(
                 Content = request.Content,
                 CreatedAt = now,
             });
-            db.AuditEvents.Add(new()
-            {
-                OwnerId = actor,
-                ResourceId = id,
-                Action = "artifact.revised",
-                Result = "saved",
-                DetailsJson = JsonSerializer.Serialize(new { version = newVersion }),
-            });
+            audit.Describe(details: new { version = newVersion });
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return await reader.HandleAsync(actor, id, null, ct);

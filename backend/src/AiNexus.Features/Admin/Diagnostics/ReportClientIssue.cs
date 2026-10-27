@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -29,7 +30,7 @@ internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, 
 {
     public static void Map(RouteGroupBuilder api) => api
         .MapPost("/client-issues", (ClientIssueRequest request, ICurrentUser user, ReportClientIssue handler) => TypedResults.Ok(handler.Handle(user.Id, request)))
-        .RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).WithName("ReportClientIssue");
+        .RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).NotAudited("前端錯誤回報寫進系統日誌，不是資料存取").WithName("ReportClientIssue");
 
     public ClientIssueResponse Handle(Guid user, ClientIssueRequest request) => dedup.Record(user, request.Kind + request.Fingerprint, code => Log(logger, user, request, code));
 

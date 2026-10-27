@@ -191,8 +191,7 @@ public sealed class MailDispatcherTests
     public async Task ClaimingTakesDueMessagesAndExpiredLeasesByPriorityWithoutWritingAudit()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
-        var audits = new ProcedureAudits();
-        await using var factory = new AppFactory(clock: clock, services: audits.Register);
+        await using var factory = new AppFactory(clock: clock);
         var stuck = await EnqueueAsync(factory, new Greeting(), "stuck", "stuck@company.com");
         clock.Advance(TimeSpan.FromSeconds(1));
         var queued = await EnqueueAsync(factory, new Greeting(), "queued", "queued@company.com");
@@ -224,7 +223,6 @@ public sealed class MailDispatcherTests
         // 已認領的、租約未到期的與退避中的都不會再被認領。
         Assert.Equal([queued], (await ClaimAsync(factory, 10, now, Guid.NewGuid())).Select(x => x.Id));
         Assert.Equal(1, (await MessageAsync(factory, leased)).Attempts);
-        audits.AssertReadOnly(ClaimProcedure);
     }
 
     [Fact]

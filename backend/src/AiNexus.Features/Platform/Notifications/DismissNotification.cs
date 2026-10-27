@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -14,6 +15,7 @@ internal sealed class DismissNotification(AppDbContext db, TimeProvider clock)
             await handler.HandleAsync(user.Id, id, ct);
             return TypedResults.NoContent();
         })
+        .NotAudited("使用者自己的通知")
         .WithName("DismissNotification");
 
     public Task HandleAsync(Guid owner, Guid id, CancellationToken ct) => db.Set<Notification>().Where(x => x.Id == id && x.OwnerId == owner)

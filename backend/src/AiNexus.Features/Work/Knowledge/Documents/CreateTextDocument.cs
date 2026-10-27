@@ -2,6 +2,7 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 
@@ -13,7 +14,7 @@ internal sealed class CreateTextDocument(ResourceAccess access, AttachmentServic
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/collections/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, CreateTextDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("CreateTextDocument");
+        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentCreated).WithName("CreateTextDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid collection, TextDocumentRequest request, CancellationToken ct)
     {

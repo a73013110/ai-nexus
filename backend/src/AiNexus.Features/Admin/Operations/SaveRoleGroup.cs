@@ -6,6 +6,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -32,9 +33,10 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/groups/{id}", async (string id, GroupUpdateRequest body, ICurrentUser user, SaveRoleGroup handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.GroupUpdated)
         .WithName("SaveRoleGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlGroups, "admin.group", null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlGroups, null, id, token => SnapshotAsync(id, token), async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds) ?? AccessRules.Scopes(request.FeatureIds, request.Scopes, request.ManagerScopes)) is { } invalid) return invalid;
         if (request.Policy is { } policy)

@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ internal sealed class GetArtifact(AppDbContext db, ResourceAccess access)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", async (Guid id, int? version, ICurrentUser user, GetArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, version, ct)).ToHttpResult())
+        .Audited(ArtifactsAudit.ArtifactRead)
         .WithName("GetArtifact");
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, Guid id, int? version, CancellationToken ct)

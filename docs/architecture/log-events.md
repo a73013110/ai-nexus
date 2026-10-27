@@ -16,6 +16,7 @@
 | EventId | EventName | 位置 |
 | --- | --- | --- |
 | 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected` | `Platform/Diagnostics/Issues.cs` |
+| 1003 | `audit.failure_unrecorded` | `Admin/Identity/RequestAudit.cs` |
 | 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` | `Knowledge/Retrieval/RetrievalDiagnostics.cs`、`Knowledge/Embeddings/RetrievalHttp.cs` |
 | 2003 | `embedding.bootstrap_deferred` | `Knowledge/Embeddings/EmbeddingBootstrapWorker.cs` |
 | 3000 / 3001 | `job.started` / `job.finished` | `Jobs/BackgroundJobWorker.cs` |
@@ -72,4 +73,4 @@ public sealed partial class ConnectorClient(ILogger<ConnectorClient> logger)
 - `IBackgroundJobHandler` 自動帶有 Job／Attempt 關聯；不要把 request scope 帶進佇列。
 - 新增子 Activity 時用標準 ActivitySource、只用核准標籤，parent 用共享 Source 或 `DiagnosticTrace.Start` 的可信 parent。
 - 新增 metadata 先更新白名單、欄位上限與敏感資料測試。新增公開錯誤代碼的 4xx 提示同步更新前後端 catalog 與契約；例外 Message 不能當提示。
-- 授權、管理設定或特權資料讀取用既有交易內的 AuditEvent，保存失敗就取消操作；logger 不能取代稽核。
+- 稽核走 `AuditTrail`（[ADR 0023](../decisions/0023-audit-standard.md)），保存失敗就取消操作；logger 不能取代稽核。

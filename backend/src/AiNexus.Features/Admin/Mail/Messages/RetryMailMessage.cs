@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Mail.Delivery;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,11 +18,12 @@ internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, Adm
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, IRequestActor actor, RetryMailMessage handler, CancellationToken ct) => handler.HandleAsync(actor.Id, id, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.MailMessagesResend)
+        .Audited(MailAudit.MessageRetried)
         .WithName("RetryMailMessage");
 
     public async Task<Result<MailMessageDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, "admin.mail_retry", id, id.ToString(), token => Snapshot(id, token), async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, id, id.ToString(), token => Snapshot(id, token), async () =>
         {
             var status = await db.Set<OutboundMessage>().Where(x => x.Id == id).Select(x => x.Status).SingleOrDefaultAsync(ct);
             if (status is null) return MailErrors.MessageNotFound;

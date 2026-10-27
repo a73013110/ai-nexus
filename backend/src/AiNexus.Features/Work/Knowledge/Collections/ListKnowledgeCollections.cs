@@ -3,6 +3,7 @@ using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
@@ -12,6 +13,7 @@ internal sealed class ListKnowledgeCollections(AppDbContext db, ResourceAccess a
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/collections", async (ICurrentUser user, ListKnowledgeCollections handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .Audited(KnowledgeAudit.CollectionRead)
         .WithName("ListKnowledgeCollections");
 
     public async Task<IReadOnlyList<CollectionDto>> HandleAsync(Guid actor, CancellationToken ct)

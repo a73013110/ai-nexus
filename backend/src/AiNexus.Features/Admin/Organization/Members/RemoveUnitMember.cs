@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,9 +12,10 @@ internal sealed class RemoveUnitMember(AppDbContext db, AdministrativeAudit audi
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, IRequestActor actor, RemoveUnitMember handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, userId, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.MemberDeleted)
         .WithName("RemoveOrganizationUnitMember");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_member_delete", id, userId.ToString(), token => UnitRules.MembershipsAsync(db, userId, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, userId.ToString(), token => UnitRules.MembershipsAsync(db, userId, token), async () =>
     {
         var member = await db.Set<UnitMember>().SingleOrDefaultAsync(x => x.UnitId == id && x.UserId == userId, ct);
         if (member is null) return OrganizationErrors.MemberNotFound;

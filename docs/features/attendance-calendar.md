@@ -27,10 +27,10 @@
 
 ## 稽核與跨資料庫的順序
 
-- 動作 `admin.calendar_day`，`resourceKey` 是日期；成功的紀錄含前後的 `morningOff`、`afternoonOff`、`calendarRemark`、`gdUserId`，被拒絕的嘗試留錯誤代碼。活動稽核以「假日設定異動」篩選。
+- 動作 `attendance.calendar_day.updated`，`resourceKey` 是日期；成功的紀錄含前後的 `morningOff`、`afternoonOff`、`calendarRemark`、`gdUserId`，被拒絕的嘗試留錯誤代碼。
 - GD 與本系統無法同一個交易，順序是：以 `UPDLOCK, HOLDLOCK` 鎖定這一天並讀前值 → 更新（未提交）→ 寫本系統稽核 → 提交 GD。
   - 稽核寫不進去：GD 回滾，什麼都沒改。不會有「GD 改了卻沒有稽核」。
-  - GD 提交失敗：已有一筆 `saved`，再補一筆 `attendance_gd_unavailable` 並記日誌 3410。提交途中斷線時 GD 可能其實已提交，重新查詢確認。
+  - GD 提交失敗：同一筆稽核改記 `attendance_gd_unavailable`（仍含前後值）並記日誌 3410。提交途中斷線時 GD 可能其實已提交，重新查詢確認。
 - 鎖持有到稽核寫完（一次本機 SQL 寫入）；並發修改同一天依序進行，各自的前值都正確。
 
 ## 部署

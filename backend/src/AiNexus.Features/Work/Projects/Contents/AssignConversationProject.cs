@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -19,12 +20,12 @@ public sealed record ConversationProjectRequest(Guid? ProjectId);
 /// <summary>
 /// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答互相競爭。
 /// </summary>
-internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
+internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.ProjectId, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Chat);
+        .RequireAuthorization(Policies.Chat).Audited(ProjectsAudit.ConversationAssigned);
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid actor, Guid id, Guid? projectId, CancellationToken ct)
     {
@@ -39,7 +40,7 @@ internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess 
             if (!active.IsSuccess) return active.Error;
         }
         conversation.ProjectId = projectId; conversation.UpdatedAt = clock.GetUtcNow();
-        db.AuditEvents.Add(new() { OwnerId = actor, Action = "conversation.project", ResourceId = id, Result = projectId is null ? "removed" : "assigned" });
+        if (projectId is null) audit.Use(ProjectsAudit.ConversationUnassigned);
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();
     }

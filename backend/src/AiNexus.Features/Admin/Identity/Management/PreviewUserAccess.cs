@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,7 @@ internal sealed class PreviewUserAccess(AppDbContext db, AccessView access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/access", async (Guid id, PreviewUserAccess handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())
+        .Audited(IdentityAudit.UserAccessRead)
         .WithName("PreviewUserAccess");
 
     public async Task<Result<AccessDto>> HandleAsync(Guid id, CancellationToken ct)

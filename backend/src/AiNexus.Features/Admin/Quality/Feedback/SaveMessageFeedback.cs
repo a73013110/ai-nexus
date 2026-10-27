@@ -4,6 +4,7 @@ using AiNexus.Data.App.Quality;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -32,7 +33,7 @@ internal sealed class SaveMessageFeedback(AppDbContext db, ResourceWriteLock wri
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
-        .RequireAuthorization(Policies.Chat);
+        .RequireAuthorization(Policies.Chat).Audited(QualityAudit.FeedbackUpdated);
 
     public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {

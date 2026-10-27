@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,9 +12,10 @@ internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeAu
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/storage", async (Guid id, AttachmentStorageLimitRequest body, ICurrentUser user, SetUserAttachmentStorage handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .Audited(FilesAudit.StorageLimitUpdated)
         .WithName("SetUserAttachmentStorage");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_storage", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
     {
         if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
         if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;

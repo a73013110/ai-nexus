@@ -3,6 +3,7 @@ using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using System.Diagnostics;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Features.Work.Jobs.Management;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Jobs;

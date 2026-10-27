@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.RemoteFiles;
 using AiNexus.Platform.Security;
@@ -17,6 +18,7 @@ internal sealed class DownloadRemoteFile(RemoteFileTickets tickets, IEnumerable<
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/content", (string ticket, bool? download, HttpContext http, ICurrentUser user, DownloadRemoteFile handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ticket, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.ContentType, x.FileName, download == true)))
+        .Audited(RemoteFilesAudit.FileDownloaded)
         .WithName("DownloadRemoteFile");
 
     public async Task<Result<(byte[] Content, string ContentType, string FileName)>> HandleAsync(Guid viewer, string ticket, CancellationToken ct)

@@ -45,7 +45,7 @@ public sealed class MonitoringBrowserTests
         var evidence = Path.Combine(root, "artifacts", "monitoring-acceptance"); Directory.CreateDirectory(evidence);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "real-browser-live-monitor.png") });
         using var scope = factory.Services.CreateScope();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "monitoring.view"));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "monitoring.snapshot.read"));
         Assert.Empty(errors);
     }
 }

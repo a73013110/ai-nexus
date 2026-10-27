@@ -1,6 +1,7 @@
 using System.Text.Json;
+using AiNexus.Platform.Diagnostics;
 
-namespace AiNexus.Platform.Diagnostics;
+namespace AiNexus.Platform.Auditing;
 
 /// <summary>
 /// 稽核日誌的遮罩器。稽核紀錄有自己核准的結構描述與持久化交易策略，因此絕不抽樣略過。
@@ -12,7 +13,7 @@ public static class AuditRedactor
         "resourceKey", "before", "after", "failureCode", "kind", "recipients", "expiresAt", "includeAttachments", "users", "groupIds", "source", "count", "externalId", "revision",
         "testId", "administratorId", "userId", "reason", "caseIndex", "variantIndex", "score", "id", "version", "conversationId", "offset", "profiles", "status", "activatedAt", "retiredAt", "vectors",
         "allowedModelIds", "dailyTokenLimits", "storedAttachmentLimitBytes", "attachmentLimitBytes", "enabled", "account", "displayName", "deletedAt", "securityVersion", "authentication",
-        "roleIds", "name", "policy", "featureIds", "sortOrder", "adAccount", "adEnabled", "localAccount", "localEnabled", "hasLocalPassword", "from", "to", "issueCode", "traceId", "jobId", "runId", "permission", "clientAddress",
+        "roleIds", "name", "policy", "featureIds", "sortOrder", "adAccount", "adEnabled", "localAccount", "localEnabled", "hasLocalPassword", "from", "to", "issueCode", "traceId", "jobId", "runId", "permission",
         "fingerprint", "retentionDays", "auditRetentionDays", "fileRetentionDays", "queueCapacity", "importantQueueCapacity", "batchSize", "maxDiskBytes", "maxSqlRows", "minimumLevel", "frameworkMinimumLevel", "lowLevelSampleEvery", "otlpEnabled",
         "fileSizeBytes", "flushIntervalMs", "retrySeconds", "sqlTimeoutSeconds", "shutdownSeconds", "maxQueryDays", "maxExportDays", "maxExportRows", "serviceName", "cleanupBatchSize", "locationFingerprint",
         "search", "action", "results", "category", "provider", "modelId", "effectiveAt", "parentId", "featureId", "openInNewTab", "icon", "audienceGroupIds", "unitId", "unitIds", "memberships", "isPrimary", "isManager",
@@ -21,10 +22,12 @@ public static class AuditRedactor
         "cardId", "cardNumber", "assignments", "startsAt", "endsAt", "holderName",
         // 出勤假日設定回寫 GD 的前後值：上午／下午放假、備註（節日名稱，例如「國慶日」，不是個人資料）與 GD 的修改者帳號。
         "morningOff", "afternoonOff", "calendarRemark", "gdUserId",
-        // 組織從公文系統匯入（admin.organization_import）：前後的單位、已匯入單位與主管數，這次排除的部門數與各類變動的數量；不收部門或人員清單。
+        // 組織從公文系統匯入（organization.unit.imported）：前後的單位、已匯入單位與主管數，這次排除的部門數與各類變動的數量；不收部門或人員清單。
         "units", "gdUnits", "managers", "excluded", "created", "adopted", "updated", "disabled", "managersAdded", "managersRemoved", "issues",
         // 出勤紀錄匯出的查詢條件（區間、人員、單位與卡號用既有欄位；人數用 count）；卡片快照的隱藏旗標。
-        "includeDaysOff", "hiddenFromRecords"
+        "includeDaysOff", "hiddenFromRecords",
+        // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。
+        "route", "query"
     };
 
     /// <summary>
@@ -87,7 +90,8 @@ public static class AuditRedactor
                 writer.WriteStartObject();
                 foreach (var property in value.EnumerateObject())
                 {
-                    var dictionaryKey = key.Equals("dailyTokenLimits", StringComparison.OrdinalIgnoreCase)
+                    // 這幾個物件是字典：鍵是模型 ID 或參數名稱，不在白名單裡，改以字元限制把關。
+                    var dictionaryKey = (key.Equals("dailyTokenLimits", StringComparison.OrdinalIgnoreCase) || key is "route" or "query")
                         && property.Name.Length <= 160
                         && property.Name.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or ':' or '-' or '_' or '.');
 

@@ -67,7 +67,8 @@ dotnet dev-certs https --trust     # 開發機首次
 | 組織 | 部門樹、人員所屬與主管（可從公文系統匯入）；資料範圍的依據，不授予功能 | [組織](docs/features/organization.md) |
 | 出勤打卡 | 卡號持有期間、接手、待指派卡號、在出勤紀錄隱藏、刷卡匯入、假日設定、出勤紀錄、舊資料轉移 | [出勤打卡](docs/features/attendance.md) |
 | 平台營運 | 全平台用量、知識檢索索引、模型與工具價格；與存取管理分開授權 | [平台營運](docs/features/operations.md)、[費用](docs/features/billing.md) |
-| 活動稽核 | 登入、異動與查閱紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
+| 活動稽核 | 每個請求的登入、查閱、異動與拒絕紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
+| 功能使用量 | 依稽核統計各功能的使用人數、次數與失敗 | [功能使用量](docs/features/feature-usage.md) |
 | 系統日誌 | 查證代碼、錯誤與耗時、關聯流程；查詢／詳情／匯出分別授權 | [系統日誌](docs/features/system-logs.md) |
 | 即時監控 | 在線人員與工作階段、API／SQL／HTTP 負載、操作時間軸 | [監控](docs/features/monitoring.md) |
 | 郵件 | 系統信 outbox、SMTP／Google relay、重試與暫停、寄送紀錄、重寄與測試信 | [郵件寄送](docs/features/mail.md) |

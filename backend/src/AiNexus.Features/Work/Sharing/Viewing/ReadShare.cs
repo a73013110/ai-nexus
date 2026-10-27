@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Sharing.Viewing;
@@ -11,7 +12,7 @@ public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 internal sealed class ReadShare(ShareAccess shares, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, ReadShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, ReadShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(SharingAudit.SharedContentRead);
 
     public async Task<Result<SharedContentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

@@ -7,6 +7,7 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.DocumentDeleted)
         .WithName("DeleteDocument");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -42,7 +44,6 @@ internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, 
             await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             await db.Set<Chunk>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct);
             if (attachment is Guid file) await lifecycle.MarkUnusedAsync([file], ct);
             await transaction.CommitAsync(ct);

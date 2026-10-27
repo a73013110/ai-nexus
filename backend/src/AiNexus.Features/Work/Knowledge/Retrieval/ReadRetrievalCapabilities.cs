@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
@@ -10,10 +11,12 @@ internal sealed class ReadRetrievalCapabilities(SqlVectorCapabilities sql, Retri
 {
     public static void MapGet(RouteGroupBuilder routes) => routes
         .MapGet("/capabilities", async (ReadRetrievalCapabilities handler, CancellationToken ct) => TypedResults.Ok(await handler.ReadAsync(ct)))
+        .NotAudited("檢索功能可用狀態")
         .WithName("GetRetrievalCapabilities");
 
     public static void MapProbe(RouteGroupBuilder routes) => routes
         .MapPost("/capabilities/probe", async (ICurrentUser user, ReadRetrievalCapabilities handler, CancellationToken ct) => TypedResults.Ok(await handler.ProbeAsync(user.Id, ct)))
+        .Audited(KnowledgeAudit.RetrievalModelDiagnosed)
         .WithName("ProbeRetrievalModels");
 
     public Task<RetrievalCapabilitiesDto> ReadAsync(CancellationToken ct) => DescribeAsync(probe.Embedding, probe.Rerank, ct);

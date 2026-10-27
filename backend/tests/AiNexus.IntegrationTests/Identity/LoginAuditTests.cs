@@ -29,15 +29,15 @@ public sealed class LoginAuditTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.SingleAsync();
-            var success = await db.AuditEvents.SingleAsync(x => x.Action == "identity.login");
-            Assert.Equal(user.Id, success.ActorId); Assert.Equal("success", success.Result);
+            var success = await db.AuditEvents.SingleAsync(x => x.Action == "identity.session.signed_in");
+            Assert.Equal(user.Id, success.ActorId); Assert.Equal("completed", success.Result);
             Assert.Contains("windows", success.DetailsJson!);
             user.AdEnabled = false; await db.SaveChangesAsync();
         }
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/auth/windows")).StatusCode);
         using var check = factory.Services.CreateScope();
-        var rows = await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action == "identity.login").ToListAsync();
-        Assert.Equal(2, rows.Count); Assert.Single(rows, row => row.Result == "failed" && row.IssueCode != null);
+        var rows = await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action == "identity.session.signed_in").ToListAsync();
+        Assert.Equal(2, rows.Count); Assert.Single(rows, row => row.Result != "completed" && row.IssueCode != null);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class LoginAuditTests
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (eventData.Context!.ChangeTracker.Entries<AuditEvent>().Any(entry => entry.State == EntityState.Added && entry.Entity.Action == "identity.login"))
+            if (eventData.Context!.ChangeTracker.Entries<AuditEvent>().Any(entry => entry.State == EntityState.Added && entry.Entity.Action == "identity.session.signed_in"))
                 throw new DbUpdateException("Fixture audit store unavailable");
             return base.SavingChangesAsync(eventData, result, cancellationToken);
         }
@@ -73,8 +73,8 @@ public sealed class LoginAuditTests
         Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         var problem = (await denied.Content.ReadFromJsonAsync<SafeProblemDetails>())!;
         Assert.True((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
-        var rows = (await client.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=authentication&action=identity.login"))!;
-        var failure = Assert.Single(rows, x => x.Result == "failed");
+        var rows = (await client.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=authentication&action=identity.session.signed_in"))!;
+        var failure = Assert.Single(rows, x => x.Result != "completed");
         Assert.Equal("未驗證", failure.Actor);
         Assert.Null(failure.ResourceId); Assert.Null(failure.ActingAs);
         Assert.Equal(problem.IssueCode, failure.IssueCode);
@@ -82,16 +82,16 @@ public sealed class LoginAuditTests
         Assert.Contains("unverified-account", failure.DetailsJson!);
         Assert.DoesNotContain("never-persist-this-password", failure.DetailsJson!);
         Assert.DoesNotContain("Password", failure.DetailsJson!, StringComparison.OrdinalIgnoreCase);
-        var success = Assert.Single(rows, x => x.Result == "success");
+        var success = Assert.Single(rows, x => x.Result == "completed");
         Assert.Equal(me.Id, success.ResourceId); Assert.Equal(me.Account, success.Actor);
         Assert.Equal("authentication", success.Category);
         // 例行的 session 續期不應產生另一筆登入事件。
         await client.GetAsync("/api/v1/auth/session"); await client.GetAsync("/api/v1/me");
-        var refreshed = (await client.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.login"))!;
+        var refreshed = (await client.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.session.signed_in"))!;
         Assert.Equal(2, refreshed.Length);
         (await client.PostAsync("/api/v1/auth/logout", null)).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope();
-        var logout = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.SingleAsync(x => x.Action == "identity.logout");
+        var logout = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.SingleAsync(x => x.Action == "identity.session.signed_out");
         Assert.Equal(me.Id, logout.ActorId); Assert.Equal("completed", logout.Result);
         Assert.False((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
     }
@@ -108,7 +108,7 @@ public sealed class LoginAuditTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("audit-local", "incorrect-password", "local"))).StatusCode);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(1, (await db.Users.SingleAsync(x => x.Id == id)).FailedLogins);
-        var failure = await db.AuditEvents.SingleAsync(x => x.Action == "identity.login" && x.Result == "failed");
+        var failure = await db.AuditEvents.SingleAsync(x => x.Action == "identity.session.signed_in" && x.Result != "completed");
         Assert.Equal(Guid.Empty, failure.ActorId); Assert.Equal(Guid.Empty, failure.OwnerId);
         Assert.Contains("local", failure.DetailsJson!); Assert.DoesNotContain("incorrect-password", failure.DetailsJson!);
     }

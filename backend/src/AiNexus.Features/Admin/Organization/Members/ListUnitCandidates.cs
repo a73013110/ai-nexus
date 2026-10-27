@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Members;
@@ -16,6 +17,7 @@ internal sealed class ListUnitCandidates(AppDbContext db, IActiveUsers activeUse
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/candidates", async (ListUnitCandidates handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .NotAudited("選人下拉的候選名單")
         .WithName("ListOrganizationUnitCandidates");
 
     public async Task<IReadOnlyList<UnitCandidateDto>> HandleAsync(CancellationToken ct)

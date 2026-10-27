@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ internal sealed class ListCardAssignments(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid? cardId, Guid? userId, ListCardAssignments handler, CancellationToken ct) => handler.HandleAsync(cardId, userId, ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.AssignmentRead)
         .WithName("ListAttendanceCardAssignments");
 
     public async Task<Result<IReadOnlyList<CardAssignmentDto>>> HandleAsync(Guid? cardId, Guid? userId, CancellationToken ct)

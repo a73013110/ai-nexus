@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -25,15 +26,19 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
     {
         repository.MapGet("/issues", (string owner, string name, string? state, string? q, int? page, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
                 handler.IssuesAsync(user.Id, owner + "/" + name, state ?? "open", q, page ?? 1, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.IssueRead)
             .WithName("ListRepositoryIssues");
         repository.MapGet("/issues/{number:int}", (string owner, string name, int number, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
                 handler.IssueAsync(user.Id, owner + "/" + name, number, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.IssueRead)
             .WithName("ReadRepositoryIssue");
         repository.MapGet("/pulls", (string owner, string name, string? state, int? page, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
                 handler.PullsAsync(user.Id, owner + "/" + name, state ?? "open", page ?? 1, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.PullRequestRead)
             .WithName("ListRepositoryPulls");
         repository.MapGet("/pulls/{number:int}", (string owner, string name, int number, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
                 handler.PullAsync(user.Id, owner + "/" + name, number, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.PullRequestRead)
             .WithName("ReadRepositoryPull");
     }
 

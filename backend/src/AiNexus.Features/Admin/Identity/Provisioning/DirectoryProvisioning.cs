@@ -3,6 +3,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -91,10 +92,10 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
     }
 
     /// <summary>
-    /// 套用一位人員：取身分鎖 → 規劃 → 需要寫入時在 <see cref="AdministrativeAudit.MutateAsync"/> 的交易內重新規劃再寫入（稽核 <paramref name="action"/>）。
+    /// 套用一位人員：取身分鎖 → 規劃 → 需要寫入時在 <see cref="AdministrativeAudit.MutateAsync"/> 的交易內重新規劃再寫入（每位人員各一筆 <paramref name="action"/> 稽核）。
     /// 交易內的規劃與交易外不同（預覽後資料被改）時不寫入，回 <c>directory_changed</c>。<paramref name="allowCreate"/> 為 false 時只更新既有帳號。
     /// </summary>
-    public async Task<DirectoryOutcomeDto> ApplyAsync(Guid actor, string feature, string action, DirectoryPerson person, bool includeDisabled, bool allowCreate, CancellationToken ct)
+    public async Task<DirectoryOutcomeDto> ApplyAsync(Guid actor, string feature, AuditAction action, DirectoryPerson person, bool includeDisabled, bool allowCreate, CancellationToken ct)
     {
         await writeLock.Gate.WaitAsync(ct);
         try
@@ -103,7 +104,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             if (!plan.Writes) return Describe(plan);
             var id = plan.User?.Id ?? Guid.NewGuid();
             Plan? applied = null;
-            var saved = await audit.MutateAsync(actor, feature, action, id, person.Sid, token => SnapshotAsync(id, token), async () =>
+            var saved = await audit.MutateAsync(actor, feature, id, person.Sid, token => SnapshotAsync(id, token), async () =>
             {
                 var fresh = await PlanAsync(person, includeDisabled, allowCreate, ct);
                 if (!fresh.Writes || fresh.Outcome != plan.Outcome || (fresh.User is not null && fresh.User.Id != id)) return IdentityErrors.DirectoryChanged;
@@ -112,7 +113,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
                 else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
                 applied = fresh;
                 return Result.Success;
-            }, ct);
+            }, ct, subject: id, item: action);
             return saved.IsSuccess ? Describe(applied!) : Describe(plan) with { Outcome = DirectoryOutcomes.Failed, ErrorCode = saved.Error.Code };
         }
         finally

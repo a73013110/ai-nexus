@@ -8,6 +8,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +29,7 @@ internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, A
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", async (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct)).ToHttpResult())
+        .Audited(FilesAudit.FileRead)
         .WithName("ListLibraryFiles");
 
     public async Task<Result<FileLibraryPageDto>> HandleAsync(Guid actor, string? search, string type, string source, int offset, int limit, CancellationToken ct)

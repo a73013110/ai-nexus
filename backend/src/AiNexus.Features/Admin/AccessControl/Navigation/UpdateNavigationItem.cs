@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -24,9 +25,10 @@ internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeAudit 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/navigation-items/{id}", async (string id, NavigationItemUpdateRequest body, IRequestActor actor, UpdateNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.NavigationUpdated)
         .WithName("UpdateNavigationItem");
 
-    public Task<Result> HandleAsync(Guid actor, string id, NavigationItemUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, "admin.navigation_item", null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, NavigationItemUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
     {
         var items = await db.Set<NavigationItem>().ToListAsync(ct);
         var item = items.SingleOrDefault(x => x.Id == id);

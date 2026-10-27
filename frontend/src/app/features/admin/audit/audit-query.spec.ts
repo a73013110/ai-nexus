@@ -1,31 +1,61 @@
 import { convertToParamMap } from '@angular/router';
 import { describe, expect, it } from 'vitest';
-import { actionsFor, auditFilters, auditQueryOptions, emptyAuditQuery } from './audit-query';
+import {
+  actionLabel,
+  actionsFor,
+  auditFilters,
+  auditQueryOptions,
+  emptyAuditQuery,
+} from './audit-query';
 
 const actions = [
-  { value: 'admin.', label: '平台管理', categories: ['administration', 'access'] },
-  { value: 'identity.login', label: '登入', categories: ['authentication'] },
+  {
+    value: 'identity.user_access.read',
+    label: '查閱使用者授權',
+    category: 'access',
+    module: 'identity',
+  },
+  {
+    value: 'identity.session.signed_in',
+    label: '登入工作區',
+    category: 'authentication',
+    module: 'identity',
+  },
 ];
-const options = auditQueryOptions(() => actions);
+const modules = [{ value: 'identity', label: '使用者' }];
+const options = auditQueryOptions(
+  () => actions,
+  () => modules,
+);
 
 describe('audit query', () => {
   it('lists the actions of a category', () => {
     expect(actionsFor(actions, '').length).toBe(2);
-    expect(actionsFor(actions, 'access').map((action) => action.value)).toEqual(['admin.']);
+    expect(actionsFor(actions, 'access').map((action) => action.value)).toEqual([
+      'identity.user_access.read',
+    ]);
+  });
+
+  it('names actions and module prefixes from the catalog', () => {
+    expect(actionLabel('identity.session.signed_in', actions, modules)).toBe('登入工作區');
+    expect(actionLabel('identity.', actions, modules)).toBe('使用者（全部）');
+    expect(actionLabel('unknown.thing.read', actions, modules)).toBe('unknown.thing.read');
   });
 
   it('sends results and a date range to the API', () => {
     expect(
       auditFilters({
         ...emptyAuditQuery(),
-        results: ['failed', 'read'],
+        results: ['failed'],
+        feature: 'attendance.records',
         range: { preset: 'custom', from: '2026-10-01', to: '2026-10-02' },
       }),
     ).toEqual({
       category: undefined,
       search: undefined,
       action: undefined,
-      result: ['failed', 'read'],
+      feature: 'attendance.records',
+      result: ['failed'],
       traceId: undefined,
       from: '2026-09-30T16:00:00.000Z',
       until: '2026-10-02T16:00:00.000Z',
@@ -42,10 +72,20 @@ describe('audit query', () => {
     expect(read({ traceId: 'ABCDEF0123456789ABCDEF0123456789' }).traceId).toBe(
       'abcdef0123456789abcdef0123456789',
     );
-    expect(read({ traceId: 'x', result: ['read', 'nope'], from: 'today' })).toMatchObject({
+    expect(read({ traceId: 'x', result: ['failed', 'nope'], from: 'today' })).toMatchObject({
       traceId: '',
-      results: ['read'],
+      results: ['failed'],
       range: { preset: 'all' },
+    });
+    expect(
+      read({ action: 'access-control.role.updated', feature: 'attendance.records' }),
+    ).toMatchObject({
+      action: 'access-control.role.updated',
+      feature: 'attendance.records',
+    });
+    expect(read({ action: 'Bad Action', feature: '<x>' })).toMatchObject({
+      action: '',
+      feature: '',
     });
   });
 
@@ -53,18 +93,21 @@ describe('audit query', () => {
     const query = {
       ...emptyAuditQuery(),
       category: 'access',
-      action: 'admin.',
+      action: 'identity.',
+      feature: 'attendance.records',
       results: ['success'],
       range: { preset: '7d', from: '', to: '' },
     };
     expect(options.chips!(query).map((chip) => chip.label)).toEqual([
-      '動作：平台管理',
-      '結果：已受理／完成',
+      '動作：使用者（全部）',
+      '功能：出勤紀錄',
+      '結果：完成',
       '時間：最近 7 天',
     ]);
     expect(options.toParams!(query)).toEqual({
       category: 'access',
-      action: 'admin.',
+      action: 'identity.',
+      feature: 'attendance.records',
       result: ['success'],
       range: '7d',
     });

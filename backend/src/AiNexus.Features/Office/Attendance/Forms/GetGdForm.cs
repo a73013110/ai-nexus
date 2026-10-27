@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Features.Platform.RemoteFiles;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,7 @@ internal sealed partial class GetGdForm(ExternalDatabase<GdDatabase> gd, GdAccou
 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/{desNo}", (string desNo, ICurrentUser user, GetGdForm handler, CancellationToken ct) => handler.HandleAsync(user.Id, desNo, ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.FormRead)
         .WithName("GetGdForm");
 
     public async Task<Result<GdFormDetailDto>> HandleAsync(Guid viewer, string desNo, CancellationToken ct)

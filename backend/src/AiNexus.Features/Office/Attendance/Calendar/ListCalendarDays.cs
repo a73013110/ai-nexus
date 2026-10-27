@@ -1,3 +1,4 @@
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Office.Attendance.Calendar;
@@ -10,6 +11,7 @@ internal sealed class ListCalendarDays(CalendarReader calendar)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (DateOnly? from, DateOnly? to, ListCalendarDays handler, CancellationToken ct) => handler.HandleAsync(from, to, ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.CalendarDayRead)
         .WithName("ListAttendanceCalendarDays");
 
     public async Task<Result<IReadOnlyList<CalendarDayDto>>> HandleAsync(DateOnly? from, DateOnly? to, CancellationToken ct)

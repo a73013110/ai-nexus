@@ -1,6 +1,6 @@
 using AiNexus.Data.App.Audit;
 using AiNexus.Platform.Data;
-using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 

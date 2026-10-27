@@ -1,10 +1,9 @@
-using System.Text.Json;
 using AiNexus.Data.App;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
@@ -13,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Platform.Account.Security;
 
 /// <summary>帳號安全各 slice 共用：組出畫面資料、寫稽核與通知信、儲存後重發 session 與 CSRF token。</summary>
-internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthentication, UserCredentials credentials, MailOutbox outbox, IAntiforgery csrf)
+internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthentication, UserCredentials credentials, MailOutbox outbox, IAntiforgery csrf, AuditTrail audit)
 {
     public bool MailAvailable => outbox.Available;
 
@@ -34,9 +33,15 @@ internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthen
     /// <summary>可以把步升驗證碼寄到本人已驗證的信箱。</summary>
     public bool CodeAvailable(User user) => outbox.Available && user.Email is not null && user.EmailVerifiedAt is not null;
 
-    /// <summary>稽核與變更同一交易寫入；細節只放遮罩後的信箱、帳號名與方式，絕不放密碼、驗證碼或雜湊。</summary>
-    public void Audit(User user, string action, object details, string result = "success")
-        => db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, ActorId = user.Id, ResourceId = user.Id, Action = action, Result = result, DetailsJson = JsonSerializer.Serialize(details) });
+    /// <summary>
+    /// 補上這個請求的稽核（與變更同一交易寫入），<paramref name="action"/> 用於同一端點依結果記不同動作。
+    /// 細節只放遮罩後的信箱、帳號名與方式，絕不放密碼、驗證碼或雜湊。
+    /// </summary>
+    public void Audit(User user, object details, AuditAction? action = null)
+    {
+        if (action is not null) audit.Use(action);
+        audit.Describe(user.Id, user.Id, details);
+    }
 
     /// <summary>寄到變更前已驗證的信箱；沒有時略過。與變更同一交易入列，變更失敗就不會寄出。</summary>
     public async Task NotifyAsync(User user, string? address, string change, string? detail, CancellationToken ct)

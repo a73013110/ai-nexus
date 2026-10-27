@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Quality;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +14,10 @@ internal sealed class ReadFeedback(AppDbContext db)
     public static RouteHandlerBuilder MapForMessage(RouteGroupBuilder api) => api
         .MapGet("/messages/{id:guid}/feedback", (Guid id, ICurrentUser user, ReadFeedback handler, CancellationToken ct) =>
             handler.ForMessageAsync(user.Id, id, ct).ToHttpResultAsync(found => TypedResults.Ok(found.Feedback)))
-        .RequireAuthorization(Policies.Chat);
+        .RequireAuthorization(Policies.Chat).NotAudited("使用者自己對回覆的回饋");
 
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
-        .MapGet("/feedback", async (ICurrentUser user, ReadFeedback handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct)));
+        .MapGet("/feedback", async (ICurrentUser user, ReadFeedback handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct))).Audited(QualityAudit.FeedbackRead);
 
     public async Task<Result<FeedbackOutcome>> ForMessageAsync(Guid actor, Guid id, CancellationToken ct)
     {

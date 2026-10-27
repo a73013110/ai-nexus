@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -20,9 +21,10 @@ internal sealed class UpdateUnit(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", async (Guid id, UnitUpdateRequest body, IRequestActor actor, UpdateUnit handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.UnitUpdated)
         .WithName("UpdateOrganizationUnit");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UnitUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_unit", id, id.ToString(), token => UnitRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, UnitUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, id.ToString(), token => UnitRules.SnapshotAsync(db, id, token), async () =>
     {
         var units = await db.Set<Unit>().ToListAsync(ct);
         var unit = units.SingleOrDefault(x => x.Id == id);

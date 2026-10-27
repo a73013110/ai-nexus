@@ -4,6 +4,7 @@ using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Work.Jobs;
@@ -19,6 +20,7 @@ internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents,
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/reindex", async (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.DocumentIndexRebuilt)
         .WithName("ReindexDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -33,7 +35,6 @@ internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents,
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running), ct)) return KnowledgeErrors.JobActive;
             var savedPages = await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct);
             doc.Status = "queued"; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, savedPages ? DocumentEmbeddingHandler.JobKind : DocumentIngestHandler.JobKind, doc.FileName).Id;
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.reindexed", Result = "queued" });
             await db.SaveChangesAsync(ct);
             return DocumentAccess.Describe(doc, true);
         }

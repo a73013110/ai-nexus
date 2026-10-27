@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ internal sealed class GetUserModelPolicy(AppDbContext db, ModelPolicyService pol
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/model-policy", async (Guid id, GetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())
+        .Audited(InferenceAudit.UserPolicyRead)
         .WithName("GetUserModelPolicy");
 
     public async Task<Result<AdminUserModelPolicyDto>> HandleAsync(Guid owner, CancellationToken ct)

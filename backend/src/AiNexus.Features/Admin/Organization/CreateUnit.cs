@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -20,12 +21,13 @@ internal sealed class CreateUnit(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (UnitCreateRequest body, IRequestActor actor, CreateUnit handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.UnitCreated)
         .WithName("CreateOrganizationUnit");
 
     public async Task<Result<UnitDto>> HandleAsync(Guid actor, UnitCreateRequest request, CancellationToken ct)
     {
         var unit = new Unit { Id = Guid.NewGuid(), ParentId = request.ParentId, Name = request.Name.Trim(), Enabled = request.Enabled };
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_unit", unit.Id, unit.Id.ToString(), token => UnitRules.SnapshotAsync(db, unit.Id, token), async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.Organization, unit.Id, unit.Id.ToString(), token => UnitRules.SnapshotAsync(db, unit.Id, token), async () =>
         {
             var units = await db.Set<Unit>().ToListAsync(ct);
             unit.SortOrder = UnitRules.NextSortOrder(units, unit.ParentId);

@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -10,11 +11,11 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 /// </summary>
 internal sealed class ImportDirectoryUsers(IAdDirectory directory, DirectoryProvisioning provisioning)
 {
-    public const string Action = "admin.user_import";
 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/directory-imports", (DirectoryImportRequest body, ICurrentUser user, ImportDirectoryUsers handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
+        .Audited(IdentityAudit.DirectoryBatchImported)
         .WithName("ImportDirectoryUsers");
 
     public async Task<Result<DirectoryOutcomesDto>> HandleAsync(Guid actor, DirectoryImportRequest request, CancellationToken ct)
@@ -25,7 +26,7 @@ internal sealed class ImportDirectoryUsers(IAdDirectory directory, DirectoryProv
         foreach (var sid in request.Sids)
         {
             items.Add(people.TryGetValue(sid, out var person)
-                ? await provisioning.ApplyAsync(actor, FeatureCatalog.IdentityUsersImport, Action, person, request.IncludeDisabled, allowCreate: true, ct)
+                ? await provisioning.ApplyAsync(actor, FeatureCatalog.IdentityUsersImport, IdentityAudit.UserImported, person, request.IncludeDisabled, allowCreate: true, ct)
                 : DirectoryProvisioning.Missing(sid));
         }
         provisioning.Completed("import", items);

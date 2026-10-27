@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -18,9 +19,11 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
     {
         repository.MapGet("/commits", (string owner, string name, string? @ref, int? page, ICurrentUser user, BrowseRepositoryHistory handler, CancellationToken ct) =>
                 handler.CommitsAsync(user.Id, owner + "/" + name, @ref, page ?? 1, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.CommitRead)
             .WithName("ListRepositoryCommits");
         repository.MapGet("/diff", (string owner, string name, string head, string? @base, ICurrentUser user, BrowseRepositoryHistory handler, CancellationToken ct) =>
                 handler.DiffAsync(user.Id, owner + "/" + name, head, @base, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.CommitRead)
             .WithName("ReadRepositoryDiff");
     }
 

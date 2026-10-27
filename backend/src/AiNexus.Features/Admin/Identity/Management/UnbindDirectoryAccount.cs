@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,7 @@ internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeAudi
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/users/{id:guid}/ad-binding", (Guid id, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(IdentityAudit.DirectoryUnbound)
         .WithName("UnbindUserDirectoryAccount");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -23,7 +25,7 @@ internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeAudi
         await writeLock.Gate.WaitAsync(ct);
         try
         {
-            return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_ad_unbind", id, id.ToString(), token => RebindDirectoryAccount.SnapshotAsync(db, id, token), async () =>
+            return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => RebindDirectoryAccount.SnapshotAsync(db, id, token), async () =>
             {
                 var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
                 if (user is null) return IdentityErrors.UserNotFound;

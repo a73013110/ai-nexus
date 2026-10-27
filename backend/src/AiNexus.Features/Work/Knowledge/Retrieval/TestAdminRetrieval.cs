@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Platform.Errors;
@@ -24,6 +25,7 @@ internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.RetrievalSearched)
         .WithName("TestAdminRetrieval");
 
     public Task<Result<KnowledgeSearchDto>> HandleAsync(Guid actor, AdminRetrievalSearchRequest request, CancellationToken ct)

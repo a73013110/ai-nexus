@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -30,6 +31,7 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudi
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/ad-binding", (Guid id, DirectoryBindingRequest body, ICurrentUser user, RebindDirectoryAccount handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+        .Audited(IdentityAudit.DirectoryBound)
         .WithName("RebindUserDirectoryAccount");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, DirectoryBindingRequest request, CancellationToken ct)
@@ -41,7 +43,7 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeAudi
         await writeLock.Gate.WaitAsync(ct);
         try
         {
-            return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_ad_bind", id, person.Sid, token => SnapshotAsync(db, id, token), async () =>
+            return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, person.Sid, token => SnapshotAsync(db, id, token), async () =>
             {
                 var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
                 if (user is null) return IdentityErrors.UserNotFound;

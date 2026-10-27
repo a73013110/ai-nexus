@@ -5,6 +5,7 @@ using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -14,15 +15,16 @@ namespace AiNexus.Features.Admin.Operations;
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 
 /// <summary>單一使用者的帳號、角色、用量與儲存空間；讀取會稽核。</summary>
-internal sealed class GetAdminUserInsights(AppDbContext db, AdministrativeReadAudit reads, UsageReports usage, PersonalUsage personal)
+internal sealed class GetAdminUserInsights(AppDbContext db, AccessService access, UsageReports usage, PersonalUsage personal)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/insights", async (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(OperationsAudit.UserUsageRead)
         .WithName("GetAdminUserInsights");
 
     public async Task<Result<AdminUserDetailDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        if (!await reads.AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
+        if (!await access.HoldsAsync(actor, FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.FeatureForbidden;
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null) return OperationsErrors.AdminResourceNotFound;
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
@@ -32,7 +34,6 @@ internal sealed class GetAdminUserInsights(AppDbContext db, AdministrativeReadAu
             report,
             await usage.KindsAsync(id, ct),
             await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == id, ct));
-        var audited = await reads.RecordAsync(actor, "admin.user_usage_read", id, new { userId = id }, ct);
-        return audited.IsSuccess ? detail : audited.Error;
+        return detail;
     }
 }

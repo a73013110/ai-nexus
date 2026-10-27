@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity.Authentication;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +27,7 @@ internal sealed class GetStatus(
     public static void Map(RouteGroupBuilder api) => api
         .MapGet("/status", async (GetStatus handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(ct)))
+        .NotAudited("服務狀態")
         .WithName("GetStatus");
 
     public async Task<StatusDto> HandleAsync(CancellationToken ct)

@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Inference;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -40,12 +41,13 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
 /// 把備份還原為使用者的新對話，訊息會重新指派 Id。每則訊息都必須屬於完整的 user/assistant 鏈（從 user 開始且無循環），
 /// 作用中葉節點必須是回答。
 /// </summary>
-internal sealed class ImportConversation(AppDbContext db, TimeProvider clock)
+internal sealed class ImportConversation(AppDbContext db, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/import", async (ConversationBackup body, ICurrentUser user, ImportConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
         .WithRequestBodyLimit(ConversationsModule.ImportBodyLimit)
+        .Audited(ConversationsAudit.ConversationImported)
         .WithName("ImportConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, ConversationBackup backup, CancellationToken ct)
@@ -118,7 +120,7 @@ internal sealed class ImportConversation(AppDbContext db, TimeProvider clock)
                 CreatedAt = message.CreatedAt,
             });
         }
-        db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.imported", ResourceId = conversation.Id });
+        audit.Describe(resource: conversation.Id);
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();
     }

@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,7 @@ internal sealed class ListMailMessages(AppDbContext db)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", ([AsParameters] MailMessageFilter filter, Guid? before, int? take, ListMailMessages handler, CancellationToken ct) =>
             handler.HandleAsync(filter, before, take, ct).ToHttpResultAsync())
+        .Audited(MailAudit.MessageRead)
         .WithName("ListMailMessages");
 
     public async Task<Result<IReadOnlyList<MailMessageDto>>> HandleAsync(MailMessageFilter filter, Guid? before, int? take, CancellationToken ct)

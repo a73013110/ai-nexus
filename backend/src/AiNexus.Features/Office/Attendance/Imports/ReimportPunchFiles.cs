@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -55,6 +56,7 @@ internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", (PunchReimportRequest body, ICurrentUser user, ReimportPunchFiles handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceImportsReimport)
+        .Audited(AttendanceAudit.PunchFileImported)
         .WithName("ReimportAttendancePunchFiles");
 
     public async Task<Result<PunchReimportResult>> HandleAsync(Guid actor, PunchReimportRequest request, CancellationToken ct)

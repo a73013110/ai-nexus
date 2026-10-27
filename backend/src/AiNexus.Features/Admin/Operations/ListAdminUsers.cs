@@ -1,7 +1,9 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Billing.Reports;
+using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 
@@ -27,6 +29,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users", async (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) => (await handler.HandleAsync(search, offset ?? 0, ct)).ToHttpResult())
+        .Audited(IdentityAudit.UserRead)
         .WithName("ListAdminUsers");
 
     public async Task<Result<AdminUsersDto>> HandleAsync(string? search, int offset, CancellationToken ct)

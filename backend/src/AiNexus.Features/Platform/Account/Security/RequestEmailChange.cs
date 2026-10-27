@@ -2,6 +2,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +19,7 @@ internal sealed class RequestEmailChange(Reauthentication reauthentication, User
         .MapPost("/settings/account/email-changes", (EmailChangeRequest body, HttpContext http, ICurrentUser user, RequestEmailChange handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
+        .Audited(AccountAudit.EmailRequested)
         .WithName("RequestEmailChange");
 
     public async Task<Result<VerificationCodeDto>> HandleAsync(HttpContext http, User user, EmailChangeRequest body, CancellationToken ct)

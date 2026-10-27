@@ -58,8 +58,6 @@ public sealed class SqlServerRetrievalTests
             => inner.QueryProcedureAsync<T>(procedure, parameters, commandTimeout, cancellationToken);
         public Task<TResult> QueryProcedureAsync<TResult>(string procedure, object? parameters, Func<SqlResults, Task<TResult>> read, int? commandTimeout = null, CancellationToken cancellationToken = default)
             => inner.QueryProcedureAsync(procedure, parameters, read, commandTimeout, cancellationToken);
-        public Task<IReadOnlyList<T>> ExecuteProcedureAsync<T>(string procedure, object? parameters = null, Guid? auditOwner = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
-            => inner.ExecuteProcedureAsync<T>(procedure, parameters, auditOwner, commandTimeout, cancellationToken);
         private string Rewrite(string sql)
         {
             if (!sql.Contains("FREETEXTTABLE", StringComparison.Ordinal)) return sql;

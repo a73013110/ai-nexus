@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Projects.Management;
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Work.Projects.Management;
 internal sealed class DeleteProject(ResourceLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteProject handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteProject handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.ProjectDeleted);
 
     public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => lifecycle.DeleteAsync(actor, id, Project.Kind, ct);
 }

@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +14,7 @@ namespace AiNexus.Features.Work.Projects.Contents;
 internal sealed class ListProjectConversations(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/conversations", (Guid id, ICurrentUser user, ListProjectConversations handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
+        .MapGet("/{id:guid}/conversations", (Guid id, ICurrentUser user, ListProjectConversations handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.ConversationRead);
 
     public async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

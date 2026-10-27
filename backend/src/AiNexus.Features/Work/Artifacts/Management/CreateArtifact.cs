@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -40,6 +41,7 @@ internal sealed class CreateArtifact(
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
+        .Audited(ArtifactsAudit.ArtifactCreated)
         .WithName("CreateArtifact");
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct)

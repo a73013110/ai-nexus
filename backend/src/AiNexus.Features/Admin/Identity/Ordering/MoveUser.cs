@@ -2,6 +2,7 @@ using System.Globalization;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -28,6 +29,7 @@ internal sealed class MoveUser(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/position", async (Guid id, UserPositionRequest body, IRequestActor actor, MoveUser handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .Audited(IdentityAudit.UserMoved)
         .WithName("MoveUser");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, UserPositionRequest request, CancellationToken ct)
@@ -37,7 +39,7 @@ internal sealed class MoveUser(AppDbContext db, AdministrativeAudit audit)
         if (planned is null) return IdentityErrors.UserOrderStale;
         if (planned.Count == 0) return Result.Success;
         var ids = planned.Select(x => x.Id).ToArray();
-        return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_order", id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token), async () =>
+        return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token), async () =>
         {
             var writes = await PlanAsync(id, request.Position, ct);
             if (writes is null || !writes.SequenceEqual(planned)) return IdentityErrors.UserOrderStale;

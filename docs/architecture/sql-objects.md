@@ -1,6 +1,6 @@
 # SQL 物件（procedure、function、view）
 
-所有 procedure、function、view 用同一個檔頭與骨架：打開任何一支，都在同一個位置找到用途、結果集與異動紀錄。何時用 procedure 見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)，稽核見 [ADR 0014](../decisions/0014-procedure-audit.md)。
+所有 procedure、function、view 用同一個檔頭與骨架：打開任何一支，都在同一個位置找到用途、結果集與異動紀錄。何時用 procedure 見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；procedure 不寫稽核，由呼叫它的請求記錄（[ADR 0023](../decisions/0023-audit-standard.md)）。
 
 ## 命名與排版
 
@@ -66,8 +66,6 @@ BEGIN
         UPDATE [billing].[Things] SET Name = @Name WHERE Id = @Id;
         IF @@ROWCOUNT = 0 THROW 50000, N'thing_not_found', 1;
 
-        EXEC [audit].[usp_WriteAuditEvent] @Action = N'billing.thing.renamed', @ResourceId = @Id, @Result = N'saved';
-
         IF @ownsTran = 1 COMMIT;
     END TRY
     BEGIN CATCH
@@ -79,10 +77,9 @@ END;
 GO
 ```
 
-- `@ownsTran`：只在沒有外層交易時自己開，出錯直接 `THROW` 交給呼叫端回復，原因見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md#交易)。只有一句異動、沒有先查後寫時可以省略交易區塊（例如 `audit.usp_WriteAuditEvent`）。
+- `@ownsTran`：只在沒有外層交易時自己開，出錯直接 `THROW` 交給呼叫端回復，原因見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md#交易)。只有一句異動、沒有先查後寫時可以省略交易區塊。
 - 先查再寫的檢查加 `WITH (UPDLOCK, HOLDLOCK)`：RCSI 下一般讀取不等寫入（[讀取隔離](database.md#讀取隔離rcsi)）。
 - 預期內的失敗 `THROW 50000, N'<error_code>', 1;`，代碼與 `<Module>Errors` 相同（`ProcedureError`）。
-- 成功稽核與異動同一個交易；多列異動用 `OUTPUT` 一次寫入，動作名稱與明細規則見 [ADR 0014](../decisions/0014-procedure-audit.md)。
 
 ## function 與 view
 
@@ -99,7 +96,7 @@ RETURN
 GO
 ```
 
-- function 用 inline 資料表值函式；scalar 函式在 `SELECT` 裡會逐列呼叫（[ADR 0014](../decisions/0014-procedure-audit.md#效能)）。
+- function 用 inline 資料表值函式；scalar 函式在 `SELECT` 裡會逐列呼叫，成本隨列數成長。
 - view：`CREATE OR ALTER VIEW [<schema>].[vw_<名稱>] AS SELECT …;`。
 
 ## 流程
@@ -112,8 +109,8 @@ GO
 
 ## 程式端
 
-- 讀取用 `QueryProcedureAsync`，寫入用 `ExecuteProcedureAsync`（同一個批次帶稽核情境）；record 欄位名稱、順序、型別與 `SELECT` 一致。
-- 背景工作只改處理狀態、不寫稽核的認領（`mail.usp_ClaimOutboundMessages`）也用 `QueryProcedureAsync`。需要特定隔離層級時在 procedure 內 `SET TRANSACTION ISOLATION LEVEL`：結束時恢復呼叫前的層級，不會留在連線池的連線上。
-- 每支被程式呼叫的 procedure 都要有整合測試（`ProcedureCoverageTests`）；寫稽核的用 `ProcedureAudits` 檢查。
+- 讀取與寫入都用 `QueryProcedureAsync`；record 欄位名稱、順序、型別與 `SELECT` 一致。稽核由端點的請求稽核寫在同一個請求裡，procedure `THROW` 時記成錯誤代碼。
+- 需要特定隔離層級時在 procedure 內 `SET TRANSACTION ISOLATION LEVEL`：結束時恢復呼叫前的層級，不會留在連線池的連線上。
+- 每支被程式呼叫的 procedure 都要有整合測試（`ProcedureCoverageTests`），以測試檔裡出現 procedure 全名判定。
 - 程式與 procedure 都要用的規則寫成一支 inline 函式，兩邊都讀它，不在 C# 重寫一次：EF 以 `[DbFunction]` 對應成可再組合的 `IQueryable`（`AppDbContext.UsageEntries`，keyless 實體 `ToTable(null)`），Dapper 直接從函式 `SELECT`（`AttachmentQuota`）。函式不在 `ProcedureCoverageTests` 範圍內，結果另以整合測試檢查。
 - 範例：[`ListAdminUsers`](../../backend/src/AiNexus.Features/Admin/Operations/ListAdminUsers.cs)、[`CreateModelPrice`](../../backend/src/AiNexus.Features/Admin/Billing/Prices/CreateModelPrice.cs)。

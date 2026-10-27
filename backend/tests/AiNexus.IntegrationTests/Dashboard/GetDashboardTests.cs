@@ -101,7 +101,7 @@ public sealed class GetDashboardTests
         (await alice.GetAsync("/api/v1/dashboard?" + Period)).EnsureSuccessStatusCode();
         Assert.Equal("platform", (await Read(bob, "scope=platform&" + Period)).Scope);
         using var scope = factory.Services.CreateScope();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "dashboard.platform.read" && x.OwnerId == b));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AnyAsync(x => x.Action == "dashboard.overview.read" && x.OwnerId == b));
     }
 
     [Fact]

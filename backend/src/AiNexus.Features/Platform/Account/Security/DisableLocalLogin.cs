@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ internal sealed class DisableLocalLogin(AppDbContext db, AccountSecurity securit
         .MapDelete("/settings/account/local-login", (HttpContext http, ICurrentUser user, DisableLocalLogin handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, ct).ToHttpResultAsync())
         .RequireRateLimiting(AccountModule.CredentialsRateLimit)
+        .Audited(AccountAudit.LocalLoginDisabled)
         .WithName("DisableLocalLogin");
 
     public async Task<Result<AccountSecurityChangeDto>> HandleAsync(HttpContext http, User user, CancellationToken ct)
@@ -26,7 +28,7 @@ internal sealed class DisableLocalLogin(AppDbContext db, AccountSecurity securit
         var disabled = UserCredentials.DisableLocalLogin(user);
         if (!disabled.IsSuccess) return disabled.Error;
         if (!disabled.Value) return security.Changed(http, user);
-        security.Audit(user, "account.local_login_disabled", new { localAccount = user.LocalAccount });
+        security.Audit(user, new { localAccount = user.LocalAccount });
         await security.NotifyAsync(user, AccountSecurity.VerifiedEmail(user), "停用了本地登入", null, ct);
         if (reauthentication.Method(http) != "local") return await security.CommitAsync(http, user, ct);
         try { await db.SaveChangesAsync(ct); }

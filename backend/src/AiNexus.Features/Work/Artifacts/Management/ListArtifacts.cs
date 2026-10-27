@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
@@ -16,6 +17,7 @@ internal sealed class ListArtifacts(AppDbContext db, ResourceAccess access)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", async (ICurrentUser user, ListArtifacts handler, CancellationToken ct) =>
             TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .Audited(ArtifactsAudit.ArtifactRead)
         .WithName("ListArtifacts");
 
     public async Task<IReadOnlyList<ArtifactSummaryDto>> HandleAsync(Guid actor, CancellationToken ct)

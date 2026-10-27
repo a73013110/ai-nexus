@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -23,11 +24,12 @@ internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeAudit au
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("", (MailSettingsRequest body, IRequestActor actor, UpdateMailSettings handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.MailMessagesResend)
+        .Audited(MailAudit.SettingsUpdated)
         .WithName("UpdateMailSettings");
 
     public async Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
     {
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, "admin.mail_settings", null, "mail.settings", Snapshot, async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, null, "mail.settings", Snapshot, async () =>
         {
             var setting = await db.Set<DeliverySetting>().SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
             if (setting is null) db.Add(setting = new DeliverySetting());

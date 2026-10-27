@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -35,12 +36,13 @@ internal sealed class CreateCard(AppDbContext db, AdministrativeAudit audit)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", (CardCreateRequest body, ICurrentUser user, CreateCard handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.CardCreated)
         .WithName("CreateAttendanceCard");
 
     public async Task<Result<CardDto>> HandleAsync(Guid actor, CardCreateRequest request, CancellationToken ct)
     {
         var card = new Card { CardNumber = request.CardNumber.Trim(), HiddenFromRecords = request.HiddenFromRecords, Note = CardRules.Normalize(request.Note) };
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_card", card.Id, card.Id.ToString(), token => CardRules.SnapshotAsync(db, card.Id, token), async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, card.Id, card.Id.ToString(), token => CardRules.SnapshotAsync(db, card.Id, token), async () =>
         {
             // 唯一索引是最後一道防線；先查才能回固定的錯誤代碼並寫進稽核。
             if (await db.Set<Card>().AnyAsync(x => x.CardNumber == card.CardNumber, ct)) return AttendanceErrors.CardNumberDuplicate;

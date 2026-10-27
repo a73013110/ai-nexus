@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -26,6 +27,7 @@ internal sealed class SearchKnowledge(RetrievalPipeline pipeline)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/search", (KnowledgeSearchRequest request, ICurrentUser user, SearchKnowledge handler, CancellationToken ct) => handler.HandleAsync(user.Id, request, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.DocumentSearched)
         .WithName("SearchKnowledge");
 
     public Task<Result<KnowledgeSearchDto>> HandleAsync(Guid actor, KnowledgeSearchRequest request, CancellationToken ct) => pipeline.SearchAsync(actor, request, ct);

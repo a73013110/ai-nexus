@@ -37,8 +37,8 @@ public sealed class ImportDirectoryUsersTests
             // 只有本人通過 AD 驗證才算目錄驗證；匯入不能讓本地密碼的新鮮度規則誤以為剛登入過。
             Assert.Null(carol.DirectoryVerifiedAt);
             Assert.Equal(["member"], await db.Set<UserRole>().Where(x => x.UserId == carolId).Select(x => x.RoleId).ToListAsync());
-            Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_import" && x.Result == "saved"));
-            Assert.False(await db.AuditEvents.AnyAsync(x => x.Action == "identity.first_seen" && x.OwnerId == carolId));
+            Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == "identity.user.imported" && x.Result == "completed"));
+            Assert.False(await db.AuditEvents.AnyAsync(x => x.Action == "identity.account.created" && x.OwnerId == carolId));
         }
 
         // 匯入的帳號與首次登入走同一條路：bob 之後登入時以 SID 對到同一位使用者，不會另建一位。
@@ -50,7 +50,7 @@ public sealed class ImportDirectoryUsersTests
         Assert.Equal([carolId, bobId], again.Select(x => x.UserId!.Value));
         using var check = f.Services.CreateScope(); var database = check.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(3, await database.Users.CountAsync());
-        Assert.Equal(2, await database.AuditEvents.CountAsync(x => x.Action == "admin.user_import"));
+        Assert.Equal(2, await database.AuditEvents.CountAsync(x => x.Action == "identity.user.imported"));
         Assert.NotNull((await database.Users.SingleAsync(x => x.Id == bobId)).DirectoryVerifiedAt);
     }
 
@@ -72,7 +72,7 @@ public sealed class ImportDirectoryUsersTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.Equal(1, await db.Users.CountAsync());
             Assert.Equal("alice", (await db.Users.SingleAsync()).DisplayName);
-            Assert.False(await db.AuditEvents.AnyAsync(x => x.Action == "admin.user_import"));
+            Assert.False(await db.AuditEvents.AnyAsync(x => x.Action == "identity.user.imported"));
         }
 
         Assert.Equal(DirectoryOutcomes.Create, Assert.Single(await Preview(admin, new([FixtureAdDirectory.Dave], IncludeDisabled: true))).Outcome);

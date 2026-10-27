@@ -30,7 +30,7 @@ public sealed class UserOrderTests
         var rest = list.Users.Skip(2).ToArray();
         Assert.All(rest, x => Assert.Null(x.SortOrder));
         Assert.Equal(rest.Select(x => x.DisplayName).Order(StringComparer.Ordinal), rest.Select(x => x.DisplayName));
-        var audits = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.user_order&result=saved"))!;
+        var audits = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.user.moved&result=success"))!;
         Assert.Equal(2, audits.Length);
         Assert.Contains(audits, x => x.ResourceId == dave && x.DetailsJson!.Contains("\"sortOrder\":10"));
     }
@@ -46,9 +46,10 @@ public sealed class UserOrderTests
 
         var found = Assert.Single((await ListAsync(admin, "bob")).Users);
         Assert.Equal(all.Users.Count, found.Position);
-        // 超過人數視為最後一位；原地放下不寫入，也不留稽核。
+        // 超過人數視為最後一位；原地放下不寫入：請求照樣留稽核，但沒有前後快照。
         (await MoveAsync(admin, bob, all.Users.Count + 5)).EnsureSuccessStatusCode();
-        Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.user_order&result=saved"))!);
+        var moves = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.user.moved&result=success"))!;
+        Assert.Equal(2, moves.Length); Assert.DoesNotContain("\"before\"", moves[0].DetailsJson ?? "");
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public sealed class UserOrderTests
         var list = await ListAsync(admin);
         Assert.Equal(0, list.Sorted);
         Assert.All(list.Users, x => Assert.Null(x.SortOrder));
-        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.user_order_reset&result=saved"))!);
+        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.user.reordered&result=success"))!);
         Assert.Contains(bob.ToString(), audit.DetailsJson!);
     }
 

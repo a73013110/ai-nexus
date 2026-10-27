@@ -21,7 +21,7 @@ public sealed record ConversationTurn(
 /// <summary>
 /// 其他模組（Chat、Inference、Knowledge、Artifacts）操作對話歷史與訊息樹的入口。
 /// </summary>
-public sealed class ConversationService(AppDbContext db, TimeProvider clock)
+public sealed class ConversationService(AppDbContext db, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>取得使用者擁有的對話並交由 EF 追蹤（不預先載入標籤），供之後修改對話屬性時使用。</summary>
     public async Task<Result<Conversation>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
@@ -38,7 +38,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock)
     }
 
     public Task<Result<ConversationDto>> CreateAsync(Guid owner, string? title, CancellationToken ct)
-        => new CreateConversation(db, clock).HandleAsync(owner, title, ct);
+        => new CreateConversation(db, clock, audit).HandleAsync(owner, title, ct);
 
     /// <summary>
     /// 準備模型生成作業：在資料庫中登記 User 與 Assistant 訊息骨架。

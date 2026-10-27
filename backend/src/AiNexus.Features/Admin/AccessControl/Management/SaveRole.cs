@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,10 @@ internal sealed class SaveRole(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/roles/{id}", async (string id, RoleUpdateRequest body, IRequestActor actor, SaveRole handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .Audited(AccessControlAudit.RoleUpdated)
         .WithName("SaveRole");
 
-    public Task<Result> HandleAsync(Guid actor, string id, RoleUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlRoles, "admin.role", null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, RoleUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlRoles, null, id, token => SnapshotAsync(id, token), async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.Keys(request.GroupIds)) is { } invalid) return invalid;
         if (await AccessRules.ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), request.GroupIds, ct) is { } unknown) return unknown;

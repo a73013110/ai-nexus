@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -31,6 +32,7 @@ internal sealed class Reauthenticate(AppDbContext db, AccountSecurity security, 
         .MapPost("/settings/account/reauthentications", (ReauthenticationRequest body, HttpContext http, ICurrentUser user, Reauthenticate handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
+        .Audited(AccountAudit.Reauthenticated)
         .WithName("Reauthenticate");
 
     public async Task<Result<AccountSecurityChangeDto>> HandleAsync(HttpContext http, User user, ReauthenticationRequest body, CancellationToken ct)
@@ -41,7 +43,8 @@ internal sealed class Reauthenticate(AppDbContext db, AccountSecurity security, 
         var verified = body.Password is not null
             ? await reauthentication.VerifyPasswordAsync(http, user, body.Password, ct)
             : await VerifyCodeAsync(user, body.ChallengeId!.Value, body.Code, ct);
-        security.Audit(user, "account.reauthentication", new { kind }, verified.IsSuccess ? "success" : "failed");
+        // 失敗也要存：驗證碼的嘗試次數與稽核一起寫入，結果由請求稽核依回傳的錯誤記下。
+        security.Audit(user, new { kind });
         await db.SaveChangesAsync(ct);
         if (!verified.IsSuccess) return verified.Error;
         await reauthentication.MarkAsync(http, user);

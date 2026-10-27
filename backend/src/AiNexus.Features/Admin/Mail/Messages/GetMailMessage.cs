@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,7 @@ internal sealed class GetMailMessage(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, GetMailMessage handler, CancellationToken ct) => handler.HandleAsync(id, ct).ToHttpResultAsync())
+        .Audited(MailAudit.MessageRead)
         .WithName("GetMailMessage");
 
     public async Task<Result<MailMessageDetailDto>> HandleAsync(Guid id, CancellationToken ct)

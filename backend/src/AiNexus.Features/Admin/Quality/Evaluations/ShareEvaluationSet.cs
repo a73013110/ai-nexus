@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Quality;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
 
@@ -12,9 +13,9 @@ internal sealed class ShareEvaluationSet(ResourceAccess access)
     public static void Map(RouteGroupBuilder routes)
     {
         routes.MapGet("/sets/{id:guid}/access", (Guid id, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync())
-            .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetAccessRead);
         routes.MapPut("/sets/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) => handler.SetAsync(user.Id, id, body, ct).ToHttpResultAsync())
-            .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetShared);
     }
 
     public Task<Result<ResourceAclDto>> GetAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, EvaluationSet.Kind, ct);

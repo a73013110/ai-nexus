@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -14,6 +15,7 @@ internal sealed class UnpinRepository(AppDbContext db, RepositoryService gitea)
             await handler.HandleAsync(user.Id, owner + "/" + name, ct);
             return TypedResults.NoContent();
         })
+        .Audited(RepositoriesAudit.RepositoryUnpinned)
         .WithName("UnpinRepository");
 
     public Task HandleAsync(Guid owner, string repo, CancellationToken ct) =>

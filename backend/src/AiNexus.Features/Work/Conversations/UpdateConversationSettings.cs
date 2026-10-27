@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -27,6 +28,7 @@ internal sealed class UpdateConversationSettings(AppDbContext db, GenerationSche
         .MapPatch("/{id:guid}/settings", async (
                 Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .Audited(ConversationsAudit.ConversationUpdated)
         .WithName("UpdateConversationSettings");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, ConversationSettingsRequest request, CancellationToken ct)
@@ -51,7 +53,6 @@ internal sealed class UpdateConversationSettings(AppDbContext db, GenerationSche
                 conversation.Labels.Add(new() { ConversationId = id, Name = name });
             }
         }
-        db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.organized", ResourceId = id });
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();
     }

@@ -2,10 +2,11 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Work.Jobs;
+namespace AiNexus.Features.Work.Jobs.Management;
 
 /// <summary>
 /// 把使用者的失敗或已取消工作重新排入佇列。全部嘗試上限為 <see cref="JobService.MaxAttempts"/> 次；且工作種類仍有處理器、處理器接受重試，
@@ -16,6 +17,7 @@ internal sealed class RetryJob(AppDbContext db, IServiceProvider services, TimeP
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(JobsAudit.JobRetried)
         .WithName("RetryJob");
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

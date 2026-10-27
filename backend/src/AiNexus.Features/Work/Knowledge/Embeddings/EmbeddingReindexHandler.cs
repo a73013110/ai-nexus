@@ -11,7 +11,7 @@ using AiNexus.Features.Work.Knowledge.Indexing;
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle lifecycle, DocumentIndexer indexer,
-    AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes) : IBackgroundJobHandler
+    AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes, AuditTrail audit) : IBackgroundJobHandler
 {
     public const string JobKind = "embedding-reindex";
     public string Kind => JobKind;
@@ -55,7 +55,7 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
             try {
                 await execution.CheckpointAsync("啟用完成的索引", coverage.CompletedChunks, coverage.TotalChunks, ct, async () => {
                     if (await lifecycle.ActivateCoreAsync(profile.Id, ct) is { IsSuccess: false } refused) { failure = refused.Error; return; }
-                    db.AuditEvents.Add(new() { OwnerId = execution.Job.OwnerId, Action = "system.embedding_activate", Result = "activated", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { profile.Id }) }); await db.SaveChangesAsync(ct);
+                    audit.Record(KnowledgeAudit.ProfileActivated, execution.Job.OwnerId, details: new { profileId = profile.Id, automatic = true }); await db.SaveChangesAsync(ct);
                 }, isolation: System.Data.IsolationLevel.Serializable);
             } finally { writes.Gate.Release(); }
             if (failure is not null) return failure;

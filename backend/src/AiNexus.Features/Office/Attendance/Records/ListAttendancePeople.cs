@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Office.Attendance.Records;
@@ -22,6 +23,7 @@ internal sealed class ListAttendancePeople(IDataScope scopes, AttendanceRoster r
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/people", (Guid? unitId, ICurrentUser user, ListAttendancePeople handler, CancellationToken ct) => handler.HandleAsync(user.Id, unitId, ct).ToHttpResultAsync())
+        .NotAudited("篩選用的人員選項，不含出勤資料")
         .WithName("ListAttendancePeople");
 
     public async Task<Result<IReadOnlyList<AttendancePersonOptionDto>>> HandleAsync(Guid viewer, Guid? unitId, CancellationToken ct)

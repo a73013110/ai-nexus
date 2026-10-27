@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   auditChanges,
+  auditContext,
   auditDetails,
   auditOutcome,
   auditResource,
-  auditResult,
-  auditRejected,
 } from './audit-presentation';
 describe('audit presentation', () => {
   it('presents model policy arrays, dictionary keys and missing models without exposing IDs', () => {
@@ -77,31 +76,27 @@ describe('audit presentation', () => {
       }),
     ]);
   });
-  it('does not label successful removal, scheduling or legacy read operations as rejected', () => {
-    for (const result of [
-      'created',
-      'deleted',
-      'soft_deleted',
-      'queued',
-      'read-only',
-      'granted_once',
-      'cancelled',
-      'started',
-      'restored',
-    ]) {
-      expect(auditRejected(result)).toBe(false);
-      expect(auditResult(result)).not.toBe(result);
-    }
-    expect(auditRejected('executor_lost')).toBe(true);
-    expect(auditRejected('unknown_access_id')).toBe(true);
-    expect(auditOutcome({ action: 'billing.price.created', result: 'price_exists' })).toEqual({
-      result: '已建立',
-      rejected: false,
-    });
-    expect(auditOutcome({ action: 'identity.login', result: 'failed' })).toEqual({
-      result: '登入未完成',
+  it('marks every error code as a failure and names denials and known reasons', () => {
+    expect(auditOutcome('completed')).toEqual({ result: '完成', rejected: false, reason: '' });
+    expect(auditOutcome('feature_forbidden')).toMatchObject({ result: '已拒絕', rejected: true });
+    expect(auditOutcome('invalid_credentials')).toEqual({
+      result: '失敗',
       rejected: true,
+      reason: '帳號、密碼或登入方式不正確，或帳號暫時無法登入。',
     });
+    // 沒有公開說明的代碼原樣顯示，仍算失敗。
+    expect(auditOutcome('executor_lost')).toEqual({
+      result: '失敗',
+      rejected: true,
+      reason: 'executor_lost',
+    });
+  });
+  it('lists the attempted account and sign-in method', () => {
+    expect(auditContext('{"account":"user01","authentication":"ad"}')).toEqual([
+      { label: '嘗試／登入帳號', value: 'user01' },
+      { label: '登入方式', value: 'AD 驗證' },
+    ]);
+    expect(auditContext('{')).toEqual([]);
   });
   it('compares nested policy changes and preserves the removal of an explicit limit', () => {
     const modelId = 'ollama/qwen3.8:27b';

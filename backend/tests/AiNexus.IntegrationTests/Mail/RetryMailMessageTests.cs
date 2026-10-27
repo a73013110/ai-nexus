@@ -39,7 +39,7 @@ public sealed class RetryMailMessageTests
         Assert.Equal(1, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
         Assert.Equal((MailStates.Sent, 2), ((await MessageAsync(factory, id)).Status, (await MessageAsync(factory, id)).Attempts));
 
-        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.mail_retry&result=saved"))!);
+        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=mail.message.retried&result=success"))!);
         Assert.DoesNotContain("chen@company.com", audit.DetailsJson, StringComparison.Ordinal);
     }
 

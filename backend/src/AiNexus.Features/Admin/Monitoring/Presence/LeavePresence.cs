@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Monitoring.Traffic;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Admin.Monitoring.Presence;
@@ -12,7 +13,7 @@ internal sealed class LeavePresence(RuntimeTraffic traffic)
         {
             handler.Handle(user.Id, sessionId);
             return TypedResults.NoContent();
-        }).WithMetadata(new SuppressSuccessfulRequestLog()).WithName("LeavePresence");
+        }).WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("LeavePresence");
 
     public void Handle(Guid user, Guid sessionId) => traffic.Leave(user, sessionId);
 }

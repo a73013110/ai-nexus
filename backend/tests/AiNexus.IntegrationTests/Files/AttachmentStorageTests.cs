@@ -97,7 +97,7 @@ public sealed class AttachmentStorageTests
         capacity = (await member.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!;
         Assert.Equal(1000, capacity.LimitBytes); Assert.Equal(0, capacity.RemainingBytes); Assert.Equal("group", capacity.LimitSource);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await Upload(member, 1)).StatusCode);
-        using var audit = factory.Services.CreateScope(); Assert.Equal(2, await audit.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "admin.user_storage" && x.Result == "saved"));
+        using var audit = factory.Services.CreateScope(); Assert.Equal(2, await audit.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.storage_limit.updated" && x.Result == "completed"));
     }
 
     [Fact]

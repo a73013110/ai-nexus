@@ -58,7 +58,7 @@
 5. **換 AD 帳號**：帳號以 SID 綁定，新帳號 SID 不同；不要另建使用者，否則角色與歷史接不上。使用者詳情「帳號」頁籤顯示是否已綁定（`operations.usp_ListAdminUsers` 回傳 `DirectoryBound`），並提供兩個操作，都沿用原本的 UserId：
    - **改綁**：輸入新的 AD 短帳號，以目錄查出 SID 後立即綁定，同時改寫 `AdAccount`。SID 已綁定別人（含已刪除者）或帳號名已被佔用時拒絕。換了帳號名的情況用這個。
    - **解除**：SID 改回 `managed:`、保留 `AdAccount`，下次以同名帳號驗證或匯入時綁定新 SID。用於 AD 重建同名帳號；舊帳號若還能登入，會被它綁回去，所以帳號名不同時要用改綁。
-   - 兩者都遞增 `SecurityVersion`（舊工作階段失效），不能對自己操作；稽核為 `admin.user_ad_bind`、`admin.user_ad_unbind`，快照記完整 SID，查得回舊 SID。
+   - 兩者都遞增 `SecurityVersion`（舊工作階段失效），不能對自己操作；稽核為 `identity.user_directory.bound`、`identity.user_directory.unbound`（ADR 0023 改名），快照記完整 SID，查得回舊 SID。
 6. **無人可管的共用資源**：只有離職者能管理的專案或知識庫，其他成員無法再調整。依「保留不動」先不處理；需要時由管理員移轉擁有權，屆時再加待辦項目。
 
 ## 何時重新評估

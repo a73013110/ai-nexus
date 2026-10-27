@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Repositories;
 using System.Text.Json;
@@ -7,6 +6,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 
@@ -20,7 +20,7 @@ public sealed record RepositoryFolderImportDto(Guid Id, int Files, JobDto Job);
 /// 列出固定 commit 上某資料夾底下的文字檔，並把匯入排入知識庫的佇列。
 /// 檔案清單在此時固定，因此工作重試時匯入的仍是同一份快照。
 /// </summary>
-internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes)
+internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes, AuditTrail audit)
 {
     // 值得當成文字建立索引的副檔名；其他多半是二進位或產生的檔案，直接略過。
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -34,7 +34,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/imports", (string owner, string name, ImportRepositoryFolderRequest body, ICurrentUser user, ImportRepositoryFolder handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.Knowledge).RequireRateLimiting(RepositoriesModule.WriteRateLimit).WithName("ImportRepositoryFolder");
+        .RequireAuthorization(Policies.Knowledge).RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.FolderImported).WithName("ImportRepositoryFolder");
 
     public async Task<Result<RepositoryFolderImportDto>> HandleAsync(Guid owner, string repo, ImportRepositoryFolderRequest request, CancellationToken ct)
     {
@@ -59,7 +59,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
             job.TotalUnits = paths.Count;
             row.JobId = job.Id;
             db.Add(row);
-            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = request.CollectionId, Action = "repository.imported", Result = "queued" });
+            audit.Describe(resource: request.CollectionId);
             await db.SaveChangesAsync(ct);
             return new RepositoryFolderImportDto(row.Id, paths.Count, JobService.Describe(job));
         }

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing.Management;
@@ -11,7 +12,7 @@ internal sealed class ListShares(AppDbContext db, ShareAccess shares, TimeProvid
     private const int PageSize = 100;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, sent ?? false, ct)));
+        .MapGet("", async (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, sent ?? false, ct))).Audited(SharingAudit.ShareRead);
 
     public async Task<IReadOnlyList<ShareDto>> HandleAsync(Guid actor, bool sent, CancellationToken ct)
     {

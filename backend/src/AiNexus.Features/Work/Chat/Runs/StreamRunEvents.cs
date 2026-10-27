@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,7 @@ internal sealed class StreamRunEvents(
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapGet("/runs/{id:guid}/events", (Guid id, long? after, HttpContext http, ICurrentUser user, StreamRunEvents handler, CancellationToken ct) =>
             handler.HandleAsync(http, user.Id, id, after, ct).ToStreamResultAsync(http))
+        .NotAudited("生成串流，送出訊息已留證")
         .WithName("RunEvents")
         .Produces<RunEventDto>(200, "text/event-stream");
 

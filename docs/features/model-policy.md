@@ -25,14 +25,14 @@
 
 ## API
 
-- `GET`／`PUT /api/v1/admin/users/{id}/model-policy`：個人與有效政策；PUT 接收 `allowedModelIds`、`dailyTokenLimits`（模型路由 → 整數 tokens），保存 `admin.user_model_policy` 前後快照。
+- `GET`／`PUT /api/v1/admin/users/{id}/model-policy`：個人與有效政策；PUT 接收 `allowedModelIds`、`dailyTokenLimits`（模型路由 → 整數 tokens），保存 `identity.model_policy.updated` 前後快照。
 - `GET /api/v1/settings/model-policy`：本人各模型的實際回報、預留、剩餘與來源；隱藏模型使用公開別名，不揭露原生名稱。
 
 ## 附件容量
 
 - 有效上限＝個人覆寫 → 有效群組的最低非空上限 → 網站預設 `Files.DefaultOwnerLimitBytes`（5 GB）。個人覆寫可以超過群組與預設；0 禁止新上傳，降低上限不刪既有檔案。
 - 用量包含草稿、pending 預約與 deleting 重試中的原檔；多處引用只計一次，實體刪檔成功才釋放。
-- `PUT /api/v1/admin/users/{id}/storage` 接收整數 `limitBytes`（0–1,000,000,000,000,000），null 恢復繼承；介面輸入十進位 GB。變更保存 `admin.user_storage` 前後快照。細節見 [附件保存](attachment-storage.md)。
+- `PUT /api/v1/admin/users/{id}/storage` 接收整數 `limitBytes`（0–1,000,000,000,000,000），null 恢復繼承；介面輸入十進位 GB。變更保存 `identity.storage_limit.updated` 前後快照。細節見 [附件保存](attachment-storage.md)。
 
 ## 部署限制
 

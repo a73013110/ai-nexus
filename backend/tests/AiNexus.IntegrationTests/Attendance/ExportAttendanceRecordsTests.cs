@@ -66,11 +66,10 @@ public sealed class ExportAttendanceRecordsTests
         Assert.All(rows.Skip(1).Take(4).SelectMany(x => x), x => Assert.Equal(("標楷體", 13.875), (x.Font, x.Size)));
         Assert.Equal(["center", "center", "center", "center", "center", "center", "center", "center", "left"], rows[1].Select(x => x.Alignment));
 
-        var audit = Assert.Single(await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"));
-        Assert.Equal("read", audit.Result);
+        var audit = Assert.Single(await AttendanceApi.AuditAsync(session.Factory, "attendance.record.exported"));
+        Assert.Equal("completed", audit.Result);
         Assert.Contains("\"from\":\"2026-10-19\"", audit.Details);
         Assert.Contains("\"count\":1", audit.Details);
-        Assert.Contains("\"includeDaysOff\":false", audit.Details);
     }
 
     [Fact]
@@ -129,7 +128,7 @@ public sealed class ExportAttendanceRecordsTests
     }
 
     [Fact]
-    public async Task InvalidRangesAndUsersWithoutTheRecordsPageAreRefusedWithoutAnAudit()
+    public async Task InvalidRangesAndUsersWithoutTheRecordsPageAreRefusedAndAuditedAsFailures()
     {
         await using var session = Create();
         using var client = await session.Factory.SignedInAsync("bob");
@@ -140,7 +139,9 @@ public sealed class ExportAttendanceRecordsTests
         await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync());
         await AssertCodeAsync(await client.GetAsync($"{Export}?{Week}"), HttpStatusCode.Forbidden, "feature_forbidden");
-        Assert.Empty(await AttendanceApi.AuditAsync(session.Factory, "attendance.records.export"));
+        // 被拒的嘗試也留下紀錄（銀行稽核要看得到誰試過匯出）。
+        Assert.Equal([.. Enumerable.Repeat("attendance_records_range_invalid", 3), "feature_forbidden"],
+            (await AttendanceApi.AuditAsync(session.Factory, "attendance.record.exported")).Select(x => x.Result));
     }
 
     /// <summary>匯出檔每段開頭的姓名，依出現順序。</summary>

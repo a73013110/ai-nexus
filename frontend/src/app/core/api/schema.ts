@@ -821,6 +821,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/audit/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListFeatureUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/usage/{featureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFeatureUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs": {
         parameters: {
             query?: never;
@@ -9311,12 +9343,14 @@ export interface components {
         AuditActionDto: {
             value: string;
             label: string;
-            categories: string[];
+            category: string;
+            module: string;
         };
         AuditCatalogDto: {
             features: components["schemas"]["FeatureDto"][];
             models: components["schemas"]["ModelDto"][];
             categories: components["schemas"]["AuditCategoryDto"][];
+            modules: components["schemas"]["AuditModuleDto"][];
             actions: components["schemas"]["AuditActionDto"][];
             navigationSections: components["schemas"]["NavigationSectionDto"][];
         };
@@ -9329,18 +9363,25 @@ export interface components {
             id: number;
             actor: string;
             action: string;
+            category: string;
             /** Format: uuid */
             resourceId: null | string;
-            result: null | string;
+            result: string;
             /** Format: date-time */
             at: string;
             detailsJson: null | string;
             actingAs: null | string;
-            category: null | string;
+            subject: null | string;
+            feature: null | string;
+            clientAddress: null | string;
             traceId: null | string;
             /** Format: uuid */
             operationId: null | string;
             issueCode: null | string;
+        };
+        AuditModuleDto: {
+            value: string;
+            label: string;
         };
         AuthSessionDto: {
             mode: string;
@@ -10094,10 +10135,57 @@ export interface components {
             icon: string;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "identity.users" | "identity.users.import" | "identity.users.sync" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "identity.users" | "identity.users.import" | "identity.users.sync" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
+        };
+        FeatureUsageDayDto: {
+            /** Format: date */
+            date: string;
+            /** Format: int32 */
+            users: number;
+            /** Format: int32 */
+            events: number;
+        };
+        FeatureUsageDetailDto: {
+            featureId: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            until: string;
+            /** Format: int32 */
+            offset: number;
+            days: components["schemas"]["FeatureUsageDayDto"][];
+            users: components["schemas"]["FeatureUsageUserDto"][];
+        };
+        FeatureUsageDto: {
+            featureId: string;
+            /** Format: int32 */
+            users: number;
+            /** Format: int32 */
+            events: number;
+            /** Format: int32 */
+            failures: number;
+            /** Format: date-time */
+            lastUsedAt: null | string;
+        };
+        FeatureUsageReportDto: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            until: string;
+            features: components["schemas"]["FeatureUsageDto"][];
+        };
+        FeatureUsageUserDto: {
+            /** Format: uuid */
+            userId: string;
+            account: string;
+            displayName: string;
+            /** Format: int32 */
+            events: number;
+            /** Format: date-time */
+            lastUsedAt: string;
         };
         FeedbackDto: {
             /** Format: uuid */
@@ -12102,6 +12190,7 @@ export type AuditActionDto = components['schemas']['AuditActionDto'];
 export type AuditCatalogDto = components['schemas']['AuditCatalogDto'];
 export type AuditCategoryDto = components['schemas']['AuditCategoryDto'];
 export type AuditDto = components['schemas']['AuditDto'];
+export type AuditModuleDto = components['schemas']['AuditModuleDto'];
 export type AuthSessionDto = components['schemas']['AuthSessionDto'];
 export type BackupMessage = components['schemas']['BackupMessage'];
 export type CalendarDayDto = components['schemas']['CalendarDayDto'];
@@ -12180,6 +12269,11 @@ export type EvaluationVariantRequest = components['schemas']['EvaluationVariantR
 export type FeatureDto = components['schemas']['FeatureDto'];
 export type FeatureId = components['schemas']['FeatureId'];
 export type FeatureUpdateRequest = components['schemas']['FeatureUpdateRequest'];
+export type FeatureUsageDayDto = components['schemas']['FeatureUsageDayDto'];
+export type FeatureUsageDetailDto = components['schemas']['FeatureUsageDetailDto'];
+export type FeatureUsageDto = components['schemas']['FeatureUsageDto'];
+export type FeatureUsageReportDto = components['schemas']['FeatureUsageReportDto'];
+export type FeatureUsageUserDto = components['schemas']['FeatureUsageUserDto'];
 export type FeedbackDto = components['schemas']['FeedbackDto'];
 export type FeedbackRequest = components['schemas']['FeedbackRequest'];
 export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
@@ -20068,6 +20162,7 @@ export interface operations {
                 from?: string;
                 until?: string;
                 category?: string;
+                feature?: string;
                 traceId?: string;
                 before?: number;
                 take?: number;
@@ -20352,6 +20447,7 @@ export interface operations {
                 from?: string;
                 until?: string;
                 category?: string;
+                feature?: string;
                 traceId?: string;
             };
             header?: never;
@@ -20360,6 +20456,289 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListFeatureUsage: {
+        parameters: {
+            query?: {
+                from?: string;
+                until?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureUsageReportDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    GetFeatureUsage: {
+        parameters: {
+            query?: {
+                from?: string;
+                until?: string;
+                offsetMinutes?: number;
+            };
+            header?: never;
+            path: {
+                featureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureUsageDetailDto"];
+                };
+            };
             /** @description Bad Request */
             400: {
                 headers: {

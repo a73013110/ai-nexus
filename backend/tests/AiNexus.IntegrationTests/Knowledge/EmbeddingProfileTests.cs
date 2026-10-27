@@ -42,8 +42,8 @@ public sealed class EmbeddingProfileTests
         (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Empty(await db.Set<ChunkEmbedding768>().ToListAsync()); Assert.NotEmpty(await db.Set<ChunkEmbedding1024>().ToListAsync()); Assert.NotEmpty(await db.Set<DocumentPage>().ToListAsync());
-        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "saved");
-        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "profile_incomplete");
+        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "completed");
+        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "profile_incomplete");
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/vectors")).StatusCode);
     }
 
@@ -61,7 +61,7 @@ public sealed class EmbeddingProfileTests
         using var response = await bob.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null); response.EnsureSuccessStatusCode();
         var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_rebuild" && x.Result == "saved" && x.OwnerId == bobId);
+        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.rebuilt" && x.Result == "completed" && x.OwnerId == bobId);
         // 重新索引以擁有者身分執行：撤銷平台營運權限後，排入佇列的重建會被拒絕。
         db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
         await Drain(factory);

@@ -3,6 +3,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,6 +26,7 @@ internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation model
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/preferences", async (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
+        .NotAudited("介面偏好（主題、側欄）")
         .WithName("UpdatePreferences");
 
     public async Task<Result<PreferencesDto>> HandleAsync(User user, PreferencesDto value, CancellationToken ct)

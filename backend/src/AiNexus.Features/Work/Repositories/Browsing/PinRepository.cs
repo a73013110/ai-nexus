@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, Re
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPut("/pin", (string owner, string name, ICurrentUser user, PinRepository handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, ct).ToHttpResultAsync())
+        .Audited(RepositoriesAudit.RepositoryPinned)
         .WithName("PinRepository");
 
     public async Task<Result<RepositoryPinDto>> HandleAsync(Guid owner, string repo, CancellationToken ct)

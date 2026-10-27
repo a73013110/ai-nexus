@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
@@ -14,16 +15,18 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 public sealed record CollectionRequest(string Name, string Description);
 
 /// <summary>建立個人知識庫（數量受設定上限限制），或修改使用者可編輯的知識庫名稱與描述。</summary>
-internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock)
+internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/collections", async (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
             (await handler.CreateAsync(user.Id, request, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.CollectionCreated)
         .WithName("CreateKnowledgeCollection");
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/collections/{id:guid}", async (Guid id, CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
             (await handler.UpdateAsync(user.Id, id, request, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.CollectionUpdated)
         .WithName("UpdateKnowledgeCollection");
 
     public async Task<Result<CollectionDto>> CreateAsync(Guid actor, CollectionRequest request, CancellationToken ct)
@@ -36,7 +39,7 @@ internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess ac
         var now = clock.GetUtcNow();
         var resource = new Resource { OwnerId = actor, Kind = Collection.Kind, Name = name.Value, CreatedAt = now, UpdatedAt = now };
         db.Add(resource); db.Add(new Collection { Id = resource.Id, Description = request.Description.Trim() });
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "knowledge.created", Result = "created" });
+        audit.Describe(resource: resource.Id);
         await db.SaveChangesAsync(ct);
         return new CollectionDto(await access.DescribeAsync(actor, resource, ct), request.Description.Trim(), 0, 0);
     }
@@ -51,7 +54,6 @@ internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess ac
         resource.Name = name.Value;
         if (request.Description.Length > Collection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
         (await db.Set<Collection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.updated", Result = "saved" });
         await db.SaveChangesAsync(ct);
         return Result.Success;
     }

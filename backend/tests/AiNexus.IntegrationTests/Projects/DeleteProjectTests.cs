@@ -58,6 +58,8 @@ public sealed class DeleteProjectTests
         Assert.Empty((await editor.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!.Items);
         Assert.Equal(HttpStatusCode.NotFound, (await editor.GetAsync($"/api/v1/documents/{document.Id}")).StatusCode);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == id && x.Action == "project.deleted").ToArrayAsync());
+        // 被拒的兩次（非擁有者、仍有工作在跑）也各留一筆。
+        var deletes = await db.AuditEvents.Where(x => x.ResourceId == id && x.Action == "projects.project.deleted").OrderBy(x => x.Id).Select(x => x.Result).ToArrayAsync();
+        Assert.Equal(3, deletes.Length); Assert.Equal("completed", deletes[^1]); Assert.DoesNotContain("completed", deletes[..^1]);
     }
 }

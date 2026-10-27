@@ -79,6 +79,7 @@ public static class FeatureCatalog
     public const string BillingPrices = "billing.prices";
     public const string Monitoring = "monitoring";
     public const string Audit = "audit";
+    public const string AuditUsage = "audit.usage";
     public const string DiagnosticsLogs = "diagnostics.logs";
     public const string DiagnosticsLogsDetail = "diagnostics.logs.detail";
     public const string DiagnosticsLogsExport = "diagnostics.logs.export";
@@ -162,6 +163,8 @@ public static class FeatureCatalog
         new(BillingPrices, FeatureKind.Page, BillingModule, "模型與工具價格", "money"),
         new(Monitoring, FeatureKind.Page, MonitoringModule, "即時監控", "activity"),
         new(Audit, FeatureKind.Page, AuditModule, "活動稽核", "audit") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All] },
+        // 由稽核紀錄統計誰在用哪個功能；範圍與活動稽核分開授予，看得到用量不代表看得到每一筆操作。
+        new(AuditUsage, FeatureKind.Page, AuditModule, "功能使用量", "chart") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All] },
         new(DiagnosticsLogs, FeatureKind.Page, DiagnosticsModule, "系統日誌", "logs"),
         new(DiagnosticsLogsDetail, FeatureKind.Action, DiagnosticsModule, "日誌診斷詳情", "search"),
         new(DiagnosticsLogsExport, FeatureKind.Action, DiagnosticsModule, "日誌匯出", "download"),

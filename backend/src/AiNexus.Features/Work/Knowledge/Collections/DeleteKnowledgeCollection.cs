@@ -8,6 +8,7 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,7 @@ internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess 
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/collections/{id:guid}", (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.CollectionDeleted)
         .WithName("DeleteKnowledgeCollection");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -47,7 +49,7 @@ internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess 
             await db.Set<DocumentPage>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
             await lifecycle.MarkUnusedAsync(files, ct);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+ await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
         await lifecycle.DeletePendingAsync(ct);

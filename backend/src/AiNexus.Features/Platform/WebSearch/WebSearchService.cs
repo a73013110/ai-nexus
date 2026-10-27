@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Platform.WebSearch;
 
 /// <summary>聊天網路搜尋的服務：負責配額、計費、稽核，並把結果組成提示詞。</summary>
-public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
+public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>為搜尋摘要保留的提示詞預算（UTF-8 位元組）。</summary>
     public const int ReservedTokens = 3600;
@@ -56,7 +56,7 @@ public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provide
         {
             await billing.MeterAsync(call.Id, call.InputTokens, call.OutputTokens, 0, 0, CancellationToken.None, call.Status == "completed");
             await billing.FinishAsync(call.Id, call.Status, CancellationToken.None);
-            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = record.Id, Action = "web.search", Result = record.Status });
+            audit.Record(WebSearchAudit.Searched, owner, record.Id, result: record.Status == "completed" ? AuditEvent.Completed : record.Status);
             await db.SaveChangesAsync(CancellationToken.None);
         }
         return record;

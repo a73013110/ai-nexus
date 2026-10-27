@@ -45,7 +45,7 @@ public sealed class DirectoryBindingTests
             Assert.Equal((FixtureAdDirectory.Erin, "erin.chen", true), (user.Sid, user.AdAccount, user.AdEnabled));
             Assert.Equal(version + 1, user.SecurityVersion);
             Assert.Equal(["administrator", "member"], await db.Set<UserRole>().Where(x => x.UserId == bobId).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToListAsync());
-            Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_ad_bind" && x.ResourceId == bobId && x.Result == "saved"));
+            Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "identity.user_directory.bound" && x.ResourceId == bobId && x.Result == "completed"));
         }
         // 以舊 SID 建立的工作階段失效。
         Assert.Equal(HttpStatusCode.Unauthorized, (await bob.GetAsync("/api/v1/me")).StatusCode);
@@ -95,7 +95,7 @@ public sealed class DirectoryBindingTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId);
             Assert.Equal((UserAccounts.ManagedSid(bobId), "bob", true), (user.Sid, user.AdAccount, user.AdEnabled));
-            Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_ad_unbind" && x.ResourceId == bobId && x.Result == "saved"));
+            Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "identity.user_directory.unbound" && x.ResourceId == bobId && x.Result == "completed"));
         }
         Assert.Equal(HttpStatusCode.Unauthorized, (await bob.GetAsync("/api/v1/me")).StatusCode);
         var row = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?search=bob"))!.Users.Single();

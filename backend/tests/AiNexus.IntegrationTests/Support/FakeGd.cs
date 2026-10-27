@@ -4,7 +4,6 @@ using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Data.Sql;
-using AiNexus.Platform.Diagnostics;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -94,7 +93,7 @@ internal sealed class FakeGd : IDisposable
     public static ExternalDatabase<GdDatabase> AccessTo(DatabasesOptions databases, ILogger<ExternalDatabase<GdDatabase>>? logger = null, TimeProvider? clock = null)
     {
         var options = Options.Create(databases);
-        return new(new SqlDatabase<GdDatabase>(options, new AuditContextSource(TimeProvider.System)), options,
+        return new(new SqlDatabase<GdDatabase>(options), options,
             clock ?? TimeProvider.System, logger ?? NullLogger<ExternalDatabase<GdDatabase>>.Instance);
     }
 

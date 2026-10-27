@@ -5,27 +5,29 @@ using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Work.Conversations;
+namespace AiNexus.Features.Work.Conversations.Administration;
 
 public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, string? ModelId, IReadOnlyList<AttachmentDto> Attachments, RunTimingDto? Timing = null, string? ModelDisplayName = null);
 
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, IReadOnlyList<AdminMessageDto> Messages, int Offset, int Total);
 
 /// <summary>任一對話的訊息，每頁 100 筆，附附件與執行耗時；讀取會稽核。</summary>
-internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadAudit reads, ModelPresentation models)
+internal sealed class ReadAdminConversation(AppDbContext db, AccessService access, AuditTrail audit, ModelPresentation models)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/conversations/{id:guid}", async (Guid id, int? offset, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, offset ?? 0, ct)).ToHttpResult())
+        .Audited(ConversationsAudit.ConversationContentRead)
         .WithName("ReadAdminConversation");
 
     public async Task<Result<AdminConversationDetailDto>> HandleAsync(Guid actor, Guid id, int offset, CancellationToken ct)
     {
-        if (!await reads.AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
-        if (!AdministrativeReadAudit.ValidPage(null, offset)) return ConversationsErrors.InvalidSearch;
+        if (!await access.HoldsAsync(actor, FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.FeatureForbidden;
+        if (!ListAdminUserConversations.ValidPage(null, offset)) return ConversationsErrors.InvalidSearch;
         var value = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (value is null) return ConversationsErrors.AdminResourceNotFound;
         var owner = await db.Users.AsNoTracking().SingleAsync(x => x.Id == value.OwnerId, ct);
@@ -48,8 +50,7 @@ internal sealed class ReadAdminConversation(AppDbContext db, AdministrativeReadA
             attachments[x.Id].ToArray(),
             x.RunId is Guid run ? timings.GetValueOrDefault(run) : null,
             models.DisplayName(x.ModelId))).ToArray();
-        var audited = await reads.RecordAsync(actor, "admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
-        if (!audited.IsSuccess) return audited.Error;
+        audit.Describe(subject: owner.Id, details: new { count = messages.Length });
         var conversation = new AdminConversationDto(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total);
         return new AdminConversationDetailDto(conversation, owner.AdAccount ?? owner.LocalAccount ?? "", owner.DisplayName, value.SystemInstruction, messages, offset, total);
     }

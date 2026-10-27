@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Office.Attendance.Forms;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -64,7 +65,7 @@ public sealed record AttendanceRecordDto(
 /// </list>
 /// </remarks>
 internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, AttendanceRoster roster, CalendarReader calendar,
-    GdFormReader formReader, IOptions<AttendanceOptions> options, TimeProvider clock)
+    GdFormReader formReader, IOptions<AttendanceOptions> options, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>每頁人數的預設與上限：一人一年約 250 個上班日，50 人已是上萬列。</summary>
     public const int DefaultPageSize = 20, MaxPageSize = 50;
@@ -72,6 +73,7 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", ([AsParameters] AttendanceRecordsFilter filter, int? offset, int? limit, ICurrentUser user, ListAttendanceRecords handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, filter, new(offset ?? 0, limit ?? DefaultPageSize), ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.RecordRead)
         .WithName("ListAttendanceRecords");
 
     /// <summary>名單的一頁；<see cref="Limit"/> 為 null 是整份名單（匯出）。</summary>
@@ -80,7 +82,15 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
         public static Page All => new(0, null);
     }
 
+    /// <summary>查詢並補上稽核：資料主體是篩選的那個人（沒指定人時為空），明細記實際區間與符合人數。</summary>
     public async Task<Result<AttendanceRecordsDto>> HandleAsync(Guid viewer, AttendanceRecordsFilter filter, Page page, CancellationToken ct)
+    {
+        var result = await QueryAsync(viewer, filter, page, ct);
+        if (result.IsSuccess) audit.Describe(subject: filter.UserId, details: new { from = result.Value.From, to = result.Value.To, count = result.Value.Total });
+        return result;
+    }
+
+    private async Task<Result<AttendanceRecordsDto>> QueryAsync(Guid viewer, AttendanceRecordsFilter filter, Page page, CancellationToken ct)
     {
         if (filter.Range() is not { } range) return AttendanceErrors.RecordsRangeInvalid;
         if (!filter.IsValid() || page.Offset < 0 || page.Limit is < 1 or > MaxPageSize) return AttendanceErrors.RecordsFilterInvalid;

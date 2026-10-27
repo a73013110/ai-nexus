@@ -3,6 +3,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Validation;
@@ -37,9 +38,10 @@ internal sealed class SetUserEmail(AppDbContext db, AdministrativeAudit audit, U
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/email", (Guid id, UserEmailRequest body, ICurrentUser user, SetUserEmail handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+        .Audited(IdentityAudit.UserEmailUpdated)
         .WithName("SetUserEmail");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_email", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
     {
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
         if (user is null) return IdentityErrors.UserNotFound;

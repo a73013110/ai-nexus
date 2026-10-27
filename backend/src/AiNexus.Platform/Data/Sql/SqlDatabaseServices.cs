@@ -1,4 +1,3 @@
-using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,7 +20,6 @@ public static class SqlDatabaseServices
     public static IServiceCollection AddSqlDatabase<TDatabase>(this IServiceCollection services) where TDatabase : ISqlDatabaseDefinition
     {
         services.AddDatabase(TDatabase.Name, TDatabase.ReadOnly);
-        services.AddAuditContext();
         services.TryAddSingleton<ISqlDatabase<TDatabase>, SqlDatabase<TDatabase>>();
         return services;
     }
@@ -29,14 +27,7 @@ public static class SqlDatabaseServices
     /// <summary>在已註冊的 DbContext 連線上註冊 <see cref="ISqlDatabase{TDatabase}"/>。</summary>
     public static IServiceCollection AddDbContextSqlDatabase<TContext>(this IServiceCollection services) where TContext : DbContext
     {
-        services.AddAuditContext();
         services.TryAddScoped<ISqlDatabase<TContext>, DbContextSqlDatabase<TContext>>();
         return services;
-    }
-
-    private static void AddAuditContext(this IServiceCollection services)
-    {
-        services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton<AuditContextSource>();
     }
 }

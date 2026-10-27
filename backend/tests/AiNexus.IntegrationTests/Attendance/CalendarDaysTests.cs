@@ -13,7 +13,7 @@ namespace AiNexus.IntegrationTests.Attendance;
 
 public sealed class CalendarDaysTests
 {
-    private const string AuditAction = "admin.calendar_day";
+    private const string AuditAction = "attendance.calendar_day.updated";
     private static readonly DateOnly NationalDay = new(2026, 10, 10);
 
     private static string Day(DateOnly day) => $"{Calendar}/{day:yyyy-MM-dd}";
@@ -77,7 +77,7 @@ public sealed class CalendarDaysTests
         Assert.Equal(new CalendarDayDto(NationalDay, true, true, "國慶日"), await response.Content.ReadFromJsonAsync<CalendarDayDto>(ct));
         Assert.Equal(new GdDay(true, true, "國慶日", CalendarSession.HrGdId), session.Gd.Day(NationalDay));
         var (result, details) = Assert.Single(await AuditAsync(session.Factory, AuditAction));
-        Assert.Equal("saved", result);
+        Assert.Equal("completed", result);
         using var json = JsonDocument.Parse(details);
         Assert.Equal("2026-10-10", json.RootElement.GetProperty("resourceKey").GetString());
         AssertSnapshot(json.RootElement.GetProperty("before"), false, false, "待定", "sys");
@@ -169,7 +169,7 @@ public sealed class CalendarDaysTests
         (await session.Hr.PutAsJsonAsync(Day(NationalDay), new CalendarDayRequest(true, false, null), TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
 
         Assert.Equal(new GdDay(true, false, null, CalendarSession.HrGdId), session.Gd.Day(NationalDay));
-        Assert.Equal(["saved"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
+        Assert.Equal(["completed"], (await AuditAsync(session.Factory, AuditAction)).Select(x => x.Result));
     }
 
     [Fact]

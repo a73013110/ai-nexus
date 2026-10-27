@@ -22,7 +22,6 @@ public sealed class AccessControlModule : IFeatureModule
         services.AddScoped<AccessView>();
         services.AddScoped<AdministrativeAudit>();
         services.AddAccountReviewSource<RoleHolderAccountReview>();
-        services.AddScoped<AdministrativeReadAudit>();
         services.AddSingleton<AdministrativeWriteLock>();
         services.AddFeaturePolicy(FeatureCatalog.AccessControlRoles);
         services.AddFeaturePolicy(FeatureCatalog.AccessControlGroups);

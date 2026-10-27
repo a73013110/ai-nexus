@@ -38,7 +38,7 @@
 
 ## 稽核
 
-- 使用者：`admin.user_order`（一次移動，快照記改到的人的 `id`、`sortOrder`）、`admin.user_order_reset`（清除，快照記清除前所有已排序的人，誤按時可據以還原）。原地放下不寫入、不留稽核。
+- 使用者：`identity.user.moved`（一次移動，快照記改到的人的 `id`、`sortOrder`）、`identity.user.reordered`（清除，快照記清除前所有已排序的人，誤按時可據以還原）。原地放下不寫入，但請求照樣留一筆沒有 `before` 的稽核（每個請求都記，見 [ADR 0023](../decisions/0023-audit-standard.md)）。
 
 ## 用在別的資料時
 

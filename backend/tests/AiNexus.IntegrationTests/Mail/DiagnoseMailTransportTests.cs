@@ -37,7 +37,7 @@ public sealed class DiagnoseMailTransportTests
         Assert.Equal((MailDiagnosisSteps.Connect, MailDiagnosisStatuses.Failed), (result.Steps[0].Id, result.Steps[0].Status));
         Assert.Equal(MailDiagnosisSteps.All.Count, result.Steps.Count);
 
-        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.mail_diagnose&result=failed"))!);
+        var audit = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=mail.transport.diagnosed&result=success"))!);
         Assert.Contains("\"failedStep\":\"connect\"", audit.DetailsJson, StringComparison.Ordinal);
         Assert.DoesNotContain("ops@company.com", audit.DetailsJson, StringComparison.Ordinal);
     }

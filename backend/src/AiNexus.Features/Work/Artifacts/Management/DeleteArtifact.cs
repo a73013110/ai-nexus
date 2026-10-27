@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, Res
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(ArtifactsAudit.ArtifactDeleted)
         .WithName("DeleteArtifact");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -29,7 +31,6 @@ internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, Res
             resource.Value.IsDeleted = true;
             events.Raise(new ArtifactDeleted(id, actor));
             await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return Result.Success;

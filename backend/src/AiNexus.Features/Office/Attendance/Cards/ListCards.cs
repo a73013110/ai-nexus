@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +36,7 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (string? search, string? status, ListCards handler, CancellationToken ct) => handler.HandleAsync(search, status, ct).ToHttpResultAsync())
+        .Audited(AttendanceAudit.CardRead)
         .WithName("ListAttendanceCards");
 
     public async Task<Result<IReadOnlyList<CardDto>>> HandleAsync(string? search, string? status, CancellationToken ct)

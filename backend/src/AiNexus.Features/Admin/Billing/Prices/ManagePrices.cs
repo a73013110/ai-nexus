@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Billing;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Billing.Prices;
@@ -10,8 +11,10 @@ internal sealed class ManagePrices(AppDbContext db, BillingService billing)
     public static void Map(RouteGroupBuilder admin)
     {
         admin.MapGet("/targets", (ManagePrices handler) => TypedResults.Ok(handler.Targets()))
+            .NotAudited("價格表單的選項")
             .WithName("ListPriceTargets");
         admin.MapGet("/prices", async (ManagePrices handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(ct)))
+            .Audited(BillingAudit.PriceRead)
             .WithName("ListModelPrices");
     }
 

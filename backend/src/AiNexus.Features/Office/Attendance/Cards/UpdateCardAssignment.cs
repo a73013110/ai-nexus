@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -29,13 +30,14 @@ internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeAudit 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (Guid id, CardAssignmentUpdateRequest body, ICurrentUser user, UpdateCardAssignment handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.AssignmentUpdated)
         .WithName("UpdateAttendanceCardAssignment");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CardAssignmentUpdateRequest request, CancellationToken ct)
     {
         // 查不到時快照為 null，交給交易內的檢查回 not found 並留下紀錄。
         var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
-        return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment", id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
+        return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
         {
             var assignment = await db.Set<CardAssignment>().SingleOrDefaultAsync(x => x.Id == id, ct);
             if (assignment is null) return AttendanceErrors.AssignmentNotFound;

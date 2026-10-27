@@ -8,7 +8,7 @@ using AiNexus.Features.Admin.Audit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.ChatApi;
-using AiNexus.Features.Work.Conversations;
+using AiNexus.Features.Work.Conversations.Administration;
 using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Operations;
@@ -32,7 +32,7 @@ public sealed class UserInspectionTests
         Assert.Contains(detail.Messages, x => x.Content == "不可寫入稽核的私人提問");
         var insights = (await admin.GetFromJsonAsync<AdminUserDetailDto>($"/api/v1/admin/users/{user.Id}/insights"))!;
         Assert.Equal(1, insights.Usage.Requests); Assert.Equal(123, insights.Usage.InputTokens);
-        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.conversation_read&result=read"))!;
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.conversation_content.read&result=success"))!;
         var read = Assert.Single(audit); Assert.Equal(conversation.Id, read.ResourceId);
         Assert.DoesNotContain("不可寫入稽核", read.DetailsJson);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).StatusCode);
@@ -62,7 +62,7 @@ public sealed class UserInspectionTests
         Assert.Equal(100, (await admin.GetFromJsonAsync<AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!.Messages.Count);
         Assert.Single((await admin.GetFromJsonAsync<AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}?offset=100"))!.Messages);
         using var check = factory.Services.CreateScope();
-        Assert.All(await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action.StartsWith("admin.conversation")).ToListAsync(), x => Assert.DoesNotContain("敏感搜尋字", x.DetailsJson));
+        Assert.All(await check.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.Where(x => x.Action == "identity.conversation_content.read" || x.Action == "identity.user_conversation.read").ToListAsync(), x => Assert.DoesNotContain("敏感搜尋字", x.DetailsJson));
     }
 
     [Fact]

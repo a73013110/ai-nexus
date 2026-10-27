@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,10 +12,10 @@ namespace AiNexus.Features.Work.Projects.Management;
 internal sealed class BrowseProjects(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
-        .MapGet("", async (ICurrentUser user, BrowseProjects handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct)));
+        .MapGet("", async (ICurrentUser user, BrowseProjects handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct))).Audited(ProjectsAudit.ProjectRead);
 
     public static RouteHandlerBuilder MapGet(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, BrowseProjects handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync());
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, BrowseProjects handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.ProjectRead);
 
     public async Task<IReadOnlyList<ProjectDto>> ListAsync(Guid actor, CancellationToken ct)
     {

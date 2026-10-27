@@ -6,6 +6,7 @@ using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ internal sealed class DeleteConversation(
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .Audited(ChatAudit.ConversationDeleted)
         .WithName("DeleteConversation");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, CancellationToken ct)
@@ -68,12 +70,6 @@ internal sealed class DeleteConversation(
                 conversation.IsDeleted = true;
                 events.Raise(new ConversationDeleted(id, owner));
 
-                db.AuditEvents.Add(new()
-                {
-                    OwnerId = owner,
-                    Action = "conversation.deleted",
-                    ResourceId = id
-                });
 
                 await db.SaveChangesAsync(ct);
 

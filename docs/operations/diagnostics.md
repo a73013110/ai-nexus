@@ -19,7 +19,7 @@
 - 檔案只清理已確認匯入 SQL、非活動且到期的 segment。**未補送的資料不會為了 14 天政策而刪除**，所以 SQL 長期離線時可能先用完磁碟上限。
 - SQL 診斷與稽核各自分批 autocommit 清理（單次 command 最多 5 秒、背景總預算約 20 秒），每 5 分鐘排程一次。
 - 佇列以筆數計，記憶體用量取決於實際事件大小；不要把大佇列當成廉價容量。
-- 日誌設定的安全摘要變更會寫一筆 `system.diagnostics.configuration` 稽核，不含路徑或 exporter URL；主機設定檔的 ACL 與變更管理另行治理。
+- 日誌設定的安全摘要變更會寫一筆 `diagnostics.configuration.activated` 稽核，不含路徑或 exporter URL；主機設定檔的 ACL 與變更管理另行治理。
 
 ## Windows 緊急事件來源
 

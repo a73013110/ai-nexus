@@ -1,5 +1,6 @@
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 
@@ -12,10 +13,12 @@ internal sealed class DownloadAttachment(AttachmentService files)
     {
         routes.MapGet("/{id:guid}/render", (Guid id, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
                 handler.HandleHtmlAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
+            .Audited(FilesAudit.FileRead)
             .WithName("RenderAttachmentHtml");
         return routes
         .MapGet("/{id:guid}/content", (Guid id, bool? download, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
+        .Audited(FilesAudit.FileDownloaded)
         .WithName("DownloadAttachment");
     }
 

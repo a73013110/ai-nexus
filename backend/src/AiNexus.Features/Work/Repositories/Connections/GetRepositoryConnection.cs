@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 
 namespace AiNexus.Features.Work.Repositories.Connections;
 
@@ -7,6 +8,7 @@ internal sealed class GetRepositoryConnection(RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/connection", async (ICurrentUser user, GetRepositoryConnection handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .NotAudited("使用者自己的連結狀態")
         .WithName("GetRepositoryConnection");
 
     public Task<RepositoryStatusDto> HandleAsync(Guid owner, CancellationToken ct) => gitea.StatusAsync(owner, ct);

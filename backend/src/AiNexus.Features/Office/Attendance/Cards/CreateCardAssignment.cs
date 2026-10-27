@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -35,6 +36,7 @@ internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeAudit 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", (CardAssignmentCreateRequest body, ICurrentUser user, CreateCardAssignment handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.AssignmentCreated)
         .WithName("CreateAttendanceCardAssignment");
 
     public async Task<Result<CardAssignmentDto>> HandleAsync(Guid actor, CardAssignmentCreateRequest request, CancellationToken ct)
@@ -48,7 +50,7 @@ internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeAudit 
             EndsAt = request.EndsAt,
             Note = CardRules.Normalize(request.Note),
         };
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_assignment", assignment.Id, assignment.Id.ToString(), token => AssignmentRules.SnapshotAsync(db, request.CardId, token), async () =>
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, assignment.Id, assignment.Id.ToString(), token => AssignmentRules.SnapshotAsync(db, request.CardId, token), async () =>
         {
             if (!await db.Set<Card>().AnyAsync(x => x.Id == request.CardId, ct)) return AttendanceErrors.CardNotFound;
             if (request.UserId is { } userId && !await AssignmentRules.HolderExistsAsync(db, userId, ct)) return AttendanceErrors.UserNotFound;

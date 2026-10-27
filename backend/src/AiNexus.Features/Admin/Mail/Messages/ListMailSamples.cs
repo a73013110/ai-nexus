@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Auditing;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
 
@@ -14,6 +15,7 @@ internal sealed class ListMailSamples(IEnumerable<MailSample> samples, IOptions<
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (ListMailSamples handler) => handler.Handle())
+        .NotAudited("固定的郵件樣張")
         .WithName("ListMailSamples");
 
     public IReadOnlyList<MailSampleDto> Handle()

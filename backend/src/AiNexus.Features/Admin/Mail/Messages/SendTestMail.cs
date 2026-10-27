@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -40,6 +41,7 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", (MailTestRequest body, IRequestActor actor, SendTestMail handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(MailModule.TestRateLimit)
+        .Audited(MailAudit.TestMessageSent)
         .WithName("SendTestMail");
 
     public async Task<Result<MailEnqueuedDto>> HandleAsync(Guid actor, MailTestRequest request, CancellationToken ct)
@@ -53,7 +55,7 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
         var mail = rendered.Value;
         if (category != TestMail.TestCategory) mail = mail with { Subject = MailRenderer.Subject(SubjectPrefix + mail.Subject) };
         MailEnqueuedDto? result = null;
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessages, "admin.mail_test", null, "test",
+        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessages, null, "test",
             token => Snapshot(result?.MessageId, token), () =>
             {
                 var enqueued = outbox.Enqueue(mail, new(request.To), new(RequestedBy: actor));

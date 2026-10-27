@@ -78,7 +78,7 @@ public sealed class MonitoringSnapshotTests
         var snapshot = (await export.Content.ReadFromJsonAsync<MonitoringSnapshot>())!;
         Assert.False(snapshot.Enabled); Assert.Empty(snapshot.Sessions); Assert.Equal(0, snapshot.Traffic.Requests);
         using var scope = factory.Services.CreateScope();
-        Assert.Contains(scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents, x => x.Action == "monitoring.export");
+        Assert.Contains(scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents, x => x.Action == "monitoring.snapshot.exported");
     }
 
     [Fact]

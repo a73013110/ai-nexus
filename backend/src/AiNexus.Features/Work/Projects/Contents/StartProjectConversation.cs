@@ -7,6 +7,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Work.Projects.Templates;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,7 @@ internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess a
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/conversations", async (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ConversationCreated);
 
     public async Task<Result<ProjectConversationDto>> HandleAsync(Guid actor, Guid id, ProjectConversationRequest request, CancellationToken ct)
     {

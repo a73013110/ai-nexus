@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Identity;
 using System.DirectoryServices.AccountManagement;
 using System.Runtime.Versioning;
@@ -20,7 +19,7 @@ namespace AiNexus.Features.Admin.Identity;
 /// 建立與同步的規則在 <see cref="DirectoryAccounts"/>，與管理員從 AD 匯入、更新共用。
 /// </summary>
 public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
-    DirectoryProfileCache profiles, DirectoryAccounts accounts, TimeProvider clock) : IRequestUser, ICurrentUser, IRequestActor
+    DirectoryProfileCache profiles, DirectoryAccounts accounts, TimeProvider clock, AuditTrail audit) : IRequestUser, ICurrentUser, IRequestActor
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
     private User? resolved;
@@ -73,7 +72,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
                 user = await accounts.CreateAsync(Guid.NewGuid(), sid, account, profile, now, ct);
                 // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據；管理員匯入的帳號則留空，直到本人登入。
                 user.DirectoryVerifiedAt = now;
-                db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
+                audit.Record(IdentityAudit.AccountCreated, user.Id, user.Id, user.Id);
                 await db.SaveChangesAsync(ct);
             }
             else if (Stale(user, profile) || db.Entry(user).State == EntityState.Modified)

@@ -23,8 +23,8 @@
 | 個人設定 | 當頁彈出、搜尋設定與使用量 | 外觀／閱讀／操作／草稿／偏好 | 還原偏好、清理本機草稿；不清理他人的資料 |
 | 活動稽核／計量 | 依查閱功能授權查詢、篩選及匯出；活動稽核使用獨立 `audit` 授權 | 只能由實際操作追加 | 不提供修改或刪除按鈕；保存期由正式 retention 政策管理 |
 
-專案與評測共用 `ResourceLifecycle`，使用 transaction、SQL 條件及擁有者驗證，追加 `project.deleted`／`evaluation.deleted` 稽核。前端共用 ConfirmDialog，確認說明列出保留／撤權效果；檔案庫與選取器共用 FileBrowser，聊天、檔案庫、知識庫與獨立閱讀頁共用 DocumentViewer。原有「個人文件」清單與 API 已由檔案庫取代。刪除評測集為 soft-delete，沒有一般使用者的回收桶還原功能；需要歷史題庫時先匯出。
+專案與評測共用 `ResourceLifecycle`，使用 transaction、SQL 條件及擁有者驗證，追加 `projects.project.deleted`／`quality.evaluation_set.deleted` 稽核。前端共用 ConfirmDialog，確認說明列出保留／撤權效果；檔案庫與選取器共用 FileBrowser，聊天、檔案庫、知識庫與獨立閱讀頁共用 DocumentViewer。原有「個人文件」清單與 API 已由檔案庫取代。刪除評測集為 soft-delete，沒有一般使用者的回收桶還原功能；需要歷史題庫時先匯出。
 
-多主機生成用 `ExecutorId` 與 `LeaseExpiresAt`：每 15 秒續約，有效期兩分鐘。復原採原子條件更新，只處理過期租約並追加一次 `run.recovered`，保留部分內容。跨主機取消先終止持久化狀態，執行主機的心跳會停止其 RPC。此設計避免原本只用本機記憶體判斷而誤殺另一台的生成；仍不是完整的持久聊天排程或全域 GPU 限流。
+多主機生成用 `ExecutorId` 與 `LeaseExpiresAt`：每 15 秒續約，有效期兩分鐘。復原採原子條件更新，只處理過期租約並追加一次 `chat.run.recovered`，保留部分內容。跨主機取消先終止持久化狀態，執行主機的心跳會停止其 RPC。此設計避免原本只用本機記憶體判斷而誤殺另一台的生成；仍不是完整的持久聊天排程或全域 GPU 限流。
 
 詳細驗證涵蓋私人資料隔離、editor 不能刪容器、內容保留、繼承權限撤銷、active job 阻擋與凍結結果保留。資料保存期、批次硬刪與備份還原需有明確營運政策，見 [DATABASE](../architecture/database.md) 與 [IIS](../operations/iis-deployment.md)。

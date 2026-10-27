@@ -10,6 +10,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -150,7 +151,8 @@ public static class ConnectionVerifier
     {
         var db = services.GetRequiredService<AppDbContext>();
         var sql = services.GetRequiredService<ISqlDatabase<AppDbContext>>();
-        var probe = new AuditEvent { OwnerId = Guid.Empty, ResourceId = Guid.NewGuid(), Action = "connection_check", Result = "ef_insert" };
+        // 探針直接寫資料表、不經 AuditTrail（不是稽核紀錄，驗證完就刪除），所以自己補上分類。
+        var probe = new AuditEvent { OwnerId = Guid.Empty, ResourceId = Guid.NewGuid(), Action = "connection_check", Category = AuditAction.Value(AuditCategory.Activity), Result = "ef_insert" };
         var removed = true;
         try
         {

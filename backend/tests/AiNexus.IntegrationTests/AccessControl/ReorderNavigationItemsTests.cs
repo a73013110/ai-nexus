@@ -29,7 +29,7 @@ public sealed class ReorderNavigationItemsTests
         // 沒列到的節點不動，子節點跟著父節點一起移動。
         Assert.Equal(BuiltInAccess.AccessNavigation, items["system.access.identity-users"].ParentId);
         Assert.Equal(20, items["work.projects"].SortOrder);
-        Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_order&result=saved"))!);
+        Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.reordered&result=success"))!);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class ReorderNavigationItemsTests
         Assert.Equal(10, items["work.chat"].SortOrder);
         Assert.Null(items[BuiltInAccess.SystemNavigation].ParentId);
         Assert.Equal(BuiltInAccess.CollaborationNavigation, items["collaboration.jobs"].ParentId);
-        Assert.Equal(cases.Length, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_order&result=failed"))!.Length);
+        Assert.Equal(cases.Length, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.reordered&result=failed"))!.Length);
     }
 
     [Fact]

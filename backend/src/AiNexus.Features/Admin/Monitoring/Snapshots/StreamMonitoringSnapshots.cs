@@ -1,9 +1,11 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Sessions;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -56,14 +58,15 @@ public sealed class MonitoringStreams
 
 /// <summary>
 /// 以 Server-Sent Events 推送快照，最長十分鐘。使用者的第四個串流會以 <c>stream_superseded</c> 結束最舊的一個。
-/// 整個檢視只稽核一次。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態（<see cref="StillAllowedAsync"/>），
+/// 整個檢視只稽核一次（開始推送前）。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態（<see cref="StillAllowedAsync"/>），
 /// 所以權限被撤銷後，串流會以錯誤事件結束，不會一直沿用舊的授權。
 /// </summary>
-internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AppDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
+internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AuditTrail audit, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
             handler.HandleAsync(http, user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToStreamResultAsync(http))
+        .Audited(MonitoringAudit.SnapshotRead)
         .WithName("StreamMonitoringSnapshots").Produces<MonitoringSnapshot>(200, "text/event-stream");
 
     public async Task<Result> HandleAsync(HttpContext http, Guid user, int window, CancellationToken ct)
@@ -74,7 +77,8 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
         try
         {
             ct = stream.Token;
-            await MonitoringReads.AuditAsync(db, user, "monitoring.view", ct);
+            // 串流的回應不會回到請求稽核手上，開始推送前先定案這筆讀取稽核；寫不進去就不推送（失敗即拒絕）。
+            await audit.CompleteAsync(AuditEvent.Completed);
             http.Response.ContentType = "text/event-stream";
             // 關閉代理（如 nginx）與 ASP.NET 的回應緩衝，否則事件會被攢住，頁面收不到即時快照。
             http.Response.Headers.CacheControl = "no-store"; http.Response.Headers["X-Accel-Buffering"] = "no";
@@ -117,7 +121,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
         var revoked = !await SessionIdentity.ActorStillValidAsync(actor, principal, access, ct)
             || !long.TryParse(principal.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds()
             || !Guid.TryParse(principal.FindFirstValue(SessionIdentity.TestId), out var testId)
-            || await SessionIdentity.TestEndedAsync(scopedDb, actorId, testId, ct);
+            || await SessionIdentity.TestEndedAsync(scopedDb, testId, ct);
         return revoked ? MonitoringErrors.SessionRevoked : Result.Success;
     }
 }

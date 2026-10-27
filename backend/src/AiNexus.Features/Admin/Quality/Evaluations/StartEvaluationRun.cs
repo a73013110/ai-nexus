@@ -9,6 +9,7 @@ using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
@@ -42,11 +43,11 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 
 /// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
 internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPolicyService policy,
-    IOptions<InferenceOptions> inference, TimeProvider clock)
+    IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/sets/{id:guid}/runs", async (Guid id, EvaluationRunRequest body, ICurrentUser user, StartEvaluationRun handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.RunQueued);
 
     public async Task<Result<EvaluationRunDto>> HandleAsync(Guid actor, Guid setId, EvaluationRunRequest request, CancellationToken ct)
     {
@@ -71,7 +72,7 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
             var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == setId, ct);
             var run = new EvaluationRun { SetId = setId, OwnerId = actor, SetTitle = resource.Name, SetVersion = set.Version, CasesJson = set.CasesJson, VariantsJson = JsonSerializer.Serialize(variants), CreatedAt = clock.GetUtcNow() };
             var job = jobs.Enqueue(actor, setId, run.Id, EvaluationHandler.JobKind, "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = run.Id, Action = "quality.run.queued", Result = "queued" });
+            audit.Describe(resource: run.Id);
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return run.ToDto(job, actor);
         }

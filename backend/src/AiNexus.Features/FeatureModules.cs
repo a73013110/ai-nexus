@@ -88,11 +88,12 @@ public static class FeatureModules
     /// </summary>
     public static WebApplication MapFeatures(this WebApplication app)
     {
-        // 篩選器依此順序執行：解析目前使用者（身分驗證結果），接著執行請求驗證。
+        // 篩選器依此順序執行：解析目前使用者（身分驗證結果）、開始請求稽核，接著執行請求驗證（驗證失敗也留下稽核）。
         var api = app.MapGroup("/api/v1")
             .RequireAuthorization()
             .WithSafeErrors()
             .WithCurrentUser()
+            .WithAudit()
             .WithRequestValidation();
 
         Map<DiagnosticsModule>(api);

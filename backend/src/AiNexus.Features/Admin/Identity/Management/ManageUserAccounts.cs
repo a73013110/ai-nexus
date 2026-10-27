@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Ordering;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Validation;
@@ -43,14 +44,17 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/users", (UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
+        .Audited(IdentityAudit.UserCreated)
         .WithName("CreateAdminUser");
 
     public static void MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}", (Guid id, UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, id, body, ct).ToHttpResultAsync(_ => TypedResults.NoContent()))
+        .Audited(IdentityAudit.UserUpdated)
         .WithName("SaveAdminUser");
 
     public static void MapDelete(RouteGroupBuilder routes) => routes
         .MapDelete("/users/{id:guid}", (Guid id, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.DeleteAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(IdentityAudit.UserDeleted)
         .WithName("DeleteAdminUser");
 
     public async Task<Result<Guid>> SaveAsync(Guid actor, Guid? id, UserAccountRequest request, CancellationToken ct)
@@ -68,7 +72,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             return IdentityErrors.InvalidPassword;
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
         var key = id ?? Guid.NewGuid();
-        var saved = await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user", key, key.ToString(), token => SnapshotAsync(key, token), async () =>
+        var saved = await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, key, key.ToString(), token => SnapshotAsync(key, token), async () =>
         {
             var user = id is null ? new User { Id = key, Sid = UserAccounts.ManagedSid(key), ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
                 await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
@@ -106,7 +110,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         return saved.IsSuccess ? key : saved.Error;
     }
 
-    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, "admin.user_delete", id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
         {
             var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
             if (user is null) return IdentityErrors.UserNotFound;

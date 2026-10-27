@@ -15,15 +15,13 @@ using AiNexus.Features.Admin.Operations;
 
 namespace AiNexus.IntegrationTests.Operations;
 
+/// <summary>經端點在 LocalDB 實際呼叫 operations.usp_ListAdminUsers，檢查回傳欄位的對應。</summary>
 public sealed class ListAdminUsersTests
 {
-    private const string Procedure = "operations.usp_ListAdminUsers";
-
     [Fact]
     public async Task ProcedureListMatchesTheServicesItReplacesForRolesUsageConversationsAndStorage()
     {
-        var audits = new ProcedureAudits();
-        await using var factory = new AppFactory(administrators: ["alice"], services: audits.Register);
+        await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob"); using var carol = await factory.SignedInAsync("carol"); using var dave = await factory.SignedInAsync("dave");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
@@ -81,6 +79,5 @@ public sealed class ListAdminUsersTests
         var beyond = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?offset=100"))!;
         Assert.Equal((3, 100), (beyond.Total, beyond.Offset)); Assert.Empty(beyond.Users);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/users?offset=-1")).StatusCode);
-        audits.AssertReadOnly(Procedure);
     }
 }

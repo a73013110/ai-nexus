@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Mail.Delivery;
+using AiNexus.Platform.Auditing;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -16,6 +17,7 @@ internal sealed class GetMailStatus(AppDbContext db, MailCircuit circuit, IOptio
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (GetMailStatus handler, CancellationToken ct) => handler.HandleAsync(ct))
+        .NotAudited("寄送狀態摘要，不含郵件內容")
         .WithName("GetMailStatus");
 
     public async Task<MailStatusDto> HandleAsync(CancellationToken ct)

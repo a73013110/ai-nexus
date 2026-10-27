@@ -1,10 +1,11 @@
 -- =============================================
 -- Author:      Yikai
 -- Create date: 2026-10-20
--- Description: 新增一個價格版本並寫入成功稽核，回傳新增的那一列。
+-- Description: 新增一個價格版本，回傳新增的那一列。
 --              同一供應商、模型與生效時間已存在時 THROW 50000 price_exists（ADR 0011）；
---              失敗稽核由程式在回復後寫入，procedure 內寫的會跟著交易回復（ADR 0014）。
+--              稽核由程式在同一個交易寫入（ADR 0023）。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
+--              2026-10-27 Yikai 移除 procedure 內的稽核，建立時間改由參數傳入
 -- =============================================
 CREATE   PROCEDURE [billing].[usp_CreateModelPrice]
     @Id                    UNIQUEIDENTIFIER,
@@ -19,6 +20,7 @@ CREATE   PROCEDURE [billing].[usp_CreateModelPrice]
     @RequestCharge         NVARCHAR (16),
     @EffectiveAt           DATETIMEOFFSET (7),
     @Note                  NVARCHAR (500),
+    @CreatedAt             DATETIMEOFFSET (7),
     @CreatedBy             UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -37,14 +39,8 @@ BEGIN
 
         INSERT [billing].[ModelPrices] (Id, Provider, ModelId, Currency, Kind, InputPerMillion, CachedInputPerMillion, OutputPerMillion,
                                         PerRequest, RequestCharge, Note, EffectiveAt, CreatedAt, CreatedBy)
-        SELECT @Id, @Provider, @ModelId, @Currency, @Kind, @InputPerMillion, @CachedInputPerMillion, @OutputPerMillion,
-               @PerRequest, @RequestCharge, @Note, @EffectiveAt, c.At, @CreatedBy
-        FROM [audit].[udf_AuditContext]() AS c;
-
-        -- 明細只放 AuditRedactor 白名單內的 camelCase 鍵。
-        DECLARE @details NVARCHAR (MAX) = (SELECT @Provider AS provider, @ModelId AS modelId, @Kind AS kind, @EffectiveAt AS effectiveAt
-                                           FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
-        EXEC [audit].[usp_WriteAuditEvent] @Action = N'billing.price.created', @ResourceId = @Id, @Result = N'created', @DetailsJson = @details;
+        VALUES (@Id, @Provider, @ModelId, @Currency, @Kind, @InputPerMillion, @CachedInputPerMillion, @OutputPerMillion,
+                @PerRequest, @RequestCharge, @Note, @EffectiveAt, @CreatedAt, @CreatedBy);
 
         SELECT Id, Provider, ModelId, Currency, Kind, InputPerMillion, CachedInputPerMillion, OutputPerMillion,
                PerRequest, RequestCharge, Note, EffectiveAt, CreatedAt, CreatedBy
@@ -61,7 +57,7 @@ END;
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'新增一個價格版本並寫入成功稽核；同一供應商、模型與生效時間已存在時以 price_exists 失敗。', @level0type = N'SCHEMA', @level0name = N'billing', @level1type = N'PROCEDURE', @level1name = N'usp_CreateModelPrice';
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'新增一個價格版本；同一供應商、模型與生效時間已存在時以 price_exists 失敗。', @level0type = N'SCHEMA', @level0name = N'billing', @level1type = N'PROCEDURE', @level1name = N'usp_CreateModelPrice';
 
 
 GO

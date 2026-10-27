@@ -46,7 +46,7 @@ public sealed class SyncDirectoryUsersTests
         Assert.Equal(("鮑伯", "bob.personal@example.test", EmailSources.Admin), (bob.DisplayName, bob.Email, bob.EmailSource));
         // AD 找不到或已停用只回報，不自動停用平台帳號。
         Assert.True(await db.Users.Where(x => x.Id == erinId || x.Id == daveId).AllAsync(x => x.Enabled));
-        Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == "admin.user_sync"));
+        Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == "identity.user.synced"));
     }
 
     [Fact]

@@ -28,6 +28,10 @@ public sealed class DeleteArtifactTests
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var link = await db.Set<ShareLink>().SingleAsync(x => x.Id == share.Id);
         Assert.True(link.IsRevoked); Assert.Equal("", link.SnapshotJson);
-        Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == source.Resource.Id && x.Action == "artifact.deleted").ToArrayAsync());
+        // bob 被拒的嘗試也留下紀錄；成功的只有擁有者那一筆。
+        var deletes = await db.AuditEvents.Where(x => x.ResourceId == source.Resource.Id && x.Action == "artifacts.artifact.deleted").OrderBy(x => x.Id).ToArrayAsync();
+        Assert.Equal(2, deletes.Length);
+        Assert.Equal(bobId, deletes[0].OwnerId); Assert.NotEqual("completed", deletes[0].Result);
+        Assert.NotEqual(bobId, deletes[1].OwnerId); Assert.Equal("completed", deletes[1].Result);
     }
 }

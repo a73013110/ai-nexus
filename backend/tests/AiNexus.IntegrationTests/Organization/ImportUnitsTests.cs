@@ -14,7 +14,7 @@ namespace AiNexus.IntegrationTests.Organization;
 
 public sealed class ImportUnitsTests
 {
-    private const string AuditAction = "admin.organization_import";
+    private const string AuditAction = "organization.unit.imported";
 
     [Fact]
     public async Task TheFirstImportBuildsTheTreeAndManagersAndReportsWhatItSkipped()
@@ -62,7 +62,7 @@ public sealed class ImportUnitsTests
         Assert.Equal([(bob, true, false), (carol, true, false)], sales.Select(x => (x.UserId, x.IsManager, x.IsPrimary)).OrderBy(x => x.UserId == bob ? 0 : 1));
 
         var audit = Assert.Single(await AttendanceApi.AuditAsync(session.Factory, AuditAction));
-        Assert.Equal("saved", audit.Result);
+        Assert.Equal("completed", audit.Result);
         Assert.Contains("\"created\":6", audit.Details);
 
         // 再匯入一次沒有任何變動，只剩同樣的問題。

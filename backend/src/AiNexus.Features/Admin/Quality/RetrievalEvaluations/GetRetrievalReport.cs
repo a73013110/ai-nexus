@@ -4,6 +4,7 @@ using AiNexus.Data.App.Quality;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Quality.RetrievalEvaluations;
@@ -19,13 +20,13 @@ internal sealed class GetRetrievalReport(AppDbContext db, RetrievalEvaluationSer
         {
             http.Response.Headers.CacheControl = "private, no-store";
             return handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync();
-        });
+        }).Audited(QualityAudit.RetrievalRead);
         routes.MapGet("/retrieval-evals/{id:guid}/report", (Guid id, ICurrentUser user, GetRetrievalReport handler, HttpContext http, CancellationToken ct) =>
         {
             http.Response.Headers.CacheControl = "private, no-store";
             return handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(report =>
                 TypedResults.File(JsonSerializer.SerializeToUtf8Bytes(report, RetrievalEvaluationService.Json), "application/json", $"retrieval-{id:N}.json"));
-        }).Produces<RetrievalReportDto>();
+        }).Produces<RetrievalReportDto>().Audited(QualityAudit.RetrievalRead);
     }
 
     public async Task<Result<RetrievalReportDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)

@@ -1,4 +1,5 @@
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
@@ -17,6 +18,7 @@ internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IA
     public static void Map(RouteGroupBuilder auth) => auth
         .MapGet("/windows", (HttpContext http, WindowsLogin handler, CancellationToken ct) => handler.HandleAsync(http, ct))
         .RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build())
+        .NotAudited("登入結果由登入稽核記錄")
         .WithName("WindowsLogin");
 
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, CancellationToken ct)
@@ -27,16 +29,16 @@ internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IA
         catch (Exception error) when (!ct.IsCancellationRequested)
         {
             var problem = issues.Problem(error);
-            await audit.WriteAsync("identity.login", null, http.User.Identity?.Name, "windows", "failed", ct, problem.Code, problem.IssueCode);
+            await audit.WriteAsync(IdentityAudit.SignedIn, null, http.User.Identity?.Name, "windows", ct, problem.Code, problem.IssueCode);
             throw;
         }
         if (!user.IsSuccess)
         {
             var issue = issues.Report(user.Error);
-            await audit.WriteAsync("identity.login", null, http.User.Identity?.Name, "windows", "failed", ct, user.Error.Code, issue);
+            await audit.WriteAsync(IdentityAudit.SignedIn, null, http.User.Identity?.Name, "windows", ct, user.Error.Code, issue);
             return user.Error.ToProblem(issue);
         }
-        await audit.WriteAsync("identity.login", user.Value.Id, UserAccounts.LoginName(user.Value), "windows", "success", ct);
+        await audit.WriteAsync(IdentityAudit.SignedIn, user.Value.Id, UserAccounts.LoginName(user.Value), "windows", ct);
         return TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
     }
 }

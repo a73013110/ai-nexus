@@ -1,8 +1,8 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Quality;
-using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,11 +25,11 @@ internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
 }
 
 /// <summary>對執行中單一案例與變體給予人工分數；需要題組的編輯權限。</summary>
-internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess access)
+internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess access, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/runs/{id:guid}/results/{caseIndex:int}/{variantIndex:int}/review", async (Guid id, int caseIndex, int variantIndex, ReviewRequest body, ICurrentUser user, ReviewEvaluationResult handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, caseIndex, variantIndex, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, id, caseIndex, variantIndex, body, ct)).ToHttpResult()).Audited(QualityAudit.ResultReviewed);
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, int caseIndex, int variantIndex, ReviewRequest request, CancellationToken ct)
     {
@@ -39,7 +39,7 @@ internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess acc
         var result = await db.Set<EvaluationResult>().SingleOrDefaultAsync(x => x.RunId == id && x.CaseIndex == caseIndex && x.VariantIndex == variantIndex, ct);
         if (result is null) return QualityErrors.ItemMissing;
         result.ReviewScore = request.Score; result.ReviewNote = request.Note.Trim(); result.ReviewerId = actor;
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "quality.result.reviewed", Result = "saved", DetailsJson = JsonSerializer.Serialize(new { caseIndex, variantIndex, request.Score }) });
+        audit.Describe(details: new { caseIndex, variantIndex, score = request.Score });
         await db.SaveChangesAsync(ct);
         return Result.Success;
     }

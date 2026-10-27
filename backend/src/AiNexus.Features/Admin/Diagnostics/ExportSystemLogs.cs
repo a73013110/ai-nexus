@@ -1,5 +1,6 @@
 using System.Text;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Admin.Diagnostics;
@@ -14,7 +15,7 @@ internal sealed class ExportSystemLogs(DiagnosticQuery query)
                 http.Response.Headers.CacheControl = "no-store";
                 return TypedResults.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "ai-nexus-logs.csv");
             }))
-        .RequireAuthorization(DiagnosticConfiguration.ExportPolicy).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).WithName("ExportSystemLogs");
+        .RequireAuthorization(DiagnosticConfiguration.ExportPolicy).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).Audited(DiagnosticsAudit.LogExported).WithName("ExportSystemLogs");
 
     public Task<Result<string>> HandleAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct) => query.ExportAsync(actor, filter, ct);
 }

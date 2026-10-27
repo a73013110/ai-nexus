@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
@@ -13,6 +14,7 @@ internal sealed class GetConversationKnowledge(AppDbContext db, ConversationServ
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid id, ICurrentUser user, GetConversationKnowledge handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .NotAudited("對話設定的知識庫選項")
         .WithName("ConversationKnowledge");
 
     public async Task<Result<KnowledgeSelectionDto>> HandleAsync(Guid actor, Guid conversation, CancellationToken ct)

@@ -13,10 +13,10 @@ using static AiNexus.IntegrationTests.Support.OrganizationApi;
 
 namespace AiNexus.IntegrationTests.Audit;
 
-/// <summary>活動稽核是第一個套用資料範圍的功能（ADR 0017）：列表與匯出只含範圍內的人（操作者或對象）的紀錄。</summary>
+/// <summary>活動稽核是第一個套用資料範圍的功能（ADR 0017）：列表與匯出只含範圍內的人（操作者、擁有者或資料主體）的紀錄。</summary>
 public sealed class AuditDataScopeTests
 {
-    private const string Action = "fixture.scope";
+    private const string Action = "fixture.scope.updated";
 
     [Fact]
     public async Task ListAndExportOnlyShowRecordsOfPeopleInTheGrantedScope()
@@ -24,7 +24,7 @@ public sealed class AuditDataScopeTests
         await using var factory = new AppFactory();
         Guid bob = await UserIdAsync(factory, "bob"), frank = await UserIdAsync(factory, "frank"), carol = await UserIdAsync(factory, "carol"),
             erin = await UserIdAsync(factory, "erin"), dave = await UserIdAsync(factory, "dave");
-        var system = Guid.NewGuid();
+        Guid system = Guid.NewGuid(), aboutFrank = Guid.NewGuid();
         Guid company = Guid.NewGuid(), it = Guid.NewGuid(), systems = Guid.NewGuid(), closed = Guid.NewGuid(), hr = Guid.NewGuid();
         await WithDbAsync(factory, async db =>
         {
@@ -41,9 +41,10 @@ public sealed class AuditDataScopeTests
                 new UnitMember { UnitId = systems, UserId = carol, IsPrimary = true },
                 new UnitMember { UnitId = closed, UserId = erin, IsPrimary = true },
                 new UnitMember { UnitId = hr, UserId = dave, IsPrimary = true });
-            // ResourceId 標記紀錄屬於誰；dave 代 bob 操作的紀錄，操作者在範圍內就看得到。
-            db.AuditEvents.AddRange(new[] { bob, frank, carol, erin, dave, system }.Select(owner => new AuditEvent { OwnerId = owner, Action = Action, ResourceId = owner, Result = "saved" }));
-            db.AuditEvents.Add(new AuditEvent { OwnerId = dave, ActorId = bob, Action = Action, ResourceId = Guid.Empty, Result = "saved" });
+            // ResourceId 標記紀錄屬於誰；dave 代 bob 操作的紀錄，操作者在範圍內就看得到；dave 查閱 frank 的資料，資料主體在範圍內也看得到。
+            db.AuditEvents.AddRange(new[] { bob, frank, carol, erin, dave, system }.Select(owner => new AuditEvent { Category = "activity", OwnerId = owner, Action = Action, ResourceId = owner, }));
+            db.AuditEvents.Add(new AuditEvent { Category = "activity", OwnerId = dave, ActorId = bob, Action = Action, ResourceId = Guid.Empty });
+            db.AuditEvents.Add(new AuditEvent { Category = "access", OwnerId = dave, SubjectUserId = frank, Action = Action, ResourceId = aboutFrank });
             db.Set<Role>().Add(new() { Id = "reviewer", Name = "稽核查閱" });
             db.Set<RoleGroup>().AddRange(new RoleGroup { Id = "reviewers", Name = "稽核查閱" }, new RoleGroup { Id = "self-review", Name = "自己的紀錄" });
             db.Set<RoleGroupRole>().Add(new() { RoleId = "reviewer", GroupId = "reviewers" });
@@ -53,9 +54,9 @@ public sealed class AuditDataScopeTests
         });
         using var client = await factory.SignedInAsync("bob");
 
-        Assert.Equal([bob, frank, Guid.Empty], await VisibleAsync(client));
+        Assert.Equal([bob, frank, Guid.Empty, aboutFrank], await VisibleAsync(client));
         await SetScopeAsync(factory, DataScopes.UnitTree);
-        Assert.Equal([bob, frank, carol, Guid.Empty], await VisibleAsync(client));
+        Assert.Equal([bob, frank, carol, Guid.Empty, aboutFrank], await VisibleAsync(client));
         await SetScopeAsync(factory, DataScopes.Own);
         Assert.Equal([bob, Guid.Empty], await VisibleAsync(client));
 
@@ -66,11 +67,11 @@ public sealed class AuditDataScopeTests
             db.Set<RoleGroupFeature>().Add(new() { GroupId = "self-review", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.UnitTree });
             await db.SaveChangesAsync();
         });
-        Assert.Equal([bob, frank, carol, Guid.Empty], await VisibleAsync(client));
+        Assert.Equal([bob, frank, carol, Guid.Empty, aboutFrank], await VisibleAsync(client));
         await WithDbAsync(factory, db => db.Set<RoleGroupRole>().Where(x => x.GroupId == "self-review").ExecuteDeleteAsync());
 
         await SetScopeAsync(factory, DataScopes.All);
-        Assert.Equal([bob, frank, carol, erin, dave, system, Guid.Empty], await VisibleAsync(client));
+        Assert.Equal([bob, frank, carol, erin, dave, system, Guid.Empty, aboutFrank], await VisibleAsync(client));
 
         // 授權在、但沒有可用的範圍（舊資料的 null、目錄不支援的值）：頁面能開，沒有資料。
         await SetScopeAsync(factory, null);
@@ -97,7 +98,7 @@ public sealed class AuditDataScopeTests
         var dave = await UserIdAsync(factory, "dave");
         await WithDbAsync(factory, async db =>
         {
-            db.AuditEvents.AddRange(new[] { bob, dave }.Select(owner => new AuditEvent { OwnerId = owner, Action = Action, ResourceId = owner, Result = "saved" }));
+            db.AuditEvents.AddRange(new[] { bob, dave }.Select(owner => new AuditEvent { Category = "activity", OwnerId = owner, Action = Action, ResourceId = owner, }));
             db.Set<Role>().Add(new() { Id = "reviewer", Name = "稽核查閱" });
             db.Set<RoleGroup>().Add(new() { Id = "reviewers", Name = "稽核查閱" });
             db.Set<RoleGroupRole>().Add(new() { RoleId = "reviewer", GroupId = "reviewers" });

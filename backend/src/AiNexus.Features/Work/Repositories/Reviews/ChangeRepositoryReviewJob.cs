@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Work.Jobs;
 
@@ -11,9 +12,11 @@ internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews,
     {
         routes.MapPost("/reviews/{id:guid}/cancel", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
                 handler.HandleAsync(user.Id, id, false, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.ReviewCancelled)
             .WithName("CancelRepositoryReview");
         routes.MapPost("/reviews/{id:guid}/retry", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
                 handler.HandleAsync(user.Id, id, true, ct).ToHttpResultAsync())
+            .Audited(RepositoriesAudit.ReviewRetried)
             .WithName("RetryRepositoryReview");
     }
 

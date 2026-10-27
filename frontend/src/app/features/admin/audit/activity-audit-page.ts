@@ -46,7 +46,6 @@ import { AuditApi, type AuditFilters } from './audit-api';
 import { auditLogQuery } from './audit-navigation';
 import { activityAuditTour, auditDetailTour } from './audit-tour';
 import {
-  auditAction,
   auditChanges,
   auditContext,
   auditDetails,
@@ -56,6 +55,7 @@ import {
 import {
   AUDIT_RANGES,
   AUDIT_RESULTS,
+  actionLabel,
   actionsFor,
   auditFilters,
   auditQueryOptions,
@@ -120,19 +120,29 @@ export class ActivityAuditPage {
     ),
   );
   private readonly actions = computed(() => this.catalog()?.actions ?? []);
+  private readonly modules = computed(() => this.catalog()?.modules ?? []);
   readonly categories = computed<SelectOption[]>(() => [
     { value: '', label: '全部活動' },
     ...(this.catalog()?.categories ?? []),
   ]);
-  readonly query = queryState(auditQueryOptions(this.actions));
+  readonly query = queryState(auditQueryOptions(this.actions, this.modules));
   readonly draft = this.query.draft;
-  readonly actionOptions = computed<SelectOption[]>(() => [
-    { value: '', label: '所有動作' },
-    ...actionsFor(this.actions(), this.draft().category).map(({ value, label }) => ({
-      value,
-      label,
-    })),
-  ]);
+  /** 每個模組先給「模組（全部）」（前綴篩選），再列該模組在目前分類下的動作。 */
+  readonly actionOptions = computed<SelectOption[]>(() => {
+    const actions = actionsFor(this.actions(), this.draft().category);
+    return [
+      { value: '', label: '所有動作' },
+      ...this.modules().flatMap((module) => {
+        const own = actions.filter((action) => action.module === module.value);
+        return own.length
+          ? [
+              { value: module.value + '.', label: module.label + '（全部）' },
+              ...own.map(({ value, label }) => ({ value, label })),
+            ]
+          : [];
+      }),
+    ];
+  });
   readonly resultOptions: SelectOption[] = AUDIT_RESULTS;
   readonly ranges = AUDIT_RANGES;
   readonly pageSize = signal(50);
@@ -167,19 +177,22 @@ export class ActivityAuditPage {
     { id: 'time', label: '時間', hideable: false },
     { id: 'actor', label: '操作者' },
     { id: 'action', label: '動作', hideable: false },
-    { id: 'resource', label: '資源' },
+    { id: 'feature', label: '功能' },
+    { id: 'subject', label: '資料主體' },
+    { id: 'resource', label: '資源', defaultHidden: true },
     { id: 'result', label: '結果' },
   ];
   readonly presentedRows = computed(() =>
     this.rows().map((entry) => ({
       entry,
-      ...auditOutcome(entry),
+      ...auditOutcome(entry.result),
       date: formatDate(entry.at),
-      action: auditAction(entry.action),
-      // 目錄還沒讀到時先留白，不先顯示可能錯誤的「功能操作」。
+      action: actionLabel(entry.action, this.actions(), this.modules()),
+      // 目錄還沒讀到時先留白，不先顯示原始代碼。
       category: this.catalog()
-        ? this.categories().find((item) => item.value === entry.category)?.label || '功能操作'
+        ? this.categories().find((item) => item.value === entry.category)?.label || entry.category
         : '',
+      feature: entry.feature ? (catalogFeature(entry.feature)?.name ?? entry.feature) : '',
       context: auditContext(entry.detailsJson),
       logs: auditLogQuery(entry),
       resource: auditResource(entry.detailsJson),
@@ -228,11 +241,14 @@ export class ActivityAuditPage {
       if (this.pageRead.value()) this.table()?.resetScroll();
     });
   }
-  /** 分類切換立即套用；已選的動作不屬於新分類時一併清除，避免查出空結果。 */
+  /** 分類切換立即套用；已選的動作（或模組）在新分類下沒有動作時一併清除，避免查出空結果。 */
   changeCategory(category: string) {
     const action = this.draft().action;
     const keep =
-      !action || actionsFor(this.actions(), category).some((item) => item.value === action);
+      !action ||
+      actionsFor(this.actions(), category).some((item) =>
+        action.endsWith('.') ? item.value.startsWith(action) : item.value === action,
+      );
     this.query.commit({ category, ...(keep ? {} : { action: '' }) });
   }
   changePage(direction: -1 | 1) {

@@ -27,8 +27,8 @@ public sealed class QuerySystemLogsTests
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/logs/" + row.LogId)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/logs/export?" + range)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await alice.GetAsync("/api/v1/admin/logs?" + range)).StatusCode);
-        Assert.Contains(await db.AuditEvents.AsNoTracking().ToArrayAsync(), x => x.Action == "logs.export");
-        Assert.Contains(await db.AuditEvents.AsNoTracking().ToArrayAsync(), x => x.Action == "logs.detail");
+        Assert.Contains(await db.AuditEvents.AsNoTracking().ToArrayAsync(), x => x.Action == "diagnostics.log.exported");
+        Assert.Contains(await db.AuditEvents.AsNoTracking().ToArrayAsync(), x => x.Action == "diagnostics.log_detail.read");
     }
 
     [Fact]

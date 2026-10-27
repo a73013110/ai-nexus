@@ -8,6 +8,7 @@ using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge.Indexing;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -24,7 +25,7 @@ internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documen
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("UpdateTextDocument");
+        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentUpdated).WithName("UpdateTextDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, TextDocumentRequest request, CancellationToken ct)
     {
@@ -59,7 +60,6 @@ internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documen
             var resource = await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
             document.JobId = jobs.Enqueue(actor, id, id, DocumentIngestHandler.JobKind, document.FileName).Id;
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.text.updated", Result = "reindexing" });
             try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return KnowledgeErrors.TextVersionChanged; }
             await transaction.CommitAsync(ct);
             return await documents.DetailAsync(actor, id, ct);

@@ -18,7 +18,7 @@ namespace AiNexus.Features.Work.Collaboration;
 public sealed record ContainerDeleted(string Kind, Guid ContainerId, Guid ActorId) : IDomainEvent;
 
 /// <summary>刪除容器，但保留私人對話、擁有的檔案與稽核證據；只做邏輯刪除。</summary>
-public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, IEnumerable<IContainerDeletionCheck> checks, TimeProvider clock)
+public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, IEnumerable<IContainerDeletionCheck> checks, TimeProvider clock, AuditTrail audit)
 {
     public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
@@ -43,7 +43,7 @@ public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, Re
             resource.IsDeleted = true;
             resource.UpdatedAt = clock.GetUtcNow();
             events.Raise(new ContainerDeleted(kind, id, actor));
-            db.AuditEvents.Add(new() { OwnerId = actor, Action = kind + ".deleted", ResourceId = id, Result = "soft_deleted" });
+            audit.Describe(resource: id);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }

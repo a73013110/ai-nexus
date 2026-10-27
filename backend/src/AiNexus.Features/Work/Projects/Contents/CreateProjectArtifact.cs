@@ -2,6 +2,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Artifacts;
 using AiNexus.Features.Work.Artifacts.Management;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Projects.Contents;
@@ -12,7 +13,7 @@ internal sealed class CreateProjectArtifact(ArtifactService artifacts)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/artifacts", (Guid id, CreateArtifactRequest body, ICurrentUser user, CreateProjectArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.Artifacts);
+        .RequireAuthorization(Policies.Artifacts).Audited(ProjectsAudit.ArtifactCreated);
 
     public Task<Result<ArtifactDto>> HandleAsync(Guid userId, Guid projectId, CreateArtifactRequest body, CancellationToken ct) =>
         artifacts.CreateAsync(userId, body with { ProjectId = projectId }, ct);

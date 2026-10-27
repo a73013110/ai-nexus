@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -23,7 +24,7 @@ internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, 
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/identity", (SelectIdentityRequest body, HttpContext http, SelectIdentity handler) => handler.HandleAsync(http, body).ToHttpResultAsync())
-        .RequireAuthorization().WithName("SelectIdentity");
+        .RequireAuthorization().Audited(IdentityAudit.IdentitySelected).WithName("SelectIdentity");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, SelectIdentityRequest body)
     {

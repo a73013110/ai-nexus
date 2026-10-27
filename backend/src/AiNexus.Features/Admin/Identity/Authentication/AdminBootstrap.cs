@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Admin.Identity.Authentication;
 
 /// <summary>依 <see cref="AdminBootstrapOptions.Administrators"/> 所列的帳號，一次性授予管理者角色。</summary>
-public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptions<AdminBootstrapOptions> options) : ISignInGrant
+public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptions<AdminBootstrapOptions> options, AuditTrail audit) : ISignInGrant
 {
     private bool Applies(User user) => options.Value.Administrators.Contains(UserAccounts.LoginName(user), StringComparer.OrdinalIgnoreCase);
 
@@ -23,7 +23,7 @@ public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptio
         if (!await db.Set<UserRole>().AnyAsync(x => x.UserId == user.Id && x.RoleId == BuiltInAccess.AdministratorRole, ct))
             db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.AdministratorRole });
         db.Set<AdministratorBootstrap>().Add(new() { UserId = user.Id });
-        db.AuditEvents.Add(new() { OwnerId = user.Id, ResourceId = user.Id, Action = "admin.bootstrap", Result = "granted_once" });
+        audit.Record(IdentityAudit.AdministratorGranted, user.Id, user.Id, user.Id);
         await db.SaveChangesAsync(ct);
         access.Invalidate();
     }

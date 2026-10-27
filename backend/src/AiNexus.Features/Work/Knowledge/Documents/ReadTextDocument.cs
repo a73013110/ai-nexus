@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 
@@ -11,7 +12,7 @@ internal sealed class ReadTextDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/text", (Guid id, ICurrentUser user, ReadTextDocument handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
-        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("ReadTextDocument");
+        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentRead).WithName("ReadTextDocument");
 
     public async Task<Result<TextDocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

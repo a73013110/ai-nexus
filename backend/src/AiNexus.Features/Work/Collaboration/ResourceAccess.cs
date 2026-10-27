@@ -24,7 +24,7 @@ public sealed class ResourceWriteLock
 }
 
 /// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
-public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiveUsers activeUsers, ResourceWriteLock writes, TimeProvider clock)
+public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiveUsers activeUsers, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public async Task<IQueryable<Resource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
     {
@@ -124,7 +124,7 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
             db.RemoveRange(oldGroups.Where(x => !request.GroupIds.Contains(x.GroupId)));
             db.AddRange(request.GroupIds.Except(oldGroups.Select(x => x.GroupId)).Select(x => new ResourceGroup { ResourceId = id, GroupId = x }));
             resource.UpdatedAt = clock.GetUtcNow();
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "resource.acl", Result = "saved", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { kind, users, request.GroupIds }) });
+            audit.Describe(resource: id, details: new { kind, users = users.Length, groups = request.GroupIds.Count });
             await db.SaveChangesAsync(ct);
         }
         return Result.Success;

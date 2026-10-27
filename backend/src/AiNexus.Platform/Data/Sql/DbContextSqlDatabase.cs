@@ -1,5 +1,4 @@
 using System.Data.Common;
-using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -9,7 +8,7 @@ namespace AiNexus.Platform.Data.Sql;
 /// 直接掛在 <typeparamref name="TContext"/> 之下的原生 SQL 執行器。
 /// 指令共用 DbContext 的連線並加入其目前的交易，因此同一請求中的原生 SQL 與 EF Core 變更會一起認可或復原。
 /// </summary>
-public sealed class DbContextSqlDatabase<TContext>(TContext context, AuditContextSource? audit = null) : DapperSqlDatabase<TContext>(audit) where TContext : DbContext
+public sealed class DbContextSqlDatabase<TContext>(TContext context) : DapperSqlDatabase<TContext> where TContext : DbContext
 {
     protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)
     {

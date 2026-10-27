@@ -118,7 +118,7 @@ public sealed class ModelPolicyTests
         policy = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
         Assert.Equal(1000, policy.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit"))!;
-        Assert.Contains(audit, x => x.Action == "admin.user_model_policy" && x.DetailsJson!.Contains("2000"));
+        Assert.Contains(audit, x => x.Action == "identity.model_policy.updated" && x.DetailsJson!.Contains("2000"));
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest())).StatusCode);
     }
 }

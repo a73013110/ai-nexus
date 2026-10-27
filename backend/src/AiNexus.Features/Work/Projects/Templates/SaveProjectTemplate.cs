@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -23,15 +24,15 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
 }
 
 /// <summary>在可編輯的有效專案中新增範本（每個專案最多 30 個）或編輯既有範本。</summary>
-internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access)
+internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/templates", async (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, null, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, id, null, body, ct)).ToHttpResult()).Audited(ProjectsAudit.TemplateCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/templates/{key:guid}", async (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, key, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, id, key, body, ct)).ToHttpResult()).Audited(ProjectsAudit.TemplateUpdated);
 
     public async Task<Result<ProjectTemplateDto>> HandleAsync(Guid actor, Guid id, Guid? key, ProjectTemplateRequest request, CancellationToken ct)
     {
@@ -50,7 +51,7 @@ internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access
             db.Add(row);
         }
         row.Title = request.Title.Trim(); row.Content = request.Content.Trim();
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = row.Id, Action = key is null ? "project.template.created" : "project.template.updated", Result = "saved" });
+        audit.Describe(resource: row.Id);
         await db.SaveChangesAsync(ct);
         return row.ToDto();
     }

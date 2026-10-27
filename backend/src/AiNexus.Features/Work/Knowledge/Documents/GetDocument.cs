@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -8,6 +9,7 @@ internal sealed class GetDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetDocument handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.DocumentRead)
         .WithName("GetDocument");
 
     public Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct) => documents.DetailAsync(actor, id, ct);

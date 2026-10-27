@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
@@ -11,6 +12,7 @@ internal sealed class SaveKnowledgeAccess(ResourceAccess access)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/collections/{id:guid}/access", (Guid id, ResourceAclRequest request, ICurrentUser user, SaveKnowledgeAccess handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, request, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.CollectionShared)
         .WithName("SaveKnowledgeAccess");
 
     public Task<Result> HandleAsync(Guid actor, Guid id, ResourceAclRequest request, CancellationToken ct) => access.SetAclAsync(actor, id, Collection.Kind, request, ct);

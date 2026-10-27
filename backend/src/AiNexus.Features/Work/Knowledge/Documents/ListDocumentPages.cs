@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ internal sealed class ListDocumentPages(AppDbContext db, DocumentAccess document
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(KnowledgeAudit.DocumentRead)
         .WithName("DocumentPages");
 
     public async Task<Result<IReadOnlyList<DocumentPageDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)

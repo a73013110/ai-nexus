@@ -31,7 +31,7 @@ public sealed class UpdateNavigationItemTests
         // 清空可見群組＝所有登入者可見。
         (await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "人資公告", $"https://{LinkHost}/hr", false, null, []))).EnsureSuccessStatusCode();
         Assert.Empty(Assert.Single(await ListAsync(admin), x => x.Id == link.Id).AudienceGroupIds);
-        Assert.Contains((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.navigation_item&result=saved"))!, x => x.DetailsJson!.Contains("\"audienceGroupIds\":[\"administrators\"]", StringComparison.Ordinal));
+        Assert.Contains((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.updated&result=success"))!, x => x.DetailsJson!.Contains("\"audienceGroupIds\":[\"administrators\"]", StringComparison.Ordinal));
     }
 
     [Fact]

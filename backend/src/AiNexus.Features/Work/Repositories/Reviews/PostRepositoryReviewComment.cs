@@ -1,7 +1,7 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -25,12 +25,12 @@ internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValid
 /// 本模組唯一的 Gitea 寫入：以使用者自己的 token（需要 <c>write:issue</c> 權限）把已完成的 pull request review 貼成一則留言。
 /// 送出前會先重新檢查來源；每份 review 最多貼一次，並寫入稽核紀錄。
 /// </summary>
-internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, RepositoryWriteLock writes, TimeProvider clock)
+internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, RepositoryWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/reviews/{id:guid}/comment", (Guid id, PostRepositoryReviewCommentRequest body, ICurrentUser user, PostRepositoryReviewComment handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body.Body.Trim(), ct).ToHttpResultAsync())
-        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).WithName("PostRepositoryReviewComment");
+        .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCommented).WithName("PostRepositoryReviewComment");
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, Guid id, string body, CancellationToken ct)
     {
@@ -51,7 +51,7 @@ internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositorySer
                 row.CommentUrl = url.StartsWith(gitea.BaseUrl, StringComparison.Ordinal) ? url : gitea.Link(row.Repository) + "/pulls/" + number;
             }
             row.CommentedAt = clock.GetUtcNow();
-            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = row.Id, Action = "repository.review.commented", Result = "posted" });
+            audit.Describe(resource: row.Id);
             await db.SaveChangesAsync(ct);
             return await reviews.DescribeAsync(row, ct);
         }

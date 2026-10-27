@@ -1,7 +1,7 @@
-using System.Text.Json;
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Mail.Delivery;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -47,11 +47,12 @@ public static class MailDiagnosisStatuses
 /// 以目前設定同步跑一次 SMTP 對話（<see cref="SmtpProbe"/>），逐步回報到哪一步失敗、為什麼；不寄出信、不經過 outbox，也不影響斷路器。
 /// 每人每分鐘 5 次；寫行政稽核 <c>admin.mail_diagnose</c>（只記結果與失敗的步驟，不記收件地址與對話內容）。
 /// </summary>
-internal sealed partial class DiagnoseMailTransport(AppDbContext db, IOptions<MailOptions> options, TimeProvider clock, ILogger<DiagnoseMailTransport> logger)
+internal sealed partial class DiagnoseMailTransport(AuditTrail audit, IOptions<MailOptions> options, TimeProvider clock, ILogger<DiagnoseMailTransport> logger)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("", (MailDiagnosisRequest body, IRequestActor actor, DiagnoseMailTransport handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
         .RequireRateLimiting(MailModule.DiagnosisRateLimit)
+        .Audited(MailAudit.TransportDiagnosed)
         .WithName("DiagnoseMailTransport");
 
     public async Task<Result<MailDiagnosisDto>> HandleAsync(Guid actor, MailDiagnosisRequest request, CancellationToken ct)
@@ -71,15 +72,8 @@ internal sealed partial class DiagnoseMailTransport(AppDbContext db, IOptions<Ma
         var elapsed = (long)clock.GetElapsedTime(started).TotalMilliseconds;
         var failed = result.Steps.FirstOrDefault(x => x.Status == MailDiagnosisStatuses.Failed)?.Id;
 
-        // 稽核寫入成功才回傳結果；失敗會拋例外，等同失敗即拒絕。
-        db.AuditEvents.Add(new()
-        {
-            OwnerId = actor,
-            Action = "admin.mail_diagnose",
-            Result = failed is null ? "passed" : "failed",
-            DetailsJson = JsonSerializer.Serialize(new { transport = settings.Transport, failedStep = failed, certificateVerdict = result.Certificate?.Verdict }),
-        });
-        await db.SaveChangesAsync(ct);
+        // 診斷本身有跑完就是成功的操作；哪一步沒過記在明細。請求稽核寫入成功才回傳結果（失敗即拒絕）。
+        audit.Describe(details: new { transport = settings.Transport, failedStep = failed, certificateVerdict = result.Certificate?.Verdict });
         LogDiagnosed(logger, failed ?? "none", result.Certificate?.Verdict ?? "none", elapsed);
         return new MailDiagnosisDto(failed is null, settings.Transport, server, startedAt, elapsed, result.Steps, result.Certificate, result.Capabilities, result.Transcript);
     }

@@ -86,7 +86,6 @@ public sealed class DiagnosticFailureTests
             => procedure == "knowledge.usp_WriteChunkEmbeddings" ? inner.QueryProcedureAsync<T>(procedure, parameters, commandTimeout, cancellationToken)
                 : throw new InvalidOperationException("Unexpected procedure: " + procedure);
         public Task<TResult> QueryProcedureAsync<TResult>(string procedure, object? parameters, Func<SqlResults, Task<TResult>> read, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
-        public Task<IReadOnlyList<T>> ExecuteProcedureAsync<T>(string procedure, object? parameters = null, Guid? auditOwner = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected procedure: " + procedure);
     }
 
     private static SqlException SqlFailure()

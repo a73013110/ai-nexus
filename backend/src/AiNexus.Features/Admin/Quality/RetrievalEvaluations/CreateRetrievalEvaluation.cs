@@ -6,6 +6,7 @@ using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -35,11 +36,11 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
 
 /// <summary>凍結檢索驗收題組並附上索引與設定的指紋，然後排入背景工作。</summary>
 internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
-    ResourceWriteLock writes, JobService jobs, TimeProvider clock)
+    ResourceWriteLock writes, JobService jobs, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/retrieval-evals", async (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult());
+            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult()).Audited(QualityAudit.RetrievalQueued);
 
     public async Task<Result<RetrievalEvaluationDto>> HandleAsync(Guid actor, RetrievalEvaluationRequest request, CancellationToken ct)
     {
@@ -63,7 +64,7 @@ internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvalua
             var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),
                 TopK = options.Value.Retrieval.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
             var job = jobs.Enqueue(actor, null, run.Id, RetrievalEvaluationHandler.JobKind, "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = run.Id, Action = "quality.retrieval.queued", Result = "queued" });
+            audit.Describe(resource: run.Id);
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return RetrievalEvaluationService.Describe(run, job);
         }

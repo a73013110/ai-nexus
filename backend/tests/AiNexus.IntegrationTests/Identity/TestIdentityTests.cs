@@ -32,12 +32,12 @@ public sealed class TestIdentityTests
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
         await Csrf(admin); Assert.Equal(actor.Id, (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit"))!;
-        Assert.Contains(audit, x => x.Action == "project.created" && x.Actor == "alice" && x.ActingAs == "tester");
+        Assert.Contains(audit, x => x.Action == "projects.project.created" && x.Actor == "alice" && x.ActingAs == "tester");
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var entry = await db.AuditEvents.SingleAsync(x => x.Action == "project.created");
+        var entry = await db.AuditEvents.SingleAsync(x => x.Action == "projects.project.created");
         Assert.Equal(actor.Id, entry.ActorId); Assert.Equal(id, entry.OwnerId);
-        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "identity.test_start"));
-        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "identity.test_end"));
+        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "identity.test_identity.started" && x.Result == "completed"));
+        Assert.True(await db.AuditEvents.AnyAsync(x => x.Action == "identity.test_identity.ended" && x.Result == "completed"));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class TestIdentityTests
         await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "巢狀切換")), HttpStatusCode.Conflict, "test_identity_nested");
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var entry = await db.AuditEvents.SingleAsync(x => x.Action == "admin.feature" && x.Result == "saved");
+        var entry = await db.AuditEvents.SingleAsync(x => x.Action == "access-control.feature.updated" && x.Result == "completed");
         Assert.Equal(actor.Id, entry.ActorId); Assert.Equal(id, entry.OwnerId);
     }
 
@@ -74,7 +74,8 @@ public sealed class TestIdentityTests
         test.DefaultRequestHeaders.Remove("Cookie");
         test.DefaultRequestHeaders.Add("Cookie", restored.Headers.GetValues("Set-Cookie").First(x => x.StartsWith("AiNexus.Session=", StringComparison.Ordinal)).Split(';')[0]);
         Assert.Equal(actor.Id, (await test.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
-        Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "identity.test_end" && x.Result == "restored"));
+        var ended = await db.AuditEvents.SingleAsync(x => x.Action == "identity.test_identity.ended" && x.Result == "completed");
+        Assert.Contains($"\"reason\":\"{(expired ? "expired" : "target_changed")}\"", ended.DetailsJson);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class TestIdentityTests
         replay.DefaultRequestHeaders.Add("Cookie", cookie);
         Assert.Equal(HttpStatusCode.Conflict, (await replay.GetAsync("/api/v1/me")).StatusCode);
         using var scope = f.Services.CreateScope();
-        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.test_end"));
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.CountAsync(x => x.Action == "identity.test_identity.ended"));
     }
 
     [Theory]
@@ -119,8 +120,8 @@ public sealed class TestIdentityTests
         replay.DefaultRequestHeaders.Add("Cookie", cookie);
         Assert.Equal(HttpStatusCode.Conflict, (await replay.GetAsync("/api/v1/me")).StatusCode);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var ended = await db.AuditEvents.SingleAsync(x => x.Action == "identity.test_end");
-        Assert.Equal("revoked", ended.Result);
+        var ended = await db.AuditEvents.SingleAsync(x => x.Action == "identity.test_identity.ended");
+        Assert.Equal("completed", ended.Result);
         Assert.Contains(logout ? "signed_out" : "signed_in", ended.DetailsJson);
     }
 

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -23,6 +24,7 @@ internal sealed class RenameConversation(AppDbContext db, TimeProvider clock)
         .MapPatch("/{id:guid}", async (
                 Guid id, RenameConversationRequest body, ICurrentUser user, RenameConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.Title, ct)).ToHttpResult())
+        .Audited(ConversationsAudit.ConversationRenamed)
         .WithName("RenameConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, string title, CancellationToken ct)
@@ -31,7 +33,6 @@ internal sealed class RenameConversation(AppDbContext db, TimeProvider clock)
         if (conversation is null) return ConversationsErrors.NotFound;
         conversation.Title = title.Trim();
         conversation.UpdatedAt = clock.GetUtcNow();
-        db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.renamed", ResourceId = id });
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();
     }

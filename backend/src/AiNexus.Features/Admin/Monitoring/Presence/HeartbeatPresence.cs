@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Monitoring.Traffic;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -32,7 +33,7 @@ internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
 {
     public static void Map(RouteGroupBuilder api) => api
         .MapPost("/presence", (PresenceRequest request, HttpContext http, ICurrentUser user, HeartbeatPresence handler) => TypedResults.Ok(handler.Handle(http, user.User, request)))
-        .RequireRateLimiting(MonitoringModule.PresenceRateLimit).WithMetadata(new SuppressSuccessfulRequestLog()).WithName("HeartbeatPresence");
+        .RequireRateLimiting(MonitoringModule.PresenceRateLimit).WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("HeartbeatPresence");
 
     public PresenceReceipt Handle(HttpContext http, User user, PresenceRequest request)
     {

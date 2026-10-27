@@ -33,6 +33,7 @@ USING (VALUES
     (N'billing.prices'),
     (N'monitoring'),
     (N'audit'),
+    (N'audit.usage'),
     (N'diagnostics.logs'),
     -- 動作：只是授權，不出現在選單。
     (N'identity.users.import'),
@@ -130,6 +131,7 @@ USING (VALUES
     (N'administrators', N'billing.prices', NULL, NULL),
     (N'administrators', N'monitoring', NULL, NULL),
     (N'administrators', N'audit', N'all', NULL),
+    (N'administrators', N'audit.usage', N'all', NULL),
     (N'administrators', N'diagnostics.logs', NULL, NULL),
     (N'administrators', N'diagnostics.logs.detail', NULL, NULL),
     (N'administrators', N'diagnostics.logs.export', NULL, NULL),
@@ -193,6 +195,7 @@ VALUES
     (N'system.observability.monitoring', N'system.observability', N'page', N'monitoring', NULL, 10),
     (N'system.observability.diagnostics-logs', N'system.observability', N'page', N'diagnostics.logs', NULL, 20),
     (N'system.observability.audit', N'system.observability', N'page', N'audit', NULL, 30),
+    (N'system.observability.audit-usage', N'system.observability', N'page', N'audit.usage', NULL, 35),
     (N'system.observability.mail-messages', N'system.observability', N'page', N'mail.messages', NULL, 40),
     (N'system.evaluation', N'system', N'group', NULL, N'評測與開發', 50),
     (N'system.evaluation.quality', N'system.evaluation', N'page', N'quality', NULL, 10),

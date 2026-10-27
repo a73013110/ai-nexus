@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,10 @@ internal sealed class SaveUnitMember(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, UnitMemberRequest body, IRequestActor actor, SaveUnitMember handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, userId, body, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.MemberUpdated)
         .WithName("SaveOrganizationUnitMember");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_member", id, userId.ToString(), token => UnitRules.MembershipsAsync(db, userId, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, userId.ToString(), token => UnitRules.MembershipsAsync(db, userId, token), async () =>
     {
         var unit = await db.Set<Unit>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (unit is null) return OrganizationErrors.UnitNotFound;

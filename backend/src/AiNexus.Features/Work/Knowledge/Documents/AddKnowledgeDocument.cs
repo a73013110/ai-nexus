@@ -3,6 +3,7 @@ using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Projects;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Files;
@@ -24,18 +25,19 @@ public sealed record AddDocumentRequest(Guid AttachmentId);
 /// 同一附件重複加入會回傳既有文件；同一原始檔若已完成擷取，直接複製擷取結果，不重跑擷取。
 /// </summary>
 internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess access, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs,
-    DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock)
+    DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCollection(RouteGroupBuilder routes) => routes
         .MapPost("/collections/{id:guid}/documents", async (Guid id, AddDocumentRequest request, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request.AttachmentId, ct)).ToHttpResult())
+        .Audited(KnowledgeAudit.DocumentCreated)
         .WithName("AddKnowledgeDocument");
 
     /// <summary>把附件讀成獨立文件，供對話中的文件檢視器使用。</summary>
     public static RouteHandlerBuilder MapAttachment(RouteGroupBuilder api) => api
         .MapPost("/attachments/{id:guid}/document", async (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, null, id, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Attachments).WithName("ReadAttachmentDocument");
+        .RequireAuthorization(Policies.Attachments).Audited(KnowledgeAudit.DocumentCreated).WithName("ReadAttachmentDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
     {
@@ -77,7 +79,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
                 document.Warning = extracted.Warning;
             }
             document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, DocumentIngestHandler.JobKind, file.FileName).Id;
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "document.created", Result = "queued" });
+            audit.Describe(resource: resource.Id);
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return DocumentAccess.Describe(document, true);
         }

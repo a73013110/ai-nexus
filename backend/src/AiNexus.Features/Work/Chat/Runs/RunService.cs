@@ -25,7 +25,7 @@ public sealed partial class RunService(
     NotificationService notifications,
     Issues issues,
     ILogger<RunService> logger,
-    TimeProvider clock)
+    TimeProvider clock, AuditTrail audit)
 {
     /// <summary>
     /// 查詢指定擁有者且對話未被刪除或移轉的生成記錄。
@@ -99,13 +99,7 @@ public sealed partial class RunService(
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);
 
-        db.AuditEvents.Add(new AuditEvent
-        {
-            OwnerId = run.OwnerId,
-            Action = "run.finished",
-            ResourceId = run.Id,
-            Result = error ?? status
-        });
+        audit.Record(ChatAudit.RunFinished, run.OwnerId, run.Id, result: error ?? (status == "completed" ? AuditEvent.Completed : status));
 
         var title = await db.Conversations
             .IgnoreQueryFilters([SoftDelete.Filter])

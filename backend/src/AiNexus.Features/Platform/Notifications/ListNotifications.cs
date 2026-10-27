@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,7 @@ internal sealed class ListNotifications(AppDbContext db)
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", (bool? unread, Guid? before, ICurrentUser user, ListNotifications handler, CancellationToken ct) => handler.HandleAsync(user.Id, unread ?? false, before, ct).ToHttpResultAsync())
+        .NotAudited("使用者自己的通知")
         .WithName("ListNotifications");
 
     public async Task<Result<NotificationPageDto>> HandleAsync(Guid owner, bool unread, Guid? before, CancellationToken ct)

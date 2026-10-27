@@ -7,7 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.IntegrationTests.Support;
 
-/// <summary>處理請求路徑期間發出的 SQL 指令；背景工作沒有請求，因此不計入。</summary>
+/// <summary>
+/// 處理請求路徑期間發出的 SQL 指令；背景工作沒有請求，因此不計入。請求稽核的寫入也不計入：
+/// 每個請求固定一筆，重複查詢合併時又會少一筆，與 handler 的查詢成本無關。
+/// </summary>
 public sealed class RequestQueries(IHttpContextAccessor http) : DbCommandInterceptor
 {
     private readonly ConcurrentQueue<(string Path, string Sql)> commands = new();
@@ -24,7 +27,8 @@ public sealed class RequestQueries(IHttpContextAccessor http) : DbCommandInterce
 
     private void Record(DbCommand command)
     {
-        if (http.HttpContext?.Request.Path.Value is { } path) commands.Enqueue((path, command.CommandText));
+        if (http.HttpContext?.Request.Path.Value is { } path && !command.CommandText.Contains("INSERT INTO [audit].[AuditEvents]", StringComparison.Ordinal))
+            commands.Enqueue((path, command.CommandText));
     }
     public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData data, InterceptionResult<DbDataReader> result) { Record(command); return result; }
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData data, InterceptionResult<DbDataReader> result, CancellationToken ct = default) { Record(command); return ValueTask.FromResult(result); }

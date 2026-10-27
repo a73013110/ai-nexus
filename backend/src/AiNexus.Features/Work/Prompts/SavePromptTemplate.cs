@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Prompts;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -27,8 +28,10 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
     public static void Map(RouteGroupBuilder routes)
     {
         routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, null, body, ct).ToHttpResultAsync())
+            .Audited(PromptsAudit.TemplateCreated)
             .WithName("CreatePromptTemplate");
         routes.MapPut("/{id:guid}", (Guid id, SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+            .Audited(PromptsAudit.TemplateUpdated)
             .WithName("UpdatePromptTemplate");
     }
 

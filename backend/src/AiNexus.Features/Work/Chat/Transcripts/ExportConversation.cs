@@ -1,5 +1,6 @@
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -16,6 +17,7 @@ internal sealed class ExportConversation(GetConversation conversations)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/export", (Guid id, ICurrentUser user, ExportConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .Audited(ChatAudit.ConversationExported)
         .WithName("ExportConversation");
 
     public async Task<Result<ConversationBackup>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

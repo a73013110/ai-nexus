@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
@@ -29,6 +30,7 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .NotAudited("管理頁的固定目錄")
         .WithName("GetAdminCatalog");
 
     public async Task<AdminCatalogDto> HandleAsync(CancellationToken ct)

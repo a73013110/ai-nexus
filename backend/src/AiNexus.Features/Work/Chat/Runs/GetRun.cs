@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -13,6 +14,7 @@ internal sealed class GetRun(RunService runs, ModelPresentation presentation)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/runs/{id:guid}", (Guid id, ICurrentUser user, GetRun handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .NotAudited("生成中的輪詢，開啟對話與送出訊息已留證")
         .WithName("GetRun");
 
     public async Task<Result<RunDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)

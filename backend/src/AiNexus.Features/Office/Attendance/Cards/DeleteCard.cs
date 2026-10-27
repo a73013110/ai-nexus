@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +17,10 @@ internal sealed class DeleteCard(AppDbContext db, AdministrativeAudit audit)
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteCard handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .Audited(AttendanceAudit.CardDeleted)
         .WithName("DeleteAttendanceCard");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, "admin.attendance_card_delete", id, id.ToString(), token => CardRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => CardRules.SnapshotAsync(db, id, token), async () =>
     {
         var card = await db.Set<Card>().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;

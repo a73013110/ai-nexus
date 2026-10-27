@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Quality;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,11 @@ internal sealed class BrowseEvaluationSets(AppDbContext db, ResourceAccess acces
 {
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
         .MapGet("/sets", async (ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct)))
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
 
     public static RouteHandlerBuilder MapGet(RouteGroupBuilder routes) => routes
         .MapGet("/sets/{id:guid}", (Guid id, ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync())
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
 
     public Task<Result<EvaluationSetDto>> GetAsync(Guid actor, Guid id, CancellationToken ct) => access.LoadSetAsync(db, actor, id, ct);
 

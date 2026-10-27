@@ -48,15 +48,13 @@ internal static class AuthSession
     }
 
     /// <summary>記錄 <paramref name="previous"/> 攜帶的測試身分已結束；若已記錄過就不重複寫入。</summary>
-    public static async Task EndExistingTestAsync(ClaimsPrincipal previous, AppDbContext db, string reason, CancellationToken ct)
+    public static async Task EndExistingTestAsync(ClaimsPrincipal previous, AppDbContext db, AuditTrail audit, string reason, CancellationToken ct)
     {
         if (!Guid.TryParse(previous.FindFirstValue(SessionIdentity.ActorId), out var actorId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.TestId), out var testId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.UserId), out var targetId)) return;
-        if (await SessionIdentity.TestEndedAsync(db, actorId, testId, ct)) return;
-        var ended = SessionIdentity.TestEnded(actorId, testId, targetId, "revoked", reason);
-        ended.ActorId = actorId;
-        db.AuditEvents.Add(ended);
+        if (await SessionIdentity.TestEndedAsync(db, testId, ct)) return;
+        SessionIdentity.RecordTestEnded(audit, actorId, testId, targetId, reason);
         await db.SaveChangesAsync(ct);
     }
 

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +15,10 @@ internal sealed class DeleteUnit(AppDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, IRequestActor actor, DeleteUnit handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, ct)).ToHttpResult())
+        .Audited(OrganizationAudit.UnitDeleted)
         .WithName("DeleteOrganizationUnit");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, "admin.organization_unit_delete", id, id.ToString(), token => UnitRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, id.ToString(), token => UnitRules.SnapshotAsync(db, id, token), async () =>
     {
         var unit = await db.Set<Unit>().FindAsync([id], ct);
         if (unit is null) return OrganizationErrors.UnitNotFound;

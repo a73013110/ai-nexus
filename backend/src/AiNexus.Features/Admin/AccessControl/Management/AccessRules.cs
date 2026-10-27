@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.AccessControl.Management;
 
 /// <summary>
-/// 角色、群組與功能編輯的格式規則。在 <see cref="AdministrativeAudit.MutateAsync(Guid, string, string, Guid?, string, Func{CancellationToken, Task{object}}, Func{Task{Result}}, CancellationToken)"/> 內、管理者檢查之後執行，
+/// 角色、群組與功能編輯的格式規則。在 <see cref="AdministrativeAudit.MutateAsync"/> 內、管理者檢查之後執行，
 /// 所以被拒絕的編輯仍會留下錯誤代碼的稽核；因此這些規則刻意不做成 request validator。Identity 與 Operations 的管理端點也共用。
 /// </summary>
 public static partial class AccessRules

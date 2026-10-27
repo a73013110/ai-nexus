@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 
@@ -13,10 +14,12 @@ internal sealed class DownloadDocumentOriginal(DocumentAccess documents, Attachm
     {
         routes.MapGet("/{id:guid}/render", (Guid id, HttpContext http, ICurrentUser user, DownloadDocumentOriginal handler, CancellationToken ct) =>
                 handler.HandleHtmlAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
+            .Audited(KnowledgeAudit.DocumentRead)
             .WithName("RenderDocumentHtml");
         return routes
         .MapGet("/{id:guid}/content", (Guid id, bool? download, HttpContext http, ICurrentUser user, DownloadDocumentOriginal handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
+        .Audited(KnowledgeAudit.DocumentDownloaded)
         .WithName("DocumentOriginal");
     }
 

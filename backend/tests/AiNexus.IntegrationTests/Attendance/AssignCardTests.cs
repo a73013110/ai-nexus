@@ -201,13 +201,14 @@ public sealed class AssignCardTests
         (await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 5), At(10, 20), "調職"))).EnsureSuccessStatusCode();
         (await hr.DeleteAsync($"{Assignments}/{first.Id}")).EnsureSuccessStatusCode();
 
-        var changes = await AuditAsync(factory, "admin.attendance_assignment");
-        Assert.Equal(["saved", "attendance_card_held", "saved", "saved"], changes.Select(x => x.Result));
+        var created = await AuditAsync(factory, "attendance.card_assignment.created");
+        Assert.Equal(["completed", "attendance_card_held", "completed"], created.Select(x => x.Result));
         // 接手的快照是該卡的全部期間：後的內容同時看得到被結束的前一段與新段。
-        Assert.Contains("A001", changes[2].Details);
-        Assert.Contains(first.Id.ToString(), changes[2].Details);
-        Assert.Contains(second.Id.ToString(), changes[2].Details);
-        Assert.Equal(["saved"], (await AuditAsync(factory, "admin.attendance_assignment_delete")).Select(x => x.Result));
+        Assert.Contains("A001", created[2].Details);
+        Assert.Contains(first.Id.ToString(), created[2].Details);
+        Assert.Contains(second.Id.ToString(), created[2].Details);
+        Assert.Equal(["completed"], (await AuditAsync(factory, "attendance.card_assignment.updated")).Select(x => x.Result));
+        Assert.Equal(["completed"], (await AuditAsync(factory, "attendance.card_assignment.deleted")).Select(x => x.Result));
     }
 
     private static async Task<IReadOnlyList<Guid?>> HolderIdsAsync(AppFactory factory)
