@@ -19,10 +19,46 @@ Describe 'Resolve-RepoArtifactPath' {
     }
 }
 
-Describe 'New-RepoMasterConnection' {
+Describe 'Get-RepoReleaseScript' {
+    BeforeAll {
+        $project = Join-Path $TestDrive 'App'
+        foreach ($folder in 'Data/2026.11.0', 'Data/2026.12.0', 'FullText/Catalogs', 'FullText/Indexes', 'Seed') { New-Item -ItemType Directory -Path (Join-Path $project $folder) -Force | Out-Null }
+        Set-Content -LiteralPath (Join-Path $project 'Data/2026.11.0/pre-move.sql') -Value 'SELECT 1;'
+        Set-Content -LiteralPath (Join-Path $project 'Data/2026.11.0/post-fill.sql') -Value 'SELECT 2;'
+        Set-Content -LiteralPath (Join-Path $project 'Data/2026.12.0/post-later.sql') -Value 'SELECT 3;'
+        Set-Content -LiteralPath (Join-Path $project 'FullText/Catalogs/Search.sql') -Value "CREATE FULLTEXT CATALOG [Search's]`n    WITH ACCENT_SENSITIVITY = ON;`nGO"
+        Set-Content -LiteralPath (Join-Path $project 'FullText/Indexes/knowledge.Chunks.sql') -Value "CREATE FULLTEXT INDEX ON [knowledge].[Chunks]`n    ([Text] LANGUAGE 1028)`n    KEY INDEX [IX_Chunks]`n    ON [Search's];`nGO"
+        Set-Content -LiteralPath (Join-Path $project 'Seed/accesscontrol.sql') -Value 'SELECT 4;'
+    }
+
+    It 'names the scripts in run order and takes Data/ only from the given release' {
+        @(Get-RepoReleaseScript $project -Release 2026.11.0).Name | Should -Be @(
+            '1-01-pre-move.sql', '3-01-fulltext-Search.sql', '3-02-fulltext-knowledge.Chunks.sql', '4-01-post-fill.sql', '5-01-seed-accesscontrol.sql')
+        @(Get-RepoReleaseScript $project).Name | Should -Be @('3-01-fulltext-Search.sql', '3-02-fulltext-knowledge.Chunks.sql', '5-01-seed-accesscontrol.sql')
+    }
+
+    It 'wraps full-text scripts so they skip without the component or when the object exists' {
+        $scripts = @(Get-RepoReleaseScript $project)
+        $catalog = $scripts[0].Text
+        $catalog | Should -Match ([regex]::Escape("FULLTEXTSERVICEPROPERTY('IsFullTextInstalled')"))
+        $catalog | Should -Match ([regex]::Escape("sys.fulltext_catalogs WHERE name = N'Search''s'"))
+        $catalog | Should -Match ([regex]::Escape("EXEC (N'CREATE FULLTEXT CATALOG [Search''s]"))
+        $scripts[1].Text | Should -Match ([regex]::Escape("OBJECT_ID(N'[knowledge].[Chunks]')"))
+        $scripts[2].Text | Should -Match '^-- 發版步驟 5：Seed/accesscontrol.sql'
+    }
+
+    It 'refuses SQLCMD directives, because the scripts run in plain SSMS' {
+        $folder = Join-Path $TestDrive 'Sqlcmd'
+        New-Item -ItemType Directory -Path (Join-Path $folder 'Seed') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'Seed/a.sql') -Value ":setvar Name x`nSELECT 1;"
+        { Get-RepoReleaseScript $folder } | Should -Throw '*SQLCMD*'
+    }
+}
+
+Describe 'New-RepoSqlConnection' {
     It 'uses the SQL login when a credential is given' {
         $credential = [pscredential]::new('demo', (ConvertTo-SecureString 'pw' -AsPlainText -Force))
-        $connection = New-RepoMasterConnection -Server 'db.test' -Credential $credential -TrustServerCertificate
+        $connection = New-RepoSqlConnection -Server 'db.test' -Credential $credential -TrustServerCertificate
         try {
             $connection.Credential.UserId | Should -Be 'demo'
             $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new($connection.ConnectionString)
@@ -33,8 +69,9 @@ Describe 'New-RepoMasterConnection' {
     }
 
     It 'uses the Windows identity without a credential' {
-        $connection = New-RepoMasterConnection -Server '(localdb)\MSSQLLocalDB'
+        $connection = New-RepoSqlConnection -Server '(localdb)\MSSQLLocalDB' -Database '沙盒庫'
         try {
+            [Data.SqlClient.SqlConnectionStringBuilder]::new($connection.ConnectionString).InitialCatalog | Should -Be '沙盒庫'
             $connection.Credential | Should -BeNullOrEmpty
             $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new($connection.ConnectionString)
             $builder.IntegratedSecurity | Should -BeTrue
@@ -368,10 +405,9 @@ Describe 'Get-RepoScriptCatalog' {
     }
 
     It 'reads parameter kinds, defaults and choices from the param block' {
-        $deploy = @($catalog | Where-Object Name -EQ 'Deploy-Database')[0].Parameters
-        ($deploy | Where-Object Name -EQ 'Server').Mandatory | Should -BeTrue
-        ($deploy | Where-Object Name -EQ 'Action').Choices | Should -Be @('Script', 'Pre', 'Post', 'Publish')
-        ($deploy | Where-Object Name -EQ 'Credential').Kind | Should -Be 'Credential'
+        $export = @($catalog | Where-Object Name -EQ 'Export-Database')[0].Parameters
+        ($export | Where-Object Name -EQ 'Server').Mandatory | Should -BeTrue
+        ($export | Where-Object Name -EQ 'Credential').Kind | Should -Be 'Credential'
         $port = @($catalog | Where-Object Name -EQ 'Start-Dev')[0].Parameters | Where-Object Name -EQ 'BackendPort'
         $port.Kind | Should -Be 'Number'
         $port.Default | Should -Be '5080'
@@ -383,9 +419,24 @@ Describe 'Get-RepoScriptCatalog' {
         $examples = @($catalog | Where-Object Name -EQ 'Start-Dev')[0].Examples
         $examples[1].Parameters['BackendPort'] | Should -Be 5081
         $examples[1].Parameters['FrontendPort'] | Should -Be 4201
-        $verify = @($catalog | Where-Object Name -EQ 'Verify-Database')[0].Examples[1].Parameters
-        $verify['Credential'] | Should -BeTrue
-        $verify['TrustServerCertificate'] | Should -BeTrue
+        $folder = Join-Path $TestDrive 'choices'
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'Sample.ps1') -Value @'
+<#
+.SYNOPSIS
+範例
+
+.EXAMPLE
+./scripts/Sample.ps1 -Action Post -Credential (Get-Credential) -Trust
+#>
+[CmdletBinding()]
+param([ValidateSet('Script', 'Post')][string]$Action = 'Script', [pscredential]$Credential, [switch]$Trust)
+'@
+        $sample = @(Get-RepoScriptCatalog $folder)[0]
+        ($sample.Parameters | Where-Object Name -EQ 'Action').Choices | Should -Be @('Script', 'Post')
+        $sample.Examples[0].Parameters['Action'] | Should -Be 'Post'
+        $sample.Examples[0].Parameters['Credential'] | Should -BeTrue
+        $sample.Examples[0].Parameters['Trust'] | Should -BeTrue
     }
 
     It 'joins source line breaks without spaces between Chinese and keeps list items on their own lines' {
@@ -450,9 +501,9 @@ Describe 'Format-RepoCommandLine' {
 
     It 'never writes a credential, only (Get-Credential)' {
         $credential = [pscredential]::new('sa', (ConvertTo-SecureString 'p@ss' -AsPlainText -Force))
-        $line = Format-RepoCommandLine 'Deploy-Database' ([ordered]@{ Server = 'sql'; Credential = $credential })
-        $line | Should -Be './scripts/Deploy-Database.ps1 -Server sql -Credential (Get-Credential)'
-        Format-RepoCommandLine 'Deploy-Database' ([ordered]@{ Credential = [pscredential]::Empty }) | Should -Be './scripts/Deploy-Database.ps1 -Credential (Get-Credential)'
+        $line = Format-RepoCommandLine 'Export-Database' ([ordered]@{ Server = 'sql'; Credential = $credential })
+        $line | Should -Be './scripts/Export-Database.ps1 -Server sql -Credential (Get-Credential)'
+        Format-RepoCommandLine 'Export-Database' ([ordered]@{ Credential = [pscredential]::Empty }) | Should -Be './scripts/Export-Database.ps1 -Credential (Get-Credential)'
     }
 
     It 'leaves out unset values and false switches' {
@@ -476,7 +527,7 @@ Describe 'Get-RepoScriptHistory and Add-RepoScriptHistory' {
 
     It 'stores a credential only as ask before running' {
         $path = Join-Path $TestDrive 'credential-history.json'
-        Add-RepoScriptHistory $path 'Deploy-Database' ([ordered]@{ Server = 'sql'; Credential = [pscredential]::new('sa', (ConvertTo-SecureString 'p@ss' -AsPlainText -Force)) })
+        Add-RepoScriptHistory $path 'Export-Database' ([ordered]@{ Server = 'sql'; Credential = [pscredential]::new('sa', (ConvertTo-SecureString 'p@ss' -AsPlainText -Force)) })
         [IO.File]::ReadAllText($path) | Should -Not -Match 'sa"|p@ss'
         @(Get-RepoScriptHistory $path)[0].Parameters['Credential'] | Should -BeTrue
     }

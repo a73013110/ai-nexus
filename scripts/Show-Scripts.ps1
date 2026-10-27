@@ -49,7 +49,6 @@ $theme = @{
     Good = if ($plain) { '' } else { $PSStyle.Foreground.Green }
     Error = if ($plain) { '' } else { $PSStyle.Foreground.Red }
 }
-$serverCategory = 'IIS 主機'
 
 function Test-Match($Item, [string[]]$Terms) {
     $text = "$($Item.Name) $($Item.Synopsis) $($Item.Category)"
@@ -202,7 +201,6 @@ function Get-ListFrame([hashtable]$State, [int]$Width, [int]$Height) {
     if ($State.Selected -ge 0) {
         $row = $rows[$State.Selected]
         $item = $row['Item']
-        if ($item.Category -eq $serverCategory) { Add-Wrapped $detail "注意：$($categories[$serverCategory])，開發時通常不需要執行。" $theme.Warn $Width }
         if ($null -ne $row['Values']) { Add-Wrapped $detail "上次：$(Format-RepoCommandLine $item.Name (ConvertTo-RunParameters $item (New-EditorValues $item $row['Values'])))" $theme.Bold $Width }
         Add-Wrapped $detail $(if ($item.Description) { $item.Description } else { $item.Synopsis }) '' $Width
     }
@@ -302,10 +300,6 @@ function Get-ConfirmFrame([hashtable]$State, [int]$Width) {
     }
     Add-Wrapped $lines $State.Command $theme.Bold $Width '   '
     $lines.Add('')
-    if ($State.Entry.Category -eq $serverCategory) {
-        Add-Wrapped $lines "注意：這支腳本$($categories[$serverCategory])。在這台機器執行前，請確認連到的伺服器與資料庫。" $theme.Warn $Width
-        $lines.Add('')
-    }
     if ($State.Message) { Add-Wrapped $lines $State.Message $State.MessageStyle $Width }
     , $lines
 }

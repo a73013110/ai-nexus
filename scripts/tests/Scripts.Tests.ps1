@@ -20,8 +20,8 @@ Describe 'scripts/ entry list' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
-            'Build', 'Configure-Local', 'Deploy-Database', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
-            'Show-Scripts', 'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
+            'Build', 'Configure-Local', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
+            'Show-Scripts', 'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify') | Sort-Object)
     }
 }
 
@@ -97,13 +97,13 @@ Describe 'Host commands called by scripts' {
         }
     }
 
-    It 'ships the dacpac, the release scripts and the database scripts with every IIS package' {
+    It 'ships the dacpac and the numbered release SQL, but no script the production host would have to run' {
         @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' }) | Should -BeNullOrEmpty
         $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
         $text | Should -Match 'dotnet build database/App'
         $text | Should -Match 'App\.dacpac'
-        foreach ($name in 'Deploy-Database\.ps1', 'Verify-Database\.ps1', "'FullText', 'Seed', 'Data'") { $text | Should -Match $name }
-        $text | Should -Not -Match 'migrations'
+        $text | Should -Match 'Get-RepoReleaseScript'
+        $text | Should -Not -Match 'Copy-Item .*\.ps1|migrations'
     }
 }
 
@@ -122,7 +122,6 @@ Describe 'Show-Scripts.ps1' {
         $historyPath = Join-Path $TestDrive 'script-history.json'
         $nameWidth = ($catalog | ForEach-Object { Get-RepoDisplayWidth $_.Name } | Measure-Object -Maximum).Maximum
         $theme = @{ Reset = ''; Bold = ''; Dim = ''; Reverse = ''; Accent = ''; Warn = ''; Good = ''; Error = '' }
-        $serverCategory = 'IIS 主機'
         $settingsPath = Join-Path $TestDrive 'appsettings.Local.json'
         $secretsPath = Join-Path $TestDrive 'appsettings.Secrets.json'
         function New-State([switch]$SavedLogin) {
@@ -154,7 +153,7 @@ Describe 'Show-Scripts.ps1' {
         Set-Filter $state ''
         $frames = [Collections.Generic.List[string]]::new()
         $frames.AddRange((Get-ListFrame $state $Width 24))
-        Open-Script $state 'Deploy-Database'
+        Open-Script $state 'Export-Database'
         Send-Key $state 'Tab' | Out-Null
         $frames.AddRange((Get-ParameterFrame $state $Width 24))
         Send-Key $state 'Enter' | Out-Null
@@ -171,7 +170,7 @@ Describe 'Show-Scripts.ps1' {
         $state = New-State
         Set-Filter $state ''
         Send-Text $state '資料庫'
-        @($state.Rows | Where-Object { $_['Item'] } | ForEach-Object { $_['Item'].Name }) | Should -Be @('Export-Contracts', 'Export-Database', 'Initialize-Database', 'Deploy-Database', 'Verify-Database')
+        @($state.Rows | Where-Object { $_['Item'] } | ForEach-Object { $_['Item'].Name }) | Should -Be @('Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS')
         Send-Key $state 'Backspace' | Out-Null
         $state.Filter | Should -Be '資料'
     }
@@ -191,7 +190,7 @@ Describe 'Show-Scripts.ps1' {
         $state = New-State -SavedLogin
         Set-Filter $state ''
         (Get-ListFrame $state 100 24) -join "`n" | Should -Match '共用設定：資料庫 192\.0\.2\.5 / 開發庫，帳號 sa（已儲存）'
-        Open-Script $state 'Deploy-Database'
+        Open-Script $state 'Export-Database'
         $state.Values['Server'] | Should -Be '192.0.2.5'
         $state.Values['Database'] | Should -Be '開發庫'
         $state.Values['Credential'] | Should -Be 'Saved'
@@ -204,7 +203,7 @@ Describe 'Show-Scripts.ps1' {
 
     It 'warns when the target differs from the shared settings and keeps the shared target when applying an example' {
         $state = New-State
-        Open-Script $state 'Deploy-Database'
+        Open-Script $state 'Export-Database'
         $state.Values['Credential'] | Should -Be ''
         Send-Key $state 'Tab' | Out-Null
         $state.Values['Server'] | Should -Be '192.0.2.5'
@@ -253,109 +252,19 @@ Describe 'Show-Scripts.ps1' {
         $text = pwsh -NoProfile -File $script -List | Out-String
         $LASTEXITCODE | Should -Be 0
         $text | Should -Match '開發（日常啟動與預覽）'
-        $text | Should -Match 'IIS 主機（由 Publish-IIS'
+        $text | Should -Match '發布（產生 IIS 發布套件）'
         foreach ($item in $catalog) { $text | Should -Match ([regex]::Escape($item.Name)) }
     }
 }
 
-Describe 'Verify-IIS.ps1' {
-    It 'runs on its own, because it is copied into the release package' {
+Describe 'Initialize-Database.ps1' {
+    It 'creates the database with the release parameters of ADR 0010 and the same hand-written SQL as the IIS package' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-        [IO.File]::ReadAllText((Join-Path $root 'scripts/Verify-IIS.ps1')) | Should -Not -Match 'Import-Module|\$PSScriptRoot'
-    }
-}
-
-Describe 'Verify-Database.ps1' {
-    BeforeAll {
-        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-        $script = Join-Path $root 'scripts/Verify-Database.ps1'
-    }
-
-    It 'runs on its own, because it is copied into the release package' {
-        [IO.File]::ReadAllText($script) | Should -Not -Match 'Import-Module|\$PSScriptRoot'
-    }
-
-    It 'names the SqlPackage version the tool manifest pins' {
-        $manifest = [IO.File]::ReadAllText((Join-Path $root '.config/dotnet-tools.json')) | ConvertFrom-Json -AsHashtable
-        $version = $manifest['tools']['microsoft.sqlpackage']['version']
-        [IO.File]::ReadAllText($script) | Should -Match ([regex]::Escape("`$sqlPackageVersion = '$version'"))
-    }
-
-    It 'ignores column order and environment differences but reports objects missing from either side' {
-        $text = [IO.File]::ReadAllText($script)
-        foreach ($property in 'IgnoreColumnOrder=True', 'DropObjectsNotInSource=True', 'IgnorePermissions=True', 'ScriptDatabaseOptions=False') { $text | Should -Match ([regex]::Escape($property)) }
-        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'", "'FullTextCatalogs'") { $text | Should -Match ([regex]::Escape($type)) }
-    }
-
-    It 'fails with installation steps instead of skipping when SqlPackage is missing' {
-        $dacpac = Join-Path $TestDrive 'App.dacpac'
-        Set-Content -LiteralPath $dacpac -Value 'x'
-        { & $script -Server 'sql.invalid' -DacpacPath $dacpac -SqlPackagePath (Join-Path $TestDrive 'missing/SqlPackage.exe') } | Should -Throw '*SqlPackagePath*'
-        $output = pwsh -NoProfile -Command "`$env:PATH = ''; `$env:ProgramFiles = '$TestDrive'; & '$script' -Server sql.invalid -DacpacPath '$dacpac'" 2>&1 | Out-String
-        $LASTEXITCODE | Should -Not -Be 0
-        $output | Should -Match 'microsoft\.sqlpackage'
-        $output | Should -Match 'sqlpackage-download'
-    }
-
-    It 'fails clearly without the expected dacpac' {
-        { & $script -Server 'sql.invalid' -DacpacPath (Join-Path $TestDrive 'none.dacpac') } | Should -Throw '*App.dacpac*'
-    }
-}
-
-Describe 'Deploy-Database.ps1' {
-    BeforeAll {
-        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-        $script = Join-Path $root 'scripts/Deploy-Database.ps1'
-        $text = [IO.File]::ReadAllText($script)
-        # 腳本頂層會連線，只載入要測的函式。
-        $ast = [Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$null)
-        foreach ($function in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -in 'Get-SqlBatch' }, $true)) {
-            . ([scriptblock]::Create($function.Extent.Text))
-        }
-    }
-
-    It 'runs on its own, because it is copied into the release package' {
-        $text | Should -Not -Match 'Import-Module'
-    }
-
-    It 'names the SqlPackage version the tool manifest pins' {
-        $manifest = [IO.File]::ReadAllText((Join-Path $root '.config/dotnet-tools.json')) | ConvertFrom-Json -AsHashtable
-        $text | Should -Match ([regex]::Escape("`$sqlPackageVersion = '$($manifest['tools']['microsoft.sqlpackage']['version'])'"))
-    }
-
-    It 'uses the release parameters of ADR 0010' {
-        foreach ($property in 'BlockOnPossibleDataLoss=$(!$AllowDataLoss)', 'DropObjectsNotInSource=False', 'GenerateSmartDefaults=False', 'IgnoreColumnOrder=True', 'IgnorePermissions=True', 'ScriptDatabaseOptions=$NewDatabase') {
+        $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Initialize-Database.ps1'))
+        foreach ($property in 'BlockOnPossibleDataLoss=True', 'GenerateSmartDefaults=False', 'IgnorePermissions=True', 'ScriptDatabaseOptions=True') {
             $text | Should -Match ([regex]::Escape($property))
         }
-        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'") { $text | Should -Match ([regex]::Escape($type)) }
-    }
-
-    It 'runs the hand-written scripts in release order' {
-        $post = $text.Substring($text.IndexOf('function Invoke-Post'))
-        $post.IndexOf('FullText/Catalogs') | Should -BeLessThan $post.IndexOf('FullText/Indexes')
-        $post.IndexOf('FullText/Indexes') | Should -BeLessThan $post.IndexOf("Get-DataScript 'post'")
-        $post.IndexOf("Get-DataScript 'post'") | Should -BeLessThan $post.IndexOf("'Seed'")
-    }
-
-    It 'splits batches on GO and refuses SQLCMD directives' {
-        $file = Join-Path $TestDrive 'batches.sql'
-        [IO.File]::WriteAllText($file, "SELECT 1;`nGO`n`n  go  `nSELECT N'GO';`n")
-        Get-SqlBatch $file | ForEach-Object Trim | Should -Be @('SELECT 1;', "SELECT N'GO';")
-        [IO.File]::WriteAllText($file, ":setvar Name x`nSELECT 1;")
-        { Get-SqlBatch $file } | Should -Throw '*SQLCMD*'
-    }
-
-    It 'fails clearly without the dacpac' {
-        { & $script -Server 'sql.invalid' -Path (Join-Path $TestDrive 'empty') } | Should -Throw '*App.dacpac*'
-    }
-
-    It 'fails with installation steps before connecting when SqlPackage is missing' {
-        $folder = Join-Path $TestDrive 'package'
-        New-Item -ItemType Directory -Path $folder -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $folder 'App.dacpac') -Value 'x'
-        $output = pwsh -NoProfile -Command "`$env:PATH = ''; `$env:ProgramFiles = '$TestDrive'; & '$script' -Server sql.invalid -Path '$folder'" 2>&1 | Out-String
-        $LASTEXITCODE | Should -Not -Be 0
-        $output | Should -Match 'microsoft\.sqlpackage'
-        $output | Should -Match 'sqlpackage-download'
+        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'", "'FullTextCatalogs'") { $text | Should -Match ([regex]::Escape($type)) }
+        $text | Should -Match 'Get-RepoReleaseScript'
     }
 }

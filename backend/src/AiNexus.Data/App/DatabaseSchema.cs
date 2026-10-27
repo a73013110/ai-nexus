@@ -14,7 +14,7 @@ public sealed partial class DatabaseSchema(
     /// </summary>
     /// <remarks>
     /// 結構由 DBA 以 <c>database/App</c> 的 dacpac 部署，程式與資料庫可能不同版；在啟動時就擋下，比第一個請求才拋出 SQL 錯誤好查。
-    /// 完整結構（索引、procedure、全文）的比對由 <c>Verify-Database.ps1</c> 負責，這裡只看 EF 讀寫的表與欄位。
+    /// 完整結構（索引、procedure、view）的比對靠發版時的結構描述比對，這裡只看 EF 讀寫的表與欄位。
     /// </remarks>
     /// <returns>全部差異，依物件名稱排序。</returns>
     public async Task<IReadOnlyList<SchemaDifference>> CompareModelAsync(CancellationToken ct)
@@ -33,7 +33,7 @@ public sealed partial class DatabaseSchema(
         return differences;
     }
 
-    // 日誌只保留前幾項，避免一次漂移就寫出上百行；完整清單在啟動失敗時印到主控台，或以 Verify-Database.ps1 查看。
+    // 日誌只保留前幾項，避免一次漂移就寫出上百行；完整清單在啟動失敗時印到主控台，或以結構描述比對查看。
     private static string Describe(List<SchemaDifference> differences) =>
         string.Join("; ", differences.Take(10).Select(x => x.ToString())) + (differences.Count > 10 ? "; …" : "");
 

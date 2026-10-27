@@ -228,6 +228,90 @@ function Test-RepoFullTextBatch {
     $Batch -match '^(CREATE|ALTER)\s+(FULLTEXT\s+(CATALOG|STOPLIST|INDEX)|SEARCH\s+PROPERTY\s+LIST)\b'
 }
 
+function ConvertTo-SqlLiteral([string]$Value) { "N'" + $Value.Replace("'", "''") + "'" }
+
+# 匯出的全文語句是 CREATE、沒有存在檢查；依第一個 CREATE 判斷是哪個物件（同檔的 ALTER 也是同一個物件）。
+function Get-FullTextObject([string]$File, [string[]]$Batch) {
+    $name = '(?:\[(?:[^\]]|\]\])+\]|[\w@#$]+)'
+    $create = $Batch | Where-Object { $_ -match '^CREATE\b' } | Select-Object -First 1
+    if (!$create) { throw "$File 沒有 CREATE 語句，無法判斷全文物件是否已存在。" }
+    if ($create -match "^CREATE\s+FULLTEXT\s+INDEX\s+ON\s+($name\.$name)") {
+        return @{ Name = $Matches[1]; Exists = "EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID($(ConvertTo-SqlLiteral $Matches[1])))" }
+    }
+    $views = @{ 'FULLTEXT CATALOG' = 'sys.fulltext_catalogs'; 'FULLTEXT STOPLIST' = 'sys.fulltext_stoplists'; 'SEARCH PROPERTY LIST' = 'sys.registered_search_property_lists' }
+    if ($create -match "^CREATE\s+(FULLTEXT\s+CATALOG|FULLTEXT\s+STOPLIST|SEARCH\s+PROPERTY\s+LIST)\s+($name)") {
+        $object = $Matches[2]
+        $plain = if ($object.StartsWith('[')) { $object.Substring(1, $object.Length - 2).Replace(']]', ']') } else { $object }
+        return @{ Name = $object; Exists = "EXISTS (SELECT 1 FROM $($views[($Matches[1] -replace '\s+', ' ').ToUpperInvariant()]) WHERE name = $(ConvertTo-SqlLiteral $plain))" }
+    }
+    throw "$File 不是可辨識的全文物件（目錄、停用字表、搜尋屬性清單或全文索引）。"
+}
+
+function Get-RepoReleaseScript {
+    <#
+    .SYNOPSIS The hand-written SQL a release runs around the schema update, named in run order: 1 pre, 3 full-text, 4 post, 5 seed.
+    .DESCRIPTION
+    步驟 2（結構）不在這裡：由結構描述比對 App.dacpac 與目標庫產生。Data/<版本>/ 只在指定 -Release 時帶入。
+    發版的人在 SSMS 依檔名順序執行，所以每一份都要能直接執行、重跑也安全：全文腳本包成「沒有全文元件或物件已存在就略過」
+    （匯出的 CREATE 沒有存在檢查；已存在物件的定義變更不會套用，由 DBA 手動處理），種子資料本身只新增缺少的列。
+    #>
+    param([Parameter(Mandatory)][string]$Path, [string]$Release)
+    if ($Release -and $Release -notmatch '^[\w.-]+$') { throw "Release 只能有英數、底線、點與連字號：$Release" }
+    $files = {
+        param([string]$Folder, [string]$Filter = '*.sql')
+        if (Test-Path -LiteralPath $Folder -PathType Container) {
+            Get-ChildItem -LiteralPath $Folder -Filter $Filter -File | Sort-Object { $_.Name } -Culture ([cultureinfo]::InvariantCulture)
+        }
+    }
+    $data = if ($Release) { Join-Path $Path "Data/$Release" }
+    $steps = @(
+        @{ Step = 1; Label = ''; Files = @(if ($data) { & $files $data 'pre-*.sql' }) }
+        @{ Step = 3; Label = 'fulltext-'; Files = @(@(& $files (Join-Path $Path 'FullText/Catalogs')) + @(& $files (Join-Path $Path 'FullText/Indexes'))) }
+        @{ Step = 4; Label = ''; Files = @(if ($data) { & $files $data 'post-*.sql' }) }
+        @{ Step = 5; Label = 'seed-'; Files = @(& $files (Join-Path $Path 'Seed')) }
+    )
+    foreach ($step in $steps) {
+        $index = 0
+        foreach ($file in $step.Files | Where-Object { $_ }) {
+            $index++
+            $source = [IO.Path]::GetRelativePath($Path, $file.FullName).Replace('\', '/')
+            $text = [IO.File]::ReadAllText($file.FullName)
+            if ($text -match '(?im)^\s*:(setvar|on|r|connect)\b') { throw "$source 含 SQLCMD 指令；手寫腳本只能用 T-SQL 與 GO。" }
+            $header = "-- 發版步驟 $($step.Step)：$source"
+            if ($step.Step -eq 3) {
+                $batches = Split-RepoSqlBatch $text
+                $object = Get-FullTextObject $source $batches
+                $text = @(
+                    "$header。沒有全文元件或物件已存在時略過；已存在物件的定義變更由 DBA 手動處理。"
+                    "IF CONVERT(int, FULLTEXTSERVICEPROPERTY('IsFullTextInstalled')) <> 1"
+                    "    PRINT $(ConvertTo-SqlLiteral "略過 $($object.Name)：沒有全文元件，混合檢索改用 vector 模式。");"
+                    "ELSE IF $($object.Exists)"
+                    "    PRINT $(ConvertTo-SqlLiteral "略過 $($object.Name)：已存在。");"
+                    'ELSE'
+                    'BEGIN'
+                    @($batches | ForEach-Object { "    EXEC ($(ConvertTo-SqlLiteral $_.Replace("`r`n", "`n")));" })
+                    'END'
+                    'GO'
+                    ''
+                ) -join "`n"
+            } else { $text = "$header`n$text" }
+            [pscustomobject]@{ Name = '{0}-{1:00}-{2}{3}' -f $step.Step, $index, $step.Label, $file.Name; Source = $source; Text = $text }
+        }
+    }
+}
+
+function Invoke-RepoSqlScript {
+    <# .SYNOPSIS Runs a T-SQL script on an open connection, one batch per GO line, the way SSMS runs it without SQLCMD mode. #>
+    param([Parameter(Mandatory)][Data.SqlClient.SqlConnection]$Connection, [Parameter(Mandatory)][string]$Text, [string]$Name = 'SQL')
+    foreach ($batch in Split-RepoSqlBatch $Text) {
+        $command = $Connection.CreateCommand()
+        $command.CommandText = $batch
+        $command.CommandTimeout = 0
+        try { [void]$command.ExecuteNonQuery() }
+        catch { throw "執行 $Name 失敗：$($_.Exception.InnerException?.Message ?? $_.Exception.Message)" }
+    }
+}
+
 function Invoke-RepoExtractPostProcess {
     <#
     .SYNOPSIS Turns a SqlPackage SchemaObjectType extract folder into the committed layout; returns the removed files.
@@ -352,17 +436,17 @@ function Compare-RepoDatabaseSetting {
     }
 }
 
-function New-RepoMasterConnection {
+function New-RepoSqlConnection {
     <#
-    .SYNOPSIS An unopened connection to the server's master database, with the SQL login when given, else the current Windows identity.
+    .SYNOPSIS An unopened connection to a database (master by default), with the SQL login when given, else the current Windows identity.
     .DESCRIPTION
     PowerShell 內附的 System.Data.SqlClient 不支援 LocalDB（shared memory）的加密，所以只有 LocalDB 不要求加密。
     變數名稱不分大小寫：區域變數不能叫 $credential，否則會蓋掉 -Credential，靜默改用 Windows 驗證。
     #>
-    param([Parameter(Mandatory)][string]$Server, [pscredential]$Credential, [switch]$TrustServerCertificate)
+    param([Parameter(Mandatory)][string]$Server, [string]$Database = 'master', [pscredential]$Credential, [switch]$TrustServerCertificate)
     $builder = [Data.SqlClient.SqlConnectionStringBuilder]::new()
     $builder['Data Source'] = $Server
-    $builder['Initial Catalog'] = 'master'
+    $builder['Initial Catalog'] = $Database
     $builder['Encrypt'] = $Server -notlike '(localdb)*'
     $builder['TrustServerCertificate'] = [bool]$TrustServerCertificate
     $sqlCredential = $null
@@ -377,7 +461,7 @@ function New-RepoMasterConnection {
 function Test-RepoDatabaseExists {
     <# .SYNOPSIS True when the server already has the database (queried through master). #>
     param([Parameter(Mandatory)][string]$Server, [Parameter(Mandatory)][string]$Database, [pscredential]$Credential, [switch]$TrustServerCertificate)
-    $connection = New-RepoMasterConnection -Server $Server -Credential $Credential -TrustServerCertificate:$TrustServerCertificate
+    $connection = New-RepoSqlConnection -Server $Server -Credential $Credential -TrustServerCertificate:$TrustServerCertificate
     try {
         $connection.Open()
         $command = $connection.CreateCommand()
@@ -503,7 +587,6 @@ $scriptCategories = [ordered]@{
     '建置與檢查' = '提交與送 PR 前'
     '資料庫與合約' = 'API 合約、資料表結構、建新庫'
     '發布' = '產生 IIS 發布套件'
-    'IIS 主機' = '由 Publish-IIS 帶進發布套件，在 IIS 主機或由 DBA 執行'
 }
 
 function Get-RepoScriptCategory {

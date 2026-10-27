@@ -1,27 +1,48 @@
-# 結構驗證與漂移偵測
+# 結構描述比對與漂移偵測
 
-給 DBA 與發布人員：以 `Verify-Database.ps1` 比對資料庫的實際結構與已發版的 `database\App.dacpac`（由 `database/App` 建置，這一版預期的結構）。同一個比對有兩個用途：
+給 DBA 與發布人員：以 Visual Studio「結構描述比對」（Schema Compare）比對發布套件的 `database\App.dacpac`（由 `database/App` 建置，這一版應有的結構）與目標資料庫。同一個比對有三個用途：
 
-- **部署後驗證**：[部署](database-setup.md#部署)完成後執行一次，確認升級 SQL 沒有漏跑或被改過。
-- **漂移偵測**：平時排程對 PROD 執行。有差異＝客戶端熱修尚未回收：在開發庫做同樣修改、匯出並提交，下一版發版後差異歸零才算結案（[ADR 0010](../decisions/0010-database-first-schema.md)）。
+- **發版**：產生升級 SQL，是 [部署](database-setup.md#部署) 的第 2 步。
+- **部署後驗證**：發版後再比一次，確認沒有漏跑或被改過。
+- **漂移偵測**：平時對 PROD 比對，抓出客戶端熱修（[ADR 0010](../decisions/0010-database-first-schema.md)）。
 
-網站啟動時只比對 EF 讀寫的表與欄位（見 [資料庫](../architecture/database.md#改結構)）；索引、procedure、view 與多出的物件要靠這個腳本。
+網站啟動時只比對 EF 讀寫的表與欄位（見 [資料庫](../architecture/database.md#改結構)）；索引、procedure、view 與多出的物件要靠這個比對。
 
-## 執行
+## 建立比對
 
-```powershell
-pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-Database.ps1' -Server 'sql.company.internal' `
-  -DacpacPath 'D:\Packages\AiNexus\database\App.dacpac' -OutputPath 'D:\Packages\AiNexus\logs\drift'
-```
+需要 Visual Studio 的「資料儲存和處理」工作負載（SSDT）。
 
-- 以 SqlPackage `DeployReport` 比對，只讀結構、不改資料庫。省略 `-Credential` 時用目前 Windows 身分；帳號需要 VIEW DEFINITION。自簽憑證加 `-TrustServerCertificate`。
-- 結束碼 0 表示一致；1 列出差異物件與讓目標符合 dacpac 所需的動作：Create＝目標缺少、Drop＝目標多出（熱修新增的 procedure、索引、表）、Alter＝定義不同（熱修改過的 procedure、欄位）。
-- `-OutputPath` 寫出 `DeployReport.xml` 與 `Report.md`（時間、目標、dacpac 雜湊、差異與警示），排程時把結束碼 1 與 `Report.md` 接到通知；只通知，不自動修正。
-- 漂移偵測要用**目前在 PROD 上的那一版**套件的 dacpac，不是 repo 最新版；否則尚未發版的變更也會被列為差異。
-- 忽略欄位順序、使用者／登入／角色／權限、schema 擁有者、檔案群組與檔案、資料庫選項（RCSI 由網站啟動時檢查）。
-- **全文不比對**：全文目錄與索引不在 dacpac，目標也可能沒有全文元件。報告中的全文物件只列為「略過」；全文索引用主機指令 `verify sql` 確認。
+1. 「工具 → SQL Server → 新增結構描述比較」。
+2. **來源**選「資料層應用程式檔案（.dacpac）」→ 套件的 `database\App.dacpac`。不要選開發庫：開發庫可能有尚未匯出、還沒進這一版的變更。
+3. **目標**選資料庫 → 正式庫（帳號見 [SQL 帳號權限](database-setup.md#sql-帳號權限)）。
+4. 依下節設定「選項」（齒輪），按「比較」。
+5. 設定好後「另存新檔」成 `.scmp`，之後每次發版只換來源的 dacpac 路徑。
 
-## 安裝 SqlPackage
+## 選項
 
-- 開發機：`./scripts/Restore.ps1` 還原 repo 的 dotnet 工具；在 repo 根目錄執行時自動使用。
-- 正式主機或 DBA 工作站：腳本依序找 `-SqlPackagePath`、PATH 上的 `sqlpackage`、`Program Files\Microsoft SQL Server\170`（或 `160`）`\DAC\bin`。都找不到時失敗並列出安裝方式，不會略過：有 .NET SDK 就 `dotnet tool install --global microsoft.sqlpackage`（版本見訊息）；只有 Hosting Bundle 的 IIS 主機下載 [SqlPackage](https://learn.microsoft.com/sql/tools/sqlpackage/sqlpackage-download) 的 Windows zip，以 `-SqlPackagePath` 指定其中的 `SqlPackage.exe`。也可以在能連目標 SQL 的 DBA 工作站執行。`Deploy-Database.ps1` 用同樣的找法。
+與開發機 `Initialize-Database.ps1` 建庫時用的參數一致；VS 語系不同時名稱略有差異。
+
+| 分頁 | 設定 | 原因 |
+|---|---|---|
+| 一般 | 勾選「可能遺失資料時封鎖累加部署」（Block on possible data loss） | 刪欄位、縮短長度時中止，交給人決定 |
+| 一般 | 不勾「卸除目標中但不在來源中的物件」（Drop objects in target but not in source） | 熱修多出的物件不在發版時刪除 |
+| 一般 | 不勾「產生智慧預設值」（Generate smart defaults） | 新增 NOT NULL 欄位卻沒有預設值時失敗 |
+| 一般 | 勾選「忽略資料行順序」、「忽略權限」、「忽略角色成員資格」、「忽略登入 SID」、「忽略檔案群組位置」、「忽略檔案與記錄檔路徑」 | 這些是環境差異，由 DBA 管理 |
+| 一般 | 不勾「部署資料庫屬性」 | 既有庫的 collation、相容層級、RCSI 不在發版時改，見 [讀取隔離](database-setup.md#讀取隔離rcsi) |
+| 物件類型 | 取消使用者、登入、資料庫角色、應用程式角色、權限、認證、檔案群組、檔案、全文檢索目錄、全文檢索停用字詞表 | 權限是環境差異；全文由套件的 `3-*.sql` 處理 |
+
+## 發版
+
+- 審核結果清單：「動作」欄只應有新增與變更。全文索引與熱修多出的物件會以「刪除」出現，取消勾選，不要刪除。
+- 確認後「產生指令碼」，在 SSMS 以 SQLCMD 模式執行；或在 VS 直接按「更新」。執行前後的其餘步驟見 [部署](database-setup.md#部署)。
+
+## 部署後驗證
+
+發版後按「比較」重新整理：除了全文索引與已知的熱修物件，應該沒有差異。仍有新增或變更表示升級 SQL 漏跑或執行失敗，查 SSMS 訊息後重做。
+
+## 漂移偵測
+
+- 比對來源要用**目前在 PROD 上那一版**套件的 dacpac，不是 repo 最新版；否則尚未發版的變更也會被列為差異。
+- 差異的意思：「新增」＝PROD 缺少、「刪除」＝PROD 多出（熱修新增的 procedure、索引、表）、「變更」＝定義不同（熱修改過的 procedure、欄位）。
+- 有差異＝熱修尚未回收：在開發庫做同樣修改、以 `scripts/Export-Database.ps1` 匯出並提交，下一版發版後差異歸零才算結案。只通知，不在 PROD 自動修正。
+- 全文索引不比對（不在 dacpac，目標也可能沒有全文元件），改用主機指令 `verify sql` 確認。

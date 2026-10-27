@@ -2,21 +2,25 @@
 
 <#
 .SYNOPSIS
-產生新的 IIS 發布套件（app、config 範本、keys、logs、database/、Verify-IIS.ps1、Deploy-Database.ps1 與 Verify-Database.ps1）。
+產生新的 IIS 發布套件：app、config 範本、keys、logs，以及資料庫的 App.dacpac 與依序執行的手寫 SQL。
 
 .DESCRIPTION
 預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Files.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
-database/ 帶 App.dacpac（由 database/App 建置，這一版預期的資料庫結構）與發版時執行的手寫腳本 FullText/、Seed/、Data/；
-DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Verify-Database.ps1 比對實際結構。
-套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/iis-deployment.md。
+database/ 帶 App.dacpac（由 database/App 建置，這一版預期的資料庫結構）與 release/：依執行順序編號的手寫 SQL
+（1 pre、3 全文、4 post、5 種子資料）。步驟 2 的結構升級 SQL 由 Visual Studio 結構描述比對 App.dacpac 與正式庫產生；
+完整步驟見 database/release/README.txt 與 docs/operations/database-setup.md。
+套件不含秘密，正式主機不需要 PowerShell 7 或 SqlPackage；只有 app/ 是 IIS 的實體路徑。
 
 .PARAMETER DataRoot
 正式主機上站外資料的根目錄（絕對路徑），例如 D:\AiNexus\data。
 
 .PARAMETER DestinationPath
 新套件的 app 目錄，必須是空的；預設 artifacts/iis/<UTC 時間>/app。不要指向執行中的 IIS 目錄。
+
+.PARAMETER Release
+這次發版的版本，對應 database/App/Data/<版本>/ 的一次性資料修正（pre-*.sql、post-*.sql）；省略時不帶。
 
 .PARAMETER IncludeLocalConfig
 以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）。
@@ -38,11 +42,15 @@ DBA 以 Deploy-Database.ps1 產生升級 SQL 並依序執行，部署後以 Veri
 
 .EXAMPLE
 ./scripts/Publish-IIS.ps1 -DataRoot 'D:\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
+
+.EXAMPLE
+./scripts/Publish-IIS.ps1 -DataRoot 'D:\AiNexus\data' -Release 2026.11.0
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$DataRoot,
     [string]$DestinationPath,
+    [ValidatePattern('^[\w.-]+$')][string]$Release,
     [switch]$IncludeLocalConfig,
     [switch]$AllowUntrustedSql,
     [switch]$SkipBuild,
@@ -84,22 +92,46 @@ if ($AllowUntrustedSql) { Set-RepoSetting $settings 'Databases.App.TrustServerCe
 Save-RepoJson $settingsPath $settings
 $settings = $null
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Verify-IIS.ps1') -Destination $package
-
-# 與 app/ 同一份原始碼建置，DBA 拿到的預期結構不會和程式脫節。
+# 與 app/ 同一份原始碼建置，結構比對的來源不會和程式脫節。
+$project = Join-Path $root 'database/App'
+$data = Join-Path $project 'Data'
+$versions = @(if (Test-Path -LiteralPath $data -PathType Container) { Get-ChildItem -LiteralPath $data -Directory | ForEach-Object Name })
+if ($Release -and $Release -notin $versions) { Write-Output "database/App/Data/$Release 不存在：這一版沒有一次性資料修正。" }
+elseif (!$Release -and $versions.Count) { Write-Warning "未指定 -Release，不帶 Data/ 的一次性資料修正（有：$($versions -join '、')）。" }
+$scripts = @(Get-RepoReleaseScript $project -Release $Release)
 Push-Location -LiteralPath $root
 try {
     dotnet build database/App --no-restore -c Release
     if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗；請先執行 scripts/Restore.ps1。' }
 } finally { Pop-Location }
 $database = Join-Path $package 'database'
-New-Item -ItemType Directory -Path $database -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $root 'database/App/bin/Release/App.dacpac') -Destination $database
-# 手寫腳本不進 dacpac，由 Deploy-Database.ps1 在結構之前（Data/<版本>/pre-*）或之後執行；這一版沒有的資料夾就不帶。
-foreach ($folder in 'FullText', 'Seed', 'Data') {
-    $source = Join-Path $root "database/App/$folder"
-    if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $database -Recurse }
-}
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Deploy-Database.ps1'), (Join-Path $PSScriptRoot 'Verify-Database.ps1') -Destination $package
+$releaseFolder = Join-Path $database 'release'
+New-Item -ItemType Directory -Path $releaseFolder -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $project 'bin/Release/App.dacpac') -Destination $database
+# SSMS 開檔要有 BOM 才不會把中文註解與 N'' 字串當成系統字碼頁。
+$encoding = [Text.UTF8Encoding]::new($true)
+foreach ($script in $scripts) { [IO.File]::WriteAllText((Join-Path $releaseFolder $script.Name), $script.Text.Replace("`r`n", "`n").Replace("`n", "`r`n"), $encoding) }
+$list = @(foreach ($step in 1, 3, 4, 5) {
+    $names = @($scripts | Where-Object { $_.Name.StartsWith("$step-") } | ForEach-Object Name)
+    $title = @{ 1 = '一次性資料修正（結構前）'; 3 = '全文目錄與索引（可重跑）'; 4 = '一次性資料修正（結構後）'; 5 = '種子資料（可重跑）' }[$step]
+    "$step. $title"
+    if ($names.Count) { $names | ForEach-Object { "   $_" } } else { '   （這一版沒有，略過）' }
+    if ($step -eq 1) {
+        '2. 結構：Visual Studio 結構描述比對，來源 database\App.dacpac、目標正式庫；選項見 docs/operations/database-setup.md'
+        '   審核差異後「產生指令碼」，在 SSMS 執行（產生的指令碼要開 SQLCMD 模式）'
+    }
+})
+$readme = @(
+    "AiNexus 資料庫發版步驟（版本：$(if ($Release) { $Release } else { '未指定' })，產生於 $([DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm')) UTC）"
+    ''
+    '先停站並備份。以下依序在 SSMS 連到正式庫執行（release\ 的檔案用一般模式即可，T-SQL 與 GO）：'
+    ''
+    $list
+    ''
+    '6. 再做一次結構描述比對，應該沒有差異（全文、權限、使用者不在比對範圍）'
+    '7. 啟動網站；結構和程式不一致時網站會拒絕啟動，並在事件記錄列出缺少的表或欄位'
+)
+[IO.File]::WriteAllText((Join-Path $releaseFolder 'README.txt'), ($readme -join "`r`n") + "`r`n", $encoding)
 Write-Output "IIS 發布套件：$package"
+Write-Output "資料庫：依 $(Join-Path $releaseFolder 'README.txt') 的順序執行；結構以結構描述比對 database\App.dacpac 與正式庫。"
 Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 docs/operations/iis-deployment.md。套件的 logs/ 只給 ANCM stdout 使用。"

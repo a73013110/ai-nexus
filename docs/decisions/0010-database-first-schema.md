@@ -5,7 +5,8 @@
   - 資料庫結構的唯一修改入口是**開發庫**：DBA 照舊在 SSMS 物件總管直接改表、procedure、view。
   - repo 的 `database/<資料庫>/` 只放 `scripts/Export-Database.ps1` 的匯出結果（SqlPackage Extract，每物件一檔），沒有人手改；一個 SDK-style SQL 專案 glob 這些檔案，`dotnet build` 產出 `.dacpac`。沒有人需要打開這個專案。
   - **不再使用 EF migration**：移除 `Migrations/`、`__EFMigrationsHistory` 與 migration 產生的發布腳本。EF Core 只做對應（[ADR 0011](0011-data-access-ef-dapper-procedures.md)）。
-  - 發版以 dacpac 對目標庫產生差異報告與升級 SQL，DBA 審核後執行；種子資料、一次性資料修正、全文索引另有手寫腳本，由發版腳本在結構更新後執行。
+  - 發版以 dacpac 對目標庫產生差異報告與升級 SQL，DBA 審核後執行；種子資料、一次性資料修正、全文索引另有手寫腳本，依編號在結構前後執行。
+- **修訂**（2026-10-27）：正式機不能放部署腳本、也不能裝 SqlPackage，所以發版改為手動：以 Visual Studio 結構描述比對產生升級 SQL，手寫腳本由 `Publish-IIS.ps1` 依執行順序編號放進套件（[資料庫建置與權限](../operations/database-setup.md#部署)）；漂移偵測改為定期手動比對。
 - **修訂**：[ADR 0005](0005-sqlite-tests-sqlserver-opt-in.md)（測試改用從 dacpac 建立的 SQL Server，procedure 無法在 SQLite 執行；已由 [ADR 0015](0015-integration-tests-on-localdb.md) 取代）。
 
 ## 原因
@@ -21,12 +22,12 @@
 開發庫（SSMS 修改）
   → Export-Database.ps1 匯出到 database/App/（PR 作者執行，只 stage 與本次有關的檔案）
   → dotnet build database/App → App.dacpac（引用錯誤在 build 時失敗）
-  → 發版：DeployReport（差異清單）＋ Script（升級 SQL）→ DBA 審核 → 執行
-  → 執行 FullText/、Data/<版本>/、Seed/ 腳本
+  → Publish-IIS.ps1：套件帶 App.dacpac 與依序編號的手寫 SQL（Data/<版本>/、FullText/、Seed/）
+  → 發版：結構描述比對 App.dacpac 與目標庫 → DBA 審核升級 SQL → 依編號在前後執行手寫 SQL
 ```
 
 - 環境：開發庫＋PROD；大專案加 UAT。所有環境都用同一個 dacpac 比對，不會出現兩份不同的升級腳本。
-- **漂移偵測**：定時以已發版 dacpac 對 PROD 跑 DeployReport；多出的差異＝客戶端熱修尚未回收。開發庫則每晚和 repo 比對，抓「改了沒匯出」。只通知，不自動提交。
+- **漂移偵測**：定期以已發版 dacpac 對 PROD 做結構描述比對（[做法](../operations/database-verification.md#漂移偵測)）；多出的差異＝客戶端熱修尚未回收。開發庫則每晚和 repo 比對，抓「改了沒匯出」。只通知，不自動提交。
 - **客戶端熱修**：允許直接改 procedure，但必須在開發庫做同樣修改並匯出提交；漂移報告為零才算結案。
 
 ## 資料夾
@@ -47,7 +48,7 @@ database/
 ## 發版參數
 
 - `BlockOnPossibleDataLoss=True`：刪欄位、縮短長度等可能遺失資料時整份中止；確定要刪的那次由 DBA 審核後單次放行，或先以 `Data/<版本>/pre-*.sql` 搬移資料。
-- `DropObjectsNotInSource=False`（產生升級 SQL）；漂移偵測時才用 `True`。
+- `DropObjectsNotInSource=False`：熱修多出的物件不在發版時刪除，由漂移偵測列出。
 - `GenerateSmartDefaults=False`：新增 NOT NULL 欄位卻沒有預設值時失敗，交給人決定。
 - 忽略權限、使用者、角色、登入、檔案群組與資料行順序；不寫入資料庫選項與 collation（由建庫步驟負責）。
 

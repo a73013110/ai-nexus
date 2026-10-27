@@ -5,8 +5,8 @@
 以 .local/ 的連線設定建立一個新的 AiNexus 資料庫：結構、全文物件與種子資料。
 
 .DESCRIPTION
-先 build database/App，再以 Deploy-Database.ps1 -Action Publish 部署。只建立新庫：資料庫已存在時停止，
-不會改動 DBA 維護的開發庫；既有庫的升級走 Deploy-Database.ps1 -Action Script（見 docs/operations/database-setup.md）。
+先 build database/App，以 SqlPackage 套用 App.dacpac，再依序執行發布套件同一份手寫 SQL（全文物件、種子資料）。
+只建立新庫：資料庫已存在時停止，不會改動 DBA 維護的開發庫；既有庫的升級見 docs/operations/database-setup.md。
 需要有建庫權限的 SQL 登入。
 
 .PARAMETER Server
@@ -52,11 +52,11 @@ if (!$Server -and !(Get-DatabaseSetting 'IntegratedSecurity') -and $user) {
 }
 $secrets = $null
 
-$scripts = $PSScriptRoot
+$project = Join-Path $root 'database/App'
 Invoke-RepoSteps "建立資料庫 $Database" @(
     @{ Name = '確認資料庫不存在'; Run = {
             if (Test-RepoDatabaseExists @connection) {
-                throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。升級既有庫用 scripts/Deploy-Database.ps1（見 docs/operations/database-setup.md）。"
+                throw "$($connection.Server) 上已有 $Database，這個腳本只建立新庫。既有庫的升級見 docs/operations/database-setup.md。"
             }
         }
     }
@@ -68,5 +68,60 @@ Invoke-RepoSteps "建立資料庫 $Database" @(
             } finally { Pop-Location }
         }
     }
-    @{ Name = '部署結構、全文物件與種子資料'; Run = { & (Join-Path $scripts 'Deploy-Database.ps1') @connection -Action Publish } }
+    @{ Name = '套用 App.dacpac'; Run = {
+            # 新庫才套用 App.sqlproj 的 collation、相容層級與 RCSI；權限、登入與檔案位置是環境差異，全文物件不在 dacpac。
+            $excluded = 'Users', 'Logins', 'DatabaseRoles', 'ApplicationRoles', 'RoleMembership', 'Permissions', 'Credentials',
+                'DatabaseScopedCredentials', 'ServerRoles', 'ServerRoleMembership', 'ServerTriggers', 'LinkedServers', 'LinkedServerLogins',
+                'Endpoints', 'ErrorMessages', 'Audits', 'ServerAuditSpecifications', 'DatabaseAuditSpecifications', 'EventSessions',
+                'Certificates', 'MasterKeys', 'DatabaseEncryptionKeys', 'CryptographicProviders', 'Filegroups', 'Files', 'FullTextCatalogs', 'FullTextStoplists'
+            $properties = @(
+                'BlockOnPossibleDataLoss=True', 'GenerateSmartDefaults=False', "ExcludeObjectTypes=$($excluded -join ';')", 'IgnorePermissions=True',
+                'IgnoreRoleMembership=True', 'IgnoreLoginSids=True', 'IgnoreAuthorizer=True', 'IgnoreUserSettingsObjects=True',
+                'ScriptDatabaseOptions=True', 'ScriptDatabaseCollation=True', 'ScriptDatabaseCompatibility=True'
+            ) | ForEach-Object { "/p:$_" }
+            $target = [Data.Common.DbConnectionStringBuilder]::new()
+            $target['Server'] = $connection.Server
+            $target['Database'] = $Database
+            $target['Encrypt'] = 'True'
+            $target['TrustServerCertificate'] = [string][bool]$connection['TrustServerCertificate']
+            $target['Persist Security Info'] = 'False'
+            if ($connection['Credential']) {
+                $target['User ID'] = $connection.Credential.UserName
+                $target['Password'] = $connection.Credential.GetNetworkCredential().Password
+            } else { $target['Integrated Security'] = 'True' }
+            # 密碼只寫進目前使用者的暫存資料夾，結束前刪除。SqlPackage 在 response file 中把 \" 當引號，結尾不可是反斜線。
+            $work = Join-Path ([IO.Path]::GetTempPath()) ('AiNexus-initialize-' + [Guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path $work | Out-Null
+            Push-Location -LiteralPath $root
+            try {
+                $value = $target.ConnectionString
+                if ($value.EndsWith('\')) { $value += ';' }
+                $response = Join-Path $work 'connection.rsp'
+                [IO.File]::WriteAllText($response, "/TargetConnectionString:`"$($value.Replace('"', '\"'))`"")
+                $target = $null
+                # SqlPackage 逐一列出每個建立的物件；成功時只在 -Verbose 顯示，失敗時全部印出，原因通常在最後幾行。
+                $output = dotnet tool run sqlpackage -- /Action:Publish "/SourceFile:$(Join-Path $project 'bin/Release/App.dacpac')" "@$response" @properties 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    $output | Out-Host
+                    throw "SqlPackage 失敗（結束碼 $LASTEXITCODE）；原因見上方輸出。找不到工具時先執行 scripts/Restore.ps1。"
+                }
+                $output | ForEach-Object { Write-Verbose "$_" }
+            } finally {
+                Pop-Location
+                Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    @{ Name = '全文物件與種子資料'; Run = {
+            $sql = New-RepoSqlConnection @connection
+            $sql.add_InfoMessage({ param($source, $info) Write-Output "  $($info.Message)" | Out-Host })
+            try {
+                $sql.Open()
+                foreach ($script in Get-RepoReleaseScript $project) {
+                    Write-Output "執行 $($script.Name)"
+                    Invoke-RepoSqlScript $sql $script.Text $script.Source
+                }
+            } finally { $sql.Dispose() }
+        }
+    }
 )

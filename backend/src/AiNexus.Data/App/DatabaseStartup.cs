@@ -55,7 +55,7 @@ public static class DatabaseStartup
             {
                 Console.Error.WriteLine("  " + difference);
             }
-            Console.Error.WriteLine("請以發布套件的 Deploy-Database.ps1 部署這一版的結構，或確認網站與資料庫是同一版；完整差異以 Verify-Database.ps1 查看。");
+            Console.Error.WriteLine("請以結構描述比對把發布套件的 database\\App.dacpac 套用到這個資料庫，或確認網站與資料庫是同一版（docs/operations/database-setup.md）。");
             return false;
         }
         catch (Exception ex)

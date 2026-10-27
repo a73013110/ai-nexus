@@ -58,6 +58,6 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 ## 資料庫
 
-結構、全文與種子資料以套件的 `Deploy-Database.ps1` 部署（新庫也是同一套步驟），見 [資料庫建置與權限](database-setup.md#部署)；部署帳號與 runtime 帳號分開，runtime 不給 DDL。既有庫的 RCSI 一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
+結構、全文與種子資料依套件的 `database\release\README.txt` 手動部署（新庫也是同一套步驟），見 [資料庫建置與權限](database-setup.md#部署)；部署帳號與 runtime 帳號分開，runtime 不給 DDL。既有庫的 RCSI 一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
 
 runtime 需要所有業務 schema（每模組一個，見 [資料庫](../architecture/database.md)）的 DML。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。

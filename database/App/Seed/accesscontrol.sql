@@ -1,6 +1,6 @@
 -- 內建角色、群組、功能、預設授權與預設選單。可重複執行：只新增缺少的列（以主鍵比對），不覆寫管理員之後的調整；
 -- 要改既有環境的值，另寫 Data/<版本>/ 的一次性腳本。
--- 由 scripts/Deploy-Database.ps1 在結構與全文之後執行（docs/operations/database-setup.md）；整合測試的範本資料庫也執行這一份。
+-- 發版時在結構與全文之後執行（Publish-IIS.ps1 放進套件的 database/release/，見 docs/operations/database-setup.md）；整合測試的範本資料庫也執行這一份。
 SET XACT_ABORT ON;
 SET NOCOUNT ON;
 BEGIN TRANSACTION;

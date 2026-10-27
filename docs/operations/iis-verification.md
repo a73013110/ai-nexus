@@ -2,17 +2,19 @@
 
 ## 分層驗收：確定設定正確
 
-先執行套件附的靜態檢查（appcmd 檢查需管理員權限）：
+先在 IIS 主機對照以下靜態項目（不需要額外工具）：
 
-```powershell
-pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-IIS.ps1' `
-  -AppPath 'D:\CoreProject\AiNexus\app' -AppPool AiNexus `
-  -BaseUrl 'https://你的實際主機名稱'
-```
+| 項目 | 應為 |
+|---|---|
+| app 必要檔案 | `AiNexus.Host.dll`、`AiNexus.Host.runtimeconfig.json`、`appsettings.json`、`web.config`、`wwwroot\index.html` 都在 |
+| `web.config` 的 `aspNetCore` | `hostingModel="inprocess"`、`stdoutLogEnabled="false"`、環境變數 `ASPNETCORE_ENVIRONMENT=Production`（自簽 SQL 憑證也一樣） |
+| 外部設定 | `LocalConfigPath`、`SecretsConfigPath`（預設 `..\config\` 下兩個 JSON）存在；`AllowedHosts` 是實際 DNS 主機名稱，不是範本的 `company.internal` |
+| 站外目錄 | `Files.StoragePath` 與 `Diagnostics.Directory` 是 app 以外的絕對路徑且已建立；診斷日誌路徑不經過 junction 或 symlink；`web.config` 的同名環境變數優先於 JSON |
+| 金鑰與秘密 | `..\keys` 存在；`wwwroot` 裡沒有任何設定檔 |
+| application pool | .NET CLR 版本「沒有 Managed 程式碼」、32 位元停用、載入使用者設定檔、最大背景工作處理序 1、閒置逾時 0、啟動模式 AlwaysRunning、停用重疊回收（設定方式見 [站外目錄、ACL 與集區](iis-site.md)） |
+| HTTPS | `https://<主機>/health/live` 回 200；`/api/v1/auth/session` 的 `configured` 為 true（實際 AD 登入仍要在瀏覽器驗收） |
 
-它檢查必要檔案、Production、外部設定位置、金鑰及站外原檔目錄、Host、集區與 HTTPS session；不會顯示秘密，也不聲稱讀得到檔案就代表集區身分可讀。
-
-結構部署後，先以套件的 `Verify-Database.ps1` 比對正式庫的實際結構，見[部署後結構驗證](database-verification.md)。
+讀得到檔案不代表集區身分可讀；集區的 ACL 由下面的 `verify deployment` 與實際網站驗收。資料庫結構以 [結構描述比對](database-verification.md#部署後驗證) 確認沒有差異。
 
 再做 **SQL／設定與原檔 IO 驗證**，不啟動背景 workers、不登入 AD、不產生 AI 回答（僅讀取模型清單）：
 
