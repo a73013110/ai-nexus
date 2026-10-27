@@ -48,34 +48,41 @@ public sealed class FeatureCatalogTests
     {
         var order = DataScopes.Definitions.Select(x => x.Id).ToList();
         Assert.Equal(order.Count, order.Distinct().Count());
+        Assert.All(DataScopes.Manager, x => Assert.Equal(DataScopeUnits.Managed, x.Units));
+        Assert.DoesNotContain(DataScopes.Member, x => x.Units == DataScopeUnits.Managed);
         var problems = FeatureCatalog.All.SelectMany(ScopeProblems).ToList();
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
 
     [Fact]
-    public void ManagerScopeMustBeAUnitScopeTheFeatureSupports()
+    public void ManagerScopesComeFromTheManagerSetAndNeedMemberScopes()
     {
         var module = FeatureCatalog.Modules[0];
-        FeatureDefinition Declare(string? manager, params string[] scopes) => new("fixture.page", FeatureKind.Page, module, "測試", "list") { Scopes = scopes, ManagerScope = manager };
+        FeatureDefinition Declare(string[] scopes, params string[] managers) => new("fixture.page", FeatureKind.Page, module, "測試", "list") { Scopes = scopes, ManagerScopes = managers };
 
-        Assert.Empty(ScopeProblems(Declare(DataScopes.UnitTree, DataScopes.Own, DataScopes.UnitTree)));
-        Assert.Single(ScopeProblems(Declare(DataScopes.UnitTree, DataScopes.Own, DataScopes.Unit)));
-        Assert.Single(ScopeProblems(Declare(DataScopes.Unit)));
-        Assert.Single(ScopeProblems(Declare(DataScopes.All, DataScopes.Own, DataScopes.All)));
+        Assert.Empty(ScopeProblems(Declare([DataScopes.Own, DataScopes.All], DataScopes.Managed, DataScopes.ManagedTree)));
+        Assert.Single(ScopeProblems(Declare([DataScopes.Own], DataScopes.ManagedTree, DataScopes.Managed)));
+        Assert.Single(ScopeProblems(Declare([DataScopes.Own], DataScopes.UnitTree)));
+        Assert.Single(ScopeProblems(Declare([DataScopes.Own, DataScopes.Managed])));
+        Assert.Single(ScopeProblems(Declare([], DataScopes.Managed)));
         // 主管範圍目前只給出勤紀錄；稽核等其他功能不宣告，主管不因此多看到資料。
-        Assert.Equal([FeatureCatalog.AttendanceRecords], FeatureCatalog.All.Where(x => x.ManagerScope is not null).Select(x => x.Id));
-        Assert.Equal(DataScopes.UnitTree, FeatureCatalog.Find(FeatureCatalog.AttendanceRecords)!.ManagerScope);
+        Assert.Equal([FeatureCatalog.AttendanceRecords], FeatureCatalog.All.Where(x => x.ManagerScopes.Count > 0).Select(x => x.Id));
     }
 
-    /// <summary>範圍宣告的規則：只在授權上、代碼已知、由窄到寬不重複；主管範圍限 <c>unit</c>／<c>unit-tree</c> 且在 <c>Scopes</c> 之內。</summary>
+    /// <summary>範圍宣告的規則：只在授權上；成員範圍與主管範圍各取自自己那一組，由窄到寬不重複；有主管範圍就要有成員範圍。</summary>
     private static IEnumerable<string> ScopeProblems(FeatureDefinition feature)
     {
-        var order = DataScopes.Definitions.Select(x => x.Id).ToList();
         if (feature.Scopes.Count > 0 && !feature.IsGrant) yield return $"{feature.Id}：閱讀器不是授權，不能宣告資料範圍。";
-        if (feature.Scopes.Any(x => !order.Contains(x))) yield return $"{feature.Id}：範圍代碼不認得。";
-        if (!feature.Scopes.SequenceEqual(feature.Scopes.Distinct().OrderBy(order.IndexOf))) yield return $"{feature.Id}：範圍要由窄到寬且不重複。";
-        if (feature.ManagerScope is { } manager && (manager is not (DataScopes.Unit or DataScopes.UnitTree) || !feature.Scopes.Contains(manager)))
-            yield return $"{feature.Id}：主管範圍 {manager} 必須是 unit 或 unit-tree，且在宣告的範圍內。";
+        if (OrderProblem(feature.Scopes, DataScopes.Member) is { } member) yield return $"{feature.Id}：範圍{member}";
+        if (OrderProblem(feature.ManagerScopes, DataScopes.Manager) is { } manager) yield return $"{feature.Id}：主管範圍{manager}";
+        if (feature.ManagerScopes.Count > 0 && feature.Scopes.Count == 0) yield return $"{feature.Id}：宣告主管範圍時也要宣告所有成員的範圍。";
+    }
+
+    private static string? OrderProblem(IReadOnlyList<string> declared, IReadOnlyList<DataScopeDefinition> set)
+    {
+        var order = set.Select(x => x.Id).ToList();
+        if (declared.Any(x => !order.Contains(x))) return "代碼不在這一組。";
+        return declared.SequenceEqual(declared.Distinct().OrderBy(order.IndexOf)) ? null : "要由窄到寬且不重複。";
     }
 
     [Fact]

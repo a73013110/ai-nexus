@@ -296,7 +296,7 @@ export function accessEditorTour(options: {
       {
         target: `${host} .access-scopes`,
         title: '資料範圍',
-        description: `有資料範圍的功能要選看得到誰的資料，預設最窄、多群組取聯集；所屬單位在「${names.organization}」頁維護。`,
+        description: `有資料範圍的功能要選所有成員看得到誰的資料，部分功能可再讓主管多看所管單位；預設最窄、多群組取聯集，單位與主管在「${names.organization}」頁維護。`,
         side: 'top',
       },
       {

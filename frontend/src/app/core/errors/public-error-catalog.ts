@@ -41,7 +41,8 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   invalid_access_id: '識別碼使用小寫英文、數字、底線與連字號，最多 64 字元。',
   invalid_access_ids: '授權清單過長或有重複。',
   invalid_access_name: '請輸入 120 字元內的名稱。',
-  invalid_data_scope: '請為每個支援資料範圍的功能選擇一個它支援的範圍；其他功能不帶範圍。',
+  invalid_data_scope:
+    '請為每個支援資料範圍的功能選擇一個它支援的範圍，主管範圍只能選該功能支援的值；其他功能不帶範圍。',
   unknown_access_id: '清單包含不存在的角色、群組或功能。',
   admin_resource_not_found: '找不到此管理項目。',
   admin_lockout: '此變更會撤銷你的管理權限。請先由另一位管理員處理。',

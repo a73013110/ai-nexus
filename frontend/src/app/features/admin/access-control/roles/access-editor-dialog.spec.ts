@@ -195,6 +195,7 @@ describe('AccessEditorDialog', () => {
       enabled: true,
       featureIds: ['repositories', 'off'],
       scopes: {},
+      managerScopes: {},
       policy: { allowedModelIds: null, dailyTokenLimits: {}, storedAttachmentLimitBytes: 2e9 },
     });
   });
@@ -222,6 +223,63 @@ describe('AccessEditorDialog', () => {
         scopes: { audit: 'unit-tree' },
       }),
     );
+  });
+
+  it('offers manager scopes only where declared, defaulting to none and folding them into all', async () => {
+    const { dialog, api } = setup();
+    dialog.open('group', group);
+    dialog.update('ids', ['audit', 'attendance.records']);
+    const [audit, records] = dialog.scopedGrants();
+    // 稽核沒宣告主管範圍，不顯示第二個選單；出勤紀錄新勾選時是最窄的本人＋不另外。
+    expect(audit.manager).toBeNull();
+    expect(records.value).toBe('own');
+    expect(records.manager?.value).toBe('');
+    expect(records.manager?.options.map((option) => option.label)).toEqual([
+      '不另外',
+      '所管單位',
+      '所管單位及下層',
+    ]);
+    expect(dialog.managerScoped()).toBe(true);
+    dialog.updateScope('attendance.records', 'managed-tree', 'managerScopes');
+    expect(dialog.scopedGrants()[1].manager?.value).toBe('managed-tree');
+    // 所有成員選全部時已含主管可看的範圍：第二個選單停用、顯示「已含」，也不送出。
+    dialog.updateScope('attendance.records', 'all');
+    expect(dialog.scopedGrants()[1].manager).toMatchObject({
+      included: true,
+      value: 'included',
+      options: [{ value: 'included', label: '已含' }],
+    });
+    await dialog.save(new Event('submit'));
+    expect(api.group).toHaveBeenLastCalledWith(
+      'review',
+      expect.objectContaining({
+        scopes: { audit: 'own', 'attendance.records': 'all' },
+        managerScopes: {},
+      }),
+    );
+    // 改回窄的範圍時，先前選的主管範圍還在。
+    dialog.updateScope('attendance.records', 'own');
+    await dialog.save(new Event('submit'));
+    expect(api.group).toHaveBeenLastCalledWith(
+      'review',
+      expect.objectContaining({ managerScopes: { 'attendance.records': 'managed-tree' } }),
+    );
+  });
+
+  it('opens saved manager scopes and treats changing them as unsaved', () => {
+    const { dialog } = setup();
+    const scoped = {
+      ...group,
+      featureIds: ['attendance.records'],
+      scopes: { 'attendance.records': 'own' },
+      managerScopes: { 'attendance.records': 'managed-tree' },
+    } as AdminGroupDto;
+    dialog.open('group', scoped);
+    expect(dialog.scopedGrants()[0].manager?.value).toBe('managed-tree');
+    dialog.updateScope('attendance.records', '', 'managerScopes');
+    expect(dialog.dirty()).toBe(true);
+    dialog.updateScope('attendance.records', 'managed-tree', 'managerScopes');
+    expect(dialog.dirty()).toBe(false);
   });
 
   it('treats a changed scope as unsaved and ignores scopes of features no longer granted', () => {

@@ -255,14 +255,26 @@ export function auditChanges(
     return [];
   }
 }
-/** 群組授權的資料範圍快照是 `[{ featureId, scope }]`（稽核遮罩只留白名單欄位，所以不是以功能為鍵的物件）。 */
+/**
+ * 群組授權的資料範圍快照是 `[{ featureId, scope, managerScope }]`（稽核遮罩只留白名單欄位，所以不是以功能為鍵的物件）；
+ * 舊快照沒有 `managerScope`。
+ */
 function displayScopes(value: unknown[]) {
+  const name = (scope: string) => CATALOG_SCOPES.find((x) => x.id === scope)?.name ?? scope;
   return (
     value
       .map((item) => {
-        const { featureId, scope } = (item ?? {}) as { featureId?: string; scope?: string };
+        const { featureId, scope, managerScope } = (item ?? {}) as {
+          featureId?: string;
+          scope?: string | null;
+          managerScope?: string | null;
+        };
         const feature = catalogFeature(String(featureId))?.name ?? String(featureId);
-        return `${feature}：${CATALOG_SCOPES.find((x) => x.id === scope)?.name ?? String(scope)}`;
+        const parts = [
+          scope == null ? '' : name(scope),
+          managerScope == null ? '' : `主管另可看${name(managerScope)}`,
+        ].filter(Boolean);
+        return `${feature}：${parts.join('，')}`;
       })
       .join('、') || '無'
   );

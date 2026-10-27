@@ -70,7 +70,7 @@
 ## 權限與畫面
 
 - 頁面（`FeatureCatalog`）：
-  - `attendance.records` 出勤紀錄：範圍 `own`、`unit`、`unit-tree`、`all`；一般人預設 `own`，主管 `unit-tree`，HR `all`。
+  - `attendance.records` 出勤紀錄：範圍 `own`、`unit`、`unit-tree`、`all`；一般人預設 `own`，主管 `managed-tree`，HR `all`。
   - `attendance.cards` 卡號對應（含待指派、持有歷史）、`attendance.imports` 匯入紀錄、`attendance.calendar` 假日設定：授權給 HR 群組，HR 不需要使用者管理權限。
 - 出勤名單＝查詢期間持有卡的人；HR 看全公司且沒指定人時略過隱藏的卡，取代舊欄位「顯示打卡資料」。不是隱私控制，本人與主管仍依範圍看得到。
 - 選單：`attendance.records` 放「員工服務」分群；管理頁放「系統管理 → 人事與出勤」。使用者詳細頁顯示卡號時由前端另呼叫出勤 API，Identity 不依賴 Attendance。

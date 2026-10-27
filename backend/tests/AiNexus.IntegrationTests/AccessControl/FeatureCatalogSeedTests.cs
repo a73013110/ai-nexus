@@ -1,6 +1,7 @@
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
+using AiNexus.Features.Admin.AccessControl.Scopes;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.IntegrationTests.AccessControl;
@@ -86,10 +87,14 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var grants = await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId, x.Scope }).ToListAsync();
-            var wrong = grants.Where(x => FeatureCatalog.Find(x.FeatureId)?.Scopes is { } supported && (supported.Count == 0 ? x.Scope is not null : x.Scope is null || !supported.Contains(x.Scope)))
-                .Select(x => $"- {x.GroupId}→{x.FeatureId}：{x.Scope ?? "NULL"}").ToList();
-            Assert.True(wrong.Count == 0, $"{Seed} 的預設授權範圍要符合 {Catalog} 的宣告：有宣告範圍的功能給一個支援的範圍，其他為 NULL（ADR 0017）：\n" + string.Join("\n", wrong));
+            var grants = await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId, x.Scope, x.ManagerScope }).ToListAsync();
+            var wrong = grants.Where(x => FeatureCatalog.Find(x.FeatureId) is { } feature && (
+                    (feature.Scopes.Count == 0 ? x.Scope is not null : x.Scope is null || !feature.Scopes.Contains(x.Scope))
+                    // 主管範圍可以不給；給了就要是宣告支援的值，而且範圍是 all 時沒有意義（IDataScope 不另外計算）。
+                    || (x.ManagerScope is not null && (!feature.ManagerScopes.Contains(x.ManagerScope) || x.Scope == DataScopes.All))))
+                .Select(x => $"- {x.GroupId}→{x.FeatureId}：{x.Scope ?? "NULL"}／主管 {x.ManagerScope ?? "NULL"}").ToList();
+            Assert.True(wrong.Count == 0, $"{Seed} 的預設授權範圍要符合 {Catalog} 的宣告：有宣告範圍的功能給一個支援的範圍，其他為 NULL（ADR 0017）；" +
+                $"主管範圍只給宣告了的功能，範圍是 all 時為 NULL（ADR 0022）：\n" + string.Join("\n", wrong));
         });
     }
 
@@ -103,7 +108,7 @@ public sealed class FeatureCatalogSeedTests
             // 目錄的 Scopes 由窄到寬（FeatureCatalogTests 檢查），最後一個就是最寬；有 all 時即 all。沒有宣告範圍的為 NULL。
             var problems = FeatureCatalog.Grants.Select(x => (x.Id, Widest: x.Scopes.Count == 0 ? null : x.Scopes[^1]))
                 .Select(x => !held.TryGetValue(x.Id, out var scope)
-                    ? $"- 缺少 {x.Id}：補上 (N'{BuiltInAccess.AdministratorsGroup}', N'{x.Id}', {Sql(x.Widest)})"
+                    ? $"- 缺少 {x.Id}：補上 (N'{BuiltInAccess.AdministratorsGroup}', N'{x.Id}', {Sql(x.Widest)}, NULL)"
                     : scope != x.Widest ? $"- {x.Id} 的範圍是 {Sql(scope)}，應為最寬的 {Sql(x.Widest)}" : null)
                 .OfType<string>().ToList();
             Assert.True(problems.Count == 0,

@@ -11,7 +11,7 @@ namespace AiNexus.IntegrationTests.Attendance;
 
 /// <summary>
 /// 出勤紀錄依 <c>attendance.records</c> 的資料範圍決定看得到誰（ADR 0018）：own、unit、unit-tree、all，多群組以 OR 合併；
-/// 組織勾選的主管另外自動看得到所管單位含下層（目錄的主管範圍，ADR 0017）。
+/// 組織勾選的主管另外看得到所管單位含下層（Seed 的 workspace 授權給了主管範圍 managed-tree，ADR 0022）。
 /// </summary>
 public sealed class AttendanceRecordsScopeTests
 {
@@ -102,7 +102,7 @@ public sealed class AttendanceRecordsScopeTests
         using var client = await session.Factory.SignedInAsync("bob");
         var queries = session.Factory.Services.GetRequiredService<RequestQueries>();
 
-        // 預設只有 workspace 的 own，主管範圍再加上所管單位含下層；停用單位與非主管的人資處不算。
+        // 預設是 workspace 的 own＋managed-tree：再加上所管單位含下層；停用單位與非主管的人資處不算。
         queries.Clear();
         Assert.Equal(Sorted(bob, frank, carol, grace), await PeopleAsync(client));
         // 授權只讀一次；單位樹讀兩次（所屬＋下層），不隨所管單位數增加。
@@ -112,7 +112,19 @@ public sealed class AttendanceRecordsScopeTests
         // 與群組範圍以 OR 合併。
         await session.GrantAsync(bob, DataScopes.Unit);
         Assert.Equal(Sorted(bob, frank, carol, dave, grace), await PeopleAsync(client));
+        // 範圍是 all 時不另外計算主管範圍，也不讀單位。
+        await SetScopeAsync(session, DataScopes.All);
+        queries.Clear();
+        Assert.Equal(Sorted(bob, frank, carol, erin, dave, grace), await PeopleAsync(client));
+        Assert.Equal(0, queries.Count(Records, "[organization].[Units]"));
         await session.WithDbAsync(db => db.Set<UserRole>().Where(x => x.UserId == bob && x.RoleId == "test-records-" + DataScopes.Unit).ExecuteDeleteAsync());
+
+        // 主管範圍存在授權上，可逐群組調整：不另外時只看自己；managed 只含所管單位本身，不含下層的系統部。
+        await SetManagerScopeAsync(session, null);
+        Assert.Equal([bob], await PeopleAsync(client));
+        await SetManagerScopeAsync(session, DataScopes.Managed);
+        Assert.Equal(Sorted(bob, frank, grace), await PeopleAsync(client));
+        await SetManagerScopeAsync(session, DataScopes.ManagedTree);
 
         // 取消主管勾選就失效。
         await session.WithDbAsync(db => db.Set<UnitMember>().Where(x => x.UserId == bob && x.UnitId == lab)
@@ -140,6 +152,9 @@ public sealed class AttendanceRecordsScopeTests
     }
 
     private static Guid[] Sorted(params Guid[] ids) => [.. ids.Order()];
+
+    private static Task SetManagerScopeAsync(RecordsSession session, string? scope) => session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteUpdateAsync(x => x.SetProperty(y => y.ManagerScope, scope)));
 
     private static Task SetScopeAsync(RecordsSession session, string scope) => session.WithDbAsync(db => db.Set<RoleGroupFeature>()
         .Where(x => x.GroupId == "test-records-" + DataScopes.Unit).ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope)));

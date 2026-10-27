@@ -61,6 +61,22 @@ describe('audit presentation', () => {
       }),
     ]);
   });
+  it('shows the manager scope next to the member scope', () => {
+    const changes = auditChanges(
+      JSON.stringify({
+        before: { scopes: [{ featureId: 'attendance.records', scope: 'own', managerScope: null }] },
+        after: {
+          scopes: [{ featureId: 'attendance.records', scope: 'own', managerScope: 'managed-tree' }],
+        },
+      }),
+    );
+    expect(changes).toEqual([
+      expect.objectContaining({
+        before: '出勤紀錄：本人',
+        after: '出勤紀錄：本人，主管另可看所管單位及下層',
+      }),
+    ]);
+  });
   it('does not label successful removal, scheduling or legacy read operations as rejected', () => {
     for (const result of [
       'created',

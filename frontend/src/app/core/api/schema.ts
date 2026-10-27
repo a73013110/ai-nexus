@@ -9029,6 +9029,9 @@ export interface components {
             scopes: {
                 [key: string]: string;
             };
+            managerScopes: {
+                [key: string]: string;
+            };
         };
         AdminMessageDto: {
             /** Format: uuid */
@@ -10231,6 +10234,9 @@ export interface components {
             featureIds: string[];
             policy?: null | components["schemas"]["GroupPolicyRequest"];
             scopes?: null | {
+                [key: string]: string;
+            };
+            managerScopes?: null | {
                 [key: string]: string;
             };
         };

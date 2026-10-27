@@ -66,6 +66,8 @@ interface Editor {
   ids: string[];
   /** 群組授權的資料範圍（功能 ID → 範圍）；未選過的功能取它支援的最窄範圍，見 `grantScopes`。 */
   scopes: Record<string, string>;
+  /** 主管另可看的範圍（功能 ID → 範圍）；沒有或空字串＝不另外，見 `grantManagerScopes`。 */
+  managerScopes: Record<string, string>;
   modelPolicy: ModelPolicyDraft;
   storage: string;
   /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
@@ -73,9 +75,23 @@ interface Editor {
   isNew: boolean;
 }
 
-/** 功能在目錄宣告支援的資料範圍，由窄到寬；空的表示授權不帶範圍（ADR 0017）。 */
-function supportedScopes(id: string): readonly string[] {
-  return catalogFeature(id)?.scopes ?? [];
+/** 授權上的兩種範圍：`scopes` 給群組的所有成員，`managerScopes` 是成員中組織勾選為主管的人另可看的（ADR 0017、0022）。 */
+type ScopeAxis = 'scopes' | 'managerScopes';
+/** 「主管另可看」的「不另外」；`Select` 的值是字串，用空字串代表沒有主管範圍。 */
+const NO_MANAGER_SCOPE = '';
+/** 「所有成員」已是全部時，主管範圍沒有意義，第二個選單停用並顯示「已含」。 */
+const INCLUDED = 'included';
+
+/** 功能在目錄宣告支援的範圍，由窄到寬；空的表示授權不帶這種範圍。 */
+function supportedScopes(id: string, axis: ScopeAxis): readonly string[] {
+  return catalogFeature(id)?.[axis] ?? [];
+}
+
+function scopeOptions(ids: readonly string[]): SelectOption[] {
+  return CATALOG_SCOPES.filter((scope) => ids.includes(scope.id)).map((scope) => ({
+    value: scope.id,
+    label: scope.name,
+  }));
 }
 
 /**
@@ -85,16 +101,42 @@ function supportedScopes(id: string): readonly string[] {
 export function grantScopes(ids: readonly string[], scopes: Record<string, string>) {
   const result: Record<string, string> = {};
   for (const id of ids) {
-    const supported = supportedScopes(id);
+    const supported = supportedScopes(id, 'scopes');
     if (supported.length) result[id] = supported.includes(scopes[id]) ? scopes[id] : supported[0];
   }
   return result;
 }
 
+/**
+ * 送給伺服器的主管範圍：只含已勾選、目錄有宣告主管範圍且選了支援值的功能；其餘（含新勾選的）是不另外。
+ * 所有成員已是全部時不送：伺服器也不會另外計算。
+ */
+export function grantManagerScopes(
+  ids: readonly string[],
+  scopes: Record<string, string>,
+  managerScopes: Record<string, string>,
+) {
+  const members = grantScopes(ids, scopes);
+  const result: Record<string, string> = {};
+  for (const id of ids)
+    if (members[id] !== 'all' && supportedScopes(id, 'managerScopes').includes(managerScopes[id]))
+      result[id] = managerScopes[id];
+  return result;
+}
+
+function sameRecord(a: Record<string, string>, b: Record<string, string>) {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((id) => a[id] === b[id]);
+}
+
 function sameScopes(first: Editor, second: Editor) {
-  const a = grantScopes(first.ids, first.scopes),
-    b = grantScopes(second.ids, second.scopes);
-  return Object.keys(a).every((id) => a[id] === b[id]);
+  return (
+    sameRecord(grantScopes(first.ids, first.scopes), grantScopes(second.ids, second.scopes)) &&
+    sameRecord(
+      grantManagerScopes(first.ids, first.scopes, first.managerScopes),
+      grantManagerScopes(second.ids, second.scopes, second.managerScopes),
+    )
+  );
 }
 
 /** 草稿是否與已儲存的內容相同。 */
@@ -150,6 +192,15 @@ export function featureNameOverride(name: string, defaultName: string) {
       align-items: center;
       gap: var(--p-space-2);
       color: var(--secondary);
+    }
+    /* 一個功能一列：功能名稱在上，「所有成員」與「主管另可看」兩個選單並排。 */
+    .access-scope {
+      display: grid;
+      gap: var(--p-space-2);
+      min-width: 0;
+    }
+    .access-scope-name {
+      font-weight: 500;
     }
   `,
 })
@@ -212,23 +263,40 @@ export class AccessEditorDialog {
       options: (this.store.catalog()?.groups || []).map(accessChoice),
     },
   ]);
-  /** 已勾選且有資料範圍的功能，各自的範圍選項只列目錄宣告支援的。 */
+  /**
+   * 已勾選且有資料範圍的功能一列，選項只列目錄宣告支援的。`manager` 是「主管另可看」，
+   * 功能沒宣告主管範圍時為 null（不顯示第二個選單）。
+   */
   readonly scopedGrants = computed(() => {
     const draft = this.editor();
     if (!draft || draft.kind !== 'group') return [];
-    const scopes = grantScopes(draft.ids, draft.scopes);
+    const scopes = grantScopes(draft.ids, draft.scopes),
+      managerScopes = grantManagerScopes(draft.ids, draft.scopes, draft.managerScopes);
     const names = new Map(
       (this.store.catalog()?.features || []).map((item) => [item.id, item.name]),
     );
-    return Object.keys(scopes).map((id) => ({
-      id,
-      name: names.get(id) || catalogFeature(id)?.name || id,
-      value: scopes[id],
-      options: CATALOG_SCOPES.filter((scope) => supportedScopes(id).includes(scope.id)).map(
-        (scope): SelectOption => ({ value: scope.id, label: scope.name }),
-      ),
-    }));
+    return Object.keys(scopes).map((id) => {
+      const managers = supportedScopes(id, 'managerScopes'),
+        included = scopes[id] === 'all';
+      return {
+        id,
+        name: names.get(id) || catalogFeature(id)?.name || id,
+        value: scopes[id],
+        options: scopeOptions(supportedScopes(id, 'scopes')),
+        manager: managers.length
+          ? {
+              value: included ? INCLUDED : (managerScopes[id] ?? NO_MANAGER_SCOPE),
+              options: included
+                ? [{ value: INCLUDED, label: '已含' }]
+                : [{ value: NO_MANAGER_SCOPE, label: '不另外' }, ...scopeOptions(managers)],
+              included,
+            }
+          : null,
+      };
+    });
   });
+  /** 有任一功能能另外給主管時，才需要說明主管是誰。 */
+  readonly managerScoped = computed(() => this.scopedGrants().some((grant) => grant.manager));
   readonly tour = computed(() => {
     const draft = this.editor();
     return draft
@@ -276,6 +344,7 @@ export class AccessEditorDialog {
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: [...(role?.groupIds || group?.featureIds || [])],
       scopes: { ...group?.scopes },
+      managerScopes: { ...group?.managerScopes },
       modelPolicy: modelPolicyDraft(group?.policy),
       storage:
         group?.policy?.storedAttachmentLimitBytes == null
@@ -297,9 +366,9 @@ export class AccessEditorDialog {
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
     this.editor.update((old) => (old ? { ...old, [key]: value } : null));
   }
-  updateScope(feature: string, scope: string) {
+  updateScope(feature: string, scope: string, axis: ScopeAxis = 'scopes') {
     this.editor.update((old) =>
-      old ? { ...old, scopes: { ...old.scopes, [feature]: scope } } : null,
+      old ? { ...old, [axis]: { ...old[axis], [feature]: scope } } : null,
     );
   }
   /** 還原為開啟時的值；分頁停留在原位。 */
@@ -379,6 +448,7 @@ export class AccessEditorDialog {
           enabled: draft.enabled,
           featureIds: draft.ids,
           scopes: grantScopes(draft.ids, draft.scopes),
+          managerScopes: grantManagerScopes(draft.ids, draft.scopes, draft.managerScopes),
           policy,
         });
       if (draft.kind === 'feature')

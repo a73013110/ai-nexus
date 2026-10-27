@@ -53,17 +53,24 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var groups = await db.Set<RoleGroup>().AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
-        // 一次讀出授權與範圍：同一功能可能由多個群組授予，各帶一個範圍。
+        // 一次讀出授權與範圍：同一功能可能由多個群組授予，各帶一個成員範圍與一個主管範圍。
         var granted = await (from grant in db.Set<RoleGroupFeature>()
                              join feature in db.Set<Feature>() on grant.FeatureId equals feature.Id
                              where enabledGroups.Contains(grant.GroupId) && feature.Enabled
-                             select new { Feature = feature, grant.Scope }).AsNoTracking().ToListAsync(ct);
+                             select new { Feature = feature, grant.Scope, grant.ManagerScope }).AsNoTracking().ToListAsync(ct);
         var rows = granted.Select(x => x.Feature).DistinctBy(x => x.Id);
-        // 目錄不支援的範圍（舊資料、目錄縮減後）與 null 都不算：失敗即拒絕，沒有範圍就沒有資料。
-        var scopes = granted.Where(x => x.Scope is not null && FeatureCatalog.Find(x.Feature.Id)?.Scopes.Contains(x.Scope) == true)
-            .GroupBy(x => x.Feature.Id, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope!).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
+        // 兩種範圍的代碼不重複，放進同一個集合；目錄不支援的值（舊資料、目錄縮減後）與 null 都不算：失敗即拒絕，沒有範圍就沒有資料。
+        var scopes = granted.SelectMany(x => SupportedScopes(x.Feature.Id, x.Scope, x.ManagerScope).Select(scope => (x.Feature.Id, Scope: scope)))
+            .GroupBy(x => x.Id, StringComparer.Ordinal)
+            .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
         return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { GrantedScopes = scopes };
+    }
+
+    private static IEnumerable<string> SupportedScopes(string featureId, string? scope, string? managerScope)
+    {
+        if (FeatureCatalog.Find(featureId) is not { } feature) yield break;
+        if (scope is not null && feature.Scopes.Contains(scope)) yield return scope;
+        if (managerScope is not null && feature.ManagerScopes.Contains(managerScope)) yield return managerScope;
     }
 
     // 啟用的使用者經由啟用的角色取得的啟用群組。SQL 報表（儲存上限、管理列表）用同一條規則的 accesscontrol.udf_UserGroups；

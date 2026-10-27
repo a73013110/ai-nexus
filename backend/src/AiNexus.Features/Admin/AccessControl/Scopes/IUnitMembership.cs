@@ -1,10 +1,19 @@
 namespace AiNexus.Features.Admin.AccessControl.Scopes;
 
 /// <summary>使用者目前所屬的有效單位，以及其中組織管理勾選為主管的單位（主管範圍只看後者）。</summary>
-public sealed record UnitsOfUser(IReadOnlyList<Guid> UnitIds, IReadOnlyList<Guid> ManagedUnitIds);
+public sealed record UnitsOfUser(IReadOnlyList<Guid> UnitIds, IReadOnlyList<Guid> ManagedUnitIds)
+{
+    /// <summary>範圍依據的單位（<see cref="DataScopeDefinition.Units"/>）。</summary>
+    public IReadOnlyList<Guid> Of(DataScopeUnits units) => units switch
+    {
+        DataScopeUnits.Member => UnitIds,
+        DataScopeUnits.Managed => ManagedUnitIds,
+        _ => [],
+    };
+}
 
 /// <summary>
-/// 計算 <c>unit</c>、<c>unit-tree</c> 與主管範圍需要的組織資料。由 Organization 實作（<c>OrganizationDirectory</c>），同 <see cref="IRequestActor"/> 的做法：
+/// 計算依單位的範圍（<c>unit</c>、<c>unit-tree</c>、<c>managed</c>、<c>managed-tree</c>）需要的組織資料。由 Organization 實作（<c>OrganizationDirectory</c>），同 <see cref="IRequestActor"/> 的做法：
 /// AccessControl 被所有模組引用，反過來依賴 Organization 會成環（ADR 0017）。只回答「現在」的有效單位，停用的單位連同下層都不算。
 /// </summary>
 public interface IUnitMembership

@@ -43340,7 +43340,8 @@
           "enabled",
           "featureIds",
           "policy",
-          "scopes"
+          "scopes",
+          "managerScopes"
         ],
         "type": "object",
         "properties": {
@@ -43370,6 +43371,12 @@
             ]
           },
           "scopes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "managerScopes": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -48180,6 +48187,15 @@
             ]
           },
           "scopes": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "managerScopes": {
             "type": [
               "null",
               "object"
@@ -54999,7 +55015,7 @@
         "icon": "dashboard",
         "route": "/work/dashboard",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "chat",
@@ -55009,7 +55025,7 @@
         "icon": "chat",
         "route": "/work/chat",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "projects",
@@ -55019,7 +55035,7 @@
         "icon": "projects",
         "route": "/work/projects",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "files",
@@ -55029,7 +55045,7 @@
         "icon": "files",
         "route": "/work/files",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "files.reader",
@@ -55039,7 +55055,7 @@
         "icon": "files",
         "route": "/work/files/reader",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge",
@@ -55049,7 +55065,7 @@
         "icon": "library",
         "route": "/work/knowledge",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge.reader",
@@ -55059,7 +55075,7 @@
         "icon": "document",
         "route": "/work/knowledge/reader",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge.retrieval",
@@ -55069,7 +55085,7 @@
         "icon": "database",
         "route": "/work/knowledge/retrieval",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "artifacts",
@@ -55079,7 +55095,7 @@
         "icon": "document",
         "route": "/work/artifacts",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "sharing",
@@ -55089,7 +55105,7 @@
         "icon": "share",
         "route": "/work/sharing",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "sharing.reader",
@@ -55099,7 +55115,7 @@
         "icon": "share",
         "route": "/work/sharing/reader",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "jobs",
@@ -55109,7 +55125,7 @@
         "icon": "tasks",
         "route": "/work/jobs",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "repositories",
@@ -55119,7 +55135,7 @@
         "icon": "git",
         "route": "/work/repositories",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.records",
@@ -55134,7 +55150,10 @@
           "unit-tree",
           "all"
         ],
-        "managerScope": "unit-tree"
+        "managerScopes": [
+          "managed",
+          "managed-tree"
+        ]
       },
       {
         "id": "attendance.cards",
@@ -55144,7 +55163,7 @@
         "icon": "tag",
         "route": "/office/attendance/cards",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.cards.maintain",
@@ -55154,7 +55173,7 @@
         "icon": "edit",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.imports",
@@ -55164,7 +55183,7 @@
         "icon": "import",
         "route": "/office/attendance/imports",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.imports.reimport",
@@ -55174,7 +55193,7 @@
         "icon": "repeat",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.calendar",
@@ -55184,7 +55203,7 @@
         "icon": "calendar",
         "route": "/office/attendance/calendar",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.calendar.maintain",
@@ -55194,7 +55213,7 @@
         "icon": "edit",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users",
@@ -55204,7 +55223,7 @@
         "icon": "user",
         "route": "/admin/identity/users",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users.import",
@@ -55214,7 +55233,7 @@
         "icon": "import",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users.sync",
@@ -55224,7 +55243,7 @@
         "icon": "repeat",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.roles",
@@ -55234,7 +55253,7 @@
         "icon": "lock",
         "route": "/admin/access-control/roles",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.groups",
@@ -55244,7 +55263,7 @@
         "icon": "apps",
         "route": "/admin/access-control/groups",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.features",
@@ -55254,7 +55273,7 @@
         "icon": "list",
         "route": "/admin/access-control/features",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.navigation",
@@ -55264,7 +55283,7 @@
         "icon": "sidebar",
         "route": "/admin/access-control/navigation",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "organization",
@@ -55274,7 +55293,7 @@
         "icon": "organization",
         "route": "/admin/organization",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "organization.import",
@@ -55284,7 +55303,7 @@
         "icon": "repeat",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "operations.usage",
@@ -55294,7 +55313,7 @@
         "icon": "chart",
         "route": "/admin/operations/usage",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "billing.prices",
@@ -55304,7 +55323,7 @@
         "icon": "money",
         "route": "/admin/billing/prices",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "monitoring",
@@ -55314,7 +55333,7 @@
         "icon": "activity",
         "route": "/admin/monitoring",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "audit",
@@ -55329,7 +55348,7 @@
           "unit-tree",
           "all"
         ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs",
@@ -55339,7 +55358,7 @@
         "icon": "logs",
         "route": "/admin/diagnostics/logs",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs.detail",
@@ -55349,7 +55368,7 @@
         "icon": "search",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs.export",
@@ -55359,7 +55378,7 @@
         "icon": "download",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "mail.messages",
@@ -55369,7 +55388,7 @@
         "icon": "mail",
         "route": "/admin/mail/messages",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "mail.messages.resend",
@@ -55379,7 +55398,7 @@
         "icon": "repeat",
         "route": null,
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "quality",
@@ -55389,7 +55408,7 @@
         "icon": "shield",
         "route": "/admin/quality",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "quality.retrieval",
@@ -55399,7 +55418,7 @@
         "icon": "search",
         "route": "/admin/quality/retrieval",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       },
       {
         "id": "design",
@@ -55409,7 +55428,7 @@
         "icon": "sliders",
         "route": "/admin/design",
         "scopes": [ ],
-        "managerScope": null
+        "managerScopes": [ ]
       }
     ],
     "scopes": [
@@ -55432,6 +55451,14 @@
       {
         "id": "all",
         "name": "全部"
+      },
+      {
+        "id": "managed",
+        "name": "所管單位"
+      },
+      {
+        "id": "managed-tree",
+        "name": "所管單位及下層"
       }
     ]
   }

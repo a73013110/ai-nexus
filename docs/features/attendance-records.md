@@ -16,7 +16,7 @@
 
 - 支援 `own`、`unit`、`unit-tree`、`all`，套用方式與活動稽核相同：`unit`／`unit-tree` 是範圍單位**目前**的成員，人調走後由新單位的主管看到他過去的出勤。機制見 [資料範圍](../architecture/data-scopes.md)。
 - 授權在但沒有可用範圍：200 與空名單；沒有功能授權：403 `feature_forbidden`。
-- 預設：`workspace` 群組 `own`、`hr` 群組 `all`；組織勾選的主管另外取得所管單位含下層（[主管範圍](../architecture/data-scopes.md#主管範圍)），仍要有 `attendance.records` 授權（`workspace` 已有）。
+- [主管範圍](../architecture/data-scopes.md#主管範圍)支援 `managed`、`managed-tree`。預設：`workspace` 群組 `own`＋主管 `managed-tree`、`hr` 群組 `all`。
 
 ## 名單
 

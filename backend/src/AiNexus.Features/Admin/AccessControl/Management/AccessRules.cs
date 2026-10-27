@@ -35,18 +35,21 @@ public static partial class AccessRules
             : null;
 
     /// <summary>
-    /// 群組授權的資料範圍（ADR 0017）：目錄有宣告範圍的功能必須選一個它支援的範圍，其他功能（含目錄不認得的舊列）不可帶範圍；
-    /// 範圍只能給這次授予的功能。
+    /// 群組授權的資料範圍（ADR 0017、0022），成員範圍與主管範圍套同一條規則：成員範圍在目錄有宣告時必須選一個它支援的，主管範圍可以不選（不另外）；
+    /// 目錄沒宣告的（含目錄不認得的舊列）都不可帶。範圍只能給這次授予的功能。
     /// </summary>
-    public static Error? Scopes(IReadOnlyList<string> featureIds, IReadOnlyDictionary<string, string>? scopes)
+    public static Error? Scopes(IReadOnlyList<string> featureIds, IReadOnlyDictionary<string, string>? scopes, IReadOnlyDictionary<string, string>? managerScopes)
+        => Scopes(featureIds, scopes, x => x.Scopes, required: true) ?? Scopes(featureIds, managerScopes, x => x.ManagerScopes, required: false);
+
+    private static Error? Scopes(IReadOnlyList<string> featureIds, IReadOnlyDictionary<string, string>? scopes, Func<FeatureDefinition, IReadOnlyList<string>> declared, bool required)
     {
         scopes ??= new Dictionary<string, string>();
         if (scopes.Keys.Any(x => !featureIds.Contains(x))) return AccessControlErrors.InvalidDataScope;
         foreach (var id in featureIds)
         {
-            var supported = FeatureCatalog.Find(id)?.Scopes ?? [];
+            var supported = FeatureCatalog.Find(id) is { } feature ? declared(feature) : [];
             var scope = scopes.GetValueOrDefault(id);
-            if (supported.Count == 0 ? scope is not null : scope is null || !supported.Contains(scope)) return AccessControlErrors.InvalidDataScope;
+            if (scope is null ? required && supported.Count > 0 : !supported.Contains(scope)) return AccessControlErrors.InvalidDataScope;
         }
         return null;
     }

@@ -27,10 +27,10 @@ for (const feature of catalog.features) {
   if (!modules.has(feature.module)) fail(`功能 ${feature.id} 的模組 ${feature.module} 不在目錄中。`);
   if ((feature.kind === 'action') !== (feature.route == null))
     fail(`功能 ${feature.id}：只有 action 沒有網址。`);
-  for (const scope of feature.scopes ?? [])
+  for (const scope of [...(feature.scopes ?? []), ...(feature.managerScopes ?? [])])
     if (!scopes.has(scope)) fail(`功能 ${feature.id} 的範圍 ${scope} 不在目錄中。`);
-  if (feature.managerScope != null && !(feature.scopes ?? []).includes(feature.managerScope))
-    fail(`功能 ${feature.id} 的主管範圍 ${feature.managerScope} 不在它支援的範圍內。`);
+  if (feature.managerScopes?.length && !feature.scopes?.length)
+    fail(`功能 ${feature.id} 宣告了主管範圍，卻沒有所有成員的範圍。`);
 }
 
 const pick = (items, keys) => items.map((item) => Object.fromEntries(keys.map((key) => [key, item[key] ?? null])));
@@ -44,10 +44,13 @@ export const CATALOG_AREAS = ${JSON.stringify(pick(catalog.areas, ['id', 'name']
 export const CATALOG_MODULES = ${JSON.stringify(pick(catalog.modules, ['id', 'area', 'name']))} as const;
 
 export const CATALOG_FEATURES = ${JSON.stringify(
-  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route', 'scopes', 'managerScope']),
+  pick(catalog.features, ['id', 'kind', 'module', 'name', 'icon', 'route', 'scopes', 'managerScopes']),
 )} as const;
 
-/** 資料範圍（ADR 0017），由窄到寬；功能的 \`scopes\` 是它支援的子集，空的表示授權不帶範圍；\`managerScope\` 是主管自動取得的範圍（null＝沒有）。 */
+/**
+ * 資料範圍（ADR 0017、0022）：先是所有成員的範圍、再是主管另可看的範圍，各自由窄到寬。
+ * 功能的 \`scopes\`、\`managerScopes\` 各是兩組的子集；\`scopes\` 空的表示授權不帶範圍，\`managerScopes\` 空的表示不能另外給主管。
+ */
 export const CATALOG_SCOPES = ${JSON.stringify(pick(catalog.scopes, ['id', 'name']))} as const;
 
 export type CatalogArea = (typeof CATALOG_AREAS)[number];

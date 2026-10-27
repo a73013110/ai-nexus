@@ -42,7 +42,7 @@ export const CATALOG_FEATURES = [
     icon: 'dashboard',
     route: '/work/dashboard',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'chat',
@@ -52,7 +52,7 @@ export const CATALOG_FEATURES = [
     icon: 'chat',
     route: '/work/chat',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'projects',
@@ -62,7 +62,7 @@ export const CATALOG_FEATURES = [
     icon: 'projects',
     route: '/work/projects',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'files',
@@ -72,7 +72,7 @@ export const CATALOG_FEATURES = [
     icon: 'files',
     route: '/work/files',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'files.reader',
@@ -82,7 +82,7 @@ export const CATALOG_FEATURES = [
     icon: 'files',
     route: '/work/files/reader',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'knowledge',
@@ -92,7 +92,7 @@ export const CATALOG_FEATURES = [
     icon: 'library',
     route: '/work/knowledge',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'knowledge.reader',
@@ -102,7 +102,7 @@ export const CATALOG_FEATURES = [
     icon: 'document',
     route: '/work/knowledge/reader',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'knowledge.retrieval',
@@ -112,7 +112,7 @@ export const CATALOG_FEATURES = [
     icon: 'database',
     route: '/work/knowledge/retrieval',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'artifacts',
@@ -122,7 +122,7 @@ export const CATALOG_FEATURES = [
     icon: 'document',
     route: '/work/artifacts',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'sharing',
@@ -132,7 +132,7 @@ export const CATALOG_FEATURES = [
     icon: 'share',
     route: '/work/sharing',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'sharing.reader',
@@ -142,7 +142,7 @@ export const CATALOG_FEATURES = [
     icon: 'share',
     route: '/work/sharing/reader',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'jobs',
@@ -152,7 +152,7 @@ export const CATALOG_FEATURES = [
     icon: 'tasks',
     route: '/work/jobs',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'repositories',
@@ -162,7 +162,7 @@ export const CATALOG_FEATURES = [
     icon: 'git',
     route: '/work/repositories',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.records',
@@ -172,7 +172,7 @@ export const CATALOG_FEATURES = [
     icon: 'clock',
     route: '/office/attendance/records',
     scopes: ['own', 'unit', 'unit-tree', 'all'],
-    managerScope: 'unit-tree',
+    managerScopes: ['managed', 'managed-tree'],
   },
   {
     id: 'attendance.cards',
@@ -182,7 +182,7 @@ export const CATALOG_FEATURES = [
     icon: 'tag',
     route: '/office/attendance/cards',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.cards.maintain',
@@ -192,7 +192,7 @@ export const CATALOG_FEATURES = [
     icon: 'edit',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.imports',
@@ -202,7 +202,7 @@ export const CATALOG_FEATURES = [
     icon: 'import',
     route: '/office/attendance/imports',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.imports.reimport',
@@ -212,7 +212,7 @@ export const CATALOG_FEATURES = [
     icon: 'repeat',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.calendar',
@@ -222,7 +222,7 @@ export const CATALOG_FEATURES = [
     icon: 'calendar',
     route: '/office/attendance/calendar',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'attendance.calendar.maintain',
@@ -232,7 +232,7 @@ export const CATALOG_FEATURES = [
     icon: 'edit',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'identity.users',
@@ -242,7 +242,7 @@ export const CATALOG_FEATURES = [
     icon: 'user',
     route: '/admin/identity/users',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'identity.users.import',
@@ -252,7 +252,7 @@ export const CATALOG_FEATURES = [
     icon: 'import',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'identity.users.sync',
@@ -262,7 +262,7 @@ export const CATALOG_FEATURES = [
     icon: 'repeat',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'access-control.roles',
@@ -272,7 +272,7 @@ export const CATALOG_FEATURES = [
     icon: 'lock',
     route: '/admin/access-control/roles',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'access-control.groups',
@@ -282,7 +282,7 @@ export const CATALOG_FEATURES = [
     icon: 'apps',
     route: '/admin/access-control/groups',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'access-control.features',
@@ -292,7 +292,7 @@ export const CATALOG_FEATURES = [
     icon: 'list',
     route: '/admin/access-control/features',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'access-control.navigation',
@@ -302,7 +302,7 @@ export const CATALOG_FEATURES = [
     icon: 'sidebar',
     route: '/admin/access-control/navigation',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'organization',
@@ -312,7 +312,7 @@ export const CATALOG_FEATURES = [
     icon: 'organization',
     route: '/admin/organization',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'organization.import',
@@ -322,7 +322,7 @@ export const CATALOG_FEATURES = [
     icon: 'repeat',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'operations.usage',
@@ -332,7 +332,7 @@ export const CATALOG_FEATURES = [
     icon: 'chart',
     route: '/admin/operations/usage',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'billing.prices',
@@ -342,7 +342,7 @@ export const CATALOG_FEATURES = [
     icon: 'money',
     route: '/admin/billing/prices',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'monitoring',
@@ -352,7 +352,7 @@ export const CATALOG_FEATURES = [
     icon: 'activity',
     route: '/admin/monitoring',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'audit',
@@ -362,7 +362,7 @@ export const CATALOG_FEATURES = [
     icon: 'audit',
     route: '/admin/audit',
     scopes: ['own', 'unit', 'unit-tree', 'all'],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'diagnostics.logs',
@@ -372,7 +372,7 @@ export const CATALOG_FEATURES = [
     icon: 'logs',
     route: '/admin/diagnostics/logs',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'diagnostics.logs.detail',
@@ -382,7 +382,7 @@ export const CATALOG_FEATURES = [
     icon: 'search',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'diagnostics.logs.export',
@@ -392,7 +392,7 @@ export const CATALOG_FEATURES = [
     icon: 'download',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'mail.messages',
@@ -402,7 +402,7 @@ export const CATALOG_FEATURES = [
     icon: 'mail',
     route: '/admin/mail/messages',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'mail.messages.resend',
@@ -412,7 +412,7 @@ export const CATALOG_FEATURES = [
     icon: 'repeat',
     route: null,
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'quality',
@@ -422,7 +422,7 @@ export const CATALOG_FEATURES = [
     icon: 'shield',
     route: '/admin/quality',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'quality.retrieval',
@@ -432,7 +432,7 @@ export const CATALOG_FEATURES = [
     icon: 'search',
     route: '/admin/quality/retrieval',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
   {
     id: 'design',
@@ -442,17 +442,22 @@ export const CATALOG_FEATURES = [
     icon: 'sliders',
     route: '/admin/design',
     scopes: [],
-    managerScope: null,
+    managerScopes: [],
   },
 ] as const;
 
-/** 資料範圍（ADR 0017），由窄到寬；功能的 `scopes` 是它支援的子集，空的表示授權不帶範圍；`managerScope` 是主管自動取得的範圍（null＝沒有）。 */
+/**
+ * 資料範圍（ADR 0017、0022）：先是所有成員的範圍、再是主管另可看的範圍，各自由窄到寬。
+ * 功能的 `scopes`、`managerScopes` 各是兩組的子集；`scopes` 空的表示授權不帶範圍，`managerScopes` 空的表示不能另外給主管。
+ */
 export const CATALOG_SCOPES = [
   { id: 'own', name: '本人' },
   { id: 'assigned', name: '被指派' },
   { id: 'unit', name: '所屬單位' },
   { id: 'unit-tree', name: '所屬單位及下層' },
   { id: 'all', name: '全部' },
+  { id: 'managed', name: '所管單位' },
+  { id: 'managed-tree', name: '所管單位及下層' },
 ] as const;
 
 export type CatalogArea = (typeof CATALOG_AREAS)[number];

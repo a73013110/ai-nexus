@@ -25,16 +25,16 @@ public sealed record FeatureDefinition(string Id, FeatureKind Kind, ModuleDefini
     public bool IsGrant => Kind != FeatureKind.Reader;
 
     /// <summary>
-    /// 支援的資料範圍（<see cref="DataScopes"/>，由窄到寬）。空的表示沒有資料列概念、授權不帶範圍；
+    /// 所有成員的資料範圍（<see cref="DataScopes.Member"/> 的子集，由窄到寬）。空的表示沒有資料列概念、授權不帶範圍；
     /// 宣告了就表示該功能的查詢經 <see cref="IDataScope"/> 套用範圍，授予時必須選其中一個（ADR 0017）。
     /// </summary>
     public IReadOnlyList<string> Scopes { get; init; } = [];
 
     /// <summary>
-    /// 主管範圍：組織管理勾選為主管的人，對其任主管的單位自動取得的範圍（<c>unit</c> 或 <c>unit-tree</c>，必須在 <see cref="Scopes"/> 之內）。
-    /// 不授予功能本身，只在已有授權時與群組範圍 OR 合併（<see cref="IDataScope"/>）；null 表示主管沒有額外範圍。
+    /// 主管另可看的範圍（<see cref="DataScopes.Manager"/> 的子集，由窄到寬），授予時可選其中一個或不另外（ADR 0022）。
+    /// 只在主管看部屬資料合乎業務的功能宣告；空的表示這個功能的授權不能帶主管範圍。必須同時宣告 <see cref="Scopes"/>。
     /// </summary>
-    public string? ManagerScope { get; init; }
+    public IReadOnlyList<string> ManagerScopes { get; init; } = [];
 }
 
 /// <summary>
@@ -141,7 +141,7 @@ public static class FeatureCatalog
         new(Jobs, FeatureKind.Page, JobsModule, "背景任務", "tasks"),
         new(Repositories, FeatureKind.Page, RepositoriesModule, "程式庫", "git"),
         // 出勤紀錄是員工自助頁，管理頁（卡號對應、匯入紀錄、假日設定）給 HR；管理頁的網址仍在 /office/attendance，選單才放進系統管理（ADR 0018）。
-        new(AttendanceRecords, FeatureKind.Page, AttendanceModule, "出勤紀錄", "clock") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All], ManagerScope = DataScopes.UnitTree },
+        new(AttendanceRecords, FeatureKind.Page, AttendanceModule, "出勤紀錄", "clock") { Scopes = [DataScopes.Own, DataScopes.Unit, DataScopes.UnitTree, DataScopes.All], ManagerScopes = [DataScopes.Managed, DataScopes.ManagedTree] },
         new(AttendanceCards, FeatureKind.Page, AttendanceModule, "卡號對應", "tag"),
         new(AttendanceCardsMaintain, FeatureKind.Action, AttendanceModule, "維護卡片與持有期間", "edit"),
         new(AttendanceImports, FeatureKind.Page, AttendanceModule, "打卡匯入紀錄", "import"),

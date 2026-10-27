@@ -43,6 +43,36 @@ public sealed class SaveRoleGroupTests
         // 拒絕與變更都留下稽核，快照看得出範圍的前後。
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.group"))!;
         Assert.Contains(audit, x => x.Result == "invalid_data_scope");
-        Assert.Contains("""{"featureId":"audit","scope":"unit-tree"}""", audit.First(x => x.Result == "saved").DetailsJson);
+        Assert.Contains("""{"featureId":"audit","scope":"unit-tree","managerScope":null}""", audit.First(x => x.Result == "saved").DetailsJson);
+    }
+
+    [Fact]
+    public async Task ManagerScopesAreOptionalAndOnlyWhereTheCatalogDeclaresThem()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]);
+        using var admin = await factory.SignedInAsync();
+        const string Group = "/api/v1/admin/groups/leads";
+        const string Records = FeatureCatalog.AttendanceRecords;
+        Task<HttpResponseMessage> Save(string[] features, Dictionary<string, string> scopes, Dictionary<string, string>? managers) =>
+            admin.PutAsJsonAsync(Group, new GroupUpdateRequest("單位主管", true, features, Scopes: scopes, ManagerScopes: managers));
+
+        // 沒宣告主管範圍的功能不能帶；帶了就要是宣告支援的值；只能給這次授予的功能。
+        await AssertCodeAsync(await Save(["audit"], new() { ["audit"] = "own" }, new() { ["audit"] = "managed" }), HttpStatusCode.BadRequest, "invalid_data_scope");
+        await AssertCodeAsync(await Save([Records], new() { [Records] = "own" }, new() { [Records] = "unit-tree" }), HttpStatusCode.BadRequest, "invalid_data_scope");
+        await AssertCodeAsync(await Save(["chat"], [], new() { [Records] = "managed" }), HttpStatusCode.BadRequest, "invalid_data_scope");
+
+        // 不帶＝不另外；帶了就存在這筆授權上，目錄回應看得到。
+        (await Save([Records], new() { [Records] = "own" }, null)).EnsureSuccessStatusCode();
+        Assert.Empty((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Groups.Single(x => x.Id == "leads").ManagerScopes);
+        (await Save([Records], new() { [Records] = "own" }, new() { [Records] = "managed" })).EnsureSuccessStatusCode();
+        var catalog = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!;
+        Assert.Equal(new Dictionary<string, string> { [Records] = "managed" }, catalog.Groups.Single(x => x.Id == "leads").ManagerScopes);
+        Assert.Equal("managed-tree", catalog.Groups.Single(x => x.Id == BuiltInAccess.WorkspaceGroup).ManagerScopes[Records]);
+        Assert.Empty(catalog.Groups.Single(x => x.Id == BuiltInAccess.AdministratorsGroup).ManagerScopes);
+
+        // 稽核快照包含主管範圍的前後。
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=admin.group"))!;
+        Assert.Contains(audit, x => x.Result == "invalid_data_scope");
+        Assert.Contains($$"""{"featureId":"{{Records}}","scope":"own","managerScope":"managed"}""", audit.First(x => x.Result == "saved").DetailsJson);
     }
 }

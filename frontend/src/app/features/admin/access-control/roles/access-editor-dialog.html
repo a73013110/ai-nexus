@@ -191,15 +191,40 @@
                   </header>
                   <div class="form-section-body">
                     @for (grant of scopedGrants(); track grant.id) {
-                      <label class="form-field-short"
-                        >{{ grant.name
-                        }}<nx-select
-                          [label]="grant.name + '的資料範圍'"
-                          [options]="grant.options"
-                          [value]="grant.value"
-                          [disabled]="locked()"
-                          (valueChange)="updateScope(grant.id, $event)"
-                      /></label>
+                      <div
+                        class="access-scope"
+                        role="group"
+                        [attr.aria-labelledby]="id + '-scope-' + grant.id"
+                      >
+                        <span class="access-scope-name" [id]="id + '-scope-' + grant.id">{{
+                          grant.name
+                        }}</span>
+                        <div class="form-row">
+                          <label
+                            >所有成員<nx-select
+                              [label]="grant.name + '：所有成員的範圍'"
+                              [options]="grant.options"
+                              [value]="grant.value"
+                              [disabled]="locked()"
+                              (valueChange)="updateScope(grant.id, $event)"
+                          /></label>
+                          @if (grant.manager; as manager) {
+                            <label
+                              >主管另可看<nx-select
+                                [label]="grant.name + '：主管另可看的範圍'"
+                                [options]="manager.options"
+                                [value]="manager.value"
+                                [disabled]="locked() || manager.included"
+                                (valueChange)="updateScope(grant.id, $event, 'managerScopes')"
+                            /></label>
+                          }
+                        </div>
+                      </div>
+                    }
+                    @if (managerScoped()) {
+                      <p class="form-note">
+                        主管是組織頁勾選為主管的成員，另外看得到所管單位的資料；不必另建主管群組。
+                      </p>
                     }
                   </div>
                 </section>
