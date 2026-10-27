@@ -118,6 +118,8 @@ export const SEEDED_NAVIGATION: readonly NavigationItemDto[] = [
     seededGroup(group, "system", name, (index + 2) * 10),
     ...pages.map((id, order) => seededPage(group, id, (order + 1) * 10)),
   ]),
+  // 功能使用量排在活動稽核之後（Seed 的 SortOrder 35）。
+  seededPage("system.observability", "audit.usage", 35),
 ];
 
 /**
