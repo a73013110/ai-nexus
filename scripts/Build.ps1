@@ -14,6 +14,9 @@
 .PARAMETER OutputDirectory
 發布目錄，相對於 repo 根目錄，必須在 artifacts/ 內。
 
+.PARAMETER Runtime
+發布的平台，只帶該平台的原生檔；預設為執行這個腳本的平台。IIS 套件固定 win-x64（Publish-IIS.ps1）。
+
 .COMPONENT
 建置與檢查
 
@@ -24,7 +27,7 @@
 ./scripts/Build.ps1 -OutputDirectory artifacts/verification
 #>
 [CmdletBinding()]
-param([switch]$Restore, [string]$OutputDirectory = 'artifacts/publish')
+param([switch]$Restore, [string]$OutputDirectory = 'artifacts/publish', [ValidateSet('win-x64', 'linux-x64')][string]$Runtime = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }))
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
@@ -43,7 +46,7 @@ try {
             }
         }
         @{ Name = '後端 publish'; Run = {
-                dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -o $publish
+                dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -r $Runtime --self-contained false -o $publish
                 if ($LASTEXITCODE -ne 0) { throw '後端 publish 失敗。' }
             }
         }

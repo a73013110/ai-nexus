@@ -64,8 +64,11 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 if ($DataRoot -notmatch '^[A-Za-z]:\\') { throw 'DataRoot 必須是正式主機上的絕對路徑，例如 D:\AiNexus\data。' }
 $root = Get-RepoRoot
 $publish = Resolve-RepoArtifactPath $PublishDirectory
-if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $publish }
-if (!(Test-Path -LiteralPath (Join-Path $publish 'AiNexus.Host.dll'))) { throw '找不到發布產物；請先執行 scripts/Build.ps1。' }
+if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $publish -Runtime win-x64 }
+$deps = Join-Path $publish 'AiNexus.Host.deps.json'
+if (!(Test-Path -LiteralPath $deps)) { throw '找不到發布產物；請先執行 scripts/Build.ps1。' }
+# 其他平台的產物缺 Windows 版的 SqlClient 與 AD 元件，在 IIS 上啟動才會失敗，所以在打包時就擋下。
+if ((Get-Content -LiteralPath $deps -Raw | ConvertFrom-Json).runtimeTarget.name -notlike '*/win-x64') { throw '發布產物不是 win-x64；請以 scripts/Build.ps1 -Runtime win-x64 重新建置。' }
 if (!$DestinationPath) { $DestinationPath = Join-Path $root ('artifacts/iis/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '/app') }
 $app = [IO.Path]::GetFullPath($DestinationPath)
 if ((Test-Path -LiteralPath $app) -and @(Get-ChildItem -LiteralPath $app -Force).Count) {

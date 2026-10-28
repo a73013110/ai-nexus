@@ -3,6 +3,11 @@
   <PropertyGroup>
     <RootNamespace>AiNexus.Host</RootNamespace>
     <UserSecretsId>ai-nexus-api-v1-local</UserSecretsId>
+    <!--
+      只影響還原：讓 Build.ps1 跳過還原、直接發布指定平台。不指定平台時，SqlClient、MSAL 等套件會把所有平台的原生檔
+      （linux-x64 的 libmsalruntime.so 就有 37 MB）都放進 runtimes/。build 與測試不受影響。
+    -->
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AiNexus.Platform/AiNexus.Platform.csproj" />

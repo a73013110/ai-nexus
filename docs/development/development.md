@@ -50,6 +50,7 @@ dotnet dev-certs https --trust
 
 - `Verify.ps1` 依序跑腳本測試、`schema.ts` 與 `openapi.json` 一致性、前端 Prettier 格式（`src`、`e2e`）、build（輸出到 `artifacts/verification`，不覆寫執行中的 publish）、後端 build、後端測試、前端 lint 與單元測試。
 - 改到日誌、安全錯誤或監控時加 `-Browser -Performance`。
+- `Build.ps1` 只發布執行它的平台（Windows 為 win-x64，其他為 linux-x64），不帶其他平台的原生檔；`Publish-IIS.ps1` 固定 win-x64，產物不是 win-x64 就拒絕打包。要支援別的平台時，同時加進 Host 專案的 `RuntimeIdentifiers`，否則跳過還原的 publish 會失敗。
 - 前端格式以 `frontend/.prettierrc` 為準，`npm --prefix frontend run format` 修正；`e2e/` 沿用 Prettier 預設（雙引號、80 欄），已寫在 override，不要對它套用全域設定。
 - GitHub Actions 只能手動觸發（Actions 頁面的 Run workflow），在 Windows 上跑 `Restore.ps1`＋`Verify.ps1`，和本機是同一組步驟。
 - 建置只接受 `artifacts/` 內的輸出路徑，刪除舊 wwwroot 前驗證絕對路徑與 reparse point。
