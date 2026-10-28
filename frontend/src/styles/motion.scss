@@ -117,6 +117,39 @@
     transform: scale(0.85);
   }
 }
+// 測試身分（core/auth/test-identity-indicator）：外框先亮起，島再從上緣垂下；離開時收回上緣。
+@keyframes test-frame-arrive {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes test-frame-depart {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes notch-arrive {
+  from {
+    translate: -50% -110%;
+  }
+}
+@keyframes notch-depart {
+  to {
+    translate: -50% -110%;
+  }
+}
+// 換身分的遮罩（styles/identity-veil.scss）；淡出結束時 hidden，不再攔點擊。
+@keyframes veil-arrive {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes veil-depart {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
 @keyframes bubble-arrive {
   from {
     opacity: 0;

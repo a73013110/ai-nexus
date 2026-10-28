@@ -6,15 +6,18 @@ import { ApiClient } from '../api/api-client';
 import { ViewMorph } from '../layout/view-morph';
 import { WORKSPACE_HOME } from '../layout/workspace-home';
 import { routeOf } from '../api/catalog';
+import { IdentityVeil } from './identity-veil';
 
 const RECENT_SESSION_MS = 5000;
 const RENEWED = 'renewed';
+const nameOf = (session: AuthSessionDto) => session.displayName || session.account || '使用者';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(WorkspaceApi);
   private readonly router = inject(Router);
   private readonly morph = inject(ViewMorph);
+  private readonly veil = inject(IdentityVeil);
   readonly session = signal<AuthSessionDto | null>(null);
   readonly generation = signal(0);
   private pending: Promise<AuthSessionDto> | null = null;
@@ -100,12 +103,15 @@ export class AuthService {
     this.announce();
   }
   async testIdentity(userId: string, reason: string) {
-    this.replaceIdentity(await this.api.testIdentity(userId, reason), WORKSPACE_HOME);
+    const session = await this.api.testIdentity(userId, reason);
+    await this.reloadAs(`正在切換為 ${nameOf(session)}`, WORKSPACE_HOME);
   }
   async endTestIdentity() {
-    await this.load(); // 測試已逾時、伺服器已自行還原身分時，先更新 CSRF。
+    // 測試已逾時、伺服器已自行還原身分時，舊的 CSRF token 已失效；只換 token，不套用到畫面。
+    await this.api.authSession();
+    const session = await this.api.endTestIdentity();
     // 測試身分從使用者頁開始，結束後回到那裡。
-    this.replaceIdentity(await this.api.endTestIdentity(), routeOf('identity.users'));
+    await this.reloadAs(`正在返回 ${nameOf(session)}`, routeOf('identity.users'));
   }
   /**
    * 同一帳號的 session cookie 已換發（步升驗證、帳號安全變更）：claims 改變後舊的 CSRF token 失效，
@@ -117,9 +123,13 @@ export class AuthService {
     if (session) this.session.set({ ...session, csrfToken });
     this.channel?.postMessage(RENEWED);
   }
-  private replaceIdentity(session: AuthSessionDto, url: string) {
-    this.replace(session);
-    // 罕見的身分轉換會一起清掉所有路由、提供者與進行中的檢視。
+  /**
+   * 罕見的身分轉換以整頁重新載入清掉所有路由、提供者與進行中的檢視。新身分不套用到目前頁面：
+   * 否則畫面會先換成新身分的半成品（選單、橫幅、資料重讀）再重新載入；它維持原樣直到被遮罩蓋住。
+   */
+  private async reloadAs(label: string, url: string) {
+    this.channel?.postMessage('changed');
+    await this.veil.cover(label);
     window.location.assign(url);
   }
   private replace(session: AuthSessionDto) {

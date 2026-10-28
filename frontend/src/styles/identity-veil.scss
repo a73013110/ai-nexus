@@ -1,0 +1,41 @@
+// 換身分的遮罩（core/auth/identity-veil.ts、src/boot.js）：根元素帶 `data-identity-veil` 時才出現。
+// 舊頁面以 showPopover() 放進 top layer，蓋過開著的對話框；新頁面的 boot 狀態在 boot.js 執行時元素還不存在，
+// 不在 top layer，所以位置與疊層都自己寫，並覆寫 popover 的預設外框。
+:root[data-identity-veil] .identity-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--secondary);
+  font-size: var(--text-label);
+}
+// 名稱是 CSS 字串，不進 DOM；切換是真的在進行的工作，沿用模型活動的單色掃光。
+.identity-veil::after {
+  content: var(--identity-veil-label, '');
+  background: var(--activity-sheen) 0 0 / 300% 100% no-repeat;
+  background-clip: text;
+  color: transparent;
+  animation: sheen-pass var(--motion-waiting) linear infinite;
+}
+:root[data-identity-veil='cover'] .identity-veil {
+  animation: veil-arrive var(--motion) var(--ease) both;
+}
+:root[data-identity-veil='reveal'] .identity-veil {
+  pointer-events: none;
+  animation: veil-depart var(--motion-enter) var(--ease-exit) forwards;
+}
+// Angular 沒有接手（例如啟動失敗）時自己退場，不把畫面一直蓋住。
+// 減少動態時 delay 會被歸零，等於不使用遮罩，直接顯示載入中的頁面。
+:root[data-identity-veil='boot'] .identity-veil {
+  animation: veil-depart var(--motion-enter) var(--ease-exit) 8s forwards;
+}

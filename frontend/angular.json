@@ -32,6 +32,10 @@
                 "input": "public"
               },
               {
+                "glob": "boot.js",
+                "input": "src"
+              },
+              {
                 "glob": "pdf.worker.min.mjs",
                 "input": "node_modules/pdfjs-dist/build",
                 "output": "vendor/pdfjs"

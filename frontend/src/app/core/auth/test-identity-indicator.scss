@@ -1,0 +1,202 @@
+@use 'optical';
+
+// 外框與島同一個 tone、同一層顏色：島像外框在上緣長出來的一段，交接處用反向圓角（肩）連成一體。
+// 徽章、返回鈕與底部動作列離島邊同一個 inset，內外圓角同心（內半徑＝外半徑－inset）。
+:host {
+  --frame-width: 2px;
+  --notch-height: 2.25rem;
+  --notch-inset: 0.25rem;
+  --notch-dot: calc(var(--notch-height) - 2 * var(--notch-inset));
+  --notch-radius: calc(var(--notch-height) / 2);
+  --notch-shoulder: 0.5rem;
+  --notch-gutter: var(--p-space-4);
+  display: contents;
+  font-size: var(--p-font-data);
+  line-height: var(--line-ui);
+}
+@media (pointer: coarse) {
+  :host {
+    --notch-height: 2.75rem;
+  }
+}
+[data-tone] {
+  --tone: var(--signal);
+  // 填色上的字與圖示：淺色主題是白，深色主題是深底色，兩種 tone 都過 4.5:1。
+  --on-tone: var(--canvas);
+}
+[data-tone='warning'] {
+  --tone: var(--warning);
+}
+
+.test-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 var(--frame-width) var(--tone),
+    inset 0 0 1.5rem -0.75rem color-mix(in srgb, var(--tone) 55%, transparent);
+  transition: box-shadow var(--motion) var(--ease);
+}
+
+.notch-shell {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 41;
+  filter: drop-shadow(0 0.375rem 0.75rem color-mix(in srgb, var(--tone) 28%, transparent));
+}
+// 肩：島兩側各一塊挖掉四分之一圓的填色，把上緣的外框線順成島的側邊。
+.notch-shell::before,
+.notch-shell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: var(--notch-shoulder);
+  height: var(--notch-shoulder);
+  background: radial-gradient(
+    circle at var(--corner) 100%,
+    transparent calc(var(--notch-shoulder) - 0.5px),
+    var(--tone) var(--notch-shoulder)
+  );
+}
+.notch-shell::before {
+  --corner: 0;
+  right: 100%;
+}
+.notch-shell::after {
+  --corner: 100%;
+  left: 100%;
+}
+
+.notch {
+  box-sizing: content-box;
+  overflow: clip;
+  border-radius: 0 0 var(--notch-radius) var(--notch-radius);
+  background: var(--tone);
+  color: var(--on-tone);
+  transition:
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring),
+    background-color var(--motion) var(--ease);
+}
+.notch-content {
+  width: max-content;
+  max-width: calc(100vw - 2 * (var(--notch-shoulder) + var(--notch-gutter)));
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.notch[data-expanded] .notch-content {
+  width: min(21rem, 100vw - 2 * (var(--notch-shoulder) + var(--notch-gutter)));
+}
+.notch :focus-visible {
+  outline: 2px solid var(--on-tone);
+  outline-offset: -2px;
+}
+
+.notch-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  height: var(--notch-height);
+  padding-inline: var(--notch-inset);
+}
+.notch-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+  height: var(--notch-dot);
+  padding: 0 var(--p-space-3) 0 0;
+  border-radius: calc(var(--notch-dot) / 2);
+  color: inherit;
+}
+.notch[data-expanded] .notch-toggle {
+  padding-right: 0;
+}
+.notch-toggle:hover {
+  background: color-mix(in srgb, var(--on-tone) 12%, transparent);
+}
+.notch-badge,
+.notch-end {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--notch-dot);
+  height: var(--notch-dot);
+  border-radius: 50%;
+  color: inherit;
+  --icon-size: var(--icon-md);
+}
+.notch-badge,
+.notch-restore {
+  background: color-mix(in srgb, var(--on-tone) 18%, transparent);
+}
+.notch-name {
+  @include optical.label-line-truncate;
+  max-width: min(12rem, 40vw);
+  font-weight: 600;
+}
+.notch-clock {
+  @include optical.label-line;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.notch-toggle .notch-end {
+  margin-left: auto;
+  opacity: 0.8;
+}
+.notch-restore:hover {
+  background: color-mix(in srgb, var(--on-tone) 30%, transparent);
+}
+
+// 說明的字從名字的左緣開始；動作列貼齊島的底與兩側，與上方徽章同一個 inset。
+.notch-details {
+  display: grid;
+  gap: var(--p-space-2);
+  padding: 0 var(--notch-inset) var(--notch-inset);
+}
+.notch-note {
+  margin: 0;
+  padding-inline: calc(var(--notch-dot) + var(--p-space-2)) var(--p-space-3);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.notch-note:last-of-type {
+  margin-bottom: var(--p-space-1);
+}
+.notch-error {
+  font-weight: 600;
+}
+.notch-return {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-2);
+  height: var(--notch-dot);
+  border-radius: calc(var(--notch-dot) / 2);
+  background: var(--on-tone);
+  color: var(--tone);
+  font-weight: 600;
+  --icon-size: var(--icon-sm);
+}
+.notch-return:hover {
+  opacity: 0.9;
+}
+
+.test-frame-enter {
+  animation: test-frame-arrive var(--motion-morph) var(--ease) both;
+}
+.test-frame-leave {
+  animation: test-frame-depart var(--motion) var(--ease-exit) forwards;
+}
+.notch-enter {
+  animation: notch-arrive var(--motion-morph) var(--ease-spring) var(--motion-fast) both;
+}
+.notch-leave {
+  animation: notch-depart var(--motion) var(--ease-exit) forwards;
+}
+.notch-reveal {
+  animation: content-arrive var(--motion) var(--ease) var(--motion-fast) both;
+}

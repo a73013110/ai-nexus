@@ -1,5 +1,8 @@
 <nx-route-progress />
-<nx-identity-banner />
+<!-- 只有管理者測試身分時用得到，不放進初始 bundle。 -->
+@defer (when testing()) {
+  <nx-test-identity-indicator />
+}
 <nx-unhandled-issue />
 <router-outlet />
 <nx-settings-dialog />

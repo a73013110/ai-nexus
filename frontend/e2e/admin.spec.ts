@@ -2039,7 +2039,7 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(page.getByText("本地測試員", { exact: true })).toHaveCount(0);
 });
 
-test("testing an identity clears the prior draft, shows a responsive banner and returns to management", async ({
+test("testing an identity clears the prior draft, shows the floating indicator and returns to management", async ({
   page,
 }) => {
   const { fixture, actor, bob } = await administration(page);
@@ -2111,26 +2111,53 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
     .getByRole("menuitem", { name: "以此身分測試", exact: true })
     .click();
   await page.getByLabel("測試目的", { exact: true }).fill("核對一般使用者權限");
+  const before = await page.evaluate(() => performance.timeOrigin);
   await page.getByRole("button", { name: "開始身分測試", exact: true }).click();
   await expect(page).toHaveURL(/\/work\/dashboard$/);
-  const banner = page.getByRole("region", {
+  // 換身分是整頁重新載入，遮罩接住兩次載入，第一頁畫好後退場。
+  expect(await page.evaluate(() => performance.timeOrigin)).toBeGreaterThan(
+    before,
+  );
+  await expect(page.locator("html")).not.toHaveAttribute("data-identity-veil");
+  const indicator = page.getByRole("region", {
     name: "管理者測試身分",
     exact: true,
   });
-  await expect(banner).toContainText("王小明");
-  await expect(banner).toContainText("15 分鐘");
+  const toggle = indicator.getByRole("button", {
+    name: "測試身分：王小明，剩餘 15 分鐘",
+    exact: true,
+  });
+  // 剛切換過來時展開說明，之後收合成精簡的島。
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(indicator).toContainText("由 測試使用者 啟用，操作會留下稽核");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false", {
+    timeout: 8000,
+  });
   await page.goto("/work/chat");
   await expect(
     page.getByRole("textbox", { name: "傳送訊息", exact: true }),
   ).toHaveValue("");
+  // 島浮在內容上，不佔版面高度。
+  expect(
+    await page
+      .locator(".workbench")
+      .evaluate((element) => element.getBoundingClientRect().height),
+  ).toBe(await page.evaluate(() => innerHeight));
   for (const width of [1920, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await expectViewportContained(page);
     await settleEntrance(page);
   }
-  await banner.getByRole("button", { name: "返回管理者", exact: true }).click();
+  await toggle.click();
+  await expect(indicator.locator("#test-identity-details")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await indicator
+    .getByRole("button", { name: "返回管理者", exact: true })
+    .click();
   await expect(page).toHaveURL(routeOf("identity.users"));
-  await expect(banner).toHaveCount(0);
+  await expect(indicator).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "使用者", level: 1, exact: true }),
   ).toBeVisible();

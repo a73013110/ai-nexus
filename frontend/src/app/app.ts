@@ -10,7 +10,8 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { UnhandledIssue } from '@core/errors/unhandled-issue';
 import { RouterOutlet } from '@angular/router';
 import { SettingsDialog } from '@features/platform/account/settings-dialog';
-import { IdentityBanner } from '@core/auth/identity-banner';
+import { TestIdentityIndicator } from '@core/auth/test-identity-indicator';
+import { IdentityVeil } from '@core/auth/identity-veil';
 import { ReaderDialog } from '@features/work/knowledge/documents/reader-dialog';
 import { NotificationCenter } from '@features/platform/notifications/notification-center';
 import { trackKeyboardInset } from '@core/layout/keyboard-inset';
@@ -22,7 +23,7 @@ import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
     UnhandledIssue,
     RouterOutlet,
     SettingsDialog,
-    IdentityBanner,
+    TestIdentityIndicator,
     ReaderDialog,
     NotificationCenter,
     RouteProgress,
@@ -33,15 +34,17 @@ import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
   templateUrl: './app.html',
 })
 export class App {
+  private readonly session = inject(WorkspaceSession);
+  readonly testing = this.session.testing;
   constructor() {
-    const session = inject(WorkspaceSession);
     const injector = inject(Injector);
     const destroyRef = inject(DestroyRef);
     destroyRef.onDestroy(trackKeyboardInset());
     destroyRef.onDestroy(bindSheetSwipe());
+    inject(IdentityVeil).revealAfterFirstNavigation();
     let started = false;
     effect(() => {
-      if (session.me() && !started) {
+      if (this.session.me() && !started) {
         started = true;
         void import('@core/monitoring/browser-presence')
           .then(({ BrowserPresence }) => injector.get(BrowserPresence))
