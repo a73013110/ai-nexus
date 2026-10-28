@@ -84,7 +84,8 @@ describe('access control dialog tours', () => {
       names,
       kind: 'role',
       creating: false,
-      models: false,
+      section: 'settings',
+      scoped: false,
       ...options,
     });
 
@@ -95,14 +96,24 @@ describe('access control dialog tours', () => {
       '儲存後可用功能',
     ]);
     expect(titles(editor({ kind: 'group' }))).toEqual([
-      '兩個頁籤一起儲存',
+      '四個頁籤一起儲存',
       '名稱與啟用',
-      '功能授權',
-      '資料範圍',
       '附件容量',
     ]);
-    expect(titles(editor({ kind: 'group', models: true }))).toEqual([
-      '兩個頁籤一起儲存',
+    expect(titles(editor({ kind: 'group', section: 'features' }))).toEqual([
+      '四個頁籤一起儲存',
+      '功能授權',
+    ]);
+    expect(titles(editor({ kind: 'group', section: 'scopes' }))).toEqual([
+      '四個頁籤一起儲存',
+      '沒有要選的範圍',
+    ]);
+    expect(titles(editor({ kind: 'group', section: 'scopes', scoped: true }))).toEqual([
+      '四個頁籤一起儲存',
+      '成員看得到誰',
+    ]);
+    expect(titles(editor({ kind: 'group', section: 'models' }))).toEqual([
+      '四個頁籤一起儲存',
       '模型與每日額度',
     ]);
     expect(titles(editor({ kind: 'feature' }))).toEqual(['名稱覆寫', '啟用功能']);
@@ -125,8 +136,9 @@ describe('access control dialog tours', () => {
 
   it('scopes every target to its dialog', () => {
     for (const kind of ['role', 'group', 'feature'] as const)
-      for (const models of [false, true])
-        hosts(editor({ kind, models, creating: true }), 'nx-access-editor-dialog');
+      for (const section of ['settings', 'features', 'scopes', 'models'] as const)
+        for (const scoped of [false, true])
+          hosts(editor({ kind, section, scoped, creating: true }), 'nx-access-editor-dialog');
     for (const kind of ['group', 'page', 'link'] as const)
       hosts(navigationItemTour({ names, kind, creating: true }), 'nx-navigation-item-dialog');
   });
@@ -250,7 +262,7 @@ describe('access control tour targets', () => {
     expectTargets(dialog.tour());
   });
 
-  it('finds the groups page and both group editor tabs', async () => {
+  it('finds the groups page and every group editor tab', async () => {
     const { fixture, settle, expectTargets } = await render(GroupsPage);
     expectTargets(fixture.componentInstance.tour(), /^nx-groups-page /);
     const dialog = fixture.debugElement.query(By.directive(AccessEditorDialog))
@@ -258,9 +270,11 @@ describe('access control tour targets', () => {
     dialog.open('group', catalog.groups[0] as unknown as AdminGroupDto);
     await settle();
     expectTargets(dialog.tour());
-    dialog.groupSection.set('models');
-    await settle();
-    expectTargets(dialog.tour());
+    for (const section of ['features', 'scopes', 'models'] as const) {
+      dialog.groupSection.set(section);
+      await settle();
+      expectTargets(dialog.tour());
+    }
   });
 
   it('finds the features page and feature editor targets', async () => {

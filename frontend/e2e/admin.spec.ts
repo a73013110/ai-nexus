@@ -569,9 +569,14 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     groups.locator("tbody tr").nth(1).locator("nx-status-badge"),
   ).toHaveAttribute("data-tone", "warning");
   await expect(groups.locator("tbody tr").nth(1)).toContainText("停用");
-  // Like a role: one page of sections (basics, features, storage), with the model policy beside it.
+  // 群組設定（基本資料、附件容量）、功能授權、資料範圍與 AI 模型四個頁籤，一起儲存。
   await groups.locator("tbody tr").first().locator("td").first().click();
-  await expect(editor.getByRole("tab")).toHaveText(["群組設定", "AI 模型"]);
+  await expect(editor.getByRole("tab")).toHaveText([
+    "群組設定",
+    /^\s*功能授權\s+\d+\s*$/,
+    /^\s*資料範圍\s*\d*\s*$/,
+    "AI 模型",
+  ]);
   await expect(editor.getByRole("tabpanel")).toHaveAttribute(
     "aria-labelledby",
     (await editor
@@ -580,8 +585,11 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   );
   await expect(editor.locator(".form-section-head h3")).toHaveText([
     "基本資料",
-    "功能授權",
     "附件容量",
+  ]);
+  await editor.getByRole("tab", { name: /^功能授權/ }).click();
+  await expect(editor.locator(".form-section-head h3")).toHaveText([
+    "功能授權",
   ]);
   // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
@@ -2238,27 +2246,45 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
+  // 沒有勾選有範圍的功能時，資料範圍頁籤是空狀態，可直接回到功能授權。
+  await dialog.getByRole("tab", { name: "資料範圍", exact: true }).click();
+  await expect(dialog.locator("nx-empty-state")).toContainText("活動稽核");
+  await dialog
+    .getByRole("button", { name: "前往功能授權", exact: true })
+    .click();
   await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
-  // 有資料範圍的功能勾選後才出現範圍選擇，預設最窄，選項只有目錄宣告的範圍。
-  await expect(dialog.getByText("資料範圍", { exact: true })).toHaveCount(0);
+  // 有資料範圍的功能勾選後預設最窄，id 後顯示目前範圍；選項只有目錄宣告的範圍。
   await dialog.getByRole("checkbox", { name: "活動稽核", exact: true }).check();
-  const scope = dialog.getByRole("combobox", {
+  await expect(dialog.getByText("audit · 資料範圍：本人")).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "設定資料範圍", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("tab", { name: /^資料範圍，1 則/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  const scopes = dialog.getByRole("group", {
     name: "活動稽核：所有成員的範圍",
     exact: true,
   });
-  await expect(scope).toHaveText("本人");
-  await scope.click();
-  const scopes = page.getByRole("listbox", {
-    name: "活動稽核：所有成員的範圍",
-    exact: true,
-  });
-  await expect(scopes.getByRole("option")).toHaveText([
+  await expect(scopes.getByRole("button")).toHaveText([
     "本人",
     "所屬單位",
     "所屬單位及下層",
     "全部",
   ]);
-  await scopes.getByRole("option", { name: "所屬單位及下層" }).click();
+  await expect(scopes.getByRole("button", { name: "本人" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const scope = dialog.getByRole("group", { name: "活動稽核", exact: true });
+  await expect(scope).toContainText("新授予");
+  await expect(scope.locator(".access-scope-reach")).toHaveText(
+    "成員只看得到自己的資料。",
+  );
+  await scopes.getByRole("button", { name: "所屬單位及下層" }).click();
+  await expect(scope.locator(".access-scope-reach")).toHaveText(
+    "成員看得到所屬單位及所有下層單位的資料。",
+  );
   await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();

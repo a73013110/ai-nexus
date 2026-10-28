@@ -24,6 +24,8 @@ const catalog = {
     { id: 'repositories', name: '程式庫', enabled: true, icon: 'git' },
     { id: 'off', name: '停用功能', enabled: false, icon: 'x' },
     { id: 'admin', name: '平台管理', enabled: true, icon: 'lock' },
+    { id: 'audit', name: '活動稽核', enabled: true, icon: 'audit' },
+    { id: 'attendance.records', name: '出勤紀錄', enabled: true, icon: 'clock' },
   ],
   models: [],
   navigationSections: [
@@ -118,6 +120,7 @@ describe('AccessEditorDialog', () => {
     ).toEqual([
       ['協作', ['程式庫']],
       ['AI 工作台', ['對話']],
+      ['未放入選單', ['出勤紀錄', '活動稽核']],
       // 不在目錄中的 ID 收在最後一張卡片。
       ['其他', ['停用功能（停用）', '平台管理']],
     ]);
@@ -242,13 +245,16 @@ describe('AccessEditorDialog', () => {
     expect(dialog.managerScoped()).toBe(true);
     dialog.updateScope('attendance.records', 'managed-tree', 'managerScopes');
     expect(dialog.scopedGrants()[1].manager?.value).toBe('managed-tree');
-    // 所有成員選全部時已含主管可看的範圍：第二個選單停用、顯示「已含」，也不送出。
+    expect(dialog.scopedGrants()[1].reach).toBe(
+      '成員只看得到自己的資料；擔任主管的人另外看得到所管單位及所有下層單位的資料。',
+    );
+    // 所有成員選全部時已含主管可看的範圍：改說明已含，也不送出；先前的選擇留著。
     dialog.updateScope('attendance.records', 'all');
     expect(dialog.scopedGrants()[1].manager).toMatchObject({
       included: true,
-      value: 'included',
-      options: [{ value: 'included', label: '已含' }],
+      value: 'managed-tree',
     });
+    expect(dialog.scopedGrants()[1].reach).toBe('成員看得到所有人的資料，已包含主管所管的單位。');
     await dialog.save(new Event('submit'));
     expect(api.group).toHaveBeenLastCalledWith(
       'review',
@@ -264,6 +270,28 @@ describe('AccessEditorDialog', () => {
       'review',
       expect.objectContaining({ managerScopes: { 'attendance.records': 'managed-tree' } }),
     );
+  });
+
+  it('counts and marks the features and scopes tabs and shows each granted scope beside its feature', () => {
+    const { dialog } = setup();
+    const scoped = { ...group, featureIds: ['audit'], scopes: { audit: 'unit' } } as AdminGroupDto;
+    dialog.open('group', scoped);
+    expect(dialog.scopedGrants()[0]).toMatchObject({
+      fresh: false,
+      reach: '成員看得到所屬單位裡每個人的資料。',
+    });
+    expect(dialog.groupSections().map((item) => item.count)).toEqual([undefined, 1, 1, undefined]);
+    const description = (id: string) =>
+      dialog
+        .featureChoices()
+        .flatMap((section) => section.options)
+        .find((option) => option.id === id)?.description;
+    expect(description('audit')).toBe('audit · 資料範圍：所屬單位');
+    // 新勾選有範圍的功能：兩個頁籤都有變更（預設範圍也會儲存），列上標記為新授予。
+    dialog.update('ids', ['audit', 'attendance.records']);
+    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([false, true, true, false]);
+    expect(dialog.scopedGrants()[1]).toMatchObject({ fresh: true, value: 'own' });
+    expect(description('attendance.records')).toBe('attendance.records · 資料範圍：本人');
   });
 
   it('opens saved manager scopes and treats changing them as unsaved', () => {
@@ -308,10 +336,10 @@ describe('AccessEditorDialog', () => {
     dialog.update('storage', '3');
     dialog.update('enabled', false);
     expect(dialog.dirty()).toBe(true);
-    // 一次儲存涵蓋兩個分頁，所以持有變更的那個分頁會被標記。
-    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false]);
+    // 一次儲存涵蓋所有分頁，所以持有變更的那個分頁會被標記。
+    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false, false, false]);
     dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, restricted: true });
-    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, true]);
+    expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false, false, true]);
     dialog.revert();
     expect(dialog.dirty()).toBe(false);
     expect(dialog.editor()!.enabled).toBe(true);

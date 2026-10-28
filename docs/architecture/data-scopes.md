@@ -8,7 +8,7 @@
 - 兩組代碼與順序（由窄到寬）、各依據哪種單位、是否含下層，都宣告在 [`DataScopes`](../../backend/src/AiNexus.Features/Admin/AccessControl/Scopes/DataScopes.cs)；`IDataScope` 依宣告計算。
 - 功能在 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs) 以 `Scopes`、`ManagerScopes` 宣告支援的範圍（由窄到寬）。**宣告了就表示查詢已套用範圍**；還沒套用的功能不要宣告，否則管理員設了範圍卻沒有效果。
 - 群組儲存（`PUT /api/v1/admin/groups/{id}` 的 `scopes`、`managerScopes`）：有宣告範圍的功能必須給一個支援的值；主管範圍可不給，給了就要是支援的值；沒宣告的不可帶。否則 `invalid_data_scope`（同樣留下稽核，快照含兩種範圍）。
-- 管理介面每個有範圍的功能一列：「所有成員」與「主管另可看」（功能沒宣告主管範圍時不顯示）。新勾選的功能預設最窄的範圍、主管不另外；「所有成員」選全部時第二個選單停用並顯示「已含」。
+- 管理介面在群組編輯的「資料範圍」頁籤，每個已勾選、有範圍的功能一張卡片：「所有成員」與「主管另可看」各一組由窄到寬的 segment（功能沒宣告主管範圍時不顯示第二組），下方一句白話說明成員實際看得到誰（文案在 `access-editor-dialog.ts` 的 `MEMBER_REACH`，新增範圍代碼時要補）。新勾選的功能預設最窄的範圍、主管不另外，卡片標「新授予」；「所有成員」選全部時第二組改說明「已含」。功能授權頁籤在有範圍的功能 id 後顯示目前範圍。
 - 目錄經 OpenAPI 的 `x-feature-catalog` 輸出每個功能的 `scopes`、`managerScopes` 與範圍名稱，前端的 `CATALOG_SCOPES` 由它產生。
 - Seed 的預設授權也要符合宣告（`FeatureCatalogSeedTests`）。
 

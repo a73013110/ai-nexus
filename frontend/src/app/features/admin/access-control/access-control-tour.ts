@@ -1,6 +1,6 @@
 import type { ProductTourDefinition, TourStep, TourSteps } from '@shared/ui/product-tour';
 import type { NavigationKind } from '@core/layout/navigation-tree';
-import type { AccessKind } from './roles/access-editor-dialog';
+import type { AccessKind, GroupSection } from './roles/access-editor-dialog';
 
 /** 導覽文案引用的其他頁名稱；取 `session.featureName`，管理員改名後文案跟著變。 */
 export interface AccessPageNames {
@@ -183,8 +183,10 @@ export function accessEditorTour(options: {
   kind: AccessKind;
   /** 新增（而非編輯既有項目），識別碼可填。 */
   creating: boolean;
-  /** 功能群組目前在「AI 模型」頁籤。 */
-  models: boolean;
+  /** 功能群組目前的頁籤。 */
+  section: GroupSection;
+  /** 功能群組已勾選有資料範圍的功能；沒有時資料範圍頁籤是空狀態。 */
+  scoped: boolean;
 }): ProductTourDefinition {
   const { names, kind } = options;
   const host = 'nx-access-editor-dialog';
@@ -200,9 +202,8 @@ export function accessEditorTour(options: {
   };
   const tabs: TourStep = {
     target: `${host} nx-tabs`,
-    title: '兩個頁籤一起儲存',
-    description:
-      '群組設定與 AI 模型分頁呈現，一次儲存涵蓋兩者；頁籤上的標記表示該頁有未儲存的變更。',
+    title: '四個頁籤一起儲存',
+    description: '一次儲存涵蓋全部頁籤；數字是授予與要選範圍的功能數，圓點表示該頁有未儲存的變更。',
     side: 'bottom',
   };
   let steps: TourSteps;
@@ -237,7 +238,7 @@ export function accessEditorTour(options: {
         side: 'top',
       },
     ];
-  else if (options.models)
+  else if (options.section === 'models')
     steps = [
       tabs,
       {
@@ -248,22 +249,37 @@ export function accessEditorTour(options: {
         side: 'top',
       },
     ];
+  else if (options.section === 'features')
+    steps = [
+      tabs,
+      {
+        target: `${host} .access-features`,
+        title: '功能授權',
+        description: `依側欄位置分組勾選；有資料範圍的功能在 id 後顯示目前的範圍，停用的功能不授予，功能本身在「${names.features}」頁管理。`,
+        side: 'top',
+      },
+    ];
+  else if (options.section === 'scopes')
+    steps = [
+      tabs,
+      options.scoped
+        ? {
+            target: `${host} .access-scope`,
+            title: '成員看得到誰',
+            description: `每個功能由窄到寬選一個範圍，部分功能可再讓主管多看所管單位；下方的句子說明結果，多群組取聯集，單位與主管在「${names.organization}」頁維護。`,
+            side: 'bottom',
+          }
+        : {
+            target: `${host} .access-scope-empty`,
+            title: '沒有要選的範圍',
+            description: '勾選有資料範圍的功能（例如出勤紀錄）後，回到這裡選成員看得到誰的資料。',
+            side: 'top',
+          },
+    ];
   else
     steps = [
       tabs,
       basics,
-      {
-        target: `${host} .access-features`,
-        title: '功能授權',
-        description: `依側欄位置分組勾選；停用的功能不授予，功能本身在「${names.features}」頁管理。`,
-        side: 'top',
-      },
-      {
-        target: `${host} .access-scopes`,
-        title: '資料範圍',
-        description: `有資料範圍的功能要選所有成員看得到誰的資料，部分功能可再讓主管多看所管單位；預設最窄、多群組取聯集，單位與主管在「${names.organization}」頁維護。`,
-        side: 'top',
-      },
       {
         target: `${host} .access-storage`,
         title: '附件容量',

@@ -1,0 +1,109 @@
+@use 'breakpoints' as bp;
+@use 'optical';
+
+.feature-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+}
+// 一個功能一張卡片，外觀與功能授權的 ChoiceGroups 卡片相同，兩個頁籤看起來是同一份清單。
+.access-scope-list {
+  max-width: 40rem;
+}
+.access-scope {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
+}
+.access-scope-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.access-scope-head nx-icon {
+  color: var(--secondary);
+}
+.access-scope-head h4 {
+  @include optical.label-line-truncate;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.access-scope-section {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+// 這次才勾選的功能已套用最窄的預設範圍；標記提醒確認，儲存後就不再是新的。
+.access-scope-fresh {
+  margin-inline-start: auto;
+  padding: 0 var(--p-space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+// 「所有成員」與「主管另可看」各一列：標籤一欄對齊，segment 在右；窄時標籤在上。
+.access-scope-axis {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+}
+.access-scope-label {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.access-scope-included {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-height: var(--button-target);
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  animation: arrive var(--motion) var(--ease);
+}
+.access-scope-included nx-icon {
+  color: var(--signal);
+}
+// 白話結果：每次換範圍重建句子，從下方淡入，讓「看得到誰」的變化被注意到。
+.access-scope-reach {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--radius-item);
+  background: var(--tile-inset);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  line-height: 1.65;
+}
+.access-scope-reach nx-icon {
+  --icon-size: var(--icon-sm);
+  @include optical.line-icon;
+  color: var(--accent);
+}
+.access-scope-reach span {
+  display: inline-block;
+  animation: arrive var(--motion) var(--ease);
+}
+@include bp.below(phone) {
+  .access-scope {
+    padding-inline: var(--p-space-3);
+  }
+  .access-scope-axis {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-space-2);
+  }
+}

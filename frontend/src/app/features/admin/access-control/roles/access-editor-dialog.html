@@ -37,7 +37,7 @@
       } @else {
         <div #body class="dialog-body"><ng-container [ngTemplateOutlet]="content" /></div>
       }
-      <!-- 角色、功能或群組的第一個頁籤是一頁區段，與使用者的頁籤相同。 -->
+      <!-- 角色、功能與群組的「群組設定」頁籤是一頁區段，與使用者的頁籤相同。 -->
       <ng-template #content>
         @if (editorError()) {
           <nx-notice tone="danger" [message]="editorError()" />
@@ -51,6 +51,131 @@
             [disabled]="saving()"
             (valueChange)="update('modelPolicy', $event)"
           />
+        } @else if (e.kind === 'group' && groupSection() === 'features') {
+          <div class="form-sections">
+            <section
+              class="form-section form-section-wide access-features"
+              role="group"
+              [attr.aria-labelledby]="id + '-features'"
+            >
+              <header class="form-section-head">
+                <h3 [id]="id + '-features'">功能授權</h3>
+                <p class="form-note">可複選；使用者取各有效群組的聯集，停用的功能不授予。</p>
+                @if (scopedGrants().length) {
+                  <p class="form-note">
+                    其中 {{ scopedGrants().length }} 個功能有資料範圍，id 後顯示目前的設定。
+                  </p>
+                  <button type="button" class="quiet-button" (click)="selectSection('scopes')">
+                    設定資料範圍<nx-icon name="forward" />
+                  </button>
+                }
+              </header>
+              <div class="form-section-body">
+                <nx-choice-groups
+                  label="授予功能"
+                  [groups]="featureChoices()"
+                  [selected]="e.ids"
+                  [disabled]="saving()"
+                  (selectedChange)="update('ids', $event)"
+                />
+              </div>
+            </section>
+          </div>
+        } @else if (e.kind === 'group' && groupSection() === 'scopes') {
+          @if (scopedGrants().length) {
+            <div class="form-sections">
+              <section
+                class="form-section form-section-wide access-scopes"
+                role="group"
+                [attr.aria-labelledby]="id + '-scopes'"
+              >
+                <header class="form-section-head">
+                  <h3 [id]="id + '-scopes'">資料範圍</h3>
+                  <p class="form-note">每個功能選成員看得到誰的資料，由窄到寬排列。</p>
+                  <nx-info-popover label="計算方式" panelLabel="資料範圍的計算方式" [width]="320">
+                    <ul class="form-note-list">
+                      <li>使用者屬於多個有效群組時，同一功能的範圍取聯集。</li>
+                      <li>新勾選的功能預設最窄的範圍，主管不另外。</li>
+                      <li>所屬單位與主管在組織頁維護；停用的單位連同下層都不算。</li>
+                      @if (managerScoped()) {
+                        <li>主管是組織頁勾選為主管的成員，不必另建主管群組。</li>
+                      }
+                    </ul>
+                  </nx-info-popover>
+                </header>
+                <div class="form-section-body access-scope-list">
+                  @for (grant of scopedGrants(); track grant.id) {
+                    <article
+                      class="access-scope"
+                      role="group"
+                      [attr.aria-labelledby]="id + '-scope-' + grant.id"
+                    >
+                      <header class="access-scope-head">
+                        <nx-icon [name]="icon(grant.icon)" />
+                        <h4 [id]="id + '-scope-' + grant.id">{{ grant.name }}</h4>
+                        @if (grant.section) {
+                          <span class="access-scope-section">{{ grant.section }}</span>
+                        }
+                        @if (grant.fresh) {
+                          <span class="access-scope-fresh">新授予</span>
+                        }
+                      </header>
+                      <div class="access-scope-axis">
+                        <span class="access-scope-label" aria-hidden="true">所有成員</span>
+                        <nx-view-switch
+                          appearance="segment"
+                          [label]="grant.name + '：所有成員的範圍'"
+                          [options]="grant.options"
+                          [value]="grant.value"
+                          [disabled]="saving()"
+                          (valueChange)="updateScope(grant.id, $event)"
+                        />
+                        @if (grant.manager; as manager) {
+                          <span class="access-scope-label" aria-hidden="true">主管另可看</span>
+                          @if (manager.included) {
+                            <p class="access-scope-included">
+                              <nx-icon name="check" />已含在「全部」
+                            </p>
+                          } @else {
+                            <nx-view-switch
+                              appearance="segment"
+                              [label]="grant.name + '：主管另可看的範圍'"
+                              [options]="manager.options"
+                              [value]="manager.value"
+                              [disabled]="saving()"
+                              (valueChange)="updateScope(grant.id, $event, 'managerScopes')"
+                            />
+                          }
+                        }
+                      </div>
+                      <!-- live region 常駐、只重建句子：換句子時進場動畫提示「結果變了」，朗讀器念新的那句。 -->
+                      <p class="access-scope-reach" aria-live="polite">
+                        <nx-icon name="eye" />
+                        @for (reach of [grant.reach]; track reach) {
+                          <span>{{ reach }}</span>
+                        }
+                      </p>
+                    </article>
+                  }
+                </div>
+              </section>
+            </div>
+          } @else {
+            <nx-empty-state class="access-scope-empty">
+              <nx-icon name="eye" />
+              <strong>授予的功能都沒有資料範圍</strong>
+              <span>
+                @if (scopableNames()) {
+                  勾選有資料範圍的功能（{{ scopableNames() }}）後，在這裡選成員看得到誰的資料。
+                } @else {
+                  目前沒有功能宣告資料範圍。
+                }
+              </span>
+              <button type="button" class="secondary-button" (click)="selectSection('features')">
+                前往功能授權
+              </button>
+            </nx-empty-state>
+          }
         } @else {
           <div class="form-sections">
             <section
@@ -158,77 +283,6 @@
               </section>
             }
             @if (e.kind === 'group') {
-              <section
-                class="form-section form-section-wide access-features"
-                role="group"
-                [attr.aria-labelledby]="id + '-features'"
-              >
-                <header class="form-section-head">
-                  <h3 [id]="id + '-features'">功能授權</h3>
-                  <p class="form-note">可複選；使用者取各有效群組的聯集，停用的功能不授予。</p>
-                </header>
-                <div class="form-section-body">
-                  <nx-choice-groups
-                    label="授予功能"
-                    [groups]="featureChoices()"
-                    [selected]="e.ids"
-                    [disabled]="saving()"
-                    (selectedChange)="update('ids', $event)"
-                  />
-                </div>
-              </section>
-              @if (scopedGrants().length) {
-                <section
-                  class="form-section access-scopes"
-                  role="group"
-                  [attr.aria-labelledby]="id + '-scopes'"
-                >
-                  <header class="form-section-head">
-                    <h3 [id]="id + '-scopes'">資料範圍</h3>
-                    <p class="form-note">
-                      決定能看到哪些人的資料；使用者屬於多個群組時取聯集，所屬單位在組織頁維護。
-                    </p>
-                  </header>
-                  <div class="form-section-body">
-                    @for (grant of scopedGrants(); track grant.id) {
-                      <div
-                        class="access-scope"
-                        role="group"
-                        [attr.aria-labelledby]="id + '-scope-' + grant.id"
-                      >
-                        <span class="access-scope-name" [id]="id + '-scope-' + grant.id">{{
-                          grant.name
-                        }}</span>
-                        <div class="form-row">
-                          <label
-                            >所有成員<nx-select
-                              [label]="grant.name + '：所有成員的範圍'"
-                              [options]="grant.options"
-                              [value]="grant.value"
-                              [disabled]="saving()"
-                              (valueChange)="updateScope(grant.id, $event)"
-                          /></label>
-                          @if (grant.manager; as manager) {
-                            <label
-                              >主管另可看<nx-select
-                                [label]="grant.name + '：主管另可看的範圍'"
-                                [options]="manager.options"
-                                [value]="manager.value"
-                                [disabled]="saving() || manager.included"
-                                (valueChange)="updateScope(grant.id, $event, 'managerScopes')"
-                            /></label>
-                          }
-                        </div>
-                      </div>
-                    }
-                    @if (managerScoped()) {
-                      <p class="form-note">
-                        主管是組織頁勾選為主管的成員，另外看得到所管單位的資料；不必另建主管群組。
-                      </p>
-                    }
-                  </div>
-                </section>
-              }
               <section
                 class="form-section access-storage"
                 role="group"
