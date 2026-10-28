@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 先 build 前端，再 dotnet publish 主機，最後把前端產物放進發布目錄的 wwwroot。
-輸出目錄必須在 artifacts/ 內；舊的 wwwroot 只有在確認是此 repo 內的實體目錄時才會刪除。
+輸出目錄必須在 artifacts/ 內，publish 前會先清空（不是連結時才清）；舊的 wwwroot 只有在確認是此 repo 內的實體目錄時才會刪除。
 
 .PARAMETER Restore
 先執行 Restore.ps1。
@@ -46,6 +46,13 @@ try {
             }
         }
         @{ Name = '後端 publish'; Run = {
+                # publish -o 只覆寫不清除；先清空，否則已不再依賴的檔案（如舊的 .playwright）會留在發布包裡。
+                if (Test-Path -LiteralPath $publish) {
+                    if ((Get-Item -LiteralPath $publish).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                        throw '拒絕清空經由連結的輸出目錄。'
+                    }
+                    Remove-Item -LiteralPath $publish -Recurse -Force
+                }
                 dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -r $Runtime --self-contained false -o $publish
                 if ($LASTEXITCODE -ne 0) { throw '後端 publish 失敗。' }
             }
