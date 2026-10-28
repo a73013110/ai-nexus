@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Office.Attendance.Imports;
+using AiNexus.Platform.Data.Tables;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 using static AiNexus.IntegrationTests.Support.PunchSource;
@@ -14,7 +15,10 @@ public sealed class ListPunchImportsTests
     private static readonly string Oct2 = NameOf(10, 2);
 
     private static async Task<PunchImportDto[]> ListAsync(HttpClient client, string query = "")
-        => (await client.GetFromJsonAsync<PunchImportDto[]>($"{Imports}{query}", TestContext.Current.CancellationToken))!;
+        => [.. (await PageAsync(client, query)).Items];
+
+    private static async Task<TablePage<PunchImportDto>> PageAsync(HttpClient client, string query = "")
+        => (await client.GetFromJsonAsync<TablePage<PunchImportDto>>($"{Imports}{query}", TestContext.Current.CancellationToken))!;
 
     /// <summary>10/1 成功一次、10/2 失敗一次再被 HR 手動重匯成功；每一步隔一分鐘，紀錄的先後才分得出來。</summary>
     private static async Task<PunchImportSession> SessionWithHistoryAsync()
@@ -67,34 +71,36 @@ public sealed class ListPunchImportsTests
     }
 
     [Fact]
-    public async Task PagesWithACursor()
+    public async Task ReturnsEverythingAtOnceWhileTheHistoryIsSmall()
     {
-        await using var session = await PunchImportSession.CreateAsync();
-        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
-        for (var i = 0; i < 27; i++)
-        {
-            Assert.True((await session.ReimportAsync(Oct1)).IsSuccess);
-            session.Clock.Advance(TimeSpan.FromSeconds(1));
-        }
+        await using var session = await SessionWithHistoryAsync();
 
-        var first = await ListAsync(session.Hr, "?take=25");
-        var second = await ListAsync(session.Hr, $"?take=25&before={first[^1].Id}");
+        // 資料量在門檻內：忽略分頁與欄位篩選，排序照指定的欄位，由前端在本機處理。
+        var page = await PageAsync(session.Hr, "?limit=1&offset=1&sort=punchCount&filter=status:in:failed");
 
-        Assert.Equal((25, 2), (first.Length, second.Length));
-        Assert.Empty(first.Select(x => x.Id).Intersect(second.Select(x => x.Id)));
-        Assert.True(first[^1].StartedAt >= second[0].StartedAt);
-        Assert.Equal(27, first.Length + second.Length);
+        Assert.True(page.Complete);
+        Assert.Equal((3, 0), (page.Total, page.Offset));
+        Assert.Equal(0, page.Items[0].PunchCount);
     }
 
     [Theory]
     [InlineData("?status=bogus")]
-    [InlineData("?take=7")]
     [InlineData("?from=2026-10-02T00:00:00%2B08:00&until=2026-10-01T00:00:00%2B08:00")]
-    [InlineData("?before=11111111-1111-1111-1111-111111111111")]
     public async Task InvalidFiltersAreRejected(string query)
     {
         await using var session = await PunchImportSession.CreateAsync();
 
         await AssertCodeAsync(await session.Hr.GetAsync($"{Imports}{query}", TestContext.Current.CancellationToken), HttpStatusCode.BadRequest, "attendance_import_filter_invalid");
+    }
+
+    [Theory]
+    [InlineData("?limit=0")]
+    [InlineData("?sort=requestedByName")]
+    [InlineData("?filter=fileName:in:20261001.txt")]
+    public async Task UndeclaredColumnsAndOperationsAreRejected(string query)
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+
+        await AssertCodeAsync(await session.Hr.GetAsync($"{Imports}{query}", TestContext.Current.CancellationToken), HttpStatusCode.BadRequest, "invalid_table_query");
     }
 }

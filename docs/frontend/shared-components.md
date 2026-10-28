@@ -23,6 +23,7 @@
 
 - 選人 `PersonPicker`、從名單挑人 `PersonBrowser`、平面清單 `Select`、階層（單位、分群）`TreeSelect`，選項狀態標籤 `OptionTags`；用法見 [表單](forms.md)「選擇對象」。
 - 由管理者決定先後的列表直接在表格上排序：`nxSortableRows`＋`nx-sort-handle`＋`nx-sort-rank`，規則見 [手動排序](../architecture/manual-ordering.md)。
+- 表格的排序、欄位篩選與分頁用 [`table-model.ts`](../../frontend/src/app/shared/ui/table-model.ts) 的表格模型＋`th[nxHeader]`，已套用條件的 chip 用 `ChipList`；規則見 [資料工作區](data-workspace.md)。
 - 下拉面板一律經 [`anchored-popover.ts`](../../frontend/src/app/shared/browser/anchored-popover.ts) 開關：給 `trigger`，按觸發鈕關閉不會被輕關閉後又打開；選擇器另給 `closeOnFocusOut`（Tab 離開即關）。選擇器常被欄位 `<label>` 包住，它保證點面板的空白或文字不會被 label 轉成觸發鈕的 click，焦點也不會落到面板外。
 
 ## 完成的條件

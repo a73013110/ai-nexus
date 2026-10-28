@@ -18,23 +18,21 @@ public sealed class MenuNavigationTests
     {
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
-        // 成員在系統管理只看得到「評測與開發」的兩個評測頁：其他子分群沒有可見頁面而被修剪，系統管理只剩這個子分群，仍保留兩層分群。
+        // 成員在系統管理沒有任何頁面（評測只給管理員），整個分群被修剪。
         // 員工服務只有出勤紀錄一頁（卡號對應等管理頁屬於人事與出勤，沒有授權就修剪），分群照常顯示。
-        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "office", BuiltInAccess.SystemNavigation], tree.Select(x => x.Id));
+        Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "office"], tree.Select(x => x.Id));
         var dashboard = tree[0];
         Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));
         Assert.Equal(["work.chat", "work.projects", "work.files", "work.knowledge", "work.artifacts"], tree[1].Children.Select(x => x.Id));
         Assert.Equal(("group", "AI 工作台"), (tree[1].Kind, tree[1].Name));
         Assert.Equal(("group", FeatureCatalog.AttendanceRecords), (tree[3].Kind, Assert.Single(tree[3].Children).FeatureId));
-        var evaluation = Assert.Single(tree[4].Children);
-        Assert.Equal("system.evaluation", evaluation.Id);
-        Assert.Equal(["system.evaluation.quality", "system.evaluation.quality-retrieval"], evaluation.Children.Select(x => x.Id));
     }
 
     [Fact]
     public async Task GroupsLeftWithOneVisibleChildStayGroups()
     {
-        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        // 成員有兩個評測頁時，系統管理只剩「評測與開發」這個子分群。
+        await using var factory = new AppFactory(seed: PlatformGrants.QualityForMembers, administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         using var member = await factory.SignedInAsync("bob");
         (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;

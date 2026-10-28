@@ -3,18 +3,13 @@
     label="搜尋在線使用者、IP 或裝置"
     placeholder="搜尋使用者、IP 或裝置…"
     [value]="query()"
-    (valueChange)="setFilter('query', $event)"
+    (valueChange)="query.set($event)"
   />
   <nx-select
-    label="在線狀態"
-    [options]="states"
-    [value]="state()"
-    (valueChange)="setFilter('state', $event)"
-  /><nx-select
     label="目前功能"
     [options]="featureOptions()"
     [value]="feature()"
-    (valueChange)="setFilter('feature', $event)"
+    (valueChange)="feature.set($event)"
   />
 </div>
 <nx-data-table
@@ -22,32 +17,21 @@
   class="monitor-sessions-table"
   [stacked]="true"
   [busy]="busy()"
+  [table]="table"
 >
   <table class="monitor-table">
     <thead>
       <tr>
-        <th scope="col" [attr.aria-sort]="sort() === 'name' ? 'ascending' : 'none'">
-          <button type="button" class="ui-table-sort" (click)="sort.set('name')">
-            使用者 <nx-icon name="chevron" />
-          </button>
-        </th>
-        <th scope="col">裝置／連線位址</th>
-        <th scope="col">目前功能</th>
-        <th scope="col">狀態</th>
-        <th
-          scope="col"
-          class="ui-table-numeric"
-          [attr.aria-sort]="sort() === 'requests' ? 'descending' : 'none'"
-        >
-          <button type="button" class="ui-table-sort" (click)="sort.set('requests')">
-            請求數 <nx-icon name="chevron" />
-          </button>
-        </th>
-        <th scope="col">最近操作</th>
+        <th nxHeader="user"></th>
+        <th nxHeader="device"></th>
+        <th nxHeader="feature"></th>
+        <th nxHeader="state"></th>
+        <th nxHeader="requests"></th>
+        <th nxHeader="lastAction"></th>
       </tr>
     </thead>
     <tbody>
-      @for (s of visible(); track s.id) {
+      @for (s of table.rows(); track s.id) {
         <tr nxTableRow [class.is-selected]="selectedId() === s.id" (rowActivate)="selected.emit(s)">
           <td>
             <button
@@ -86,23 +70,6 @@
     </tbody>
   </table>
   <nx-table-state
-    [count]="visible().length"
-    [emptyTitle]="
-      query() || state() !== 'all' || feature() !== 'all'
-        ? '沒有符合篩選的連線'
-        : '目前沒有在線工作階段'
-    "
+    [emptyTitle]="query() || feature() !== 'all' ? '沒有符合篩選的連線' : '目前沒有在線工作階段'"
   />
-  <div table-footer class="ui-table-footer">
-    <nx-table-pagination
-      mode="offset"
-      [pageIndex]="currentPage()"
-      [pageSize]="pageSize"
-      [pageSizes]="[pageSize]"
-      [count]="visible().length"
-      [total]="filtered().length"
-      (pageChange)="page.set(currentPage() + $event)"
-      (pageSelect)="page.set($event)"
-    />
-  </div>
 </nx-data-table>

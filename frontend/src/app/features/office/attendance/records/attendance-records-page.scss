@@ -1,4 +1,9 @@
-@use 'breakpoints' as bp;
+// 元件不封裝（人員資訊的範本畫在每段 `RecordsPersonGroup` 裡）：class 一律 `records-` 開頭，通用的選擇器收在 `.records-table` 底下。
+// 每段的列與儲存格樣式在 records-person-group.scss。
+nx-attendance-records-page {
+  display: block;
+  min-width: 0;
+}
 
 // 最小寬度交給 stacked 表格（--table-min-width）：寬版橫向捲動，手機卡片不受它撐寬。
 .records-table {
@@ -28,42 +33,9 @@
 .records-duration-column {
   width: 6.5rem;
 }
-.records-time {
-  font-variant-numeric: tabular-nums;
-}
-// 每個人一段：寬版的人員欄跨過他的每一天，往右捲時黏在左邊、往下捲時內容黏在表頭下，
-// 看到哪一列都知道是誰；段落交替底色、段與段之間加粗分隔。手機卡片不排欄，改顯示段首的姓名列。
-.records-table .records-person-row {
-  display: none;
-}
-.records-person-group:nth-of-type(even) {
-  // --surface-subtle 在白底上幾乎看不出來；從 --ink 混一點，深淺主題都分得出相鄰兩個人。
-  --records-group-surface: color-mix(in srgb, var(--ink) 3.5%, var(--surface));
-  background: var(--records-group-surface);
-}
-.records-person-group + .records-person-group > tr:nth-child(2) > * {
-  border-top: 2px solid var(--line);
-}
 .records-table th.records-person-head {
   left: 0;
   z-index: 2;
-}
-.records-table th.records-person-cell {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  vertical-align: top;
-  background: var(--records-group-surface, var(--surface));
-  border-inline-end: 1px solid var(--line);
-  font-weight: 400;
-}
-// 表頭高度＝一行字＋上下內距：人員資訊黏在表頭下方，捲到段尾才跟著離開。
-.records-person-card {
-  position: sticky;
-  top: calc(var(--text-ui) * var(--line-ui) + 2 * var(--table-cell-padding-block) + 1px);
-  display: grid;
-  justify-items: start;
-  gap: var(--p-space-1);
 }
 .records-person-card .records-person-name {
   display: grid;
@@ -88,106 +60,10 @@
   color: var(--danger);
   font-weight: 600;
 }
-// 換週的那一列與上一週隔一條線（加上原本的列線就是兩倍粗）。
-tr.records-week-start > td {
-  border-top: 1px solid var(--line);
-}
-// 缺口的顏色跟著補足狀態（`GAP_COVERAGE` 的 tone）：已補足綠、流程中黃、未補足紅、無法取得灰。
-[data-tone='success'] {
-  --gap-color: var(--success);
-}
-[data-tone='warning'] {
-  --gap-color: var(--warning);
-}
-[data-tone='danger'] {
-  --gap-color: var(--danger);
-}
-[data-tone='neutral'] {
-  --gap-color: var(--secondary);
-}
-// 遲到的上班、早退的下班：在時間本身標色，對應舊系統的紅字。
-.records-time-flag {
-  margin-inline: -0.3em;
-  padding: 0.0625rem 0.3em;
-  border-radius: var(--radius-mark);
-  background: color-mix(in srgb, var(--gap-color, var(--warning)) 14%, var(--surface));
-  color: var(--gap-color, var(--warning));
-  font-weight: 600;
-}
-.records-gap {
-  color: var(--gap-color, var(--warning));
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-// 應下班下的扣表單時間。
-.records-adjusted {
-  display: block;
-  color: var(--gap-color, var(--secondary));
-  font-size: var(--p-font-xs);
-  font-weight: 600;
-}
-// 補足欄：狀態標籤在前、差額接在後面（窄時換行），下面是缺口時段。狀態欄的多個標籤同樣並排。
-.records-gap-cell {
-  display: grid;
-  justify-items: start;
-  gap: 2px;
-}
-.records-badges {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-1);
-}
-.records-gap-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: var(--p-space-2);
-}
-.records-short {
-  color: var(--gap-color);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.records-form-hours {
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
-}
-.records-gaps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.4;
-}
-.records-gaps li {
-  display: flex;
-  gap: 0.4em;
-  white-space: nowrap;
-}
-.records-gaps span {
-  color: var(--ink);
-}
 .records-person-flags {
   display: flex;
   flex-wrap: wrap;
   gap: var(--p-space-1);
-}
-.records-missing {
-  padding: 0 0.3em;
-  border: 1px dashed var(--danger);
-  border-radius: var(--radius-mark);
-  color: var(--danger);
-  font-size: var(--p-font-xs);
-}
-.records-person-row > th {
-  background: var(--surface-subtle);
-  font-weight: 400;
-}
-.records-person-row > th > * + * {
-  margin-inline-start: var(--p-space-2);
 }
 .records-person-name strong {
   font-weight: 600;
@@ -205,29 +81,6 @@ tr.records-week-start > td {
 .records-person-summary > span + span::before {
   content: '・';
 }
-.records-person-group {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 40rem;
-}
-.records-reason {
-  display: block;
-  margin-top: 2px;
-  line-height: 1.4;
-}
-.records-today {
-  display: block;
-  font-weight: 600;
-}
-tr.is-weekend > td:first-child {
-  color: var(--secondary);
-}
-.records-unavailable {
-  color: var(--warning);
-  font-weight: 600;
-}
-.records-none {
-  color: var(--secondary);
-}
 // 核取方塊不需要欄位寬度：不參與欄位的伸縮，與控制項底部對齊並在同高度內垂直置中。
 .records-option {
   display: flex;
@@ -236,37 +89,10 @@ tr.is-weekend > td:first-child {
   align-items: center;
   min-height: var(--button-target);
 }
-@include bp.below(narrow) {
-  .records-person-group {
-    contain-intrinsic-size: auto 80rem;
-  }
-  .records-table .records-person-row {
-    display: grid;
-  }
-  .records-person-row > th {
-    white-space: normal;
-  }
-  .records-table th.records-person-cell {
-    display: none;
-  }
-  // 卡片的儲存格是直排的區塊，換週與換人的上緣線只留給寬版的表格列。
-  tr.records-week-start > td,
-  .records-person-group + .records-person-group > tr:nth-child(2) > * {
-    border-top: 0;
-  }
-}
 .records-rules-loading {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
-}
-.records-remark {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
 }
 .records-badge-link {
   text-decoration: none;

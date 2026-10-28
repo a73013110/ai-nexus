@@ -272,6 +272,8 @@ test("compact chat keeps more history and controls visible while touch menus rem
 
   const row = history.locator(".history-row").first();
   await row.getByRole("link").click();
+  // 等對話選定（列標成目前頁）再輸入：選定時輸入區會重設，滿載時太早輸入的字會被蓋掉。
+  await expect(row.getByRole("link")).toHaveAttribute("aria-current", "page");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("確認緊湊聊天操作");

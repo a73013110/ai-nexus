@@ -29,6 +29,8 @@ import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { SearchField } from '@shared/ui/search-field';
 import { SortableRows, SortHandle, SortRank, type RowMove } from '@shared/ui/sortable-rows';
 import { StatusBadge } from '@shared/ui/status-badge';
+import { TableHeader } from '@shared/ui/table-header';
+import { localTable } from '@shared/ui/table-model';
 import { Tabs } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
 import { TreeItem, TreeView } from '@shared/ui/tree-view';
@@ -63,6 +65,17 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
   ],
 };
 
+/** 欄位排序與篩選範例的虛構成員。 */
+const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
+  id: index + 1,
+  name:
+    ['林雨晴', '陳柏宇', '黃詩涵', '張家豪', '李宜蓁', '王冠廷', '吳佳穎'][index % 7] + (index + 1),
+  unit: ['研發部', '業務部', '人資室', '財務室'][index % 4],
+  role: (['owner', 'member', 'member', 'viewer'] as const)[index % 4],
+  tasks: (index * 7) % 13,
+  joined: `2026-${String((index % 9) + 1).padStart(2, '0')}-${String((index % 27) + 1).padStart(2, '0')}`,
+}));
+
 /** 精簡的資料工作區（篩選、表格、詳情抽屜）與閱讀元件。 */
 @Component({
   selector: 'nx-design-data',
@@ -92,6 +105,7 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
     SortHandle,
     SortRank,
     StatusBadge,
+    TableHeader,
     TablePagination,
     TableState,
     Tabs,
@@ -212,6 +226,41 @@ const LAZY_CHILDREN: Record<string, TreeItem[]> = {
           emptyText="試著擴大時間範圍，或移除部分條件。"
           (retry)="retry()"
         />
+      </nx-data-table>
+    </nx-design-section>
+    <nx-design-section
+      id="design-table-model"
+      class="ui-density-compact"
+      title="欄位排序與篩選"
+      api="localTable · endpointTable · cursorTable · th[nxHeader]"
+      description="欄位宣告一次（可排序、篩選型別、數字欄），表頭的排序鈕、篩選 popover、已套用的 chip、載入／空狀態與分頁列都由 [table] 產生，頁面只寫儲存格。資料已在前端用 localTable；後端列表用 endpointTable，資料量在門檻內時後端一次回傳全部，之後在本機排序與篩選；日誌、稽核等大表用 cursorTable。"
+    >
+      <nx-data-table label="欄位排序與篩選範例" [table]="people">
+        <table>
+          <caption class="sr-only">
+            示範成員，可依欄位排序與篩選
+          </caption>
+          <thead>
+            <tr>
+              <th nxHeader="name"></th>
+              <th nxHeader="unit"></th>
+              <th nxHeader="role"></th>
+              <th nxHeader="tasks"></th>
+              <th nxHeader="joined"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (person of people.rows(); track person.id) {
+              <tr>
+                <td>{{ person.name }}</td>
+                <td>{{ person.unit }}</td>
+                <td>{{ roleName(person.role) }}</td>
+                <td class="ui-table-numeric">{{ person.tasks }}</td>
+                <td>{{ person.joined }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </nx-data-table>
     </nx-design-section>
     <nx-design-section
@@ -542,6 +591,25 @@ export class DesignData {
   readonly tableBusy = computed(
     () => this.tableState() === 'loading' || this.tableState() === 'refreshing' || this.retrying(),
   );
+  readonly roles = [
+    { value: 'owner', label: '負責人' },
+    { value: 'member', label: '成員' },
+    { value: 'viewer', label: '檢視者' },
+  ];
+  readonly roleName = (role: string) => this.roles.find((item) => item.value === role)?.label;
+  /** 虛構成員；欄位宣告一次，排序、篩選與分頁都在本機。 */
+  readonly people = localTable({
+    rows: () => DESIGN_PEOPLE,
+    columns: [
+      { id: 'name', label: '姓名', sort: true, filter: 'text' },
+      { id: 'unit', label: '單位', sort: true, filter: 'text' },
+      { id: 'role', label: '角色', filter: { options: this.roles } },
+      { id: 'tasks', label: '待辦', sort: 'desc', filter: 'number', numeric: true },
+      { id: 'joined', label: '加入日', sort: 'desc', filter: 'day' },
+    ],
+    pageSize: 10,
+    pageSizes: [10, 25],
+  });
   readonly cursorPage = signal(0);
   readonly offsetPage = signal(0);
   readonly traceId = '4bf92f3577b34da6a3ce929d0e0e4736';

@@ -42,20 +42,23 @@ describe('file library store', () => {
     await settle();
     expect(list).toHaveBeenCalledTimes(1);
     expect(store.items()).toHaveLength(40);
-    expect(store.canNext()).toBe(true);
+    expect(store.table.hasNext()).toBe(true);
   });
 
   it('pages within the total and returns to the first page on a new filter', async () => {
     const { store, list, settle } = setup(60);
     store.load();
     await settle();
-    store.page(1);
+    store.table.turn(1);
     await settle();
-    expect(store.offset()).toBe(40);
-    expect(store.canNext()).toBe(false);
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 40 }),
+      expect.anything(),
+    );
+    expect(store.table.hasNext()).toBe(false);
     store.filter('image');
     await settle();
-    expect(store.offset()).toBe(0);
+    expect(store.table.pageIndex()).toBe(0);
     expect(list).toHaveBeenLastCalledWith(
       { search: '', type: 'image', source: 'all', offset: 0, limit: 40 },
       expect.anything(),

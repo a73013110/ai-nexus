@@ -11737,6 +11737,14 @@ export interface components {
             text: null | string;
             tone: string;
         };
+        TablePageOfPunchImportDto: {
+            items: components["schemas"]["PunchImportDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
         TestIdentityDto: {
             /** Format: uuid */
             administratorId: string;
@@ -12437,6 +12445,7 @@ export type SqlVectorCapabilitiesDto = components['schemas']['SqlVectorCapabilit
 export type StartRepositoryChatRequest = components['schemas']['StartRepositoryChatRequest'];
 export type StatusDto = components['schemas']['StatusDto'];
 export type SubsystemFact = components['schemas']['SubsystemFact'];
+export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
 export type TestIdentityRequest = components['schemas']['TestIdentityRequest'];
 export type TextDocumentDto = components['schemas']['TextDocumentDto'];
@@ -42194,8 +42203,10 @@ export interface operations {
                 status?: string;
                 from?: string;
                 until?: string;
-                before?: string;
-                take?: number;
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
             };
             header?: never;
             path?: never;
@@ -42209,7 +42220,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PunchImportDto"][];
+                    "application/json": components["schemas"]["TablePageOfPunchImportDto"];
                 };
             };
             /** @description Bad Request */

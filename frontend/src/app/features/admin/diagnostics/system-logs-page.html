@@ -106,8 +106,7 @@
     }
     <nx-data-table
       label="系統日誌資料表，可捲動查看更多事件"
-      [busy]="loading()"
-      [columns]="columns"
+      [table]="table"
       preferenceKey="system-logs"
     >
       <div table-toolbar class="ui-table-toolbar">
@@ -124,7 +123,7 @@
           type="button"
           class="quiet-button log-export"
           [pending]="exporting()"
-          [disabled]="!page()"
+          [disabled]="!table.data()"
           (click)="export()"
         >
           <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 CSV' }}
@@ -133,7 +132,7 @@
       <table class="log-table">
         <caption class="sr-only">
           系統日誌，依時間{{
-            sortDirection() === 'desc' ? '由新到舊' : '由舊到新'
+            table.sort()?.direction === 'asc' ? '由舊到新' : '由新到舊'
           }}排列。
         </caption>
         <colgroup>
@@ -147,21 +146,13 @@
         </colgroup>
         <thead>
           <tr>
-            <th
-              nxTableColumn="time"
-              nxSortHeader="時間"
-              ascendingLabel="由舊到新"
-              descendingLabel="由新到舊"
-              [direction]="sortDirection()"
-              [disabled]="loading()"
-              (directionChange)="changeSort($event)"
-            ></th>
-            <th scope="col" nxTableColumn="level">等級</th>
-            <th scope="col" nxTableColumn="event">事件／模組</th>
-            <th scope="col" nxTableColumn="message">訊息</th>
-            <th scope="col" class="ui-table-numeric" nxTableColumn="status">HTTP</th>
-            <th scope="col" class="ui-table-numeric" nxTableColumn="duration">耗時</th>
-            <th scope="col" nxTableColumn="correlation">查證／關聯</th>
+            <th nxHeader="time"></th>
+            <th nxHeader="level"></th>
+            <th nxHeader="event"></th>
+            <th nxHeader="message"></th>
+            <th nxHeader="status"></th>
+            <th nxHeader="duration"></th>
+            <th nxHeader="correlation"></th>
           </tr>
         </thead>
         <tbody>
@@ -241,27 +232,11 @@
         </tbody>
       </table>
       <nx-table-state
-        [count]="events().length"
-        [loading]="loading()"
-        [error]="readError()"
         loadingText="正在載入日誌…"
         errorTitle="無法載入日誌"
         emptyTitle="此範圍沒有日誌"
         emptyText="試著擴大時間範圍，或移除部分條件。"
-        (retry)="retry()"
       />
-      <div table-footer class="ui-table-footer">
-        <nx-table-pagination
-          [pageIndex]="pageIndex()"
-          [pageSize]="pageSize()"
-          [count]="events().length"
-          [hasNext]="!!page()?.nextCursor"
-          [busy]="loading()"
-          (pageChange)="changePage($event)"
-          (pageSelect)="firstPage()"
-          (pageSizeChange)="changePageSize($event)"
-        />
-      </div>
     </nx-data-table>
   }
 </nx-feature-page>
@@ -271,7 +246,7 @@
   [current]="selectedEntry()"
   [index]="selectedIndex()"
   [count]="events().length"
-  [range]="submitted()"
+  [range]="submitted() ?? null"
   (move)="inspectAdjacent($event)"
   (closed)="closeDetail()"
 />

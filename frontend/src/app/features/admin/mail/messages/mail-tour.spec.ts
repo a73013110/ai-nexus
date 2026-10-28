@@ -216,7 +216,7 @@ describe('mail messages tour targets', () => {
     await settle();
     const component = fixture.componentInstance;
     const host = fixture.nativeElement as HTMLElement;
-    expect(component.rows()).toHaveLength(2);
+    expect(component.table.rows()).toHaveLength(2);
     // 元件宿主本身就是頁面標籤，查詢時去掉開頭的宿主選擇器。
     const expectTargets = (definition: ProductTourDefinition | null) => {
       expect(definition).not.toBeNull();

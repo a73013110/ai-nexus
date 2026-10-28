@@ -51,16 +51,21 @@ function setup({
     featureName: () => '打卡匯入紀錄',
   };
   const api = {
-    imports: vi.fn(async (_filters: object, _take: number, _before?: string) => [
-      item('a', {
-        status: 'failed',
-        punchCount: 0,
-        errorMessage: '第 3 行：時間格式錯誤',
-        triggerKind: 'manual',
-        requestedByName: '人事專員',
-      }),
-      item('b'),
-    ]),
+    imports: vi.fn(async (_filters: object, _table: object) => ({
+      items: [
+        item('a', {
+          status: 'failed',
+          punchCount: 0,
+          errorMessage: '第 3 行：時間格式錯誤',
+          triggerKind: 'manual',
+          requestedByName: '人事專員',
+        }),
+        item('b'),
+      ],
+      total: 2,
+      offset: 0,
+      complete: true,
+    })),
     reimport: vi.fn(reimport),
   };
   const toast = { success: vi.fn() };
@@ -101,7 +106,11 @@ describe('AttendanceImportsPage', () => {
   it('lists imports with file, result, count and who triggered them', async () => {
     const { fixture, root, api } = setup();
     await fixture.whenStable();
-    expect(api.imports).toHaveBeenCalledWith({}, 50, undefined, expect.anything());
+    expect(api.imports).toHaveBeenCalledWith(
+      {},
+      { offset: 0, limit: 50, sort: 'startedAt:desc' },
+      expect.anything(),
+    );
     const rows = root.querySelectorAll('.imports-table tbody tr');
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('20261001.txt');

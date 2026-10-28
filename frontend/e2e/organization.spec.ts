@@ -262,6 +262,7 @@ test("組織頁以樹狀列出單位，可新增下層、排序並維護成員",
     parentId: state.ids.it,
     name: "系統部",
     enabled: true,
+    headRank: null,
   });
   await expect(tree(page)).toHaveText(["總公司", "人資處", "資訊處", "系統部"]);
 

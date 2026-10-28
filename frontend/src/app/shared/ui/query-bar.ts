@@ -6,13 +6,22 @@ import {
   ElementRef,
   computed,
   contentChildren,
+  effect,
   input,
   viewChild,
 } from '@angular/core';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
+import { ChipList } from './chip-list';
 import { Icon } from './icon';
 import type { QueryChip, QueryState } from './query-state';
+import type { TableModel } from './table-model';
+
+interface AppliedChip {
+  id: string;
+  label: string;
+  apply: () => void;
+}
 
 /**
  * 查詢列欄位對應的條件鍵（`nxQueryField="unitId"`）：已套用條件的 chip 依這些欄位在範本中的順序排列，
@@ -38,7 +47,7 @@ export class QueryField {
  */
 @Component({
   selector: 'nx-query-bar',
-  imports: [Icon],
+  imports: [ChipList, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './query-bar.scss',
   host: { class: 'ui-query-bar' },
@@ -109,25 +118,15 @@ export class QueryField {
           <nx-icon name="info" />條件已變更，按「查詢」套用
         }
       </span>
-      @if (chips().length) {
-        <ul class="ui-query-chips" aria-label="已套用條件">
-          @for (chip of chips(); track chip.id; let i = $index) {
-            <li>
-              <span [title]="chip.label">{{ chip.label }}</span>
-              <button
-                type="button"
-                data-chip-remove
-                [attr.aria-label]="'移除條件：' + chip.label"
-                [title]="'移除條件'"
-                [attr.aria-disabled]="busy() || null"
-                (click)="remove(chip, i)"
-              >
-                <nx-icon name="close" />
-              </button>
-            </li>
-          }
-        </ul>
-      }
+      <!-- 以 hidden 收起而非移除：最後一個 chip 移除後清單仍要在，才能把焦點交給「查詢」。 -->
+      <nx-chip-list
+        class="ui-query-chips"
+        [hidden]="!chips().length"
+        [chips]="chips()"
+        [busy]="busy()"
+        (chipRemove)="remove($event)"
+        (allRemoved)="focusSubmit()"
+      />
     </div>
   </form>`,
 })
@@ -142,11 +141,16 @@ export class QueryBar {
   readonly moreCount = input(0);
   readonly id = uniqueId('nx-query');
   private readonly fields = contentChildren(QueryField, { descendants: true });
-  /** 已套用條件的 chip，依 `nxQueryField` 欄位的順序。 */
-  readonly chips = computed(() => {
+  /**
+   * 同一頁表格的欄位篩選（`[table]`）：chip 接在查詢條件後面，使用者只看到一列已套用條件；
+   * 表格就不再自己顯示。
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的列型別不同
+  readonly table = input<TableModel<any> | null>(null);
+  /** 已套用條件的 chip：查詢條件依 `nxQueryField` 欄位的順序，欄位篩選排在最後。 */
+  readonly chips = computed<AppliedChip[]>(() => {
     const chips = this.state().chips();
     const keys = this.fields().map((field) => field.key());
-    if (!keys.length) return chips;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
     const rank = (chip: QueryChip<any>) =>
       Math.min(
@@ -155,8 +159,28 @@ export class QueryBar {
           .map((key) => keys.indexOf(key))
           .filter((index) => index >= 0),
       );
-    return [...chips].sort((a, b) => rank(a) - rank(b));
+    const ordered = keys.length ? [...chips].sort((a, b) => rank(a) - rank(b)) : chips;
+    return [
+      ...ordered.map((chip) => ({
+        id: 'query:' + chip.id,
+        label: chip.label,
+        apply: () => this.state().commit(chip.clear),
+      })),
+      ...(this.table()?.chips() ?? []).map((chip) => ({
+        id: 'column:' + chip.id,
+        label: chip.label,
+        apply: chip.remove,
+      })),
+    ];
   });
+  constructor() {
+    effect((onCleanup) => {
+      const table = this.table();
+      if (!table) return;
+      table.chipsClaimed.set(true);
+      onCleanup(() => table.chipsClaimed.set(false));
+    });
+  }
   private readonly form = viewChild.required<ElementRef<HTMLFormElement>>('form');
   private readonly moreTrigger = viewChild<ElementRef<HTMLButtonElement>>('moreTrigger');
   private readonly morePanel = viewChild.required<ElementRef<HTMLElement>>('morePanel');
@@ -180,20 +204,12 @@ export class QueryBar {
   reset() {
     if (!this.busy()) this.state().reset();
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
-  remove(chip: QueryChip<any>, index: number) {
-    if (this.busy()) return;
-    this.state().commit(chip.clear);
-    // 被移除的 chip 按鈕會消失，焦點移到補上同位置的 chip；沒有 chip 了就移到「查詢」，
-    // 避免焦點掉回 body。
-    requestAnimationFrame(() => {
-      const form = this.form().nativeElement;
-      const buttons = form.querySelectorAll<HTMLButtonElement>('[data-chip-remove]');
-      (
-        buttons[Math.min(index, buttons.length - 1)] ??
-        form.querySelector<HTMLButtonElement>('button[type="submit"]')
-      )?.focus();
-    });
+  remove(chip: AppliedChip) {
+    if (!this.busy()) chip.apply();
+  }
+  /** 最後一個 chip 移除後焦點移到「查詢」，避免掉回 body。 */
+  focusSubmit() {
+    this.form().nativeElement.querySelector<HTMLButtonElement>('button[type="submit"]')?.focus();
   }
   toggleMore() {
     if (this.moreOpen()) this.closeMore();

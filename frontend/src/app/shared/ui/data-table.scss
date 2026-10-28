@@ -74,3 +74,8 @@
 .ui-table-columns-panel .quiet-button {
   width: 100%;
 }
+// 欄位篩選的 chip（同頁沒有查詢列時）：接在工具列下方，與工具列同一層內距。
+.ui-table-chips {
+  padding: var(--p-space-2) var(--p-space-3);
+  border-bottom: 1px solid var(--line);
+}

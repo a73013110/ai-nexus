@@ -80,11 +80,12 @@
     role="grid"
     [attr.aria-labelledby]="id + '-month'"
     (keydown)="calendarKey($event)"
+    (wheel)="wheelMonth($event)"
   >
     <thead>
       <tr>
-        @for (day of weekdays; track day) {
-          <th scope="col" [abbr]="'星期' + day">{{ day }}</th>
+        @for (day of weekdays; track day; let first = $first, last = $last) {
+          <th scope="col" [abbr]="'星期' + day" [class.is-weekend]="first || last">{{ day }}</th>
         }
       </tr>
     </thead>
@@ -92,7 +93,10 @@
       @for (week of weeks(); track $index) {
         <tr>
           @for (day of week; track day.value) {
-            <td [attr.aria-selected]="day.value === draft().slice(0, 10)">
+            <td
+              [class.is-weekend]="day.weekend"
+              [attr.aria-selected]="day.value === draft().slice(0, 10)"
+            >
               <button
                 type="button"
                 [attr.data-date]="day.value"
@@ -150,7 +154,7 @@
   @if (invalidTimeFields().length) {
     <p class="ui-date-error" role="alert">時須介於 00–23，分與秒須介於 00–59。</p>
   }
-  <p class="ui-calendar-help">方向鍵移動 · Page Up／Down 換月</p>
+  <p class="ui-calendar-help">方向鍵移動 · Page Up／Down 或滾輪換月</p>
   <div class="ui-calendar-footer">
     <button
       type="button"

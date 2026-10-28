@@ -69,6 +69,11 @@
 }
 .ui-calendar-month input {
   width: 4.5rem;
+  text-align: center;
+  appearance: textfield;
+}
+.ui-calendar-month input::-webkit-inner-spin-button {
+  appearance: none;
 }
 .ui-calendar-month nx-select {
   width: 5.75rem;
@@ -83,6 +88,11 @@
 .ui-calendar td {
   padding: 1px;
   text-align: center;
+}
+// 週末欄整欄淡底（同 `nx-month-calendar`），選取與今天的標示疊在上面。popover 是白底，--surface-subtle
+// 疊上去幾乎看不出來，所以從 --ink 混一點透明色，深淺主題都分得出。
+.ui-calendar .is-weekend {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
 .ui-calendar th {
   height: 2rem;
@@ -103,8 +113,12 @@
   background: var(--surface-subtle);
   border-color: var(--line);
 }
-.ui-calendar td button.is-outside {
+.ui-calendar .is-weekend button {
   color: var(--secondary);
+}
+// 不在這個月的日期最淡（比週末淡），整個月的範圍一眼就看得出來。
+.ui-calendar td button.is-outside {
+  color: var(--muted);
 }
 .ui-calendar td button[aria-current='date'] {
   border-color: var(--accent);

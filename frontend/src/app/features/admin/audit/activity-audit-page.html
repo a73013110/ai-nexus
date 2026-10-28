@@ -14,7 +14,7 @@
           type="button"
           class="secondary-button"
           [pending]="catalogRefreshing()"
-          (click)="retry()"
+          (click)="retryCatalog()"
         >
           {{ catalogRefreshing() ? '重新載入中…' : '重新載入' }}
         </button></nx-notice
@@ -81,7 +81,7 @@
       class="activity-audit-table"
       label="活動稽核列表"
       [busy]="loading()"
-      [columns]="columns"
+      [table]="table"
       preferenceKey="admin-audit"
     >
       <div table-toolbar class="ui-table-toolbar">
@@ -117,13 +117,13 @@
         </colgroup>
         <thead>
           <tr>
-            <th scope="col" nxTableColumn="time">時間</th>
-            <th scope="col" nxTableColumn="actor">操作者</th>
-            <th scope="col" nxTableColumn="action">動作</th>
-            <th scope="col" nxTableColumn="feature">功能</th>
-            <th scope="col" nxTableColumn="subject">資料主體</th>
-            <th scope="col" nxTableColumn="resource">資源</th>
-            <th scope="col" nxTableColumn="result">結果</th>
+            <th nxHeader="time"></th>
+            <th nxHeader="actor"></th>
+            <th nxHeader="action"></th>
+            <th nxHeader="feature"></th>
+            <th nxHeader="subject"></th>
+            <th nxHeader="resource"></th>
+            <th nxHeader="result"></th>
           </tr>
         </thead>
         <tbody>
@@ -188,27 +188,12 @@
         </tbody>
       </table>
       <nx-table-state
-        [count]="rows().length"
-        [loading]="loading()"
-        [error]="readError()"
         loadingText="正在載入稽核紀錄…"
         errorTitle="無法取得稽核紀錄"
         emptyTitle="沒有符合條件的稽核紀錄"
         emptyText="試著擴大時間範圍，或移除部分條件。"
-        (retry)="retry()"
+        (retry)="retryCatalog()"
       />
-      <div table-footer class="ui-table-footer">
-        <nx-table-pagination
-          [pageIndex]="pageIndex()"
-          [pageSize]="pageSize()"
-          [count]="rows().length"
-          [hasNext]="hasNext()"
-          [busy]="loading()"
-          (pageChange)="changePage($event)"
-          (pageSelect)="firstPage()"
-          (pageSizeChange)="changePageSize($event)"
-        />
-      </div>
     </nx-data-table>
     <nx-detail-drawer title="稽核詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
       <nx-drawer-pager

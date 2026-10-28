@@ -18,16 +18,7 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
-import {
-  CursorTrail,
-  DataTable,
-  DataTableColumn,
-  DataTableRow,
-  PAGE_SIZES,
-  TablePagination,
-  TableState,
-  type TableColumn,
-} from '@shared/ui/data-table';
+import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
@@ -37,9 +28,11 @@ import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
+import { TableHeader } from '@shared/ui/table-header';
+import { cursorTable } from '@shared/ui/table-model';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { MailApi, type MailFilters } from '../mail-api';
+import { MailApi } from '../mail-api';
 import { MailDiagnosisDialog } from '../transport/mail-diagnosis-dialog';
 import {
   MAIL_ACTIVE_POLL,
@@ -55,14 +48,6 @@ import {
 import { MAIL_RANGES, MAIL_STATUSES, mailFilters, mailQueryOptions } from './mail-query';
 import { MailTestDialog } from './mail-test-dialog';
 import { mailDetailTour, mailMessagesTour } from './mail-tour';
-
-interface MailPageRequest {
-  filters: MailFilters;
-  take: number;
-  /** 游標：上一頁最後一筆的 ID，只讀比它舊的信；第一頁為 undefined。 */
-  before: string | undefined;
-  index: number;
-}
 
 /**
  * 郵件寄送紀錄（`mail.messages`）：查證「到底有沒有寄出」，連線診斷查「為什麼寄不出」。收件者只顯示遮罩，敏感信看不到內文；
@@ -88,7 +73,7 @@ interface MailPageRequest {
     QueryBar,
     RouterLink,
     StatusBadge,
-    TablePagination,
+    TableHeader,
     TableState,
     TimeRangePicker,
     ViewSwitch,
@@ -106,18 +91,35 @@ export class MailMessagesPage {
   readonly ranges = MAIL_RANGES;
   readonly query = queryState(mailQueryOptions);
   readonly draft = this.query.draft;
-  readonly pageSize = signal(50);
-  private readonly request = signal<MailPageRequest | undefined>(undefined);
-  private readonly pageRead = apiResource({
+  /** 套用條件時把相對時間換算成起訖；條件不合法時不讀。 */
+  private readonly filters = computed(() => {
+    const filters = mailFilters(this.query.applied());
+    return typeof filters === 'string' ? undefined : filters;
+  });
+  /** 游標是上一頁最後一封的 ID，只讀比它舊的信；不算總數，本頁滿一頁才表示可能還有。 */
+  readonly table = cursorTable({
     feature: 'mail.messages',
-    params: this.request,
-    loader: async (request, signal) => ({
-      request,
-      rows: await this.api.list(request.filters, request.take, request.before, signal),
-    }),
+    params: this.filters,
+    load: async (filters, table, signal) => {
+      const before = typeof table.cursor === 'string' ? table.cursor : undefined;
+      const items = await this.api.list(filters, table.limit, before, signal);
+      return { items, next: items.length === table.limit ? items.at(-1)?.id : null };
+    },
     // 只有第一頁會出現新入列的信；較舊的頁面只在有進行中的信時更新。
-    poll: (page) =>
-      page ? mailPollDelay(page.rows, page.request.index === 0 ? MAIL_IDLE_POLL : null) : null,
+    poll: (page, index) =>
+      page ? mailPollDelay(page.items, index === 0 ? MAIL_IDLE_POLL : null) : null,
+    columns: [
+      { id: 'time', label: '時間', hideable: false },
+      { id: 'status', label: '狀態', hideable: false },
+      { id: 'recipient', label: '收件者' },
+      { id: 'subject', label: '主旨', hideable: false },
+      { id: 'category', label: '分類' },
+      { id: 'attempts', label: '嘗試', numeric: true },
+    ],
+    navigated: () => {
+      this.drawer()?.close();
+      this.selectedId.set(null);
+    },
   });
   private readonly statusRead = apiResource({
     feature: 'mail.messages',
@@ -128,43 +130,27 @@ export class MailMessagesPage {
         : MAIL_IDLE_POLL,
   });
   readonly status = this.statusRead.value;
-  readonly rows = computed<MailMessageDto[]>(() => this.pageRead.value()?.rows ?? []);
-  readonly pageIndex = computed(() => this.pageRead.value()?.request.index ?? 0);
-  /** 游標分頁不算總數：本頁筆數等於每頁筆數，才表示可能還有更舊的信。 */
-  readonly hasNext = computed(() => {
-    const page = this.pageRead.value();
-    return !!page && page.rows.length === page.request.take;
-  });
   /**
    * 使用者感覺得到的讀取（換條件、換頁、重試與寫入後重讀）：擋操作、表格淡化。
    * 背景更新（輪詢）不算，不打斷閱讀。
    */
-  readonly loading = computed(() => this.pageRead.refreshing());
-  /** 同一個請求的背景更新裡新出現的列（新入列的信），進場時有動效；換頁或換條件時清空。 */
+  readonly loading = this.table.refreshing;
+  /** 同一頁的背景更新裡新出現的列（新入列的信），進場時有動效；換頁或換條件時清空。 */
   private readonly arrived = linkedSignal<
-    { request: MailPageRequest; rows: MailMessageDto[] } | undefined,
+    { revision: number; rows: readonly MailMessageDto[] },
     ReadonlySet<string>
   >({
-    source: () => this.pageRead.value(),
+    source: () => ({ revision: this.table.revision(), rows: this.table.rows() }),
     computation: (page, previous) => {
       const before = previous?.source;
-      if (!page || !before || before.request !== page.request) return new Set();
+      if (!before || before.revision !== page.revision || !before.rows.length) return new Set();
       const known = new Set(before.rows.map((row) => row.id));
       return new Set(page.rows.filter((row) => !known.has(row.id)).map((row) => row.id));
     },
   });
-  readonly readError = computed(() => this.pageRead.error());
-  readonly columns: TableColumn[] = [
-    { id: 'time', label: '時間', hideable: false },
-    { id: 'status', label: '狀態', hideable: false },
-    { id: 'recipient', label: '收件者' },
-    { id: 'subject', label: '主旨', hideable: false },
-    { id: 'category', label: '分類' },
-    { id: 'attempts', label: '嘗試' },
-  ];
   readonly presentedRows = computed(() => {
     const now = Date.now();
-    return this.rows().map((message) => ({
+    return this.table.rows().map((message) => ({
       message,
       date: formatDate(message.createdAt),
       status: mailStatus(message, now),
@@ -235,10 +221,8 @@ export class MailMessagesPage {
   });
   readonly detailError = this.detailRead.error;
   readonly drawer = viewChild(DetailDrawer);
-  private readonly table = viewChild(DataTable);
   private readonly testDialog = viewChild(MailTestDialog);
   private readonly diagnosisDialog = viewChild(MailDiagnosisDialog);
-  private readonly cursors = new CursorTrail<string | undefined>(undefined);
   readonly notice = signal('');
   readonly actionError = signal('');
   readonly resending = signal(false);
@@ -251,18 +235,6 @@ export class MailMessagesPage {
   readonly mailError = mailError;
 
   constructor() {
-    // 每次套用條件都從最新一頁重讀；相對時間以套用當下計算。
-    effect(() => {
-      const query = this.query.applied();
-      untracked(() => {
-        const filters = mailFilters(query);
-        if (typeof filters !== 'string') this.read(filters, undefined, 0);
-      });
-    });
-    // 換頁或換條件才回到頂端；背景更新保留捲動位置。
-    effect(() => {
-      if (this.request()) this.table()?.resetScroll();
-    });
     // 列表先看到開啟中那封的狀態變了（背景更新），詳情跟著重讀，兩邊不會不一致。
     let watched: string | undefined;
     effect(() => {
@@ -274,34 +246,8 @@ export class MailMessagesPage {
     });
   }
 
-  changePage(direction: -1 | 1) {
-    const index = this.pageIndex() + direction;
-    if (index < 0 || (direction === 1 && !this.hasNext())) return;
-    this.goTo(index, direction === 1 ? this.rows().at(-1)?.id : this.cursors.at(index));
-  }
-  firstPage() {
-    this.goTo(0, undefined);
-  }
-  changePageSize(size: number) {
-    const request = this.request();
-    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
-    this.pageSize.set(size);
-    this.read(request.filters, undefined, 0);
-  }
-  private goTo(index: number, before: string | undefined) {
-    const request = this.request();
-    if (this.loading() || !request) return;
-    this.read(request.filters, before, index);
-  }
-  private read(filters: MailFilters, before: string | undefined, index: number) {
-    this.cursors.visit(index, before);
-    this.drawer()?.close();
-    this.selectedId.set(null);
-    this.request.set({ filters, take: this.pageSize(), before, index });
-  }
-  /** 表格讀取失敗時的重試；平常由自動更新負責。 */
-  reload() {
-    this.pageRead.reload();
+  /** 表格讀取失敗後重試（表格自己重讀）時，頁首狀態一起更新；平常由自動更新負責。 */
+  reloadStatus() {
     this.statusRead.reload();
   }
   reloadDetail() {
@@ -330,8 +276,8 @@ export class MailMessagesPage {
   }
   /** 寫入後回到第一頁重讀（新信在最前面），並更新頁首狀態。 */
   private reread() {
-    const request = this.request();
-    if (request) this.read(request.filters, undefined, 0);
+    this.table.goTo(0);
+    this.table.reload();
     this.statusRead.reload();
   }
   async toggleAutoRetry(autoRetry: boolean) {
@@ -356,7 +302,7 @@ export class MailMessagesPage {
     try {
       await this.api.retry(id);
       this.notice.set('已排入立即重試，結果會自動更新在這封信的寄送嘗試。');
-      this.pageRead.reload();
+      this.table.reload();
       this.detailRead.reload();
       this.statusRead.reload();
     } catch (error) {

@@ -53,6 +53,11 @@
 - 找人（`directorySearch`）的 `loading()` 涵蓋防抖等待與請求：結果為空且 `loading()` 時顯示「正在搜尋…」，不是「沒有符合的帳號」。
 - 有「查詢」鈕的用 `QueryBar` 的 `busy`。
 
+## 上千列的清單
+
+- 一頁上千列（以人分組、每人展開整段區間）時，一次建立所有列會讓畫面卡住，之後每次版面計算也要涵蓋整頁。每段用 `nearViewport`（`frontend/src/app/shared/browser/near-viewport.ts`）在捲到附近才建立，之前放一列估計高度的佔位；每段是 OnPush 元件，後面的段顯示時不重檢查前面的。例：出勤紀錄的 `RecordsPersonGroup`。
+- 沒有內容的儲存格不建立元件（例：沒有表單的日子不放清單元件），列數多時差很多。
+
 ## 換頁
 
 - 延遲載入的路由與 guard 期間，頂端顯示細的進度線（`RouteProgress`，掛在 `app.html`，看 `Router.currentNavigation()`），不遮內容；不到 200ms 的換頁不顯示。頁面不必自己處理。

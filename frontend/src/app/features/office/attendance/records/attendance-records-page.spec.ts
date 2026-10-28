@@ -432,18 +432,67 @@ describe('AttendanceRecordsPage', () => {
     expect(root.querySelector('.ui-count-label')?.textContent).toContain('45 人');
     expect(root.querySelector('nx-table-pagination')).not.toBeNull();
 
-    fixture.componentInstance.changePage(1);
+    expect(root.querySelector('nx-table-pagination')?.textContent).toContain('45 人');
+    fixture.componentInstance.table.turn(1);
     await fixture.whenStable();
     expect(api.records.mock.calls.at(-1)!.slice(1, 3)).toEqual([20, 20]);
-    fixture.componentInstance.changePageSize(50);
+    fixture.componentInstance.table.resize(50);
     await fixture.whenStable();
     expect(api.records.mock.calls.at(-1)!.slice(1, 3)).toEqual([0, 50]);
 
-    fixture.componentInstance.changePage(1);
+    fixture.componentInstance.table.turn(1);
     fixture.componentInstance.query.commit({ includeDaysOff: true });
     await fixture.whenStable();
     const [query, offset] = api.records.mock.calls.at(-1)!;
     expect([query.includeDaysOff, offset]).toEqual([true, 0]);
+  });
+
+  it('builds the days of a person only once they scroll near, keeping a placeholder until then', async () => {
+    const observers: { callback: IntersectionObserverCallback; target?: Element }[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        private readonly entry: { callback: IntersectionObserverCallback; target?: Element };
+        constructor(callback: IntersectionObserverCallback) {
+          this.entry = { callback };
+          observers.push(this.entry);
+        }
+        observe(target: Element) {
+          this.entry.target = target;
+        }
+        disconnect() {}
+      },
+    );
+    const days = Array.from({ length: 300 }, (_, index) =>
+      day(new Date(Date.UTC(2026, 0, 1 + index)).toISOString().slice(0, 10)),
+    );
+    const data = records();
+    data.people = [
+      data.people[0],
+      { ...data.people[0], userId: 'u2', displayName: '陳小華', days },
+    ];
+    const { fixture, root } = setup(async () => data);
+    await fixture.whenStable();
+    const groups = () => [...root.querySelectorAll<HTMLElement>('tbody.records-person-group')];
+    const dayRows = (group: HTMLElement) =>
+      group.querySelectorAll('tr:not(.records-person-row):not(.records-pending)').length;
+    expect(groups()).toHaveLength(2);
+    expect(groups().map(dayRows)).toEqual([0, 0]);
+    // 佔位依天數估計高度；段首列（手機的姓名）照常在。
+    expect(
+      groups()[1]
+        .querySelector<HTMLElement>('.records-pending td')
+        ?.style.getPropertyValue('--records-days'),
+    ).toBe('300');
+    expect(groups()[1].querySelector('.records-person-row')?.textContent).toContain('陳小華');
+
+    const near = observers.find((observer) => observer.target === groups()[1])!;
+    near.callback(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+    await fixture.whenStable();
+    expect(groups().map(dayRows)).toEqual([0, 300]);
   });
 
   it('shows the judgement rules from the server in the header panel', async () => {

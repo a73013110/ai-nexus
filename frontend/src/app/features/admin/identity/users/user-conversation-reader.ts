@@ -2,6 +2,7 @@ import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminConversationDetailDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
+import { endpointTable } from '@shared/ui/table-model';
 import { IdentityApi } from '../identity-api';
 import { AdminUserStore } from './admin-user-store';
 
@@ -25,38 +26,44 @@ export class UserConversationReader {
   private readonly query = linkedSignal(() => (this.key(), ''));
   private readonly typing = linkedSignal(() => (this.key(), false));
   readonly includeDeleted = linkedSignal(() => (this.key(), true));
-  private readonly offset = linkedSignal(() => (this.key(), 0));
-  readonly pageSize = 50;
-  private readonly listRead = apiResource({
-    params: () => {
+  /**
+   * 對話列表：後端每頁固定 50 段、以 offset 分頁。換使用者、搜尋或「含已刪除」都是新的查詢條件，
+   * 表格模型自己回到第一頁；回應帶著讀取時的使用者，換人後舊回應不顯示。
+   */
+  readonly table = endpointTable({
+    params: computed(() => {
       const key = this.key(),
         id = this.owner.user()?.id;
       return key && id && this.wanted()
-        ? {
-            key,
-            id,
-            search: this.query(),
-            includeDeleted: this.includeDeleted(),
-            offset: this.offset(),
-          }
+        ? { key, id, search: this.query(), includeDeleted: this.includeDeleted() }
         : undefined;
-    },
-    loader: async (request) => ({
-      key: request.key,
-      data: await this.api.conversations(
+    }),
+    load: async (request, page) => ({
+      ...(await this.api.conversations(
         request.id,
         request.search,
         request.includeDeleted,
-        request.offset,
-      ),
+        page.offset,
+      )),
+      key: request.key,
+      complete: false,
     }),
+    columns: [],
+    pageSize: 50,
+    pageSizes: [50],
+    unit: '段',
   });
   readonly page = computed(() => {
-    const loaded = this.listRead.value();
-    return loaded && loaded.key === this.key() ? loaded.data : null;
+    const loaded = this.table.data();
+    return loaded && loaded.key === this.key() ? loaded : null;
   });
-  readonly loading = computed(() => this.typing() || this.listRead.refreshing());
-  readonly error = this.listRead.error;
+  /** 超過一頁才顯示分頁；已翻到後面的頁時即使總數變少也保留，才能回到前面。 */
+  readonly paged = computed(
+    () =>
+      !!this.page() && (this.table.total() > this.table.pageSize() || this.table.pageIndex() > 0),
+  );
+  readonly loading = computed(() => this.typing() || this.table.refreshing());
+  readonly error = this.table.error;
   /** 正在閱讀的對話，以及其中已顯示的訊息數。 */
   private readonly opened = linkedSignal<string | undefined, Opened | null>({
     source: this.key,
@@ -97,7 +104,6 @@ export class UserConversationReader {
     this.scope.later(
       () => {
         this.typing.set(false);
-        this.offset.set(0);
         this.query.set(value);
       },
       250,
@@ -108,11 +114,7 @@ export class UserConversationReader {
     this.typing.set(false);
     this.scope.cancel('inspector-search');
     this.query.set(this.search());
-    this.offset.set(0);
     this.includeDeleted.set(value);
-  }
-  loadList(offset = 0) {
-    this.offset.set(offset);
   }
   /** 窄螢幕上回到列表；下一次讀取會重新開始。 */
   close() {

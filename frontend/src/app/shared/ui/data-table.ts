@@ -6,6 +6,7 @@ import {
   Directive,
   ElementRef,
   computed,
+  forwardRef,
   contentChild,
   effect,
   inject,
@@ -15,19 +16,21 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { ChipList } from './chip-list';
 import { Icon } from './icon';
 import { PendingButton } from './pending-button';
 import { Select } from './select';
+import { PAGE_SIZES, type TableColumn, type TableModel } from './table-model';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
-export interface TableColumn {
-  id: string;
-  label: string;
-  hideable?: boolean;
-  defaultHidden?: boolean;
-}
-export type TableSortDirection = 'asc' | 'desc';
+export {
+  PAGE_SIZES,
+  type TableColumn,
+  type TableColumnDef,
+  type TableModel,
+  type TableSortDirection,
+} from './table-model';
 
 /**
  * 語意化的表格外殼，附帶檢視偏好。資料讀取與查詢狀態仍屬於功能頁。
@@ -45,19 +48,25 @@ export type TableSortDirection = 'asc' | 'desc';
  */
 @Component({
   selector: 'nx-data-table',
-  imports: [Checkbox, Icon],
+  imports: [
+    Checkbox,
+    ChipList,
+    Icon,
+    forwardRef(() => TablePagination),
+    forwardRef(() => TableState),
+  ],
   styleUrl: './data-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'ui-data-table',
     '[class.ui-table-stack]': 'stacked()',
-    '[attr.aria-busy]': 'busy() || null',
+    '[attr.aria-busy]': 'working() || null',
   },
   template: `<div class="ui-table-frame">
     <div class="ui-table-toolbar-wrap">
       <ng-content select="[table-toolbar]" />
       <div class="ui-table-actions"><ng-content select="[table-actions]" /></div>
-      @if (columns().length) {
+      @if (pickerColumns().length) {
         <button
           #columnTrigger
           type="button"
@@ -83,7 +92,7 @@ export type TableSortDirection = 'asc' | 'desc';
       (keydown.escape)="closeColumns($event)"
     >
       <h3>顯示欄位</h3>
-      @for (column of columns(); track column.id) {
+      @for (column of pickerColumns(); track column.id) {
         <nx-checkbox
           [label]="column.label"
           [checked]="isVisible(column.id)"
@@ -95,6 +104,20 @@ export type TableSortDirection = 'asc' | 'desc';
         <nx-icon name="reset" />還原預設欄位
       </button>
     </div>
+    @if (table(); as model) {
+      <!-- 以 hidden 收起而非移除：最後一個 chip 移除後清單仍要在，才能把焦點交出去。 -->
+      @if (!model.chipsClaimed()) {
+        <nx-chip-list
+          class="ui-table-chips"
+          label="欄位篩選"
+          [hidden]="!model.chips().length"
+          [chips]="model.chips()"
+          [busy]="working()"
+          (chipRemove)="$event.remove()"
+          (allRemoved)="focusScroll()"
+        />
+      }
+    }
     <span class="refresh-line" [class.is-active]="refreshing()" aria-hidden="true"></span>
     <div
       class="ui-table-scroll"
@@ -105,7 +128,17 @@ export type TableSortDirection = 'asc' | 'desc';
     >
       <ng-content select="table" />
       <ng-content select="nx-table-state" />
+      @if (table() && !state()) {
+        <nx-table-state />
+      }
     </div>
+    @if (table(); as model) {
+      @if (!pagination() && paged()) {
+        <div class="ui-table-footer">
+          <nx-table-pagination [table]="model" [busy]="busy()" />
+        </div>
+      }
+    }
     <ng-content select="[table-footer]" />
   </div>`,
 })
@@ -113,18 +146,43 @@ export class DataTable {
   readonly label = input.required<string>();
   /** 讀取中（首次載入或重新讀取）；綁 `apiResource` 的 `refreshing()`，有防抖的搜尋再加上打字中。 */
   readonly busy = input(false);
+  /**
+   * 表格的資料、排序、篩選與分頁（`localTable`／`endpointTable`／`cursorTable`）。給了之後表頭用 `th[nxHeader]`，
+   * 載入／空狀態、欄位篩選 chip 與分頁列自動顯示，頁面不必再投影 `nx-table-state` 與分頁列（要自訂文字時仍可投影）。
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的列型別不同
+  readonly table = input<TableModel<any> | null>(null);
+  /** 沒有 `table` 時的欄位顯示偏好；有 `table` 時取它的欄位（需要 `preferenceKey`）。 */
   readonly columns = input<TableColumn[]>([]);
   readonly preferenceKey = input('');
   /** 窄螢幕時列會變成卡片，細節見類別註解。 */
   readonly stacked = input(false);
   readonly hidden = signal<string[]>([]);
   readonly id = 'nx-table-columns-' + ++tableSequence;
-  private readonly state = contentChild(TableState);
+  protected readonly state = contentChild(TableState);
+  private readonly builtinState = viewChild(TableState);
+  protected readonly pagination = contentChild(TablePagination, { descendants: true });
+  /** 欄位選擇器列出的欄位。 */
+  readonly pickerColumns = computed<readonly TableColumn[]>(() => {
+    const model = this.table();
+    return this.columns().length || !model || !this.preferenceKey()
+      ? this.columns()
+      : model.columns;
+  });
+  /** 讀取中：頁面給的 `busy` 或 `table` 的重新讀取。 */
+  readonly working = computed(() => this.busy() || !!this.table()?.refreshing());
   /**
    * 淡化與細線只給已有列的表格：沒有列時 `nx-table-state` 正顯示骨架、空狀態或錯誤，
-   * 骨架本身就是載入回饋，再疊上淡化會像停用。沒有投影 `nx-table-state` 的表格照 `busy` 顯示。
+   * 骨架本身就是載入回饋，再疊上淡化會像停用。沒有 `nx-table-state` 的表格照 `busy` 顯示。
    */
-  protected readonly refreshing = computed(() => this.busy() && !this.state()?.visible());
+  protected readonly refreshing = computed(
+    () => this.working() && !(this.state() ?? this.builtinState())?.visible(),
+  );
+  /** 有資料就顯示分頁列：筆數只在頁尾出現（data-workspace），不到一頁也要看得到。 */
+  protected readonly paged = computed(() => {
+    const model = this.table();
+    return !!model && (model.pageIndex() > 0 || model.rows().length > 0);
+  });
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('columnTrigger');
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('columnPanel');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -137,8 +195,13 @@ export class DataTable {
   });
   readonly columnsOpen = this.columnsPopover.opened;
   constructor() {
+    // 換頁、排序、篩選或換查詢條件後回到頂端；背景更新不改 revision，保留捲動位置。
     effect(() => {
-      const columns = this.columns(),
+      this.table()?.revision();
+      untracked(() => this.resetScroll());
+    });
+    effect(() => {
+      const columns = this.pickerColumns(),
         key = this.preferenceKey();
       let hidden = columns.filter((column) => column.defaultHidden).map((column) => column.id);
       if (key) {
@@ -179,7 +242,8 @@ export class DataTable {
     this.trigger()?.nativeElement.focus({ preventScroll: true });
   }
   toggleColumn(id: string) {
-    if (!this.columns().some((column) => column.id === id && column.hideable !== false)) return;
+    if (!this.pickerColumns().some((column) => column.id === id && column.hideable !== false))
+      return;
     this.hidden.update((hidden) =>
       hidden.includes(id) ? hidden.filter((key) => key !== id) : [...hidden, id],
     );
@@ -187,7 +251,7 @@ export class DataTable {
   }
   resetColumns() {
     this.hidden.set(
-      this.columns()
+      this.pickerColumns()
         .filter((column) => column.defaultHidden)
         .map((column) => column.id),
     );
@@ -197,7 +261,7 @@ export class DataTable {
     if (!this.preferenceKey()) return;
     try {
       const preferences = Object.fromEntries(
-        this.columns().map((column) => [column.id, this.isVisible(column.id)]),
+        this.pickerColumns().map((column) => [column.id, this.isVisible(column.id)]),
       );
       localStorage.setItem('ai-nexus.table.' + this.preferenceKey(), JSON.stringify(preferences));
     } catch {
@@ -205,7 +269,15 @@ export class DataTable {
     }
   }
   resetScroll() {
-    this.host.nativeElement.querySelector('.ui-table-scroll')?.scrollTo({ top: 0, left: 0 });
+    const region = this.scrollRegion();
+    if (region) region.scrollTop = 0;
+  }
+  /** 最後一個欄位篩選 chip 移除後，焦點交給表格的捲動區。 */
+  focusScroll() {
+    this.scrollRegion()?.focus({ preventScroll: true });
+  }
+  private scrollRegion() {
+    return this.host.nativeElement.querySelector<HTMLElement>('.ui-table-scroll');
   }
 }
 
@@ -220,37 +292,6 @@ function isRowAction(target: EventTarget | null): target is HTMLElement {
 export class DataTableColumn {
   readonly id = input.required<string>({ alias: 'nxTableColumn' });
   readonly table = inject(DataTable);
-}
-
-@Component({
-  selector: 'th[nxSortHeader]',
-  imports: [Icon],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { scope: 'col', '[attr.aria-sort]': 'direction() === "asc" ? "ascending" : "descending"' },
-  // 讀取中只以 aria-disabled 擋：剛按下的排序鈕若變成 disabled，焦點會掉到頁首。
-  template: `<button
-    type="button"
-    class="ui-table-sort"
-    [attr.aria-disabled]="disabled() || null"
-    [attr.aria-label]="
-      label() +
-      '：' +
-      (direction() === 'asc'
-        ? ascendingLabel() + '，切換為' + descendingLabel()
-        : descendingLabel() + '，切換為' + ascendingLabel())
-    "
-    (click)="disabled() || directionChange.emit(direction() === 'asc' ? 'desc' : 'asc')"
-  >
-    {{ label() }}<nx-icon [name]="direction() === 'asc' ? 'arrow' : 'down'" />
-  </button>`,
-})
-export class TableSortHeader {
-  readonly label = input.required<string>({ alias: 'nxSortHeader' });
-  readonly direction = input<TableSortDirection>('desc');
-  readonly ascendingLabel = input('由小到大');
-  readonly descendingLabel = input('由大到小');
-  readonly disabled = input(false);
-  readonly directionChange = output<TableSortDirection>();
 }
 
 /**
@@ -343,6 +384,7 @@ export class DataTableRow {
  * 綁法：`loading` 綁首次載入（`apiResource` 的 `loading()`），只決定要不要畫骨架；`retrying`
  * 綁重讀（`refreshing()`），重試鈕在重讀期間轉圈。`apiResource` 的 `reload()` 不會讓 `loading()`
  * 變真，所以重試的回饋不能靠 `loading`。放在 `nx-data-table` 裡時也跟著表格的 `busy` 轉圈。
+ * 表格有 `[table]` 時，沒綁的 `count`、`loading`、`error` 取自它，重試也直接重讀它。
  */
 @Component({
   selector: 'nx-table-state',
@@ -350,9 +392,9 @@ export class DataTableRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // 讀取失敗要立即讀出，與 nx-notice 的 danger 相同；載入中與空狀態只是狀態更新。
-    '[attr.role]': 'error() ? "alert" : "status"',
+    '[attr.role]': 'shownError() ? "alert" : "status"',
     '[hidden]': '!visible()',
-    '[attr.data-loading]': 'loading() && !error() ? "" : null',
+    '[attr.data-loading]': 'shownLoading() && !shownError() ? "" : null',
   },
   styles: `
     :host {
@@ -382,27 +424,27 @@ export class DataTableRow {
       color: var(--muted);
     }
   `,
-  template: `@if (error()) {
+  template: `@if (shownError()) {
       <nx-icon name="info" />
       <strong>{{ errorTitle() }}</strong>
-      <p>{{ error() }}</p>
+      <p>{{ shownError() }}</p>
       <button
         nxPending
         type="button"
         class="secondary-button"
         [pending]="retryPending()"
-        (click)="retry.emit()"
+        (click)="retryRead()"
       >
         <nx-icon name="refresh" />{{ retryPending() ? '重試中…' : '重試' }}
       </button>
-    } @else if (loading()) {
+    } @else if (shownLoading()) {
       @for (width of skeleton; track $index) {
         <span class="skeleton ui-table-skeleton" aria-hidden="true" [style.width.%]="width"></span>
       }
       <p class="sr-only">{{ loadingText() }}</p>
     } @else {
       <nx-icon name="search" />
-      <strong>{{ emptyTitle() }}</strong>
+      <strong>{{ filtered() ? '沒有符合欄位篩選的資料' : emptyTitle() }}</strong>
       @if (emptyText()) {
         <p>{{ emptyText() }}</p>
       }
@@ -411,47 +453,41 @@ export class DataTableRow {
 })
 export class TableState {
   /** 顯示中的列數；有列就隱藏。 */
-  readonly count = input(0);
+  readonly count = input<number>();
   /** 首次載入：沒有列時畫骨架。 */
-  readonly loading = input(false);
+  readonly loading = input<boolean>();
   /** 失敗後重讀中：重試鈕轉圈並擋重複按下。 */
   readonly retrying = input(false);
-  readonly error = input<string | null | undefined>('');
+  readonly error = input<string | null | undefined>();
   readonly loadingText = input('正在載入…');
   readonly errorTitle = input('無法載入資料');
   readonly emptyTitle = input('沒有符合條件的資料');
   readonly emptyText = input('');
   readonly retry = output<void>();
-  readonly visible = computed(() => this.count() === 0);
   private readonly table = inject(DataTable, { optional: true });
-  protected readonly retryPending = computed(
-    () => this.retrying() || this.loading() || !!this.table?.busy(),
+  private readonly model = computed(() => this.table?.table() ?? null);
+  protected readonly shownCount = computed(() => this.count() ?? this.model()?.rows().length ?? 0);
+  protected readonly shownLoading = computed(() => this.loading() ?? !!this.model()?.loading());
+  /** 已有列時的重讀失敗由頁面的 Notice 顯示，這裡只顯示沒有列時的失敗。 */
+  protected readonly shownError = computed(() => {
+    const error = this.error();
+    if (error !== undefined) return error;
+    return this.shownCount() ? '' : (this.model()?.error() ?? '');
+  });
+  /** 空狀態是因為欄位篩選：換一句話，提示清除篩選。 */
+  protected readonly filtered = computed(
+    () => !!this.model() && Object.keys(this.model()!.filters()).length > 0,
   );
+  readonly visible = computed(() => this.shownCount() === 0);
+  protected readonly retryPending = computed(
+    () => this.retrying() || this.shownLoading() || !!this.table?.working(),
+  );
+  retryRead() {
+    this.retry.emit();
+    if (this.error() === undefined) this.model()?.reload();
+  }
   /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
   protected readonly skeleton = [92, 74, 86, 62, 80];
-}
-
-/** `TablePagination` 預設可選的每頁筆數；頁面收到 `pageSizeChange` 時以它擋下其他值。 */
-export const PAGE_SIZES: readonly number[] = [25, 50, 100];
-
-/**
- * `cursor` 分頁看過的各頁游標：游標只能往後讀，上一頁要用記下的游標重讀。
- * `first` 是第一頁的游標（沒有游標時的值）。
- */
-export class CursorTrail<T> {
-  private cursors: T[];
-  constructor(private readonly first: T) {
-    this.cursors = [first];
-  }
-  /** 讀第 `index` 頁前記下它的游標；回到第一頁（新查詢、排序、每頁筆數）時清掉舊紀錄。 */
-  visit(index: number, cursor: T) {
-    if (index === 0) this.cursors = [this.first];
-    this.cursors[index] = cursor;
-  }
-  /** 看過的第 `index` 頁的游標。 */
-  at(index: number): T | undefined {
-    return this.cursors[index];
-  }
 }
 
 /**
@@ -468,42 +504,42 @@ export class CursorTrail<T> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'ui-table-pagination' },
   template: `<div class="ui-pagination-info">
-      @if (mode() === 'offset') {
+      @if (view().mode === 'offset') {
         <span role="status">
-          @if (total()) {
-            <b>{{ span() }}</b> / {{ totalText() }} 筆
+          @if (view().total) {
+            <b>{{ span() }}</b> / {{ totalText() }} {{ view().unit }}
           } @else {
-            0 筆
+            0 {{ view().unit }}
           }
         </span>
       } @else {
         <span role="status"
-          >本頁 <b>{{ count() }}</b> 筆</span
+          >本頁 <b>{{ view().count }}</b> {{ view().unit }}</span
         >
       }
       <span class="ui-pagination-size">
         <span aria-hidden="true">·</span>
-        @if (pageSizes().length > 1) {
+        @if (view().pageSizes.length > 1) {
           <nx-select
             appearance="inline"
             label="每頁筆數"
             [options]="sizes()"
-            [value]="pageSize().toString()"
+            [value]="view().pageSize.toString()"
             (valueChange)="changeSize(+$event)"
           />
         } @else {
-          <span>每頁 {{ pageSize() }} 筆</span>
+          <span>每頁 {{ view().pageSize }} {{ view().unit }}</span>
         }
       </span>
     </div>
     <div class="ui-pagination-group" role="group" aria-label="分頁">
-      @if (mode() === 'cursor') {
+      @if (view().mode === 'cursor') {
         <button
           type="button"
           class="icon-button"
           aria-label="回到第一頁"
           title="回到第一頁"
-          [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
+          [attr.aria-disabled]="view().busy || view().pageIndex === 0 || null"
           (click)="select(0)"
         >
           <nx-icon name="first" />
@@ -514,12 +550,12 @@ export class CursorTrail<T> {
         class="icon-button"
         aria-label="上一頁"
         title="上一頁"
-        [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
+        [attr.aria-disabled]="view().busy || view().pageIndex === 0 || null"
         (click)="step(-1)"
       >
         <nx-icon name="left" />
       </button>
-      @if (mode() === 'offset') {
+      @if (view().mode === 'offset') {
         <label class="ui-pagination-page"
           ><input
             type="number"
@@ -528,8 +564,8 @@ export class CursorTrail<T> {
             [max]="pageCount()"
             aria-label="跳到頁碼"
             title="輸入頁碼後按 Enter"
-            [value]="pageIndex() + 1"
-            [readOnly]="busy()"
+            [value]="view().pageIndex + 1"
+            [readOnly]="view().busy"
             [disabled]="pageCount() <= 1"
             (keydown.enter)="jump($event)"
             (change)="jump($event)"
@@ -537,7 +573,7 @@ export class CursorTrail<T> {
         >
       } @else {
         <span class="ui-pagination-page"
-          >第 <b>{{ pageIndex() + 1 }}</b> 頁</span
+          >第 <b>{{ view().pageIndex + 1 }}</b> 頁</span
         >
       }
       <button
@@ -545,7 +581,7 @@ export class CursorTrail<T> {
         class="icon-button"
         aria-label="下一頁"
         title="下一頁"
-        [attr.aria-disabled]="busy() || !next() || null"
+        [attr.aria-disabled]="view().busy || !next() || null"
         (click)="step(1)"
       >
         <nx-icon name="chevron" />
@@ -553,6 +589,12 @@ export class CursorTrail<T> {
     </div>`,
 })
 export class TablePagination {
+  /**
+   * 表格模型：給了就從它取模式、頁碼、筆數與單位，翻頁直接呼叫它，其餘 input 不必綁
+   * （表格以外的格線、選擇器也用同一個模型分頁）。`busy` 仍可另外給（例：搜尋防抖中）。
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的列型別不同
+  readonly table = input<TableModel<any> | null>(null);
   readonly mode = input<'cursor' | 'offset'>('cursor');
   readonly pageIndex = input(0);
   readonly pageSize = input(50);
@@ -564,51 +606,95 @@ export class TablePagination {
   /** `offset`：符合條件的總列數。 */
   readonly total = input(0);
   readonly busy = input(false);
+  /** 計數單位：依人分頁的表寫「人」。 */
+  readonly unit = input('筆');
   readonly pageChange = output<-1 | 1>();
   readonly pageSelect = output<number>();
   readonly pageSizeChange = output<number>();
+  /** 顯示用的值：有模型取模型，沒有取 input。 */
+  protected readonly view = computed(() => {
+    const table = this.table();
+    return table
+      ? {
+          mode: table.mode(),
+          pageIndex: table.pageIndex(),
+          pageSize: table.pageSize(),
+          pageSizes: table.pageSizes,
+          count: table.rows().length,
+          hasNext: table.hasNext(),
+          total: table.total(),
+          busy: this.busy() || table.refreshing(),
+          unit: table.unit,
+        }
+      : {
+          mode: this.mode(),
+          pageIndex: this.pageIndex(),
+          pageSize: this.pageSize(),
+          pageSizes: this.pageSizes(),
+          count: this.count(),
+          hasNext: this.hasNext(),
+          total: this.total(),
+          busy: this.busy(),
+          unit: this.unit(),
+        };
+  });
   readonly sizes = computed(() =>
-    this.pageSizes().map((size) => ({
+    this.view().pageSizes.map((size) => ({
       value: String(size),
-      label: '每頁 ' + size + ' 筆',
+      label: `每頁 ${size} ${this.view().unit}`,
     })),
   );
-  readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
+  readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.view().total / this.view().pageSize)),
+  );
   readonly next = computed(() =>
-    this.mode() === 'offset' ? this.pageIndex() < this.pageCount() - 1 : this.hasNext(),
+    this.view().mode === 'offset'
+      ? this.view().pageIndex < this.pageCount() - 1
+      : this.view().hasNext,
   );
   /** 這一頁的起訖列號，例如 `101–150`。 */
   readonly span = computed(() => {
-    const first = this.pageIndex() * this.pageSize();
-    return `${first + 1}–${first + this.count()}`;
+    const first = this.view().pageIndex * this.view().pageSize;
+    return `${first + 1}–${first + this.view().count}`;
   });
-  readonly totalText = computed(() => this.total().toLocaleString('zh-TW'));
+  readonly totalText = computed(() => this.view().total.toLocaleString('zh-TW'));
   /** 已送出、尚未讀完的頁；Enter 之後失焦還會再觸發一次 change，靠它避免重複讀同一頁。 */
   private requested = -1;
   constructor() {
     // 讀完（或沒有 busy 的呼叫端換了頁）才清掉；讀取失敗時可以再送同一頁。
     effect(() => {
-      this.pageIndex();
-      if (!this.busy()) this.requested = -1;
+      const { pageIndex, busy } = this.view();
+      void pageIndex;
+      if (!busy) this.requested = -1;
     });
   }
   step(direction: -1 | 1) {
-    if (this.busy() || (direction === -1 ? this.pageIndex() === 0 : !this.next())) return;
-    this.pageChange.emit(direction);
+    const { busy, pageIndex } = this.view();
+    if (busy || (direction === -1 ? pageIndex === 0 : !this.next())) return;
+    const table = this.table();
+    if (table) table.turn(direction);
+    else this.pageChange.emit(direction);
   }
   select(index: number) {
-    if (this.busy() || index === this.pageIndex() || index === this.requested) return;
+    const { busy, pageIndex } = this.view();
+    if (busy || index === pageIndex || index === this.requested) return;
     this.requested = index;
-    this.pageSelect.emit(index);
+    const table = this.table();
+    if (table) table.goTo(index);
+    else this.pageSelect.emit(index);
   }
   changeSize(size: number) {
-    if (!this.busy() && size !== this.pageSize()) this.pageSizeChange.emit(size);
+    const { busy, pageSize } = this.view();
+    if (busy || size === pageSize) return;
+    const table = this.table();
+    if (table) table.resize(size);
+    else this.pageSizeChange.emit(size);
   }
   jump(event: Event) {
     const input = event.target as HTMLInputElement;
     const page = Math.round(Number(input.value));
     if (!Number.isFinite(page) || page < 1 || page > this.pageCount()) {
-      input.value = String(this.pageIndex() + 1);
+      input.value = String(this.view().pageIndex + 1);
       return;
     }
     this.select(page - 1);

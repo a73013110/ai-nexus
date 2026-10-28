@@ -102,6 +102,7 @@ export class DateTimePicker {
         value,
         day: date.getUTCDate(),
         outside: date.getUTCMonth() + 1 !== this.view().month,
+        weekend: index % 7 === 0 || index % 7 === 6,
         disabled: !this.dayAvailable(value),
       };
     });
@@ -121,6 +122,9 @@ export class DateTimePicker {
   readonly opened = this.popover.opened;
   private returnFocus: HTMLElement | null = null;
   private lastEmitted = '';
+  /** 滾輪換月：累積的捲動量與上次換月的時間（見 `wheelMonth`）。 */
+  private wheelDelta = 0;
+  private wheelTurnedAt = -Infinity;
   constructor() {
     effect(() => {
       const value = this.value();
@@ -258,6 +262,24 @@ export class DateTimePicker {
     this.valueChange.emit(this.draft());
     this.close();
     this.editor().nativeElement.focus({ preventScroll: true });
+  }
+  /**
+   * 在日曆格上捲動滾輪換月（往下是下個月）。滑鼠一格約 100px 換一個月；觸控板的捲動量小而連續，
+   * 累積到門檻才換，且換完 150ms 內不再換，免得輕輕一滑就跳好幾個月。按著 Ctrl 是縮放，橫向捲動不處理。
+   */
+  wheelMonth(event: WheelEvent) {
+    if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    if (event.timeStamp - this.wheelTurnedAt < 150) return;
+    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode ? 400 : 1;
+    this.wheelDelta += event.deltaY * unit;
+    if (Math.abs(this.wheelDelta) < 60) return;
+    const focusedDay = (document.activeElement as HTMLElement | null)?.dataset['date'];
+    this.shiftMonth(Math.sign(this.wheelDelta));
+    this.wheelDelta = 0;
+    this.wheelTurnedAt = event.timeStamp;
+    // 焦點在日期上時跟著換月，否則原本的日期按鈕被換掉，焦點會掉到頁面上。
+    if (focusedDay) this.focusDay();
   }
   calendarKey(event: KeyboardEvent) {
     if (event.isComposing) return;

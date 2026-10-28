@@ -131,14 +131,13 @@
     <nx-data-table
       class="mail-table"
       label="郵件寄送紀錄"
-      [busy]="loading()"
-      [columns]="columns"
+      [table]="table"
       preferenceKey="admin-mail-messages"
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>寄送紀錄</h2>
         <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀（背景更新不算）。 -->
-        @if (loading() && rows().length) {
+        @if (loading() && table.rows().length) {
           <span class="sr-only" role="status">正在載入寄送紀錄…</span>
         }
       </div>
@@ -156,12 +155,12 @@
         </colgroup>
         <thead>
           <tr>
-            <th scope="col" nxTableColumn="time">時間</th>
-            <th scope="col" nxTableColumn="status">狀態</th>
-            <th scope="col" nxTableColumn="recipient">收件者</th>
-            <th scope="col" nxTableColumn="subject">主旨</th>
-            <th scope="col" nxTableColumn="category">分類</th>
-            <th scope="col" nxTableColumn="attempts" class="ui-table-numeric">嘗試</th>
+            <th nxHeader="time"></th>
+            <th nxHeader="status"></th>
+            <th nxHeader="recipient"></th>
+            <th nxHeader="subject"></th>
+            <th nxHeader="category"></th>
+            <th nxHeader="attempts"></th>
           </tr>
         </thead>
         <tbody>
@@ -215,34 +214,19 @@
         </tbody>
       </table>
       <nx-table-state
-        [count]="rows().length"
-        [loading]="loading()"
-        [error]="readError()"
         loadingText="正在載入寄送紀錄…"
         errorTitle="無法取得寄送紀錄"
         emptyTitle="沒有符合條件的信件"
         emptyText="試著擴大時間範圍，或移除部分條件。"
-        (retry)="reload()"
+        (retry)="reloadStatus()"
       />
-      <div table-footer class="ui-table-footer">
-        <nx-table-pagination
-          [pageIndex]="pageIndex()"
-          [pageSize]="pageSize()"
-          [count]="rows().length"
-          [hasNext]="hasNext()"
-          [busy]="loading()"
-          (pageChange)="changePage($event)"
-          (pageSelect)="firstPage()"
-          (pageSizeChange)="changePageSize($event)"
-        />
-      </div>
     </nx-data-table>
     <nx-detail-drawer title="郵件詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
       <nx-drawer-pager
         drawer-actions
         noun="郵件"
         [index]="selectedIndex()"
-        [count]="rows().length"
+        [count]="table.rows().length"
         (move)="adjacent($event)"
       />
       <div drawer-summary class="ui-drawer-summary">

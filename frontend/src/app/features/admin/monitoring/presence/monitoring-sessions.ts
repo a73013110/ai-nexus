@@ -8,28 +8,18 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
-import { Icon } from '@shared/ui/icon';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { SearchField } from '@shared/ui/search-field';
 import { Select } from '@shared/ui/select';
+import { TableHeader } from '@shared/ui/table-header';
+import { localTable } from '@shared/ui/table-model';
 import type { OnlineSession } from '@core/api/schema';
 import { presenceState, monitoringTime, monitoringFeatureNames } from '../monitoring-format';
 
-const PAGE_SIZE = 10;
-
 @Component({
   selector: 'nx-monitoring-sessions',
-  imports: [
-    DataTable,
-    DataTableRow,
-    TablePagination,
-    TableState,
-    Icon,
-    StatusBadge,
-    SearchField,
-    Select,
-  ],
+  imports: [DataTable, DataTableRow, StatusBadge, SearchField, Select, TableHeader, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-sessions.html',
   styles: ':host { display: grid; gap: var(--p-space-3); min-width: 0; }',
@@ -41,69 +31,61 @@ export class MonitoringSessions {
   /** 連線中斷、顯示的是舊快照：表格淡化。 */
   readonly busy = input(false);
   readonly selected = output<OnlineSession>();
+  /** 目前功能；與上方「依目前功能篩選」的清單同步，所以留在表格外。 */
   readonly feature = model('all');
   readonly query = signal('');
-  readonly state = signal('all');
-  readonly sort = signal<'name' | 'requests'>('name');
-  readonly page = signal(0);
-  readonly pageSize = PAGE_SIZE;
   readonly featureName = monitoringFeatureNames();
   readonly stateName = presenceState;
   readonly time = monitoringTime;
-  readonly states = [
-    { value: 'all', label: '所有在線狀態' },
-    { value: 'active', label: '使用中' },
-    { value: 'idle', label: '閒置' },
-    { value: 'background', label: '背景分頁' },
-  ];
   readonly featureOptions = computed(() => [
     { value: 'all', label: '所有功能' },
-    ...[...new Set(this.sessions().map((segment) => segment.feature))]
+    ...[...new Set(this.sessions().map((session) => session.feature))]
       .sort()
       .map((id) => ({ value: id, label: this.featureName(id) })),
   ]);
-  readonly filtered = computed(() => {
+  /** 搜尋與功能是表格外的條件：跨多個欄位，或由上方清單控制；在線狀態、排序與分頁交給表格。 */
+  private readonly matched = computed(() => {
     const query = this.query().trim().toLocaleLowerCase();
-    return this.sessions()
-      .filter(
-        (segment2) =>
-          (this.state() === 'all' || segment2.state === this.state()) &&
-          (this.feature() === 'all' || segment2.feature === this.feature()) &&
-          (!query ||
-            [
-              segment2.displayName,
-              segment2.account,
-              segment2.address,
-              segment2.browser,
-              segment2.device,
-            ]
-              .join(' ')
-              .toLocaleLowerCase()
-              .includes(query)),
-      )
-      .sort((first, second) =>
-        this.sort() === 'requests'
-          ? second.requests - first.requests || first.id.localeCompare(second.id)
-          : first.displayName.localeCompare(second.displayName, 'zh-TW') ||
-            first.id.localeCompare(second.id),
-      );
+    const feature = this.feature();
+    return this.sessions().filter(
+      (session) =>
+        (feature === 'all' || session.feature === feature) &&
+        (!query ||
+          [session.displayName, session.account, session.address, session.browser, session.device]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(query)),
+    );
   });
-  readonly lastPage = computed(() =>
-    Math.max(0, Math.ceil(this.filtered().length / PAGE_SIZE) - 1),
-  );
-  readonly currentPage = computed(() => Math.min(this.page(), this.lastPage()));
-  readonly visible = computed(() =>
-    this.filtered().slice(this.currentPage() * PAGE_SIZE, (this.currentPage() + 1) * PAGE_SIZE),
-  );
-
+  readonly table = localTable({
+    rows: this.matched,
+    columns: [
+      { id: 'user', label: '使用者', sort: true, value: (session) => session.displayName },
+      { id: 'device', label: '裝置／連線位址' },
+      { id: 'feature', label: '目前功能' },
+      {
+        id: 'state',
+        label: '狀態',
+        filter: {
+          options: [
+            { value: 'active', label: '使用中' },
+            { value: 'idle', label: '閒置' },
+            { value: 'background', label: '背景分頁' },
+          ],
+        },
+      },
+      { id: 'requests', label: '請求數', sort: 'desc', numeric: true },
+      { id: 'lastAction', label: '最近操作' },
+    ],
+    sort: { column: 'user', direction: 'asc' },
+    pageSize: 10,
+    pageSizes: [10],
+  });
   constructor() {
+    // 搜尋或換功能是新的一批資料：回到第一頁。
     effect(() => {
-      this.feature();
-      this.page.set(0);
+      this.matched();
+      this.table.goTo(0);
     });
-  }
-  setFilter(kind: 'query' | 'state' | 'feature', value: string) {
-    this[kind].set(value);
-    this.page.set(0);
   }
 }

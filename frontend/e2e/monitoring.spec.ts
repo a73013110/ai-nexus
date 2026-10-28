@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createServer, type Server } from "node:http";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, chooseSelect } from "./fixtures";
+import { ApiFixture } from "./fixtures";
 import type { MonitoringSnapshot } from "../src/app/core/api/schema";
 
 // Totals over `seconds`: the window (5 minutes) or recentTraffic's last minute.
@@ -424,9 +424,19 @@ test("health, service map, session filters, inspectors, range changes and snapsh
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(2);
     await expect(page.getByRole("table")).toContainText("黃雅婷");
     await page.getByRole("searchbox").clear();
-    await chooseSelect(page, "在線狀態", "背景分頁");
+    const sessions = page.locator("nx-monitoring-sessions");
+    await sessions
+      .getByRole("button", { name: "篩選狀態", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "篩選：狀態" })
+      .getByRole("checkbox", { name: "背景分頁" })
+      .check();
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(3);
-    await chooseSelect(page, "在線狀態", "所有在線狀態");
+    await sessions
+      .getByRole("button", { name: "移除條件：狀態：背景分頁", exact: true })
+      .click();
     await page
       .locator("nx-monitoring-sessions")
       .getByRole("button", { name: "下一頁", exact: true })

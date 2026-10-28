@@ -163,6 +163,7 @@ public static class PublicErrorCatalog
         ["invalid_settings"] = "個人設定超出允許範圍，請重新選擇。",
         ["invalid_spend_period"] = "查詢期間需為 1 至 366 天，並提供有效的時區。",
         ["invalid_storage_limit"] = "容量上限需為 0 至 1,000,000 GB 的整數 bytes；留空則使用群組或預設容量。",
+        ["invalid_table_query"] = "表格的排序或篩選條件不正確，請清除欄位篩選後再試。",
         ["invalid_theme"] = "請選擇淺色、深色或跟隨系統。",
         ["invalid_title"] = "標題需為 1 至 120 個字元。",
         ["invalid_user"] = "請輸入姓名與有效角色。",

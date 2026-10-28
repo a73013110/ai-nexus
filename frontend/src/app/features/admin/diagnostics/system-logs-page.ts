@@ -2,34 +2,20 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FeaturePage } from '@core/layout/feature-page';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { apiResource } from '@core/api/api-resource';
 import { safeMessage } from '@core/errors/safe-errors';
 import type { DiagnosticSummary, LogLevel } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
 import { downloadBlob } from '@shared/browser/download';
 import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
-import {
-  CursorTrail,
-  DataTable,
-  DataTableColumn,
-  DataTableRow,
-  PAGE_SIZES,
-  TablePagination,
-  TableSortHeader,
-  TableState,
-  type TableColumn,
-  type TableSortDirection,
-} from '@shared/ui/data-table';
+import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -38,8 +24,10 @@ import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
+import { TableHeader } from '@shared/ui/table-header';
+import { cursorTable } from '@shared/ui/table-model';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
-import { DiagnosticsApi, type LogFilter } from './diagnostics-api';
+import { DiagnosticsApi } from './diagnostics-api';
 import { systemLogsTour } from './diagnostics-tour';
 import { LogDetailDrawer } from './log-detail-drawer';
 import { levelTone, milliseconds } from './log-display';
@@ -56,12 +44,6 @@ import {
   type LogMoreField,
 } from './log-query';
 import { routeOf } from '@core/api/catalog';
-
-interface LogPageRequest {
-  filter: LogFilter;
-  cursor: string | null;
-  index: number;
-}
 
 @Component({
   selector: 'nx-system-logs-page',
@@ -80,8 +62,7 @@ interface LogPageRequest {
     RouterLink,
     Select,
     StatusBadge,
-    TablePagination,
-    TableSortHeader,
+    TableHeader,
     TableState,
     TimeRangePicker,
   ],
@@ -97,45 +78,55 @@ export class SystemLogsPage {
   private readonly api = inject(DiagnosticsApi);
   private readonly view = inject(ViewScope);
   private readonly inspector = viewChild(LogDetailDrawer);
-  private readonly table = viewChild(DataTable);
   readonly query = queryState(logQueryOptions);
   readonly draft = this.query.draft;
   readonly searchKind = computed(() => searchKind(this.draft().search));
   readonly moreCount = computed(() => logMoreCount(this.draft()));
-  /** 已套用的條件、要顯示第幾頁，以及讀那一頁的游標。 */
-  private readonly request = signal<LogPageRequest | undefined>(undefined);
-  private readonly pageRead = apiResource({
-    feature: 'diagnostics.logs',
-    params: this.request,
-    loader: async (request, signal) => ({
-      request,
-      data: await this.api.list(request.filter, request.cursor, signal),
-    }),
+  /** 已套用的條件；預設區間以套用當下計算起訖，條件不合法時不讀。 */
+  private readonly filter = computed(() => {
+    const filter = logFilter(this.query.applied());
+    return typeof filter === 'string' ? undefined : filter;
   });
-  readonly page = computed(() => this.pageRead.value()?.data ?? null);
-  readonly events = computed(() => this.page()?.events ?? []);
-  readonly pageIndex = computed(() => this.pageRead.value()?.request.index ?? 0);
-  readonly submitted = computed(() => this.request()?.filter ?? null);
-  readonly loading = this.pageRead.refreshing;
-  readonly readError = this.pageRead.error;
-  readonly degraded = computed(() => this.page()?.degraded === true);
+  /** 游標分頁、不計總數；只能依時間排序（後端以時間與事件 ID 為游標）。 */
+  readonly table = cursorTable({
+    feature: 'diagnostics.logs',
+    params: this.filter,
+    load: async (filter, table, signal) => {
+      const sortDirection = table.order?.direction ?? 'desc';
+      const cursor = typeof table.cursor === 'string' ? table.cursor : undefined;
+      const page = await this.api.list(
+        { ...filter, take: table.limit, sortDirection },
+        cursor,
+        signal,
+      );
+      return { ...page, items: page.events, next: page.nextCursor };
+    },
+    columns: [
+      { id: 'time', label: '時間', hideable: false, sort: 'desc', time: true },
+      { id: 'level', label: '等級' },
+      { id: 'event', label: '事件／模組', hideable: false },
+      { id: 'message', label: '訊息', hideable: false },
+      { id: 'status', label: 'HTTP 狀態', header: 'HTTP', numeric: true },
+      { id: 'duration', label: '耗時', numeric: true },
+      { id: 'correlation', label: '查證／關聯' },
+    ],
+    sort: { column: 'time', direction: 'desc' },
+    navigated: () => {
+      this.inspector()?.close();
+      this.closeDetail();
+      this.exportError.set('');
+    },
+  });
+  readonly events = this.table.rows;
+  readonly loading = this.table.refreshing;
+  readonly submitted = this.filter;
+  readonly degraded = computed(() => this.table.data()?.degraded === true);
   readonly exporting = signal(false);
   readonly exportError = signal('');
   readonly selectedEntry = signal<DiagnosticSummary | null>(null);
   readonly selectedIndex = computed(() =>
     this.events().findIndex((entry) => entry.logId === this.selectedEntry()?.logId),
   );
-  readonly pageSize = signal(50);
-  readonly sortDirection = signal<TableSortDirection>('desc');
-  readonly columns: TableColumn[] = [
-    { id: 'time', label: '時間', hideable: false },
-    { id: 'level', label: '等級' },
-    { id: 'event', label: '事件／模組', hideable: false },
-    { id: 'message', label: '訊息', hideable: false },
-    { id: 'status', label: 'HTTP 狀態' },
-    { id: 'duration', label: '耗時' },
-    { id: 'correlation', label: '查證／關聯' },
-  ];
   readonly ranges = LOG_RANGES;
   readonly levelOptions: SelectOption[] = LOG_LEVELS.map((value) => ({ value, label: value }));
   readonly guidOptions: SelectOption[] = LOG_GUID_FIELDS;
@@ -144,7 +135,6 @@ export class SystemLogsPage {
   readonly milliseconds = milliseconds;
   readonly tone = levelTone;
   readonly categoryName = (value: string) => value.split('.').at(-1) || value;
-  private readonly cursors = new CursorTrail<string | null>(null);
   /** 沒有 `diagnostics.logs` 時頁面只剩標題，不給導覽。 */
   readonly tour = computed(() => {
     const session = this.session;
@@ -160,24 +150,6 @@ export class SystemLogsPage {
     });
   });
 
-  constructor() {
-    effect(() => {
-      if (this.page()) this.table()?.resetScroll();
-    });
-    // 每次套用條件都從第一頁讀起，預設區間以套用當下計算起訖。
-    effect(() => {
-      const query = this.query.applied();
-      untracked(() => {
-        const filter = logFilter(query);
-        if (typeof filter === 'string') return;
-        this.read(
-          { ...filter, take: this.pageSize(), sortDirection: this.sortDirection() },
-          null,
-          0,
-        );
-      });
-    });
-  }
   setLevels(levels: string[]) {
     this.query.set('levels', levels as LogLevel[]);
   }
@@ -186,42 +158,6 @@ export class SystemLogsPage {
   }
   setMore(key: LogMoreField, value: string) {
     this.query.set(key, value);
-  }
-  changePage(direction: -1 | 1) {
-    const index = this.pageIndex() + direction;
-    const cursor = direction === 1 ? this.page()?.nextCursor : this.cursors.at(index);
-    if (index < 0 || (direction === 1 && !cursor)) return;
-    this.goTo(index, cursor ?? null);
-  }
-  firstPage() {
-    this.goTo(0, null);
-  }
-  private goTo(index: number, cursor: string | null) {
-    const request = this.request();
-    if (this.loading() || !request) return;
-    this.read(request.filter, cursor, index);
-  }
-  changeSort(direction: TableSortDirection) {
-    const request = this.request();
-    if (this.loading() || !request) return;
-    this.sortDirection.set(direction);
-    this.read({ ...request.filter, sortDirection: direction }, null, 0);
-  }
-  changePageSize(size: number) {
-    const request = this.request();
-    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
-    this.pageSize.set(size);
-    this.read({ ...request.filter, take: size }, null, 0);
-  }
-  retry() {
-    this.pageRead.reload();
-  }
-  private read(filter: LogFilter, cursor: string | null, index: number) {
-    this.cursors.visit(index, cursor);
-    this.inspector()?.close();
-    this.closeDetail();
-    this.exportError.set('');
-    this.request.set({ filter, cursor, index });
   }
   closeDetail() {
     this.selectedEntry.set(null);
@@ -236,8 +172,8 @@ export class SystemLogsPage {
     if (entry) this.inspect(entry);
   }
   async export() {
-    const request = this.request();
-    if (!request || this.exporting() || !this.session.has('diagnostics.logs.export')) return;
+    if (!this.table.data() || this.exporting() || !this.session.has('diagnostics.logs.export'))
+      return;
     // 預設區間（最近 N 小時）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filter = logFilter(this.query.applied());
     if (typeof filter === 'string') {
@@ -250,7 +186,7 @@ export class SystemLogsPage {
     try {
       const response = await this.api.export({
         ...filter,
-        sortDirection: request.filter.sortDirection,
+        sortDirection: this.table.sort()?.direction ?? 'desc',
       });
       const blob = await response.blob();
       if (guard()) downloadBlob(blob, 'ai-nexus-logs', 'csv');

@@ -29,10 +29,10 @@
         notice-actions
         nxPending
         type="button"
-        [pending]="store.result.refreshing()"
+        [pending]="store.table.refreshing()"
         (click)="reload()"
       >
-        {{ store.result.refreshing() ? '重試中…' : '重試' }}
+        {{ store.table.refreshing() ? '重試中…' : '重試' }}
       </button></nx-notice
     >
   }
@@ -48,7 +48,7 @@
       [search]="store.search()"
       [filters]="kinds"
       [filter]="store.type()"
-      [loading]="store.result.loading() && !store.items().length"
+      [loading]="store.table.loading()"
       [busy]="store.loading()"
       [empty]="!store.items().length"
       (searchChange)="store.find($event)"
@@ -86,22 +86,9 @@
     >
   </div>
   <footer class="file-footer">
-    <nx-storage-usage
-      [storage]="store.result.value()?.storage"
-      [loading]="store.result.loading()"
-    />
+    <nx-storage-usage [storage]="store.table.data()?.storage" [loading]="store.table.loading()" />
     @if (store.paged()) {
-      <nx-table-pagination
-        mode="offset"
-        [pageIndex]="store.pageIndex()"
-        [pageSize]="store.pageSize"
-        [pageSizes]="[store.pageSize]"
-        [count]="store.items().length"
-        [total]="store.total()"
-        [busy]="store.loading()"
-        (pageChange)="turn(store.pageIndex() + $event)"
-        (pageSelect)="turn($event)"
-      />
+      <nx-table-pagination [table]="store.table" [busy]="store.loading()" />
     }
   </footer>
   <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog /><nx-name-dialog />

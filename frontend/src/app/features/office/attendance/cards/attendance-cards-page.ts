@@ -15,13 +15,7 @@ import { formatDate, formatDateTimeInput, formatDay, nameInitial } from '@shared
 import { ViewScope } from '@shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
-import {
-  DataTable,
-  DataTableColumn,
-  DataTableRow,
-  TableState,
-  type TableColumn,
-} from '@shared/ui/data-table';
+import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
@@ -31,6 +25,8 @@ import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { SettingRow } from '@shared/ui/setting-row';
 import { StatusBadge } from '@shared/ui/status-badge';
+import { TableHeader } from '@shared/ui/table-header';
+import { localTable } from '@shared/ui/table-model';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { clockTime, weekday } from '../attendance-presentation';
 import { attendanceCardsTour, cardDetailTour } from '../attendance-tour';
@@ -70,6 +66,7 @@ const EMPTY_TEXT: Record<CardStatus, string> = {
     QueryBar,
     SettingRow,
     StatusBadge,
+    TableHeader,
     TableState,
     ViewSwitch,
   ],
@@ -99,16 +96,54 @@ export class AttendanceCardsPage {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   /** 抽屜裡的動作（刪除、隱藏）失敗；對話框的失敗留在對話框。 */
   readonly drawerError = signal('');
-  readonly columns: TableColumn[] = [
-    { id: 'number', label: '卡號', hideable: false },
-    { id: 'holder', label: '目前持有人' },
-    { id: 'since', label: '持有起' },
-    { id: 'punched', label: '最後刷卡' },
-    { id: 'status', label: '狀態' },
-    { id: 'note', label: '備註' },
-  ];
+  /**
+   * 卡片一次全部讀到（數量是公司的卡，不會大），欄位排序、篩選與分頁都在本機；搜尋與狀態仍在查詢列（寫進網址）。
+   * 預設維持後端的卡號順序。
+   */
+  readonly table = localTable({
+    rows: () => (this.store.cardsLoaded() ? this.store.cards() : undefined),
+    read: {
+      loading: this.store.cardsLoading,
+      refreshing: this.store.cardsRefreshing,
+      error: this.store.cardsError,
+      reload: () => this.store.reloadCards(),
+    },
+    columns: [
+      {
+        id: 'number',
+        label: '卡號',
+        hideable: false,
+        sort: true,
+        value: (card: CardDto) => card.cardNumber,
+      },
+      {
+        id: 'holder',
+        label: '目前持有人',
+        sort: true,
+        filter: 'text',
+        value: (card: CardDto) => (card.current ? holderName(card.current) : null),
+      },
+      {
+        id: 'since',
+        label: '持有起',
+        sort: 'desc',
+        filter: 'date',
+        value: (card: CardDto) => card.current?.startsAt ?? null,
+      },
+      {
+        id: 'punched',
+        label: '最後刷卡',
+        sort: 'desc',
+        filter: 'date',
+        value: (card: CardDto) => card.lastPunchedAt,
+      },
+      { id: 'status', label: '狀態' },
+      { id: 'note', label: '備註', filter: 'text' },
+    ],
+    unit: '張',
+  });
   readonly rows = computed(() =>
-    this.store.cards().map((card) => ({
+    this.table.rows().map((card) => ({
       card,
       holder: card.current ? holderName(card.current) : '',
       since: card.current ? formatDate(card.current.startsAt) : '',

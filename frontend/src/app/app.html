@@ -7,4 +7,7 @@
 <router-outlet />
 <nx-settings-dialog />
 <nx-reader-dialog />
-<nx-notification-center />
+<!-- 通知面板第一次打開才載入（鈴鐺與未讀數在 NotificationStore，不需要它）；載入後留著，之後開關不再等。 -->
+@defer (when notifications.opened()) {
+  <nx-notification-center />
+}

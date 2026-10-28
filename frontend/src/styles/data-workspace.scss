@@ -338,8 +338,9 @@ select:where(.ui-input) {
   font-size: var(--text-ui);
   line-height: var(--line-ui);
 }
-.ui-table-scroll th,
-.ui-table-scroll td {
+// 儲存格規則只套用到表格自己的列（`> table > 區段 > tr > 格`）：表頭的篩選 popover 也在 `.ui-table-scroll` 裡，
+// 用後代選擇器會讓 popover 裡的日曆表格也帶上分隔線、灰底表頭與手機卡片排版。多出來的部分包在 :where，權重不變。
+.ui-table-scroll > :where(table) > :where(thead, tbody, tfoot) > :where(tr) > :is(th, td) {
   padding: var(--table-cell-padding-block) var(--table-cell-padding-inline);
   text-align: start;
   border-bottom: 1px solid var(--line);
@@ -350,7 +351,7 @@ select:where(.ui-input) {
 :where(.ui-table-scroll td) nx-checkbox {
   --selection-control-padding-inline: var(--p-space-2);
 }
-.ui-table-scroll thead th {
+.ui-table-scroll > :where(table) > thead > :where(tr) > th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -360,10 +361,10 @@ select:where(.ui-input) {
   font-weight: 600;
   white-space: nowrap;
 }
-.ui-table-scroll tbody th {
+.ui-table-scroll > :where(table) > tbody > :where(tr) > th {
   font-weight: 400;
 }
-.ui-table-scroll tbody:last-of-type > tr:last-child > :is(td, th) {
+.ui-table-scroll > :where(table) > tbody:last-of-type > tr:last-child > :is(td, th) {
   border-bottom: 0;
 }
 // `<nx-data-table stacked>`: one card per row at `narrow` and below, so a phone never scrolls a
@@ -375,12 +376,12 @@ select:where(.ui-input) {
   .ui-table-stack .ui-table-scroll {
     max-height: none;
     > table,
-    tbody,
-    tbody :is(td, th) {
+    > :where(table) > tbody,
+    > :where(table) > tbody > :where(tr) > :is(td, th) {
       display: block;
       min-width: 0;
     }
-    thead {
+    > :where(table) > thead {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -388,7 +389,7 @@ select:where(.ui-input) {
       clip-path: inset(50%);
       white-space: nowrap;
     }
-    tbody tr {
+    > :where(table) > tbody > tr {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       align-items: start;
@@ -397,15 +398,15 @@ select:where(.ui-input) {
       padding: var(--p-space-3);
       border-bottom: 1px solid var(--line);
     }
-    tbody:last-of-type tr:last-child {
+    > :where(table) > tbody:last-of-type > tr:last-child {
       border-bottom: 0;
     }
-    tbody :is(td, th) {
+    > :where(table) > tbody > :where(tr) > :is(td, th) {
       grid-column: 1;
       padding: 0;
       border: 0;
     }
-    tbody th[colspan] {
+    > :where(table) > tbody > :where(tr) > th[colspan] {
       grid-column: 1 / -1;
     }
     // Spans two lines so a touch-sized button does not push the next line down.
@@ -424,7 +425,7 @@ select:where(.ui-input) {
     tbody .ui-table-numeric {
       text-align: start;
     }
-    td[data-label]::before {
+    > :where(table) > tbody > :where(tr) > td[data-label]::before {
       content: attr(data-label);
       margin-inline-end: var(--p-space-2);
       color: var(--secondary);

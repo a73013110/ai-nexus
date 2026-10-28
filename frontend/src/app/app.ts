@@ -14,6 +14,7 @@ import { TestIdentityIndicator } from '@core/auth/test-identity-indicator';
 import { IdentityVeil } from '@core/auth/identity-veil';
 import { ReaderDialog } from '@features/work/knowledge/documents/reader-dialog';
 import { NotificationCenter } from '@features/platform/notifications/notification-center';
+import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { trackKeyboardInset } from '@core/layout/keyboard-inset';
 import { RouteProgress } from '@core/layout/route-progress';
 import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
@@ -36,6 +37,7 @@ import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
 export class App {
   private readonly session = inject(WorkspaceSession);
   readonly testing = this.session.testing;
+  readonly notifications = inject(NotificationStore);
   constructor() {
     const injector = inject(Injector);
     const destroyRef = inject(DestroyRef);

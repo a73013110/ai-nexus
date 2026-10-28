@@ -24,7 +24,12 @@
       (dismissed)="failure.set('')"
     />
   }
-  <nx-query-bar label="匯入紀錄查詢條件" [state]="query" [busy]="refreshing()">
+  <nx-query-bar
+    label="匯入紀錄查詢條件"
+    [state]="query"
+    [table]="table"
+    [busy]="table.refreshing()"
+  >
     <nx-view-switch
       query-lead
       label="匯入結果"
@@ -51,62 +56,61 @@
       (valueChange)="query.set('range', $event)"
     />
   </nx-query-bar>
-  @if (readError() && rows().length) {
-    <nx-notice tone="danger" [message]="readError()"
+  @if (table.error() && table.rows().length) {
+    <nx-notice tone="danger" [message]="table.error()"
       ><button
         nxPending
         notice-actions
         type="button"
         class="secondary-button"
-        [pending]="refreshing()"
+        [pending]="table.refreshing()"
         (click)="reload()"
       >
-        {{ refreshing() ? '重試中…' : '重試' }}
+        {{ table.refreshing() ? '重試中…' : '重試' }}
       </button></nx-notice
     >
   }
   <nx-data-table
     class="imports-table"
     label="打卡匯入紀錄"
-    [busy]="refreshing()"
-    [columns]="columns"
+    [table]="table"
     [stacked]="true"
     preferenceKey="office-attendance-imports"
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>匯入紀錄</h2>
       <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
-      @if (refreshing() && rows().length) {
+      @if (table.refreshing() && table.rows().length) {
         <span class="sr-only" role="status">正在載入匯入紀錄…</span>
       }
     </div>
     <table>
       <caption class="sr-only">
-        打卡匯入紀錄，依開始匯入的時間由新到舊排列。
+        打卡匯入紀錄；欄位標題可排序與篩選。
       </caption>
       <colgroup>
-        <col nxTableColumn="time" class="imports-time-column" />
-        <col nxTableColumn="file" class="imports-file-column" />
+        <col nxTableColumn="startedAt" class="imports-time-column" />
+        <col nxTableColumn="fileName" class="imports-file-column" />
         <col nxTableColumn="status" class="imports-status-column" />
-        <col nxTableColumn="count" class="imports-count-column" />
-        <col nxTableColumn="trigger" />
+        <col nxTableColumn="punchCount" class="imports-count-column" />
+        <col nxTableColumn="triggerKind" />
       </colgroup>
       <thead>
         <tr>
-          <th scope="col" nxTableColumn="time">時間</th>
-          <th scope="col" nxTableColumn="file">檔名</th>
-          <th scope="col" nxTableColumn="status">結果</th>
-          <th scope="col" nxTableColumn="count" class="ui-table-numeric">筆數</th>
-          <th scope="col" nxTableColumn="trigger">觸發</th>
+          <th nxHeader="startedAt"></th>
+          <th nxHeader="fileName"></th>
+          <th nxHeader="status"></th>
+          <th nxHeader="punchCount"></th>
+          <th nxHeader="triggerKind"></th>
         </tr>
       </thead>
       <tbody>
         @for (item of presentedRows(); track item.row.id) {
           <tr>
-            <td nxTableColumn="time">
+            <td nxTableColumn="startedAt">
               <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
             </td>
-            <th scope="row" nxTableColumn="file" class="imports-file">
+            <th scope="row" nxTableColumn="fileName" class="imports-file">
               {{ item.row.fileName }}
             </th>
             <td nxTableColumn="status">
@@ -117,10 +121,10 @@
                 }}</small>
               }
             </td>
-            <td nxTableColumn="count" class="ui-table-numeric" data-label="筆數">
+            <td nxTableColumn="punchCount" class="ui-table-numeric" data-label="筆數">
               {{ item.count }}
             </td>
-            <td nxTableColumn="trigger" data-label="觸發">
+            <td nxTableColumn="triggerKind" data-label="觸發">
               {{ item.trigger }}
               @if (item.row.requestedByName) {
                 <small class="ui-truncate">{{ item.row.requestedByName }}</small>
@@ -131,27 +135,11 @@
       </tbody>
     </table>
     <nx-table-state
-      [count]="rows().length"
-      [loading]="loading()"
-      [error]="rows().length ? '' : readError()"
       loadingText="正在載入匯入紀錄…"
       errorTitle="無法取得匯入紀錄"
       emptyTitle="沒有符合條件的匯入紀錄"
       emptyText="試著擴大時間範圍，或移除部分條件。"
-      (retry)="reload()"
     />
-    <div table-footer class="ui-table-footer">
-      <nx-table-pagination
-        [pageIndex]="pageIndex()"
-        [pageSize]="pageSize()"
-        [count]="rows().length"
-        [hasNext]="hasNext()"
-        [busy]="refreshing()"
-        (pageChange)="changePage($event)"
-        (pageSelect)="firstPage()"
-        (pageSizeChange)="changePageSize($event)"
-      />
-    </div>
   </nx-data-table>
 </nx-feature-page>
 <nx-reimport-dialog (imported)="imported($event)" />

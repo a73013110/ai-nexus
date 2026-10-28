@@ -8,8 +8,10 @@ import {
   DestroyRef,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import type { AttachmentPolicyDto, LibraryFileDto } from '@core/api/schema';
@@ -92,17 +94,19 @@ export class FilesPage {
   constructor() {
     this.store.load();
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
+    // 分頁在格線下方：換頁或換條件後捲回格線開頭，否則畫面會停在新一頁的最後幾張。背景重讀不改 revision。
+    effect(() => {
+      if (!this.store.table.revision()) return;
+      untracked(() => {
+        const gallery = this.gallery().nativeElement;
+        if (gallery.getBoundingClientRect().top < 0) gallery.scrollIntoView({ block: 'start' });
+      });
+    });
   }
   reload() {
     this.actionError.set('');
     this.policyRead.reload();
     this.store.load();
-  }
-  /** 分頁在格線下方，翻頁後捲回格線開頭，否則畫面會停在新一頁的最後幾張。 */
-  turn(index: number) {
-    this.store.select(index);
-    const gallery = this.gallery().nativeElement;
-    if (gallery.getBoundingClientRect().top < 0) gallery.scrollIntoView({ block: 'start' });
   }
   chooseFiles(picker: HTMLInputElement) {
     void this.upload(picker.files!);
@@ -178,8 +182,10 @@ export class FilesPage {
       await this.api.removeFile(item.file.id);
       if (valid()) {
         this.toast.success('檔案已刪除');
-        if (this.store.items().length === 1 && this.store.offset()) this.store.page(-1);
-        this.store.load();
+        // 刪掉本頁最後一張就回上一頁；換頁本身會重讀。
+        if (this.store.items().length === 1 && this.store.table.pageIndex())
+          this.store.table.turn(-1);
+        else this.store.load();
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));

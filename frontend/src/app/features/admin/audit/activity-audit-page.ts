@@ -2,15 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
-import type { AuditDto, FeatureDto } from '@core/api/schema';
+import type { FeatureDto } from '@core/api/schema';
 import { catalogFeature, routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -20,16 +18,7 @@ import { downloadBlob } from '@shared/browser/download';
 import { formatDate, formatModelName } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyValue } from '@shared/ui/copy-value';
-import {
-  CursorTrail,
-  DataTable,
-  DataTableColumn,
-  DataTableRow,
-  PAGE_SIZES,
-  TablePagination,
-  TableState,
-  type TableColumn,
-} from '@shared/ui/data-table';
+import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
@@ -40,9 +29,11 @@ import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
+import { TableHeader } from '@shared/ui/table-header';
+import { cursorTable } from '@shared/ui/table-model';
 import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { AuditApi, type AuditFilters } from './audit-api';
+import { AuditApi } from './audit-api';
 import { auditLogQuery } from './audit-navigation';
 import { activityAuditTour, auditDetailTour } from './audit-tour';
 import {
@@ -60,14 +51,6 @@ import {
   auditFilters,
   auditQueryOptions,
 } from './audit-query';
-
-interface AuditPageRequest {
-  filters: AuditFilters;
-  take: number;
-  /** 游標：上一頁最後一筆的 ID，只讀比它舊的紀錄；第一頁為 undefined。 */
-  before: number | undefined;
-  index: number;
-}
 
 @Component({
   selector: 'nx-activity-audit-page',
@@ -88,7 +71,7 @@ interface AuditPageRequest {
     RouterLink,
     Select,
     StatusBadge,
-    TablePagination,
+    TableHeader,
     TableState,
     TimeRangePicker,
     ViewSwitch,
@@ -145,25 +128,37 @@ export class ActivityAuditPage {
   });
   readonly resultOptions: SelectOption[] = AUDIT_RESULTS;
   readonly ranges = AUDIT_RANGES;
-  readonly pageSize = signal(50);
-  private readonly request = signal<AuditPageRequest | undefined>(undefined);
-  private readonly pageRead = apiResource({
+  /** 已套用的條件；相對時間（最近 24 小時）以套用當下計算，條件不合法時不讀。 */
+  private readonly filters = computed(() => {
+    const filters = auditFilters(this.query.applied());
+    return typeof filters === 'string' ? undefined : filters;
+  });
+  /** 游標是上一頁最後一筆的 ID，只讀比它舊的紀錄；不算總數。 */
+  readonly table = cursorTable({
     feature: 'audit',
-    params: this.request,
-    loader: async (request, signal) => ({
-      request,
-      rows: await this.api.query(request.filters, request.take, request.before, signal),
-    }),
+    params: this.filters,
+    load: async (filters, table, signal) => {
+      const before = typeof table.cursor === 'number' ? table.cursor : undefined;
+      const items = await this.api.query(filters, table.limit, before, signal);
+      return { items, next: items.length === table.limit ? items.at(-1)?.id : null };
+    },
+    columns: [
+      { id: 'time', label: '時間', hideable: false },
+      { id: 'actor', label: '操作者' },
+      { id: 'action', label: '動作', hideable: false },
+      { id: 'feature', label: '功能' },
+      { id: 'subject', label: '資料主體' },
+      { id: 'resource', label: '資源', defaultHidden: true },
+      { id: 'result', label: '結果' },
+    ],
+    navigated: () => {
+      this.drawer()?.close();
+      this.selectedId.set(null);
+      this.exportError.set('');
+    },
   });
-  readonly rows = computed<AuditDto[]>(() => this.pageRead.value()?.rows ?? []);
-  readonly pageIndex = computed(() => this.pageRead.value()?.request.index ?? 0);
-  /** 游標分頁不算總數：本頁筆數等於每頁筆數，才表示可能還有更舊的紀錄。 */
-  readonly hasNext = computed(() => {
-    const page = this.pageRead.value();
-    return !!page && page.rows.length === page.request.take;
-  });
-  readonly loading = computed(() => this.catalogRead.loading() || this.pageRead.refreshing());
-  readonly readError = computed(() => this.pageRead.error());
+  readonly rows = this.table.rows;
+  readonly loading = computed(() => this.catalogRead.loading() || this.table.refreshing());
   readonly catalogError = this.catalogRead.error;
   /** 動作選項來自目錄：讀到前選單顯示「正在載入」，不先只給「所有動作」。 */
   readonly catalogLoading = this.catalogRead.loading;
@@ -172,16 +167,6 @@ export class ActivityAuditPage {
   readonly exportError = signal('');
   readonly selectedId = signal<number | null>(null);
   readonly drawer = viewChild(DetailDrawer);
-  private readonly table = viewChild(DataTable);
-  readonly columns: TableColumn[] = [
-    { id: 'time', label: '時間', hideable: false },
-    { id: 'actor', label: '操作者' },
-    { id: 'action', label: '動作', hideable: false },
-    { id: 'feature', label: '功能' },
-    { id: 'subject', label: '資料主體' },
-    { id: 'resource', label: '資源', defaultHidden: true },
-    { id: 'result', label: '結果' },
-  ];
   readonly presentedRows = computed(() =>
     this.rows().map((entry) => ({
       entry,
@@ -208,7 +193,6 @@ export class ActivityAuditPage {
     this.presentedRows().findIndex((row) => row.entry.id === this.selectedId()),
   );
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
-  private readonly cursors = new CursorTrail<number | undefined>(undefined);
   private readonly logsName = computed(() =>
     this.session.has('diagnostics.logs') ? this.session.featureName('diagnostics.logs') : null,
   );
@@ -228,19 +212,6 @@ export class ActivityAuditPage {
     });
   });
 
-  constructor() {
-    // 每次套用條件都從最新一頁重讀；相對時間（最近 24 小時）以套用當下計算。
-    effect(() => {
-      const query = this.query.applied();
-      untracked(() => {
-        const filters = auditFilters(query);
-        if (typeof filters !== 'string') this.read(filters, undefined, 0);
-      });
-    });
-    effect(() => {
-      if (this.pageRead.value()) this.table()?.resetScroll();
-    });
-  }
   /** 分類切換立即套用；已選的動作（或模組）在新分類下沒有動作時一併清除，避免查出空結果。 */
   changeCategory(category: string) {
     const action = this.draft().action;
@@ -251,35 +222,9 @@ export class ActivityAuditPage {
       );
     this.query.commit({ category, ...(keep ? {} : { action: '' }) });
   }
-  changePage(direction: -1 | 1) {
-    const index = this.pageIndex() + direction;
-    if (index < 0 || (direction === 1 && !this.hasNext())) return;
-    this.goTo(index, direction === 1 ? this.rows().at(-1)?.id : this.cursors.at(index));
-  }
-  firstPage() {
-    this.goTo(0, undefined);
-  }
-  private goTo(index: number, before: number | undefined) {
-    const request = this.request();
-    if (this.loading() || !request) return;
-    this.read(request.filters, before, index);
-  }
-  changePageSize(size: number) {
-    const request = this.request();
-    if (this.loading() || !request || !PAGE_SIZES.includes(size)) return;
-    this.pageSize.set(size);
-    this.read(request.filters, undefined, 0);
-  }
-  private read(filters: AuditFilters, before: number | undefined, index: number) {
-    this.cursors.visit(index, before);
-    this.drawer()?.close();
-    this.selectedId.set(null);
-    this.exportError.set('');
-    this.request.set({ filters, take: this.pageSize(), before, index });
-  }
-  retry() {
+  /** 表格讀取失敗後重試（表格自己重讀）時，動作目錄也失敗就一起重讀。 */
+  retryCatalog() {
     if (this.catalogError()) this.catalogRead.reload();
-    this.pageRead.reload();
   }
   openDetails(id: number) {
     this.selectedId.set(id);
@@ -290,7 +235,7 @@ export class ActivityAuditPage {
     if (row) this.openDetails(row.entry.id);
   }
   async export() {
-    if (!this.request() || this.exporting()) return;
+    if (!this.table.data() || this.exporting()) return;
     // 預設區間（最近 N 天）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filters = auditFilters(this.query.applied());
     if (typeof filters === 'string') {

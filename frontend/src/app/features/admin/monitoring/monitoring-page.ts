@@ -162,7 +162,7 @@ export class MonitoringPage {
     ),
   );
   /** 線上人員表格目前這一頁的工作階段；上下筆只在這一頁內移動。 */
-  readonly pageSessions = computed(() => this.people()?.list()?.visible() ?? []);
+  readonly pageSessions = computed(() => this.people()?.list()?.table.rows() ?? []);
   readonly sessionIndex = computed(() => {
     const id = this.selectedSession()?.id;
     return id ? this.pageSessions().findIndex((segment3) => segment3.id === id) : -1;

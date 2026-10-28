@@ -155,7 +155,7 @@
   <nx-data-table
     class="records-table"
     label="出勤紀錄"
-    [busy]="refreshing()"
+    [table]="table"
     [columns]="columns"
     [stacked]="true"
     preferenceKey="office-attendance-records"
@@ -282,191 +282,22 @@
           <th scope="col" nxTableColumn="forms">表單</th>
         </tr>
       </thead>
+      <!-- 每人一個元件：捲到附近才建立那個人的每一天（見 RecordsPersonGroup）。 -->
       @for (group of groups(); track group.key) {
-        <tbody class="records-person-group">
-          <tr class="records-person-row">
-            <th scope="rowgroup" colspan="11">
-              <ng-container
-                [ngTemplateOutlet]="personInfo"
-                [ngTemplateOutletContext]="{ $implicit: group }"
-              />
-            </th>
-          </tr>
-          @for (row of group.days; track row.day.date; let first = $first) {
-            <tr [class.is-weekend]="row.weekend" [class.records-week-start]="row.weekStart">
-              @if (first) {
-                <th scope="rowgroup" class="records-person-cell" [attr.rowspan]="group.days.length">
-                  <div class="records-person-card">
-                    <ng-container
-                      [ngTemplateOutlet]="personInfo"
-                      [ngTemplateOutletContext]="{ $implicit: group }"
-                    />
-                  </div>
-                </th>
-              }
-              <td nxTableColumn="date">
-                <time [attr.datetime]="row.day.date">{{ row.date }}（{{ row.weekday }}）</time>
-                @if (row.today) {
-                  <small class="records-today">今天</small>
-                }
-              </td>
-              <td nxTableColumn="dayType" data-label="日型">
-                {{ row.dayType }}
-                @if (row.remark) {
-                  <small class="records-remark" [title]="row.remark">{{ row.remark }}</small>
-                }
-              </td>
-              <!-- 標籤寫發生什麼事、顏色跟著補足狀態；原因在 title，只有真的無法判定才另寫一行。 -->
-              <td nxTableColumn="status">
-                <span class="records-badges">
-                  @for (status of row.statuses; track status.label) {
-                    <nx-status-badge [tone]="status.tone" [attr.title]="row.reason || null">{{
-                      status.label
-                    }}</nx-status-badge>
-                  }
-                </span>
-                @if (row.note) {
-                  <small class="records-reason">{{ row.note }}</small>
-                }
-              </td>
-              <!-- 遲到的上班、早退的下班直接在時間上標色（舊系統的紅字，顏色跟著補足狀態）；沒刷卡也沒表單補足標「未刷卡」。 -->
-              <td nxTableColumn="clockIn" class="records-time" data-label="上班">
-                @if (row.clockIn) {
-                  <span
-                    [class.records-time-flag]="row.late"
-                    [attr.data-tone]="row.coverage?.tone"
-                    [attr.title]="row.lateNote || null"
-                    >{{ row.clockIn }}</span
-                  >
-                } @else if (row.missing) {
-                  <span class="records-missing">未刷卡</span>
-                } @else {
-                  —
-                }
-              </td>
-              <td nxTableColumn="clockOut" class="records-time" data-label="下班">
-                @if (row.clockOut && !row.singlePunch) {
-                  <span
-                    [class.records-time-flag]="row.early"
-                    [attr.data-tone]="row.coverage?.tone"
-                    [attr.title]="row.earlyNote || null"
-                    >{{ row.clockOut }}</span
-                  >
-                } @else if (row.missing) {
-                  <span class="records-missing">未刷卡</span>
-                } @else {
-                  —
-                }
-              </td>
-              <td nxTableColumn="expected" class="records-time" data-label="應下班">
-                {{ row.expected || '—' }}
-                <!-- 原本的應下班照舊系統；扣掉核准表單後的時間另起一行，走在它之後就補足。 -->
-                @if (row.adjusted) {
-                  <small class="records-adjusted" title="扣掉核准表單時數後的應下班"
-                    >扣表單 {{ row.adjusted }}</small
-                  >
-                }
-              </td>
-              <!-- 遲到、早退的時數照舊系統；顏色跟著當天的補足狀態（已補足綠、流程中黃、未補足紅）。 -->
-              <td nxTableColumn="late" data-label="遲到">
-                @if (row.late) {
-                  <span class="records-gap" [attr.data-tone]="row.coverage?.tone">{{
-                    row.late
-                  }}</span>
-                } @else {
-                  <span class="records-none">—</span>
-                }
-              </td>
-              <td nxTableColumn="early" data-label="早退">
-                @if (row.early) {
-                  <span class="records-gap" [attr.data-tone]="row.coverage?.tone">{{
-                    row.early
-                  }}</span>
-                } @else {
-                  <span class="records-none">—</span>
-                }
-              </td>
-              <!-- HR 要追的：狀態標籤在前，接著還差多少（差額整段不斷行）、缺在哪幾段，緊鄰表單欄好對照流程中假單的起訖。 -->
-              <td nxTableColumn="coverage" data-label="補足">
-                @if (row.coverage; as coverage) {
-                  <div class="records-gap-cell" [attr.data-tone]="coverage.tone">
-                    <span class="records-gap-head">
-                      <nx-status-badge [tone]="coverage.tone">{{ coverage.label }}</nx-status-badge>
-                      @if (coverage.short) {
-                        <strong class="records-short">{{ coverage.short }}</strong>
-                      } @else if (coverage.formHours) {
-                        <span class="records-form-hours">{{ coverage.formHours }}</span>
-                      }
-                    </span>
-                    @if (coverage.gaps.length) {
-                      <ul class="records-gaps" aria-label="缺口時段">
-                        @for (gap of coverage.gaps; track gap.kind) {
-                          <li>
-                            <span>{{ gap.kind }}</span
-                            ><time>{{ gap.time }}</time>
-                          </li>
-                        }
-                      </ul>
-                    }
-                  </div>
-                } @else {
-                  <span class="records-none">—</span>
-                }
-              </td>
-              <td nxTableColumn="forms" data-label="表單">
-                @if (row.formsUnavailable) {
-                  <span class="records-unavailable">無法取得</span>
-                } @else {
-                  <nx-gd-form-list
-                    [forms]="row.forms"
-                    (open)="formDialog.open($event, row.day.date)"
-                  />
-                }
-              </td>
-            </tr>
-          } @empty {
-            <!-- 區間內只有沒列出的放假日：仍列出這個人，免得寬版看不到他。 -->
-            <tr>
-              <th scope="rowgroup" class="records-person-cell">
-                <div class="records-person-card">
-                  <ng-container
-                    [ngTemplateOutlet]="personInfo"
-                    [ngTemplateOutletContext]="{ $implicit: group }"
-                  />
-                </div>
-              </th>
-              <td colspan="10" class="records-none">這段期間沒有要列出的日子</td>
-            </tr>
-          }
-        </tbody>
+        <tbody
+          nxRecordsGroup
+          [group]="group"
+          [info]="personInfo"
+          (openForm)="formDialog.open($event.desNo, $event.date)"
+        ></tbody>
       }
     </table>
     <nx-table-state
-      [count]="groups().length"
-      [loading]="loading()"
-      [error]="records() ? '' : readError()"
       loadingText="正在載入出勤紀錄…"
       errorTitle="無法取得出勤紀錄"
       emptyTitle="這段期間沒有出勤紀錄"
       emptyText="只列出期間內持有卡的人；未來的日子不列出。"
-      (retry)="reload()"
     />
-    @if (total() > pageSizes[0] || pageIndex()) {
-      <div table-footer class="ui-table-footer">
-        <nx-table-pagination
-          mode="offset"
-          [pageIndex]="pageIndex()"
-          [pageSize]="pageSize()"
-          [pageSizes]="pageSizes"
-          [count]="people().length"
-          [total]="total()"
-          [busy]="refreshing()"
-          (pageChange)="changePage($event)"
-          (pageSelect)="pageIndex.set($event)"
-          (pageSizeChange)="changePageSize($event)"
-        />
-      </div>
-    }
   </nx-data-table>
 </nx-feature-page>
 <nx-gd-form-dialog #formDialog />

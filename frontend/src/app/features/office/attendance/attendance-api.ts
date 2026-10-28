@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient, type ApiQuery } from '@core/api/api-client';
+import type { TableRequestQuery } from '@shared/ui/table-model';
 import type {
   CalendarDayRequest,
   CardAssignmentCreateRequest,
@@ -13,10 +14,10 @@ export type AttendanceRecordFilters = Omit<
   ApiQuery<'/api/v1/attendance-records', 'get'>,
   'offset' | 'limit'
 >;
-/** 匯入紀錄已套用的條件；分頁參數（`before`、`take`）每頁另外加上。 */
+/** 匯入紀錄已套用的條件；表格參數（排序、欄位篩選、分頁）由 `endpointTable` 加上。 */
 export type PunchImportFilters = Omit<
   ApiQuery<'/api/v1/attendance-imports', 'get'>,
-  'before' | 'take'
+  keyof TableRequestQuery
 >;
 
 /**
@@ -73,8 +74,8 @@ export class AttendanceApi {
   deleteAssignment = (id: string) =>
     this.api.delete('/api/v1/attendance-card-assignments/{id}', { path: { id } });
 
-  imports = (filters: PunchImportFilters, take: number, before?: string, signal?: AbortSignal) =>
-    this.api.get('/api/v1/attendance-imports', { query: { ...filters, take, before }, signal });
+  imports = (filters: PunchImportFilters, table: TableRequestQuery, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-imports', { query: { ...filters, ...table }, signal });
   /** 重匯檔名日期（`yyyyMMdd.txt` 的日期，不是出勤日）`from`～`to`，含頭尾；只重匯一個檔時起訖相同。 */
   reimport = (from: string, to: string) =>
     this.api.post('/api/v1/attendance-imports', { body: { from, to } });

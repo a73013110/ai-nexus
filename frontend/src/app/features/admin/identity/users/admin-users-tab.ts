@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   input,
   output,
@@ -19,7 +18,6 @@ import {
   DataTable,
   DataTableColumn,
   DataTableRow,
-  TablePagination,
   TableState,
   type TableColumn,
 } from '@shared/ui/data-table';
@@ -43,7 +41,6 @@ import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directo
     DataTable,
     DataTableColumn,
     DataTableRow,
-    TablePagination,
     TableState,
     Icon,
     SearchField,
@@ -70,7 +67,6 @@ export class AdminUsersTab {
   /** 在檢視器中開啟的使用者，帳號、角色與政策都在那裡編輯。 */
   readonly selectedId = input<string | null>(null);
   readonly inspect = output<AdminUserDto>();
-  private readonly userTable = viewChild<DataTable>('userTable');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly testDialog = viewChild.required(TestIdentityDialog);
   readonly createDialog = viewChild.required(AdminUserCreateDialog);
@@ -117,12 +113,6 @@ export class AdminUsersTab {
     )
       return;
     await this.store.resetOrder();
-  }
-  constructor() {
-    // 換頁或換條件才回到頂端；同一頁重讀（拖曳排序、編輯帳號後）保留捲動位置，才能接著往下調整。
-    effect(() => {
-      if (this.store.request()) this.userTable()?.resetScroll();
-    });
   }
   /** 只有檢視器沒有持有的部分：從 AD 更新、切換身分與移除。 */
   actions(user: AdminUserDto): MenuAction[] {
@@ -174,7 +164,7 @@ export class AdminUsersTab {
       this.acting.set(user.id);
       try {
         await this.api.deleteUser(user.id);
-        this.store.changed(0);
+        this.store.changed(true);
         this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
       } catch (error) {
         this.store.actionError.set(safeMessage(error));

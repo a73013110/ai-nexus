@@ -6,9 +6,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  effect,
   inject,
   input,
   output,
+  untracked,
   viewChild,
 } from '@angular/core';
 import type { LibraryFileDto } from '@core/api/schema';
@@ -120,17 +122,7 @@ import { TablePagination } from '@shared/ui/data-table';
       </div>
       @if (store.paged()) {
         <footer class="dialog-foot">
-          <nx-table-pagination
-            mode="offset"
-            [pageIndex]="store.pageIndex()"
-            [pageSize]="store.pageSize"
-            [pageSizes]="[store.pageSize]"
-            [count]="store.items().length"
-            [total]="store.total()"
-            [busy]="store.loading()"
-            (pageChange)="turn(store.pageIndex() + $event)"
-            (pageSelect)="turn($event)"
-          />
+          <nx-table-pagination [table]="store.table" [busy]="store.loading()" />
         </footer>
       }
     </dialog>`,
@@ -145,14 +137,16 @@ export class LibraryPicker {
   readonly date = formatDay;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
+  constructor() {
+    // 換頁或換搜尋回到清單開頭；背景重讀不改 revision。
+    effect(() => {
+      this.store.table.revision();
+      untracked(() => (this.body().nativeElement.scrollTop = 0));
+    });
+  }
   open() {
     this.dialog().nativeElement.showModal();
     this.store.load();
-  }
-  /** 翻頁回到清單開頭。 */
-  turn(index: number) {
-    this.store.select(index);
-    this.body().nativeElement.scrollTop = 0;
   }
   pick(file: LibraryFileDto) {
     this.dialog().nativeElement.close();

@@ -23,9 +23,9 @@
   </div>
 </div>
 <nx-data-table
-  #userTable
   class="admin-access-table admin-users-table"
   label="使用者列表"
+  [table]="store.table"
   [busy]="store.loadingUsers()"
   [columns]="userColumns"
   [stacked]="true"
@@ -187,26 +187,11 @@
   <nx-table-state
     [count]="store.users()?.users?.length || 0"
     [loading]="store.loadingUsers()"
-    [error]="store.usersRead.error()"
     loadingText="正在載入使用者…"
     errorTitle="無法載入使用者"
     emptyTitle="沒有符合的使用者"
     emptyText="可手動建立使用者，或在第一次 AD 登入時自動建立。"
-    (retry)="store.readUsers()"
   />
-  <div table-footer class="ui-table-footer">
-    <nx-table-pagination
-      mode="offset"
-      [pageIndex]="(store.users()?.offset || 0) / store.pageSize"
-      [pageSize]="store.pageSize"
-      [pageSizes]="[store.pageSize]"
-      [count]="store.users()?.users?.length || 0"
-      [total]="store.users()?.total || 0"
-      [busy]="store.loadingUsers()"
-      (pageChange)="store.readUsers((store.users()?.offset || 0) + $event * store.pageSize)"
-      (pageSelect)="store.readUsers($event * store.pageSize)"
-    />
-  </div>
 </nx-data-table>
 <nx-confirm-dialog />
 <nx-test-identity-dialog />

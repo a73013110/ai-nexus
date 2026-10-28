@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
   ChangeDetectionStrategy,
@@ -9,6 +8,7 @@ import {
   linkedSignal,
   signal,
   untracked,
+  ViewEncapsulation,
   type Signal,
 } from '@angular/core';
 import { apiResource, type ApiResource } from '@core/api/api-resource';
@@ -19,13 +19,8 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { attachmentName, downloadBlob } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
-import {
-  DataTable,
-  DataTableColumn,
-  TablePagination,
-  TableState,
-  type TableColumn,
-} from '@shared/ui/data-table';
+import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
+import { endpointTable } from '@shared/ui/table-model';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
@@ -41,16 +36,10 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitNodes } from '@features/admin/organization/unit-tree';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
-import {
-  attendanceProblem,
-  presentRecord,
-  presentSchedule,
-  summarizePerson,
-  weekOf,
-} from '../attendance-presentation';
+import { attendanceProblem, presentSchedule } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
 import { GdFormDialog } from '../forms/gd-form-dialog';
-import { GdFormList } from './gd-form-list';
+import { RecordsPersonGroup, presentGroup } from './records-person-group';
 import {
   RECORD_COVERAGES,
   RECORD_RANGES,
@@ -60,13 +49,14 @@ import {
   type RecordsCoverage,
 } from './records-query';
 
-/** 每頁人數：一人一年約 250 列，頁面一次只畫這幾個人；上限與後端 `ListAttendanceRecords.MaxPageSize` 相同。 */
+/** 每頁人數：一人一年約 250 列（捲到附近才畫）；上限與後端 `ListAttendanceRecords.MaxPageSize` 相同。 */
 const PAGE_SIZES = [10, 20, 50];
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * 出勤紀錄（`attendance.records`）：資料範圍內每人每天的判定、上下班刷卡、應下班、遲到早退與當天的假單。
- * 名單依人分組、依人分頁（區間最長一年，一次只畫一頁的人）；公文系統連不上時頁首標示，判定改為無法判定而不是異常。
+ * 名單依人分組、依人分頁（區間最長一年）；每人的每一天都列出，一頁可達數千列，每人的列捲到附近才建立
+ * （`RecordsPersonGroup`），讀完不會卡住。公文系統連不上時頁首標示，判定改為無法判定而不是異常。
  * 人員選單另外讀（範圍內持過卡的人，含還沒綁帳號的姓名持有人），不靠目前這一頁的名單；單位放在人員前面，選了單位後人員選單只列那個單位的人。
  * 沒有刷卡的放假日預設不列（只有表單的也一樣，勾「含放假日」才列），放假日附假日設定的備註。
  * 單位與人員選單只給資料範圍看得到別人的人；單位清單另外要組織管理權限。
@@ -88,16 +78,14 @@ const DEFAULT_PAGE_SIZE = 20;
     Icon,
     InfoPopover,
     GdFormDialog,
-    GdFormList,
-    NgTemplateOutlet,
     Notice,
     PendingButton,
     QueryBar,
     QueryField,
+    RecordsPersonGroup,
     Select,
     RouterLink,
     StatusBadge,
-    TablePagination,
     TableState,
     TimeRangePicker,
     TreeSelect,
@@ -105,7 +93,8 @@ const DEFAULT_PAGE_SIZE = 20;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ViewScope],
-  styles: ':host { display: block; min-width: 0; }',
+  // 不封裝：每人一段的 `RecordsPersonGroup` 共用這份樣式（class 一律 `records-` 開頭，見樣式檔開頭）。
+  encapsulation: ViewEncapsulation.None,
   styleUrl: './attendance-records-page.scss',
   templateUrl: './attendance-records-page.html',
 })
@@ -115,7 +104,6 @@ export class AttendanceRecordsPage {
   private readonly organization = inject(OrganizationApi);
   private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
-  readonly pageSizes = PAGE_SIZES;
   readonly coverages = RECORD_COVERAGES;
   /** 隱藏的卡在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
   readonly cardsRoute = routeOf('attendance.cards');
@@ -182,40 +170,8 @@ export class AttendanceRecordsPage {
   readonly tour = computed(() =>
     attendanceRecordsTour({ people: this.seesOthers(), units: this.showUnits() }),
   );
-  /** 已套用的條件（換算成起訖）；換頁與每頁人數沿用它，不寫進網址。 */
+  /** 已套用的條件（換算成起訖）；每次套用都是新參考，表格據此回到第一頁重讀。不寫進網址。 */
   private readonly filters = signal<AttendanceRecordFilters | undefined>(undefined);
-  readonly pageIndex = signal(0);
-  readonly pageSize = signal(DEFAULT_PAGE_SIZE);
-  private readonly recordsRead = apiResource({
-    feature: 'attendance.records',
-    params: () => {
-      const filters = this.filters();
-      if (!filters) return undefined;
-      return { filters, offset: this.pageIndex() * this.pageSize(), limit: this.pageSize() };
-    },
-    loader: (request, signal) =>
-      this.api.records(request.filters, request.offset, request.limit, signal),
-  });
-  readonly records = this.recordsRead.value;
-  /** 新條件的第一次讀取（還沒有這次的結果）。 */
-  readonly loading = this.recordsRead.loading;
-  /** 使用者感覺得到的讀取（查詢、換頁、重試）：表格淡化、查詢鈕轉圈。 */
-  readonly refreshing = this.recordsRead.refreshing;
-  readonly readError = this.recordsRead.error;
-  readonly people = computed(() => this.records()?.people ?? []);
-  readonly total = computed(() => this.records()?.total ?? 0);
-  private readonly rulesRead = apiResource({
-    feature: 'attendance.records',
-    loader: (_: true, signal) => this.api.rules(signal),
-  });
-  /** 判定規則；讀不到時面板改顯示錯誤，不影響查詢。 */
-  readonly rules = computed(() => {
-    const rules = this.rulesRead.value();
-    return rules ? { schedules: rules.schedules.map(presentSchedule), items: rules.rules } : null;
-  });
-  readonly rulesError = this.rulesRead.error;
-  readonly exporting = signal(false);
-  readonly exportError = signal('');
   readonly columns: TableColumn[] = [
     { id: 'date', label: '日期', hideable: false },
     { id: 'dayType', label: '日型' },
@@ -228,20 +184,44 @@ export class AttendanceRecordsPage {
     { id: 'coverage', label: '補足' },
     { id: 'forms', label: '表單' },
   ];
+  /**
+   * 依人分頁：後端以人為單位回 `offset`／`limit`（不走 `TableRequest`，沒有欄位排序與篩選），
+   * 回應裡的期間、今天與公文系統狀態從 `data()` 取。
+   */
+  readonly table = endpointTable({
+    feature: 'attendance.records',
+    params: this.filters,
+    load: async (filters, page, signal) => {
+      const data = await this.api.records(filters, page.offset, page.limit, signal);
+      return { ...data, items: data.people, offset: page.offset, complete: false };
+    },
+    columns: this.columns,
+    pageSize: DEFAULT_PAGE_SIZE,
+    pageSizes: PAGE_SIZES,
+    unit: '人',
+  });
+  readonly records = this.table.data;
+  /** 使用者感覺得到的讀取（查詢、換頁、重試）：表格淡化、查詢鈕轉圈。 */
+  readonly refreshing = this.table.refreshing;
+  /** 已有結果時的讀取失敗由頁首提示（附重試）；沒有結果時由表格狀態顯示。 */
+  readonly readError = this.table.error;
+  readonly people = this.table.rows;
+  readonly total = this.table.total;
+  private readonly rulesRead = apiResource({
+    feature: 'attendance.records',
+    loader: (_: true, signal) => this.api.rules(signal),
+  });
+  /** 判定規則；讀不到時面板改顯示錯誤，不影響查詢。 */
+  readonly rules = computed(() => {
+    const rules = this.rulesRead.value();
+    return rules ? { schedules: rules.schedules.map(presentSchedule), items: rules.rules } : null;
+  });
+  readonly rulesError = this.rulesRead.error;
+  readonly exporting = signal(false);
+  readonly exportError = signal('');
   readonly groups = computed(() => {
     const data = this.records();
-    if (!data) return [];
-    return data.people.map((person) => ({
-      person,
-      // 同一張卡先後有兩位只有姓名的持有人時是兩列。
-      key: person.userId ?? `${cardKey(person.cardNumber!)}:${person.displayName}`,
-      ...summarizePerson(person.days),
-      // 換週的那一列上緣加分隔線；放假日不列時週一可能不在，所以比的是「哪一週」而不是星期幾。
-      days: person.days.map((day, index, days) => ({
-        ...presentRecord(day, data.today),
-        weekStart: index > 0 && weekOf(day.date) !== weekOf(days[index - 1].date),
-      })),
-    }));
+    return data ? this.people().map((person) => presentGroup(person, data.today)) : [];
   });
   readonly period = computed(() => {
     const data = this.records();
@@ -249,14 +229,12 @@ export class AttendanceRecordsPage {
   });
 
   constructor() {
-    // 每次套用條件都回到第一頁重讀；「本月」以套用當下的台北日期換算。
+    // 每次套用條件都換一個新參考（表格回到第一頁重讀）；「本月」以套用當下的台北日期換算。
     effect(() => {
       const query = this.query.applied();
       untracked(() => {
         const filters = recordFilters(query);
-        if (typeof filters === 'string') return;
-        this.pageIndex.set(0);
-        this.filters.set(filters);
+        if (typeof filters !== 'string') this.filters.set(filters);
       });
     });
   }
@@ -266,16 +244,8 @@ export class AttendanceRecordsPage {
     this.query.commit({ coverage });
   }
 
-  changePage(delta: -1 | 1) {
-    this.pageIndex.update((index) => Math.max(0, index + delta));
-  }
-  changePageSize(size: number) {
-    this.pageSize.set(size);
-    this.pageIndex.set(0);
-  }
-
   reload() {
-    this.recordsRead.reload();
+    this.table.reload();
   }
 
   async export() {

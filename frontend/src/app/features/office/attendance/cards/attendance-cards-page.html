@@ -53,22 +53,16 @@
   <nx-data-table
     class="cards-table"
     label="卡號列表"
-    [busy]="store.cardsRefreshing()"
-    [columns]="columns"
+    [table]="table"
     [stacked]="true"
     preferenceKey="office-attendance-cards"
   >
     <div table-toolbar class="ui-table-toolbar">
-      <h2>
-        卡號
-        @if (store.cardsLoaded()) {
-          <span class="ui-count-label">{{ rows().length }} 張</span>
-        }
-      </h2>
+      <h2>卡號</h2>
     </div>
     <table>
       <caption class="sr-only">
-        打卡卡號，依卡號排序。
+        打卡卡號，預設依卡號排序；欄位標題可排序與篩選。
       </caption>
       <colgroup>
         <col nxTableColumn="number" class="cards-number-column" />
@@ -80,12 +74,12 @@
       </colgroup>
       <thead>
         <tr>
-          <th scope="col" nxTableColumn="number">卡號</th>
-          <th scope="col" nxTableColumn="holder">目前持有人</th>
-          <th scope="col" nxTableColumn="since">持有起</th>
-          <th scope="col" nxTableColumn="punched">最後刷卡</th>
-          <th scope="col" nxTableColumn="status">狀態</th>
-          <th scope="col" nxTableColumn="note">備註</th>
+          <th nxHeader="number"></th>
+          <th nxHeader="holder"></th>
+          <th nxHeader="since"></th>
+          <th nxHeader="punched"></th>
+          <th nxHeader="status"></th>
+          <th nxHeader="note"></th>
         </tr>
       </thead>
       <tbody>
@@ -142,14 +136,10 @@
       </tbody>
     </table>
     <nx-table-state
-      [count]="rows().length"
-      [loading]="store.cardsLoading()"
-      [error]="store.cardsLoaded() ? '' : store.cardsError()"
       loadingText="正在載入卡號…"
       errorTitle="無法取得卡號"
       emptyTitle="沒有符合條件的卡號"
       [emptyText]="emptyText()"
-      (retry)="store.reloadCards()"
     />
   </nx-data-table>
 </nx-feature-page>

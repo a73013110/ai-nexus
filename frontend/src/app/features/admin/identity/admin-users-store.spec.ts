@@ -24,7 +24,7 @@ function setup() {
   const api = {
     users: vi.fn(async (search: string, offset: number) => ({
       users: [{ id: `${search}-${offset}` }],
-      total: 1,
+      total: 250,
       offset,
     })),
     accountReviews: vi.fn(async () => ({
@@ -66,7 +66,7 @@ describe('admin users store', () => {
   it('searches after typing pauses and starts again from the first page', async () => {
     const { store, api, settle } = setup();
     await settle();
-    store.readUsers(100);
+    store.table.turn(1);
     await settle();
     expect(api.users).toHaveBeenLastCalledWith('', 100);
     store.find('王');
@@ -104,7 +104,7 @@ describe('admin users store', () => {
   it('reads the reviews again with the given page after an account change', async () => {
     const { store, api, settle } = setup();
     await settle();
-    store.changed(0);
+    store.changed(true);
     await settle();
     expect(api.accountReviews).toHaveBeenCalledTimes(2);
   });

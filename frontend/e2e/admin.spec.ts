@@ -379,7 +379,8 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await expect(
     page.getByRole("list", { name: "已套用條件", exact: true }),
   ).toContainText("動作：對話（全部）");
-  await expect(nextPage).toBeDisabled();
+  // 沒有資料時只顯示空狀態，分頁列收起。
+  await expect(nextPage).toHaveCount(0);
   await page.reload();
   await page.goto("/admin/audit");
   await expect(

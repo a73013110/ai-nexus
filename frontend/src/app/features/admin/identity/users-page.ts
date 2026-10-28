@@ -30,12 +30,10 @@ import { AdminUsersTab } from './users/admin-users-tab';
             notice-actions
             nxPending
             type="button"
-            [pending]="store.access.refreshing() || store.usersRead.refreshing()"
+            [pending]="store.access.refreshing() || store.table.refreshing()"
             (click)="store.load()"
           >
-            {{
-              store.access.refreshing() || store.usersRead.refreshing() ? '重新載入中…' : '重新載入'
-            }}
+            {{ store.access.refreshing() || store.table.refreshing() ? '重新載入中…' : '重新載入' }}
           </button>
         </nx-notice>
       }

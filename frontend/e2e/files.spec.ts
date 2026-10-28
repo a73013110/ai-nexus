@@ -279,16 +279,16 @@ test("the library and its chooser page with the shared offset pagination", async
   const footer = page.locator(".file-footer");
   const pager = footer.locator("nx-table-pagination");
   await expect(page.locator(".file-card")).toHaveCount(40);
-  await expect(pager.getByRole("status")).toHaveText("1–40 / 45 筆");
-  // 筆數只在分頁出現一次，不另寫「45 份」。
-  await expect(footer).not.toContainText("45 份");
+  await expect(pager.getByRole("status")).toHaveText("1–40 / 45 份");
+  // 筆數只在分頁出現一次，頁尾不另寫一個總數。
+  await expect(footer.getByText("45 份")).toHaveCount(1);
   const previous = pager.getByRole("button", { name: "上一頁", exact: true }),
     next = pager.getByRole("button", { name: "下一頁", exact: true }),
     jump = pager.getByRole("spinbutton", { name: "跳到頁碼", exact: true });
   await expect(previous).toBeDisabled();
   await next.click();
   await expect(page.locator(".file-card")).toHaveCount(5);
-  await expect(pager.getByRole("status")).toHaveText("41–45 / 45 筆");
+  await expect(pager.getByRole("status")).toHaveText("41–45 / 45 份");
   await expect(next).toBeDisabled();
   await expect(next).toBeFocused();
   await jump.fill("1");
@@ -315,7 +315,7 @@ test("the library and its chooser page with the shared offset pagination", async
   });
   const chooser = picker.locator("nx-table-pagination");
   await expect(picker.locator(".picker-list > li")).toHaveCount(40);
-  await expect(chooser.getByRole("status")).toHaveText("1–40 / 45 筆");
+  await expect(chooser.getByRole("status")).toHaveText("1–40 / 45 份");
   await expect(picker).not.toContainText("45 份檔案");
   await chooser.getByRole("button", { name: "下一頁", exact: true }).click();
   await expect(picker.locator(".picker-list > li")).toHaveCount(5);

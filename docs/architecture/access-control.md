@@ -6,7 +6,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 ## 預設授權
 
-首次登入或[從 AD 匯入](../features/directory-import.md)的使用者取得 `member` 角色（`workspace` 群組）。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面與品質評測；`administrators`（平台管理）擁有全部功能、範圍取最寬（`FeatureCatalogSeedTests` 強制）；`hr` 是出勤管理（[出勤打卡](../features/attendance.md)），獨立成群組讓 HR 不必是管理員。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+首次登入或[從 AD 匯入](../features/directory-import.md)的使用者取得 `member` 角色（`workspace` 群組）。內建功能與預設群組寫在 `database/App/Seed/accesscontrol.sql`：`workspace` 是工作台頁面（品質評測只給 `administrators`）；`administrators`（平台管理）擁有全部功能、範圍取最寬（`FeatureCatalogSeedTests` 強制）；`hr` 是出勤管理（[出勤打卡](../features/attendance.md)），獨立成群組讓 HR 不必是管理員。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 ## 功能目錄
 

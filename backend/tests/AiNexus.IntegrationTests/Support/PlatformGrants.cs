@@ -27,4 +27,15 @@ internal static class PlatformGrants
         db.Set<UserRole>().Add(new() { UserId = operatorId, RoleId = "operator" });
         await db.SaveChangesAsync();
     }
+
+    /// <summary>
+    /// 評測預設只給 administrators；評測的測試驗證的是題庫 ACL 與回饋歸屬，所以讓一般成員也有評測頁，
+    /// 不必把每個帳號都設成管理員（管理員會多出不相干的授權）。
+    /// </summary>
+    internal static void QualityForMembers(AppDbContext db)
+    {
+        db.Set<RoleGroupFeature>().AddRange(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Quality },
+            new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.QualityRetrieval });
+        db.SaveChanges();
+    }
 }

@@ -29,11 +29,11 @@ function fakeReader() {
     reading: signal(false),
     readError: signal<string | null>(null),
     selected,
-    pageSize: 50,
+    paged: signal(false),
+    table: null,
     start: vi.fn(),
     searchChanged: vi.fn(),
     deletedChanged: vi.fn(),
-    loadList: vi.fn(),
     read: vi.fn((id: string) => selected.set(id)),
     close: vi.fn(() => selected.set(null)),
   };

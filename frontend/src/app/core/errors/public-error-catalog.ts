@@ -34,6 +34,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
     '測試身分期間不能變更該使用者的密碼與信箱；請返回管理者後從使用者管理調整。',
   feature_forbidden: '你的角色目前沒有使用此功能的權限，請聯絡管理員。',
   invalid_search: '搜尋條件不正確。',
+  invalid_table_query: '表格的排序或篩選條件不正確，請清除欄位篩選後再試。',
   invalid_storage_limit: '容量上限需為 0 至 1,000,000 GB 的整數 bytes；留空則使用群組或預設容量。',
   invalid_model_policy: '群組容量上限不正確。',
   invalid_order: '排序值必須介於 0 與 10000。',

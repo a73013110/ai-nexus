@@ -89,7 +89,7 @@ function usagePage(kind: string) {
     <nx-menu-panel #menu label="檔案操作" [items]="actions()" (action)="act($event)" />`,
 })
 export class FileBrowser {
-  readonly items = input.required<LibraryFileDto[]>();
+  readonly items = input.required<readonly LibraryFileDto[]>();
   readonly knowledge = input(false);
   /** 動作進行中的檔案 id（例如刪除）：只有那張卡片的選單鈕轉圈並擋下再次開啟。 */
   readonly working = input<string | null>(null);

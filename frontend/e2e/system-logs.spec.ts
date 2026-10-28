@@ -533,15 +533,15 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
   await columns.getByLabel("等級", { exact: true }).uncheck();
   await page.keyboard.press("Escape");
   await expect(
-    page.locator('.log-table th[nxTableColumn="status"]'),
+    page.locator('.log-table th[nxHeader="status"]'),
   ).not.toBeVisible();
   await expect(
-    page.locator('.log-table th[nxTableColumn="level"]'),
+    page.locator('.log-table th[nxHeader="level"]'),
   ).not.toBeVisible();
   await page.reload();
   await expect(page.locator(".log-table tbody tr")).toHaveCount(50);
   await expect(
-    page.locator('.log-table th[nxTableColumn="level"]'),
+    page.locator('.log-table th[nxHeader="level"]'),
   ).not.toBeVisible();
   await page
     .getByRole("searchbox", { name: "搜尋", exact: true })
@@ -551,9 +551,10 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
   expect(fixture.queries.at(-1)!.searchParams.get("issueCode")).toBeNull();
   expect(fixture.queries.at(-1)!.searchParams.get("take")).toBe("25");
   await page.getByRole("button", { name: /^時間：由新到舊/ }).click();
-  await expect(
-    page.locator('.log-table th[nxTableColumn="time"]'),
-  ).toHaveAttribute("aria-sort", "ascending");
+  await expect(page.locator('.log-table th[nxHeader="time"]')).toHaveAttribute(
+    "aria-sort",
+    "ascending",
+  );
   await expect
     .poll(() => fixture.queries.at(-1)!.searchParams.get("sortDirection"))
     .toBe("asc");
@@ -563,12 +564,8 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
   await page.getByRole("button", { name: "顯示欄位", exact: true }).click();
   await columns.getByRole("button", { name: "還原預設欄位" }).click();
   await page.keyboard.press("Escape");
-  await expect(
-    page.locator('.log-table th[nxTableColumn="level"]'),
-  ).toBeVisible();
-  await expect(
-    page.locator('.log-table th[nxTableColumn="status"]'),
-  ).toBeVisible();
+  await expect(page.locator('.log-table th[nxHeader="level"]')).toBeVisible();
+  await expect(page.locator('.log-table th[nxHeader="status"]')).toBeVisible();
 });
 
 test("智慧搜尋依格式查詢，降級時提示並連到監控", async ({ page }) => {

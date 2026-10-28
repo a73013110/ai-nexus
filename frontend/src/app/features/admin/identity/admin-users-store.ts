@@ -1,8 +1,9 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
 import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
+import { endpointTable } from '@shared/ui/table-model';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { IdentityApi } from './identity-api';
 
@@ -19,22 +20,24 @@ export class AdminUsersStore {
   readonly search = signal('');
   private readonly query = signal('');
   private readonly typing = signal(false);
-  readonly offset = signal(0);
-  /** 伺服器固定每頁 100 筆（`ListAdminUsers`），分頁只能照它換算。 */
-  readonly pageSize = 100;
   /**
-   * 目前要看的那一頁（搜尋字與起點）；目錄讀到前為 undefined。換條件或換頁才會變，
-   * 同一頁重讀（排序寫入後、帳號異動後）不變，表格據此只在換頁或換條件時捲回頂端。
+   * 使用者列表：伺服器固定每頁 100 筆（`ListAdminUsers`），順序是手動排序（沒有欄位排序與篩選）。
+   * 目錄讀到前不讀；換搜尋字時模型回到第一頁，同一頁重讀（排序寫入後、帳號異動後）不改 revision，表格保留捲動位置。
    */
-  readonly request = computed(() =>
-    this.ready() ? { search: this.query(), offset: this.offset() } : undefined,
-  );
-  readonly usersRead = apiResource({
+  readonly table = endpointTable({
     feature: 'identity.users',
-    params: this.request,
-    loader: ({ search, offset }) => this.api.users(search, offset),
+    params: computed(() => (this.ready() ? { search: this.query() } : undefined)),
+    load: async ({ search }, page) => {
+      const data = await this.api.users(search, page.offset);
+      return { ...data, items: data.users, complete: false };
+    },
+    columns: [],
+    pageSize: 100,
+    pageSizes: [100],
+    unit: '人',
   });
-  readonly users = computed(() => this.usersRead.value() ?? null);
+  /** 顯示中的頁；拖曳排序時先換成本頁換序後的結果，下一次讀到就換回伺服器的。 */
+  readonly users = linkedSignal(() => this.table.data() ?? null);
   /** 帳號待辦不需要角色名稱，不等目錄；帳號有異動時跟著列表重讀。 */
   readonly reviewsRead = apiResource({
     feature: 'identity.users',
@@ -50,18 +53,18 @@ export class AdminUsersStore {
    * 沒有列時表格畫骨架，有列時淡化。
    */
   readonly loadingUsers = computed(
-    () => this.typing() || this.usersRead.refreshing() || this.access.loading(),
+    () => this.typing() || this.table.refreshing() || this.access.loading(),
   );
   readonly actionError = this.access.actionError;
   readonly toast = this.access.toast;
   /** 使用者列表沒有資料時讀取失敗由表格狀態顯示（附重試），頁首只提示已有資料時的失敗。 */
   readonly error = computed(
-    () => this.access.error() || (this.users()?.users.length ? this.usersRead.error() : ''),
+    () => this.access.error() || (this.users()?.users.length ? this.table.error() : ''),
   );
 
   load() {
     this.access.load();
-    this.usersRead.reload();
+    this.table.reload();
     this.reviewsRead.reload();
   }
   /** 這位使用者的帳號待辦；沒有時為空陣列。 */
@@ -74,21 +77,20 @@ export class AdminUsersStore {
     this.scope.later(
       () => {
         this.typing.set(false);
-        this.offset.set(0);
         this.query.set(value);
       },
       250,
       'admin-users-search',
     );
   }
-  /** 在 `offset` 顯示使用者頁面；若已顯示，則重新讀取。 */
-  readUsers(offset = this.offset()) {
-    if (offset === this.offset()) this.usersRead.reload();
-    else this.offset.set(offset);
+  /** 重新讀取顯示中的使用者頁面。 */
+  readUsers() {
+    this.table.reload();
   }
-  /** 帳號或 AD 資料已寫入：重新讀取顯示中的使用者與帳號待辦。 */
-  changed(offset = this.offset()) {
-    this.readUsers(offset);
+  /** 帳號或 AD 資料已寫入：重新讀取顯示中的使用者與帳號待辦；`first` 時回到第一頁（例：刪除後）。 */
+  changed(first = false) {
+    if (first && this.table.pageIndex()) this.table.goTo(0);
+    else this.readUsers();
     this.reviewsRead.reload();
   }
   /** 授權已改變：重新讀取目錄、顯示中的使用者、帳號待辦與此帳號的授權。 */
@@ -107,16 +109,16 @@ export class AdminUsersStore {
   async move(id: string, position: number) {
     const page = this.users();
     if (!page || this.ordering()) return;
-    if (this.reorderable()) this.usersRead.value.set(reordered(page, id, position));
+    if (this.reorderable()) this.users.set(reordered(page, id, position));
     this.ordering.set(true);
     try {
       await this.api.moveUser(id, position);
     } catch (error) {
-      this.usersRead.value.set(page);
+      this.users.set(page);
       this.actionError.set(safeMessage(error));
     } finally {
       this.ordering.set(false);
-      this.usersRead.reload();
+      this.table.reload();
     }
   }
   /** 清除所有人的順序，回到依姓名、帳號排列。 */
@@ -129,7 +131,7 @@ export class AdminUsersStore {
       this.actionError.set(safeMessage(error));
     } finally {
       this.ordering.set(false);
-      this.usersRead.reload();
+      this.table.reload();
     }
   }
   roleNames(ids: string[]) {
@@ -141,11 +143,9 @@ export class AdminUsersStore {
  * 本頁的樂觀換序：未搜尋時本頁的編號連續（`offset + 1` 起），移到頁外的人先從本頁拿掉。
  * 被移動的人與它越過的未排序者先標成已排序（值由伺服器決定，重讀後換成真的值）。
  */
-function reordered(
-  page: { users: AdminUserDto[]; offset: number; sorted: number; total: number },
-  id: string,
-  position: number,
-) {
+function reordered<
+  Page extends { users: AdminUserDto[]; offset: number; sorted: number; total: number },
+>(page: Page, id: string, position: number): Page {
   const users = [...page.users];
   const from = users.findIndex((user) => user.id === id);
   if (from < 0) return page;

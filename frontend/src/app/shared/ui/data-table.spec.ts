@@ -2,12 +2,10 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  CursorTrail,
   DataTable,
   DataTableColumn,
   DataTableRow,
   TablePagination,
-  TableSortHeader,
   TableState,
 } from './data-table';
 
@@ -289,51 +287,5 @@ describe('DataTable', () => {
     fixture.detectChanges();
     jump.dispatchEvent(new Event('change'));
     expect(selected).toEqual([2, 0]);
-  });
-
-  it('keeps a held sort button focusable and ignores presses while reading', () => {
-    @Component({
-      imports: [TableSortHeader],
-      template: `<table>
-        <thead>
-          <tr>
-            <th
-              nxSortHeader="時間"
-              [disabled]="busy()"
-              (directionChange)="changes.push($event)"
-            ></th>
-          </tr>
-        </thead>
-      </table>`,
-    })
-    class SortHost {
-      readonly busy = signal(true);
-      readonly changes: string[] = [];
-    }
-    const fixture = TestBed.createComponent(SortHost);
-    fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-    expect(button.disabled).toBe(false);
-    expect(button.getAttribute('aria-disabled')).toBe('true');
-    button.click();
-    expect(fixture.componentInstance.changes).toEqual([]);
-    fixture.componentInstance.busy.set(false);
-    fixture.detectChanges();
-    expect(button.hasAttribute('aria-disabled')).toBe(false);
-    button.click();
-    expect(fixture.componentInstance.changes).toEqual(['asc']);
-  });
-});
-
-describe('CursorTrail', () => {
-  it('remembers the cursor of each visited page until the first page is read again', () => {
-    const trail = new CursorTrail<string | null>(null);
-    trail.visit(1, 'a');
-    trail.visit(2, 'b');
-    expect(trail.at(1)).toBe('a');
-    expect(trail.at(2)).toBe('b');
-    trail.visit(0, null);
-    expect(trail.at(0)).toBeNull();
-    expect(trail.at(1)).toBeUndefined();
   });
 });

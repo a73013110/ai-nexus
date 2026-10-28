@@ -38,8 +38,6 @@ import type { PresentedForm } from '../attendance-presentation';
           <small class="form-waiting">{{ item.waiting }}</small>
         }
       </li>
-    } @empty {
-      <li class="form-none">—</li>
     }
   </ul>`,
 })

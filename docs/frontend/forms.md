@@ -36,7 +36,7 @@
 
 - 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
 - 多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色；不用原生勾選框的外觀，對齊見 [並排對齊](alignment.md)。
-- 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。
+- 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。日曆的週末欄淡底、不在當月的日期最淡，方向鍵、Page Up／Down 或滾輪換月。
 - 文字輸入：IME 組字中（含 keyCode 229）的 Enter 不送出，Shift+Enter 換行；長草稿自動增高。
 
 ## 未儲存的變更
