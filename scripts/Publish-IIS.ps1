@@ -80,6 +80,12 @@ foreach ($directory in @($app, (Join-Path $package 'config'), (Join-Path $packag
 }
 Get-ChildItem -LiteralPath $publish | Where-Object { $_.Name -notin @('logs', 'App_Data') } | Copy-Item -Destination $app -Recurse
 
+# SDK 對 RID 發布會把 processPath 改成 apphost 卻不動 arguments；兩者不一致時 exe 會收到 dll 參數，IIS 啟動失敗。
+$aspNetCore = ([xml](Get-Content -LiteralPath (Join-Path $app 'web.config') -Raw)).SelectSingleNode('//aspNetCore')
+if (!$aspNetCore -or $aspNetCore.processPath -ne '.\AiNexus.Host.exe' -or $aspNetCore.arguments) {
+    throw "web.config 的 aspNetCore 必須是 processPath='.\AiNexus.Host.exe'、arguments 為空；實際為 processPath='$($aspNetCore.processPath)'、arguments='$($aspNetCore.arguments)'。請修 backend/src/AiNexus.Host/web.config。"
+}
+
 $settingsPath = Join-Path $package 'config/appsettings.Production.json'
 $secretsPath = Join-Path $package 'config/appsettings.Secrets.json'
 $templates = Join-Path $root 'backend/src/AiNexus.Host'

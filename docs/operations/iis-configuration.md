@@ -48,7 +48,7 @@
 以版本庫 `backend/src/AiNexus.Host/web.config` 為唯一範本，發版 SDK 會帶到 app。關鍵內容：
 
 ```xml
-<aspNetCore processPath="dotnet" arguments=".\AiNexus.Host.dll"
+<aspNetCore processPath=".\AiNexus.Host.exe" arguments=""
             hostingModel="inprocess" stdoutLogEnabled="false"
             stdoutLogFile="..\logs\stdout">
   <environmentVariables>
@@ -61,5 +61,7 @@
   </environmentVariables>
 </aspNetCore>
 ```
+
+`processPath` 用 apphost、`arguments` 留空：指定 RID 發布時 SDK 會把 `processPath` 改成 apphost 卻不清 `arguments`，範本若寫 `dotnet` 加 dll 會變成 exe 收到 dll 參數而啟動失敗。`Publish-IIS.ps1` 打包時會檢查這兩個值。
 
 外部設定與 keys 的相對位置由 app content root 解析，不依 shell 的工作目錄；`Files.StoragePath` 必須為絕對路徑，`Files__StoragePath` 環境變數優先。明確指定的設定檔缺失、JSON 錯誤或無讀取權限會讓啟動失敗；修檔後回收集區。ASP.NET Core 不會自動把 app 外的同名 Production 檔當作環境檔，這裡由 AI Nexus 的外部設定載入器處理。不要同時保留 app 內另一份帶秘密的環境檔或在集區設重複環境變數。
