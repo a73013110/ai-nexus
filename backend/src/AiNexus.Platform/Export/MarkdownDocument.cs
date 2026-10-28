@@ -1,72 +1,30 @@
 using System.Globalization;
-using System.Net;
-using System.Text;
-using AiNexus.Platform.Errors;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
-using Microsoft.Extensions.Options;
-using Microsoft.Playwright;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 using MarkdownTable = Markdig.Extensions.Tables.Table;
 using MarkdownRow = Markdig.Extensions.Tables.TableRow;
 using MarkdownCell = Markdig.Extensions.Tables.TableCell;
-using System.ComponentModel.DataAnnotations;
 
-namespace AiNexus.Features.Work.Artifacts.Export;
+namespace AiNexus.Platform.Export;
 
-public sealed class ExportOptions : IValidatableObject
+/// <summary>
+/// 把一份 Markdown 文件（標題＋內文）轉成 Word 或交給 <see cref="PdfRenderer"/> 的列印 HTML，供各模組的文件匯出共用。
+/// 原始 HTML 一律停用、視為文字；支援標題、清單、表格與程式區塊。
+/// </summary>
+public static class MarkdownDocument
 {
-    public const string Section = "Artifacts:Export";
+    public const string DocxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    /// <summary>已安裝的瀏覽器頻道（<c>msedge</c>、<c>chrome</c>），或 Playwright 內建的 <c>chromium</c>。</summary>
-    [AllowedValues("msedge", "chrome", "chromium")] public string BrowserChannel { get; set; } = "msedge";
-    /// <summary>Chromium 系瀏覽器執行檔的絕對路徑；設定後會取代 <see cref="BrowserChannel"/>。</summary>
-    public string? BrowserExecutablePath { get; set; }
-    [Range(5, 120)] public int TimeoutSeconds { get; set; } = 30;
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!string.IsNullOrWhiteSpace(BrowserExecutablePath) && !Path.IsPathFullyQualified(BrowserExecutablePath))
-            yield return new($"{nameof(BrowserExecutablePath)} must be an absolute path.", [nameof(BrowserExecutablePath)]);
-    }
-
-    internal BrowserTypeLaunchOptions LaunchOptions() => string.IsNullOrWhiteSpace(BrowserExecutablePath)
-        ? new() { Channel = BrowserChannel == "chromium" ? null : BrowserChannel, Headless = true, Timeout = TimeoutSeconds * 1000 }
-        : new() { ExecutablePath = BrowserExecutablePath, Headless = true, Timeout = TimeoutSeconds * 1000 };
-}
-[OptionsValidator]
-public sealed partial class ExportOptionsValidator : IValidateOptions<ExportOptions>;
-
-public sealed record ExportFile(byte[] Data, string ContentType);
-
-public sealed class ArtifactExport(PdfExportRenderer pdf)
-{
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder().UsePipeTables().DisableHtml().Build();
 
-    internal async Task<Result<ExportFile>> ExportAsync(ArtifactDto document, string format, CancellationToken ct) => format switch
-    {
-        "md" => new ExportFile(Encoding.UTF8.GetBytes(document.Content), "text/markdown; charset=utf-8"),
-        "docx" => new ExportFile(
-            Word(document.Resource.Name, document.Content),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-        "pdf" => new ExportFile(
-            await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct),
-            "application/pdf"),
-        _ => ArtifactsErrors.ExportFormatInvalid,
-    };
+    /// <summary>A4 列印頁；<paramref name="caption"/> 是標題上方的小字（例如「AI NEXUS · 成果文件」）。</summary>
+    public static string Html(string title, string markdown, string caption) => PrintPage.Html(title, caption, Markdown.ToHtml(markdown, Pipeline));
 
-    public static string Html(string title, string content)
-    {
-        // Markdown 管線已停用原始 HTML；網路請求則由 PdfExportRenderer 全部攔截，這裡不再處理。
-        var markdown = Markdown.ToHtml(content, Pipeline);
-        return "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\"><style>" +
-            "@page{size:A4;margin:20mm 18mm 22mm}*{box-sizing:border-box}body{font:12pt/1.8 'Microsoft JhengHei','Noto Sans CJK TC',sans-serif;color:#242a2d;overflow-wrap:anywhere}h1{font-size:24pt;line-height:1.4;margin:0 0 20pt}h2{font-size:18pt}h3{font-size:15pt}h1,h2,h3,h4{break-after:avoid}p,li{orphans:3;widows:3}table{border-collapse:collapse;width:100%;font-size:10pt;table-layout:fixed}th,td{border:1px solid #dce0da;padding:7pt;text-align:left;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f2ee;padding:10pt;line-height:1.6;font-size:10pt}blockquote{border-left:3px solid #087e83;margin-left:0;padding-left:12pt;color:#59615f}img{display:none}a{color:#273f51;text-decoration:none}.meta{font-size:9pt;color:#65706a;border-bottom:1px solid #dce0da;padding-bottom:12pt}" +
-            "</style></head><body><p class=\"meta\">AI NEXUS · 成果文件</p><h1>" + WebUtility.HtmlEncode(title) + "</h1>" + markdown + "</body></html>";
-    }
-    public static byte[] Word(string title, string content)
+    public static byte[] Docx(string title, string content)
     {
         using var stream = new MemoryStream();
         using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document, true))
@@ -214,96 +172,5 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
                 paragraph.Append(new W.Run(format, new W.Text(text) { Space = SpaceProcessingModeValues.Preserve }));
             }
         }
-    }
-}
-
-public sealed class PdfExportRenderer(IOptions<ExportOptions> options) : IAsyncDisposable
-{
-    private readonly SemaphoreSlim concurrency = new(2, 2);
-    private readonly SemaphoreSlim startup = new(1, 1);
-    private IPlaywright? driver;
-    private IBrowser? browser;
-    public async Task<byte[]> RenderAsync(string html, CancellationToken ct)
-    {
-        // 併發上限為 2；超過時立即拒絕，不排隊等待，避免 PDF 請求堆積佔住伺服器。
-        if (!await concurrency.WaitAsync(0, ct))
-            throw new ExternalServiceException(Error.RateLimited("pdf_export_busy"), "PDF 匯出正在忙碌，請稍後重試。");
-        IBrowserContext? context = null;
-        try
-        {
-            // 瀏覽器啟動只能一次一個進行，且斷線後要重新啟動。
-            await startup.WaitAsync(ct);
-            try
-            {
-                if (browser?.IsConnected != true)
-                {
-                    driver ??= await Playwright.CreateAsync();
-                    browser = await driver.Chromium.LaunchAsync(options.Value.LaunchOptions());
-                }
-                ct.ThrowIfCancellationRequested();
-            }
-            finally
-            {
-                startup.Release();
-            }
-
-            // 關閉 JavaScript 與 Service Worker，並由 RouteAsync 攔截所有網路請求，避免文件內容對外連線。
-            context = await browser.NewContextAsync(new()
-            {
-                JavaScriptEnabled = false,
-                ServiceWorkers = ServiceWorkerPolicy.Block,
-                AcceptDownloads = false,
-            });
-            ct.ThrowIfCancellationRequested();
-            await context.RouteAsync("**/*", route => route.AbortAsync());
-            var page = await context.NewPageAsync();
-            page.SetDefaultTimeout(options.Value.TimeoutSeconds * 1000);
-            await page.SetContentAsync(html, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
-            return await page.PdfAsync(new()
-                {
-                    Format = "A4",
-                    PrintBackground = true,
-                    PreferCSSPageSize = true,
-                    DisplayHeaderFooter = true,
-                    HeaderTemplate = "<span></span>",
-                    FooterTemplate = "<div style=\"font:9px sans-serif;width:100%;text-align:center;color:#65706a\">"
-                        + "<span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></div>",
-                })
-                .WaitAsync(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception error) when (error is PlaywrightException or TimeoutException)
-        {
-            throw new ExternalServiceException(
-                Error.Unavailable("pdf_renderer_unavailable"),
-                "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。",
-                error);
-        }
-        finally
-        {
-            try
-            {
-                if (context is not null) await context.CloseAsync();
-            }
-            catch (PlaywrightException)
-            {
-                // 關閉 context 失敗不影響已產出的 PDF；context 只用一次，不會被重用。
-            }
-            finally
-            {
-                concurrency.Release();
-            }
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (browser is not null) await browser.CloseAsync();
-        driver?.Dispose();
-        concurrency.Dispose();
-        startup.Dispose();
     }
 }

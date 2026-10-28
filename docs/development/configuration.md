@@ -37,7 +37,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Gd` | [`GdOptions`](../../backend/src/AiNexus.Features/Platform/Gd/GdOptions.cs) | — |
 | `RemoteFiles` | [`RemoteFilesOptions`](../../backend/src/AiNexus.Features/Platform/RemoteFiles/RemoteFilesOptions.cs) | — |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
-| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Work/Artifacts/Export/ArtifactExport.cs) | — |
+| `Export.Pdf` | [`PdfOptions`](../../backend/src/AiNexus.Platform/Export/PdfOptions.cs) | — |
 | `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
 | `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Admin/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |

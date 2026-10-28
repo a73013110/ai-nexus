@@ -34,7 +34,7 @@ internal sealed class ReportSpend(SpendReports reports, TimeProvider clock, Audi
                 Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler,
                 CancellationToken ct) =>
             handler.AdministrativeAsync(ownerId, from, until, offsetMinutes, ct)
-                .ToHttpResultAsync(report => TypedResults.File(SpendReports.Csv(report), "text/csv; charset=utf-8", "ai-nexus-spend.csv")))
+                .ToHttpResultAsync(report => SpendReports.Export(report).ToHttpResult()))
             .Audited(BillingAudit.SpendExported)
             .WithName("ExportAdministrativeSpend");
     }

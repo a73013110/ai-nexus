@@ -15,6 +15,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
 | 讀寫其他系統的資料庫（GD 等）、新增外部資料庫 | `docs/architecture/external-databases.md` |
+| 匯出 CSV、Excel、Word、PDF | `docs/architecture/exports.md` |
 | 郵件寄送、outbox | `docs/architecture/mail-outbox.md`（設定、重試、保存見 `docs/features/mail.md`） |
 | 後端測試、`AppFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |

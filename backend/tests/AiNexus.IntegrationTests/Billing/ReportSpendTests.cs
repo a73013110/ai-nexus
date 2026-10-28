@@ -102,7 +102,7 @@ public sealed class ReportSpendTests
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.GetAsync("/api/v1/billing/spend?from=2020-01-01&until=2026-10-01")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform")).StatusCode);
         var dashboard = (await bob.GetFromJsonAsync<DashboardDto>("/api/v1/dashboard?" + parameters))!; Assert.Equal(1, dashboard.Spend.Requests);
-        var csv = System.Text.Encoding.UTF8.GetString(SpendReports.Csv(report with { Users = [new(a, "=malicious()", "user", "USD", "api", 1, 1, 0)] }));
+        var csv = System.Text.Encoding.UTF8.GetString(SpendReports.Export(report with { Users = [new(a, "=malicious()", "user", "USD", "api", 1, 1, 0)] }).Content);
         Assert.Contains("\"'=malicious()\"", csv);
     }
 

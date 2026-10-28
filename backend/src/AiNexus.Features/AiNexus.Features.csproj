@@ -20,8 +20,6 @@
     <PackageReference Include="MailKit" />
     <PackageReference Include="PdfPig" />
     <PackageReference Include="DocumentFormat.OpenXml" />
-    <PackageReference Include="Markdig" />
-    <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" />

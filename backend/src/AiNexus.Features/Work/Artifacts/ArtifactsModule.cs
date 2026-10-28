@@ -4,7 +4,6 @@ using AiNexus.Features.Work.Artifacts.Export;
 using AiNexus.Features.Work.Artifacts.Management;
 using AiNexus.Features.Work.Artifacts.Transforms;
 using AiNexus.Features.Work.Collaboration;
-using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Http;
@@ -24,9 +23,6 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddDashboardSource<ArtifactsDashboard>();
         services.AddScoped<CreateArtifact>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
-        services.AddScoped<ArtifactExport>();
-        services.AddSingleton<PdfExportRenderer>();
-        services.AddSettings<ExportOptions, ExportOptionsValidator>(ExportOptions.Section);
         services.AddFeaturePolicy(FeatureCatalog.Artifacts);
         services.AddFeaturePolicy(Policies.Text, FeatureCatalog.Chat, FeatureCatalog.Artifacts);
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();

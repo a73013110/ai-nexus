@@ -22,6 +22,6 @@
 | SQL 憑證錯誤 | 外部 Production 是否真的載入，且 `Databases.App.TrustServerCertificate=true` |
 | 模型未就緒 | SQL 結構版本、服務啟動、Ollama Endpoint 指到哪台、模型已安裝與 profile Id 一致、Google key／quota |
 | 生成中斷，executor_lost | 執行主機停止、心跳逾期、時鐘不同步；確認共用資料庫的所有主機是同一版本 |
-| 附件／PDF 匯出錯誤 | Files.StoragePath／環境覆寫、站外目錄 Modify ACL／磁碟剩餘、容量／引用／待刪重試；PDF 匯出需該執行身分可用的 Edge／Chromium，伺服器未安裝時改成已部署瀏覽器 |
+| 附件／PDF 匯出錯誤 | Files.StoragePath／環境覆寫、站外目錄 Modify ACL／磁碟剩餘、容量／引用／待刪重試；PDF 匯出需該執行身分可啟動的 Edge／Chrome，裝在非標準位置時設 `Export.Pdf.BrowserExecutablePath` |
 
 日誌可能包含部署資訊，只開放維運人員，stdout 不能長期開啟且無內建輪替。一般 request 錯誤帶 `traceId`；生成錯誤另有 run ID／error code 可對照稽核。上線設定與金鑰不是可公開的成果，不上傳 Git。

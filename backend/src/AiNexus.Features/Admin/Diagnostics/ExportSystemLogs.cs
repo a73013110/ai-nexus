@@ -1,7 +1,7 @@
-using System.Text;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Export;
 
 namespace AiNexus.Features.Admin.Diagnostics;
 
@@ -9,13 +9,9 @@ namespace AiNexus.Features.Admin.Diagnostics;
 internal sealed class ExportSystemLogs(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs
-        .MapGet("/export", ([AsParameters] DiagnosticFilter filter, ICurrentUser user, HttpContext http, ExportSystemLogs handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, filter, ct).ToHttpResultAsync(csv =>
-            {
-                http.Response.Headers.CacheControl = "no-store";
-                return TypedResults.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "ai-nexus-logs.csv");
-            }))
+        .MapGet("/export", ([AsParameters] DiagnosticFilter filter, ICurrentUser user, ExportSystemLogs handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, filter, ct).ToHttpResultAsync(file => file.ToHttpResult()))
         .RequireAuthorization(DiagnosticConfiguration.ExportPolicy).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).Audited(DiagnosticsAudit.LogExported).WithName("ExportSystemLogs");
 
-    public Task<Result<string>> HandleAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct) => query.ExportAsync(actor, filter, ct);
+    public Task<Result<ExportFile>> HandleAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct) => query.ExportAsync(actor, filter, ct);
 }

@@ -1,4 +1,4 @@
-using AiNexus.Features.Work.Artifacts.Export;
+using AiNexus.Platform.Export;
 using Microsoft.Playwright;
 
 namespace AiNexus.IntegrationTests.Support;
@@ -16,7 +16,7 @@ public static class TestBrowser
     private static string RequiredTarget => Target ?? throw new InvalidOperationException("AINEXUS_TEST_BROWSER is not set.");
     private static bool IsExecutable => Path.IsPathFullyQualified(RequiredTarget);
 
-    public static ExportOptions ExportOptions() => IsExecutable ? new() { BrowserExecutablePath = RequiredTarget } : new() { BrowserChannel = RequiredTarget };
+    public static PdfOptions PdfOptions() => IsExecutable ? new() { BrowserExecutablePath = RequiredTarget } : new() { Browser = RequiredTarget };
 
     public static BrowserTypeLaunchOptions LaunchOptions() => IsExecutable
         ? new() { ExecutablePath = RequiredTarget, Headless = true }

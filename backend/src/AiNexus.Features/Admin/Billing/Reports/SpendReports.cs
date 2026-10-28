@@ -1,10 +1,8 @@
 using AiNexus.Data.App;
-using System.Globalization;
-using System.Text;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
-using AiNexus.Platform.Security;
+using AiNexus.Platform.Export;
 
 namespace AiNexus.Features.Admin.Billing.Reports;
 
@@ -74,24 +72,9 @@ public sealed class SpendReports(ISqlDatabase<AppDbContext> sql, ModelPresentati
         .OrderByDescending(x => x.Requests)
         .ToArray();
 
-    public static byte[] Csv(SpendReportDto report)
-    {
-        var csv = new StringBuilder("﻿使用者,帳號,幣別,計費類型,已知金額,呼叫次數,未知費用次數\r\n");
-        foreach (var user in report.Users)
-        {
-            csv.AppendLine(string.Join(',', new[]
-            {
-                CsvCell.Quote(user.DisplayName),
-                CsvCell.Quote(user.Account),
-                CsvCell.Quote(user.Currency),
-                CsvCell.Quote(user.Kind),
-                user.Amount.ToString(CultureInfo.InvariantCulture),
-                user.Requests.ToString(CultureInfo.InvariantCulture),
-                user.UnknownCalls.ToString(CultureInfo.InvariantCulture),
-            }));
-        }
-        return Encoding.UTF8.GetBytes(csv.ToString());
-    }
+    public static ExportFile Export(SpendReportDto report) => new("ai-nexus-spend.csv", Csv.ContentType, Csv.Write(
+        ["使用者", "帳號", "幣別", "計費類型", "已知金額", "呼叫次數", "未知費用次數"],
+        report.Users.Select(user => new object?[] { user.DisplayName, user.Account, user.Currency, user.Kind, user.Amount, user.Requests, user.UnknownCalls })));
 
     // 以下 record 的欄位名稱、順序與型別與 procedure 的 SELECT 一致，只在執行時對應（整合測試涵蓋）；
     // 合計、每日與各使用者直接對應到 MoneyTotalDto、SpendBucketDto、SpendUserDto。

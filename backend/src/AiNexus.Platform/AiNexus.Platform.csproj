@@ -9,6 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Dapper" />
     <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="PuppeteerSharp" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />

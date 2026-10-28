@@ -5,6 +5,7 @@ using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Export;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -62,6 +63,8 @@ public static class PlatformServices
         });
 
         services.AddControlledHttpClient(ControlledHttpClients.Tools);
+        services.AddSingleton<PdfRenderer>();
+        services.AddSettings<PdfOptions, PdfOptionsValidator>(PdfOptions.Section);
         return builder;
     }
 

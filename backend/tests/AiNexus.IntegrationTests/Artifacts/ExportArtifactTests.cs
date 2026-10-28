@@ -2,7 +2,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
-using AiNexus.Features.Work.Artifacts.Export;
+using AiNexus.Platform.Export;
 using static AiNexus.IntegrationTests.Support.ArtifactApi;
 
 namespace AiNexus.IntegrationTests.Artifacts;
@@ -25,8 +25,8 @@ public sealed class ExportArtifactTests
     public async Task PdfExportUsesRealBrowserAndPreservesChineseWithoutExternalResources()
     {
         TestBrowser.SkipUnlessConfigured();
-        await using var renderer = new PdfExportRenderer(Options.Create(TestBrowser.ExportOptions()));
-        var bytes = await renderer.RenderAsync(ArtifactExport.Html("公文成果", Content + "\n\n![remote](http://127.0.0.1:9/secret)\n\n<script>alert('unsafe')</script>"), CancellationToken.None);
+        await using var renderer = new PdfRenderer(Options.Create(TestBrowser.PdfOptions()));
+        var bytes = await renderer.RenderAsync(MarkdownDocument.Html("公文成果", Content + "\n\n![remote](http://127.0.0.1:9/secret)\n\n<script>alert('unsafe')</script>", "AI NEXUS · 成果文件"), CancellationToken.None);
         using var pdf = PdfDocument.Open(bytes); Assert.InRange(pdf.NumberOfPages, 1, 4);
         var text = string.Join("", pdf.GetPages().Select(x => x.Text)); Assert.Contains("公文成果", text); Assert.Contains("保留事實", text);
     }

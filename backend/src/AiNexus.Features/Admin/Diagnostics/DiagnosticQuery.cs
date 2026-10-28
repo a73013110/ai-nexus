@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
-using AiNexus.Platform.Security;
+using AiNexus.Platform.Export;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -132,7 +132,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
         if (item is null) return DiagnosticsErrors.NotFound;
         return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
     }
-    public async Task<Result<string>> ExportAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct)
+    public async Task<Result<ExportFile>> ExportAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
         var range = Validate(filter, export: true);
@@ -144,11 +144,11 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
             .Select(x => new { x.LogId, x.At, x.Level, x.Category, x.EventName, x.IssueCode, x.TraceId, x.JobId, x.RunId, x.ErrorCode, x.Instance })
             .Take(options.Value.MaxExportRows + 1).ToArrayAsync(ct);
         if (rows.Length > options.Value.MaxExportRows) return DiagnosticsErrors.ExportLimit;
-        var csv = new StringBuilder("\uFEFFLogId,UTC,Level,Category,Event,IssueCode,TraceId,JobId,RunId,ErrorCode,Instance\r\n");
-        foreach (var row in rows) csv.AppendLine(string.Join(",", new object?[] { row.LogId, row.At.ToUniversalTime().ToString("O"), row.Level, row.Category, row.EventName, row.IssueCode, row.TraceId, row.JobId, row.RunId, row.ErrorCode, row.Instance }.Select(Csv)));
-        return csv.ToString();
+        var csv = Csv.Write(ExportHeader, rows.Select(row => new object?[] { row.LogId, row.At.ToUniversalTime().ToString("O"), row.Level, row.Category, row.EventName, row.IssueCode, row.TraceId, row.JobId, row.RunId, row.ErrorCode, row.Instance }
+            .Select(value => DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240)).ToArray()));
+        return new ExportFile("ai-nexus-logs.csv", Csv.ContentType, csv);
     }
-    private static string Csv(object? value) => CsvCell.Quote(DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240));
+    private static readonly string[] ExportHeader = ["LogId", "UTC", "Level", "Category", "Event", "IssueCode", "TraceId", "JobId", "RunId", "ErrorCode", "Instance"];
     /// <summary>
     /// 每個讀取入口的共同前置：在請求稽核補上實際的查詢區間（其他條件由請求稽核從查詢字串記下），再把後續日誌查詢的逾時收斂到設定值。
     /// 特權讀取採 fail closed：請求稽核寫不進去，資料就不送出。這與診斷事件的抽樣或佇列無關。

@@ -19,15 +19,13 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/export", ([AsParameters] AttendanceRecordsFilter filter, ICurrentUser user, ExportAttendanceRecords handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, filter, ct)
-                .ToHttpResultAsync(file => TypedResults.File(file.Content, Spreadsheet.ContentType, file.Name)))
+                .ToHttpResultAsync(file => file.ToHttpResult()))
         .RequireRateLimiting(AttendanceModule.ExportRateLimit)
         .Audited(AttendanceAudit.RecordExported)
         .WithName("ExportAttendanceRecords");
 
     /// <summary>檔名與舊系統相同：「出缺勤計算_匯出時間(起to迄).xlsx」，匯出時間是台灣時間，起迄是查詢區間。</summary>
-    internal sealed record ExportedFile(string Name, byte[] Content);
-
-    public async Task<Result<ExportedFile>> HandleAsync(Guid viewer, AttendanceRecordsFilter filter, CancellationToken ct)
+    public async Task<Result<ExportFile>> HandleAsync(Guid viewer, AttendanceRecordsFilter filter, CancellationToken ct)
     {
         // 不分頁：匯出整份名單，區間上限與畫面相同（一年）。
         var read = await records.HandleAsync(viewer, filter, ListAttendanceRecords.Page.All, ct);
@@ -38,7 +36,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
 
         var exportedAt = TaipeiTime.Of(clock.GetUtcNow());
         var content = AttendanceReportWorkbook.Write(data, await CardsAsync(data, ct));
-        return new ExportedFile(Invariant($"出缺勤計算_{exportedAt:yyyyMMdd_HHmmss}({data.From:yyyyMMdd}to{data.To:yyyyMMdd}).xlsx"), content);
+        return new ExportFile(Invariant($"出缺勤計算_{exportedAt:yyyyMMdd_HHmmss}({data.From:yyyyMMdd}to{data.To:yyyyMMdd}).xlsx"), Spreadsheet.ContentType, content);
     }
 
     /// <summary>

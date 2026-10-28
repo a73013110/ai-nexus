@@ -178,6 +178,11 @@
           "Microsoft.IdentityModel.Logging": "7.7.1"
         }
       },
+      "Microsoft.IO.RecyclableMemoryStream": {
+        "type": "Transitive",
+        "resolved": "3.0.1",
+        "contentHash": "s/s20YTVY9r9TPfTrN5g8zPF1YhwxyqO6PxUkrYTGI2B+OGPe9AdajWZrLhFqXIvqIW23fnUE4+ztrUWNU1+9g=="
+      },
       "Microsoft.SqlServer.Server": {
         "type": "Transitive",
         "resolved": "1.0.0",
@@ -203,6 +208,11 @@
         "dependencies": {
           "OpenTelemetry.Api": "1.19.1"
         }
+      },
+      "ReactiveExtensionsSharp": {
+        "type": "Transitive",
+        "resolved": "0.3.0",
+        "contentHash": "7rF0x9AnfwuDl20ojNmGBK53Cqqr9aaxiCQ5MMnZHlhAiXZr8STN1IjTZJoA75GZVxv1ugz++UNphEy/bcSMMg=="
       },
       "System.ClientModel": {
         "type": "Transitive",
@@ -244,15 +254,22 @@
         "resolved": "9.0.11",
         "contentHash": "s8yUYuYYu+PAwvBdhLG1KyrGrk9gkYeuPxfAsXsTqqWyepwSyEw8hAaflW4nO98NG52YpYI1am2+9o+79h2RtQ=="
       },
+      "WebDriverBiDi": {
+        "type": "Transitive",
+        "resolved": "0.0.61",
+        "contentHash": "UJGHt0DqU2nNHf8l12QvJZvj47dFb0VUcKsY6KTn+Cm6tlwXfcmkftfsED9ce+KJCmx4ZgvcaBZjWlae3GKunw=="
+      },
       "ainexus.platform": {
         "type": "Project",
         "dependencies": {
           "Dapper": "[2.1.89, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "FluentValidation": "[12.1.1, )",
+          "Markdig": "[1.4.0, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.19.1, )",
-          "OpenTelemetry.Extensions.Hosting": "[1.19.1, )"
+          "OpenTelemetry.Extensions.Hosting": "[1.19.1, )",
+          "PuppeteerSharp": "[25.15.0, )"
         }
       },
       "Dapper": {
@@ -276,6 +293,12 @@
         "resolved": "12.1.1",
         "contentHash": "EPpkIe1yh1a0OXyC100oOA8WMbZvqUu5plwhvYcb7oSELfyUZzfxV48BLhvs3kKo4NwG7MGLNgy1RJiYtT8Dpw=="
       },
+      "Markdig": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.0, )",
+        "resolved": "1.4.0",
+        "contentHash": "lLhaiI/mNDTNzgLqnmknhf4LjgTqOAyjx5+GNz0X3AxYMxUhmFppF2WVMdER+SDqwhE5wUF1pzs/cuLwFxs7xA=="
+      },
       "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
         "type": "CentralTransitive",
         "requested": "[1.19.1, )",
@@ -292,6 +315,17 @@
         "contentHash": "3qqZfVmW8mKA2/fRwI83o8z+yZd33KbEqRlXrlX0+3e/U7i+z0MQiCr0L3Axxa0jGdiylIrpWX4DIT9nAbJ00A==",
         "dependencies": {
           "OpenTelemetry": "1.19.1"
+        }
+      },
+      "PuppeteerSharp": {
+        "type": "CentralTransitive",
+        "requested": "[25.15.0, )",
+        "resolved": "25.15.0",
+        "contentHash": "iTM/9GBCzgAjRA18zIH5g4yoy4nDlT4LEfKDIm2YyciDywC9HvVCQj97RAmMefPSoaKkA5PfmRrO0Z2+LfzmQg==",
+        "dependencies": {
+          "Microsoft.IO.RecyclableMemoryStream": "3.0.1",
+          "ReactiveExtensionsSharp": "0.3.0",
+          "WebDriverBiDi": "0.0.61"
         }
       },
       "System.Security.Cryptography.Pkcs": {

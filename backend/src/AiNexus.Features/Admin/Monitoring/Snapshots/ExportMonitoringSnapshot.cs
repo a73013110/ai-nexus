@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Export;
 
 namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 
@@ -10,12 +11,9 @@ namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 internal sealed class ExportMonitoringSnapshot(MonitoringSnapshots snapshots)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
-        .MapGet("/export", (int? minutes, ICurrentUser user, HttpContext http, ExportMonitoringSnapshot handler, CancellationToken ct) =>
+        .MapGet("/export", (int? minutes, ICurrentUser user, ExportMonitoringSnapshot handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToHttpResultAsync(snapshot =>
-            {
-                http.Response.Headers.CacheControl = "no-store";
-                return TypedResults.File(JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonSerializerOptions.Web), "application/json", "ai-nexus-monitoring.json");
-            }))
+                new ExportFile("ai-nexus-monitoring.json", "application/json", JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonSerializerOptions.Web)).ToHttpResult()))
         .RequireRateLimiting(DiagnosticsModule.ExportRateLimit).Audited(MonitoringAudit.SnapshotExported).WithName("ExportMonitoringSnapshot");
 
     public Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
