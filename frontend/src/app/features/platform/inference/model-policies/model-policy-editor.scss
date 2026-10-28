@@ -12,10 +12,9 @@
   gap: var(--p-space-3);
   min-width: 0;
 }
-// The box lines up with the table's edge; its hover keeps room around it.
+// 方框以 flush 對齊表格左緣，hover 底色往外伸。
 .model-policy-head > nx-checkbox {
   flex: 1 1 auto;
-  margin-inline-start: calc(-1 * var(--control-padding-inline));
 }
 .model-policy-head > nx-info-popover {
   flex: none;
@@ -29,8 +28,8 @@
 .model-policy-limit-column {
   width: 30%;
 }
+// 表格列裡的勾選以 flush 對齊欄位文字，內距由表格的共用規則決定。
 .model-policy-name {
-  --selection-control-padding: 0;
   min-width: 0;
   overflow-wrap: anywhere;
 }

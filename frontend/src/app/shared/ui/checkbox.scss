@@ -4,6 +4,13 @@
   display: block;
   min-width: 0;
 }
+// flush：方框與文字對齊外層內容的左緣（表單段落、表格欄、標題列），整列的 hover 底色仍留一圈內距、往外伸。
+// 不要用內距 0 對齊：內容比列高時方框會貼在 hover 底色的左上角。
+:host(.is-flush) {
+  margin-inline-start: calc(
+    -1 * var(--selection-control-padding-inline, var(--control-padding-inline))
+  );
+}
 .selection-indicator nx-icon {
   --icon-size: var(--icon-sm);
   opacity: 0;
@@ -20,10 +27,8 @@
   gap: var(--p-space-1) var(--p-space-3);
   min-height: var(--selection-control-height, var(--button-target));
   margin: 0;
-  padding: var(
-    --selection-control-padding,
-    var(--control-padding-block) var(--control-padding-inline)
-  );
+  padding: var(--selection-control-padding-block, var(--control-padding-block))
+    var(--selection-control-padding-inline, var(--control-padding-inline));
   border-radius: var(--radius-item);
   cursor: pointer;
   color: var(--ink);

@@ -13,6 +13,7 @@
       />
       <div class="conversation-filter">
         <nx-checkbox
+          flush
           label="包含已刪除對話"
           [checked]="reader.includeDeleted()"
           (checkedChange)="reader.deletedChanged($event)"

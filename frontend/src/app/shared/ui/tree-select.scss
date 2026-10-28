@@ -102,7 +102,8 @@
 }
 .tree-select-footer {
   --selection-control-height: var(--control-height-compact);
-  --selection-control-padding: var(--p-space-1) var(--p-space-2);
+  --selection-control-padding-block: var(--p-space-1);
+  --selection-control-padding-inline: var(--p-space-2);
   flex: none;
   padding: var(--p-space-1);
   border-top: 1px solid var(--line);

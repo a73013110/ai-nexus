@@ -18,13 +18,14 @@ import { Icon } from './icon';
  * 原生核取方塊的語意，搭配一致的整列指標目標。只有方框顯示勾選狀態：
  * 列表中的列保持同一背景，因此 hover（`--hover`）不會與它混淆。
  * `mixed` 是表頭全選的「部分已選」（原生 indeterminate，報讀為 mixed）；`hideLabel` 只留方框，
- * 名稱仍給輔助技術（表格的選取欄，姓名另有欄位顯示）。
+ * 名稱仍給輔助技術（表格的選取欄，姓名另有欄位顯示）。`flush` 讓方框對齊外層內容的左緣，hover 底色往外伸。
  */
 @Component({
   selector: 'nx-checkbox',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './checkbox.scss',
+  host: { '[class.is-flush]': 'flush()' },
   template: `<label
     class="selection-control"
     [class.is-disabled]="disabled()"
@@ -71,6 +72,8 @@ export class Checkbox {
    */
   readonly pending = input(false);
   readonly hideLabel = input(false, { transform: booleanAttribute });
+  /** 方框與文字對齊外層內容的左緣（段落、表格欄），hover 底色往外伸；取代把內距設成 0。 */
+  readonly flush = input(false, { transform: booleanAttribute });
   readonly checkedChange = output<boolean>();
 
   private readonly injector = inject(Injector);

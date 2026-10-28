@@ -70,7 +70,8 @@
 // 共用勾選框只留方框；資料夾列以同寬的空位對齊。
 .pick {
   --selection-control-height: auto;
-  --selection-control-padding: 0;
+  --selection-control-padding-block: 0;
+  --selection-control-padding-inline: 0;
   flex: none;
   width: 1.25rem;
   margin-inline-start: var(--p-space-4);

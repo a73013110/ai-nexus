@@ -49,6 +49,7 @@ export interface PropertyGroup {
       />
       @if (blankCount()) {
         <nx-checkbox
+          flush
           class="ui-props-blank-toggle"
           [label]="'顯示沒有值的屬性（' + blankCount() + '）'"
           [checked]="showBlank()"

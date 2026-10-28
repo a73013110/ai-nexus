@@ -44,7 +44,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--p-space-2);
-  --selection-control-padding: 0;
 }
 // Rows keep their own inset, so the list starts 8px in to line titles up with the search field
 // and ends 12px in, under the tools' end.

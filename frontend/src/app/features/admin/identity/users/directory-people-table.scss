@@ -77,7 +77,8 @@
   min-width: 12rem;
 }
 .directory-hide-disabled {
-  --selection-control-padding: 0 var(--p-space-2);
+  --selection-control-padding-block: 0;
+  --selection-control-padding-inline: var(--p-space-2);
   flex: none;
 }
 .directory-banner {
@@ -98,7 +99,8 @@
   width: 3rem;
 }
 .directory-people nx-checkbox {
-  --selection-control-padding: 0;
+  --selection-control-padding-block: 0;
+  --selection-control-padding-inline: 0;
 }
 .directory-people tr.is-picked:not(.is-selected) {
   background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));

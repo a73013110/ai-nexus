@@ -47,6 +47,13 @@ class Saving {
   readonly pending = signal(false);
 }
 
+@Component({
+  selector: 'nx-checkbox-flush',
+  imports: [Checkbox],
+  template: `<nx-checkbox flush label="對話" /><nx-checkbox label="檔案" />`,
+})
+class Flush {}
+
 function setup() {
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
@@ -183,5 +190,13 @@ describe('Checkbox', () => {
     row.click();
     fixture.detectChanges();
     expect(host.checked()).toBe(false);
+  });
+
+  it('marks a flush row so it lines up with the content edge instead of losing its padding', () => {
+    const fixture = TestBed.createComponent(Flush);
+    fixture.detectChanges();
+    const [flush, plain] = fixture.nativeElement.querySelectorAll('nx-checkbox');
+    expect(flush.classList).toContain('is-flush');
+    expect(plain.classList).not.toContain('is-flush');
   });
 });

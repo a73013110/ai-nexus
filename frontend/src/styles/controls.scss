@@ -21,6 +21,23 @@
 .quiet-button nx-icon {
   --icon-size: var(--icon-sm);
 }
+// 夾在文字行裡的 quiet-button（段落標題旁的說明、說明下的動作，`.form-section-head` 內自動套用）：
+// 底色只比字高一點，hover 不會蓋到上下行；觸控面積由 ::after 撐回 --button-target，不撐高所在的行。
+// 放在行首時以 margin-inline-start: calc(-1 * var(--inline-action-padding)) 讓字對齊上下文字。
+.quiet-button.is-inline,
+.form-section-head .quiet-button {
+  --inline-action-padding: var(--p-space-2);
+  --info-popover-trigger-padding: 2px var(--inline-action-padding);
+  position: relative;
+  min-height: 0;
+  padding: 2px var(--inline-action-padding);
+}
+.quiet-button.is-inline::after,
+.form-section-head .quiet-button::after {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((100% - var(--button-target)) / 2)) 0;
+}
 // 開著選單、資訊面板等浮層的觸發鈕維持 hover 底色並轉為主文字色，看得出面板屬於哪顆鈕；
 // 只看 aria-haspopup，展開／收合區塊的 aria-expanded 不受影響。
 :is(.quiet-button, .icon-button)[aria-haspopup][aria-expanded='true'] {

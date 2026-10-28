@@ -15,6 +15,7 @@ import {
 import { ThemeService } from '@core/preferences/theme-service';
 import { placeBeside, setPopoverOrigin } from '@shared/browser/popover-position';
 import { uniqueId } from '@shared/browser/unique-id';
+import { visibleRect } from '@shared/browser/visible-rect';
 import { Icon } from './icon';
 import type { ShownTourStep } from './product-tour';
 import { FrameMotion, ViewMotion } from './view-motion';
@@ -194,15 +195,18 @@ export class ProductTourOverlay {
   private place(target: HTMLElement | undefined, tracking: boolean) {
     const spot = this.spot().nativeElement,
       card = this.card().nativeElement;
-    const rect = target?.getBoundingClientRect();
-    this.placed = rect;
-    const area = rect && {
-      left: rect.left - PADDING,
-      top: rect.top - PADDING,
-      width: rect.width + PADDING * 2,
-      height: rect.height + PADDING * 2,
-    };
-    // 沒有目標（已從畫面移除）時聚光框縮成視口中心的一點，遮罩蓋滿。
+    this.placed = target?.getBoundingClientRect();
+    // 只框目標露出的部分：比對話框內容高的段落不會讓框蓋到頁籤或儲存列，說明框也貼著看得到的那一截。
+    const visible = target ? visibleRect(target, PADDING) : null;
+    const area = visible
+      ? {
+          left: visible.left,
+          top: visible.top,
+          width: visible.right - visible.left,
+          height: visible.bottom - visible.top,
+        }
+      : undefined;
+    // 沒有目標（已從畫面移除或完全被捲出）時聚光框縮成視口中心的一點，遮罩蓋滿。
     const { left, top, width, height } = area ?? {
       left: innerWidth / 2,
       top: innerHeight / 2,

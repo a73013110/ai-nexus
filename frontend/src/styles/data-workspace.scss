@@ -345,6 +345,11 @@ select:where(.ui-input) {
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
+// 儲存格裡有標題的勾選（加 flush 對齊欄位文字）：左右內距比儲存格內距小，往外伸的 hover 底色不碰到表格外框；
+// 上下保留預設內距，方框與底色四周等距。:where 讓各表格的覆寫（例如只留方框的選取欄）不必比這裡更具體。
+:where(.ui-table-scroll td) nx-checkbox {
+  --selection-control-padding-inline: var(--p-space-2);
+}
 .ui-table-scroll thead th {
   position: sticky;
   top: 0;

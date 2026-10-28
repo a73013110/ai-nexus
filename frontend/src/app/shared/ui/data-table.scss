@@ -68,7 +68,8 @@
 // 欄位清單用共用勾選框；面板窄，列高比表單小一級。
 .ui-table-columns-panel nx-checkbox {
   --selection-control-height: var(--control-height-compact);
-  --selection-control-padding: var(--p-space-1) var(--p-space-2);
+  --selection-control-padding-block: var(--p-space-1);
+  --selection-control-padding-inline: var(--p-space-2);
 }
 .ui-table-columns-panel .quiet-button {
   width: 100%;

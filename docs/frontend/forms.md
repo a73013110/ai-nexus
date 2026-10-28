@@ -4,7 +4,7 @@
 
 ## 段落排版
 
-- 結構：`.form-sections` ＞ `section.form-section`（`role="group"` 指向標題）＞ `header.form-section-head`（`h3`＋最多一句 `.form-note`）＋ `.form-section-body`。樣式在 [`platform.scss`](../../frontend/src/styles/platform.scss)。
+- 結構：`.form-sections` ＞ `section.form-section`（`role="group"` 指向標題）＞ `header.form-section-head`（`h3`＋最多一句 `.form-note`，需要時再加一個跳轉用的 `.quiet-button`）＋ `.form-section-body`。標題列裡的 quiet-button（含 `InfoPopover`）自動是行內尺寸，hover 底色不蓋到說明行；文字行裡的其他 quiet-button 加 `.is-inline`。樣式在 [`platform.scss`](../../frontend/src/styles/platform.scss)。
 - 段落以細線分隔、不加框；容器夠寬時標題在左欄，窄時在上。段落依「填的人怎麼想」分：誰（持有人、收件者）、何時（期間）、怎麼存取（期限、附件）。
 - 只有一兩個欄位、不分組的表單（命名、確認）不分段，欄位直接放 `.dialog-body`。
 - 欄位一律寫成 `<label>標籤文字<控制項 /></label>`，原生 input 與 `Select`、`TreeSelect` 相同；表單容器（`.dialog-body`、`.form-section-body`、`.platform-form`）裡的 label 自動排成上下兩列，距離只由 `--field-label-gap` 決定，容器外（查詢列）加 `.ui-field`。不另寫 span 當標籤、不在控制項上補 margin；label 裡的每個元素各佔一列，補充字樣寫進標籤文字，說明放欄位下方的 `.form-note`，錯誤再加 `.field-error`。

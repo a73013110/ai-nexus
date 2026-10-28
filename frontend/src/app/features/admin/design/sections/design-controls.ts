@@ -299,7 +299,7 @@ import { DesignSamples } from './design-samples';
       id="design-checkbox"
       title="核取方塊"
       api="Checkbox"
-      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。方框對齊標題那一行的字中線（optical），說明再長也不會把方框往下拉。緊湊清單以 --selection-control-height 調列高。立即儲存又不可還原的勾選用 pending：旁邊轉圈、暫不接受切換。"
+      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。方框對齊標題那一行的字中線（optical），說明再長也不會把方框往下拉。緊湊清單以 --selection-control-height 與 --selection-control-padding-block／-inline 調列高與內距；要對齊段落或表格欄的左緣用 flush（hover 底色往外伸），不要把內距設成 0。立即儲存又不可還原的勾選用 pending：旁邊轉圈、暫不接受切換。"
     >
       <nx-checkbox label="只有標題" [checked]="checked()" (checkedChange)="checked.set($event)" />
       <nx-checkbox
@@ -312,6 +312,13 @@ import { DesignSamples } from './design-samples';
       <nx-checkbox
         label="說明較長"
         description="說明換成兩三行時，方框仍對齊標題這一行，而不是落在整段的中間。"
+        [checked]="checked()"
+        (checkedChange)="checked.set($event)"
+      />
+      <nx-checkbox
+        flush
+        label="對齊左緣（flush）"
+        description="方框與上下文字對齊，hover 底色仍留一圈內距、往外伸。"
         [checked]="checked()"
         (checkedChange)="checked.set($event)"
       />

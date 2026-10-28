@@ -9,6 +9,14 @@
   text-box: trim-both cap alphabetic;
 }
 
+/// 可能換行的文字前的圖示（說明句、提示）：容器用 `align-items: flex-start`，圖示對齊第一行字的中線，
+/// 換行時不跟著整塊往下移。圖示本身的 line-height 是 0，改繼承文字的行高才量得到 1lh。
+@mixin line-icon {
+  flex: none;
+  line-height: inherit;
+  margin-block-start: calc((1lh - var(--icon-size, var(--icon-xl, 1.25rem))) / 2);
+}
+
 /// 同上，但放不下時以刪節號截斷。修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與
 /// 下伸部（g、y）；改用 `clip` 並把裁切邊界往外放，只截斷行尾、不切字的上下緣。
 @mixin label-line-truncate {

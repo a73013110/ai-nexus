@@ -75,6 +75,7 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
   template: `
     <div class="model-policy-head">
       <nx-checkbox
+        flush
         label="限制可用模型"
         [description]="
           personal()
@@ -127,6 +128,7 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
               <td class="model-policy-name">
                 @if (value().restricted) {
                   <nx-checkbox
+                    flush
                     [label]="name(model)"
                     [description]="kind(model)"
                     [checked]="value().modelIds.includes(model.id)"
