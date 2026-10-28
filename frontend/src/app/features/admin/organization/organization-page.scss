@@ -42,6 +42,8 @@
 }
 .unit-list {
   display: grid;
+  // 欄寬固定為容器寬：列的最小內容寬是完整單位名稱（不換行），自動欄寬會讓長名稱撐出卡片、蓋到右側窗格。
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--p-space-1);
   margin: 0;
   padding: 0;
@@ -49,6 +51,7 @@
 }
 .unit-row {
   display: flex;
+  min-width: 0;
   gap: var(--p-space-1);
   align-items: center;
   padding-inline-start: calc(var(--depth, 0) * var(--p-space-4));
@@ -81,6 +84,17 @@
 .unit-name > span {
   flex: 1;
   min-width: 0;
+}
+// 窄時只截斷名稱，標籤與人數維持完整。
+.unit-name > nx-status-badge,
+.unit-name > small {
+  flex: none;
+}
+// 手機寬度讓給名稱：來源改由詳細窗格的說明交代，停用與首長仍標在列上。
+@include bp.below(phone) {
+  .unit-source {
+    display: none;
+  }
 }
 .unit-name:hover {
   background: var(--hover);
