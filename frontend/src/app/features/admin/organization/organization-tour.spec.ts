@@ -42,8 +42,18 @@ describe('unitDialogTour', () => {
   it('describes the parent as a move only when editing', () => {
     const editing = tourSteps(unitDialogTour({ editing: true }));
     const creating = tourSteps(unitDialogTour({ editing: false }));
-    expect(editing.map((step) => step.title)).toEqual(['單位名稱', '搬到其他上層', '啟用與停用']);
-    expect(creating.map((step) => step.title)).toEqual(['單位名稱', '放在哪個上層', '啟用與停用']);
+    expect(editing.map((step) => step.title)).toEqual([
+      '單位名稱',
+      '搬到其他上層',
+      '首長單位',
+      '啟用與停用',
+    ]);
+    expect(creating.map((step) => step.title)).toEqual([
+      '單位名稱',
+      '放在哪個上層',
+      '首長單位',
+      '啟用與停用',
+    ]);
     expect(editing[1].description).toContain('整棵下層跟著搬');
   });
 
@@ -53,6 +63,7 @@ describe('unitDialogTour', () => {
       '下次匯入會改回',
       '單位名稱',
       '搬到其他上層',
+      '首長單位',
       '啟用與停用',
     ]);
     expect(titles(unitDialogTour({ editing: true }))).not.toContain('下次匯入會改回');

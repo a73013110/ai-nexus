@@ -101,6 +101,13 @@ export function unitDialogTour(options: {
         side: 'bottom',
       },
       {
+        target: 'nx-unit-dialog .unit-head-field',
+        title: '首長單位',
+        description:
+          '與各處同層的董事會、總經理室等設為首長單位：主管管轄上層與層級不比它高的單位，上層不再勾選主管。',
+        side: 'bottom',
+      },
+      {
         target: 'nx-unit-dialog .unit-enabled',
         title: '啟用與停用',
         description: '停用的單位保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。',

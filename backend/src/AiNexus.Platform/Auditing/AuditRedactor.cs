@@ -24,6 +24,8 @@ public static class AuditRedactor
         "morningOff", "afternoonOff", "calendarRemark", "gdUserId",
         // 組織從公文系統匯入（organization.unit.imported）：前後的單位、已匯入單位與主管數，這次排除的部門數與各類變動的數量；不收部門或人員清單。
         "units", "gdUnits", "managers", "excluded", "created", "adopted", "updated", "disabled", "managersAdded", "managersRemoved", "issues",
+        // 首長單位（ADR 0024）：層級，與設定時被取消主管勾選的上層主管（使用者 ID）。
+        "headRank", "parentManagerIds",
         // 出勤紀錄匯出的查詢條件（區間、人員、單位與卡號用既有欄位；人數用 count）；卡片快照的隱藏旗標。
         "includeDaysOff", "hiddenFromRecords",
         // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。

@@ -149,6 +149,66 @@ public sealed class DataScopeTests
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
     }
 
+    [Fact]
+    public async Task HeadUnitManagersGovernTheirParentExceptHigherRankedHeads()
+    {
+        await using var factory = new AppFactory();
+        Guid carol = await UserIdAsync(factory, "carol"), bob = await UserIdAsync(factory, "bob"), dave = await UserIdAsync(factory, "dave"),
+            erin = await UserIdAsync(factory, "erin"), frank = await UserIdAsync(factory, "frank");
+        Guid company = Guid.NewGuid(), board = Guid.NewGuid(), audit = Guid.NewGuid(), office = Guid.NewGuid(), legal = Guid.NewGuid(),
+            finance = Guid.NewGuid(), sales = Guid.NewGuid(), branch = Guid.NewGuid(), closed = Guid.NewGuid();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // 公文系統常見的扁平結構：董事會、總經理與各處都在公司底下同一層，以首長單位標出誰管誰。
+        db.AddRange(
+            new Unit { Id = company, Name = "總公司", SortOrder = 10 },
+            new Unit { Id = board, ParentId = company, Name = "董事會", SortOrder = 10, HeadRank = 1 },
+            new Unit { Id = audit, ParentId = board, Name = "稽核部", SortOrder = 10 },
+            new Unit { Id = office, ParentId = company, Name = "總經理室", SortOrder = 20, HeadRank = 2 },
+            new Unit { Id = legal, ParentId = office, Name = "法務部", SortOrder = 10 },
+            new Unit { Id = finance, ParentId = company, Name = "財務處", SortOrder = 30 },
+            new Unit { Id = sales, ParentId = company, Name = "業務處", SortOrder = 40 },
+            new Unit { Id = branch, ParentId = sales, Name = "北區", SortOrder = 10 },
+            new Unit { Id = closed, ParentId = company, Name = "已裁撤", Enabled = false, SortOrder = 50 });
+        await db.SaveChangesAsync();
+        db.AddRange(
+            new UnitMember { UnitId = board, UserId = carol, IsPrimary = true, IsManager = true },
+            new UnitMember { UnitId = office, UserId = bob, IsPrimary = true, IsManager = true },
+            new UnitMember { UnitId = office, UserId = erin, IsPrimary = true },
+            new UnitMember { UnitId = finance, UserId = dave, IsPrimary = true, IsManager = true },
+            // 上層有首長單位時，它自己的主管勾選不生效（正常流程會被拒絕或清除，這裡直接寫入驗證失敗即拒絕）。
+            new UnitMember { UnitId = company, UserId = frank, IsPrimary = true, IsManager = true });
+        await db.SaveChangesAsync();
+        var scopes = scope.ServiceProvider.GetRequiredService<IDataScope>();
+        async Task<IReadOnlySet<Guid>> UnitsAsync(Guid user) => (await scopes.ForAsync(user, FeatureCatalog.AttendanceRecords, default)).UnitIds;
+
+        // 董事長管整間公司；總經理管公司與層級不比它高的單位，看不到董事會與其下的稽核部；一般單位主管照舊。
+        Assert.Equal(new HashSet<Guid> { company, board, audit, office, legal, finance, sales, branch }, await UnitsAsync(carol));
+        Assert.Equal(new HashSet<Guid> { company, office, legal, finance, sales, branch }, await UnitsAsync(bob));
+        Assert.Equal(new HashSet<Guid> { finance }, await UnitsAsync(dave));
+        Assert.Empty(await UnitsAsync(frank));
+        Assert.Equal([DataScopes.Own], (await scopes.ScopesAsync(frank, default))[FeatureCatalog.AttendanceRecords]);
+
+        // managed 只含任主管的單位：首長單位加上它的上層（公司的直屬成員），不展開各處。
+        await SetRecordsAsync(db, BuiltInAccess.WorkspaceGroup, DataScopes.UnitTree, DataScopes.Managed);
+        Assert.Equal(new HashSet<Guid> { company, office, legal }, await UnitsAsync(bob));
+        // 成員範圍只看單位樹：總經理室的成員選所屬單位及下層，不會因首長單位看到全公司。
+        Assert.Equal(new HashSet<Guid> { office, legal }, await UnitsAsync(erin));
+        await SetRecordsAsync(db, BuiltInAccess.WorkspaceGroup, DataScopes.Own, DataScopes.ManagedTree);
+
+        // 董事會停用：董事長沒有範圍，總經理照常（失敗即拒絕，不改由其他人遞補）。
+        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        Assert.Empty(await UnitsAsync(carol));
+        Assert.Equal(new HashSet<Guid> { company, office, legal, finance, sales, branch }, await UnitsAsync(bob));
+        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
+
+        // 董事會不再是首長單位：它成了一般的處，總經理也管得到；公司仍由總經理室帶領，主管勾選照樣不生效。
+        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.HeadRank, (byte?)null));
+        Assert.Equal(new HashSet<Guid> { company, board, audit, office, legal, finance, sales, branch }, await UnitsAsync(bob));
+        Assert.Equal(new HashSet<Guid> { board, audit }, await UnitsAsync(carol));
+        Assert.Empty(await UnitsAsync(frank));
+    }
+
     private static Task SetRecordsAsync(AppDbContext db, string group, string? scope, string? manager) => db.Set<RoleGroupFeature>()
         .Where(x => x.GroupId == group && x.FeatureId == FeatureCatalog.AttendanceRecords)
         .ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope).SetProperty(y => y.ManagerScope, manager));

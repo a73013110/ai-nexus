@@ -156,6 +156,46 @@ public sealed class ImportUnitsTests
     }
 
     [Fact]
+    public async Task HeadUnitsAreKeptAndTheirParentsNoLongerFollowGdManagers()
+    {
+        await using var session = await ImportSession.CreateAsync();
+        var gd = session.Gd;
+        var alice = await session.PersonAsync("alice", "G-ADM");
+        var bob = await session.PersonAsync("bob", "G-BOB");
+        var carol = await session.PersonAsync("carol", "G-CAR");
+        gd.AddDepartment(1, "總公司", chief: "G-ADM");
+        gd.AddDepartment(2, "董事會", parent: 1, chief: "G-CAR");
+        gd.AddDepartment(3, "總經理室", parent: 1, chief: "G-BOB");
+        gd.AddDepartment(4, "業務部", parent: 1);
+        await ImportAsync(session.Admin);
+        var before = (await ListUnitsAsync(session.Admin)).ToDictionary(x => x.GdDepNo ?? 0);
+        Assert.True(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
+
+        // 本地把董事會與總經理室設成首長單位：總公司的主管改由它們擔任，GD 的主管（常是無意義的帳號）不再同步。
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "董事會", true, 1))).EnsureSuccessStatusCode();
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[3].Id}", new UnitUpdateRequest(before[1].Id, "總經理室", true, 2))).EnsureSuccessStatusCode();
+        Assert.False(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
+        var (preview, _) = await ImportAsync(session.Admin);
+        Assert.Empty(preview.Units);
+        Assert.Empty(preview.Managers);
+        Assert.Equal([(1, UnitImportIssueCode.ManagersByHeadUnit)], preview.Issues.Select(x => (x.GdDepNo, x.Code)));
+        var after = (await ListUnitsAsync(session.Admin)).ToDictionary(x => x.Id);
+        Assert.Equal(((byte?)1, (byte?)2), (after[before[2].Id].HeadRank, after[before[3].Id].HeadRank));
+        Assert.False(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
+
+        // GD 把董事會搬到別處：層級清除，不帶去當別人的首長；總公司仍由總經理室帶領。
+        gd.UpdateDepartment(2, "PARENT_NO = 4");
+        (preview, _) = await ImportAsync(session.Admin);
+        Assert.Equal("Parent,HeadRank", string.Join(',', preview.Units.Single(x => x.GdDepNo == 2).Fields));
+        after = (await ListUnitsAsync(session.Admin)).ToDictionary(x => x.Id);
+        Assert.Equal(((byte?)null, (byte?)2), (after[before[2].Id].HeadRank, after[before[3].Id].HeadRank));
+        Assert.False(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
+        Assert.Equal([(carol, true)], (await MembersAsync(session.Admin, before[2].Id)).Select(x => (x.UserId, x.IsManager)));
+        Assert.Equal([(bob, true)], (await MembersAsync(session.Admin, before[3].Id)).Select(x => (x.UserId, x.IsManager)));
+        Assert.Equal(alice, Assert.Single(await MembersAsync(session.Admin, before[1].Id)).UserId);
+    }
+
+    [Fact]
     public async Task TheFirstImportAdoptsManualUnitsWithTheSameNameUnderTheSameParent()
     {
         await using var session = await ImportSession.CreateAsync();

@@ -18,6 +18,8 @@ namespace AiNexus.Features.Admin.Organization.Imports;
 /// <item>名稱、成環、深度等問題不讓整批失敗：該列略過、照舊（已綁定的維持原樣，新的不建立，其下層若無處可掛也略過），並列入問題。
 /// 略過會改變其他列的位置，所以反覆檢查到沒有新的略過為止；每輪至少多略過一列，一定會停。</item>
 /// <item>主管以來源為準，只動 <c>IsManager</c>：新主管不是成員就加入（不設主要所屬），不再是主管的人保留成員資格。停用的單位不同步主管。</item>
+/// <item>首長單位（<c>HeadRank</c>，ADR 0024）是本地設定，不覆寫；上層被搬到別處的首長單位清除層級，不帶著去當別人的首長。
+/// 有首長單位的上層不同步主管（主管由首長單位擔任），GD 有設主管時列為問題。</item>
 /// <item>管理員可排除部分部門（<see cref="Excluding"/>）：排除的列這次不動，已綁定的維持原樣（含公文系統已沒有的不停用），新的不建立、其下層無處可掛也略過，主管也不同步。</item>
 /// </list>
 /// </remarks>
@@ -79,7 +81,7 @@ internal sealed class UnitImportPlan
         foreach (var target in units)
         {
             var unit = target.IsNew ? new Unit { Id = target.Id } : loadedUnits[target.Id];
-            unit.ParentId = target.ParentId; unit.Name = target.Name; unit.Enabled = target.Enabled; unit.SortOrder = target.SortOrder; unit.GdDepNo = target.Key;
+            unit.ParentId = target.ParentId; unit.Name = target.Name; unit.Enabled = target.Enabled; unit.SortOrder = target.SortOrder; unit.GdDepNo = target.Key; unit.HeadRank = target.HeadRank;
             if (target.IsNew) db.Add(unit);
         }
         foreach (var target in members)
@@ -172,6 +174,7 @@ internal sealed class UnitImportPlan
                     nodes[id] = new Node { Id = id };
                 }
                 var node = nodes[id];
+                if (node.ParentId != parentId) node.HeadRank = null;
                 node.ParentId = parentId; node.Name = name; node.Enabled = !row.Disabled; node.Key = row.Key;
                 applied[row.Key] = id;
             }
@@ -258,11 +261,17 @@ internal sealed class UnitImportPlan
             var memberTargets = new List<MemberTarget>();
             var managers = new List<UnitImportManagerDto>();
             var byUnit = members.ToLookup(x => x.UnitId);
+            var led = HeadUnits.LedUnits(nodes.Values.Select(x => x.ToUnit()));
             foreach (var (key, id) in attempt.Applied)
             {
                 // 停用的單位不參與資料範圍，也不能加入新成員；主管等它啟用後的下一次匯入再同步。
                 if (!nodes[id].Enabled) continue;
                 var row = rows[key];
+                if (led.Contains(id))
+                {
+                    if (row.Managers.Count > 0) issues.Add(new(key, names[key], UnitImportIssueCode.ManagersByHeadUnit, null));
+                    continue;
+                }
                 issues.AddRange(row.Managers.Where(x => x.UserId is null).Select(x => new UnitImportIssueDto(key, names[key], IssueOf(x.Issue), x.SourceId)));
                 var wanted = row.Managers.Where(x => x.UserId is not null).DistinctBy(x => x.UserId).ToList();
                 var current = byUnit[id].ToList();
@@ -307,6 +316,7 @@ internal sealed class UnitImportPlan
         if (before.ParentId != after.ParentId) fields.Add(UnitImportField.Parent);
         if (before.Enabled != after.Enabled) fields.Add(UnitImportField.Enabled);
         if (before.SortOrder != after.SortOrder) fields.Add(UnitImportField.SortOrder);
+        if (before.HeadRank != after.HeadRank) fields.Add(UnitImportField.HeadRank);
         return fields;
     }
 
@@ -337,7 +347,7 @@ internal sealed class UnitImportPlan
     /// <summary>一輪安排的結果：全部單位（本地＋新增）的匯入後狀態，與每個套用的來源列對到的單位 ID。</summary>
     private sealed record Attempt(Dictionary<Guid, Node> Nodes, Dictionary<int, Guid> Applied);
 
-    private sealed record UnitTarget(Guid Id, bool IsNew, int? Key, Guid? ParentId, string Name, bool Enabled, int SortOrder);
+    private sealed record UnitTarget(Guid Id, bool IsNew, int? Key, Guid? ParentId, string Name, bool Enabled, int SortOrder, byte? HeadRank);
 
     private sealed record MemberTarget(Guid UnitId, Guid UserId, bool IsManager);
 
@@ -350,11 +360,12 @@ internal sealed class UnitImportPlan
         public bool Enabled { get; set; } = true;
         public int SortOrder { get; set; }
         public int? Key { get; set; }
+        public byte? HeadRank { get; set; }
 
-        public static Node From(Unit unit) => new() { Id = unit.Id, ParentId = unit.ParentId, Name = unit.Name, Enabled = unit.Enabled, SortOrder = unit.SortOrder, Key = unit.GdDepNo };
+        public static Node From(Unit unit) => new() { Id = unit.Id, ParentId = unit.ParentId, Name = unit.Name, Enabled = unit.Enabled, SortOrder = unit.SortOrder, Key = unit.GdDepNo, HeadRank = unit.HeadRank };
 
-        public Unit ToUnit() => new() { Id = Id, ParentId = ParentId, Name = Name, Enabled = Enabled, SortOrder = SortOrder, GdDepNo = Key };
+        public Unit ToUnit() => new() { Id = Id, ParentId = ParentId, Name = Name, Enabled = Enabled, SortOrder = SortOrder, GdDepNo = Key, HeadRank = HeadRank };
 
-        public UnitTarget ToTarget(bool isNew) => new(Id, isNew, Key, ParentId, Name, Enabled, SortOrder);
+        public UnitTarget ToTarget(bool isNew) => new(Id, isNew, Key, ParentId, Name, Enabled, SortOrder, HeadRank);
     }
 }

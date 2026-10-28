@@ -62,6 +62,13 @@ export class OrganizationPage {
   readonly maxDepth = MAX_DEPTH;
   readonly canImport = computed(() => this.session.has('organization.import'));
   readonly tour = computed(() => organizationTour({ canImport: this.canImport() }));
+  /** 帶領選取單位的首長單位，例如「董事會（層級 1）、總經理室（層級 2）」。 */
+  readonly headNames = computed(() =>
+    this.store
+      .selectedHeads()
+      .map((unit) => `${unit.name}（層級 ${unit.headRank}）`)
+      .join('、'),
+  );
   private readonly menu = viewChild.required(MenuPanel);
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly dialog = viewChild.required(UnitDialog);

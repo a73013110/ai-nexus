@@ -65,6 +65,8 @@ const labels: Record<string, string> = {
   featureIds: '功能',
   scopes: '資料範圍',
   sortOrder: '顯示順序',
+  headRank: '首長單位層級',
+  parentManagerIds: '上層的主管',
   parentId: '上層分群',
   kind: '種類',
   featureId: '頁面',

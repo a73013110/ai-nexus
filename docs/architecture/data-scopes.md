@@ -18,7 +18,7 @@
 
 - 各有效群組（角色、群組、功能都啟用）的範圍與主管範圍以 OR 合併；與功能授權同一次 SQL 讀取（`AccessService`），同一個 request 內不重讀授權。
 - 目錄不支援的值（舊資料、目錄縮減）與 null 都不算，`IsEmpty`＝沒有資料：失敗即拒絕。
-- `UnitIds`：`unit` 是使用者目前所屬的有效單位，`unit-tree` 再加上所有有效下層，再 OR 上[主管範圍](#主管範圍)的單位；有 `all` 時不計算。停用的單位連同下層、停用或刪除的帳號都不算。所屬（含主管勾選）與下層各讀一次，不隨單位數增加。
+- `UnitIds`：`unit` 是使用者目前所屬的有效單位，`unit-tree` 再加上所有有效下層，再 OR 上[主管範圍](#主管範圍)的單位；有 `all` 時不計算。停用的單位連同下層、停用或刪除的帳號都不算。單位表與所屬各讀一次就算出四種範圍的單位，不隨範圍種類或單位數增加。
 - 對沒有宣告範圍的功能呼叫會拋出（程式錯誤）。
 
 單位由 AccessControl 定義的 [`IUnitMembership`](../../backend/src/AiNexus.Features/Admin/AccessControl/Scopes/IUnitMembership.cs) 計算，Organization 的 `OrganizationDirectory` 實作；AccessControl 不依賴 Organization（`ModuleBoundaryTests`）。
@@ -32,6 +32,7 @@
 組織勾選為主管（`organization.UnitMembers.IsManager`）的人，在群組授權的主管範圍內另外看得到所管單位的資料，不必另建主管群組。理由與取捨見 [ADR 0022](../decisions/0022-manager-scopes-on-grants.md)。
 
 - `managed` 是此人**任主管**的有效單位，`managed-tree` 再加有效下層；同時所屬但不是主管的單位不加入。取消勾選、單位停用、帳號停用都在下一個請求失效。
+- [首長單位](../features/organization.md#首長單位)的主管另外任上層的主管（`managed` 加上層），`managed-tree` 的上層只展開層級不比它高的子單位（[ADR 0024](../decisions/0024-head-units.md)）；有首長單位的上層，自己的主管勾選不算。
 - 不是主管的人，即使授權帶了主管範圍，有效範圍也不含 `managed*`；範圍已含 `all` 時不另外計算也不列出。
 - 不授予功能本身：要先有該功能的授權（沒有仍是 403）；成員範圍沒有可用值時只靠主管範圍。模組照一般範圍處理 `UnitIds`，不需要分辨來源。
 - 何時宣告 `ManagerScopes`：主管看部屬資料合乎業務（出勤）。主管不該多看的（稽核、對話）不宣告，管理員也就無法給。

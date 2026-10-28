@@ -39,6 +39,9 @@ public enum UnitImportField
     Parent,
     Enabled,
     SortOrder,
+
+    /// <summary>首長單位的層級被清除：它被搬到別的上層（ADR 0024）。</summary>
+    HeadRank,
 }
 
 /// <summary>
@@ -101,6 +104,9 @@ public enum UnitImportIssueCode
 
     /// <summary>主管帳號對到不只一位使用者。</summary>
     UserAmbiguous,
+
+    /// <summary>單位由首長單位帶領，主管由首長單位的主管擔任，不同步 GD 的主管（ADR 0024）。</summary>
+    ManagersByHeadUnit,
 }
 
 /// <summary>

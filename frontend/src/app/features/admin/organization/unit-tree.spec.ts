@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { UnitDto } from '@core/api/schema';
-import { heightOf, moved, subtree, unitNodes, unitRows } from './unit-tree';
+import { headsOf, heightOf, moved, subtree, unitNodes, unitRows } from './unit-tree';
 
 const unit = (id: string, parentId: string | null, sortOrder: number, enabled = true): UnitDto => ({
   id,
@@ -10,6 +10,7 @@ const unit = (id: string, parentId: string | null, sortOrder: number, enabled = 
   sortOrder,
   memberCount: 0,
   gdDepNo: null,
+  headRank: null,
 });
 const units = [
   unit('hr', 'company', 20),
@@ -21,6 +22,16 @@ const units = [
 ];
 
 describe('unit tree', () => {
+  it('lists the head units leading a unit from the highest rank down', () => {
+    const led = [
+      ...units,
+      { ...unit('office', 'company', 40), headRank: 2 },
+      { ...unit('board', 'company', 50), headRank: 1 },
+    ];
+    expect(headsOf(led, 'company').map((item) => item.id)).toEqual(['board', 'office']);
+    expect(headsOf(led, 'it')).toEqual([]);
+  });
+
   it('lists units depth-first in sibling order with their paths', () => {
     const rows = unitRows(units);
     expect(rows.map((row) => row.unit.id)).toEqual([

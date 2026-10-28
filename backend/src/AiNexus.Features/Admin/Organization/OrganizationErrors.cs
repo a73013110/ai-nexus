@@ -14,6 +14,18 @@ public static class OrganizationErrors
     /// <summary>停用的單位不能加入新成員；既有成員仍可修改或移除。</summary>
     public static readonly Error UnitDisabled = Error.Conflict("organization_unit_disabled");
     public static readonly Error MemberNotFound = Error.NotFound("organization_member_not_found");
+
+    /// <summary>首長單位要有上層，層級 1～9（ADR 0024）。</summary>
+    public static readonly Error HeadRankInvalid = Error.Invalid("organization_head_rank_invalid");
+
+    /// <summary>同一個上層已有相同層級的首長單位。</summary>
+    public static readonly Error HeadRankDuplicate = Error.Conflict("organization_head_rank_duplicate");
+
+    /// <summary>首長單位底下不能再有首長單位：管轄不連鎖。</summary>
+    public static readonly Error HeadUnitNested = Error.Invalid("organization_head_unit_nested");
+
+    /// <summary>單位由首長單位帶領，主管由首長單位的主管擔任，不能再勾選主管。</summary>
+    public static readonly Error ManagerByHeadUnit = Error.Conflict("organization_manager_by_head_unit");
     /// <summary>排序清單不是該層現有的全部單位：畫面過期，期間有人新增、搬走或刪除了單位。</summary>
     public static readonly Error OrderStale = Error.Conflict("organization_order_stale");
     /// <summary>不存在或已刪除的使用者不能加入單位。</summary>

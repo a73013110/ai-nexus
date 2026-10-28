@@ -11871,6 +11871,8 @@ export interface components {
             parentId: null | string;
             name: string;
             enabled: boolean;
+            /** Format: uint8 */
+            headRank?: null | number;
         };
         UnitDto: {
             /** Format: uuid */
@@ -11885,6 +11887,8 @@ export interface components {
             memberCount: number;
             /** Format: int32 */
             gdDepNo: null | number;
+            /** Format: uint8 */
+            headRank: null | number;
         };
         /** @enum {unknown} */
         UnitImportAction: "Create" | "Adopt" | "Update" | "Disable";
@@ -11900,9 +11904,9 @@ export interface components {
             fields: components["schemas"]["UnitImportField"][];
         };
         /** @enum {unknown} */
-        UnitImportField: "Name" | "Parent" | "Enabled" | "SortOrder";
+        UnitImportField: "Name" | "Parent" | "Enabled" | "SortOrder" | "HeadRank";
         /** @enum {unknown} */
-        UnitImportIssueCode: "NameMissing" | "NameInvalid" | "NameDuplicate" | "Cycle" | "DepthExceeded" | "ParentSkipped" | "AccountNotFound" | "AccountDisabled" | "UserNotFound" | "UserAmbiguous";
+        UnitImportIssueCode: "NameMissing" | "NameInvalid" | "NameDuplicate" | "Cycle" | "DepthExceeded" | "ParentSkipped" | "AccountNotFound" | "AccountDisabled" | "UserNotFound" | "UserAmbiguous" | "ManagersByHeadUnit";
         UnitImportIssueDto: {
             /** Format: int32 */
             gdDepNo: number;
@@ -11975,6 +11979,8 @@ export interface components {
             parentId: null | string;
             name: string;
             enabled: boolean;
+            /** Format: uint8 */
+            headRank?: null | number;
         };
         UsageDayDto: {
             /** Format: date */

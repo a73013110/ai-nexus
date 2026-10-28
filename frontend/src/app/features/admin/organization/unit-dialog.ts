@@ -16,19 +16,23 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
+import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
+import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect } from '@shared/ui/tree-select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
 import { unitDialogTour } from './organization-tour';
-import { MAX_DEPTH, heightOf, subtree, unitNodes } from './unit-tree';
+import { MAX_DEPTH, MAX_HEAD_RANK, headsOf, heightOf, subtree, unitNodes } from './unit-tree';
 
 interface Draft {
   /** 空字串為最上層。 */
   parentId: string;
   name: string;
   enabled: boolean;
+  /** 首長單位的層級；空字串為一般單位。 */
+  headRank: string;
 }
 interface Editor {
   id: string | null;
@@ -39,7 +43,10 @@ interface Editor {
 }
 
 const sameDraft = (a: Draft, b: Draft) =>
-  a.parentId === b.parentId && a.name.trim() === b.name.trim() && a.enabled === b.enabled;
+  a.parentId === b.parentId &&
+  a.name.trim() === b.name.trim() &&
+  a.enabled === b.enabled &&
+  a.headRank === b.headRank;
 
 /**
  * 新增或修改一個組織單位。修改時可換上層（整棵下層跟著搬，排到新一層最後），
@@ -54,8 +61,10 @@ const sameDraft = (a: Draft, b: Draft) =>
     DialogHeader,
     DialogSaveBar,
     Field,
+    InfoPopover,
     Notice,
     PendingButton,
+    Select,
     TreeSelect,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,6 +123,38 @@ const sameDraft = (a: Draft, b: Draft) =>
                       [disabled]="saving()"
                       (valueChange)="update('parentId', $event)"
                   /></label>
+                </div>
+              </section>
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-head'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-head'">首長單位</h3>
+                  <p class="form-note">與各處同層的董事會、總經理室等，標為首長單位來帶領上層。</p>
+                  <nx-info-popover label="首長單位的規則" [width]="320">
+                    <ul class="form-note-list">
+                      <li>
+                        主管另外管轄上層，以及上層底下層級不比它高的單位與下層；數字越小層級越高，例如董事會
+                        1、總經理室 2。
+                      </li>
+                      <li>
+                        上層的主管改由首長單位擔任：儲存後取消上層的主管勾選，之後也不能再勾選。
+                      </li>
+                      <li>只影響主管範圍；成員的「所屬單位及下層」仍照單位樹。</li>
+                      <li>本地設定，公文系統匯入不會覆蓋；單位被匯入搬到別的上層時清除。</li>
+                    </ul>
+                  </nx-info-popover>
+                </header>
+                <div class="form-section-body">
+                  <label class="form-field-short unit-head-field"
+                    >層級<nx-select
+                      label="首長單位的層級"
+                      [options]="headRanks()"
+                      [value]="e.draft.headRank"
+                      [disabled]="saving() || !!headBlocked()"
+                      (valueChange)="update('headRank', $event)"
+                  /></label>
+                  @if (headBlocked(); as reason) {
+                    <p class="form-note">{{ reason }}</p>
+                  }
                 </div>
               </section>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-state'">
@@ -197,12 +238,44 @@ export class UnitDialog {
     const height = id ? heightOf(units, id) : 1;
     return unitNodes(units, (row) => !excluded.has(row.unit.id) && row.depth + height <= MAX_DEPTH);
   });
+  /** 不能設為首長單位的原因；已設的仍可改回一般單位，所以有值時不擋。 */
+  readonly headBlocked = computed(() => {
+    const editor = this.editor();
+    if (!editor || editor.draft.headRank) return '';
+    if (!editor.draft.parentId) return '最上層的單位沒有上層可帶領。';
+    return editor.id && headsOf(this.store.units(), editor.id).length
+      ? '底下已有首長單位，不能再設為首長單位。'
+      : '';
+  });
+  /** 層級選項；同一個上層已被其他單位使用的層級停用，並標出是誰。 */
+  readonly headRanks = computed<SelectOption[]>(() => {
+    const editor = this.editor();
+    const taken = new Map(
+      (editor?.draft.parentId ? headsOf(this.store.units(), editor.draft.parentId) : [])
+        .filter((unit) => unit.id !== editor?.id)
+        .map((unit) => [unit.headRank!, unit.name]),
+    );
+    return [
+      { value: '', label: '不是首長單位' },
+      ...Array.from({ length: MAX_HEAD_RANK }, (_, index) => {
+        const rank = index + 1;
+        const owner = taken.get(rank);
+        return {
+          value: String(rank),
+          label: `層級 ${rank}${rank === 1 ? '（最高）' : ''}`,
+          description: owner ? `已由「${owner}」使用` : undefined,
+          disabled: !!owner,
+        };
+      }),
+    ];
+  });
 
   create(parent: UnitDto | null = null) {
     this.show(null, parent ? `新增下層單位：${parent.name}` : '新增單位', false, {
       parentId: parent?.id ?? '',
       name: '',
       enabled: true,
+      headRank: '',
     });
   }
   edit(unit: UnitDto) {
@@ -210,6 +283,7 @@ export class UnitDialog {
       parentId: unit.parentId ?? '',
       name: unit.name,
       enabled: unit.enabled,
+      headRank: unit.headRank == null ? '' : String(unit.headRank),
     });
   }
   private show(id: string | null, title: string, imported: boolean, draft: Draft) {
@@ -264,7 +338,12 @@ export class UnitDialog {
       this.nameInput()?.nativeElement.focus();
       return;
     }
-    const body = { parentId: draft.parentId || null, name, enabled: draft.enabled };
+    const body = {
+      parentId: draft.parentId || null,
+      name,
+      enabled: draft.enabled,
+      headRank: draft.headRank ? Number(draft.headRank) : null,
+    };
     this.saving.set(true);
     this.error.set('');
     try {

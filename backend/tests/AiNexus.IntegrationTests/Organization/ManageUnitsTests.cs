@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using AiNexus.Features.Admin.Audit;
 using AiNexus.Features.Admin.Organization;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
@@ -58,6 +59,46 @@ public sealed class ManageUnitsTests
         await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(parent, "太深", true)), HttpStatusCode.BadRequest, "organization_depth_exceeded");
         // 被拒絕的變更也留下錯誤代碼的稽核。
         Assert.NotEmpty((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.&result=organization_unit_cycle"))!);
+    }
+
+    [Fact]
+    public async Task HeadUnitsAreValidatedAndTakeOverTheParentsManagers()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
+        Guid bob = await UserIdAsync(factory, "bob"), frank = await UserIdAsync(factory, "frank");
+        var company = await CreateUnitAsync(admin, "總公司");
+        var office = await CreateUnitAsync(admin, "總經理室", company.Id);
+        (await SaveMemberAsync(admin, company.Id, frank, primary: true, manager: true)).EnsureSuccessStatusCode();
+        (await SaveMemberAsync(admin, office.Id, bob, primary: true, manager: true)).EnsureSuccessStatusCode();
+
+        // 設成首長單位：上層的主管改由它擔任，同一個交易內取消上層的主管勾選（成員資格保留），前後快照看得出來。
+        (await admin.PutAsJsonAsync($"{Units}/{office.Id}", new UnitUpdateRequest(company.Id, "總經理室", true, 2))).EnsureSuccessStatusCode();
+        Assert.Equal((byte?)2, (await ListUnitsAsync(admin)).Single(x => x.Id == office.Id).HeadRank);
+        Assert.False(Assert.Single(await MembersAsync(admin, company.Id)).IsManager);
+        var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.updated&result=success"))!.Single();
+        using (var json = JsonDocument.Parse(audit.DetailsJson!))
+        {
+            Assert.Equal([frank], json.RootElement.GetProperty("before").GetProperty("parentManagerIds").Deserialize<Guid[]>()!);
+            Assert.Empty(json.RootElement.GetProperty("after").GetProperty("parentManagerIds").Deserialize<Guid[]>()!);
+        }
+
+        // 上層不能再勾選主管；一般成員照常。
+        await AssertCodeAsync(await SaveMemberAsync(admin, company.Id, frank, primary: true, manager: true), HttpStatusCode.Conflict, "organization_manager_by_head_unit");
+        (await SaveMemberAsync(admin, company.Id, bob)).EnsureSuccessStatusCode();
+
+        // 同一個上層的層級不可重複；最上層沒有上層可帶領；層級 1～9；首長單位底下不能再有首長單位。
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(company.Id, "董事會", true, 2)), HttpStatusCode.Conflict, "organization_head_rank_duplicate");
+        (await admin.PostAsJsonAsync(Units, new UnitCreateRequest(company.Id, "董事會", true, 1))).EnsureSuccessStatusCode();
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(null, "集團", true, 1)), HttpStatusCode.BadRequest, "organization_head_rank_invalid");
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(company.Id, "顧問室", true, 10)), HttpStatusCode.BadRequest, "organization_head_rank_invalid");
+        await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(office.Id, "特助室", true, 1)), HttpStatusCode.BadRequest, "organization_head_unit_nested");
+
+        // 搬到別的上層時層級跟著檢查：搬到公司底下撞到同層級就拒絕。
+        var other = await CreateUnitAsync(admin, "子公司");
+        var advisor = await admin.PostAsJsonAsync(Units, new UnitCreateRequest(other.Id, "顧問室", true, 1));
+        var advisorId = (await advisor.Content.ReadFromJsonAsync<UnitDto>())!.Id;
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 1)), HttpStatusCode.Conflict, "organization_head_rank_duplicate");
+        (await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 3))).EnsureSuccessStatusCode();
     }
 
     [Fact]

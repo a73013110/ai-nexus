@@ -125,6 +125,10 @@ describe('unit import presentation', () => {
       '公文系統已沒有此部門，保留成員與歷史',
     );
     expect(changeNote(change({ action: 'Create' }))).toBe('');
+    // 首長單位層級不是公文系統的欄位：搬移時清除，另外說明。
+    expect(changeNote(change({ fields: ['Parent', 'HeadRank'] }))).toBe(
+      '上層依公文系統更新；搬到別的上層，取消首長單位',
+    );
   });
 
   it('summarises the applied result and says when nothing changed', () => {

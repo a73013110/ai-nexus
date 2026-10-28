@@ -54468,6 +54468,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "headRank": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "uint8"
           }
         }
       },
@@ -54479,7 +54486,8 @@
           "enabled",
           "sortOrder",
           "memberCount",
-          "gdDepNo"
+          "gdDepNo",
+          "headRank"
         ],
         "type": "object",
         "properties": {
@@ -54514,6 +54522,13 @@
               "integer"
             ],
             "format": "int32"
+          },
+          "headRank": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "uint8"
           }
         }
       },
@@ -54582,7 +54597,8 @@
           "Name",
           "Parent",
           "Enabled",
-          "SortOrder"
+          "SortOrder",
+          "HeadRank"
         ]
       },
       "UnitImportIssueCode": {
@@ -54596,7 +54612,8 @@
           "AccountNotFound",
           "AccountDisabled",
           "UserNotFound",
-          "UserAmbiguous"
+          "UserAmbiguous",
+          "ManagersByHeadUnit"
         ]
       },
       "UnitImportIssueDto": {
@@ -54871,6 +54888,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "headRank": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "uint8"
           }
         }
       },

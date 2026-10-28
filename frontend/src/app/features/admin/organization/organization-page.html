@@ -115,6 +115,14 @@
                       >公文</nx-status-badge
                     >
                   }
+                  @if (row.unit.headRank != null) {
+                    <nx-status-badge
+                      class="unit-head"
+                      tone="success"
+                      [title]="'首長單位，層級 ' + row.unit.headRank + '：主管帶領上層'"
+                      >首長 {{ row.unit.headRank }}</nx-status-badge
+                    >
+                  }
                   @if (!row.unit.enabled) {
                     <nx-status-badge tone="neutral">停用</nx-status-badge>
                   }
@@ -173,6 +181,26 @@
                   '來自公文系統（部門編號 ' +
                   row.unit.gdDepNo +
                   '）：名稱、上層、啟用、順序與主管以公文系統為準，匯入時會覆蓋；成員與主要所屬不受影響。'
+                "
+              />
+            }
+            @if (row.unit.headRank != null && row.path.length > 1) {
+              <nx-notice
+                tone="info"
+                [message]="
+                  '首長單位（層級 ' +
+                  row.unit.headRank +
+                  '）：主管另外管轄「' +
+                  row.path[row.path.length - 2] +
+                  '」，以及它底下層級不比這裡高的單位與下層。'
+                "
+              />
+            }
+            @if (store.selectedHeads().length) {
+              <nx-notice
+                tone="info"
+                [message]="
+                  '主管由首長單位擔任：' + headNames() + '。這裡不能勾選主管，成員範圍不受影響。'
                 "
               />
             }
@@ -254,7 +282,10 @@
                         label="主管"
                         [checked]="member.isManager"
                         [pending]="manager"
-                        [disabled]="store.membersLocked() && !manager"
+                        [disabled]="
+                          (store.membersLocked() && !manager) ||
+                          (!!store.selectedHeads().length && !member.isManager)
+                        "
                         (checkedChange)="setManager(member, $event)"
                       />
                       <button

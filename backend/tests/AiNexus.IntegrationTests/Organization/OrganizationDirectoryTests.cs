@@ -35,11 +35,10 @@ public sealed class OrganizationDirectoryTests
         Assert.Equal([new UnitMembership(it, true, true)], await directory.MembershipsAsync(bob, default));
         Assert.Equal(new HashSet<Guid> { company, it, systems }, await directory.SubtreeAsync([company], default));
         Assert.Empty(await directory.SubtreeAsync([under, Guid.NewGuid()], default));
-        Assert.Equal([bob], await directory.MembersAsync(it, managersOnly: true, default));
-        Assert.Empty(await directory.MembersAsync(under, managersOnly: false, default));
+        Assert.Equal([bob], await directory.MemberIds([it]).ToListAsync());
 
         await db.Users.Where(x => x.Id == carol).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.Empty(await directory.MembershipsAsync(carol, default));
-        Assert.Empty(await directory.MembersAsync(systems, managersOnly: false, default));
+        Assert.Empty(await directory.MemberIds([systems]).ToListAsync());
     }
 }

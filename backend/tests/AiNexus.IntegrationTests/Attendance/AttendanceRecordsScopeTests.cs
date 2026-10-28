@@ -105,9 +105,9 @@ public sealed class AttendanceRecordsScopeTests
         // 預設是 workspace 的 own＋managed-tree：再加上所管單位含下層；停用單位與非主管的人資處不算。
         queries.Clear();
         Assert.Equal(Sorted(bob, frank, carol, grace), await PeopleAsync(client));
-        // 授權只讀一次；單位樹讀兩次（所屬＋下層），不隨所管單位數增加。
+        // 授權與單位樹各只讀一次，不隨範圍種類或所管單位數增加。
         Assert.Equal(1, queries.Count(Records, "RoleGroupFeatures"));
-        Assert.Equal(2, queries.Count(Records, "[organization].[Units]"));
+        Assert.Equal(1, queries.Count(Records, "[organization].[Units]"));
 
         // 與群組範圍以 OR 合併。
         await session.GrantAsync(bob, DataScopes.Unit);

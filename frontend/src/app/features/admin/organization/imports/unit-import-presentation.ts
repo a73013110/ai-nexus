@@ -25,7 +25,8 @@ const GROUPS: readonly (UnitImportAction | 'Managers')[] = [
   'Managers',
 ];
 
-const FIELD_LABELS: Record<UnitImportField, string> = {
+/** 依公文系統更新的欄位；首長單位層級是本地設定，只會因搬移而清除，另外說明。 */
+const FIELD_LABELS: Record<Exclude<UnitImportField, 'HeadRank'>, string> = {
   Name: '名稱',
   Parent: '上層',
   Enabled: '啟用狀態',
@@ -43,6 +44,7 @@ const ISSUE_LABELS: Record<UnitImportIssueCode, string> = {
   AccountDisabled: '主管的公文帳號已停用',
   UserNotFound: '主管對不到平台使用者（可能還沒登入過）',
   UserAmbiguous: '主管對到不只一位使用者',
+  ManagersByHeadUnit: '主管由首長單位擔任，不同步公文系統的主管',
 };
 
 /** 預覽各類變動的數量，給摘要列。 */
@@ -69,8 +71,11 @@ export function hasChanges(preview: UnitImportPreviewDto) {
 export function changeNote(change: UnitImportChangeDto) {
   const parts: string[] = [];
   if (change.action === 'Update' || change.action === 'Adopt') {
-    const fields = change.fields.map((field) => FIELD_LABELS[field]);
+    const fields = change.fields.flatMap((field) =>
+      field === 'HeadRank' ? [] : [FIELD_LABELS[field]],
+    );
     if (fields.length) parts.push(`${fields.join('、')}依公文系統更新`);
+    if (change.fields.includes('HeadRank')) parts.push('搬到別的上層，取消首長單位');
   }
   if (change.previousPath?.length) parts.push(`原為 ${change.previousPath.join(' › ')}`);
   if (!change.enabled && change.action !== 'Disable') parts.push('公文系統已關閉此部門');

@@ -1,14 +1,19 @@
 namespace AiNexus.Features.Admin.AccessControl.Scopes;
 
-/// <summary>使用者目前所屬的有效單位，以及其中組織管理勾選為主管的單位（主管範圍只看後者）。</summary>
-public sealed record UnitsOfUser(IReadOnlyList<Guid> UnitIds, IReadOnlyList<Guid> ManagedUnitIds)
+/// <summary>
+/// 使用者目前的有效單位，依範圍宣告（<see cref="DataScopeDefinition.Units"/>、<see cref="DataScopeDefinition.Subtree"/>）分四組，都已含下層與否算好：
+/// 所屬、所屬及下層、任主管、任主管及下層。主管的單位不只是勾選的單位（首長單位另管轄上層，ADR 0024），所以下層由 Organization 一併計算。
+/// </summary>
+public sealed record UnitsOfUser(IReadOnlySet<Guid> Units, IReadOnlySet<Guid> UnitTree, IReadOnlySet<Guid> Managed, IReadOnlySet<Guid> ManagedTree)
 {
-    /// <summary>範圍依據的單位（<see cref="DataScopeDefinition.Units"/>）。</summary>
-    public IReadOnlyList<Guid> Of(DataScopeUnits units) => units switch
+    /// <summary>範圍依據的單位；不看單位的範圍（<c>own</c>、<c>assigned</c>、<c>all</c>）為空。</summary>
+    public IReadOnlySet<Guid> Of(DataScopeDefinition scope) => (scope.Units, scope.Subtree) switch
     {
-        DataScopeUnits.Member => UnitIds,
-        DataScopeUnits.Managed => ManagedUnitIds,
-        _ => [],
+        (DataScopeUnits.Member, false) => Units,
+        (DataScopeUnits.Member, true) => UnitTree,
+        (DataScopeUnits.Managed, false) => Managed,
+        (DataScopeUnits.Managed, true) => ManagedTree,
+        _ => new HashSet<Guid>(),
     };
 }
 
@@ -19,10 +24,7 @@ public sealed record UnitsOfUser(IReadOnlyList<Guid> UnitIds, IReadOnlyList<Guid
 public interface IUnitMembership
 {
     /// <summary>
-    /// 使用者目前所屬的有效單位與任主管的有效單位，一次讀出：群組範圍與主管範圍同時需要時不必多查一次。帳號停用或刪除時都為空。
+    /// 使用者目前的四組有效單位，一次讀出：同一個功能有多種範圍時不必多查。帳號停用或刪除時都為空。
     /// </summary>
     Task<UnitsOfUser> UnitsOfAsync(Guid userId, CancellationToken ct);
-
-    /// <summary>指定單位與所有下層中的有效單位。</summary>
-    Task<IReadOnlySet<Guid>> SubtreeAsync(IReadOnlyCollection<Guid> unitIds, CancellationToken ct);
 }

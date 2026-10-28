@@ -3,6 +3,8 @@ import type { TreeSelectNode } from '@shared/ui/tree-select';
 
 /** 與後端 `UnitRules.MaxDepth` 相同；伺服器仍會以 `organization_depth_exceeded` 拒絕。 */
 export const MAX_DEPTH = 8;
+/** 與後端 `Unit.MaxHeadRank` 相同：首長單位的層級 1～9，數字越小越高（ADR 0024）。 */
+export const MAX_HEAD_RANK = 9;
 
 /** 樹狀清單的一列：`depth` 由 1 起算，`path` 是由最上層到自己的名稱。 */
 export interface UnitRow {
@@ -69,6 +71,13 @@ export function unitNodes(
     nodes.push({ value: row.unit.id, label: row.unit.name, parent, inactive: !row.unit.enabled });
   }
   return nodes;
+}
+
+/** 帶領 `id` 的首長單位，依層級由高到低；空陣列表示主管由成員勾選。 */
+export function headsOf(units: readonly UnitDto[], id: string) {
+  return units
+    .filter((unit) => unit.parentId === id && unit.headRank != null)
+    .sort((a, b) => a.headRank! - b.headRank!);
 }
 
 /** 單位與它所有下層的 ID；搬移時這些不能當新的上層。 */

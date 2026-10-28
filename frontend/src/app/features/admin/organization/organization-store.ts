@@ -5,7 +5,7 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { OrganizationApi } from './organization-api';
-import { moved, unitRows } from './unit-tree';
+import { headsOf, moved, unitRows } from './unit-tree';
 
 /**
  * 組織頁提供（`providers`）的狀態：全部單位（平面清單）、選取的單位與它的直屬成員。
@@ -36,6 +36,11 @@ export class OrganizationStore {
   readonly selectedRow = computed(() => {
     const id = this.selectedId();
     return unitRows(this.units()).find((row) => row.unit.id === id) ?? null;
+  });
+  /** 帶領選取單位的首長單位：有的話主管由它們擔任，成員不能勾選主管。 */
+  readonly selectedHeads = computed(() => {
+    const id = this.selectedId();
+    return id ? headsOf(this.units(), id) : [];
   });
   private readonly membersRead = apiResource({
     feature: 'organization',
