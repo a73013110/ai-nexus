@@ -31,9 +31,9 @@
 ## 重新讀取
 
 - 保留舊內容，不換回骨架、不清空，也不重設捲動或選取。
-- `nx-data-table`、`nx-tree-view`、`nx-resource-gallery`、`nx-month-calendar`、`nx-stat-grid` 與圖表傳 `busy`：已有內容時淡化並設 `aria-busy`，列表類（表格、樹、卡片格線）在上緣掃過 `.refresh-line`。`nx-data-table` 在沒有列（`nx-table-state` 顯示中）時不淡化，骨架就是回饋。
+- `nx-data-table`、`nx-tree-view`、`nx-resource-gallery`、`nx-month-calendar`、`nx-stat-grid` 與圖表傳 `busy`：已有內容時淡化並設 `aria-busy`，列表類（表格、樹、卡片格線）在上緣掃過 `.refresh-line`。`nx-data-table` 在沒有列（`nx-table-state` 顯示中）時不淡化，骨架就是回饋；已有列的重讀由它播報，頁面不另放 `sr-only` 狀態。
 - 其他區塊（卡片、屬性清單、詳情面板）在容器加 `.is-refreshing` 與 `aria-busy`；不自訂 `.stale`、`.is-loading` 之類的淡化。
-- 讀取中翻頁、排序與列操作用 `aria-disabled`／`readonly` 擋，不用 `disabled`，焦點才不會掉。
+- 讀取中查詢、翻頁、上下筆、排序與列操作用 `aria-disabled`／`readonly` 擋，不用 `disabled`，焦點才不會掉。
 - 分頁與檢視切換（`nx-tabs`、`nx-view-switch`）不轉圈：切換後讀取的回饋在內容區的 `loading`／`busy`。
 
 ## 送出中

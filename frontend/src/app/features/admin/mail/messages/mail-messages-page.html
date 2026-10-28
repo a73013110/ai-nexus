@@ -136,10 +136,6 @@
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>寄送紀錄</h2>
-        <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀（背景更新不算）。 -->
-        @if (loading() && table.rows().length) {
-          <span class="sr-only" role="status">正在載入寄送紀錄…</span>
-        }
       </div>
       <table>
         <caption class="sr-only">

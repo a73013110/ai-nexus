@@ -130,6 +130,10 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
     .design-data-workspace nx-data-table {
       --table-min-width: 32rem;
     }
+    /* 限高讓內容超出，示範「放大表格」。 */
+    .design-table-capped {
+      --table-max-height: 14rem;
+    }
     nx-markdown-view {
       display: block;
       max-width: var(--reading-width);
@@ -147,7 +151,7 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="QueryBar · DataTable · TableState · TablePagination · DetailDrawer · DrawerPager · CopyValue"
-      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip，欄位標上 nxQueryField 時 chip 依欄位順序排列。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
+      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip，欄位標上 nxQueryField 時 chip 依欄位順序排列。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。內容超出捲動區時「欄位」旁多一顆放大表格，外框從原位過渡成貼齊視窗，Esc 還原。"
       [stacked]="true"
     >
       <nx-query-bar label="示範查詢條件" [state]="query">
@@ -235,7 +239,7 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
       api="localTable · endpointTable · cursorTable · th[nxHeader]"
       description="欄位宣告一次（可排序、篩選型別、數字欄），表頭的排序鈕、篩選 popover、已套用的 chip、載入／空狀態與分頁列都由 [table] 產生，頁面只寫儲存格。資料已在前端用 localTable；後端列表用 endpointTable，資料量在門檻內時後端一次回傳全部，之後在本機排序與篩選；日誌、稽核等大表用 cursorTable。"
     >
-      <nx-data-table label="欄位排序與篩選範例" [table]="people">
+      <nx-data-table class="design-table-capped" label="欄位排序與篩選範例" [table]="people">
         <table>
           <caption class="sr-only">
             示範成員，可依欄位排序與篩選

@@ -79,10 +79,6 @@
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>匯入紀錄</h2>
-      <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
-      @if (table.refreshing() && table.rows().length) {
-        <span class="sr-only" role="status">正在載入匯入紀錄…</span>
-      }
     </div>
     <table>
       <caption class="sr-only">

@@ -97,6 +97,36 @@ describe('DataTable', () => {
     expect(line.classList).toContain('is-active');
     expect(scroll.classList).toContain('is-refreshing');
     expect(element.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(element.querySelector('[role="status"]')?.textContent).toContain('正在重新載入');
+  });
+
+  it('maximizes over the page keeping its place, and restores on Escape or the same button', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const host = element.querySelector<HTMLElement>('nx-data-table')!;
+    const frame = element.querySelector('.ui-table-frame')!;
+    const table = fixture.debugElement.children[0].injector.get(DataTable);
+    // jsdom 沒有版面，量不出超出捲動區；按鈕只在放大後出現。
+    expect(element.querySelector('.ui-table-maximize')).toBeNull();
+    table.setMaximized(true);
+    fixture.detectChanges();
+    expect(frame.classList).toContain('is-maximized');
+    expect(host.style.minHeight).toBe('0px');
+    const button = element.querySelector<HTMLButtonElement>('.ui-table-maximize')!;
+    expect(button.getAttribute('aria-label')).toBe('還原表格');
+    element
+      .querySelector('[data-row-action]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(frame.classList).not.toContain('is-maximized');
+    expect(host.style.minHeight).toBe('');
+    expect(element.querySelector('.ui-table-maximize')).toBeNull();
+    table.setMaximized(true);
+    fixture.detectChanges();
+    element.querySelector<HTMLButtonElement>('.ui-table-maximize')!.click();
+    fixture.detectChanges();
+    expect(table.maximized()).toBe(false);
   });
 
   it('shows the skeleton alone on the first load and dims only once rows are on screen', () => {

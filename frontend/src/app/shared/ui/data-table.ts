@@ -3,8 +3,11 @@ import { Checkbox } from './checkbox';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   Directive,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   forwardRef,
   contentChild,
@@ -16,6 +19,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { ThemeService } from '@core/preferences/theme-service';
 import { ChipList } from './chip-list';
 import { Icon } from './icon';
 import { PendingButton } from './pending-button';
@@ -23,6 +27,7 @@ import { Select } from './select';
 import { PAGE_SIZES, type TableColumn, type TableModel } from './table-model';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
+import { timing } from './view-motion';
 
 export {
   PAGE_SIZES,
@@ -40,7 +45,9 @@ export {
  * 表格本身的最小寬度放在 `--table-min-width`，卡片模式才能清掉它。
  *
  * 工具列放標題（`[table-toolbar]`），表格自己的動作（如匯出，`[table-actions]`）接在欄位選擇器旁邊；
- * `nx-table-state` 負責載入中、無資料與錯誤三種狀態。
+ * `nx-table-state` 負責載入中、無資料與錯誤三種狀態，已有列時的重讀由表格自己播報。
+ * 內容超出捲動區時多一顆「放大表格」：外框改為貼齊視窗（`is-maximized`），從原位置過渡過去，
+ * Esc 或焦點移回頁面時還原。
  *
  * 可見外框的高度跟著列數走，不會超過宿主；頁面若把剩餘高度交給宿主（`layoutMode="data"`），
  * 表格改由內部捲動、表頭固定，列數少時下方也不會留白。列的狀態與共用樣式在
@@ -61,25 +68,40 @@ export {
     class: 'ui-data-table',
     '[class.ui-table-stack]': 'stacked()',
     '[attr.aria-busy]': 'working() || null',
+    '(keydown.escape)': 'escapeMaximized($event)',
+    '(focusout)': 'focusLeft($event)',
   },
-  template: `<div class="ui-table-frame">
+  template: `<div #frame class="ui-table-frame">
     <div class="ui-table-toolbar-wrap">
       <ng-content select="[table-toolbar]" />
-      <div class="ui-table-actions"><ng-content select="[table-actions]" /></div>
-      @if (pickerColumns().length) {
-        <button
-          #columnTrigger
-          type="button"
-          class="quiet-button ui-table-columns-trigger"
-          aria-label="顯示欄位"
-          aria-haspopup="dialog"
-          [attr.aria-expanded]="columnsOpen()"
-          [attr.aria-controls]="id"
-          (click)="toggleColumns()"
-        >
-          <nx-icon name="columns" />欄位
-        </button>
-      }
+      <div class="ui-table-actions">
+        <ng-content select="[table-actions]" />
+        @if (pickerColumns().length) {
+          <button
+            #columnTrigger
+            type="button"
+            class="quiet-button ui-table-columns-trigger"
+            aria-label="顯示欄位"
+            aria-haspopup="dialog"
+            [attr.aria-expanded]="columnsOpen()"
+            [attr.aria-controls]="id"
+            (click)="toggleColumns()"
+          >
+            <nx-icon name="columns" />欄位
+          </button>
+        }
+        @if (overflowing() || maximized()) {
+          <button
+            type="button"
+            class="icon-button ui-table-maximize"
+            [attr.aria-label]="maximized() ? '還原表格' : '放大表格'"
+            [title]="maximized() ? '還原表格' : '放大表格'"
+            (click)="setMaximized(!maximized())"
+          >
+            <nx-icon [name]="maximized() ? 'minimize' : 'maximize'" />
+          </button>
+        }
+      </div>
     </div>
     <div
       #columnPanel
@@ -119,6 +141,10 @@ export {
       }
     }
     <span class="refresh-line" [class.is-active]="refreshing()" aria-hidden="true"></span>
+    <!-- 首次載入由 nx-table-state 播報；這裡只播報已有列時的重讀（背景輪詢不算重讀）。 -->
+    @if (refreshing()) {
+      <span class="sr-only" role="status">正在重新載入資料…</span>
+    }
     <div
       class="ui-table-scroll"
       role="region"
@@ -194,7 +220,34 @@ export class DataTable {
     },
   });
   readonly columnsOpen = this.columnsPopover.opened;
+  /** 放大成貼齊視窗；只在頁面上，對話框裡的表格用對話框自己的放大（CSS 隱藏按鈕）。 */
+  readonly maximized = signal(false);
+  /** 捲動區放不下內容（列多或欄寬）才顯示放大鈕，列少的表格不多一顆按鈕。 */
+  protected readonly overflowing = signal(false);
+  private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
+  /** 放大時才取 `ThemeService`：單元測試沒有 matchMedia，也不跑動畫。 */
+  private readonly injector = inject(Injector);
+  private motion?: Animation;
   constructor() {
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const region = this.scrollRegion();
+      if (!region || typeof ResizeObserver === 'undefined') return;
+      // 放大中（含還原的動畫）不量：外框貼齊視窗時多半放得下，按鈕會在還原那一刻消失、焦點跟著掉。
+      const measure = () => {
+        if (this.frame().nativeElement.classList.contains('is-maximized')) return;
+        this.overflowing.set(
+          region.scrollHeight > region.clientHeight + 1 ||
+            region.scrollWidth > region.clientWidth + 1,
+        );
+      };
+      // 捲動區本身與裡面的表格：列數變了捲動區不一定變大小，表格會。
+      const observer = new ResizeObserver(measure);
+      observer.observe(region);
+      for (const child of region.children) observer.observe(child);
+      destroyRef.onDestroy(() => observer.disconnect());
+    });
+    destroyRef.onDestroy(() => this.motion?.cancel());
     // 換頁、排序、篩選或換查詢條件後回到頂端；背景更新不改 revision，保留捲動位置。
     effect(() => {
       this.table()?.revision();
@@ -267,6 +320,72 @@ export class DataTable {
     } catch {
       /* 選用偏好。 */
     }
+  }
+  /**
+   * 放大與還原都量好起訖兩個矩形，再讓外框（`position: fixed`）從起點過渡到終點；DOM 不搬動，捲動位置、
+   * 欄位偏好與列內元件都保留。外框離開文件流時宿主以 `min-height` 佔住原本的高度，頁面不跳動也不改捲動。
+   * 還原時先回到原位量出終點，再固定回去播完動畫，結束時才真的回到文件流（`fill: forwards` 避免最後一幀閃回全螢幕）。
+   */
+  setMaximized(on: boolean) {
+    if (on === this.maximized()) return;
+    const frame = this.frame().nativeElement,
+      host = this.host.nativeElement;
+    const place = (maximized: boolean) => {
+      host.style.minHeight = maximized ? `${host.offsetHeight}px` : '';
+      frame.classList.toggle('is-maximized', maximized);
+    };
+    const from = frame.getBoundingClientRect(),
+      fromRadius = getComputedStyle(frame).borderRadius;
+    this.motion?.cancel();
+    place(false);
+    const inline = frame.getBoundingClientRect(),
+      radius = getComputedStyle(frame).borderRadius;
+    place(true);
+    const full = frame.getBoundingClientRect();
+    this.maximized.set(on);
+    if (typeof frame.animate !== 'function' || this.injector.get(ThemeService).reducedMotion()) {
+      place(on);
+      return;
+    }
+    const box = (rect: DOMRect, borderRadius: string) => ({
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      borderRadius,
+    });
+    // 起點是當下的位置（動畫中途反向時也接得上），終點是原位或整個視窗。
+    this.motion = frame.animate(
+      [box(from, fromRadius), on ? box(full, '0px') : box(inline, radius)],
+      { ...timing(frame), fill: 'forwards' },
+    );
+    this.motion.onfinish = () => {
+      this.motion?.cancel();
+      this.motion = undefined;
+      if (!on) place(false);
+    };
+  }
+  /** 放大時 Esc 還原；表格裡的浮層、頁面上開著的對話框或抽屜先處理自己的 Esc。 */
+  escapeMaximized(event: Event) {
+    if (
+      !this.maximized() ||
+      event.defaultPrevented ||
+      document.querySelector('dialog[open], [popover]:popover-open:not(.toaster)')
+    )
+      return;
+    event.preventDefault();
+    this.setMaximized(false);
+  }
+  /** 焦點移到後面的頁面（Tab 出表格）就還原，免得焦點落在被蓋住的元素上；移進對話框、抽屜或浮層不算。 */
+  focusLeft(event: FocusEvent) {
+    const to = event.relatedTarget;
+    if (
+      this.maximized() &&
+      to instanceof Element &&
+      !this.frame().nativeElement.contains(to) &&
+      !to.closest('dialog, [popover]')
+    )
+      this.setMaximized(false);
   }
   resetScroll() {
     const region = this.scrollRegion();

@@ -223,10 +223,6 @@ export class AttendanceRecordsPage {
     const data = this.records();
     return data ? this.people().map((person) => presentGroup(person, data.today)) : [];
   });
-  readonly period = computed(() => {
-    const data = this.records();
-    return data ? `${data.from.replaceAll('-', '/')} — ${data.to.slice(5).replace('-', '/')}` : '';
-  });
 
   constructor() {
     // 每次套用條件都換一個新參考（表格回到第一頁重讀）；「本月」以套用當下的台北日期換算。

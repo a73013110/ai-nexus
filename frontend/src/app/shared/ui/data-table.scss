@@ -38,22 +38,39 @@
 .ui-table-toolbar-wrap:has(> .ui-table-actions:only-child:empty) {
   display: none;
 }
-// 表格動作與「欄位」固定靠右；沒有標題（[table-toolbar]）時也一樣，不會跑到左邊。
+// 表格動作、「欄位」與放大固定靠右；沒有標題（[table-toolbar]）時也一樣，不會跑到左邊。
 .ui-table-actions {
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
-  margin-inline-start: auto;
+  margin-inline: auto var(--p-space-3);
 }
 .ui-table-actions:empty {
   display: none;
 }
-.ui-table-actions:empty + .ui-table-columns-trigger {
-  margin-inline-start: auto;
-}
 .ui-table-columns-trigger {
-  margin-inline-end: var(--p-space-3);
   font-size: var(--p-font-xs);
+}
+// 對話框有自己的放大視窗，裡面的表格不再放大一層。
+:host-context(dialog) .ui-table-maximize {
+  display: none;
+}
+// 放大：外框貼齊視窗、浮在頁面上（低於抽屜 z-index 50 與 top layer 的對話框、浮層、toast），
+// 捲動區吃滿剩下的高度，分頁列留在底部。位置與大小的過渡由 DataTable.setMaximized 以 JS 動畫處理。
+.ui-table-frame.is-maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  width: 100%;
+  height: 100%;
+  // 最後一列的底角也跟著外框變直角（data-workspace.scss）。
+  --table-radius: 0px;
+  box-shadow: var(--shadow-floating);
+  > .ui-table-scroll {
+    flex: 1 1 auto;
+    max-height: none;
+  }
 }
 .ui-table-columns-panel {
   padding: var(--p-space-3);

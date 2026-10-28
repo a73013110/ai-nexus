@@ -86,10 +86,6 @@
     >
       <div table-toolbar class="ui-table-toolbar">
         <h2>活動紀錄</h2>
-        <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
-        @if (loading() && rows().length) {
-          <span class="sr-only" role="status">正在載入稽核紀錄…</span>
-        }
       </div>
       <button
         nxPending

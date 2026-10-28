@@ -9,7 +9,8 @@ import {
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
 
-function timing(element: HTMLElement) {
+/** 面板過渡的時長與曲線（`--motion-panel`、`--ease`），JS 動畫與 CSS 過渡共用。 */
+export function timing(element: HTMLElement) {
   const style = getComputedStyle(element);
   return {
     duration: parseFloat(style.getPropertyValue('--motion-panel')) || 240,

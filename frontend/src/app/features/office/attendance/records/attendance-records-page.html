@@ -167,13 +167,6 @@
           <span class="ui-count-label">{{ total() }} 人</span>
         }
       </h2>
-      @if (period()) {
-        <span class="form-note">{{ period() }}</span>
-      }
-      <!-- 首次載入由表格狀態播報；這裡只播報已有列時的重讀。 -->
-      @if (refreshing() && groups().length) {
-        <span class="sr-only" role="status">正在載入出勤紀錄…</span>
-      }
     </div>
     <button
       nxPending
