@@ -28,7 +28,7 @@
               <h3 [id]="id + '-target'">計費對象</h3>
               <p class="form-note">依名稱選擇；計費以供應商與原生識別碼對應。</p>
             </header>
-            <div class="form-section-body price-pair">
+            <div class="form-section-body form-row">
               <label
                 >供應商<nx-select
                   label="計費供應商"
@@ -61,7 +61,7 @@
               <p class="form-note">token 單價以每百萬 tokens 計，最多 8 位小數。</p>
             </header>
             <div class="form-section-body">
-              <div class="price-pair price-basis">
+              <div class="form-row price-basis">
                 <label
                   >幣別<nx-select
                     label="計費幣別"
@@ -77,7 +77,7 @@
                     (valueChange)="setKind($event)"
                 /></label>
               </div>
-              <div class="price-pair price-rates">
+              <div class="form-row price-rates">
                 @for (rate of rates; track rate.key) {
                   <label
                     >{{ rate.label
@@ -105,11 +105,11 @@
                 }
               </div>
               @if (rateError()) {
-                <p [id]="id + '-rate-error'" class="form-note price-error" role="alert">
+                <p [id]="id + '-rate-error'" class="form-note field-error" role="alert">
                   {{ rateError() }}
                 </p>
               }
-              <label class="price-trigger"
+              <label class="form-field-short price-trigger"
                 >單次計費時機<nx-select
                   label="單次計費時機"
                   [options]="triggers"
@@ -125,14 +125,14 @@
               <p class="form-note">只影響之後的呼叫，已記錄的費用不重算。</p>
             </header>
             <div class="form-section-body">
-              <div class="ui-field price-effective">
-                <nx-date-time-picker
-                  label="生效時間"
-                  [required]="false"
-                  [value]="effective()"
-                  (valueChange)="effective.set($event)"
-                /><small>台北時區；留空即儲存時生效，可排定未來版本。</small>
-              </div>
+              <nx-date-time-picker
+                class="form-field-short price-effective"
+                label="生效時間"
+                [required]="false"
+                [value]="effective()"
+                (valueChange)="effective.set($event)"
+              />
+              <p class="form-note">台北時區；留空即儲存時生效，可排定未來版本。</p>
               <label class="price-note-field"
                 >價格依據或備註<textarea
                   nxField

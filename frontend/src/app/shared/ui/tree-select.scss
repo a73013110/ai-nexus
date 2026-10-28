@@ -17,6 +17,7 @@
   background: var(--surface);
   color: var(--ink);
   font-size: var(--control-font-size);
+  font-weight: 400;
   text-align: left;
   &:hover:not(:disabled) {
     background: var(--hover);

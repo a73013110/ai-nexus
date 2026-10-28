@@ -56,14 +56,6 @@
   align-items: end;
   gap: var(--p-space-3);
 }
-.ui-field {
-  display: grid;
-  align-content: start;
-  gap: var(--field-label-gap);
-  min-width: 0;
-  font-size: var(--field-label-size);
-  color: var(--secondary);
-}
 // 欄位標題列：標籤靠左、即時說明靠右。說明若放在輸入框下方，查詢列底部對齊時該欄輸入框會被墊高；
 // 標題列固定一行高，說明裡的 inline 下拉超出也不改變列高。
 .ui-field-head {
@@ -81,6 +73,7 @@
   min-width: 0;
   color: var(--secondary);
   font-size: var(--p-font-xs);
+  font-weight: 400;
   white-space: nowrap;
 }
 // Native control defaults stay below feature classes, including long-form editors.
@@ -96,6 +89,8 @@ select:where(.ui-input) {
   background: var(--surface);
   color: var(--ink);
   font-size: var(--control-font-size);
+  // 欄位標籤是 500；值用一般字重，不承接外層 label。
+  font-weight: 400;
   line-height: var(--line-ui);
 }
 .ui-input:focus-visible {

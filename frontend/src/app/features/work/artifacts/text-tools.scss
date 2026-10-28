@@ -14,11 +14,6 @@
 .text-tools-content .dialog-body > :not(nx-markdown-editor) {
   flex: none;
 }
-.text-tools-title {
-  display: grid;
-  gap: var(--field-label-gap);
-  font-size: var(--text-label);
-}
 .text-tool-source {
   max-height: 25%;
   overflow: auto;

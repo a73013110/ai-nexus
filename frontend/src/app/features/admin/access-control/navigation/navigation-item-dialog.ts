@@ -108,11 +108,6 @@ function sameDraft(first: Draft, second: Draft) {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './navigation-item-dialog.html',
-  styles: `
-    .field-error {
-      color: var(--error);
-    }
-  `,
 })
 export class NavigationItemDialog {
   readonly id = uniqueId('nx-navigation-item');

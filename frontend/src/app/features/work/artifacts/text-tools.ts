@@ -85,7 +85,7 @@ import { routeOf } from '@core/api/catalog';
             @if (error()) {
               <nx-notice tone="danger" [message]="error()" />
             }
-            <label class="text-tools-title"
+            <label
               >成果名稱<input
                 nxField
                 autofocus

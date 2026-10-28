@@ -7,6 +7,7 @@
 - 結構：`.form-sections` ＞ `section.form-section`（`role="group"` 指向標題）＞ `header.form-section-head`（`h3`＋最多一句 `.form-note`）＋ `.form-section-body`。樣式在 [`platform.scss`](../../frontend/src/styles/platform.scss)。
 - 段落以細線分隔、不加框；容器夠寬時標題在左欄，窄時在上。段落依「填的人怎麼想」分：誰（持有人、收件者）、何時（期間）、怎麼存取（期限、附件）。
 - 只有一兩個欄位、不分組的表單（命名、確認）不分段，欄位直接放 `.dialog-body`。
+- 欄位一律寫成 `<label>標籤文字<控制項 /></label>`，原生 input 與 `Select`、`TreeSelect` 相同；表單容器（`.dialog-body`、`.form-section-body`、`.platform-form`）裡的 label 自動排成上下兩列，距離只由 `--field-label-gap` 決定，容器外（查詢列）加 `.ui-field`。不另寫 span 當標籤、不在控制項上補 margin；label 裡的每個元素各佔一列，補充字樣寫進標籤文字，說明放欄位下方的 `.form-note`，錯誤再加 `.field-error`。
 - 欄位間距只靠 `.form-section-body` 的 gap；不插空的容器（例如沒有內容時仍存在的 chip 列要用 `@if` 包住），不然會多出一段空白。
 - 成對的短欄位（起訖時間、數量與單位）用 `.form-row` 並排，放不下時自動換成一欄；名稱、代碼等短欄位加 `.form-field-short`。
 - 勾選框對齊欄位左緣，依附它的欄位用 `.form-subfields`。

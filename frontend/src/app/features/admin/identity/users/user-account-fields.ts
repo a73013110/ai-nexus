@@ -116,8 +116,8 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
           (checkedChange)="change('adEnabled', $event)"
         />
         @if (value().adEnabled) {
-          <div class="form-subfields login-fields">
-            <label
+          <div class="form-subfields">
+            <label class="form-field-short"
               >AD 帳號（不含網域）<input
                 nxField
                 aria-label="使用者 AD 帳號"
@@ -138,7 +138,7 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
           (checkedChange)="change('localEnabled', $event)"
         />
         @if (value().localEnabled) {
-          <div class="form-subfields login-fields">
+          <div class="form-subfields form-row">
             <label
               >本地登入帳號<input
                 nxField

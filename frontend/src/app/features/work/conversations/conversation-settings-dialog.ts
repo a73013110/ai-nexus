@@ -20,6 +20,7 @@ import { Select } from '@shared/ui/select';
 import { ProjectsApi } from '@features/work/projects/projects-api';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
+import { uniqueId } from '@shared/browser/unique-id';
 
 // 與後端 invalid_labels 的限制一致；送出前先擋，說明與錯誤訊息共用同一組數字。
 const MAX_LABELS = 5;
@@ -35,37 +36,59 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="讓這段對話更合用" closeLabel="關閉對話設定" />
       <div class="dialog-body">
-        <label
-          >對話指令<textarea
-            nxField
-            [formField]="fields.instruction"
-            rows="5"
-            placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
-          ></textarea>
-        </label>
-        <p class="panel-note">套用至這段對話後續的提問；已生成的回答與其他對話保留原樣。</p>
-        <label
-          >標籤<input nxField [formField]="fields.labels" placeholder="工作, 企劃, 會議"
-        /></label>
-        <p class="panel-note">以逗號分隔，{{ labelRule }}</p>
-        @if (session.has('projects') || projectId()) {
-          <span class="field-label" aria-hidden="true">所屬專案</span
-          ><nx-select
-            label="對話所屬專案"
-            [value]="projectId()"
-            [options]="projectOptions()"
-            [loading]="projectsRead.refreshing() || moving()"
-            [disabled]="busy() && !moving()"
-            (valueChange)="chooseProject($event)"
-          />
-          <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
-          @if (moving()) {
-            <span class="sr-only" role="status">正在儲存所屬專案…</span>
-          }
-        }
         @if (error()) {
           <nx-notice tone="danger" [message]="error()" />
         }
+        <div class="form-sections">
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-answer'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-answer'">回答方式</h3>
+              <p class="form-note">套用至這段對話之後的提問；已生成的回答與其他對話保留原樣。</p>
+            </header>
+            <div class="form-section-body">
+              <label
+                >對話指令<textarea
+                  nxField
+                  [formField]="fields.instruction"
+                  rows="5"
+                  placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
+                ></textarea>
+              </label>
+            </div>
+          </section>
+          <section class="form-section" role="group" [attr.aria-labelledby]="id + '-organize'">
+            <header class="form-section-head">
+              <h3 [id]="id + '-organize'">整理</h3>
+            </header>
+            <div class="form-section-body">
+              <label
+                >標籤<input
+                  nxField
+                  [formField]="fields.labels"
+                  placeholder="工作, 企劃, 會議"
+                  [attr.aria-describedby]="id + '-labels-note'"
+              /></label>
+              <p class="form-note" [id]="id + '-labels-note'">以逗號分隔，{{ labelRule }}</p>
+              @if (session.has('projects') || projectId()) {
+                <label class="form-field-short"
+                  >所屬專案<nx-select
+                    label="對話所屬專案"
+                    [value]="projectId()"
+                    [options]="projectOptions()"
+                    [loading]="projectsRead.refreshing() || moving()"
+                    [disabled]="busy() && !moving()"
+                    (valueChange)="chooseProject($event)"
+                /></label>
+                <p class="form-note">
+                  選擇後立即儲存；加入專案後，之後的提問會使用專案的共用指示與參考文件。
+                </p>
+                @if (moving()) {
+                  <span class="sr-only" role="status">正在儲存所屬專案…</span>
+                }
+              }
+            </div>
+          </section>
+        </div>
       </div>
       <footer class="dialog-foot">
         <button
@@ -90,6 +113,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
   </dialog>`,
 })
 export class ConversationSettingsDialog {
+  readonly id = uniqueId('nx-conversation-settings');
   readonly session = inject(WorkspaceSession);
   private readonly projects = inject(ProjectsApi);
   private readonly scope = inject(ViewScope);

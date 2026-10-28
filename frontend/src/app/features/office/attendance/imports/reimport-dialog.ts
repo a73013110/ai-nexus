@@ -112,16 +112,6 @@ export function reimportOutcome(result: PunchReimportResult): {
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    .reimport-range {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-      gap: var(--p-space-3);
-    }
-    .field-error {
-      color: var(--error);
-    }
-  `,
   template: `<dialog
     nxCompactDialog
     #reimportDialog
@@ -156,7 +146,7 @@ export function reimportOutcome(result: PunchReimportResult): {
               (valueChange)="date.set($event)"
             />
           } @else {
-            <div class="reimport-range">
+            <div class="form-row reimport-range">
               <nx-date-time-picker
                 label="開始檔名日期"
                 [withTime]="false"

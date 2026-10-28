@@ -2,11 +2,3 @@
 :host {
   display: contents;
 }
-.login-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-@container form-sections (max-width: 30rem) {
-  .login-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}

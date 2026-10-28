@@ -105,19 +105,18 @@ const same = (a: DayDraft, b: DayDraft) =>
               </div>
             </fieldset>
             <div class="day-remark">
-              <label [for]="id + '-remark'">備註 <small>選填</small></label>
-              <input
-                #remark
-                nxField
-                autocomplete="off"
-                placeholder="例如：國慶日、颱風停班"
-                [id]="id + '-remark'"
-                [attr.maxlength]="remarkMax"
-                [attr.aria-describedby]="id + '-remark-note'"
-                [value]="draft().remark"
-                [readOnly]="saving()"
-                (input)="update('remark', remark.value)"
-              />
+              <label
+                >備註（選填）<input
+                  #remark
+                  nxField
+                  autocomplete="off"
+                  placeholder="例如：國慶日、颱風停班"
+                  [attr.maxlength]="remarkMax"
+                  [attr.aria-describedby]="id + '-remark-note'"
+                  [value]="draft().remark"
+                  [readOnly]="saving()"
+                  (input)="update('remark', remark.value)"
+              /></label>
               <p class="day-remark-meta">
                 <span class="form-note" [id]="id + '-remark-note'"
                   >罕用字與表情符號公文系統存不下，會被拒絕。</span

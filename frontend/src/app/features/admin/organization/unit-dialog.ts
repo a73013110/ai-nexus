@@ -200,11 +200,6 @@ const sameDraft = (a: Draft, b: Draft) =>
       }
     </dialog>
     <nx-confirm-dialog />`,
-  styles: `
-    .field-error {
-      color: var(--error);
-    }
-  `,
 })
 export class UnitDialog {
   readonly id = uniqueId('nx-unit-dialog');

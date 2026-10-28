@@ -217,15 +217,6 @@ form.dialog-form {
   padding: 0;
   scrollbar-gutter: auto;
 }
-.dialog-body :where(label:not(.selection-control), .field-label) {
-  display: block;
-  color: var(--ink);
-  font-size: var(--text-label);
-  font-weight: 500;
-}
-.dialog-body :where(label:not(.selection-control), .field-label) > :where(input, select, textarea) {
-  margin-top: var(--field-label-gap);
-}
 .dialog-body textarea {
   resize: vertical;
   min-height: 7rem;

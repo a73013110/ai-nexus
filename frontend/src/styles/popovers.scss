@@ -15,6 +15,8 @@
   border-radius: var(--radius-surface);
   background: var(--surface);
   color: var(--ink);
+  // 浮層在 DOM 上可能位於欄位 label 之內，字重不承接觸發處。
+  font-weight: 400;
   box-shadow: var(--shadow-floating);
   overscroll-behavior: contain;
   opacity: 0;

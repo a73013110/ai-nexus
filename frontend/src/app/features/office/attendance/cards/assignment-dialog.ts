@@ -230,11 +230,6 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
       }
     </dialog>
     <nx-confirm-dialog />`,
-  styles: `
-    .field-error {
-      color: var(--error);
-    }
-  `,
 })
 export class AssignmentDialog {
   readonly id = uniqueId('nx-assignment-dialog');

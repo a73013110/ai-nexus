@@ -96,15 +96,10 @@
     scale: 1;
   }
 }
+// 字數與說明緊接在備註欄下方，不吃對話框的段落間距。
 .day-remark {
   display: grid;
   gap: var(--field-label-gap);
-  label small {
-    margin-inline-start: var(--p-space-1);
-    color: var(--muted);
-    font-size: var(--p-font-xs);
-    font-weight: 400;
-  }
 }
 .day-remark-meta {
   display: flex;

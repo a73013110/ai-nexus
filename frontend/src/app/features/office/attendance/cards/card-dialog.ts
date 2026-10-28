@@ -168,11 +168,6 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
       }
     </dialog>
     <nx-confirm-dialog />`,
-  styles: `
-    .field-error {
-      color: var(--error);
-    }
-  `,
 })
 export class CardDialog {
   readonly id = uniqueId('nx-card-dialog');
