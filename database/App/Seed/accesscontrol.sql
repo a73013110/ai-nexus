@@ -99,8 +99,6 @@ USING (VALUES
     (N'workspace', N'repositories', NULL, NULL),
     -- 出勤紀錄的預設範圍：每位成員看自己的（ADR 0018）；組織勾選為主管的人另外看得到所管單位及下層（ADR 0022），不必另建主管群組。
     (N'workspace', N'attendance.records', N'own', N'managed-tree'),
-    (N'workspace', N'quality', NULL, NULL),
-    (N'workspace', N'quality.retrieval', NULL, NULL),
     (N'administrators', N'dashboard', NULL, NULL),
     (N'administrators', N'chat', NULL, NULL),
     (N'administrators', N'projects', NULL, NULL),
