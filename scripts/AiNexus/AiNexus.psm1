@@ -900,25 +900,25 @@ function New-RepoDatabaseUpdateScript {
 
 function New-RepoIisPackage {
     <#
-    .SYNOPSIS Lays out the IIS part of a release package from a win-x64 publish folder: app/, config/ templates, empty keys/ and logs/.
+    .SYNOPSIS Lays out the IIS part of a release package from a win-x64 publish folder: app/, plus config/ templates and empty keys/ and logs/ with -DataRoot.
     .DESCRIPTION
-    只有 app/ 是 IIS 實體路徑；config/ 只在不存在時由範本建立，Files.StoragePath 與 Diagnostics.Directory 設為 DataRoot 下的
+    只有 app/ 是 IIS 實體路徑；升級只替換它，執行中的 config、keys 與站外資料都不動，所以預設只產生 app/。
+    首次部署（新主機）才給 -DataRoot：config/ 由範本建立，Files.StoragePath 與 Diagnostics.Directory 設為 DataRoot 下的
     attachments、diagnostics。套件不含秘密（-IncludeLocalConfig 只用於自己的測試主機），正式主機不需要 PowerShell 或 SqlPackage。
     #>
     param(
-        [Parameter(Mandatory)][string]$Publish, [Parameter(Mandatory)][string]$Destination, [Parameter(Mandatory)][string]$DataRoot,
+        [Parameter(Mandatory)][string]$Publish, [Parameter(Mandatory)][string]$Destination, [string]$DataRoot,
         [switch]$IncludeLocalConfig, [switch]$AllowUntrustedSql
     )
     # Windows 路徑在任何平台都檢查：套件是給 Windows IIS 主機的。
-    if ($DataRoot -notmatch '^[A-Za-z]:\\') { throw 'DataRoot 必須是正式主機上的絕對路徑，例如 D:\AiNexus\data。' }
+    if ($DataRoot -and $DataRoot -notmatch '^[A-Za-z]:\\') { throw 'DataRoot 必須是正式主機上的絕對路徑，例如 D:\AiNexus\data。' }
+    if (!$DataRoot -and ($IncludeLocalConfig -or $AllowUntrustedSql)) { throw '-IncludeLocalConfig 與 -AllowUntrustedSql 只影響首次部署的 config，要和 -DataRoot 一起用。' }
     $deps = Join-Path $Publish 'AiNexus.Host.deps.json'
     if (!(Test-Path -LiteralPath $deps)) { throw "找不到發布產物：$Publish。" }
     # 其他平台的產物缺 Windows 版的 SqlClient 與 AD 元件，在 IIS 上啟動才會失敗，所以在打包時就擋下。
     if ((Get-Content -LiteralPath $deps -Raw | ConvertFrom-Json).runtimeTarget.name -notlike '*/win-x64') { throw '發布產物不是 win-x64；請以 scripts/Build.ps1 -Runtime win-x64 重新建置。' }
     $app = Join-Path $Destination 'app'
-    foreach ($directory in @($app, (Join-Path $Destination 'config'), (Join-Path $Destination 'keys'), (Join-Path $Destination 'logs'))) {
-        New-Item -ItemType Directory -Path $directory -Force | Out-Null
-    }
+    New-Item -ItemType Directory -Path $app -Force | Out-Null
     Get-ChildItem -LiteralPath $Publish | Where-Object { $_.Name -notin @('logs', 'App_Data') } | Copy-Item -Destination $app -Recurse
 
     # SDK 對 RID 發布會把 processPath 改成 apphost 卻不動 arguments；兩者不一致時 exe 會收到 dll 參數，IIS 啟動失敗。
@@ -926,7 +926,9 @@ function New-RepoIisPackage {
     if (!$aspNetCore -or $aspNetCore.processPath -ne '.\AiNexus.Host.exe' -or $aspNetCore.arguments) {
         throw "web.config 的 aspNetCore 必須是 processPath='.\AiNexus.Host.exe'、arguments 為空；實際為 processPath='$($aspNetCore.processPath)'、arguments='$($aspNetCore.arguments)'。請修 backend/src/AiNexus.Host/web.config。"
     }
+    if (!$DataRoot) { return }
 
+    foreach ($directory in 'config', 'keys', 'logs') { New-Item -ItemType Directory -Path (Join-Path $Destination $directory) -Force | Out-Null }
     $settingsPath = Join-Path $Destination 'config/appsettings.Production.json'
     $secretsPath = Join-Path $Destination 'config/appsettings.Secrets.json'
     $templates = Join-Path $root 'backend/src/AiNexus.Host'

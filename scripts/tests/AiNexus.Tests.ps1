@@ -736,3 +736,29 @@ Describe 'Shared settings and the saved SQL login' {
         Get-RepoSavedCredential -SecretsPath $secrets | Should -BeNullOrEmpty
     }
 }
+
+Describe 'New-RepoIisPackage' {
+    BeforeAll {
+        $publish = Join-Path $TestDrive 'publish'
+        New-Item -ItemType Directory -Path $publish | Out-Null
+        Set-Content -LiteralPath (Join-Path $publish 'AiNexus.Host.deps.json') -Value '{"runtimeTarget":{"name":".NETCoreApp,Version=v10.0/win-x64"}}'
+        Set-Content -LiteralPath (Join-Path $publish 'web.config') -Value '<configuration><system.webServer><aspNetCore processPath=".\AiNexus.Host.exe" arguments="" /></system.webServer></configuration>'
+    }
+
+    It 'packages only the app folder for an upgrade' {
+        $package = Join-Path $TestDrive 'upgrade'
+        New-RepoIisPackage -Publish $publish -Destination $package
+        @(Get-ChildItem -LiteralPath $package).Name | Should -Be @('app')
+    }
+
+    It 'adds config templates under the data root for a first deployment' {
+        $package = Join-Path $TestDrive 'first'
+        New-RepoIisPackage -Publish $publish -Destination $package -DataRoot 'D:\AiNexus\data'
+        @(Get-ChildItem -LiteralPath $package | Sort-Object Name).Name | Should -Be @('app', 'config', 'keys', 'logs')
+        (Get-Content -LiteralPath (Join-Path $package 'config/appsettings.Production.json') -Raw | ConvertFrom-Json).Files.StoragePath | Should -Be 'D:\AiNexus\data\attachments'
+    }
+
+    It 'refuses config options without a data root' {
+        { New-RepoIisPackage -Publish $publish -Destination (Join-Path $TestDrive 'x') -AllowUntrustedSql } | Should -Throw '*-DataRoot*'
+    }
+}

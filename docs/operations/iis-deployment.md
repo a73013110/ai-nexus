@@ -40,11 +40,12 @@ D:\CoreProject\AiNexus\
 Set-Location D:\GitProject\ai-nexus
 pwsh -NoProfile -File scripts/Verify.ps1
 pwsh -NoProfile -File scripts/Release.ps1                                   # 看上一版、下一版與這次會帶什麼
-pwsh -NoProfile -File scripts/Release.ps1 -Publish -DataRoot 'D:\CoreProject\AiNexus\data'
+pwsh -NoProfile -File scripts/Release.ps1 -Publish                         # 升級：只產生 app\
+pwsh -NoProfile -File scripts/Release.ps1 -Publish -DataRoot 'D:\CoreProject\AiNexus\data'   # 新主機首次部署
 ```
 
-版號與發版流程見 [ADR 0027](../decisions/0027-single-version-and-tag-based-release.md)。`-Publish` 要求工作區乾淨、分支是 `master` 或 `hotfix/*`，產生套件後建 annotated tag，push 前會再問一次；只想先看套件用 `-Preview`。只帶其中一部分用 `-Only App` 或 `-Only Database`。
+版號與發版流程見 [ADR 0027](../decisions/0027-single-version-and-tag-based-release.md)。`-Publish` 要求工作區乾淨、分支是 `master` 或 `hotfix/*`，產生套件後建 annotated tag，push 前會再問一次；只想先看套件用 `-Preview`。只帶其中一部分用 `-Only App` 或 `-Only Database`。還沒有任何含資料庫的發版時（正式機與開發共用同一個庫）只發程式，見 [ADR 0027](../decisions/0027-single-version-and-tag-based-release.md)。
 
-套件放 `artifacts/releases/v<版號>/`，只含部署需要的東西：`app\`（含 `version.json`）／config 範本／空 keys／logs，以及 `database\`（`update.sql` 從上一版升到這一版，已在 LocalDB 演練過；`changes.md`、`compare.scmp`、`rollback.sql`、`manual\`；部署方式見 [資料庫建置與權限](database-setup.md#部署)），不預設攜帶秘密，正式主機也不需要執行任何腳本。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（帶 app 時必填），套件 config 的 `Files.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。`app` 已包含前端與後端，IIS 主機不用 Node.js。
+套件放 `artifacts/releases/v<版號>/`，只含部署需要的東西：`app\`（含 `version.json`）與 `database\`（`update.sql` 從上一版升到這一版，已在 LocalDB 演練過；`changes.md`、`compare.scmp`、`rollback.sql`、`manual\`；部署方式見 [資料庫建置與權限](database-setup.md#部署)），不預設攜帶秘密，正式主機也不需要執行任何腳本。文件不打包，請看 repo。升級只替換 `app\`（[升級](iis-upgrade.md)）。首次部署加 `-DataRoot`（正式主機的站外資料根目錄），另產生 config 範本與空的 keys／logs，config 的 `Files.StoragePath`、`Diagnostics.Directory` 設為其下的 `attachments`、`diagnostics`。`app` 已包含前端與後端，IIS 主機不用 Node.js。
 
-若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。既有 config／keys 不會被這個封裝流程覆蓋。
+若是在受控環境製作含本機設定的內部移轉套件，可以在 `-DataRoot` 之外加 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。既有 config／keys 不會被這個封裝流程覆蓋。

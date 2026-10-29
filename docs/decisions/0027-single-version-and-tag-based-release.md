@@ -28,6 +28,9 @@
 | 改了 SQL | 照舊 `Export-Database.ps1` 後 commit（[ADR 0010](0010-database-first-schema.md)） |
 | 看要發什麼 | `Release.ps1`：各元件自上次發版的變更（程式列 `feat`／`fix`，資料庫列物件）、開發庫尚未匯出的物件、下一個版號 |
 | 發版 | `Release.ps1 -Publish`：有變更的元件都放入；程式還在跑內規流程時加 `-Only Database` |
+| 上線前，正式機與開發共用同一個庫 | `Release.ps1 -Publish` 只發程式：還沒有含資料庫的 tag 時自動略過資料庫（結構已在庫裡）。分庫後以 `-Only Database -From <分庫時的 commit>` 發第一次資料庫 |
+| 已部署過、但當時還沒有 tag | 在部署的 commit 補 `git tag -a v<當月>.0 <commit> -m "AI Nexus v…" -m "Components: app"` 當基準，第一次發版的更新說明才不會列出全部歷史 |
+| 新主機首次部署 | 加 `-DataRoot <站外資料目錄>`，另產生 config 範本與空的 keys／logs；升級只替換 `app/` |
 | 目標庫落後不只一版（UAT 與 PROD 不同步、某版沒上） | 加 `-From v2026.11.3`，填目標庫版本頁顯示的版本 |
 | 舊版出問題、master 已有未發的功能 | 從 tag 開 `hotfix/*` 分支修正，在分支上 `-Publish`，再合回 master |
 | 本機重現客戶的資料庫 | `Initialize-Database.ps1 -Version v2026.11.3` 在 LocalDB 建臨時庫 |
@@ -37,7 +40,7 @@
 ```text
 README.md        執行順序（先資料庫、後程式）與手動步驟
 app/             IIS 套件；根目錄 version.json（版本、commit、建置時間、需要的最低資料庫版本、feat／fix）
-config/ keys/ logs/  與現行 IIS 套件相同
+config/ keys/ logs/  只在首次部署（-DataRoot）產生
 database/
   update.sql     唯一要執行的檔案（SSMS，SQLCMD 模式）
   changes.md     變更清單，給人審核

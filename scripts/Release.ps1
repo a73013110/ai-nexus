@@ -7,9 +7,10 @@
 .DESCRIPTION
 版號 YYYY.MM.N 只存在 annotated tag（v2026.11.4），tag 說明的 Components trailer 記錄這次發了哪些部分（ADR 0027）。
 元件依路徑判定：database/ 是資料庫，backend/、frontend/、contracts/ 是程式；各自和上一個含該元件的 tag 比較，有變更才放入。
+還沒有任何含資料庫的發版時（正式機與開發共用同一個庫）只發程式。
 
-發布包在 artifacts/releases/v<版號>/：README.md（執行順序）、IIS 套件（app/、config/、keys/、logs/）與 database/
-（update.sql、changes.md、compare.scmp、rollback.sql、manual/）。
+發布包在 artifacts/releases/v<版號>/：README.md（執行順序）、app/（升級只替換它）與 database/
+（update.sql、changes.md、compare.scmp、rollback.sql、manual/）；首次部署加 -DataRoot 另有 config/ 範本與空的 keys/、logs/。
 資料庫更新包以起點 tag 與目前 commit 各建一份 dacpac 比對產生（git worktree，依 commit 快取在 .local/releases/），
 並在 LocalDB 演練：以起點建庫、執行 update.sql，再和目前的 dacpac 比對必須沒有差異；預期快照取自演練庫。
 
@@ -29,13 +30,14 @@
 省略時為上一個含資料庫的 tag。目標庫記錄的版本必須等於起點，update.sql 才會執行。
 
 .PARAMETER DataRoot
-正式主機上站外資料的根目錄（絕對路徑），例如 D:\AiNexus\data；放入程式時必填。
+首次部署（新主機）才需要：正式主機上站外資料的根目錄（絕對路徑），例如 D:\AiNexus\data。
+給了才產生 config/ 範本（附件與診斷目錄設在其下）與空的 keys/、logs/；升級只替換 app/，不必給。
 
 .PARAMETER AllowUntrustedSql
-設定 Databases.App.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
+首次部署的 config 設定 Databases.App.TrustServerCertificate=true，用於自簽憑證的 SQL Server；要和 -DataRoot 一起用。
 
 .PARAMETER IncludeLocalConfig
-以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）。
+首次部署的 config 以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）；要和 -DataRoot 一起用。
 
 .COMPONENT
 發布
@@ -44,7 +46,10 @@
 ./scripts/Release.ps1
 
 .EXAMPLE
-./scripts/Release.ps1 -Publish -DataRoot 'D:\AiNexus\data'
+./scripts/Release.ps1 -Publish
+
+.EXAMPLE
+./scripts/Release.ps1 -Publish -DataRoot 'D:\AiNexus\data'   # 新主機首次部署
 
 .EXAMPLE
 ./scripts/Release.ps1 -Publish -Only Database
@@ -116,7 +121,7 @@ if (!$Publish -and !$Preview) {
     $names = @{ Added = '新增'; Modified = '修改'; Deleted = '刪除' }
     # 還沒有起點時整個結構都算新增，只列數量。
     if ($start) { foreach ($item in $objects) { Write-Host "  $($names[$item.Change]) $($item.Type) $($item.Name)" } }
-    else { Write-Host '  還沒有含資料庫的發版；第一次發資料庫要以 -From 指定客戶庫目前對應的 commit，新客戶改用 Initialize-Database.ps1 建庫。' }
+    else { Write-Host '  還沒有含資料庫的發版：-Publish 只發程式（正式機與開發共用同一個庫時）。第一次發資料庫以 -Only Database -From 指定目標庫對應的 commit，新客戶改用 Initialize-Database.ps1 建庫。' }
     foreach ($file in @(Get-RepoDatabaseChange -Scripts -From $(if ($start) { $start.Commit }))) { Write-Host "  一次性資料修正 $file" }
 
     # 開發庫在最後一次提交匯出之後改過的物件＝可能還沒匯出；查不到就略過，不影響狀態。
@@ -141,7 +146,7 @@ if (!$Publish -and !$Preview) {
         } catch { Write-Host "開發庫：未檢查（$($_.Exception.InnerException?.Message ?? $_.Exception.Message)）" }
     }
     Write-Host ''
-    Write-Host '發版：./scripts/Release.ps1 -Publish -DataRoot <正式主機資料目錄>（只發資料庫加 -Only Database）'
+    Write-Host '發版：./scripts/Release.ps1 -Publish（新主機首次部署加 -DataRoot <站外資料目錄>；只發資料庫加 -Only Database）'
     return
 }
 
@@ -153,13 +158,19 @@ if ($Publish) {
     if ($tagged) { throw "HEAD 已經是 $($tagged[0].Tag)。" }
 }
 $components = @($changed.Keys | Where-Object { $changed[$_] -and (!$Only -or $_ -eq $Only.ToLowerInvariant()) })
+# 還沒有含資料庫的發版＝正式機與開發共用同一個庫（尚未上線），結構已經在目標庫裡，沒有東西要發；明確要發資料庫時才停下。
+if ('database' -in $components -and !$start -and !$Only) {
+    $components = @($components | Where-Object { $_ -ne 'database' })
+    Write-Warning '還沒有含資料庫的發版，略過資料庫（共用開發庫時正常）。正式庫分開後以 -Only Database -From <分庫時的 commit> 發第一次資料庫。'
+}
 if (!$components.Count) {
     throw "$(if ($Only) { "$($labels[$Only.ToLowerInvariant()])" } else { '程式與資料庫' })自上次發版沒有變更，不需要發版。"
 }
 if ('database' -in $components -and !$start) {
     throw '還沒有含資料庫的發版 tag，無法決定比對起點。新客戶以 scripts/Initialize-Database.ps1 建庫；既有的客戶庫以 -From <commit> 指定它目前對應的 commit。'
 }
-if ('app' -in $components -and !$DataRoot) { throw '放入程式時需要 -DataRoot（正式主機上站外資料的根目錄，例如 D:\AiNexus\data）。' }
+if ($DataRoot -and 'app' -notin $components) { throw '-DataRoot 只用於放入程式的首次部署。' }
+if (!$DataRoot -and ($IncludeLocalConfig -or $AllowUntrustedSql)) { throw '-IncludeLocalConfig 與 -AllowUntrustedSql 只影響首次部署的 config，要和 -DataRoot 一起用。' }
 
 $version = if ($Publish) { $next } else { "$next-preview" }
 $package = Resolve-RepoArtifactPath "artifacts/releases/v$version"
@@ -338,7 +349,7 @@ $steps.Add(@{ Name = '寫入說明'; Run = {
             }
             if ($has.app) {
                 $readme += @(
-                    "$((++$number)). 程式：以 ``app\`` 替換網站實體路徑，保留執行中的 config、keys 與站外資料（docs/operations/iis-upgrade.md）。首次部署另依 docs/operations/iis-deployment.md 建立 config 與目錄權限。"
+                    "$((++$number)). 程式：以 ``app\`` 替換網站實體路徑，保留執行中的 config、keys 與站外資料（docs/operations/iis-upgrade.md）。$(if ($DataRoot) { '首次部署：把 `config\`、`keys\`、`logs\` 放在 app 旁邊，依 docs/operations/iis-deployment.md 填 config 與設定目錄權限。' } else { '新主機首次部署要另以 `-DataRoot` 產生 config 範本。' })"
                     '   - 網站啟動時檢查資料庫結構；不一致時拒絕啟動並在事件記錄列出差異。'
                 )
             }
