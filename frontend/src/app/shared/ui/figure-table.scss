@@ -5,7 +5,33 @@
 .figure-table table {
   table-layout: fixed;
 }
+// 占比（`.figure-share` 包住長條與數值）：長條吃掉數值以外的寬度，數值欄固定寬、各列長條終點對齊。
+// 不用百分比寬度：捲動區算固有高度時百分比沒有依據，會把表格多撐出一截。
+.figure-share {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  white-space: nowrap;
+  meter {
+    flex: 1;
+    min-width: 0;
+    height: 0.375rem;
+  }
+  .ui-table-numeric {
+    flex: none;
+    min-width: 4rem;
+    text-align: end;
+  }
+}
 @include bp.below(narrow) {
+  // 卡片裡標籤、長條、數值排成一列，讀成「使用人數 ▬▬ 12 人」。
+  .figure-table.ui-table-stack td:has(> .figure-share) {
+    display: flex;
+    align-items: center;
+  }
+  .figure-table.ui-table-stack .figure-share {
+    flex: 1;
+  }
   .figure-table.ui-table-stack tbody tr {
     position: relative;
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -110,14 +110,16 @@
                   </span>
                 </span>
               </th>
-              <td class="usage-share figure-span" data-label="使用人數">
-                <meter
-                  min="0"
-                  max="1"
-                  [value]="share(row.users)"
-                  [attr.aria-label]="row.name + ' 使用人數'"
-                ></meter
-                ><span class="ui-table-numeric">{{ format(row.users) }} 人</span>
+              <td class="figure-span" data-label="使用人數">
+                <span class="figure-share"
+                  ><meter
+                    min="0"
+                    max="1"
+                    [value]="share(row.users)"
+                    [attr.aria-label]="row.name + ' 使用人數'"
+                  ></meter
+                  ><span class="ui-table-numeric">{{ format(row.users) }} 人</span></span
+                >
               </td>
               <td class="ui-table-numeric" data-label="操作次數">{{ format(row.events) }}</td>
               <td class="ui-table-numeric" data-label="失敗或拒絕">

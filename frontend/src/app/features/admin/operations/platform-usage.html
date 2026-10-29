@@ -164,14 +164,16 @@
             <td class="ui-table-numeric" data-label="tokens">
               {{ format(kind.inputTokens + kind.outputTokens) }}
             </td>
-            <td class="usage-share figure-span" data-label="占比">
-              <meter
-                min="0"
-                [max]="kindTotal() || 1"
-                [value]="kind.requests"
-                [attr.aria-label]="kindName(kind.kind) + ' 請求占比'"
-              ></meter
-              ><span class="ui-table-numeric">{{ share(kind.requests, kindTotal()) }}</span>
+            <td class="figure-span" data-label="占比">
+              <span class="figure-share"
+                ><meter
+                  min="0"
+                  [max]="kindTotal() || 1"
+                  [value]="kind.requests"
+                  [attr.aria-label]="kindName(kind.kind) + ' 請求占比'"
+                ></meter
+                ><span class="ui-table-numeric">{{ share(kind.requests, kindTotal()) }}</span></span
+              >
             </td>
           </tr>
         }
