@@ -46,6 +46,7 @@ USING (VALUES
     (N'organization.import'),
     (N'mail.messages'),
     (N'mail.messages.resend'),
+    (N'releases'),
     (N'quality'),
     (N'quality.retrieval'),
     (N'design')
@@ -135,6 +136,7 @@ USING (VALUES
     (N'administrators', N'diagnostics.logs.export', NULL, NULL),
     (N'administrators', N'mail.messages', NULL, NULL),
     (N'administrators', N'mail.messages.resend', NULL, NULL),
+    (N'administrators', N'releases', NULL, NULL),
     (N'administrators', N'quality', NULL, NULL),
     (N'administrators', N'quality.retrieval', NULL, NULL),
     (N'administrators', N'design', NULL, NULL),
@@ -195,6 +197,7 @@ VALUES
     (N'system.observability.audit', N'system.observability', N'page', N'audit', NULL, 30),
     (N'system.observability.audit-usage', N'system.observability', N'page', N'audit.usage', NULL, 35),
     (N'system.observability.mail-messages', N'system.observability', N'page', N'mail.messages', NULL, 40),
+    (N'system.observability.releases', N'system.observability', N'page', N'releases', NULL, 50),
     (N'system.evaluation', N'system', N'group', NULL, N'評測與開發', 50),
     (N'system.evaluation.quality', N'system.evaluation', N'page', N'quality', NULL, 10),
     (N'system.evaluation.quality-retrieval', N'system.evaluation', N'page', N'quality.retrieval', NULL, 20),

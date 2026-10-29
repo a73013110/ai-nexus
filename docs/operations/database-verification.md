@@ -26,6 +26,7 @@ EXEC [releases].[usp_GetSchemaObject] N'operations', N'usp_ListAdminUsers';   --
 ## 手動異動
 
 - 比對的是「這一版應有的結構」（`update.sql` 寫入的快照，取自發版時的演練庫），所以更新前就存在的客戶端修改也會列出。判定與時間見 [ADR 0028](../decisions/0028-schema-drift-and-version-display.md)。
+- 網站的[版本頁](../features/releases.md)列出同樣的清單、並排差異，並可下載異動物件目前定義的 `.sql`。
 - 有異動＝熱修尚未回收：在開發庫做同樣修改、以 `scripts/Export-Database.ps1` 匯出並提交，下一版更新後清單歸零才算結案。不在正式機自動修正。
 - 下一次 `update.sql` 的前置檢查遇到異動會停止，避免覆蓋尚未回收的修改。
 - 不比對：權限、使用者、統計、全文索引（改用主機指令 `verify sql`）與欄位說明；`database/App/export-exclusions.txt` 列出的表也略過。

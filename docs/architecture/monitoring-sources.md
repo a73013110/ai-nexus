@@ -32,6 +32,7 @@
 | `knowledge-index` | Knowledge | 30 秒 | 文件狀態索引，只數未完成與失敗 | 有失敗文件 degraded |
 | `usage-today` | Billing | 60 秒 | `UsageReports`，伺服器本地日，走 `CreatedAt` 覆蓋索引 | 失敗 ≥ 5 次且 > 20% degraded |
 | `storage` | Files | 5 分鐘 | 檔案數與大小、附件磁碟可用空間 | 可用 < 10% degraded、< 3% failing |
+| `database-schema` | Releases | 10 分鐘 | `releases.usp_ListSchemaChanges`（伺服器端算雜湊，只傳回差異）與最新的資料庫部署 | 資料庫低於程式需要的版本 failing；有結構異動 degraded；還沒有快照 idle |
 | `web-search` | WebSearch | 60 秒 | 只讀設定，不連線（與聊天頁共用 `WebSearchService.StatusOf`） | 已啟用但設定不完整 degraded；未啟用 idle |
 
 ## 成本

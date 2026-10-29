@@ -20,6 +20,8 @@ internal static class NotificationDisplay
         "share" => FeatureCatalog.RouteOf(FeatureCatalog.Sharing) + "/" + id,
         "task" => FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + id,
         "repository-review" => FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "?review=" + id,
+        // 結構異動是整個資料庫的狀態，沒有單一資料列可指，id 不使用。
+        "schema-changes" => FeatureCatalog.RouteOf(FeatureCatalog.Releases),
         _ => null,
     };
 

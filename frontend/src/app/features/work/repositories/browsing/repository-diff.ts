@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { formatNumber } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
-import { type DiffFile, parseDiff } from './repository-diff-parser';
+import { type DiffFile, parseDiff } from '@shared/browser/diff';
 
 /** 先開啟的行；較後的與非常大的檔案要點擊才會展開，讓長的 diff 維持快速。 */
 const openBudget = 1600;

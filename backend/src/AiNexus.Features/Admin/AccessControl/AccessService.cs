@@ -30,6 +30,18 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     public async Task<bool> HoldsAsync(Guid user, string feature, CancellationToken ct)
         => (await ForUserAsync(user, ct)).Features.Any(x => x.Id == feature);
 
+    /// <summary>目前持有 <paramref name="feature"/> 的使用者（規則同 <see cref="ForUserAsync"/>），給背景工作決定通知誰。</summary>
+    public async Task<IReadOnlyList<Guid>> HoldersAsync(string feature, CancellationToken ct)
+        => await (from userId in activeUsers.Ids
+                  join assignment in db.Set<UserRole>() on userId equals assignment.UserId
+                  join role in db.Set<Role>() on assignment.RoleId equals role.Id
+                  join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
+                  join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
+                  join grant in db.Set<RoleGroupFeature>() on roleGroup.Id equals grant.GroupId
+                  join granted in db.Set<Feature>() on grant.FeatureId equals granted.Id
+                  where role.Enabled && roleGroup.Enabled && granted.Enabled && granted.Id == feature
+                  select userId).Distinct().ToListAsync(ct);
+
     /// <summary>所有選單節點（平面清單、含外部連結的可見群組），同層依 <c>SortOrder</c>、再依 Id；管理端清單與選單樹共用。</summary>
     public async Task<IReadOnlyList<NavigationItemDto>> NavigationItemsAsync(CancellationToken ct)
     {

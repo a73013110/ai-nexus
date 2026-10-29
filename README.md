@@ -71,6 +71,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 功能使用量 | 依稽核統計各功能的使用人數、次數與失敗 | [功能使用量](docs/features/feature-usage.md) |
 | 系統日誌 | 查證代碼、錯誤與耗時、關聯流程；查詢／詳情／匯出分別授權 | [系統日誌](docs/features/system-logs.md) |
 | 即時監控 | 在線人員與工作階段、API／SQL／HTTP 負載、操作時間軸 | [監控](docs/features/monitoring.md) |
+| 版本 | 使用者選單的版本與本版更新、新版提示、版本對照、正式機結構異動與並排差異、部署歷史 | [版本與結構異動](docs/features/releases.md) |
 | 郵件 | 系統信 outbox、SMTP／Google relay、重試與暫停、寄送紀錄、重寄與測試信 | [郵件寄送](docs/features/mail.md) |
 | 介面元件 | 管理員檢視實際元件、主題、鍵盤與動畫 | [設計系統](docs/frontend/design-system.md) |
 

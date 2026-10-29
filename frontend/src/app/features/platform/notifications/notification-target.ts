@@ -7,6 +7,8 @@ const TARGETS = new Map<string, { feature: RoutedId; suffix: (id: string) => str
   ['share', { feature: 'sharing', suffix: (id) => `/${id}` }],
   ['task', { feature: 'jobs', suffix: (id) => `?job=${id}` }],
   ['repository-review', { feature: 'repositories', suffix: (id) => `?review=${id}` }],
+  // 結構異動是整個資料庫的狀態，id 不使用（伺服器送空的 GUID）。
+  ['schema-changes', { feature: 'releases', suffix: () => '' }],
 ]);
 
 /** 通知指向的功能；不認得的種類為 `null`。 */

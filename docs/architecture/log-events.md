@@ -37,10 +37,12 @@
 | 3407 / 3408 | `database.external_unavailable` / `database.external_restored`（所有外部資料庫共用，`Database` 欄位區分） | `Platform/Data/External/ExternalDatabase.cs` |
 | 3409 / 3410 | `attendance.calendar_write_failed` / `attendance.calendar_commit_failed` | `Attendance/Gd/GdCalendarWriter.cs` |
 | 3411 | `database.external_query_rejected` | 同上 |
+| 3500 / 3501 / 3502 | `releases.schema_changes_read` / `releases.schema_changes_found` / `releases.schema_check_failed` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatch.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
 | 5003 / 5004 / 5005 | `database.read_committed_snapshot_off` / `database.schema_mismatch` / `database.schema_drift` | `AiNexus.Data/App/DatabaseSchema.cs` |
+| 5006 / 5007 | `releases.app_deployed` / `releases.app_deployment_unrecorded` | `Releases/Versions/AppDeploymentRecorder.cs` |
 | 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
 | 6201 | `gd.file_unavailable` | `Platform/Gd/GdFileSource.cs` |

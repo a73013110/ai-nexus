@@ -1,0 +1,259 @@
+<nx-feature-page
+  [title]="session.featureName('releases')"
+  description="這一版的程式與資料庫、正式機上不在版本裡的結構異動，以及部署歷史。"
+>
+  @if (session.has('releases')) {
+    <button
+      nxRefresh
+      page-actions
+      aria-label="重新讀取版本與異動"
+      [busy]="status.refreshing() || changes.refreshing() || deployments.refreshing()"
+      (refresh)="refresh()"
+    ></button>
+  }
+  @if (session.has('releases')) {
+    @if (status.error()) {
+      <nx-notice tone="danger" [message]="status.error()">
+        <button
+          nxPending
+          notice-actions
+          type="button"
+          class="secondary-button"
+          [pending]="status.refreshing()"
+          (click)="status.reload()"
+        >
+          重試
+        </button>
+      </nx-notice>
+    } @else {
+      @if (status.value()?.compatibility === 'incompatible') {
+        <nx-notice
+          tone="danger"
+          message="資料庫低於這一版程式需要的版本，部分功能可能失敗；請先執行這一版的 update.sql。"
+        />
+      }
+      @if (status.value()?.hasSnapshot === false) {
+        <nx-notice
+          tone="info"
+          message="資料庫還沒有結構快照：第一次以 update.sql 部署後才開始偵測結構異動。"
+        />
+      }
+      <nx-stat-grid label="版本對照" [busy]="status.refreshing() && !!status.value()">
+        <nx-stat-tile
+          label="程式"
+          [loading]="status.loading()"
+          [value]="status.value() ? 'v' + status.value()!.appVersion : null"
+          [hint]="status.value()?.appBuiltAt ? '發布於 ' + date(status.value()!.appBuiltAt!) : ''"
+        />
+        <nx-stat-tile
+          label="資料庫"
+          [loading]="status.loading()"
+          [value]="status.value()?.databaseVersion ? 'v' + status.value()!.databaseVersion : null"
+          [hint]="
+            status.value()?.databaseDeployedAt
+              ? '部署於 ' + date(status.value()!.databaseDeployedAt!)
+              : '沒有部署紀錄'
+          "
+        />
+        <nx-stat-tile
+          label="程式需要的資料庫"
+          [loading]="status.loading()"
+          [value]="
+            status.value()?.minimumDatabaseVersion
+              ? 'v' + status.value()!.minimumDatabaseVersion
+              : null
+          "
+          [hint]="verdict()?.hint ?? ''"
+          [tone]="verdict()?.tone === 'danger' ? 'danger' : 'neutral'"
+        />
+        <nx-stat-tile
+          label="結構異動"
+          [loading]="changes.loading()"
+          [value]="changes.value() ? changes.value()!.length.toString() : null"
+          unit="個物件"
+          [tone]="changes.value()?.length ? 'warning' : 'neutral'"
+        />
+      </nx-stat-grid>
+    }
+
+    @if (exportError()) {
+      <nx-notice
+        tone="danger"
+        [message]="exportError()"
+        [dismissible]="true"
+        (dismissed)="exportError.set('')"
+      />
+    }
+    <nx-data-table
+      label="正式機上與這一版不同的資料庫物件"
+      [table]="changeTable"
+      [busy]="changes.refreshing() && !!changes.value()"
+      preferenceKey="schema-changes"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>結構異動</h2>
+      </div>
+      <button
+        nxPending
+        table-actions
+        type="button"
+        class="quiet-button"
+        [pending]="exporting()"
+        [disabled]="!changes.value()?.length"
+        (click)="export()"
+      >
+        <nx-icon name="download" />{{ exporting() ? '下載中…' : '下載 .sql' }}
+      </button>
+      <table class="releases-table">
+        <caption class="sr-only">
+          與這一版應有結構不同的物件；選取後並排顯示差異。
+        </caption>
+        <thead>
+          <tr>
+            <th nxHeader="object"></th>
+            <th nxHeader="type"></th>
+            <th nxHeader="change"></th>
+            <th nxHeader="changedAt"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (change of changeTable.rows(); track objectName(change)) {
+            <tr
+              nxTableRow
+              [class.is-selected]="selected() === change"
+              (rowActivate)="inspect(change)"
+            >
+              <td nxTableColumn="object">
+                <button
+                  type="button"
+                  class="ui-table-link ui-truncate releases-code"
+                  data-row-action
+                  [title]="objectName(change)"
+                  [attr.aria-expanded]="selected() === change"
+                  (click)="inspect(change)"
+                >
+                  {{ objectName(change) }}
+                </button>
+              </td>
+              <td nxTableColumn="type">{{ typeNames[change.type] ?? change.type }}</td>
+              <td nxTableColumn="change">
+                <nx-status-badge [tone]="changeTone(change.change)">{{
+                  changeNames[change.change] ?? change.change
+                }}</nx-status-badge>
+              </td>
+              <td nxTableColumn="changedAt">
+                @if (change.changedAt) {
+                  <time [attr.datetime]="change.changedAt">{{ date(change.changedAt) }}</time>
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        emptyTitle="結構與這一版一致"
+        emptyText="正式機上沒有在版本之外新增、修改或移除的物件。"
+        [retrying]="changes.refreshing()"
+      />
+    </nx-data-table>
+
+    <nx-data-table
+      label="程式與資料庫的部署歷史"
+      [table]="deploymentTable"
+      [busy]="deployments.refreshing() && !!deployments.value()"
+      preferenceKey="deployments"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>部署歷史</h2>
+      </div>
+      <table class="releases-table">
+        <caption class="sr-only">
+          程式（新版本第一次啟動時記錄）與資料庫（update.sql 記錄）的部署，依時間排列。
+        </caption>
+        <thead>
+          <tr>
+            <th nxHeader="deployedAt"></th>
+            <th nxHeader="component"></th>
+            <th nxHeader="version"></th>
+            <th nxHeader="revision"></th>
+            <th nxHeader="host"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (deployment of deploymentTable.rows(); track deployment.id) {
+            <tr>
+              <td nxTableColumn="deployedAt">
+                <time [attr.datetime]="deployment.deployedAt">{{
+                  date(deployment.deployedAt)
+                }}</time>
+              </td>
+              <td nxTableColumn="component">
+                {{ deployment.component === 'app' ? '程式' : '資料庫' }}
+              </td>
+              <td nxTableColumn="version">
+                <span class="releases-code">v{{ deployment.version }}</span>
+                @if (deployment.startPoint) {
+                  <small>從 v{{ deployment.startPoint }} 升級</small>
+                }
+              </td>
+              <td nxTableColumn="revision">
+                <span class="releases-code" [title]="deployment.revision">{{
+                  shortRevision(deployment.revision)
+                }}</span>
+              </td>
+              <td nxTableColumn="host">{{ deployment.host }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state emptyTitle="還沒有部署紀錄" [retrying]="deployments.refreshing()" />
+    </nx-data-table>
+
+    <nx-detail-drawer
+      [title]="selected() ? objectName(selected()!) : '結構異動'"
+      (closed)="closeDetail()"
+    >
+      @if (selected(); as change) {
+        <div drawer-summary class="releases-summary">
+          <span>{{ typeNames[change.type] ?? change.type }}</span>
+          <nx-status-badge [tone]="changeTone(change.change)">{{
+            changeNames[change.change] ?? change.change
+          }}</nx-status-badge>
+        </div>
+      }
+      @if (detail.value(); as object) {
+        <nx-schema-diff
+          [class.is-refreshing]="detail.loading()"
+          [attr.aria-busy]="detail.loading() || null"
+          [expected]="object.expected"
+          [actual]="object.actual"
+        />
+        @if (object.type === 'table') {
+          <p class="form-note">資料表的定義是由欄位與約束組成的說明，不是可執行的 DDL。</p>
+        }
+      } @else if (detail.error()) {
+        <nx-notice tone="danger" [message]="detail.error()">
+          <button
+            nxPending
+            notice-actions
+            type="button"
+            class="secondary-button"
+            [pending]="detail.refreshing()"
+            (click)="detail.reload()"
+          >
+            重試
+          </button>
+        </nx-notice>
+      } @else {
+        <div class="releases-loading" role="status">
+          <span class="sr-only">正在載入定義…</span>
+          @for (line of [1, 2, 3, 4, 5, 6]; track line) {
+            <span class="skeleton" aria-hidden="true"></span>
+          }
+        </div>
+      }
+    </nx-detail-drawer>
+  }
+</nx-feature-page>

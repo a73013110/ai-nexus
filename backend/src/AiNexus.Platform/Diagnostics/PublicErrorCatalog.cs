@@ -311,6 +311,7 @@ public static class PublicErrorCatalog
         ["review_source_invalid"] = "請選擇一個 Pull Request，或指定 commit／區間。",
         ["review_summary_too_long"] = "中間彙整超過預算，請縮小區間或選擇更大的模型。",
         ["run_not_found"] = "找不到這次生成。",
+        ["schema_object_not_found"] = "找不到這個物件，可能名稱有誤或已移除；請重新整理異動清單。",
         ["session_revoked"] = "登入已失效，請重新登入工作區。",
         ["share_content_limit"] = "分享內容過長，請改分享整理後的成果文件。",
         ["share_generation_active"] = "請先等待或停止回答，再分享完整內容。",

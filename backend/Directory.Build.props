@@ -17,5 +17,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <PublishDocumentationFile>false</PublishDocumentationFile>
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+    <!-- 版號只來自 git tag：Build.ps1 以 -p:Version 帶入（ADR 0027）；沒帶時與前端的 APP_VERSION 預設相同，不會被當成另一個版本。 -->
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 </Project>

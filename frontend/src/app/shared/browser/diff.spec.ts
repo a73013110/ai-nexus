@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDiff } from './repository-diff-parser';
+import { diffLines, parseDiff, sideBySide } from './diff';
 
 describe('parseDiff', () => {
   it('numbers old and new lines across a hunk', () => {
@@ -87,5 +87,72 @@ describe('parseDiff', () => {
       'diff --git "a/\\346\\226\\207\\344\\273\\266.md" "b/\\346\\226\\207\\344\\273\\266.md"\n',
     );
     expect(file.path).toBe('文件.md');
+  });
+});
+
+describe('diffLines', () => {
+  const kinds = (before: string, after: string) =>
+    diffLines(before, after).map(
+      (line) => `${line.kind} ${line.old ?? '-'} ${line.new ?? '-'} ${line.text}`,
+    );
+
+  it('keeps shared lines as context and numbers both sides', () => {
+    expect(kinds('a\nb\nc\nd', 'a\nB\nc\nd\ne')).toEqual([
+      'ctx 1 1 a',
+      'del 2 - b',
+      'add - 2 B',
+      'ctx 3 3 c',
+      'ctx 4 4 d',
+      'add - 5 e',
+    ]);
+  });
+
+  it('ignores carriage returns and a trailing newline', () => {
+    expect(diffLines('a\r\nb\r\n', 'a\nb').every((line) => line.kind === 'ctx')).toBe(true);
+  });
+
+  it('treats a missing side as entirely added or deleted', () => {
+    expect(kinds('', 'x\ny')).toEqual(['add - 1 x', 'add - 2 y']);
+    expect(kinds('x', '')).toEqual(['del 1 - x']);
+  });
+
+  it('finds the shortest edit inside the changed middle', () => {
+    const before = ['select', 'from t', 'where a = 1', 'and b = 2', 'order by c'].join('\n');
+    const after = ['select', 'from t', '-- fix', 'where a = 1', 'order by c'].join('\n');
+    expect(diffLines(before, after).filter((line) => line.kind !== 'ctx')).toEqual([
+      { kind: 'add', text: '-- fix', old: null, new: 3 },
+      { kind: 'del', text: 'and b = 2', old: 4, new: null },
+    ]);
+  });
+});
+
+describe('sideBySide', () => {
+  const show = (rows: ReturnType<typeof sideBySide>) =>
+    rows.map((row) =>
+      row.skipped !== undefined
+        ? `… ${row.skipped}`
+        : `${row.left?.text ?? '_'} | ${row.right?.text ?? '_'}`,
+    );
+
+  it('pairs a run of deletions with the additions that replace it', () => {
+    expect(show(sideBySide(diffLines('a\nb\nc\nz', 'a\nB\nC\nD\nz')))).toEqual([
+      'a | a',
+      'b | B',
+      'c | C',
+      '_ | D',
+      'z | z',
+    ]);
+  });
+
+  it('folds unchanged lines far from any change', () => {
+    const before = ['1', '2', '3', '4', '5', '6', '7', '8'].join('\n');
+    const after = before.replace('7', 'seven');
+    expect(show(sideBySide(diffLines(before, after), 2))).toEqual([
+      '… 4',
+      '5 | 5',
+      '6 | 6',
+      '7 | seven',
+      '8 | 8',
+    ]);
   });
 });

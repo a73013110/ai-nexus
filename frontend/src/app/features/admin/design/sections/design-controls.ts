@@ -443,6 +443,7 @@ export class DesignControls {
     { id: 'copy', label: '複製示範（送出中示範）', icon: 'copy' },
     { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
     { id: 'reset', label: '重設示範', icon: 'reset', danger: true },
+    { id: 'about', label: '關於（附註示範）', icon: 'info', note: 'v2026.11.4' },
   ];
   toggle(id: string) {
     if (id === 'web' || id === 'time')

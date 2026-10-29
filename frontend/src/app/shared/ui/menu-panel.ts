@@ -25,6 +25,8 @@ export interface MenuAction {
   checked?: boolean;
   /** 此項目的動作進行中：圖示換成轉圈，點擊不關閉選單也不送出。 */
   busy?: boolean;
+  /** 標籤右側的等寬小字，例如版本號。 */
+  note?: string;
 }
 
 /**
@@ -68,6 +70,9 @@ export interface MenuAction {
           (click)="item.busy || choose(item.id)"
         >
           <nx-icon [name]="item.busy ? 'loading' : item.icon" />{{ item.label }}
+          @if (item.note) {
+            <small class="menu-note">{{ item.note }}</small>
+          }
           @if (item.checked) {
             <nx-icon name="check" class="menu-check" />
           }

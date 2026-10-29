@@ -1,0 +1,20 @@
+.releases-code {
+  font-family: var(--font-code);
+}
+.releases-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: 0 var(--p-space-4) var(--p-space-3);
+  color: var(--secondary);
+}
+.releases-loading {
+  display: grid;
+  gap: var(--p-space-2);
+  .skeleton {
+    height: 1rem;
+  }
+  .skeleton:nth-child(odd) {
+    width: 70%;
+  }
+}

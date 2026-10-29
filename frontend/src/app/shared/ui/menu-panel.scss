@@ -25,6 +25,12 @@
     margin-inline-start: auto;
     color: var(--signal);
   }
+  .menu-note {
+    margin-inline-start: auto;
+    color: var(--secondary);
+    font-family: var(--font-code);
+    font-size: var(--text-caption);
+  }
 }
 .menu-heading {
   display: grid;

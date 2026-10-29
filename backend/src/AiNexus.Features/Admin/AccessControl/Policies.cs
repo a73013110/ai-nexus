@@ -33,6 +33,7 @@ public static class Policies
     public const string BillingPrices = Prefix + FeatureCatalog.BillingPrices;
     public const string MailMessages = Prefix + FeatureCatalog.MailMessages;
     public const string MailMessagesResend = Prefix + FeatureCatalog.MailMessagesResend;
+    public const string Releases = Prefix + FeatureCatalog.Releases;
     public const string AttendanceRecords = Prefix + FeatureCatalog.AttendanceRecords;
     public const string AttendanceCards = Prefix + FeatureCatalog.AttendanceCards;
     public const string AttendanceCardsMaintain = Prefix + FeatureCatalog.AttendanceCardsMaintain;

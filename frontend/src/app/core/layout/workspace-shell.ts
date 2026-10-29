@@ -10,6 +10,7 @@ import { NavigationPreferences } from './navigation-preferences';
 import { navigationIcon, navigationNodes, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
 import { SHORTCUTS } from './keyboard-shortcuts';
+import { AppUpdateNotice } from './app-update-notice';
 import { WorkspaceCommands } from './workspace-commands';
 import { WorkspaceLayout } from './workspace-layout';
 import { WorkspaceSidebar } from './workspace-sidebar';
@@ -65,6 +66,8 @@ export class WorkspaceShell {
     return [...(source?.actions() ?? []), ...entries, ...(source?.entries?.() ?? [])];
   });
   constructor() {
+    // 伺服器版本只出現在登入後的回應，新版提示跟著已登入的外框建立。
+    inject(AppUpdateNotice);
     this.workspaceCommands.attach(() => this.palette().open());
     bindHotkeys(
       { [SHORTCUTS.commandPalette.keys]: () => this.palette().open() },

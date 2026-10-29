@@ -24,6 +24,7 @@ using AiNexus.Features.Admin.Operations;
 using AiNexus.Features.Admin.Organization;
 using AiNexus.Features.Work.Projects;
 using AiNexus.Features.Admin.Quality;
+using AiNexus.Features.Admin.Releases;
 using AiNexus.Features.Work.Repositories;
 using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Work.Sharing;
@@ -63,6 +64,7 @@ public static class FeatureModules
         Add<CollaborationModule>(builder);
         Add<NotificationsModule>(builder);
         Add<MailModule>(builder);
+        Add<ReleasesModule>(builder);
         Add<ProjectsModule>(builder);
         Add<SharingModule>(builder);
         Add<KnowledgeModule>(builder);
@@ -122,6 +124,7 @@ public static class FeatureModules
         Map<WebSearchModule>(api);
         Map<MonitoringModule>(api);
         Map<MailModule>(api);
+        Map<ReleasesModule>(api);
         Map<AttendanceModule>(api);
         Map<RemoteFilesModule>(api);
 

@@ -1,15 +1,23 @@
 import { Notice } from '@shared/ui/notice';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { SettingsOverlay } from '../preferences/settings-overlay';
 import { nameInitial } from '@shared/browser/format';
 import { ActionMenu } from '@shared/ui/action-menu';
 import { Icon } from '@shared/ui/icon';
+import { AboutDialog } from './about-dialog';
 import { WorkspaceLayout } from './workspace-layout';
 
 @Component({
   selector: 'nx-account-menu',
-  imports: [Notice, ActionMenu, Icon],
+  imports: [Notice, ActionMenu, Icon, AboutDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './account-menu.scss',
   host: { class: 'ui-density-compact' },
@@ -28,6 +36,7 @@ import { WorkspaceLayout } from './workspace-layout';
       >
       <nx-icon name="more" />
     </nx-action-menu>
+    <nx-about-dialog />
     @if (error()) {
       <nx-notice tone="danger" [message]="error()" />
     }`,
@@ -42,6 +51,7 @@ export class AccountMenu {
     detail: this.session.me()?.account,
   }));
   private readonly settings = inject(SettingsOverlay);
+  private readonly about = viewChild.required(AboutDialog);
   readonly error = signal('');
   readonly items = computed(() => [
     { id: 'settings', label: '設定', icon: 'settings' },
@@ -54,9 +64,12 @@ export class AccountMenu {
     this.session.testing()
       ? [{ id: 'logout', label: '登出工作區', icon: 'logout' }]
       : []),
+    // 版本放在選單底部，所有人都看得到；回報問題時先看這裡。
+    { id: 'about', label: '關於', icon: 'info', note: 'v' + APP_VERSION },
   ]);
   async act(id: string) {
     if (id === 'settings') this.settings.open();
+    if (id === 'about') this.about().open();
     if (id === 'login') window.location.assign('/login?method=local');
     if (id === 'restore') {
       try {

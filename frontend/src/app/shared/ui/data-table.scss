@@ -65,7 +65,7 @@
   width: 100%;
   height: 100%;
   // 最後一列的底角也跟著外框變直角（data-workspace.scss）。
-  --table-radius: 0px;
+  --table-radius: 0;
   box-shadow: var(--shadow-floating);
   > .ui-table-scroll {
     flex: 1 1 auto;

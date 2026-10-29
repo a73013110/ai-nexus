@@ -91,6 +91,8 @@ export class ApiClient {
   private readonly reads = new Map<string, Promise<string>>();
   private readonly references = new Map<string, { at: number; body: Promise<string> }>();
   readonly expired = signal(0);
+  /** 伺服器在登入後的 API 回應帶的 `X-App-Version`；和前端的 `APP_VERSION` 不同代表網站已更新、這個分頁還是舊版。 */
+  readonly serverVersion = signal<string | null>(null);
 
   session(value: AuthSessionDto) {
     this.csrf = value.csrfToken;
@@ -207,6 +209,8 @@ export class ApiClient {
       if (request.signal?.aborted) throw error;
       throw new ApiError(0, 'network_error', '連線中斷，請確認區網連線後重試。');
     }
+    const version = response.headers.get('X-App-Version');
+    if (version) this.serverVersion.set(version);
     const identity = response.headers.get('X-Active-Identity');
     if (identity) {
       if (this.identity && identity !== this.identity && !isAuthPath(url)) {

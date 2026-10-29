@@ -185,6 +185,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   test_identity_same: '請選擇另一位使用者。',
   test_source_revoked: '原管理者登入或權限已失效，請重新登入。',
   test_session_invalid: '測試登入已失效。',
+  schema_object_not_found: '找不到這個物件，可能名稱有誤或已移除；請重新整理異動清單。',
   session_revoked: '登入已失效，請重新登入工作區。',
   web_search_unavailable: '網路搜尋服務忙碌或額度受限，請稍後重試。',
   windows_sid_required: '無法取得 AD SID，請確認登入設定。',
