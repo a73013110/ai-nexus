@@ -56,6 +56,7 @@ dotnet test --solution backend/AiNexus.slnx --no-build --filter "FullyQualifiedN
 ./scripts/Export-Database.ps1 -Server <開發庫>    # 開發庫結構改完後匯出到 database/App/（詢問 SQL 帳密）
 dotnet build database/App                 # 匯出檔建成 dacpac；引用錯誤在這裡失敗
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080   # API 有變動時重產 openapi.json 與 schema.ts
+./scripts/Release.ps1                     # 發版狀態；-Publish 產生發布包並建 tag（ADR 0027）
 npm --prefix frontend run format          # 前端改完先排版；Verify 會以 format:check 擋下
 ```
 
@@ -74,7 +75,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）。
-- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`feature-catalog.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Data/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
+- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`feature-catalog.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Scripts/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
 - PowerShell 入口腳本要有 `[CmdletBinding()]`、`Set-StrictMode -Version Latest` 與 comment-based help（`scripts/tests` 檢查）。
 - 不提交 `.local/`、`artifacts/`、秘密；不跳過或停用測試。
 

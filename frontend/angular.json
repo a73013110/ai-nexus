@@ -22,6 +22,9 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "define": {
+              "APP_VERSION": "'0.0.0-dev'"
+            },
             "inlineStyleLanguage": "scss",
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles"]

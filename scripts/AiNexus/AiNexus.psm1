@@ -184,7 +184,7 @@ function Test-RepoForbiddenPath {
 # 匯出腳本產生、每次整批替換的全文資料夾；FullText/ 底下其他檔案是手寫的。
 $fullTextFolders = @{ Catalogs = 'FullText/Catalogs'; Indexes = 'FullText/Indexes' }
 # 資料庫專案內手寫或建置產出的頂層資料夾，匯出時不可刪除。schema 不能取這些名稱。
-$keptProjectFolders = @('FullText', 'Seed', 'Data', 'bin', 'obj')
+$keptProjectFolders = @('FullText', 'Seed', 'Scripts', 'bin', 'obj')
 
 function Split-RepoSqlBatch {
     <# .SYNOPSIS Batches of a SqlPackage-generated script, split on lines that contain only GO. #>
@@ -249,36 +249,31 @@ function Get-FullTextObject([string]$File, [string[]]$Batch) {
 
 function Get-RepoReleaseScript {
     <#
-    .SYNOPSIS The hand-written SQL a release runs around the schema update, named in run order: 1 pre, 3 full-text, 4 post, 5 seed.
+    .SYNOPSIS The hand-written SQL that runs after the schema update, in run order: full-text objects, then seed data.
     .DESCRIPTION
-    步驟 2（結構）不在這裡：由結構描述比對 App.dacpac 與目標庫產生。Data/<版本>/ 只在指定 -Release 時帶入。
-    發版的人在 SSMS 依檔名順序執行，所以每一份都要能直接執行、重跑也安全：全文腳本包成「沒有全文元件或物件已存在就略過」
+    update.sql 與 Initialize-Database.ps1 在結構之後依序執行，所以每一份都要可以重跑：全文腳本包成「沒有全文元件或物件已存在就略過」
     （匯出的 CREATE 沒有存在檢查；已存在物件的定義變更不會套用，由 DBA 手動處理），種子資料本身只新增缺少的列。
+    update.sql 以 SQLCMD 模式執行，所以手寫腳本不能有 SQLCMD 指令，也不能出現 $(（會被當成變數）。
     #>
-    param([Parameter(Mandatory)][string]$Path, [string]$Release)
-    if ($Release -and $Release -notmatch '^[\w.-]+$') { throw "Release 只能有英數、底線、點與連字號：$Release" }
+    param([Parameter(Mandatory)][string]$Path)
     $files = {
-        param([string]$Folder, [string]$Filter = '*.sql')
+        param([string]$Folder)
         if (Test-Path -LiteralPath $Folder -PathType Container) {
-            Get-ChildItem -LiteralPath $Folder -Filter $Filter -File | Sort-Object { $_.Name } -Culture ([cultureinfo]::InvariantCulture)
+            Get-ChildItem -LiteralPath $Folder -Filter '*.sql' -File | Sort-Object { $_.Name } -Culture ([cultureinfo]::InvariantCulture)
         }
     }
-    $data = if ($Release) { Join-Path $Path "Data/$Release" }
     $steps = @(
-        @{ Step = 1; Label = ''; Files = @(if ($data) { & $files $data 'pre-*.sql' }) }
-        @{ Step = 3; Label = 'fulltext-'; Files = @(@(& $files (Join-Path $Path 'FullText/Catalogs')) + @(& $files (Join-Path $Path 'FullText/Indexes'))) }
-        @{ Step = 4; Label = ''; Files = @(if ($data) { & $files $data 'post-*.sql' }) }
-        @{ Step = 5; Label = 'seed-'; Files = @(& $files (Join-Path $Path 'Seed')) }
+        @{ Label = 'fulltext'; Title = '全文'; Files = @(@(& $files (Join-Path $Path 'FullText/Catalogs')) + @(& $files (Join-Path $Path 'FullText/Indexes'))) }
+        @{ Label = 'seed'; Title = '種子資料'; Files = @(& $files (Join-Path $Path 'Seed')) }
     )
     foreach ($step in $steps) {
-        $index = 0
         foreach ($file in $step.Files | Where-Object { $_ }) {
-            $index++
             $source = [IO.Path]::GetRelativePath($Path, $file.FullName).Replace('\', '/')
             $text = [IO.File]::ReadAllText($file.FullName)
             if ($text -match '(?im)^\s*:(setvar|on|r|connect)\b') { throw "$source 含 SQLCMD 指令；手寫腳本只能用 T-SQL 與 GO。" }
-            $header = "-- 發版步驟 $($step.Step)：$source"
-            if ($step.Step -eq 3) {
+            if ($text.Contains('$(')) { throw "$source 含 `$(；update.sql 以 SQLCMD 模式執行，會被當成變數。請改寫（例如拆成 N'`$' + N'('）。" }
+            $header = "-- $($step.Title)：$source"
+            if ($step.Label -eq 'fulltext') {
                 $batches = Split-RepoSqlBatch $text
                 $object = Get-FullTextObject $source $batches
                 $text = @(
@@ -295,7 +290,7 @@ function Get-RepoReleaseScript {
                     ''
                 ) -join "`n"
             } else { $text = "$header`n$text" }
-            [pscustomobject]@{ Name = '{0}-{1:00}-{2}{3}' -f $step.Step, $index, $step.Label, $file.Name; Source = $source; Text = $text }
+            [pscustomobject]@{ Name = "$($step.Label)-$($file.Name)"; Source = $source; Text = $text }
         }
     }
 }
@@ -471,6 +466,519 @@ function Test-RepoDatabaseExists {
     } finally { $connection.Dispose() }
 }
 
+# 以下是發版（ADR 0027、0028）：版號、tag、元件判定、資料庫建置與更新包；Release.ps1、Build.ps1、Initialize-Database.ps1 共用。
+
+# 元件依路徑判定；其他路徑（docs、scripts、tooling）不屬於任何元件，只改它們不需要發版。
+$componentPaths = [ordered]@{ app = @('backend/', 'frontend/', 'contracts/'); database = @('database/') }
+$releaseTagPattern = '^v(\d{4})\.(\d{2})\.(\d+)$'
+
+function Invoke-RepoGit {
+    <# .SYNOPSIS Runs git in the repository and returns its standard output lines; throws with git's message when it fails. #>
+    param([Parameter(Mandatory, ValueFromRemainingArguments)][string[]]$Arguments)
+    $output = & git -C $root @Arguments 2>&1
+    $failed = $LASTEXITCODE -ne 0
+    $lines = @($output | Where-Object { $_ -isnot [Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    if ($failed) { throw "git $($Arguments -join ' ') 失敗：$(@($output | ForEach-Object { "$_" }) -join "`n")" }
+    $lines
+}
+
+function Get-RepoPathComponent {
+    <# .SYNOPSIS Components (app, database) that repository-relative paths belong to, in a fixed order. #>
+    param([AllowEmptyCollection()][string[]]$Path = @())
+    foreach ($component in $componentPaths.Keys) {
+        if (@($Path | Where-Object { $file = $_.Replace('\', '/'); @($componentPaths[$component] | Where-Object { $file.StartsWith($_) }).Count }).Count) { $component }
+    }
+}
+
+function Get-RepoReleaseTag {
+    <#
+    .SYNOPSIS Release tags (annotated vYYYY.MM.N), newest version first, with commit, date and the components from the Components trailer.
+    .DESCRIPTION lightweight tag 與名稱不符的 tag 不算發版。-Merged 只留 HEAD 能到達的（hotfix 分支看不到 master 之後的發版）。
+    #>
+    param([switch]$Merged)
+    $format = '%(refname:strip=2)%09%(objecttype)%09%(*objectname)%09%(creatordate:iso-strict)%09%(contents:trailers:key=Components,valueonly,separator=%x2C)'
+    $arguments = @('for-each-ref', "--format=$format") + @(if ($Merged) { '--merged=HEAD' }) + 'refs/tags/v*'
+    $tags = foreach ($line in Invoke-RepoGit @arguments) {
+        $fields = $line.Split("`t")
+        if ($fields.Count -lt 5 -or $fields[1] -ne 'tag' -or !($fields[0] -match $releaseTagPattern)) { continue }
+        [pscustomobject]@{
+            Tag = $fields[0]
+            Version = $fields[0].Substring(1)
+            Key = [int]$Matches[1] * 100000000L + [int]$Matches[2] * 1000000L + [int]$Matches[3]
+            Commit = $fields[2]
+            Date = [DateTimeOffset]::Parse($fields[3], [cultureinfo]::InvariantCulture)
+            Components = @($fields[4].Split(',') | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+        }
+    }
+    @($tags | Sort-Object Key -Descending)
+}
+
+function Get-RepoNextVersion {
+    <# .SYNOPSIS The next version YYYY.MM.N for a date: N counts the releases of that month from 0. #>
+    param([AllowEmptyCollection()][string[]]$Existing = @(), [datetime]$Date = [datetime]::Now)
+    $prefix = $Date.ToString('yyyy.MM', [cultureinfo]::InvariantCulture)
+    $used = @($Existing | Where-Object { $_ -match "^$([regex]::Escape($prefix))\.(\d+)$" } | ForEach-Object { [int]$Matches[1] })
+    "$prefix.$(if ($used.Count) { ($used | Measure-Object -Maximum).Maximum + 1 } else { 0 })"
+}
+
+function Get-RepoVersion {
+    <#
+    .SYNOPSIS The build version of HEAD from the nearest release tag: 2026.11.4 on the tag, 2026.11.4-dev.3 three commits later, 0.0.0-dev without a tag.
+    .DESCRIPTION git describe 預設只認 annotated tag；Revision 是 HEAD 的完整 SHA，建置時寫進 InformationalVersion（版本+commit）。
+    #>
+    $revision = @(Invoke-RepoGit rev-parse HEAD)[0]
+    $described = & git -C $root describe --match 'v[0-9][0-9][0-9][0-9].[0-9][0-9].*' --long --abbrev=7 2>$null
+    $version = if ($LASTEXITCODE -eq 0 -and "$described" -match '^v(\d{4}\.\d{2}\.\d+)-(\d+)-g[0-9a-f]+$') {
+        if ($Matches[2] -eq '0') { $Matches[1] } else { "$($Matches[1])-dev.$($Matches[2])" }
+    } else { '0.0.0-dev' }
+    [pscustomobject]@{ Version = $version; Revision = $revision; Short = $revision.Substring(0, 7) }
+}
+
+function Get-RepoConventionalCommit {
+    <# .SYNOPSIS feat and fix commits (type, scope, subject) between two refs that touched the given paths, oldest first. #>
+    param([string]$From, [string]$To = 'HEAD', [string[]]$Path = @())
+    $range = if ($From) { "$From..$To" } else { $To }
+    $arguments = @('log', '--reverse', '--no-merges', '--format=%h%x09%s', $range) + @(if ($Path.Count) { @('--') + $Path })
+    foreach ($line in Invoke-RepoGit @arguments) {
+        $hash, $subject = $line.Split("`t", 2)
+        if ($subject -match '^(feat|fix)(\(([^)]+)\))?!?:\s*(.+)$') {
+            [pscustomobject]@{ Type = $Matches[1]; Scope = "$($Matches[3])"; Subject = $Matches[4]; Commit = $hash }
+        }
+    }
+}
+
+function Get-RepoDatabaseChange {
+    <#
+    .SYNOPSIS Database objects whose exported file changed between two refs (Added, Modified, Deleted), from the paths under database/App.
+    .DESCRIPTION 只看檔案、不建置，所以狀態列表很快；實際的結構差異由更新包的演練確認。Scripts/ 另由 -Scripts 取得（只算新增的）。
+    #>
+    param([string]$From, [string]$To = 'HEAD', [switch]$Scripts)
+    if ($Scripts) {
+        $arguments = if ($From) { @('diff', '--name-only', '--diff-filter=A', "$From..$To", '--', 'database/App/Scripts') } else { @('ls-tree', '-r', '--name-only', $To, '--', 'database/App/Scripts') }
+        return @(Invoke-RepoGit @arguments | Where-Object { $_ -like '*.sql' })
+    }
+    $arguments = if ($From) { @('diff', '--name-status', '--no-renames', "$From..$To", '--', 'database/App') } else { @('ls-tree', '-r', '--name-only', $To, '--', 'database/App') }
+    foreach ($line in Invoke-RepoGit @arguments) {
+        $status, $file = if ($From) { $line.Split("`t", 2) } else { 'A', $line }
+        if ($file -notmatch '^database/App/([^/]+)/([^/]+)/([^/]+)\.sql$' -or $Matches[1] -in $keptProjectFolders) { continue }
+        [pscustomobject]@{
+            Change = @{ A = 'Added'; M = 'Modified'; D = 'Deleted' }[$status.Substring(0, 1)] ?? 'Modified'
+            Type = @{ Tables = 'table'; Views = 'view'; StoredProcedures = 'procedure'; Functions = 'function'; Synonyms = 'synonym'; Sequences = 'sequence'; UserDefinedTypes = 'type' }[$Matches[2]] ?? $Matches[2]
+            Name = "$($Matches[1]).$($Matches[3])"
+        }
+    }
+}
+
+function ConvertTo-RepoLikePattern {
+    <# .SYNOPSIS SQL LIKE pattern of a PowerShell wildcard (schema.name in export-exclusions.txt): brackets, % and _ escaped, * ? turned into % _. #>
+    param([Parameter(Mandatory)][string]$Pattern)
+    $Pattern.Replace('[', '[[]').Replace('%', '[%]').Replace('_', '[_]').Replace('*', '%').Replace('?', '_')
+}
+
+# update.sql 以 SQLCMD 模式執行：字串常值裡的 $( 會被當成變數，拆成兩段；超過 4000 字的串接要先轉成 nvarchar(max)，否則被截斷。
+function ConvertTo-SqlCmdLiteral([AllowEmptyString()][string]$Value) {
+    $parts = @($Value.Replace("'", "''") -split '\$\(')
+    if ($parts.Count -eq 1) { return "N'$($parts[0])'" }
+    "CONVERT(nvarchar(max), N'$($parts[0])')" + -join @($parts | Select-Object -Skip 1 | ForEach-Object { " + N'`$' + N'(' + N'$_'" })
+}
+
+function Get-RepoDatabaseBuild {
+    <#
+    .SYNOPSIS The built database project of a commit: a folder with App.dacpac, FullText/ and Seed/, cached under .local/releases/<commit>/.
+    .DESCRIPTION
+    以 git worktree 取出該 commit 建置，不動工作目錄；SDK 由 global.json 固定，同一個 commit 建出同一份結構，所以依 commit 快取、不保存 dacpac。
+    省略 Ref 時建置工作目錄的 database/App（可能有未提交的修改，不快取）。
+    #>
+    param([string]$Ref)
+    if (!$Ref) {
+        $project = Join-Path $root 'database/App'
+        dotnet build $project -c Release --nologo -v q | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw '資料庫專案 build 失敗；請先執行 scripts/Restore.ps1。' }
+        return [pscustomobject]@{ Path = $project; Dacpac = Join-Path $project 'bin/Release/App.dacpac'; Commit = $null }
+    }
+    $commit = @(Invoke-RepoGit rev-parse --verify "$Ref^{commit}")[0]
+    $cache = Join-Path $root ".local/releases/$commit"
+    $dacpac = Join-Path $cache 'App.dacpac'
+    if (!(Test-Path -LiteralPath $dacpac -PathType Leaf)) {
+        $worktree = Join-Path $root ".local/worktrees/$commit"
+        if (Test-Path -LiteralPath $worktree) { Invoke-RepoGit worktree remove --force $worktree | Out-Null }
+        Invoke-RepoGit worktree add --detach $worktree $commit | Out-Null
+        try {
+            $project = Join-Path $worktree 'database/App'
+            Write-Host "建置 $($commit.Substring(0, 7)) 的資料庫專案"
+            dotnet build $project -c Release --nologo -v q | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "$Ref 的資料庫專案 build 失敗。" }
+            # 先寫到暫存資料夾再改名：中斷時不會留下缺檔的快取。
+            $staging = "$cache.tmp"
+            Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction Ignore
+            New-Item -ItemType Directory -Path $staging -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $project 'bin/Release/App.dacpac') -Destination $staging
+            foreach ($folder in 'FullText', 'Seed') {
+                if (Test-Path -LiteralPath (Join-Path $project $folder)) { Copy-Item -LiteralPath (Join-Path $project $folder) -Destination $staging -Recurse }
+            }
+            Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction Ignore
+            Move-Item -LiteralPath $staging -Destination $cache
+        } finally { Invoke-RepoGit worktree remove --force $worktree | Out-Null }
+    }
+    [pscustomobject]@{ Path = $cache; Dacpac = $dacpac; Commit = $commit }
+}
+
+# SqlPackage 對建庫與更新共用的排除：權限、登入與檔案位置是環境差異，全文物件不在 dacpac（ADR 0010 的發版參數）。
+$sqlPackageExcludedTypes = 'Users', 'Logins', 'DatabaseRoles', 'ApplicationRoles', 'RoleMembership', 'Permissions', 'Credentials',
+    'DatabaseScopedCredentials', 'ServerRoles', 'ServerRoleMembership', 'ServerTriggers', 'LinkedServers', 'LinkedServerLogins',
+    'Endpoints', 'ErrorMessages', 'Audits', 'ServerAuditSpecifications', 'DatabaseAuditSpecifications', 'EventSessions',
+    'Certificates', 'MasterKeys', 'DatabaseEncryptionKeys', 'CryptographicProviders', 'Filegroups', 'Files', 'FullTextCatalogs', 'FullTextStoplists'
+
+function Get-RepoSqlPackageOption {
+    <#
+    .SYNOPSIS SqlPackage /p: options for creating a database (Create) or for the update script between two versions (Update).
+    .DESCRIPTION
+    Create 才寫入 App.sqlproj 的 collation、相容層級與 RCSI；Update 不動資料庫選項。
+    Update 比的是兩份 dacpac，不是客戶庫：起點有、這一版沒有的物件就是被刪除的，所以 DropObjectsNotInSource=True；
+    客戶端自己加的物件不在起點，不會被刪，由異動偵測列出。可能遺失資料時腳本執行到該處即停止。
+    #>
+    param([Parameter(Mandatory)][ValidateSet('Create', 'Update')][string]$Purpose)
+    $common = @(
+        'BlockOnPossibleDataLoss=True', 'GenerateSmartDefaults=False', "ExcludeObjectTypes=$($sqlPackageExcludedTypes -join ';')",
+        'IgnorePermissions=True', 'IgnoreRoleMembership=True', 'IgnoreLoginSids=True', 'IgnoreAuthorizer=True', 'IgnoreUserSettingsObjects=True'
+    )
+    $specific = if ($Purpose -eq 'Create') { 'ScriptDatabaseOptions=True', 'ScriptDatabaseCollation=True', 'ScriptDatabaseCompatibility=True' }
+    else {
+        'ScriptDatabaseOptions=False', 'ScriptDatabaseCollation=False', 'ScriptDatabaseCompatibility=False', 'DropObjectsNotInSource=True',
+        'IgnoreColumnOrder=True', 'IgnoreFilegroupPlacement=True', 'CommentOutSetVarDeclarations=True'
+    }
+    @($common + $specific) | ForEach-Object { "/p:$_" }
+}
+
+function Invoke-RepoSqlPackage {
+    <# .SYNOPSIS Runs the pinned SqlPackage (dotnet tool) from the repository root; prints its output only with -Verbose or on failure. #>
+    param([Parameter(Mandatory)][string[]]$Argument)
+    Push-Location -LiteralPath $root
+    try { $output = dotnet tool run sqlpackage -- @Argument 2>&1 } finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) {
+        $output | Out-Host
+        throw "SqlPackage 失敗（結束碼 $LASTEXITCODE）；原因見上方輸出。找不到工具時先執行 scripts/Restore.ps1。"
+    }
+    $output | ForEach-Object { Write-Verbose "$_" }
+}
+
+function Publish-RepoDacpac {
+    <#
+    .SYNOPSIS Creates a new database from a dacpac with the Create options (collation, compatibility level and RCSI from App.sqlproj).
+    .DESCRIPTION 密碼只寫進目前使用者暫存資料夾的 response file，結束前刪除；SqlPackage 在 response file 中把 \" 當引號，結尾不可是反斜線。
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Dacpac, [Parameter(Mandatory)][string]$Server, [Parameter(Mandatory)][string]$Database,
+        [pscredential]$Credential, [switch]$TrustServerCertificate
+    )
+    $target = [Data.Common.DbConnectionStringBuilder]::new()
+    $target['Server'] = $Server
+    $target['Database'] = $Database
+    $target['Encrypt'] = 'True'
+    $target['TrustServerCertificate'] = [string][bool]$TrustServerCertificate
+    $target['Persist Security Info'] = 'False'
+    if ($Credential) {
+        $target['User ID'] = $Credential.UserName
+        $target['Password'] = $Credential.GetNetworkCredential().Password
+    } else { $target['Integrated Security'] = 'True' }
+    $work = Join-Path ([IO.Path]::GetTempPath()) ('AiNexus-publish-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $work | Out-Null
+    try {
+        $value = $target.ConnectionString
+        $target = $null
+        if ($value.EndsWith('\')) { $value += ';' }
+        $response = Join-Path $work 'connection.rsp'
+        [IO.File]::WriteAllText($response, "/TargetConnectionString:`"$($value.Replace('"', '\"'))`"")
+        Invoke-RepoSqlPackage (@('/Action:Publish', "/SourceFile:$Dacpac", "@$response") + @(Get-RepoSqlPackageOption Create))
+    } finally { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Invoke-RepoSqlCmdScript {
+    <#
+    .SYNOPSIS Runs a script the way SSMS runs it in SQLCMD mode, supporting what update.sql uses: :setvar, :on error exit and $(name).
+    .DESCRIPTION 呼叫端傳入的 Variable 優先於腳本內的 :setvar（例如把 DatabaseName 換成演練庫）；遇到第一個錯誤即停止，等同 :on error exit。
+    #>
+    param(
+        [Parameter(Mandatory)][Data.SqlClient.SqlConnection]$Connection, [Parameter(Mandatory)][string]$Text,
+        [hashtable]$Variable = @{}, [string]$Name = 'SQL'
+    )
+    $values = @{}
+    foreach ($key in $Variable.Keys) { $values[$key] = $Variable[$key] }
+    $batch = [Text.StringBuilder]::new()
+    $number = 0
+    foreach ($line in @($Text -split '\r?\n') + 'GO') {
+        if ($line -match '^\s*:setvar\s+(\w+)\s+"?([^"]*)"?\s*$') {
+            if (!$Variable.ContainsKey($Matches[1])) { $values[$Matches[1]] = $Matches[2] }
+            continue
+        }
+        if ($line -match '^\s*:on\s+error\s+exit\s*$') { continue }
+        if ($line -match '^\s*:') { throw "$Name 含不支援的 SQLCMD 指令：$line" }
+        if ($line -notmatch '^\s*GO\s*$') { [void]$batch.AppendLine($line); continue }
+        $number++
+        $sql = [regex]::Replace($batch.ToString(), '\$\((\w+)\)', {
+                param($match)
+                $key = $match.Groups[1].Value
+                if (!$values.ContainsKey($key)) { throw "$Name 第 $number 個批次使用了未定義的 SQLCMD 變數 $key。" }
+                $values[$key]
+            })
+        [void]$batch.Clear()
+        if (!$sql.Trim()) { continue }
+        $command = $Connection.CreateCommand()
+        $command.CommandText = $sql
+        $command.CommandTimeout = 0
+        try { [void]$command.ExecuteNonQuery() }
+        catch { throw "執行 $Name 第 $number 個批次失敗：$($_.Exception.InnerException?.Message ?? $_.Exception.Message)" }
+    }
+}
+
+function Get-RepoSchemaSnapshot {
+    <#
+    .SYNOPSIS The schema snapshot of a database, computed with the repository's releases.udf_SchemaObjects body run as an ad-hoc query.
+    .DESCRIPTION 以目前版本的算法計算，目標庫不必有 releases schema（起點可能早於這個機制，開發庫也不一定已匯入）。
+    #>
+    param([Parameter(Mandatory)][Data.SqlClient.SqlConnection]$Connection, [string]$Definition = (Join-Path $root 'database/App/releases/Functions/udf_SchemaObjects.sql'))
+    $text = [IO.File]::ReadAllText($Definition)
+    if ($text -notmatch '(?s)\bRETURN\s+(WITH\b.*?);?\s*GO\s*$') { throw "$Definition 不是預期的 inline function（RETURN WITH ...）。" }
+    $command = $Connection.CreateCommand()
+    $command.CommandText = $Matches[1]
+    $command.CommandTimeout = 0
+    $table = [Data.DataTable]::new()
+    $reader = $command.ExecuteReader()
+    try { $table.Load($reader) } finally { $reader.Dispose() }
+    foreach ($row in $table.Rows) {
+        [pscustomobject]@{ SchemaName = $row.SchemaName; Name = $row.Name; Type = $row.Type; Hash = [byte[]]$row.Hash; Definition = $row.Definition; ModifiedAt = $row.ModifiedAt }
+    }
+}
+
+function Compare-RepoSchemaSnapshot {
+    <# .SYNOPSIS Objects that differ between two snapshots (Added, Modified, Removed), ordered by type and name. #>
+    param([AllowEmptyCollection()][object[]]$Before = @(), [AllowEmptyCollection()][object[]]$After = @())
+    $old = @{}
+    foreach ($item in $Before) { $old["$($item.SchemaName).$($item.Name)"] = $item }
+    $new = @{}
+    foreach ($item in $After) { $new["$($item.SchemaName).$($item.Name)"] = $item }
+    $changes = foreach ($key in @($old.Keys) + @($new.Keys) | Select-Object -Unique) {
+        $a = $old[$key]
+        $b = $new[$key]
+        $change = if (!$a) { 'Added' } elseif (!$b) { 'Removed' } elseif ([Convert]::ToHexString($a.Hash) -ne [Convert]::ToHexString($b.Hash)) { 'Modified' }
+        if ($change) { [pscustomobject]@{ Change = $change; Type = ($b ?? $a).Type; Name = $key; Before = $a; After = $b } }
+    }
+    @($changes | Sort-Object Type, Name)
+}
+
+function New-RepoRollbackScript {
+    <#
+    .SYNOPSIS T-SQL that puts the procedures, functions, views and triggers changed between two snapshots back to the first one.
+    .DESCRIPTION
+    只處理程式物件：改過的與刪除的以起點定義 CREATE OR ALTER，新增的 DROP。資料表無法安全反向（可能已有新資料），一律用備份回復。
+    function 在 inline 與多陳述式之間改過時不能 ALTER，要先 DROP；這種情況少見，腳本執行失敗時由 DBA 處理。
+    #>
+    param([AllowEmptyCollection()][object[]]$Change = @())
+    $modules = @($Change | Where-Object { $_.Type -in 'procedure', 'function', 'view', 'trigger' })
+    $keyword = @{ procedure = 'PROCEDURE'; function = 'FUNCTION'; view = 'VIEW'; trigger = 'TRIGGER' }
+    foreach ($item in $modules | Sort-Object @{ Expression = { if ($_.Change -eq 'Added') { 0 } else { 1 } } }, Name) {
+        $schema, $name = $item.Name.Split('.', 2)
+        $quoted = "[$($schema.Replace(']', ']]'))].[$($name.Replace(']', ']]'))]"
+        if ($item.Change -eq 'Added') {
+            "DROP $($keyword[$item.Type]) IF EXISTS $quoted;"
+            'GO'
+            continue
+        }
+        $definition = [regex]::new('\bCREATE\s+(?=(PROC|PROCEDURE|FUNCTION|VIEW|TRIGGER)\b)', 'IgnoreCase').Replace($item.Before.Definition, 'CREATE OR ALTER ', 1)
+        $definition.TrimEnd()
+        'GO'
+    }
+}
+
+function New-RepoReleaseRecordScript {
+    <#
+    .SYNOPSIS The last step of update.sql: replaces the expected snapshot and ignore patterns, then records the database version.
+    .DESCRIPTION 快照取自演練庫（同一份 update.sql 執行後的結果），所以客戶庫在更新前就存在的修改也會被列為異動（ADR 0028）。
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Version, [Parameter(Mandatory)][string]$Revision, [string]$StartPoint,
+        [AllowEmptyCollection()][object[]]$Snapshot = @(), [AllowEmptyCollection()][string[]]$IgnorePattern = @()
+    )
+    'SET XACT_ABORT ON;'
+    'BEGIN TRANSACTION;'
+    'DELETE FROM [releases].[SchemaObjects];'
+    $rows = @($Snapshot | Sort-Object SchemaName, Name)
+    for ($i = 0; $i -lt $rows.Count; $i += 100) {
+        'INSERT INTO [releases].[SchemaObjects] ([SchemaName], [Name], [Type], [Hash], [Definition]) VALUES'
+        $chunk = $rows[$i..([Math]::Min($i + 99, $rows.Count - 1))]
+        ($chunk | ForEach-Object {
+            "    ($(ConvertTo-SqlCmdLiteral $_.SchemaName), $(ConvertTo-SqlCmdLiteral $_.Name), $(ConvertTo-SqlCmdLiteral $_.Type), 0x$([Convert]::ToHexString($_.Hash)), $(ConvertTo-SqlCmdLiteral $_.Definition))"
+        }) -join ",`n"
+        ';'
+    }
+    'DELETE FROM [releases].[IgnoredObjects];'
+    foreach ($pattern in $IgnorePattern | Select-Object -Unique) { "INSERT INTO [releases].[IgnoredObjects] ([Pattern]) VALUES ($(ConvertTo-SqlCmdLiteral (ConvertTo-RepoLikePattern $pattern)));" }
+    "INSERT INTO [releases].[Deployments] ([Component], [Version], [Revision], [StartPoint], [DeployedAt], [Host]) VALUES (N'database', $(ConvertTo-SqlCmdLiteral $Version), $(ConvertTo-SqlCmdLiteral $Revision), $(if ($StartPoint) { ConvertTo-SqlCmdLiteral $StartPoint } else { 'NULL' }), SYSDATETIMEOFFSET(), LEFT(ISNULL(HOST_NAME(), N''), 128));"
+    'COMMIT;'
+    'GO'
+}
+
+function New-RepoDatabaseUpdateScript {
+    <#
+    .SYNOPSIS update.sql: version and drift checks, the schema update, full-text and seed data, then the record step; run once in SSMS (SQLCMD mode).
+    .DESCRIPTION
+    StartVersion 是比對起點的版號；起點不是發版 tag（-From 指定 commit）時為空，目標庫必須還沒有版本紀錄。
+    Record 省略時不含第 4 步：演練先執行到第 3 步，再從演練庫取快照組出完整的檔案。
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Version, [string]$StartVersion, [string]$StartPoint, [Parameter(Mandatory)][AllowEmptyString()][string]$Structure,
+        [AllowEmptyCollection()][object[]]$Script = @(), [string[]]$Record, [string]$DatabaseName = 'AiNexus'
+    )
+    $expected = if ($StartVersion) { ConvertTo-SqlCmdLiteral $StartVersion } else { 'NULL' }
+    $from = if ($StartPoint) { $StartPoint } else { '空資料庫' }
+    @(
+        "-- AiNexus 資料庫更新 v$Version（比對起點：$from）"
+        '-- 在 SSMS 開啟 SQLCMD 模式（查詢 > SQLCMD 模式）連到目標庫執行；先停站並備份。資料庫名稱不同時改下一行。'
+        "--"
+        ":setvar DatabaseName `"$DatabaseName`""
+        '-- 前置檢查列出手動異動並停止時：確認這些修改可以被覆蓋（或已回收進開發庫），改成 1 後重新執行。'
+        ':setvar AcceptDrift "0"'
+        ':setvar DefaultFilePrefix "AiNexus"'
+        ':setvar DefaultDataPath ""'
+        ':setvar DefaultLogPath ""'
+        ':on error exit'
+        'GO'
+        ':setvar __IsSqlCmdEnabled "True"'
+        'GO'
+        "IF N'`$(__IsSqlCmdEnabled)' NOT LIKE N'True'"
+        'BEGIN'
+        "    PRINT N'請先開啟 SQLCMD 模式再執行。';"
+        '    SET NOEXEC ON;'
+        'END'
+        'GO'
+        'USE [$(DatabaseName)];'
+        'GO'
+        ''
+        '-- ===== 1. 前置檢查 ====='
+        "DECLARE @expected nvarchar(64) = $expected, @current nvarchar(64);"
+        "IF OBJECT_ID(N'[releases].[Deployments]', N'U') IS NOT NULL"
+        "    SELECT TOP (1) @current = [Version] FROM [releases].[Deployments] WHERE [Component] = N'database' ORDER BY [Id] DESC;"
+        "IF ISNULL(@current, N'') <> ISNULL(@expected, N'')"
+        'BEGIN'
+        "    DECLARE @message nvarchar(2048) = FORMATMESSAGE(N'目標庫的資料庫版本是 %s，這份更新包要求 %s。請以 Release.ps1 -From v<目標庫版本> 重新產生更新包。', ISNULL(N'v' + @current, N'（沒有紀錄）'), ISNULL(N'v' + @expected, N'（沒有紀錄）'));"
+        '    THROW 50000, @message, 1;'
+        'END'
+        'GO'
+        "IF OBJECT_ID(N'[releases].[usp_ListSchemaChanges]', N'P') IS NOT NULL"
+        'BEGIN'
+        # 同一個 SSMS 視窗重跑時是同一個工作階段，上次停下時留下的暫存表還在。
+        '    DROP TABLE IF EXISTS #changes;'
+        '    CREATE TABLE #changes ([SchemaName] sysname, [Name] sysname, [Type] nvarchar(16), [Change] nvarchar(16), [ChangedAt] datetimeoffset(7));'
+        '    INSERT INTO #changes EXEC [releases].[usp_ListSchemaChanges];'
+        '    IF EXISTS (SELECT 1 FROM #changes)'
+        '    BEGIN'
+        '        SELECT * FROM #changes ORDER BY [ChangedAt] DESC;'
+        "        IF N'`$(AcceptDrift)' <> N'1'"
+        "            THROW 50000, N'目標庫在上次更新後有手動異動（見結果），更新可能覆蓋它們。確認後把 AcceptDrift 改成 1 重新執行。', 1;"
+        "        PRINT N'已確認手動異動，繼續更新。';"
+        '    END'
+        '    DROP TABLE #changes;'
+        'END'
+        'GO'
+        ''
+        '-- ===== 2. 結構（SqlPackage 以兩份 dacpac 產生）====='
+        $Structure.Replace("`r`n", "`n").TrimEnd()
+        'GO'
+        ''
+        '-- ===== 3. 全文、種子資料（可重跑）====='
+        @($Script | ForEach-Object { $_.Text.Replace("`r`n", "`n").TrimEnd(); 'GO' })
+        ''
+        if ($Record) {
+            '-- ===== 4. 記錄版本與這一版應有的結構 ====='
+            $Record
+            "PRINT N'已更新到 v$Version。以下若有結果，是與這一版不同的物件（更新前就有的手動修改），請在網站的版本頁確認。';"
+            'EXEC [releases].[usp_ListSchemaChanges];'
+            'GO'
+        }
+    ) -join "`n"
+}
+
+function New-RepoIisPackage {
+    <#
+    .SYNOPSIS Lays out the IIS part of a release package from a win-x64 publish folder: app/, config/ templates, empty keys/ and logs/.
+    .DESCRIPTION
+    只有 app/ 是 IIS 實體路徑；config/ 只在不存在時由範本建立，Files.StoragePath 與 Diagnostics.Directory 設為 DataRoot 下的
+    attachments、diagnostics。套件不含秘密（-IncludeLocalConfig 只用於自己的測試主機），正式主機不需要 PowerShell 或 SqlPackage。
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Publish, [Parameter(Mandatory)][string]$Destination, [Parameter(Mandatory)][string]$DataRoot,
+        [switch]$IncludeLocalConfig, [switch]$AllowUntrustedSql
+    )
+    # Windows 路徑在任何平台都檢查：套件是給 Windows IIS 主機的。
+    if ($DataRoot -notmatch '^[A-Za-z]:\\') { throw 'DataRoot 必須是正式主機上的絕對路徑，例如 D:\AiNexus\data。' }
+    $deps = Join-Path $Publish 'AiNexus.Host.deps.json'
+    if (!(Test-Path -LiteralPath $deps)) { throw "找不到發布產物：$Publish。" }
+    # 其他平台的產物缺 Windows 版的 SqlClient 與 AD 元件，在 IIS 上啟動才會失敗，所以在打包時就擋下。
+    if ((Get-Content -LiteralPath $deps -Raw | ConvertFrom-Json).runtimeTarget.name -notlike '*/win-x64') { throw '發布產物不是 win-x64；請以 scripts/Build.ps1 -Runtime win-x64 重新建置。' }
+    $app = Join-Path $Destination 'app'
+    foreach ($directory in @($app, (Join-Path $Destination 'config'), (Join-Path $Destination 'keys'), (Join-Path $Destination 'logs'))) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+    Get-ChildItem -LiteralPath $Publish | Where-Object { $_.Name -notin @('logs', 'App_Data') } | Copy-Item -Destination $app -Recurse
+
+    # SDK 對 RID 發布會把 processPath 改成 apphost 卻不動 arguments；兩者不一致時 exe 會收到 dll 參數，IIS 啟動失敗。
+    $aspNetCore = ([xml](Get-Content -LiteralPath (Join-Path $app 'web.config') -Raw)).SelectSingleNode('//aspNetCore')
+    if (!$aspNetCore -or $aspNetCore.processPath -ne '.\AiNexus.Host.exe' -or $aspNetCore.arguments) {
+        throw "web.config 的 aspNetCore 必須是 processPath='.\AiNexus.Host.exe'、arguments 為空；實際為 processPath='$($aspNetCore.processPath)'、arguments='$($aspNetCore.arguments)'。請修 backend/src/AiNexus.Host/web.config。"
+    }
+
+    $settingsPath = Join-Path $Destination 'config/appsettings.Production.json'
+    $secretsPath = Join-Path $Destination 'config/appsettings.Secrets.json'
+    $templates = Join-Path $root 'backend/src/AiNexus.Host'
+    $sources = if ($IncludeLocalConfig) { Initialize-RepoLocalSettings } else {
+        @{ Settings = Join-Path $templates 'appsettings.Production.example.json'; Secrets = Join-Path $templates 'appsettings.Secrets.example.json' }
+    }
+    if (!(Test-Path -LiteralPath $settingsPath)) { Copy-Item -LiteralPath $sources.Settings -Destination $settingsPath }
+    if (!(Test-Path -LiteralPath $secretsPath)) { Copy-Item -LiteralPath $sources.Secrets -Destination $secretsPath; Protect-RepoSecrets $secretsPath }
+    $settings = Read-RepoJson $settingsPath
+    Set-RepoSetting $settings 'Files.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
+    Set-RepoSetting $settings 'Diagnostics.Directory' ($DataRoot.TrimEnd('\') + '\diagnostics')
+    if ($AllowUntrustedSql) { Set-RepoSetting $settings 'Databases.App.TrustServerCertificate' $true }
+    Save-RepoJson $settingsPath $settings
+}
+
+function New-RepoSchemaComparisonFile {
+    <#
+    .SYNOPSIS Writes a Visual Studio schema comparison (.scmp) of two dacpacs with the update options, through DacFx in a child process.
+    .DESCRIPTION
+    DacFx 只存絕對路徑（實測相對路徑讀不到），套件搬到別台後要在 VS 重新選擇兩個 dacpac。
+    在子程序載入 DacFx，避免它的 SqlClient 與目前工作階段已載入的組件衝突。
+    #>
+    param([Parameter(Mandatory)][string]$Source, [Parameter(Mandatory)][string]$Target, [Parameter(Mandatory)][string]$Path)
+    $config = Read-RepoJson (Join-Path $root '.config/dotnet-tools.json')
+    $nuget = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $HOME '.nuget/packages' }
+    $tools = Join-Path $nuget "microsoft.sqlpackage/$($config.tools['microsoft.sqlpackage'].version)/tools/net8.0/any"
+    if (!(Test-Path -LiteralPath $tools)) { throw "找不到 SqlPackage 的 DacFx：$tools；請先執行 scripts/Restore.ps1。" }
+    $options = @(Get-RepoSqlPackageOption Update | ForEach-Object { $_.Substring(3) } | Where-Object { $_ -notlike 'CommentOutSetVarDeclarations=*' })
+    $child = @'
+param($Tools, $Source, $Target, $Path, $Options)
+$ErrorActionPreference = 'Stop'
+Add-Type -Path (Join-Path $Tools 'runtimes/win/lib/net8.0/Microsoft.Data.SqlClient.dll')
+Add-Type -Path (Join-Path $Tools 'Microsoft.SqlServer.Dac.dll')
+Add-Type -Path (Join-Path $Tools 'Microsoft.SqlServer.Dac.Extensions.dll')
+$deploy = [Microsoft.SqlServer.Dac.DacDeployOptions]::new()
+foreach ($option in $Options.Split('|')) {
+    $name, $value = $option.Split('=', 2)
+    $property = $deploy.GetType().GetProperty($name)
+    $deploy.$name = if ($name -eq 'ExcludeObjectTypes') { [Microsoft.SqlServer.Dac.ObjectType[]]$value.Split(';') } else { [Convert]::ChangeType($value, $property.PropertyType) }
+}
+$comparison = [Microsoft.SqlServer.Dac.Compare.SchemaComparison]::new([Microsoft.SqlServer.Dac.Compare.SchemaCompareDacpacEndpoint]::new($Source), [Microsoft.SqlServer.Dac.Compare.SchemaCompareDacpacEndpoint]::new($Target))
+$comparison.Options = $deploy
+$comparison.SaveToFile($Path, $true)
+'@
+    $file = Join-Path ([IO.Path]::GetTempPath()) ('AiNexus-scmp-' + [Guid]::NewGuid().ToString('N') + '.ps1')
+    [IO.File]::WriteAllText($file, $child)
+    try {
+        pwsh -NoProfile -NonInteractive -File $file -Tools $tools -Source $Source -Target $Target -Path $Path -Options ($options -join '|') | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw '產生 compare.scmp 失敗；原因見上方輸出。' }
+    } finally { Remove-Item -LiteralPath $file -ErrorAction SilentlyContinue }
+}
+
 # 以下是腳本選單（Show-Scripts.ps1）與步驟摘要（Invoke-RepoSteps）用的顯示寬度、腳本目錄與指令組裝。
 
 # 終端機裡中日韓文字與全形標點佔 2 格。East Asian Ambiguous 字元（─ → … ✓ ⚠ 等）依終端機與字型是 1 或 2 格，
@@ -586,7 +1094,7 @@ $scriptCategories = [ordered]@{
     '初次設定' = '新機器或剛 clone 時'
     '建置與檢查' = '提交與送 PR 前'
     '資料庫與合約' = 'API 合約、資料表結構、建新庫'
-    '發布' = '產生 IIS 發布套件'
+    '發布' = '發版狀態、發布包與 tag'
 }
 
 function Get-RepoScriptCategory {

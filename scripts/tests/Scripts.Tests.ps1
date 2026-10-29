@@ -20,7 +20,7 @@ Describe 'scripts/ entry list' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
-            'Build', 'Configure-Local', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
+            'Build', 'Configure-Local', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Release', 'Restore', 'Start-Dev',
             'Show-Scripts', 'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify') | Sort-Object)
     }
 }
@@ -97,12 +97,12 @@ Describe 'Host commands called by scripts' {
         }
     }
 
-    It 'ships the dacpac and the numbered release SQL, but no script the production host would have to run' {
-        @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' }) | Should -BeNullOrEmpty
-        $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
-        $text | Should -Match 'dotnet build database/App'
-        $text | Should -Match 'App\.dacpac'
-        $text | Should -Match 'Get-RepoReleaseScript'
+    It 'packages update.sql and the IIS app, but no script the production host would have to run' {
+        @($calls | Where-Object { $_.Script -eq 'Release.ps1' }) | Should -BeNullOrEmpty
+        $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Release.ps1'))
+        foreach ($function in 'New-RepoDatabaseUpdateScript', 'New-RepoReleaseRecordScript', 'New-RepoRollbackScript', 'New-RepoIisPackage', 'Get-RepoDatabaseBuild') {
+            $text | Should -Match $function
+        }
         $text | Should -Not -Match 'Copy-Item .*\.ps1|migrations'
     }
 }
@@ -170,7 +170,7 @@ Describe 'Show-Scripts.ps1' {
         $state = New-State
         Set-Filter $state ''
         Send-Text $state '資料庫'
-        @($state.Rows | Where-Object { $_['Item'] } | ForEach-Object { $_['Item'].Name }) | Should -Be @('Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS')
+        @($state.Rows | Where-Object { $_['Item'] } | ForEach-Object { $_['Item'].Name }) | Should -Be @('Export-Contracts', 'Export-Database', 'Initialize-Database', 'Release')
         Send-Key $state 'Backspace' | Out-Null
         $state.Filter | Should -Be '資料'
     }
@@ -252,19 +252,17 @@ Describe 'Show-Scripts.ps1' {
         $text = pwsh -NoProfile -File $script -List | Out-String
         $LASTEXITCODE | Should -Be 0
         $text | Should -Match '開發（日常啟動與預覽）'
-        $text | Should -Match '發布（產生 IIS 發布套件）'
+        $text | Should -Match '發布（發版狀態、發布包與 tag）'
         foreach ($item in $catalog) { $text | Should -Match ([regex]::Escape($item.Name)) }
     }
 }
 
 Describe 'Initialize-Database.ps1' {
-    It 'creates the database with the release parameters of ADR 0010 and the same hand-written SQL as the IIS package' {
+    It 'creates the database with the shared SqlPackage options and the same hand-written SQL as update.sql, then records the version' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Initialize-Database.ps1'))
-        foreach ($property in 'BlockOnPossibleDataLoss=True', 'GenerateSmartDefaults=False', 'IgnorePermissions=True', 'ScriptDatabaseOptions=True') {
-            $text | Should -Match ([regex]::Escape($property))
-        }
-        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'", "'FullTextCatalogs'") { $text | Should -Match ([regex]::Escape($type)) }
-        $text | Should -Match 'Get-RepoReleaseScript'
+        foreach ($function in 'Publish-RepoDacpac', 'Get-RepoReleaseScript', 'Get-RepoDatabaseBuild') { $text | Should -Match $function }
+        $text | Should -Match ([regex]::Escape('[releases].[udf_SchemaObjects]()'))
+        $text | Should -Match ([regex]::Escape('[releases].[Deployments]'))
     }
 }

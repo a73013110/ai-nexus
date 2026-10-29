@@ -22,6 +22,13 @@
       手寫腳本由發版腳本在結構更新後另外執行，不進 dacpac：全文物件需要目標有全文元件（LocalDB 沒有），
       種子資料與一次性資料修正不是結構。
     -->
-    <Build Remove="FullText/**;Seed/**;Data/**" />
+    <Build Remove="FullText/**;Seed/**;Scripts/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <!--
+      releases.udf_SchemaObjects 讀 sys 目錄檢視，build 要有 master 的模型才解析得到；版本對應 DSP（Sql170）。
+      資料庫專案不在 backend 的集中套件管理內，版本寫在這裡。
+    -->
+    <PackageReference Include="Microsoft.SqlServer.Dacpacs.Master" Version="170.0.4" />
   </ItemGroup>
 </Project>

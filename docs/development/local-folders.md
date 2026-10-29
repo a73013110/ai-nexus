@@ -30,8 +30,8 @@
 | `browser-results/`、`browser-report/`、`browser-results.json` | Playwright 的失敗截圖與 trace、HTML 報告、JSON 結果 | `frontend/e2e/playwright.config.ts` |
 | `browser-server-*/` | e2e 測試伺服器專用的空設定、金鑰、附件與日誌 | `Start-BrowserTest.ps1` |
 | `diagnostic-acceptance/`、`monitoring-acceptance/`、`diagnostics-performance.json` | 後端真實瀏覽器與效能測試的畫面和結果 | `Category=Browser`／`Performance` 測試 |
-| `iis/<時間>/` | IIS 部署套件 | `Publish-IIS.ps1` |
+| `releases/v<版號>/` | 發布包（IIS 套件與資料庫更新包）；`releases/.publish/` 是打包前的建置產物 | `Release.ps1` |
 | `connection-checks.json`、`sql-capabilities.json` | 實際 AD／SQL／模型連線與 SQL 能力的報告 | `Test-Environment.ps1` |
 | `embeddings/` | embedding 模型比較結果 | `tooling/embeddings/compare.py` |
 
-新增會產生檔案的腳本或測試時，輸出放在 `artifacts/` 的子資料夾，並在上表加一行。`Build.ps1`、`Start-Local.ps1`、`Publish-IIS.ps1`、`Start-BrowserTest.ps1` 只接受 `artifacts/` 內的輸出路徑。
+新增會產生檔案的腳本或測試時，輸出放在 `artifacts/` 的子資料夾，並在上表加一行。`Build.ps1`、`Start-Local.ps1`、`Release.ps1`、`Start-BrowserTest.ps1` 只接受 `artifacts/` 內的輸出路徑。

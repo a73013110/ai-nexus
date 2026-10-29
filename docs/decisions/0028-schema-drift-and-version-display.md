@@ -1,6 +1,6 @@
 # 0028 正式機結構異動偵測與版本呈現
 
-- **狀態**：提議（2026-10-29）
+- **狀態**：採用（2026-10-29）
 - **決定**：
   - 不在客戶庫裝 DDL trigger。以「預期快照」比對實際結構：有無異動看雜湊，時間取 `sys.objects` 的 `modify_date`／`create_date`。
   - 取快照與比對寫成同一組 procedure（schema `releases`），update.sql、演練庫與網站共用，雜湊算法只有一份。
@@ -12,7 +12,7 @@
 
 - 每個物件一列：schema、名稱、類型、雜湊、定義本文。procedure、function、view、trigger 取 `sys.sql_modules.definition`；資料表的定義是欄位、索引、約束組成的固定格式字串。
 - 預期快照取自演練庫（執行同一份 update.sql，見 [ADR 0027](0027-single-version-and-tag-based-release.md)），由 update.sql 寫入目標庫。比對的是「與這一版應有的結構不同」，更新前就存在的客戶端修改也抓得到。
-- 實作時先以 PoC 確認演練庫與客戶庫的定義本文一致；不一致時改為更新完成當下在目標庫取快照（只偵測更新後的異動）。
+- PoC 實測：開發庫（SSMS 手動建立）與 LocalDB（SqlPackage 部署）95 個物件雜湊全部相同；正規化只做空白摺疊與 binary collation，`ALTER`／`CREATE OR ALTER` 存成 `CREATE` 不影響。大小寫差異算異動。
 - 新庫由 `Initialize-Database.ps1` 建立後同樣寫入快照。
 
 ## 異動判定

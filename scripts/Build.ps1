@@ -5,7 +5,7 @@
 建置 Angular 並發布 .NET，產出可直接執行的網站。
 
 .DESCRIPTION
-先 build 前端，再 dotnet publish 主機，最後把前端產物放進發布目錄的 wwwroot。
+先 build 前端，再 dotnet publish 主機，最後把前端產物放進發布目錄的 wwwroot。前後端寫入同一個版號與 commit（ADR 0027）。
 輸出目錄必須在 artifacts/ 內，publish 前會先清空（不是連結時才清）；舊的 wwwroot 只有在確認是此 repo 內的實體目錄時才會刪除。
 
 .PARAMETER Restore
@@ -15,7 +15,11 @@
 發布目錄，相對於 repo 根目錄，必須在 artifacts/ 內。
 
 .PARAMETER Runtime
-發布的平台，只帶該平台的原生檔；預設為執行這個腳本的平台。IIS 套件固定 win-x64（Publish-IIS.ps1）。
+發布的平台，只帶該平台的原生檔；預設為執行這個腳本的平台。IIS 套件固定 win-x64（Release.ps1）。
+
+.PARAMETER Version
+寫入程式的版號（後端 InformationalVersion、前端 APP_VERSION）；省略時由最近的發版 tag 推得（git describe），
+例如 2026.11.4-dev.3，沒有 tag 時為 0.0.0-dev。Release.ps1 發版時傳入新的版號。
 
 .COMPONENT
 建置與檢查
@@ -27,13 +31,20 @@
 ./scripts/Build.ps1 -OutputDirectory artifacts/verification
 #>
 [CmdletBinding()]
-param([switch]$Restore, [string]$OutputDirectory = 'artifacts/publish', [ValidateSet('win-x64', 'linux-x64')][string]$Runtime = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }))
+param(
+    [switch]$Restore,
+    [string]$OutputDirectory = 'artifacts/publish',
+    [ValidateSet('win-x64', 'linux-x64')][string]$Runtime = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }),
+    [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')][string]$Version
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $root = Get-RepoRoot
 $publish = Resolve-RepoArtifactPath $OutputDirectory
+$build = Get-RepoVersion
+if ($Version) { $build.Version = $Version }
 Disable-RepoTelemetry
 Push-Location -LiteralPath $root
 $scripts = $PSScriptRoot
@@ -41,7 +52,8 @@ try {
     Invoke-RepoSteps '建置網站' @(
         @{ Name = '還原套件'; Skip = $(if (!$Restore) { '未加 -Restore' }); Run = { & (Join-Path $scripts 'Restore.ps1') } }
         @{ Name = '前端 build'; Run = {
-                npm --prefix frontend run build
+                # 字串常值要帶引號：define 的值是一段 JavaScript。
+                npm --prefix frontend run build -- --define "APP_VERSION='$($build.Version)'"
                 if ($LASTEXITCODE -ne 0) { throw '前端 build 失敗。' }
             }
         }
@@ -53,7 +65,7 @@ try {
                     }
                     Remove-Item -LiteralPath $publish -Recurse -Force
                 }
-                dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -r $Runtime --self-contained false -o $publish
+                dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -r $Runtime --self-contained false -o $publish "-p:Version=$($build.Version)" "-p:SourceRevisionId=$($build.Revision)"
                 if ($LASTEXITCODE -ne 0) { throw '後端 publish 失敗。' }
             }
         }
@@ -72,5 +84,5 @@ try {
             }
         }
     )
-    Write-Output "發布完成：$publish"
+    Write-Output "發布完成：$publish（v$($build.Version)，$($build.Short)）"
 } finally { Pop-Location }

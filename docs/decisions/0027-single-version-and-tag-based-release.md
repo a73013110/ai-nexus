@@ -1,12 +1,12 @@
 # 0027 單一版號與以 git tag 為基準的發版
 
-- **狀態**：提議（2026-10-29）
+- **狀態**：採用（2026-10-29）
 - **決定**：
   - 全專案一條版號 `YYYY.MM.N`（N 每月從 0 起算，每次發版加一），不分前端、後端、資料庫。一個客戶一個專案，不依客戶分版號。
   - 版號只存在 annotated tag（`v2026.11.4`），不寫在任何檔案；tag 說明以 trailer `Components: app, database` 記這次發了哪些部分。
   - 元件依路徑判定：`database/` 是資料庫；`backend/`、`frontend/`、`contracts/` 是程式（前後端同一次建置、同一個 IIS 套件，不分開）。
   - 唯一入口 `Release.ps1`（取代 `Publish-IIS.ps1`）：不帶參數只列狀態，`-Publish` 發版。
-  - 資料庫更新包由「上一個含資料庫的 tag」與目前 commit 各建一份 dacpac 比對產生；不保存 dacpac，也不維護對應客戶版本的鏡像庫。
+  - 資料庫更新包由「上一個含資料庫的 tag」與目前 commit 各建一份 dacpac 比對產生；dacpac 只隨套件附上給人審核、不另外保存，也不維護對應客戶版本的鏡像庫。
 
 ## 為什麼用 annotated tag
 
@@ -36,11 +36,13 @@
 
 ```text
 README.md        執行順序（先資料庫、後程式）與手動步驟
-app/             IIS 套件；根目錄 version.json（版本、commit、建置時間）
+app/             IIS 套件；根目錄 version.json（版本、commit、建置時間、需要的最低資料庫版本、feat／fix）
+config/ keys/ logs/  與現行 IIS 套件相同
 database/
   update.sql     唯一要執行的檔案（SSMS，SQLCMD 模式）
   changes.md     變更清單，給人審核
-  compare.scmp   VS 結構描述比對：兩份 dacpac 與比對選項已設定
+  compare/       兩份 dacpac
+  compare.scmp   VS 結構描述比對：選項已設定；.scmp 只認絕對路徑，換位置後在 VS 重選 compare/ 的兩個檔
   rollback.sql   只含 procedure、function、view 的反向腳本；資料表回復一律用備份
   manual/        database/Scripts/ 在這段期間新增的一次性資料修正
 ```

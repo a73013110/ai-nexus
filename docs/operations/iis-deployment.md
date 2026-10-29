@@ -39,9 +39,12 @@ D:\CoreProject\AiNexus\
 ```powershell
 Set-Location D:\GitProject\ai-nexus
 pwsh -NoProfile -File scripts/Verify.ps1
-pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
+pwsh -NoProfile -File scripts/Release.ps1                                   # 看上一版、下一版與這次會帶什麼
+pwsh -NoProfile -File scripts/Release.ps1 -Publish -DataRoot 'D:\CoreProject\AiNexus\data'
 ```
 
-套件放 `artifacts/iis/<時間>/`，只含部署需要的東西：app／config 範本／空 keys／logs，以及 `database\`（`App.dacpac`＝這一版應有的資料庫結構，與 app 出自同一份原始碼；`release\` 是依執行順序編號的手寫 SQL；部署方式見 [資料庫建置與權限](database-setup.md#部署)），不預設攜帶秘密，正式主機也不需要執行任何腳本。這一版有一次性資料修正時加 `-Release <版本>`。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Files.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
+版號與發版流程見 [ADR 0027](../decisions/0027-single-version-and-tag-based-release.md)。`-Publish` 要求工作區乾淨、分支是 `master` 或 `hotfix/*`，產生套件後建 annotated tag，push 前會再問一次；只想先看套件用 `-Preview`。只帶其中一部分用 `-Only App` 或 `-Only Database`。
 
-若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。`-DestinationPath` 指**全新且空的套件 app 目錄**，不是正在運行的網站；腳本拒絕覆蓋非空目錄。既有 config／keys 也不會被這個封裝流程覆蓋。
+套件放 `artifacts/releases/v<版號>/`，只含部署需要的東西：`app\`（含 `version.json`）／config 範本／空 keys／logs，以及 `database\`（`update.sql` 從上一版升到這一版，已在 LocalDB 演練過；`changes.md`、`compare.scmp`、`rollback.sql`、`manual\`；部署方式見 [資料庫建置與權限](database-setup.md#部署)），不預設攜帶秘密，正式主機也不需要執行任何腳本。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（帶 app 時必填），套件 config 的 `Files.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。`app` 已包含前端與後端，IIS 主機不用 Node.js。
+
+若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。既有 config／keys 不會被這個封裝流程覆蓋。

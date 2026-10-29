@@ -6,7 +6,7 @@
 
 ## 目錄與權限
 
-- 空字串時用 `%ProgramData%\AiNexus\diagnostics`；正式主機設成站外資料根目錄下的 `diagnostics`（`Publish-IIS.ps1 -DataRoot` 會寫進套件 config）。
+- 空字串時用 `%ProgramData%\AiNexus\diagnostics`；正式主機設成站外資料根目錄下的 `diagnostics`（`Release.ps1 -DataRoot` 會寫進套件 config）。
 - 目錄必須是絕對路徑、在 app 外、主機本地，不可經 junction／symlink／UNC，不得映射成 IIS 虛擬目錄。
 - application pool 身分需要 Modify；維運人員依組織核准給唯讀。套件的 `logs/` 只給 ANCM stdout，不能與應用 journal 混用。
 - 主機指令 `verify deployment` 會輸出 diagnosticStoragePath、diagnosticStorageWritable、容量與 OTLP 狀態，並做短暫寫入 probe；它用維運 shell 的身分，IIS 帳號仍要實際網站驗證。

@@ -55,7 +55,7 @@ public static class DatabaseStartup
             {
                 Console.Error.WriteLine("  " + difference);
             }
-            Console.Error.WriteLine("請以結構描述比對把發布套件的 database\\App.dacpac 套用到這個資料庫，或確認網站與資料庫是同一版（docs/operations/database-setup.md）。");
+            Console.Error.WriteLine("請先在這個資料庫執行發布包的 database\\update.sql，或確認網站與資料庫是同一版（docs/operations/database-setup.md）。");
             return false;
         }
         catch (Exception ex)

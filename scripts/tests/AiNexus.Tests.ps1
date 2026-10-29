@@ -22,19 +22,15 @@ Describe 'Resolve-RepoArtifactPath' {
 Describe 'Get-RepoReleaseScript' {
     BeforeAll {
         $project = Join-Path $TestDrive 'App'
-        foreach ($folder in 'Data/2026.11.0', 'Data/2026.12.0', 'FullText/Catalogs', 'FullText/Indexes', 'Seed') { New-Item -ItemType Directory -Path (Join-Path $project $folder) -Force | Out-Null }
-        Set-Content -LiteralPath (Join-Path $project 'Data/2026.11.0/pre-move.sql') -Value 'SELECT 1;'
-        Set-Content -LiteralPath (Join-Path $project 'Data/2026.11.0/post-fill.sql') -Value 'SELECT 2;'
-        Set-Content -LiteralPath (Join-Path $project 'Data/2026.12.0/post-later.sql') -Value 'SELECT 3;'
+        foreach ($folder in 'FullText/Catalogs', 'FullText/Indexes', 'Seed', 'Scripts') { New-Item -ItemType Directory -Path (Join-Path $project $folder) -Force | Out-Null }
         Set-Content -LiteralPath (Join-Path $project 'FullText/Catalogs/Search.sql') -Value "CREATE FULLTEXT CATALOG [Search's]`n    WITH ACCENT_SENSITIVITY = ON;`nGO"
         Set-Content -LiteralPath (Join-Path $project 'FullText/Indexes/knowledge.Chunks.sql') -Value "CREATE FULLTEXT INDEX ON [knowledge].[Chunks]`n    ([Text] LANGUAGE 1028)`n    KEY INDEX [IX_Chunks]`n    ON [Search's];`nGO"
         Set-Content -LiteralPath (Join-Path $project 'Seed/accesscontrol.sql') -Value 'SELECT 4;'
+        Set-Content -LiteralPath (Join-Path $project 'Scripts/2026-11-01-fix.sql') -Value 'SELECT 5;'
     }
 
-    It 'names the scripts in run order and takes Data/ only from the given release' {
-        @(Get-RepoReleaseScript $project -Release 2026.11.0).Name | Should -Be @(
-            '1-01-pre-move.sql', '3-01-fulltext-Search.sql', '3-02-fulltext-knowledge.Chunks.sql', '4-01-post-fill.sql', '5-01-seed-accesscontrol.sql')
-        @(Get-RepoReleaseScript $project).Name | Should -Be @('3-01-fulltext-Search.sql', '3-02-fulltext-knowledge.Chunks.sql', '5-01-seed-accesscontrol.sql')
+    It 'names the scripts in run order and leaves the one-off fixes in Scripts/ to the engineer' {
+        @(Get-RepoReleaseScript $project).Name | Should -Be @('fulltext-Search.sql', 'fulltext-knowledge.Chunks.sql', 'seed-accesscontrol.sql')
     }
 
     It 'wraps full-text scripts so they skip without the component or when the object exists' {
@@ -44,14 +40,117 @@ Describe 'Get-RepoReleaseScript' {
         $catalog | Should -Match ([regex]::Escape("sys.fulltext_catalogs WHERE name = N'Search''s'"))
         $catalog | Should -Match ([regex]::Escape("EXEC (N'CREATE FULLTEXT CATALOG [Search''s]"))
         $scripts[1].Text | Should -Match ([regex]::Escape("OBJECT_ID(N'[knowledge].[Chunks]')"))
-        $scripts[2].Text | Should -Match '^-- 發版步驟 5：Seed/accesscontrol.sql'
+        $scripts[2].Text | Should -Match '^-- 種子資料：Seed/accesscontrol.sql'
     }
 
-    It 'refuses SQLCMD directives, because the scripts run in plain SSMS' {
-        $folder = Join-Path $TestDrive 'Sqlcmd'
+    It 'refuses <Name>, because update.sql runs in SQLCMD mode' -ForEach @(
+        @{ Name = 'SQLCMD directives'; Text = ":setvar Name x`nSELECT 1;"; Message = '*SQLCMD*' }
+        @{ Name = 'a $( sequence'; Text = "SELECT N'`$(x)';"; Message = '*$(*' }
+    ) {
+        $folder = Join-Path $TestDrive ([Guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path (Join-Path $folder 'Seed') -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path $folder 'Seed/a.sql') -Value ":setvar Name x`nSELECT 1;"
-        { Get-RepoReleaseScript $folder } | Should -Throw '*SQLCMD*'
+        Set-Content -LiteralPath (Join-Path $folder 'Seed/a.sql') -Value $Text
+        { Get-RepoReleaseScript $folder } | Should -Throw $Message
+    }
+}
+
+Describe 'Get-RepoPathComponent' {
+    It 'maps database/ to database and backend, frontend, contracts to app' {
+        @(Get-RepoPathComponent @('docs/a.md', 'database/App/x.sql')) | Should -Be @('database')
+        @(Get-RepoPathComponent @('frontend\src\main.ts', 'contracts/openapi.json')) | Should -Be @('app')
+        @(Get-RepoPathComponent @('backend/x.cs', 'database/App/y.sql')) | Should -Be @('app', 'database')
+        @(Get-RepoPathComponent @('scripts/Release.ps1', 'docs/x.md')) | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-RepoNextVersion' {
+    It 'counts the releases of the month from 0' {
+        $date = [datetime]::new(2026, 3, 9)
+        Get-RepoNextVersion @() $date | Should -Be '2026.03.0'
+        Get-RepoNextVersion @('2026.02.5', '2026.03.0', '2026.03.1') $date | Should -Be '2026.03.2'
+        Get-RepoNextVersion @('2026.03.9', '2026.03.10') $date | Should -Be '2026.03.11'
+    }
+}
+
+Describe 'Get-RepoVersion' {
+    It 'derives a version and the full commit of HEAD' {
+        $version = Get-RepoVersion
+        $version.Version | Should -Match '^(0\.0\.0-dev|\d{4}\.\d{2}\.\d+(-dev\.\d+)?)$'
+        $version.Revision | Should -Match '^[0-9a-f]{40}$'
+    }
+}
+
+Describe 'ConvertTo-RepoLikePattern' {
+    It 'escapes LIKE characters and turns wildcards into LIKE wildcards' {
+        ConvertTo-RepoLikePattern 'dbo.Temp_*' | Should -Be 'dbo.Temp[_]%'
+        ConvertTo-RepoLikePattern 'x.[a]?%' | Should -Be 'x.[[]a]_[%]'
+    }
+}
+
+Describe 'Release snapshots and scripts' {
+    BeforeAll {
+        function Item([string]$Name, [string]$Type, [string]$Definition) {
+            $schema, $object = $Name.Split('.', 2)
+            [pscustomobject]@{ SchemaName = $schema; Name = $object; Type = $Type; Definition = $Definition; Hash = [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Definition)) }
+        }
+        $before = @(
+            Item 'ops.usp_Kept' 'procedure' "-- Create date: 2026-11-01`nCREATE   PROCEDURE [ops].[usp_Kept] AS SELECT 1;"
+            Item 'ops.usp_Changed' 'procedure' "CREATE PROCEDURE [ops].[usp_Changed] AS SELECT 1;"
+            Item 'ops.udf_Removed' 'function' "CREATE FUNCTION [ops].[udf_Removed] () RETURNS TABLE AS RETURN SELECT 1 AS x;"
+            Item 'ops.Things' 'table' '[Id] int NOT NULL'
+        )
+        $after = @(
+            $before[0]
+            Item 'ops.usp_Changed' 'procedure' "CREATE PROCEDURE [ops].[usp_Changed] AS SELECT 2;"
+            Item 'ops.vw_Added' 'view' "CREATE VIEW [ops].[vw_Added] AS SELECT 1 AS x;"
+            Item 'ops.Things' 'table' "[Id] int NOT NULL`n[Name] nvarchar(20) NULL"
+        )
+        $changes = @(Compare-RepoSchemaSnapshot $before $after)
+    }
+
+    It 'lists added, modified and removed objects by hash' {
+        @($changes | ForEach-Object { "$($_.Change) $($_.Name)" }) | Should -Be @('Removed ops.udf_Removed', 'Modified ops.usp_Changed', 'Modified ops.Things', 'Added ops.vw_Added')
+    }
+
+    It 'rolls back only programmable objects: earlier definitions as CREATE OR ALTER, new ones dropped' {
+        $text = (New-RepoRollbackScript $changes) -join "`n"
+        $text | Should -Match ([regex]::Escape('DROP VIEW IF EXISTS [ops].[vw_Added];'))
+        $text | Should -Match ([regex]::Escape('CREATE OR ALTER FUNCTION [ops].[udf_Removed]'))
+        $text | Should -Match ([regex]::Escape('CREATE OR ALTER PROCEDURE [ops].[usp_Changed] AS SELECT 1;'))
+        $text | Should -Not -Match 'Things|usp_Kept'
+    }
+
+    It 'records the snapshot without letting SQLCMD read $( as a variable' {
+        $snapshot = @(Item 'ops.usp_Money' 'procedure' "SELECT N'`$(x)';")
+        $text = (New-RepoReleaseRecordScript -Version '2026.11.4' -Revision 'abc' -StartPoint 'v2026.11.3' -Snapshot $snapshot -IgnorePattern 'dbo.Temp_*') -join "`n"
+        $text | Should -Not -Match '\$\('
+        $text | Should -Match ([regex]::Escape("CONVERT(nvarchar(max), N'SELECT N''') + N'`$' + N'(' + N'x)'';')"))
+        $text | Should -Match ([regex]::Escape("VALUES (N'dbo.Temp[_]%')"))
+        $text | Should -Match ([regex]::Escape("(N'database', N'2026.11.4', N'abc', N'v2026.11.3', SYSDATETIMEOFFSET()"))
+    }
+
+    It 'checks the recorded version before anything else and records last' {
+        $text = New-RepoDatabaseUpdateScript -Version '2026.11.4' -StartVersion '2026.11.3' -StartPoint 'v2026.11.3' -Structure 'PRINT 1;' -Record @('-- record')
+        $text | Should -Match ([regex]::Escape("DECLARE @expected nvarchar(64) = N'2026.11.3'"))
+        $text.IndexOf('1. 前置檢查') | Should -BeLessThan $text.IndexOf('PRINT 1;')
+        $text.IndexOf('PRINT 1;') | Should -BeLessThan $text.IndexOf('-- record')
+        (New-RepoDatabaseUpdateScript -Version '2026.11.4' -Structure '') | Should -Match ([regex]::Escape('DECLARE @expected nvarchar(64) = NULL'))
+        (New-RepoDatabaseUpdateScript -Version '2026.11.4' -Structure '') | Should -Not -Match '4\. 記錄'
+    }
+}
+
+Describe 'Get-RepoSqlPackageOption' {
+    It 'writes database options only when creating, and drops objects removed between versions only when updating' {
+        $create = @(Get-RepoSqlPackageOption Create)
+        $update = @(Get-RepoSqlPackageOption Update)
+        foreach ($option in $create, $update) {
+            $option | Should -Contain '/p:BlockOnPossibleDataLoss=True'
+            $option | Should -Contain '/p:GenerateSmartDefaults=False'
+            ($option -join ' ') | Should -Match 'ExcludeObjectTypes=Users;Logins;.*FullTextCatalogs'
+        }
+        $create | Should -Contain '/p:ScriptDatabaseCollation=True'
+        $update | Should -Contain '/p:ScriptDatabaseOptions=False'
+        $update | Should -Contain '/p:DropObjectsNotInSource=True'
     }
 }
 
@@ -298,7 +397,7 @@ Describe 'Update-RepoDatabaseProject' {
         $extract = Join-Path $TestDrive 'extract'
         $files = @{
             'App.sqlproj' = '<Project />'; 'old/Tables/Gone.sql' = 'old'; 'identity/Tables/Users.sql' = 'old'; 'FullText/Catalogs/Old.sql' = 'old'
-            'FullText/README.sql' = 'hand'; 'Seed/identity.Roles.sql' = 'hand'; 'Data/1.2.0/pre-move.sql' = 'hand'; 'bin/Debug/App.sql' = 'build'
+            'FullText/README.sql' = 'hand'; 'Seed/identity.Roles.sql' = 'hand'; 'Scripts/2026-11-01-fix.sql' = 'hand'; 'bin/Debug/App.sql' = 'build'
         }
         foreach ($name in $files.Keys) {
             New-Item -ItemType Directory -Path (Split-Path (Join-Path $project $name)) -Force | Out-Null
@@ -310,7 +409,7 @@ Describe 'Update-RepoDatabaseProject' {
         }
         Update-RepoDatabaseProject $extract $project
         $left = @(Get-ChildItem -LiteralPath $project -File -Recurse | ForEach-Object { [IO.Path]::GetRelativePath($project, $_.FullName).Replace('\', '/') }) | Sort-Object
-        $left | Should -Be (@('App.sqlproj', 'bin/Debug/App.sql', 'Data/1.2.0/pre-move.sql', 'FullText/Catalogs/KnowledgeSearch.sql', 'FullText/README.sql', 'identity/Tables/Users.sql', 'Seed/identity.Roles.sql') | Sort-Object)
+        $left | Should -Be (@('App.sqlproj', 'bin/Debug/App.sql', 'FullText/Catalogs/KnowledgeSearch.sql', 'FullText/README.sql', 'identity/Tables/Users.sql', 'Scripts/2026-11-01-fix.sql', 'Seed/identity.Roles.sql') | Sort-Object)
         Get-Content -LiteralPath (Join-Path $project 'identity/Tables/Users.sql') -Raw | Should -Be 'new'
         Test-Path -LiteralPath (Join-Path $project 'old') | Should -BeFalse
     }
