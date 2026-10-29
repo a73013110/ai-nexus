@@ -96,7 +96,6 @@
   justify-content: space-between;
   gap: var(--section-gap);
   flex-wrap: wrap;
-  margin-bottom: var(--section-gap);
 }
 // 工具列裡的說明（例如頁內分頁目前那頁的說明）占滿剩餘寬度；放不下時整句換到下一列，不把旁邊的
 // 控制項擠窄。

@@ -128,7 +128,7 @@ function rank(provider: string) {
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../../../../shared/ui/management-section-page.scss', './price-book.scss'],
+  styleUrls: ['../../../../shared/ui/figure-table.scss', './price-book.scss'],
   templateUrl: './price-book.html',
 })
 export class PriceBook {

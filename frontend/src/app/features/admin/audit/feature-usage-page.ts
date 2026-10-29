@@ -64,7 +64,7 @@ const isoDay = (date: Date) =>
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
-  styleUrls: ['../../../shared/ui/management-section-page.scss', './feature-usage-page.scss'],
+  styleUrls: ['../../../shared/ui/figure-table.scss', './feature-usage-page.scss'],
   templateUrl: './feature-usage-page.html',
 })
 export class FeatureUsagePage {

@@ -1,14 +1,10 @@
-@use 'breakpoints' as bp;
-
-// 平台用量、模型與工具價格、檢索管理三頁（原本是平台營運的分頁，styleUrls）共用：一欄區段——
-// 工具列、選用的數字列，再來是標題寫明名稱與筆數的表格。各頁自己的儲存格樣式在各自的檔案。
+// 平台用量與檢索管理（原本是平台營運的分頁，styleUrls）共用：一欄區段——工具列、選用的數字列，再來是
+// 標題寫明名稱與筆數的表格。一頁有好幾張表，所以表格各自設上限而不是吃滿頁面；只有一張表的頁面改用
+// `layoutMode="data"`。各頁自己的儲存格樣式在各自的檔案。
 :host {
   display: grid;
   gap: var(--section-gap);
   min-width: 0;
-}
-.page-toolbar {
-  margin-bottom: 0;
 }
 // Sections whose tables fit half the width sit side by side; narrower, they stack.
 .ops-pair {
@@ -23,34 +19,7 @@
 .ops-table table {
   table-layout: fixed;
 }
-.ops-action-column {
-  width: 3.25rem;
-}
 .ops-table-note {
   color: var(--secondary);
   font-size: var(--p-font-xs);
-}
-// On cards, tables of figures (`.ops-figures`) list them two to a row under the name instead of
-// one per line; the row's button keeps the top-right corner and `.ops-span` cells take
-// the whole row.
-@include bp.below(narrow) {
-  .ops-figures.ui-table-stack tbody tr {
-    position: relative;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .ops-figures.ui-table-stack tbody :is(td, th) {
-    grid-column: auto;
-  }
-  .ops-figures.ui-table-stack tbody :is(th, .ops-span) {
-    grid-column: 1 / -1;
-  }
-  .ops-figures.ui-table-stack tbody tr:has([data-stack='end']) th {
-    padding-inline-end: calc(var(--button-target) + var(--p-space-2));
-  }
-  .ops-figures.ui-table-stack tbody [data-stack='end'] {
-    position: absolute;
-    top: var(--p-space-2);
-    right: var(--p-space-2);
-    margin: 0;
-  }
 }

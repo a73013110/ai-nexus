@@ -222,9 +222,6 @@ form.dialog-form {
   min-height: 7rem;
   max-height: 40dvh;
 }
-.dialog-body > :where(p, .form-note) {
-  margin: 0;
-}
 
 // Footer: an optional note on the left, actions on the right.
 .dialog-foot {

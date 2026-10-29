@@ -2,144 +2,143 @@
   [title]="session.featureName('audit.usage')"
   description="依稽核紀錄統計各功能的使用人數、次數與失敗。"
   density="compact"
+  layoutMode="data"
 >
   @if (session.has('audit.usage')) {
-    <div class="usage-sections">
-      <div class="page-toolbar">
-        <nx-view-switch
-          label="統計期間"
-          appearance="segment"
-          [options]="periods"
-          [value]="days()"
-          (valueChange)="days.set($event)"
-        />
-        @if (periodLabel()) {
-          <p class="form-note">{{ periodLabel() }}</p>
-        }
-        <div class="page-actions">
-          <button
-            nxRefresh
-            aria-label="更新功能使用量"
-            [busy]="read.refreshing()"
-            (refresh)="read.reload()"
-          ></button>
-        </div>
+    <div class="page-toolbar">
+      <nx-view-switch
+        label="統計期間"
+        appearance="segment"
+        [options]="periods"
+        [value]="days()"
+        (valueChange)="days.set($event)"
+      />
+      @if (periodLabel()) {
+        <p class="form-note">{{ periodLabel() }}</p>
+      }
+      <div class="page-actions">
+        <button
+          nxRefresh
+          aria-label="更新功能使用量"
+          [busy]="read.refreshing()"
+          (refresh)="read.reload()"
+        ></button>
       </div>
-      @if (read.error() && report()) {
-        <nx-notice [message]="read.error()"
-          ><button
-            notice-actions
-            nxPending
-            type="button"
-            [pending]="read.refreshing()"
-            (click)="read.reload()"
-          >
-            {{ read.refreshing() ? '重新載入中…' : '重新載入' }}
-          </button>
-        </nx-notice>
-      }
-      @if (report() || read.loading()) {
-        <nx-stat-grid label="功能使用量摘要" [busy]="read.refreshing()">
-          @for (tile of tiles(); track tile.key) {
-            <nx-stat-tile
-              [label]="tile.label"
-              [value]="tile.value"
-              [loading]="!report()"
-              [unit]="tile.unit"
-            />
-          }
-        </nx-stat-grid>
-      }
-      <nx-data-table
-        class="ops-table ops-figures usage-features"
-        label="各功能使用量"
-        [busy]="read.refreshing()"
-        [stacked]="true"
-      >
-        <div table-toolbar class="ui-table-toolbar">
-          <h2>
-            各功能使用量
-            @if (report()) {
-              <span class="ui-count-label">{{ rows().length }} 個功能</span>
-            }
-          </h2>
-        </div>
-        <table>
-          <caption class="sr-only">
-            各頁面功能的使用人數、成功操作次數與失敗次數，依使用人數由多到少排列。
-          </caption>
-          <colgroup>
-            <col />
-            <col class="usage-share-column" />
-            <col class="usage-count-column" />
-            <col class="usage-count-column" />
-            <col class="usage-time-column" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">功能</th>
-              <th scope="col">使用人數</th>
-              <th scope="col" class="ui-table-numeric">操作次數</th>
-              <th scope="col" class="ui-table-numeric">失敗或拒絕</th>
-              <th scope="col">最後使用</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.featureId) {
-              <tr
-                nxTableRow
-                [class.is-selected]="selectedId() === row.featureId"
-                (rowActivate)="open(row.featureId)"
-              >
-                <th scope="row">
-                  <span class="usage-feature">
-                    <nx-icon [name]="row.icon" />
-                    <span class="usage-feature-text">
-                      <button
-                        type="button"
-                        class="ui-table-link ui-truncate"
-                        data-row-action
-                        [attr.aria-label]="'檢視使用量：' + row.name"
-                        [attr.aria-controls]="drawer()?.id"
-                        [attr.aria-expanded]="selectedId() === row.featureId"
-                        (click)="open(row.featureId)"
-                      >
-                        {{ row.name }}
-                      </button>
-                      <small class="ui-truncate">{{ row.module }}</small>
-                    </span>
-                  </span>
-                </th>
-                <td class="usage-share ops-span" data-label="使用人數">
-                  <meter
-                    min="0"
-                    max="1"
-                    [value]="share(row.users)"
-                    [attr.aria-label]="row.name + ' 使用人數'"
-                  ></meter
-                  ><span class="ui-table-numeric">{{ format(row.users) }} 人</span>
-                </td>
-                <td class="ui-table-numeric" data-label="操作次數">{{ format(row.events) }}</td>
-                <td class="ui-table-numeric" data-label="失敗或拒絕">
-                  {{ format(row.failures) }}<span class="usage-rate">{{ failureRate(row) }}</span>
-                </td>
-                <td data-label="最後使用">{{ row.lastUsed }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <nx-table-state
-          [count]="rows().length"
-          [loading]="read.loading()"
-          [error]="read.error()"
-          loadingText="正在載入功能使用量…"
-          errorTitle="無法載入功能使用量"
-          emptyTitle="期間內沒有功能使用紀錄"
-          emptyText="試著拉長統計期間。"
-          (retry)="read.reload()"
-        />
-      </nx-data-table>
     </div>
+    @if (read.error() && report()) {
+      <nx-notice [message]="read.error()"
+        ><button
+          notice-actions
+          nxPending
+          type="button"
+          [pending]="read.refreshing()"
+          (click)="read.reload()"
+        >
+          {{ read.refreshing() ? '重新載入中…' : '重新載入' }}
+        </button>
+      </nx-notice>
+    }
+    @if (report() || read.loading()) {
+      <nx-stat-grid label="功能使用量摘要" [busy]="read.refreshing()">
+        @for (tile of tiles(); track tile.key) {
+          <nx-stat-tile
+            [label]="tile.label"
+            [value]="tile.value"
+            [loading]="!report()"
+            [unit]="tile.unit"
+          />
+        }
+      </nx-stat-grid>
+    }
+    <nx-data-table
+      class="figure-table usage-features"
+      label="各功能使用量"
+      [busy]="read.refreshing()"
+      [stacked]="true"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>
+          各功能使用量
+          @if (report()) {
+            <span class="ui-count-label">{{ rows().length }} 個功能</span>
+          }
+        </h2>
+      </div>
+      <table>
+        <caption class="sr-only">
+          各頁面功能的使用人數、成功操作次數與失敗次數，依使用人數由多到少排列。
+        </caption>
+        <colgroup>
+          <col />
+          <col class="usage-share-column" />
+          <col class="usage-count-column" />
+          <col class="usage-count-column" />
+          <col class="usage-time-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">功能</th>
+            <th scope="col">使用人數</th>
+            <th scope="col" class="ui-table-numeric">操作次數</th>
+            <th scope="col" class="ui-table-numeric">失敗或拒絕</th>
+            <th scope="col">最後使用</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.featureId) {
+            <tr
+              nxTableRow
+              [class.is-selected]="selectedId() === row.featureId"
+              (rowActivate)="open(row.featureId)"
+            >
+              <th scope="row">
+                <span class="usage-feature">
+                  <nx-icon [name]="row.icon" />
+                  <span class="usage-feature-text">
+                    <button
+                      type="button"
+                      class="ui-table-link ui-truncate"
+                      data-row-action
+                      [attr.aria-label]="'檢視使用量：' + row.name"
+                      [attr.aria-controls]="drawer()?.id"
+                      [attr.aria-expanded]="selectedId() === row.featureId"
+                      (click)="open(row.featureId)"
+                    >
+                      {{ row.name }}
+                    </button>
+                    <small class="ui-truncate">{{ row.module }}</small>
+                  </span>
+                </span>
+              </th>
+              <td class="usage-share figure-span" data-label="使用人數">
+                <meter
+                  min="0"
+                  max="1"
+                  [value]="share(row.users)"
+                  [attr.aria-label]="row.name + ' 使用人數'"
+                ></meter
+                ><span class="ui-table-numeric">{{ format(row.users) }} 人</span>
+              </td>
+              <td class="ui-table-numeric" data-label="操作次數">{{ format(row.events) }}</td>
+              <td class="ui-table-numeric" data-label="失敗或拒絕">
+                {{ format(row.failures) }}<span class="usage-rate">{{ failureRate(row) }}</span>
+              </td>
+              <td data-label="最後使用">{{ row.lastUsed }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        [count]="rows().length"
+        [loading]="read.loading()"
+        [error]="read.error()"
+        loadingText="正在載入功能使用量…"
+        errorTitle="無法載入功能使用量"
+        emptyTitle="期間內沒有功能使用紀錄"
+        emptyText="試著拉長統計期間。"
+        (retry)="read.reload()"
+      />
+    </nx-data-table>
     <nx-detail-drawer title="功能使用量" (closed)="selectedId.set(null)">
       <div drawer-summary class="ui-drawer-summary">
         @if (selected(); as row) {

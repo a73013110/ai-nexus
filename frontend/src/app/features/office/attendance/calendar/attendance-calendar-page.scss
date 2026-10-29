@@ -3,7 +3,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--p-space-2) var(--p-space-3);
-  margin-bottom: var(--p-space-3);
 }
 .calendar-nav {
   display: flex;
@@ -22,10 +21,6 @@
 }
 .calendar-view-switch {
   margin-inline-start: auto;
-}
-.calendar-error,
-.calendar-read-only {
-  margin-bottom: var(--p-space-3);
 }
 
 // 月曆格子：放假的半天鋪上 --accent 的淡色（上半＝上午、下半＝下午），半天之間留一條虛線，
@@ -111,7 +106,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--p-space-2) var(--p-space-5);
-  margin: var(--p-space-3) 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   color: var(--secondary);

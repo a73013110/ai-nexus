@@ -1,8 +1,5 @@
 @use 'breakpoints' as bp;
 
-nx-notice {
-  margin-bottom: var(--p-space-4);
-}
 .artifact-version {
   width: 9rem;
 }
@@ -11,7 +8,6 @@ nx-notice {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--p-space-2) var(--p-space-3);
-  margin-bottom: var(--p-space-4);
   nx-view-switch {
     margin: 0;
   }

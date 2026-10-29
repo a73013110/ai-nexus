@@ -12,9 +12,10 @@ import { pricesTour } from './prices-tour';
   template: `<nx-feature-page
     [title]="session.featureName('billing.prices')"
     description="管理模型與工具的價格版本，作為用量費用的估算依據。"
+    layoutMode="data"
     [tour]="tour()"
   >
-    <nx-price-book />
+    <nx-price-book class="ui-table-fill" />
   </nx-feature-page>`,
 })
 export class PricesPage {

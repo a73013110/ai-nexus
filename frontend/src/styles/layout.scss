@@ -52,27 +52,43 @@ nx-feature-page {
   min-width: 0;
   animation: content-arrive var(--motion-enter) var(--ease);
 }
-.feature-content > .form-note {
-  margin-bottom: var(--p-space-3);
+// 區塊堆疊：頁面內容、表格的外層（`ui-table-fill`）、抽屜段落與對話框 body（dialogs.scss）的區塊間距
+// 只由 gap 決定，區塊不自帶上下外距；否則有提示時疊兩份外距、沒有時又貼在一起。元件寫在 :host 的外距與
+// 這條同權重又較晚載入，所以點名歸零（提示、查詢列、分頁式切換、篩選面板在別處仍需要自己的外距）。
+:is(.feature-content, .ui-table-fill, .ui-drawer-sections) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+  min-width: 0;
+}
+:is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body) > *,
+:is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body)
+  > :is(nx-notice, nx-query-bar, nx-view-switch, nx-filter-panel) {
+  margin-block: 0;
+}
+// 只放 top layer 內容（對話框、popover、確認框）的元件與沒有內容的元件不佔位置，免得多出一段 gap。
+:is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body)
+  > :is(
+    :empty,
+    :has(> :is(dialog, [popover])):not(:has(> :not(dialog, [popover], nx-confirm-dialog)))
+  ) {
+  display: contents;
 }
 .feature-layout-wide .feature-content {
   max-width: none;
 }
 .feature-layout-data .feature-content {
-  display: flex;
-  flex-direction: column;
   height: 100%;
 }
 .feature-layout-data .feature-content > * {
   flex: none;
 }
 // The table gets the height left under the header and filters (at least 18rem, or the page
-// scrolls) and draws its frame only as tall as its rows (DataTable). A wrapper between the page and
-// its table, such as a tab panel or a tab's host, adds `ui-table-fill` to pass the height on.
+// scrolls) and its frame fills that height, so every data page ends on the same line however few
+// rows it has (DataTable). A wrapper between the page and its table, such as a tab panel or a
+// tab's host, adds `ui-table-fill` to pass the height on.
 .feature-layout-data .ui-table-fill {
-  display: flex;
   flex: 1 0 auto;
-  flex-direction: column;
   min-height: 0;
 }
 .feature-layout-data :is(.feature-content, .ui-table-fill) > nx-data-table {

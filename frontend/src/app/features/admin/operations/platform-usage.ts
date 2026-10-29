@@ -58,7 +58,11 @@ interface ServiceRow {
     TableState,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../../../shared/ui/management-section-page.scss', './platform-usage.scss'],
+  styleUrls: [
+    '../../../shared/ui/management-section-page.scss',
+    '../../../shared/ui/figure-table.scss',
+    './platform-usage.scss',
+  ],
   templateUrl: './platform-usage.html',
 })
 export class PlatformUsage {

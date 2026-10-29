@@ -319,7 +319,7 @@ select:where(.ui-input) {
   font-variant-numeric: tabular-nums;
 }
 .ui-table-scroll {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
   position: relative;
   overflow: auto;
@@ -330,6 +330,9 @@ select:where(.ui-input) {
   // when the rows overflow (data changes, not interaction, so the columns do not shift under use).
   scrollbar-gutter: auto;
   scroll-padding-block-start: 2.5rem;
+  // 每一列（含最後一列）都有底線：外框比列高時，最後一列的線標出資料到這裡為止。捲動區往下伸 1px，
+  // 列碰到底時那條線落在外框底線或頁尾上緣的位置，不疊成兩條。
+  margin-bottom: -1px;
 }
 .ui-table-scroll > table {
   width: 100%;
@@ -364,9 +367,6 @@ select:where(.ui-input) {
 .ui-table-scroll > :where(table) > tbody > :where(tr) > th {
   font-weight: 400;
 }
-.ui-table-scroll > :where(table) > tbody:last-of-type > tr:last-child > :is(td, th) {
-  border-bottom: 0;
-}
 // `<nx-data-table stacked>`: one card per row at `narrow` and below, so a phone never scrolls a
 // table sideways. The header stays for assistive technology; cells name themselves by `data-label`.
 .ui-table-stack .ui-table-scroll > table {
@@ -397,9 +397,6 @@ select:where(.ui-input) {
       min-height: 2.75rem;
       padding: var(--p-space-3);
       border-bottom: 1px solid var(--line);
-    }
-    > :where(table) > tbody:last-of-type > tr:last-child {
-      border-bottom: 0;
     }
     > :where(table) > tbody > :where(tr) > :is(td, th) {
       grid-column: 1;
@@ -548,17 +545,10 @@ select:where(.ui-input) {
 .ui-section-heading:first-child {
   margin-top: 0;
 }
-// 抽屜主要內容由數個區塊（提示、卡片、帶標題的段落）組成時，區塊間距只由這裡的 gap 提供：
-// 區塊自己的外距歸零，有沒有提示都一樣齊，不會一處疊兩份外距、另一處又貼在一起。
+// 抽屜主要內容由數個區塊（提示、卡片、帶標題的段落）組成時是區塊堆疊（layout.scss），段落之間比頁面寬。
 // 段落內標題與內容的距離仍由 `.ui-section-heading` 的下距決定。
 .ui-drawer-sections {
-  display: flex;
-  flex-direction: column;
   gap: var(--p-space-5);
-  min-width: 0;
-}
-.ui-drawer-sections > nx-notice {
-  margin-block: 0;
 }
 .ui-message-box {
   margin: 0;

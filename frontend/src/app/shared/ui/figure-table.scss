@@ -1,0 +1,28 @@
+@use 'breakpoints' as bp;
+
+// 數字表（各功能使用量、模型與工具價格、平台用量）共用：固定欄寬；`narrow` 以下的卡片（`stacked`）把數字
+// 兩兩排在名稱下而不是一列一個，列的按鈕留在右上角，`.figure-span` 的格子占滿整列。
+.figure-table table {
+  table-layout: fixed;
+}
+@include bp.below(narrow) {
+  .figure-table.ui-table-stack tbody tr {
+    position: relative;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .figure-table.ui-table-stack tbody :is(td, th) {
+    grid-column: auto;
+  }
+  .figure-table.ui-table-stack tbody :is(th, .figure-span) {
+    grid-column: 1 / -1;
+  }
+  .figure-table.ui-table-stack tbody tr:has([data-stack='end']) th {
+    padding-inline-end: calc(var(--button-target) + var(--p-space-2));
+  }
+  .figure-table.ui-table-stack tbody [data-stack='end'] {
+    position: absolute;
+    top: var(--p-space-2);
+    right: var(--p-space-2);
+    margin: 0;
+  }
+}

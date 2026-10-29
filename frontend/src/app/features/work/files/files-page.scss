@@ -1,8 +1,5 @@
 @use 'breakpoints' as bp;
 
-nx-notice {
-  margin-bottom: var(--p-space-4);
-}
 nx-resource-gallery {
   --gallery-min: 14rem;
 }
@@ -38,7 +35,6 @@ nx-resource-gallery {
   align-items: center;
   justify-content: space-between;
   gap: var(--p-space-3);
-  margin-top: var(--p-space-5);
 }
 // Two narrow tiles per row on a phone, so a screen shows more than one file.
 @include bp.below(phone) {

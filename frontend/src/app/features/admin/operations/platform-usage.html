@@ -57,7 +57,7 @@
   </p>
 }
 <nx-data-table
-  class="ops-table ops-figures usage-models"
+  class="ops-table figure-table usage-models"
   label="各模型使用狀況"
   [busy]="read.refreshing()"
   [stacked]="true"
@@ -126,7 +126,7 @@
 </nx-data-table>
 <div class="ops-pair">
   <nx-data-table
-    class="ops-table ops-figures usage-kinds"
+    class="ops-table figure-table usage-kinds"
     label="使用來源"
     [busy]="read.refreshing()"
     [stacked]="true"
@@ -164,7 +164,7 @@
             <td class="ui-table-numeric" data-label="tokens">
               {{ format(kind.inputTokens + kind.outputTokens) }}
             </td>
-            <td class="usage-share ops-span" data-label="占比">
+            <td class="usage-share figure-span" data-label="占比">
               <meter
                 min="0"
                 [max]="kindTotal() || 1"

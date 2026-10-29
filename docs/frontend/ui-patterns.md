@@ -6,6 +6,7 @@
 
 - 功能頁用 `FeaturePage`（預設 compact、wide）。頁首只放標題、一句說明與動作，不加眉標或其他功能的入口。
 - 全頁只有 `.feature-main` 一個捲動區；`.feature-content` 統一內容上限與對齊線。
+- 區塊間距只由容器的 gap 決定（區塊堆疊：`.feature-content`、`ui-table-fill`、`.ui-drawer-sections`，`frontend/src/styles/layout.scss`）：區塊不自帶上下外距，頁面不替區塊補 margin 或另包一層只為了 gap 的容器。新的區塊元件不在 `:host` 寫外距；只包對話框的元件不佔位置。
 - 固定欄位用表格（`layoutMode="data"`、列狀態、查詢與分頁見 [資料工作區](data-workspace.md)），面板裡的小表格也用 `DataTable`；差異大的文件、報告、進度用卡片或專屬閱讀介面。
 - 卡片用 `nxCard`（保留原生語意），沒有資料用 `EmptyState`；頁首摘要數字用 `StatGrid`＋`StatTile`。資源的列表與詳細頁見 [資源集合頁](resource-pages.md)。
 
@@ -35,7 +36,7 @@
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal。
-- 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`：區塊間距只靠它的 gap，區塊不自帶外距；否則有提示時疊兩份外距、沒提示時又貼在一起。
+- 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`（區塊堆疊，段落間距比頁面寬）。
 - 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」，不必切過去才知道。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 - 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用，呼叫端只負責組 `FileListItem`；其他系統的檔案以 `ReaderTarget.remote` 預覽；唯讀單據加 `stacked` 一檔一列。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。

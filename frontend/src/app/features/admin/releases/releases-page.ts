@@ -24,6 +24,7 @@ import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { localTable } from '@shared/ui/table-model';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { ReleasesApi } from './releases-api';
 import {
   CHANGE_NAMES,
@@ -41,6 +42,7 @@ const options = (names: Record<string, string>) =>
 /**
  * 版本頁（ADR 0028）：程式與資料庫的版本對照、正式機上不在這一版裡的結構異動，以及部署歷史。
  * 異動清單由伺服器比對雜湊、只傳回有差異的物件；定義本文在打開差異時才讀。
+ * 異動與部署歷史是兩份資料，以檢視切換，一次一張表吃滿頁面高度。
  */
 @Component({
   selector: 'nx-releases-page',
@@ -60,6 +62,7 @@ const options = (names: Record<string, string>) =>
     StatusBadge,
     TableHeader,
     TableState,
+    ViewSwitch,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -129,6 +132,11 @@ export class ReleasesPage {
     sort: { column: 'deployedAt', direction: 'desc' },
     pageSize: 25,
   });
+  readonly sections = [
+    { value: 'changes', label: '結構異動' },
+    { value: 'deployments', label: '部署歷史' },
+  ];
+  readonly section = signal<'changes' | 'deployments'>('changes');
   readonly selected = signal<SchemaChangeDto | null>(null);
   readonly detail = apiResource({
     feature: 'releases',
@@ -144,6 +152,11 @@ export class ReleasesPage {
   readonly shortRevision = shortRevision;
   readonly date = formatDate;
 
+  showSection(value: string) {
+    this.section.set(value === 'deployments' ? 'deployments' : 'changes');
+    // 差異抽屜屬於異動清單，換到部署歷史時一起收起。
+    this.drawer()?.close();
+  }
   refresh() {
     this.status.reload();
     this.changes.reload();
