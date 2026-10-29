@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
+import { motionTiming } from '@shared/browser/motion-tokens';
 import { placeBeside, setPopoverOrigin } from '@shared/browser/popover-position';
 import { uniqueId } from '@shared/browser/unique-id';
 import { visibleRect } from '@shared/browser/visible-rect';
@@ -236,8 +237,7 @@ export class ProductTourOverlay {
   }
   private pulse(spot: HTMLElement) {
     if (this.theme.reducedMotion() || !spot.animate) return;
-    const style = getComputedStyle(spot);
-    const morph = parseFloat(style.getPropertyValue('--motion-morph')) || 460;
+    const { duration: morph, easing } = motionTiming(spot, '--motion-morph');
     spot.animate(
       [
         { inset: '-2px', opacity: 1 },
@@ -247,7 +247,7 @@ export class ProductTourOverlay {
         pseudoElement: '::after',
         duration: morph * 1.6,
         delay: morph * 0.6,
-        easing: style.getPropertyValue('--ease').trim() || 'ease-out',
+        easing,
       },
     );
   }

@@ -27,7 +27,7 @@ import { Select } from './select';
 import { PAGE_SIZES, type TableColumn, type TableModel } from './table-model';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
-import { timing } from './view-motion';
+import { motionTiming } from '../browser/motion-tokens';
 
 export {
   PAGE_SIZES,
@@ -357,7 +357,7 @@ export class DataTable {
     // 起點是當下的位置（動畫中途反向時也接得上），終點是原位或整個視窗。
     this.motion = frame.animate(
       [box(from, fromRadius), on ? box(full, '0px') : box(inline, radius)],
-      { ...timing(frame), fill: 'forwards' },
+      { ...motionTiming(frame, '--motion-panel'), fill: 'forwards' },
     );
     this.motion.onfinish = () => {
       this.motion?.cancel();

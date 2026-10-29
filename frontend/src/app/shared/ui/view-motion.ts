@@ -8,15 +8,7 @@ import {
   input,
 } from '@angular/core';
 import { ThemeService } from '@core/preferences/theme-service';
-
-/** 面板過渡的時長與曲線（`--motion-panel`、`--ease`），JS 動畫與 CSS 過渡共用。 */
-export function timing(element: HTMLElement) {
-  const style = getComputedStyle(element);
-  return {
-    duration: parseFloat(style.getPropertyValue('--motion-panel')) || 240,
-    easing: style.getPropertyValue('--ease').trim() || 'ease-out',
-  };
-}
+import { motionTiming } from '@shared/browser/motion-tokens';
 
 /** 版面大小，不受對話框自身開啟／關閉縮放的影響。 */
 function size(element: HTMLElement) {
@@ -66,7 +58,7 @@ export class ViewMotion {
           { opacity: 0, transform: 'translateY(6px) scale(.985)' },
           { opacity: 1, transform: 'none' },
         ],
-        timing(this.element),
+        motionTiming(this.element, '--motion-panel'),
       );
     });
     inject(DestroyRef).onDestroy(() => this.animation?.cancel());
@@ -134,7 +126,7 @@ export class FrameMotion {
         { width: `${before.width}px`, height: `${before.height}px` },
         { width: `${after.width}px`, height: `${after.height}px` },
       ],
-      timing(this.element),
+      motionTiming(this.element, '--motion-panel'),
     );
   }
 }

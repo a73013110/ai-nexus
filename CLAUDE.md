@@ -36,6 +36,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 資料表、查詢與分頁（稽核、日誌、管理列表） | `docs/frontend/data-workspace.md` |
 | 載入骨架、重新讀取、送出中、下拉與搜尋的等待 | `docs/frontend/loading.md` |
 | 動效、動態島、通知（toast）、對話框進出場 | `docs/frontend/motion.md` |
+| 程式讀 CSS 值（`getComputedStyle`、動效權杖）、正式建置才出現的樣式差異 | `docs/frontend/script-reads-css.md` |
 | 手機版面、滑動關閉、螢幕鍵盤 | `docs/frontend/mobile.md` |
 | 聊天渲染、串流 Markdown、前端請求與快取 | `docs/frontend/chat-rendering.md` |
 | 單一功能 | `README.md` 功能表連到的 `docs/features/` 那一份 |

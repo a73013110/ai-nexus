@@ -1,3 +1,5 @@
+import { motionDuration } from './motion-tokens';
+
 /** 按下後移動多少距離才算拖曳，讓把手上的點擊仍然有效。 */
 const SLOP = 6;
 /** 能被視為快速輕彈而關閉的放開速度（px/ms）。 */
@@ -58,7 +60,7 @@ export interface SwipeGesture {
 
 /** 回彈動畫的長度（`--motion-panel`），之後表面才套用一般的過場。 */
 export function swipeSettleTime(element: HTMLElement) {
-  return parseFloat(getComputedStyle(element).getPropertyValue('--motion-panel')) || 240;
+  return motionDuration(element, '--motion-panel');
 }
 
 const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';

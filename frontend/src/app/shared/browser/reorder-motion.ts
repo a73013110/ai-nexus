@@ -1,3 +1,5 @@
+import { motionTiming } from './motion-tokens';
+
 /**
  * 拖曳排序共用的動效（選單編輯表、`SortableRows`）：其他列以 FLIP 從舊位置滑到新位置，放手的列以彈簧落定。
  * 減少動態時由呼叫端略過（`ThemeService.reducedMotion()`）。
@@ -5,11 +7,7 @@
 
 /** 落定與換位的彈簧參數，取自動效權杖（`--motion-morph`、`--ease-spring`）。 */
 export function settleMotion(): KeyframeAnimationOptions {
-  const style = getComputedStyle(document.documentElement);
-  return {
-    duration: parseFloat(style.getPropertyValue('--motion-morph')) || 460,
-    easing: style.getPropertyValue('--ease-spring').trim() || 'ease-out',
-  };
+  return motionTiming(document.documentElement, '--motion-morph', '--ease-spring');
 }
 
 /**

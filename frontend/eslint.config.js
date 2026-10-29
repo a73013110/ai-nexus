@@ -57,6 +57,16 @@ module.exports = tseslint.config(
       ],
       '@typescript-eslint/no-unused-expressions': ['error', { allowTernary: true }],
       'no-empty': ['error', { allowEmptyCatch: true }],
+      // 正式建置會壓縮 CSS，讀到的自訂屬性不一定是原始碼的寫法，直接轉數字只在正式機出錯。
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.name=/^(parseFloat|parseInt|Number)$/] CallExpression[callee.property.name='getPropertyValue']",
+          message:
+            'CSS 值在正式建置會被壓縮改寫（240ms→.24s），不能直接轉數字；動效權杖用 @shared/browser/motion-tokens，見 docs/frontend/script-reads-css.md。',
+        },
+      ],
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
       '@angular-eslint/prefer-signals': 'error',
       '@angular-eslint/prefer-output-emitter-ref': 'error',

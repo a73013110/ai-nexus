@@ -4,7 +4,7 @@
 
 ## 原則
 
-- 時長用 `--motion*`、曲線用 `--ease*`；`--ease-spring` 是 `linear()` 彈簧，不支援時退回 cubic-bezier。
+- 時長用 `--motion*`、曲線用 `--ease*`；JS 動畫經 `motionTiming()` 讀，不自己解析（[從程式讀 CSS 值](script-reads-css.md)）。
 - 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈、按下時微縮（`scale: 0.97`）。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
 - 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`、`@starting-style` 與 `transition-behavior: allow-discrete` 只是加分，不支援時直接切換。
 
