@@ -380,7 +380,8 @@ $message = @(
 ) -join "`n"
 $file = Join-Path ([IO.Path]::GetTempPath()) "AiNexus-tag-$tag.txt"
 [IO.File]::WriteAllText($file, $message, [Text.UTF8Encoding]::new($false))
-try { Invoke-RepoGit tag -a $tag -F $file --cleanup=verbatim HEAD | Out-Null } finally { Remove-Item -LiteralPath $file -ErrorAction SilentlyContinue }
+# git 選項寫長名稱：單一破折號的 -a、-F 會被 PowerShell 當成 Invoke-RepoGit 的參數名稱綁走。
+try { Invoke-RepoGit tag --annotate $tag --file=$file --cleanup=verbatim HEAD | Out-Null } finally { Remove-Item -LiteralPath $file -ErrorAction SilentlyContinue }
 Write-Output "已建立 $tag（$($components -join ', ')）。"
 
 $push = "git push origin refs/tags/$tag"
