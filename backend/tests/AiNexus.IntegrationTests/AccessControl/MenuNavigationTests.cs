@@ -19,7 +19,7 @@ public sealed class MenuNavigationTests
         await using var factory = new AppFactory(); using var member = await factory.SignedInAsync();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
         // 成員在系統管理沒有任何頁面（評測只給管理員），整個分群被修剪。
-        // 員工服務只有出勤紀錄一頁（卡號對應等管理頁屬於人事與出勤，沒有授權就修剪），分群照常顯示。
+        // 公司事務只剩出勤紀錄一頁（同層的卡號對應等管理頁沒有授權就修剪），分群照常顯示。
         Assert.Equal([FeatureCatalog.Dashboard, BuiltInAccess.WorkNavigation, BuiltInAccess.CollaborationNavigation, "office"], tree.Select(x => x.Id));
         var dashboard = tree[0];
         Assert.Equal(("page", "總覽", "dashboard", FeatureCatalog.RouteOf(FeatureCatalog.Dashboard)), (dashboard.Kind, dashboard.Name, dashboard.Icon, dashboard.Route));

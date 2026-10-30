@@ -1,7 +1,7 @@
 import type { Routes } from '@angular/router';
 import { catalogRoute } from '@core/auth/feature-guard';
 
-/** 出勤四頁；網址由功能目錄推得，管理頁（卡號、匯入、假日）在選單放「系統管理 → 人事與出勤」。 */
+/** 出勤四頁；網址由功能目錄推得，選單四頁都放「公司事務」。 */
 export const attendanceRoutes: Routes = [
   catalogRoute('attendance.records', {
     path: 'records',

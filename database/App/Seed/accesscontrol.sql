@@ -177,7 +177,11 @@ VALUES
     (N'collaboration.jobs', N'collaboration', N'page', N'jobs', NULL, 20),
     (N'collaboration.repositories', N'collaboration', N'page', N'repositories', NULL, 30),
     (N'office', NULL, N'group', NULL, N'公司事務', 35),
+    -- 出勤四頁平鋪、不分子群：員工只看得到出勤紀錄，包一層會讓每個人多點一次；HR 的維護頁靠授權出現在同一段圖示格。
     (N'office.attendance-records', N'office', N'page', N'attendance.records', NULL, 10),
+    (N'office.attendance-cards', N'office', N'page', N'attendance.cards', NULL, 20),
+    (N'office.attendance-imports', N'office', N'page', N'attendance.imports', NULL, 30),
+    (N'office.attendance-calendar', N'office', N'page', N'attendance.calendar', NULL, 40),
     (N'system', NULL, N'group', NULL, N'系統管理', 40),
     (N'system.access', N'system', N'group', NULL, N'身分與權限', 10),
     (N'system.access.identity-users', N'system.access', N'page', N'identity.users', NULL, 10),
@@ -201,11 +205,7 @@ VALUES
     (N'system.evaluation', N'system', N'group', NULL, N'評測與開發', 50),
     (N'system.evaluation.quality', N'system.evaluation', N'page', N'quality', NULL, 10),
     (N'system.evaluation.quality-retrieval', N'system.evaluation', N'page', N'quality.retrieval', NULL, 20),
-    (N'system.evaluation.design', N'system.evaluation', N'page', N'design', NULL, 30),
-    (N'system.hr', N'system', N'group', NULL, N'人事與出勤', 60),
-    (N'system.hr.attendance-cards', N'system.hr', N'page', N'attendance.cards', NULL, 10),
-    (N'system.hr.attendance-imports', N'system.hr', N'page', N'attendance.imports', NULL, 20),
-    (N'system.hr.attendance-calendar', N'system.hr', N'page', N'attendance.calendar', NULL, 30);
+    (N'system.evaluation.design', N'system.evaluation', N'page', N'design', NULL, 30);
 
 -- 一層一層寫入：每輪只寫父節點已存在的列，沒有新列就停（外鍵要求父節點先存在）。
 -- 既有環境的選單可能被管理員改過：上層分群已刪除，或同層已有同一頁面（唯一索引會擋），這些預設節點直接略過，Seed 不因此失敗。
