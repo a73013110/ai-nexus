@@ -5,30 +5,28 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { endpointTable } from '@shared/ui/table-model';
 import { AttendanceApi } from '../attendance-api';
+import { punchCodes } from '../attendance-presentation';
 
 /**
  * 一次匯入寫入的刷卡（匯入詳情的主要內容），依刷卡時間由早到晚；排序、篩選與分頁交給 `endpointTable`，一個每日檔通常一次讀完、在本機處理。
  * 只給這個檔最近一次成功的匯入（`isCurrent`）用：刷卡依檔案保存，較舊的匯入內容已被取代，後端回 409。
  * 持有人是讀取當下依持有期間歸戶的結果，機器與事件代號原樣列出、不解讀。
+ * 表格吃抽屜剩下的高度、在框內捲動：使用處要在 host 與外層區塊堆疊加 `ui-table-fill`。
  */
 @Component({
   selector: 'nx-import-punches',
   imports: [DataTable, DataTableColumn, StatusBadge, TableHeader, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
     .import-punches-table table {
       table-layout: fixed;
-      min-width: 30rem;
+      min-width: 28rem;
     }
     .import-punches-time-column {
-      width: 11rem;
+      width: 10.5rem;
     }
-    .import-punches-code-column {
-      width: 4.5rem;
+    .import-punches-codes-column {
+      width: 5rem;
     }
     .import-punches-card {
       font-family: var(--font-code);
@@ -53,16 +51,14 @@ import { AttendanceApi } from '../attendance-api';
           <col nxTableColumn="punchedAt" class="import-punches-time-column" />
           <col nxTableColumn="cardNumber" />
           <col nxTableColumn="holder" />
-          <col nxTableColumn="machineCode" class="import-punches-code-column" />
-          <col nxTableColumn="eventCode" class="import-punches-code-column" />
+          <col nxTableColumn="codes" class="import-punches-codes-column" />
         </colgroup>
         <thead>
           <tr>
             <th nxHeader="punchedAt"></th>
             <th nxHeader="cardNumber"></th>
             <th nxHeader="holder"></th>
-            <th nxHeader="machineCode"></th>
-            <th nxHeader="eventCode"></th>
+            <th nxHeader="codes"></th>
           </tr>
         </thead>
         <tbody>
@@ -83,8 +79,9 @@ import { AttendanceApi } from '../attendance-api';
                   }}</span>
                 }
               </td>
-              <td nxTableColumn="machineCode" data-label="機器">{{ item.punch.machineCode }}</td>
-              <td nxTableColumn="eventCode" data-label="事件">{{ item.punch.eventCode }}</td>
+              <td nxTableColumn="codes" data-label="代號" [title]="item.codesTitle">
+                {{ item.codes }}
+              </td>
             </tr>
           }
         </tbody>
@@ -110,12 +107,13 @@ export class ImportPunches {
       { id: 'punchedAt', label: '刷卡時間', hideable: false, sort: true, filter: 'date' },
       { id: 'cardNumber', label: '卡號', hideable: false, sort: true, filter: 'text' },
       { id: 'holder', label: '持有人', sort: true, filter: 'text' },
-      { id: 'machineCode', label: '機器代號', header: '機器', sort: true, filter: 'text' },
-      { id: 'eventCode', label: '事件代號', header: '事件', sort: true, filter: 'text' },
+      { id: 'codes', label: '機器與事件代號', header: '代號' },
     ],
     sort: { column: 'punchedAt', direction: 'asc' },
   });
   readonly rows = computed(() =>
-    this.table.rows().map((punch) => ({ punch, time: formatDate(punch.punchedAt) })),
+    this.table
+      .rows()
+      .map((punch) => ({ punch, time: formatDate(punch.punchedAt), ...punchCodes(punch) })),
   );
 }

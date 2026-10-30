@@ -28,7 +28,7 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { localTable } from '@shared/ui/table-model';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { clockTime, weekday } from '../attendance-presentation';
+import { clockTime, punchCodes, weekday } from '../attendance-presentation';
 import { attendanceCardsTour, cardDetailTour } from '../attendance-tour';
 import { AssignmentDialog } from './assignment-dialog';
 import { AttendanceCardsStore, holderName } from './attendance-cards-store';
@@ -189,12 +189,7 @@ export class AttendanceCardsPage {
         day = { date, label: `${formatDay(punch.punchedAt)}（${weekday(date)}）`, punches: [] };
         days.push(day);
       }
-      day.punches.push({
-        punch,
-        time: clockTime(punch.punchedAt),
-        codes: `${punch.machineCode}・${punch.eventCode}`,
-        codesTitle: `機器代號 ${punch.machineCode}、事件代號 ${punch.eventCode}`,
-      });
+      day.punches.push({ punch, time: clockTime(punch.punchedAt), ...punchCodes(punch) });
     }
     return days;
   });

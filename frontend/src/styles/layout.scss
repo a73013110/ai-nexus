@@ -87,17 +87,25 @@ nx-feature-page {
 // scrolls) and its frame fills that height, so every data page ends on the same line however few
 // rows it has (DataTable). A wrapper between the page and its table, such as a tab panel or a
 // tab's host, adds `ui-table-fill` to pass the height on.
-.feature-layout-data .ui-table-fill {
+// 抽屜同一套：內容（`.ui-drawer-sections`）加 `ui-table-fill` 就撐滿抽屜，表格吃其他區塊剩下的高度、在框內捲動；
+// 不到 18rem 時整個抽屜捲動。
+.ui-drawer-body:has(> .ui-table-fill) {
+  display: flex;
+  flex-direction: column;
+}
+:is(.feature-layout-data, .ui-drawer-body) .ui-table-fill {
   flex: 1 0 auto;
   min-height: 0;
 }
-.feature-layout-data :is(.feature-content, .ui-table-fill) > nx-data-table {
+:is(.feature-layout-data :is(.feature-content, .ui-table-fill), .ui-drawer-body .ui-table-fill)
+  > nx-data-table {
   flex: 1 0 18rem;
   min-height: 0;
 }
 // Cards (`stacked`) have no header to keep in view, so a phone scrolls the page instead.
 @include bp.below(narrow) {
-  .feature-layout-data :is(.feature-content, .ui-table-fill) > nx-data-table.ui-table-stack {
+  :is(.feature-layout-data :is(.feature-content, .ui-table-fill), .ui-drawer-body .ui-table-fill)
+    > nx-data-table.ui-table-stack {
     flex: none;
   }
 }

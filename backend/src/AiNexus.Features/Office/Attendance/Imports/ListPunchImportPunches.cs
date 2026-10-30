@@ -35,8 +35,6 @@ internal sealed class ListPunchImportPunches(AppDbContext db)
         .Range("punchedAt", x => x.PunchedAt)
         .Text("cardNumber", x => x.CardNumber)
         .Text("holder", x => x.UserId != null ? db.Users.Where(u => u.Id == x.UserId).Select(u => u.DisplayName).FirstOrDefault() : x.HolderName)
-        .Text("machineCode", x => x.MachineCode)
-        .Text("eventCode", x => x.EventCode)
         .Key(x => x.PunchId)
         .DefaultSort("punchedAt");
 }

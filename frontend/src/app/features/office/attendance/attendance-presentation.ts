@@ -10,6 +10,7 @@ import type {
   GdFormFlowOver,
   GdForm,
   GdFormKind,
+  PunchDto,
 } from '@core/api/schema';
 import { publicErrorHints } from '@core/errors/public-error-catalog';
 import { ApiError, safeMessage, validIssueCode } from '@core/errors/safe-errors';
@@ -63,6 +64,12 @@ export const IMPORT_TRIGGER: Record<string, string> = {
   scheduled: '排程',
   manual: '手動重匯',
 };
+
+/** 刷卡的機器與事件代號原樣列出、不解讀；卡片詳情與匯入詳情都用這個寫法。 */
+export const punchCodes = (punch: Pick<PunchDto, 'machineCode' | 'eventCode'>) => ({
+  codes: `${punch.machineCode}・${punch.eventCode}`,
+  codesTitle: `機器代號 ${punch.machineCode}、事件代號 ${punch.eventCode}`,
+});
 
 /**
  * 遲到、早退的秒數：「45 秒」「12 分 5 秒」「1 小時 3 分」；0 為空字串（沒有遲到不顯示）。
