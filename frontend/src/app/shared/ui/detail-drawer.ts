@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { below } from '../browser/breakpoints';
 import { mediaQuery } from '../browser/media-query';
+import { bringToFront, ownsEscape } from '../browser/top-layer';
 import { Icon } from './icon';
 import { ProductTourButton } from './product-tour-button';
 import type { ProductTourDefinition } from './product-tour';
@@ -21,6 +22,8 @@ import type { ProductTourDefinition } from './product-tour';
 /**
  * 桌面版的非模態檢視器；窄螢幕時變成原生模態。重讀時舊內容留著，由呼叫端在內容區加
  * `.is-refreshing` 與 `aria-busy`，不換回骨架。
+ * 非模態時同時是 manual popover：和對話框、放大的表格一樣在 top layer，依開啟順序疊放；
+ * 仍是開著的 `dialog[open]`，關閉、焦點還原與 `close` 事件照對話框的規則。
  */
 @Component({
   selector: 'nx-detail-drawer',
@@ -29,6 +32,7 @@ import type { ProductTourDefinition } from './product-tour';
   template: `<dialog
     #dialog
     [id]="id"
+    popover="manual"
     class="ui-detail-drawer ui-density-compact"
     [class.is-wide]="wide()"
     [attr.aria-labelledby]="id + '-title'"
@@ -97,21 +101,16 @@ export class DetailDrawer {
         if (!dialog.open || this.modal() === narrow) return;
         const focused = document.activeElement as HTMLElement | null;
         ++this.suppressedCloses;
-        dialog.close();
+        this.close();
         this.showNative();
         if (focused && dialog.contains(focused)) focused.focus({ preventScroll: true });
       });
     });
+    // 非模態沒有原生的 Esc 關閉：焦點在抽屜裡或頁面上都收（規則見 `ownsEscape`）。
     const escape = (event: KeyboardEvent) => {
-      if (
-        event.key !== 'Escape' ||
-        event.defaultPrevented ||
-        this.modal() ||
-        !this.dialog().nativeElement.open
-      )
+      const dialog = this.dialog().nativeElement;
+      if (event.key !== 'Escape' || this.modal() || !dialog.open || !ownsEscape(dialog, event))
         return;
-      // 提示的層永遠是開啟的，且從不為頁面持有 Escape。
-      if (document.querySelector('dialog:modal, [popover]:popover-open:not(.toaster)')) return;
       event.preventDefault();
       this.close();
     };
@@ -119,22 +118,30 @@ export class DetailDrawer {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       document.removeEventListener('keydown', escape);
-      if (this.dialog().nativeElement.open) this.dialog().nativeElement.close();
+      if (this.dialog().nativeElement.open) this.close();
     });
   }
+  /** 已開著時換內容；被之後開的圖層（例如放大的表格）蓋住就移回最上面。 */
   open() {
-    if (!this.dialog().nativeElement.open) {
+    const dialog = this.dialog().nativeElement;
+    if (!dialog.open) {
       this.returnFocus =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
       this.showNative();
-    }
+    } else bringToFront(dialog);
     this.resetScroll();
   }
   private showNative() {
     // 宿主可能從 effect 開啟抽屜；視口不能成為它的依賴。
     const modal = untracked(this.narrow);
     this.modal.set(modal);
-    modal ? this.dialog().nativeElement.showModal() : this.dialog().nativeElement.show();
+    const dialog = this.dialog().nativeElement;
+    if (modal) dialog.showModal();
+    else {
+      // 先 show 再進 top layer：開著的 popover 不能再 show。
+      dialog.show();
+      dialog.showPopover?.();
+    }
   }
   resetScroll() {
     this.body().nativeElement.scrollTop = 0;
@@ -144,7 +151,9 @@ export class DetailDrawer {
     this.close();
   }
   close() {
-    this.dialog().nativeElement.close();
+    const dialog = this.dialog().nativeElement;
+    if (dialog.matches(':popover-open')) dialog.hidePopover();
+    dialog.close();
   }
   didClose() {
     if (this.suppressedCloses) {

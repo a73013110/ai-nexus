@@ -13,6 +13,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { bringToFront } from '../browser/top-layer';
 import { SwipeTracker } from '../browser/swipe';
 import { Icon } from './icon';
 import { ToastService, toastIcon, type Toast } from './toast-service';
@@ -26,7 +27,8 @@ const SWIPE_DISMISS = 64;
 /**
  * `ToastService` 的右下角堆疊。收合時，較新的提示排在一小疊的前面（參考 Sonner 的堆疊）；
  * 懸停或聚焦時會以彈簧展開，並暫停所有計時器。每則提示先以膠囊形式出現，再 morph 成卡片，與島相同。
- * 此層是手動的 popover，所以會留在頁面內容之上；提示在對話框上方抵達時，會重新進入最上層。
+ * 此層是手動的 popover，所以會留在頁面內容之上；新提示抵達時若有之後開的對話框、抽屜或放大的表格蓋住它，
+ * 會重新進入最上層。
  * 螢幕閱讀器依緊急程度各聽一個 live region，而不是逐張聽卡片。
  */
 @Component({
@@ -183,7 +185,7 @@ export class Toaster {
         const region = fresh.tone === 'danger' ? this.assertive : this.polite;
         region.set('');
         queueMicrotask(() => region.set(text));
-        this.raise();
+        bringToFront(this.layer().nativeElement);
       });
     });
 
@@ -274,11 +276,5 @@ export class Toaster {
   private syncTimers() {
     if (this.expanded() || document.hidden) this.service.pause();
     else this.service.resume();
-  }
-  private raise() {
-    const layer = this.layer().nativeElement;
-    if (!layer.showPopover || !document.querySelector('dialog:modal')) return;
-    layer.hidePopover();
-    layer.showPopover();
   }
 }

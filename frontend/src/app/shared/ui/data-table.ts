@@ -28,6 +28,7 @@ import { PAGE_SIZES, type TableColumn, type TableModel } from './table-model';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 import { motionTiming } from '../browser/motion-tokens';
+import { OPEN_LAYERS, isAbove, keepingFocus, ownsEscape } from '../browser/top-layer';
 
 export {
   PAGE_SIZES,
@@ -46,8 +47,8 @@ export {
  *
  * 工具列放標題（`[table-toolbar]`），表格自己的動作（如匯出，`[table-actions]`）接在欄位選擇器旁邊；
  * `nx-table-state` 負責載入中、無資料與錯誤三種狀態，已有列時的重讀由表格自己播報。
- * 內容超出捲動區時多一顆「放大表格」：外框改為貼齊視窗（`is-maximized`），從原位置過渡過去，
- * Esc 或焦點移回頁面時還原。
+ * 內容超出捲動區時多一顆「放大表格」：外框進 top layer 貼齊視窗（`is-maximized`），從原位置過渡過去，
+ * Esc 或焦點移到被蓋住的元素時還原。頁面、抽屜與對話框裡都一樣。
  *
  * 外框填滿宿主：頁面把剩餘高度交給宿主（`layoutMode="data"`）時，外框一律延伸到頁底、分頁列貼底，
  * 列多時內部捲動、表頭固定；一般流動版面裡宿主跟著內容走，外框就等於列高。列的狀態與共用樣式在
@@ -220,7 +221,7 @@ export class DataTable {
     },
   });
   readonly columnsOpen = this.columnsPopover.opened;
-  /** 放大成貼齊視窗；頁面與詳情抽屜裡都可以，對話框裡的表格用對話框自己的放大（CSS 隱藏按鈕）。 */
+  /** 放大成貼齊視窗；不論表格在頁面、詳情抽屜或對話框裡。 */
   readonly maximized = signal(false);
   /** 捲動區放不下內容（列多或欄寬）才顯示放大鈕，列少的表格不多一顆按鈕。 */
   protected readonly overflowing = signal(false);
@@ -322,9 +323,11 @@ export class DataTable {
     }
   }
   /**
-   * 放大與還原都量好起訖兩個矩形，再讓外框（`position: fixed`）從起點過渡到終點；DOM 不搬動，捲動位置、
-   * 欄位偏好與列內元件都保留。外框離開文件流時宿主以 `min-height` 佔住原本的高度，頁面不跳動也不改捲動。
-   * 還原時先回到原位量出終點，再固定回去播完動畫，結束時才真的回到文件流（`fill: forwards` 避免最後一幀閃回全螢幕）。
+   * 放大與還原都量好起訖兩個矩形，再讓外框從起點過渡到終點；DOM 不搬動，捲動位置、欄位偏好與列內元件都保留。
+   * 放大的外框是 manual popover：進 top layer 才能貼齊視窗、蓋住已開的抽屜與對話框，不受祖先的 transform
+   * 或 containment 影響；之後開的抽屜、對話框與浮層照開啟順序疊在它上面。外框離開文件流時宿主以
+   * `min-height` 佔住原本的高度，頁面不跳動也不改捲動。還原時先回到原位量出終點，再放大回去播完動畫，
+   * 結束時才真的回到文件流（`fill: forwards` 避免最後一幀閃回全螢幕）。
    */
   setMaximized(on: boolean) {
     if (on === this.maximized()) return;
@@ -333,18 +336,28 @@ export class DataTable {
     const place = (maximized: boolean) => {
       host.style.minHeight = maximized ? `${host.offsetHeight}px` : '';
       frame.classList.toggle('is-maximized', maximized);
+      if (maximized === frame.hasAttribute('popover')) return;
+      // 移除屬性就會離開 top layer；不在 popover 狀態時屬性也不能留，否則外框被瀏覽器隱藏。
+      if (!maximized) frame.removeAttribute('popover');
+      else {
+        frame.setAttribute('popover', 'manual');
+        frame.showPopover?.();
+      }
     };
     const from = frame.getBoundingClientRect(),
       fromRadius = getComputedStyle(frame).borderRadius;
     this.motion?.cancel();
-    place(false);
-    const inline = frame.getBoundingClientRect(),
+    let inline!: DOMRect, radius!: string, full!: DOMRect;
+    keepingFocus(() => {
+      place(false);
+      inline = frame.getBoundingClientRect();
       radius = getComputedStyle(frame).borderRadius;
-    place(true);
-    const full = frame.getBoundingClientRect();
+      place(true);
+      full = frame.getBoundingClientRect();
+    });
     this.maximized.set(on);
     if (typeof frame.animate !== 'function' || this.injector.get(ThemeService).reducedMotion()) {
-      place(on);
+      keepingFocus(() => place(on));
       return;
     }
     const box = (rect: DOMRect, borderRadius: string) => ({
@@ -362,35 +375,22 @@ export class DataTable {
     this.motion.onfinish = () => {
       this.motion?.cancel();
       this.motion = undefined;
-      if (!on) place(false);
+      if (!on) keepingFocus(() => place(false));
     };
   }
-  /**
-   * 放大時 Esc 還原；疊在表格上的浮層、對話框或抽屜先處理自己的 Esc。
-   * 包著表格的抽屜不算：放大的表格蓋在它上面，Esc 先還原表格，抽屜看到 `defaultPrevented` 就不關。
-   */
+  /** 放大時 Esc 還原；規則見 `ownsEscape`（處理後標記，包著表格的抽屜或對話框就不關）。 */
   escapeMaximized(event: Event) {
-    if (
-      !this.maximized() ||
-      event.defaultPrevented ||
-      [...document.querySelectorAll('dialog[open], [popover]:popover-open:not(.toaster)')].some(
-        (layer) => !layer.contains(this.host.nativeElement),
-      )
-    )
-      return;
+    if (!this.maximized() || !ownsEscape(this.frame().nativeElement, event)) return;
     event.preventDefault();
     this.setMaximized(false);
   }
-  /**
-   * 焦點移到被蓋住的元素（Tab 出表格）就還原；移進疊在上面的對話框、抽屜或浮層不算。
-   * 包著表格的抽屜在放大的表格底下，焦點移到它的其他元素也要還原。
-   */
+  /** 焦點移到被放大的表格蓋住的元素（Tab 出表格）就還原；移進之後才開、疊在上面的圖層不算。 */
   focusLeft(event: FocusEvent) {
-    const to = event.relatedTarget;
-    if (!this.maximized() || !(to instanceof Element) || this.frame().nativeElement.contains(to))
-      return;
-    const layer = to.closest('dialog, [popover]');
-    if (!layer || layer.contains(this.host.nativeElement)) this.setMaximized(false);
+    const to = event.relatedTarget,
+      frame = this.frame().nativeElement;
+    if (!this.maximized() || !(to instanceof Element) || frame.contains(to)) return;
+    const layer = to.closest(OPEN_LAYERS);
+    if (!layer || !isAbove(layer, frame)) this.setMaximized(false);
   }
   resetScroll() {
     const region = this.scrollRegion();

@@ -53,6 +53,7 @@
 
 - 浮層（選單、`InfoPopover`、Select）用原生 top layer（不用會被裁切的 `<details>`），依空間翻轉並限高；開關、重新定位與 manual 浮層的點外關閉用 `shared/browser/anchored-popover.ts`。
 - 共用 UI 的 DOM ID 每個實例唯一。關閉浮層、對話框或抽屜後焦點回到觸發元素；Escape 一層一層關閉巢狀浮層。
+- 圖層（對話框、詳情抽屜、浮層、toast、放大的表格）都在 top layer，依開啟順序疊放、不用 z-index；Esc 交給焦點所在的圖層（`frontend/src/app/shared/browser/top-layer.ts`）。
 - 按下後會被移除的按鈕要把焦點交給接手的控制項，不讓它掉到 `<body>`。
 - 群組控制（ViewSwitch、Tabs、ActionMenu、表格事件按鈕、長清單列）用方向鍵／Home／End 移動，跳過停用項目。
 - 操作不能只靠 hover 出現；focus、停用、錯誤、斷線都要可辨識。
