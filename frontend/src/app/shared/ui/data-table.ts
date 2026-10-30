@@ -220,7 +220,7 @@ export class DataTable {
     },
   });
   readonly columnsOpen = this.columnsPopover.opened;
-  /** 放大成貼齊視窗；只在頁面上，對話框裡的表格用對話框自己的放大（CSS 隱藏按鈕）。 */
+  /** 放大成貼齊視窗；頁面與詳情抽屜裡都可以，對話框裡的表格用對話框自己的放大（CSS 隱藏按鈕）。 */
   readonly maximized = signal(false);
   /** 捲動區放不下內容（列多或欄寬）才顯示放大鈕，列少的表格不多一顆按鈕。 */
   protected readonly overflowing = signal(false);
@@ -365,27 +365,32 @@ export class DataTable {
       if (!on) place(false);
     };
   }
-  /** 放大時 Esc 還原；表格裡的浮層、頁面上開著的對話框或抽屜先處理自己的 Esc。 */
+  /**
+   * 放大時 Esc 還原；疊在表格上的浮層、對話框或抽屜先處理自己的 Esc。
+   * 包著表格的抽屜不算：放大的表格蓋在它上面，Esc 先還原表格，抽屜看到 `defaultPrevented` 就不關。
+   */
   escapeMaximized(event: Event) {
     if (
       !this.maximized() ||
       event.defaultPrevented ||
-      document.querySelector('dialog[open], [popover]:popover-open:not(.toaster)')
+      [...document.querySelectorAll('dialog[open], [popover]:popover-open:not(.toaster)')].some(
+        (layer) => !layer.contains(this.host.nativeElement),
+      )
     )
       return;
     event.preventDefault();
     this.setMaximized(false);
   }
-  /** 焦點移到後面的頁面（Tab 出表格）就還原，免得焦點落在被蓋住的元素上；移進對話框、抽屜或浮層不算。 */
+  /**
+   * 焦點移到被蓋住的元素（Tab 出表格）就還原；移進疊在上面的對話框、抽屜或浮層不算。
+   * 包著表格的抽屜在放大的表格底下，焦點移到它的其他元素也要還原。
+   */
   focusLeft(event: FocusEvent) {
     const to = event.relatedTarget;
-    if (
-      this.maximized() &&
-      to instanceof Element &&
-      !this.frame().nativeElement.contains(to) &&
-      !to.closest('dialog, [popover]')
-    )
-      this.setMaximized(false);
+    if (!this.maximized() || !(to instanceof Element) || this.frame().nativeElement.contains(to))
+      return;
+    const layer = to.closest('dialog, [popover]');
+    if (!layer || layer.contains(this.host.nativeElement)) this.setMaximized(false);
   }
   resetScroll() {
     const region = this.scrollRegion();

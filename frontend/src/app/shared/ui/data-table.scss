@@ -51,8 +51,8 @@
 .ui-table-columns-trigger {
   font-size: var(--p-font-xs);
 }
-// 對話框有自己的放大視窗，裡面的表格不再放大一層。
-:host-context(dialog) .ui-table-maximize {
+// 對話框有自己的放大視窗，裡面的表格不再放大一層；詳情抽屜沒有，抽屜裡的表格照常可放大。
+:host-context(dialog[nxCompactDialog]) .ui-table-maximize {
   display: none;
 }
 // 放大：外框貼齊視窗、浮在頁面上（低於抽屜 z-index 50 與 top layer 的對話框、浮層、toast），

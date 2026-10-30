@@ -129,6 +129,39 @@ describe('DataTable', () => {
     expect(table.maximized()).toBe(false);
   });
 
+  it('restores first inside the open drawer that holds it, but leaves Escape to a layer above', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const drawer = document.createElement('dialog');
+    drawer.setAttribute('open', '');
+    document.body.append(drawer);
+    drawer.append(element);
+    const table = fixture.debugElement.children[0].injector.get(DataTable);
+    const escape = () => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      element.querySelector('[data-row-action]')!.dispatchEvent(event);
+      return event;
+    };
+    table.setMaximized(true);
+    // 包著表格的抽屜：Esc 還原表格並標記已處理，抽屜就不關。
+    expect(escape().defaultPrevented).toBe(true);
+    expect(table.maximized()).toBe(false);
+    // 疊在上面的對話框先處理自己的 Esc。
+    const above = document.createElement('dialog');
+    above.setAttribute('open', '');
+    document.body.append(above);
+    table.setMaximized(true);
+    expect(escape().defaultPrevented).toBe(false);
+    expect(table.maximized()).toBe(true);
+    above.remove();
+    drawer.remove();
+  });
+
   it('shows the skeleton alone on the first load and dims only once rows are on screen', () => {
     const fixture = TestBed.createComponent(StateHost);
     const host = fixture.componentInstance;

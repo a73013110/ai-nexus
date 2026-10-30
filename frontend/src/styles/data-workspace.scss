@@ -113,7 +113,8 @@ select:where(.ui-input) {
   min-height: 2.75rem;
   border-bottom: 1px solid var(--line);
 }
-.ui-table-toolbar h2 {
+// 標題的層級依所在位置（頁面 h2、抽屜 h3），樣式不隨層級改變。
+.ui-table-toolbar :is(h2, h3) {
   margin: 0;
   font-size: var(--text-ui);
   font-weight: 600;

@@ -39,7 +39,9 @@
 .ui-detail-drawer[open] {
   display: flex;
   opacity: 1;
-  translate: 0 0;
+  // 停住時是 none 而不是 0：任何 translate 值都讓抽屜成為 fixed 子元素的定位基準，
+  // 裡面放大的表格（DataTable）就只能貼齊抽屜、不能貼齊視窗。
+  translate: none;
   transition-duration: var(--motion-panel);
   transition-timing-function: var(--ease);
 }
