@@ -27,14 +27,6 @@ internal sealed class ListPunchImportPunches(AppDbContext db)
         if (import is null) return AttendanceErrors.ImportNotFound;
         if (!import.IsCurrent) return AttendanceErrors.ImportNotCurrent;
         var punches = db.Set<AttributedPunch>().Where(x => x.PunchFileId == import.PunchFileId);
-        return await punches.ToTablePageAsync(table, Columns(), x => x.ToDtos(db), ct);
+        return await punches.ToTablePageAsync(table, db.PunchColumns().DefaultSort("punchedAt"), x => x.ToDtos(db), ct);
     }
-
-    /// <summary>欄位 ID 與 <see cref="PunchDto"/> 的屬性同名，前端在本機排序時直接取同名欄位。</summary>
-    private TableColumns<AttributedPunch> Columns() => new TableColumns<AttributedPunch>()
-        .Range("punchedAt", x => x.PunchedAt)
-        .Text("cardNumber", x => x.CardNumber)
-        .Text("holder", x => x.UserId != null ? db.Users.Where(u => u.Id == x.UserId).Select(u => u.DisplayName).FirstOrDefault() : x.HolderName)
-        .Key(x => x.PunchId)
-        .DefaultSort("punchedAt");
 }

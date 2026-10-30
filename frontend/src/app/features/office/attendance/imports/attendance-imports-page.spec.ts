@@ -167,9 +167,13 @@ describe('AttendanceImportsPage', () => {
     );
     const drawer = root.querySelector('nx-detail-drawer')!;
     expect(drawer.querySelector('.ui-drawer-summary h3')?.textContent).toContain('20261001.txt');
-    const rows = [...drawer.querySelectorAll('nx-import-punches tbody tr')];
+    // 刷卡表格在基本資訊與關聯之後，吃剩下的高度到抽屜底。
+    expect(drawer.querySelector('.ui-drawer-sections > :last-child')?.tagName).toBe(
+      'NX-PUNCH-TABLE',
+    );
+    const rows = [...drawer.querySelectorAll('nx-punch-table tbody tr')];
     // 已一次讀完：依刷卡時間在本機由早到晚排。
-    expect(rows.map((row) => row.querySelector('th')?.textContent?.trim())).toEqual([
+    expect(rows.map((row) => row.querySelector('.punch-table-card')?.textContent?.trim())).toEqual([
       'A001',
       'B002',
     ]);
@@ -185,7 +189,7 @@ describe('AttendanceImportsPage', () => {
     await fixture.whenStable();
     const drawer = root.querySelector('nx-detail-drawer')!;
     expect(drawer.querySelector('nx-notice')?.textContent).toContain('第 3 行：時間格式錯誤');
-    expect(drawer.querySelector('nx-import-punches')).toBeNull();
+    expect(drawer.querySelector('nx-punch-table')).toBeNull();
     expect(api.importPunches).not.toHaveBeenCalled();
   });
 

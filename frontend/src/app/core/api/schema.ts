@@ -42923,7 +42923,10 @@ export interface operations {
     ListAttendanceCardPunches: {
         parameters: {
             query?: {
-                before?: number;
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
             };
             header?: never;
             path: {
@@ -42939,7 +42942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PunchDto"][];
+                    "application/json": components["schemas"]["TablePageOfPunchDto"];
                 };
             };
             /** @description Bad Request */

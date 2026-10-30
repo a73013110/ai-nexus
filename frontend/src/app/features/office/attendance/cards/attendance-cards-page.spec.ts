@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardAssignmentDto, CardDto, PunchDto } from '@core/api/schema';
+import type { CardAssignmentDto, CardDto, PunchDto, TablePageOfPunchDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
@@ -60,6 +60,12 @@ const punch = (index: number, unattributed = false): PunchDto => ({
   userId: unattributed ? null : 'u1',
   holder: unattributed ? null : '王小明',
 });
+const punchPage = (items: PunchDto[]): TablePageOfPunchDto => ({
+  items,
+  total: items.length,
+  offset: 0,
+  complete: true,
+});
 const visitor: CardDto = { ...fresh, id: 'c3', cardNumber: 'V01', hiddenFromRecords: true };
 
 function setup() {
@@ -82,7 +88,9 @@ function setup() {
     cards: vi.fn(async () => [card, fresh, visitor]),
     assignments: vi.fn(async (id: string) => (id === card.id ? [held] : [])),
     updateCard: vi.fn(async () => undefined),
-    cardPunches: vi.fn(async (_id: string, _before?: number): Promise<PunchDto[]> => []),
+    cardPunches: vi.fn(async (_id: string, _table: object): Promise<TablePageOfPunchDto> =>
+      punchPage([]),
+    ),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -199,31 +207,23 @@ describe('AttendanceCardsPage', () => {
     expect(api.updateCard).toHaveBeenCalledWith(card.id, { hiddenFromRecords: true, note: null });
   });
 
-  it('lists the card punches by Taipei day and loads earlier ones from the last punch', async () => {
+  it('lists the card punches newest first in a table without the card number', async () => {
     const { host, page, api, settle } = setup();
-    const first = [...Array(50).keys()].map((index) => punch(index, index === 49));
-    api.cardPunches.mockImplementation(async (_id, before) => (before ? [punch(50)] : first));
+    api.cardPunches.mockResolvedValue(punchPage([punch(0), punch(1, true)]));
     await settle();
     page.store.selectedId.set(card.id);
     await settle();
     await settle();
-    const days = [...host.querySelectorAll('nx-detail-drawer .cards-punch-day')];
-    // 台北時間：2026-10-02 18:00 往前 50 小時，跨了三個日期。
-    expect(days.map((day) => day.querySelector('h4')?.textContent?.trim())).toEqual([
-      '2026/10/02（五）',
-      '2026/10/01（四）',
-      '2026/09/30（三）',
-    ]);
-    expect(days[0].querySelector('li')?.textContent).toContain('18:00:00');
-    expect(days[0].querySelector('li')?.textContent).toContain('王小明');
-    expect(days.at(-1)!.querySelector('li:last-child')?.textContent).toContain('無持有人');
-
-    host.querySelector<HTMLButtonElement>('nx-detail-drawer .cards-punches-more')!.click();
-    await settle();
-    await settle();
-    expect(api.cardPunches).toHaveBeenLastCalledWith(card.id, punch(49).id, expect.anything());
-    expect(host.querySelectorAll('nx-detail-drawer .cards-punch-day li')).toHaveLength(51);
-    // 最後一頁不滿 50 筆：沒有更早的刷卡了。
-    expect(host.querySelector('nx-detail-drawer .cards-punches-more')).toBeNull();
+    expect(api.cardPunches).toHaveBeenCalledWith(
+      card.id,
+      { offset: 0, limit: 50, sort: 'punchedAt:desc' },
+      expect.anything(),
+    );
+    const table = host.querySelector('nx-detail-drawer .ui-drawer-sections > nx-punch-table')!;
+    expect(table.querySelector('.punch-table-card')).toBeNull();
+    const rows = [...table.querySelectorAll('tbody tr')];
+    expect(rows[0].textContent).toContain('2026/10/02 18:00:00');
+    expect(rows[0].textContent).toContain('王小明');
+    expect(rows[1].textContent).toContain('無持有人');
   });
 });

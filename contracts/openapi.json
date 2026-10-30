@@ -41899,11 +41899,36 @@
             }
           },
           {
-            "name": "before",
+            "name": "offset",
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         ],
@@ -42043,10 +42068,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PunchDto"
-                  }
+                  "$ref": "#/components/schemas/TablePageOfPunchDto"
                 }
               }
             }

@@ -30,6 +30,7 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { AttendanceApi } from '../attendance-api';
 import { IMPORT_TRIGGER, importStatus } from '../attendance-presentation';
 import { attendanceImportsTour } from '../attendance-tour';
+import { PunchTable, punchTable } from '../punches/punch-table';
 import {
   IMPORT_RANGES,
   IMPORT_STATUSES,
@@ -37,7 +38,6 @@ import {
   importFilters,
   importsQueryOptions,
 } from './imports-query';
-import { ImportPunches } from './import-punches';
 import { ReimportDialog, reimportOutcome } from './reimport-dialog';
 
 /**
@@ -57,9 +57,9 @@ import { ReimportDialog, reimportOutcome } from './reimport-dialog';
     FeaturePage,
     Field,
     Icon,
-    ImportPunches,
     Notice,
     PendingButton,
+    PunchTable,
     QueryBar,
     ReimportDialog,
     StatusBadge,
@@ -155,12 +155,24 @@ export class AttendanceImportsPage {
       size: formatBytes(row.sourceSize),
     })),
   );
-  /** 開啟詳情的匯入；詳情只用列上的資料，刷卡由 `ImportPunches` 另外讀。 */
+  /** 開啟詳情的匯入；詳情只用列上的資料，刷卡由 `punches` 另外讀。 */
   readonly selectedId = signal<string | null>(null);
   readonly selectedIndex = computed(() =>
     this.presentedRows().findIndex((item) => item.row.id === this.selectedId()),
   );
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
+  /**
+   * 詳情裡這次匯入寫入的刷卡。刷卡依檔案保存，較舊的匯入內容已被取代（後端回 409），
+   * 所以只讀這個檔最近一次成功的匯入（`isCurrent`）。
+   */
+  readonly punches = punchTable({
+    feature: 'attendance.imports',
+    params: () => {
+      const row = this.selected()?.row;
+      return row?.isCurrent ? row.id : undefined;
+    },
+    load: (id, table, signal) => this.api.importPunches(id, table, signal),
+  });
   readonly drawer = viewChild(DetailDrawer);
   /** 最近一次手動重匯中失敗的檔（檔案格式錯誤等）；請求本身成功，所以放在頁面提示。 */
   readonly failure = signal('');

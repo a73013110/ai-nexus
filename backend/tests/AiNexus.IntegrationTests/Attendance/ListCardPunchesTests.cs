@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Office.Attendance.Punches;
+using AiNexus.Platform.Data.Tables;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 
@@ -8,8 +9,8 @@ namespace AiNexus.IntegrationTests.Attendance;
 
 public sealed class ListCardPunchesTests
 {
-    /// <summary>與 <c>ListCardPunches.PageSize</c> 相同。</summary>
-    private const int PageSize = 50;
+    private static async Task<TablePage<PunchDto>> PageAsync(HttpClient client, Guid cardId, string query = "")
+        => (await client.GetFromJsonAsync<TablePage<PunchDto>>($"{Cards}/{cardId}/punches{query}", TestContext.Current.CancellationToken))!;
 
     [Fact]
     public async Task ListsTheCardsPunchesNewestFirstWithTheHolderAtTheTime()
@@ -24,38 +25,31 @@ public sealed class ListCardPunchesTests
             ("A001", At(10, 5, 9)),   // 只有姓名的持有人
             ("B002", At(10, 3, 9)));  // 別張卡
 
-        var rows = (await hr.GetFromJsonAsync<PunchDto[]>($"{Cards}/{session.Card.Id}/punches"))!;
+        var page = await PageAsync(hr, session.Card.Id);
+        var rows = page.Items;
 
+        Assert.True(page.Complete);
         Assert.Equal([At(10, 5, 9), At(10, 3, 9), At(10, 1, 9)], rows.Select(x => x.PunchedAt));
         Assert.Equal([("王新進", false), ("bob", false), (null, true)], rows.Select(x => (x.Holder, x.Unattributed)));
         Assert.Equal(session.Bob, rows[1].UserId);
     }
 
     [Fact]
-    public async Task PagesWithTheLastPunchAsCursor()
+    public async Task SortsByTheRequestedColumn()
     {
         await using var session = await HrSession.CreateAsync();
-        var (factory, hr) = (session.Factory, session.Hr);
-        var times = Enumerable.Range(0, PageSize + 3).Select(i => At(10, 1, 7).AddMinutes(i)).ToArray();
-        await AddPunchesAsync(factory, [.. times.Select(x => ("A001", x))]);
+        await AddPunchesAsync(session.Factory, ("A001", At(10, 3, 9)), ("A001", At(10, 1, 9)), ("A001", At(10, 2, 9)));
 
-        var first = (await hr.GetFromJsonAsync<PunchDto[]>($"{Cards}/{session.Card.Id}/punches"))!;
-        var second = (await hr.GetFromJsonAsync<PunchDto[]>($"{Cards}/{session.Card.Id}/punches?before={first[^1].Id}"))!;
+        var page = await PageAsync(session.Hr, session.Card.Id, "?sort=punchedAt");
 
-        Assert.Equal(PageSize, first.Length);
-        Assert.Equal(times.Reverse().Skip(PageSize), second.Select(x => x.PunchedAt));
+        Assert.Equal([At(10, 1, 9), At(10, 2, 9), At(10, 3, 9)], page.Items.Select(x => x.PunchedAt));
     }
 
     [Fact]
-    public async Task RejectsAnUnknownCardOrACursorFromAnotherCard()
+    public async Task RejectsAnUnknownCard()
     {
         await using var session = await HrSession.CreateAsync();
-        var (factory, hr) = (session.Factory, session.Hr);
-        var card = await CreateCardAsync(hr, "B002");
-        await AddPunchesAsync(factory, ("B002", At(10, 3, 9)));
-        var other = Assert.Single((await hr.GetFromJsonAsync<PunchDto[]>($"{Cards}/{card.Id}/punches"))!);
 
-        await AssertCodeAsync(await hr.GetAsync($"{Cards}/{Guid.NewGuid()}/punches"), HttpStatusCode.NotFound, "attendance_card_not_found");
-        await AssertCodeAsync(await hr.GetAsync($"{Cards}/{session.Card.Id}/punches?before={other.Id}"), HttpStatusCode.BadRequest, "attendance_filter_invalid");
+        await AssertCodeAsync(await session.Hr.GetAsync($"{Cards}/{Guid.NewGuid()}/punches"), HttpStatusCode.NotFound, "attendance_card_not_found");
     }
 }

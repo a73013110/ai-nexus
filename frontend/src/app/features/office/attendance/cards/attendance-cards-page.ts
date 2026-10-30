@@ -8,10 +8,10 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import type { CardAssignmentDto, CardDto, PunchDto } from '@core/api/schema';
+import type { CardAssignmentDto, CardDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { formatDate, formatDateTimeInput, formatDay, nameInitial } from '@shared/browser/format';
+import { formatDate, formatDay, nameInitial } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -28,8 +28,8 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { localTable } from '@shared/ui/table-model';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { clockTime, punchCodes, weekday } from '../attendance-presentation';
 import { attendanceCardsTour, cardDetailTour } from '../attendance-tour';
+import { PunchTable } from '../punches/punch-table';
 import { AssignmentDialog } from './assignment-dialog';
 import { AttendanceCardsStore, holderName } from './attendance-cards-store';
 import { CardDialog } from './card-dialog';
@@ -63,6 +63,7 @@ const EMPTY_TEXT: Record<CardStatus, string> = {
     Icon,
     Notice,
     PendingButton,
+    PunchTable,
     QueryBar,
     SettingRow,
     StatusBadge,
@@ -153,7 +154,7 @@ export class AttendanceCardsPage {
     })),
   );
   readonly emptyText = computed(() => EMPTY_TEXT[this.query.applied().status]);
-  /** 持有歷史與刷卡紀錄骨架的寬度（%）。 */
+  /** 持有歷史骨架的寬度（%）。 */
   protected readonly skeleton = [72, 54, 64];
   readonly history = computed(() => {
     const now = Date.now();
@@ -171,27 +172,6 @@ export class AttendanceCardsPage {
   readonly idleMeta = computed(() => {
     const punched = this.store.selected()?.lastPunchedAt;
     return punched ? `最後刷卡 ${formatDate(punched)}` : '還沒有刷卡紀錄';
-  });
-  /**
-   * 刷卡紀錄依台北日期分組（新到舊）。日期取刷卡時間在工作區時區的日期，與出勤日一致；
-   * 機器與事件代號原樣列出、不解讀。
-   */
-  readonly punchDays = computed(() => {
-    const days: {
-      date: string;
-      label: string;
-      punches: { punch: PunchDto; time: string; codes: string; codesTitle: string }[];
-    }[] = [];
-    for (const punch of this.store.punches() ?? []) {
-      const date = formatDateTimeInput(new Date(punch.punchedAt)).slice(0, 10);
-      let day = days.at(-1);
-      if (day?.date !== date) {
-        day = { date, label: `${formatDay(punch.punchedAt)}（${weekday(date)}）`, punches: [] };
-        days.push(day);
-      }
-      day.punches.push({ punch, time: clockTime(punch.punchedAt), ...punchCodes(punch) });
-    }
-    return days;
   });
   /** 選取的卡有沒有持有人涵蓋的刷卡（隱藏的卡不提示）：「N 筆刷卡沒有持有人（起–迄）」。 */
   readonly pending = computed(() => {

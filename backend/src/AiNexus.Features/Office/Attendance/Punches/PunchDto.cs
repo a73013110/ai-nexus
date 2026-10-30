@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Platform.Data.Tables;
 
 namespace AiNexus.Features.Office.Attendance.Punches;
 
@@ -18,4 +19,14 @@ internal static class PunchQueries
            join u in db.Users on p.UserId equals u.Id into users
            from u in users.DefaultIfEmpty()
            select new PunchDto(p.PunchId, p.CardNumber, p.PunchedAt, p.MachineCode, p.EventCode, p.IsUnattributed, p.UserId, u != null ? u.DisplayName : p.HolderName);
+
+    /// <summary>
+    /// 刷卡表格（卡片詳情、匯入明細）共用的欄位；ID 與 <see cref="PunchDto"/> 的屬性同名，前端在本機排序時直接取同名欄位。
+    /// 預設排序由端點決定：卡片看最近的刷卡、匯入照檔案的時間順序。
+    /// </summary>
+    public static TableColumns<AttributedPunch> PunchColumns(this AppDbContext db) => new TableColumns<AttributedPunch>()
+        .Range("punchedAt", x => x.PunchedAt)
+        .Text("cardNumber", x => x.CardNumber)
+        .Text("holder", x => x.UserId != null ? db.Users.Where(u => u.Id == x.UserId).Select(u => u.DisplayName).FirstOrDefault() : x.HolderName)
+        .Key(x => x.PunchId);
 }

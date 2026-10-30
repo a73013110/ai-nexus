@@ -175,12 +175,10 @@
     </div>
     @if (selected(); as item) {
       <div class="ui-drawer-sections" [class.ui-table-fill]="item.row.isCurrent">
-        @if (item.row.isCurrent) {
-          <nx-import-punches class="ui-table-fill" [importId]="item.row.id" />
-        } @else if (item.row.errorMessage) {
+        @if (item.row.errorMessage) {
           <nx-notice tone="danger" [message]="item.row.errorMessage" />
           <p class="form-note">這次沒有寫入刷卡；這個檔保留上次成功匯入的內容。</p>
-        } @else {
+        } @else if (!item.row.isCurrent) {
           <div class="imports-replaced">
             <p class="form-note">這個檔之後又成功匯入過，刷卡已換成最新一次的內容。</p>
             <button type="button" class="secondary-button" (click)="showFile(item.row.fileName)">
@@ -216,16 +214,32 @@
         <section aria-labelledby="imports-relations-heading">
           <h3 class="ui-section-heading" id="imports-relations-heading">關聯</h3>
           <dl class="ui-description-list">
-            <div class="ui-description-wide">
+            <!-- 兩個 ID 並排、過長截斷（滑過看全文、複製取完整值），多讓一列高度給下方的刷卡表格。 -->
+            <div>
               <dt>匯入 ID</dt>
-              <dd><nx-copy-value label="匯入 ID" [value]="item.row.id" /></dd>
+              <dd><nx-copy-value class="is-truncated" label="匯入 ID" [value]="item.row.id" /></dd>
             </div>
-            <div class="ui-description-wide">
+            <div>
               <dt>檔案 ID</dt>
-              <dd><nx-copy-value label="檔案 ID" [value]="item.row.punchFileId" /></dd>
+              <dd>
+                <nx-copy-value
+                  class="is-truncated"
+                  label="檔案 ID"
+                  [value]="item.row.punchFileId"
+                />
+              </dd>
             </div>
           </dl>
         </section>
+        <!-- 刷卡表格放最後：資訊在上，表格吃剩下的高度到抽屜底，分頁列貼底。 -->
+        @if (item.row.isCurrent) {
+          <nx-punch-table
+            title="匯入的刷卡"
+            preferenceKey="office-attendance-import-punches"
+            emptyText="這個檔沒有刷卡，或試著移除欄位篩選。"
+            [table]="punches"
+          />
+        }
       </div>
     }
   </nx-detail-drawer>
