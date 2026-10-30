@@ -17,7 +17,7 @@ export function promptLibraryTour(options: {
         title: '你的常用範本',
         description: options.testing
           ? '測試身分期間列出的是該使用者自己的範本，新增或修改會實際保存到對方名下。'
-          : '把常用的提問存成範本，只有你自己看得到；最近更新的排在前面，每人最多 100 個。也可按 Ctrl + Shift + L 開啟。',
+          : '把常用的提問存成範本，只有你自己看得到。\n最近更新的排在前面，每人最多 100 個。\n也可按 Ctrl + Shift + L 開啟。',
         side: 'right',
       },
       {

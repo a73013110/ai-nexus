@@ -76,7 +76,7 @@ describe('ProductTour', () => {
     button('下一步').click();
     await rendered();
     expect(text('.tour-title')).toBe('丙');
-    expect(text('.tour-description')).toMatch(/^丙。.*重播導覽。$/);
+    expect(text('.tour-description')).toMatch(/^丙。\n.*重播導覽。$/);
     expect(button('上一步').disabled).toBe(false);
     button('開始使用').click();
     expect(tour.active()).toBe(false);

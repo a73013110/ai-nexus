@@ -20,6 +20,10 @@ paths:
 - 勾選一律 `nx-checkbox`（不留原生 `input[type=checkbox]` 外觀）；方框、圓點、圖示旁的單行標題用 `optical` mixin 對齊字的中線（[並排對齊](../../docs/frontend/alignment.md)）。
 - 範本：`frontend/src/app/features/office/attendance/cards/assignment-dialog.ts`。
 
+## 畫面文字（[畫面文字](../../docs/frontend/microcopy.md)）
+
+新增或修改導覽、說明面板、提示、空狀態的文字時：結論先行、一句一事、多個重點用 `\n` 分行，不寫一整串長句。
+
 ## 共用元件（[共用元件](../../docs/frontend/shared-components.md)）
 
 - 寫 UI 前先看 `/admin/design` 的索引（`frontend/src/app/features/admin/design/design-page.ts`）與 `frontend/src/app/shared/ui/`，有就用。

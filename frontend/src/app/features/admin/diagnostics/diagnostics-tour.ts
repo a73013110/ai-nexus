@@ -60,7 +60,7 @@ export function systemLogsTour(options: {
         target: `${PAGE} .log-export`,
         title: '匯出 CSV',
         description:
-          '由伺服器匯出整個已套用的查詢（只含摘要欄位），預設區間在按下時重算；超過範圍或筆數上限會拒絕而不截斷。',
+          '由伺服器匯出整個已套用的查詢（只含摘要欄位）；預設區間在按下時重算。\n超過範圍或筆數上限會拒絕，不截斷。',
         side: 'bottom',
       },
       cursorPaginationStep(PAGE),

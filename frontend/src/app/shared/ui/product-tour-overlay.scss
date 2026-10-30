@@ -93,8 +93,10 @@
   font-weight: 600;
   text-wrap: balance;
 }
+// 說明文字用 \n 分行：一行一個重點，比長句容易掃讀。
 .tour-description {
   margin: 0;
+  white-space: pre-line;
   color: var(--secondary);
   font-size: var(--p-font-sm);
   line-height: 1.75;

@@ -31,14 +31,14 @@ export function activityAuditTour(options: {
         target: `${PAGE} .activity-audit-table thead`,
         title: '活動紀錄',
         description:
-          '由新到舊列出操作者、動作、資源與結果；失敗登入的操作者顯示「未驗證」與嘗試的帳號。「欄位」可隱藏次要欄，點動作或整列開啟詳情。',
+          '由新到舊列出操作者、動作、資源與結果。\n失敗登入的操作者顯示「未驗證」與嘗試的帳號。\n「欄位」可隱藏次要欄；點動作或整列開啟詳情。',
         side: 'bottom',
       },
       {
         target: `${PAGE} .audit-export`,
         title: '匯出 CSV',
         description:
-          '由伺服器匯出整個已套用的查詢，不分頁，預設區間在按下時重算；超過筆數上限會拒絕而不截斷，每次匯出本身也會留下稽核紀錄。',
+          '由伺服器匯出整個已套用的查詢，不分頁；預設區間在按下時重算。\n超過筆數上限會拒絕，不截斷。\n每次匯出本身也會留下稽核紀錄。',
         side: 'bottom',
       },
       cursorPaginationStep(PAGE, { sortable: false }),

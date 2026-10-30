@@ -7,7 +7,7 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
       target: 'nx-knowledge-page .feature-title',
       title: '可查核的資料來源',
       description:
-        '知識庫保存文件的頁面與索引；在對話選取後，AI 會先檢索這些來源，回答附上依據與頁碼。',
+        '知識庫保存文件的頁面與索引。\n在對話選取後，AI 會先檢索這些來源，回答附上依據與頁碼。',
       side: 'bottom',
     },
     {
@@ -76,7 +76,7 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
       target: 'nx-knowledge-page .document-row nx-status-badge',
       title: '處理狀態',
       description:
-        '文字辨識與索引在背景進行，完成前顯示「等待處理」或「處理中」；只有「已就緒」的文件會被檢索，「需要重試」可從文件操作重試索引。',
+        '文字辨識與索引在背景進行，完成前顯示「等待處理」或「處理中」。\n只有「已就緒」的文件會被檢索。\n「需要重試」可從文件操作重試索引。',
       side: 'left',
     },
     {
@@ -90,7 +90,7 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
       target: 'nx-knowledge-page .knowledge-query',
       title: '檢索測試',
       description:
-        '輸入問題，檢查會找到哪些段落與頁碼，結果列出檢索模式與分數。要讓 AI 引用，在對話輸入框旁選取知識庫。',
+        '輸入問題，檢查會找到哪些段落與頁碼；結果列出檢索模式與分數。\n要讓 AI 引用，請在對話輸入框旁選取知識庫。',
     },
     options.manage && {
       target: 'nx-knowledge-page .page-actions nx-action-menu',

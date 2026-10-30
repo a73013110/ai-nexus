@@ -33,7 +33,7 @@ export function usageTour(options: {
         target: 'nx-usage-page nx-stat-grid',
         title: '四個摘要數字',
         description:
-          '啟用帳號下方是區間內實際用過 AI 的人數；生成次數拆成完成、失敗與取消；原檔容量不受期間限制，同一份檔案被多處引用只計一次。',
+          '啟用帳號下方是區間內實際用過 AI 的人數。\n生成次數拆成完成、失敗與取消。\n原檔容量不受期間限制，同一份檔案被多處引用只計一次。',
         side: 'bottom',
       },
       !options.empty && {

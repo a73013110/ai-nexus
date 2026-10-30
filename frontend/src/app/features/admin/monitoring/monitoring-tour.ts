@@ -22,14 +22,14 @@ export function monitoringTour(options: {
         target: `${PAGE} .feature-title`,
         title: '這個執行個體正常嗎',
         description:
-          '只觀測目前這個應用程式執行個體，保留最近 15 分鐘、重啟後重新採集，不主動探測；頁尾「觀測範圍與資料定義」說明各數字怎麼量。',
+          '只觀測目前這個應用程式執行個體，不主動探測。\n保留最近 15 分鐘，重啟後重新採集。\n頁尾「觀測範圍與資料定義」說明各數字怎麼量。',
         side: 'bottom',
       },
       {
         target: `${PAGE} nx-monitoring-hero`,
         title: '一句話回答健康',
         description:
-          '依錯誤率、5xx、延遲、程序資源、周邊服務與子系統判定正常、需要注意或嚴重問題，並列出問題；與周邊服務或子系統有關的問題可點開詳情。',
+          '依錯誤率、5xx、延遲、程序資源、周邊服務與子系統，判定正常、需要注意或嚴重問題，並列出問題。\n與周邊服務或子系統有關的問題，可點開詳情。',
         side: 'bottom',
       },
       {
@@ -63,13 +63,13 @@ export function monitoringTour(options: {
         target: `${PAGE} nx-monitoring-subsystems`,
         title: '子系統',
         description:
-          '生成佇列、背景工作、郵件、日誌管線、知識索引、儲存空間等由各模組在背景回報，頻率從數秒到數分鐘不等；讀取失敗或逾時也列為需要注意。點卡片看指標。',
+          '生成佇列、背景工作、郵件、日誌管線、知識索引、儲存空間等，由各模組在背景回報，頻率從數秒到數分鐘不等。\n讀取失敗或逾時，也列為需要注意。\n點卡片看指標。',
       },
       {
         target: `${PAGE} nx-monitoring-people`,
         title: '線上人員',
         description:
-          '以瀏覽器心跳判定在線，一個分頁算一個工作階段；可依功能、狀態篩選與搜尋，點選看工作階段詳情。',
+          '以瀏覽器心跳判定在線，一個分頁算一個工作階段。\n可依功能、狀態篩選與搜尋，點選看工作階段詳情。',
       },
       {
         target: `${PAGE} nx-monitoring-activity`,
@@ -89,7 +89,7 @@ export function monitoringDrawerTour(
   const session = kind === 'session';
   const data = {
     session:
-      '身分驗證、目前功能、裝置與最近操作，以及這個工作階段累計的請求、錯誤與傳輸量；不收集輸入內容。',
+      '身分驗證、目前功能、裝置與最近操作，以及這個工作階段累計的請求、錯誤與傳輸量。\n不收集輸入內容。',
     dependency:
       '所選範圍內的呼叫數、速率、平均與 P95 耗時、失敗與執行中的呼叫；不含 SQL 指令或資料內容。',
     subsystem: '模組回報的指標與最近讀取時間；讀取失敗或逾時時列為需要注意。',

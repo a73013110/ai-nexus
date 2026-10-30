@@ -65,7 +65,7 @@ export function artifactTour(options: {
       target: 'nx-artifacts-page .artifact-version',
       title: '切換版本',
       description:
-        '每次儲存都建立新版本，舊版本保持不變；檢視舊版本時可「將此版帶入編輯」，儲存後成為最新版本。',
+        '每次儲存都建立新版本，舊版本保持不變。\n檢視舊版本時，可「將此版帶入編輯」；儲存後成為最新版本。',
       side: 'bottom',
     },
     options.editable
@@ -87,7 +87,7 @@ export function artifactTour(options: {
       target: 'nx-artifacts-page .artifact-editor',
       title: '選取段落交給 AI',
       description:
-        '選取文字後上方出現改寫、摘要、解釋與翻譯，單次上限 8,000 字元；確認結果後才會替換原段落。',
+        '選取文字後，上方出現改寫、摘要、解釋與翻譯，單次上限 8,000 字元。\n確認結果後，才會替換原段落。',
     },
     options.editing && {
       target: 'nx-artifacts-page .artifact-save',

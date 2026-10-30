@@ -60,7 +60,7 @@ export function projectTour(options: {
       target: 'nx-projects-page .project-templates',
       title: '用範本快速開始',
       description:
-        '點選範本會建立專案對話並把提問放進輸入框，確認後再送出。編輯者可新增或修改範本。',
+        '點選範本會建立專案對話，並把提問放進輸入框，確認後再送出。\n編輯者可新增或修改範本。',
     },
     options.chat && {
       target: 'nx-projects-page .project-conversations',
@@ -76,7 +76,7 @@ export function projectTour(options: {
       target: 'nx-projects-page .project-files',
       title: '參考文件',
       description:
-        '上傳或拖曳文字、PDF 與圖片，辨識完成後隨提問帶入，全文上限 12,000 字元；大量資料請用知識庫。',
+        '上傳或拖曳文字、PDF 與圖片，辨識完成後隨提問帶入，全文上限 12,000 字元。\n大量資料請用知識庫。',
     },
     options.artifacts && {
       target: 'nx-projects-page .project-outputs',

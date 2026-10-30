@@ -60,7 +60,7 @@ export function rolesTour(options: {
       target: 'nx-roles-page .admin-roles-table .ui-table-link',
       title: '編輯角色',
       description:
-        '點名稱調整名稱、啟用與群組，並試算儲存後可用的功能；角色只能停用、不能刪除，以保留授權歷史。',
+        '點名稱可調整名稱、啟用與群組，並試算儲存後可用的功能。\n角色只能停用、不能刪除，以保留授權歷史。',
     },
   ];
   return { steps };
@@ -86,7 +86,7 @@ export function groupsTour(options: { names: AccessPageNames }): ProductTourDefi
       target: 'nx-groups-page .admin-groups-table td[data-label="AI 模型"]',
       title: '模型與附件容量',
       description:
-        '使用者屬於多個群組時，模型取聯集、每日額度取最高值（無上限優先）、附件容量取最低值；個人政策另行套用。',
+        '使用者屬於多個群組時：\n・模型取聯集\n・每日額度取最高值（無上限優先）\n・附件容量取最低值\n個人政策另行套用。',
     },
     {
       target: 'nx-groups-page .admin-groups-table td[data-label="功能授權"]',
@@ -153,14 +153,14 @@ export function navigationTour(options: { names: AccessPageNames }): ProductTour
       target: 'nx-navigation-page .navigation-table .navigation-handle',
       title: '調整順序與層級',
       description:
-        '拖曳把手，或在把手上用上下鍵排序、左右鍵移出或移入分群；整批檢查通過才寫入，失敗時畫面回到原狀。',
+        '拖曳把手，或在把手上用上下鍵排序、左右鍵移出或移入分群。\n整批檢查通過才寫入；失敗時畫面回到原狀。',
       side: 'right',
     },
     {
       target: 'nx-navigation-page .navigation-table td[data-label="內容"]',
       title: '每個人看到的不同',
       description:
-        '使用者只看到有權限且啟用的頁面與可見的連結；沒有可見項目的分群不顯示，只要有一項就照常顯示分群。',
+        '使用者只看到有權限且啟用的頁面與可見的連結。\n沒有可見項目的分群不顯示；只要有一項，就照常顯示分群。',
     },
     {
       target: 'nx-navigation-page .navigation-table .navigation-row-menu',
@@ -338,7 +338,7 @@ export function navigationItemTour(options: {
       target: `${host} .navigation-audience`,
       title: '可見群組',
       description:
-        '不勾選＝所有登入者都看得到；勾選後只有屬於其中任一功能群組的人看得到。外部系統仍自行驗證權限。',
+        '不勾選：所有登入者都看得到。\n勾選後：只有屬於其中任一功能群組的人看得到。\n外部系統仍自行驗證權限。',
       side: 'top',
     },
   ];

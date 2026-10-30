@@ -17,7 +17,7 @@ export function jobsTour(options: {
       target: 'nx-jobs-page .feature-title',
       title: '耗時的處理交給背景',
       description:
-        '文件辨識、索引、評測與程式碼 review 都在伺服器上處理，離開頁面或關閉瀏覽器也不會中斷；結束時通知中心會告訴你。',
+        '文件辨識、索引、評測與程式碼 review 都在伺服器上處理。\n離開頁面或關閉瀏覽器也不會中斷。\n結束時，通知中心會告訴你。',
       side: 'bottom',
     },
     {
@@ -37,7 +37,7 @@ export function jobsTour(options: {
       target: 'nx-jobs-page .job-card',
       title: '看真實進度',
       description:
-        '卡片顯示種類、目前階段與完成數量，每 3 秒自動更新；還不知道總量時只顯示處理中，不估算百分比。',
+        '卡片顯示種類、目前階段與完成數量，每 3 秒自動更新。\n還不知道總量時，只顯示處理中，不估算百分比。',
     },
     options.results && {
       target: 'nx-jobs-page .job-result',
@@ -48,7 +48,7 @@ export function jobsTour(options: {
       target: 'nx-jobs-page .job-control',
       title: '停止或重試',
       description:
-        '處理中的任務可要求停止，會在目前步驟結束後停下；失敗或已停止的任務可重試，最多處理六次。',
+        '處理中的任務可要求停止，會在目前步驟結束後停下。\n失敗或已停止的任務可重試，最多處理六次。',
     },
   ];
   return { steps };

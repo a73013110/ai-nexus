@@ -36,7 +36,7 @@ export function tourSteps(definition: ProductTourDefinition) {
   return definition.steps.filter((step): step is TourStep => !!step);
 }
 
-const REPLAY_HINT = '右上角的問號圖示可隨時重播導覽。';
+const REPLAY_HINT = '\n右上角的問號圖示可隨時重播導覽。';
 
 /** 操作導覽：頁面提供步驟，導覽層（延遲載入）負責畫面、動效與鍵盤；同一時間只有一個導覽。 */
 @Injectable({ providedIn: 'root' })

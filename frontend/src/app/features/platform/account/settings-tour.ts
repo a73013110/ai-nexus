@@ -26,7 +26,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-appearance-tab .appearance-reading`,
           title: '調整閱讀版面',
           description:
-            '字級、行距、內容寬度與訊息密度只影響對話與文件正文，一般介面維持固定字級；側欄寬度讓長對話名稱好讀。',
+            '字級、行距、內容寬度與訊息密度，只影響對話與文件正文；一般介面維持固定字級。\n側欄寬度讓長對話名稱好讀。',
         },
         {
           target: `${host} nx-appearance-tab .reading-preview`,
@@ -47,13 +47,13 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-conversation-tab .conversation-defaults`,
           title: '新對話的預設',
           description:
-            '預設模型只列出管理員允許你使用的模型，政策不開放選擇時由系統指定；模型不支援所選思考強度時改用模型預設。',
+            '預設模型只列出管理員允許你使用的模型；政策不開放選擇時，由系統指定。\n模型不支援所選思考強度時，改用模型預設。',
         },
         {
           target: `${host} nx-conversation-tab .conversation-web-search`,
           title: '網路搜尋是否可用',
           description:
-            '啟用時預設關閉，在輸入區按「搜尋網路」才把該次提問送往搜尋服務；未啟用時輸入區不顯示按鈕，原因寫在這裡。',
+            '啟用時預設關閉；在輸入區按「搜尋網路」，才把該次提問送往搜尋服務。\n未啟用時，輸入區不顯示按鈕，原因寫在這裡。',
         },
       ];
     case 'notifications':
@@ -62,7 +62,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-notifications-tab .notification-completion`,
           title: '回覆完成通知',
           description:
-            '要先允許這個瀏覽器的通知才能開啟；工作區在背景時提醒回覆已完成，通知不含提問或回覆內容。',
+            '要先允許這個瀏覽器的通知才能開啟。\n工作區在背景時，會提醒回覆已完成。\n通知不含提問或回覆內容。',
           side: 'bottom',
         },
       ];
@@ -72,7 +72,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-data-tab .data-autosave`,
           title: '自動保存草稿',
           description:
-            '未送出的文字與附件參照依帳號存在這個瀏覽器，不同步到其他裝置；共用電腦建議關閉。',
+            '未送出的文字與附件參照依帳號存在這個瀏覽器，不同步到其他裝置。\n共用電腦建議關閉。',
           side: 'bottom',
         },
         {
@@ -88,7 +88,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           title: '個人資料與通知信箱',
           description: options.testing
             ? '姓名與帳號由公司目錄提供；測試身分期間只能查看，不能變更信箱。'
-            : '姓名與帳號由公司目錄提供；通知信箱用來收驗證碼與安全通知，AD 提供的由目錄維護，其他可自行設定並以驗證碼確認。',
+            : '姓名與帳號由公司目錄提供。\n通知信箱用來收驗證碼與安全通知；AD 提供的由目錄維護，其他可自行設定，並以驗證碼確認。',
           side: 'bottom',
         },
         {
@@ -96,7 +96,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           title: '登入方式',
           description: options.testing
             ? '顯示目前的登入方式與本地登入狀態；要返回管理者請使用登入者選單。'
-            : '顯示這次的登入方式；系統開放時可另設本地帳號與密碼當備援。變更前可能要先確認身分，完成後其他裝置的登入會登出。',
+            : '顯示這次的登入方式。\n系統開放時，可另設本地帳號與密碼當備援。\n變更前可能要先確認身分；完成後，其他裝置的登入會登出。',
         },
         {
           target: `${host} nx-account-tab nx-account-access`,
@@ -158,7 +158,7 @@ export function settingsTour(options: SettingsTourOptions): ProductTourDefinitio
         target: `${host} .settings-savebar`,
         title: '預覽後再儲存',
         description:
-          '修改立即預覽，按「儲存變更」才寫回帳號，其他裝置也會套用；「還原」恢復已儲存的值，未儲存就關閉會先確認。',
+          '修改立即預覽，按「儲存變更」才寫回帳號，其他裝置也會套用。\n「還原」恢復已儲存的值。\n未儲存就關閉，會先確認。',
       },
     ],
   };

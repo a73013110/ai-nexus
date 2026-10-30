@@ -15,7 +15,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-profile',
         title: '檢索索引與覆蓋率',
         description:
-          '每個向量模型與維度各一個索引；覆蓋率是已向量化的片段比例，下方列出片段數、待處理文件與重建進度。',
+          '每個向量模型與維度各有一個索引。\n覆蓋率是已向量化的片段比例。\n下方列出片段數、待處理文件與重建進度。',
       },
       {
         target: 'nx-retrieval-page .retrieval-rebuild',
@@ -27,7 +27,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-activate',
         title: '啟用新索引',
         description:
-          '換向量模型或維度會建立新索引，覆蓋率達 100% 且文件全部就緒才能啟用；原本的使用中索引隨之退役。',
+          '換向量模型或維度，會建立新索引。\n覆蓋率達 100% 且文件全部就緒，才能啟用。\n啟用後，原本的使用中索引隨之退役。',
         side: 'left',
       },
       {
@@ -41,13 +41,13 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-capabilities',
         title: '服務能力',
         description:
-          '檢查 SQL 原生向量、全文檢索與繁體中文斷詞器、全文索引，以及向量與重排模型；缺少的項目會讓對應的檢索方式無法使用。',
+          '檢查 SQL 原生向量、全文檢索與繁體中文斷詞器、全文索引，以及向量與重排模型。\n缺少的項目，會讓對應的檢索方式無法使用。',
       },
       {
         target: 'nx-retrieval-page .retrieval-probe',
         title: '驗證檢索模型',
         description:
-          '模型在驗證前顯示「未驗證」；驗證只傳送合成資料實際呼叫向量與重排模型，會計入模型呼叫配額。',
+          '模型在驗證前顯示「未驗證」。\n驗證只傳送合成資料，但會實際呼叫向量與重排模型，並計入模型呼叫配額。',
         side: 'bottom',
       },
       {
@@ -60,7 +60,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-result',
         title: '命中結果',
         description:
-          '列出各階段耗時，每筆附頁碼、向量與全文排名、RRF 與重排分數；點選在閱讀器開啟並停在該頁。',
+          '列出各階段耗時。\n每筆附頁碼、向量與全文排名、RRF 與重排分數。\n點選在閱讀器開啟，並停在該頁。',
       },
     ],
   };

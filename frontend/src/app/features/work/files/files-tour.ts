@@ -12,7 +12,7 @@ export function filesTour(options: { knowledge: boolean }): ProductTourDefinitio
         target: 'nx-files-page .feature-title',
         title: '你的原檔都在這裡',
         description:
-          '對話附件、知識庫與專案上傳的原檔都會保存到檔案庫，同一份檔案可再用於對話或加入知識庫，不必重新上傳。',
+          '對話附件、知識庫與專案上傳的原檔，都會保存到檔案庫。\n同一份檔案可再用於對話或加入知識庫，不必重新上傳。',
         side: 'bottom',
       },
       {
@@ -43,7 +43,7 @@ export function filesTour(options: { knowledge: boolean }): ProductTourDefinitio
         target: 'nx-files-page .file-card',
         title: '預覽與引用位置',
         description:
-          '點選縮圖或名稱開啟預覽，不會離開這一頁；下方標籤列出引用這份檔案的對話、知識庫或專案。',
+          '點選縮圖或名稱開啟預覽，不會離開這一頁。\n下方標籤列出引用這份檔案的對話、知識庫或專案。',
       },
       {
         target: 'nx-files-page .file-menu',

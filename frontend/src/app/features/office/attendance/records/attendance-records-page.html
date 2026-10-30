@@ -127,14 +127,14 @@
       <nx-notice
         class="records-calendar-unavailable"
         tone="warning"
-        message="假日行事曆無法取得：公文系統暫時連不上，週末當放假、平日一律無法判定，也不判遲到、早退與異常。"
+        message="假日行事曆無法取得：公文系統暫時連不上。週末當放假，平日一律無法判定，也不判遲到、早退與異常。"
       />
     }
     @if (!data.formsAvailable) {
       <nx-notice
         class="records-forms-unavailable"
         tone="warning"
-        message="表單無法取得：公文系統暫時連不上，沒刷卡的日子改為無法判定，表單欄顯示「無法取得」。"
+        message="表單無法取得：公文系統暫時連不上。沒刷卡的日子改為無法判定，表單欄顯示「無法取得」。"
       />
     }
     @if (readError()) {

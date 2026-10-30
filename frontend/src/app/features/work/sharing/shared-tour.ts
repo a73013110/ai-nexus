@@ -40,7 +40,7 @@ export function sharesTour(options: {
         target: 'nx-shared-page .resource-card',
         title: '打開分享',
         description:
-          '卡片顯示分享的是對話或成果文件、分享者或收件者與分享時間，已撤銷或到期會標示狀態。',
+          '卡片顯示分享的是對話或成果文件、分享者或收件者與分享時間。\n已撤銷或到期的，會標示狀態。',
       },
     ],
   };
@@ -64,7 +64,7 @@ export function shareTour(options: {
         target: 'nx-shared-page .feature-title',
         title: '分享者與期限',
         description:
-          '標題下方顯示分享者與到期時間；頁面會定期重新確認存取權，到期或撤銷時內容立即收起。',
+          '標題下方顯示分享者與到期時間。\n頁面會定期重新確認存取權，到期或撤銷時，內容立即收起。',
         side: 'bottom',
       },
       options.artifact
@@ -87,7 +87,7 @@ export function shareTour(options: {
         target: 'nx-shared-page .share-menu',
         title: '撤銷分享',
         description:
-          '「分享操作」可撤銷分享，收件者立即無法閱讀或下載附件；原始內容保留，已下載或複製的內容無法收回。',
+          '「分享操作」可撤銷分享；收件者會立即無法閱讀或下載附件。\n原始內容保留，但已下載或複製的內容無法收回。',
         side: 'bottom',
       },
     ],

@@ -10,7 +10,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
           : '.workspace-sidebar nx-chat-sidebar .new-chat',
         title: '從這裡開始新的思路',
         description: narrow
-          ? '點選左上角展開導覽，開始新對話、尋找歷史紀錄或切換工作區。收合後，整個畫面留給你的內容。'
+          ? '點選左上角展開導覽，開始新對話、尋找歷史紀錄或切換工作區。\n收合後，整個畫面留給你的內容。'
           : '開始新對話，保留每件工作的脈絡。側邊欄也能搜尋歷史、開啟常用範本與切換工作區。',
         side: 'right',
       },
@@ -18,7 +18,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
         target: 'nx-chat-workspace .composer-input',
         title: '把問題交給 AI',
         description:
-          '描述目標、補充背景與期待的格式。下方會顯示目前的送出與換行快捷鍵；右上角可展開輸入區。',
+          '描述目標、補充背景與期待的格式。\n下方會顯示目前的送出與換行快捷鍵。\n右上角可展開輸入區。',
       },
       {
         // 窄版輸入框會把附件與來源收進工具選單。
@@ -26,7 +26,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
           'nx-chat-workspace .composer .attach-button, nx-chat-workspace .composer .tools-menu',
         title: '帶上你的文件與圖片',
         description:
-          '點選迴紋針（窄畫面在「＋」選單）加入附件，也可以拖放檔案或貼上圖片。AI 會依附件內容協助分析。',
+          '點選迴紋針（窄畫面在「＋」選單）加入附件，也可以拖放檔案或貼上圖片。\nAI 會依附件內容協助分析。',
       },
       {
         target: 'nx-chat-workspace nx-composer-controls',
@@ -38,7 +38,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
         target: 'nx-chat-workspace .knowledge-trigger, nx-chat-workspace .composer .tools-menu',
         title: '讓回答有資料依據',
         description:
-          '從「來源」（窄畫面在「＋」選單）加入知識庫，讓回答參考你的文件。需要查證時，可從回答的來源開啟閱讀器。',
+          '從「來源」（窄畫面在「＋」選單）加入知識庫，讓回答參考你的文件。\n需要查證時，可從回答的來源開啟閱讀器。',
       },
       {
         target: 'nx-chat-workspace .composer .send-button',

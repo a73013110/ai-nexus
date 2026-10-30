@@ -104,4 +104,6 @@
 }
 .info-terms dd {
   margin: var(--p-space-1) 0 0;
+  // 說明用 \n 分行：一行一個重點。
+  white-space: pre-line;
 }

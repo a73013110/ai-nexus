@@ -27,7 +27,7 @@ export function documentReaderTour(options: {
         target: 'nx-document-viewer .dialog-title',
         title: '核對來源原文',
         description:
-          '標題列顯示檔名、格式與頁數；從回答的引用或檢索結果開啟時，會直接停在被引用的那一頁。',
+          '標題列顯示檔名、格式與頁數。\n從回答的引用或檢索結果開啟時，會直接停在被引用的那一頁。',
         side: 'bottom',
       },
       original && {
@@ -35,7 +35,7 @@ export function documentReaderTour(options: {
         title: options.image ? '原始圖片與辨識文字' : '原始頁面與擷取文字',
         description: options.image
           ? '原始圖片顯示上傳的檔案；辨識文字列出 AI 從圖片讀出的文字，請與原圖核對。'
-          : '原始頁面顯示 PDF 原樣；擷取文字是檢索與引用實際讀到的逐頁文字，AI 辨識出的會標示「請核對原文」。',
+          : '・原始頁面：顯示 PDF 原樣。\n・擷取文字：檢索與引用實際讀到的逐頁文字；AI 辨識出的會標示「請核對原文」。',
         side: 'bottom',
       },
       options.view === 'rich' && {
@@ -71,7 +71,7 @@ export function documentReaderTour(options: {
         target: 'nx-document-viewer .viewer-status',
         title: '處理進度',
         description:
-          '文字辨識與索引在背景進行，進度顯示在這裡，完成後文字自動出現；失敗時有權限者可就地重新處理。',
+          '文字辨識與索引在背景進行，進度顯示在這裡。\n完成後，文字自動出現。\n失敗時，有權限者可就地重新處理。',
         side: 'bottom',
       },
       {

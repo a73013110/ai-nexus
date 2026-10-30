@@ -87,7 +87,7 @@ const sameDraft = (a: Draft, b: Draft) =>
               <nx-notice
                 class="unit-imported"
                 tone="warning"
-                message="來自公文系統：這裡的修改會在下次匯入時改回。要保留停用等調整，匯入時不勾選這個部門；長期調整請改公文系統。"
+                message="來自公文系統，這裡的修改會在下次匯入時改回。要保留停用等調整，匯入時請不勾選這個部門。長期調整請改公文系統。"
               />
             }
             <div class="form-sections">

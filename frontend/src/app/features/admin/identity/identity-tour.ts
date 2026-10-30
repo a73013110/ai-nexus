@@ -26,7 +26,7 @@ export function usersTour(options: {
       target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
       title: '從 AD 匯入',
       description:
-        '新進人員還沒登入、要先指派角色時用：依 OU 瀏覽公司 AD、跨節點勾選，預覽後再確認；已在平台的人會以 AD 的姓名、信箱與帳號更新。',
+        '新進人員還沒登入、要先指派角色時使用。\n依 OU 瀏覽公司 AD，可跨節點勾選，預覽後再確認。\n已在平台的人，會以 AD 的姓名、信箱與帳號更新。',
       side: 'bottom',
     },
     {
@@ -40,7 +40,7 @@ export function usersTour(options: {
       target: 'nx-users-page .admin-users-table .directory-sync-button',
       title: '從 AD 更新',
       description:
-        'AD 改了姓名、信箱或帳號後用：勾選本頁的人批次更新並逐人列出結果。AD 已停用或找不到的人只標示，不會停用平台帳號。',
+        'AD 改了姓名、信箱或帳號後使用。\n勾選本頁的人批次更新，並逐人列出結果。\nAD 已停用或找不到的人只標示，不會停用平台帳號。',
       side: 'bottom',
     },
     {
@@ -58,9 +58,8 @@ export function usersTour(options: {
     {
       target: 'nx-users-page .admin-users-table nx-action-menu',
       title: '測試身分與刪除',
-      description: `${
-        sync ? '「從 AD 更新」只更新這一位；' : ''
-      }可用這位使用者的身分檢視平台；刪除後無法登入，但對話、稽核與登入帳號會保留，避免他人接管。`,
+      description: `${sync ? '「從 AD 更新」只更新這一位。\n' : ''}可用這位使用者的身分檢視平台。
+刪除後無法登入，但對話、稽核與登入帳號會保留，避免他人接管。`,
       side: 'left',
     },
   ];
@@ -91,7 +90,7 @@ export function userInspectorTour(options: {
           target: 'nx-admin-user-inspector nx-admin-user-conversations .conversation-audit-note',
           title: '受稽核的唯讀檢視',
           description:
-            '列出清單、開啟內容與預覽或下載附件都會先寫入稽核；這裡不能修改對話，也不能重新生成或評分。',
+            '列出清單、開啟內容、預覽或下載附件，都會先寫入稽核。\n這裡不能修改對話，也不能重新生成或評分。',
           side: 'bottom',
         },
         {
@@ -136,7 +135,7 @@ export function userInspectorTour(options: {
           target: 'nx-admin-user-inspector .admin-inspector nx-tabs',
           title: '依頁籤管理',
           description:
-            '每個頁籤各自儲存；切換頁籤、換人或關閉時，未儲存的變更會先確認。「對話」頁籤可唯讀查看他的對話。',
+            '每個頁籤各自儲存。\n切換頁籤、換人或關閉時，未儲存的變更會先確認。\n「對話」頁籤可唯讀查看他的對話。',
           side: 'bottom',
         },
         {
@@ -185,13 +184,13 @@ export function directoryImportTour(options: {
             target: `${IMPORT} .directory-people`,
             title: '勾選要匯入的人',
             description:
-              '勾選框才是選取：表頭可全選目前清單，Shift＋勾選連續選一段；帳號衝突、帳號名不支援與已刪除的人不能勾選。',
+              '勾選框才是選取。\n表頭可全選目前清單；Shift＋勾選可連續選一段。\n帳號衝突、帳號名不支援與已刪除的人不能勾選。',
           },
           {
             target: `${IMPORT} .directory-side`,
             title: '匯入籃與 AD 屬性',
             description:
-              '切換節點時已選的人會留在匯入籃，依新增、更新、略過分組；點清單中的人就在這裡列出分組、可篩選的完整 AD 屬性與會改的欄位。',
+              '切換節點時，已選的人會留在匯入籃，依新增、更新、略過分組。\n點清單中的人，這裡會列出完整的 AD 屬性（可篩選）與會改的欄位。',
             side: 'left',
           },
           {

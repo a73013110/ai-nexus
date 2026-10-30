@@ -67,7 +67,8 @@ const VIEWS: ViewOption[] = [
   { value: 'calendar', label: '月曆', icon: 'calendar' },
   { value: 'list', label: '清單', icon: 'list' },
 ];
-const MISSING = '未建立：公文系統沒有這一天，不能在這裡新增；出勤判定時週末當放假、平日無法判定。';
+const MISSING =
+  '未建立：公文系統沒有這一天，不能在這裡新增。出勤判定時，週末當放假，平日無法判定。';
 
 /** 讀取結果；公文系統不可用時不是空月份（空清單會被當成整月上班），而是帶著原因的失敗。 */
 interface MonthRead {

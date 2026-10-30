@@ -83,7 +83,7 @@ export function evaluationSetTour(options: {
       target: 'nx-quality-page .quality-runs',
       title: '比較紀錄',
       description:
-        '在背景逐題執行，離開頁面不會停止；可切換過去的紀錄，發起人能停止或接續重試，已完成的答案不會重算。',
+        '在背景逐題執行，離開頁面不會停止。\n可切換過去的紀錄；發起人能停止或接續重試。\n已完成的答案不會重算。',
     },
     {
       target: 'nx-quality-page .evaluation-case',
@@ -130,7 +130,7 @@ export const RETRIEVAL_TOUR: ProductTourDefinition = {
       target: 'nx-retrieval-evaluation .retrieval-corpus',
       title: '貼上驗收集',
       description:
-        '每題標註相關文件、頁碼與 1–3 級相關性，無答案題用來檢查是否不提供來源；也可用面板右上的上傳圖示匯入 JSON。',
+        '每題標註相關文件、頁碼與 1–3 級相關性；無答案題用來檢查是否不提供來源。\n也可用面板右上的上傳圖示匯入 JSON。',
     },
     {
       target: 'nx-retrieval-evaluation .retrieval-start',

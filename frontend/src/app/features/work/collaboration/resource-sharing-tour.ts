@@ -31,7 +31,7 @@ export function resourceSharingTour(options: {
         target: 'nx-resource-sharing .sharing-search',
         title: '搜尋並加入成員',
         description:
-          '輸入至少兩個字搜尋帳號或姓名，點結果即加入，預設為可檢視。只找得到登入過平台的帳號，你自己與已加入的人不會出現。',
+          '輸入至少兩個字搜尋帳號或姓名，點結果即加入，預設為可檢視。\n只找得到登入過平台的帳號；你自己與已加入的人不會出現。',
         side: 'bottom',
       },
       {

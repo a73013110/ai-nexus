@@ -10,7 +10,7 @@ const connection = (): TourStep => ({
   target: 'nx-repositories-page .repository-account',
   title: '你的 Gitea 連線',
   description:
-    '所有內容都以你自己的權杖讀取。「更新授權」換新權杖，「中斷連線」刪除保存的權杖，已匯入的文件與檢閱紀錄會保留。',
+    '所有內容都以你自己的權杖讀取。\n・更新授權：換新權杖。\n・中斷連線：刪除保存的權杖；已匯入的文件與檢閱紀錄會保留。',
   side: 'bottom',
 });
 
@@ -80,7 +80,7 @@ function sectionSteps(options: {
               target: 'nx-repository-commits .commit',
               title: '選兩個提交看區間',
               description:
-                '點左側圓點選兩個提交，就能看區間內的所有變更（含較舊那一個）並交給 AI；點標題看單一提交。',
+                '點左側圓點選兩個提交，可看區間內的所有變更（含較舊那一個），並交給 AI。\n點標題看單一提交。',
             },
           ];
     case 'pulls':
@@ -92,7 +92,8 @@ function sectionSteps(options: {
               {
                 target: 'nx-repository-thread .actions',
                 title: '檢閱這個 Pull Request',
-                description: `「AI 檢閱」或「AI 變更摘要」比較合併基準到 head，完成後可預覽並貼回 PR 留言；「查看變更」看完整差異。${chat ? '「帶入對話」把說明與留言放進新對話的草稿，長度允許時附上差異。' : ''}`,
+                description: `「AI 檢閱」或「AI 變更摘要」會比較合併基準到 head；完成後可預覽，並貼回 PR 留言。
+「查看變更」看完整差異。${chat ? '\n「帶入對話」把說明與留言放進新對話的草稿；長度允許時附上差異。' : ''}`,
                 side: 'bottom',
               },
             ]
@@ -173,7 +174,7 @@ function sectionSteps(options: {
               target: 'nx-repository-code .repository-import',
               title: '匯入知識庫',
               description:
-                '把目前資料夾的文字檔匯入你能編輯的知識庫，由背景任務逐檔處理；之後不會跟著 Gitea 更新。',
+                '把目前資料夾的文字檔，匯入你能編輯的知識庫，由背景任務逐檔處理。\n之後不會跟著 Gitea 更新。',
               side: 'bottom',
             },
           ];
@@ -206,7 +207,7 @@ export function repositoryTour(options: {
         target: 'nx-repository-detail .ref-select',
         title: '固定閱讀的版本',
         description:
-          '選擇分支或標籤後固定到一個提交（旁邊的短 SHA，點一下複製），之後閱讀的內容不會混入新的推送。',
+          '選擇分支或標籤後，會固定到一個提交（旁邊的短 SHA，點一下複製）。\n之後閱讀的內容不會混入新的推送。',
         side: 'bottom',
       },
       ...(options.empty ? [] : sectionSteps(options)),

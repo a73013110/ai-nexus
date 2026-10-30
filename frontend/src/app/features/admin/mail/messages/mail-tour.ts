@@ -25,14 +25,14 @@ export function mailMessagesTour(options: {
         target: `${PAGE} .mail-diagnose`,
         title: '連線診斷',
         description:
-          '寄不出時先查這裡：以目前設定跑一次 SMTP 對話但不寄信，逐步標出連線、TLS、憑證或帳密在哪一步失敗。傳輸未啟用時不能使用。',
+          '寄不出時先查這裡。\n以目前設定跑一次 SMTP 對話但不寄信，逐步標出連線、TLS、憑證或帳密在哪一步失敗。\n傳輸未啟用時不能使用。',
         side: 'bottom',
       },
       options.resend && {
         target: `${PAGE} .mail-auto-retry`,
         title: '自動重試',
         description:
-          '開啟時暫時性失敗會在 1、5、15、30、60 分鐘後自動再寄，直到放棄時間；關閉則第一次失敗就結束，需要時手動重試或重寄。下一輪寄送就生效。',
+          '開啟：暫時性失敗會在 1、5、15、30、60 分鐘後自動再寄，直到放棄時間。\n關閉：第一次失敗就結束，需要時手動重試或重寄。\n下一輪寄送就生效。',
         side: 'bottom',
       },
       {
@@ -105,7 +105,7 @@ export function mailDetailTour(options: {
         target: `${DRAWER} .mail-body-heading`,
         title: '內文與保存期限',
         description:
-          '一般信可檢視寄出的內文；驗證碼等敏感信不保存可檢視的內文。內文、收件原址與紀錄依保存期限分別清除。',
+          '一般信可檢視寄出的內文；驗證碼等敏感信不保存可檢視的內文。\n內文、收件原址與紀錄，依保存期限分別清除。',
       },
       {
         target: `${DRAWER} .mail-relations`,

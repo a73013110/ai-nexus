@@ -131,7 +131,7 @@ import {
               問題 <span class="ui-count-label">{{ p.issues.length }} 筆</span>
             </h3>
             <p class="form-note">
-              這些列或帳號不會匯入，其他變動照常套用；請在公文系統修正，或讓對應的人先登入平台後再匯入。
+              這些列或帳號不會匯入，其他變動照常套用。請在公文系統修正，或讓對應的人先登入平台後再匯入。
             </p>
             <ul class="import-list">
               @for (issue of p.issues; track $index) {

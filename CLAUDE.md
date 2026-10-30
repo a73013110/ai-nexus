@@ -30,6 +30,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |
 | 前端 UI、樣式 | `docs/frontend/ui-patterns.md`、`docs/frontend/design-system.md`、`docs/frontend/shapes.md`、`docs/frontend/lines.md`、`docs/frontend/materials.md`、`docs/frontend/alignment.md` |
+| 畫面文字（導覽、說明面板、提示、空狀態、斷句） | `docs/frontend/microcopy.md` |
 | 表單、對話框欄位排版、選人 | `docs/frontend/forms.md` |
 | 共用元件、`/admin/design` 範例 | `docs/frontend/shared-components.md` |
 | 檔案庫、知識庫、專案、成果等列表／詳細頁 | `docs/frontend/resource-pages.md` |

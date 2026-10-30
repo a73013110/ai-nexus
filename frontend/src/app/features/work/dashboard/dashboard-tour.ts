@@ -41,7 +41,7 @@ export const DASHBOARD_TOUR: ProductTourDefinition = {
       target: 'nx-dashboard-tile[data-id^="section:"]',
       title: '每個功能一張卡片',
       description:
-        '有權限的功能各有一張卡片：目前數量、標「期間」的區間數字、每日走勢與自己最近的項目。',
+        '有權限的功能各有一張卡片，內容包括：\n・目前數量\n・標「期間」的區間數字\n・每日走勢\n・自己最近的項目',
     },
     {
       target: 'nx-dashboard-tile[data-id="recent"]',
@@ -52,7 +52,7 @@ export const DASHBOARD_TOUR: ProductTourDefinition = {
       target: 'nx-dashboard-page .dashboard-customize',
       title: '排出自己的總覽',
       description:
-        '「自訂版面」可拖曳排序、調整大小、加高或隱藏卡片。版面只存在這個瀏覽器，可隨時恢復預設。',
+        '「自訂版面」可拖曳排序、調整大小、加高或隱藏卡片。\n版面只存在這個瀏覽器，可隨時恢復預設。',
       side: 'bottom',
     },
     {

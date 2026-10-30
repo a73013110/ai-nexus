@@ -30,35 +30,38 @@ public static class AttendanceRules
         var slightlyLate = full.FlexEnd.Add(new TimeSpan(0, 1, 19));
         var halfHour = full.ScheduledStart.AddMinutes(30);
         var netHours = full.WorkHours - full.BreakLength.TotalHours;
-        var lunch = full.BreakStart is { } breakStart && full.BreakEnd is { } breakEnd ? $"午休 {Time(breakStart)}～{Time(breakEnd)} 不算在內；" : "";
+        var lunch = full.BreakStart is { } breakStart && full.BreakEnd is { } breakEnd ? $"午休 {Time(breakStart)}～{Time(breakEnd)} 不算在內。\n" : "";
 
         return new(
             [Schedule(AttendanceDayType.FullDay, full), Schedule(AttendanceDayType.MorningOff, options.MorningOff), Schedule(AttendanceDayType.AfternoonOff, options.AfternoonOff)],
             [
-                new("上班與下班", "當天最早一筆刷卡為上班、最晚一筆為下班，中間的刷卡不影響判定。出勤日依刷卡時間的日期，不依打卡檔的檔名：過了午夜的刷卡算隔天。"),
-                new("彈性上班", $"彈性時段內上班不算遲到，應下班＝上班＋規定時數（含午休）；早於彈性起點上班以起點計。" +
-                    $"例：上班日 {Time(full.FlexStart)} 前到，應下班 {Time(ExpectedClockOut(earlyArrival, options))}；" +
-                    $"{Time(full.ScheduledStart)} 到，應下班 {Time(ExpectedClockOut(full.ScheduledStart, options))}。"),
-                new("遲到", $"晚於彈性終點上班為遲到，從彈性終點起算；遲到時應下班改為表定下班。" +
+                new("上班與下班", "當天最早一筆刷卡是上班，最晚一筆是下班，中間的刷卡不影響判定。\n出勤日依刷卡時間的日期，不看打卡檔的檔名；過了午夜的刷卡算隔天。"),
+                new("彈性上班", "在彈性時段內上班不算遲到。\n應下班＝上班時間＋規定時數（含午休）；早於彈性起點上班，以起點計。\n" +
+                    $"例：上班日 {Time(full.FlexStart)} 前到，應下班 {Time(ExpectedClockOut(earlyArrival, options))}。\n" +
+                    $"例：{Time(full.ScheduledStart)} 到，應下班 {Time(ExpectedClockOut(full.ScheduledStart, options))}。"),
+                new("遲到", "晚於彈性終點上班就是遲到，從彈性終點起算。\n遲到時，應下班改為表定下班。\n" +
                     $"例：上班日 {Time(lateArrival)} 到，遲到 10 分，應下班 {Time(ExpectedClockOut(lateArrival, options))}。"),
-                new("早退", "早於應下班離開為早退。" + (options.PunchPrecision == PunchPrecision.Minute
-                    ? $"遲到與早退以整分計：刷卡的秒數捨去後再比（{Time(full.FlexEnd)}:59 到不算遲到），遲到、早退都是整分。"
+                new("早退", "早於應下班離開就是早退。\n" + (options.PunchPrecision == PunchPrecision.Minute
+                    ? $"遲到與早退以整分計：刷卡的秒數先捨去再比（{Time(full.FlexEnd)}:59 到不算遲到）。"
                     : "遲到與早退都以秒計，彈性時段以外沒有寬限。")),
-                new("只有一筆刷卡", "判為異常；分不出缺的是上班還是下班，所以不算遲到早退。"),
-                new("沒有刷卡", "核准的假單或出差單補足當天的工時為請假；沒有表單、只請了部分時段或表單還在流程中為異常。"),
-                new("假單與出差單", "取公文系統已核准與流程中的表單，與當天有交集就列在當天，跨日、半天都一樣；" +
-                    "暫存、退回、銷單與退回結案不算（退回結案是承辦人把退回的單結案存查，不是核准）。"),
-                new("表單補足", $"表單只比時數、不比時段：核准表單的時數從當天的工時（上班日 {Hours(netHours)} 小時）扣掉，" +
-                    $"剩下的不多於實際上班的時數就補足；遲到時表單至少要抵掉遲到的部分，晚走不抵遲到。{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。" +
+                new("只有一筆刷卡", "判為異常。\n分不出缺的是上班還是下班，所以不算遲到或早退。"),
+                new("沒有刷卡", "核准的假單或出差單補足當天工時：算請假。\n沒有表單、只請了部分時段，或表單還在流程中：算異常。"),
+                new("假單與出差單", "取公文系統已核准與流程中的表單；與當天有交集就列在當天，跨日、半天都一樣。\n暫存、退回、銷單與退回結案不算。\n退回結案是承辦人把退回的單結案存查，不是核准。"),
+                new("表單補足", "表單只比時數，不比時段。\n" +
+                    $"核准表單的時數，從當天工時（上班日 {Hours(netHours)} 小時）扣掉；剩下的不多於實際上班的時數，就算補足。\n" +
+                    $"遲到時，表單至少要抵掉遲到的部分，晚走不抵遲到。\n{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。\n" +
                     $"例：上班日 {Seconds(slightlyLate)} 到、請 {Time(full.ScheduledStart)}～{Time(halfHour)} 的假，" +
-                    $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}；" +
-                    $"{Time(lateArrival)} 到、{Time(full.ScheduledEnd)} 走，遲到 10 分，但要 {Span(Short(lateArrival, full.ScheduledEnd, options))}的表單才補足（上班時數少了這麼多）。"),
-                new("補足狀態", $"有遲到、早退或異常才標：核准的表單夠為{Label(GapCoverage.Covered)}；加上流程中的才夠為{Label(GapCoverage.Pending)}；" +
-                    $"都不夠為{Label(GapCoverage.Unexplained)}，並寫出還差多少。遲到、早退的時間與小計照原本的判定，不因表單改變。"),
-                new("日型", "上班日、上午放假、下午放假與放假依公文系統的假日行事曆；放假整天不判定，刷卡照樣列出。行事曆沒有這一天時，週末當放假、平日無法判定。"),
-                new("無法判定", "公文系統連不上或對不到公文帳號時表單無法取得，沒刷卡的日子列為無法判定，不算異常。" +
-                    "今天還沒結束（打卡檔晚上才匯入），出勤與異常一律先列為無法判定，也不算遲到。"),
-                new("列出的日子", "只列持有卡的日子：到職前、換卡空窗與離職後不列，未來的日子也不列。"),
+                    $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}。\n" +
+                    $"例：{Time(lateArrival)} 到、{Time(full.ScheduledEnd)} 走，遲到 10 分，但要 {Span(Short(lateArrival, full.ScheduledEnd, options))}的表單才補足（上班時數少了這麼多）。"),
+                new("補足狀態", "有遲到、早退或異常才標。\n" +
+                    $"・{Label(GapCoverage.Covered)}：核准的表單就夠\n" +
+                    $"・{Label(GapCoverage.Pending)}：加上流程中的表單才夠\n" +
+                    $"・{Label(GapCoverage.Unexplained)}：都不夠，並寫出還差多少\n" +
+                    "遲到、早退的時間與小計照原本的判定，不因表單改變。"),
+                new("日型", "上班日、上午放假、下午放假與放假，依公文系統的假日行事曆。\n放假整天不判定，刷卡照樣列出。\n行事曆沒有這一天時：週末當放假，平日無法判定。"),
+                new("無法判定", "公文系統連不上或對不到公文帳號時，表單無法取得；沒刷卡的日子列為無法判定，不算異常。\n" +
+                    "今天還沒結束（打卡檔晚上才匯入）時，出勤與異常一律先列為無法判定，也不算遲到。"),
+                new("列出的日子", "只列持有卡的日子。\n到職前、換卡空窗、離職後與未來的日子都不列。"),
             ]);
     }
 

@@ -17,8 +17,10 @@ export function queryBarStep(
     target: `${host} nx-query-bar`,
     title: '查詢條件',
     description: `可依${options.fields}篩選${
-      options.more ? `，${options.more}收在「＋條件」` : ''
-    }。改欄位只是草稿，按「查詢」或 Enter 才套用；已套用的條件成為可逐一移除的標籤並寫進網址，重新整理或分享連結會看到相同結果。`,
+      options.more ? `；${options.more}收在「＋條件」` : ''
+    }。
+改欄位只是草稿，按「查詢」或 Enter 才套用。
+已套用的條件會成為可逐一移除的標籤，並寫進網址；重新整理或分享連結，會看到相同結果。`,
     side: 'bottom',
   };
 }
@@ -33,7 +35,7 @@ export function cursorPaginationStep(host: string, options: { sortable?: boolean
     title: '翻頁',
     description:
       options.sortable === false
-        ? '紀錄固定由新到舊、不計總數，只有上一頁、下一頁與回到第一頁，新紀錄不會讓翻頁重複；要找較早的紀錄請縮小時間範圍。換頁與每頁筆數沿用已套用的條件，不寫進網址。'
-        : '大表不計總數，只有上一頁、下一頁與回到第一頁，改用時間範圍與排序定位；換頁、排序與每頁筆數沿用已套用的條件，不寫進網址。',
+        ? '紀錄固定由新到舊，不計總數。\n只有上一頁、下一頁與回到第一頁；新紀錄不會讓翻頁重複。\n要找較早的紀錄，請縮小時間範圍。\n換頁與每頁筆數沿用已套用的條件，不寫進網址。'
+        : '大表不計總數，只有上一頁、下一頁與回到第一頁。\n請改用時間範圍與排序定位。\n換頁、排序與每頁筆數沿用已套用的條件，不寫進網址。',
   };
 }

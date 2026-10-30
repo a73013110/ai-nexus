@@ -12,7 +12,7 @@ export function pricesTour(options: {
         target: 'nx-prices-page .feature-title',
         title: '費用依當時的價格計算',
         description:
-          '每次模型呼叫建立時，會複製當時有效的價格版本來估算費用；之後改價只影響新的呼叫，已記錄的費用不重算。',
+          '每次模型呼叫建立時，會複製當時有效的價格版本來估算費用。\n之後改價只影響新的呼叫，已記錄的費用不重算。',
         side: 'bottom',
       },
       {
@@ -26,14 +26,14 @@ export function pricesTour(options: {
         target: 'nx-prices-page .price-add',
         title: '新增價格版本',
         description:
-          '版本不可修改，調價就新增下一個版本；系統不預填價格，也不推定本機模型為零成本，請依實際方案填寫。',
+          '版本不可修改；調價就新增下一個版本。\n系統不預填價格，也不推定本機模型為零成本，請依實際方案填寫。',
         side: 'bottom',
       },
       current && {
         target: 'nx-prices-page .price-current .price-unpriced',
         title: '未定價的項目',
         description:
-          '沒有適用版本的模型或工具標示未定價，費用顯示為未知、不當成免費；之後補上價格也不會回頭重算。',
+          '沒有適用版本的模型或工具，標示「未定價」，費用顯示為未知，不當成免費。\n之後補上價格也不會回頭重算。',
       },
       current && {
         target: 'nx-prices-page .price-current .price-time',
@@ -50,7 +50,7 @@ export function pricesTour(options: {
         target: 'nx-prices-page .price-history .price-state',
         title: '版本狀態',
         description:
-          '「適用中」是目前計費的版本，「已排定」在生效時間到了才套用，「已取代」只留作紀錄；備註欄記錄價格依據。',
+          '・適用中：目前計費的版本。\n・已排定：生效時間到了才套用。\n・已取代：只留作紀錄。\n備註欄記錄價格依據。',
       },
       !current && {
         target: 'nx-prices-page .price-history .price-reuse',
@@ -82,7 +82,7 @@ export function priceVersionTour(options: {
         target: 'nx-price-version-dialog .price-basis',
         title: '幣別與費用類型',
         description:
-          'API 計費估算依對外方案，內部成本估算是自行制定的本機成本，免費會把費率固定為 0；不同幣別分開統計、不換算。',
+          'API 計費估算依對外方案；內部成本估算是自行制定的本機成本，免費會把費率固定為 0。\n不同幣別分開統計，不換算。',
         side: 'bottom',
       },
       {
@@ -103,7 +103,7 @@ export function priceVersionTour(options: {
         target: 'nx-price-version-dialog .price-effective',
         title: '生效時間',
         description:
-          '以台北時區輸入；留空即儲存時生效，也可排定未來版本。只影響之後的呼叫，已記錄的費用不重算。',
+          '以台北時區輸入；留空表示儲存時生效，也可排定未來版本。\n只影響之後的呼叫，已記錄的費用不重算。',
         side: 'top',
       },
       {

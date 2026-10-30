@@ -148,7 +148,7 @@ export function attributeGroups(
           hint: ago(detail.badPasswordTime),
         },
       ],
-      '除了「最近登入（複寫）」，這裡都是這次連到的網域控制站上的值，不會在 DC 之間複寫；使用者在別台 DC 登入時會比實際舊。',
+      '除了「最近登入（複寫）」，這裡都是這次連到的網域控制站（DC）上的值，不會在 DC 之間複寫。使用者在別台 DC 登入時，會比實際舊。',
     ),
     group('groups', '所屬群組', [
       {
