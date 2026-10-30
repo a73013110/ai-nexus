@@ -24,7 +24,7 @@ import { sameIds } from '@features/admin/access-control/roles/same-ids';
 /** 草稿在檢視器的同一次開啟（`key`）內跟隨已儲存的值。 */
 type Keyed<T> = readonly [string | undefined, T];
 
-export type UserTab = 'account' | 'email' | 'roles' | 'models' | 'storage' | 'conversations';
+export type UserTab = 'account' | 'roles' | 'models' | 'usage' | 'conversations';
 /** 會編輯某些內容的分頁；各自獨立儲存。 */
 export type UserSettingsTab = Exclude<UserTab, 'conversations'>;
 
@@ -57,13 +57,15 @@ export class AdminUserStore {
     source: this.key,
     computation: () => ({}),
   });
-  /** 改綁或解除 AD 綁定送出中；不經帳號表單的儲存，錯誤顯示在帳號分頁。 */
-  readonly binding = linkedSignal<string | undefined, 'rebind' | 'unbind' | null>({
+  /**
+   * 立即生效的帳號動作（改綁、解除 AD 綁定、啟用或停用）送出中；不經帳號表單的儲存，錯誤顯示在帳號分頁。
+   */
+  readonly acting = linkedSignal<string | undefined, 'rebind' | 'unbind' | 'status' | null>({
     source: this.key,
     computation: () => null,
   });
-  /** 分頁儲存中、AD 綁定送出中或測試其他身分時，欄位唯讀。 */
-  readonly locked = computed(() => !!this.saving() || !!this.binding());
+  /** 分頁儲存中或帳號動作送出中時，欄位唯讀。 */
+  readonly locked = computed(() => !!this.saving() || !!this.acting());
 
   private readonly request = computed(() => {
     const key = this.key(),
@@ -143,12 +145,15 @@ export class AdminUserStore {
     computation: ([, saved]) => saved,
   });
 
+  private readonly accountChanged = computed(
+    () => !sameUserAccount(this.account(), this.savedAccount()),
+  );
+  private readonly emailChanged = computed(() => this.email().trim() !== this.savedEmail());
   readonly dirty = computed<Record<UserSettingsTab, boolean>>(() => ({
-    account: !sameUserAccount(this.account(), this.savedAccount()),
-    email: this.email().trim() !== this.savedEmail(),
+    account: this.accountChanged() || this.emailChanged(),
     roles: !sameIds(this.roles(), this.savedRoles()),
     models: !!this.modelPolicy() && !sameModelPolicy(this.models(), this.savedModels()),
-    storage: this.storage().trim() !== this.savedStorage(),
+    usage: this.storage().trim() !== this.savedStorage(),
   }));
 
   open(user: AdminUserDto) {
@@ -167,11 +172,13 @@ export class AdminUserStore {
   }
   /** 把分頁的草稿還原為已儲存的值。 */
   revert(tab: UserSettingsTab) {
-    if (tab === 'account') this.account.set(this.savedAccount());
-    if (tab === 'email') this.email.set(this.savedEmail());
+    if (tab === 'account') {
+      this.account.set(this.savedAccount());
+      this.email.set(this.savedEmail());
+    }
     if (tab === 'roles') this.roles.set([...this.savedRoles()]);
     if (tab === 'models') this.models.set(this.savedModels());
-    if (tab === 'storage') this.storage.set(this.savedStorage());
+    if (tab === 'usage') this.storage.set(this.savedStorage());
     this.errors.update((errors) => ({ ...errors, [tab]: '' }));
   }
   reloadModels() {
@@ -179,35 +186,42 @@ export class AdminUserStore {
     this.modelsRead.reload();
   }
 
+  /**
+   * 帳號分頁的姓名、登入方式與通知信箱一起儲存，但後端是兩個端點：只送有變動的那個，
+   * 先送的成功就先更新基準，後送的失敗時只剩它還是未儲存。
+   */
   saveAccount() {
+    const draft = this.account(),
+      email = this.email().trim(),
+      account = this.accountChanged(),
+      mail = this.emailChanged();
     return this.save(
       'account',
-      (id) => this.api.updateUser(id, userAccountRequest(this.account(), [...this.savedRoles()])),
-      () => {
-        const draft = this.account();
-        this.savedAccount.set({
-          ...draft,
-          password: '',
-          hasLocalPassword: draft.localEnabled && (draft.hasLocalPassword || !!draft.password),
-        });
-        this.changed('帳號已儲存', '停用、登入方式或密碼變更會讓舊的工作階段失效。');
+      async (id, valid) => {
+        if (account) {
+          const enabled = this.current()?.enabled ?? true;
+          await this.api.updateUser(id, userAccountRequest(draft, [...this.savedRoles()], enabled));
+          if (valid())
+            this.savedAccount.set({
+              ...draft,
+              password: '',
+              hasLocalPassword: draft.localEnabled && (draft.hasLocalPassword || !!draft.password),
+            });
+        }
+        if (mail) {
+          await this.api.email(id, email || null);
+          if (valid()) this.savedEmail.set(email);
+        }
       },
-    );
-  }
-  saveEmail() {
-    const email = this.email().trim();
-    return this.save(
-      'email',
-      (id) => this.api.email(id, email || null),
-      () => {
-        this.savedEmail.set(email);
-        this.overviewRead.reload();
-        this.toast.success(
-          email ? '通知信箱已設定' : '通知信箱已清除',
-          email ? '本人驗證前不會用來寄驗證碼。' : undefined,
-        );
-        this.admin.readUsers();
-      },
+      () =>
+        this.changed(
+          '帳號已儲存',
+          account
+            ? '登入方式或密碼變更會讓舊的工作階段失效。'
+            : email
+              ? '通知信箱在本人驗證前不會用來寄驗證碼。'
+              : '通知信箱已清除。',
+        ),
     );
   }
   saveRoles() {
@@ -234,7 +248,7 @@ export class AdminUserStore {
   }
   saveStorage() {
     return this.save(
-      'storage',
+      'usage',
       async (id) => {
         const bytes = parseStorageLimitGb(this.storage());
         await this.api.storage(id, bytes);
@@ -249,7 +263,7 @@ export class AdminUserStore {
     );
   }
   rebind(adAccount: string) {
-    return this.bind(
+    return this.act(
       'rebind',
       (id) => this.api.rebindDirectory(id, adAccount),
       'AD 帳號已改綁',
@@ -257,16 +271,29 @@ export class AdminUserStore {
     );
   }
   unbind() {
-    return this.bind(
+    return this.act(
       'unbind',
       (id) => this.api.unbindDirectory(id),
       'AD 綁定已解除',
       '下次以 AD 帳號驗證或從 AD 匯入時重新綁定。',
     );
   }
+  /** 立即啟用或停用；姓名與登入方式沿用已儲存的值，所以帳號表單有未儲存的變更時由呼叫端先擋下。 */
+  setEnabled(enabled: boolean) {
+    return this.act(
+      'status',
+      (id) =>
+        this.api.updateUser(
+          id,
+          userAccountRequest(this.savedAccount(), [...this.savedRoles()], enabled),
+        ),
+      enabled ? '已啟用使用者' : '已停用使用者',
+      enabled ? '可以再次登入。' : '既有工作階段已失效；資料與稽核保留。',
+    );
+  }
   /** 成功回傳 true，呼叫端據此清空輸入；失敗訊息放在帳號分頁。 */
-  private async bind(
-    action: 'rebind' | 'unbind',
+  private async act(
+    action: 'rebind' | 'unbind' | 'status',
     work: (id: string) => Promise<unknown>,
     title: string,
     description: string,
@@ -276,7 +303,7 @@ export class AdminUserStore {
       alive = this.scope.guard(),
       valid = () => alive() && this.key() === key;
     if (!id || this.locked()) return false;
-    this.binding.set(action);
+    this.acting.set(action);
     this.errors.update((errors) => ({ ...errors, account: '' }));
     try {
       await work(id);
@@ -286,7 +313,7 @@ export class AdminUserStore {
       if (valid()) this.errors.update((errors) => ({ ...errors, account: safeMessage(error) }));
       return false;
     } finally {
-      if (valid()) this.binding.set(null);
+      if (valid()) this.acting.set(null);
     }
   }
   /** 帳號與角色的授權變更：目錄、列表與自己的工作階段會重新讀取。 */
@@ -296,7 +323,7 @@ export class AdminUserStore {
   }
   private async save(
     tab: UserSettingsTab,
-    work: (id: string) => Promise<unknown>,
+    work: (id: string, valid: () => boolean) => Promise<unknown>,
     done: (result: unknown) => void,
   ) {
     const key = this.key(),
@@ -307,7 +334,7 @@ export class AdminUserStore {
     this.saving.set(tab);
     this.errors.update((errors) => ({ ...errors, [tab]: '' }));
     try {
-      const result = await work(id);
+      const result = await work(id, valid);
       if (valid()) done(result);
     } catch (error) {
       if (valid()) this.errors.update((errors) => ({ ...errors, [tab]: safeMessage(error) }));

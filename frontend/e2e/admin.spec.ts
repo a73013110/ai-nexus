@@ -1385,6 +1385,19 @@ async function administration(page: Page) {
       )
       .map((user, index) => ({ ...user, position: index + 1 }));
   const conversationId = randomUUID();
+  // 同一個問題重新生成過一次：使用者訊息底下有兩個回覆版本，最後停留在第二版。
+  const question = randomUUID(),
+    draft = randomUUID(),
+    answer = randomUUID(),
+    attachmentId = randomUUID();
+  const attachment = {
+    id: attachmentId,
+    fileName: "公文.txt",
+    contentType: "text/plain",
+    size: 1200,
+    isImage: false,
+    analysisMode: "text",
+  };
   const recordRead = (action: string, resourceId: string) =>
     audit.unshift({
       id: audit.length + 1,
@@ -1727,22 +1740,31 @@ async function administration(page: Page) {
         ownerAccount: bob.account,
         ownerName: bob.displayName,
         systemInstruction: "請附上來源",
-        offset: 0,
-        total: 2,
+        activeLeafId: answer,
         messages: [
           {
-            id: randomUUID(),
+            id: question,
             parentId: null,
             role: "user",
             content: "請協助摘要公文",
             status: "completed",
             createdAt: actor.lastSeenAt,
             modelId: null,
+            attachments: [attachment],
+          },
+          {
+            id: draft,
+            parentId: question,
+            role: "assistant",
+            content: "第一版回覆。",
+            status: "completed",
+            createdAt: actor.lastSeenAt,
+            modelId: "fixture:8b",
             attachments: [],
           },
           {
-            id: randomUUID(),
-            parentId: null,
+            id: answer,
+            parentId: question,
             role: "assistant",
             content: "## 摘要\n\n這是唯讀的 AI 回覆。",
             status: "completed",
@@ -1756,6 +1778,22 @@ async function administration(page: Page) {
               outputTokens: 150,
             },
             attachments: [],
+          },
+        ],
+      });
+    }
+    if (
+      path === `/conversations/${conversationId}/files/${attachmentId}/preview`
+    ) {
+      recordRead("identity.conversation_file.read", bob.id);
+      return json({
+        file: attachment,
+        pages: [
+          {
+            pageNumber: 1,
+            text: "公文全文：請各單位於月底前回報。",
+            extraction: "attachment",
+            needsReview: false,
           },
         ],
       });
@@ -1935,7 +1973,7 @@ test("administrators edit roles with effective access preview and an audit trail
   await expect(save).toBeDisabled();
   await expect(dialog).not.toContainText("有未儲存的變更");
   expect(state.bob.roleIds).toContain("administrator");
-  await expect(dialog.locator(".summary-roles")).toContainText("平台管理員");
+  await expect(dialog.locator(".inspector-roles")).toContainText("平台管理員");
   await page.goto("/admin/audit");
   await expect(
     page.locator(".audit-row", { hasText: "調整使用者角色" }).first(),
@@ -1990,7 +2028,7 @@ test("manual user creation, dual login editing and removal keep one place for ea
   // The dialog is named by the user, so it is followed through the rename below.
   const edit = page.locator("dialog.admin-inspector");
   await expect(edit).toHaveAccessibleName("本地測試者");
-  await expect(edit).toContainText("登入：本地密碼");
+  await expect(edit.locator(".inspector-subtitle")).toContainText("本地密碼");
   await expect(edit.getByLabel("設定本地密碼", { exact: true })).toHaveValue(
     "",
   );
@@ -2010,12 +2048,12 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(
     edit.getByRole("tab", { name: "帳號（有未儲存的變更）", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-  await edit
-    .getByRole("checkbox", { name: "允許 AD 驗證", exact: true })
-    .check();
+  await edit.getByRole("checkbox", { name: "AD 驗證", exact: true }).check();
   await edit.getByLabel("使用者 AD 帳號", { exact: true }).fill("test-ad");
   await edit.getByRole("button", { name: "儲存帳號", exact: true }).click();
-  await expect(edit).toContainText("登入：AD · 本地密碼");
+  await expect(edit.locator(".inspector-subtitle")).toContainText(
+    "AD · 本地密碼",
+  );
   await expect(edit).toHaveAccessibleName("本地測試員");
   await expect(edit).not.toContainText("有未儲存的變更");
   await expect(
@@ -2361,36 +2399,50 @@ test("administrators inspect user usage and deleted conversations through an aud
     .click();
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".inspector-stats")).toContainText("1,800");
   // Conversations are listed, and audited, only once their tab is opened.
   expect(state.audit.some((x) => x.action === "admin.conversations_list")).toBe(
     false,
   );
-  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
+  await dialog.getByRole("tab", { name: "用量", exact: true }).click();
+  await expect(dialog.locator("nx-stat-grid")).toContainText("1,800");
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
-  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
+  await dialog
+    .getByLabel("個人容量上限（GB，選填）", { exact: true })
+    .fill("10");
   await dialog
     .getByRole("button", { name: "儲存容量上限", exact: true })
     .click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("10.00 GB");
   expect(state.bob.storage.personalLimitBytes).toBe(10_000_000_000);
-  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("");
+  await dialog.getByLabel("個人容量上限（GB，選填）", { exact: true }).fill("");
   await dialog
     .getByRole("button", { name: "儲存容量上限", exact: true })
     .click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
   expect(state.bob.storage.personalLimitBytes).toBeNull();
   await dialog.getByRole("tab", { name: "對話", exact: true }).click();
-  await expect(dialog).toContainText("開啟清單與內容都會寫入稽核");
+  await expect(dialog).toContainText("開啟清單、內容與附件都會寫入稽核");
   await dialog
     .getByRole("button", { name: "檢視對話：公文內容討論", exact: true })
     .click();
   await expect(
     dialog.getByRole("heading", { name: "摘要", exact: true }),
   ).toBeVisible();
-  await expect(dialog.locator(".inspector-user-message")).toContainText(
+  await expect(dialog.locator(".reading-messages")).toContainText(
     "請協助摘要公文",
   );
+  // 與聊天相同：先顯示最後停留的版本，重新生成前的回覆可切換查看；唯讀時沒有編輯與重新生成。
+  await expect(dialog.locator(".reading-messages")).not.toContainText(
+    "第一版回覆。",
+  );
+  await dialog.getByRole("button", { name: "上一個版本", exact: true }).click();
+  await expect(dialog.locator(".reading-messages")).toContainText(
+    "第一版回覆。",
+  );
+  await dialog.getByRole("button", { name: "下一個版本", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: /重新生成|編輯/ }),
+  ).toHaveCount(0);
   await dialog.locator("nx-run-timing summary").click();
   await expect(dialog.locator("nx-run-timing details")).toContainText(
     "輸入 300",
@@ -2406,6 +2458,17 @@ test("administrators inspect user usage and deleted conversations through an aud
         x.resourceId === state.conversationId,
     ),
   ).toBe(true);
+  // 附件經由這段對話的範圍預覽，每次開啟都稽核。
+  await dialog
+    .getByRole("link", { name: "閱讀附件：公文.txt", exact: true })
+    .click();
+  const preview = page.getByRole("dialog", { name: "檔案預覽" });
+  await expect(preview).toContainText("請各單位於月底前回報");
+  expect(
+    state.audit.some((x) => x.action === "identity.conversation_file.read"),
+  ).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(preview).not.toBeVisible();
   await settleEntrance(page);
   await expectCompactWorkspace(page);
   await dialog
@@ -2415,8 +2478,10 @@ test("administrators inspect user usage and deleted conversations through an aud
     dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 375, height: 812 });
-  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
-  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
+  await dialog.getByRole("tab", { name: "用量", exact: true }).click();
+  await dialog
+    .getByLabel("個人容量上限（GB，選填）", { exact: true })
+    .fill("10");
   await dialog
     .getByRole("button", { name: "儲存容量上限", exact: true })
     .click();
@@ -2672,7 +2737,7 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     .toBe(true);
   await settleEntrance(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await inspector.getByRole("tab", { name: "附件容量", exact: true }).click();
+  await inspector.getByRole("tab", { name: "用量", exact: true }).click();
   expect(
     await inspector
       .getByRole("tabpanel")

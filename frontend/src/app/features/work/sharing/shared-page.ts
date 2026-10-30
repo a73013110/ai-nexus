@@ -150,7 +150,7 @@ export class SharedPage {
     let shown: string | null = null;
     effect(() => {
       const id = this.content()?.share.id ?? null;
-      if (shown && shown !== id && untracked(this.reader.target)?.shareId === shown)
+      if (shown && shown !== id && untracked(this.reader.target)?.scope?.id === shown)
         untracked(() => this.reader.close());
       shown = id;
     });

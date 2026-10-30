@@ -101,7 +101,10 @@
                 }
                 <time [attr.datetime]="message.createdAt">{{ date(message.createdAt) }}</time>
               </div>
-              <nx-message-content [message]="message" [shareId]="view.share.id" />
+              <nx-message-content
+                [message]="message"
+                [scope]="{ kind: 'share', id: view.share.id }"
+              />
             </section>
           }
         }

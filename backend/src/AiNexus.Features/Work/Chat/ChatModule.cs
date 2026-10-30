@@ -25,6 +25,7 @@ public sealed class ChatModule : IFeatureModule
         services.AddScoped<RunService>();
         services.AddScoped<RunLeaseRecovery>();
         services.AddScoped<ContextBuilder>();
+        services.AddScoped<TranscriptReader>();
         services.AddSingleton<SubscriptionLimits>();
         services.AddSingleton<RunSignals>();
 
@@ -50,5 +51,10 @@ public sealed class ChatModule : IFeatureModule
         DuplicateConversation.Map(conversations);
         ExportConversation.Map(conversations);
         DeleteConversation.Map(conversations);
+
+        // 管理端稽核式讀取任一使用者的對話內容與附件，從使用者頁開啟；列表在 Conversations。
+        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
+        ReadAdminConversation.Map(admin);
+        OpenAdminConversationFile.Map(admin);
     }
 }

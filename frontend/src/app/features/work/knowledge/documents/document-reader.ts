@@ -9,6 +9,7 @@ import {
   readerReturnLabel,
   readerReturnUrl,
 } from '@shared/browser/reader-navigation';
+import type { FileScope } from '@shared/browser/reader-overlay';
 import { DocumentViewer } from './document-viewer';
 import { WorkspaceMenuButton } from '@core/layout/workspace-menu-button';
 
@@ -22,6 +23,11 @@ function readerId(value: unknown): ReaderId {
   return typeof value === 'string' && Object.hasOwn(READER_HOME, value)
     ? (value as ReaderId)
     : 'knowledge.reader';
+}
+
+/** 分享閱讀器的網址帶著分享 ID；其他閱讀器沒有容器。 */
+function scopeOf(share: string | null): FileScope | null {
+  return share ? { kind: 'share', id: share } : null;
 }
 
 @Component({
@@ -48,7 +54,7 @@ export class DocumentReader {
       map(([params, query]) => ({
         target: {
           id: params.get('id')!,
-          shareId: params.get('shareId'),
+          scope: scopeOf(params.get('shareId')),
           // 三個閱讀器共用此元件；是哪一個由路由的目錄 ID 決定，不看網址字面。
           attachment: this.reader === 'files.reader',
           page: Number(query.get('page')) || 1,

@@ -11,4 +11,5 @@ public static class ConversationsAudit
     public static readonly AuditAction ConversationUpdated = AuditAction.Activity("chat.conversation.updated", "整理對話");
     public static readonly AuditAction UserConversationRead = AuditAction.Access("identity.user_conversation.read", "檢視使用者對話清單");
     public static readonly AuditAction ConversationContentRead = AuditAction.Access("identity.conversation_content.read", "檢視使用者對話內容");
+    public static readonly AuditAction ConversationFileRead = AuditAction.Access("identity.conversation_file.read", "檢視使用者對話附件");
 }

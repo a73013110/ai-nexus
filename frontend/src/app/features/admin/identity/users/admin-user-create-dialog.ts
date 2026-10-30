@@ -45,7 +45,6 @@ import { UserRoleFields } from './user-role-fields';
               />
               <nx-user-role-fields
                 [roleIds]="roleIds()"
-                [enabled]="account().enabled"
                 [disabled]="saving()"
                 (roleIdsChange)="roleIds.set($event)"
               />

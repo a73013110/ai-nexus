@@ -49,9 +49,8 @@ public sealed class ConversationsModule : IFeatureModule
         UpdateConversationSettings.Map(routes);
         SelectBranch.Map(routes);
 
-        // 管理端稽核式讀取任一使用者的對話，從使用者頁開啟。
+        // 管理端稽核式列出任一使用者的對話，從使用者頁開啟；內容與附件的讀取在 Chat（訊息 DTO 屬於它）。
         var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
         ListAdminUserConversations.Map(admin);
-        ReadAdminConversation.Map(admin);
     }
 }

@@ -36,8 +36,13 @@ import { jobFailure } from '@features/work/jobs/job-kind';
 import { Island } from '@shared/ui/island';
 import { IslandService, type IslandItem } from '@shared/ui/island-service';
 import { KnowledgeApi } from '../knowledge-api';
-import { readerUrl, remoteFileContent, type ReaderTarget } from '@shared/browser/reader-overlay';
-import { SharingApi } from '@features/work/sharing/sharing-api';
+import {
+  originalOnlyHref,
+  readerUrl,
+  remoteFileContent,
+  scopedFileHref,
+  type ReaderTarget,
+} from '@shared/browser/reader-overlay';
 import { attachmentContent, FilesApi } from '@features/work/files/files-api';
 import { RemoteFilesApi } from '@features/platform/remote-files/remote-files-api';
 import { MarkdownView } from '@shared/markdown/markdown-view';
@@ -98,7 +103,6 @@ const readyDocument = (
 })
 export class DocumentViewer {
   private readonly api = inject(KnowledgeApi);
-  private readonly shares = inject(SharingApi);
   private readonly jobToasts = inject(JobToasts);
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
@@ -211,14 +215,13 @@ export class DocumentViewer {
       value: 'text',
       label: this.rawImage() ? '辨識文字' : '擷取文字',
       icon: 'lines',
-      disabled: this.busy() || (!!this.target().shareId && !this.hasText()),
+      disabled: this.busy() || (!!this.target().scope && !this.hasText()),
     },
   ]);
   readonly contentUrl = computed(() => {
-    const { id, shareId, remote } = this.target();
+    const { id, scope, remote } = this.target();
     if (remote) return remoteFileContent(remote.ticket);
-    if (shareId)
-      return apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: shareId, file: id } });
+    if (scope) return scopedFileHref(scope, id);
     return this.rawImage()
       ? attachmentContent(id)
       : apiHref('/api/v1/documents/{id}/content', { path: { id: this.document()?.id || '' } });
@@ -228,11 +231,8 @@ export class DocumentViewer {
     return remote ? remoteFileContent(remote.ticket, true) : this.contentUrl() + '?download=true';
   });
   readonly htmlUrl = computed(() => {
-    const { id, shareId } = this.target();
-    if (shareId)
-      return apiHref('/api/v1/shares/{id}/files/{file}/render', {
-        path: { id: shareId, file: id },
-      });
+    const { id, scope } = this.target();
+    if (scope) return scopedFileHref(scope, id, 'render');
     return this.rawImage()
       ? apiHref('/api/v1/attachments/{id}/render', { path: { id } })
       : apiHref('/api/v1/documents/{id}/render', { path: { id: this.document()?.id || '' } });
@@ -249,13 +249,15 @@ export class DocumentViewer {
     });
   });
   /** 遠端檔案沒有閱讀器網址，新分頁直接開原檔。 */
-  readonly standaloneUrl = computed(() =>
-    this.target().remote ? this.contentUrl() : readerUrl(this.target(), this.page()),
+  readonly standaloneUrl = computed(
+    () => originalOnlyHref(this.target()) ?? readerUrl(this.target(), this.page()),
   );
   /** 這頁沒有擷取文字時的說明；工作已失敗或停止就不說「會自動顯示」。 */
   readonly missingText = computed(() => {
     if (this.target().remote) return '這種檔案無法在這裡預覽，請下載原檔。';
-    if (this.target().shareId) return '這份分享尚無此頁的擷取文字。可預覽原檔或下載。';
+    const scope = this.target().scope;
+    if (scope)
+      return `${scope.kind === 'share' ? '這份分享' : '這個附件'}尚無此頁的擷取文字。可預覽原檔或下載。`;
     if (this.busy()) return '正在建立文字辨識工作…';
     const status = this.job()?.status;
     if (status === 'failed' || status === 'cancelled')
@@ -422,7 +424,7 @@ export class DocumentViewer {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
       if (target.remote) return await this.loadRemote(target.remote, valid);
-      if (attachment && !target.shareId) {
+      if (attachment && !target.scope) {
         const file = await this.uploads.attachment(id);
         if (!valid()) return;
         // 預覽點陣圖片不會排入 OCR，也不會產生模型呼叫。
@@ -433,8 +435,8 @@ export class DocumentViewer {
           return;
         }
       }
-      const shared = target.shareId
-        ? await this.shares.preview(target.shareId, id, this.controller.signal)
+      const shared = target.scope
+        ? await this.uploads.scopedPreview(target.scope, id, this.controller.signal)
         : null;
       const info: DocumentDto = shared
         ? readyDocument(id, shared.file, shared.pages.length || 1)
@@ -456,12 +458,13 @@ export class DocumentViewer {
       if (kind !== 'other') void this.loadRaw(info, target, kind === 'html', valid);
       if (shared) {
         this.pages.set(shared.pages);
-        this.watchShare(target, valid);
+        // 分享可能被撤銷，定期重讀以便收回畫面；稽核檢視的每次讀取都會寫稽核，不輪詢。
+        if (target.scope?.kind === 'share') this.watchShare(target, valid);
       } else await this.refresh(info.id, valid);
       if (info.contentType === 'application/pdf')
         await this.openPdf(
-          target.shareId
-            ? this.shares.original(target.shareId, id, this.controller.signal)
+          target.scope
+            ? this.uploads.scopedOriginal(target.scope, id, this.controller.signal)
             : this.api.original(info.id, this.controller.signal),
           valid,
         );
@@ -520,8 +523,8 @@ export class DocumentViewer {
     valid: () => boolean,
   ) {
     try {
-      const response = await (target.shareId
-          ? this.shares.original(target.shareId, target.id, this.controller?.signal)
+      const response = await (target.scope
+          ? this.uploads.scopedOriginal(target.scope, target.id, this.controller?.signal)
           : this.api.original(info.id, this.controller?.signal)),
         text = await response.text();
       if (!valid()) return;
@@ -552,9 +555,9 @@ export class DocumentViewer {
   private watchShare(target: ReaderTarget, valid: () => boolean) {
     this.scope.later(
       () => {
-        if (!valid() || !target.shareId) return;
-        void this.shares
-          .preview(target.shareId, target.id)
+        if (!valid() || !target.scope) return;
+        void this.uploads
+          .scopedPreview(target.scope, target.id)
           .then((value) => {
             if (valid()) {
               this.pages.set(value.pages);
@@ -658,7 +661,7 @@ export class DocumentViewer {
   }
   async setMode(mode: string) {
     this.mode.set(mode);
-    if (this.target().shareId || mode !== 'text' || !this.rawImage() || this.busy()) return;
+    if (this.target().scope || mode !== 'text' || !this.rawImage() || this.busy()) return;
     const version = this.version,
       guard = this.scope.guard(),
       valid = () => guard() && version === this.version;

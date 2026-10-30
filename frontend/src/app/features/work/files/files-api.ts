@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { ApiClient, apiHref, type ApiQuery } from '@core/api/api-client';
 import type { AttachmentPolicyDto } from '@core/api/schema';
 import { ClientValidationError } from '@core/errors/safe-errors';
+import { scopedFileRoute, type FileScope } from '@shared/browser/reader-overlay';
 
 type FileFilters = ApiQuery<'/api/v1/files', 'get'>;
 
@@ -34,4 +35,14 @@ export class FilesApi {
     this.api.put('/api/v1/files/{id}/name', { path: { id }, body: { fileName, expectedFileName } });
   retainFile = (id: string) => this.api.post('/api/v1/files/{id}/retain', { path: { id } });
   removeFile = (id: string) => this.api.delete('/api/v1/files/{id}', { path: { id } });
+  /** 容器（分享、稽核檢視的對話）內檔案的預覽：描述與逐頁擷取文字。 */
+  scopedPreview(scope: FileScope, file: string, signal?: AbortSignal) {
+    const route = scopedFileRoute(scope, file, 'preview');
+    return this.api.get(route.path, { ...route.params, signal });
+  }
+  /** 容器內檔案的原檔（PDF 繪製、Markdown 與 HTML 的原始文字）。 */
+  scopedOriginal(scope: FileScope, file: string, signal?: AbortSignal) {
+    const route = scopedFileRoute(scope, file, 'content');
+    return this.api.open(route.path, { ...route.params, signal });
+  }
 }

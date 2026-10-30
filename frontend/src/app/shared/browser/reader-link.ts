@@ -4,14 +4,16 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
 import {
   ReaderOverlay,
+  originalOnlyHref,
   readerCommands,
-  remoteFileContent,
+  type FileScope,
   type RemoteReaderFile,
 } from './reader-overlay';
 
 /**
  * 原生連結支援開新分頁；同分頁導覽也會保留閱讀位置。
- * 遠端檔案（`readerRemote`）沒有閱讀器網址：連結指向內容本身，開新分頁就是瀏覽器直接顯示原檔。
+ * 遠端檔案（`readerRemote`）與稽核檢視中的對話附件沒有閱讀器網址：連結指向內容本身，
+ * 開新分頁就是瀏覽器直接顯示原檔。
  */
 @Directive({
   selector: 'a[nxReaderLink]',
@@ -24,7 +26,7 @@ export class ReaderLink {
   readonly id = input.required<string>({ alias: 'nxReaderLink' });
   readonly attachment = input(false, { alias: 'readerAttachment' });
   readonly page = input<number | null>(null, { alias: 'readerPage' });
-  readonly shareId = input<string | null>(null, { alias: 'readerShare' });
+  readonly scope = input<FileScope | null>(null, { alias: 'readerScope' });
   readonly remote = input<RemoteReaderFile | null>(null, { alias: 'readerRemote' });
   private readonly origin = toSignal(
     this.router.events.pipe(
@@ -34,11 +36,15 @@ export class ReaderLink {
     { initialValue: this.router.url },
   );
   readonly href = computed(() => {
-    const remote = this.remote();
-    if (remote) return remoteFileContent(remote.ticket);
+    const original = originalOnlyHref({
+      id: this.id(),
+      scope: this.scope(),
+      remote: this.remote(),
+    });
+    if (original) return original;
     return this.router.serializeUrl(
       this.router.createUrlTree(
-        readerCommands({ id: this.id(), attachment: this.attachment(), shareId: this.shareId() }),
+        readerCommands({ id: this.id(), attachment: this.attachment(), scope: this.scope() }),
         { queryParams: { page: this.page(), returnTo: this.origin() } },
       ),
     );
@@ -60,7 +66,7 @@ export class ReaderLink {
       id: this.id(),
       attachment: this.attachment(),
       page: this.page(),
-      shareId: this.shareId(),
+      scope: this.scope(),
       remote: this.remote(),
     });
   }

@@ -18,7 +18,7 @@ import { ViewMorph } from '@core/layout/view-morph';
 import { ThemeService } from '@core/preferences/theme-service';
 import { AuthService } from '@core/auth/auth-service';
 import { DraftAttachments } from '@features/work/files/draft-attachments';
-import { MessageTree } from './state/message-tree';
+import { MessageTree } from '@features/work/conversations/message-tree';
 import { UserSettingsService } from '@core/preferences/user-settings';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { KnowledgeSelection } from '@features/work/knowledge/collections/knowledge-selection';

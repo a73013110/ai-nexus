@@ -1,19 +1,16 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
-import type { AdminConversationDetailDto } from '@core/api/schema';
+import type { MessageDto } from '@core/api/schema';
+import type { FileScope } from '@shared/browser/reader-overlay';
 import { ViewScope } from '@shared/browser/view-scope';
 import { endpointTable } from '@shared/ui/table-model';
+import { MessageTree } from '@features/work/conversations/message-tree';
 import { IdentityApi } from '../identity-api';
 import { AdminUserStore } from './admin-user-store';
 
-interface Opened {
-  id: string;
-  offset: number;
-}
-
 /**
- * 受稽核、唯讀的被檢視使用者對話檢視。分頁第一次顯示時才開始列出（每次列出與每次讀取都會被稽核），
- * 切換分頁時會保留其位置。
+ * 受稽核、唯讀的被檢視使用者對話檢視。分頁第一次顯示時才開始列出（每次列出、讀取與開啟附件都會被稽核），
+ * 切換分頁時會保留其位置。內容與聊天共用訊息樹：一次讀完整段對話，依分支顯示並可切換重新生成的版本。
  */
 @Injectable()
 export class UserConversationReader {
@@ -64,36 +61,39 @@ export class UserConversationReader {
   );
   readonly loading = computed(() => this.typing() || this.table.refreshing());
   readonly error = this.table.error;
-  /** 正在閱讀的對話，以及其中已顯示的訊息數。 */
-  private readonly opened = linkedSignal<string | undefined, Opened | null>({
+  /** 正在閱讀的對話；換使用者時清空。 */
+  private readonly opened = linkedSignal<string | undefined, string | null>({
     source: this.key,
     computation: () => null,
   });
   /** 為閱讀而選的對話，在其訊息抵達前後都是如此。 */
-  readonly selected = computed(() => this.opened()?.id ?? null);
+  readonly selected = this.opened.asReadonly();
   private readonly detailRead = apiResource({
     params: () => this.opened() ?? undefined,
-    loader: async (request) => ({
-      request,
-      data: await this.api.conversation(request.id, request.offset),
-    }),
+    loader: async (id) => ({ id, data: await this.api.conversation(id) }),
   });
-  readonly detail = linkedSignal<
-    { request: Opened | null; loaded?: { request: Opened; data: AdminConversationDetailDto } },
-    AdminConversationDetailDto | null
-  >({
-    source: () => ({ request: this.opened(), loaded: this.detailRead.value() }),
-    computation: ({ request, loaded }, previous) => {
-      if (!request) return null;
-      const shown = request.offset ? (previous?.value ?? null) : null;
-      if (loaded?.request !== request) return shown;
-      return shown
-        ? { ...loaded.data, offset: 0, messages: [...shown.messages, ...loaded.data.messages] }
-        : loaded.data;
-    },
+  /** 只顯示目前選取的對話；切換後舊回應即使抵達也不顯示。 */
+  readonly detail = computed(() => {
+    const loaded = this.detailRead.value();
+    return loaded && loaded.id === this.opened() ? loaded.data : null;
   });
   readonly reading = this.detailRead.refreshing;
   readonly readError = this.detailRead.error;
+  /** 附件經由這段對話授權開啟（每次都稽核），不是對原始附件的存取權。 */
+  readonly fileScope = computed<FileScope | null>(() => {
+    const id = this.detail()?.conversation.id;
+    return id ? { kind: 'conversation', id } : null;
+  });
+  readonly tree = computed(() => new MessageTree(this.detail()?.messages ?? []));
+  /**
+   * 顯示中的分支：先開擁有者最後停留的分支（沒有記錄時用最新一則）。切換版本只改這個檢視，
+   * 不寫回對話，擁有者下次開啟看到的分支不受影響。
+   */
+  private readonly leaf = linkedSignal(() => {
+    const detail = this.detail();
+    return detail?.activeLeafId ?? detail?.messages.at(-1)?.id ?? null;
+  });
+  readonly visibleMessages = computed(() => this.tree().branch(this.leaf()));
 
   start() {
     this.wanted.set(true);
@@ -120,10 +120,11 @@ export class UserConversationReader {
   close() {
     this.opened.set(null);
   }
-  read(id: string, more = false) {
-    if (more) {
-      if (this.reading()) return;
-      this.opened.set({ id, offset: this.detail()?.messages.length || 0 });
-    } else this.opened.set({ id, offset: 0 });
+  read(id: string) {
+    this.opened.set(id);
+  }
+  selectVersion(message: MessageDto, direction: number) {
+    const leaf = this.tree().versionLeaf(message, direction);
+    if (leaf) this.leaf.set(leaf);
   }
 }

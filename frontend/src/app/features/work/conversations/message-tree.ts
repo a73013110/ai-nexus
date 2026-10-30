@@ -1,6 +1,9 @@
 import type { MessageDto } from '@core/api/schema';
 
-/** 每個歷史快照一個索引，而不是為每個可見列掃描所有訊息。 */
+/**
+ * 對話的訊息樹（分支、重新生成的版本）。每個歷史快照一個索引，而不是為每個可見列掃描所有訊息；
+ * 聊天與管理員的稽核檢視共用，兩邊的分支與版本切換規則相同。
+ */
 export class MessageTree {
   private readonly byId = new Map<string, MessageDto>();
   private readonly children = new Map<string | null, MessageDto[]>();

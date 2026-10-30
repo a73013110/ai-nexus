@@ -86,21 +86,21 @@ describe('directoryImportTour', () => {
 });
 
 describe('userInspectorTour', () => {
-  it('introduces the summary, tabs and pager outside the conversations tab', () => {
+  it('introduces the header, its menu, tabs and pager outside the conversations tab', () => {
     expect(titles(userInspectorTour({ audit: true, conversations: false }))).toEqual([
       '這位使用者的概況',
-      '反查活動稽核',
+      '複製 ID 與反查活動稽核',
       '依頁籤管理',
       '上一位、下一位',
     ]);
   });
 
   it('omits the audit lookup without the audit grant', () => {
-    expect(titles(userInspectorTour({ audit: false, conversations: false }))).not.toContain(
-      '反查活動稽核',
+    expect(titles(userInspectorTour({ audit: false, conversations: false }))).toContain(
+      '複製使用者 ID',
     );
     expect(titles(userInspectorTour({ audit: false, conversations: true }))).not.toContain(
-      '反查活動稽核',
+      '複製 ID 與反查活動稽核',
     );
   });
 
@@ -110,8 +110,8 @@ describe('userInspectorTour', () => {
       '搜尋對話',
       '包含已刪除對話',
       '切換對話',
-      '完整的對話內容',
-      '反查活動稽核',
+      '與聊天相同的對話內容',
+      '複製 ID 與反查活動稽核',
     ]);
   });
 

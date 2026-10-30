@@ -73,7 +73,7 @@ module.exports = tseslint.config(
       // Attribute directives namespace their extra inputs after the selector.
       '@angular-eslint/no-input-rename': [
         'error',
-        { allowedNames: ['readerAttachment', 'readerPage', 'readerRemote', 'readerShare', 'rowEnabled'] },
+        { allowedNames: ['readerAttachment', 'readerPage', 'readerRemote', 'readerScope', 'rowEnabled'] },
       ],
     },
   },

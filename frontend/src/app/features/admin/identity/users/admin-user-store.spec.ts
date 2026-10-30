@@ -24,8 +24,8 @@ function setup() {
   let saved = user;
   const api = {
     insights: vi.fn(async () => ({ user: saved, usage: {}, kinds: [], conversations: 0 })),
-    updateUser: vi.fn(async (_id: string, body: { displayName: string }) => {
-      saved = { ...saved, displayName: body.displayName };
+    updateUser: vi.fn(async (_id: string, body: { displayName: string; enabled: boolean }) => {
+      saved = { ...saved, displayName: body.displayName, enabled: body.enabled };
     }),
     roles: vi.fn(async () => undefined),
     rebindDirectory: vi.fn(async (_id: string, adAccount: string) => {
@@ -84,7 +84,6 @@ describe('admin user store', () => {
     expect(await store.rebind('wang.new')).toBe(true);
     expect(api.rebindDirectory).toHaveBeenCalledWith('u1', 'wang.new');
     expect(admin.saved).toHaveBeenCalledWith('AD 帳號已改綁', expect.any(String));
-    expect(store.binding()).toBeNull();
     expect(await store.rebind('taken')).toBe(false);
     expect(store.errors().account).toBeTruthy();
     expect(await store.unbind()).toBe(true);
@@ -101,27 +100,48 @@ describe('admin user store', () => {
     expect(api.roles).toHaveBeenCalledWith('u1', ['member', 'reviewer']);
     expect(store.dirty().roles).toBe(false);
     store.storage.set('10');
-    expect(store.dirty().storage).toBe(true);
-    store.revert('storage');
+    expect(store.dirty().usage).toBe(true);
+    store.revert('usage');
     expect(store.storage()).toBe('');
   });
 
-  it('sets an email as trimmed text and clears it with null', async () => {
+  it('saves the email with the account, sending only the endpoint that changed', async () => {
     const { store, api, admin, settle } = setup();
     store.open(user);
     await settle();
     expect(store.emailEditable()).toBe(true);
     store.email.set('  wang@corp.test ');
-    expect(store.dirty().email).toBe(true);
-    await store.saveEmail();
+    expect(store.dirty().account).toBe(true);
+    await store.saveAccount();
     expect(api.email).toHaveBeenCalledWith('u1', 'wang@corp.test');
-    expect(store.dirty().email).toBe(false);
-    expect(admin.readUsers).toHaveBeenCalled();
+    expect(api.updateUser).not.toHaveBeenCalled();
+    expect(store.dirty().account).toBe(false);
+    expect(admin.saved).toHaveBeenCalled();
     await settle();
     expect(store.current()?.emailSource).toBe('admin');
     store.email.set('');
-    await store.saveEmail();
+    await store.saveAccount();
     expect(api.email).toHaveBeenLastCalledWith('u1', null);
+  });
+
+  it('enables and disables at once with the saved account, keeping the draft out', async () => {
+    const { store, api, settle } = setup();
+    store.open(user);
+    await settle();
+    expect(await store.setEnabled(false)).toBe(true);
+    expect(api.updateUser).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ displayName: '王小明', enabled: false, roleIds: ['member'] }),
+    );
+    expect(store.acting()).toBeNull();
+    await settle();
+    expect(store.current()?.enabled).toBe(false);
+    store.account.set({ ...store.account(), name: '王大明' });
+    await store.saveAccount();
+    expect(api.updateUser).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({ displayName: '王大明', enabled: false }),
+    );
   });
 
   it('treats a directory email as read-only', async () => {

@@ -4588,175 +4588,6 @@
         }
       }
     },
-    "/api/v1/admin/conversations/{id}": {
-      "get": {
-        "tags": [
-          "Conversations"
-        ],
-        "operationId": "ReadAdminConversation",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Payload Too Large",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported Media Type",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/SafeProblemDetails"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationDetailDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/models": {
       "get": {
         "tags": [
@@ -6656,6 +6487,664 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ConversationBackup"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/conversations/{id}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "ReadAdminConversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminConversationDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/conversations/{id}/files/{file}/preview": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "PreviewAdminConversationFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilePreviewDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/conversations/{id}/files/{file}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "OpenAdminConversationFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/conversations/{id}/files/{file}/render": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "RenderAdminConversationFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
                 }
               }
             }
@@ -20895,7 +21384,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SharedFilePreviewDto"
+                  "$ref": "#/components/schemas/FilePreviewDto"
                 }
               }
             }
@@ -44503,9 +44992,8 @@
           "ownerAccount",
           "ownerName",
           "systemInstruction",
-          "messages",
-          "offset",
-          "total"
+          "activeLeafId",
+          "messages"
         ],
         "type": "object",
         "properties": {
@@ -44521,19 +45009,18 @@
           "systemInstruction": {
             "type": "string"
           },
+          "activeLeafId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
           "messages": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AdminMessageDto"
+              "$ref": "#/components/schemas/MessageDto"
             }
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
@@ -44675,75 +45162,6 @@
             "additionalProperties": {
               "type": "string"
             }
-          }
-        }
-      },
-      "AdminMessageDto": {
-        "required": [
-          "id",
-          "parentId",
-          "role",
-          "content",
-          "status",
-          "createdAt",
-          "modelId",
-          "attachments",
-          "timing",
-          "modelDisplayName"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "parentId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "role": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "modelId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AttachmentDto"
-            }
-          },
-          "timing": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RunTimingDto"
-              }
-            ]
-          },
-          "modelDisplayName": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -49246,6 +49664,24 @@
           "limit": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "FilePreviewDto": {
+        "required": [
+          "file",
+          "pages"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/AttachmentDto"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentPageDto"
+            }
           }
         }
       },
@@ -54589,24 +55025,6 @@
           }
         }
       },
-      "SharedFilePreviewDto": {
-        "required": [
-          "file",
-          "pages"
-        ],
-        "type": "object",
-        "properties": {
-          "file": {
-            "$ref": "#/components/schemas/AttachmentDto"
-          },
-          "pages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DocumentPageDto"
-            }
-          }
-        }
-      },
       "SharedMessageDto": {
         "required": [
           "role",
@@ -56762,8 +57180,8 @@
         "name": "\u7E3D\u89BD",
         "icon": "dashboard",
         "route": "/work/dashboard",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "chat",
@@ -56772,8 +57190,8 @@
         "name": "\u5C0D\u8A71",
         "icon": "chat",
         "route": "/work/chat",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "projects",
@@ -56782,8 +57200,8 @@
         "name": "\u5C08\u6848",
         "icon": "projects",
         "route": "/work/projects",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "files",
@@ -56792,8 +57210,8 @@
         "name": "\u6A94\u6848\u5EAB",
         "icon": "files",
         "route": "/work/files",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "files.reader",
@@ -56802,8 +57220,8 @@
         "name": "\u6A94\u6848\u95B1\u8B80\u5668",
         "icon": "files",
         "route": "/work/files/reader",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge",
@@ -56812,8 +57230,8 @@
         "name": "\u77E5\u8B58\u5EAB",
         "icon": "library",
         "route": "/work/knowledge",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge.reader",
@@ -56822,8 +57240,8 @@
         "name": "\u6587\u4EF6\u95B1\u8B80\u5668",
         "icon": "document",
         "route": "/work/knowledge/reader",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "knowledge.retrieval",
@@ -56832,8 +57250,8 @@
         "name": "\u6AA2\u7D22\u7BA1\u7406",
         "icon": "database",
         "route": "/work/knowledge/retrieval",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "artifacts",
@@ -56842,8 +57260,8 @@
         "name": "\u6210\u679C\u6587\u4EF6",
         "icon": "document",
         "route": "/work/artifacts",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "sharing",
@@ -56852,8 +57270,8 @@
         "name": "\u5206\u4EAB",
         "icon": "share",
         "route": "/work/sharing",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "sharing.reader",
@@ -56862,8 +57280,8 @@
         "name": "\u5206\u4EAB\u95B1\u8B80\u5668",
         "icon": "share",
         "route": "/work/sharing/reader",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "jobs",
@@ -56872,8 +57290,8 @@
         "name": "\u80CC\u666F\u4EFB\u52D9",
         "icon": "tasks",
         "route": "/work/jobs",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "repositories",
@@ -56882,8 +57300,8 @@
         "name": "\u7A0B\u5F0F\u5EAB",
         "icon": "git",
         "route": "/work/repositories",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.records",
@@ -56910,8 +57328,8 @@
         "name": "\u5361\u865F\u5C0D\u61C9",
         "icon": "tag",
         "route": "/office/attendance/cards",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.cards.maintain",
@@ -56920,8 +57338,8 @@
         "name": "\u7DAD\u8B77\u5361\u7247\u8207\u6301\u6709\u671F\u9593",
         "icon": "edit",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.imports",
@@ -56930,8 +57348,8 @@
         "name": "\u6253\u5361\u532F\u5165\u7D00\u9304",
         "icon": "import",
         "route": "/office/attendance/imports",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.imports.reimport",
@@ -56940,8 +57358,8 @@
         "name": "\u624B\u52D5\u91CD\u532F\u6253\u5361\u6A94",
         "icon": "repeat",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.calendar",
@@ -56950,8 +57368,8 @@
         "name": "\u5047\u65E5\u8A2D\u5B9A",
         "icon": "calendar",
         "route": "/office/attendance/calendar",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "attendance.calendar.maintain",
@@ -56960,8 +57378,8 @@
         "name": "\u4FEE\u6539\u5047\u65E5\u8207\u5F48\u6027\u653E\u5047",
         "icon": "edit",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users",
@@ -56970,8 +57388,8 @@
         "name": "\u4F7F\u7528\u8005",
         "icon": "user",
         "route": "/admin/identity/users",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users.import",
@@ -56980,8 +57398,8 @@
         "name": "\u5F9E AD \u532F\u5165\u4F7F\u7528\u8005",
         "icon": "import",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "identity.users.sync",
@@ -56990,8 +57408,8 @@
         "name": "\u4EE5 AD \u8CC7\u6599\u66F4\u65B0\u4F7F\u7528\u8005",
         "icon": "repeat",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.roles",
@@ -57000,8 +57418,8 @@
         "name": "\u89D2\u8272",
         "icon": "lock",
         "route": "/admin/access-control/roles",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.groups",
@@ -57010,8 +57428,8 @@
         "name": "\u529F\u80FD\u7FA4\u7D44\u8207\u6A21\u578B",
         "icon": "apps",
         "route": "/admin/access-control/groups",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.features",
@@ -57020,8 +57438,8 @@
         "name": "\u529F\u80FD",
         "icon": "list",
         "route": "/admin/access-control/features",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "access-control.navigation",
@@ -57030,8 +57448,8 @@
         "name": "\u9078\u55AE",
         "icon": "sidebar",
         "route": "/admin/access-control/navigation",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "organization",
@@ -57040,8 +57458,8 @@
         "name": "\u7D44\u7E54\u55AE\u4F4D",
         "icon": "organization",
         "route": "/admin/organization",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "organization.import",
@@ -57050,8 +57468,8 @@
         "name": "\u5F9E\u516C\u6587\u7CFB\u7D71\u532F\u5165\u90E8\u9580",
         "icon": "repeat",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "operations.usage",
@@ -57060,8 +57478,8 @@
         "name": "\u5E73\u53F0\u7528\u91CF",
         "icon": "chart",
         "route": "/admin/operations/usage",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "billing.prices",
@@ -57070,8 +57488,8 @@
         "name": "\u6A21\u578B\u8207\u5DE5\u5177\u50F9\u683C",
         "icon": "money",
         "route": "/admin/billing/prices",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "monitoring",
@@ -57080,8 +57498,8 @@
         "name": "\u5373\u6642\u76E3\u63A7",
         "icon": "activity",
         "route": "/admin/monitoring",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "audit",
@@ -57096,7 +57514,7 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": []
+        "managerScopes": [ ]
       },
       {
         "id": "audit.usage",
@@ -57111,7 +57529,7 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": []
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs",
@@ -57120,8 +57538,8 @@
         "name": "\u7CFB\u7D71\u65E5\u8A8C",
         "icon": "logs",
         "route": "/admin/diagnostics/logs",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs.detail",
@@ -57130,8 +57548,8 @@
         "name": "\u65E5\u8A8C\u8A3A\u65B7\u8A73\u60C5",
         "icon": "search",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "diagnostics.logs.export",
@@ -57140,8 +57558,8 @@
         "name": "\u65E5\u8A8C\u532F\u51FA",
         "icon": "download",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "mail.messages",
@@ -57150,8 +57568,8 @@
         "name": "\u90F5\u4EF6\u5BC4\u9001\u7D00\u9304",
         "icon": "mail",
         "route": "/admin/mail/messages",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "mail.messages.resend",
@@ -57160,8 +57578,8 @@
         "name": "\u91CD\u5BC4\u8207\u91CD\u8A66\u90F5\u4EF6",
         "icon": "repeat",
         "route": null,
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "releases",
@@ -57170,8 +57588,8 @@
         "name": "\u7248\u672C\u8207\u7D50\u69CB\u7570\u52D5",
         "icon": "history",
         "route": "/admin/releases",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "quality",
@@ -57180,8 +57598,8 @@
         "name": "\u54C1\u8CEA\u8A55\u6E2C",
         "icon": "shield",
         "route": "/admin/quality",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "quality.retrieval",
@@ -57190,8 +57608,8 @@
         "name": "\u6AA2\u7D22\u8A55\u6E2C",
         "icon": "search",
         "route": "/admin/quality/retrieval",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       },
       {
         "id": "design",
@@ -57200,8 +57618,8 @@
         "name": "\u4ECB\u9762\u5143\u4EF6",
         "icon": "sliders",
         "route": "/admin/design",
-        "scopes": [],
-        "managerScopes": []
+        "scopes": [ ],
+        "managerScopes": [ ]
       }
     ],
     "scopes": [

@@ -5,6 +5,7 @@ import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Icon } from '@shared/ui/icon';
 import { RunTimingDisplay } from './run-timing';
 import { ReaderLink } from '@shared/browser/reader-link';
+import type { FileScope } from '@shared/browser/reader-overlay';
 import { AttachmentList } from '@features/work/files/attachment-list';
 import { systemProblem } from '@core/errors/safe-errors';
 
@@ -24,7 +25,7 @@ export type MessageDisplay = Pick<
       <nx-markdown-view [content]="message().content" />
     }
     @if (message().attachments?.length) {
-      <nx-attachment-list [files]="message().attachments!" [shareId]="shareId()" />
+      <nx-attachment-list [files]="message().attachments!" [scope]="scope()" />
     }
     @if (message().sources?.length) {
       <nav class="source-citations" aria-label="回答引用來源">
@@ -33,7 +34,7 @@ export type MessageDisplay = Pick<
             source.endPage > source.pageNumber
               ? source.pageNumber + '–' + source.endPage
               : source.pageNumber;
-          @if (!shareId()) {
+          @if (!scope()) {
             <a
               [nxReaderLink]="source.documentId"
               [readerPage]="source.pageNumber"
@@ -80,6 +81,10 @@ export type MessageDisplay = Pick<
 })
 export class MessageContent {
   readonly message = input.required<MessageDisplay>();
-  readonly shareId = input<string | null>(null);
+  /**
+   * 檔案的授權容器（分享、稽核檢視的對話）。有容器時讀者不一定能開引用的知識文件，
+   * 所以引用改成就地展開摘錄，不連到閱讀器。
+   */
+  readonly scope = input<FileScope | null>(null);
   readonly failure = computed(() => systemProblem(this.message().issueCode));
 }

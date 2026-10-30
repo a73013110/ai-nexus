@@ -10,36 +10,38 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import type { AdminUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { CopyFeedback } from '@shared/browser/copy-feedback';
+import { formatDate } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
-import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DrawerPager } from '@shared/ui/drawer-pager';
-import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
+import { ToastService } from '@shared/ui/toast-service';
 import { ViewMotion } from '@shared/ui/view-motion';
+import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
 import { AdminUsersStore } from '../admin-users-store';
 import { AccountReviewItems } from './account-review-items';
 import { AdminUserConversations } from './admin-user-conversations';
 import { AdminUserSettings } from './admin-user-settings';
 import { AdminUserStore, type UserTab } from './admin-user-store';
-import { AdminUserSummary } from './admin-user-summary';
 import { UserConversationReader } from './user-conversation-reader';
+import { signInMethods } from './user-account-fields';
 import { routeOf } from '@core/api/catalog';
 import { userInspectorTour } from '../identity-tour';
 
 /**
- * 單一使用者的管理中心：他是誰，以及其最近 30 天的資料；分頁包括帳號、
- * 角色、模型政策、儲存空間，以及稽核過的唯讀對話檢視。共用的標題列以使用者名稱為對話框命名；
- * 摘要與分頁隨之變化。
- * 標題列的上下筆只在列表目前這一頁內移動，離開前與切換頁籤一樣確認未儲存的變更；
- * 使用者 ID 與活動稽核反查放在摘要的關聯列。
+ * 單一使用者的管理中心。標題列是紀錄樣式：第一行姓名、狀態與帳號，第二行角色、登入方式與最近活動；
+ * 分頁是帳號、角色與權限、AI 模型、用量，以及稽核過的唯讀對話檢視。
+ * 上下筆只在列表目前這一頁內移動，離開前與切換頁籤一樣確認未儲存的變更；
+ * 複製使用者 ID 與活動稽核反查收在標題列的選單。
  */
 @Component({
   selector: 'nx-admin-user-inspector',
@@ -47,27 +49,22 @@ import { userInspectorTour } from '../identity-tour';
     AccessStatus,
     AccountReviewItems,
     AdminUserConversations,
+    ActionMenu,
     AdminUserSettings,
-    AdminUserSummary,
     CompactDialog,
     ConfirmDialog,
-    CopyValue,
     DialogHeader,
     DrawerPager,
-    Icon,
     Notice,
-    RouterLink,
     Tabs,
     ViewMotion,
   ],
-  providers: [ViewScope, AdminUserStore, UserConversationReader],
+  providers: [ViewScope, CopyFeedback, AdminUserStore, UserConversationReader],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
   styleUrl: './admin-user-inspector.scss',
 })
 export class AdminUserInspector {
-  /** 範本裡的連結由功能目錄取得網址。 */
-  readonly routeOf = routeOf;
   readonly user = input<AdminUserDto | null>(null);
   /** 開啟中的使用者在列表目前這一頁的位置；不在這一頁時為 -1。 */
   readonly index = input(-1);
@@ -77,6 +74,20 @@ export class AdminUserInspector {
   readonly store = inject(AdminUserStore);
   readonly session = inject(WorkspaceSession);
   private readonly users = inject(AdminUsersStore);
+  private readonly access = inject(AccessControlStore);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+  private readonly clipboard = inject(CopyFeedback);
+  readonly roles = computed(() => {
+    const names = this.access.roleNames(this.store.current()?.roleIds ?? []);
+    return names.length ? names.join('、') : '尚未分派角色';
+  });
+  readonly methods = signInMethods;
+  readonly date = formatDate;
+  readonly menu = computed<MenuAction[]>(() => [
+    { id: 'copy-id', label: '複製使用者 ID', icon: 'copy' },
+    ...(this.session.has('audit') ? [{ id: 'audit', label: '查閱活動稽核', icon: 'audit' }] : []),
+  ]);
   /** 帳號待辦來自頁面的列表 store，處理後隨列表重讀更新。 */
   readonly reviews = computed(() => {
     const id = this.store.current()?.id;
@@ -89,14 +100,13 @@ export class AdminUserInspector {
     const dirty = this.store.dirty();
     return [
       { value: 'account', label: '帳號', dirty: dirty.account },
-      { value: 'email', label: '通知信箱', dirty: dirty.email },
       { value: 'roles', label: '角色與權限', dirty: dirty.roles },
       { value: 'models', label: 'AI 模型', dirty: dirty.models },
-      { value: 'storage', label: '附件容量', dirty: dirty.storage },
+      { value: 'usage', label: '用量', dirty: dirty.usage },
       { value: 'conversations', label: '對話' },
     ];
   });
-  /** 「對話」頁籤改介紹受稽核的唯讀檢視，其他頁籤介紹摘要與頁籤。 */
+  /** 「對話」頁籤改介紹受稽核的唯讀檢視，其他頁籤介紹標題列與頁籤。 */
   readonly tour = computed(() =>
     userInspectorTour({
       audit: this.session.has('audit'),
@@ -123,9 +133,23 @@ export class AdminUserInspector {
     await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((item) => item.finished));
     if (!dialog.open) this.store.release();
   }
-  /** 離開前往稽核頁面：不會詢問，對話框直接關閉。 */
+  /** 離開前往其他頁面（稽核、帳號待辦）：不會詢問，對話框直接關閉。 */
   close() {
     this.dialog().nativeElement.close();
+  }
+  async act(action: string) {
+    const user = this.store.current();
+    if (!user) return;
+    if (action === 'copy-id') {
+      await this.clipboard.copy(user.id);
+      if (this.clipboard.error())
+        this.toast.show({ tone: 'warning', title: this.clipboard.error() });
+      else this.toast.success('已複製使用者 ID');
+    }
+    if (action === 'audit') {
+      this.close();
+      void this.router.navigate([routeOf('audit')], { queryParams: { search: user.id } });
+    }
   }
   async requestClose() {
     if (await this.mayLeave()) this.close();

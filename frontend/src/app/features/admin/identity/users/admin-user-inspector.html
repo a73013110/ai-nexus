@@ -10,6 +10,7 @@
 >
   @let user = store.current();
   <nx-dialog-header
+    icon="user"
     [heading]="user?.displayName ?? ''"
     [detail]="user?.account ?? ''"
     closeLabel="關閉使用者管理"
@@ -18,29 +19,25 @@
     @if (user) {
       <nx-access-status dialog-title [enabled]="user.enabled !== false" />
     }
+    @if (user) {
+      <p dialog-subtitle class="dialog-subtitle inspector-subtitle">
+        <span class="inspector-roles" [title]="roles()">{{ roles() }}</span>
+        <span>{{ methods(user) }}</span>
+        <span class="inspector-seen">最近活動 {{ date(user.lastSeenAt) }}</span>
+      </p>
+    }
     @if (count() > 1) {
       <nx-drawer-pager noun="使用者" [index]="index()" [count]="count()" (move)="step($event)" />
     }
-  </nx-dialog-header>
-  <nx-admin-user-summary>
     @if (user) {
-      <nx-copy-value class="is-truncated" label="使用者 ID" [value]="user.id" />
-      @if (session.has('audit')) {
-        <a
-          class="quiet-button inspector-audit"
-          [routerLink]="routeOf('audit')"
-          aria-label="查閱活動稽核"
-          title="查閱活動稽核"
-          [queryParams]="{ search: user.id }"
-          (click)="close()"
-        >
-          <nx-icon name="audit" /><span>查閱活動稽核</span>
-        </a>
-      }
+      <nx-action-menu label="使用者的其他操作" [items]="menu()" (action)="act($event)" />
     }
-  </nx-admin-user-summary>
+  </nx-dialog-header>
+  @if (store.overviewError()) {
+    <nx-notice class="inspector-notice" tone="danger" [message]="store.overviewError()" />
+  }
   @if (reviews().length) {
-    <nx-notice class="inspector-reviews" tone="warning" icon="tasks">
+    <nx-notice class="inspector-notice" tone="warning" icon="tasks">
       <nx-account-review-items [items]="reviews()" (navigate)="close()" />
     </nx-notice>
   }

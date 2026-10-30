@@ -8,34 +8,31 @@ import {
   viewChild,
 } from '@angular/core';
 import { below } from '@shared/browser/breakpoints';
-import { formatBytes, formatDate, formatNumber } from '@shared/browser/format';
+import { formatDate, formatNumber } from '@shared/browser/format';
 import { mediaQuery } from '@shared/browser/media-query';
-import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Checkbox } from '@shared/ui/checkbox';
 import { TablePagination } from '@shared/ui/data-table';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
-import { RunTimingDisplay } from '@features/work/conversations/run-timing';
+import { ChatMessage } from '@features/work/chat/thread/chat-message';
 import { UserConversationReader } from './user-conversation-reader';
 
 /**
  * 唯讀的對話分頁：左側是可搜尋的列表，右側是正在閱讀的對話，兩者各自捲動。窄螢幕一次只顯示一個；
- * 選取對話會開啟它，而其返回鈕會回到同一列。
+ * 選取對話會開啟它，而其返回鈕會回到同一列。訊息用聊天的 `ChatMessage`（唯讀），
+ * 引用、附件、耗時與版本切換的呈現與擁有者看到的一致。
  */
 @Component({
   selector: 'nx-admin-user-conversations',
   imports: [
+    ChatMessage,
     Checkbox,
     EmptyState,
     Icon,
-    MarkdownView,
     Notice,
-    PendingButton,
-    RunTimingDisplay,
     SearchField,
     StatusBadge,
     TablePagination,
@@ -48,7 +45,6 @@ export class AdminUserConversations {
   readonly reader = inject(UserConversationReader);
   readonly date = formatDate;
   readonly format = formatNumber;
-  readonly bytes = formatBytes;
   /** 骨架列的寬度（%），長短交錯才不像一整塊色塊。 */
   protected readonly skeleton = [88, 64, 80, 56, 72];
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

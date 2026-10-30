@@ -4,7 +4,7 @@ import { ReaderLink } from '@shared/browser/reader-link';
 import { Icon } from './icon';
 
 /**
- * 清單上的一個檔案：`reader` 決定點開時用哪個閱讀器（附件、分享、遠端檔案），`thumbnail` 有值時顯示縮圖，
+ * 清單上的一個檔案：`reader` 決定點開時用哪個閱讀器（附件、容器內的檔案、遠端檔案），`thumbnail` 有值時顯示縮圖，
  * `detail` 是檔名下的一行說明（大小、分析方式、上傳者…），由呼叫端依情境組好。
  */
 export interface FileListItem {
@@ -33,7 +33,7 @@ export interface FileListItem {
           class="attachment-preview"
           [nxReaderLink]="file.reader.id"
           [readerAttachment]="file.reader.attachment"
-          [readerShare]="file.reader.shareId ?? null"
+          [readerScope]="file.reader.scope ?? null"
           [readerRemote]="file.reader.remote ?? null"
           [attr.aria-label]="'閱讀' + label() + '：' + file.fileName"
           [title]="file.fileName"

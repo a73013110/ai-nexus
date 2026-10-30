@@ -21,8 +21,7 @@ export class IdentityApi {
       path: { id },
       query: { search, includeDeleted, offset },
     });
-  conversation = (id: string, offset = 0) =>
-    this.api.get('/api/v1/admin/conversations/{id}', { path: { id }, query: { offset } });
+  conversation = (id: string) => this.api.get('/api/v1/admin/conversations/{id}', { path: { id } });
   modelPolicy = (id: string) =>
     this.api.get('/api/v1/admin/users/{id}/model-policy', { path: { id } });
   saveModelPolicy = (id: string, body: ModelPolicyRequest) =>

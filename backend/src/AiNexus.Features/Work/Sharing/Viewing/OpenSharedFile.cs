@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Knowledge;
 using System.Text.Json;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
@@ -11,8 +10,6 @@ using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing.Viewing;
-
-public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
 
 /// <summary>
 /// 預覽與下載擁有者明確納入分享的檔案。授權來源是分享本身的引用，絕不是收件人對原始附件的存取權；
@@ -63,15 +60,10 @@ internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, Attach
         return file;
     }
 
-    public async Task<Result<SharedFilePreviewDto>> PreviewAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
+    public async Task<Result<FilePreviewDto>> PreviewAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
     {
         var found = await FindAsync(actor, id, fileId, ct);
         if (!found.IsSuccess) return found.Error;
-        var file = found.Value;
-        var documentId = await db.Set<Document>().AsNoTracking().Where(x => x.AttachmentId == fileId && !x.IsDeleted && x.Status == "ready").OrderBy(x => x.Id).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
-        IReadOnlyList<DocumentPageDto> pages = documentId is Guid doc
-            ? await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == doc).OrderBy(x => x.PageNumber).Select(x => new DocumentPageDto(x.PageNumber, x.Text, x.Extraction, x.NeedsReview)).ToArrayAsync(ct)
-            : string.IsNullOrWhiteSpace(file.ExtractedText) ? [] : [new DocumentPageDto(1, file.ExtractedText, "shared", false)];
-        return new SharedFilePreviewDto(AttachmentService.Describe(file), pages);
+        return await FilePreviews.ReadAsync(db, found.Value, ct);
     }
 }

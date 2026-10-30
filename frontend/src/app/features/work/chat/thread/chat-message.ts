@@ -13,7 +13,8 @@ import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { MessageContent } from '@features/work/conversations/message-content';
-import { MessageTree } from '../state/message-tree';
+import { MessageTree } from '@features/work/conversations/message-tree';
+import type { FileScope } from '@shared/browser/reader-overlay';
 import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { generationStatus } from '@core/api/generation-status';
 import { MessageFeedback } from '@features/admin/quality/message-feedback';
@@ -68,7 +69,7 @@ const idle: Signal<string> = signal('').asReadonly();
         />
       }
     } @else {
-      <nx-message-content [message]="message()" />
+      <nx-message-content [message]="message()" [scope]="fileScope()" />
       @if (message().role === 'assistant') {
         <div class="message-charges">
           @if (message().charge; as charge) {
@@ -91,34 +92,37 @@ const idle: Signal<string> = signal('').asReadonly();
             copied() ? '已複製' : '複製'
           }}</span>
         </button>
-        @if (message().role === 'user') {
-          <button
-            class="quiet-button"
-            (click)="edit.emit(message())"
-            [disabled]="busy()"
-            aria-label="編輯提問"
-          >
-            <nx-icon name="edit" /><span>編輯</span>
-          </button>
-        } @else {
-          @if (allowArtifacts()) {
+        <!-- 唯讀檢視只能複製與切換版本，不能改寫別人的對話。 -->
+        @if (!readOnly()) {
+          @if (message().role === 'user') {
             <button
               class="quiet-button"
-              (click)="saveArtifact.emit(message())"
+              (click)="edit.emit(message())"
               [disabled]="busy()"
-              aria-label="儲存回答為成果文件"
+              aria-label="編輯提問"
             >
-              <nx-icon name="document" /><span>儲存成果</span>
+              <nx-icon name="edit" /><span>編輯</span>
+            </button>
+          } @else {
+            @if (allowArtifacts()) {
+              <button
+                class="quiet-button"
+                (click)="saveArtifact.emit(message())"
+                [disabled]="busy()"
+                aria-label="儲存回答為成果文件"
+              >
+                <nx-icon name="document" /><span>儲存成果</span>
+              </button>
+            }
+            <button
+              class="quiet-button"
+              (click)="regenerate.emit(message())"
+              [disabled]="busy()"
+              aria-label="重新生成"
+            >
+              <nx-icon name="repeat" /><span>重新生成</span>
             </button>
           }
-          <button
-            class="quiet-button"
-            (click)="regenerate.emit(message())"
-            [disabled]="busy()"
-            aria-label="重新生成"
-          >
-            <nx-icon name="repeat" /><span>重新生成</span>
-          </button>
         }
         @if (versions().length > 1) {
           <div class="version-picker">
@@ -145,7 +149,7 @@ const idle: Signal<string> = signal('').asReadonly();
     @if (copyError()) {
       <nx-notice [message]="copyError()" />
     }
-    @if (!active() && message().role === 'assistant' && message().content) {
+    @if (!readOnly() && !active() && message().role === 'assistant' && message().content) {
       <nx-message-feedback [message]="message()" (rated)="rated.emit($event)" />
     }
   </article>`,
@@ -159,6 +163,10 @@ export class ChatMessage {
   readonly active = input(false);
   readonly showModelNames = input(true);
   readonly allowArtifacts = input(false);
+  /** 唯讀檢視（管理員稽核）：不提供編輯、重新生成、儲存成果與評分。 */
+  readonly readOnly = input(false);
+  /** 附件的授權容器；唯讀檢視的附件經由容器開啟，見 {@link MessageContent}。 */
+  readonly fileScope = input<FileScope | null>(null);
   readonly saveArtifact = output<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   readonly busy = input(false);

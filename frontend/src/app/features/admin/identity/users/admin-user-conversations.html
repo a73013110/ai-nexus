@@ -1,5 +1,5 @@
 <p class="conversation-audit-note">
-  <nx-icon name="shield" />唯讀檢視：開啟清單與內容都會寫入稽核；附件只顯示名稱與大小。
+  <nx-icon name="shield" />唯讀檢視：開啟清單、內容與附件都會寫入稽核。
 </p>
 <div class="conversation-body" [class.is-reading]="!!reader.selected()">
   <aside class="conversation-list" aria-label="使用者對話清單">
@@ -88,7 +88,7 @@
       <header class="reading-heading">
         <h3>{{ data.conversation.title }}</h3>
         <small
-          >{{ data.ownerName }} · 共 {{ data.total }} 則 · 所有版本按時間排列
+          >{{ data.ownerName }} · 共 {{ data.conversation.messages }} 則 · 顯示最後停留的分支
           @if (data.conversation.isDeleted) {
             <nx-status-badge tone="warning">已刪除</nx-status-badge>
           }
@@ -100,46 +100,17 @@
           <p>{{ data.systemInstruction }}</p>
         </details>
       }
-      @for (message of data.messages; track message.id) {
-        <article class="reading-message" [class.inspector-user-message]="message.role === 'user'">
-          <header>
-            <strong>{{ message.role === 'user' ? data.ownerName + ' 的提問' : 'AI 回覆' }}</strong
-            ><small>{{ date(message.createdAt) }} · {{ message.status }}</small>
-          </header>
-          <nx-run-timing [value]="message.timing" />
-          @if (message.role === 'user') {
-            <p class="reading-input">{{ message.content }}</p>
-          } @else {
-            <nx-markdown-view [content]="message.content" />
-          }
-          @if (message.attachments.length) {
-            <div class="reading-attachments">
-              @for (file of message.attachments; track file.id) {
-                <span
-                  ><nx-icon name="paperclip" />{{ file.fileName }} · {{ bytes(file.size) }}</span
-                >
-              }
-            </div>
-          }
-          <small class="reading-version"
-            >訊息 {{ message.id.slice(0, 8) }}
-            @if (message.parentId) {
-              · 上一則 {{ message.parentId.slice(0, 8) }}
-            }
-          </small>
-        </article>
-      }
-      @if (data.messages.length < data.total) {
-        <button
-          nxPending
-          type="button"
-          class="secondary-button"
-          [pending]="reader.reading()"
-          (click)="reader.read(data.conversation.id, true)"
-        >
-          {{ reader.reading() ? '載入中…' : '載入後續訊息' }}
-        </button>
-      }
+      <section class="reading-messages" aria-label="對話訊息">
+        @for (message of reader.visibleMessages(); track message.id) {
+          <nx-chat-message
+            [message]="message"
+            [tree]="reader.tree()"
+            [readOnly]="true"
+            [fileScope]="reader.fileScope()"
+            (version)="reader.selectVersion(message, $event)"
+          />
+        }
+      </section>
     } @else if (reader.reading()) {
       <div class="conversation-skeleton" role="status">
         @for (width of skeleton; track $index) {

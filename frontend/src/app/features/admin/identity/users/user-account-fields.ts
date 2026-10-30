@@ -4,10 +4,12 @@ import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { Field } from '@shared/ui/field';
 
-/** 使用者編輯中的名稱、開關與登入方式；密碼永遠不會被讀回。 */
+/**
+ * 使用者編輯中的名稱與登入方式；密碼永遠不會被讀回。啟用與停用是立即生效的動作（檢視器的「帳號狀態」），
+ * 不在草稿裡，免得和姓名一起被「儲存」。
+ */
 export interface UserAccountDraft {
   name: string;
-  enabled: boolean;
   adEnabled: boolean;
   localEnabled: boolean;
   adAccount: string;
@@ -21,7 +23,6 @@ export function userAccountDraft(user?: AdminUserDto | null): UserAccountDraft {
   const login = user?.authentication;
   return {
     name: user?.displayName ?? '',
-    enabled: user?.enabled ?? true,
     adEnabled: login?.adEnabled ?? !!user,
     localEnabled: login?.localEnabled ?? !user,
     adAccount: login?.adAccount ?? '',
@@ -31,10 +32,15 @@ export function userAccountDraft(user?: AdminUserDto | null): UserAccountDraft {
   };
 }
 
-export function userAccountRequest(draft: UserAccountDraft, roleIds: string[]): UserAccountRequest {
+/** 建立的使用者一律啟用；既有使用者沿用目前的狀態（`enabled`）。 */
+export function userAccountRequest(
+  draft: UserAccountDraft,
+  roleIds: string[],
+  enabled = true,
+): UserAccountRequest {
   return {
     displayName: draft.name,
-    enabled: draft.enabled,
+    enabled,
     adEnabled: draft.adEnabled,
     localEnabled: draft.localEnabled,
     adAccount: draft.adEnabled ? draft.adAccount : null,
@@ -71,8 +77,9 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
 }
 
 /**
- * 名稱、開關與登入方式，分成兩個表單區段；由建立對話框與使用者檢視器共用，
- * 兩者會把它們包在 `.form-sections` 中。
+ * 名稱與登入方式，分成兩個表單區段；由建立對話框與使用者檢視器共用，兩者會把它們包在 `.form-sections` 中。
+ * 檢視器投影兩處：`[account-basics]` 接在姓名之後（通知信箱），`[ad-binding]` 接在 AD 帳號之後（綁定狀態與改綁）。
+ * 已以 SID 綁定 AD 時（`adBound`），AD 帳號名跟著目錄、伺服器不接受在表單裡改，所以不顯示輸入框，改由投影的綁定列呈現。
  */
 @Component({
   selector: 'nx-user-account-fields',
@@ -93,13 +100,7 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
             [readOnly]="disabled()"
             (input)="change('name', $any($event.target).value)"
         /></label>
-        <nx-checkbox
-          label="啟用使用者"
-          description="停用後無法登入，既有工作階段會失效；資料與稽核保留。"
-          [checked]="value().enabled"
-          [disabled]="disabled()"
-          (checkedChange)="change('enabled', $event)"
-        />
+        <ng-content select="[account-basics]" />
       </div>
     </section>
     <section class="form-section" role="group" [attr.aria-labelledby]="id + '-login'">
@@ -109,29 +110,32 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
       </header>
       <div class="form-section-body">
         <nx-checkbox
-          label="允許 AD 驗證"
-          description="驗證後綁定 AD SID，不保存 AD 密碼。"
+          label="AD 驗證"
+          description="驗證後以 AD SID 綁定，不保存 AD 密碼。"
           [checked]="value().adEnabled"
           [disabled]="disabled()"
           (checkedChange)="change('adEnabled', $event)"
         />
         @if (value().adEnabled) {
           <div class="form-subfields">
-            <label class="form-field-short"
-              >AD 帳號（不含網域）<input
-                nxField
-                aria-label="使用者 AD 帳號"
-                required
-                maxlength="64"
-                autocomplete="off"
-                [value]="value().adAccount"
-                [readOnly]="disabled()"
-                (input)="change('adAccount', $any($event.target).value)"
-            /></label>
+            @if (!adBound()) {
+              <label class="form-field-short"
+                >AD 帳號（不含網域）<input
+                  nxField
+                  aria-label="使用者 AD 帳號"
+                  required
+                  maxlength="64"
+                  autocomplete="off"
+                  [value]="value().adAccount"
+                  [readOnly]="disabled()"
+                  (input)="change('adAccount', $any($event.target).value)"
+              /></label>
+            }
+            <ng-content select="[ad-binding]" />
           </div>
         }
         <nx-checkbox
-          label="允許本地密碼登入"
+          label="本地密碼"
           description="以 Argon2id 加鹽雜湊保存；重設後舊登入會失效。"
           [checked]="value().localEnabled"
           [disabled]="disabled()"
@@ -174,6 +178,8 @@ export class UserAccountFields {
   readonly id = uniqueId('nx-user-account');
   readonly value = input.required<UserAccountDraft>();
   readonly disabled = input(false);
+  /** 已以 SID 綁定 AD：AD 帳號不在表單裡編輯。 */
+  readonly adBound = input(false);
   readonly valueChange = output<UserAccountDraft>();
   change<K extends keyof UserAccountDraft>(key: K, value: UserAccountDraft[K]) {
     this.valueChange.emit({ ...this.value(), [key]: value });

@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { AttachmentDto } from '@core/api/schema';
-import { apiHref } from '@core/api/api-client';
 import { attachmentContent } from './files-api';
+import { scopedFileHref, type FileScope } from '@shared/browser/reader-overlay';
 import { FileList, fileSize, type FileListItem } from '@shared/ui/file-list';
 
-/** 草稿與訊息的附件：把檔案庫的附件（或分享裡的檔案）轉成共用的 {@link FileList}。 */
+/**
+ * 草稿與訊息的附件：把檔案庫的附件轉成共用的 {@link FileList}。
+ * 有 `scope` 時檔案由容器（分享、稽核檢視的對話）授權，縮圖、下載與閱讀器都走容器的路由。
+ */
 @Component({
   selector: 'nx-attachment-list',
   imports: [FileList],
@@ -18,7 +21,7 @@ import { FileList, fileSize, type FileListItem } from '@shared/ui/file-list';
 export class AttachmentList {
   readonly files = input.required<AttachmentDto[]>();
   readonly editable = input(false);
-  readonly shareId = input<string | null>(null);
+  readonly scope = input<FileScope | null>(null);
   readonly remove = output<string>();
   readonly items = computed(() =>
     this.files().map((file): FileListItem => {
@@ -33,16 +36,14 @@ export class AttachmentList {
               ? '圖片分析'
               : '文字分析'
         }`,
-        reader: { id: file.id, attachment: true, shareId: this.shareId() },
+        reader: { id: file.id, attachment: true, scope: this.scope() },
         downloadUrl: url + '?download=true',
         thumbnail: file.isImage ? url : null,
       };
     }),
   );
   private url(id: string) {
-    const share = this.shareId();
-    return share
-      ? apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: share, file: id } })
-      : attachmentContent(id);
+    const scope = this.scope();
+    return scope ? scopedFileHref(scope, id) : attachmentContent(id);
   }
 }

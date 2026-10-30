@@ -104,7 +104,7 @@ public sealed class FileLibraryTests
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PutAsJsonAsync($"/api/v1/files/{file.Id}/name", new RenameLibraryFileRequest("衝突.txt", file.FileName))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await owner.PutAsJsonAsync($"/api/v1/files/{file.Id}/name", new RenameLibraryFileRequest("執行.exe", "新名稱.txt"))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await reader.PutAsJsonAsync($"/api/v1/files/{file.Id}/name", new RenameLibraryFileRequest("偷改.txt", "新名稱.txt"))).StatusCode);
-        var preview = (await reader.GetFromJsonAsync<SharedFilePreviewDto>($"/api/v1/shares/{share.Id}/files/{file.Id}/preview"))!;
+        var preview = (await reader.GetFromJsonAsync<FilePreviewDto>($"/api/v1/shares/{share.Id}/files/{file.Id}/preview"))!;
         Assert.Equal(file.FileName, preview.File.FileName); Assert.Contains("附件原始文字", Assert.Single(preview.Pages).Text);
         using var inline = await reader.GetAsync($"/api/v1/shares/{share.Id}/files/{file.Id}"); inline.EnsureSuccessStatusCode(); Assert.Equal("attachment", inline.Content.Headers.ContentDisposition!.DispositionType);
         Assert.Equal("附件原始文字", await inline.Content.ReadAsStringAsync());

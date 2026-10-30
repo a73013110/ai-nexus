@@ -69,18 +69,20 @@ export function usersTour(options: {
 
 /**
  * 使用者詳情對話框的導覽。開在「對話」頁籤時改為介紹受稽核的唯讀對話檢視，
- * 其他頁籤介紹摘要、頁籤與上下筆；稽核反查只在有活動稽核授權時出現。
+ * 其他頁籤介紹標題列、頁籤與上下筆；稽核反查只在有活動稽核授權時出現（收在標題列的選單）。
  */
 export function userInspectorTour(options: {
-  /** 檢視者有活動稽核授權，摘要列出反查連結。 */
+  /** 檢視者有活動稽核授權，標題列的選單有反查項目。 */
   audit: boolean;
   /** 目前在「對話」頁籤。 */
   conversations: boolean;
 }): ProductTourDefinition {
-  const auditStep: TourStep | false = options.audit && {
-    target: 'nx-admin-user-inspector .inspector-audit',
-    title: '反查活動稽核',
-    description: '帶著使用者 ID 前往活動稽核，查看這位使用者的操作紀錄；對話框會直接關閉。',
+  const menuStep: TourStep = {
+    target: 'nx-admin-user-inspector .dialog-bar nx-action-menu',
+    title: options.audit ? '複製 ID 與反查活動稽核' : '複製使用者 ID',
+    description: options.audit
+      ? '選單可複製使用者 ID，或帶著 ID 前往活動稽核查看這位使用者的操作紀錄（對話框會直接關閉）。'
+      : '選單可複製使用者 ID，到其他頁面搜尋或回報問題時使用。',
     side: 'bottom',
   };
   const steps: TourSteps = options.conversations
@@ -89,7 +91,7 @@ export function userInspectorTour(options: {
           target: 'nx-admin-user-inspector nx-admin-user-conversations .conversation-audit-note',
           title: '受稽核的唯讀檢視',
           description:
-            '每次列出清單與開啟內容都會先寫入稽核；這裡不能修改對話，附件只顯示名稱與大小，不增加下載權限。',
+            '列出清單、開啟內容與預覽或下載附件都會先寫入稽核；這裡不能修改對話，也不能重新生成或評分。',
           side: 'bottom',
         },
         {
@@ -114,21 +116,22 @@ export function userInspectorTour(options: {
         },
         {
           target: 'nx-admin-user-inspector nx-admin-user-conversations .conversation-reading',
-          title: '完整的對話內容',
+          title: '與聊天相同的對話內容',
           description:
-            '依時間列出資料庫保存的所有版本與分支，包含對話指示與每次回答的耗時；每次載入 100 則。',
+            '先顯示使用者最後停留的分支；重新生成或編輯過的訊息可用「‹ 1/2 ›」切換版本，附件可預覽與下載。',
           side: 'left',
         },
-        auditStep,
+        options.audit && menuStep,
       ]
     : [
         {
-          target: 'nx-admin-user-inspector nx-admin-user-summary',
+          target: 'nx-admin-user-inspector .inspector-subtitle',
           title: '這位使用者的概況',
-          description: '登入方式、角色、所屬單位與最近 30 天的生成、tokens 與附件用量。',
+          description:
+            '角色、登入方式與最近活動；所屬單位在「帳號」，最近 30 天的生成、tokens 與附件用量在「用量」。',
           side: 'bottom',
         },
-        auditStep,
+        menuStep,
         {
           target: 'nx-admin-user-inspector .admin-inspector nx-tabs',
           title: '依頁籤管理',

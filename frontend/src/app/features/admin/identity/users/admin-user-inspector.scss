@@ -12,23 +12,22 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-// 帳號待辦夾在摘要與頁籤之間，左右與摘要對齊。
-.inspector-reviews {
+// 讀取錯誤與帳號待辦夾在標題列與頁籤之間，左右與頁籤對齊。
+.inspector-notice {
   flex: none;
   margin: 0 var(--p-space-5) var(--p-space-3);
 }
-.inspector-audit {
-  flex: none;
-  min-height: 1.75rem;
-  font-size: var(--text-caption);
+// 角色可能很多：第二行先截斷角色，登入方式與最近活動保持完整（全部角色在「角色與權限」）。
+.inspector-subtitle {
+  flex-wrap: nowrap;
 }
-// 手機上關聯列維持一行：ID 截斷，稽核連結只留圖示與觸控尺寸。
+.inspector-roles {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @include bp.below(phone) {
-  .inspector-audit {
-    justify-content: center;
-    min-width: var(--button-target);
-  }
-  .inspector-audit > span {
+  .inspector-seen {
     display: none;
   }
 }
