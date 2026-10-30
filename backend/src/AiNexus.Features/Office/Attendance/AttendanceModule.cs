@@ -75,6 +75,7 @@ public sealed class AttendanceModule : IFeatureModule
 
         var imports = api.MapGroup("/attendance-imports").RequireAuthorization(Policies.AttendanceImports);
         ListPunchImports.Map(imports);
+        ListPunchImportPunches.Map(imports);
         ReimportPunchFiles.Map(imports);
 
         var calendar = api.MapGroup("/attendance-calendar-days").RequireAuthorization(Policies.AttendanceCalendar);

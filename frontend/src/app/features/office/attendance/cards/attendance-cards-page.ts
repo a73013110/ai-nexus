@@ -8,7 +8,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import type { CardAssignmentDto, CardDto, CardPunchDto } from '@core/api/schema';
+import type { CardAssignmentDto, CardDto, PunchDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate, formatDateTimeInput, formatDay, nameInitial } from '@shared/browser/format';
@@ -180,7 +180,7 @@ export class AttendanceCardsPage {
     const days: {
       date: string;
       label: string;
-      punches: { punch: CardPunchDto; time: string; codes: string; codesTitle: string }[];
+      punches: { punch: PunchDto; time: string; codes: string; codesTitle: string }[];
     }[] = [];
     for (const punch of this.store.punches() ?? []) {
       const date = formatDateTimeInput(new Date(punch.punchedAt)).slice(0, 10);

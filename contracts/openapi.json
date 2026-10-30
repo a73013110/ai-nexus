@@ -42045,7 +42045,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CardPunchDto"
+                    "$ref": "#/components/schemas/PunchDto"
                   }
                 }
               }
@@ -43073,6 +43073,200 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PunchReimportResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attendance-imports/{id}/punches": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "operationId": "ListAttendancePunchImportPunches",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfPunchDto"
                 }
               }
             }
@@ -46761,50 +46955,6 @@
               "string"
             ],
             "format": "date-time"
-          }
-        }
-      },
-      "CardPunchDto": {
-        "required": [
-          "id",
-          "punchedAt",
-          "machineCode",
-          "eventCode",
-          "unattributed",
-          "userId",
-          "holder"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "punchedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "machineCode": {
-            "type": "string"
-          },
-          "eventCode": {
-            "type": "string"
-          },
-          "unattributed": {
-            "type": "boolean"
-          },
-          "userId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "holder": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -52801,6 +52951,54 @@
           }
         }
       },
+      "PunchDto": {
+        "required": [
+          "id",
+          "cardNumber",
+          "punchedAt",
+          "machineCode",
+          "eventCode",
+          "unattributed",
+          "userId",
+          "holder"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cardNumber": {
+            "type": "string"
+          },
+          "punchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "machineCode": {
+            "type": "string"
+          },
+          "eventCode": {
+            "type": "string"
+          },
+          "unattributed": {
+            "type": "boolean"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "holder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PunchImportDto": {
         "required": [
           "id",
@@ -52815,7 +53013,8 @@
           "sourceSize",
           "punchCount",
           "status",
-          "errorMessage"
+          "errorMessage",
+          "isCurrent"
         ],
         "type": "object",
         "properties": {
@@ -52874,6 +53073,9 @@
               "null",
               "string"
             ]
+          },
+          "isCurrent": {
+            "type": "boolean"
           }
         }
       },
@@ -55579,6 +55781,34 @@
           },
           "tone": {
             "type": "string"
+          }
+        }
+      },
+      "TablePageOfPunchDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PunchDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
           }
         }
       },

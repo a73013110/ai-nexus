@@ -40,6 +40,12 @@ public static class AttendanceErrors
     /// <summary>匯入紀錄的查詢條件不合法：狀態不明、期間顛倒、每頁筆數不在允許值內，或游標不存在。</summary>
     public static readonly Error ImportFilterInvalid = Error.Invalid("attendance_import_filter_invalid");
 
+    /// <summary>找不到這筆匯入紀錄。</summary>
+    public static readonly Error ImportNotFound = Error.NotFound("attendance_import_not_found");
+
+    /// <summary>這次匯入失敗，或同一個檔之後又成功匯入過：刷卡依檔案保存，只有最近一次成功的匯入能列出它寫入的刷卡。</summary>
+    public static readonly Error ImportNotCurrent = Error.Conflict("attendance_import_not_current");
+
     /// <summary>來源資料夾裡沒有指定日期的打卡檔，區間內一個都沒有（打卡機尚未輸出，或檔名日期錯誤）；只缺部分檔案不是錯誤。</summary>
     public static readonly Error ImportFileNotFound = Error.NotFound("attendance_import_file_not_found");
 

@@ -136,7 +136,7 @@ export function attendanceImportsTour(options: WriteAccess): ProductTourDefiniti
         target: `${IMPORTS} .imports-table .ui-table-toolbar`,
         title: '匯入紀錄',
         description:
-          '・時間：開始匯入的時間。\n・觸發：排程或手動，手動會標示操作者。\n找不到檔的日期不留紀錄。',
+          '點一筆看這次匯入寫入的刷卡。\n觸發是排程或手動，手動會標示操作者。\n找不到檔的日期不留紀錄。',
         side: 'bottom',
       },
       cursorPaginationStep(IMPORTS, { sortable: false }),

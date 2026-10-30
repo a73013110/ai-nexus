@@ -6,7 +6,7 @@ import type {
   CardAssignmentUpdateRequest,
   CardCreateRequest,
   CardDto,
-  CardPunchDto,
+  PunchDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
@@ -92,8 +92,8 @@ export class AttendanceCardsStore {
   });
   /** 選取卡片已載入的刷卡（各頁接起來）；還沒讀到這張卡的第一頁時為 null，不顯示上一張的紀錄。 */
   readonly punches = linkedSignal<
-    { id: string; before?: number; items: CardPunchDto[] } | undefined,
-    CardPunchDto[] | null
+    { id: string; before?: number; items: PunchDto[] } | undefined,
+    PunchDto[] | null
   >({
     source: () => this.punchesRead.value(),
     computation: (read, previous) => {

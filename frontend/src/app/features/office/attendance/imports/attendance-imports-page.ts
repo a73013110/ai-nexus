@@ -9,9 +9,12 @@ import {
 import type { PunchReimportResult } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { formatDate, formatNumber } from '@shared/browser/format';
+import { formatBytes, formatDate, formatNumber } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
-import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
+import { CopyValue } from '@shared/ui/copy-value';
+import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
+import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -30,23 +33,31 @@ import { attendanceImportsTour } from '../attendance-tour';
 import {
   IMPORT_RANGES,
   IMPORT_STATUSES,
+  emptyImportsQuery,
   importFilters,
   importsQueryOptions,
 } from './imports-query';
+import { ImportPunches } from './import-punches';
 import { ReimportDialog, reimportOutcome } from './reimport-dialog';
 
 /**
  * 打卡匯入紀錄（`attendance.imports`）：每次匯入（排程或手動）一筆，預設新到舊；排序、欄位篩選與分頁交給 `endpointTable`。
+ * 點一筆開詳情：這個檔目前的內容（`isCurrent`）列出匯入的刷卡，失敗或已被之後的匯入取代的只列結果與來源資訊。
  * 有 `attendance.imports.reimport` 時可指定檔名日期（或日期區間）手動重匯；結果就是第一頁新出現的紀錄。
  */
 @Component({
   selector: 'nx-attendance-imports-page',
   imports: [
+    CopyValue,
     DataTable,
     DataTableColumn,
+    DataTableRow,
+    DetailDrawer,
+    DrawerPager,
     FeaturePage,
     Field,
     Icon,
+    ImportPunches,
     Notice,
     PendingButton,
     QueryBar,
@@ -82,6 +93,11 @@ import { ReimportDialog, reimportOutcome } from './reimport-dialog';
     }
     .imports-file {
       font-family: var(--font-code);
+    }
+    .imports-replaced {
+      display: grid;
+      justify-items: start;
+      gap: var(--p-space-2);
     }
   `,
   templateUrl: './attendance-imports-page.html',
@@ -122,6 +138,10 @@ export class AttendanceImportsPage {
       },
     ],
     sort: { column: 'startedAt', direction: 'desc' },
+    navigated: () => {
+      this.drawer()?.close();
+      this.selectedId.set(null);
+    },
   });
   readonly presentedRows = computed(() =>
     this.table.rows().map((row) => ({
@@ -130,14 +150,36 @@ export class AttendanceImportsPage {
       status: importStatus(row.status),
       count: formatNumber(row.punchCount),
       trigger: IMPORT_TRIGGER[row.triggerKind] ?? row.triggerKind,
+      finished: formatDate(row.finishedAt),
+      sourceModified: formatDate(row.sourceModifiedAt),
+      size: formatBytes(row.sourceSize),
     })),
   );
+  /** 開啟詳情的匯入；詳情只用列上的資料，刷卡由 `ImportPunches` 另外讀。 */
+  readonly selectedId = signal<string | null>(null);
+  readonly selectedIndex = computed(() =>
+    this.presentedRows().findIndex((item) => item.row.id === this.selectedId()),
+  );
+  readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
+  readonly drawer = viewChild(DetailDrawer);
   /** 最近一次手動重匯中失敗的檔（檔案格式錯誤等）；請求本身成功，所以放在頁面提示。 */
   readonly failure = signal('');
   private readonly dialog = viewChild.required(ReimportDialog);
 
   reload() {
     this.table.reload();
+  }
+  openDetails(id: string) {
+    this.selectedId.set(id);
+    this.drawer()?.open();
+  }
+  adjacent(direction: -1 | 1) {
+    const item = this.presentedRows()[this.selectedIndex() + direction];
+    if (item) this.openDetails(item.row.id);
+  }
+  /** 已被取代的匯入：只看這個檔的紀錄，最新一次成功的就在最前面。 */
+  showFile(fileName: string) {
+    this.query.commit({ fileName, status: '', range: emptyImportsQuery().range });
   }
   openReimport() {
     this.failure.set('');

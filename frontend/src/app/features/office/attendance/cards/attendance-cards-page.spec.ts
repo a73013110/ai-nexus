@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardAssignmentDto, CardDto, CardPunchDto } from '@core/api/schema';
+import type { CardAssignmentDto, CardDto, PunchDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
@@ -50,8 +50,9 @@ const fresh: CardDto = {
   lastUnattributedAt: '2026-10-02T10:01:00Z',
 };
 /** 第 `index` 筆刷卡：2026-10-02 起每小時一筆往前推，新到舊。 */
-const punch = (index: number, unattributed = false): CardPunchDto => ({
+const punch = (index: number, unattributed = false): PunchDto => ({
   id: 1000 - index,
+  cardNumber: 'A001',
   punchedAt: new Date(Date.parse('2026-10-02T10:00:00Z') - index * 3_600_000).toISOString(),
   machineCode: '001',
   eventCode: '11',
@@ -81,7 +82,7 @@ function setup() {
     cards: vi.fn(async () => [card, fresh, visitor]),
     assignments: vi.fn(async (id: string) => (id === card.id ? [held] : [])),
     updateCard: vi.fn(async () => undefined),
-    cardPunches: vi.fn(async (_id: string, _before?: number): Promise<CardPunchDto[]> => []),
+    cardPunches: vi.fn(async (_id: string, _before?: number): Promise<PunchDto[]> => []),
   };
   TestBed.configureTestingModule({
     providers: [

@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { PunchImportDto, PunchReimportResult } from '@core/api/schema';
+import type { PunchDto, PunchImportDto, PunchReimportResult } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ApiError } from '@core/errors/safe-errors';
@@ -26,6 +26,18 @@ const item = (id: string, patch: Partial<PunchImportDto> = {}): PunchImportDto =
   punchCount: 1234,
   status: 'succeeded',
   errorMessage: null,
+  isCurrent: true,
+  ...patch,
+});
+const punch = (id: number, patch: Partial<PunchDto> = {}): PunchDto => ({
+  id,
+  cardNumber: 'A001',
+  punchedAt: '2026-10-01T00:00:00Z',
+  machineCode: '001',
+  eventCode: '11',
+  unattributed: false,
+  userId: 'u2',
+  holder: '王小明',
   ...patch,
 });
 
@@ -59,14 +71,25 @@ function setup({
           errorMessage: '第 3 行：時間格式錯誤',
           triggerKind: 'manual',
           requestedByName: '人事專員',
+          isCurrent: false,
         }),
         item('b'),
+        item('c', { fileName: '20260930.txt', isCurrent: false }),
+      ],
+      total: 3,
+      offset: 0,
+      complete: true,
+    })),
+    reimport: vi.fn(reimport),
+    importPunches: vi.fn(async (_id: string, _table: object) => ({
+      items: [
+        punch(2, { cardNumber: 'B002', punchedAt: '2026-10-01T10:05:00Z' }),
+        punch(1, { unattributed: true, userId: null, holder: null }),
       ],
       total: 2,
       offset: 0,
       complete: true,
     })),
-    reimport: vi.fn(reimport),
   };
   const toast = { success: vi.fn() };
   TestBed.configureTestingModule({
@@ -90,6 +113,9 @@ describe('AttendanceImportsPage', () => {
   beforeAll(() => {
     // jsdom 沒有捲動；換頁時表格捲回開頭。
     Element.prototype.scrollTo ??= function () {};
+    HTMLDialogElement.prototype.show ??= function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
     HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
       this.setAttribute('open', '');
     };
@@ -112,7 +138,7 @@ describe('AttendanceImportsPage', () => {
       expect.anything(),
     );
     const rows = root.querySelectorAll('.imports-table tbody tr');
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0].textContent).toContain('20261001.txt');
     expect(rows[0].textContent).toContain('失敗');
     expect(rows[0].textContent).toContain('第 3 行：時間格式錯誤');
@@ -127,6 +153,57 @@ describe('AttendanceImportsPage', () => {
     const { fixture, root } = setup({ features: ['attendance.imports'] });
     await fixture.whenStable();
     expect(root.querySelector('.imports-reimport')).toBeNull();
+  });
+
+  it('opens a current import and lists the punches it wrote oldest first', async () => {
+    const { fixture, root, api } = setup();
+    await fixture.whenStable();
+    root.querySelectorAll<HTMLButtonElement>('.imports-table [data-row-action]')[1].click();
+    await fixture.whenStable();
+    expect(api.importPunches).toHaveBeenCalledWith(
+      'b',
+      { offset: 0, limit: 50, sort: 'punchedAt' },
+      expect.anything(),
+    );
+    const drawer = root.querySelector('nx-detail-drawer')!;
+    expect(drawer.querySelector('.ui-drawer-summary h3')?.textContent).toContain('20261001.txt');
+    const rows = [...drawer.querySelectorAll('nx-import-punches tbody tr')];
+    // 已一次讀完：依刷卡時間在本機由早到晚排。
+    expect(rows.map((row) => row.querySelector('th')?.textContent?.trim())).toEqual([
+      'A001',
+      'B002',
+    ]);
+    expect(rows[0].textContent).toContain('無持有人');
+    expect(rows[1].textContent).toContain('王小明');
+    expect(drawer.textContent).toContain('2.0 KB');
+  });
+
+  it('shows why a failed import wrote nothing without reading punches', async () => {
+    const { fixture, root, api } = setup();
+    await fixture.whenStable();
+    root.querySelector<HTMLButtonElement>('.imports-table [data-row-action]')!.click();
+    await fixture.whenStable();
+    const drawer = root.querySelector('nx-detail-drawer')!;
+    expect(drawer.querySelector('nx-notice')?.textContent).toContain('第 3 行：時間格式錯誤');
+    expect(drawer.querySelector('nx-import-punches')).toBeNull();
+    expect(api.importPunches).not.toHaveBeenCalled();
+  });
+
+  it('points a replaced import to the history of its file', async () => {
+    const { fixture, root, api } = setup();
+    await fixture.whenStable();
+    root.querySelectorAll<HTMLButtonElement>('.imports-table [data-row-action]')[2].click();
+    await fixture.whenStable();
+    const drawer = root.querySelector('nx-detail-drawer')!;
+    expect(drawer.textContent).toContain('刷卡已換成最新一次的內容');
+    drawer.querySelector<HTMLButtonElement>('.imports-replaced button')!.click();
+    await fixture.whenStable();
+    expect(api.importPunches).not.toHaveBeenCalled();
+    expect(api.imports).toHaveBeenLastCalledWith(
+      { fileName: '20260930.txt' },
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('reimports a single file by default and reports a failure on the page', async () => {

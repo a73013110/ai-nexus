@@ -8921,6 +8921,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance-imports/{id}/punches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListAttendancePunchImportPunches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance-calendar-days": {
         parameters: {
             query?: never;
@@ -9613,18 +9629,6 @@ export interface components {
             firstUnattributedAt: null | string;
             /** Format: date-time */
             lastUnattributedAt: null | string;
-        };
-        CardPunchDto: {
-            /** Format: int64 */
-            id: number;
-            /** Format: date-time */
-            punchedAt: string;
-            machineCode: string;
-            eventCode: string;
-            unattributed: boolean;
-            /** Format: uuid */
-            userId: null | string;
-            holder: null | string;
         };
         CardUpdateRequest: {
             hiddenFromRecords: boolean;
@@ -11178,6 +11182,19 @@ export interface components {
             available: boolean;
             notice: null | string;
         };
+        PunchDto: {
+            /** Format: int64 */
+            id: number;
+            cardNumber: string;
+            /** Format: date-time */
+            punchedAt: string;
+            machineCode: string;
+            eventCode: string;
+            unattributed: boolean;
+            /** Format: uuid */
+            userId: null | string;
+            holder: null | string;
+        };
         PunchImportDto: {
             /** Format: uuid */
             id: string;
@@ -11200,6 +11217,7 @@ export interface components {
             punchCount: number;
             status: string;
             errorMessage: null | string;
+            isCurrent: boolean;
         };
         PunchReimportRequest: {
             /** Format: date */
@@ -11912,6 +11930,14 @@ export interface components {
             text: null | string;
             tone: string;
         };
+        TablePageOfPunchDto: {
+            items: components["schemas"]["PunchDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
         TablePageOfPunchImportDto: {
             items: components["schemas"]["PunchImportDto"][];
             /** Format: int32 */
@@ -12388,7 +12414,6 @@ export type CardAssignmentDto = components['schemas']['CardAssignmentDto'];
 export type CardAssignmentUpdateRequest = components['schemas']['CardAssignmentUpdateRequest'];
 export type CardCreateRequest = components['schemas']['CardCreateRequest'];
 export type CardDto = components['schemas']['CardDto'];
-export type CardPunchDto = components['schemas']['CardPunchDto'];
 export type CardUpdateRequest = components['schemas']['CardUpdateRequest'];
 export type ChargeDto = components['schemas']['ChargeDto'];
 export type CitationDto = components['schemas']['CitationDto'];
@@ -12547,6 +12572,7 @@ export type ProjectTemplateDto = components['schemas']['ProjectTemplateDto'];
 export type ProjectTemplateRequest = components['schemas']['ProjectTemplateRequest'];
 export type PromptTemplateDto = components['schemas']['PromptTemplateDto'];
 export type ProviderStatusDto = components['schemas']['ProviderStatusDto'];
+export type PunchDto = components['schemas']['PunchDto'];
 export type PunchImportDto = components['schemas']['PunchImportDto'];
 export type PunchReimportRequest = components['schemas']['PunchReimportRequest'];
 export type PunchReimportResult = components['schemas']['PunchReimportResult'];
@@ -12625,6 +12651,7 @@ export type SqlVectorCapabilitiesDto = components['schemas']['SqlVectorCapabilit
 export type StartRepositoryChatRequest = components['schemas']['StartRepositoryChatRequest'];
 export type StatusDto = components['schemas']['StatusDto'];
 export type SubsystemFact = components['schemas']['SubsystemFact'];
+export type TablePageOfPunchDto = components['schemas']['TablePageOfPunchDto'];
 export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
 export type TestIdentityRequest = components['schemas']['TestIdentityRequest'];
@@ -42912,7 +42939,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CardPunchDto"][];
+                    "application/json": components["schemas"]["PunchDto"][];
                 };
             };
             /** @description Bad Request */
@@ -43760,6 +43787,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PunchReimportResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ListAttendancePunchImportPunches: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfPunchDto"];
                 };
             };
             /** @description Bad Request */

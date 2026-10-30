@@ -122,6 +122,9 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   attendance_gd_unavailable: '公文系統暫時無法連線，請稍後再試。',
   attendance_import_file_not_found: '找不到指定日期的打卡檔，請確認打卡機是否已輸出。',
   attendance_import_filter_invalid: '查詢條件不正確，請檢查期間、檔案、狀態與分頁。',
+  attendance_import_not_current:
+    '這次匯入的刷卡已被之後的匯入取代，或這次匯入失敗，沒有可列出的刷卡。',
+  attendance_import_not_found: '找不到這筆匯入紀錄，請重新整理。',
   attendance_import_source_unavailable: '讀不到打卡檔資料夾，請聯絡管理員確認網路共用與讀取權限。',
   attendance_records_filter_invalid: '查詢條件不正確，請重新選擇人員或重新整理頁面。',
   attendance_records_range_invalid: '查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。',

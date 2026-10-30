@@ -1,16 +1,11 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Office.Attendance.Punches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
-
-/// <summary>
-/// 一筆刷卡從卡片的角度看：當時的持有人（<see cref="Holder"/> 是帳號顯示名稱，沒有帳號時是留下的姓名），
-/// <see cref="Unattributed"/> 表示沒有持有期間涵蓋，不會出現在出勤紀錄。機器與事件代號原樣保存、不解讀。
-/// </summary>
-public sealed record CardPunchDto(long Id, DateTimeOffset PunchedAt, string MachineCode, string EventCode, bool Unattributed, Guid? UserId, string? Holder);
 
 /// <summary>
 /// 卡片詳情的刷卡紀錄，新到舊，每頁 <see cref="PageSize"/> 筆；<c>before</c> 是上一頁最後一筆的 ID（游標），不回傳總數。
@@ -26,7 +21,7 @@ internal sealed class ListCardPunches(AppDbContext db)
         .Audited(AttendanceAudit.PunchRead)
         .WithName("ListAttendanceCardPunches");
 
-    public async Task<Result<IReadOnlyList<CardPunchDto>>> HandleAsync(Guid id, long? before, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<PunchDto>>> HandleAsync(Guid id, long? before, CancellationToken ct)
     {
         if (!await db.Set<Card>().AnyAsync(x => x.Id == id, ct)) return AttendanceErrors.CardNotFound;
         var punches = db.Set<AttributedPunch>().Where(x => x.CardId == id);
@@ -37,13 +32,7 @@ internal sealed class ListCardPunches(AppDbContext db)
             if (previous is not { } at) return AttendanceErrors.FilterInvalid;
             punches = punches.Where(x => x.PunchedAt < at || (x.PunchedAt == at && x.PunchId < cursor));
         }
-        var rows = await (
-            from p in punches
-            join u in db.Users on p.UserId equals u.Id into users
-            from u in users.DefaultIfEmpty()
-            orderby p.PunchedAt descending, p.PunchId descending
-            select new CardPunchDto(p.PunchId, p.PunchedAt, p.MachineCode, p.EventCode, p.IsUnattributed, p.UserId, u != null ? u.DisplayName : p.HolderName))
-            .Take(PageSize).ToListAsync(ct);
-        return Result<IReadOnlyList<CardPunchDto>>.Ok(rows);
+        var rows = await punches.OrderByDescending(x => x.PunchedAt).ThenByDescending(x => x.PunchId).Take(PageSize).ToDtos(db).ToListAsync(ct);
+        return Result<IReadOnlyList<PunchDto>>.Ok(rows);
     }
 }

@@ -102,12 +102,27 @@
       </thead>
       <tbody>
         @for (item of presentedRows(); track item.row.id) {
-          <tr>
+          <tr
+            nxTableRow
+            [class.is-selected]="selectedId() === item.row.id"
+            (rowActivate)="openDetails(item.row.id)"
+          >
             <td nxTableColumn="startedAt">
               <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
             </td>
-            <th scope="row" nxTableColumn="fileName" class="imports-file">
-              {{ item.row.fileName }}
+            <th scope="row" nxTableColumn="fileName">
+              <button
+                type="button"
+                class="ui-table-link ui-truncate imports-file"
+                data-row-action
+                aria-haspopup="dialog"
+                [attr.aria-label]="'檢視匯入：' + item.row.fileName + '，' + item.time"
+                [attr.aria-controls]="drawer()?.id"
+                [attr.aria-expanded]="selectedId() === item.row.id"
+                (click)="openDetails(item.row.id)"
+              >
+                {{ item.row.fileName }}
+              </button>
             </th>
             <td nxTableColumn="status">
               <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
@@ -137,5 +152,76 @@
       emptyText="試著擴大時間範圍，或移除部分條件。"
     />
   </nx-data-table>
+  <nx-detail-drawer title="匯入詳情" (closed)="selectedId.set(null)">
+    <nx-drawer-pager
+      drawer-actions
+      noun="匯入紀錄"
+      [index]="selectedIndex()"
+      [count]="table.rows().length"
+      (move)="adjacent($event)"
+    />
+    <div drawer-summary class="ui-drawer-summary">
+      @if (selected(); as item) {
+        <div>
+          <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge
+          ><time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
+        </div>
+        <h3 class="imports-file">{{ item.row.fileName }}</h3>
+        <span class="ui-drawer-subtitle"
+          >{{ item.trigger
+          }}{{ item.row.requestedByName ? '・' + item.row.requestedByName : '' }}</span
+        >
+      }
+    </div>
+    @if (selected(); as item) {
+      @if (item.row.isCurrent) {
+        <nx-import-punches [importId]="item.row.id" />
+      } @else if (item.row.errorMessage) {
+        <nx-notice tone="danger" [message]="item.row.errorMessage" />
+        <p class="form-note">這次沒有寫入刷卡；這個檔保留上次成功匯入的內容。</p>
+      } @else {
+        <div class="imports-replaced">
+          <p class="form-note">這個檔之後又成功匯入過，刷卡已換成最新一次的內容。</p>
+          <button type="button" class="secondary-button" (click)="showFile(item.row.fileName)">
+            只看這個檔的匯入
+          </button>
+        </div>
+      }
+      <h3 class="ui-section-heading">基本資訊</h3>
+      <dl class="ui-description-list">
+        <div>
+          <dt>筆數</dt>
+          <dd>{{ item.count }}</dd>
+        </div>
+        <div>
+          <dt>完成時間</dt>
+          <dd>
+            <time [attr.datetime]="item.row.finishedAt">{{ item.finished }}</time>
+          </dd>
+        </div>
+        <div>
+          <dt>檔案修改時間</dt>
+          <dd>
+            <time [attr.datetime]="item.row.sourceModifiedAt">{{ item.sourceModified }}</time>
+          </dd>
+        </div>
+        <div>
+          <dt>檔案大小</dt>
+          <dd>{{ item.size }}</dd>
+        </div>
+      </dl>
+      <h3 class="ui-section-heading">關聯</h3>
+      <dl class="ui-description-list">
+        <div class="ui-description-wide">
+          <dt>匯入 ID</dt>
+          <dd><nx-copy-value label="匯入 ID" [value]="item.row.id" /></dd>
+        </div>
+        <div class="ui-description-wide">
+          <dt>檔案 ID</dt>
+          <dd><nx-copy-value label="檔案 ID" [value]="item.row.punchFileId" /></dd>
+        </div>
+      </dl>
+    }
+  </nx-detail-drawer>
 </nx-feature-page>
 <nx-reimport-dialog (imported)="imported($event)" />

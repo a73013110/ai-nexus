@@ -76,6 +76,13 @@ export class AttendanceApi {
 
   imports = (filters: PunchImportFilters, table: TableRequestQuery, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-imports', { query: { ...filters, ...table }, signal });
+  /** 一次匯入寫入的刷卡；只有這個檔最近一次成功的匯入（`isCurrent`）列得出來，其餘回 409 `attendance_import_not_current`。 */
+  importPunches = (id: string, table: TableRequestQuery, signal?: AbortSignal) =>
+    this.api.get('/api/v1/attendance-imports/{id}/punches', {
+      path: { id },
+      query: table,
+      signal,
+    });
   /** 重匯檔名日期（`yyyyMMdd.txt` 的日期，不是出勤日）`from`～`to`，含頭尾；只重匯一個檔時起訖相同。 */
   reimport = (from: string, to: string) =>
     this.api.post('/api/v1/attendance-imports', { body: { from, to } });

@@ -13,7 +13,7 @@ public static class AttendanceAudit
     public static readonly AuditAction CardCreated = AuditAction.Administration("attendance.card.created", "新增卡片");
     public static readonly AuditAction CardUpdated = AuditAction.Administration("attendance.card.updated", "修改卡片");
     public static readonly AuditAction CardDeleted = AuditAction.Administration("attendance.card.deleted", "刪除卡片");
-    public static readonly AuditAction PunchRead = AuditAction.Access("attendance.punch.read", "查詢卡片刷卡紀錄");
+    public static readonly AuditAction PunchRead = AuditAction.Access("attendance.punch.read", "查詢刷卡紀錄");
     public static readonly AuditAction AssignmentRead = AuditAction.Access("attendance.card_assignment.read", "查詢卡片持有期間");
     public static readonly AuditAction AssignmentCreated = AuditAction.Administration("attendance.card_assignment.created", "新增卡片持有期間");
     public static readonly AuditAction AssignmentUpdated = AuditAction.Administration("attendance.card_assignment.updated", "修改卡片持有期間");
