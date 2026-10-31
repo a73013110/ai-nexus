@@ -117,6 +117,4 @@ public sealed class IdentityModule : IFeatureModule
         ImportDirectoryUsers.Map(import);
         SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersSync));
     }
-
-    public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapAuthenticationEndpoints();
 }

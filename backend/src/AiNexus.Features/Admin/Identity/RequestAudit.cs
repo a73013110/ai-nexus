@@ -15,31 +15,44 @@ public static partial class RequestAudit
     /// <summary>群組掛了請求稽核的標記：只宣告 <see cref="AuditedEndpoint"/> 卻不在這種群組底下，稽核不會寫入（測試據此檢查）。</summary>
     public sealed record Applied;
 
-    public static RouteGroupBuilder WithAudit(this RouteGroupBuilder group) => group.WithMetadata(new Applied()).AddEndpointFilter(async (invocation, next) =>
+    public static RouteGroupBuilder WithAudit(this RouteGroupBuilder group)
     {
-        var http = invocation.HttpContext;
-        if (http.GetEndpoint().AuditActionOf() is not { } action) return await next(invocation);
-        // 稽核一定要有身分：功能 policy 與 ICurrentUser 通常已解析過，這裡取的是同一份快取。
-        var user = await http.RequestServices.GetRequiredService<CurrentUser>().GetAsync(http.RequestAborted);
-        if (!user.IsSuccess) return user.Error.ToProblem();
-        var trail = http.RequestServices.GetRequiredService<AuditTrail>();
-        trail.Begin(action, user.Value.Id, http);
-        object? result;
-        try
+        // 與 AddEndpointFilterFactory 相同的掛法，但留住 EndpointBuilder：factory 執行時端點層的稽核宣告已加進 metadata，
+        // 而 EndpointFilterFactoryContext 本身拿不到 metadata。
+        ((IEndpointConventionBuilder)group.WithMetadata(new Applied())).Add(builder => builder.FilterFactories.Add((context, next) => Create(builder, context, next)));
+        return group;
+    }
+
+    private static EndpointFilterDelegate Create(EndpointBuilder builder, EndpointFilterFactoryContext context, EndpointFilterDelegate next)
+    {
+        // 稽核宣告在建置端點時就確定：不稽核的端點不掛過濾器，請求時不必再掃 metadata。
+        if (builder.AuditActionOf() is not { } action) return next;
+        var logger = context.ApplicationServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(RequestAudit).FullName!);
+        return async invocation =>
         {
-            result = await next(invocation);
-        }
-        catch (Exception error)
-        {
-            // 原本的例外比稽核失敗重要：稽核寫不進去只記日誌，再把原本的例外拋出去。
-            try { await trail.CompleteAsync(Code(error, http)); }
-            catch (Exception audit) { LogFailureUnrecorded(http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(RequestAudit).FullName!), action.Name, audit.GetType().Name); }
-            throw;
-        }
-        // 成功路徑不吞例外：查詢的稽核寫不進去，資料就不送出。
-        await trail.CompleteAsync(Outcome(result));
-        return result;
-    });
+            var http = invocation.HttpContext;
+            // 稽核一定要有身分：功能 policy 與 ICurrentUser 通常已解析過，這裡取的是同一份快取。
+            var user = await http.RequestServices.GetRequiredService<CurrentUser>().GetAsync(http.RequestAborted);
+            if (!user.IsSuccess) return user.Error.ToProblem();
+            var trail = http.RequestServices.GetRequiredService<AuditTrail>();
+            trail.Begin(action, user.Value.Id, http);
+            object? result;
+            try
+            {
+                result = await next(invocation);
+            }
+            catch (Exception error)
+            {
+                // 原本的例外比稽核失敗重要：稽核寫不進去只記日誌，再把原本的例外拋出去。
+                try { await trail.CompleteAsync(Code(error, http)); }
+                catch (Exception audit) { LogFailureUnrecorded(logger, action.Name, audit.GetType().Name); }
+                throw;
+            }
+            // 成功路徑不吞例外：查詢的稽核寫不進去，資料就不送出。
+            await trail.CompleteAsync(Outcome(result));
+            return result;
+        };
+    }
 
     /// <summary>handler 的回傳值對應的稽核結果：problem 取它的錯誤代碼，其他 4xx／5xx 用預設代碼，其餘為成功。</summary>
     internal static string Outcome(object? result)

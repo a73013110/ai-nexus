@@ -1,26 +1,25 @@
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.IntegrationTests.Host;
 
 public sealed class EndpointConventionTests
 {
-    // 預設拒絕是 fallback policy；此測試確保每個 endpoint 的存取權都是明確且可審查的決定。
+    // 只要求登入的端點不宣告授權，全靠 fallback policy 預設拒絕匿名；這個 policy 被拿掉或放寬，那些端點就變成公開。
     [Fact]
-    public async Task EveryEndpointDeclaresAuthorizationOrAnonymousAccess()
+    public async Task FallbackPolicyRejectsAnonymousRequests()
     {
         await using var factory = new AppFactory();
         _ = factory.CreateClient();
-        var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToList();
-        Assert.NotEmpty(endpoints);
-        var undeclared = endpoints
-            .Where(e => e.Metadata.GetMetadata<IAuthorizeData>() is null && e.Metadata.GetMetadata<IAllowAnonymous>() is null)
-            .Select(e => e.RoutePattern.RawText).ToList();
-        Assert.True(undeclared.Count == 0, "Endpoints without an explicit authorization decision: " + string.Join(", ", undeclared));
+        var fallback = factory.Services.GetRequiredService<IOptions<AuthorizationOptions>>().Value.FallbackPolicy;
+        Assert.NotNull(fallback);
+        Assert.Contains(fallback.Requirements, requirement => requirement is DenyAnonymousAuthorizationRequirement);
     }
 
     // 政策名稱拼錯只會在請求時才失敗，這裡改為在測試階段就攔下。

@@ -73,14 +73,11 @@ public sealed record SafeProblemDetails(
 /// </summary>
 public static class SafeErrorMetadata
 {
-    public static RouteGroupBuilder WithSafeErrors(this RouteGroupBuilder group)
-    {
-        foreach (var status in new[] { 400, 401, 403, 404, 405, 409, 413, 415, 429, 500, 502, 503, 504 })
-        {
-            group.WithMetadata(new Microsoft.AspNetCore.Http.ProducesResponseTypeMetadata(status, typeof(SafeProblemDetails), ["application/problem+json"]));
-        }
-        return group;
-    }
+    // metadata 不可變，所有群組共用同一組實例。
+    private static readonly object[] Metadata = [.. new[] { 400, 401, 403, 404, 405, 409, 413, 415, 429, 500, 502, 503, 504 }
+        .Select(status => new ProducesResponseTypeMetadata(status, typeof(SafeProblemDetails), ["application/problem+json"]))];
+
+    public static RouteGroupBuilder WithSafeErrors(this RouteGroupBuilder group) => group.WithMetadata(Metadata);
 }
 
 /// <summary>

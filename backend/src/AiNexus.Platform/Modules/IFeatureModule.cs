@@ -9,9 +9,6 @@ public interface IFeatureModule
     /// <summary>註冊模組專屬之相依服務、設定選項（Options）與授權原則（Policies）。</summary>
     static abstract void AddServices(IHostApplicationBuilder builder);
 
-    /// <summary>將模組端點掛載至需授權的 <c>/api/v1</c> 路由群組下。</summary>
+    /// <summary>將模組端點掛載至 <c>/api/v1</c> 路由群組下；預設要求登入，功能 policy 或匿名存取才需要另外宣告。</summary>
     static virtual void MapEndpoints(RouteGroupBuilder api) { }
-
-    /// <summary>掛載登入前即可公開存取的端點；各公開端點自行宣告其授權策略。</summary>
-    static virtual void MapPublicEndpoints(IEndpointRouteBuilder app) { }
 }

@@ -66,7 +66,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 app.MapFeatures();
 
 // 未知的 API 路徑不能回傳 SPA 的 index.html，否則前端會收到錯誤的內容。
-app.Map("/api/{**path}", () => Results.NotFound()).RequireAuthorization();
+app.Map("/api/{**path}", () => Results.NotFound());
 
 // 預設的 FallbackToFile 會把最後一段含點號（.）的路徑當成遺失的靜態檔而略過。
 // Gitea 程式庫路由常以 `team/my.repo` 或 `base...head` 這類路徑結尾，沒有實體檔案，所以要明確指定。網址取目錄，模組換區時跟著變。

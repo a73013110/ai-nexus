@@ -90,9 +90,10 @@ public static class FeatureModules
     /// </summary>
     public static WebApplication MapFeatures(this WebApplication app)
     {
+        // 登入由 fallback policy 預設要求，群組與端點都不必再宣告；只有功能 policy 與 AllowAnonymous 這類例外才寫在端點上。
         // 篩選器依此順序執行：解析目前使用者（身分驗證結果）、開始請求稽核，接著執行請求驗證（驗證失敗也留下稽核）。
+        // 三者都在建置端點時判斷是否適用，不適用的端點不掛過濾器。
         var api = app.MapGroup("/api/v1")
-            .RequireAuthorization()
             .WithSafeErrors()
             .WithCurrentUser()
             .WithAudit()
@@ -128,7 +129,8 @@ public static class FeatureModules
         Map<AttendanceModule>(api);
         Map<RemoteFilesModule>(api);
 
-        IdentityModule.MapPublicEndpoints(app.MapGroup("").WithTags(Tag<IdentityModule>()));
+        // 登入交握端點同樣走上面的篩選器；排在最後是為了維持既有的 OpenAPI 順序。
+        api.MapGroup("").WithTags(Tag<IdentityModule>()).MapAuthenticationEndpoints();
         return app;
     }
 

@@ -24,7 +24,7 @@ internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, 
 {
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/identity", (SelectIdentityRequest body, HttpContext http, SelectIdentity handler) => handler.HandleAsync(http, body).ToHttpResultAsync())
-        .RequireAuthorization().Audited(IdentityAudit.IdentitySelected).WithName("SelectIdentity");
+        .Audited(IdentityAudit.IdentitySelected).WithName("SelectIdentity");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, SelectIdentityRequest body)
     {

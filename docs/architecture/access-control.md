@@ -50,7 +50,7 @@ AD login → Users（SID）→ UserRoles → Roles
 ## 擴充功能
 
 1. 在所屬區新增 `Features/Work/Reports` 與 `ReportsModule.cs`；在 `FeatureCatalog` 加模組與頁面（例如 `reports`），在 `database/App/Seed/accesscontrol.sql` 加功能列（Name 為 NULL）、預設授權，以及預設選單樹的 page 節點（`FeatureCatalogSeedTests` 檢查）。
-2. 在 `Policies` 加 policy，於 `ReportsModule` 註冊 `services.AddFeaturePolicy(...)`、加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
+2. 在 `Policies` 加 policy，於 `ReportsModule` 註冊 `services.AddFeaturePolicy(...)`、加入 `FeatureModules` 清單，endpoint 套用該 policy（只需登入則不必宣告，fallback 已拒絕匿名）。
 3. 重產合約（`FeatureId` 與 `feature-catalog.ts` 隨之更新），前端新增 `reports.routes.ts`，路由以 `data: { feature }` 指向目錄；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 有資料列、要依部門切資料的功能宣告範圍並套用（[資料範圍](data-scopes.md)）。
 5. 以至少兩個角色驗沒有 grant 的 403、資料 owner 或範圍外的 404 與停用／撤銷，並更新文件。

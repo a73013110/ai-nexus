@@ -12,15 +12,12 @@ public static class AuditEndpointExtensions
         => string.IsNullOrWhiteSpace(reason) ? throw new ArgumentException("必須說明不稽核的原因。", nameof(reason)) : builder.WithMetadata(new UnauditedEndpoint(reason));
 
     /// <summary>端點最後宣告的稽核方式（端點層覆寫群組層）；沒有宣告時為 null。</summary>
-    public static AuditAction? AuditActionOf(this Endpoint? endpoint)
-    {
-        var metadata = endpoint?.Metadata;
-        if (metadata is null) return null;
-        for (var i = metadata.Count - 1; i >= 0; i--)
-        {
-            if (metadata[i] is AuditedEndpoint audited) return audited.Action;
-            if (metadata[i] is UnauditedEndpoint) return null;
-        }
-        return null;
-    }
+    public static AuditAction? AuditActionOf(this Endpoint? endpoint) => endpoint is null ? null : Resolve(endpoint.Metadata);
+
+    /// <summary>建置端點時讀的同一個宣告，讓過濾器在啟動時就決定要不要掛上。</summary>
+    public static AuditAction? AuditActionOf(this EndpointBuilder builder) => Resolve(builder.Metadata);
+
+    // metadata 依群組到端點的順序排列，取最後一筆宣告。
+    private static AuditAction? Resolve(IEnumerable<object> metadata)
+        => metadata.LastOrDefault(item => item is AuditedEndpoint or UnauditedEndpoint) is AuditedEndpoint audited ? audited.Action : null;
 }
