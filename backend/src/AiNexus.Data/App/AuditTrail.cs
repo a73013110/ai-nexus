@@ -41,18 +41,15 @@ public sealed partial class AuditTrail(AppDbContext db, AuditContextSource sourc
     public bool Active => current is not null;
 
     /// <summary>
-    /// 請求稽核 filter 呼叫：以端點宣告的動作開始這個請求的稽核。路由參數 <c>id</c> 是 GUID 時預設為對象；
-    /// 路由的使用者參數（<c>{userId}</c>，或 <c>users/{id}</c> 底下的 <c>id</c>）預設為資料主體，管理別人帳號的端點不必各自補。
+    /// 請求稽核呼叫：以端點宣告的動作開始這個請求的稽核。<paramref name="route"/> 指出的路由參數是 GUID 時，預設為對象與資料主體。
     /// </summary>
-    public void Begin(AuditAction action, Guid owner, HttpContext http)
+    public void Begin(AuditAction action, Guid owner, HttpContext http, AuditRoute route)
     {
         if (current is not null) throw new InvalidOperationException("同一個請求只能開始一筆請求稽核。");
         request = RequestDetails(http);
         current = New(action, owner);
-        var resource = RouteGuid(http, "id");
-        current.ResourceId = resource;
-        var pattern = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "";
-        current.SubjectUserId = RouteGuid(http, "userId") ?? (pattern.Contains("users/{id", StringComparison.Ordinal) ? resource : null);
+        current.ResourceId = RouteGuid(http, route.Resource);
+        current.SubjectUserId = RouteGuid(http, route.Subject);
         current.DetailsJson = Compose();
         db.AuditEvents.Add(current);
     }
@@ -172,8 +169,8 @@ public sealed partial class AuditTrail(AppDbContext db, AuditContextSource sourc
         return result;
     }
 
-    private static Guid? RouteGuid(HttpContext http, string name)
-        => http.Request.RouteValues.TryGetValue(name, out var value) && Guid.TryParse(value?.ToString(), out var id) ? id : null;
+    private static Guid? RouteGuid(HttpContext http, string? name)
+        => name is not null && http.Request.RouteValues.TryGetValue(name, out var value) && Guid.TryParse(value?.ToString(), out var id) ? id : null;
 
     private static string? Safe(string key, string? value)
         => string.IsNullOrEmpty(value) ? value : FreeText.Contains(key) || !SafeValue().IsMatch(value) ? "[text]" : value;

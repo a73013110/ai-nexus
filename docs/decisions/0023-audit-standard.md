@@ -55,10 +55,10 @@
 
 - **異動**：請求開始時，稽核列就加進請求的 DbContext。handler SaveChanges 時，它與業務異動在同一個交易裡一起提交或一起回滾。
 - **查詢與失敗**：handler 沒有 SaveChanges 時，由 `CompleteAsync` 用新的 DbContext 補寫。
-  - 查詢的稽核在回應送出前寫入，寫不進去就不送出資料（失敗即拒絕）。
+  - 查詢的稽核在回應送出前寫入，寫不進去就不送出資料（失敗即拒絕）。所以 `completed` 表示資料已開始送出，送出途中中斷（例如取消下載）不改紀錄。
   - handler 已經提交、之後才失敗時（例如跨資料庫的提交失敗），會把同一筆紀錄改記成錯誤代碼。
 - **例外**：記 `unexpected_error`，或外部服務自己的代碼。如果這筆也寫不進去，就記日誌 1003 `audit.failure_unrecorded`，原本的例外照常拋出。
-- **授權拒絕**：`FeatureAuthorizationHandler` 用端點宣告的動作寫一筆 `feature_forbidden`，`FeatureId` 是被要求的功能。
+- **授權拒絕**：`AuditingAuthorizationResultHandler` 在寫出 403 前，用端點宣告的動作寫一筆，結果與回應的錯誤代碼相同（`feature_forbidden`），`FeatureId` 是被要求的功能。放在授權結果處理而非 requirement handler，每個請求只記一筆，評估授權也不帶寫入。這筆寫不進去時記日誌 1003，仍回 403：拒絕沒有送出資料。
 - **請求以外**：背景工作，或一個請求影響多筆資料時，用 `AuditTrail.Record`，由呼叫端在自己的交易裡提交。
 - `AuditEventInterceptor` 會拒絕沒有分類的紀錄。
 
