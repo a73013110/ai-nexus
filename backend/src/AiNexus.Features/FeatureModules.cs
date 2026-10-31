@@ -1,91 +1,30 @@
 using AiNexus.Data.App;
-using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Platform.Account;
-using AiNexus.Features.Work.Artifacts;
-using AiNexus.Features.Work.Files;
-using AiNexus.Features.Admin.Audit;
-using AiNexus.Features.Admin.Billing;
-using AiNexus.Features.Work.Chat;
-using AiNexus.Features.Work.Collaboration;
-using AiNexus.Features.Work.Conversations;
-using AiNexus.Features.Work.Dashboard;
-using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Features.Platform.Gd;
-using AiNexus.Features.Platform.Inference;
-using AiNexus.Features.Admin.Mail;
-using AiNexus.Features.Work.Jobs;
-using AiNexus.Features.Work.Knowledge;
-using AiNexus.Features.Work.Prompts;
-using AiNexus.Features.Admin.Monitoring;
-using AiNexus.Features.Platform.Notifications;
-using AiNexus.Features.Platform.RemoteFiles;
-using AiNexus.Features.Admin.Operations;
-using AiNexus.Features.Admin.Organization;
-using AiNexus.Features.Work.Projects;
-using AiNexus.Features.Admin.Quality;
-using AiNexus.Features.Admin.Releases;
-using AiNexus.Features.Work.Repositories;
-using AiNexus.Features.Office.Attendance;
-using AiNexus.Features.Work.Sharing;
-using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features;
 
 /// <summary>
-/// 業務功能模組的註冊中心，系統中唯一完整列出所有模組的地方。
-/// 新增模組時，在下面的 <c>AddFeatures</c> 與 <c>MapFeatures</c> 各加一行即可。
+/// 業務功能模組的組合點。組件內的模組、端點切片與請求驗證器由組合產生器在編譯期列出（<see cref="FeatureCompositionAttribute"/>、ADR 0029），
+/// 新增模組只要在 <c>&lt;Area&gt;/&lt;Module&gt;/&lt;Module&gt;Module.cs</c> 實作 <see cref="IFeatureModule"/>，不必改這個檔案。
+/// 模組依完整型別名稱排序註冊與掛載；順序固定但沒有意義，模組之間不可依賴它。
 /// </summary>
-public static class FeatureModules
+[FeatureComposition]
+public static partial class FeatureModules
 {
-    /// <summary>
-    /// 註冊所有業務功能模組的服務。注意註冊順序會決定 <c>IEnumerable&lt;T&gt;</c> 的順序（例如儀表板區塊），調整時要留意。
-    /// </summary>
+    /// <summary>註冊所有業務功能模組的服務。</summary>
     public static IHostApplicationBuilder AddFeatures(this IHostApplicationBuilder builder)
     {
-        Add<AppDatabaseModule>(builder);
-        Add<AccessControlModule>(builder);
-        Add<IdentityModule>(builder);
-        Add<OrganizationModule>(builder);
-        Add<GdModule>(builder);
-        Add<RemoteFilesModule>(builder);
-        Add<AccountModule>(builder);
-        Add<DiagnosticsModule>(builder);
-        Add<BillingModule>(builder);
-        Add<WebSearchModule>(builder);
-        Add<RepositoriesModule>(builder);
-        Add<DashboardModule>(builder);
-        Add<OperationsModule>(builder);
-        Add<QualityModule>(builder);
-        Add<CollaborationModule>(builder);
-        Add<NotificationsModule>(builder);
-        Add<MailModule>(builder);
-        Add<ReleasesModule>(builder);
-        Add<ProjectsModule>(builder);
-        Add<SharingModule>(builder);
-        Add<KnowledgeModule>(builder);
-        Add<ArtifactsModule>(builder);
-        Add<JobsModule>(builder);
-        Add<AuditModule>(builder);
-        Add<ConversationsModule>(builder);
-        Add<PromptsModule>(builder);
-        Add<FilesModule>(builder);
-        Add<InferenceModule>(builder);
-        Add<ChatModule>(builder);
-        Add<MonitoringModule>(builder);
-        Add<AttendanceModule>(builder);
-
-        builder.Services.AddEndpointHandlers(typeof(FeatureModules).Assembly);
-        builder.Services.AddRequestValidators(typeof(FeatureModules).Assembly);
+        // 主資料庫模組在 Data 專案，不在產生器看得到的組件內，所以在這裡明確註冊。
+        AppDatabaseModule.AddServices(builder);
+        AddModules(builder);
+        AddEndpointHandlers(builder.Services);
+        AddRequestValidators(builder.Services);
         return builder;
     }
 
-    /// <summary>
-    /// 將各業務模組的 API 端點對應至路由群組。
-    /// 端點註冊順序即為公開的 OpenAPI 文件順序，請保持穩定。
-    /// </summary>
+    /// <summary>將各業務模組的 API 端點掛到 <c>/api/v1</c>；每個模組的 OpenAPI tag 是模組名（類別名去掉 Module）。</summary>
     public static WebApplication MapFeatures(this WebApplication app)
     {
         // 登入由 fallback policy 預設要求，群組與端點都不必再宣告；只有功能 policy 與 AllowAnonymous 這類例外才寫在端點上。
@@ -95,50 +34,21 @@ public static class FeatureModules
             .WithCurrentUser()
             .WithAudit()
             .WithRequestValidation();
-
-        Map<DiagnosticsModule>(api);
-        Map<AccountModule>(api);
-        Map<ConversationsModule>(api);
-        Map<InferenceModule>(api);
-        Map<ChatModule>(api);
-        Map<FilesModule>(api);
-        Map<PromptsModule>(api);
-        Map<AuditModule>(api);
-        Map<JobsModule>(api);
-        Map<KnowledgeModule>(api);
-        Map<CollaborationModule>(api);
-        Map<ArtifactsModule>(api);
-        Map<ProjectsModule>(api);
-        Map<SharingModule>(api);
-        Map<NotificationsModule>(api);
-        Map<QualityModule>(api);
-        Map<OperationsModule>(api);
-        Map<IdentityModule>(api);
-        Map<AccessControlModule>(api);
-        Map<OrganizationModule>(api);
-        Map<BillingModule>(api);
-        Map<RepositoriesModule>(api);
-        Map<DashboardModule>(api);
-        Map<WebSearchModule>(api);
-        Map<MonitoringModule>(api);
-        Map<MailModule>(api);
-        Map<ReleasesModule>(api);
-        Map<AttendanceModule>(api);
-        Map<RemoteFilesModule>(api);
-
-        // 登入交握端點同樣走上面的篩選器；排在最後是為了維持既有的 OpenAPI 順序。
-        api.MapGroup("").WithTags(Tag<IdentityModule>()).MapAuthenticationEndpoints();
+        MapModules(api);
         return app;
     }
 
-    /// <summary>
-    /// 啟動時檢查功能模組依賴的外部環境（目前是附件儲存目錄）。環境不健全時要在對外服務前中止，而不是等到第一次請求才失敗。
-    /// </summary>
-    public static void VerifyStartup(IServiceProvider services) => FilesModule.VerifyStorage(services);
+    /// <summary>容器建好後、對外服務前執行各模組的 <see cref="IFeatureModule.VerifyStartup"/>。</summary>
+    public static void VerifyStartup(IServiceProvider services) => VerifyModules(services);
 
-    private static void Add<TModule>(IHostApplicationBuilder builder) where TModule : IFeatureModule => TModule.AddServices(builder);
-    // OpenAPI tag 一律是模組名（類別名去掉 Module），端點自己不加 tag：管理端點分散在各模組，tag 跟著模組走才找得到。
-    private static void Map<TModule>(RouteGroupBuilder api) where TModule : IFeatureModule => TModule.MapEndpoints(api.MapGroup("").WithTags(Tag<TModule>()));
+    // 以下由組合產生器實作（AiNexus.Generators/Composition）。
+    private static partial void AddModules(IHostApplicationBuilder builder);
 
-    private static string Tag<TModule>() => typeof(TModule).Name[..^"Module".Length];
+    private static partial void MapModules(RouteGroupBuilder api);
+
+    private static partial void VerifyModules(IServiceProvider services);
+
+    private static partial void AddEndpointHandlers(IServiceCollection services);
+
+    private static partial void AddRequestValidators(IServiceCollection services);
 }

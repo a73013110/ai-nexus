@@ -116,5 +116,6 @@ public sealed class IdentityModule : IFeatureModule
         PreviewDirectoryImport.Map(import);
         ImportDirectoryUsers.Map(import);
         SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersSync));
+        api.MapAuthenticationEndpoints();
     }
 }

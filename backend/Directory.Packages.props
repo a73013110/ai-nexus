@@ -17,7 +17,6 @@
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
-    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageVersion Include="MailKit" Version="4.18.1" />
     <PackageVersion Include="Markdig" Version="1.4.0" />
@@ -33,6 +32,11 @@
   </ItemGroup>
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Source generators">
+    <!-- 產生器由 IDE 與 SDK 內建的編譯器載入，版本不可高於開發者會用到的最舊編譯器（.NET 10 SDK／VS 2026 為 Roslyn 5.0）。 -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />

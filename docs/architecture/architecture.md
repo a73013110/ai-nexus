@@ -28,9 +28,11 @@ flowchart LR
 | 專案 | 責任 |
 | --- | --- |
 | `AiNexus.Host` | 設定載入、middleware 管線、模組組裝（`Program.cs`）與維運子命令（`verify …`） |
-| `AiNexus.Features` | 業務模組，依區與模組分兩層資料夾（`<Area>/<Module>`），以 `<Module>Module`（`IFeatureModule`）註冊服務、設定、授權政策、rate limit 與端點；`FeatureModules` 是唯一的模組清單 |
+| `AiNexus.Features` | 業務模組，依區與模組分兩層資料夾（`<Area>/<Module>`），以 `<Module>Module`（`IFeatureModule`）註冊服務、設定、授權政策、rate limit 與端點；`FeatureModules` 是組合點，模組清單由組合產生器在編譯期列出 |
 | `AiNexus.Data` | 資料表的 EF 對應：`App/<Module>/<Entity>.cs` 一表一檔、`AppDbContext` 與只屬於主資料庫的元件；只依賴 Platform |
 | `AiNexus.Platform` | 不認識業務的共用基礎：錯誤與 `Result<T>`、安全、設定註冊、診斷、HTTP 限制、domain event 分派、手寫 SQL（`Data/Sql`）、程序內鎖 |
+
+另有 `AiNexus.Generators`：編譯期的 source generator，不是執行期的一層，也不進入發布輸出（[Source generator](source-generators.md)）。
 
 端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。模組間只用明確的 `public` 服務，不新增能繞過 owner、ACL 或模型核准的資料入口；「A 發生後 B 跟著處理」用同交易的 domain event（見 [模組邊界](module-boundaries.md#直接呼叫或-domain-event)）。
 

@@ -10,7 +10,8 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
   </ItemGroup>
   <!-- Class libraries share the ASP.NET Core implicit usings that the web host gets from Microsoft.NET.Sdk.Web. -->
-  <ItemGroup Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'">
+  <!-- 產生器（IsRoslynComponent）是 netstandard2.0、沒有 ASP.NET Core；item 在所有屬性之後才求值，所以看得到專案檔設的值。 -->
+  <ItemGroup Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true' and '$(IsRoslynComponent)' != 'true'">
     <Using Include="System.Net.Http.Json" />
     <Using Include="Microsoft.AspNetCore.Builder" />
     <Using Include="Microsoft.AspNetCore.Hosting" />

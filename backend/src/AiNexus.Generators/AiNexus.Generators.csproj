@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    編譯期的 source generator（docs/architecture/source-generators.md）。編譯器在 IDE 與 dotnet build 內載入它，
+    所以目標是 netstandard2.0、只依賴 Roslyn；使用的專案以 OutputItemType="Analyzer" 引用，不會進入發布輸出。
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>AiNexus.Generators</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable>false</IsPackable>
+    <!-- 診斷只在本儲存庫內出現、不發布給外部使用者，代碼區段記在 source-generators.md，不另維護 AnalyzerReleases 檔。 -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AiNexus.GeneratorTests" />
+  </ItemGroup>
+</Project>

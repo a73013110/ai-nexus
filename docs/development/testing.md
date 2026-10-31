@@ -1,6 +1,6 @@
 # 測試
 
-- `./scripts/Verify.ps1` 跑全部預設測試：腳本（Pester）、後端三個測試專案（單元＋整合＋架構）、前端 lint 與單元測試；預設後端測試集在 16 執行緒開發機約 65 秒。
+- `./scripts/Verify.ps1` 跑全部預設測試：腳本（Pester）、後端四個測試專案（單元＋整合＋架構＋產生器）、前端 lint 與單元測試；預設後端測試集在 16 執行緒開發機約 65 秒。
 - 整合測試需要 SQL Server 2025 的 LocalDB（`(localdb)\MSSQLLocalDB`），每個 host 有自己的資料庫，彼此不共用狀態（[ADR 0015](../decisions/0015-integration-tests-on-localdb.md)）。
 - 真實瀏覽器與效能測試要另外開啟（見下表），AD、真模型、全文與正式 IIS 由 `Test-Environment.ps1` 與 [部署驗收](../operations/iis-verification.md) 驗證。
 
@@ -10,7 +10,8 @@
 | --- | --- |
 | `backend/tests/AiNexus.UnitTests` | 不啟動 host、不碰資料庫：純邏輯、遮罩、排序、設定綁定；整個專案幾秒內跑完 |
 | `backend/tests/AiNexus.IntegrationTests` | 啟動 host（`AppFactory`）走 HTTP 與 LocalDB：每個 use case 的行為、OpenAPI 合約、端點慣例；EF 對應與資料庫一致（`Data/ModelSchemaTests`）、資料表說明、唯一索引 |
-| `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向、模組無循環、slice 形狀、資料庫模型、檔名＝型別名、測試的資料夾與命名、EventId 唯一 |
+| `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向、模組無循環、slice 形狀與組合產生器的註冊、資料庫模型、檔名＝型別名、測試的資料夾與命名、EventId 唯一 |
+| `backend/tests/AiNexus.GeneratorTests` | 以範例原始碼執行 source generator：產出、診斷與 incremental 快取（[Source generator](../architecture/source-generators.md)） |
 | `scripts/tests` | 腳本慣例、共用模組函式、文件連結與長度（`Docs.Tests.ps1`） |
 | `frontend/src/**/*.spec.ts` | 前端單元測試（Vitest，`npm --prefix frontend test`） |
 | `frontend/e2e` | Playwright 端到端測試，對發布後的網站執行；spec 以功能命名 |

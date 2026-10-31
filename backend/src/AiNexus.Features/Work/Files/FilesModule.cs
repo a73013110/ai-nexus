@@ -67,5 +67,5 @@ public sealed class FilesModule : IFeatureModule
     }
 
     /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>
-    public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
+    public static void VerifyStartup(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
 }

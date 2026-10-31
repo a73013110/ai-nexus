@@ -9,6 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="../AiNexus.Platform/AiNexus.Platform.csproj" />
     <ProjectReference Include="../AiNexus.Data/AiNexus.Data.csproj" />
+    <!-- 編譯期產生模組組合（FeatureModules）；只當分析器載入，不引用組件、不進發布輸出。 -->
+    <ProjectReference Include="../AiNexus.Generators/AiNexus.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <!-- 常見密碼清單（來源與授權見同目錄的 common-passwords.LICENSE.txt）。 -->

@@ -20,7 +20,7 @@
 | 內容 | Knowledge、Projects、Quality、Repositories | 組合上述資料的功能 |
 | 組合 | Chat、Sharing、Account、Operations、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 
-`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除。OpenAPI tag 一律＝模組名，由 `FeatureModules` 掛載模組時加上，端點不自己寫 tag。
+`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除。OpenAPI tag 一律＝模組名，由組合產生器掛載模組時加上，端點不自己寫 tag。
 
 整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Files、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
 

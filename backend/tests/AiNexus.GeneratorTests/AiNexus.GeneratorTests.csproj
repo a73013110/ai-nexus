@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 以小段原始碼直接執行產生器：驗證產出、診斷與 incremental 快取。不建 host，毫秒級完成。 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/AiNexus.Generators/AiNexus.Generators.csproj" />
+    <!-- 範例原始碼要引用的契約（IFeatureModule、RouteGroupBuilder、FluentValidation）隨它進入執行期的組件清單。 -->
+    <ProjectReference Include="../../src/AiNexus.Platform/AiNexus.Platform.csproj" />
+  </ItemGroup>
+</Project>

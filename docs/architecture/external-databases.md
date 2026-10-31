@@ -32,12 +32,11 @@
    }
    ```
 
-2. `FeatureModules.AddFeatures` 加 `Add<ErpModule>(builder)`。
-3. `appsettings.json` 的 `Databases` 加 `Erp` 一項（伺服器、名稱、逾時、`ReadOnly`），帳密放秘密檔；欄位見 [設定與秘密](../development/configuration.md)。
-4. 使用端注入 `ExternalDatabase<ErpDatabase>`，SQL 寫在使用端。
-5. 在該系統建專用帳號，只給用到的物件權限；清單寫在該功能的文件（GD 見 [出勤與公文系統 GD](../features/attendance-gd.md#連線與帳號權限)）。
+2. `appsettings.json` 的 `Databases` 加 `Erp` 一項（伺服器、名稱、逾時、`ReadOnly`），帳密放秘密檔；欄位見 [設定與秘密](../development/configuration.md)。
+3. 使用端注入 `ExternalDatabase<ErpDatabase>`，SQL 寫在使用端。
+4. 在該系統建專用帳號，只給用到的物件權限；清單寫在該功能的文件（GD 見 [出勤與公文系統 GD](../features/attendance-gd.md#連線與帳號權限)）。
 
-不必寫：設定區段、Options 類別、監控來源、日誌事件、連線字串。
+不必寫：模組清單（由[組合產生器](source-generators.md)列出）、設定區段、Options 類別、監控來源、日誌事件、連線字串。
 
 ## 存取規則
 

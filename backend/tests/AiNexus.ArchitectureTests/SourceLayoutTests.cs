@@ -9,9 +9,10 @@ namespace AiNexus.ArchitectureTests;
 public sealed class SourceLayoutTests
 {
     public static TheoryData<string> Projects =>
-        ["AiNexus.Host", "AiNexus.Features", "AiNexus.Data", "AiNexus.Platform", "AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests"];
+        ["AiNexus.Host", "AiNexus.Features", "AiNexus.Data", "AiNexus.Platform", "AiNexus.Generators",
+            "AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests", "AiNexus.GeneratorTests"];
 
-    public static TheoryData<string> TestProjects => ["AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests"];
+    public static TheoryData<string> TestProjects => ["AiNexus.UnitTests", "AiNexus.IntegrationTests", "AiNexus.ArchitectureTests", "AiNexus.GeneratorTests"];
 
     public static TheoryData<string> ModuleTestProjects => ["AiNexus.UnitTests", "AiNexus.IntegrationTests"];
 

@@ -4,9 +4,11 @@
     <Project Path="src/AiNexus.Features/AiNexus.Features.csproj" />
     <Project Path="src/AiNexus.Data/AiNexus.Data.csproj" />
     <Project Path="src/AiNexus.Platform/AiNexus.Platform.csproj" />
+    <Project Path="src/AiNexus.Generators/AiNexus.Generators.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AiNexus.ArchitectureTests/AiNexus.ArchitectureTests.csproj" />
+    <Project Path="tests/AiNexus.GeneratorTests/AiNexus.GeneratorTests.csproj" />
     <Project Path="tests/AiNexus.IntegrationTests/AiNexus.IntegrationTests.csproj" />
     <Project Path="tests/AiNexus.UnitTests/AiNexus.UnitTests.csproj" />
   </Folder>

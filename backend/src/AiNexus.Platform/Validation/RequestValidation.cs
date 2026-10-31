@@ -8,7 +8,7 @@ namespace AiNexus.Platform.Validation;
 
 /// <summary>
 /// 請求驗證器基底類別。可覆寫 <see cref="ProblemCode"/> 以保留特定功能模組既有的公開錯誤代碼。
-/// 驗證器是 singleton（<see cref="RequestValidation.AddRequestValidators"/>），只看 request 本身：建構子只注入 singleton（options、<see cref="TimeProvider"/>），
+/// 驗證器由組合產生器註冊為 singleton（<see cref="Modules.FeatureCompositionAttribute"/>），只看 request 本身：建構子只注入 singleton（options、<see cref="TimeProvider"/>），
 /// 依賴目前使用者、身分或資料庫的規則放 handler。
 /// </summary>
 public abstract class RequestValidator<T> : AbstractValidator<T>
@@ -25,10 +25,6 @@ public static class RequestValidation
     public const string DefaultCode = "validation_failed";
 
     private static readonly MethodInfo ValidateDefinition = typeof(RequestValidation).GetMethod(nameof(Validate), BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    /// <summary>註冊組件內的驗證器。一律 singleton：規則只建一次，過濾器才能在建置端點時解析驗證器。</summary>
-    public static IServiceCollection AddRequestValidators(this IServiceCollection services, Assembly assembly)
-        => services.AddValidatorsFromAssembly(assembly, ServiceLifetime.Singleton, includeInternalTypes: true);
 
     public static RouteGroupBuilder WithRequestValidation(this RouteGroupBuilder group) => group.AddEndpointFilterFactory(Create);
 

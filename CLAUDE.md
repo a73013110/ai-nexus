@@ -18,6 +18,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 匯出 CSV、Excel、Word、PDF | `docs/architecture/exports.md` |
 | 郵件寄送、outbox | `docs/architecture/mail-outbox.md`（設定、重試、保存見 `docs/features/mail.md`） |
 | 後端測試、`AppFactory` | `docs/development/testing.md` |
+| 模組註冊、source generator | `docs/architecture/source-generators.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
 | 資料表、EF 對應、結構變更 | `docs/architecture/database.md` |

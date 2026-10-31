@@ -35,7 +35,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 }
 ```
 
-- 每個 use case 都是 `internal sealed class`：靜態 `Map*(RouteGroupBuilder)` 宣告端點，實例 `HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。`EndpointHandlers` 依這個形狀自動註冊為 scoped，模組的 `AddServices` 只註冊共用服務（`SliceTests` 檢查形狀）。同一資源有多個端點時用多個 `Map*` 與具名方法（如 `BrowseRepositories`）。
+- 每個 use case 都是 `internal sealed class`：靜態 `Map*(RouteGroupBuilder)` 宣告端點，實例 `HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。[產生器](source-generators.md)依形狀註冊為 scoped，模組的 `AddServices` 只註冊共用服務（`SliceTests` 檢查形狀）。同一資源有多個端點時用多個 `Map*` 與具名方法（如 `BrowseRepositories`）。
 - lambda 回傳 `TypedResults`：`Result` 用 `ToHttpResultAsync()`（成功 200／204，失敗 problem）；成功不是 200 時傳 mapper，如 `ToHttpResultAsync(x => TypedResults.Accepted(...))`。回應型別由回傳型別進入 OpenAPI，不寫 `.Produces<T>()`；只有 SSE（`text/event-stream`）與自行寫入回應的下載例外。
 - lambda 直接回傳 `ToHttpResultAsync()` 時不要加 `async`，否則回傳型別變成 `Task<Task<…>>`，OpenAPI 產生錯誤的 schema。
 - SSE 端點用 `ToStreamResultAsync(http)`：串流開始前的失敗回 problem，開始後改寫一個 `error` 事件。
