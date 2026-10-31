@@ -22,7 +22,9 @@ public sealed class TestIdentityHandler(IOptionsMonitor<AuthenticationSchemeOpti
     {
         var user = Request.Headers["X-Test-User"].ToString();
         if (user.Length == 0) return Task.FromResult(AuthenticateResult.NoResult());
-        var claims = new[] { new Claim(ClaimTypes.Name, $"TEST\\{user}"), new Claim(ClaimTypes.PrimarySid, $"S-1-5-21-test-{user}"), new Claim("display_name", user) };
+        List<Claim> claims = [new(ClaimTypes.Name, $"TEST\\{user}"), new(ClaimTypes.PrimarySid, $"S-1-5-21-test-{user}")];
+        // 預設像 LDAP 登入一樣帶目錄姓名；X-Test-Profile: none 模擬真正的 Windows 整合驗證，姓名與信箱要另查目錄。
+        if (Request.Headers["X-Test-Profile"] != "none") claims.Add(new("display_name", user));
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")), "Test")));
     }
     protected override Task HandleChallengeAsync(AuthenticationProperties properties) { Response.StatusCode = (int)HttpStatusCode.Unauthorized; return Task.CompletedTask; }

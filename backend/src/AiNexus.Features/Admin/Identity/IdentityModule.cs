@@ -70,8 +70,10 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSingleton<IdentityWriteLock>();
         services.AddSingleton<LoginThrottle>();
         services.AddSingleton<DirectoryProfileCache>();
+        services.AddSingleton<IDirectoryProfileLookup, WindowsDirectoryProfiles>();
         services.AddScoped<DirectoryAccounts>();
         services.AddScoped<DirectoryProvisioning>();
+        services.AddScoped<DirectorySignIn>();
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());

@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Security;
 using AiNexus.Features.Admin.Identity.Sessions;
 
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
@@ -31,7 +31,7 @@ public sealed class RuntimeTrafficMiddleware(RequestDelegate next)
             http.Request.Body = originalRequest; http.Response.Body = originalResponse;
             var route = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "/api/v1/{unmatched}";
             var principal = http.User;
-            Guid? user = http.RequestServices.GetService<CurrentUser>()?.ResolvedId ??
+            Guid? user = http.RequestServices.GetService<IRequestUser>()?.ResolvedId ??
                 (principal.Identity?.IsAuthenticated == true && Guid.TryParse(principal.FindFirst(SessionIdentity.UserId)?.Value, out var id) ? id : null);
             Guid? session = Guid.TryParse(http.Request.Headers["X-Browser-Session"], out var sid) ? sid : null;
             traffic.RequestFinished(user, session, http.Request.Method, route, http.Response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds,

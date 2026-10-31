@@ -48,6 +48,7 @@
 | 6201 | `gd.file_unavailable` | `Platform/Gd/GdFileSource.cs` |
 | 7001 | `identity.directory_rename_skipped` | `Identity/Users/DirectoryAccounts.cs` |
 | 7002 | `identity.directory_provisioned` | `Identity/Provisioning/DirectoryProvisioning.cs` |
+| 7003 | `identity.directory_profile_unavailable` | `Identity/Users/WindowsDirectoryProfiles.cs` |
 
 `service.startup.failed` 不經 logger，由 `DiagnosticStartup` 直接寫入 journal。
 

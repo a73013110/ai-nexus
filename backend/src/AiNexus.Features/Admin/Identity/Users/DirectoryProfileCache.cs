@@ -12,11 +12,12 @@ public sealed class DirectoryProfileCache(TimeProvider clock)
     private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
     private readonly ConcurrentDictionary<string, (DirectoryProfile Profile, DateTimeOffset At)> profiles = new(StringComparer.Ordinal);
 
-    public DirectoryProfile GetOrAdd(string sid, Func<DirectoryProfile> resolve)
+    /// <summary><paramref name="resolve"/> 回 null（目錄查不到或暫時連不上）時不快取，下次再查，避免把「不知道」當成目錄的值留一小時。</summary>
+    public DirectoryProfile? GetOrAdd(string sid, Func<DirectoryProfile?> resolve)
     {
         var now = clock.GetUtcNow();
         if (profiles.TryGetValue(sid, out var cached) && now - cached.At < Lifetime) return cached.Profile;
-        var profile = resolve();
+        if (resolve() is not { } profile) return null;
         // 超過容量時先清掉過期項目，仍然滿就整個清空：寧可多查幾次目錄，也不讓快取無上限膨脹。
         if (profiles.Count >= Capacity)
         {

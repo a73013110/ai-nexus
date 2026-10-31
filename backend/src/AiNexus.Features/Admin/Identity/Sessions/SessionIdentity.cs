@@ -34,8 +34,16 @@ public static class SessionIdentity
     public static readonly string TestEndAction = IdentityAudit.TestIdentityEnded.Name;
     private const string Validated = "Identity.ValidatedUser";
 
-    /// <summary>此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。</summary>
-    internal static User? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is User user && user.Id == id ? user : null;
+    /// <summary>
+    /// 取走此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。
+    /// 只能取一次：同一請求之後再解析（例如長串流在新 scope 重驗）必須重查資料庫，否則看不到期間的停用或安全版本變更。
+    /// </summary>
+    internal static User? TakeValidatedUser(HttpContext http, Guid id)
+    {
+        if (http.Items[Validated] is not User user) return null;
+        http.Items.Remove(Validated);
+        return user.Id == id ? user : null;
+    }
 
     /// <summary>principal 是否為測試身分（帶有來源管理者）。</summary>
     public static bool IsTest(ClaimsPrincipal? principal) => principal?.HasClaim(x => x.Type == ActorId) == true;
@@ -64,6 +72,13 @@ public static class SessionIdentity
         _ => false
     });
     public static bool MatchesVersion(User user, string? version) => int.TryParse(version, out var value) && value == user.SecurityVersion;
+
+    /// <summary>
+    /// session 對這位使用者是否仍有效：在職且安全版本相符；一般登入另要求當初的登入方式仍啟用，測試身分的登入方式屬於來源管理者，不檢查目標。
+    /// cookie 驗證與 <see cref="CurrentUser"/> 共用同一判斷。
+    /// </summary>
+    public static bool Accepts(User user, ClaimsPrincipal principal) => MatchesVersion(user, principal.FindFirstValue(Version))
+        && (IsTest(principal) ? ActiveUsers.IsActive(user) : Allows(user, principal.FindFirstValue(Method)));
 
     /// <summary>來源管理者是否仍可回到自己的身分：登入方式、安全版本與管理權都要仍有效。cookie 驗證與返回端點共用同一判斷。</summary>
     internal static async Task<bool> ActorStillValidAsync(User? actor, ClaimsPrincipal principal, AccessService access, CancellationToken ct)
@@ -108,7 +123,7 @@ public static class SessionIdentity
             }
             var ended = await TestEndedAsync(db, testId, ct);
             var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
-            if (ended || expired || user is null || !ActiveUsers.IsActive(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
+            if (ended || expired || user is null || !Accepts(user, principal))
             {
                 // 只切回仍有權限的原管理者，且絕不延長測試身分的有效期。
                 context.ReplacePrincipal(Principal(actor!, principal.FindFirstValue(ActorMethod)!)); context.ShouldRenew = true;
@@ -124,7 +139,7 @@ public static class SessionIdentity
             http.Items[Validated] = user;
             return;
         }
-        if (user is null || !Allows(user, principal.FindFirstValue(Method)) || !MatchesVersion(user, principal.FindFirstValue(Version)))
+        if (user is null || !Accepts(user, principal))
         {
             await RejectAsync(context);
             return;

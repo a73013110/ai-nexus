@@ -14,6 +14,7 @@
 | `admin` | 管理員在使用者詳情設定（[管理員設定信箱](#管理員設定信箱)）；本人驗證前視為未驗證 | 是 |
 
 - 目錄只覆寫「沒有信箱」或「來源是 `directory`」的值；`ProfileManaged=1`（管理員維護個人資料）的使用者姓名與信箱都不被目錄覆寫。
+- Windows 整合驗證不帶姓名與信箱，至多每 5 分鐘另查一次 AD；查不到（網域控制站連不上等）時不覆寫，記 `identity.directory_profile_unavailable` 警告。
 - 每次 AD 驗證成功（LDAP 登入、Windows 驗證的請求，至多每 5 分鐘寫一次）更新 `DirectoryVerifiedAt`，供本地密碼新鮮度規則使用；管理員匯入或從 AD 更新不算驗證，不寫入。
 
 ## 管理員設定信箱

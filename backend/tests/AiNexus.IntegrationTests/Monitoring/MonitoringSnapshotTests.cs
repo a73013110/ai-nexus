@@ -6,9 +6,11 @@ using AiNexus.Features.Admin.Monitoring;
 using AiNexus.Features.Admin.Monitoring.Presence;
 using AiNexus.Features.Admin.Monitoring.Snapshots;
 using AiNexus.Platform.Monitoring;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using static AiNexus.IntegrationTests.Support.IdentityApi;
 
 namespace AiNexus.IntegrationTests.Monitoring;
 
@@ -111,24 +113,43 @@ public sealed class MonitoringSnapshotTests
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         await using var factory = new AppFactory(administrators: ["alice"], clock: clock);
-        using var alice = await factory.SignedInAsync(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var alice = await factory.SignedInAsync();
+        Assert.True(await StreamEndsAfterAsync(factory, alice, clock, db =>
+        {
+            db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators"));
+            return db.SaveChangesAsync();
+        }));
+    }
+
+    [Fact]
+    public async Task RevokedSessionTerminatesExistingStream()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new AppFactory(ldap: true, administrators: ["alice"], clock: clock);
+        using var alice = factory.CreateClient();
+        var me = await Login(alice, "alice");
+        // 改密碼、強制登出會遞增安全版本；權限沒變，所以只有重查使用者列才看得到。cookie 驗證在請求開始時讀到的那一列不能沿用到重驗。
+        Assert.True(await StreamEndsAfterAsync(factory, alice, clock,
+            db => db.Users.Where(x => x.Id == me.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.SecurityVersion, x => x.SecurityVersion + 1))));
+    }
+
+    private static async Task<bool> StreamEndsAfterAsync(AppFactory factory, HttpClient client, FakeTimeProvider clock, Func<AppDbContext, Task> revoke)
+    {
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         cancel.CancelAfter(TimeSpan.FromSeconds(10));
-        using var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
+        using var response = await client.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
         response.EnsureSuccessStatusCode();
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancel.Token));
         Assert.Equal("event: snapshot", await reader.ReadLineAsync(cancel.Token));
-        using (var scope = factory.Services.CreateScope()) {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators")); await db.SaveChangesAsync(cancel.Token);
-        }
-        // 串流期間每 15 秒重新檢查一次授權。
+        using (var scope = factory.Services.CreateScope()) await revoke(scope.ServiceProvider.GetRequiredService<AppDbContext>());
+        // 串流期間每 15 秒重新檢查一次帳號與授權。
         clock.Advance(TimeSpan.FromSeconds(15));
-        var ended = false;
-        while (!cancel.IsCancellationRequested) {
+        while (!cancel.IsCancellationRequested)
+        {
             var line = await reader.ReadLineAsync(cancel.Token);
-            if (line is null) break;
-            if (line == "event: error") { ended = true; break; }
+            if (line is null) return false;
+            if (line == "event: error") return true;
         }
-        Assert.True(ended);
+        return false;
     }
 }

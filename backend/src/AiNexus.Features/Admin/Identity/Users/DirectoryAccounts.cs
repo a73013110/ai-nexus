@@ -57,9 +57,9 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     /// <summary>
     /// 目錄資料會改動哪些欄位（不寫入）；<see cref="Apply"/> 依同一份結果寫入，所以預覽與實際更新一致。
     /// 規則：AD 帳號名改了（含只改大小寫）就更新 AdAccount（新名稱已被他人使用時保留舊值並記警告）；
-    /// 管理者維護個人資料（ProfileManaged）時不動姓名與信箱；信箱只覆寫空的或來源是目錄的值。
+    /// 管理者維護個人資料（ProfileManaged）或目錄資料未知（<paramref name="profile"/> 為 null）時不動姓名與信箱；信箱只覆寫空的或來源是目錄的值。
     /// </summary>
-    public async Task<IReadOnlyList<DirectoryChange>> ChangesAsync(User user, string account, DirectoryProfile profile, CancellationToken ct)
+    public async Task<IReadOnlyList<DirectoryChange>> ChangesAsync(User user, string account, DirectoryProfile? profile, CancellationToken ct)
     {
         var renamed = RenamedAdAccount(user, account);
         var taken = renamed is not null && await db.Users.AnyAsync(x => x.Id != user.Id && x.AdAccount == renamed, ct);
@@ -77,13 +77,13 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     /// <summary>
     /// <see cref="ChangesAsync"/> 的純計算版本：<paramref name="renameTaken"/> 由呼叫端查好（列表一次批次查，不逐人查詢）。
     /// </summary>
-    public static IReadOnlyList<DirectoryChange> Changes(User user, string account, DirectoryProfile profile, bool renameTaken)
+    public static IReadOnlyList<DirectoryChange> Changes(User user, string account, DirectoryProfile? profile, bool renameTaken)
     {
         var changes = new List<DirectoryChange>();
         // 新名稱已被另一位使用者佔用（通常是已離職、名稱被 AD 重新配發的舊帳號）：AdAccount 維持原值，
         // 否則兩位使用者會指向同一個 AD 帳號，之後管理端編輯也會被 ad_binding_immutable 擋下。
         if (RenamedAdAccount(user, account) is { } renamed && !renameTaken) changes.Add(new("adAccount", user.AdAccount, renamed));
-        if (user.ProfileManaged) return changes;
+        if (user.ProfileManaged || profile is null) return changes;
         if (user.DisplayName != profile.DisplayName) changes.Add(new("displayName", user.DisplayName, profile.DisplayName));
         var email = DirectoryEmail(profile.Email);
         if (OwnsEmail(user) && user.Email != email) changes.Add(new("email", user.Email, email));
@@ -109,7 +109,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         }
     }
 
-    /// <summary>登入的快速路徑用：姓名或信箱與目錄是否不同（不查資料庫，所以不含 AdAccount 改名，改名由 5 分鐘一次的完整同步處理）。</summary>
+    /// <summary>登入的快速路徑用：姓名或信箱與目錄是否不同（不查資料庫，所以不含 AdAccount 改名，改名由定期的完整同步處理）。</summary>
     public static bool Differs(User user, DirectoryProfile profile)
         => (!user.ProfileManaged && (user.DisplayName != profile.DisplayName || (OwnsEmail(user) && user.Email != DirectoryEmail(profile.Email))));
 
