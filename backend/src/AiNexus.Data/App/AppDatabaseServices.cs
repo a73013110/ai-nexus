@@ -3,17 +3,19 @@ using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Health;
-using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Data.App;
 
-/// <summary>主資料庫的服務註冊：<see cref="AppDbContext"/>、稽核、SQL 存取、健康檢查與結構檢查。</summary>
-public sealed class AppDatabaseModule : IFeatureModule
+/// <summary>
+/// 主資料庫的服務註冊：<see cref="AppDbContext"/>、稽核、SQL 存取、健康檢查與結構檢查。
+/// 這是功能模組共同依賴的基礎設施，不是功能模組，所以不實作 <c>IFeatureModule</c>，由 <c>AddFeatures</c> 先行註冊。
+/// </summary>
+public static class AppDatabaseServices
 {
-    public static void AddServices(IHostApplicationBuilder builder)
+    public static IHostApplicationBuilder AddAppDatabase(this IHostApplicationBuilder builder)
     {
         var services = builder.Services;
         services.AddDomainEvents();
@@ -36,5 +38,6 @@ public sealed class AppDatabaseModule : IFeatureModule
 
         services.AddHealthChecks()
             .AddCheck<DatabaseHealthCheck>("database", tags: [HealthEndpoints.ReadyTag]);
+        return builder;
     }
 }

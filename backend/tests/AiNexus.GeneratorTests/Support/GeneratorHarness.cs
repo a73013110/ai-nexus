@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace AiNexus.GeneratorTests.Support;
 
@@ -27,4 +28,8 @@ internal static class GeneratorHarness
         var errors = output.GetDiagnostics().Where(x => x.Severity == DiagnosticSeverity.Error).ToList();
         return new(result.Diagnostics, string.Concat(result.GeneratedTrees.Select(tree => tree.ToString())), errors);
     }
+
+    /// <summary>以 analyzer 分析範例原始碼，回傳它回報的診斷（含編譯結束時才回報的）。</summary>
+    public static async Task<IReadOnlyList<Diagnostic>> AnalyzeAsync(DiagnosticAnalyzer analyzer, params string[] sources)
+        => await Compile(sources).WithAnalyzers([analyzer]).GetAnalyzerDiagnosticsAsync(TestContext.Current.CancellationToken);
 }

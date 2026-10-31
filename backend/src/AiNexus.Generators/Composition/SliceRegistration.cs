@@ -21,13 +21,21 @@ internal sealed record SliceRegistration
 
     public static SliceRegistration? From(IMethodSymbol method)
     {
-        if (!method.IsStatic || method.IsGenericMethod || method.Parameters.Length == 0
-            || !Symbols.Is(method.Parameters[0].Type, "Microsoft.AspNetCore.Routing", "RouteGroupBuilder")) return null;
+        if (!IsMapMethod(method)) return null;
         var type = method.ContainingType;
-        // 模組的 MapEndpoints 形狀相同，但模組是組合點、不是切片。
-        if (!Symbols.IsConcreteClass(type) || Symbols.Interfaces(type, ModuleRegistration.Namespace, ModuleRegistration.Contract).Any()) return null;
         var problem = Symbols.IsVisibleToAssembly(type) ? null
             : new DiagnosticInfo(CompositionDiagnostics.InvisibleType, LocationInfo.From(type), type.ToDisplayString(), "端點切片");
         return new(Symbols.FullName(type), problem);
     }
+
+    /// <summary>
+    /// 方法是不是切片的掛載方法。產生器據此註冊切片，<see cref="UnmappedSliceAnalyzer"/> 據此檢查每個掛載方法都有人呼叫，兩者必須是同一條規則。
+    /// </summary>
+    public static bool IsMapMethod(IMethodSymbol method)
+        => method is { MethodKind: MethodKind.Ordinary, IsStatic: true, IsGenericMethod: false, Parameters.Length: > 0 }
+            && method.Name.StartsWith("Map", StringComparison.Ordinal)
+            && Symbols.Is(method.Parameters[0].Type, "Microsoft.AspNetCore.Routing", "RouteGroupBuilder")
+            && Symbols.IsConcreteClass(method.ContainingType)
+            // 模組的 MapEndpoints 形狀相同，但模組是組合點、不是切片。
+            && !Symbols.Interfaces(method.ContainingType, ModuleRegistration.Namespace, ModuleRegistration.Contract).Any();
 }

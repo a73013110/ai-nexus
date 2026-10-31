@@ -21,7 +21,6 @@ public sealed class ArtifactsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDashboardSource<ArtifactsDashboard>();
-        services.AddScoped<CreateArtifact>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
         services.AddFeaturePolicy(FeatureCatalog.Artifacts);
         services.AddFeaturePolicy(Policies.Text, FeatureCatalog.Chat, FeatureCatalog.Artifacts);

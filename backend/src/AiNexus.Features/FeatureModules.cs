@@ -13,11 +13,10 @@ namespace AiNexus.Features;
 [FeatureComposition]
 public static partial class FeatureModules
 {
-    /// <summary>註冊所有業務功能模組的服務。</summary>
+    /// <summary>註冊所有業務功能模組的服務，以及它們共同依賴的主資料庫。</summary>
     public static IHostApplicationBuilder AddFeatures(this IHostApplicationBuilder builder)
     {
-        // 主資料庫模組在 Data 專案，不在產生器看得到的組件內，所以在這裡明確註冊。
-        AppDatabaseModule.AddServices(builder);
+        builder.AddAppDatabase();
         AddModules(builder);
         AddEndpointHandlers(builder.Services);
         AddRequestValidators(builder.Services);
