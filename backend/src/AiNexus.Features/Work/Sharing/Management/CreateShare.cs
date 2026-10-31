@@ -33,15 +33,13 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 {
     public override string ProblemCode => SharingErrors.InvalidCode;
 
-    // /api/v1 群組在驗證前就已解析目前使用者。
-    public CreateShareRequestValidator(ICurrentUser user)
+    public CreateShareRequestValidator()
     {
         RuleFor(x => x.Kind).Must(x => x is ShareAccess.ConversationKind or Artifact.Kind).WithErrorCode("unknown");
         RuleFor(x => x.Hours).InclusiveBetween(1, ShareLink.MaxHours);
         RuleFor(x => x.RecipientIds).Cascade(CascadeMode.Stop).NotNull()
             .Must(x => x.Count is >= 1 and <= ShareLink.MaxRecipients).WithErrorCode("count")
-            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode("duplicate")
-            .Must(x => !x.Contains(user.Id)).WithErrorCode("self");
+            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode("duplicate");
     }
 }
 
@@ -57,7 +55,8 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
 
     public async Task<Result<ShareDto>> HandleAsync(Guid actor, CreateShareRequest request, CancellationToken ct)
     {
-        // 收件者只能是啟用中的人；已發出的分享不因收件者停用而撤銷（ADR 0019）。
+        // 收件者只能是其他啟用中的人；已發出的分享不因收件者停用而撤銷（ADR 0019）。
+        if (request.RecipientIds.Contains(actor)) return SharingErrors.Invalid;
         var recipientCount = await activeUsers.Ids.CountAsync(x => request.RecipientIds.Contains(x), ct);
         if (recipientCount != request.RecipientIds.Count) return SharingErrors.RecipientUnknown;
 

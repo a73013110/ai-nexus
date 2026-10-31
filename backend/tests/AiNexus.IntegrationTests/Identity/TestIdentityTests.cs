@@ -45,10 +45,13 @@ public sealed class TestIdentityTests
     {
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var actor = await Login(admin, "alice");
-        var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"])); await Begin(admin, id);
+        var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"]));
+        await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(id, "短")), HttpStatusCode.BadRequest, "test_reason_required");
+        await Begin(admin, id);
         // 管理 API 與業務 API 一樣依目標的權限執行；稽核以 ActorId 留下實際操作的管理者。
         (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("測試身分改名", true))).EnsureSuccessStatusCode();
-        await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "巢狀切換")), HttpStatusCode.Conflict, "test_identity_nested");
+        // 已在測試身分時先以專屬代碼拒絕巢狀切換，不檢查測試目的。
+        await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "")), HttpStatusCode.Conflict, "test_identity_nested");
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var entry = await db.AuditEvents.SingleAsync(x => x.Action == "access-control.feature.updated" && x.Result == "completed");

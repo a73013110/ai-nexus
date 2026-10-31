@@ -31,7 +31,6 @@ using AiNexus.Features.Work.Sharing;
 using AiNexus.Features.Platform.WebSearch;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
-using FluentValidation;
 
 namespace AiNexus.Features;
 
@@ -79,7 +78,7 @@ public static class FeatureModules
         Add<AttendanceModule>(builder);
 
         builder.Services.AddEndpointHandlers(typeof(FeatureModules).Assembly);
-        builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
+        builder.Services.AddRequestValidators(typeof(FeatureModules).Assembly);
         return builder;
     }
 

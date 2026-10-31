@@ -4,7 +4,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
-using FluentValidation;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -14,22 +13,8 @@ using AiNexus.Features.Admin.Identity.Users;
 
 namespace AiNexus.Features.Admin.Identity.Sessions;
 
+[ValidatedInHandler("已在測試身分時要先以 test_identity_nested 拒絕，測試目的的長度才有意義")]
 public sealed record TestIdentityRequest(Guid UserId, string Reason);
-
-/// <summary>
-/// 測試用途（reason）的長度規則。若目前已是測試身分，handler 會先以專屬代碼拒絕，所以這條規則只在非測試身分時生效。
-/// </summary>
-internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdentityRequest>
-{
-    public override string ProblemCode => IdentityErrors.TestReasonRequired.Code;
-
-    public TestIdentityRequestValidator(IHttpContextAccessor accessor)
-    {
-        When(_ => !SessionIdentity.IsTest(accessor.HttpContext?.User), () =>
-            RuleFor(x => x.Reason).Must(x => !string.IsNullOrWhiteSpace(x) && x.Trim().Length is >= StartTestIdentity.MinReasonLength and <= StartTestIdentity.MaxReasonLength)
-                .WithErrorCode("length"));
-    }
-}
 
 /// <summary>
 /// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
@@ -47,6 +32,8 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, TestIdentityRequest body, CancellationToken ct)
     {
         if (SessionIdentity.IsTest(http.User)) return IdentityErrors.TestIdentityNested;
+        // JSON 可能送 null；只有空白的理由修剪後長度為 0，同樣拒絕。
+        if (body.Reason?.Trim() is not { Length: >= MinReasonLength and <= MaxReasonLength } reason) return IdentityErrors.TestReasonRequired;
         var resolved = await current.GetAsync(ct);
         if (!resolved.IsSuccess) return resolved.Error;
         var actor = resolved.Value;
@@ -58,7 +45,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
         var expiry = now.Add(Lifetime);
         var testId = Guid.NewGuid();
         var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? options.Value.DirectoryMethod;
-        audit.Describe(testId, target.Id, new { testId, administratorId = actor.Id, userId = target.Id, reason = body.Reason.Trim(), expiresAt = expiry });
+        audit.Describe(testId, target.Id, new { testId, administratorId = actor.Id, userId = target.Id, reason, expiresAt = expiry });
         await db.SaveChangesAsync(ct);
         var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
         var properties = new AuthenticationProperties { IsPersistent = false, AllowRefresh = false, ExpiresUtc = previous.Properties?.ExpiresUtc ?? now.AddHours(8) };

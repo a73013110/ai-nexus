@@ -5,6 +5,7 @@ namespace AiNexus.Features.Work.Sharing;
 internal static class SharingErrors
 {
     public const string InvalidCode = "share_invalid";
+    public static readonly Error Invalid = Error.Invalid(InvalidCode);
     public static readonly Error RecipientUnknown = Error.Invalid("share_recipient_unknown");
     public static readonly Error LimitReached = Error.Conflict("share_limit");
     public static readonly Error GenerationActive = Error.Conflict("share_generation_active");

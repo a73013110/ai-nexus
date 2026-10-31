@@ -32,6 +32,16 @@ public sealed class CreateShareTests
         await AssertCodeAsync(await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user])), HttpStatusCode.BadRequest, "share_recipient_unknown");
     }
 
+    // 「自己」是發出這次請求的人：分享給自己被拒，另一位使用者分享給同一人仍成功。
+    [Fact]
+    public async Task SelfRecipientIsTheCurrentRequestUser()
+    {
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        var ownerId = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        await AssertCodeAsync(await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(owner)).Id, [ownerId])), HttpStatusCode.BadRequest, "share_invalid");
+        (await reader.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(reader)).Id, [ownerId]))).EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task AttachmentGrantIsExplicitBranchBoundAndRemovedOnRevoke()
     {

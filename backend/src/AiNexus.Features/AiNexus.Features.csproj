@@ -15,7 +15,6 @@
     <EmbeddedResource Include="Admin/Identity/SelfService/common-passwords.txt" LogicalName="AiNexus.Features.Admin.Identity.SelfService.common-passwords.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="PdfPig" />

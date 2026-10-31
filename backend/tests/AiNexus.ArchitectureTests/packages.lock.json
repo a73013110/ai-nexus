@@ -597,17 +597,16 @@
       "ainexus.data": {
         "type": "Project",
         "dependencies": {
-          "AiNexus.Platform": "[1.0.0, )",
+          "AiNexus.Platform": "[0.0.0-dev, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )"
         }
       },
       "ainexus.features": {
         "type": "Project",
         "dependencies": {
-          "AiNexus.Data": "[1.0.0, )",
-          "AiNexus.Platform": "[1.0.0, )",
+          "AiNexus.Data": "[0.0.0-dev, )",
+          "AiNexus.Platform": "[0.0.0-dev, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
-          "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Konscious.Security.Cryptography.Argon2": "[1.3.1, )",
           "MailKit": "[4.18.1, )",
           "Microsoft.AspNetCore.Authentication.Negotiate": "[10.0.13, )",
@@ -620,9 +619,9 @@
       "ainexus.host": {
         "type": "Project",
         "dependencies": {
-          "AiNexus.Data": "[1.0.0, )",
-          "AiNexus.Features": "[1.0.0, )",
-          "AiNexus.Platform": "[1.0.0, )",
+          "AiNexus.Data": "[0.0.0-dev, )",
+          "AiNexus.Features": "[0.0.0-dev, )",
+          "AiNexus.Platform": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.13, )"
         }
       },
@@ -631,7 +630,7 @@
         "dependencies": {
           "Dapper": "[2.1.89, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
-          "FluentValidation": "[12.1.1, )",
+          "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Markdig": "[1.4.0, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.19.1, )",

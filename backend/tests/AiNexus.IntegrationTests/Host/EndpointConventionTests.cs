@@ -2,6 +2,8 @@ using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,5 +64,25 @@ public sealed class EndpointConventionTests
         var both = bodies.Where(t => validated[t] && reasons[t] is not null).Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
         Assert.True(missing.Count == 0, "Request bodies need a RequestValidator<T> or [ValidatedInHandler(reason)]:\n" + string.Join('\n', missing));
         Assert.True(both.Count == 0, "Request bodies with a validator must not also be marked [ValidatedInHandler]:\n" + string.Join('\n', both));
+    }
+
+    // 驗證過濾器在建置端點時從根容器解析驗證器、跨請求共用：不是 singleton 的註冊，或注入 scoped 服務（DbContext、ICurrentUser），
+    // 都會讓所有請求共用第一次解析的實例。lifetime 逐一檢查所有註冊，依賴由範圍檢查在建置容器時攔下。
+    [Fact]
+    public async Task RequestValidatorsAreSingletonsWithoutScopedDependencies()
+    {
+        await using var factory = new AppFactory();
+        List<ServiceDescriptor> validators = [];
+        await using var app = factory.WithWebHostBuilder(builder => builder
+            .UseDefaultServiceProvider(options =>
+            {
+                options.ValidateScopes = true;
+                options.ValidateOnBuild = true;
+            })
+            .ConfigureTestServices(services => validators.AddRange(services.Where(x => typeof(IValidator).IsAssignableFrom(x.ServiceType)))));
+        _ = app.CreateClient();
+        Assert.NotEmpty(validators);
+        var wrong = validators.Where(x => x.Lifetime != ServiceLifetime.Singleton).Select(x => $"{x.ServiceType.FullName} ({x.Lifetime})").Order(StringComparer.Ordinal).ToList();
+        Assert.True(wrong.Count == 0, "Request validators must be registered as singletons (AddRequestValidators):\n" + string.Join('\n', wrong));
     }
 }
