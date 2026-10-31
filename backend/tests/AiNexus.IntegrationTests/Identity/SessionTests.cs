@@ -54,20 +54,18 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public async Task LegacyAdCookiesKeepTheirLoginMethodAndAreRevokedByPolicyChanges()
+    public async Task CookiesWithoutAUserIdAreRejected()
     {
         await using var f = new AppFactory(ldap: true);
         using var modern = f.CreateClient(); var me = await Login(modern, "alice");
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await db.Users.SingleAsync(x => x.Id == me.Id);
+        using var scope = f.Services.CreateScope();
+        var user = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Id == me.Id);
+        // 即使 SID 對得上仍可 AD 登入的使用者，只帶 SID 的 cookie 也不再接受。
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([
             new(System.Security.Claims.ClaimTypes.PrimarySid, user.Sid), new(System.Security.Claims.ClaimTypes.Name, user.AdAccount!)
         ], AuthEndpoints.CookieScheme));
-        using var legacy = CookieClient(f, principal);
-        var session = (await legacy.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!;
-        Assert.True(session.Authenticated); Assert.Equal("ad", session.Method);
-        user.AdEnabled = false; user.SecurityVersion++; await db.SaveChangesAsync();
-        Assert.False((await legacy.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
+        using var client = CookieClient(f, principal);
+        Assert.False((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
     }
 
     [Fact]

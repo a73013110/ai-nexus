@@ -102,12 +102,9 @@ public static class SessionIdentity
         var ct = http.RequestAborted;
         var db = http.RequestServices.GetRequiredService<AppDbContext>();
         var principal = context.Principal!;
+        // cookie 一律由 Principal 簽發、必帶 UserId；沒有的不是本系統目前發出的，直接登出。
         if (!Guid.TryParse(principal.FindFirstValue(UserId), out var id))
         {
-            // 舊版（僅 AD 登入）發出的 cookie 沒有 UserId，改以 SID 對應；只有仍可 AD 登入且安全版本為 0 的使用者才繼續有效。
-            var sid = principal.FindFirstValue(ClaimTypes.PrimarySid);
-            var legacy = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
-            if (legacy is null || (Allows(legacy, "ad") && legacy.SecurityVersion == 0)) return;
             await RejectAsync(context);
             return;
         }
