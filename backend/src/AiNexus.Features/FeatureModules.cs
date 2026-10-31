@@ -29,7 +29,6 @@ using AiNexus.Features.Work.Repositories;
 using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Work.Sharing;
 using AiNexus.Features.Platform.WebSearch;
-using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -94,7 +93,6 @@ public static class FeatureModules
         // 篩選器依此順序執行：解析目前使用者（身分驗證結果）、開始請求稽核，接著執行請求驗證（驗證失敗也留下稽核）。
         // 三者都在建置端點時判斷是否適用，不適用的端點不掛過濾器。
         var api = app.MapGroup("/api/v1")
-            .WithSafeErrors()
             .WithCurrentUser()
             .WithAudit()
             .WithRequestValidation();

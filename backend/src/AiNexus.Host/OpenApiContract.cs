@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
+using AiNexus.Platform.Diagnostics;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.OpenApi;
@@ -62,6 +63,7 @@ internal static class OpenApiContract
         });
 
         options.AddSchemaTransformer<ResponseSchemaRequirements>();
+        options.AddDocumentTransformer<ProblemResponses>();
     });
 
     /// <summary>
@@ -88,6 +90,36 @@ internal static class OpenApiContract
         })]),
         ["scopes"] = new JsonArray([.. DataScopes.Definitions.Select(scope => (JsonNode)new JsonObject { ["id"] = scope.Id, ["name"] = scope.Name })]),
     };
+}
+
+/// <summary>
+/// 錯誤回應轉換器：錯誤回應在 components 只定義一次，每個操作以 <c>default</c> 引用。
+/// 不逐一列出狀態碼：所有失敗都經 <c>Problems</c> 寫成同一個 <see cref="SafeProblemDetails"/>（含 middleware 外層的例外），
+/// 逐一列舉只會與 <c>ErrorKind</c> 的對應各自漂移，還會讓每個操作重複同一段內容。
+/// </summary>
+internal sealed class ProblemResponses : IOpenApiDocumentTransformer
+{
+    private const string Name = "Problem";
+
+    public async Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+    {
+        var schema = await context.GetOrCreateSchemaAsync(typeof(SafeProblemDetails), cancellationToken: cancellationToken);
+        document.AddComponent(nameof(SafeProblemDetails), schema);
+        document.AddComponent<IOpenApiResponse>(Name, new OpenApiResponse
+        {
+            Description = "Problem details",
+            Content = new Dictionary<string, OpenApiMediaType>
+            {
+                ["application/problem+json"] = new() { Schema = new OpenApiSchemaReference(nameof(SafeProblemDetails), document) },
+            },
+        });
+
+        var problem = new OpenApiResponseReference(Name, document);
+        foreach (var operation in document.Paths.Values.SelectMany(path => path.Operations?.Values ?? Enumerable.Empty<OpenApiOperation>()))
+        {
+            (operation.Responses ??= []).TryAdd("default", problem);
+        }
+    }
 }
 
 /// <summary>

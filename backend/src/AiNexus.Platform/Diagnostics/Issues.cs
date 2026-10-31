@@ -69,18 +69,6 @@ public sealed record SafeProblemDetails(
     IReadOnlyDictionary<string, string[]>? Errors = null);
 
 /// <summary>
-/// 路由群組的錯誤回應中繼資料擴充，讓 OpenAPI 文件列出常見錯誤狀態碼對應的 <see cref="SafeProblemDetails"/>。
-/// </summary>
-public static class SafeErrorMetadata
-{
-    // metadata 不可變，所有群組共用同一組實例。
-    private static readonly object[] Metadata = [.. new[] { 400, 401, 403, 404, 405, 409, 413, 415, 429, 500, 502, 503, 504 }
-        .Select(status => new ProducesResponseTypeMetadata(status, typeof(SafeProblemDetails), ["application/problem+json"]))];
-
-    public static RouteGroupBuilder WithSafeErrors(this RouteGroupBuilder group) => group.WithMetadata(Metadata);
-}
-
-/// <summary>
 /// 平台錯誤與查證代碼（IssueCode）的集中管理器。確保同一例外跨層時只記錄一次，
 /// 產生全域唯一、不透明的 NX- 查證代碼，並對應到對外安全的錯誤提示。
 /// </summary>

@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import type { AuthSessionDto, paths } from './schema';
+import type { AuthSessionDto, paths, SafeProblemDetails } from './schema';
 import { BrowserSession } from '../monitoring/browser-session';
 import { ApiError } from '../errors/safe-errors';
 import { WORKSPACE_HOME } from '../layout/workspace-home';
@@ -227,11 +227,8 @@ export class ApiClient {
         if (!this.router.url.startsWith('/login'))
           void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       }
-      const problem = (await response.json().catch(() => ({}))) as {
-        code?: string;
-        title?: string;
-        issueCode?: string;
-      };
+      // 代理或閘道擋下的回應不一定是 problem+json，所以每個欄位都可能不存在。
+      const problem = (await response.json().catch(() => ({}))) as Partial<SafeProblemDetails>;
       throw new ApiError(
         response.status,
         problem.code ?? 'request_failed',
