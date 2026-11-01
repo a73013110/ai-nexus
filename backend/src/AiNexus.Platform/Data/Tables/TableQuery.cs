@@ -16,11 +16,11 @@ public sealed class TableQuery<T>
     private const int MaxValueLength = 200;
 
     private readonly IReadOnlyList<Expression<Func<T, bool>>> filters;
-    private readonly TableColumn<T>? sort;
+    private readonly TableOrder<T>? sort;
     private readonly bool descending;
-    private readonly TableColumn<T> key;
+    private readonly TableOrder<T> key;
 
-    internal TableQuery(IReadOnlyList<Expression<Func<T, bool>>> filters, TableColumn<T>? sort, bool descending, TableColumn<T> key, int offset, int limit) =>
+    internal TableQuery(IReadOnlyList<Expression<Func<T, bool>>> filters, TableOrder<T>? sort, bool descending, TableOrder<T> key, int offset, int limit) =>
         (this.filters, this.sort, this.descending, this.key, Offset, Limit) = (filters, sort, descending, key, offset, limit);
 
     public int Offset { get; }
@@ -34,19 +34,19 @@ public sealed class TableQuery<T>
 
     internal static Result<TableQuery<T>> Parse(TableColumns<T> columns, TableRequest request)
     {
-        var key = columns.KeyColumn ?? throw new InvalidOperationException($"{typeof(T).Name} 的表格欄位沒有指定唯一鍵。");
+        var key = columns.KeyOrder ?? throw new InvalidOperationException($"{typeof(T).Name} 的表格欄位沒有指定唯一鍵。");
         var limit = request.Limit ?? DefaultLimit;
         var offset = request.Offset ?? 0;
         if (offset < 0 || limit < 1 || limit > columns.MaxLimit) return TableQueryExtensions.Invalid;
 
-        var sort = columns.DefaultColumn is { } fallback ? columns.Find(fallback) : null;
+        var sort = columns.DefaultColumn is { } fallback ? columns.Find(fallback)?.Order : null;
         var descending = columns.DefaultDescending;
         if (!string.IsNullOrEmpty(request.Sort))
         {
             var parts = request.Sort.Split(':');
             if (parts.Length > 2 || columns.Find(parts[0]) is not { } column || !column.Use.HasFlag(TableUse.Sort)) return TableQueryExtensions.Invalid;
             if (parts.Length == 2 && parts[1] is not ("asc" or "desc")) return TableQueryExtensions.Invalid;
-            (sort, descending) = (column, parts.Length == 2 && parts[1] == "desc");
+            (sort, descending) = (column.Order, parts.Length == 2 && parts[1] == "desc");
         }
 
         var filters = new List<Expression<Func<T, bool>>>();

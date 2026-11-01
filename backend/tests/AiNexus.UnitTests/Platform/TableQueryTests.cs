@@ -81,4 +81,16 @@ public sealed class TableQueryTests
     [Fact]
     public void ColumnWithoutKeyIsProgrammingError() =>
         Assert.Throws<InvalidOperationException>(() => new TableColumns<Row>().Text("name", x => x.Name).Parse(new TableRequest()));
+
+    // 篩選不了的型別要在宣告時失敗，不能宣告成功後每次篩選都回 invalid_table_query（或建立運算式時拋出例外）。
+    [Fact]
+    public void ColumnsThatCannotBeFilteredFailWhenDeclared()
+    {
+        Assert.Throws<ArgumentException>(() => new TableColumns<Row>().Range("stage", x => x.Stage));
+        Assert.Throws<ArgumentException>(() => new TableColumns<Row>().Range("archived", x => x.Archived));
+        Assert.Throws<ArgumentException>(() => new TableColumns<Row>().Range("name", x => x.Name));
+        Assert.Throws<ArgumentException>(() => new TableColumns<Row>().Options("at", x => x.At.DateTime));
+        // 只排序不篩選時不需要解析篩選值。
+        _ = new TableColumns<Row>().Options("at", x => x.At.DateTime, TableUse.Sort);
+    }
 }

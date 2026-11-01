@@ -28,8 +28,8 @@ public sealed class TableColumns<T>
 {
     private readonly Dictionary<string, TableColumn<T>> columns = new(StringComparer.Ordinal);
 
-    /// <summary>唯一鍵；只用來排序（種類與用途不會被讀取）。</summary>
-    internal TableColumn<T>? KeyColumn { get; private set; }
+    /// <summary>唯一鍵；只用來排序。</summary>
+    internal TableOrder<T>? KeyOrder { get; private set; }
     internal string? DefaultColumn { get; private set; }
     internal bool DefaultDescending { get; private set; }
 
@@ -40,19 +40,19 @@ public sealed class TableColumns<T>
     public int MaxLimit { get; init; } = 200;
 
     public TableColumns<T> Text(string id, Expression<Func<T, string?>> value, TableUse use = TableUse.All) =>
-        Add(id, new TableColumn<T, string?>(TableFilterKind.Text, value, use));
+        Add(id, new TableColumn<T, string?>(id, TableFilterKind.Text, value, use));
 
-    /// <summary>以值清單篩選的欄位；值依屬性型別解析（列舉用名稱、布林用 true／false）。</summary>
+    /// <summary>以值清單篩選的欄位；值依屬性型別解析（列舉用名稱、布林用 true／false）。型別無法解析篩選值時，宣告就會失敗。</summary>
     public TableColumns<T> Options<TValue>(string id, Expression<Func<T, TValue>> value, TableUse use = TableUse.All) =>
-        Add(id, new TableColumn<T, TValue>(TableFilterKind.Options, value, use));
+        Add(id, new TableColumn<T, TValue>(id, TableFilterKind.Options, value, use));
 
-    /// <summary>以範圍篩選的欄位（整數、小數、<see cref="DateTimeOffset"/>、<see cref="DateOnly"/>，可為 null）。</summary>
+    /// <summary>以範圍篩選的欄位（整數、小數、<see cref="DateTimeOffset"/>、<see cref="DateOnly"/>，可為 null）；其他型別宣告就會失敗。</summary>
     public TableColumns<T> Range<TValue>(string id, Expression<Func<T, TValue>> value, TableUse use = TableUse.All) =>
-        Add(id, new TableColumn<T, TValue>(TableFilterKind.Range, value, use));
+        Add(id, new TableColumn<T, TValue>(id, TableFilterKind.Range, value, use));
 
     public TableColumns<T> Key<TKey>(Expression<Func<T, TKey>> key)
     {
-        KeyColumn = new TableColumn<T, TKey>(TableFilterKind.Range, key, TableUse.Sort);
+        KeyOrder = new TableOrder<T, TKey>(key);
         return this;
     }
 
