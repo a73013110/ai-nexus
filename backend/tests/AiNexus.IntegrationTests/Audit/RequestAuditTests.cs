@@ -44,6 +44,7 @@ public sealed class RequestAuditTests
     }
 
     // 同一個名稱在不同類別宣告成不同分類或標籤，稽核頁會只顯示其中一個。
+    // 反射掃描是對照組：欄位目錄產生器列出的動作（AuditActions.Declared）必須與它一致。
     [Fact]
     public void EveryActionNameHasOneDefinitionAndAKnownModule()
     {
@@ -53,6 +54,7 @@ public sealed class RequestAuditTests
             .Where(x => x.FieldType == typeof(AuditAction))
             .Select(x => (AuditAction)x.GetValue(null)!).ToList();
         Assert.NotEmpty(declared);
+        Assert.Equal(declared.Select(x => x.Name).Distinct().Order(StringComparer.Ordinal), AuditActions.Declared.Select(x => x.Name).Order(StringComparer.Ordinal));
         var conflicting = declared.GroupBy(x => x.Name).Where(g => g.Distinct().Count() > 1).Select(g => g.Key).ToList();
         Assert.True(conflicting.Count == 0, "Audit actions declared with different category or label: " + string.Join(", ", conflicting));
         var unknown = AuditActions.Modules.Where(x => x.Label == x.Value).Select(x => x.Value).ToList();

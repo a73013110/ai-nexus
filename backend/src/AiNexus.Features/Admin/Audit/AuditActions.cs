@@ -1,6 +1,6 @@
-using System.Reflection;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Audit;
 
@@ -14,7 +14,7 @@ public sealed record AuditModuleDto(string Value, string Label);
 /// 所有宣告的稽核動作：各模組 <c>&lt;Module&gt;Audit</c> 類別裡型別為 <see cref="AuditAction"/> 的公開靜態欄位。
 /// 稽核頁的動作選單、名稱與分類都來自這裡，前端不寫死；新增動作只要在模組裡宣告。依功能目錄的模組順序、再依宣告順序排列。
 /// </summary>
-public static class AuditActions
+public static partial class AuditActions
 {
     // 不在功能目錄裡的平台模組（沒有自己的頁面）。
     private static readonly Dictionary<string, string> PlatformModules = new(StringComparer.Ordinal)
@@ -24,14 +24,8 @@ public static class AuditActions
         ["web-search"] = "網路搜尋",
     };
 
-    /// <summary>宣告的全部動作；同一個動作被多個類別引用時只列一次。</summary>
-    public static IReadOnlyList<AuditAction> Declared { get; } = [.. typeof(AuditActions).Assembly.GetTypes()
-        .Where(x => x is { IsAbstract: true, IsSealed: true })
-        .OrderBy(x => x.FullName, StringComparer.Ordinal)
-        .SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
-        .Where(x => x.FieldType == typeof(AuditAction))
-        .Select(x => (AuditAction)x.GetValue(null)!)
-        .DistinctBy(x => x.Name)];
+    /// <summary>宣告的全部動作，依類別完整名稱、再依宣告順序；同一個動作被多個類別引用時只列一次。</summary>
+    public static IReadOnlyList<AuditAction> Declared { get; } = [.. DeclaredFields().DistinctBy(x => x.Name)];
 
     public static IReadOnlyList<AuditModuleDto> Modules { get; } = [.. Declared.Select(x => x.Module).Distinct().OrderBy(Order).Select(x => new AuditModuleDto(x, ModuleLabel(x)))];
 
@@ -47,4 +41,8 @@ public static class AuditActions
 
     private static string ModuleLabel(string module)
         => FeatureCatalog.Modules.FirstOrDefault(x => x.Id == module)?.Name ?? PlatformModules.GetValueOrDefault(module, module);
+
+    // 由欄位目錄產生器在編譯期實作（AiNexus.Generators/Catalogs）：組件內 static 類別裡型別為 AuditAction 的 public static 欄位。
+    [FieldCatalog]
+    private static partial AuditAction[] DeclaredFields();
 }
