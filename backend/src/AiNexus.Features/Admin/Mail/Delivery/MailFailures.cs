@@ -29,6 +29,7 @@ public static partial class MailFailures
     public const string Timeout = "mail_timeout";
     public const string ConnectionFailed = "mail_connection_failed";
     public const string Deferred = "mail_deferred";
+    // 無法分類的例外是 MailErrors.DeliveryFailed：它另外寫日誌、產生查證代碼，所以是 Error。
 
     public static MailFailure Classify(Exception exception)
     {

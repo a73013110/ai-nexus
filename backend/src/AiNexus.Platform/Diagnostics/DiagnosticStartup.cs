@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Diagnostics;
@@ -9,6 +10,9 @@ namespace AiNexus.Platform.Diagnostics;
 /// </summary>
 public static class DiagnosticStartup
 {
+    // 日誌管線還沒起來，直接寫進日誌檔；代碼仍與 Issues 記錄的同一套。
+    private static readonly Error StartupFailed = Error.Unavailable("startup_failed");
+
     /// <summary>
     /// 主機啟動崩潰時記錄致命事件：產生 NX- 查證代碼，並嘗試寫入期刊。
     /// </summary>
@@ -46,7 +50,7 @@ public static class DiagnosticStartup
                 TraceId = ActivityTraceId.CreateRandom().ToHexString(),
                 SpanId = ActivitySpanId.CreateRandom().ToHexString(),
                 IssueCode = issue,
-                ErrorCode = "startup_failed",
+                ErrorCode = StartupFailed.Code,
                 ExceptionType = DiagnosticRedactor.Text(exception.GetType().FullName, 180),
                 ExceptionDetail = DiagnosticRedactor.Exception(exception)
             }], timeout.Token);
