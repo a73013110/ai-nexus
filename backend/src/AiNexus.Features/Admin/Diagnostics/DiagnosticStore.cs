@@ -1,13 +1,13 @@
 using AiNexus.Data.App;
 using System.Globalization;
 using System.Data;
-using System.Reflection;
 using System.Transactions;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Diagnostics;
 
@@ -17,7 +17,6 @@ namespace AiNexus.Features.Admin.Diagnostics;
 public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
 {
     private static readonly string ConfigurationAction = DiagnosticsAudit.ConfigurationActivated.Name;
-    private static readonly PropertyInfo[] Columns = typeof(DiagnosticEvent).GetProperties();
     private bool configurationRecorded;
     public async Task WriteAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct)
     {
@@ -44,22 +43,38 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
             }
         }
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var columns = string.Join(",", Columns.Select(x => "[" + x.Name + "]"));
+        var mapped = Columns(db.Model);
+        var columns = string.Join(",", mapped.Select(x => "[" + x.Name + "]"));
         await using (var create = Command("SELECT TOP (0) " + columns + " INTO #LogBatch FROM [diagnostics].[DiagnosticEvents];", transaction))
             await create.ExecuteNonQueryAsync(ct);
         var table = new DataTable();
-        foreach (var column in Columns) table.Columns.Add(column.Name, column.PropertyType == typeof(LogLevel) ? typeof(int) : Nullable.GetUnderlyingType(column.PropertyType) ?? column.PropertyType);
-        foreach (var item in events.DistinctBy(x => x.LogId)) table.Rows.Add(Columns.Select(x => x.GetValue(item) is { } value ? value is LogLevel l ? (object)(int)l : value : DBNull.Value).ToArray());
+        foreach (var column in mapped) table.Columns.Add(column.Name, column.Type);
+        foreach (var item in events.DistinctBy(x => x.LogId)) table.Rows.Add([.. mapped.Select(x => x.Value(item) ?? DBNull.Value)]);
         using (var bulk = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction) { DestinationTableName = "#LogBatch", BatchSize = settings.BatchSize, BulkCopyTimeout = settings.SqlTimeoutSeconds })
         {
-            foreach (var column in Columns) bulk.ColumnMappings.Add(column.Name, column.Name);
+            foreach (var column in mapped) bulk.ColumnMappings.Add(column.Name, column.Name);
             await bulk.WriteToServerAsync(table, ct);
         }
-        await using (var insert = Command("INSERT INTO [diagnostics].[DiagnosticEvents] (" + columns + ") SELECT " + string.Join(",", Columns.Select(x => "b.[" + x.Name + "]")) +
+        await using (var insert = Command("INSERT INTO [diagnostics].[DiagnosticEvents] (" + columns + ") SELECT " + string.Join(",", mapped.Select(x => "b.[" + x.Name + "]")) +
             " FROM #LogBatch b WHERE NOT EXISTS (SELECT 1 FROM [diagnostics].[DiagnosticEvents] d WITH (UPDLOCK,HOLDLOCK) WHERE d.[LogId]=b.[LogId]);", transaction))
             await insert.ExecuteNonQueryAsync(ct);
         await transaction.CommitAsync(ct);
     }
+    /// <summary>
+    /// 批次寫入的欄位取自 EF 模型（欄名與資料表對應一致），值以 EF 編譯好的存取子讀取並轉成資料庫型別（例如 <see cref="LogLevel"/> 轉 int），
+    /// 不以反射逐格讀屬性。
+    /// </summary>
+    private static (string Name, Type Type, Func<DiagnosticEvent, object?> Value)[] Columns(IModel model) =>
+    [
+        .. model.FindEntityType(typeof(DiagnosticEvent))!.GetProperties().Select(property =>
+        {
+            var getter = property.GetGetter();
+            var converter = property.GetTypeMapping().Converter;
+            var type = converter?.ProviderClrType ?? property.ClrType;
+            return (property.GetColumnName(), Nullable.GetUnderlyingType(type) ?? type,
+                (Func<DiagnosticEvent, object?>)(item => getter.GetClrValue(item) is { } value ? converter?.ConvertToProvider(value) ?? value : null));
+        }),
+    ];
     public async Task CleanupAsync(CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();

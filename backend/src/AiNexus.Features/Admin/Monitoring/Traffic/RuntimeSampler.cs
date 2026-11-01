@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using System.Data.Common;
 using System.Diagnostics;
+using Microsoft.Data.SqlClient.Diagnostics;
 
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
 
@@ -16,21 +16,26 @@ public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog cat
         if (source.Name == "SqlClientDiagnosticListener")
             lock (subscriptions) subscriptions.Add(source.Subscribe(this, name => name is "Microsoft.Data.SqlClient.WriteCommandBefore" or "Microsoft.Data.SqlClient.WriteCommandAfter" or "Microsoft.Data.SqlClient.WriteCommandError"));
     }
+    // 每個 SQL 命令都會經過這裡；以 SqlClient 的強型別事件比對，不在熱路徑上以反射讀屬性。
     public void OnNext(KeyValuePair<string, object?> evt)
     {
-        if (!traffic.Enabled || evt.Value is null) return;
-        var type = evt.Value.GetType();
-        if (type.GetProperty("OperationId")?.GetValue(evt.Value) is not Guid operation) return;
-        if (evt.Key.EndsWith("Before", StringComparison.Ordinal))
+        if (!traffic.Enabled) return;
+        switch (evt.Value)
         {
-            if (MonitoringSuppression.Active) return;
-            var command = type.GetProperty("Command")?.GetValue(evt.Value) as DbCommand;
-            var id = catalog.Sql(command?.Connection);
-            lock (commands)
-                if (commands.Count < 1024 && commands.TryAdd(operation, (id, Stopwatch.GetTimestamp()))) traffic.DependencyStarted(id);
+            case SqlClientCommandBefore before:
+                if (MonitoringSuppression.Active) return;
+                var id = catalog.Sql(before.Command?.Connection);
+                lock (commands)
+                    if (commands.Count < 1024 && commands.TryAdd(before.OperationId, (id, Stopwatch.GetTimestamp()))) traffic.DependencyStarted(id);
+                break;
+            case SqlClientCommandAfter after: Finish(after.OperationId, failed: false); break;
+            case SqlClientCommandError error: Finish(error.OperationId, failed: true); break;
         }
-        else if (commands.TryRemove(operation, out var observed))
-            traffic.DependencyFinished(observed.Id, Stopwatch.GetElapsedTime(observed.Start).TotalMilliseconds, evt.Key.EndsWith("Error", StringComparison.Ordinal));
+    }
+    private void Finish(Guid operation, bool failed)
+    {
+        if (commands.TryRemove(operation, out var observed))
+            traffic.DependencyFinished(observed.Id, Stopwatch.GetElapsedTime(observed.Start).TotalMilliseconds, failed);
     }
     public void OnCompleted() { }
     public void OnError(Exception error) { }
