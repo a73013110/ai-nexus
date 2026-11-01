@@ -40,7 +40,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 - 沒有回傳值的 handler 一律回 `Result`，不回 `Task`：端點才是 204，之後要加失敗情境也不必改端點。
 - lambda 直接回傳 `Task` 時不加 `async`／`await`：只加 `async` 型別會變成 `Task<Task<…>>`，OpenAPI 錯誤。
 - SSE 端點用 `ToStreamResultAsync(http)`：串流開始前的失敗回 problem，開始後改寫一個 `error` 事件。
-- 使用者一律用 `ICurrentUser`（同步 `Id`），不呼叫 `CurrentUser.GetAsync`。
+- 使用者一律用 `ICurrentUser`（同步 `Id`），不呼叫 `CurrentUser.GetAsync`。宣告在 lambda，把 `user.Id` 傳給 handler，不注入建構子：endpoint filter 只替 lambda 有宣告的端點解析使用者，只放建構子時讀 `Id` 會拋例外；其他模組的 `public` 服務也才能指定操作者。操作者不取自 request body。
 - 建立時間在 `Add` 時由 `CreationTime` 從 `AppDbContext.Clock` 補上；`Add` 前就要讀取的自行設定。
 - 依字串鍵挑實作（工作種類、供應商）時以 `AddKeyedService`（或 `AddBackgroundJobHandler`、`AddRemoteFileSource`）註冊、注入 `KeyedServices<T>`：只建立查到的實作，鍵重複時啟動失敗；不注入 `IEnumerable<T>` 再比對。
 - 直接用 `AppDbContext` 的 `db.<表名>`，不加 repository 或只轉送呼叫的 service；屬性名＝表名（view 去掉 `vw_`），新表在 `AppDbContext` 加一行（`DatabaseModelTests` 檢查）。單表用 EF，多表查詢、報表與 procedure 見 [ADR 0011](../decisions/0011-data-access-ef-dapper-procedures.md)；列表排序、篩選與分頁用 `TableRequest`＋`ToTablePageAsync`（[ADR 0026](../decisions/0026-shared-table-queries.md)）。
