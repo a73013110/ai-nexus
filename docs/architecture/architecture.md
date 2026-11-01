@@ -62,7 +62,7 @@ flowchart LR
 | Admin | Billing | 追加價格版本、呼叫價格快照、實際用量計費、報表與 CSV；不以 Context 預估冒充帳單 |
 | Platform | Account | 登入者本人的資料、偏好、閱讀設定與個人用量 |
 | Platform | Inference | provider、模型呈現與政策（含管理）、聊天佇列、服務狀態（`/status`）、共用模型任務 |
-| Platform | WebSearch | 搜尋 provider、本人配額與冪等紀錄、可核對來源；不爬取結果網站 |
+| Platform | WebSearches | 搜尋 provider、本人配額與冪等紀錄、可核對來源；不爬取結果網站 |
 | Platform | Notifications | owner 範圍的 durable 通知與目標連結，與觸發事件同交易 |
 
 ## 兩種權限

@@ -9,7 +9,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Knowledge;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Repositories;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.Data.SqlClient;
@@ -55,7 +55,7 @@ public static class DeploymentVerifier
             }
 
             _ = scope.ServiceProvider.GetRequiredService<IOptions<PdfOptions>>().Value;
-            var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchOptions>>().Value;
+            var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchesOptions>>().Value;
             var gitea = scope.ServiceProvider.GetRequiredService<IOptions<GiteaOptions>>().Value;
             var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(AppDbContext.DatabaseName));
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

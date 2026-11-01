@@ -1,4 +1,4 @@
-CREATE SCHEMA [websearch]
+CREATE SCHEMA [websearches]
     AUTHORIZATION [dbo];
 
 

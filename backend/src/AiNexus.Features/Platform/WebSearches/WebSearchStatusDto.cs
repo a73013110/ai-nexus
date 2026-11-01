@@ -1,3 +1,3 @@
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
 public sealed record WebSearchStatusDto(bool Available, string Notice);

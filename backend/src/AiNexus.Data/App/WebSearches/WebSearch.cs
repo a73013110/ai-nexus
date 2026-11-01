@@ -2,9 +2,9 @@ using AiNexus.Data.App.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace AiNexus.Data.App.WebSearch;
+namespace AiNexus.Data.App.WebSearches;
 
-public sealed class WebSearchRecord
+public sealed class WebSearch
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OwnerId { get; set; }
@@ -17,12 +17,12 @@ public sealed class WebSearchRecord
     public Guid? RunId { get; set; }
 }
 
-internal sealed class WebSearchRecordConfiguration : IEntityTypeConfiguration<WebSearchRecord>
+internal sealed class WebSearchConfiguration : IEntityTypeConfiguration<WebSearch>
 {
-    public void Configure(EntityTypeBuilder<WebSearchRecord> item)
+    public void Configure(EntityTypeBuilder<WebSearch> item)
     {
         item.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
-        item.ToTable("WebSearches", "websearch");
+        item.ToTable("WebSearches", "websearches");
         item.HasKey(x => x.Id);
         item.Property(x => x.IdempotencyKey).HasMaxLength(80);
         item.Property(x => x.RequestHash).HasMaxLength(64);

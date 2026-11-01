@@ -16,7 +16,7 @@
 | 身分 | AccessControl、Identity、Organization | 授權資料與登入；Organization（部門樹）依賴 AccessControl 的授權目錄與行政稽核，匯入部門時用 Gd |
 | 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Prompts | 模型、通知、監控；Inference 只依賴身分與授權 |
 | 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
-| 資料延伸 | Files、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
+| 資料延伸 | Files、Billing、WebSearches、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
 | 內容 | Knowledge、Projects、Quality、Repositories | 組合上述資料的功能 |
 | 組合 | Chat、Sharing、Account、Operations、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 

@@ -13,7 +13,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Platform.Notifications;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;

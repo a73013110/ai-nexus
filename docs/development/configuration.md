@@ -31,7 +31,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Identity.SelfService` | [`SelfServiceOptions`](../../backend/src/AiNexus.Features/Admin/Identity/SelfService/SelfServiceOptions.cs) | — |
 | `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Platform/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
-| `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/Platform/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
+| `WebSearches` | [`WebSearchesOptions`](../../backend/src/AiNexus.Features/Platform/WebSearches/WebSearchesOptions.cs) | `ApiKey`（Brave） |
 | `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
 | `Gd` | [`GdOptions`](../../backend/src/AiNexus.Features/Platform/Gd/GdOptions.cs) | — |

@@ -3,7 +3,7 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Billing.Charges;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using Microsoft.EntityFrameworkCore;

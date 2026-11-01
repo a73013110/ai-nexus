@@ -1,10 +1,10 @@
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Monitoring;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AiNexus.UnitTests.WebSearch;
+namespace AiNexus.UnitTests.WebSearches;
 
 /// <summary>監控卡片與聊天頁共用同一個可用判定：未啟用 idle、缺 Brave key degraded、其餘 healthy。</summary>
 public sealed class WebSearchMonitoringTests
@@ -19,9 +19,9 @@ public sealed class WebSearchMonitoringTests
         var builder = WebApplication.CreateEmptyBuilder(new());
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["WebSearch:Enabled"] = enabled.ToString(), ["WebSearch:Provider"] = provider, ["WebSearch:ApiKey"] = apiKey,
+            ["WebSearches:Enabled"] = enabled.ToString(), ["WebSearches:Provider"] = provider, ["WebSearches:ApiKey"] = apiKey,
         });
-        WebSearchModule.AddServices(builder);
+        WebSearchesModule.AddServices(builder);
         await using var services = builder.Services.BuildServiceProvider();
         await using var scope = services.CreateAsyncScope();
         var source = scope.ServiceProvider.GetServices<MonitoringSourceRegistration>()

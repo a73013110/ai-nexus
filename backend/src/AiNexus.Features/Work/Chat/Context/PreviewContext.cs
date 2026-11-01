@@ -6,7 +6,7 @@ using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Projects;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;

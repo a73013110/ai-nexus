@@ -1,13 +1,13 @@
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
 /// <summary>
 /// 連網搜尋的執行期監控，只依設定判斷、不實際呼叫搜尋服務（實際呼叫以 dependency 指標呈現）。
 /// 與聊天頁的提示共用 <see cref="WebSearchService.StatusOf"/>，兩邊對「可用」的判定不會分歧。
 /// </summary>
-internal sealed class WebSearchMonitoring(IOptions<WebSearchOptions> options) : IMonitoringSource
+internal sealed class WebSearchMonitoring(IOptions<WebSearchesOptions> options) : IMonitoringSource
 {
     public string Id => "web-search";
     public string Name => "連網搜尋";

@@ -15,7 +15,7 @@ public sealed class DependencyCatalog
         AddHttp(config["Inference:Providers:Ollama:Endpoint"], "ollama", "Ollama");
         AddHttp(config["Knowledge:Embedding:Endpoint"], "embedding", "向量模型服務");
         AddHttp(config["Knowledge:Rerank:Endpoint"], "rerank", "重排序服務");
-        AddHttp(config["WebSearch:Endpoint"], "search", "連網搜尋");
+        AddHttp(config["WebSearches:Endpoint"], "search", "連網搜尋");
         AddHttp(config["Repositories:Gitea:BaseUrl"], "gitea", "Gitea 程式庫");
         foreach (var (name, database) in databases.Value.Where(x => x.Value.Configured).OrderBy(x => x.Key, StringComparer.Ordinal))
         {

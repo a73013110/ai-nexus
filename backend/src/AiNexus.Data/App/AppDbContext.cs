@@ -19,7 +19,7 @@ using AiNexus.Data.App.Quality;
 using AiNexus.Data.App.Releases;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Data.App.Sharing;
-using AiNexus.Data.App.WebSearch;
+using AiNexus.Data.App.WebSearches;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 
@@ -133,7 +133,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareRecipient> ShareRecipients => Set<ShareRecipient>();
 
-    public DbSet<WebSearchRecord> WebSearches => Set<WebSearchRecord>();
+    public DbSet<WebSearch> WebSearches => Set<WebSearch>();
 
     /// <summary>
     /// <c>inference.udf_UsageEntries</c>：期間 [<paramref name="from"/>, <paramref name="until"/>) 的用量紀錄，<paramref name="until"/> 為 null 表示不限。

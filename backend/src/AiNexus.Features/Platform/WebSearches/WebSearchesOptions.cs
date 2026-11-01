@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 using AiNexus.Platform.Configuration;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
-public sealed class WebSearchOptions
+public sealed class WebSearchesOptions
 {
-    public const string Section = "WebSearch";
+    public const string Section = "WebSearches";
 
     public bool Enabled { get; set; }
     [AllowedValues("searxng", "brave")] public string Provider { get; set; } = "searxng";
@@ -23,4 +23,4 @@ public sealed class WebSearchOptions
 }
 
 [OptionsValidator]
-public sealed partial class WebSearchOptionsValidator : IValidateOptions<WebSearchOptions>;
+public sealed partial class WebSearchesOptionsValidator : IValidateOptions<WebSearchesOptions>;

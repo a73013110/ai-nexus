@@ -4,12 +4,12 @@ using System.Net.Http.Json;
 using AiNexus.Features.Work.Chat.Context;
 using AiNexus.Features.Work.Chat.Runs;
 using AiNexus.Features.Work.Chat.Transcripts;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace AiNexus.IntegrationTests.WebSearch;
+namespace AiNexus.IntegrationTests.WebSearches;
 
 public sealed class WebSearchRunTests
 {
@@ -20,7 +20,7 @@ public sealed class WebSearchRunTests
         await using var factory = new AppFactory(services: services =>
         {
             services.RemoveAll<IWebSearchProvider>(); services.AddSingleton<IWebSearchProvider>(search);
-            services.PostConfigure<WebSearchOptions>(o => o.Enabled = true);
+            services.PostConfigure<WebSearchesOptions>(o => o.Enabled = true);
         });
         using var client = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var conversation = await ChatApi.CreateConversation(client);
@@ -44,7 +44,7 @@ public sealed class WebSearchRunTests
     public async Task FailedSearchConsumesQuotaAndCannotRepeatWithSameKey()
     {
         var search = new FixtureSearch { Fail = true };
-        await using var factory = new AppFactory(services: services => { services.RemoveAll<IWebSearchProvider>(); services.AddSingleton<IWebSearchProvider>(search); services.PostConfigure<WebSearchOptions>(o => { o.Enabled = true; o.MaxDailyRequests = 1; }); });
+        await using var factory = new AppFactory(services: services => { services.RemoveAll<IWebSearchProvider>(); services.AddSingleton<IWebSearchProvider>(search); services.PostConfigure<WebSearchesOptions>(o => { o.Enabled = true; o.MaxDailyRequests = 1; }); });
         using var client = await factory.SignedInAsync(); var conversation = await ChatApi.CreateConversation(client);
         var body = new CreateRunRequest(conversation.Id, "test-model", "公開問題", null, null, WebSearch: true); var key = Guid.NewGuid().ToString();
         async Task<HttpResponseMessage> Submit(string id) { using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/runs") { Content = JsonContent.Create(body) }; request.Headers.Add("Idempotency-Key", id); return await client.SendAsync(request); }
@@ -57,7 +57,7 @@ public sealed class WebSearchRunTests
     public async Task BraveLengthLimitRejectsBeforeSearchReservation()
     {
         var search = new FixtureSearch();
-        await using var factory = new AppFactory(services: services => { services.RemoveAll<IWebSearchProvider>(); services.AddSingleton<IWebSearchProvider>(search); services.PostConfigure<WebSearchOptions>(o => { o.Enabled = true; o.Provider = "brave"; o.ApiKey = "fixture-key"; }); });
+        await using var factory = new AppFactory(services: services => { services.RemoveAll<IWebSearchProvider>(); services.AddSingleton<IWebSearchProvider>(search); services.PostConfigure<WebSearchesOptions>(o => { o.Enabled = true; o.Provider = "brave"; o.ApiKey = "fixture-key"; }); });
         using var client = await factory.SignedInAsync(); var conversation = await ChatApi.CreateConversation(client);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/runs") { Content = JsonContent.Create(new CreateRunRequest(conversation.Id, "test-model", new string('文', 601), null, null, WebSearch: true)) }; request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
         Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(request)).StatusCode); Assert.Empty(search.Queries);

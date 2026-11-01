@@ -1,7 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
 internal sealed class GetWebSearchStatus(WebSearchService service)
 {

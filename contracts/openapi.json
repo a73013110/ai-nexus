@@ -5270,7 +5270,7 @@
     "/api/v1/tools/web-search": {
       "get": {
         "tags": [
-          "WebSearch"
+          "WebSearches"
         ],
         "operationId": "GetWebSearchStatus",
         "responses": {
@@ -22396,7 +22396,7 @@
       "name": "RemoteFiles"
     },
     {
-      "name": "WebSearch"
+      "name": "WebSearches"
     },
     {
       "name": "Artifacts"

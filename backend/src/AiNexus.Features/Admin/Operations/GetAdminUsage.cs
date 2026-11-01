@@ -2,7 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.Models;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 

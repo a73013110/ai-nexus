@@ -41,7 +41,7 @@ public sealed class DashboardProcedureTests
         ["repositories.usp_GetRepositoriesDashboard"] = string.Join('|', "Connections:Int32,Running:Int32", Days, Shares, "Id:Guid,Repository:String,Commit:String,CreatedAt:DateTimeOffset"),
         ["sharing.usp_GetSharingDashboard"] = string.Join('|', "Open:Int32,Expiring:Int32,Received:Int32", Days, Shares, "Id:Guid,Title:String,Kind:String,CreatedAt:DateTimeOffset,ExpiresAt:DateTimeOffset"),
         ["notifications.usp_GetNotificationsDashboard"] = string.Join('|', "Unread:Int32,Errors:Int32", Days, "Id:Guid,Title:String,Body:String,Severity:String,IssueCode:String,TargetKind:String,TargetId:Guid,CreatedAt:DateTimeOffset"),
-        ["websearch.usp_GetWebSearchDashboard"] = string.Join('|', "Failed:Int32", Days),
+        ["websearches.usp_GetWebSearchDashboard"] = string.Join('|', "Failed:Int32", Days),
         ["quality.usp_GetQualityDashboard"] = string.Join('|', "Up:Int32,Down:Int32,Evaluations:Int32,Retrievals:Int32,Running:Int32", Days),
     };
 

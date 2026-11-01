@@ -2,7 +2,7 @@
 
 - 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫。**結構以開發庫為準**：DBA 在 SSMS 修改，匯出到 `database/App/` 建成 dacpac；EF Core 只做對應，沒有 migration（[ADR 0010](../decisions/0010-database-first-schema.md)～[0013](../decisions/0013-data-project-and-template-naming.md)）。
 - 對應在 `backend/src/AiNexus.Data/App/`，由單一 `AppDbContext` 載入；跨模組外鍵與同一交易可直接使用。
-- **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名；唯一例外 `WebSearches` → `WebSearchRecord`（`WebSearch` 與模組命名空間同名）。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
+- **一表一檔，資料夾＝schema**：`identity.Users` → `AiNexus.Data/App/Identity/User.cs`（實體＋`IEntityTypeConfiguration`）→ `database/App/identity/Tables/Users.sql`。實體名稱＝資料表單數名。`DatabaseModelTests` 檢查資料夾與 schema 一致，且 Features 不得宣告組態。
 - 欄位用到的列舉、狀態常數與值型別（`RunStates`、`UserPreferences`）跟著實體放在 `AiNexus.Data`；`AiNexus.Data` 只依賴 Platform，不能引用模組型別。
 
 ## 改結構
@@ -19,7 +19,7 @@
 
 ## Schema 與模組
 
-一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）；共用的 `audit.AuditEvents` 只由 `AuditTrail` 寫入，`AuditEventInterceptor` 遮罩與補值（[ADR 0023](../decisions/0023-audit-standard.md)）。
+一個業務模組一個 schema，名稱＝模組名小寫、不帶區（`accesscontrol`、`files`…）。模組以資料表為名時用複數（`Projects`／`Project`），命名空間才不會與實體同名。共用的 `audit.AuditEvents` 只由 `AuditTrail` 寫入，`AuditEventInterceptor` 遮罩與補值（[ADR 0023](../decisions/0023-audit-standard.md)）。
 
 ## 欄位規則
 

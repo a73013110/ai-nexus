@@ -4,7 +4,7 @@ using AiNexus.Features.Admin.Billing.Charges;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
 

@@ -1,7 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.WebSearch;
+using AiNexus.Data.App.WebSearches;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,7 +18,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Features.Work.Projects;
-using AiNexus.Features.Platform.WebSearch;
+using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -141,7 +141,7 @@ internal sealed class CreateRun(
 
         if (await AdmissionAsync(owner, ct) is { } blocked) return blocked;
 
-        WebSearchRecord? search = null;
+        WebSearch? search = null;
         if (request.WebSearch)
         {
             var query = request.RegenerateUserMessageId is Guid old
@@ -346,7 +346,7 @@ internal sealed class CreateRun(
     }
 
     /// <summary>系統提示詞：基底與對話偏好，再接專案、知識庫來源與網路搜尋結果；鎖外預組與鎖內建立必須組出相同字串才能沿用上下文。</summary>
-    private string SystemPrompt(string instruction, string projectContext, IReadOnlyList<KnowledgeHitDto> sources, WebSearchRecord? search) =>
+    private string SystemPrompt(string instruction, string projectContext, IReadOnlyList<KnowledgeHitDto> sources, WebSearch? search) =>
         ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction)
             + projectContext
             + KnowledgeRetrieval.Prompt(sources)
@@ -360,7 +360,7 @@ internal sealed class CreateRun(
         CreateRunRequest request,
         ModelDefinition profile,
         IReadOnlyList<KnowledgeHitDto> sources,
-        WebSearchRecord? search,
+        WebSearch? search,
         CancellationToken ct)
     {
         var conversation = await db.Conversations

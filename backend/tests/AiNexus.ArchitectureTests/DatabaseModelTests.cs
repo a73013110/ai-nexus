@@ -66,6 +66,26 @@ public sealed class DatabaseModelTests
         Assert.True(wrong.Count == 0, "Declare these properties in AppDbContext:\n" + string.Join("\n", wrong));
     }
 
+    /// <summary>實體＝資料庫物件名的單數。模組命名空間與實體撞名時改用複數的模組名與 schema（<c>Projects/Project</c>），不是替實體另外取名。</summary>
+    [Fact]
+    public void EveryEntityIsNamedAfterItsTable()
+    {
+        var wrong = EntityTypes().Where(e => !e.IsOwned() && (e.GetTableName() ?? e.GetViewName()) is not null)
+            .Select(e => (Entity: e.ClrType.Name, Table: (e.GetTableName() ?? e.GetViewName())!.Replace("vw_", "", StringComparison.Ordinal)))
+            .Where(x => x.Entity != Singular(x.Table)).Select(x => $"{x.Table} → {Singular(x.Table)} (is {x.Entity})").Distinct().Order(StringComparer.Ordinal).ToList();
+        Assert.True(wrong.Count == 0, "Name each entity after its table:\n" + string.Join("\n", wrong));
+    }
+
+    // 向量表的維度在字尾（ChunkEmbeddings768 → ChunkEmbedding768）。
+    private static string Singular(string table)
+    {
+        var name = table.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+        var suffix = table[name.Length..];
+        if (name.EndsWith("ies", StringComparison.Ordinal)) return name[..^3] + "y" + suffix;
+        if (name.EndsWith("ches", StringComparison.Ordinal) || name.EndsWith("ses", StringComparison.Ordinal) || name.EndsWith("xes", StringComparison.Ordinal)) return name[..^2] + suffix;
+        return (name.EndsWith('s') ? name[..^1] : name) + suffix;
+    }
+
     /// <summary>實體對應的資料庫物件：表，沒有表時是檢視（AttributedPunch）或函式（UsageEntry）。</summary>
     private static (string Schema, string? Name) StoreObject(IEntityType entity)
     {

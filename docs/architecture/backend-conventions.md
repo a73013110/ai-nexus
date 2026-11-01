@@ -37,6 +37,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 
 - use case 是 `internal sealed class`：靜態 `Map*(RouteGroupBuilder)` 宣告端點，`HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。註冊（scoped）與掛載由[產生器](source-generators.md)處理，漏掛建置失敗；`AddServices` 只註冊共用服務。同一資源有多個端點時用多個 `Map*` 與具名方法。
 - lambda 直接回傳 handler 的 `Result`／`Result<T>`：它們本身是 `IResult`（成功 200／204，失敗 problem），回應型別也由它們進入 OpenAPI，不寫 `.Produces<T>()`；只有 SSE 與自行寫入回應的下載例外。成功不是 200 或要回檔案時傳 mapper，如 `ToHttpResultAsync(x => TypedResults.Accepted(...))`。
+- 沒有回傳值的 handler 一律回 `Result`，不回 `Task`：端點才是 204，之後要加失敗情境也不必改端點。
 - lambda 直接回傳 `Task` 時不加 `async`／`await`：只加 `async` 型別會變成 `Task<Task<…>>`，OpenAPI 錯誤。
 - SSE 端點用 `ToStreamResultAsync(http)`：串流開始前的失敗回 problem，開始後改寫一個 `error` 事件。
 - 使用者一律用 `ICurrentUser`（同步 `Id`），不呼叫 `CurrentUser.GetAsync`。

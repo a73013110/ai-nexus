@@ -34,7 +34,7 @@
 | `work` | AI 工作台 | Dashboard、Chat、Conversations、Projects、Files、Knowledge、Artifacts、Prompts、Sharing、Collaboration、Repositories、Jobs |
 | `office` | 公司事務 | Attendance（出勤打卡，見 [ADR 0018](0018-attendance-cards-and-punches.md)）；規劃：公文、客服 |
 | `admin` | 系統管理 | Identity、AccessControl、Organization、Operations、Audit、Diagnostics、Monitoring、Quality、Billing、Design（只有前端） |
-| `platform` | 基礎能力 | Account、Inference、WebSearch、Notifications；沒有選單頁，不出現在網址 |
+| `platform` | 基礎能力 | Account、Inference、WebSearches、Notifications；沒有選單頁，不出現在網址 |
 
 - 區依工作類別決定、不依使用者身分，總數維持 3～8 個；新增區要修訂本 ADR。
 - 用 `office` 而不是 `staff`、`hr`：出勤、公文、客服不只員工自助、也不只人事。

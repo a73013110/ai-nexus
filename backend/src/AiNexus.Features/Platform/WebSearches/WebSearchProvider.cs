@@ -5,14 +5,14 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
 public interface IWebSearchProvider
 {
     Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct);
 }
 /// <summary>以 SearXNG 或 Brave 的 JSON 介面取得搜尋結果，並過濾不安全的來源網址。</summary>
-public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchOptions> options, TimeProvider clock) : IWebSearchProvider
+public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchesOptions> options, TimeProvider clock) : IWebSearchProvider
 {
     public async Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct)
     {
@@ -26,7 +26,7 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
         try
         {
             using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchErrors.RateLimited : WebSearchErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
+            if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchesErrors.RateLimited : WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
             using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout.Token);
             JsonElement rows;
             if (brave) { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
@@ -44,8 +44,8 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
             }
             return hits;
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(WebSearchErrors.Timeout, "網路搜尋逾時，請稍後再試。"); }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(WebSearchErrors.Unavailable, "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。", ex); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(WebSearchesErrors.Timeout, "網路搜尋逾時，請稍後再試。"); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。", ex); }
     }
     public static string? SafeUrl(string? value)
     {

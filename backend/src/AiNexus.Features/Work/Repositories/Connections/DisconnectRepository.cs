@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Connections;
@@ -9,15 +10,12 @@ namespace AiNexus.Features.Work.Repositories.Connections;
 internal sealed class DisconnectRepository(AppDbContext db, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/connection", async (ICurrentUser user, DisconnectRepository handler, CancellationToken ct) =>
-        {
-            await handler.HandleAsync(user.Id, ct);
-            return TypedResults.NoContent();
-        })
+        .MapDelete("/connection", (ICurrentUser user, DisconnectRepository handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, ct))
         .Audited(RepositoriesAudit.ConnectionDisconnected)
         .WithName("DisconnectRepository");
 
-    public async Task HandleAsync(Guid owner, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid owner, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
         try
@@ -26,5 +24,6 @@ internal sealed class DisconnectRepository(AppDbContext db, RepositoryWriteLock 
             await db.SaveChangesAsync(ct);
         }
         finally { writes.Gate.Release(); }
+        return Result.Success;
     }
 }

@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Monitoring.Traffic;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Admin.Monitoring.Presence;
@@ -9,11 +10,12 @@ namespace AiNexus.Features.Admin.Monitoring.Presence;
 internal sealed class LeavePresence(RuntimeTraffic traffic)
 {
     public static void Map(RouteGroupBuilder api) => api
-        .MapDelete("/presence/{sessionId:guid}", (Guid sessionId, ICurrentUser user, LeavePresence handler) =>
-        {
-            handler.Handle(user.Id, sessionId);
-            return TypedResults.NoContent();
-        }).WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("LeavePresence");
+        .MapDelete("/presence/{sessionId:guid}", (Guid sessionId, ICurrentUser user, LeavePresence handler) => handler.Handle(user.Id, sessionId))
+        .WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("LeavePresence");
 
-    public void Handle(Guid user, Guid sessionId) => traffic.Leave(user, sessionId);
+    public Result Handle(Guid user, Guid sessionId)
+    {
+        traffic.Leave(user, sessionId);
+        return Result.Success;
+    }
 }

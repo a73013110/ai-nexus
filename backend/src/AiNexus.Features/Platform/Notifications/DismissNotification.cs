@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -9,14 +10,15 @@ namespace AiNexus.Features.Platform.Notifications;
 internal sealed class DismissNotification(AppDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DismissNotification handler, CancellationToken ct) =>
-        {
-            await handler.HandleAsync(user.Id, id, ct);
-            return TypedResults.NoContent();
-        })
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DismissNotification handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .NotAudited("使用者自己的通知")
         .WithName("DismissNotification");
 
-    public Task HandleAsync(Guid owner, Guid id, CancellationToken ct) => db.Notifications.Where(x => x.Id == id && x.OwnerId == owner)
-        .ExecuteUpdateAsync(p => p.SetProperty(x => x.DismissedAt, clock.GetUtcNow()), ct);
+    public async Task<Result> HandleAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        await db.Notifications.Where(x => x.Id == id && x.OwnerId == owner)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.DismissedAt, clock.GetUtcNow()), ct);
+        return Result.Success;
+    }
 }

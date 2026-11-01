@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -9,14 +10,14 @@ namespace AiNexus.Features.Work.Repositories.Browsing;
 internal sealed class UnpinRepository(AppDbContext db, RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
-        .MapDelete("/pin", async (string owner, string name, ICurrentUser user, UnpinRepository handler, CancellationToken ct) =>
-        {
-            await handler.HandleAsync(user.Id, owner + "/" + name, ct);
-            return TypedResults.NoContent();
-        })
+        .MapDelete("/pin", (string owner, string name, ICurrentUser user, UnpinRepository handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, owner + "/" + name, ct))
         .Audited(RepositoriesAudit.RepositoryUnpinned)
         .WithName("UnpinRepository");
 
-    public Task HandleAsync(Guid owner, string repo, CancellationToken ct) =>
-        db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo).ExecuteDeleteAsync(ct);
+    public async Task<Result> HandleAsync(Guid owner, string repo, CancellationToken ct)
+    {
+        await db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo).ExecuteDeleteAsync(ct);
+        return Result.Success;
+    }
 }

@@ -25,23 +25,23 @@ internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapPost("/read", async (ReadNotificationsRequest body, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
-        {
-            await handler.ThroughAsync(user.Id, body.Through, ct);
-            return TypedResults.NoContent();
-        }).NotAudited("使用者自己的通知").WithName("ReadNotifications");
-        routes.MapPost("/{id:guid}/read", async (Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
-        {
-            await handler.OneAsync(user.Id, id, ct);
-            return TypedResults.NoContent();
-        }).NotAudited("使用者自己的通知").WithName("ReadNotification");
+        routes.MapPost("/read", (ReadNotificationsRequest body, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
+            handler.ThroughAsync(user.Id, body.Through, ct))
+            .NotAudited("使用者自己的通知").WithName("ReadNotifications");
+        routes.MapPost("/{id:guid}/read", (Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
+            handler.OneAsync(user.Id, id, ct))
+            .NotAudited("使用者自己的通知").WithName("ReadNotification");
     }
 
-    public Task ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => MarkReadAsync(owner, x => x.CreatedAt <= through, ct);
+    public Task<Result> ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => MarkReadAsync(owner, x => x.CreatedAt <= through, ct);
 
-    public Task OneAsync(Guid owner, Guid id, CancellationToken ct) => MarkReadAsync(owner, x => x.Id == id, ct);
+    public Task<Result> OneAsync(Guid owner, Guid id, CancellationToken ct) => MarkReadAsync(owner, x => x.Id == id, ct);
 
     // 只更新收件匣中仍未讀的列，已讀時間不會被重複呼叫覆寫。
-    private Task MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct) => db.Notifications.Inbox(owner)
-        .Where(x => x.ReadAt == null).Where(which).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+    private async Task<Result> MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct)
+    {
+        await db.Notifications.Inbox(owner)
+            .Where(x => x.ReadAt == null).Where(which).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+        return Result.Success;
+    }
 }

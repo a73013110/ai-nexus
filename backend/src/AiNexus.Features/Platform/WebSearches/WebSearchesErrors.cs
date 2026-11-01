@@ -1,8 +1,8 @@
 using AiNexus.Platform.Errors;
 
-namespace AiNexus.Features.Platform.WebSearch;
+namespace AiNexus.Features.Platform.WebSearches;
 
-internal static class WebSearchErrors
+internal static class WebSearchesErrors
 {
     public static readonly Error NotConfigured = Error.Unavailable("web_search_not_configured");
     public static readonly Error QueryTooLong = Error.Invalid("web_query_too_long");
