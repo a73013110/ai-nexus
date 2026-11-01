@@ -26,9 +26,10 @@ public enum TableFilterKind
 /// </summary>
 public sealed class TableColumns<T>
 {
-    private readonly Dictionary<string, TableColumnDefinition> columns = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TableColumn<T>> columns = new(StringComparer.Ordinal);
 
-    internal LambdaExpression? KeyExpression { get; private set; }
+    /// <summary>唯一鍵；只用來排序（種類與用途不會被讀取）。</summary>
+    internal TableColumn<T>? KeyColumn { get; private set; }
     internal string? DefaultColumn { get; private set; }
     internal bool DefaultDescending { get; private set; }
 
@@ -39,19 +40,19 @@ public sealed class TableColumns<T>
     public int MaxLimit { get; init; } = 200;
 
     public TableColumns<T> Text(string id, Expression<Func<T, string?>> value, TableUse use = TableUse.All) =>
-        Add(id, TableFilterKind.Text, value, use);
+        Add(id, new TableColumn<T, string?>(TableFilterKind.Text, value, use));
 
     /// <summary>以值清單篩選的欄位；值依屬性型別解析（列舉用名稱、布林用 true／false）。</summary>
     public TableColumns<T> Options<TValue>(string id, Expression<Func<T, TValue>> value, TableUse use = TableUse.All) =>
-        Add(id, TableFilterKind.Options, value, use);
+        Add(id, new TableColumn<T, TValue>(TableFilterKind.Options, value, use));
 
     /// <summary>以範圍篩選的欄位（整數、小數、<see cref="DateTimeOffset"/>、<see cref="DateOnly"/>，可為 null）。</summary>
     public TableColumns<T> Range<TValue>(string id, Expression<Func<T, TValue>> value, TableUse use = TableUse.All) =>
-        Add(id, TableFilterKind.Range, value, use);
+        Add(id, new TableColumn<T, TValue>(TableFilterKind.Range, value, use));
 
     public TableColumns<T> Key<TKey>(Expression<Func<T, TKey>> key)
     {
-        KeyExpression = key;
+        KeyColumn = new TableColumn<T, TKey>(TableFilterKind.Range, key, TableUse.Sort);
         return this;
     }
 
@@ -63,14 +64,12 @@ public sealed class TableColumns<T>
         return this;
     }
 
-    internal TableColumnDefinition? Find(string id) => columns.GetValueOrDefault(id);
+    internal TableColumn<T>? Find(string id) => columns.GetValueOrDefault(id);
 
-    private TableColumns<T> Add(string id, TableFilterKind kind, LambdaExpression value, TableUse use)
+    private TableColumns<T> Add(string id, TableColumn<T> column)
     {
-        if (!columns.TryAdd(id, new TableColumnDefinition(kind, value, use)))
+        if (!columns.TryAdd(id, column))
             throw new ArgumentException($"欄位重複：{id}", nameof(id));
         return this;
     }
 }
-
-internal sealed record TableColumnDefinition(TableFilterKind Kind, LambdaExpression Value, TableUse Use);
