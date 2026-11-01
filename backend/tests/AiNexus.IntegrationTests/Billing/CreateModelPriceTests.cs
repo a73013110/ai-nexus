@@ -84,7 +84,7 @@ public sealed class CreateModelPriceTests
         public List<(Guid Id, bool Visible)> Seen { get; } = [];
         public bool Fail { get; init; }
 
-        public void Register(IServiceCollection services) => services.AddScoped<IDomainEventHandler<ModelPriceCreated>>(scope => new Handler(this, scope.GetRequiredService<AppDbContext>()));
+        public void Register(IServiceCollection services) => services.AddDomainEventHandler<ModelPriceCreated>(scope => new Handler(this, scope.GetRequiredService<AppDbContext>()));
 
         private sealed class Handler(PriceEvents owner, AppDbContext db) : IDomainEventHandler<ModelPriceCreated>
         {
