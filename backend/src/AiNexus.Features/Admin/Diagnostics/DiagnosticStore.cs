@@ -18,6 +18,8 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
 {
     private static readonly string ConfigurationAction = DiagnosticsAudit.ConfigurationActivated.Name;
     private bool configurationRecorded;
+    // EF 模型在程式執行期間不變，欄位與存取子只建一次；並行時重複建立也無妨。
+    private (string Name, Type Type, Func<DiagnosticEvent, object?> Value)[]? mapped;
     public async Task WriteAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct)
     {
         if (events.Count == 0) return;
@@ -43,7 +45,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
             }
         }
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var mapped = Columns(db.Model);
+        var mapped = this.mapped ??= Columns(db.Model);
         var columns = string.Join(",", mapped.Select(x => "[" + x.Name + "]"));
         await using (var create = Command("SELECT TOP (0) " + columns + " INTO #LogBatch FROM [diagnostics].[DiagnosticEvents];", transaction))
             await create.ExecuteNonQueryAsync(ct);

@@ -14,7 +14,7 @@ public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog cat
     public void OnNext(DiagnosticListener source)
     {
         if (source.Name == "SqlClientDiagnosticListener")
-            lock (subscriptions) subscriptions.Add(source.Subscribe(this, name => name is "Microsoft.Data.SqlClient.WriteCommandBefore" or "Microsoft.Data.SqlClient.WriteCommandAfter" or "Microsoft.Data.SqlClient.WriteCommandError"));
+            lock (subscriptions) subscriptions.Add(source.Subscribe(this, name => name is SqlClientCommandBefore.Name or SqlClientCommandAfter.Name or SqlClientCommandError.Name));
     }
     // 每個 SQL 命令都會經過這裡；以 SqlClient 的強型別事件比對，不在熱路徑上以反射讀屬性。
     public void OnNext(KeyValuePair<string, object?> evt)
