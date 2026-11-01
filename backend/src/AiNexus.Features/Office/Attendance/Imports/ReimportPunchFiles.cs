@@ -23,14 +23,17 @@ public sealed record PunchReimportResult(IReadOnlyList<PunchImportDto> Imports, 
 
 internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReimportRequest>
 {
+    private static readonly RuleCode Order = new("order");
+    private static readonly RuleCode Future = new("future");
+
     public PunchReimportRequestValidator(TimeProvider clock)
     {
-        RuleFor(x => x.From).Must(PunchFileParser.IsSupported).WithErrorCode("range");
-        RuleFor(x => x.To).Must(PunchFileParser.IsSupported).WithErrorCode("range")
-            .GreaterThanOrEqualTo(x => x.From).WithErrorCode("order")
+        RuleFor(x => x.From).Must(PunchFileParser.IsSupported).WithErrorCode(RuleCode.Range);
+        RuleFor(x => x.To).Must(PunchFileParser.IsSupported).WithErrorCode(RuleCode.Range)
+            .GreaterThanOrEqualTo(x => x.From).WithErrorCode(Order)
             // 台灣的今天，不是伺服器的今天；今天的檔可能已經輸出，所以包含今天。
-            .Must(x => x <= TaipeiTime.Today(clock)).WithErrorCode("future")
-            .Must((request, to) => to.DayNumber - request.From.DayNumber < ReimportPunchFiles.MaxDays).WithErrorCode("too_long");
+            .Must(x => x <= TaipeiTime.Today(clock)).WithErrorCode(Future)
+            .Must((request, to) => to.DayNumber - request.From.DayNumber < ReimportPunchFiles.MaxDays).WithErrorCode(RuleCode.TooLong);
     }
 }
 

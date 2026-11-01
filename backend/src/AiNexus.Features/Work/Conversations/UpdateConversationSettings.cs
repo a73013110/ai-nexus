@@ -14,7 +14,7 @@ public sealed record ConversationSettingsRequest(bool? IsFavorite = null, bool? 
 /// <summary>只驗證指令長度；無效標籤有自己的代碼，由 handler 回報。</summary>
 internal sealed class ConversationSettingsRequestValidator : RequestValidator<ConversationSettingsRequest>
 {
-    public override string ProblemCode => ConversationsErrors.InstructionTooLongCode;
+    public override Error Problem => ConversationsErrors.InstructionTooLong;
 
     public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).MaximumLength(Conversation.InstructionMaxLength);
 }

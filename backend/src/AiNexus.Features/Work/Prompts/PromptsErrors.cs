@@ -6,4 +6,5 @@ internal static class PromptsErrors
 {
     public static readonly Error NotFound = Error.NotFound("template_not_found");
     public static readonly Error LimitReached = Error.Invalid("template_limit");
+    public static readonly Error Invalid = Error.Invalid("invalid_prompt_template");
 }

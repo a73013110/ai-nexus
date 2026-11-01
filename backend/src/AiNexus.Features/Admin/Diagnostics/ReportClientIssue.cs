@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -13,12 +14,12 @@ public sealed record ClientIssueResponse(string IssueCode, bool Accepted);
 
 internal sealed class ClientIssueRequestValidator : RequestValidator<ClientIssueRequest>
 {
-    public override string ProblemCode => "client_issue_invalid";
+    public override Error Problem => DiagnosticsErrors.ClientIssueInvalid;
 
     public ClientIssueRequestValidator()
     {
-        RuleFor(x => x.Kind).Must(x => x is "exception" or "rejection").WithErrorCode("unknown");
-        RuleFor(x => x.Fingerprint).Must(x => x is { Length: 64 } && x.All(char.IsAsciiHexDigit)).WithErrorCode("format");
+        RuleFor(x => x.Kind).Must(x => x is "exception" or "rejection").WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.Fingerprint).Must(x => x is { Length: 64 } && x.All(char.IsAsciiHexDigit)).WithErrorCode(RuleCode.Format);
     }
 }
 

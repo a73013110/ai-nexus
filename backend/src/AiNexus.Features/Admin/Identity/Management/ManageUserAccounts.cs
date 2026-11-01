@@ -30,12 +30,12 @@ public sealed record UserDisabled(Guid UserId, Guid ActorId) : IDomainEvent;
 /// </summary>
 internal sealed class UserAccountRequestValidator : RequestValidator<UserAccountRequest>
 {
-    public override string ProblemCode => "invalid_account";
+    public override Error Problem => IdentityErrors.InvalidAccount;
 
     public UserAccountRequestValidator()
     {
-        RuleFor(x => x.LocalAccount).Must(UserAccounts.IsValid).WithErrorCode("format");
-        RuleFor(x => x.AdAccount).Must(UserAccounts.IsValid).WithErrorCode("format");
+        RuleFor(x => x.LocalAccount).Must(UserAccounts.IsValid).WithErrorCode(RuleCode.Format);
+        RuleFor(x => x.AdAccount).Must(UserAccounts.IsValid).WithErrorCode(RuleCode.Format);
     }
 }
 

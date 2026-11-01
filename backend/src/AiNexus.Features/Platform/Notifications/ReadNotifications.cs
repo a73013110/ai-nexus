@@ -3,6 +3,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ public sealed record ReadNotificationsRequest(DateTimeOffset Through);
 
 internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadNotificationsRequest>
 {
-    public override string ProblemCode => "notification_cursor_required";
+    public override Error Problem => NotificationsErrors.CursorRequired;
 
     public ReadNotificationsRequestValidator() => RuleFor(x => x.Through).NotEmpty();
 }

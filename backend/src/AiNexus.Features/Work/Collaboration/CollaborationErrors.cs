@@ -11,4 +11,5 @@ public static class CollaborationErrors
     public static readonly Error UnknownMember = Error.Invalid("unknown_resource_member");
     public static readonly Error InvalidName = Error.Invalid("invalid_resource_name");
     public static readonly Error TasksActive = Error.Conflict("resource_tasks_active");
+    public static readonly Error InvalidAcl = Error.Invalid("invalid_resource_acl");
 }

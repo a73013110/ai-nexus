@@ -4,7 +4,6 @@ namespace AiNexus.Features.Platform.Inference;
 
 internal static class InferenceErrors
 {
-    public const string InputTooLongCode = "input_too_long";
     public static readonly Error RunNotFound = Error.NotFound("run_not_found");
     public static readonly Error InvalidModelPolicy = Error.Invalid("invalid_model_policy");
     public static readonly Error IdempotencyKeyRequired = Error.Invalid("idempotency_key_required");
@@ -27,4 +26,5 @@ internal static class InferenceErrors
     public static readonly Error ModelNotAllowed = Error.Invalid("model_not_allowed");
     public static readonly Error ReasoningNotSupported = Error.Invalid("reasoning_not_supported");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
+    public static readonly Error InputTooLong = Error.Invalid("input_too_long");
 }

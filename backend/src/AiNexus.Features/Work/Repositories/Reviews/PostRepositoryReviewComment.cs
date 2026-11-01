@@ -15,10 +15,10 @@ public sealed record PostRepositoryReviewCommentRequest(string Body);
 internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValidator<PostRepositoryReviewCommentRequest>
 {
     public const int MaxLength = 20000;
-    public override string ProblemCode => "review_comment_invalid";
+    public override Error Problem => RepositoriesErrors.CommentInvalid;
 
     public PostRepositoryReviewCommentRequestValidator() =>
-        RuleFor(x => x.Body).Must(x => x?.Trim().Length is > 0 and <= MaxLength).WithErrorCode("length");
+        RuleFor(x => x.Body).Must(x => x?.Trim().Length is > 0 and <= MaxLength).WithErrorCode(RuleCode.Length);
 }
 
 /// <summary>

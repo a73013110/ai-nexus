@@ -15,11 +15,11 @@ public sealed record ReviewRequest(int? Score, string Note = "");
 
 internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
 {
-    public override string ProblemCode => "review_invalid";
+    public override Error Problem => QualityErrors.ReviewInvalid;
 
     public ReviewRequestValidator()
     {
-        RuleFor(x => x.Score).Must(x => x is null or (>= 1 and <= 5)).WithErrorCode("range");
+        RuleFor(x => x.Score).Must(x => x is null or (>= 1 and <= 5)).WithErrorCode(RuleCode.Range);
         RuleFor(x => x.Note).MaximumLength(2000);
     }
 }

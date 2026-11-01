@@ -59,7 +59,9 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 ## 請求驗證
 
 - request body 的格式規則寫成 `RequestValidator<T>`，與 request 同檔；`/api/v1` 群組的 filter 在 handler 前驗證。單純的 `AbstractValidator<T>` 只當子驗證器；同一型別只能有一個（AINX1005）。
-- 要保留模組既有的錯誤代碼時覆寫 `ProblemCode`；欄位規則代碼用 `WithErrorCode("snake_case")`。
+- 失敗預設回 `validation_failed`（`RequestValidation.Failed`）；功能有專屬提示時覆寫 `Problem`，回傳 `<Module>Errors` 裡的 `Error.Invalid`。種類必須是 Invalid、代碼要在 `PublicErrorCatalog`（`EndpointConventionTests`）。
+- 欄位規則代碼是公開合約，用 `WithErrorCode(RuleCode.X)`；字串版禁用（BannedSymbols），打錯在編譯期失敗。兩個以上模組用到的代碼放 `RuleCode` 的靜態成員，只有一個功能用到的在驗證器宣告 `private static readonly RuleCode X = new("x")`，第二個模組要用時再搬進 `RuleCode`。
+- 文字欄位用 `RequiredText(上限)`／`OptionalText(上限)`：去掉前後空白後計算長度、擋控制字元，回 `required`／`too_long`／`format`。
 - validator 是 singleton，只看 request 本身：建構子只注入 singleton（options、`TimeProvider`）；依賴使用者、身分或資料庫的規則（重複、配額、擁有權）在 handler。
 - 刻意交給 handler 驗證的 request（失敗要寫稽核、登入失敗不可分辨、404／403 先於 400）不寫 validator，改標 `[ValidatedInHandler("原因")]`；兩者擇一（`EndpointConventionTests`）。
 

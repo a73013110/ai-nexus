@@ -18,11 +18,11 @@ public sealed record CreateArtifactRequest(string Title, string Content, Guid? S
 /// <summary>只驗證內容；標題不合法時由 handler 先回傳自己的錯誤代碼。</summary>
 internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateArtifactRequest>
 {
-    public override string ProblemCode => ArtifactsErrors.ContentInvalidCode;
+    public override Error Problem => ArtifactsErrors.ContentInvalid;
 
     public CreateArtifactRequestValidator()
     {
-        When(x => Artifact.TitleIsValid(x.Title), () => RuleFor(x => x.Content).Must(Artifact.ContentIsValid).WithErrorCode("invalid"));
+        When(x => Artifact.TitleIsValid(x.Title), () => RuleFor(x => x.Content).Must(Artifact.ContentIsValid).WithErrorCode(RuleCode.Invalid));
     }
 }
 

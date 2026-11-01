@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Management;
+using AiNexus.Platform.Validation;
 using FluentValidation;
 
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
@@ -11,30 +12,32 @@ namespace AiNexus.Features.Admin.AccessControl.Navigation;
 /// </summary>
 internal sealed partial class NavigationItemContentValidator : AbstractValidator<INavigationItemContent>
 {
+    private static readonly RuleCode HttpsUrl = new("https_url");
+
     public NavigationItemContentValidator()
     {
-        RuleFor(x => x.Kind).Must(x => x is NavigationItem.GroupKind or NavigationItem.PageKind or NavigationItem.LinkKind).WithErrorCode("unknown");
+        RuleFor(x => x.Kind).Must(x => x is NavigationItem.GroupKind or NavigationItem.PageKind or NavigationItem.LinkKind).WithErrorCode(RuleCode.Unknown);
         When(x => x.Kind == NavigationItem.PageKind, () =>
         {
-            RuleFor(x => x.FeatureId).Must(x => x is not null && AccessRules.FeatureKeys([x]) is null).WithErrorCode("required");
-            RuleFor(x => x.Name).Null().WithErrorCode("not_allowed");
+            RuleFor(x => x.FeatureId).Must(x => x is not null && AccessRules.FeatureKeys([x]) is null).WithErrorCode(RuleCode.Required);
+            RuleFor(x => x.Name).Null().WithErrorCode(RuleCode.NotAllowed);
             // 頁面的圖示一律來自目錄，避免同一頁面在不同位置出現不同圖示。
-            RuleFor(x => x.Icon).Null().WithErrorCode("not_allowed");
+            RuleFor(x => x.Icon).Null().WithErrorCode(RuleCode.NotAllowed);
         }).Otherwise(() =>
         {
-            RuleFor(x => x.FeatureId).Null().WithErrorCode("not_allowed");
-            RuleFor(x => x.Name).Must(x => x is not null && AccessRules.Name(x) is null).WithErrorCode("required");
-            RuleFor(x => x.Icon).Must(x => x is null || IconName().IsMatch(x)).WithErrorCode("format");
+            RuleFor(x => x.FeatureId).Null().WithErrorCode(RuleCode.NotAllowed);
+            RuleFor(x => x.Name).Must(x => x is not null && AccessRules.Name(x) is null).WithErrorCode(RuleCode.Required);
+            RuleFor(x => x.Icon).Must(x => x is null || IconName().IsMatch(x)).WithErrorCode(RuleCode.Format);
         });
         When(x => x.Kind == NavigationItem.LinkKind, () =>
         {
-            RuleFor(x => x.Url).Must(NavigationLinks.WellFormed).WithErrorCode("https_url");
-            RuleFor(x => x.AudienceGroupIds).Must(x => x is null || AccessRules.Keys(x) is null).WithErrorCode("format");
+            RuleFor(x => x.Url).Must(NavigationLinks.WellFormed).WithErrorCode(HttpsUrl);
+            RuleFor(x => x.AudienceGroupIds).Must(x => x is null || AccessRules.Keys(x) is null).WithErrorCode(RuleCode.Format);
         }).Otherwise(() =>
         {
-            RuleFor(x => x.Url).Null().WithErrorCode("not_allowed");
+            RuleFor(x => x.Url).Null().WithErrorCode(RuleCode.NotAllowed);
             // 可見群組只對外部連結有意義；頁面的可見範圍就是功能授權，不另設一層。
-            RuleFor(x => x.AudienceGroupIds).Must(x => x is null || x.Count == 0).WithErrorCode("not_allowed");
+            RuleFor(x => x.AudienceGroupIds).Must(x => x is null || x.Count == 0).WithErrorCode(RuleCode.NotAllowed);
         });
     }
 

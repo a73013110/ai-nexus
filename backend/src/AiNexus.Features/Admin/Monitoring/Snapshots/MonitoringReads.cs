@@ -15,5 +15,5 @@ internal static class MonitoringReads
 
     /// <summary>單次讀取（檢視或匯出）：驗證時間窗並取共用快照。</summary>
     public static Result<MonitoringSnapshot> Read(MonitoringSnapshots snapshots, int window)
-        => ValidWindow(window) ? snapshots.Read(window) : MonitoringErrors.InvalidWindow;
+        => ValidWindow(window) ? snapshots.Read(window) : MonitoringErrors.InvalidRequest;
 }

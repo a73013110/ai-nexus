@@ -11,12 +11,14 @@ namespace AiNexus.Features.Platform.Account.Security;
 
 internal sealed class ReauthenticationRequestValidator : RequestValidator<ReauthenticationRequest>
 {
-    public override string ProblemCode => "invalid_reauthentication";
+    private static readonly RuleCode OneMethod = new("one_method");
+
+    public override Error Problem => AccountErrors.InvalidReauthentication;
 
     public ReauthenticationRequestValidator()
     {
         // 擇一：密碼，或驗證碼 Id＋驗證碼；兩者都給或都沒給都是請求格式錯誤，不是驗證失敗。
-        RuleFor(x => x).Must(x => (x.Password is { Length: > 0 }) != (x.ChallengeId is not null && x.Code is { Length: > 0 })).WithErrorCode("one_method");
+        RuleFor(x => x).Must(x => (x.Password is { Length: > 0 }) != (x.ChallengeId is not null && x.Code is { Length: > 0 })).WithErrorCode(OneMethod);
         RuleFor(x => x.Password).MaximumLength(1024);
         RuleFor(x => x.Code).MaximumLength(16);
     }

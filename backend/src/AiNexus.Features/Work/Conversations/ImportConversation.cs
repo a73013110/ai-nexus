@@ -18,22 +18,24 @@ public sealed record BackupMessage(Guid Id, Guid? ParentId, string Role, string 
 /// </summary>
 internal sealed class ConversationBackupValidator : RequestValidator<ConversationBackup>
 {
+    private static readonly RuleCode Size = new("size");
+
     public const int MaxMessages = 400;
     public const long MaxContentCharacters = 1_000_000;
 
-    public override string ProblemCode => ConversationsErrors.InvalidBackupCode;
+    public override Error Problem => ConversationsErrors.InvalidBackup;
 
     public ConversationBackupValidator()
     {
         RuleFor(x => x.Version).Equal(1);
-        RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode("length");
+        RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode(RuleCode.Length);
         RuleFor(x => x.SystemInstruction).NotNull().MaximumLength(Conversation.InstructionMaxLength);
         RuleFor(x => x.Labels).NotNull();
         RuleFor(x => x.Messages)
             .Must(x => x is { Count: <= MaxMessages }
                 && x.All(m => m is { Content: not null })
                 && x.Sum(m => (long)m.Content.Length) <= MaxContentCharacters)
-            .WithErrorCode("size");
+            .WithErrorCode(Size);
     }
 }
 

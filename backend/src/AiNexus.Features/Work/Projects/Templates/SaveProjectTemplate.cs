@@ -14,12 +14,12 @@ public sealed record ProjectTemplateRequest(string Title, string Content);
 
 internal sealed class ProjectTemplateRequestValidator : RequestValidator<ProjectTemplateRequest>
 {
-    public override string ProblemCode => "project_template_invalid";
+    public override Error Problem => ProjectsErrors.TemplateInvalid;
 
     public ProjectTemplateRequestValidator()
     {
-        RuleFor(x => x.Title).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.TitleMaxLength).WithErrorCode("length");
-        RuleFor(x => x.Content).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.ContentMaxLength).WithErrorCode("length");
+        RuleFor(x => x.Title).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.TitleMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Content).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.ContentMaxLength).WithErrorCode(RuleCode.Length);
     }
 }
 

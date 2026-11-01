@@ -19,7 +19,7 @@ public sealed record ProjectRequest(string Name, string Description = "", string
 /// </summary>
 internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 {
-    public override string ProblemCode => "project_settings_invalid";
+    public override Error Problem => ProjectsErrors.SettingsInvalid;
 
     public ProjectRequestValidator()
     {

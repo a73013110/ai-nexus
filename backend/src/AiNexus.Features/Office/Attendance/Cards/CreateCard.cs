@@ -15,15 +15,12 @@ public sealed record CardCreateRequest(string CardNumber, bool HiddenFromRecords
 
 /// <summary>
 /// 卡號是打卡檔裡的原始字串（不補零、不轉數字），去掉前後空白後存入，之後與刷卡以相同字串比對。
-/// 控制字元會讓打卡檔的逐行解析與畫面顯示出錯，所以擋掉。
 /// </summary>
 internal sealed class CardCreateRequestValidator : RequestValidator<CardCreateRequest>
 {
     public CardCreateRequestValidator()
     {
-        RuleFor(x => x.CardNumber).Must(x => !string.IsNullOrWhiteSpace(x)).WithErrorCode("required")
-            .Must(x => x is null || x.Trim().Length <= Card.CardNumberMaxLength).WithErrorCode("too_long")
-            .Must(x => x is null || !x.Any(char.IsControl)).WithErrorCode("format");
+        RuleFor(x => x.CardNumber).RequiredText(Card.CardNumberMaxLength);
         RuleFor(x => x.Note).OptionalText(Card.NoteMaxLength);
     }
 }

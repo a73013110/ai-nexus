@@ -201,6 +201,8 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   ad_sid_required: 'AD 帳號缺少 SID，無法建立工作區。',
   ad_invalid_credentials: 'AD 帳號或密碼不正確，或此帳號無法登入。',
   invalid_settings: '個人設定超出允許範圍，請重新選擇。',
+  invalid_reauthentication: '請擇一確認身分：輸入密碼，或輸入寄到信箱的驗證碼。',
+  invalid_verification_request: '驗證碼的用途不正確，請重新整理後再試。',
   invalid_account:
     '登入帳號需為 1–64 個字元，只能使用字母、數字、點、底線與連字號。AD 請填目錄中的帳號，不含網域。',
   invalid_user: '請輸入姓名與有效角色。',

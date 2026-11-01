@@ -85,10 +85,4 @@ internal static class UnitRules
             memberships = await db.Set<UnitMember>().AsNoTracking().Where(x => x.UserId == userId).OrderBy(x => x.UnitId)
                 .Select(x => new { x.UnitId, x.IsPrimary, x.IsManager }).ToArrayAsync(ct),
         };
-
-    /// <summary>單位名稱的格式：去掉前後空白後 1～120 字、不含控制字元。</summary>
-    public static IRuleBuilderOptions<T, string> UnitName<T>(this IRuleBuilder<T, string> rule)
-        => rule.Must(x => !string.IsNullOrWhiteSpace(x)).WithErrorCode("required")
-            .Must(x => x is null || x.Trim().Length <= Unit.NameMaxLength).WithErrorCode("too_long")
-            .Must(x => x is null || !x.Any(char.IsControl)).WithErrorCode("format");
 }

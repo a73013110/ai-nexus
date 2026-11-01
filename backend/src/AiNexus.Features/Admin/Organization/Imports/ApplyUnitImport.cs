@@ -13,8 +13,8 @@ internal sealed class UnitImportRequestValidator : RequestValidator<UnitImportRe
 {
     public UnitImportRequestValidator()
     {
-        RuleFor(x => x.Fingerprint).NotEmpty().WithErrorCode("required").MaximumLength(64).WithErrorCode("too_long");
-        RuleFor(x => x.Excluded).Must(x => x is null || x.Count <= MaxExcluded).WithErrorCode("too_many");
+        RuleFor(x => x.Fingerprint).NotEmpty().WithErrorCode(RuleCode.Required).MaximumLength(64).WithErrorCode(RuleCode.TooLong);
+        RuleFor(x => x.Excluded).Must(x => x is null || x.Count <= MaxExcluded).WithErrorCode(RuleCode.TooMany);
     }
 
     /// <summary>GD 的部門以百計；上限只為擋住異常大的請求。</summary>

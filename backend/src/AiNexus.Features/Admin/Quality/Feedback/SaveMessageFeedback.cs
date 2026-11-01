@@ -17,12 +17,12 @@ public sealed record FeedbackRequest(int Rating, string Reason = "", string Note
 
 internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackRequest>
 {
-    public override string ProblemCode => "feedback_invalid";
+    public override Error Problem => QualityErrors.FeedbackInvalid;
 
     public FeedbackRequestValidator()
     {
         RuleFor(x => x.Rating).InclusiveBetween(-1, 1);
-        RuleFor(x => x.Reason).Must(x => x is "" or "incorrect" or "citation" or "incomplete" or "format" or "other").WithErrorCode("unknown");
+        RuleFor(x => x.Reason).Must(x => x is "" or "incorrect" or "citation" or "incomplete" or "format" or "other").WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.Note).MaximumLength(2000);
     }
 }

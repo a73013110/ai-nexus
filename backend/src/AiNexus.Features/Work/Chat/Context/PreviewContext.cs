@@ -46,12 +46,12 @@ public sealed record ContextUsageDto(
 /// </summary>
 internal sealed class ContextPreviewRequestValidator : RequestValidator<ContextPreviewRequest>
 {
-    public override string ProblemCode => InferenceErrors.InputTooLongCode;
+    public override Error Problem => InferenceErrors.InputTooLong;
 
     public ContextPreviewRequestValidator(IOptions<InferenceOptions> options) =>
         RuleFor(x => x.Prompt)
             .Must(x => x is null || x.Length <= options.Value.MaxInputCharacters)
-            .WithErrorCode("length");
+            .WithErrorCode(RuleCode.Length);
 }
 
 /// <summary>

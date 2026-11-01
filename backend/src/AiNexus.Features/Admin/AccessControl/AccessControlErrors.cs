@@ -1,4 +1,5 @@
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.AccessControl;
 
@@ -30,5 +31,5 @@ public static class AccessControlErrors
     public static readonly Error NavigationPageDuplicate = Error.Conflict("navigation_page_duplicate");
     public static readonly Error NavigationLinkHostNotAllowed = Error.Invalid("navigation_link_host_not_allowed");
     /// <summary>修改時送來的種類與節點現有種類不同。種類不能改，屬於請求形狀錯誤，所以沿用驗證失敗的通用代碼而不另開代碼。</summary>
-    public static readonly Error NavigationKindMismatch = Error.Invalid("validation_failed");
+    public static readonly Error NavigationKindMismatch = RequestValidation.Failed;
 }

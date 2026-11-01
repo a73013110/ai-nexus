@@ -13,11 +13,11 @@ public sealed record RenameLibraryFileRequest(string FileName, string ExpectedFi
 
 internal sealed class RenameLibraryFileRequestValidator : RequestValidator<RenameLibraryFileRequest>
 {
-    public override string ProblemCode => FilesErrors.FileNameInvalidCode;
+    public override Error Problem => FilesErrors.FileNameInvalid;
 
     public RenameLibraryFileRequestValidator()
     {
-        RuleFor(x => x.FileName).Must(x => RenameLibraryFile.NameIsValid(x.Trim())).WithErrorCode("invalid");
+        RuleFor(x => x.FileName).Must(x => RenameLibraryFile.NameIsValid(x.Trim())).WithErrorCode(RuleCode.Invalid);
     }
 }
 

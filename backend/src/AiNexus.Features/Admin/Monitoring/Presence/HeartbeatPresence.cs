@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Monitoring.Traffic;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -15,13 +16,13 @@ public sealed record PresenceRequest(Guid SessionId, string Feature, string Stat
 
 internal sealed class PresenceRequestValidator : RequestValidator<PresenceRequest>
 {
-    public override string ProblemCode => "invalid_request";
+    public override Error Problem => MonitoringErrors.InvalidRequest;
 
     public PresenceRequestValidator()
     {
         RuleFor(x => x.SessionId).NotEmpty();
-        RuleFor(x => x.Feature).Must(MonitoringVocabulary.ValidFeature).WithErrorCode("unknown");
-        RuleFor(x => x.State).Must(x => x is "active" or "idle" or "background").WithErrorCode("unknown");
+        RuleFor(x => x.Feature).Must(MonitoringVocabulary.ValidFeature).WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.State).Must(x => x is "active" or "idle" or "background").WithErrorCode(RuleCode.Unknown);
     }
 }
 public sealed record PresenceReceipt(bool Enabled, int HeartbeatSeconds);

@@ -11,11 +11,11 @@ public sealed record AdminRetrievalSearchRequest(string Query, IReadOnlyList<Gui
 /// <summary>與 <see cref="RetrievalPipeline.SearchAsync"/> 相同的查詢規則；模式與集合權限由 pipeline 之後再檢查。</summary>
 internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<AdminRetrievalSearchRequest>
 {
-    public override string ProblemCode => "knowledge_query_invalid";
+    public override Error Problem => KnowledgeErrors.QueryInvalid;
 
     public AdminRetrievalSearchRequestValidator()
     {
-        RuleFor(x => x.Query).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 2000).WithErrorCode("length");
+        RuleFor(x => x.Query).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 2000).WithErrorCode(RuleCode.Length);
     }
 }
 

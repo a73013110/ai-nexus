@@ -13,10 +13,10 @@ public sealed record CreateConversationRequest(string? Title = null);
 /// <summary>沒有標題時使用「新對話」；給定的標題去除頭尾空白後必須為 1 到 120 字元。</summary>
 internal sealed class CreateConversationRequestValidator : RequestValidator<CreateConversationRequest>
 {
-    public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
+    public override Error Problem => ConversationsErrors.InvalidTitle;
 
     public CreateConversationRequestValidator()
-        => RuleFor(x => x.Title).Must(x => x is null || Conversation.TitleIsValid(x)).WithErrorCode("length");
+        => RuleFor(x => x.Title).Must(x => x is null || Conversation.TitleIsValid(x)).WithErrorCode(RuleCode.Length);
 }
 
 /// <summary>建立使用者自己的空對話。其他模組經由 <see cref="ConversationService.CreateAsync"/> 建立。</summary>

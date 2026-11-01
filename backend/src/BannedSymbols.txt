@@ -90,3 +90,5 @@ M:System.Array.CreateInstance(System.Type,System.Int32[],System.Int32[]);在型�
 M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
 M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
 M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32[],System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+// 欄位規則代碼是公開合約：經由 RuleCode 指定，打錯成員名稱會編譯失敗；字串到執行期才會發現（backend-conventions.md 請求驗證）。
+M:FluentValidation.DefaultValidatorOptions.WithErrorCode``2(FluentValidation.IRuleBuilderOptions{``0,``1},System.String);改用 WithErrorCode(RuleCode)：共用代碼用 RuleCode 的靜態成員，單一功能的代碼在驗證器宣告成具名欄位。

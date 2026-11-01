@@ -15,8 +15,8 @@ public sealed record UnitOrderRequest(Guid? ParentId, IReadOnlyList<Guid> UnitId
 internal sealed class UnitOrderRequestValidator : RequestValidator<UnitOrderRequest>
 {
     public UnitOrderRequestValidator() => RuleFor(x => x.UnitIds).NotEmpty()
-        .Must(x => x.Count <= UnitRules.MaxSiblings).WithErrorCode("too_many")
-        .Must(x => x.Distinct().Count() == x.Count).WithErrorCode("duplicate");
+        .Must(x => x.Count <= UnitRules.MaxSiblings).WithErrorCode(RuleCode.TooMany)
+        .Must(x => x.Distinct().Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
 }
 
 /// <summary>

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -13,19 +14,21 @@ public sealed record ResourceMemberUpdate(Guid UserId, string Role);
 /// </summary>
 internal sealed class ResourceAclRequestValidator : RequestValidator<ResourceAclRequest>
 {
+    private static readonly RuleCode NotNull = new("not_null");
+
     public const int MaxMembers = 50, MaxGroups = 20;
 
-    public override string ProblemCode => "invalid_resource_acl";
+    public override Error Problem => CollaborationErrors.InvalidAcl;
 
     public ResourceAclRequestValidator()
     {
         RuleFor(x => x.Members).Cascade(CascadeMode.Stop).NotNull()
-            .Must(x => x.All(m => m is not null)).WithErrorCode("not_null")
-            .Must(x => x.Count <= MaxMembers).WithErrorCode("too_many")
-            .Must(x => x.Select(m => m.UserId).Distinct().Count() == x.Count).WithErrorCode("duplicate")
-            .Must(x => x.All(m => m.Role is "viewer" or "editor")).WithErrorCode("unknown");
+            .Must(x => x.All(m => m is not null)).WithErrorCode(NotNull)
+            .Must(x => x.Count <= MaxMembers).WithErrorCode(RuleCode.TooMany)
+            .Must(x => x.Select(m => m.UserId).Distinct().Count() == x.Count).WithErrorCode(RuleCode.Duplicate)
+            .Must(x => x.All(m => m.Role is "viewer" or "editor")).WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.GroupIds).Cascade(CascadeMode.Stop).NotNull()
-            .Must(x => x.Count <= MaxGroups).WithErrorCode("too_many")
-            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode("duplicate");
+            .Must(x => x.Count <= MaxGroups).WithErrorCode(RuleCode.TooMany)
+            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
     }
 }

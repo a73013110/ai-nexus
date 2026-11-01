@@ -15,7 +15,7 @@ public sealed record UnitUpdateRequest(Guid? ParentId, string Name, bool Enabled
 
 internal sealed class UnitUpdateRequestValidator : RequestValidator<UnitUpdateRequest>
 {
-    public UnitUpdateRequestValidator() => RuleFor(x => x.Name).UnitName();
+    public UnitUpdateRequestValidator() => RuleFor(x => x.Name).RequiredText(Unit.NameMaxLength);
 }
 
 /// <summary>修改或搬移單位；搬移時整棵下層跟著走，成員不變。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>

@@ -16,32 +16,35 @@ public interface IRequestValidator
     /// <summary>驗證的 request 型別；端點參數是這個型別時才套用。</summary>
     Type RequestType { get; }
 
+    /// <summary>驗證失敗時回應的錯誤；種類必須是 <see cref="ErrorKind.Invalid"/>、代碼要在 <c>PublicErrorCatalog</c>（<c>EndpointConventionTests</c> 檢查）。</summary>
+    Error Problem { get; }
+
     /// <summary>包住 <paramref name="next"/>：驗證第 <paramref name="index"/> 個引數，失敗時回應 problem、不呼叫 handler。</summary>
     internal EndpointFilterDelegate Wrap(int index, EndpointFilterDelegate next);
 }
 
 /// <summary>
 /// 請求驗證器基底類別，只有它會套用到端點；單純的 <see cref="AbstractValidator{T}"/> 只當子驗證器（<c>Include</c>、<c>SetValidator</c>）。
-/// 可覆寫 <see cref="ProblemCode"/> 以保留特定功能模組既有的公開錯誤代碼。
+/// 功能有自己的提示時覆寫 <see cref="Problem"/>，回傳模組 <c>&lt;Module&gt;Errors</c> 裡的錯誤；預設是 <see cref="RequestValidation.Failed"/>。
 /// 驗證器由組合產生器以 <see cref="IRequestValidator"/> 註冊為 singleton（<see cref="Modules.FeatureCompositionAttribute"/>），只看 request 本身：
 /// 建構子只注入 singleton（options、<see cref="TimeProvider"/>），依賴目前使用者、身分或資料庫的規則放 handler。
 /// </summary>
 public abstract class RequestValidator<T> : AbstractValidator<T>, IRequestValidator
 {
-    public virtual string ProblemCode => RequestValidation.DefaultCode;
+    public virtual Error Problem => RequestValidation.Failed;
 
     Type IRequestValidator.RequestType => typeof(T);
 
     // 在泛型型別裡建立過濾器，請求時以 GetArgument<T> 取引數（RDG 產生的 context 不必裝箱）並直接呼叫強型別驗證。
     EndpointFilterDelegate IRequestValidator.Wrap(int index, EndpointFilterDelegate next)
     {
-        var code = ProblemCode;
+        var problem = Problem;
         return async invocation =>
         {
             // 選填 body 沒送時是 null；必填 body 缺少時，框架在進過濾器前就已回 400。
             if (invocation.GetArgument<T>(index) is not { } argument) return await next(invocation);
             var result = await ValidateAsync(argument, invocation.HttpContext.RequestAborted);
-            return result.IsValid ? await next(invocation) : Error.Invalid(code).ToProblem(RequestValidation.Fields(result));
+            return result.IsValid ? await next(invocation) : problem.ToProblem(RequestValidation.Fields(result));
         };
     }
 }
@@ -71,7 +74,8 @@ public sealed class RequestValidators
 /// </summary>
 public static class RequestValidation
 {
-    public const string DefaultCode = "validation_failed";
+    /// <summary>沒有功能專屬提示時的驗證錯誤：「請檢查標示的欄位」。</summary>
+    public static readonly Error Failed = Error.Invalid("validation_failed");
 
     /// <summary>註冊驗證器的查詢表；驗證器本身由組合產生器註冊。</summary>
     public static IServiceCollection AddRequestValidation(this IServiceCollection services)

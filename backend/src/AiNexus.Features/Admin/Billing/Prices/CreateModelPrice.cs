@@ -17,24 +17,29 @@ public sealed record PriceRequest(string Provider, string ModelId, string Curren
 
 internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
 {
-    public override string ProblemCode => "invalid_price";
+    private static readonly RuleCode Characters = new("characters");
+    private static readonly RuleCode Iso4217 = new("iso_4217");
+    private static readonly RuleCode Window = new("window");
+    private static readonly RuleCode FreeHasRates = new("free_has_rates");
+
+    public override Error Problem => BillingErrors.InvalidPrice;
 
     // 新價格只對 EffectiveAt 之後的呼叫生效，已記錄的費用不會被追溯改寫。
     public PriceRequestValidator(TimeProvider clock)
     {
-        RuleFor(x => x.Provider).Must(x => x is "google" or "ollama" || BillingService.WebSearchProviders.Contains(x)).WithErrorCode("unknown");
+        RuleFor(x => x.Provider).Must(x => x is "google" or "ollama" || BillingService.WebSearchProviders.Contains(x)).WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.ModelId).NotEmpty().MaximumLength(160)
-            .Must(x => x.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/')).WithErrorCode("characters");
-        RuleFor(x => x.Currency).Must(x => x.Length == 3 && x.All(char.IsAsciiLetterUpper)).WithErrorCode("iso_4217");
-        RuleFor(x => x.Kind).Must(x => x is "api" or "internal" or "free").WithErrorCode("unknown");
-        RuleFor(x => x.RequestCharge).Must(x => x is "completed" or "attempted").WithErrorCode("unknown");
+            .Must(x => x.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/')).WithErrorCode(Characters);
+        RuleFor(x => x.Currency).Must(x => x.Length == 3 && x.All(char.IsAsciiLetterUpper)).WithErrorCode(Iso4217);
+        RuleFor(x => x.Kind).Must(x => x is "api" or "internal" or "free").WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.RequestCharge).Must(x => x is "completed" or "attempted").WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.Note).MaximumLength(500);
-        RuleFor(x => x.EffectiveAt).Must(x => x >= clock.GetUtcNow().AddMinutes(-5) && x <= clock.GetUtcNow().AddDays(366)).WithErrorCode("window");
+        RuleFor(x => x.EffectiveAt).Must(x => x >= clock.GetUtcNow().AddMinutes(-5) && x <= clock.GetUtcNow().AddDays(366)).WithErrorCode(Window);
         RuleForEach(x => new[] { x.InputPerMillion, x.CachedInputPerMillion, x.OutputPerMillion, x.PerRequest })
-            .Must(x => x is >= 0 and <= 100000 && decimal.Round(x, 8) == x).WithErrorCode("range").OverridePropertyName("rates");
+            .Must(x => x is >= 0 and <= 100000 && decimal.Round(x, 8) == x).WithErrorCode(RuleCode.Range).OverridePropertyName("rates");
         RuleFor(x => x.CachedInputPerMillion).LessThanOrEqualTo(x => x.InputPerMillion);
         RuleFor(x => x).Must(x => x.Kind != "free" || x is { InputPerMillion: 0, CachedInputPerMillion: 0, OutputPerMillion: 0, PerRequest: 0 })
-            .WithErrorCode("free_has_rates").OverridePropertyName("kind");
+            .WithErrorCode(FreeHasRates).OverridePropertyName("kind");
     }
 }
 

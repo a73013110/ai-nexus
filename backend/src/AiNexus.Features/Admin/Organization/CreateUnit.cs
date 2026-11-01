@@ -13,7 +13,7 @@ public sealed record UnitCreateRequest(Guid? ParentId, string Name, bool Enabled
 
 internal sealed class UnitCreateRequestValidator : RequestValidator<UnitCreateRequest>
 {
-    public UnitCreateRequestValidator() => RuleFor(x => x.Name).UnitName();
+    public UnitCreateRequestValidator() => RuleFor(x => x.Name).RequiredText(Unit.NameMaxLength);
 }
 
 /// <summary>新增單位，排到同層最後。Id 由伺服器產生。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>

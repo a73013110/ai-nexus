@@ -12,9 +12,9 @@ public sealed record RenameConversationRequest(string Title);
 
 internal sealed class RenameConversationRequestValidator : RequestValidator<RenameConversationRequest>
 {
-    public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
+    public override Error Problem => ConversationsErrors.InvalidTitle;
 
-    public RenameConversationRequestValidator() => RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode("length");
+    public RenameConversationRequestValidator() => RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode(RuleCode.Length);
 }
 
 /// <summary>重新命名使用者自己的對話。</summary>

@@ -26,12 +26,14 @@ public sealed record CreateRepositoryReviewRequest(string? Commit, string? BaseC
 /// </summary>
 internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<CreateRepositoryReviewRequest>
 {
-    public override string ProblemCode => "review_request_invalid";
+    private static readonly RuleCode GuidFormat = new("guid");
+
+    public override Error Problem => RepositoriesErrors.ReviewRequestInvalid;
 
     public CreateRepositoryReviewRequestValidator()
     {
-        RuleFor(x => x.Note).Must(x => (x?.Trim().Length ?? 0) <= RepositoryReview.NoteMaxLength).WithErrorCode("length");
-        RuleFor(x => x.IdempotencyKey).Must(x => Guid.TryParse(x, out _)).WithErrorCode("guid");
+        RuleFor(x => x.Note).Must(x => (x?.Trim().Length ?? 0) <= RepositoryReview.NoteMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.IdempotencyKey).Must(x => Guid.TryParse(x, out _)).WithErrorCode(GuidFormat);
     }
 }
 

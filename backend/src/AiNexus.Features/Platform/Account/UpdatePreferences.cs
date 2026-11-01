@@ -13,9 +13,9 @@ namespace AiNexus.Features.Platform.Account;
 /// <summary>驗證順序固定：先檢查主題，再由 handler 檢查模型 ID 長度與伺服器是否核准該模型。</summary>
 internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 {
-    public override string ProblemCode => AccountErrors.InvalidTheme.Code;
+    public override Error Problem => AccountErrors.InvalidTheme;
 
-    public PreferencesValidator() => RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode("unknown");
+    public PreferencesValidator() => RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode(RuleCode.Unknown);
 }
 
 /// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>

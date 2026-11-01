@@ -25,18 +25,20 @@ public sealed record EvaluationRunRequest(IReadOnlyList<EvaluationVariantRequest
 
 internal sealed class EvaluationRunRequestValidator : RequestValidator<EvaluationRunRequest>
 {
-    public override string ProblemCode => "evaluation_variants_invalid";
+    private static readonly RuleCode Unique = new("unique");
+
+    public override Error Problem => QualityErrors.VariantsInvalid;
 
     // 變體 1 至 3 個；標籤去除空白後不分大小寫不得重複，每個 1 至 80 字元。
     public EvaluationRunRequestValidator()
     {
-        RuleFor(x => x.Variants).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode("count");
+        RuleFor(x => x.Variants).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode(RuleCode.Count);
         RuleForEach(x => x.Variants).NotNull().ChildRules(variant =>
         {
-            variant.RuleFor(x => x.Label).Must(x => x.Trim().Length is >= 1 and <= 80).WithErrorCode("length");
+            variant.RuleFor(x => x.Label).Must(x => x.Trim().Length is >= 1 and <= 80).WithErrorCode(RuleCode.Length);
             variant.RuleFor(x => x.Instruction).MaximumLength(4000);
         });
-        RuleFor(x => x.Variants).Must(x => x.Select(v => v?.Label.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == x.Count).WithErrorCode("unique")
+        RuleFor(x => x.Variants).Must(x => x.Select(v => v?.Label.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == x.Count).WithErrorCode(Unique)
             .When(x => x.Variants is not null);
     }
 }

@@ -163,6 +163,8 @@ public static class PublicErrorCatalog
         ["invalid_roles"] = "選取的角色已不存在，請重新載入。",
         ["invalid_search"] = "搜尋條件不正確。",
         ["invalid_settings"] = "個人設定超出允許範圍，請重新選擇。",
+        ["invalid_reauthentication"] = "請擇一確認身分：輸入密碼，或輸入寄到信箱的驗證碼。",
+        ["invalid_verification_request"] = "驗證碼的用途不正確，請重新整理後再試。",
         ["invalid_spend_period"] = "查詢期間需為 1 至 366 天，並提供有效的時區。",
         ["invalid_storage_limit"] = "容量上限需為 0 至 1,000,000 GB 的整數 bytes；留空則使用群組或預設容量。",
         ["invalid_table_query"] = "表格的排序或篩選條件不正確，請清除欄位篩選後再試。",
@@ -363,6 +365,9 @@ public static class PublicErrorCatalog
         ["windows_account_required"] = "Windows 帳號資料不完整。",
         ["windows_sid_required"] = "無法取得 AD SID，請確認登入設定。",
     };
+    /// <summary>代碼是否有核准的提示；沒有的代碼只會顯示通用提示。</summary>
+    public static bool Contains(string code) => Hints.ContainsKey(code);
+
     /// <summary>取得代碼的核准提示；未登錄的代碼依狀態碼退回 401／403 的預設提示或通用提示。</summary>
     public static string Message(string code, int status) => Hints.GetValueOrDefault(code)
         ?? (status == 401 ? Hints["authentication_required"] : status == 403 ? Hints["access_denied"] : "操作未完成，請確認輸入或稍後再試。");

@@ -12,16 +12,16 @@ namespace AiNexus.Features.Platform.Account;
 /// <summary>閱讀與版面設定的形狀檢查。外觀（Appearance）不在這裡驗證，由 <c>UpdatePreferences.Apply</c> 使用它自己的錯誤代碼檢查。</summary>
 internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 {
-    public override string ProblemCode => "invalid_settings";
+    public override Error Problem => AccountErrors.InvalidSettings;
 
     public UserSettingsValidator()
     {
         RuleFor(x => x.ReadingFontSize).InclusiveBetween(12, 24);
-        RuleFor(x => x.ReadingLineHeight).Must(x => double.IsFinite(x) && x is >= 1 and <= 2.2).WithErrorCode("range");
+        RuleFor(x => x.ReadingLineHeight).Must(x => double.IsFinite(x) && x is >= 1 and <= 2.2).WithErrorCode(RuleCode.Range);
         RuleFor(x => x.SidebarWidth).InclusiveBetween(240, 360);
-        RuleFor(x => x.Density).Must(x => x is "comfortable" or "compact").WithErrorCode("unknown");
-        RuleFor(x => x.ReadingWidth).Must(x => x is "narrow" or "standard" or "wide").WithErrorCode("unknown");
-        RuleFor(x => x.DefaultReasoningEffort).Must(x => x is "auto" or "minimal" or "low" or "medium" or "high").WithErrorCode("unknown");
+        RuleFor(x => x.Density).Must(x => x is "comfortable" or "compact").WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.ReadingWidth).Must(x => x is "narrow" or "standard" or "wide").WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.DefaultReasoningEffort).Must(x => x is "auto" or "minimal" or "low" or "medium" or "high").WithErrorCode(RuleCode.Unknown);
     }
 }
 

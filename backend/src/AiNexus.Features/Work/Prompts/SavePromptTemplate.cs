@@ -13,12 +13,12 @@ public sealed record SavePromptRequest(string Title, string Content);
 
 internal sealed class SavePromptRequestValidator : RequestValidator<SavePromptRequest>
 {
-    public override string ProblemCode => "invalid_prompt_template";
+    public override Error Problem => PromptsErrors.Invalid;
 
     public SavePromptRequestValidator()
     {
-        RuleFor(x => x.Title).Must(x => x.Trim().Length is >= 1 and <= PromptTemplate.TitleMaxLength).WithErrorCode("length");
-        RuleFor(x => x.Content).Must(x => x.Trim().Length is >= 1 and <= PromptTemplate.ContentMaxLength).WithErrorCode("length");
+        RuleFor(x => x.Title).Must(x => x.Trim().Length is >= 1 and <= PromptTemplate.TitleMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Content).Must(x => x.Trim().Length is >= 1 and <= PromptTemplate.ContentMaxLength).WithErrorCode(RuleCode.Length);
     }
 }
 

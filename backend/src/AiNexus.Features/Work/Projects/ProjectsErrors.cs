@@ -14,4 +14,6 @@ internal static class ProjectsErrors
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
     public static readonly Error FilesPending = Error.Conflict("project_files_pending");
     public static readonly Error ContextLimit = Error.Conflict("project_context_limit");
+    public static readonly Error SettingsInvalid = Error.Invalid("project_settings_invalid");
+    public static readonly Error TemplateInvalid = Error.Invalid("project_template_invalid");
 }

@@ -46,4 +46,7 @@ internal static class RepositoriesErrors
     public static readonly Error ResponseInvalid = Error.Upstream("gitea_response_invalid");
     public static readonly Error Timeout = Error.Timeout("gitea_timeout");
     public static readonly Error Unreachable = Error.Unavailable("gitea_unavailable");
+    public static readonly Error InvalidToken = Error.Invalid("invalid_gitea_token");
+    public static readonly Error ReviewRequestInvalid = Error.Invalid("review_request_invalid");
+    public static readonly Error CommentInvalid = Error.Invalid("review_comment_invalid");
 }

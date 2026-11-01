@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,12 +23,15 @@ internal interface IAssignmentFields
 /// </summary>
 internal static class AssignmentRules
 {
+    private static readonly RuleCode Period = new("period");
+    private static readonly RuleCode HolderRequired = new("holder_required");
+
     /// <summary>格式規則與資料表的 check（持有人至少一個、結束晚於開始）一致，才能在碰資料庫前回固定的代碼。</summary>
     public static void AddFieldRules<T>(this AbstractValidator<T> validator) where T : IAssignmentFields
     {
-        validator.RuleFor(x => x.StartsAt).Must(x => x != default).WithErrorCode("required");
-        validator.RuleFor(x => x.EndsAt).Must((request, end) => end is null || end > request.StartsAt).WithErrorCode("period");
-        validator.RuleFor(x => x).Must(x => x.UserId is not null || !string.IsNullOrWhiteSpace(x.HolderName)).WithErrorCode("holder_required").OverridePropertyName("holder");
+        validator.RuleFor(x => x.StartsAt).Must(x => x != default).WithErrorCode(RuleCode.Required);
+        validator.RuleFor(x => x.EndsAt).Must((request, end) => end is null || end > request.StartsAt).WithErrorCode(Period);
+        validator.RuleFor(x => x).Must(x => x.UserId is not null || !string.IsNullOrWhiteSpace(x.HolderName)).WithErrorCode(HolderRequired).OverridePropertyName("holder");
         validator.RuleFor(x => x.HolderName).OptionalText(CardAssignment.HolderNameMaxLength);
         validator.RuleFor(x => x.Note).OptionalText(CardAssignment.NoteMaxLength);
     }

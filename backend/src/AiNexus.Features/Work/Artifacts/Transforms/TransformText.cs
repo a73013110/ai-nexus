@@ -14,14 +14,16 @@ public sealed record TransformTextDto(string Text, bool Truncated);
 /// <summary>只驗證輸入的文字與語言；不支援的 action 有自己的錯誤代碼，由 handler 之後回報。</summary>
 internal sealed class TransformTextRequestValidator : RequestValidator<TransformTextRequest>
 {
+    private static readonly RuleCode Unsupported = new("unsupported");
+
     public const int MaxTextCharacters = 8000;
 
-    public override string ProblemCode => ArtifactsErrors.TransformInputInvalidCode;
+    public override Error Problem => ArtifactsErrors.TransformInputInvalid;
 
     public TransformTextRequestValidator()
     {
-        RuleFor(x => x.Text).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= MaxTextCharacters).WithErrorCode("length");
-        RuleFor(x => x.Language).Must(x => x is "繁體中文" or "English" or "日本語" or "简体中文").WithErrorCode("unsupported");
+        RuleFor(x => x.Text).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= MaxTextCharacters).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Language).Must(x => x is "繁體中文" or "English" or "日本語" or "简体中文").WithErrorCode(Unsupported);
     }
 }
 

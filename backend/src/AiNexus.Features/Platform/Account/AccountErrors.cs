@@ -12,4 +12,7 @@ internal static class AccountErrors
     /// <summary>帳號安全設定在同一時間被其他請求改過（SecurityVersion 並行衝突）。</summary>
     public static readonly Error AccountChanged = Error.Conflict("account_changed");
     public static readonly Error VerificationNotFound = Error.NotFound("verification_not_found");
+    public static readonly Error InvalidSettings = Error.Invalid("invalid_settings");
+    public static readonly Error InvalidReauthentication = Error.Invalid("invalid_reauthentication");
+    public static readonly Error InvalidVerificationRequest = Error.Invalid("invalid_verification_request");
 }

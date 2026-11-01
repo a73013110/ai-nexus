@@ -6,9 +6,9 @@ internal static class ConversationsErrors
 {
     public static readonly Error NotFound = Error.NotFound("conversation_not_found");
     public static readonly Error InvalidQuery = Error.Invalid("invalid_query");
-    public static readonly Error InvalidTitle = Error.Invalid(InvalidTitleCode);
+    public static readonly Error InvalidTitle = Error.Invalid("invalid_title");
     public static readonly Error InvalidLabels = Error.Invalid("invalid_labels");
-    public static readonly Error InvalidBackup = Error.Invalid(InvalidBackupCode);
+    public static readonly Error InvalidBackup = Error.Invalid("invalid_backup");
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
     public static readonly Error MessageNotFound = Error.NotFound("message_not_found");
     public static readonly Error Archived = Error.Conflict("conversation_archived");
@@ -17,8 +17,6 @@ internal static class ConversationsErrors
     public static readonly Error InvalidParent = Error.Invalid("invalid_parent");
     public static readonly Error InvalidSearch = Error.Invalid("invalid_search");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
+    public static readonly Error InstructionTooLong = Error.Invalid("instruction_too_long");
 
-    public const string InvalidTitleCode = "invalid_title";
-    public const string InstructionTooLongCode = "instruction_too_long";
-    public const string InvalidBackupCode = "invalid_backup";
 }

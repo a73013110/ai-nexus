@@ -24,13 +24,13 @@ public sealed record RetrievalEvaluationRequest(string Title, IReadOnlyList<Guid
 /// </summary>
 internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<RetrievalEvaluationRequest>
 {
-    public override string ProblemCode => "retrieval_evaluation_invalid";
+    public override Error Problem => QualityErrors.RetrievalInvalid;
 
     public RetrievalEvaluationRequestValidator()
     {
-        RuleFor(x => x.Title).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 120).WithErrorCode("length");
-        RuleFor(x => x.CollectionIds).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode("count");
-        RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode("count");
+        RuleFor(x => x.Title).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 120).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.CollectionIds).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode(RuleCode.Count);
+        RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode(RuleCode.Count);
     }
 }
 

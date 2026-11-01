@@ -17,15 +17,21 @@ public sealed record RepositoryChatDto(ConversationDto Conversation, AttachmentD
 
 internal sealed class StartRepositoryChatRequestValidator : RequestValidator<StartRepositoryChatRequest>
 {
-    public override string ProblemCode => RepositoriesErrors.ChatSourceInvalid.Code;
+    private static readonly RuleCode Source = new("source");
+    private static readonly RuleCode Commit = new("commit");
+    private static readonly RuleCode Paths = new("paths");
+    private static readonly RuleCode Issue = new("issue");
+    private static readonly RuleCode Pull = new("pull");
+
+    public override Error Problem => RepositoriesErrors.ChatSourceInvalid;
 
     public StartRepositoryChatRequestValidator()
     {
-        RuleFor(x => x).Must(x => (x.Paths is { Count: > 0 } ? 1 : 0) + (x.Issue is not null ? 1 : 0) + (x.Pull is not null ? 1 : 0) == 1).WithErrorCode("source");
-        RuleFor(x => x.Commit).Must(RepositoryService.IsCommit).When(x => x.Paths is { Count: > 0 }).WithErrorCode("commit");
-        RuleFor(x => x.Paths).Must(x => x!.Count <= 50 && x.All(p => RepositoryService.IsFilePath(p, false))).When(x => x.Paths is not null).WithErrorCode("paths");
-        RuleFor(x => x.Issue).GreaterThan(0).When(x => x.Issue is not null).WithErrorCode("issue");
-        RuleFor(x => x.Pull).GreaterThan(0).When(x => x.Pull is not null).WithErrorCode("pull");
+        RuleFor(x => x).Must(x => (x.Paths is { Count: > 0 } ? 1 : 0) + (x.Issue is not null ? 1 : 0) + (x.Pull is not null ? 1 : 0) == 1).WithErrorCode(Source);
+        RuleFor(x => x.Commit).Must(RepositoryService.IsCommit).When(x => x.Paths is { Count: > 0 }).WithErrorCode(Commit);
+        RuleFor(x => x.Paths).Must(x => x!.Count <= 50 && x.All(p => RepositoryService.IsFilePath(p, false))).When(x => x.Paths is not null).WithErrorCode(Paths);
+        RuleFor(x => x.Issue).GreaterThan(0).When(x => x.Issue is not null).WithErrorCode(Issue);
+        RuleFor(x => x.Pull).GreaterThan(0).When(x => x.Pull is not null).WithErrorCode(Pull);
     }
 }
 

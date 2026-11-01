@@ -14,11 +14,11 @@ public sealed record KnowledgeSearchRequest(string Query, IReadOnlyList<Guid> Co
 /// </summary>
 internal sealed class KnowledgeSearchRequestValidator : RequestValidator<KnowledgeSearchRequest>
 {
-    public override string ProblemCode => "knowledge_query_invalid";
+    public override Error Problem => KnowledgeErrors.QueryInvalid;
 
     public KnowledgeSearchRequestValidator()
     {
-        RuleFor(x => x.Query).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 2000).WithErrorCode("length");
+        RuleFor(x => x.Query).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 2000).WithErrorCode(RuleCode.Length);
     }
 }
 

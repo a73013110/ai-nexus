@@ -16,7 +16,7 @@ public sealed record UserPositionRequest(int Position);
 
 internal sealed class UserPositionRequestValidator : RequestValidator<UserPositionRequest>
 {
-    public override string ProblemCode => IdentityErrors.InvalidUserOrder.Code;
+    public override Error Problem => IdentityErrors.InvalidUserOrder;
 
     public UserPositionRequestValidator() => RuleFor(x => x.Position).GreaterThanOrEqualTo(1);
 }

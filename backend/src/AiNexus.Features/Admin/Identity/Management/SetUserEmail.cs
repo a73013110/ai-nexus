@@ -17,10 +17,10 @@ public sealed record UserEmailRequest(string? Email);
 
 internal sealed class UserEmailRequestValidator : RequestValidator<UserEmailRequest>
 {
-    public override string ProblemCode => "email_invalid";
+    public override Error Problem => IdentityErrors.EmailInvalid;
 
     public UserEmailRequestValidator() => RuleFor(x => x.Email)
-        .Must(x => string.IsNullOrWhiteSpace(x) || UserEmails.TryNormalize(x, out _)).WithErrorCode("format");
+        .Must(x => string.IsNullOrWhiteSpace(x) || UserEmails.TryNormalize(x, out _)).WithErrorCode(RuleCode.Format);
 }
 
 /// <summary>

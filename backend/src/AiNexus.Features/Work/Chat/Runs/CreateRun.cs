@@ -49,17 +49,17 @@ public sealed record CreateRunRequest(
 /// </summary>
 internal sealed class CreateRunRequestValidator : RequestValidator<CreateRunRequest>
 {
-    public override string ProblemCode => InferenceErrors.InputTooLongCode;
+    public override Error Problem => InferenceErrors.InputTooLong;
 
     public CreateRunRequestValidator(IOptions<InferenceOptions> options)
     {
         RuleFor(x => x.Prompt)
             .Must(x => x is null || x.Length <= options.Value.MaxInputCharacters)
-            .WithErrorCode("length");
+            .WithErrorCode(RuleCode.Length);
 
         RuleFor(x => x.ModelId)
             .Must(x => x is null || x.Length <= 160)
-            .WithErrorCode("length");
+            .WithErrorCode(RuleCode.Length);
     }
 }
 

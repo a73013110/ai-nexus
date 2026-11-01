@@ -14,9 +14,9 @@ public sealed record DirectorySyncRequest(IReadOnlyList<Guid> UserIds);
 
 internal sealed class DirectorySyncRequestValidator : RequestValidator<DirectorySyncRequest>
 {
-    public DirectorySyncRequestValidator() => RuleFor(x => x.UserIds).NotNull().WithErrorCode("required")
-        .Must(x => x is { Count: > 0 and <= DirectoryProvisioning.MaxBatch }).WithErrorCode("count")
-        .Must(x => x is null || x.Distinct().Count() == x.Count).WithErrorCode("duplicate");
+    public DirectorySyncRequestValidator() => RuleFor(x => x.UserIds).NotNull().WithErrorCode(RuleCode.Required)
+        .Must(x => x is { Count: > 0 and <= DirectoryProvisioning.MaxBatch }).WithErrorCode(RuleCode.Count)
+        .Must(x => x is null || x.Distinct().Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
 }
 
 /// <summary>

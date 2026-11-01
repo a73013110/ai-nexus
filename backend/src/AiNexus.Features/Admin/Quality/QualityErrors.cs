@@ -18,4 +18,9 @@ internal static class QualityErrors
     public static readonly Error RetrievalLimit = Error.Conflict("retrieval_evaluation_limit");
     public static readonly Error RetrievalChanged = Error.Conflict("retrieval_evaluation_changed");
     public static readonly Error RunMissing = Error.NotFound("evaluation_run_missing");
+    public static readonly Error ReviewInvalid = Error.Invalid("review_invalid");
+    public static readonly Error CasesInvalid = Error.Invalid("evaluation_cases_invalid");
+    public static readonly Error VariantsInvalid = Error.Invalid("evaluation_variants_invalid");
+    public static readonly Error FeedbackInvalid = Error.Invalid("feedback_invalid");
+    public static readonly Error RetrievalInvalid = Error.Invalid("retrieval_evaluation_invalid");
 }

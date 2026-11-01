@@ -13,10 +13,10 @@ namespace AiNexus.Features.Platform.Account.Security;
 
 internal sealed class VerificationCodeRequestValidator : RequestValidator<VerificationCodeRequest>
 {
-    public override string ProblemCode => "invalid_verification_request";
+    public override Error Problem => AccountErrors.InvalidVerificationRequest;
 
     // 信箱變更的驗證碼由 RequestEmailChange 寄到新地址；這裡只寄步升驗證碼到已驗證的信箱。
-    public VerificationCodeRequestValidator() => RuleFor(x => x.Purpose).Equal(VerificationPurposes.Reauthentication).WithErrorCode("unknown");
+    public VerificationCodeRequestValidator() => RuleFor(x => x.Purpose).Equal(VerificationPurposes.Reauthentication).WithErrorCode(RuleCode.Unknown);
 }
 
 /// <summary>寄步升驗證碼到本人已驗證的信箱（沒有密碼可用、或想改用驗證碼時）。</summary>

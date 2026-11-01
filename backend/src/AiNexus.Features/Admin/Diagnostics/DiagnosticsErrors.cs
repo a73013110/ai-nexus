@@ -10,4 +10,5 @@ internal static class DiagnosticsErrors
     public static readonly Error NotFound = Error.NotFound("log_not_found");
     public static readonly Error ExportCursor = Error.Invalid("log_export_cursor");
     public static readonly Error ExportLimit = Error.Invalid("log_export_limit");
+    public static readonly Error ClientIssueInvalid = Error.Invalid("client_issue_invalid");
 }

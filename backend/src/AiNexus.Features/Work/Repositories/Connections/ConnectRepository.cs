@@ -13,11 +13,11 @@ public sealed record ConnectRepositoryRequest(string Token);
 
 internal sealed class ConnectRepositoryRequestValidator : RequestValidator<ConnectRepositoryRequest>
 {
-    public override string ProblemCode => "invalid_gitea_token";
+    public override Error Problem => RepositoriesErrors.InvalidToken;
 
     public ConnectRepositoryRequestValidator()
     {
-        RuleFor(x => x.Token).Must(x => x is { Length: >= 20 and <= 512 } && x.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')).WithErrorCode("format");
+        RuleFor(x => x.Token).Must(x => x is { Length: >= 20 and <= 512 } && x.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')).WithErrorCode(RuleCode.Format);
     }
 }
 

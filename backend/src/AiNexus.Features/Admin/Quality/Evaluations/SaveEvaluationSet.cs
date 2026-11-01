@@ -21,20 +21,22 @@ public sealed record EvaluationSetRequest(string Name, string Description, IRead
 /// </summary>
 internal sealed class EvaluationSetRequestValidator : RequestValidator<EvaluationSetRequest>
 {
-    public override string ProblemCode => "evaluation_cases_invalid";
+    private static readonly RuleCode Terms = new("terms");
+
+    public override Error Problem => QualityErrors.CasesInvalid;
 
     public EvaluationSetRequestValidator()
     {
         When(x => ResourceAccess.IsValidName(x.Name), () =>
         {
             RuleFor(x => x.Description).MaximumLength(2000);
-            RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode("count");
+            RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode(RuleCode.Count);
             RuleForEach(x => x.Cases).NotNull().ChildRules(test =>
             {
-                test.RuleFor(x => x.Question).Must(x => x.Trim().Length is >= 1 and <= 4000).WithErrorCode("length");
+                test.RuleFor(x => x.Question).Must(x => x.Trim().Length is >= 1 and <= 4000).WithErrorCode(RuleCode.Length);
                 test.RuleFor(x => x.Reference).MaximumLength(4000);
-                test.RuleFor(x => x.RequiredTerms).Must(TermsValid).WithErrorCode("terms");
-                test.RuleFor(x => x.ForbiddenTerms).Must(TermsValid).WithErrorCode("terms");
+                test.RuleFor(x => x.RequiredTerms).Must(TermsValid).WithErrorCode(Terms);
+                test.RuleFor(x => x.ForbiddenTerms).Must(TermsValid).WithErrorCode(Terms);
             });
         });
     }

@@ -31,15 +31,15 @@ public sealed record CreateShareRequest(string Kind, Guid SourceId, IReadOnlyLis
 
 internal sealed class CreateShareRequestValidator : RequestValidator<CreateShareRequest>
 {
-    public override string ProblemCode => SharingErrors.InvalidCode;
+    public override Error Problem => SharingErrors.Invalid;
 
     public CreateShareRequestValidator()
     {
-        RuleFor(x => x.Kind).Must(x => x is ShareAccess.ConversationKind or Artifact.Kind).WithErrorCode("unknown");
+        RuleFor(x => x.Kind).Must(x => x is ShareAccess.ConversationKind or Artifact.Kind).WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.Hours).InclusiveBetween(1, ShareLink.MaxHours);
         RuleFor(x => x.RecipientIds).Cascade(CascadeMode.Stop).NotNull()
-            .Must(x => x.Count is >= 1 and <= ShareLink.MaxRecipients).WithErrorCode("count")
-            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode("duplicate");
+            .Must(x => x.Count is >= 1 and <= ShareLink.MaxRecipients).WithErrorCode(RuleCode.Count)
+            .Must(x => x.Distinct().Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
     }
 }
 

@@ -16,12 +16,12 @@ public sealed record NavigationOrderRequest(IReadOnlyList<NavigationOrderItem> I
 
 internal sealed class NavigationOrderRequestValidator : RequestValidator<NavigationOrderRequest>
 {
-    public override string ProblemCode => AccessControlErrors.InvalidOrder.Code;
+    public override Error Problem => AccessControlErrors.InvalidOrder;
 
     public NavigationOrderRequestValidator()
     {
-        RuleFor(x => x.Items).NotEmpty().Must(x => x.Count <= 1000).WithErrorCode("too_many")
-            .Must(x => x.Select(y => y.Id).Distinct(StringComparer.Ordinal).Count() == x.Count).WithErrorCode("duplicate");
+        RuleFor(x => x.Items).NotEmpty().Must(x => x.Count <= 1000).WithErrorCode(RuleCode.TooMany)
+            .Must(x => x.Select(y => y.Id).Distinct(StringComparer.Ordinal).Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
         RuleForEach(x => x.Items).ChildRules(item =>
         {
             item.RuleFor(x => x.Id).NotEmpty().MaximumLength(NavigationItem.IdMaxLength);

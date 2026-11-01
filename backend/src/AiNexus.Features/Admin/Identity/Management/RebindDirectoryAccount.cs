@@ -15,11 +15,11 @@ public sealed record DirectoryBindingRequest(string AdAccount);
 
 internal sealed class DirectoryBindingRequestValidator : RequestValidator<DirectoryBindingRequest>
 {
-    public override string ProblemCode => "invalid_account";
+    public override Error Problem => IdentityErrors.InvalidAccount;
 
     public DirectoryBindingRequestValidator() => RuleFor(x => x.AdAccount)
-        .NotEmpty().WithErrorCode("required")
-        .Must(UserAccounts.IsValid).WithErrorCode("format");
+        .NotEmpty().WithErrorCode(RuleCode.Required)
+        .Must(UserAccounts.IsValid).WithErrorCode(RuleCode.Format);
 }
 
 /// <summary>

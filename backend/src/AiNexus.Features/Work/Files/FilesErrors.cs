@@ -4,7 +4,6 @@ namespace AiNexus.Features.Work.Files;
 
 internal static class FilesErrors
 {
-    public const string FileNameInvalidCode = "file_name_invalid";
 
     public static readonly Error NotFound = Error.NotFound("attachment_not_found");
     public static readonly Error InUse = Error.Conflict("attachment_in_use");
@@ -38,4 +37,5 @@ internal static class FilesErrors
     public static readonly Error ContentMissing = Error.Unavailable("attachment_content_missing");
     public static readonly Error InvalidStorageLimit = Error.Invalid("invalid_storage_limit");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
+    public static readonly Error FileNameInvalid = Error.Invalid("file_name_invalid");
 }

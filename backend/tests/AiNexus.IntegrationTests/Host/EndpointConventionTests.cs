@@ -1,3 +1,5 @@
+using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -77,5 +79,16 @@ public sealed class EndpointConventionTests
         }));
         _ = app.CreateClient();
         Assert.NotEmpty(app.Services.GetServices<IRequestValidator>());
+    }
+
+    // 驗證失敗一律回 400；代碼沒有核准提示時前端只能顯示通用訊息，使用者看不出該改哪裡。
+    [Fact]
+    public async Task RequestValidatorProblemsAreInvalidAndHaveReviewedHints()
+    {
+        await using var factory = new AppFactory();
+        _ = factory.CreateClient();
+        var problems = factory.Services.GetServices<IRequestValidator>().Select(x => (Validator: x.GetType().Name, x.Problem)).ToList();
+        Assert.NotEmpty(problems);
+        Assert.DoesNotContain(problems, x => x.Problem.Kind != ErrorKind.Invalid || !PublicErrorCatalog.Contains(x.Problem.Code));
     }
 }
