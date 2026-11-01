@@ -7,7 +7,6 @@ namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
 public sealed class OpenAiCompatibleRerankClient(RetrievalHttp http, IOptions<KnowledgeOptions> options) : IRerankClient
 {
-    public string Provider => "openai-compatible";
     public async Task<IReadOnlyList<RerankScore>> RerankAsync(string query, IReadOnlyList<string> candidates, CancellationToken ct)
     {
         using var json = await http.PostAsync(KnowledgeModule.RetrievalModelsClient, options.Value.Rerank.Endpoint.TrimEnd('/') + "/v1/rerank", new { model = options.Value.Rerank.Model, query, documents = candidates, top_n = candidates.Count }, ct);

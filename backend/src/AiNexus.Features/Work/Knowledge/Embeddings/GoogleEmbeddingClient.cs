@@ -7,7 +7,6 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 public sealed class GoogleEmbeddingClient(RetrievalHttp http, IOptions<InferenceOptions> inference) : IEmbeddingClient
 {
-    public string Provider => "google";
     public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(inference.Value.Providers.Google.ApiKey)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定 Google AI API key。");

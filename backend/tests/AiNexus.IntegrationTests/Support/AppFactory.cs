@@ -91,8 +91,8 @@ public sealed class AppFactory : WebApplicationFactory<Program>
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);
             services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
-            services.RemoveAll<IEmbeddingClient>();
-            services.AddSingleton<IEmbeddingClient>(Embeddings);
+            services.RemoveAllKeyed<IEmbeddingClient>("ollama");
+            services.AddKeyedSingleton<IEmbeddingClient>("ollama", Embeddings);
             services.PostConfigure<KnowledgeOptions>(x => { x.Embedding.Provider = "ollama"; x.Embedding.Dimensions = 768; });
             foreach (var worker in services.Where(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType?.Assembly.GetName().Name?.StartsWith("AiNexus.", StringComparison.Ordinal) == true
                 && !workers.Contains(x.ImplementationType)).ToList()) services.Remove(worker);

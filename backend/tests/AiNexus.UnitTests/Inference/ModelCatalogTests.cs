@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Providers;
@@ -81,11 +82,11 @@ public sealed class ModelCatalogTests
     private static (ModelCatalog Catalog, ServiceProvider Container) Create(IOptions<InferenceOptions> options, IInferenceProvider provider, ILogger<ModelCatalog>? logger = null, TimeProvider? clock = null)
     {
         var services = new ServiceCollection();
-        services.AddKeyedSingleton("ollama", provider);
+        services.AddKeyedService("ollama", ServiceLifetime.Singleton, _ => provider);
         var container = services.BuildServiceProvider();
         var issues = new AiNexus.Platform.Diagnostics.Issues(NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
         var presentation = new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]);
-        return (new ModelCatalog(new InferenceRouter(container, options), options, presentation, issues, logger ?? NullLogger<ModelCatalog>.Instance, clock), container);
+        return (new ModelCatalog(new InferenceRouter(container.GetRequiredService<KeyedServices<IInferenceProvider>>(), options), options, presentation, issues, logger ?? NullLogger<ModelCatalog>.Instance, clock), container);
     }
 
     private sealed class CaptureLogger : ILogger<ModelCatalog>

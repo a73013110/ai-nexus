@@ -2,6 +2,7 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Knowledge.Embeddings;
 
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
 public sealed record RetrievalConnectionDto(string Provider, string Model, string Endpoint, bool? Available, string Notice);
 
-public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings, IEnumerable<IRerankClient> rerankers, EmbeddingService embeddingService,
+public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddings, KeyedServices<IRerankClient> rerankers, EmbeddingService embeddingService,
     RerankService rerankService, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference, ILogger<RetrievalModelProbe> logger, Issues issues)
 {
     public RetrievalConnectionDto Embedding => new(options.Value.Embedding.Provider, options.Value.Embedding.Model,
@@ -28,7 +29,7 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 var profile = new EmbeddingProfile { Provider = settings.Embedding.Provider, Model = settings.Embedding.Model, Dimensions = settings.Embedding.Dimensions, InputFormat = settings.Embedding.InputFormat, QueryInstruction = settings.Embedding.QueryInstruction };
                 string[] input = ["合成索引測試 › 採購\n主管核准後辦理採購。", "合成索引測試 › 請假\n請假申請應完成簽核。"];
                 var vectors = actor is Guid owner ? await embeddingService.EmbedBatchAsync(owner, profile, input, EmbeddingPurpose.Query, timeout.Token)
-                    : (await embeddings.Single(x => x.Provider == profile.Provider).EmbedBatchAsync(input, EmbeddingPurpose.Query, profile, timeout.Token)).Vectors;
+                    : (await embeddings.Require(profile.Provider).EmbedBatchAsync(input, EmbeddingPurpose.Query, profile, timeout.Token)).Vectors;
                 if (vectors.Count != input.Length || vectors.Any(x => x.Length != settings.Embedding.Dimensions || x.Any(v => !float.IsFinite(v)) || x.All(v => v == 0)))
                     throw new ExternalServiceException(Error.Upstream("embedding_probe_invalid"), "向量數量、維度或數值不符合設定。");
                 embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Embedding.Dimensions}。" };
@@ -49,7 +50,7 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 string[] input = ["主管核准後辦理採購。", "請假申請應完成簽核。"];
                 if (actor is Guid owner) await rerankService.RerankAsync(owner, "採購如何核准？", input.Select(x => new KnowledgeHitDto(Guid.Empty, "合成測試", 1, x, 0, Guid.Empty)).ToArray(), timeout.Token);
                 else {
-                    var scores = await rerankers.Single(x => x.Provider == settings.Rerank.Provider).RerankAsync("採購如何核准？", input, timeout.Token);
+                    var scores = await rerankers.Require(settings.Rerank.Provider).RerankAsync("採購如何核准？", input, timeout.Token);
                     if (scores.Count != 2 || scores.Select(x => x.Index).Distinct().Count() != 2 || scores.Any(x => x.Index is < 0 or > 1 || !double.IsFinite(x.Score))) throw new ExternalServiceException(Error.Upstream("rerank_probe_invalid"), "重排回應無效。");
                 }
                 rerank = rerank with { Available = true, Notice = "合成查詢與候選重排通過。" };

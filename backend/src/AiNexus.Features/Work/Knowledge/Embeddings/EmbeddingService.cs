@@ -1,10 +1,11 @@
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
-public sealed class EmbeddingService(IEnumerable<IEmbeddingClient> clients, RetrievalInvocation invocations, EmbeddingBatchScheduler scheduler, IOptions<KnowledgeOptions> options)
+public sealed class EmbeddingService(KeyedServices<IEmbeddingClient> clients, RetrievalInvocation invocations, EmbeddingBatchScheduler scheduler, IOptions<KnowledgeOptions> options)
 {
     public bool Enabled => options.Value.Embedding.Provider != "none";
     public string Profile => EmbeddingInput.Profile(options.Value);
@@ -16,7 +17,7 @@ public sealed class EmbeddingService(IEnumerable<IEmbeddingClient> clients, Retr
         try
         {
             return await invocations.RunAsync(owner, "embedding", profile.Provider, profile.Model, async () => {
-                var batch = await clients.Single(x => x.Provider == profile.Provider).EmbedBatchAsync(inputs, purpose, profile, timeout.Token);
+                var batch = await clients.Require(profile.Provider).EmbedBatchAsync(inputs, purpose, profile, timeout.Token);
                 if (batch.Vectors.Count != inputs.Count) throw Invalid();
                 foreach (var vector in batch.Vectors)
                 {

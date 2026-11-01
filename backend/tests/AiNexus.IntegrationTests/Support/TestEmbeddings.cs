@@ -6,7 +6,6 @@ namespace AiNexus.IntegrationTests.Support;
 
 public sealed class TestEmbeddings : IEmbeddingClient
 {
-    public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
     public bool Fail { get; set; }
     public int? FailProfileId { get; set; }

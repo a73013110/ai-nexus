@@ -85,7 +85,7 @@ public sealed class SearchKnowledgeTests
     {
         await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", FailurePolicy = policy });
-            services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(new FixtureReranker { Fail = true });
+            services.RemoveAllKeyed<IRerankClient>("tei"); services.AddKeyedSingleton<IRerankClient>("tei", new FixtureReranker { Fail = true });
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
@@ -99,7 +99,7 @@ public sealed class SearchKnowledgeTests
         var rerank = new FixtureReranker();
         await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", MinScore = .9 });
-            services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
+            services.RemoveAllKeyed<IRerankClient>("tei"); services.AddKeyedSingleton<IRerankClient>("tei", rerank);
             services.RemoveAll<IQueryRewriter>(); services.AddSingleton<IQueryRewriter>(new FixtureRewriter { Fail = true });
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
@@ -114,7 +114,7 @@ public sealed class SearchKnowledgeTests
         var rerank = new FixtureReranker();
         await using var factory = new AppFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture" });
-            services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
+            services.RemoveAllKeyed<IRerankClient>("tei"); services.AddKeyedSingleton<IRerankClient>("tei", rerank);
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -126,7 +126,7 @@ public sealed class SearchKnowledgeTests
 
     internal sealed class FixtureReranker : IRerankClient
     {
-        public string Provider => "tei"; public bool Fail { get; set; } public string? Query { get; private set; } public Func<Task>? BeforeReturn { get; set; }
+        public bool Fail { get; set; } public string? Query { get; private set; } public Func<Task>? BeforeReturn { get; set; }
         public async Task<IReadOnlyList<RerankScore>> RerankAsync(string query, IReadOnlyList<string> candidates, CancellationToken ct)
         {
             Query = query; if (Fail) throw new ExternalServiceException(Error.Unavailable("fixture_rerank"), "測試重排失敗。");

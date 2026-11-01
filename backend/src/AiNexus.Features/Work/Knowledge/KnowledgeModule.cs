@@ -50,18 +50,19 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<RetrievalPipeline>();
         services.AddSingleton<QueryVectorCache>();
         services.AddSingleton<RerankService>();
-        services.AddSingleton<IRerankClient, NoneRerankClient>();
-        services.AddSingleton<IRerankClient, TeiRerankClient>();
-        services.AddSingleton<IRerankClient, OpenAiCompatibleRerankClient>();
+        // 鍵＝KnowledgeOptions 的 Provider 允許值；設定的供應商沒有實作時啟動失敗（VerifyStartup）。
+        services.AddKeyedService<IRerankClient, NoneRerankClient>("none", ServiceLifetime.Singleton);
+        services.AddKeyedService<IRerankClient, TeiRerankClient>("tei", ServiceLifetime.Singleton);
+        services.AddKeyedService<IRerankClient, OpenAiCompatibleRerankClient>("openai-compatible", ServiceLifetime.Singleton);
         // 查詢改寫會用到 ModelTaskService 與其 scoped 的資料庫 context，因此這裡必須是 scoped，不可改成 singleton。
         services.AddScoped<IQueryRewriter>(s => s.GetRequiredService<IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
             ? ActivatorUtilities.CreateInstance<ModelQueryRewriter>(s) : new NoopQueryRewriter());
         services.AddSingleton<RetrievalHttp>();
         services.AddSingleton<RetrievalInvocation>();
         services.AddSingleton<EmbeddingBatchScheduler>();
-        services.AddSingleton<IEmbeddingClient, OllamaEmbeddingClient>();
-        services.AddSingleton<IEmbeddingClient, GoogleEmbeddingClient>();
-        services.AddSingleton<IEmbeddingClient, NoneEmbeddingClient>();
+        services.AddKeyedService<IEmbeddingClient, OllamaEmbeddingClient>("ollama", ServiceLifetime.Singleton);
+        services.AddKeyedService<IEmbeddingClient, GoogleEmbeddingClient>("google", ServiceLifetime.Singleton);
+        services.AddKeyedService<IEmbeddingClient, NoneEmbeddingClient>("none", ServiceLifetime.Singleton);
         services.AddSingleton<EmbeddingService>();
         services.AddSingleton<ITextChunker, StructuredChunker>();
         services.AddControlledHttpClient(RetrievalModelsClient);
@@ -69,6 +70,14 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddBackgroundJobHandler<DocumentEmbeddingHandler>(DocumentEmbeddingHandler.JobKind);
         services.AddFeaturePolicy(FeatureCatalog.Knowledge);
         services.AddFeaturePolicy(FeatureCatalog.KnowledgeRetrieval);
+    }
+
+    /// <summary>設定的向量與重排供應商都要有實作，不等到第一次索引或檢索才失敗。</summary>
+    public static void VerifyStartup(IServiceProvider services)
+    {
+        var options = services.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
+        _ = services.GetRequiredService<KeyedServices<IEmbeddingClient>>().Require(options.Embedding.Provider);
+        _ = services.GetRequiredService<KeyedServices<IRerankClient>>().Require(options.Rerank.Provider);
     }
 
     // 端點註冊順序即為發布的 OpenAPI 順序；調整順序會改變 contracts/openapi.json 的內容。

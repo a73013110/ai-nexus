@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Inference.Providers;
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Platform.Inference.Providers;
 /// 負責根據設定檔控管各供應商的最大並行請求數（SemaphoreSlim），
 /// 並將推論需求分派至對應的推論實作轉接器。
 /// </summary>
-public sealed class InferenceRouter(IServiceProvider services, IOptions<InferenceOptions> options)
+public sealed class InferenceRouter(KeyedServices<IInferenceProvider> providers, IOptions<InferenceOptions> options)
 {
     private readonly IReadOnlyDictionary<string, SemaphoreSlim> capacity = options.Value.ProviderConcurrency
         .ToDictionary(x => x.Key, x => new SemaphoreSlim(x.Value, x.Value), StringComparer.Ordinal);
@@ -24,7 +25,7 @@ public sealed class InferenceRouter(IServiceProvider services, IOptions<Inferenc
             throw new ExternalServiceException(Error.Unavailable("provider_disabled"), "此模型供應商已停用，請選擇其他模型。");
         }
 
-        return services.GetRequiredKeyedService<IInferenceProvider>(provider);
+        return providers.Require(provider);
     }
 
     /// <summary>

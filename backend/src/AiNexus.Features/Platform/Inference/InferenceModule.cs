@@ -45,10 +45,10 @@ public sealed class InferenceModule : IFeatureModule
             client.Timeout = Timeout.InfiniteTimeSpan;
         });
 
-        services.AddKeyedSingleton<IInferenceProvider>("google", (sp, _) =>
+        services.AddKeyedService<IInferenceProvider>("google", ServiceLifetime.Singleton, sp =>
             new GoogleAiProvider(sp.GetRequiredService<IHttpClientFactory>().CreateClient("GoogleAI"), sp.GetRequiredService<IOptions<InferenceOptions>>()));
 
-        services.AddKeyedSingleton<IInferenceProvider>("ollama", (sp, _) =>
+        services.AddKeyedService<IInferenceProvider>("ollama", ServiceLifetime.Singleton, sp =>
             new OllamaProvider(sp.GetRequiredService<IHttpClientFactory>().CreateClient("Ollama")));
 
         services.AddSingleton<InferenceRouter>();
@@ -57,6 +57,13 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<GenerationScheduler>();
         services.AddMonitoringSource<GenerationQueueMonitoring>();
         services.AddMonitoringSource<ModelProvidersMonitoring>();
+    }
+
+    /// <summary>啟用的供應商都要有轉接器，不等到第一次生成才失敗。</summary>
+    public static void VerifyStartup(IServiceProvider services)
+    {
+        var providers = services.GetRequiredService<KeyedServices<IInferenceProvider>>();
+        foreach (var provider in services.GetRequiredService<IOptions<InferenceOptions>>().Value.ProviderConcurrency.Keys) _ = providers.Require(provider);
     }
 
     /// <summary>

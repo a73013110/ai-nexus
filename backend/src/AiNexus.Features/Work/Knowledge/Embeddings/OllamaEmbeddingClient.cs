@@ -6,7 +6,6 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 public sealed class OllamaEmbeddingClient(RetrievalHttp http, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference) : IEmbeddingClient
 {
-    public string Provider => "ollama";
     public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
         var endpoint = options.Value.Embedding.Endpoint.Length > 0 ? options.Value.Embedding.Endpoint : inference.Value.Providers.Ollama.Endpoint;
