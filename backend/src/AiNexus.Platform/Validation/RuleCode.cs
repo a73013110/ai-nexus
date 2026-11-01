@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 using FluentValidation;
 
@@ -6,7 +7,8 @@ namespace AiNexus.Platform.Validation;
 /// <summary>
 /// 欄位規則代碼：驗證失敗時寫在 problem 的 <c>errors</c>（欄位 → 代碼）。代碼是公開合約，不跟著成員改名。
 /// 兩個以上模組用到的列在這裡；只有一個功能用到的，在該驗證器宣告成具名欄位（<c>static readonly RuleCode Window = new("window")</c>），
-/// 第二個模組也需要時再搬到這裡。字串版 <c>WithErrorCode</c> 已禁用（BannedSymbols），代碼只能經由這個型別指定。
+/// 第二個模組也需要時再搬到這裡。字串版 <c>WithErrorCode</c> 已禁用（BannedSymbols），代碼只能經由這個型別指定；
+/// FluentValidation 內建規則（<c>NotEmpty</c>、<c>MaximumLength</c>…）不必指定，回應時由 <see cref="Resolve"/> 對應到同一套代碼。
 /// </summary>
 public sealed partial record RuleCode
 {
@@ -33,6 +35,31 @@ public sealed partial record RuleCode
     /// <summary>不在允許的值之中。</summary>
     public static readonly RuleCode Unknown = new("unknown");
 
+    // 內建規則沒指定代碼時，失敗代碼是規則的類別名稱；不對應的話，公開合約會跟著函式庫命名，
+    // 或在 NotEmpty 改寫成 Must 時改變。宣告在共用代碼之後，靜態初始化時它們已有值。
+    private static readonly FrozenDictionary<string, RuleCode> BuiltIn = new Dictionary<string, RuleCode>
+    {
+        ["NotNullValidator"] = Required,
+        ["NotEmptyValidator"] = Required,
+        ["NullValidator"] = NotAllowed,
+        ["EmptyValidator"] = NotAllowed,
+        ["MaximumLengthValidator"] = TooLong,
+        ["MinimumLengthValidator"] = Length,
+        ["LengthValidator"] = Length,
+        ["ExactLengthValidator"] = Length,
+        ["GreaterThanValidator"] = Range,
+        ["GreaterThanOrEqualValidator"] = Range,
+        ["LessThanValidator"] = Range,
+        ["LessThanOrEqualValidator"] = Range,
+        ["InclusiveBetweenValidator"] = Range,
+        ["ExclusiveBetweenValidator"] = Range,
+        ["ScalePrecisionValidator"] = Range,
+        ["RegularExpressionValidator"] = Format,
+        ["EmailValidator"] = Format,
+        ["EnumValidator"] = Unknown,
+        ["StringEnumValidator"] = Unknown,
+    }.ToFrozenDictionary(StringComparer.Ordinal);
+
     /// <param name="value">snake_case；不符時丟例外，驗證器在啟動建立時就會失敗。</param>
     public RuleCode(string value)
     {
@@ -43,6 +70,15 @@ public sealed partial record RuleCode
     public string Value { get; }
 
     public override string ToString() => Value;
+
+    /// <summary>
+    /// 驗證失敗的 <c>ErrorCode</c> 轉成公開代碼：指定過的原樣回傳，內建規則查表；
+    /// 其餘沒指定代碼的規則（<c>Must</c> 等）一律是 <see cref="Invalid"/>，不外露類別名稱。
+    /// </summary>
+    public static string Resolve(string errorCode)
+        => BuiltIn.TryGetValue(errorCode, out var code) ? code.Value
+            : errorCode.EndsWith("Validator", StringComparison.Ordinal) ? Invalid.Value
+            : errorCode;
 
     [GeneratedRegex("^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")]
     private static partial Regex ValuePattern();
@@ -58,13 +94,15 @@ public static class RuleCodeExtensions
 
     /// <summary>必填文字：不可空白；去掉前後空白後不超過 <paramref name="maxLength"/>、不含控制字元（會破壞逐行解析與畫面顯示）。</summary>
     public static IRuleBuilderOptions<T, string?> RequiredText<T>(this IRuleBuilder<T, string?> rule, int maxLength)
-        => rule.Must(x => !string.IsNullOrWhiteSpace(x)).WithErrorCode(RuleCode.Required).TrimmedText(maxLength);
+        => rule.NotEmpty().TrimmedText(maxLength);
 
     /// <summary>選填文字：null 或空白都可以；有值時規則同 <see cref="RequiredText"/>。</summary>
     public static IRuleBuilderOptions<T, string?> OptionalText<T>(this IRuleBuilder<T, string?> rule, int maxLength) => rule.TrimmedText(maxLength);
 
     // 預設 cascade 會繼續跑後面的規則，所以每條都要容許 null，空值只回一個 required。
+    // 每個請求都會跑：以 span 計算、向量化搜尋，不配置字串也不經過 LINQ；兩段範圍就是 char.IsControl 的定義。
     private static IRuleBuilderOptions<T, string?> TrimmedText<T>(this IRuleBuilder<T, string?> rule, int maxLength)
-        => rule.Must(x => x is null || x.Trim().Length <= maxLength).WithErrorCode(RuleCode.TooLong)
-            .Must(x => x is null || !x.Any(char.IsControl)).WithErrorCode(RuleCode.Format);
+        => rule.Must(x => x is null || x.AsSpan().Trim().Length <= maxLength).WithErrorCode(RuleCode.TooLong)
+            .Must(x => x is null || !x.AsSpan().ContainsAnyInRange('\u0000', '\u001f') && !x.AsSpan().ContainsAnyInRange('\u007f', '\u009f'))
+            .WithErrorCode(RuleCode.Format);
 }

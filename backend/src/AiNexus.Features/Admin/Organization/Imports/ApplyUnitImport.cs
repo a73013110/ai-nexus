@@ -13,7 +13,7 @@ internal sealed class UnitImportRequestValidator : RequestValidator<UnitImportRe
 {
     public UnitImportRequestValidator()
     {
-        RuleFor(x => x.Fingerprint).NotEmpty().WithErrorCode(RuleCode.Required).MaximumLength(64).WithErrorCode(RuleCode.TooLong);
+        RuleFor(x => x.Fingerprint).NotEmpty().MaximumLength(64);
         RuleFor(x => x.Excluded).Must(x => x is null || x.Count <= MaxExcluded).WithErrorCode(RuleCode.TooMany);
     }
 

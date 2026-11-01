@@ -50,6 +50,6 @@ public sealed class ProblemDetailsTests
         Assert.Equal("invalid_prompt_template", body.RootElement.GetProperty("code").GetString());
         var errors = body.RootElement.GetProperty("errors");
         Assert.Equal(["title"], errors.EnumerateObject().Select(p => p.Name));
-        Assert.Equal(["length"], errors.GetProperty("title").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal(["required"], errors.GetProperty("title").EnumerateArray().Select(e => e.GetString()));
     }
 }

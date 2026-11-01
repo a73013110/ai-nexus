@@ -11,7 +11,7 @@ internal sealed class DirectoryImportRequestValidator : RequestValidator<Directo
 {
     public DirectoryImportRequestValidator()
     {
-        RuleFor(x => x.Sids).NotNull().WithErrorCode(RuleCode.Required)
+        RuleFor(x => x.Sids).NotNull()
             .Must(x => x is { Count: > 0 and <= DirectoryProvisioning.MaxBatch }).WithErrorCode(RuleCode.Count)
             .Must(x => x is null || x.Distinct(StringComparer.OrdinalIgnoreCase).Count() == x.Count).WithErrorCode(RuleCode.Duplicate);
         RuleForEach(x => x.Sids).Must(DirectoryProvisioning.IsSid).WithErrorCode(RuleCode.Format);

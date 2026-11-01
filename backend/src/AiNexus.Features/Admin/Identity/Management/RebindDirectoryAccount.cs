@@ -18,7 +18,7 @@ internal sealed class DirectoryBindingRequestValidator : RequestValidator<Direct
     public override Error Problem => IdentityErrors.InvalidAccount;
 
     public DirectoryBindingRequestValidator() => RuleFor(x => x.AdAccount)
-        .NotEmpty().WithErrorCode(RuleCode.Required)
+        .NotEmpty()
         .Must(UserAccounts.IsValid).WithErrorCode(RuleCode.Format);
 }
 

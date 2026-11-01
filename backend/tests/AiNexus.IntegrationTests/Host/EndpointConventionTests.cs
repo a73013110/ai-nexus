@@ -82,13 +82,16 @@ public sealed class EndpointConventionTests
     }
 
     // 驗證失敗一律回 400；代碼沒有核准提示時前端只能顯示通用訊息，使用者看不出該改哪裡。
+    // 靜態欄位的錯誤另由 ErrorCatalogTests 檢查提示，這裡看實際回傳值，連覆寫時直接 new 的也涵蓋。
     [Fact]
     public async Task RequestValidatorProblemsAreInvalidAndHaveReviewedHints()
     {
         await using var factory = new AppFactory();
         _ = factory.CreateClient();
-        var problems = factory.Services.GetServices<IRequestValidator>().Select(x => (Validator: x.GetType().Name, x.Problem)).ToList();
-        Assert.NotEmpty(problems);
-        Assert.DoesNotContain(problems, x => x.Problem.Kind != ErrorKind.Invalid || !PublicErrorCatalog.Contains(x.Problem.Code));
+        var validators = factory.Services.GetServices<IRequestValidator>().ToList();
+        Assert.NotEmpty(validators);
+        var wrong = validators.Where(x => x.Problem.Kind != ErrorKind.Invalid || !PublicErrorCatalog.Contains(x.Problem.Code))
+            .Select(x => $"{x.GetType().FullName}: {x.Problem}").Order(StringComparer.Ordinal).ToList();
+        Assert.True(wrong.Count == 0, "RequestValidator<T>.Problem must be an Invalid error with a reviewed hint:\n" + string.Join('\n', wrong));
     }
 }

@@ -20,12 +20,12 @@ internal sealed partial class NavigationItemContentValidator : AbstractValidator
         When(x => x.Kind == NavigationItem.PageKind, () =>
         {
             RuleFor(x => x.FeatureId).Must(x => x is not null && AccessRules.FeatureKeys([x]) is null).WithErrorCode(RuleCode.Required);
-            RuleFor(x => x.Name).Null().WithErrorCode(RuleCode.NotAllowed);
+            RuleFor(x => x.Name).Null();
             // 頁面的圖示一律來自目錄，避免同一頁面在不同位置出現不同圖示。
-            RuleFor(x => x.Icon).Null().WithErrorCode(RuleCode.NotAllowed);
+            RuleFor(x => x.Icon).Null();
         }).Otherwise(() =>
         {
-            RuleFor(x => x.FeatureId).Null().WithErrorCode(RuleCode.NotAllowed);
+            RuleFor(x => x.FeatureId).Null();
             RuleFor(x => x.Name).Must(x => x is not null && AccessRules.Name(x) is null).WithErrorCode(RuleCode.Required);
             RuleFor(x => x.Icon).Must(x => x is null || IconName().IsMatch(x)).WithErrorCode(RuleCode.Format);
         });
@@ -35,7 +35,7 @@ internal sealed partial class NavigationItemContentValidator : AbstractValidator
             RuleFor(x => x.AudienceGroupIds).Must(x => x is null || AccessRules.Keys(x) is null).WithErrorCode(RuleCode.Format);
         }).Otherwise(() =>
         {
-            RuleFor(x => x.Url).Null().WithErrorCode(RuleCode.NotAllowed);
+            RuleFor(x => x.Url).Null();
             // 可見群組只對外部連結有意義；頁面的可見範圍就是功能授權，不另設一層。
             RuleFor(x => x.AudienceGroupIds).Must(x => x is null || x.Count == 0).WithErrorCode(RuleCode.NotAllowed);
         });

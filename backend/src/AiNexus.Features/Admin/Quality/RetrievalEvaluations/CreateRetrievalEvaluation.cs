@@ -28,7 +28,7 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
 
     public RetrievalEvaluationRequestValidator()
     {
-        RuleFor(x => x.Title).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 120).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Title).RequiredText(120);
         RuleFor(x => x.CollectionIds).Must(x => x is { Count: >= 1 and <= 3 }).WithErrorCode(RuleCode.Count);
         RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode(RuleCode.Count);
     }

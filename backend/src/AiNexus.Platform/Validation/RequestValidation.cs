@@ -102,13 +102,7 @@ public static class RequestValidation
     /// </summary>
     internal static Dictionary<string, string[]> Fields(ValidationResult result) => result.Errors
         .GroupBy(failure => Path(failure.PropertyName), StringComparer.Ordinal)
-        .ToDictionary(group => group.Key, group => group.Select(failure => Rule(failure.ErrorCode)).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
+        .ToDictionary(group => group.Key, group => group.Select(failure => RuleCode.Resolve(failure.ErrorCode)).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
 
     private static string Path(string property) => string.Join('.', property.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
-
-    // FluentValidation 內建規則的代碼（如 MaximumLengthValidator）會轉為 snake_case；
-    // 自訂規則若需要固定代碼，應改用 WithErrorCode 指定。
-    private static string Rule(string code) => code.EndsWith("Validator", StringComparison.Ordinal)
-        ? JsonNamingPolicy.SnakeCaseLower.ConvertName(code[..^"Validator".Length])
-        : code;
 }

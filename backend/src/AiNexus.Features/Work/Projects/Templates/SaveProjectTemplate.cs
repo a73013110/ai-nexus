@@ -18,7 +18,7 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
 
     public ProjectTemplateRequestValidator()
     {
-        RuleFor(x => x.Title).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.TitleMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Title).RequiredText(ProjectTemplate.TitleMaxLength);
         RuleFor(x => x.Content).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.ContentMaxLength).WithErrorCode(RuleCode.Length);
     }
 }
