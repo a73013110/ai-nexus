@@ -1,5 +1,4 @@
 using AiNexus.Platform.Validation;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -53,12 +52,12 @@ public sealed class EndpointConventionTests
     {
         await using var factory = new AppFactory();
         _ = factory.CreateClient();
-        var registered = factory.Services.GetRequiredService<IServiceProviderIsService>();
+        var registered = factory.Services.GetRequiredService<RequestValidators>();
         var bodies = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .Select(e => e.Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType).OfType<Type>()
             .Where(t => t.Namespace?.StartsWith("AiNexus.", StringComparison.Ordinal) == true).Distinct().ToList();
         Assert.NotEmpty(bodies);
-        var validated = bodies.ToDictionary(t => t, t => registered.IsService(typeof(IValidator<>).MakeGenericType(t)));
+        var validated = bodies.ToDictionary(t => t, registered.Contains);
         var reasons = bodies.ToDictionary(t => t, t => t.GetCustomAttributes(typeof(ValidatedInHandlerAttribute), false).OfType<ValidatedInHandlerAttribute>().SingleOrDefault()?.Reason);
         var missing = bodies.Where(t => !validated[t] && string.IsNullOrWhiteSpace(reasons[t])).Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
         var both = bodies.Where(t => validated[t] && reasons[t] is not null).Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
@@ -66,7 +65,7 @@ public sealed class EndpointConventionTests
         Assert.True(both.Count == 0, "Request bodies with a validator must not also be marked [ValidatedInHandler]:\n" + string.Join('\n', both));
     }
 
-    // 驗證過濾器在建置端點時從根容器解析驗證器、跨請求共用：不是 singleton 的註冊，或注入 scoped 服務（DbContext、ICurrentUser），
+    // 驗證過濾器在建置端點時從根容器查好驗證器、跨請求共用：不是 singleton 的註冊，或注入 scoped 服務（DbContext、ICurrentUser），
     // 都會讓所有請求共用第一次解析的實例。lifetime 逐一檢查所有註冊，依賴由範圍檢查在建置容器時攔下。
     [Fact]
     public async Task RequestValidatorsAreSingletonsWithoutScopedDependencies()
@@ -79,7 +78,7 @@ public sealed class EndpointConventionTests
                 options.ValidateScopes = true;
                 options.ValidateOnBuild = true;
             })
-            .ConfigureTestServices(services => validators.AddRange(services.Where(x => typeof(IValidator).IsAssignableFrom(x.ServiceType)))));
+            .ConfigureTestServices(services => validators.AddRange(services.Where(x => x.ServiceType == typeof(IRequestValidator)))));
         _ = app.CreateClient();
         Assert.NotEmpty(validators);
         var wrong = validators.Where(x => x.Lifetime != ServiceLifetime.Singleton).Select(x => $"{x.ServiceType.FullName} ({x.Lifetime})").Order(StringComparer.Ordinal).ToList();

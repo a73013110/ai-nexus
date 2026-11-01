@@ -1,13 +1,13 @@
 using AiNexus.Features;
 using AiNexus.Platform;
-using FluentValidation;
+using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiNexus.ArchitectureTests;
 
 /// <summary>
-/// 組合產生器（ADR 0029）的結果對照執行期反射：每個切片註冊為 scoped，每個驗證器以 <see cref="IValidator{T}"/> 註冊為 singleton。
+/// 組合產生器（ADR 0029）的結果對照執行期反射：每個切片註冊為 scoped，每個 <see cref="RequestValidator{T}"/> 以 <see cref="IRequestValidator"/> 註冊為 singleton。
 /// 產生器的辨識規則與這裡的定義分歧時，列出漏掉的型別。
 /// </summary>
 public sealed class CompositionTests
@@ -32,14 +32,19 @@ public sealed class CompositionTests
     }
 
     [Fact]
-    public void EveryValidatorIsRegisteredAsASingleton()
+    public void EveryRequestValidatorIsRegisteredAsASingleton()
     {
-        var validators = Assemblies.Features.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
-            .SelectMany(t => t.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>)).Select(i => (Service: i, Type: t)))
-            .ToList();
+        var validators = Assemblies.Features.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false } && IsRequestValidator(t)).ToList();
         Assert.NotEmpty(validators);
-        var missing = validators.Where(v => !Registered.Value.Any(x => x.ServiceType == v.Service && x.ImplementationType == v.Type && x.Lifetime == ServiceLifetime.Singleton))
-            .Select(v => v.Type.FullName).Order(StringComparer.Ordinal).ToList();
-        Assert.True(missing.Count == 0, "Validators not registered as IValidator<T> singletons by the composition generator:\n" + string.Join('\n', missing));
+        var missing = validators.Where(t => !Registered.Value.Any(x => x.ServiceType == typeof(IRequestValidator) && x.ImplementationType == t && x.Lifetime == ServiceLifetime.Singleton))
+            .Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
+        Assert.True(missing.Count == 0, "Request validators not registered as IRequestValidator singletons by the composition generator:\n" + string.Join('\n', missing));
+    }
+
+    private static bool IsRequestValidator(Type type)
+    {
+        for (var current = type.BaseType; current is not null; current = current.BaseType)
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(RequestValidator<>)) return true;
+        return false;
     }
 }

@@ -37,8 +37,13 @@ public static partial class FeatureModules
         return app;
     }
 
-    /// <summary>容器建好後、對外服務前執行各模組的 <see cref="IFeatureModule.VerifyStartup"/>。</summary>
-    public static void VerifyStartup(IServiceProvider services) => VerifyModules(services);
+    /// <summary>容器建好後、對外服務前檢查請求驗證器（同一 request 型別只能有一個），再執行各模組的 <see cref="IFeatureModule.VerifyStartup"/>。</summary>
+    public static void VerifyStartup(IServiceProvider services)
+    {
+        // 端點在第一個請求時才建置；先建好查詢表，重複的驗證器在啟動時就失敗，不會等到請求才發現。
+        _ = services.GetRequiredService<RequestValidators>();
+        VerifyModules(services);
+    }
 
     // 以下由組合產生器實作（AiNexus.Generators/Composition）。
     private static partial void AddModules(IHostApplicationBuilder builder);

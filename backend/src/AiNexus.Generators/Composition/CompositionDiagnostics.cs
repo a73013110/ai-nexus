@@ -24,4 +24,9 @@ internal static class CompositionDiagnostics
         "AINX1004", "端點切片的掛載方法必須有人呼叫",
         "'{0}.{1}' 是端點切片的掛載方法，但組件裡沒有任何地方呼叫它，端點不會存在；在模組的 MapEndpoints 掛上它", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true, customTags: WellKnownDiagnosticTags.CompilationEnd);
+
+    public static readonly DiagnosticDescriptor DuplicateValidator = new(
+        "AINX1005", "同一個 request 型別只能有一個請求驗證器",
+        "'{0}' 驗證 '{1}'，但 '{2}' 也驗證它；過濾器只會套用一個，另一個的規則會悄悄失效，把規則合併到同一個驗證器", Category,
+        DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

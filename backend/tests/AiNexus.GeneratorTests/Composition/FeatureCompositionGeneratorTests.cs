@@ -74,9 +74,10 @@ public sealed class FeatureCompositionGeneratorTests
     }
 
     [Fact]
-    public void SlicesAreScopedAndValidatorsAreSingletons()
+    public void SlicesAreScopedAndRequestValidatorsAreSingletons()
     {
         const string slices = """
+            using AiNexus.Platform.Validation;
             using FluentValidation;
             using Microsoft.AspNetCore.Builder;
             using Microsoft.AspNetCore.Routing;
@@ -109,11 +110,17 @@ public sealed class FeatureCompositionGeneratorTests
 
             internal sealed record ItemRequest(string Name);
 
-            internal sealed class ItemRequestValidator : AbstractValidator<ItemRequest>;
+            internal sealed class ItemRequestValidator : RequestValidator<ItemRequest>;
 
-            internal abstract class BaseValidator : AbstractValidator<ItemRequest>;
+            internal abstract class BaseValidator<T> : RequestValidator<T>;
 
-            internal sealed class GenericValidator<T> : AbstractValidator<T>;
+            internal sealed record OtherRequest(string Name);
+
+            internal sealed class DerivedValidator : BaseValidator<OtherRequest>;
+
+            internal sealed class GenericValidator<T> : RequestValidator<T>;
+
+            internal sealed class ChildValidator : AbstractValidator<ItemRequest>;
             """;
 
         var run = GeneratorHarness.Run(new FeatureCompositionGenerator(), Target, slices);
@@ -122,9 +129,10 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Empty(run.Errors);
         Assert.Contains("TryAddScoped<global::Sample.ListItems>(services);", run.Source, StringComparison.Ordinal);
         Assert.Contains("TryAddScoped<global::Sample.Outer.SaveItem>(services);", run.Source, StringComparison.Ordinal);
-        Assert.Contains("AddSingleton<global::FluentValidation.IValidator<global::Sample.ItemRequest>, global::Sample.ItemRequestValidator>(services);",
-            run.Source, StringComparison.Ordinal);
-        foreach (var excluded in new[] { "Sample.Extensions", "Sample.NotASlice", "Sample.BaseValidator", "Sample.GenericValidator" })
+        Assert.Contains("Singleton<global::AiNexus.Platform.Validation.IRequestValidator, global::Sample.ItemRequestValidator>());", run.Source, StringComparison.Ordinal);
+        Assert.Contains("Singleton<global::AiNexus.Platform.Validation.IRequestValidator, global::Sample.DerivedValidator>());", run.Source, StringComparison.Ordinal);
+        // 單純的 AbstractValidator<T> 是子驗證器，不套用到端點，也不註冊。
+        foreach (var excluded in new[] { "Sample.Extensions", "Sample.NotASlice", "Sample.BaseValidator", "Sample.GenericValidator", "Sample.ChildValidator" })
             Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
     }
 
@@ -152,6 +160,29 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Equal("Source1.cs", diagnostic.Location.GetLineSpan().Path);
         Assert.Empty(run.Errors);
         Assert.DoesNotContain("Hidden", run.Source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TwoValidatorsForTheSameRequestAreReported()
+    {
+        const string validators = """
+            using AiNexus.Platform.Validation;
+
+            namespace Sample;
+
+            internal sealed record ItemRequest(string Name);
+
+            internal sealed class ItemRequestValidator : RequestValidator<ItemRequest>;
+
+            internal sealed class ItemRulesValidator : RequestValidator<ItemRequest>;
+            """;
+
+        var run = GeneratorHarness.Run(new FeatureCompositionGenerator(), Target, validators);
+
+        var diagnostic = Assert.Single(run.Diagnostics);
+        Assert.Equal("AINX1005", diagnostic.Id);
+        Assert.Contains("Sample.ItemRulesValidator", diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        Assert.Equal(8, diagnostic.Location.GetLineSpan().StartLinePosition.Line);
     }
 
     [Fact]

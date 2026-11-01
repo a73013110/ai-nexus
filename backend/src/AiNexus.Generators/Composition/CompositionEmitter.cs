@@ -35,11 +35,11 @@ internal static class CompositionEmitter
             writer.Line($"global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<{slice.Type}>(services);");
         writer.Close().Line();
 
-        // 一律 singleton：過濾器在建置端點時解析驗證器並跨請求共用（RequestValidation）。
+        // 一律 singleton：過濾器在建置端點時查好驗證器並跨請求共用（RequestValidators）。TryAddEnumerable：模組已註冊同一個實作時不重複。
         writer.Open("private static partial void AddRequestValidators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         foreach (var validator in Valid(composition.Validators, x => x.Problem))
-            foreach (var service in validator.Services)
-                writer.Line($"global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<{service}, {validator.Type}>(services);");
+            writer.Line("global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, "
+                + $"global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::{ValidatorRegistration.Namespace}.IRequestValidator, {validator.Type}>());");
         writer.Close();
 
         return writer.Close().ToString();

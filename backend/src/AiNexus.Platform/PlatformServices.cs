@@ -8,6 +8,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
+using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -41,6 +42,7 @@ public static class PlatformServices
             options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
         services.AddPlatformProblemDetails();
+        services.AddRequestValidation();
         services.AddHealthChecks();
         services.AddRateLimiter(options => options.OnRejected = (context, _) =>
         {
