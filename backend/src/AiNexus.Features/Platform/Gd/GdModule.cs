@@ -20,6 +20,6 @@ public sealed class GdModule : IFeatureModule
         builder.Services.AddScoped<GdAccounts>();
         builder.Services.AddScoped<GdFlowReader>();
         builder.Services.AddScoped<GdAttachments>();
-        builder.Services.AddRemoteFileSource<GdFileSource>();
+        builder.Services.AddRemoteFileSource<GdFileSource>(GdFileSource.SourceName);
     }
 }

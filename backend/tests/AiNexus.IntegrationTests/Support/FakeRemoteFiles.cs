@@ -22,10 +22,10 @@ internal sealed class FakeRemoteFiles(string name) : IRemoteFileSource
         return Task.FromResult(Files.GetValueOrDefault(reference, RemoteFileRead.NotFound));
     }
 
-    /// <summary>移除所有已註冊的來源，只留這一個，測試不會連到外部網站。</summary>
+    /// <summary>換掉同名的來源，測試不會連到外部網站。</summary>
     public void Register(IServiceCollection services)
     {
-        services.RemoveAll<IRemoteFileSource>();
-        services.AddSingleton<IRemoteFileSource>(this);
+        services.RemoveAllKeyed<IRemoteFileSource>(Name);
+        services.AddKeyedSingleton<IRemoteFileSource>(Name, this);
     }
 }

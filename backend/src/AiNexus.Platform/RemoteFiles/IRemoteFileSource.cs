@@ -1,7 +1,9 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Platform.RemoteFiles;
 
 /// <summary>
-/// 別的系統上的一個檔案：<see cref="Source"/> 是 <see cref="IRemoteFileSource.Name"/>，<see cref="Reference"/> 是該來源自己認得的位置（例如公文系統的附件路徑）。
+/// 別的系統上的一個檔案：<see cref="Source"/> 是註冊來源時的名稱，<see cref="Reference"/> 是該來源自己認得的位置（例如公文系統的附件路徑）。
 /// 只在伺服器端流動：發給瀏覽器的是包住它的短期憑證，對方系統的網址與路徑不會出現在前端。
 /// </summary>
 public sealed record RemoteFileReference(string Source, string Reference);
@@ -34,9 +36,6 @@ public enum RemoteFileStatus
 /// </summary>
 public interface IRemoteFileSource
 {
-    /// <summary>寫進憑證的穩定名稱（例如 <c>gd</c>）；改名會讓已發出的憑證失效。</summary>
-    string Name { get; }
-
     /// <summary>
     /// 讀取整個檔案到記憶體（有大小上限）：要先確認內容像個檔案、沒有超過上限，才開始回應瀏覽器。
     /// <paramref name="reference"/> 來自憑證，憑證有簽章，但實作仍要驗證格式，不能拿它組出任意網址。
@@ -46,7 +45,9 @@ public interface IRemoteFileSource
 
 public static class RemoteFileSources
 {
-    /// <summary>加入一個遠端檔案來源；<see cref="IRemoteFileSource.Name"/> 不可與其他來源重複。</summary>
-    public static IServiceCollection AddRemoteFileSource<TSource>(this IServiceCollection services) where TSource : class, IRemoteFileSource
-        => services.AddScoped<IRemoteFileSource, TSource>();
+    /// <summary>
+    /// 以 <paramref name="name"/> 加入一個遠端檔案來源。名稱寫進憑證（例如 <c>gd</c>），改名會讓已發出的憑證失效；與其他來源重複時啟動失敗。
+    /// </summary>
+    public static IServiceCollection AddRemoteFileSource<TSource>(this IServiceCollection services, string name) where TSource : class, IRemoteFileSource
+        => services.AddKeyedService<IRemoteFileSource, TSource>(name, ServiceLifetime.Scoped);
 }

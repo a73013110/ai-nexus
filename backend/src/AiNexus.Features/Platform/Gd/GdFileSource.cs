@@ -20,8 +20,6 @@ public sealed partial class GdFileSource(IHttpClientFactory clients, IOptions<Gd
 {
     public const string SourceName = "gd";
 
-    public string Name => SourceName;
-
     public async Task<RemoteFileRead> ReadAsync(string reference, CancellationToken ct)
     {
         if (!GdAttachments.IsPath(reference)) return RemoteFileRead.NotFound;

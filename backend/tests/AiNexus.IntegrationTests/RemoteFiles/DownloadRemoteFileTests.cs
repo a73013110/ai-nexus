@@ -1,4 +1,6 @@
 using System.Net;
+using AiNexus.Features;
+using AiNexus.Features.Platform.Gd;
 using AiNexus.Features.Platform.RemoteFiles;
 using AiNexus.Platform.RemoteFiles;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,5 +86,18 @@ public sealed class DownloadRemoteFileTests
 
         Assert.Equal(expected, response.StatusCode);
         Assert.Contains(code, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    // 重複的名稱若照 DI 預設只取最後一個，另一個來源發出的憑證會悄悄失效；要在啟動時就失敗。
+    [Fact]
+    public async Task ASecondSourceWithTheSameNameFailsAtStartup()
+    {
+        var duplicate = new FakeRemoteFiles(GdFileSource.SourceName);
+        await using var factory = new AppFactory(services: services => services.AddKeyedSingleton<IRemoteFileSource>(duplicate.Name, duplicate));
+
+        var error = Assert.Throws<InvalidOperationException>(() => FeatureModules.VerifyStartup(factory.Services));
+
+        Assert.Contains("'gd'", error.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(GdFileSource).FullName!, error.Message, StringComparison.Ordinal);
     }
 }
