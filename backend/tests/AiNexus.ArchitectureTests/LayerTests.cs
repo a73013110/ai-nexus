@@ -21,10 +21,20 @@ public sealed class LayerTests
     [Fact]
     public void FeatureModulesAreRegisteredThroughTheModuleContract()
     {
-        var modules = Assemblies.Features.GetTypes().Concat(Assemblies.Data.GetTypes())
+        var modules = Assemblies.Features.GetTypes()
             .Where(t => t.Name.EndsWith("Module", StringComparison.Ordinal) && t.IsClass && !t.IsAbstract).ToList();
         Assert.NotEmpty(modules);
         Assert.All(modules, module => Assert.Contains(typeof(AiNexus.Platform.Modules.IFeatureModule), module.GetInterfaces()));
+    }
+
+    /// <summary>組合產生器只看得到 Features 組件（ADR 0029）；放在其他專案的模組不會被註冊，編譯也不會報錯。</summary>
+    [Fact]
+    public void FeatureModulesLiveOnlyInFeatures()
+    {
+        var elsewhere = Assemblies.Data.GetTypes().Concat(Assemblies.Platform.GetTypes())
+            .Where(t => t.IsClass && typeof(AiNexus.Platform.Modules.IFeatureModule).IsAssignableFrom(t))
+            .Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
+        Assert.True(elsewhere.Count == 0, "Move these modules to AiNexus.Features (the composition generator cannot see them):\n" + string.Join('\n', elsewhere));
     }
 
     private static void AssertNoDependency(Types types, params string[] forbidden)
