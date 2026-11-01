@@ -20,10 +20,6 @@ public sealed class JobService(AppDbContext db, IServiceProvider services)
     /// <summary>同一業務對象同一種工作只能有一筆進行中，由資料庫的 filtered unique index 擋下重複。</summary>
     internal static string ActiveKey(string kind, Guid subject) => kind + ":" + subject.ToString("N");
 
-    /// <summary>該種工作的處理器；種類沒有（或已不再有）處理器時為 null。</summary>
-    internal static IBackgroundJobHandler? HandlerFor(IServiceProvider services, string kind) =>
-        services.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == kind);
-
     public static JobDto Describe(BackgroundJob x) => new(
         x.Id,
         x.Kind,

@@ -4,6 +4,7 @@ using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Jobs.Management;
@@ -12,7 +13,7 @@ namespace AiNexus.Features.Work.Jobs.Management;
 /// 把使用者的失敗或已取消工作重新排入佇列。全部嘗試上限為 <see cref="JobService.MaxAttempts"/> 次；且工作種類仍有處理器、處理器接受重試，
 /// 同一業務對象沒有其他進行中的工作。更新以讀到的狀態作為條件（fencing），避免覆寫併發的狀態變更。
 /// </summary>
-internal sealed class RetryJob(AppDbContext db, IServiceProvider services, TimeProvider clock)
+internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHandler> handlers, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>
@@ -27,7 +28,7 @@ internal sealed class RetryJob(AppDbContext db, IServiceProvider services, TimeP
         if (job.Status is not (RunStates.Failed or RunStates.Cancelled)) return JobsErrors.JobNotRetryable;
         if (job.Attempt >= JobService.MaxAttempts) return JobsErrors.JobRetryLimit;
         // 只有可重試的工作才解析處理器；處理器自己的檢查屬於其所在模組，這裡不重複。
-        var handler = JobService.HandlerFor(services, job.Kind);
+        var handler = handlers.Find(job.Kind);
         if (handler is null) return JobsErrors.JobHandlerMissing;
         var allowed = await handler.ValidateRetryAsync(job, ct);
         if (!allowed.IsSuccess) return allowed.Error;

@@ -1,5 +1,8 @@
+using AiNexus.Features.Admin.Quality.RetrievalEvaluations;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Features.Work.Knowledge.Indexing;
 using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,10 +30,10 @@ public sealed class RetrievalDependencyTests
         var rewriter = Assert.IsType<ModelQueryRewriter>(first.ServiceProvider.GetRequiredService<IQueryRewriter>());
         Assert.Same(rewriter, first.ServiceProvider.GetRequiredService<IQueryRewriter>());
         first.ServiceProvider.GetRequiredService<RetrievalPipeline>();
-        var handlers = first.ServiceProvider.GetServices<IBackgroundJobHandler>().ToArray();
-        Assert.Contains(handlers, x => x.Kind == "document-ingest");
-        Assert.Contains(handlers, x => x.Kind == "document-embedding");
-        Assert.Contains(handlers, x => x.Kind == "retrieval-eval");
+        var handlers = first.ServiceProvider.GetRequiredService<KeyedServices<IBackgroundJobHandler>>();
+        Assert.IsType<DocumentIngestHandler>(handlers.Find(DocumentIngestHandler.JobKind));
+        Assert.IsType<DocumentEmbeddingHandler>(handlers.Find(DocumentEmbeddingHandler.JobKind));
+        Assert.IsType<RetrievalEvaluationHandler>(handlers.Find(RetrievalEvaluationHandler.JobKind));
         using var second = app.Services.CreateScope();
         Assert.NotSame(rewriter, second.ServiceProvider.GetRequiredService<IQueryRewriter>());
     }

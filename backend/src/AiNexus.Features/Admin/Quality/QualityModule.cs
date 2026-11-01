@@ -23,8 +23,8 @@ public sealed class QualityModule : IFeatureModule
         var services = builder.Services;
         services.AddDashboardSource<QualityDashboard>();
         services.AddScoped<RetrievalEvaluationService>();
-        services.AddScoped<IBackgroundJobHandler, RetrievalEvaluationHandler>();
-        services.AddScoped<IBackgroundJobHandler, EvaluationHandler>();
+        services.AddBackgroundJobHandler<RetrievalEvaluationHandler>(RetrievalEvaluationHandler.JobKind);
+        services.AddBackgroundJobHandler<EvaluationHandler>(EvaluationHandler.JobKind);
         services.AddFeaturePolicy(FeatureCatalog.Quality);
         services.AddFeaturePolicy(FeatureCatalog.QualityRetrieval);
     }

@@ -13,7 +13,6 @@ public sealed class RetrievalEvaluationHandler(AppDbContext db, RetrievalEvaluat
 {
     public const string JobKind = "retrieval-eval";
 
-    public string Kind => JobKind;
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {
         var run = await evaluations.RequireUnchangedAsync(job.OwnerId, job.SubjectId, ct);

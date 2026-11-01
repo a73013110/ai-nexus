@@ -22,7 +22,6 @@ internal sealed class RepositoryImportHandler(AppDbContext db, RepositoryService
     AttachmentService attachments, DocumentService documents) : IBackgroundJobHandler
 {
     public const string JobKind = "repository-import";
-    public string Kind => JobKind;
 
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => await RequireAsync(job, ct) is { IsSuccess: false } denied ? denied.Error! : Result.Success;
 

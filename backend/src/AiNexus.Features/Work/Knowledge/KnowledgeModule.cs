@@ -42,7 +42,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<DocumentIndexer>();
         services.AddScoped<EmbeddingLifecycle>();
         services.AddScoped<RetrievalModelProbe>();
-        services.AddScoped<IBackgroundJobHandler, EmbeddingReindexHandler>();
+        services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind);
         services.AddHostedService<EmbeddingBootstrapWorker>();
         services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
         services.AddScoped<KnowledgeRetrieval>();
@@ -65,8 +65,8 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddSingleton<EmbeddingService>();
         services.AddSingleton<ITextChunker, StructuredChunker>();
         services.AddControlledHttpClient(RetrievalModelsClient);
-        services.AddScoped<IBackgroundJobHandler, DocumentIngestHandler>();
-        services.AddScoped<IBackgroundJobHandler, DocumentEmbeddingHandler>();
+        services.AddBackgroundJobHandler<DocumentIngestHandler>(DocumentIngestHandler.JobKind);
+        services.AddBackgroundJobHandler<DocumentEmbeddingHandler>(DocumentEmbeddingHandler.JobKind);
         services.AddFeaturePolicy(FeatureCatalog.Knowledge);
         services.AddFeaturePolicy(FeatureCatalog.KnowledgeRetrieval);
     }

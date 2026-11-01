@@ -41,7 +41,7 @@ public sealed class IssueCorrelationTests
     [Fact]
     public async Task BackgroundRetryKeepsTraceAndJobButGetsDistinctIssueAndAttempt()
     {
-        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], services: services => services.AddScoped<IBackgroundJobHandler, FailingJob>());
+        await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], services: services => services.AddBackgroundJobHandler<FailingJob>("diagnostic-fixture"));
         using var client = await factory.SignedInAsync(); var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; Guid jobId;
         using (var scope = factory.Services.CreateScope()) { using var trace = DiagnosticTrace.Start("test.enqueue"); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var job = scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, Guid.NewGuid(), "diagnostic-fixture", "safe task"); jobId = job.Id; await db.SaveChangesAsync(); }
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services); Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
@@ -53,7 +53,6 @@ public sealed class IssueCorrelationTests
 
     public sealed class FailingJob : IBackgroundJobHandler
     {
-        public string Kind => "diagnostic-fixture";
         public Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct) => throw new ExternalServiceException(Error.Unavailable("fixture_failed"), Secret);
         public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
     }

@@ -28,7 +28,6 @@ public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, Ac
 {
     public const string JobKind = "evaluation";
 
-    public string Kind => JobKind;
     private async Task<Result<EvaluationRun>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
         if (!await features.HoldsAsync(job.OwnerId, FeatureCatalog.Quality, ct)) return AccessControlErrors.FeatureForbidden;

@@ -14,7 +14,6 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
     AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes, AuditTrail audit) : IBackgroundJobHandler
 {
     public const string JobKind = "embedding-reindex";
-    public string Kind => JobKind;
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await ProfileAsync(job, ct)) is { IsSuccess: false } invalid ? invalid.Error : Result.Success;
 
     /// <summary>取得要重建的向量模型設定；擁有者仍需具備檢索管理頁的授權，且模型未退役。</summary>

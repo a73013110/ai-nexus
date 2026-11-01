@@ -6,6 +6,7 @@ using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Jobs;
@@ -101,7 +102,8 @@ public sealed partial class BackgroundJobWorker(
                 execution.Cancel();
                 execution.Token.ThrowIfCancellationRequested();
             }
-            var handler = JobService.HandlerFor(scope.ServiceProvider, job.Kind);
+            // 種類沒有（或已不再有）處理器時為 null。
+            var handler = scope.ServiceProvider.GetRequiredService<KeyedServices<IBackgroundJobHandler>>().Find(job.Kind);
             var outcome = job.Attempt > JobService.MaxAttempts ? JobsErrors.JobRetryLimit
                 : handler is null ? JobsErrors.JobHandlerMissing
                 : await handler.ExecuteAsync(new(db, job, lease), execution.Token);

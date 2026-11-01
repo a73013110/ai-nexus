@@ -15,7 +15,6 @@ public sealed class BackgroundJobWorkerTests
 {
     private sealed class UnfinishedHandler : IBackgroundJobHandler
     {
-        public string Kind => "unfinished-test";
         public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
         public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
         {
@@ -28,7 +27,7 @@ public sealed class BackgroundJobWorkerTests
     [Fact]
     public async Task TerminalNotificationDoesNotCommitUncheckpointedHandlerChanges()
     {
-        await using var factory = new AppFactory(services: services => services.AddScoped<IBackgroundJobHandler, UnfinishedHandler>());
+        await using var factory = new AppFactory(services: services => services.AddBackgroundJobHandler<UnfinishedHandler>("unfinished-test"));
         using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Guid id;

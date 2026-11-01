@@ -19,7 +19,6 @@ public sealed partial class RepositoryReviewHandler(AppDbContext db, RepositoryR
     ModelCatalog catalog, ModelPresentation presentation, IOptions<InferenceOptions> inference, ILogger<RepositoryReviewHandler> logger) : IBackgroundJobHandler
 {
     public const string JobKind = "repository-review";
-    public string Kind => JobKind;
 
     private async Task<Result<RepositoryReview>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
@@ -141,7 +140,7 @@ public sealed partial class RepositoryReviewHandler(AppDbContext db, RepositoryR
         await execution.CheckpointAsync(stage, completed, total, ct);
         return result;
 
-        Task<Result<ModelTaskResult>> GenerateModelAsync(string source) => model.GenerateAsync(row.OwnerId, Kind, source,
+        Task<Result<ModelTaskResult>> GenerateModelAsync(string source) => model.GenerateAsync(row.OwnerId, JobKind, source,
             instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens);
         static long? Sum(long? first, long? second) => first is null || second is null ? null : first + second;
         // 被拒絕的文字含有使用者程式碼與模型輸出，所以日誌只記錄原因與長度。
