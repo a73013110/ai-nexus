@@ -16,7 +16,7 @@ public sealed class FieldCatalogGenerator : IIncrementalGenerator
     public const string AttributeName = "AiNexus.Platform.Modules.FieldCatalogAttribute";
 
     /// <summary>pipeline 各步驟的追蹤名稱；測試以它們確認無關的編輯不會讓步驟重算。</summary>
-    public const string TargetsStep = "Targets", FieldsStep = "Fields";
+    public const string TargetsStep = "Targets", FieldsStep = "Fields", CatalogStep = "Catalog";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -35,24 +35,24 @@ public sealed class FieldCatalogGenerator : IIncrementalGenerator
             .Collect()
             .Select(static (items, _) => Sorted(items));
 
-        context.RegisterSourceOutput(targets.Combine(fields), static (output, source) => Generate(output, source.Left, source.Right));
+        // 先依每個目錄篩出符合的欄位再交給輸出：其他型別的 public static 欄位增刪時，這一步的結果不變，輸出不必重跑。
+        var catalogs = targets.Combine(fields)
+            .Select(static (source, _) => Catalog.From(source.Left, source.Right))
+            .WithTrackingName(CatalogStep);
+
+        context.RegisterSourceOutput(catalogs, static (output, catalog) => Generate(output, catalog));
     }
 
-    private static void Generate(SourceProductionContext output, CatalogTarget target, EquatableArray<CatalogField> fields)
+    private static void Generate(SourceProductionContext output, Catalog catalog)
     {
-        if (!target.Valid)
-        {
-            output.ReportDiagnostic(new DiagnosticInfo(CatalogDiagnostics.InvalidTarget, target.Location, target.Display).ToDiagnostic());
-            return;
-        }
-        var matching = fields.Where(x => x.Type == target.ElementType).ToList();
-        foreach (var hidden in matching.Where(x => x.Hidden is not null))
-            output.ReportDiagnostic(new DiagnosticInfo(CatalogDiagnostics.InvisibleField, hidden.Hidden, hidden.Display, target.Display).ToDiagnostic());
+        foreach (var diagnostic in catalog.Diagnostics) output.ReportDiagnostic(diagnostic.ToDiagnostic());
+        var target = catalog.Target;
+        if (target.Problem is not null) return;
 
         var writer = new SourceWriter();
         if (target.Namespace is { } ns) writer.Line().Line($"namespace {ns};");
         writer.Line().Open(target.Declaration).Line($"{target.Signature} =>").Line("[");
-        foreach (var field in matching.Where(x => x.Hidden is null)) writer.Line($"    {field.Reference},");
+        foreach (var reference in catalog.References) writer.Line($"    {reference},");
         writer.Line("];").Close();
         output.AddSource(target.Display + ".g.cs", writer.ToString());
     }

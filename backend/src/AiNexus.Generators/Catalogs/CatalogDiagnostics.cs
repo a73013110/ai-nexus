@@ -16,4 +16,9 @@ internal static class CatalogDiagnostics
         "AINX2002", "列入目錄的欄位必須在組件內可見",
         "'{0}' 的型別符合目錄 '{1}'，但它的類別或外層類別不是 public／internal，產生的程式碼無法引用", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor GeneralElement = new(
+        "AINX2003", "欄位目錄的元素型別必須是專用型別",
+        "'{0}' 列出型別為 '{1}' 的欄位，但這個型別太通用，其他類別同型別的 public static 欄位也會被列入；改用專用的型別（例如 record）", Category,
+        DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | [`FeatureCompositionGenerator`](../../backend/src/AiNexus.Generators/Composition/FeatureCompositionGenerator.cs) | `[FeatureComposition]`（`FeatureModules`） | 組件內每個模組的 `AddServices`、`MapEndpoints`（OpenAPI tag＝模組名）與 `VerifyStartup`；端點切片註冊為 scoped；`RequestValidator<T>` 以 `IRequestValidator` 註冊為 singleton |
 | [`UnmappedSliceAnalyzer`](../../backend/src/AiNexus.Generators/Composition/UnmappedSliceAnalyzer.cs) | 切片的 `Map*` 方法 | 組件內沒有任何呼叫或方法群組引用時回報 AINX1004（建置失敗） |
-| [`FieldCatalogGenerator`](../../backend/src/AiNexus.Generators/Catalogs/FieldCatalogGenerator.cs) | `[FieldCatalog]` 方法（`AuditActions`） | 回傳組件內 static 類別裡、型別等於元素型別的 public static 欄位，依類別完整名稱再依宣告順序 |
+| [`FieldCatalogGenerator`](../../backend/src/AiNexus.Generators/Catalogs/FieldCatalogGenerator.cs) | `[FieldCatalog]` 方法（`AuditActions`） | 回傳組件內 static 類別裡、型別等於元素型別的 public static 欄位，依類別完整名稱再依宣告順序；元素型別要專用（AINX2003） |
 
 組合的規則：
 
