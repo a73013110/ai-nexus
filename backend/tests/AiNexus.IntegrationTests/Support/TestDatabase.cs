@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using AiNexus.Data.App;
-using AiNexus.IntegrationTests.Host;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -126,7 +125,7 @@ public sealed class TestDatabase : IDisposable
     {
         public static Template Create()
         {
-            var root = OpenApiContractTests.RepositoryRoot();
+            var root = Repository.Root;
             var project = Path.Combine(root, "database", "App");
             var dacpac = new[] { "Release", "Debug" }.Select(x => Path.Combine(project, "bin", x, "App.dacpac"))
                 .Where(File.Exists).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()

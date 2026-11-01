@@ -28,8 +28,8 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
     public ConversationBackupValidator()
     {
         RuleFor(x => x.Version).Equal(1);
-        RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode(RuleCode.Length);
-        RuleFor(x => x.SystemInstruction).NotNull().MaximumLength(Conversation.InstructionMaxLength);
+        RuleFor(x => x.Title).RequiredText(Conversation.TitleMaxLength);
+        RuleFor(x => x.SystemInstruction).NotNull().OptionalContent(Conversation.InstructionMaxLength);
         RuleFor(x => x.Labels).NotNull();
         RuleFor(x => x.Messages)
             .Must(x => x is { Count: <= MaxMessages }

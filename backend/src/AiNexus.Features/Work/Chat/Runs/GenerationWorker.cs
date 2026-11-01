@@ -123,7 +123,7 @@ public sealed partial class GenerationWorker(
                 var issue = issues.Report(ex, "generation_persistence_failed");
                 try
                 {
-                    await FinishIfActiveAsync(job, RunStates.Failed, "internal_error", issue);
+                    await FinishIfActiveAsync(job, RunStates.Failed, ChatErrors.InternalError, issue);
                 }
                 catch (Exception recovery)
                 {
@@ -163,7 +163,7 @@ public sealed partial class GenerationWorker(
             if (await RecheckAsync(scope.ServiceProvider, db, run, stoppingToken) is { IsSuccess: false } revoked)
             {
                 await scope.ServiceProvider.GetRequiredService<RunService>()
-                    .FinishAsync(run, RunStates.Failed, revoked.Error.Code, stoppingToken);
+                    .FinishAsync(run, RunStates.Failed, revoked.Error, stoppingToken);
                 return;
             }
 
@@ -185,7 +185,7 @@ public sealed partial class GenerationWorker(
             if (!built.IsSuccess)
             {
                 await scope.ServiceProvider.GetRequiredService<RunService>()
-                    .FinishAsync(run, RunStates.Failed, built.Error.Code, stoppingToken);
+                    .FinishAsync(run, RunStates.Failed, built.Error, stoppingToken);
                 return;
             }
 
@@ -206,7 +206,8 @@ public sealed partial class GenerationWorker(
         var characters = 0;
         var completed = false;
         string finalStatus = RunStates.Completed;
-        string? error = null, issueCode = null;
+        Error? error = null;
+        string? issueCode = null;
 
         try
         {
@@ -215,7 +216,7 @@ public sealed partial class GenerationWorker(
                 characters += chunk.Text.Length;
                 if (characters > options.Value.MaxOutputCharacters)
                 {
-                    throw new ExternalServiceException(Error.Upstream("output_limit_exceeded"), "回答超過文字上限，請分段提問。");
+                    throw new ExternalServiceException(ChatErrors.OutputLimitExceeded, "回答超過文字上限，請分段提問。");
                 }
 
                 completed |= chunk.Done;
@@ -235,7 +236,7 @@ public sealed partial class GenerationWorker(
 
             if (!completed)
             {
-                throw new ExternalServiceException(Error.Upstream("provider_stream_incomplete"), "模型串流提前結束。");
+                throw new ExternalServiceException(InferenceErrors.ProviderStreamIncomplete, "模型串流提前結束。");
             }
         }
         catch (OperationCanceledException)
@@ -243,13 +244,13 @@ public sealed partial class GenerationWorker(
             finalStatus = job.Cancellation.IsCancellationRequested ? RunStates.Cancelled : RunStates.Failed;
             error = finalStatus == RunStates.Cancelled
                 ? null
-                : stoppingToken.IsCancellationRequested ? "server_stopping" : "generation_timeout";
+                : stoppingToken.IsCancellationRequested ? ChatErrors.ServerStopping : ChatErrors.GenerationTimeout;
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ExternalServiceException)
         {
             finalStatus = RunStates.Failed;
-            error = (ex as ExternalServiceException)?.Error.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
-            issueCode = issues.Report(ex, error);
+            error = (ex as ExternalServiceException)?.Error ?? (ex is HttpRequestException or IOException ? InferenceErrors.ProviderConnectionLost : InferenceErrors.ProviderProtocolError);
+            issueCode = issues.Report(ex, error.Code);
         }
 
         // 結束前寫入剩餘的文字與用量。使用 CancellationToken.None，即使已被取消，局部產出也要保存下來
@@ -261,7 +262,7 @@ public sealed partial class GenerationWorker(
     /// 在對話鎖內結算仍活躍的 Run；已被取消或由別處結算的不再變更。
     /// 一律用 <see cref="CancellationToken.None"/>：收尾發生在取消或停機之後，仍要把終止狀態寫進資料庫。
     /// </summary>
-    private async Task FinishIfActiveAsync(GenerationJob job, string status, string? error, string? issueCode)
+    private async Task FinishIfActiveAsync(GenerationJob job, string status, Error? error, string? issueCode)
     {
         using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
         {

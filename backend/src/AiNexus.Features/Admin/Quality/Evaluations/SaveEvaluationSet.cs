@@ -29,12 +29,12 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
     {
         When(x => ResourceAccess.IsValidName(x.Name), () =>
         {
-            RuleFor(x => x.Description).MaximumLength(2000);
+            RuleFor(x => x.Description).OptionalContent(2000);
             RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode(RuleCode.Count);
             RuleForEach(x => x.Cases).NotNull().ChildRules(test =>
             {
-                test.RuleFor(x => x.Question).Must(x => x.Trim().Length is >= 1 and <= 4000).WithErrorCode(RuleCode.Length);
-                test.RuleFor(x => x.Reference).MaximumLength(4000);
+                test.RuleFor(x => x.Question).RequiredContent(4000);
+                test.RuleFor(x => x.Reference).OptionalContent(4000);
                 test.RuleFor(x => x.RequiredTerms).Must(TermsValid).WithErrorCode(Terms);
                 test.RuleFor(x => x.ForbiddenTerms).Must(TermsValid).WithErrorCode(Terms);
             });
@@ -42,7 +42,7 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
     }
 
     // 詞彙最多 20 個，去除空白後不分大小寫不得重複，每個 1 至 80 字元。
-    private static bool TermsValid(IReadOnlyList<string>? terms) => terms is null || terms.Count <= 20 && terms.All(x => x.Trim().Length is > 0 and <= 80) && terms.Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == terms.Count;
+    private static bool TermsValid(IReadOnlyList<string>? terms) => terms is null || terms.Count <= 20 && terms.All(x => TextRules.IsLine(x, 80)) && terms.Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == terms.Count;
 }
 
 /// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>

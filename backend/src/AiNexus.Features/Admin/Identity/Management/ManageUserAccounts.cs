@@ -60,7 +60,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
     public async Task<Result<Guid>> SaveAsync(Guid actor, Guid? id, UserAccountRequest request, CancellationToken ct)
     {
         var local = UserAccounts.Normalize(request.LocalAccount); var ad = UserAccounts.Normalize(request.AdAccount);
-        var displayNameInvalid = string.IsNullOrWhiteSpace(request.DisplayName) || request.DisplayName.Trim().Length > 120;
+        var displayNameInvalid = !TextRules.IsLine(request.DisplayName, 120);
         // 角色清單要在這裡就確認非 null，編譯器才能保證後面的 RoleIds 使用安全；不要抽成布林變數。
         if (displayNameInvalid || request.RoleIds is null || request.RoleIds.Count > 100
             || request.RoleIds.Distinct().Count() != request.RoleIds.Count)

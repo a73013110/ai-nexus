@@ -65,4 +65,12 @@ internal static class IdentityErrors
     public static readonly Error DirectoryQueryInvalid = Error.Invalid("directory_query_invalid");
     // 預覽之後、寫入之前資料已被別人改動（同時登入、另一位管理員編輯）：該人不寫入，請重新預覽。
     public static readonly Error DirectoryChanged = Error.Conflict("directory_changed");
+
+    // AD 連線、設定或查詢失敗，由 ExternalServiceException 帶出；5xx，前端顯示查證代碼。
+    public static readonly Error AdSearchUnavailable = Error.Unavailable("ad_search_unavailable");
+    public static readonly Error AdUnavailable = Error.Unavailable("ad_unavailable");
+    public static readonly Error AdNotConfigured = Error.Unavailable("ad_not_configured");
+    public static readonly Error AdPlatformUnavailable = Error.Unavailable("ad_platform_unavailable");
+    public static readonly Error AdBindUnavailable = Error.Unavailable("ad_bind_unavailable");
+    public static readonly Error AdTlsUnavailable = Error.Unavailable("ad_tls_unavailable");
 }

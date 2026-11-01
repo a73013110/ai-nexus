@@ -16,6 +16,9 @@ namespace AiNexus.Platform.Export;
 /// </remarks>
 public sealed class PdfRenderer(IOptions<PdfOptions> options) : IAsyncDisposable
 {
+    private static readonly Error PdfExportBusy = Error.RateLimited("pdf_export_busy");
+    private static readonly Error PdfRendererUnavailable = Error.Unavailable("pdf_renderer_unavailable");
+
     public const string ContentType = "application/pdf";
 
     private readonly SemaphoreSlim concurrency = new(2, 2);
@@ -26,7 +29,7 @@ public sealed class PdfRenderer(IOptions<PdfOptions> options) : IAsyncDisposable
     {
         // 併發上限為 2；超過時立即拒絕，不排隊等待，避免 PDF 請求堆積佔住伺服器。
         if (!await concurrency.WaitAsync(0, ct))
-            throw new ExternalServiceException(Error.RateLimited("pdf_export_busy"), "PDF 匯出正在忙碌，請稍後重試。");
+            throw new ExternalServiceException(PdfExportBusy, "PDF 匯出正在忙碌，請稍後重試。");
         var timeout = options.Value.TimeoutSeconds * 1000;
         IBrowserContext? context = null;
         try
@@ -113,7 +116,7 @@ public sealed class PdfRenderer(IOptions<PdfOptions> options) : IAsyncDisposable
     }
 
     private static ExternalServiceException Unavailable(Exception? error) => new(
-        Error.Unavailable("pdf_renderer_unavailable"),
+        PdfRendererUnavailable,
         "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。",
         error);
 

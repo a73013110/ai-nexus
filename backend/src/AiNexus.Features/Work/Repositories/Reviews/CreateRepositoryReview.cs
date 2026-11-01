@@ -32,7 +32,7 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 
     public CreateRepositoryReviewRequestValidator()
     {
-        RuleFor(x => x.Note).Must(x => (x?.Trim().Length ?? 0) <= RepositoryReview.NoteMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Note).OptionalContent(RepositoryReview.NoteMaxLength);
         RuleFor(x => x.IdempotencyKey).Must(x => Guid.TryParse(x, out _)).WithErrorCode(GuidFormat);
     }
 }

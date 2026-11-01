@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Data.App.Conversations;
 
@@ -15,7 +16,7 @@ public sealed class ConversationLabel
     public static string[]? Clean(IReadOnlyList<string> labels)
     {
         if (labels.Count > MaxPerConversation
-            || labels.Any(x => string.IsNullOrWhiteSpace(x) || x.Trim().Length > NameMaxLength || x.Any(char.IsControl)))
+            || labels.Any(x => !TextRules.IsLine(x, NameMaxLength)))
         {
             return null;
         }

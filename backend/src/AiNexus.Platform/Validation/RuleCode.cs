@@ -84,25 +84,11 @@ public sealed partial record RuleCode
     private static partial Regex ValuePattern();
 }
 
-/// <summary>以 <see cref="RuleCode"/> 指定規則代碼，與跨模組共用的文字規則。</summary>
+/// <summary>以 <see cref="RuleCode"/> 指定規則代碼；文字欄位的共用規則在 <see cref="TextRules"/>。</summary>
 public static class RuleCodeExtensions
 {
     /// <summary>指定這條規則失敗時回傳的代碼。</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0030", Justification = "字串版只在這裡呼叫，其他地方經由 RuleCode 指定代碼。")]
     public static IRuleBuilderOptions<T, TProperty> WithErrorCode<T, TProperty>(this IRuleBuilderOptions<T, TProperty> rule, RuleCode code)
         => DefaultValidatorOptions.WithErrorCode(rule, code.Value);
-
-    /// <summary>必填文字：不可空白；去掉前後空白後不超過 <paramref name="maxLength"/>、不含控制字元（會破壞逐行解析與畫面顯示）。</summary>
-    public static IRuleBuilderOptions<T, string?> RequiredText<T>(this IRuleBuilder<T, string?> rule, int maxLength)
-        => rule.NotEmpty().TrimmedText(maxLength);
-
-    /// <summary>選填文字：null 或空白都可以；有值時規則同 <see cref="RequiredText"/>。</summary>
-    public static IRuleBuilderOptions<T, string?> OptionalText<T>(this IRuleBuilder<T, string?> rule, int maxLength) => rule.TrimmedText(maxLength);
-
-    // 預設 cascade 會繼續跑後面的規則，所以每條都要容許 null，空值只回一個 required。
-    // 每個請求都會跑：以 span 計算、向量化搜尋，不配置字串也不經過 LINQ；兩段範圍就是 char.IsControl 的定義。
-    private static IRuleBuilderOptions<T, string?> TrimmedText<T>(this IRuleBuilder<T, string?> rule, int maxLength)
-        => rule.Must(x => x is null || x.AsSpan().Trim().Length <= maxLength).WithErrorCode(RuleCode.TooLong)
-            .Must(x => x is null || !x.AsSpan().ContainsAnyInRange('\u0000', '\u001f') && !x.AsSpan().ContainsAnyInRange('\u007f', '\u009f'))
-            .WithErrorCode(RuleCode.Format);
 }

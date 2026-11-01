@@ -2,6 +2,7 @@ using System.Text;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
@@ -16,7 +17,7 @@ internal static class TextDocuments
         var named = ResourceAccess.Name(request.Title);
         if (!named.IsSuccess) return named.Error;
         var title = named.Value;
-        if (title.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || title.Any(char.IsControl))
+        if (title.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || TextRules.HasLineControl(title))
             return KnowledgeErrors.TextTitleInvalid;
         if (string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > MaxCharacters || request.Text.Contains('\0'))
             return KnowledgeErrors.TextContentInvalid;

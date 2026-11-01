@@ -3,7 +3,7 @@
 - ASP.NET Core 模組化單體＋Angular 功能路由，部署在單一 IIS 執行個體。
 - 模組各自管理端點與服務；資料表的對應集中在 `AiNexus.Data`，共用一個 scoped `AppDbContext`，跨模組異動在同一個交易完成。
 - 不拆每模組一個專案、不引入 MediatR 或分層專案，原因見 [ADR 0002](../decisions/0002-vertical-slice-single-features-project.md)。
-- 細節：[模組邊界](module-boundaries.md)、[後端撰寫慣例](backend-conventions.md)、[生成與背景任務](generation.md)、[資料庫](database.md)、[身分與授權](access-control.md)、[診斷日誌](diagnostics.md)。
+- 細節：[模組邊界](module-boundaries.md)、[後端撰寫慣例](backend-conventions.md)、[請求驗證](request-validation.md)、[生成與背景任務](generation.md)、[資料庫](database.md)、[身分與授權](access-control.md)、[診斷日誌](diagnostics.md)。
 
 ```mermaid
 flowchart LR

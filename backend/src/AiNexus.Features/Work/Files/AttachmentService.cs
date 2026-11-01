@@ -4,6 +4,7 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Work.Files.Extraction;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -24,7 +25,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
     {
         if (file.Length is < 1 || file.Length > options.Value.MaxFileBytes) return FilesErrors.FileSizeLimit;
         var name = Path.GetFileName(file.FileName.Replace('\\', '/'));
-        if (name.Length is < 1 or > Attachment.FileNameMaxLength || name.Any(char.IsControl)) return FilesErrors.InvalidFileName;
+        if (name.Length is < 1 or > Attachment.FileNameMaxLength || TextRules.HasLineControl(name)) return FilesErrors.InvalidFileName;
         using var data = new MemoryStream();
         await using (var input = file.OpenReadStream())
         {

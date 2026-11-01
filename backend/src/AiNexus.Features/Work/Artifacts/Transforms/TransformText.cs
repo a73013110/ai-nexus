@@ -22,7 +22,7 @@ internal sealed class TransformTextRequestValidator : RequestValidator<Transform
 
     public TransformTextRequestValidator()
     {
-        RuleFor(x => x.Text).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= MaxTextCharacters).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Text).RequiredContent(MaxTextCharacters);
         RuleFor(x => x.Language).Must(x => x is "繁體中文" or "English" or "日本語" or "简体中文").WithErrorCode(Unsupported);
     }
 }

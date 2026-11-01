@@ -16,7 +16,7 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 {
     public override Error Problem => ConversationsErrors.InstructionTooLong;
 
-    public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).MaximumLength(Conversation.InstructionMaxLength);
+    public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).OptionalContent(Conversation.InstructionMaxLength);
 }
 
 /// <summary>

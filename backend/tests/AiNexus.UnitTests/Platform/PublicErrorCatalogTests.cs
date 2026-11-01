@@ -6,7 +6,7 @@ public sealed class PublicErrorCatalogTests
     [Fact]
     public void ReviewedPublicHintsStayIdenticalAcrossBackendAndFrontend()
     {
-        var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
+        var root = Repository.Root;
         var backend = File.ReadAllText(Path.Combine(root, "backend/src/AiNexus.Platform/Diagnostics/PublicErrorCatalog.cs"));
         var frontend = File.ReadAllText(Path.Combine(root, "frontend/src/app/core/errors/public-error-catalog.ts"));
         var expected = System.Text.RegularExpressions.Regex.Matches(backend, "\\[\"(?<key>[a-z0-9_]+)\"\\]\\s*=\\s*\"(?<hint>[^\"\\r\\n]*)\"")

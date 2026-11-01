@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Office.Attendance;
 
@@ -138,7 +139,7 @@ public sealed class PunchImportOptions : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         // UNC 另外判斷：非 Windows 的開發機上 Path.IsPathFullyQualified 會把 UNC 路徑當成相對路徑而讓啟動失敗。
-        if (SourceDirectory.Any(char.IsControl) || !(Path.IsPathFullyQualified(SourceDirectory) || SourceDirectory.StartsWith(@"\\", StringComparison.Ordinal)))
+        if (TextRules.HasLineControl(SourceDirectory) || !(Path.IsPathFullyQualified(SourceDirectory) || SourceDirectory.StartsWith(@"\\", StringComparison.Ordinal)))
             yield return new($"{nameof(SourceDirectory)} must be an absolute path or a UNC share.", [nameof(SourceDirectory)]);
     }
 }

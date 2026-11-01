@@ -12,7 +12,7 @@ public sealed class OpenApiContractTests
         await using var factory = new AppFactory();
         using var client = factory.CreateClient();
         var actual = JsonNode.Parse(await client.GetStringAsync("/openapi/v1.json"));
-        var path = Path.Combine(RepositoryRoot(), "contracts", "openapi.json");
+        var path = Path.Combine(Repository.Root, "contracts", "openapi.json");
         var expected = JsonNode.Parse(await File.ReadAllTextAsync(path));
         if (!JsonNode.DeepEquals(expected, actual))
         {
@@ -20,13 +20,6 @@ public sealed class OpenApiContractTests
             await File.WriteAllTextAsync(output, actual!.ToJsonString(new() { WriteIndented = true }));
             Assert.Fail($"OpenAPI differs from contracts/openapi.json. Actual contract: {output}. Regenerate with scripts/Export-Contracts.ps1 when the change is intentional.");
         }
-    }
-
-    internal static string RepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "global.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root (global.json) was not found.");
     }
 
     [Fact]

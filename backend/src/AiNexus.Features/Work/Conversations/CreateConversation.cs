@@ -16,7 +16,7 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
     public override Error Problem => ConversationsErrors.InvalidTitle;
 
     public CreateConversationRequestValidator()
-        => RuleFor(x => x.Title).Must(x => x is null || Conversation.TitleIsValid(x)).WithErrorCode(RuleCode.Length);
+        => RuleFor(x => x.Title).RequiredText(Conversation.TitleMaxLength).When(x => x.Title is not null);
 }
 
 /// <summary>建立使用者自己的空對話。其他模組經由 <see cref="ConversationService.CreateAsync"/> 建立。</summary>

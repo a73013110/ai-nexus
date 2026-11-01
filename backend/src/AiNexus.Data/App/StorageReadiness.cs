@@ -10,6 +10,8 @@ namespace AiNexus.Data.App;
 /// </remarks>
 public sealed class StorageReadiness(IOptions<DatabasesOptions> databases, IHostEnvironment environment)
 {
+    private static readonly Error StorageNotConfigured = Error.Unavailable("storage_not_configured");
+
     public bool Configured => environment.IsEnvironment("Testing") || databases.Value.For(AppDbContext.DatabaseName).Configured;
 
     /// <summary>
@@ -20,7 +22,7 @@ public sealed class StorageReadiness(IOptions<DatabasesOptions> databases, IHost
         if (!Configured)
         {
             throw new ExternalServiceException(
-                Error.Unavailable("storage_not_configured"),
+                StorageNotConfigured,
                 "伺服器尚未完成資料庫設定。請由管理員設定 SQL 連線。");
         }
     }

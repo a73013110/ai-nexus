@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -46,6 +47,6 @@ internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuth
     {
         if (string.IsNullOrWhiteSpace(node)) return settings.Base;
         var dn = node.Trim();
-        return dn.Length <= 1024 && !dn.Any(char.IsControl) && DirectoryNames.Within(dn, settings.Base) ? dn : null;
+        return dn.Length <= 1024 && !TextRules.HasLineControl(dn) && DirectoryNames.Within(dn, settings.Base) ? dn : null;
     }
 }

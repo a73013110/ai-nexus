@@ -9,5 +9,7 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <Using Include="Xunit" />
+    <Using Include="AiNexus.Tests" />
+    <Compile Include="$(MSBuildThisFileDirectory)Repository.cs" Link="Repository.cs" />
   </ItemGroup>
 </Project>

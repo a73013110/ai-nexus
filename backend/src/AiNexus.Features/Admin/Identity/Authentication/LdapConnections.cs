@@ -14,7 +14,7 @@ public static class LdapConnections
     /// <summary>未設定服務帳號密碼時拋出 <c>ad_not_configured</c>；回傳同一份設定方便串接。</summary>
     public static AdAuthenticationOptions Require(AdAuthenticationOptions settings)
     {
-        if (!settings.Configured) throw Unavailable("ad_not_configured", "AD 登入尚未完成設定，請在秘密檔設定 BindPassword。");
+        if (!settings.Configured) throw new ExternalServiceException(IdentityErrors.AdNotConfigured, "AD 登入尚未完成設定，請在秘密檔設定 BindPassword。");
         return settings;
     }
 
@@ -22,7 +22,7 @@ public static class LdapConnections
     /// 非 Windows 主機的錯誤（SID 轉換只在 Windows 可用）。呼叫端自己寫 <c>if (!OperatingSystem.IsWindows()) throw …</c>，
     /// 平台分析器才看得出後面的程式只在 Windows 執行。
     /// </summary>
-    public static ExternalServiceException PlatformUnavailable() => Unavailable("ad_platform_unavailable", "此部署的 AD 登入需要 Windows 主機。");
+    public static ExternalServiceException PlatformUnavailable() => new(IdentityErrors.AdPlatformUnavailable, "此部署的 AD 登入需要 Windows 主機。");
 
     /// <summary>
     /// 加密交握與 bind 一次只做一條連線。Windows 的 LDAP 用戶端（wldap32）在多條連線上同時 StartTLS／bind 會隨機失敗
@@ -36,7 +36,7 @@ public static class LdapConnections
     {
         var service = Connect(settings, settings.BindName, settings.BindPassword);
         try { Bind(service, settings); return service; }
-        catch (LdapException error) { service.Dispose(); throw Unavailable("ad_bind_unavailable", "AD 服務帳號連線失敗，請確認 Server、BindUser 與 BindPassword。", error); }
+        catch (LdapException error) { service.Dispose(); throw new ExternalServiceException(IdentityErrors.AdBindUnavailable, "AD 服務帳號連線失敗，請確認 Server、BindUser 與 BindPassword。", error); }
         catch { service.Dispose(); throw; }
     }
 
@@ -63,7 +63,7 @@ public static class LdapConnections
             {
                 try { connection.SessionOptions.StartTransportLayerSecurity(null); }
                 catch (Exception error) when (error is DirectoryException or InvalidOperationException)
-                { throw Unavailable("ad_tls_unavailable", "無法建立 AD 加密連線，請確認 StartTLS／LDAPS 與憑證設定。", error); }
+                { throw new ExternalServiceException(IdentityErrors.AdTlsUnavailable, "無法建立 AD 加密連線，請確認 StartTLS／LDAPS 與憑證設定。", error); }
             }
             connection.Bind();
         }
@@ -81,5 +81,4 @@ public static class LdapConnections
     public static bool Disabled(SearchResultEntry entry)
         => entry.Attributes["userAccountControl"]?[0] is string flags && int.TryParse(flags, out var value) && (value & 2) != 0;
 
-    public static ExternalServiceException Unavailable(string code, string detail, Exception? inner = null) => new(Error.Unavailable(code), detail, inner);
 }

@@ -1,6 +1,7 @@
 using AiNexus.Data.App.Identity;
 using AiNexus.Data.App.Projects;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -24,7 +25,7 @@ public sealed class Conversation
     public string SystemInstruction { get; set; } = "";
     public List<ConversationLabel> Labels { get; set; } = [];
 
-    public static bool TitleIsValid(string? title) => title?.Trim().Length is >= 1 and <= TitleMaxLength;
+    public static bool TitleIsValid(string? title) => TextRules.IsLine(title, TitleMaxLength);
 }
 
 internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conversation>

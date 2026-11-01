@@ -20,7 +20,7 @@ internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
     public ReviewRequestValidator()
     {
         RuleFor(x => x.Score).Must(x => x is null or (>= 1 and <= 5)).WithErrorCode(RuleCode.Range);
-        RuleFor(x => x.Note).MaximumLength(2000);
+        RuleFor(x => x.Note).OptionalContent(2000);
     }
 }
 

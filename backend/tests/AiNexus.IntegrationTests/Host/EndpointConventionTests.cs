@@ -82,7 +82,7 @@ public sealed class EndpointConventionTests
     }
 
     // 驗證失敗一律回 400；代碼沒有核准提示時前端只能顯示通用訊息，使用者看不出該改哪裡。
-    // 靜態欄位的錯誤另由 ErrorCatalogTests 檢查提示，這裡看實際回傳值，連覆寫時直接 new 的也涵蓋。
+    // 靜態欄位的錯誤另由 ErrorDefinitionTests 檢查提示，這裡看實際回傳值，連覆寫時直接 new 的也涵蓋。
     [Fact]
     public async Task RequestValidatorProblemsAreInvalidAndHaveReviewedHints()
     {

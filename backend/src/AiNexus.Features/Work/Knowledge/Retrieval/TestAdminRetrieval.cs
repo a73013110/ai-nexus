@@ -15,7 +15,7 @@ internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<Ad
 
     public AdminRetrievalSearchRequestValidator()
     {
-        RuleFor(x => x.Query).Must(x => !string.IsNullOrWhiteSpace(x) && x.Length <= 2000).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Query).RequiredContent(2000);
     }
 }
 

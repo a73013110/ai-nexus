@@ -31,7 +31,7 @@ public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddin
                 var vectors = actor is Guid owner ? await embeddingService.EmbedBatchAsync(owner, profile, input, EmbeddingPurpose.Query, timeout.Token)
                     : (await embeddings.Require(profile.Provider).EmbedBatchAsync(input, EmbeddingPurpose.Query, profile, timeout.Token)).Vectors;
                 if (vectors.Count != input.Length || vectors.Any(x => x.Length != settings.Embedding.Dimensions || x.Any(v => !float.IsFinite(v)) || x.All(v => v == 0)))
-                    throw new ExternalServiceException(Error.Upstream("embedding_probe_invalid"), "向量數量、維度或數值不符合設定。");
+                    throw new ExternalServiceException(KnowledgeErrors.EmbeddingProbeInvalid, "向量數量、維度或數值不符合設定。");
                 embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Embedding.Dimensions}。" };
             }
             catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
@@ -51,7 +51,7 @@ public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddin
                 if (actor is Guid owner) await rerankService.RerankAsync(owner, "採購如何核准？", input.Select(x => new KnowledgeHitDto(Guid.Empty, "合成測試", 1, x, 0, Guid.Empty)).ToArray(), timeout.Token);
                 else {
                     var scores = await rerankers.Require(settings.Rerank.Provider).RerankAsync("採購如何核准？", input, timeout.Token);
-                    if (scores.Count != 2 || scores.Select(x => x.Index).Distinct().Count() != 2 || scores.Any(x => x.Index is < 0 or > 1 || !double.IsFinite(x.Score))) throw new ExternalServiceException(Error.Upstream("rerank_probe_invalid"), "重排回應無效。");
+                    if (scores.Count != 2 || scores.Select(x => x.Index).Distinct().Count() != 2 || scores.Any(x => x.Index is < 0 or > 1 || !double.IsFinite(x.Score))) throw new ExternalServiceException(KnowledgeErrors.RerankProbeInvalid, "重排回應無效。");
                 }
                 rerank = rerank with { Available = true, Notice = "合成查詢與候選重排通過。" };
             }

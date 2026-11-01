@@ -33,7 +33,7 @@ internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
         RuleFor(x => x.Currency).Must(x => x.Length == 3 && x.All(char.IsAsciiLetterUpper)).WithErrorCode(Iso4217);
         RuleFor(x => x.Kind).Must(x => x is "api" or "internal" or "free").WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.RequestCharge).Must(x => x is "completed" or "attempted").WithErrorCode(RuleCode.Unknown);
-        RuleFor(x => x.Note).MaximumLength(500);
+        RuleFor(x => x.Note).OptionalContent(500);
         RuleFor(x => x.EffectiveAt).Must(x => x >= clock.GetUtcNow().AddMinutes(-5) && x <= clock.GetUtcNow().AddDays(366)).WithErrorCode(Window);
         RuleForEach(x => new[] { x.InputPerMillion, x.CachedInputPerMillion, x.OutputPerMillion, x.PerRequest })
             .Must(x => x is >= 0 and <= 100000 && decimal.Round(x, 8) == x).WithErrorCode(RuleCode.Range).OverridePropertyName("rates");

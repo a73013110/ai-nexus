@@ -14,7 +14,7 @@ public sealed class MonitoringBrowserTests
     public async Task RealBrowserHeartbeatAndOperationReachLiveDashboard()
     {
         TestBrowser.SkipUnlessConfigured();
-        var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
+        var root = Repository.Root;
         var webRoot = Environment.GetEnvironmentVariable("AINEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
         await using var factory = new AppFactory(administrators: ["alice"], webRoot: webRoot);
         factory.UseKestrel(0); using var client = await factory.SignedInAsync();

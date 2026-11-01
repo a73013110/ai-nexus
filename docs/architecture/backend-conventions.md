@@ -49,7 +49,8 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 
 ## 錯誤
 
-- 預期內的失敗（找不到、衝突、無權限、配額）回傳 `Result<T>`／`Result`，錯誤定義在 `<Module>Errors`：`Error.NotFound("template_not_found")`。4xx 代碼必須有 `PublicErrorCatalog` 提示（`ErrorCatalogTests`），前後端提示一致（`PublicErrorCatalogTests`）。
+- 預期內的失敗（找不到、衝突、無權限、配額）回傳 `Result<T>`／`Result`，錯誤定義在 `<Module>Errors`：`Error.NotFound("template_not_found")`。
+- 錯誤只宣告成靜態欄位：Features 放 `<Module>Errors`，Platform／Data／Host 放擁有它的型別（如 `TableQuery.Invalid`）；不寫行內 `Error.X("…")`、不以字串參數組錯誤。4xx 代碼必須有 `PublicErrorCatalog` 提示（皆由 `ErrorDefinitionTests` 檢查），前後端提示一致（`PublicErrorCatalogTests`）。
 - HTTP 狀態碼只由 `Problems.Status(ErrorKind)` 決定。
 - 呼叫端傳遞失敗：`if (await X(...) is { IsSuccess: false } failed) return failed.Error;`；背景工作 `ExecuteAsync` 回傳的錯誤記為任務的錯誤代碼。
 - 外部系統故障或拒絕、又無法回傳 `Result`（HTTP client、串流中途、探測）時，丟 `ExternalServiceException(Error, detail)`：狀態碼依 `Error.Kind`，`detail` 只進日誌。
@@ -58,13 +59,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 
 ## 請求驗證
 
-- request body 的格式規則寫成 `RequestValidator<T>`，與 request 同檔；`/api/v1` 群組的 filter 在 handler 前驗證。單純的 `AbstractValidator<T>` 只當子驗證器；同一型別只能有一個（AINX1005）。
-- 失敗預設回 `validation_failed`；有專屬提示時覆寫 `Problem`，回傳 `<Module>Errors` 的 `Error.Invalid`（`EndpointConventionTests`）。
-- 欄位規則代碼是公開合約，只有 `RuleCode` 一套詞彙。內建規則不必指定，回應時自動對應（`NotEmpty` → `required`、`MaximumLength` → `too_long`）；沒指定的 `Must` 是 `invalid`。
-- 指定代碼用 `WithErrorCode(RuleCode.X)`，字串版禁用（BannedSymbols）。只有一個功能用到的宣告在驗證器（`new("x")`），第二個模組要用時再搬進 `RuleCode`。
-- 單行文字用 `RequiredText`／`OptionalText(上限)`：去空白後計長、擋控制字元；可換行的內容不適用。
-- validator 是 singleton、只看 request：建構子只注入 singleton（options、`TimeProvider`）；依賴使用者或資料庫的規則（重複、配額、擁有權）在 handler。
-- 刻意交給 handler 驗證的 request（失敗要寫稽核、登入失敗不可分辨、404／403 先於 400）不寫 validator，改標 `[ValidatedInHandler("原因")]`；兩者擇一（`EndpointConventionTests`）。
+見 [請求驗證](request-validation.md)：驗證器、欄位規則代碼、單行與可換行文字的共用規則。
 
 ## 軟刪除
 

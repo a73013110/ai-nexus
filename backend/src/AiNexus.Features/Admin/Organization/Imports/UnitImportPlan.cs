@@ -3,6 +3,7 @@ using System.Text.Json;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Imports;
@@ -108,7 +109,7 @@ internal sealed class UnitImportPlan
             var name = row.Name?.Trim();
             names[row.Key] = string.IsNullOrEmpty(name) ? null : name;
             if (string.IsNullOrEmpty(name)) skipped[row.Key] = UnitImportIssueCode.NameMissing;
-            else if (name.Length > Unit.NameMaxLength || name.Any(char.IsControl)) skipped[row.Key] = UnitImportIssueCode.NameInvalid;
+            else if (name.Length > Unit.NameMaxLength || TextRules.HasLineControl(name)) skipped[row.Key] = UnitImportIssueCode.NameInvalid;
         }
 
         // 0、null 或不存在的上層都是最上層；指向自己算成環。

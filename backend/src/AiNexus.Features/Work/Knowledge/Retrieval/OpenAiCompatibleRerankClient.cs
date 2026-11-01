@@ -29,5 +29,5 @@ public static class RerankPayload
         }
         return scores;
     }
-    public static ExternalServiceException Invalid() => new(Error.Upstream("rerank_invalid"), "重排服務回應格式不正確。");
+    public static ExternalServiceException Invalid() => new(KnowledgeErrors.RerankInvalid, "重排服務回應格式不正確。");
 }

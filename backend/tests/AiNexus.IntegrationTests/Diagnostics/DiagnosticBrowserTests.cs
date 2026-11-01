@@ -19,7 +19,7 @@ public sealed partial class DiagnosticBrowserTests
     public async Task RealFrontendCopiesIssueAndAdministratorFindsMaskedCause()
     {
         TestBrowser.SkipUnlessConfigured();
-        var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
+        var root = Repository.Root;
         var webRoot = Environment.GetEnvironmentVariable("AINEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
         Assert.True(File.Exists(Path.Combine(webRoot, "index.html")), "Build the frontend before real browser acceptance.");
         await using var factory = new AppFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], webRoot: webRoot);

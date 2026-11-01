@@ -5,7 +5,7 @@ namespace AiNexus.ArchitectureTests;
 /// <summary>backend/src 與 backend/tests 底下的 C# 原始碼，以建置測試時所在的儲存庫為根。</summary>
 internal static partial class SourceTree
 {
-    public static readonly string Root = FindRoot();
+    public static readonly string Root = Repository.Root;
 
     /// <summary>原始碼檔；排除 Host 的頂層 Program.cs。</summary>
     public static IEnumerable<string> Files(string project) => Directory
@@ -52,13 +52,6 @@ internal static partial class SourceTree
 
     /// <summary>檔案中 [Fact] 與 [Theory] 測試方法的名稱。</summary>
     public static IEnumerable<string> TestMethods(string path) => TestMethod().Matches(File.ReadAllText(path)).Select(m => m.Groups["name"].Value);
-
-    private static string FindRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "global.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root (global.json) was not found.");
-    }
 
     [GeneratedRegex(@"^(?:\[.*\]\s*)?(?:(?:public|internal|file|sealed|static|abstract|partial|readonly|ref)\s+)*(?:class|interface|enum|struct|record(?:\s+(?:class|struct))?)\s+(?<name>[A-Za-z_]\w*)")]
     private static partial Regex Declaration();

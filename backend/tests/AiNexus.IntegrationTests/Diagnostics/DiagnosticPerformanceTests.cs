@@ -25,7 +25,7 @@ public sealed class DiagnosticPerformanceTests
             baselineProviderDisabled = baseline, diagnostics = logging,
             limitations = "Single process local development measurement. Baseline disables the provider on the same code path. Does not establish IIS/SQL Server network or production capacity."
         };
-        var path = Path.GetFullPath("../../../../../../artifacts/diagnostics-performance.json", AppContext.BaseDirectory); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var path = Path.Combine(Repository.Root, "artifacts", "diagnostics-performance.json"); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Indented));
         Assert.Equal(0, logging.Lost); Assert.True(logging.PersistedEvents > 0); Assert.True(logging.P95Ms < 500, "Local fixture should remain responsive; see measured report rather than a production performance claim.");
     }

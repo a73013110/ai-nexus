@@ -31,7 +31,7 @@ internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files
         .WithName("RenameLibraryFile");
 
     /// <summary>1 到 180 個字元，不可含路徑、控制字元或保留字元，且不可以點結尾。</summary>
-    internal static bool NameIsValid(string name) => name.Length is >= 1 and <= Attachment.FileNameMaxLength && !name.Any(char.IsControl)
+    internal static bool NameIsValid(string name) => name.Length is >= 1 and <= Attachment.FileNameMaxLength && !TextRules.HasLineControl(name)
         && name.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) < 0 && !name.EndsWith('.') && name is not ("." or "..");
 
     public async Task<Result<AttachmentDto>> HandleAsync(Guid actor, Guid id, RenameLibraryFileRequest request, CancellationToken ct)

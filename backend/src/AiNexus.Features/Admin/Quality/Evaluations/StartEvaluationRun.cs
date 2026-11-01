@@ -36,7 +36,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
         RuleForEach(x => x.Variants).NotNull().ChildRules(variant =>
         {
             variant.RuleFor(x => x.Label).RequiredText(80);
-            variant.RuleFor(x => x.Instruction).MaximumLength(4000);
+            variant.RuleFor(x => x.Instruction).OptionalContent(4000);
         });
         RuleFor(x => x.Variants).Must(x => x.Select(v => v?.Label.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == x.Count).WithErrorCode(Unique)
             .When(x => x.Variants is not null);

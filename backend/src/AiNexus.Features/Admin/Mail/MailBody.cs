@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.Mail;
 
@@ -47,7 +48,7 @@ public sealed class MailBody
     /// <summary>站內連結按鈕；<paramref name="path"/> 必須是 <c>/</c> 開頭的站內路徑（例：<c>FeatureCatalog.RouteOf(...)</c>）。</summary>
     public MailBody Button(string label, string path)
     {
-        if (!path.StartsWith('/') || path.StartsWith("//", StringComparison.Ordinal) || path.Contains('\\') || path.Any(char.IsControl))
+        if (!path.StartsWith('/') || path.StartsWith("//", StringComparison.Ordinal) || path.Contains('\\') || TextRules.HasLineControl(path))
             throw new ArgumentException("Mail links must be site-relative paths.", nameof(path));
         var url = baseUrl + path;
         html.Append("<p style=\"margin:0 0 16px;\"><a href=\"").Append(Encode(url))

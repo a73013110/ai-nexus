@@ -172,13 +172,13 @@ public sealed class ModelTaskService(
                 // 輸出超過 64,000 字元就中止，避免失控的模型輸出吃光記憶體
                 if (text.Length > 64000)
                 {
-                    throw new ExternalServiceException(Error.Upstream("task_output_too_long"), "模型輸出超過處理上限。");
+                    throw new ExternalServiceException(InferenceErrors.TaskOutputTooLong, "模型輸出超過處理上限。");
                 }
             }
 
             if (!done)
             {
-                throw new ExternalServiceException(Error.Upstream("task_response_incomplete"), "模型未傳回完整結果，請重試。");
+                throw new ExternalServiceException(InferenceErrors.TaskResponseIncomplete, "模型未傳回完整結果，請重試。");
             }
 
             call.Status = "completed";
@@ -200,7 +200,7 @@ public sealed class ModelTaskService(
         catch (OperationCanceledException error)
         {
             call.Status = "failed";
-            throw new ExternalServiceException(Error.Timeout("model_timeout"), "模型處理逾時，請稍後重試。", error);
+            throw new ExternalServiceException(InferenceErrors.ModelTimeout, "模型處理逾時，請稍後重試。", error);
         }
         catch
         {

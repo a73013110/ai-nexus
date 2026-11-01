@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -27,7 +28,7 @@ internal sealed class ListDirectoryPeople(IAdDirectory directory, DirectoryProvi
     public async Task<Result<DirectoryPeopleDto>> HandleAsync(string? node, bool subtree, string? query, CancellationToken ct)
     {
         if (ListDirectoryNodes.Resolve(options.Value, node) is not { } dn) return IdentityErrors.DirectoryNodeInvalid;
-        if (query is { Length: > MaxQuery } || query?.Any(char.IsControl) == true) return IdentityErrors.DirectoryQueryInvalid;
+        if (query is { Length: > MaxQuery } || TextRules.HasLineControl(query)) return IdentityErrors.DirectoryQueryInvalid;
         if (await directory.PeopleAsync(dn, subtree, query, Limit, ct) is not { } listing) return IdentityErrors.DirectoryNodeNotFound;
         return new DirectoryPeopleDto(await provisioning.DescribeAsync(listing.People, ct), listing.More);
     }

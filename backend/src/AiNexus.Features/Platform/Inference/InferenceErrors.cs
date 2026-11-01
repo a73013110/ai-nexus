@@ -27,4 +27,19 @@ internal static class InferenceErrors
     public static readonly Error ReasoningNotSupported = Error.Invalid("reasoning_not_supported");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
     public static readonly Error InputTooLong = Error.Invalid("input_too_long");
+    public static readonly Error TaskOutputTooLong = Error.Upstream("task_output_too_long");
+    public static readonly Error TaskResponseIncomplete = Error.Upstream("task_response_incomplete");
+    public static readonly Error ModelTimeout = Error.Timeout("model_timeout");
+    public static readonly Error GoogleApiKeyMissing = Error.Unavailable("google_api_key_missing");
+    public static readonly Error ProviderProtocolError = Error.Upstream("provider_protocol_error");
+    public static readonly Error ProviderConnectionLost = Error.Upstream("provider_connection_lost");
+    public static readonly Error GoogleStreamError = Error.Upstream("google_stream_error");
+    public static readonly Error ProviderFrameTooLarge = Error.Upstream("provider_frame_too_large");
+    public static readonly Error ProviderStreamIncomplete = Error.Upstream("provider_stream_incomplete");
+    public static readonly Error GoogleResponseBlocked = Error.Unprocessable("google_response_blocked");
+    public static readonly Error GoogleKeyRejected = Error.Unavailable("google_key_rejected");
+    public static readonly Error GoogleQuotaExceeded = Error.RateLimited("google_quota_exceeded");
+    public static readonly Error GoogleModelUnavailable = Error.Unavailable("google_model_unavailable");
+    public static readonly Error GoogleServiceUnavailable = Error.Unavailable("google_service_unavailable");
+    public static readonly Error ProviderDisabled = Error.Unavailable("provider_disabled");
 }

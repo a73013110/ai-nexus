@@ -59,7 +59,7 @@ public sealed partial class RunService(
     public async Task FinishAsync(
         GenerationRun run,
         string status,
-        string? error,
+        Error? error,
         CancellationToken ct,
         string? issueCode = null)
     {
@@ -80,11 +80,11 @@ public sealed partial class RunService(
         }
 
         run.Status = status;
-        run.ErrorCode = error;
+        run.ErrorCode = error?.Code;
 
         if (status == RunStates.Failed)
         {
-            run.IssueCode = issueCode ?? issues.Report(Error.Unavailable(error ?? "generation_failed"));
+            run.IssueCode = issueCode ?? issues.Report(error ?? ChatErrors.GenerationFailed);
         }
 
         LogFinished(logger, status);
@@ -99,7 +99,7 @@ public sealed partial class RunService(
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);
 
-        audit.Record(ChatAudit.RunFinished, run.OwnerId, run.Id, result: error ?? (status == "completed" ? AuditEvent.Completed : status));
+        audit.Record(ChatAudit.RunFinished, run.OwnerId, run.Id, result: error?.Code ?? (status == "completed" ? AuditEvent.Completed : status));
 
         var title = await db.Conversations
             .IgnoreQueryFilters([SoftDelete.Filter])

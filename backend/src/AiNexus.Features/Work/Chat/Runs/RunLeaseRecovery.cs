@@ -5,7 +5,6 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Diagnostics;
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -72,7 +71,7 @@ public sealed class RunLeaseRecovery(
                 ["RequestId"] = null
             });
 
-            run.IssueCode = issues.Report(Error.Unavailable("executor_lost"));
+            run.IssueCode = issues.Report(ChatErrors.ExecutorLost);
             if (run.StartedAt is null)
             {
                 run.ReservedTokens = 0;

@@ -16,14 +16,7 @@ namespace AiNexus.UnitTests.Host;
 /// <summary>設定依模組區段綁定；未知的鍵或無效的值會阻止啟動，並在錯誤訊息中指出該鍵。</summary>
 public sealed class SettingsTests
 {
-    internal static string RepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "global.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root (global.json) was not found.");
-    }
-
-    private static readonly string Host = Path.Combine(RepositoryRoot(), "backend", "src", "AiNexus.Host");
+    private static readonly string Host = Path.Combine(Repository.Root, "backend", "src", "AiNexus.Host");
 
     /// <summary>所有設定根：宣告了 <c>Section</c> 常數的型別，由反射找出。</summary>
     private static readonly Type[] Roots = new[] { typeof(PlatformServices).Assembly, typeof(FeatureModules).Assembly }

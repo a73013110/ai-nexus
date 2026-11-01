@@ -45,7 +45,7 @@ public sealed class RetrievalPipeline(AppDbContext db, RetrievalAuthorization au
             if (settings.Rerank.Provider != "none" && hits.Count > 0 && await authorization.CollectionsAsync(actor, request.CollectionIds, ct, fresh: true) is { IsSuccess: false } revoked) return revoked.Error;
             try
             {
-                if (settings.Rerank.Provider == "none") throw new ExternalServiceException(Error.Unavailable("rerank_disabled"), "尚未啟用重排模型。");
+                if (settings.Rerank.Provider == "none") throw new ExternalServiceException(KnowledgeErrors.RerankDisabled, "尚未啟用重排模型。");
                 // 來源文字在此送往外部的重排服務；存取權剛才已檢查過。
                 if (hits.Count > 0) hits = await reranker.RerankAsync(actor, query, hits, ct);
                 actual += "+rerank";
@@ -53,7 +53,7 @@ public sealed class RetrievalPipeline(AppDbContext db, RetrievalAuthorization au
             catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             {
                 ct.ThrowIfCancellationRequested();
-                if (settings.Rerank.FailurePolicy == "fail") throw new ExternalServiceException(Error.Unavailable("rerank_unavailable"), "重排服務無法使用，請稍後重試。", error);
+                if (settings.Rerank.FailurePolicy == "fail") throw new ExternalServiceException(KnowledgeErrors.RerankUnavailable, "重排服務無法使用，請稍後重試。", error);
                 actual += "(rerank-skipped)"; RetrievalDiagnostics.Degraded(logger, "rerank", "recall", "rerank_skipped", error, "rerank");
             }
             rerankMs = timer.ElapsedMilliseconds;

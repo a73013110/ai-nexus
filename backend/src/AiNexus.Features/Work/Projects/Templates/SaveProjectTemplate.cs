@@ -5,7 +5,6 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
-using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Projects.Templates;
@@ -19,7 +18,7 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
     public ProjectTemplateRequestValidator()
     {
         RuleFor(x => x.Title).RequiredText(ProjectTemplate.TitleMaxLength);
-        RuleFor(x => x.Content).Must(x => x?.Trim().Length is >= 1 and <= ProjectTemplate.ContentMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Content).RequiredContent(ProjectTemplate.ContentMaxLength);
     }
 }
 

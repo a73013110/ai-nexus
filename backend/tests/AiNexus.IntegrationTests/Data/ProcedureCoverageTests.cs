@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using AiNexus.IntegrationTests.Host;
 
 namespace AiNexus.IntegrationTests.Data;
 
@@ -11,7 +10,7 @@ public sealed partial class ProcedureCoverageTests
     [Fact]
     public void EveryProcedureCalledByCodeAppearsInAnIntegrationTest()
     {
-        var root = OpenApiContractTests.RepositoryRoot();
+        var root = Repository.Root;
         static IEnumerable<string> Names(string folder, params string[] patterns) => patterns
             .SelectMany(pattern => Directory.EnumerateFiles(folder, pattern, SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)

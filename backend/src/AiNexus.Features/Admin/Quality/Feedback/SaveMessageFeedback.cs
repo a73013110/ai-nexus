@@ -23,7 +23,7 @@ internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackReques
     {
         RuleFor(x => x.Rating).InclusiveBetween(-1, 1);
         RuleFor(x => x.Reason).Must(x => x is "" or "incorrect" or "citation" or "incomplete" or "format" or "other").WithErrorCode(RuleCode.Unknown);
-        RuleFor(x => x.Note).MaximumLength(2000);
+        RuleFor(x => x.Note).OptionalContent(2000);
     }
 }
 

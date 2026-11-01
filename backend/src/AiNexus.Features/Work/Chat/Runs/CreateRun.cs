@@ -53,13 +53,9 @@ internal sealed class CreateRunRequestValidator : RequestValidator<CreateRunRequ
 
     public CreateRunRequestValidator(IOptions<InferenceOptions> options)
     {
-        RuleFor(x => x.Prompt)
-            .Must(x => x is null || x.Length <= options.Value.MaxInputCharacters)
-            .WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Prompt).MaximumLength(options.Value.MaxInputCharacters);
 
-        RuleFor(x => x.ModelId)
-            .Must(x => x is null || x.Length <= 160)
-            .WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.ModelId).MaximumLength(160);
     }
 }
 

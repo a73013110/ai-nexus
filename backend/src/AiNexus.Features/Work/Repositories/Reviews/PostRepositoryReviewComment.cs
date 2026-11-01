@@ -18,7 +18,7 @@ internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValid
     public override Error Problem => RepositoriesErrors.CommentInvalid;
 
     public PostRepositoryReviewCommentRequestValidator() =>
-        RuleFor(x => x.Body).Must(x => x?.Trim().Length is > 0 and <= MaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Body).RequiredContent(MaxLength);
 }
 
 /// <summary>

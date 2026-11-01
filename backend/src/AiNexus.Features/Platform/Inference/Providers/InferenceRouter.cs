@@ -22,7 +22,7 @@ public sealed class InferenceRouter(KeyedServices<IInferenceProvider> providers,
     {
         if (!options.Value.ProviderConcurrency.ContainsKey(provider))
         {
-            throw new ExternalServiceException(Error.Unavailable("provider_disabled"), "此模型供應商已停用，請選擇其他模型。");
+            throw new ExternalServiceException(InferenceErrors.ProviderDisabled, "此模型供應商已停用，請選擇其他模型。");
         }
 
         return providers.Require(provider);

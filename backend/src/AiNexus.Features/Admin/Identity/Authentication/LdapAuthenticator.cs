@@ -42,7 +42,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         };
         SearchResponse result;
         try { result = (SearchResponse)service.SendRequest(search); }
-        catch (DirectoryOperationException error) { throw Unavailable("ad_search_unavailable", "AD 查詢暫時無法使用。", error); }
+        catch (DirectoryOperationException error) { throw new ExternalServiceException(IdentityErrors.AdSearchUnavailable, "AD 查詢暫時無法使用。", error); }
         if (result.Entries.Count != 1) return IdentityErrors.AdInvalidCredentials;
         var entry = result.Entries[0];
         // 已停用的帳號直接當成帳密錯誤回覆，不透露停用狀態。
@@ -52,7 +52,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         try { Bind(user, settings); }
         // 錯誤碼 49 為 invalid credentials；其他 LDAP 錯誤代表服務異常，不可當成帳密錯誤，否則會誤導使用者與稽核。
         catch (LdapException ex) when (ex.ErrorCode == 49) { return IdentityErrors.AdInvalidCredentials; }
-        catch (LdapException error) { throw Unavailable("ad_unavailable", "AD 服務暫時無法使用，請稍後重試。", error); }
+        catch (LdapException error) { throw new ExternalServiceException(IdentityErrors.AdUnavailable, "AD 服務暫時無法使用，請稍後重試。", error); }
         ct.ThrowIfCancellationRequested();
         if (entry.Attributes["objectSid"]?[0] is not byte[] bytes) return IdentityErrors.AdSidRequired;
         var sid = new SecurityIdentifier(bytes, 0).Value;

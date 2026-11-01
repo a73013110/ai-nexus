@@ -24,4 +24,12 @@ internal static class ChatErrors
 
     /// <summary>SSE 游標序號超出伺服器目前已產生的最大序號（客戶端游標超前）。</summary>
     public static readonly Error CursorAhead = Error.Conflict("invalid_cursor");
+
+    // 生成任務的失敗代碼，寫在 run 的 ErrorCode；串流中途的外部失敗另見 InferenceErrors。
+    public static readonly Error OutputLimitExceeded = Error.Upstream("output_limit_exceeded");
+    public static readonly Error ExecutorLost = Error.Unavailable("executor_lost");
+    public static readonly Error GenerationFailed = Error.Unavailable("generation_failed");
+    public static readonly Error ServerStopping = Error.Unavailable("server_stopping");
+    public static readonly Error GenerationTimeout = Error.Unavailable("generation_timeout");
+    public static readonly Error InternalError = Error.Unavailable("internal_error");
 }

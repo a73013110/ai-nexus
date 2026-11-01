@@ -25,8 +25,8 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
     {
         When(x => ResourceAccess.IsValidName(x.Name), () =>
         {
-            RuleFor(x => x.Description).MaximumLength(2000);
-            RuleFor(x => x.Instructions).MaximumLength(4000);
+            RuleFor(x => x.Description).OptionalContent(2000);
+            RuleFor(x => x.Instructions).OptionalContent(4000);
             RuleFor(x => x.ExpectedVersion).GreaterThanOrEqualTo(1);
         });
     }

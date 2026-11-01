@@ -27,7 +27,7 @@ public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<Re
                 {
                     var transient = response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
                     if (transient && attempt < 2) { await Delay(attempt, client, (int)response.StatusCode, null, ct); continue; }
-                    throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? Error.RateLimited("retrieval_provider_unavailable") : Error.Unavailable("retrieval_provider_unavailable"), "檢索模型服務目前無法使用，請確認端點、模型與配額。");
+                    throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? KnowledgeErrors.RetrievalProviderRateLimited : KnowledgeErrors.RetrievalProviderUnavailable, "檢索模型服務目前無法使用，請確認端點、模型與配額。");
                 }
                 return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             }
@@ -60,7 +60,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
             // 所有嵌入與重排呼叫都經過這裡（位於索引與搜尋的深處），因此每日上限要回報成供應商限制（RateLimited），
             // 而不是一般的內部錯誤。
             if (await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && (x.Kind == "embedding" || x.Kind == "rerank") && x.CreatedAt >= start && x.CreatedAt < end, ct) >= options.Value.Embedding.MaxDailyRequests)
-                throw new ExternalServiceException(Error.RateLimited("embedding_daily_quota"), "今日索引、語意查詢與重排次數已達系統上限，請稍後重試。");
+                throw new ExternalServiceException(KnowledgeErrors.EmbeddingDailyQuota, "今日索引、語意查詢與重排次數已達系統上限，請稍後重試。");
             await billing.ReserveAsync(call.Id, owner, null, provider, model, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }

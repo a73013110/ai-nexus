@@ -13,19 +13,6 @@ public sealed class RuleCodeTests
     [InlineData("")]
     public void RejectsCodesThatAreNotSnakeCase(string value) => Assert.Throws<ArgumentException>(() => new RuleCode(value));
 
-    [Fact]
-    public void FailuresCarryTheRuleCode()
-    {
-        var result = new TextValidator().Validate(new Text(" ", new string('x', 6) + "\n"));
-
-        Assert.Equal(
-            [("Required", "required"), ("Optional", "too_long"), ("Optional", "format")],
-            result.Errors.Select(x => (x.PropertyName, RuleCode.Resolve(x.ErrorCode))));
-    }
-
-    [Fact]
-    public void TextLengthIsCountedAfterTrimming() => Assert.True(new TextValidator().Validate(new Text("  abcde  ", null)).IsValid);
-
     // 內建規則與沒指定代碼的 Must 都對應到同一套代碼，不外露 FluentValidation 的類別名稱。
     [Fact]
     public void BuiltInRulesResolveToTheSharedVocabulary()
@@ -40,8 +27,6 @@ public sealed class RuleCodeTests
     [Fact]
     public void SpecifiedCodesPassThrough() => Assert.Equal("too_many", RuleCode.Resolve(RuleCode.TooMany.Value));
 
-    private sealed record Text(string? Required, string? Optional);
-
     private sealed record Values(string? Required, string Long, int Number, string? Absent, string Checked);
 
     private sealed class BuiltInValidator : AbstractValidator<Values>
@@ -53,15 +38,6 @@ public sealed class RuleCodeTests
             RuleFor(x => x.Number).InclusiveBetween(1, 3);
             RuleFor(x => x.Absent).Null();
             RuleFor(x => x.Checked).Must(x => x == "a");
-        }
-    }
-
-    private sealed class TextValidator : AbstractValidator<Text>
-    {
-        public TextValidator()
-        {
-            RuleFor(x => x.Required).RequiredText(5);
-            RuleFor(x => x.Optional).OptionalText(5);
         }
     }
 }

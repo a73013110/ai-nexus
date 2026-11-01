@@ -49,9 +49,7 @@ internal sealed class ContextPreviewRequestValidator : RequestValidator<ContextP
     public override Error Problem => InferenceErrors.InputTooLong;
 
     public ContextPreviewRequestValidator(IOptions<InferenceOptions> options) =>
-        RuleFor(x => x.Prompt)
-            .Must(x => x is null || x.Length <= options.Value.MaxInputCharacters)
-            .WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Prompt).MaximumLength(options.Value.MaxInputCharacters);
 }
 
 /// <summary>

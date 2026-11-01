@@ -25,6 +25,12 @@ namespace AiNexus.Host.Commands;
 /// </summary>
 public static class ConnectionVerifier
 {
+    private static readonly Error DefaultAccessMissing = Error.Unavailable("default_access_missing");
+    private static readonly Error ModelNotConfigured = Error.Unavailable("model_not_configured");
+    private static readonly Error ModelUnavailable = Error.Unavailable("model_unavailable");
+    private static readonly Error AttachmentProbeFailed = Error.Unavailable("attachment_probe_failed");
+    private static readonly Error RetrievalModelsUnavailable = Error.Unavailable("retrieval_models_unavailable");
+
     /// <summary>
     /// 執行完整連線檢查並將結果寫入報告檔案。
     /// </summary>
@@ -63,7 +69,7 @@ public static class ConnectionVerifier
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
                 || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Chat, ct))
             {
-                throw new ExternalServiceException(Error.Unavailable("default_access_missing"), "預設角色、群組與 chat 功能關聯尚未完成。");
+                throw new ExternalServiceException(DefaultAccessMissing, "預設角色、群組與 chat 功能關聯尚未完成。");
             }
 
             var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
@@ -81,11 +87,11 @@ public static class ConnectionVerifier
             var models = services.GetRequiredService<IOptions<InferenceOptions>>().Value.Models;
             var defaultId = services.GetRequiredService<ModelPresentation>().DefaultId;
             var profile = models.FirstOrDefault(x => x.Id == defaultId)
-                ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
+                ?? throw new ExternalServiceException(ModelNotConfigured, "請設定預設模型。");
             var provider = router.For(profile.Provider);
             if (!(await provider.InstalledModelsAsync(ct)).Contains(profile.NativeId))
             {
-                throw new ExternalServiceException(Error.Unavailable("model_unavailable"), "目前的模型服務無法使用系統預設模型。");
+                throw new ExternalServiceException(ModelUnavailable, "目前的模型服務無法使用系統預設模型。");
             }
 
             var efforts = profile.ReasoningEfforts.Count > 0 ? profile.ReasoningEfforts : ["auto"];
@@ -112,7 +118,7 @@ public static class ConnectionVerifier
             var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
             var defaultId = services.GetRequiredService<ModelPresentation>().DefaultId;
             var profile = profiles.FirstOrDefault(x => x.Id == defaultId)
-                ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
+                ?? throw new ExternalServiceException(ModelNotConfigured, "請設定預設模型。");
             // 只送合成內容，不含任何個人檔案、對話紀錄或身分憑證。
             var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: PROBECHECK42"), ct).Value.Text;
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
@@ -120,12 +126,12 @@ public static class ConnectionVerifier
             var parameters = new GenerationParameters(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "Answer concisely in English.", profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
             var (answer, done) = await StreamAsync(services.GetRequiredService<InferenceRouter>().For(profile.Provider), profile.NativeId, new("user", prompt, images), parameters, ct);
             if (!done || !answer.Contains("PROBECHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !answer.Contains("red", StringComparison.OrdinalIgnoreCase)))
-                throw new ExternalServiceException(Error.Unavailable("attachment_probe_failed"), "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
+                throw new ExternalServiceException(AttachmentProbeFailed, "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
         await Check("RetrievalModels", async () => {
             var result = await services.GetRequiredService<RetrievalModelProbe>().CheckAsync(null, ct);
-            if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(Error.Unavailable("retrieval_models_unavailable"), result.Embedding.Notice + " " + result.Rerank.Notice);
+            if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(RetrievalModelsUnavailable, result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
         await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, HostCommand.ReportJson), ct);

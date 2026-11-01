@@ -6,6 +6,8 @@ namespace AiNexus.Platform.Http;
 /// <summary>讀取遠端 JSON 回應時設定位元組上限，避免惡意的超大回應耗盡記憶體。</summary>
 public static class BoundedHttpJson
 {
+    private static readonly Error RemoteResponseTooLarge = Error.Upstream("remote_response_too_large");
+
     /// <summary>
     /// 在指定的位元組上限內讀取遠端回應串流並解析為 <see cref="JsonDocument"/>。
     /// 若 Content-Length 標頭或實際傳輸位元組數超過上限，立即拋出 <see cref="ExternalServiceException"/>。
@@ -30,5 +32,5 @@ public static class BoundedHttpJson
         return JsonDocument.Parse(buffer.ToArray(), new JsonDocumentOptions { MaxDepth = 32 });
     }
 
-    private static ExternalServiceException TooLarge() => new(Error.Upstream("remote_response_too_large"), "外部服務回應超過上限。");
+    private static ExternalServiceException TooLarge() => new(RemoteResponseTooLarge, "外部服務回應超過上限。");
 }

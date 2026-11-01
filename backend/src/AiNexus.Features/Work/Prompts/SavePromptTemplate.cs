@@ -18,7 +18,7 @@ internal sealed class SavePromptRequestValidator : RequestValidator<SavePromptRe
     public SavePromptRequestValidator()
     {
         RuleFor(x => x.Title).RequiredText(PromptTemplate.TitleMaxLength);
-        RuleFor(x => x.Content).Must(x => x.Trim().Length is >= 1 and <= PromptTemplate.ContentMaxLength).WithErrorCode(RuleCode.Length);
+        RuleFor(x => x.Content).RequiredContent(PromptTemplate.ContentMaxLength);
     }
 }
 

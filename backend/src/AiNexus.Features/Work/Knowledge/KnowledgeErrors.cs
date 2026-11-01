@@ -37,4 +37,18 @@ internal static class KnowledgeErrors
     public static readonly Error OcrOutputTruncated = Error.Unprocessable("ocr_output_truncated");
     public static readonly Error IndexSourceChanged = Error.Conflict("index_source_changed");
     public static readonly Error TableRowTooLong = Error.Unprocessable("table_row_too_long");
+    public static readonly Error EmbeddingTimeout = Error.Timeout("embedding_timeout");
+    public static readonly Error EmbeddingInvalid = Error.Upstream("embedding_invalid");
+    public static readonly Error EmbeddingsDisabled = Error.Conflict("embeddings_disabled");
+    public static readonly Error RetrievalProviderRateLimited = Error.RateLimited("retrieval_provider_unavailable");
+    public static readonly Error RetrievalProviderUnavailable = Error.Unavailable("retrieval_provider_unavailable");
+    public static readonly Error EmbeddingDailyQuota = Error.RateLimited("embedding_daily_quota");
+    public static readonly Error RewriteModelUnavailable = Error.Unavailable("rewrite_model_unavailable");
+    public static readonly Error RewriteInvalid = Error.Upstream("rewrite_invalid");
+    public static readonly Error RerankInvalid = Error.Upstream("rerank_invalid");
+    public static readonly Error EmbeddingProbeInvalid = Error.Upstream("embedding_probe_invalid");
+    public static readonly Error RerankProbeInvalid = Error.Upstream("rerank_probe_invalid");
+    public static readonly Error RerankDisabled = Error.Unavailable("rerank_disabled");
+    public static readonly Error RerankUnavailable = Error.Unavailable("rerank_unavailable");
+    public static readonly Error FullTextUnavailable = Error.Unavailable("fulltext_unavailable");
 }
