@@ -1,5 +1,32 @@
+// 時間一律用注入的 TimeProvider（測試可控制、時區一致）。
 P:System.DateTime.Now;Use the injected TimeProvider.
 P:System.DateTime.UtcNow;Use the injected TimeProvider.
 P:System.DateTime.Today;Use the injected TimeProvider.
 P:System.DateTimeOffset.Now;Use the injected TimeProvider.
 P:System.DateTimeOffset.UtcNow;Use the injected TimeProvider.
+// 執行期反射與型別掃描（ADR 0030）：編譯期就知道的事交給 source generator，型別參數在宣告或註冊時就已知的，在那裡以泛型建立。
+// 確實無法避免時，在該成員加上寫明 Justification 的 [SuppressMessage("ApiDesign", "RS0030")]（backend-conventions.md 的例外寫法）。
+M:System.Reflection.Assembly.GetTypes;掃描組件改用 source generator 在編譯期列出（docs/architecture/source-generators.md）。
+M:System.Reflection.Assembly.GetExportedTypes;掃描組件改用 source generator 在編譯期列出（docs/architecture/source-generators.md）。
+P:System.Reflection.Assembly.DefinedTypes;掃描組件改用 source generator 在編譯期列出（docs/architecture/source-generators.md）。
+P:System.Reflection.Assembly.ExportedTypes;掃描組件改用 source generator 在編譯期列出（docs/architecture/source-generators.md）。
+M:System.Type.MakeGenericType(System.Type[]);在型別參數已知的地方（宣告、DI 註冊時）以泛型型別建立，或由 source generator 產生。
+M:System.Reflection.MethodInfo.MakeGenericMethod(System.Type[]);在型別參數已知的地方（宣告、DI 註冊時）以泛型方法建立，或由 source generator 產生。
+M:System.Activator.CreateInstance(System.Type);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Activator.CreateInstance(System.Type,System.Boolean);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Activator.CreateInstance(System.Type,System.Object[]);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Activator.CreateInstance(System.Type,System.Object[],System.Object[]);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Activator.CreateInstance(System.Type,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Activator.CreateInstance(System.Type,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo,System.Object[]);改用 new、泛型 new() 約束或 DI；型別要由程式碼決定時用 source generator 產生建立程式碼。
+M:System.Type.GetType(System.String);不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Type.GetType(System.String,System.Boolean);不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Type.GetType(System.String,System.Boolean,System.Boolean);不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Reflection.MethodBase.Invoke(System.Object,System.Object[]);不以反射呼叫方法：改用強型別呼叫、介面或委派。
+M:System.Reflection.MethodBase.Invoke(System.Object,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo);不以反射呼叫方法：改用強型別呼叫、介面或委派。
+M:System.Reflection.ConstructorInfo.Invoke(System.Object[]);不以反射建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Type.InvokeMember(System.String,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object,System.Object[]);不以反射呼叫成員：改用強型別呼叫、介面或委派。
+M:System.Delegate.DynamicInvoke(System.Object[]);改用強型別的委派呼叫。
+M:System.Reflection.PropertyInfo.GetValue(System.Object);不以反射讀屬性：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.PropertyInfo.SetValue(System.Object,System.Object);不以反射寫屬性：改用強型別存取。
+M:System.Reflection.FieldInfo.GetValue(System.Object);不以反射讀欄位：清單改由 source generator 列出（[FieldCatalog]）。
+M:System.Reflection.FieldInfo.SetValue(System.Object,System.Object);不以反射寫欄位：改用強型別存取。

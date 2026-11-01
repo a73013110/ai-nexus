@@ -28,7 +28,7 @@
   - 對象用 snake_case 單數。
   - 動詞只能取固定清單 [`AuditAction`](../../backend/src/AiNexus.Platform/Auditing/AuditAction.cs) 裡的值。
 - 分類在宣告時決定，存在 `Category` 欄位，共四種：`authentication`、`administration`、`access`、`activity`。`access` 只能用 `read`、`searched`、`exported`、`downloaded` 這四個動詞，其他分類則不能用這四個。
-- 宣告寫在模組根目錄的 `<Module>Audit` 靜態類別，附中文標籤。稽核頁的動作清單、標籤與分類都由 [`AuditActions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditActions.cs) 從宣告收集，前端不寫死。
+- 宣告寫在模組根目錄的 `<Module>Audit` 靜態類別，附中文標籤。稽核頁的動作清單、標籤與分類都由 [`AuditActions`](../../backend/src/AiNexus.Features/Admin/Audit/AuditActions.cs) 從宣告收集（欄位目錄產生器在編譯期列出），前端不寫死。
 - 名稱一旦寫進資料庫就是歷史，不跟著類別或端點改名。真的要改時，同一次修改要附上更新既有資料列的資料庫腳本。
 
 ## 一筆紀錄
