@@ -12,5 +12,5 @@ public static class MailDeliverySettings
 {
     /// <summary>暫時性與傳輸層失敗是否自動退避重試；沒有設定列時為 true。</summary>
     public static async Task<bool> AutoRetryAsync(AppDbContext db, CancellationToken ct)
-        => await db.Set<DeliverySetting>().AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => (bool?)x.AutoRetry).SingleOrDefaultAsync(ct) ?? true;
+        => await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => (bool?)x.AutoRetry).SingleOrDefaultAsync(ct) ?? true;
 }

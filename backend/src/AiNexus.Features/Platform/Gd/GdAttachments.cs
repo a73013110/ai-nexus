@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.RemoteFiles;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Platform.Gd;
 
@@ -49,8 +50,8 @@ public sealed partial class GdAttachments(ExternalDatabase<GdDatabase> gd)
     private static GdAttachment? Attachment(AttachmentRow row)
     {
         if (PathOf(row.Folder, row.StoredName) is not { } path) return null;
-        var fileName = GdPeople.Text(row.FileName) ?? row.StoredName!.Trim();
-        return new(fileName, GdPeople.Text(row.Memo), GdPeople.Text(row.Uploader), new(GdFileSource.SourceName, path));
+        var fileName = TextRules.TrimToNull(row.FileName) ?? row.StoredName!.Trim();
+        return new(fileName, TextRules.TrimToNull(row.Memo), TextRules.TrimToNull(row.Uploader), new(GdFileSource.SourceName, path));
     }
 
     [GeneratedRegex("^/attfile/[0-9]{2,3}$")]

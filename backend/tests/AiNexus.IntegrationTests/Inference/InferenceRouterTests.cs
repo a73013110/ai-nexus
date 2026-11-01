@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Inference;
@@ -52,7 +51,7 @@ public sealed class InferenceRouterTests
         Assert.Equal("running", (await alice.GetFromJsonAsync<RunDto>($"/api/v1/runs/{remote.Id}"))!.Status);
         Assert.Equal("test-model", factory.Provider.LastModel); Assert.Equal("test-model", local.LastModel);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var charge = await db.Set<ModelCharge>().SingleAsync(x => x.Id == queued.Id);
+        var charge = await db.ModelCharges.SingleAsync(x => x.Id == queued.Id);
         Assert.Equal("ollama", charge.Provider); Assert.Equal("test-model", charge.ModelId);
         var spend = (await bob.GetFromJsonAsync<ConversationSpendDto>($"/api/v1/conversations/{b.Id}/spend"))!;
         Assert.Equal("Ollama test", Assert.Single(spend.Models).Label);

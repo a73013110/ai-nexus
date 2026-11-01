@@ -1,7 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Jobs;
-using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -41,7 +38,7 @@ public sealed class EmbeddingProfileTests
         Assert.Equal(target.Id, factory.Embeddings.LastProfileId);
         (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Empty(await db.Set<ChunkEmbedding768>().ToListAsync()); Assert.NotEmpty(await db.Set<ChunkEmbedding1024>().ToListAsync()); Assert.NotEmpty(await db.Set<DocumentPage>().ToListAsync());
+        Assert.Empty(await db.ChunkEmbeddings768.ToListAsync()); Assert.NotEmpty(await db.ChunkEmbeddings1024.ToListAsync()); Assert.NotEmpty(await db.DocumentPages.ToListAsync());
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "completed");
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "profile_incomplete");
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/vectors")).StatusCode);
@@ -63,11 +60,11 @@ public sealed class EmbeddingProfileTests
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.rebuilt" && x.Result == "completed" && x.OwnerId == bobId);
         // 重新索引以擁有者身分執行：撤銷平台營運權限後，排入佇列的重建會被拒絕。
-        db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
+        db.Remove(await db.UserRoles.SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
         await Drain(factory);
-        var failed = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == job.Id);
+        var failed = await db.BackgroundJobs.AsNoTracking().SingleAsync(x => x.Id == job.Id);
         Assert.Equal(("failed", "feature_forbidden"), (failed.Status, failed.ErrorCode));
-        Assert.Empty(await db.Set<ChunkEmbedding1024>().ToListAsync());
+        Assert.Empty(await db.ChunkEmbeddings1024.ToListAsync());
     }
 
     [Fact]

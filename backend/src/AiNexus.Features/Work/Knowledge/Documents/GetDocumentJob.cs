@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -14,7 +13,8 @@ public sealed record DocumentJobDto(JobDto Job, bool CanControl);
 internal sealed class GetDocumentJob(AppDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/job", (Guid id, ICurrentUser user, GetDocumentJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}/job", (Guid id, ICurrentUser user, GetDocumentJob handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .NotAudited("文件處理進度的輪詢")
         .WithName("DocumentJob");
 
@@ -22,7 +22,7 @@ internal sealed class GetDocumentJob(AppDbContext db, DocumentAccess documents)
     {
         var document = await documents.FindAsync(actor, id, ct);
         if (!document.IsSuccess) return document.Error;
-        var job = await db.Set<BackgroundJob>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == document.Value.JobId, ct);
+        var job = await db.BackgroundJobs.AsNoTracking().SingleOrDefaultAsync(x => x.Id == document.Value.JobId, ct);
         if (job is null) return KnowledgeErrors.DocumentNotFound;
         var info = await documents.DescribeAsync(actor, document.Value, ct);
         if (!info.IsSuccess) return info.Error;

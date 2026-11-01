@@ -10,7 +10,7 @@ public sealed record AttachmentPolicyDto(long MaxFileBytes, int MaxFilesPerMessa
 internal sealed class GetAttachmentPolicy(IOptions<FilesOptions> options)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/policy", (GetAttachmentPolicy handler) => TypedResults.Ok(handler.Handle()))
+        .MapGet("/policy", (GetAttachmentPolicy handler) => handler.Handle())
         .NotAudited("上傳限制")
         .WithName("AttachmentPolicy");
 

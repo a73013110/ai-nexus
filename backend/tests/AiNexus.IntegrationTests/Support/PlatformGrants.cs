@@ -19,12 +19,12 @@ internal static class PlatformGrants
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.RemoveRange(await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup && OperationsFeatures.Contains(x.FeatureId)).ToListAsync());
-        db.Set<Role>().Add(new() { Id = "operator", Name = "營運人員" });
-        db.Set<RoleGroup>().Add(new() { Id = "operations-team", Name = "營運小組" });
-        db.Set<RoleGroupRole>().Add(new() { RoleId = "operator", GroupId = "operations-team" });
-        db.Set<RoleGroupFeature>().AddRange(OperationsFeatures.Select(feature => new RoleGroupFeature { GroupId = "operations-team", FeatureId = feature }));
-        db.Set<UserRole>().Add(new() { UserId = operatorId, RoleId = "operator" });
+        db.RemoveRange(await db.RoleGroupFeatures.Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup && OperationsFeatures.Contains(x.FeatureId)).ToListAsync());
+        db.Roles.Add(new() { Id = "operator", Name = "營運人員" });
+        db.RoleGroups.Add(new() { Id = "operations-team", Name = "營運小組" });
+        db.RoleGroupRoles.Add(new() { RoleId = "operator", GroupId = "operations-team" });
+        db.RoleGroupFeatures.AddRange(OperationsFeatures.Select(feature => new RoleGroupFeature { GroupId = "operations-team", FeatureId = feature }));
+        db.UserRoles.Add(new() { UserId = operatorId, RoleId = "operator" });
         await db.SaveChangesAsync();
     }
 
@@ -34,7 +34,7 @@ internal static class PlatformGrants
     /// </summary>
     internal static void QualityForMembers(AppDbContext db)
     {
-        db.Set<RoleGroupFeature>().AddRange(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Quality },
+        db.RoleGroupFeatures.AddRange(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Quality },
             new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.QualityRetrieval });
         db.SaveChanges();
     }

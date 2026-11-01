@@ -14,6 +14,9 @@ public static class TextRules
     private static readonly SearchValues<char> LineControls = SearchValues.Create(Controls(allowed: ""));
     private static readonly SearchValues<char> ContentControls = SearchValues.Create(Controls(allowed: "\t\n\r"));
 
+    /// <summary>選填文字的儲存形式：去掉前後空白，空白存成 null。</summary>
+    public static string? TrimToNull(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
     /// <summary>單行文字含控制字元。</summary>
     public static bool HasLineControl(ReadOnlySpan<char> text) => text.ContainsAny(LineControls);
 

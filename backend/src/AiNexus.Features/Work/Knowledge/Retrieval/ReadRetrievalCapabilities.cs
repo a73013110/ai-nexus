@@ -10,12 +10,14 @@ namespace AiNexus.Features.Work.Knowledge.Retrieval;
 internal sealed class ReadRetrievalCapabilities(SqlVectorCapabilities sql, RetrievalModelProbe probe)
 {
     public static void MapGet(RouteGroupBuilder routes) => routes
-        .MapGet("/capabilities", async (ReadRetrievalCapabilities handler, CancellationToken ct) => TypedResults.Ok(await handler.ReadAsync(ct)))
+        .MapGet("/capabilities", (ReadRetrievalCapabilities handler, CancellationToken ct) =>
+            handler.ReadAsync(ct))
         .NotAudited("檢索功能可用狀態")
         .WithName("GetRetrievalCapabilities");
 
     public static void MapProbe(RouteGroupBuilder routes) => routes
-        .MapPost("/capabilities/probe", async (ICurrentUser user, ReadRetrievalCapabilities handler, CancellationToken ct) => TypedResults.Ok(await handler.ProbeAsync(user.Id, ct)))
+        .MapPost("/capabilities/probe", (ICurrentUser user, ReadRetrievalCapabilities handler, CancellationToken ct) =>
+            handler.ProbeAsync(user.Id, ct))
         .Audited(KnowledgeAudit.RetrievalModelDiagnosed)
         .WithName("ProbeRetrievalModels");
 

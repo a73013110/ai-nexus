@@ -17,7 +17,7 @@ internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, Res
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteArtifact handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ArtifactsAudit.ArtifactDeleted)
         .WithName("DeleteArtifact");
 
@@ -30,7 +30,7 @@ internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, Res
             if (!resource.IsSuccess) return resource.Error;
             resource.Value.IsDeleted = true;
             events.Raise(new ArtifactDeleted(id, actor));
-            await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
+            await db.ArtifactRevisions.Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return Result.Success;

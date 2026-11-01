@@ -34,10 +34,10 @@ public static class DirectoryPersonStates
 /// <summary>
 /// 管理員從 AD 匯入與更新使用者的共用流程：逐人「規劃 → 在稽核交易內重新規劃並寫入」。
 /// 建立、綁定與欄位同步都交給 <see cref="DirectoryAccounts"/>（與首次登入同一份規則）；每人一筆稽核、一個交易，一人失敗不影響其他人。
-/// 鎖的順序固定為 <see cref="IdentityWriteLock"/> → 行政寫入鎖（<see cref="AdministrativeAudit"/> 內），且身分鎖在交易外取得：
+/// 鎖的順序固定為 <see cref="IdentityWriteLock"/> → 行政寫入鎖（<see cref="AdministrativeWrite"/> 內），且身分鎖在交易外取得：
 /// 登入只取身分鎖，所以不會互相等待成死結。
 /// </summary>
-internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeAudit audit, IdentityWriteLock writeLock,
+internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeWrite write, IdentityWriteLock writeLock,
     TimeProvider clock, ILogger<DirectoryProvisioning> logger)
 {
     /// <summary>單次匯入、預覽或更新的人數上限：每人一個 Serializable 交易，上限讓一次操作維持在數秒內。</summary>
@@ -92,7 +92,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
     }
 
     /// <summary>
-    /// 套用一位人員：取身分鎖 → 規劃 → 需要寫入時在 <see cref="AdministrativeAudit.MutateAsync"/> 的交易內重新規劃再寫入（每位人員各一筆 <paramref name="action"/> 稽核）。
+    /// 套用一位人員：取身分鎖 → 規劃 → 需要寫入時在 <see cref="AdministrativeWrite"/> 的交易內重新規劃再寫入（每位人員各一筆 <paramref name="action"/> 稽核）。
     /// 交易內的規劃與交易外不同（預覽後資料被改）時不寫入，回 <c>directory_changed</c>。<paramref name="allowCreate"/> 為 false 時只更新既有帳號。
     /// </summary>
     public async Task<DirectoryOutcomeDto> ApplyAsync(Guid actor, string feature, AuditAction action, DirectoryPerson person, bool includeDisabled, bool allowCreate, CancellationToken ct)
@@ -104,7 +104,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             if (!plan.Writes) return Describe(plan);
             var id = plan.User?.Id ?? Guid.NewGuid();
             Plan? applied = null;
-            var saved = await audit.MutateAsync(actor, feature, id, person.Sid, token => SnapshotAsync(id, token), async () =>
+            var saved = await write.ExecuteItemAsync(actor, new AuditTarget(feature, id, person.Sid, token => SnapshotAsync(id, token), id), action, async () =>
             {
                 var fresh = await PlanAsync(person, includeDisabled, allowCreate, ct);
                 if (!fresh.Writes || fresh.Outcome != plan.Outcome || (fresh.User is not null && fresh.User.Id != id)) return IdentityErrors.DirectoryChanged;
@@ -113,7 +113,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
                 else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
                 applied = fresh;
                 return Result.Success;
-            }, ct, subject: id, item: action);
+            }, ct);
             return saved.IsSuccess ? Describe(applied!) : Describe(plan) with { Outcome = DirectoryOutcomes.Failed, ErrorCode = saved.Error.Code };
         }
         finally

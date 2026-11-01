@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
-using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Platform.Account.Security;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +80,7 @@ public sealed class AccountSecurityTests
         await ConfirmAsync(client, next);
         Assert.Equal("robert@fixture.test", (await UserAsync(f, me.Id)).Email);
         using var scope = f.Services.CreateScope();
-        var notice = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AsNoTracking().SingleAsync(x => x.Category == "account.security-notice");
+        var notice = await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AsNoTracking().SingleAsync(x => x.Category == "account.security-notice");
         Assert.Equal("bob@fixture.test", notice.RecipientAddress);
         // 驗證碼信是敏感信：寄出後內文即刪除，紀錄看不到驗證碼。
         Assert.Null(await ContentAsync(f, (await StatusMessageAsync(f, code.Id))!.Value));
@@ -196,7 +195,7 @@ public sealed class AccountSecurityTests
     private static async Task<Guid?> StatusMessageAsync(AppFactory f, Guid challengeId)
     {
         using var scope = f.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<VerificationChallenge>().Where(x => x.Id == challengeId).Select(x => x.MailMessageId).SingleAsync();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().VerificationChallenges.Where(x => x.Id == challengeId).Select(x => x.MailMessageId).SingleAsync();
     }
 
     private static void UseToken(HttpClient client, string token)

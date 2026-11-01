@@ -54,7 +54,7 @@ public sealed class JobLifecycleTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Set<BackgroundJob>().Where(x => x.Id == first.Id).ExecuteUpdateAsync(x => x.SetProperty(j => j.ActiveKey, (string?)null));
+            await db.BackgroundJobs.Where(x => x.Id == first.Id).ExecuteUpdateAsync(x => x.SetProperty(j => j.ActiveKey, (string?)null));
             scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, subject, "fixture", "再排入");
             await db.SaveChangesAsync();
         }

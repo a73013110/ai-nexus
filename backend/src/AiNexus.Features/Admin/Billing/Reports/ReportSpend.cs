@@ -13,12 +13,12 @@ internal sealed class ReportSpend(SpendReports reports, TimeProvider clock, Audi
     {
         api.MapGet("/billing/spend", (
                 DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
-            handler.PersonalAsync(user.Id, from, until, offsetMinutes, ct).ToHttpResultAsync())
+            handler.PersonalAsync(user.Id, from, until, offsetMinutes, ct))
             .NotAudited("使用者自己的費用")
             .WithName("GetPersonalSpend");
         api.MapGet("/conversations/{id:guid}/spend", (Guid id, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
-            handler.ConversationAsync(user.Id, id, ct).ToHttpResultAsync())
-            .RequireAuthorization(Policies.Chat).NotAudited("使用者自己對話的費用").WithName("GetConversationSpend");
+            handler.ConversationAsync(user.Id, id, ct))
+            .RequireFeature(FeatureCatalog.Chat).NotAudited("使用者自己對話的費用").WithName("GetConversationSpend");
     }
 
     public static void MapAdministrative(RouteGroupBuilder admin)
@@ -27,7 +27,7 @@ internal sealed class ReportSpend(SpendReports reports, TimeProvider clock, Audi
                 Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler,
                 CancellationToken ct) =>
             handler.AdministrativeAsync(ownerId, from, until, offsetMinutes, ct)
-                .ToHttpResultAsync())
+                )
             .Audited(BillingAudit.SpendRead)
             .WithName("GetAdministrativeSpend");
         admin.MapGet("/export", (

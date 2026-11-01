@@ -48,10 +48,9 @@ public sealed partial class MailRetentionWorker(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var retention = options.Value.Retention;
         var now = clock.GetUtcNow();
-        var messages = db.Set<OutboundMessage>();
-        var finished = messages.Where(x => x.Status == MailStates.Sent || x.Status == MailStates.Failed || x.Status == MailStates.Cancelled);
+        var finished = db.OutboundMessages.Where(x => x.Status == MailStates.Sent || x.Status == MailStates.Failed || x.Status == MailStates.Cancelled);
 
-        var expired = await BatchesAsync(() => messages.Where(x => x.Status == MailStates.Queued && x.ExpiresAt <= now).Take(BatchSize)
+        var expired = await BatchesAsync(() => db.OutboundMessages.Where(x => x.Status == MailStates.Queued && x.ExpiresAt <= now).Take(BatchSize)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Failed).SetProperty(x => x.ErrorCode, MailFailures.Expired)
                 .SetProperty(x => x.ContentPurgedAt, now).SetProperty(x => x.UpdatedAt, now), ct));
 
@@ -59,7 +58,7 @@ public sealed partial class MailRetentionWorker(
         var contentBefore = now.AddDays(-retention.ContentDays);
         var contents = await BatchesAsync(() => finished.Where(x => x.ContentPurgedAt == null && (x.Sensitive || x.CreatedAt < contentBefore)).Take(BatchSize)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.ContentPurgedAt, now), ct));
-        await BatchesAsync(() => db.Set<OutboundMessageContent>().Where(c => messages.Any(m => m.Id == c.MessageId && m.ContentPurgedAt != null)).Take(BatchSize).ExecuteDeleteAsync(ct));
+        await BatchesAsync(() => db.OutboundMessageContents.Where(c => db.OutboundMessages.Any(m => m.Id == c.MessageId && m.ContentPurgedAt != null)).Take(BatchSize).ExecuteDeleteAsync(ct));
 
         var recipientBefore = now.AddDays(-retention.RecipientDays);
         var recipients = await BatchesAsync(() => finished.Where(x => x.RecipientAddress != null && x.CreatedAt < recipientBefore).Take(BatchSize)

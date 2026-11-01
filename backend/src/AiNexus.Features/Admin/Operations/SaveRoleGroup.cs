@@ -29,14 +29,15 @@ public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList
     IReadOnlyDictionary<string, string>? ManagerScopes = null);
 
 /// <summary>建立或更新群組、其功能（含資料範圍）與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
-internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, ModelPolicyService policies)
+internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/groups/{id}", async (string id, GroupUpdateRequest body, ICurrentUser user, SaveRoleGroup handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/groups/{id}", (string id, GroupUpdateRequest body, ICurrentUser user, SaveRoleGroup handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(AccessControlAudit.GroupUpdated)
         .WithName("SaveRoleGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlGroups, null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlGroups, id, token => SnapshotAsync(id, token)), async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds) ?? AccessRules.Scopes(request.FeatureIds, request.Scopes, request.ManagerScopes)) is { } invalid) return invalid;
         if (request.Policy is { } policy)
@@ -44,11 +45,11 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
             if (policies.Check(new(policy.AllowedModelIds, policy.DailyTokenLimits)) is { } rejected) return rejected;
             if (policy.StoredAttachmentLimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return InferenceErrors.InvalidModelPolicy;
         }
-        if (await AccessRules.ExistingAsync(db.Set<Feature>().Select(x => x.Id), request.FeatureIds, ct) is { } unknown) return unknown;
-        var group = await db.Set<RoleGroup>().FindAsync([id], ct);
+        if (await AccessRules.ExistingAsync(db.Features.Select(x => x.Id), request.FeatureIds, ct) is { } unknown) return unknown;
+        var group = await db.RoleGroups.FindAsync([id], ct);
         if (group is null) { group = new() { Id = id }; db.Add(group); }
         group.Name = request.Name.Trim(); group.Enabled = request.Enabled;
-        var old = await db.Set<RoleGroupFeature>().Where(x => x.GroupId == id).ToListAsync(ct);
+        var old = await db.RoleGroupFeatures.Where(x => x.GroupId == id).ToListAsync(ct);
         db.RemoveRange(old.Where(x => !request.FeatureIds.Contains(x.FeatureId)));
         var added = request.FeatureIds.Where(x => !old.Any(y => y.FeatureId == x)).Select(x => new RoleGroupFeature { GroupId = id, FeatureId = x }).ToList();
         db.AddRange(added);
@@ -57,7 +58,7 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
             grant.Scope = request.Scopes?.GetValueOrDefault(grant.FeatureId);
             grant.ManagerScope = request.ManagerScopes?.GetValueOrDefault(grant.FeatureId);
         }
-        var value = await db.Set<GroupModelPolicy>().FindAsync([id], ct);
+        var value = await db.GroupModelPolicies.FindAsync([id], ct);
         if (request.Policy is null) { if (value is not null) db.Remove(value); }
         else
         {
@@ -70,10 +71,10 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeAudit audit, 
 
     private async Task<object?> SnapshotAsync(string id, CancellationToken ct)
     {
-        var value = await db.Set<RoleGroup>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var value = await db.RoleGroups.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (value is null) return null;
-        var policy = await db.Set<GroupModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.GroupId == id, ct);
-        var grants = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == id).OrderBy(x => x.FeatureId).ToListAsync(ct);
+        var policy = await db.GroupModelPolicies.AsNoTracking().SingleOrDefaultAsync(x => x.GroupId == id, ct);
+        var grants = await db.RoleGroupFeatures.AsNoTracking().Where(x => x.GroupId == id).OrderBy(x => x.FeatureId).ToListAsync(ct);
         return new
         {
             value.Name,

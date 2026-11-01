@@ -2,7 +2,6 @@ using System.Globalization;
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Features.Office.Attendance.Cards;
 using AiNexus.Features.Office.Attendance.Gd;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Auditing;
@@ -46,14 +45,15 @@ internal sealed class CalendarDayRequestValidator : RequestValidator<CalendarDay
 internal sealed class UpdateCalendarDay(AppDbContext db, GdAccounts accounts, GdCalendarWriter writer, AuditTrail audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{date}", (DateOnly date, CalendarDayRequest body, ICurrentUser user, UpdateCalendarDay handler, CancellationToken ct) => handler.HandleAsync(user.Id, date, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.AttendanceCalendarMaintain)
+        .MapPut("/{date}", (DateOnly date, CalendarDayRequest body, ICurrentUser user, UpdateCalendarDay handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, date, body, ct))
+        .RequireFeature(FeatureCatalog.AttendanceCalendarMaintain)
         .Audited(AttendanceAudit.CalendarDayUpdated)
         .WithName("UpdateAttendanceCalendarDay");
 
     public async Task<Result<CalendarDayDto>> HandleAsync(Guid actor, DateOnly date, CalendarDayRequest request, CancellationToken ct)
     {
-        var after = new GdCalendarValues(request.MorningOff, request.AfternoonOff, CardRules.Normalize(request.Remark));
+        var after = new GdCalendarValues(request.MorningOff, request.AfternoonOff, TextRules.TrimToNull(request.Remark));
         audit.Describe(details: new { resourceKey = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
 
         // 先檢查不必連 GD 的條件；未設定或設為唯讀是部署問題，不必等到查帳號才發現。

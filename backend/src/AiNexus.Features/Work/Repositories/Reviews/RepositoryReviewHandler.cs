@@ -46,7 +46,7 @@ public sealed partial class RepositoryReviewHandler(AppDbContext db, RepositoryR
         var frozen = RepositoryReviewService.Snapshot(row);
         if (!frozen.IsSuccess) return frozen.Error;
         var snapshot = frozen.Value; var slices = snapshot.Slices;
-        var results = await db.Set<RepositoryReviewResult>().AsNoTracking().Where(x => x.ReviewId == row.Id).ToDictionaryAsync(x => x.Ordinal, ct);
+        var results = await db.RepositoryReviewResults.AsNoTracking().Where(x => x.ReviewId == row.Id).ToDictionaryAsync(x => x.Ordinal, ct);
         if (snapshot.Direct || slices.All(x => x.Binary))
         {
             if (results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return Result.Success;

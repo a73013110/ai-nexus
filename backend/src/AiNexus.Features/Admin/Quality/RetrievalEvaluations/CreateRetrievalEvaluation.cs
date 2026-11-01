@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
@@ -39,17 +37,17 @@ internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvalua
     ResourceWriteLock writes, JobService jobs, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/retrieval-evals", async (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult()).Audited(QualityAudit.RetrievalQueued);
+        .MapPost("/retrieval-evals", (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct)).Audited(QualityAudit.RetrievalQueued);
 
     public async Task<Result<RetrievalEvaluationDto>> HandleAsync(Guid actor, RetrievalEvaluationRequest request, CancellationToken ct)
     {
         if (!AnnotationsValid(request.Cases)) return QualityErrors.CorpusInvalid;
         if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } denied) return denied.Error;
         var ids = request.Cases.SelectMany(x => x.Relevant).Select(x => x.DocumentId).Distinct().ToArray();
-        var documents = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null && request.CollectionIds.Contains(x.CollectionId.Value)).Select(x => x.Id).ToListAsync(ct);
+        var documents = await db.Documents.AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null && request.CollectionIds.Contains(x.CollectionId.Value)).Select(x => x.Id).ToListAsync(ct);
         if (documents.Count != ids.Length) return QualityErrors.CorpusInvalid;
-        var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => ids.Contains(x.DocumentId)).Select(x => new { x.DocumentId, x.PageNumber }).ToListAsync(ct);
+        var pages = await db.DocumentPages.AsNoTracking().Where(x => ids.Contains(x.DocumentId)).Select(x => new { x.DocumentId, x.PageNumber }).ToListAsync(ct);
         if (request.Cases.SelectMany(x => x.Relevant).Any(x => x.Pages.Any(p => !pages.Any(page => page.DocumentId == x.DocumentId && page.PageNumber == p)))) return QualityErrors.PagesInvalid;
         await profiles.ActiveAsync(ct);
         // 擁有者同時只能有一個進行中的檢索評測，並有總執行次數上限。
@@ -57,8 +55,8 @@ internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvalua
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } revoked) return revoked.Error;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == RetrievalEvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
-            if (await db.Set<RetrievalEvaluation>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
+            if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == RetrievalEvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
+            if (await db.RetrievalEvaluations.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
             var profile = await profiles.ActiveAsync(ct);
             var json = RetrievalEvaluationService.Json;
             var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),

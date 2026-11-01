@@ -19,16 +19,15 @@ public sealed class BillingModule : IFeatureModule
         builder.Services.AddScoped<SpendReports>();
         builder.Services.AddScoped<UsageReports>();
         builder.Services.AddMonitoringSource<UsageMonitoring>();
-        builder.Services.AddFeaturePolicy(FeatureCatalog.BillingPrices);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         ReportSpend.MapPersonal(api);
-        var prices = api.MapGroup("/admin/billing").RequireAuthorization(Policies.BillingPrices);
+        var prices = api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.BillingPrices);
         ManagePrices.Map(prices);
         CreateModelPrice.Map(prices);
         // 全平台花費報表是總覽「全平台」範圍的匯出，與平台總覽同一個授權（GetDashboard）。
-        ReportSpend.MapAdministrative(api.MapGroup("/admin/billing").RequireAuthorization(Policies.OperationsUsage));
+        ReportSpend.MapAdministrative(api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.OperationsUsage));
     }
 }

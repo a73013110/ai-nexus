@@ -12,8 +12,8 @@ internal sealed class CreateProjectArtifact(ArtifactService artifacts)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/artifacts", (Guid id, CreateArtifactRequest body, ICurrentUser user, CreateProjectArtifact handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.Artifacts).Audited(ProjectsAudit.ArtifactCreated);
+            handler.HandleAsync(user.Id, id, body, ct))
+        .RequireFeature(FeatureCatalog.Artifacts).Audited(ProjectsAudit.ArtifactCreated);
 
     public Task<Result<ArtifactDto>> HandleAsync(Guid userId, Guid projectId, CreateArtifactRequest body, CancellationToken ct) =>
         artifacts.CreateAsync(userId, body with { ProjectId = projectId }, ct);

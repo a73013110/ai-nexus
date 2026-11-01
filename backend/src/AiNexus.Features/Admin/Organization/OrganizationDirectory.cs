@@ -71,7 +71,7 @@ public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUs
     /// <summary>有效單位，與有首長單位帶領的上層（<see cref="HeadUnits.LedUnits"/>，含停用的首長單位）。</summary>
     private async Task<(Dictionary<Guid, Unit> Active, HashSet<Guid> Led)> ActiveUnitsAsync(CancellationToken ct)
     {
-        var units = await db.Set<Unit>().AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
+        var units = await db.Units.AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
         return (units.Values.Where(x => Active(units, x)).ToDictionary(x => x.Id), HeadUnits.LedUnits(units.Values));
     }
 
@@ -92,5 +92,5 @@ public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUs
     }
 
     /// <summary>帳號啟用且未刪除的成員列；「帳號停用或刪除不算」只在這裡判斷，條件來自 Identity 的 <see cref="IActiveUsers"/>。</summary>
-    private IQueryable<UnitMember> ActiveMembers() => db.Set<UnitMember>().Where(x => activeUsers.Ids.Contains(x.UserId));
+    private IQueryable<UnitMember> ActiveMembers() => db.UnitMembers.Where(x => activeUsers.Ids.Contains(x.UserId));
 }

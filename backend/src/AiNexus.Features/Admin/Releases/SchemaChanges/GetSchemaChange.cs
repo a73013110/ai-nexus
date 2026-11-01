@@ -8,7 +8,7 @@ internal sealed class GetSchemaChange(SchemaChangeReader changes)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/{schemaName}/{name}", (string schemaName, string name, GetSchemaChange handler, CancellationToken ct) =>
-            handler.HandleAsync(schemaName, name, ct).ToHttpResultAsync())
+            handler.HandleAsync(schemaName, name, ct))
         .Audited(ReleasesAudit.SchemaObjectRead)
         .WithName("GetSchemaChange");
 

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Features.Admin.Audit;
@@ -56,6 +55,6 @@ public sealed class SaveFeatureTests
     private static async Task<string?> StoredNameAsync(AppFactory factory)
     {
         using var scope = factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Feature>().Where(x => x.Id == FeatureCatalog.Jobs).Select(x => x.Name).SingleAsync();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Features.Where(x => x.Id == FeatureCatalog.Jobs).Select(x => x.Name).SingleAsync();
     }
 }

@@ -33,11 +33,11 @@ internal sealed class ReportFeatureUsage(AppDbContext db, AuditDataScope scope, 
     public static void Map(RouteGroupBuilder usage)
     {
         usage.MapGet("", (DateTimeOffset? from, DateTimeOffset? until, ICurrentUser user, ReportFeatureUsage handler, CancellationToken ct) =>
-                handler.ListAsync(user.Id, from, until, ct).ToHttpResultAsync())
+                handler.ListAsync(user.Id, from, until, ct))
             .Audited(AuditAudit.UsageRead)
             .WithName("ListFeatureUsage");
         usage.MapGet("/{featureId}", (string featureId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportFeatureUsage handler,
-                CancellationToken ct) => handler.DetailAsync(user.Id, featureId, from, until, offsetMinutes, ct).ToHttpResultAsync())
+                CancellationToken ct) => handler.DetailAsync(user.Id, featureId, from, until, offsetMinutes, ct))
             .Audited(AuditAudit.UsageRead)
             .WithName("GetFeatureUsage");
     }

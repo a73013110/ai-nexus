@@ -20,12 +20,12 @@ public sealed class MailOutboxTests
             var enqueued = await scope.ServiceProvider.GetRequiredService<MailOutbox>().EnqueueAsync(new Greeting(), "小陳", new("chen@company.com", "陳小明"), null, CancellationToken.None);
             Assert.True(enqueued.IsSuccess);
             // 入列不自行儲存：業務還沒 SaveChanges 前資料庫沒有這封信。
-            Assert.False(await db.Set<OutboundMessage>().AsNoTracking().AnyAsync());
+            Assert.False(await db.OutboundMessages.AsNoTracking().AnyAsync());
             await db.SaveChangesAsync();
             await transaction.RollbackAsync();
         }
         using (var scope = factory.Services.CreateScope())
-            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AnyAsync());
+            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AnyAsync());
 
         var id = await EnqueueAsync(factory, new Greeting(), "小陳", "Chen@Company.COM");
         var message = await MessageAsync(factory, id);
@@ -59,7 +59,7 @@ public sealed class MailOutboxTests
         Assert.False(first.Duplicate);
         Assert.Equal((first.MessageId, true), (local.MessageId, local.Duplicate));
         Assert.Equal((first.MessageId, true), (stored.MessageId, stored.Duplicate));
-        Assert.Equal(1, await db.Set<OutboundMessage>().CountAsync());
+        Assert.Equal(1, await db.OutboundMessages.CountAsync());
     }
 
     [Fact]

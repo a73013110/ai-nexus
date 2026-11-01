@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -25,8 +24,8 @@ internal sealed class ConnectRepositoryRequestValidator : RequestValidator<Conne
 internal sealed class ConnectRepository(AppDbContext db, RepositoryService gitea, IGiteaClient client, RepositoryWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/connection", async (ConnectRepositoryRequest body, ICurrentUser user, ConnectRepository handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body.Token, ct)).ToHttpResult())
+        .MapPost("/connection", (ConnectRepositoryRequest body, ICurrentUser user, ConnectRepository handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body.Token, ct))
         .Audited(RepositoriesAudit.ConnectionConnected)
         .WithName("ConnectRepository");
 
@@ -40,7 +39,7 @@ internal sealed class ConnectRepository(AppDbContext db, RepositoryService gitea
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var row = await db.Set<RepositoryConnection>().SingleOrDefaultAsync(x => x.OwnerId == owner, ct);
+            var row = await db.RepositoryConnections.SingleOrDefaultAsync(x => x.OwnerId == owner, ct);
             if (row is null) { row = new() { OwnerId = owner }; db.Add(row); }
             row.BaseUrl = gitea.BaseUrl; row.Login = login; row.ProtectedToken = gitea.Protect(owner, token); row.ConnectedAt = clock.GetUtcNow();
             await db.SaveChangesAsync(ct);

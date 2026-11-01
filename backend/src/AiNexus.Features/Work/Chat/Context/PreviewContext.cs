@@ -69,7 +69,7 @@ internal sealed class PreviewContext(
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/context", (ContextPreviewRequest body, ICurrentUser user, PreviewContext handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, body, ct))
         .WithRequestBodyLimit(InferenceModule.PromptBodyLimit)
         .NotAudited("送出前估算上下文用量")
         .WithName("PreviewContext");

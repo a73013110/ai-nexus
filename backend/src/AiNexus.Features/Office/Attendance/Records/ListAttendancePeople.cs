@@ -22,14 +22,15 @@ public sealed record AttendancePersonOptionDto(Guid? UserId, string? CardNumber,
 internal sealed class ListAttendancePeople(IDataScope scopes, AttendanceRoster roster, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/people", (Guid? unitId, ICurrentUser user, ListAttendancePeople handler, CancellationToken ct) => handler.HandleAsync(user.Id, unitId, ct).ToHttpResultAsync())
+        .MapGet("/people", (Guid? unitId, ICurrentUser user, ListAttendancePeople handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, unitId, ct))
         .NotAudited("篩選用的人員選項，不含出勤資料")
         .WithName("ListAttendancePeople");
 
-    public async Task<Result<IReadOnlyList<AttendancePersonOptionDto>>> HandleAsync(Guid viewer, Guid? unitId, CancellationToken ct)
+    public async Task<Result<AttendancePersonOptionDto[]>> HandleAsync(Guid viewer, Guid? unitId, CancellationToken ct)
     {
         var scope = await scopes.ForAsync(viewer, FeatureCatalog.AttendanceRecords, ct);
-        if (scope.IsEmpty) return Result<IReadOnlyList<AttendancePersonOptionDto>>.Ok([]);
+        if (scope.IsEmpty) return Array.Empty<AttendancePersonOptionDto>();
         var holdings = await roster.HoldingsAsync(viewer, scope, new() { UnitId = unitId }, null, includeHidden: true, ct);
         var now = clock.GetUtcNow();
         bool Holding(RosterPerson person) => person.Holdings.Any(h => h.StartsAt <= now && (h.EndsAt is null || h.EndsAt > now));
@@ -50,6 +51,6 @@ internal sealed class ListAttendancePeople(IDataScope scopes, AttendanceRoster r
             var latest = rows.MaxBy(x => x.Holdings.Max(h => h.StartsAt))!;
             options.Add(new(null, person.CardNumber, latest.DisplayName, null, rows.All(x => x.Hidden), rows.Any(Holding)));
         }
-        return Result<IReadOnlyList<AttendancePersonOptionDto>>.Ok(options);
+        return options.ToArray();
     }
 }

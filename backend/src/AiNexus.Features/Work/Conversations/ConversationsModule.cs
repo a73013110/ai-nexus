@@ -32,14 +32,13 @@ public sealed class ConversationsModule : IFeatureModule
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectConversations>();
         services.AddScoped<IContainerDeletionCheck, DetachDeletedProjectConversations>();
 
-        services.AddFeaturePolicy(FeatureCatalog.Chat);
     }
 
     /// <summary>註冊對話 REST 端點群組；註冊順序即 OpenAPI 發佈順序。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/conversations")
-            .RequireAuthorization(Policies.Chat);
+            .RequireFeature(FeatureCatalog.Chat);
 
         ListConversations.Map(routes);
         ListConversationLabels.Map(routes);
@@ -50,7 +49,7 @@ public sealed class ConversationsModule : IFeatureModule
         SelectBranch.Map(routes);
 
         // 管理端稽核式列出任一使用者的對話，從使用者頁開啟；內容與附件的讀取在 Chat（訊息 DTO 屬於它）。
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
+        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
         ListAdminUserConversations.Map(admin);
     }
 }

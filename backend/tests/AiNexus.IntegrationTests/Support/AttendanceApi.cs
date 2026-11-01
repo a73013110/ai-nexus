@@ -68,11 +68,11 @@ internal static class AttendanceApi
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Set<Role>().Add(new() { Id = id, Name = id });
-        db.Set<RoleGroup>().Add(new() { Id = id, Name = id });
-        db.Set<RoleGroupRole>().Add(new() { RoleId = id, GroupId = id });
-        db.Set<RoleGroupFeature>().AddRange(features.Select(feature => new RoleGroupFeature { GroupId = id, FeatureId = feature }));
-        db.Set<UserRole>().Add(new() { UserId = userId, RoleId = id });
+        db.Roles.Add(new() { Id = id, Name = id });
+        db.RoleGroups.Add(new() { Id = id, Name = id });
+        db.RoleGroupRoles.Add(new() { RoleId = id, GroupId = id });
+        db.RoleGroupFeatures.AddRange(features.Select(feature => new RoleGroupFeature { GroupId = id, FeatureId = feature }));
+        db.UserRoles.Add(new() { UserId = userId, RoleId = id });
         await db.SaveChangesAsync();
     }
 
@@ -81,7 +81,7 @@ internal static class AttendanceApi
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var file = await db.Set<PunchFile>().FirstOrDefaultAsync();
+        var file = await db.PunchFiles.FirstOrDefaultAsync();
         if (file is null)
         {
             file = new PunchFile { FileName = "20261001.txt" };
@@ -98,7 +98,7 @@ internal static class AttendanceApi
             EventCode = "11",
         }));
         var numbers = punches.Select(x => x.Card).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var known = await db.Set<Card>().Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync();
+        var known = await db.Cards.Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync();
         db.AddRange(numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }));
         await db.SaveChangesAsync();
     }
@@ -218,7 +218,7 @@ internal sealed class PunchImportSession : IAsyncDisposable
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var rows = await (from p in db.Set<Punch>().AsNoTracking() join f in db.Set<PunchFile>() on p.PunchFileId equals f.Id select new { p.CardNumber, p.PunchedAt, f.FileName }).ToListAsync();
+        var rows = await (from p in db.Punches.AsNoTracking() join f in db.PunchFiles on p.PunchFileId equals f.Id select new { p.CardNumber, p.PunchedAt, f.FileName }).ToListAsync();
         return [.. rows.OrderBy(x => x.PunchedAt).ThenBy(x => x.CardNumber).Select(x => new PunchRow(x.CardNumber, x.PunchedAt, x.FileName))];
     }
 
@@ -226,15 +226,15 @@ internal sealed class PunchImportSession : IAsyncDisposable
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var query = db.Set<PunchImport>().AsNoTracking();
-        if (fileName is not null) query = query.Where(x => db.Set<PunchFile>().Any(f => f.Id == x.PunchFileId && f.FileName == fileName));
+        var query = db.PunchImports.AsNoTracking();
+        if (fileName is not null) query = query.Where(x => db.PunchFiles.Any(f => f.Id == x.PunchFileId && f.FileName == fileName));
         return await query.OrderBy(x => x.StartedAt).ThenBy(x => x.FinishedAt).ToListAsync();
     }
 
     public async Task<PunchFile> FileAsync(string name)
     {
         using var scope = Factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<PunchFile>().AsNoTracking().SingleAsync(x => x.FileName == name);
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().PunchFiles.AsNoTracking().SingleAsync(x => x.FileName == name);
     }
 
     public async ValueTask DisposeAsync()

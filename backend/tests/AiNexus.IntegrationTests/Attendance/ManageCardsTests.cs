@@ -18,9 +18,13 @@ public sealed class ManageCardsTests
 
         var card = await CreateCardAsync(hr, " ab0012 ", note: "  備用卡  ");
         Assert.Equal(("ab0012", false, "備用卡"), (card.CardNumber, card.HiddenFromRecords, card.Note));
+        // DTO 在寫入前就產生，建立時間要在 Add 時補上。
+        Assert.NotEqual(default, card.CreatedAt);
 
         await AssertCodeAsync(await hr.PostAsJsonAsync(Cards, new CardCreateRequest("AB0012", false, null)), HttpStatusCode.Conflict, "attendance_card_number_duplicate");
         await CreateCardAsync(hr, "ab0013", hidden: true);
+        // handler 直接回傳 Result 時，請求稽核仍要取得失敗的錯誤代碼。
+        Assert.Equal(["completed", "attendance_card_number_duplicate", "completed"], (await AuditAsync(factory, "attendance.card.created")).Select(x => x.Result));
 
         var cards = (await hr.GetFromJsonAsync<CardDto[]>(Cards))!;
         Assert.Equal(["ab0012", "ab0013"], cards.Select(x => x.CardNumber));

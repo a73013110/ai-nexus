@@ -90,14 +90,11 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<VerificationChallenges>();
         services.AddScoped<Reauthentication>();
         services.AddScoped<UserCredentials>();
-        services.AddFeaturePolicy(FeatureCatalog.IdentityUsers);
-        services.AddFeaturePolicy(FeatureCatalog.IdentityUsersImport);
-        services.AddFeaturePolicy(FeatureCatalog.IdentityUsersSync);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
+        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
         ManageUserAccounts.MapCreate(admin);
         ManageUserAccounts.MapUpdate(admin);
         ManageUserAccounts.MapDelete(admin);
@@ -109,13 +106,13 @@ public sealed class IdentityModule : IFeatureModule
         ListAccountReviews.Map(admin);
         MoveUser.Map(admin);
         ResetUserOrder.Map(admin);
-        var import = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersImport);
+        var import = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersImport);
         ListDirectoryNodes.Map(import);
         ListDirectoryPeople.Map(import);
         GetDirectoryPerson.Map(import);
         PreviewDirectoryImport.Map(import);
         ImportDirectoryUsers.Map(import);
-        SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsersSync));
+        SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersSync));
         api.MapAuthenticationEndpoints();
     }
 }

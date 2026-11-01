@@ -48,7 +48,7 @@ public sealed class DiagnosticStoreTests
         await store.WriteAsync([old[0]], CancellationToken.None); // 重複寫入是安全的，即使已超過軟性容量上限。
         await Assert.ThrowsAsync<DiagnosticCapacityException>(() => store.WriteAsync([new DiagnosticEvent()], CancellationToken.None));
         await store.CleanupAsync(CancellationToken.None);
-        Assert.False(await db.Set<DiagnosticEvent>().AnyAsync(x => x.LogId == old[0].LogId)); Assert.True(await db.AuditEvents.AnyAsync(x => x.Id == retained.Id));
+        Assert.False(await db.DiagnosticEvents.AnyAsync(x => x.LogId == old[0].LogId)); Assert.True(await db.AuditEvents.AnyAsync(x => x.Id == retained.Id));
         Assert.False(await db.AuditEvents.AnyAsync(x => x.Id == expired.Id)); await store.WriteAsync([new DiagnosticEvent()], CancellationToken.None);
     }
 
@@ -70,11 +70,11 @@ public sealed class DiagnosticStoreTests
             }
             await store.WriteAsync([row], CancellationToken.None);
             Assert.False(await db.Users.AsNoTracking().AnyAsync(x => x.Id == user.Id));
-            Assert.Equal(1, await db.Set<DiagnosticEvent>().CountAsync(x => x.IssueCode == code));
-            Assert.Equal(row.TraceId, (await db.Set<DiagnosticEvent>().AsNoTracking().SingleAsync(x => x.LogId == row.LogId)).TraceId);
+            Assert.Equal(1, await db.DiagnosticEvents.CountAsync(x => x.IssueCode == code));
+            Assert.Equal(row.TraceId, (await db.DiagnosticEvents.AsNoTracking().SingleAsync(x => x.LogId == row.LogId)).TraceId);
             await store.WriteAsync(Enumerable.Range(0, 5).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31) }).ToArray(), CancellationToken.None);
             await store.CleanupAsync(CancellationToken.None);
-            Assert.Equal(1, await db.Set<DiagnosticEvent>().CountAsync());
+            Assert.Equal(1, await db.DiagnosticEvents.CountAsync());
         });
     }
 }

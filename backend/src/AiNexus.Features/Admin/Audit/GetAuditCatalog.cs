@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
@@ -20,12 +19,13 @@ public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOn
 internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder audit) => audit
-        .MapGet("/catalog", async (GetAuditCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/catalog", (GetAuditCatalog handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .NotAudited("稽核篩選用的固定目錄")
         .WithName("GetAuditCatalog");
 
     public async Task<AuditCatalogDto> HandleAsync(CancellationToken ct) => new(
-        [.. FeatureDto.InCatalogOrder(await db.Set<Feature>().AsNoTracking().ToListAsync(ct)).Select(FeatureDto.From)],
+        [.. FeatureDto.InCatalogOrder(await db.Features.AsNoTracking().ToListAsync(ct)).Select(FeatureDto.From)],
         (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(),
         AuditCategories.All,
         AuditActions.Modules,

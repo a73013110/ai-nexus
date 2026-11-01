@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Inference;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference;
@@ -25,8 +24,8 @@ public sealed record ConversationDetailDto(
 internal sealed class GetConversation(AppDbContext db, TranscriptReader transcripts, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", async (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationRead)
         .WithName("GetConversation");
 
@@ -38,7 +37,7 @@ internal sealed class GetConversation(AppDbContext db, TranscriptReader transcri
             return ConversationsErrors.NotFound;
         }
 
-        var run = await db.Set<GenerationRun>()
+        var run = await db.GenerationRuns
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.ConversationId == id && x.ActiveOwnerId == owner, ct);
 

@@ -13,7 +13,8 @@ internal sealed class ImportDirectoryUsers(IAdDirectory directory, DirectoryProv
 {
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/directory-imports", (DirectoryImportRequest body, ICurrentUser user, ImportDirectoryUsers handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .MapPost("/directory-imports", (DirectoryImportRequest body, ICurrentUser user, ImportDirectoryUsers handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
         .Audited(IdentityAudit.DirectoryBatchImported)
         .WithName("ImportDirectoryUsers");

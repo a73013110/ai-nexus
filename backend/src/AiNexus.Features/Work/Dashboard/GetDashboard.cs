@@ -24,9 +24,9 @@ internal sealed class GetDashboard(SpendReports reports, UsageReports usage, Acc
     private const string Personal = "personal", Platform = "platform";
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, scope ?? Personal, ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Dashboard).Audited(DashboardAudit.OverviewRead).WithName("GetDashboard");
+        .MapGet("/dashboard", (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, scope ?? Personal, ownerId, from, until, offsetMinutes, ct))
+        .RequireFeature(FeatureCatalog.Dashboard).Audited(DashboardAudit.OverviewRead).WithName("GetDashboard");
 
     public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {

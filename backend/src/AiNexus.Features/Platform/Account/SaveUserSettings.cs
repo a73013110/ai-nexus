@@ -29,8 +29,8 @@ internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/settings", async (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
+        .MapPut("/settings", (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
+            handler.HandleAsync(user.User, body, ct))
         .Audited(AccountAudit.SettingsUpdated)
         .WithName("SaveUserSettings");
 

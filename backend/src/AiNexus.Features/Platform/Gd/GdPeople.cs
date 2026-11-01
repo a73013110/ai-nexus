@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 namespace AiNexus.Features.Platform.Gd;
 
 /// <summary>公文系統的一個人在某個部門的顯示資料；查不到（帳號已刪、部門已撤）的欄位是 null。</summary>
@@ -29,9 +30,6 @@ public static class GdPeople
         LEFT JOIN [dbo].[Sys_User_Title] t ON t.[TitleID] = ud.[TitleCode]
         """;
 
-    /// <summary>空白字串當成沒有；GD 的 char 欄位會補尾端空白。</summary>
-    public static string? Text(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
     public static GdPerson? Person(string? name, string? unit, string? title)
-        => Text(name) is null && Text(unit) is null ? null : new(Text(name), Text(unit), Text(title));
+        => TextRules.TrimToNull(name) is null && TextRules.TrimToNull(unit) is null ? null : new(TextRules.TrimToNull(name), TextRules.TrimToNull(unit), TextRules.TrimToNull(title));
 }

@@ -1,5 +1,4 @@
 using System.Net;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Office.Attendance.Forms;
@@ -387,7 +386,7 @@ public sealed class ListAttendanceRecordsTests
     {
         await using var session = Create();
         using var client = await session.Factory.SignedInAsync("bob");
-        await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        await session.WithDbAsync(db => db.RoleGroupFeatures
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync());
 
         await AssertCodeAsync(await client.GetAsync($"{Records}?{Week}"), HttpStatusCode.Forbidden, "feature_forbidden");

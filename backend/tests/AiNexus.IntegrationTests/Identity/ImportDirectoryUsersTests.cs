@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Provisioning;
@@ -36,7 +35,7 @@ public sealed class ImportDirectoryUsersTests
             Assert.True(carol.Enabled && carol.AdEnabled && !carol.LocalEnabled && !carol.ProfileManaged);
             // 只有本人通過 AD 驗證才算目錄驗證；匯入不能讓本地密碼的新鮮度規則誤以為剛登入過。
             Assert.Null(carol.DirectoryVerifiedAt);
-            Assert.Equal(["member"], await db.Set<UserRole>().Where(x => x.UserId == carolId).Select(x => x.RoleId).ToListAsync());
+            Assert.Equal(["member"], await db.UserRoles.Where(x => x.UserId == carolId).Select(x => x.RoleId).ToListAsync());
             Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == "identity.user.imported" && x.Result == "completed"));
             Assert.False(await db.AuditEvents.AnyAsync(x => x.Action == "identity.account.created" && x.OwnerId == carolId));
         }

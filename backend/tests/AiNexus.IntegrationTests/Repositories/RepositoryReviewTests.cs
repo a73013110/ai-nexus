@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Repositories;
 using System.Net;
 using System.Net.Http.Json;
@@ -128,9 +127,9 @@ public sealed class RepositoryReviewTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Equal(["review", "summary"], await db.Set<RepositoryReview>().OrderBy(x => x.CreatedAt).Select(x => x.Purpose).ToListAsync());
+            Assert.Equal(["review", "summary"], await db.RepositoryReviews.OrderBy(x => x.CreatedAt).Select(x => x.Purpose).ToListAsync());
             // 清單會讀取 purpose 欄位；若快照無法讀取，所有審查都會被顯示為 "review"。
-            await db.Set<RepositoryReview>().ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, "{}"));
+            await db.RepositoryReviews.ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, "{}"));
         }
         var listed = (await client.GetFromJsonAsync<RepositoryReviewDto[]>(Reviews))!;
         Assert.Equal([(summary.Id, "summary"), (review.Id, "review")], listed.Select(x => (x.Id, x.Purpose)));
@@ -143,7 +142,7 @@ public sealed class RepositoryReviewTests
         var provider = new ReviewProvider(); await using var factory = Factory(new(), provider); using var client = await factory.SignedInAsync();
         var response = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString(), "typos"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode); Assert.Empty(provider.Calls);
-        using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RepositoryReview>().ToListAsync());
+        using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<AppDbContext>().RepositoryReviews.ToListAsync());
     }
 
     [Theory]
@@ -270,7 +269,7 @@ public sealed class RepositoryReviewTests
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(new RepositoryReviewResult { ReviewId = review.Id, Ordinal = 0, Output = "已完成區段" });
-            await db.Set<BackgroundJob>().Where(x => x.Id == review.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "failed").SetProperty(x => x.ActiveKey, (string?)null)); await db.SaveChangesAsync(); }
+            await db.BackgroundJobs.Where(x => x.Id == review.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "failed").SetProperty(x => x.ActiveKey, (string?)null)); await db.SaveChangesAsync(); }
         (await owner.PostAsync($"/api/v1/repositories/reviews/{review.Id}/retry", null)).EnsureSuccessStatusCode(); await Process(factory);
         var detail = (await owner.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
         Assert.Equal("completed", detail.Review.Job.Status); Assert.True(detail.Sections.Count > 1); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(detail.Sections.Count, factory.Provider.Calls);

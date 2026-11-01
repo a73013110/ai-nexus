@@ -10,7 +10,8 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 internal sealed class PreviewDirectoryImport(IAdDirectory directory, DirectoryProvisioning provisioning)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/directory-imports/preview", (DirectoryImportRequest body, PreviewDirectoryImport handler, CancellationToken ct) => handler.HandleAsync(body, ct).ToHttpResultAsync())
+        .MapPost("/directory-imports/preview", (DirectoryImportRequest body, PreviewDirectoryImport handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
         .Audited(IdentityAudit.DirectoryImportRead)
         .WithName("PreviewDirectoryImport");

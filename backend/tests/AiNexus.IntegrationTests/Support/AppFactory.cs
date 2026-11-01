@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using System.Net.Http.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Platform.Account;
@@ -66,7 +65,7 @@ public sealed class AppFactory : WebApplicationFactory<Program>
         using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(database.ConnectionString).Options);
         seed?.Invoke(db);
         foreach (var user in db.Users.AsNoTracking().ToList())
-            if (!db.Set<UserRole>().Any(x => x.UserId == user.Id)) db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
+            if (!db.UserRoles.Any(x => x.UserId == user.Id)) db.UserRoles.Add(new() { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
         db.SaveChanges();
     }
 

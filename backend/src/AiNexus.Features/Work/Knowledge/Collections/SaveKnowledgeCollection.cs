@@ -18,14 +18,14 @@ public sealed record CollectionRequest(string Name, string Description);
 internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/collections", async (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
-            (await handler.CreateAsync(user.Id, request, ct)).ToHttpResult())
+        .MapPost("/collections", (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
+            handler.CreateAsync(user.Id, request, ct))
         .Audited(KnowledgeAudit.CollectionCreated)
         .WithName("CreateKnowledgeCollection");
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/collections/{id:guid}", async (Guid id, CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
-            (await handler.UpdateAsync(user.Id, id, request, ct)).ToHttpResult())
+        .MapPut("/collections/{id:guid}", (Guid id, CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
+            handler.UpdateAsync(user.Id, id, request, ct))
         .Audited(KnowledgeAudit.CollectionUpdated)
         .WithName("UpdateKnowledgeCollection");
 
@@ -34,7 +34,7 @@ internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess ac
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
         if (request.Description.Length > Collection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        if (await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Collection.Kind, ct) >= options.Value.Indexing.MaxCollections)
+        if (await db.Resources.CountAsync(x => x.OwnerId == actor && x.Kind == Collection.Kind, ct) >= options.Value.Indexing.MaxCollections)
             return KnowledgeErrors.CollectionLimit;
         var now = clock.GetUtcNow();
         var resource = new Resource { OwnerId = actor, Kind = Collection.Kind, Name = name.Value, CreatedAt = now, UpdatedAt = now };
@@ -53,7 +53,7 @@ internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess ac
         if (!name.IsSuccess) return name.Error;
         resource.Name = name.Value;
         if (request.Description.Length > Collection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        (await db.Set<Collection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
+        (await db.Collections.SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
         return Result.Success;
     }

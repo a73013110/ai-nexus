@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Releases.SchemaChanges;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +37,7 @@ public sealed class SchemaChangeWatchTests
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return [.. (await (from n in db.Set<Notification>()
+        return [.. (await (from n in db.Notifications
                            join u in db.Users on n.OwnerId equals u.Id
                            where n.Type == "releases.schema_changed"
                            select new { u.AdAccount, n.TargetKind }).ToListAsync()).Select(x => (x.AdAccount!, x.TargetKind))];

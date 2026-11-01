@@ -32,7 +32,7 @@ public sealed partial class RunService(
     /// </summary>
     internal async Task<Result<GenerationRun>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var run = await db.Runs.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
+        var run = await db.GenerationRuns.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
         if (run is null) return InferenceErrors.RunNotFound;
 
         if (await conversations.RequireOwnedAsync(owner, run.ConversationId, ct) is { IsSuccess: false } denied)
@@ -47,7 +47,7 @@ public sealed partial class RunService(
     /// 查詢生成記錄所屬的對話識別碼（不加載回答文字），供呼叫端在取得對話鎖前先解析目標對話。
     /// </summary>
     internal async Task<Guid?> ConversationOfAsync(Guid owner, Guid id, CancellationToken ct) =>
-        await db.Runs
+        await db.GenerationRuns
             .Where(x => x.Id == id && x.OwnerId == owner)
             .Select(x => (Guid?)x.ConversationId)
             .SingleOrDefaultAsync(ct);

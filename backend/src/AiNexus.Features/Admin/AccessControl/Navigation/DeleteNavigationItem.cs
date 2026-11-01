@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -7,18 +6,19 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
 /// <summary>刪除選單節點。分群必須先清空，不級聯刪除子節點，避免一次誤刪整段選單。會稽核。</summary>
-internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeAudit audit)
+internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/navigation-items/{id}", async (string id, IRequestActor actor, DeleteNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, ct)).ToHttpResult())
+        .MapDelete("/navigation-items/{id}", (string id, IRequestActor actor, DeleteNavigationItem handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, ct))
         .Audited(AccessControlAudit.NavigationDeleted)
         .WithName("DeleteNavigationItem");
 
-    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => write.ExecuteAsync(actor, NavigationRules.Target(db, id), async () =>
     {
-        var item = await db.Set<NavigationItem>().FindAsync([id], ct);
+        var item = await db.NavigationItems.FindAsync([id], ct);
         if (item is null) return AccessControlErrors.NavigationItemNotFound;
-        if (await db.Set<NavigationItem>().AnyAsync(x => x.ParentId == id, ct)) return AccessControlErrors.NavigationItemNotEmpty;
+        if (await db.NavigationItems.AnyAsync(x => x.ParentId == id, ct)) return AccessControlErrors.NavigationItemNotEmpty;
         // 外鍵是 NO ACTION：可見群組要先刪。
         await NavigationRules.ReplaceAudiencesAsync(db, id, [], ct);
         db.Remove(item);

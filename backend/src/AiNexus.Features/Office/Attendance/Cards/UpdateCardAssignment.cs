@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -25,11 +24,12 @@ internal sealed class CardAssignmentUpdateRequestValidator : RequestValidator<Ca
 /// 接手是「指派給新的人」的語意，更正既有紀錄時重疊代表輸入有誤，不該悄悄改動另一段。
 /// 綁上使用者後，該使用者在這段期間內的刷卡立即歸戶（view 在讀取時計算，不必回頭改寫刷卡）。
 /// </summary>
-internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeAudit audit)
+internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", (Guid id, CardAssignmentUpdateRequest body, ICurrentUser user, UpdateCardAssignment handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .MapPut("/{id:guid}", (Guid id, CardAssignmentUpdateRequest body, ICurrentUser user, UpdateCardAssignment handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
+        .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.AssignmentUpdated)
         .WithName("UpdateAttendanceCardAssignment");
 
@@ -37,20 +37,20 @@ internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeAudit 
     {
         // 查不到時快照為 null，交給交易內的檢查回 not found 並留下紀錄。
         var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
-        return await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => AssignmentRules.SnapshotAsync(db, cardId, token), async () =>
+        return await write.ExecuteAsync(actor, AssignmentRules.Target(db, id, cardId), async () =>
         {
-            var assignment = await db.Set<CardAssignment>().SingleOrDefaultAsync(x => x.Id == id, ct);
+            var assignment = await db.CardAssignments.SingleOrDefaultAsync(x => x.Id == id, ct);
             if (assignment is null) return AttendanceErrors.AssignmentNotFound;
             // 沒換人就不重查：持有人帳號之後被刪除，不該讓更正備註或結束時間的操作失敗。
             if (request.UserId is { } userId && userId != assignment.UserId && !await AssignmentRules.HolderExistsAsync(db, userId, ct))
                 return AttendanceErrors.UserNotFound;
-            var others = await db.Set<CardAssignment>().AsNoTracking().Where(x => x.CardId == assignment.CardId && x.Id != id).ToListAsync(ct);
+            var others = await db.CardAssignments.AsNoTracking().Where(x => x.CardId == assignment.CardId && x.Id != id).ToListAsync(ct);
             if (others.Any(x => AssignmentRules.Overlaps(request.StartsAt, request.EndsAt, x))) return AttendanceErrors.AssignmentOverlap;
             assignment.UserId = request.UserId;
-            assignment.HolderName = CardRules.Normalize(request.HolderName);
+            assignment.HolderName = TextRules.TrimToNull(request.HolderName);
             assignment.StartsAt = request.StartsAt;
             assignment.EndsAt = request.EndsAt;
-            assignment.Note = CardRules.Normalize(request.Note);
+            assignment.Note = TextRules.TrimToNull(request.Note);
             return Result.Success;
         }, ct);
     }

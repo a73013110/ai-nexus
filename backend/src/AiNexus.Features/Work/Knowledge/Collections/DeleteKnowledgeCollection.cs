@@ -1,8 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
@@ -21,7 +18,8 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess access, AttachmentService attachments, AttachmentWriteLock writes, AttachmentLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/collections/{id:guid}", (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapDelete("/collections/{id:guid}", (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.CollectionDeleted)
         .WithName("DeleteKnowledgeCollection");
 
@@ -37,16 +35,16 @@ internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess 
             var current = await access.OwnerAsync(actor, id, Collection.Kind, ct);
             if (!current.IsSuccess) return current.Error;
             var resource = current.Value;
-            var docs = await db.Set<Document>().Where(x => x.CollectionId == id && !x.IsDeleted).ToListAsync(ct);
+            var docs = await db.Documents.Where(x => x.CollectionId == id && !x.IsDeleted).ToListAsync(ct);
             var documentIds = docs.Select(x => x.Id).ToArray(); var files = docs.Where(x => x.AttachmentId != null).Select(x => x.AttachmentId!.Value).Distinct().ToArray();
             foreach (var doc in docs) { doc.IsDeleted = true; doc.AttachmentId = null; doc.Status = "deleted"; }
             resource.IsDeleted = true;
-            await db.Set<Resource>().Where(x => documentIds.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
-            await db.Set<BackgroundJob>().Where(x => documentIds.Contains(x.SubjectId) && (x.Status == RunStates.Queued || x.Status == RunStates.Running)).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
-            await db.Set<ResourceAttachment>().Where(x => documentIds.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
-            await db.Set<ConversationCollection>().Where(x => x.CollectionId == id).ExecuteDeleteAsync(ct);
-            await db.Set<Chunk>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
-            await db.Set<DocumentPage>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
+            await db.Resources.Where(x => documentIds.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
+            await db.BackgroundJobs.Where(x => documentIds.Contains(x.SubjectId) && (x.Status == RunStates.Queued || x.Status == RunStates.Running)).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
+            await db.ResourceAttachments.Where(x => documentIds.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
+            await db.ConversationCollections.Where(x => x.CollectionId == id).ExecuteDeleteAsync(ct);
+            await db.Chunks.Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
+            await db.DocumentPages.Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
             await lifecycle.MarkUnusedAsync(files, ct);
  await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

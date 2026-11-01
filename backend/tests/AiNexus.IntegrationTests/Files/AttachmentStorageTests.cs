@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -35,7 +34,7 @@ public sealed class AttachmentStorageTests
         var response = await Upload(alice); response.EnsureSuccessStatusCode();
         var file = (await response.Content.ReadFromJsonAsync<AttachmentDto>())!;
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var metadata = await db.Set<Attachment>().SingleAsync();
+        var metadata = await db.Attachments.SingleAsync();
         Assert.Null(db.Model.FindEntityType(typeof(Attachment))!.FindProperty("Data"));
         Assert.Equal("original.txt", metadata.FileName); Assert.Equal(32, metadata.StorageKey.Length);
         var root = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value.StoragePath;
@@ -47,7 +46,7 @@ public sealed class AttachmentStorageTests
         Assert.Equal(5_000_000_000, storage.LimitBytes); Assert.Equal(600, storage.UsedBytes); Assert.Equal(4_999_999_400, storage.RemainingBytes);
         (await alice.DeleteAsync($"/api/v1/attachments/{file.Id}")).EnsureSuccessStatusCode();
         Assert.Empty(Directory.GetFiles(root, "*.blob", SearchOption.AllDirectories));
-        Assert.Empty(await db.Set<Attachment>().AsNoTracking().ToListAsync());
+        Assert.Empty(await db.Attachments.AsNoTracking().ToListAsync());
     }
 
     [Fact]
@@ -130,11 +129,11 @@ public sealed class AttachmentStorageTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Equal(AttachmentStates.Deleting, (await db.Set<Attachment>().SingleAsync()).StorageState);
+            Assert.Equal(AttachmentStates.Deleting, (await db.Attachments.SingleAsync()).StorageState);
             Assert.Equal(600, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
             fault.FailDelete = false;
             await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().DeletePendingAsync(CancellationToken.None);
-            Assert.Empty(await db.Set<Attachment>().ToListAsync());
+            Assert.Empty(await db.Attachments.ToListAsync());
         }
         fault.FailWrite = false;
         var response = await Upload(client); response.EnsureSuccessStatusCode(); var file = (await response.Content.ReadFromJsonAsync<AttachmentDto>())!;
@@ -158,11 +157,11 @@ public sealed class AttachmentStorageTests
         readerResponse.EnsureSuccessStatusCode(); var reader = (await readerResponse.Content.ReadFromJsonAsync<DocumentDto>())!;
         var second = await Upload(client); second.EnsureSuccessStatusCode(); var interrupted = (await second.Content.ReadFromJsonAsync<AttachmentDto>())!;
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Set<Attachment>().Where(x => x.Id == draft.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddDays(-15)));
-        await db.Set<Attachment>().Where(x => x.Id == interrupted.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Pending).SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
+        await db.Attachments.Where(x => x.Id == draft.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddDays(-15)));
+        await db.Attachments.Where(x => x.Id == interrupted.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Pending).SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
-        Assert.Empty(await db.Set<Attachment>().ToListAsync());
-        var document = await db.Set<Document>().SingleAsync(x => x.Id == reader.Id);
+        Assert.Empty(await db.Attachments.ToListAsync());
+        var document = await db.Documents.SingleAsync(x => x.Id == reader.Id);
         Assert.True(document.IsDeleted); Assert.Null(document.AttachmentId);
         Assert.Equal(0, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
         var root = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value.StoragePath;
@@ -183,21 +182,21 @@ public sealed class AttachmentStorageTests
         var uploading = Upload(client);
         await fault.WriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var reservation = await db.Set<Attachment>().AsNoTracking().SingleAsync();
-        await db.Set<Attachment>().Where(x => x.Id == reservation.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
+        var reservation = await db.Attachments.AsNoTracking().SingleAsync();
+        await db.Attachments.Where(x => x.Id == reservation.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
-        Assert.Empty(await db.Set<Attachment>().ToListAsync());
+        Assert.Empty(await db.Attachments.ToListAsync());
         fault.FailDelete = true;
         fault.ContinueWrite.SetResult();
         Assert.Equal(HttpStatusCode.Conflict, (await uploading).StatusCode);
-        var cleanup = await db.Set<Attachment>().AsNoTracking().SingleAsync();
+        var cleanup = await db.Attachments.AsNoTracking().SingleAsync();
         Assert.NotEqual(reservation.Id, cleanup.Id);
         Assert.Equal(reservation.StorageKey, cleanup.StorageKey);
         Assert.Equal(AttachmentStates.Deleting, cleanup.StorageState);
         Assert.Equal(600, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
         fault.FailDelete = false;
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
-        Assert.Empty(await db.Set<Attachment>().ToListAsync());
+        Assert.Empty(await db.Attachments.ToListAsync());
         var root = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value.StoragePath;
         Assert.Empty(Directory.GetFiles(root, "*.blob", SearchOption.AllDirectories));
         Assert.Empty(Directory.GetFiles(root, "*.upload", SearchOption.AllDirectories));
@@ -217,7 +216,7 @@ public sealed class AttachmentStorageTests
         (await Upload(client)).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var original = await db.Set<Attachment>().SingleAsync();
+        var original = await db.Attachments.SingleAsync();
         var root = scope.ServiceProvider.GetRequiredService<IOptions<FilesOptions>>().Value.StoragePath;
         string PathFor(string key) => Path.Combine(root, key[..2], key.Substring(2, 2), key + ".blob");
         File.SetLastWriteTimeUtc(PathFor(original.StorageKey), DateTime.UtcNow.AddDays(-2));

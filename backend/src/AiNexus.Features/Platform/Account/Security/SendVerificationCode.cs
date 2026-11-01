@@ -24,7 +24,7 @@ internal sealed class SendVerificationCode(VerificationChallenges challenges, Ma
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/verification-codes", (VerificationCodeRequest body, HttpContext http, ICurrentUser user, SendVerificationCode handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
         .Audited(AccountAudit.VerificationCodeSent)
         .WithName("SendVerificationCode");

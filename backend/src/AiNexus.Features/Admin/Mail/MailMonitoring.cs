@@ -47,7 +47,7 @@ internal sealed record MailQueue(int Queued, int Sending, int FailedLastHour, in
 {
     public static async Task<MailQueue> ReadAsync(AppDbContext db, DateTimeOffset now, CancellationToken ct)
     {
-        var messages = db.Set<OutboundMessage>().AsNoTracking();
+        var messages = db.OutboundMessages.AsNoTracking();
         var pending = await messages.Where(x => x.Status == MailStates.Queued || x.Status == MailStates.Sending).GroupBy(x => 1).Select(g => new
         {
             Queued = g.Count(x => x.Status == MailStates.Queued),

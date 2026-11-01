@@ -26,7 +26,8 @@ internal sealed class KnowledgeSearchRequestValidator : RequestValidator<Knowled
 internal sealed class SearchKnowledge(RetrievalPipeline pipeline)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/search", (KnowledgeSearchRequest request, ICurrentUser user, SearchKnowledge handler, CancellationToken ct) => handler.HandleAsync(user.Id, request, ct).ToHttpResultAsync())
+        .MapPost("/search", (KnowledgeSearchRequest request, ICurrentUser user, SearchKnowledge handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, request, ct))
         .Audited(KnowledgeAudit.DocumentSearched)
         .WithName("SearchKnowledge");
 

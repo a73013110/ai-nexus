@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -19,7 +18,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/export", ([AsParameters] AttendanceRecordsFilter filter, ICurrentUser user, ExportAttendanceRecords handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, filter, ct)
-                .ToHttpResultAsync(file => file.ToHttpResult()))
+                .ToFileResultAsync())
         .RequireRateLimiting(AttendanceModule.ExportRateLimit)
         .Audited(AttendanceAudit.RecordExported)
         .WithName("ExportAttendanceRecords");
@@ -47,9 +46,9 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         List<Guid> users = [.. data.People.Where(x => x.UserId is not null).Select(x => x.UserId!.Value)];
         if (users.Count == 0) return [];
         var (start, end) = AttendanceRoster.Bounds((data.From, data.To < data.Today ? data.To : data.Today));
-        var rows = await db.Set<CardAssignment>().AsNoTracking()
+        var rows = await db.CardAssignments.AsNoTracking()
             .Where(a => a.UserId != null && users.Contains(a.UserId.Value) && a.StartsAt < end && (a.EndsAt == null || a.EndsAt > start))
-            .Join(db.Set<Card>(), a => a.CardId, c => c.Id, (a, c) => new { a.UserId, a.StartsAt, c.CardNumber })
+            .Join(db.Cards, a => a.CardId, c => c.Id, (a, c) => new { a.UserId, a.StartsAt, c.CardNumber })
             .ToListAsync(ct);
         return rows.GroupBy(x => x.UserId!.Value)
             .ToDictionary(g => g.Key, g => string.Join("、", g.OrderBy(x => x.StartsAt).Select(x => x.CardNumber).Distinct()));

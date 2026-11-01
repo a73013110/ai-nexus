@@ -28,7 +28,8 @@ public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total,
 internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users", async (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) => (await handler.HandleAsync(search, offset ?? 0, ct)).ToHttpResult())
+        .MapGet("/users", (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) =>
+            handler.HandleAsync(search, offset ?? 0, ct))
         .Audited(IdentityAudit.UserRead)
         .WithName("ListAdminUsers");
 

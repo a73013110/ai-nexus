@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -137,7 +136,7 @@ public sealed class TestIdentityTests
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == actor.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
+            db.Remove(await db.UserRoles.SingleAsync(x => x.UserId == actor.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         Assert.False((await admin.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Authenticated);
         Assert.Equal(HttpStatusCode.Unauthorized, (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).StatusCode);

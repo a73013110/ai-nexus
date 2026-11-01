@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -11,8 +10,8 @@ namespace AiNexus.Features.Work.Repositories.Reviews;
 internal sealed class ReadRepositoryReview(AppDbContext db, RepositoryReviewService reviews)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/reviews/{id:guid}", async (Guid id, ICurrentUser user, ReadRepositoryReview handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapGet("/reviews/{id:guid}", (Guid id, ICurrentUser user, ReadRepositoryReview handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(RepositoriesAudit.ReviewRead)
         .WithName("ReadRepositoryReview");
 
@@ -23,7 +22,7 @@ internal sealed class ReadRepositoryReview(AppDbContext db, RepositoryReviewServ
         var row = found.Value;
         var source = await reviews.CheckSourceAsync(owner, row, ct);
         if (!source.IsSuccess) return source.Error;
-        var results = await db.Set<RepositoryReviewResult>().AsNoTracking().Where(x => x.ReviewId == id).ToDictionaryAsync(x => x.Ordinal, ct);
+        var results = await db.RepositoryReviewResults.AsNoTracking().Where(x => x.ReviewId == id).ToDictionaryAsync(x => x.Ordinal, ct);
         var frozen = RepositoryReviewService.Snapshot(row);
         if (!frozen.IsSuccess) return frozen.Error;
         var snapshot = frozen.Value;

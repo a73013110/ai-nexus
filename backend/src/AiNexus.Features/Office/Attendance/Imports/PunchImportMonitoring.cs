@@ -23,8 +23,8 @@ internal sealed class PunchImportMonitoring(AppDbContext db, PunchImportState st
     {
         var settings = options.Value.Import;
         var now = clock.GetUtcNow();
-        var imports = db.Set<PunchImport>().AsNoTracking();
-        var failedFiles = await (from file in db.Set<PunchFile>().AsNoTracking()
+        var imports = db.PunchImports.AsNoTracking();
+        var failedFiles = await (from file in db.PunchFiles.AsNoTracking()
                                  join import in imports on file.LastImportId equals import.Id
                                  where import.Status == PunchImportStatuses.Failed
                                  select file.Id).CountAsync(ct);

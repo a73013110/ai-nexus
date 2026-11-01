@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Conversations;
@@ -33,8 +31,8 @@ internal sealed class DeleteConversation(
     AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationDeleted)
         .WithName("DeleteConversation");
 
@@ -60,13 +58,13 @@ internal sealed class DeleteConversation(
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
                 await quota.LockOwnerAsync(owner, ct);
 
-                var links = await db.Set<MessageAttachment>()
-                    .Where(x => db.Set<Message>().Any(m => m.Id == x.MessageId && m.ConversationId == id))
+                var links = await db.MessageAttachments
+                    .Where(x => db.Messages.Any(m => m.Id == x.MessageId && m.ConversationId == id))
                     .ToListAsync(ct);
 
                 var fileIds = links.Select(x => x.AttachmentId).Distinct().ToList();
 
-                db.Set<MessageAttachment>().RemoveRange(links);
+                db.MessageAttachments.RemoveRange(links);
                 conversation.IsDeleted = true;
                 events.Raise(new ConversationDeleted(id, owner));
 

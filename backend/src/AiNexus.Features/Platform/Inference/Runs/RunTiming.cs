@@ -30,7 +30,7 @@ public static class RunTiming
     {
         if (ids.Count == 0) return [];
 
-        return await db.Runs.AsNoTracking()
+        return await db.GenerationRuns.AsNoTracking()
             .Where(x => ids.Contains(x.Id) && x.DurationMilliseconds != null)
             .Select(x => new GenerationRun
             {

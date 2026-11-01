@@ -55,7 +55,7 @@ public sealed class TokenBudgetTests
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.UsedTokens);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Runs.Where(x => x.Id == run.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, UtcDay.Start(DateTimeOffset.UtcNow).AddDays(-1)));
+        await db.GenerationRuns.Where(x => x.Id == run.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, UtcDay.Start(DateTimeOffset.UtcNow).AddDays(-1)));
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(0, budget.ReservedTokens); Assert.Equal(500, budget.RemainingTokens);
     }

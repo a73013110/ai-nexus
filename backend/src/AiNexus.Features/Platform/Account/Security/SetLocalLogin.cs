@@ -14,7 +14,7 @@ internal sealed class SetLocalLogin(AccountSecurity security, Reauthentication r
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/settings/account/local-login", (LocalLoginRequest body, HttpContext http, ICurrentUser user, SetLocalLogin handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, body, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.CredentialsRateLimit)
         .Audited(AccountAudit.LocalLoginEnabled)
         .WithName("SetLocalLogin");

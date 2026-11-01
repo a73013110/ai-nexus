@@ -10,7 +10,7 @@ namespace AiNexus.Features.Office.Attendance.Records;
 internal sealed class GetAttendanceRules(IOptions<AttendanceOptions> options)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (GetAttendanceRules handler) => TypedResults.Ok(handler.Handle()))
+        .MapGet("", (GetAttendanceRules handler) => handler.Handle())
         .NotAudited("固定的出勤規則說明")
         .WithName("GetAttendanceRules");
 

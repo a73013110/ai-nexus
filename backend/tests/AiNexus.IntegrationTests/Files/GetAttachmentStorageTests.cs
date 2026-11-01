@@ -25,20 +25,20 @@ public sealed class GetAttachmentStorageTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<Role>().AddRange(new Role { Id = "probe", Name = "啟用" }, new Role { Id = "probe-off", Name = "停用", Enabled = false }, new Role { Id = "probe-null", Name = "未設上限" });
-            db.Set<RoleGroup>().AddRange(
+            db.Roles.AddRange(new Role { Id = "probe", Name = "啟用" }, new Role { Id = "probe-off", Name = "停用", Enabled = false }, new Role { Id = "probe-null", Name = "未設上限" });
+            db.RoleGroups.AddRange(
                 new RoleGroup { Id = "probe-small", Name = "小" }, new RoleGroup { Id = "probe-large", Name = "大" },
                 new RoleGroup { Id = "probe-disabled", Name = "停用群組", Enabled = false }, new RoleGroup { Id = "probe-tiny", Name = "停用角色的群組" },
                 new RoleGroup { Id = "probe-null", Name = "未設上限" });
-            db.Set<RoleGroupRole>().AddRange(
+            db.RoleGroupRoles.AddRange(
                 new RoleGroupRole { RoleId = "probe", GroupId = "probe-small" }, new RoleGroupRole { RoleId = "probe", GroupId = "probe-large" },
                 new RoleGroupRole { RoleId = "probe", GroupId = "probe-disabled" }, new RoleGroupRole { RoleId = "probe-off", GroupId = "probe-tiny" },
                 new RoleGroupRole { RoleId = "probe-null", GroupId = "probe-null" });
-            db.Set<GroupModelPolicy>().AddRange(
+            db.GroupModelPolicies.AddRange(
                 new GroupModelPolicy { GroupId = "probe-small", StoredAttachmentLimitBytes = 3000 }, new GroupModelPolicy { GroupId = "probe-large", StoredAttachmentLimitBytes = 7000 },
                 new GroupModelPolicy { GroupId = "probe-disabled", StoredAttachmentLimitBytes = 20 }, new GroupModelPolicy { GroupId = "probe-tiny", StoredAttachmentLimitBytes = 10 },
                 new GroupModelPolicy { GroupId = "probe-null" });
-            db.Set<UserRole>().AddRange(
+            db.UserRoles.AddRange(
                 new UserRole { UserId = alice, RoleId = "probe-null" },
                 new UserRole { UserId = bob, RoleId = "probe" },
                 new UserRole { UserId = carol, RoleId = "probe" }, new UserRole { UserId = carol, RoleId = "probe-off" },
@@ -46,7 +46,7 @@ public sealed class GetAttachmentStorageTests
             // 個人上限可以比群組寬；預約中與待清理的附件也算已用。
             (await db.Users.SingleAsync(x => x.Id == bob)).AttachmentLimitBytes = 5000;
             (await db.Users.SingleAsync(x => x.Id == dave)).Enabled = false;
-            db.Set<Attachment>().AddRange(
+            db.Attachments.AddRange(
                 new Attachment { OwnerId = bob, FileName = "a.txt", ContentType = "text/plain", Size = 1000 },
                 new Attachment { OwnerId = bob, FileName = "b.txt", ContentType = "text/plain", Size = 150, StorageState = AttachmentStates.Pending },
                 new Attachment { OwnerId = bob, FileName = "c.txt", ContentType = "text/plain", Size = 50, StorageState = AttachmentStates.Deleting },

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Audit;
 using System.Text;
 using System.Text.Json;
@@ -66,13 +65,13 @@ public static class ConnectionVerifier
             await VerifyPersistenceAsync(services, ct);
             var db = services.GetRequiredService<AppDbContext>();
 
-            if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
-                || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Chat, ct))
+            if (!await db.RoleGroupRoles.AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
+                || !await db.RoleGroupFeatures.AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Chat, ct))
             {
                 throw new ExternalServiceException(DefaultAccessMissing, "預設角色、群組與 chat 功能關聯尚未完成。");
             }
 
-            var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
+            var members = await db.UserRoles.CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
             return $"SQL EF Core／Dapper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
         });
 

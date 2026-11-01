@@ -173,7 +173,7 @@ public sealed class MailDispatcherTests
         using (var scope = factory.Services.CreateScope())
         {
             // 模擬寄到一半中止的 worker：已認領、租約已過期。
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().Where(x => x.Id == stuck)
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.Where(x => x.Id == stuck)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)
                     .SetProperty(x => x.LeaseToken, Guid.NewGuid()).SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddMinutes(1)));
         }
@@ -203,7 +203,7 @@ public sealed class MailDispatcherTests
         using (var scope = factory.Services.CreateScope())
         {
             // stuck：寄到一半中止、租約已過期；leased：另一個 worker 寄送中、租約未到期；later：退避中。
-            var messages = scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>();
+            var messages = scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages;
             await messages.Where(x => x.Id == stuck).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)
                 .SetProperty(x => x.LeaseToken, Guid.NewGuid()).SetProperty(x => x.LeaseUntil, now.AddSeconds(-1)));
             await messages.Where(x => x.Id == leased).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Sending).SetProperty(x => x.Attempts, 1)

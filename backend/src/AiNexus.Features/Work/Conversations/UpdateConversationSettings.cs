@@ -25,9 +25,9 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 internal sealed class UpdateConversationSettings(AppDbContext db, GenerationScheduler scheduler)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPatch("/{id:guid}/settings", async (
+        .MapPatch("/{id:guid}/settings", (
                 Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(ConversationsAudit.ConversationUpdated)
         .WithName("UpdateConversationSettings");
 
@@ -46,7 +46,7 @@ internal sealed class UpdateConversationSettings(AppDbContext db, GenerationSche
             if (names is null) return ConversationsErrors.InvalidLabels;
             // 保留未變動的標籤實體：同一個主鍵若先移除再加回，會破壞 EF 的追蹤身分。
             var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
-            db.Set<ConversationLabel>().RemoveRange(removed);
+            db.ConversationLabels.RemoveRange(removed);
             foreach (var label in removed) conversation.Labels.Remove(label);
             foreach (var name in names.Where(name => !conversation.Labels.Any(x => x.Name == name)))
             {

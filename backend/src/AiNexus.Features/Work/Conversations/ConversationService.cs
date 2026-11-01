@@ -26,14 +26,14 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
     /// <summary>取得使用者擁有的對話並交由 EF 追蹤（不預先載入標籤），供之後修改對話屬性時使用。</summary>
     public async Task<Result<Conversation>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var conversation = await db.Set<Conversation>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
+        var conversation = await db.Conversations.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
         return conversation is null ? ConversationsErrors.NotFound : conversation;
     }
 
     /// <summary>只確認對話存在且屬於該使用者，用 SQL EXISTS 查詢，不把實體載入記憶體。</summary>
     public async Task<Result> RequireOwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var exists = await db.Set<Conversation>().AnyAsync(x => x.Id == id && x.OwnerId == owner, ct);
+        var exists = await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct);
         return exists ? Result.Success : ConversationsErrors.NotFound;
     }
 
@@ -76,7 +76,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
                 return HttpErrors.InvalidRequest;
             }
 
-            var original = await db.Set<Message>()
+            var original = await db.Messages
                 .SingleOrDefaultAsync(x => x.Id == userId && x.ConversationId == conversation.Id && x.Role == "user", ct);
 
             if (original is null)
@@ -94,7 +94,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
             }
 
             // 父訊息必須是已結束生成的回答；排隊中或生成中的回答還沒有定案，不能再接續提問。
-            if (request.ParentMessageId is Guid parentId && !await db.Set<Message>().AnyAsync(
+            if (request.ParentMessageId is Guid parentId && !await db.Messages.AnyAsync(
                 x => x.Id == parentId && x.ConversationId == conversation.Id && x.Role == "assistant"
                     && x.Status != RunStates.Queued && x.Status != RunStates.Running, ct))
             {
@@ -108,7 +108,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
                 Content = request.Prompt.Trim(),
             };
 
-            db.Set<Message>().Add(user);
+            db.Messages.Add(user);
 
             if (conversation.ActiveLeafId is null && conversation.Title == CreateConversation.DefaultTitle)
             {
@@ -126,7 +126,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
             ModelId = modelId,
         };
 
-        db.Set<Message>().Add(assistant);
+        db.Messages.Add(assistant);
 
         // 作用中葉節點指向新回答，之後的 UI 與上下文才會沿著這條分支走。
         conversation.ActiveLeafId = assistant.Id;
@@ -140,14 +140,14 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
     /// </summary>
     public async Task UpdateAnswerAsync(GenerationRun run, CancellationToken ct)
     {
-        var message = await db.Set<Message>().SingleAsync(x => x.Id == run.AssistantMessageId, ct);
+        var message = await db.Messages.SingleAsync(x => x.Id == run.AssistantMessageId, ct);
         message.Content = run.Content;
         message.Status = run.Status;
         message.ErrorCode = run.ErrorCode;
         message.IssueCode = run.IssueCode;
 
         // 對話若在生成途中被軟刪除，仍要更新 UpdatedAt，所以必須略過軟刪除過濾器，否則查不到該列。
-        var conversation = await db.Set<Conversation>()
+        var conversation = await db.Conversations
             .IgnoreQueryFilters([SoftDelete.Filter])
             .SingleAsync(x => x.Id == run.ConversationId, ct);
 
@@ -165,13 +165,13 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
     {
         if (delta.Length > 0)
         {
-            await db.Set<Message>()
+            await db.Messages
                 .Where(x => x.Id == answer)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Content, x => x.Content + delta), ct);
         }
 
         var now = clock.GetUtcNow();
-        await db.Set<Conversation>()
+        await db.Conversations
             .IgnoreQueryFilters([SoftDelete.Filter])
             .Where(x => x.Id == conversation)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.UpdatedAt, now), ct);

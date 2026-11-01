@@ -11,7 +11,7 @@
 
 ## 端點寫法
 
-- handler 回傳 `Result<ExportFile>`，端點寫 `.ToHttpResultAsync(file => file.ToHttpResult())`。
+- handler 回傳 `Result<ExportFile>`，端點寫 `.ToFileResultAsync()`。
 - 不要自己設 `Cache-Control`：`/api` 回應在送出前一律改寫為不快取（[ADR 0006](../decisions/0006-api-no-store.md)）。
 - 匯出是把資料帶離系統：加 `.Audited(...)`、`.RequireRateLimiting(...)`，筆數超過上限時拒絕而不是截斷（見稽核、日誌匯出）。
 - 要在檔案送出前再檢查權限的（例如成果的 PDF 渲染較慢），在 handler 渲染後重新讀取一次。

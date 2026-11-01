@@ -18,7 +18,7 @@ internal sealed class ExportArtifact(GetArtifact reader, PdfRenderer pdf)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/export/{format}", (
                 Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, format, version, ct).ToHttpResultAsync(file => file.ToHttpResult()))
+            handler.HandleAsync(user.Id, id, format, version, ct).ToFileResultAsync())
         .Audited(ArtifactsAudit.ArtifactExported)
         .WithName("ExportArtifact");
 

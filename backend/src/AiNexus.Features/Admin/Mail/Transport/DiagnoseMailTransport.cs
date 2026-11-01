@@ -50,7 +50,8 @@ public static class MailDiagnosisStatuses
 internal sealed partial class DiagnoseMailTransport(AuditTrail audit, IOptions<MailOptions> options, TimeProvider clock, ILogger<DiagnoseMailTransport> logger)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (MailDiagnosisRequest body, IRequestActor actor, DiagnoseMailTransport handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
+        .MapPost("", (MailDiagnosisRequest body, IRequestActor actor, DiagnoseMailTransport handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
         .RequireRateLimiting(MailModule.DiagnosisRateLimit)
         .Audited(MailAudit.TransportDiagnosed)
         .WithName("DiagnoseMailTransport");

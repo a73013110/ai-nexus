@@ -8,7 +8,7 @@ public sealed record CurrentReleaseDto(string Version, string? Revision, DateTim
 internal sealed class GetCurrentRelease(AppRelease release)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/releases/current", (GetCurrentRelease handler) => TypedResults.Ok(handler.Handle()))
+        .MapGet("/releases/current", (GetCurrentRelease handler) => handler.Handle())
         .NotAudited("目前版本與更新說明，所有使用者都看得到")
         .WithName("GetCurrentRelease");
 

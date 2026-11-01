@@ -30,7 +30,7 @@ public sealed class DirectoryBindingTests
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<UserRole>().Add(new UserRole { UserId = bobId, RoleId = "administrator" });
+            db.UserRoles.Add(new UserRole { UserId = bobId, RoleId = "administrator" });
             await db.SaveChangesAsync();
             version = (await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId)).SecurityVersion;
         }
@@ -44,7 +44,7 @@ public sealed class DirectoryBindingTests
             var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId);
             Assert.Equal((FixtureAdDirectory.Erin, "erin.chen", true), (user.Sid, user.AdAccount, user.AdEnabled));
             Assert.Equal(version + 1, user.SecurityVersion);
-            Assert.Equal(["administrator", "member"], await db.Set<UserRole>().Where(x => x.UserId == bobId).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToListAsync());
+            Assert.Equal(["administrator", "member"], await db.UserRoles.Where(x => x.UserId == bobId).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToListAsync());
             Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.Action == "identity.user_directory.bound" && x.ResourceId == bobId && x.Result == "completed"));
         }
         // 以舊 SID 建立的工作階段失效。

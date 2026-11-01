@@ -12,7 +12,7 @@ internal sealed class GetVerificationCode(VerificationChallenges challenges, Mai
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/settings/account/verification-codes/{id:guid}", (Guid id, ICurrentUser user, GetVerificationCode handler, CancellationToken ct)
-            => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+            => handler.HandleAsync(user.Id, id, ct))
         .NotAudited("輪詢驗證碼的寄送狀態")
         .WithName("GetVerificationCode");
 

@@ -1,9 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Jobs;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
@@ -21,8 +17,8 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentDeleted)
         .WithName("DeleteDocument");
 
@@ -39,11 +35,11 @@ internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, 
             if (!current.IsSuccess) return current.Error;
             var document = current.Value;
             document.IsDeleted = true; document.Status = "deleted"; var attachment = document.AttachmentId; document.AttachmentId = null;
-            (await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct)).IsDeleted = true;
-            await db.Set<BackgroundJob>().Where(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running)).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
-            await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
-            await db.Set<Chunk>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
+            (await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct)).IsDeleted = true;
+            await db.BackgroundJobs.Where(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running)).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
+            await db.ResourceAttachments.Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+            await db.Chunks.Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
+            await db.DocumentPages.Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
             if (attachment is Guid file) await lifecycle.MarkUnusedAsync([file], ct);
             await transaction.CommitAsync(ct);

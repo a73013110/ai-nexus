@@ -5,7 +5,6 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
-using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +17,6 @@ internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthen
 
     public AccountSecurityDto Describe(HttpContext http, User user)
     {
-        WebSecurity.NoStore(http.Response);
         var methods = new List<string>();
         if (reauthentication.PasswordAvailable(http, user)) methods.Add("password");
         if (CodeAvailable(user)) methods.Add("code");

@@ -20,7 +20,7 @@ public sealed class JobExecution(AppDbContext db, BackgroundJob job, Guid lease)
     {
         ct.ThrowIfCancellationRequested();
         await using var transaction = await db.Database.BeginTransactionAsync(isolation, ct);
-        var changed = await db.Set<BackgroundJob>()
+        var changed = await db.BackgroundJobs
             .Where(x => x.Id == job.Id && x.LeaseToken == lease && x.Status == RunStates.Running && !x.CancelRequested)
             .ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Stage, stage)

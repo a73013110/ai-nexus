@@ -27,28 +27,29 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, null, body, ct).ToHttpResultAsync())
+        routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, null, body, ct))
             .Audited(PromptsAudit.TemplateCreated)
             .WithName("CreatePromptTemplate");
-        routes.MapPut("/{id:guid}", (Guid id, SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+        routes.MapPut("/{id:guid}", (Guid id, SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
             .Audited(PromptsAudit.TemplateUpdated)
             .WithName("UpdatePromptTemplate");
     }
 
     public async Task<Result<PromptTemplateDto>> HandleAsync(Guid owner, Guid? id, SavePromptRequest request, CancellationToken ct)
     {
-        var templates = db.Set<PromptTemplate>();
         PromptTemplate? template;
         if (id is { } key)
         {
-            template = await templates.OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == key, ct);
+            template = await db.PromptTemplates.OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == key, ct);
             if (template is null) return PromptsErrors.NotFound;
         }
         else
         {
-            if (await templates.OwnedBy(owner).CountAsync(ct) >= PromptTemplate.MaxPerOwner) return PromptsErrors.LimitReached;
+            if (await db.PromptTemplates.OwnedBy(owner).CountAsync(ct) >= PromptTemplate.MaxPerOwner) return PromptsErrors.LimitReached;
             template = PromptTemplate.Create(owner);
-            templates.Add(template);
+            db.PromptTemplates.Add(template);
         }
         template.Edit(request.Title, request.Content, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);

@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
@@ -24,7 +23,7 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
     /// <summary>以追蹤模式載入文件並完成權限檢查，供呼叫端修改。</summary>
     public async Task<Result<Document>> FindAsync(Guid actor, Guid id, CancellationToken ct, bool write = false)
     {
-        var doc = await db.Set<Document>().SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
+        var doc = await db.Documents.SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
         if (doc is null) return KnowledgeErrors.DocumentNotFound;
         if (doc.CollectionId is Guid collection)
         {
@@ -58,10 +57,10 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
     /// <see cref="DetailAsync"/> 的批次版本：結果順序與輸入相同，檢查與失敗規則也相同，且查詢次數固定。
     /// 任一文件失敗即整批失敗。
     /// </summary>
-    public async Task<Result<IReadOnlyList<DocumentDto>>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct)
+    public async Task<Result<DocumentDto[]>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct)
     {
         if (ids.Count == 0) return Array.Empty<DocumentDto>();
-        var docs = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
+        var docs = await db.Documents.AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
         var granted = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         var collections = docs.Values.Where(x => x.CollectionId != null).Select(x => x.CollectionId!.Value).Distinct().ToArray();
         var standalone = docs.Values.Where(x => x.CollectionId == null).Select(x => x.Id).ToArray();
@@ -97,7 +96,7 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
         }
         var editable = await access.EditableAsync(actor, resources.DistinctBy(x => x.Id).ToArray(), ct);
         var jobs = docs.Values.Where(x => x.JobId != null).Select(x => x.JobId!.Value).Distinct().ToArray();
-        var states = jobs.Length == 0 ? [] : await db.Set<BackgroundJob>().Where(x => jobs.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Status, ct);
+        var states = jobs.Length == 0 ? [] : await db.BackgroundJobs.Where(x => jobs.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Status, ct);
         return ids.Select((id, index) => Describe(docs[id], editable.Contains(resources[index].Id), docs[id].JobId is Guid job ? states.GetValueOrDefault(job) : null)).ToArray();
     }
 
@@ -107,7 +106,7 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
         var document = await FindAsync(actor, id, ct);
         if (!document.IsSuccess) return document.Error;
         if (document.Value.AttachmentId is not Guid attachment) return KnowledgeErrors.DocumentNotFound;
-        var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == attachment && x.StorageState == AttachmentStates.Ready, ct);
+        var file = await db.Attachments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == attachment && x.StorageState == AttachmentStates.Ready, ct);
         if (file is null) return KnowledgeErrors.DocumentNotFound;
         return file;
     }
@@ -117,7 +116,7 @@ internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, Acc
         var resource = await access.RequireAsync(actor, doc.CollectionId ?? doc.Id, doc.CollectionId is null ? Document.Kind : Collection.Kind, ct);
         if (!resource.IsSuccess) return resource.Error;
         var editable = (await access.DescribeAsync(actor, resource.Value, ct)).CanEdit;
-        var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
+        var state = doc.JobId is Guid job ? await db.BackgroundJobs.Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
         return Describe(doc, editable, state);
     }
 

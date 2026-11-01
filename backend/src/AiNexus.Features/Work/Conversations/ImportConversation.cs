@@ -46,8 +46,8 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
 internal sealed class ImportConversation(AppDbContext db, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/import", async (ConversationBackup body, ICurrentUser user, ImportConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
+        .MapPost("/import", (ConversationBackup body, ICurrentUser user, ImportConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct))
         .WithRequestBodyLimit(ConversationsModule.ImportBodyLimit)
         .Audited(ConversationsAudit.ConversationImported)
         .WithName("ImportConversation");
@@ -108,10 +108,10 @@ internal sealed class ImportConversation(AppDbContext db, TimeProvider clock, Au
             UpdatedAt = now,
         };
         conversation.Labels = labels.Select(x => new ConversationLabel { ConversationId = conversation.Id, Name = x }).ToList();
-        db.Set<Conversation>().Add(conversation);
+        db.Conversations.Add(conversation);
         foreach (var message in backup.Messages)
         {
-            db.Set<Message>().Add(new()
+            db.Messages.Add(new()
             {
                 Id = ids[message.Id],
                 ConversationId = conversation.Id,

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Platform.Events;
 
@@ -11,5 +10,5 @@ namespace AiNexus.Features.Work.Jobs;
 /// </summary>
 internal sealed class CancelDisabledOwnerJobs(AppDbContext db, TimeProvider clock) : IDomainEventHandler<UserDisabled>
 {
-    public Task HandleAsync(UserDisabled e, CancellationToken ct) => db.Set<BackgroundJob>().OwnedBy(e.UserId).RequestCancelAsync(clock.GetUtcNow(), ct);
+    public Task HandleAsync(UserDisabled e, CancellationToken ct) => db.BackgroundJobs.OwnedBy(e.UserId).RequestCancelAsync(clock.GetUtcNow(), ct);
 }

@@ -5,7 +5,8 @@ namespace AiNexus.Features.Admin.AccessControl.Navigation;
 internal sealed class ListNavigationItems(AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/navigation-items", async (ListNavigationItems handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/navigation-items", (ListNavigationItems handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .Audited(AccessControlAudit.NavigationRead)
         .WithName("ListNavigationItems");
 

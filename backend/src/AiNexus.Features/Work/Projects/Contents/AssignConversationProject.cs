@@ -23,16 +23,16 @@ public sealed record ConversationProjectRequest(Guid? ProjectId);
 internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body.ProjectId, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Chat).Audited(ProjectsAudit.ConversationAssigned);
+        .MapPut("/conversations/{id:guid}/project", (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body.ProjectId, ct))
+        .RequireFeature(FeatureCatalog.Chat).Audited(ProjectsAudit.ConversationAssigned);
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid actor, Guid id, Guid? projectId, CancellationToken ct)
     {
         using var conversationLock = await scheduler.LockConversationAsync(id, ct);
         var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
         if (conversation is null) return ProjectsErrors.ConversationMissing;
-        if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
+        if (await db.GenerationRuns.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
         if (projectId is Guid project)
         {
             if (!await features.HoldsAsync(actor, FeatureCatalog.Projects, ct)) return AccessControlErrors.FeatureForbidden;

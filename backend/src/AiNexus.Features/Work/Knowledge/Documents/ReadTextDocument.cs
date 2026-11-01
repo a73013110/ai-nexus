@@ -11,7 +11,8 @@ public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Ver
 internal sealed class ReadTextDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/text", (Guid id, ICurrentUser user, ReadTextDocument handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}/text", (Guid id, ICurrentUser user, ReadTextDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentRead).WithName("ReadTextDocument");
 
     public async Task<Result<TextDocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)

@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Quality;
 using System.Net;
 using System.Net.Http.Json;
@@ -53,7 +51,7 @@ public sealed class EvaluationRunTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(new EvaluationResult { RunId = run.Id, CaseIndex = 0, VariantIndex = 0, Output = "先前完成的回答" });
-            await db.SaveChangesAsync(); await db.Set<BackgroundJob>().Where(x => x.Id == run.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "cancelled").SetProperty(x => x.ActiveKey, (string?)null));
+            await db.SaveChangesAsync(); await db.BackgroundJobs.Where(x => x.Id == run.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "cancelled").SetProperty(x => x.ActiveKey, (string?)null));
         }
         (await owner.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).EnsureSuccessStatusCode();
         await ActivatorUtilities.CreateInstance<BackgroundJobWorker>(f.Services).ProcessNextAsync(CancellationToken.None);
@@ -62,7 +60,7 @@ public sealed class EvaluationRunTests
         var task = check.ServiceProvider.GetRequiredService<ModelTaskService>();
         var settings = f.Services.GetRequiredService<IOptions<InferenceOptions>>().Value;
         var invalid = await task.GenerateAsync(actor, "evaluation", new string('中', 4000), "", CancellationToken.None, expectedConfiguration: ModelTaskConfiguration.Capture(settings.Models[0], settings).Fingerprint); Assert.Equal("context_budget_exceeded", invalid.Error?.Code);
-        Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().Set<ModelInvocation>().CountAsync());
+        Assert.Equal(1, await check.ServiceProvider.GetRequiredService<AppDbContext>().ModelInvocations.CountAsync());
     }
 
     [Fact]
@@ -79,7 +77,7 @@ public sealed class EvaluationRunTests
         Assert.Equal("failed", detail.Run.Job.Status); Assert.Equal("evaluation_configuration_changed", detail.Run.Job.ErrorCode);
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).StatusCode);
         Assert.Equal(0, f.Provider.Calls);
-        using var scope = f.Services.CreateScope(); Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<ModelInvocation>().CountAsync());
+        using var scope = f.Services.CreateScope(); Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<AppDbContext>().ModelInvocations.CountAsync());
     }
 
     [Fact]
@@ -94,6 +92,6 @@ public sealed class EvaluationRunTests
         Assert.Empty((await owner.GetFromJsonAsync<EvaluationSetDto[]>("/api/v1/quality/sets"))!);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/quality/runs/{run.Id}")).StatusCode);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.True(await db.Set<EvaluationResult>().AnyAsync(x => x.RunId == run.Id));
+        Assert.True(await db.EvaluationResults.AnyAsync(x => x.RunId == run.Id));
     }
 }

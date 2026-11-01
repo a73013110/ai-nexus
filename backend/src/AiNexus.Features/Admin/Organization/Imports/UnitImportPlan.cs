@@ -52,8 +52,8 @@ internal sealed class UnitImportPlan
     {
         // GD 一個部門都沒有多半是連到錯的資料庫或權限被收走；照算會把所有已匯入的單位停用，所以拒絕。
         if (source.Count == 0) return OrganizationErrors.ImportEmpty;
-        IQueryable<Unit> unitQuery = tracking ? db.Set<Unit>() : db.Set<Unit>().AsNoTracking();
-        IQueryable<UnitMember> memberQuery = tracking ? db.Set<UnitMember>() : db.Set<UnitMember>().AsNoTracking();
+        IQueryable<Unit> unitQuery = tracking ? db.Units : db.Units.AsNoTracking();
+        IQueryable<UnitMember> memberQuery = tracking ? db.UnitMembers : db.UnitMembers.AsNoTracking();
         // 單位與所屬都是百筆等級（ADR 0017），整表讀進來比逐單位查簡單。
         var units = await unitQuery.ToListAsync(ct);
         var members = await memberQuery.ToListAsync(ct);

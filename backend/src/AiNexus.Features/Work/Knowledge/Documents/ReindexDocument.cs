@@ -1,7 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Jobs;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -18,8 +16,8 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, AttachmentWriteLock writes, JobService jobs)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/reindex", async (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapPost("/{id:guid}/reindex", (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentIndexRebuilt)
         .WithName("ReindexDocument");
 
@@ -32,8 +30,8 @@ internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents,
             if (!found.IsSuccess) return found.Error;
             var doc = found.Value;
             if (doc.CollectionId is null) return KnowledgeErrors.DocumentNotIndexed;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running), ct)) return KnowledgeErrors.JobActive;
-            var savedPages = await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct);
+            if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running), ct)) return KnowledgeErrors.JobActive;
+            var savedPages = await db.DocumentPages.AnyAsync(x => x.DocumentId == id, ct);
             doc.Status = "queued"; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, savedPages ? DocumentEmbeddingHandler.JobKind : DocumentIngestHandler.JobKind, doc.FileName).Id;
             await db.SaveChangesAsync(ct);
             return DocumentAccess.Describe(doc, true);

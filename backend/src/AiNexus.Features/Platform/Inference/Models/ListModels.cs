@@ -12,8 +12,8 @@ namespace AiNexus.Features.Platform.Inference.Models;
 internal sealed class ListModels(ModelCatalog models, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/models", async (ICurrentUser user, ListModels handler, CancellationToken ct) =>
-            TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .MapGet("/models", (ICurrentUser user, ListModels handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, ct))
         .NotAudited("模型選單")
         .WithName("ListModels");
 

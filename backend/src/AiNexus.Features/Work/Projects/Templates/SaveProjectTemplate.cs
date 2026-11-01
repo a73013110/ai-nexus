@@ -26,12 +26,12 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
 internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/templates", async (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, null, body, ct)).ToHttpResult()).Audited(ProjectsAudit.TemplateCreated);
+        .MapPost("/{id:guid}/templates", (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, null, body, ct)).Audited(ProjectsAudit.TemplateCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/templates/{key:guid}", async (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, key, body, ct)).ToHttpResult()).Audited(ProjectsAudit.TemplateUpdated);
+        .MapPut("/{id:guid}/templates/{key:guid}", (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, key, body, ct)).Audited(ProjectsAudit.TemplateUpdated);
 
     public async Task<Result<ProjectTemplateDto>> HandleAsync(Guid actor, Guid id, Guid? key, ProjectTemplateRequest request, CancellationToken ct)
     {
@@ -40,12 +40,12 @@ internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access
         ProjectTemplate? row;
         if (key is Guid existing)
         {
-            row = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == existing && x.ProjectId == id, ct);
+            row = await db.ProjectTemplates.SingleOrDefaultAsync(x => x.Id == existing && x.ProjectId == id, ct);
             if (row is null) return ProjectsErrors.TemplateMissing;
         }
         else
         {
-            if (await db.Set<ProjectTemplate>().CountAsync(x => x.ProjectId == id, ct) >= ProjectTemplate.MaxPerProject) return ProjectsErrors.TemplateLimit;
+            if (await db.ProjectTemplates.CountAsync(x => x.ProjectId == id, ct) >= ProjectTemplate.MaxPerProject) return ProjectsErrors.TemplateLimit;
             row = new() { ProjectId = id };
             db.Add(row);
         }

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Conversations;
@@ -84,7 +83,7 @@ public sealed class GetDashboardTests
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform&" + Period)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync($"/api/v1/dashboard?ownerId={Guid.NewGuid()}&{Period}")).StatusCode);
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>()
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().RoleGroupFeatures
                 .Where(x => x.FeatureId == FeatureCatalog.Knowledge).ExecuteDeleteAsync();
         Assert.DoesNotContain((await Read(bob, Period)).Sections, x => x.Id == "knowledge");
     }

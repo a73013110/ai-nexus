@@ -29,19 +29,20 @@ public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnl
 internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/catalog", (GetAdminCatalog handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .NotAudited("管理頁的固定目錄")
         .WithName("GetAdminCatalog");
 
     public async Task<AdminCatalogDto> HandleAsync(CancellationToken ct)
     {
-        var roles = await db.Set<Role>().AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
-        var groups = await db.Set<RoleGroup>().AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
-        var features = FeatureDto.InCatalogOrder(await db.Set<Feature>().AsNoTracking().ToListAsync(ct));
-        var links = (await db.Set<RoleGroupRole>().AsNoTracking().ToListAsync(ct)).ToLookup(x => x.RoleId, x => x.GroupId);
-        var grants = (await db.Set<RoleGroupFeature>().AsNoTracking().ToListAsync(ct)).ToLookup(x => x.GroupId);
-        var policies = await db.Set<GroupModelPolicy>().AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
-        var counts = await db.Set<UserRole>().GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
+        var roles = await db.Roles.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
+        var groups = await db.RoleGroups.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
+        var features = FeatureDto.InCatalogOrder(await db.Features.AsNoTracking().ToListAsync(ct));
+        var links = (await db.RoleGroupRoles.AsNoTracking().ToListAsync(ct)).ToLookup(x => x.RoleId, x => x.GroupId);
+        var grants = (await db.RoleGroupFeatures.AsNoTracking().ToListAsync(ct)).ToLookup(x => x.GroupId);
+        var policies = await db.GroupModelPolicies.AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
+        var counts = await db.UserRoles.GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
         var roleDtos = roles
             .Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links[x.Id].ToArray(), counts.GetValueOrDefault(x.Id)))
             .ToArray();

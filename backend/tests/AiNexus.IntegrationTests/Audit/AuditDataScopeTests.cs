@@ -45,11 +45,11 @@ public sealed class AuditDataScopeTests
             db.AuditEvents.AddRange(new[] { bob, frank, carol, erin, dave, system }.Select(owner => new AuditEvent { Category = "activity", OwnerId = owner, Action = Action, ResourceId = owner, }));
             db.AuditEvents.Add(new AuditEvent { Category = "activity", OwnerId = dave, ActorId = bob, Action = Action, ResourceId = Guid.Empty });
             db.AuditEvents.Add(new AuditEvent { Category = "access", OwnerId = dave, SubjectUserId = frank, Action = Action, ResourceId = aboutFrank });
-            db.Set<Role>().Add(new() { Id = "reviewer", Name = "稽核查閱" });
-            db.Set<RoleGroup>().AddRange(new RoleGroup { Id = "reviewers", Name = "稽核查閱" }, new RoleGroup { Id = "self-review", Name = "自己的紀錄" });
-            db.Set<RoleGroupRole>().Add(new() { RoleId = "reviewer", GroupId = "reviewers" });
-            db.Set<RoleGroupFeature>().Add(new() { GroupId = "reviewers", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Unit });
-            db.Set<UserRole>().Add(new() { UserId = bob, RoleId = "reviewer" });
+            db.Roles.Add(new() { Id = "reviewer", Name = "稽核查閱" });
+            db.RoleGroups.AddRange(new RoleGroup { Id = "reviewers", Name = "稽核查閱" }, new RoleGroup { Id = "self-review", Name = "自己的紀錄" });
+            db.RoleGroupRoles.Add(new() { RoleId = "reviewer", GroupId = "reviewers" });
+            db.RoleGroupFeatures.Add(new() { GroupId = "reviewers", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Unit });
+            db.UserRoles.Add(new() { UserId = bob, RoleId = "reviewer" });
             await db.SaveChangesAsync();
         });
         using var client = await factory.SignedInAsync("bob");
@@ -63,12 +63,12 @@ public sealed class AuditDataScopeTests
         // 多個群組的範圍以 OR 合併。
         await WithDbAsync(factory, async db =>
         {
-            db.Set<RoleGroupRole>().Add(new() { RoleId = "reviewer", GroupId = "self-review" });
-            db.Set<RoleGroupFeature>().Add(new() { GroupId = "self-review", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.UnitTree });
+            db.RoleGroupRoles.Add(new() { RoleId = "reviewer", GroupId = "self-review" });
+            db.RoleGroupFeatures.Add(new() { GroupId = "self-review", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.UnitTree });
             await db.SaveChangesAsync();
         });
         Assert.Equal([bob, frank, carol, Guid.Empty, aboutFrank], await VisibleAsync(client));
-        await WithDbAsync(factory, db => db.Set<RoleGroupRole>().Where(x => x.GroupId == "self-review").ExecuteDeleteAsync());
+        await WithDbAsync(factory, db => db.RoleGroupRoles.Where(x => x.GroupId == "self-review").ExecuteDeleteAsync());
 
         await SetScopeAsync(factory, DataScopes.All);
         Assert.Equal([bob, frank, carol, erin, dave, system, Guid.Empty, aboutFrank], await VisibleAsync(client));
@@ -86,7 +86,7 @@ public sealed class AuditDataScopeTests
         Assert.DoesNotContain(system.ToString(), csv);
 
         // 撤銷授權仍是 403，與範圍無關。
-        await WithDbAsync(factory, db => db.Set<UserRole>().Where(x => x.UserId == bob && x.RoleId == "reviewer").ExecuteDeleteAsync());
+        await WithDbAsync(factory, db => db.UserRoles.Where(x => x.UserId == bob && x.RoleId == "reviewer").ExecuteDeleteAsync());
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/admin/audit")).StatusCode);
     }
 
@@ -99,11 +99,11 @@ public sealed class AuditDataScopeTests
         await WithDbAsync(factory, async db =>
         {
             db.AuditEvents.AddRange(new[] { bob, dave }.Select(owner => new AuditEvent { Category = "activity", OwnerId = owner, Action = Action, ResourceId = owner, }));
-            db.Set<Role>().Add(new() { Id = "reviewer", Name = "稽核查閱" });
-            db.Set<RoleGroup>().Add(new() { Id = "reviewers", Name = "稽核查閱" });
-            db.Set<RoleGroupRole>().Add(new() { RoleId = "reviewer", GroupId = "reviewers" });
-            db.Set<RoleGroupFeature>().Add(new() { GroupId = "reviewers", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.UnitTree });
-            db.Set<UserRole>().Add(new() { UserId = bob, RoleId = "reviewer" });
+            db.Roles.Add(new() { Id = "reviewer", Name = "稽核查閱" });
+            db.RoleGroups.Add(new() { Id = "reviewers", Name = "稽核查閱" });
+            db.RoleGroupRoles.Add(new() { RoleId = "reviewer", GroupId = "reviewers" });
+            db.RoleGroupFeatures.Add(new() { GroupId = "reviewers", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.UnitTree });
+            db.UserRoles.Add(new() { UserId = bob, RoleId = "reviewer" });
             await db.SaveChangesAsync();
         });
         using var client = await factory.SignedInAsync("bob");
@@ -114,7 +114,7 @@ public sealed class AuditDataScopeTests
         => [.. (await client.GetFromJsonAsync<AuditDto[]>($"/api/v1/admin/audit?action={Action}"))!.OrderBy(x => x.Id).Select(x => x.ResourceId!.Value)];
 
     private static Task SetScopeAsync(AppFactory factory, string? scope)
-        => WithDbAsync(factory, db => db.Set<RoleGroupFeature>().Where(x => x.GroupId == "reviewers").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope)));
+        => WithDbAsync(factory, db => db.RoleGroupFeatures.Where(x => x.GroupId == "reviewers").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope)));
 
     private static async Task WithDbAsync(AppFactory factory, Func<AppDbContext, Task> action)
     {

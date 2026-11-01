@@ -49,11 +49,13 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
 internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/sets", async (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, null, body, ct)).ToHttpResult())
+        .MapPost("/sets", (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, null, body, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/sets/{id:guid}", async (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/sets/{id:guid}", (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetUpdated);
 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
@@ -68,13 +70,13 @@ internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, 
                 var allowed = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
                 if (!allowed.IsSuccess) return allowed.Error;
                 resource = allowed.Value;
-                var changed = await db.Set<EvaluationSet>().Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
+                var changed = await db.EvaluationSets.Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
                 if (changed != 1) return QualityErrors.SetConflict;
                 resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
             }
             else
             {
-                if (await db.Set<Resource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
+                if (await db.Resources.CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
                 resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }

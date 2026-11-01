@@ -20,8 +20,8 @@ public sealed record AdminConversationDetailDto(AdminConversationDto Conversatio
 internal sealed class ReadAdminConversation(AppDbContext db, AccessService access, AuditTrail audit, TranscriptReader transcripts)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/conversations/{id:guid}", async (Guid id, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapGet("/conversations/{id:guid}", (Guid id, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ConversationsAudit.ConversationContentRead)
         .WithName("ReadAdminConversation");
 

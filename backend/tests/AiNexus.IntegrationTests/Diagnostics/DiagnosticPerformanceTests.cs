@@ -44,7 +44,7 @@ public sealed class DiagnosticPerformanceTests
         watch.Stop(); Array.Sort(samples); var elapsed = watch.Elapsed.TotalSeconds;
         var health = factory.Services.GetRequiredService<DiagnosticHealth>();
         if (enabled) for (var i = 0; i < 500 && (health.QueueDepth > 0 || health.PendingBytes > 0 || health.Accepted > health.Written); i++) await Task.Delay(10);
-        using var scope = factory.Services.CreateScope(); var rows = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DiagnosticEvent>().LongCountAsync();
+        using var scope = factory.Services.CreateScope(); var rows = await scope.ServiceProvider.GetRequiredService<AppDbContext>().DiagnosticEvents.LongCountAsync();
         return new(samples.Length / elapsed, samples[2000], samples[3800], samples[3960], GC.GetTotalAllocatedBytes(true) - allocated, before, GC.GetTotalMemory(false), Process.GetCurrentProcess().WorkingSet64, health.Written, rows, health.Lost);
     }
 }

@@ -32,7 +32,7 @@ internal static class CardAssignmentQueries
     /// <summary>持有期間連同卡號與使用者顯示名稱；使用者可能沒有（只有姓名的持有人），所以是 left join。</summary>
     public static IQueryable<CardAssignmentDto> ToDtos(this IQueryable<CardAssignment> assignments, AppDbContext db)
         => from a in assignments
-           join c in db.Set<Card>() on a.CardId equals c.Id
+           join c in db.Cards on a.CardId equals c.Id
            join u in db.Users on a.UserId equals u.Id into users
            from u in users.DefaultIfEmpty()
            select new CardAssignmentDto(a.Id, a.CardId, c.CardNumber, a.UserId, u.DisplayName, a.HolderName, a.StartsAt, a.EndsAt, a.Note, a.CreatedAt);

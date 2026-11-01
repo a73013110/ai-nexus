@@ -58,8 +58,8 @@ public sealed class ListNotificationsTests
         Assert.Equal(new("share", share.Id), received.Target);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.ChangeTracker.Clear();
-        var row = await db.Set<Notification>().SingleAsync(x => x.Id == completion.Id);
+        var row = await db.Notifications.SingleAsync(x => x.Id == completion.Id);
         await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(row.OwnerId, row.EventKey, row.Type, row.Severity, row.Title, row.Body, row.TargetKind, row.TargetId, CancellationToken.None);
-        await db.SaveChangesAsync(); Assert.Equal(2, await db.Set<Notification>().CountAsync());
+        await db.SaveChangesAsync(); Assert.Equal(2, await db.Notifications.CountAsync());
     }
 }

@@ -19,7 +19,7 @@ internal static class BackgroundJobQueries
     public static async Task<Result<JobDto>> ReloadJobAsync(this AppDbContext db, Guid owner, Guid id, CancellationToken ct)
     {
         db.ChangeTracker.Clear();
-        var job = await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct);
+        var job = await db.BackgroundJobs.OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct);
         return job is null ? JobsErrors.JobNotFound : JobService.Describe(job);
     }
 }

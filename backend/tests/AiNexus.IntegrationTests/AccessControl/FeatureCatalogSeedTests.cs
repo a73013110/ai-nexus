@@ -21,12 +21,12 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var roles = await db.Set<Role>().Select(x => x.Id).ToListAsync();
-            var groups = await db.Set<RoleGroup>().Select(x => x.Id).ToListAsync();
-            var navigation = await db.Set<NavigationItem>().Where(x => x.Kind == NavigationItem.GroupKind).Select(x => x.Id).ToListAsync();
-            var features = await db.Set<Feature>().Select(x => x.Id).ToListAsync();
-            var roleGroups = (await db.Set<RoleGroupRole>().Select(x => new { x.RoleId, x.GroupId }).ToListAsync()).Select(x => (x.RoleId, x.GroupId));
-            var groupFeatures = (await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId }).ToListAsync()).Select(x => (x.GroupId, x.FeatureId));
+            var roles = await db.Roles.Select(x => x.Id).ToListAsync();
+            var groups = await db.RoleGroups.Select(x => x.Id).ToListAsync();
+            var navigation = await db.NavigationItems.Where(x => x.Kind == NavigationItem.GroupKind).Select(x => x.Id).ToListAsync();
+            var features = await db.Features.Select(x => x.Id).ToListAsync();
+            var roleGroups = (await db.RoleGroupRoles.Select(x => new { x.RoleId, x.GroupId }).ToListAsync()).Select(x => (x.RoleId, x.GroupId));
+            var groupFeatures = (await db.RoleGroupFeatures.Select(x => new { x.GroupId, x.FeatureId }).ToListAsync()).Select(x => (x.GroupId, x.FeatureId));
 
             string[] missing =
             [
@@ -47,7 +47,7 @@ public sealed class FeatureCatalogSeedTests
         await TestDatabase.WithContextAsync(async db =>
         {
             var grants = FeatureCatalog.Grants.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
-            var unknown = (await db.Set<Feature>().Select(x => x.Id).ToListAsync()).Where(id => !grants.Contains(id)).Order(StringComparer.Ordinal).ToList();
+            var unknown = (await db.Features.Select(x => x.Id).ToListAsync()).Where(id => !grants.Contains(id)).Order(StringComparer.Ordinal).ToList();
             Assert.True(unknown.Count == 0,
                 $"{Seed} 有目錄沒有的功能，或把閱讀器寫成了授權；在 {Catalog} 宣告頁面或動作（前端的 FeatureId 與路由目錄由 OpenAPI 產生，記得重產契約），或從 Seed 移除：\n"
                 + string.Join("\n", unknown));
@@ -59,7 +59,7 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var pages = await db.Set<NavigationItem>().Where(x => x.Kind == NavigationItem.PageKind).Select(x => new { x.Id, x.FeatureId }).ToListAsync();
+            var pages = await db.NavigationItems.Where(x => x.Kind == NavigationItem.PageKind).Select(x => new { x.Id, x.FeatureId }).ToListAsync();
             var placed = pages.Select(x => x.FeatureId!).ToHashSet(StringComparer.Ordinal);
             var unplaced = FeatureCatalog.All.Where(x => x.Kind == FeatureKind.Page && !placed.Contains(x.Id)).Select(x => $"- {x.Id}").ToList();
             Assert.True(unplaced.Count == 0, $"{Seed} 的預設選單樹沒有放這些頁面，新環境的使用者即使有授權也看不到入口；在 NavigationItems 補上 page 節點：\n" + string.Join("\n", unplaced));
@@ -73,7 +73,7 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var items = await db.Set<NavigationItem>().ToListAsync();
+            var items = await db.NavigationItems.ToListAsync();
             var groups = items.Where(x => x.Kind == NavigationItem.GroupKind).Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
             Assert.All(items, x => Assert.True(x.ParentId is null || groups.Contains(x.ParentId), $"{x.Id} 的上層不是分群"));
             var parents = items.ToDictionary(x => x.Id, x => x.ParentId, StringComparer.Ordinal);
@@ -87,7 +87,7 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var grants = await db.Set<RoleGroupFeature>().Select(x => new { x.GroupId, x.FeatureId, x.Scope, x.ManagerScope }).ToListAsync();
+            var grants = await db.RoleGroupFeatures.Select(x => new { x.GroupId, x.FeatureId, x.Scope, x.ManagerScope }).ToListAsync();
             var wrong = grants.Where(x => FeatureCatalog.Find(x.FeatureId) is { } feature && (
                     (feature.Scopes.Count == 0 ? x.Scope is not null : x.Scope is null || !feature.Scopes.Contains(x.Scope))
                     // 主管範圍可以不給；給了就要是宣告支援的值，而且範圍是 all 時沒有意義（IDataScope 不另外計算）。
@@ -103,7 +103,7 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var held = (await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup).Select(x => new { x.FeatureId, x.Scope }).ToListAsync())
+            var held = (await db.RoleGroupFeatures.Where(x => x.GroupId == BuiltInAccess.AdministratorsGroup).Select(x => new { x.FeatureId, x.Scope }).ToListAsync())
                 .ToDictionary(x => x.FeatureId, x => x.Scope, StringComparer.Ordinal);
             // 目錄的 Scopes 由窄到寬（FeatureCatalogTests 檢查），最後一個就是最寬；有 all 時即 all。沒有宣告範圍的為 NULL。
             var problems = FeatureCatalog.Grants.Select(x => (x.Id, Widest: x.Scopes.Count == 0 ? null : x.Scopes[^1]))
@@ -123,7 +123,7 @@ public sealed class FeatureCatalogSeedTests
     {
         await TestDatabase.WithContextAsync(async db =>
         {
-            var named = await db.Set<Feature>().Where(x => x.Name != null).Select(x => x.Id).ToListAsync();
+            var named = await db.Features.Where(x => x.Name != null).Select(x => x.Id).ToListAsync();
             Assert.True(named.Count == 0, $"{Seed} 的 Name 是管理員的名稱覆寫，內建列應為 NULL（預設名稱寫在 {Catalog}）：\n" + string.Join("\n", named));
         });
     }

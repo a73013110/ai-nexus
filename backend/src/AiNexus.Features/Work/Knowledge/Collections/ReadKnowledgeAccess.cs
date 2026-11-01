@@ -10,7 +10,8 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 internal sealed class ReadKnowledgeAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/collections/{id:guid}/access", (Guid id, ICurrentUser user, ReadKnowledgeAccess handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/collections/{id:guid}/access", (Guid id, ICurrentUser user, ReadKnowledgeAccess handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.CollectionAccessRead)
         .WithName("GetKnowledgeAccess");
 

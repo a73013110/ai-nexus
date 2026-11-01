@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Work.Files;
@@ -36,7 +35,7 @@ public sealed class DocumentIndexingTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var job = await db.Set<BackgroundJob>().SingleAsync(x => x.Id == document.JobId); job.Status = "running"; job.LeaseToken = Guid.NewGuid(); job.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
+            var job = await db.BackgroundJobs.SingleAsync(x => x.Id == document.JobId); job.Status = "running"; job.LeaseToken = Guid.NewGuid(); job.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
         }
         using var first = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
         using var second = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);

@@ -26,13 +26,13 @@ public sealed class DataScopeTests
             new Unit { Id = closed, ParentId = it, Name = "已裁撤", Enabled = false, SortOrder = 20 });
         await db.SaveChangesAsync();
         db.Add(new UnitMember { UnitId = it, UserId = bob, IsPrimary = true });
-        db.Set<Role>().Add(new() { Id = "reviewer", Name = "稽核查閱" });
-        db.Set<RoleGroup>().AddRange(new RoleGroup { Id = "unit-reviewers", Name = "單位" }, new RoleGroup { Id = "self-review", Name = "本人" });
-        db.Set<RoleGroupRole>().AddRange(new RoleGroupRole { RoleId = "reviewer", GroupId = "unit-reviewers" }, new RoleGroupRole { RoleId = "reviewer", GroupId = "self-review" });
-        db.Set<RoleGroupFeature>().AddRange(
+        db.Roles.Add(new() { Id = "reviewer", Name = "稽核查閱" });
+        db.RoleGroups.AddRange(new RoleGroup { Id = "unit-reviewers", Name = "單位" }, new RoleGroup { Id = "self-review", Name = "本人" });
+        db.RoleGroupRoles.AddRange(new RoleGroupRole { RoleId = "reviewer", GroupId = "unit-reviewers" }, new RoleGroupRole { RoleId = "reviewer", GroupId = "self-review" });
+        db.RoleGroupFeatures.AddRange(
             new RoleGroupFeature { GroupId = "unit-reviewers", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Unit },
             new RoleGroupFeature { GroupId = "self-review", FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Own });
-        db.Set<UserRole>().Add(new() { UserId = bob, RoleId = "reviewer" });
+        db.UserRoles.Add(new() { UserId = bob, RoleId = "reviewer" });
         await db.SaveChangesAsync();
         var scopes = scope.ServiceProvider.GetRequiredService<IDataScope>();
 
@@ -41,18 +41,18 @@ public sealed class DataScopeTests
         Assert.True(unit.Own); Assert.False(unit.All);
         Assert.Equal(new HashSet<Guid> { it }, unit.UnitIds);
 
-        await db.Set<RoleGroupFeature>().Where(x => x.GroupId == "unit-reviewers").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, DataScopes.UnitTree));
+        await db.RoleGroupFeatures.Where(x => x.GroupId == "unit-reviewers").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, DataScopes.UnitTree));
         Assert.Equal(new HashSet<Guid> { it, systems }, (await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).UnitIds);
 
-        await db.Set<RoleGroupFeature>().Where(x => x.GroupId == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, DataScopes.All));
+        await db.RoleGroupFeatures.Where(x => x.GroupId == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, DataScopes.All));
         var all = await scopes.ForAsync(bob, FeatureCatalog.Audit, default);
         Assert.True(all.All); Assert.Empty(all.UnitIds);
         Assert.Equal([DataScopes.UnitTree, DataScopes.All], (await scopes.ScopesAsync(bob, default))[FeatureCatalog.Audit]);
 
         // 群組停用、功能停用都等於沒有範圍；沒有宣告範圍的功能不能查範圍。
-        await db.Set<RoleGroup>().Where(x => x.Id == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        await db.RoleGroups.Where(x => x.Id == "self-review").ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.Equal(new HashSet<string> { DataScopes.UnitTree }, (await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).Scopes);
-        await db.Set<Feature>().Where(x => x.Id == FeatureCatalog.Audit).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        await db.Features.Where(x => x.Id == FeatureCatalog.Audit).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.Audit, default)).IsEmpty);
         await Assert.ThrowsAsync<ArgumentException>(() => scopes.ForAsync(bob, FeatureCatalog.Chat, default));
     }
@@ -96,11 +96,11 @@ public sealed class DataScopeTests
         Assert.Empty(off.UnitIds);
 
         // 多群組以 OR 合併：另一個群組給 unit＋managed-tree，與 workspace 的 own 合起來。
-        db.Set<Role>().Add(new() { Id = "unit-lead", Name = "單位主管" });
-        db.Set<RoleGroup>().Add(new() { Id = "unit-leads", Name = "單位主管" });
-        db.Set<RoleGroupRole>().Add(new() { RoleId = "unit-lead", GroupId = "unit-leads" });
-        db.Set<RoleGroupFeature>().Add(new() { GroupId = "unit-leads", FeatureId = FeatureCatalog.AttendanceRecords, Scope = DataScopes.Unit, ManagerScope = DataScopes.ManagedTree });
-        db.Set<UserRole>().Add(new() { UserId = bob, RoleId = "unit-lead" });
+        db.Roles.Add(new() { Id = "unit-lead", Name = "單位主管" });
+        db.RoleGroups.Add(new() { Id = "unit-leads", Name = "單位主管" });
+        db.RoleGroupRoles.Add(new() { RoleId = "unit-lead", GroupId = "unit-leads" });
+        db.RoleGroupFeatures.Add(new() { GroupId = "unit-leads", FeatureId = FeatureCatalog.AttendanceRecords, Scope = DataScopes.Unit, ManagerScope = DataScopes.ManagedTree });
+        db.UserRoles.Add(new() { UserId = bob, RoleId = "unit-lead" });
         await db.SaveChangesAsync();
         var merged = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
         Assert.Equal(new HashSet<string> { DataScopes.Own, DataScopes.Unit, DataScopes.ManagedTree }, merged.Scopes);
@@ -115,13 +115,13 @@ public sealed class DataScopeTests
         await SetRecordsAsync(db, "unit-leads", DataScopes.Unit, DataScopes.ManagedTree);
 
         // 不是主管的人拿不到 managed*：取消主管勾選後只剩成員範圍，畫面的代碼也一樣。
-        await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false));
+        await db.UnitMembers.Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false));
         var member = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
         Assert.Equal(new HashSet<string> { DataScopes.Own, DataScopes.Unit }, member.Scopes);
         Assert.Equal(new HashSet<Guid> { it, hr }, member.UnitIds);
         Assert.Equal([DataScopes.Own, DataScopes.Unit], (await scopes.ScopesAsync(bob, default))[FeatureCatalog.AttendanceRecords]);
-        await db.Set<UnitMember>().Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, true));
-        await db.Set<UserRole>().Where(x => x.RoleId == "unit-lead").ExecuteDeleteAsync();
+        await db.UnitMembers.Where(x => x.UnitId == it && x.UserId == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, true));
+        await db.UserRoles.Where(x => x.RoleId == "unit-lead").ExecuteDeleteAsync();
         await SetRecordsAsync(db, BuiltInAccess.WorkspaceGroup, DataScopes.Own, DataScopes.ManagedTree);
 
         // 成員範圍沒有可用值時只靠主管範圍；單位停用後連同下層不算，沒有有效的所管單位就沒有範圍。
@@ -129,13 +129,13 @@ public sealed class DataScopeTests
         var only = await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default);
         Assert.Equal(new HashSet<string> { DataScopes.ManagedTree }, only.Scopes);
         Assert.Equal(new HashSet<Guid> { it, systems }, only.UnitIds);
-        await db.Set<Unit>().Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        await db.Units.Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
         Assert.DoesNotContain(FeatureCatalog.AttendanceRecords, (await scopes.ScopesAsync(bob, default)).Keys);
-        await db.Set<Unit>().Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
+        await db.Units.Where(x => x.Id == it).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
 
         // 目錄沒宣告主管範圍的功能，資料庫裡的值（舊資料）也不算。
-        db.Set<RoleGroupFeature>().Add(new() { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Own, ManagerScope = DataScopes.ManagedTree });
+        db.RoleGroupFeatures.Add(new() { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = FeatureCatalog.Audit, Scope = DataScopes.Own, ManagerScope = DataScopes.ManagedTree });
         await db.SaveChangesAsync();
         var audit = await scopes.ForAsync(bob, FeatureCatalog.Audit, default);
         Assert.Equal(new HashSet<string> { DataScopes.Own }, audit.Scopes);
@@ -145,7 +145,7 @@ public sealed class DataScopeTests
         await db.Users.Where(x => x.Id == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
         await db.Users.Where(x => x.Id == bob).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
-        await db.Set<RoleGroupFeature>().Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync();
+        await db.RoleGroupFeatures.Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync();
         Assert.True((await scopes.ForAsync(bob, FeatureCatalog.AttendanceRecords, default)).IsEmpty);
     }
 
@@ -197,19 +197,19 @@ public sealed class DataScopeTests
         await SetRecordsAsync(db, BuiltInAccess.WorkspaceGroup, DataScopes.Own, DataScopes.ManagedTree);
 
         // 董事會停用：董事長沒有範圍，總經理照常（失敗即拒絕，不改由其他人遞補）。
-        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
+        await db.Units.Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, false));
         Assert.Empty(await UnitsAsync(carol));
         Assert.Equal(new HashSet<Guid> { company, office, legal, finance, sales, branch }, await UnitsAsync(bob));
-        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
+        await db.Units.Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.Enabled, true));
 
         // 董事會不再是首長單位：它成了一般的處，總經理也管得到；公司仍由總經理室帶領，主管勾選照樣不生效。
-        await db.Set<Unit>().Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.HeadRank, (byte?)null));
+        await db.Units.Where(x => x.Id == board).ExecuteUpdateAsync(x => x.SetProperty(y => y.HeadRank, (byte?)null));
         Assert.Equal(new HashSet<Guid> { company, board, audit, office, legal, finance, sales, branch }, await UnitsAsync(bob));
         Assert.Equal(new HashSet<Guid> { board, audit }, await UnitsAsync(carol));
         Assert.Empty(await UnitsAsync(frank));
     }
 
-    private static Task SetRecordsAsync(AppDbContext db, string group, string? scope, string? manager) => db.Set<RoleGroupFeature>()
+    private static Task SetRecordsAsync(AppDbContext db, string group, string? scope, string? manager) => db.RoleGroupFeatures
         .Where(x => x.GroupId == group && x.FeatureId == FeatureCatalog.AttendanceRecords)
         .ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope).SetProperty(y => y.ManagerScope, manager));
 }

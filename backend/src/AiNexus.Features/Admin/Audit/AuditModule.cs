@@ -11,14 +11,10 @@ namespace AiNexus.Features.Admin.Audit;
 /// </summary>
 public sealed class AuditModule : IFeatureModule
 {
-    public const string Feature = FeatureCatalog.Audit, Policy = Policies.Prefix + Feature;
-    public const string UsagePolicy = Policies.Prefix + FeatureCatalog.AuditUsage;
     public const string ExportRateLimit = "audit-export";
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddFeaturePolicy(Feature);
-        builder.Services.AddFeaturePolicy(FeatureCatalog.AuditUsage);
         builder.Services.AddScoped<AuditDataScope>();
         builder.Services.AddSettings<AuditOptions, AuditOptionsValidator>(AuditOptions.Section);
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
@@ -27,10 +23,10 @@ public sealed class AuditModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 保留 API 路徑不變（前端與已發布的文件依賴它），只把授權與 /admin 管理功能分開。
-        var audit = api.MapGroup("/admin/audit").RequireAuthorization(Policy);
+        var audit = api.MapGroup("/admin/audit").RequireFeature(FeatureCatalog.Audit);
         ListActivityAudit.Map(audit);
         GetAuditCatalog.Map(audit);
         ExportActivityAudit.Map(audit);
-        ReportFeatureUsage.Map(api.MapGroup("/admin/audit/usage").RequireAuthorization(UsagePolicy));
+        ReportFeatureUsage.Map(api.MapGroup("/admin/audit/usage").RequireFeature(FeatureCatalog.AuditUsage));
     }
 }

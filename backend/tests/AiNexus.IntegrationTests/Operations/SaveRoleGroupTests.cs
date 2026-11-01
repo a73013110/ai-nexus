@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Audit;
 using AiNexus.Features.Admin.Operations;
@@ -34,7 +33,7 @@ public sealed class SaveRoleGroupTests
 
         using (var scope = factory.Services.CreateScope())
         {
-            var grants = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>().Where(x => x.GroupId == "reviewers").OrderBy(x => x.FeatureId).ToListAsync();
+            var grants = await scope.ServiceProvider.GetRequiredService<AppDbContext>().RoleGroupFeatures.Where(x => x.GroupId == "reviewers").OrderBy(x => x.FeatureId).ToListAsync();
             Assert.Equal([("audit", (string?)"own"), ("chat", null)], grants.Select(x => (x.FeatureId, x.Scope)));
         }
         var builtIn = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Groups.Single(x => x.Id == BuiltInAccess.AdministratorsGroup);

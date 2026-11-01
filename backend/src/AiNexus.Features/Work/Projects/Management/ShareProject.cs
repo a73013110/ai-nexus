@@ -11,8 +11,10 @@ internal sealed class ShareProject(ResourceAccess access)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ShareProject handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.AccessRead);
-        routes.MapPut("/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareProject handler, CancellationToken ct) => handler.SetAsync(user.Id, id, body, ct).ToHttpResultAsync()).Audited(ProjectsAudit.ProjectShared);
+        routes.MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ShareProject handler, CancellationToken ct) =>
+            handler.GetAsync(user.Id, id, ct)).Audited(ProjectsAudit.AccessRead);
+        routes.MapPut("/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareProject handler, CancellationToken ct) =>
+            handler.SetAsync(user.Id, id, body, ct)).Audited(ProjectsAudit.ProjectShared);
     }
 
     public Task<Result<ResourceAclDto>> GetAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, Project.Kind, ct);

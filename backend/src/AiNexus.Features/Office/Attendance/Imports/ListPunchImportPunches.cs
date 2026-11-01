@@ -17,16 +17,16 @@ internal sealed class ListPunchImportPunches(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/punches", (Guid id, [AsParameters] TableRequest table, ListPunchImportPunches handler, CancellationToken ct)
-            => handler.HandleAsync(id, table, ct).ToHttpResultAsync())
+            => handler.HandleAsync(id, table, ct))
         .Audited(AttendanceAudit.PunchRead)
         .WithName("ListAttendancePunchImportPunches");
 
     public async Task<Result<TablePage<PunchDto>>> HandleAsync(Guid id, TableRequest table, CancellationToken ct)
     {
-        var import = await db.Set<PunchImport>().AsNoTracking().Where(x => x.Id == id).ToDtos(db).SingleOrDefaultAsync(ct);
+        var import = await db.PunchImports.AsNoTracking().Where(x => x.Id == id).ToDtos(db).SingleOrDefaultAsync(ct);
         if (import is null) return AttendanceErrors.ImportNotFound;
         if (!import.IsCurrent) return AttendanceErrors.ImportNotCurrent;
-        var punches = db.Set<AttributedPunch>().Where(x => x.PunchFileId == import.PunchFileId);
+        var punches = db.AttributedPunches.Where(x => x.PunchFileId == import.PunchFileId);
         return await punches.ToTablePageAsync(table, db.PunchColumns().DefaultSort("punchedAt"), x => x.ToDtos(db), ct);
     }
 }

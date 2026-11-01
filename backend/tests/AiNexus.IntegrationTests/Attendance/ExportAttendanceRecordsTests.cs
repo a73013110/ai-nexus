@@ -1,5 +1,4 @@
 using System.Net;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Platform.Export;
@@ -136,7 +135,7 @@ public sealed class ExportAttendanceRecordsTests
         foreach (var query in new[] { "from=2026-10-01", "from=2026-10-31&to=2026-10-01", "from=2025-10-01&to=2026-10-02" })
             await AssertCodeAsync(await client.GetAsync($"{Export}?{query}"), HttpStatusCode.BadRequest, "attendance_records_range_invalid");
 
-        await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        await session.WithDbAsync(db => db.RoleGroupFeatures
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync());
         await AssertCodeAsync(await client.GetAsync($"{Export}?{Week}"), HttpStatusCode.Forbidden, "feature_forbidden");
         // 被拒的嘗試也留下紀錄（銀行稽核要看得到誰試過匯出）。

@@ -15,7 +15,6 @@ namespace AiNexus.Features.Admin.Monitoring;
 /// <summary>本實例的即時在線、請求流量與相依服務健康度。每個用例各自一個檔案。</summary>
 public sealed class MonitoringModule : IFeatureModule
 {
-    public const string Feature = FeatureCatalog.Monitoring, Policy = Policies.Prefix + Feature;
     public const string PresenceRateLimit = "presence";
 
     public static void AddServices(IHostApplicationBuilder builder)
@@ -31,7 +30,6 @@ public sealed class MonitoringModule : IFeatureModule
         services.AddTransient<TrafficHttpHandler>();
         services.ConfigureHttpClientDefaults(client => client.AddHttpMessageHandler<TrafficHttpHandler>());
         services.AddHostedService<RuntimeSampler>();
-        services.AddFeaturePolicy(Feature);
         services.AddRateLimiter(options => options.AddPerUserLimit(PresenceRateLimit, 120));
     }
 
@@ -41,7 +39,7 @@ public sealed class MonitoringModule : IFeatureModule
         HeartbeatPresence.Map(api);
         LeavePresence.Map(api);
         // 監控讀取與日誌查詢共用速率限制、會被稽核，且不列入請求日誌，避免監控自己的查詢洗版日誌。
-        var monitor = api.MapGroup("/admin/monitoring").RequireAuthorization(Policy).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
+        var monitor = api.MapGroup("/admin/monitoring").RequireFeature(FeatureCatalog.Monitoring).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog());
         GetMonitoringSnapshot.Map(monitor);
         ExportMonitoringSnapshot.Map(monitor);

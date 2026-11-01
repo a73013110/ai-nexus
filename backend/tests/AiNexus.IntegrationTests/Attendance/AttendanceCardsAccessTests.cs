@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Office.Attendance.Cards;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,6 +75,6 @@ public sealed class AttendanceCardsAccessTests
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Set<RoleGroupFeature>().Where(x => x.GroupId == groupId).ExecuteDeleteAsync();
+        await db.RoleGroupFeatures.Where(x => x.GroupId == groupId).ExecuteDeleteAsync();
     }
 }

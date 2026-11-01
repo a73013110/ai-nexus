@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,11 +17,11 @@ public static class FilePreviews
     /// <summary>附件已建成知識文件時用文件的逐頁文字；否則把附件擷取的全文當作第 1 頁。</summary>
     public static async Task<FilePreviewDto> ReadAsync(AppDbContext db, Attachment file, CancellationToken ct)
     {
-        var documentId = await db.Set<Document>().AsNoTracking()
+        var documentId = await db.Documents.AsNoTracking()
             .Where(x => x.AttachmentId == file.Id && !x.IsDeleted && x.Status == "ready")
             .OrderBy(x => x.Id).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
         IReadOnlyList<DocumentPageDto> pages = documentId is Guid doc
-            ? await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == doc).OrderBy(x => x.PageNumber)
+            ? await db.DocumentPages.AsNoTracking().Where(x => x.DocumentId == doc).OrderBy(x => x.PageNumber)
                 .Select(x => new DocumentPageDto(x.PageNumber, x.Text, x.Extraction, x.NeedsReview)).ToArrayAsync(ct)
             : string.IsNullOrWhiteSpace(file.ExtractedText) ? [] : [new DocumentPageDto(1, file.ExtractedText, "attachment", false)];
         return new FilePreviewDto(AttachmentService.Describe(file), pages);

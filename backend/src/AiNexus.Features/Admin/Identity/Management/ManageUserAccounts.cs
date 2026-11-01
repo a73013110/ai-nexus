@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Authentication;
@@ -39,8 +38,8 @@ internal sealed class UserAccountRequestValidator : RequestValidator<UserAccount
     }
 }
 
-/// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeAudit"/> 稽核。</summary>
-internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit audit, Argon2Passwords passwords, IHttpContextAccessor http, DomainEvents events, TimeProvider clock)
+/// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeWrite"/> 稽核。</summary>
+internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite write, Argon2Passwords passwords, IHttpContextAccessor http, DomainEvents events, TimeProvider clock)
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/users", (UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
@@ -53,7 +52,8 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
         .WithName("SaveAdminUser");
 
     public static void MapDelete(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/{id:guid}", (Guid id, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.DeleteAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapDelete("/users/{id:guid}", (Guid id, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) =>
+            handler.DeleteAsync(user.Id, id, ct))
         .Audited(IdentityAudit.UserDeleted)
         .WithName("DeleteAdminUser");
 
@@ -72,7 +72,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             return IdentityErrors.InvalidPassword;
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
         var key = id ?? Guid.NewGuid();
-        var saved = await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, key, key.ToString(), token => SnapshotAsync(key, token), async () =>
+        return await write.ExecuteAsync<Guid>(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, key, token => SnapshotAsync(key, token)), async () =>
         {
             var user = id is null ? new User { Id = key, Sid = UserAccounts.ManagedSid(key), ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
                 await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
@@ -89,7 +89,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             // 已以 SID 綁定 AD 的使用者，AD 帳號名跟著目錄（改名用「改綁」）；只改大小寫不算改名。
             if (ad is not null && UserAccounts.DirectoryBound(user) && !UserAccounts.Same(user.AdAccount, ad))
                 return IdentityErrors.AdBindingImmutable;
-            var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
+            var validRoles = await db.Roles.CountAsync(x => request.RoleIds.Contains(x.Id), ct);
             if (validRoles != request.RoleIds.Count) return IdentityErrors.InvalidRoles;
             if (id is null)
             {
@@ -105,12 +105,11 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeAudit au
             user.AdAccount = ad; user.LocalAccount = local;
             if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
             await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
-            return Result.Success;
+            return key;
         }, ct);
-        return saved.IsSuccess ? key : saved.Error;
     }
 
-    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
         {
             var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
             if (user is null) return IdentityErrors.UserNotFound;

@@ -6,8 +6,8 @@ namespace AiNexus.Features.Platform.WebSearch;
 internal sealed class GetWebSearchStatus(WebSearchService service)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapGet("/tools/web-search", (GetWebSearchStatus handler) => TypedResults.Ok(handler.Handle()))
-        .RequireAuthorization(Policies.Chat)
+        .MapGet("/tools/web-search", (GetWebSearchStatus handler) => handler.Handle())
+        .RequireFeature(FeatureCatalog.Chat)
         .NotAudited("工具可用狀態")
         .WithName("GetWebSearchStatus");
 

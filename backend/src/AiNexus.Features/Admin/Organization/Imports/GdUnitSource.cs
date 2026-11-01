@@ -23,7 +23,7 @@ internal sealed class GdUnitSource(ExternalDatabase<GdDatabase> gd, GdAccounts a
     /// 讀取全部部門，主管已對到使用者。GD 不可用時回 <see cref="OrganizationErrors.ImportNotConfigured"/>、
     /// <see cref="OrganizationErrors.ImportUnavailable"/> 或 <see cref="OrganizationErrors.ImportRejected"/>，不拋例外。
     /// </summary>
-    public async Task<Result<IReadOnlyList<SourceUnit>>> ReadAsync(CancellationToken ct)
+    public async Task<Result<SourceUnit[]>> ReadAsync(CancellationToken ct)
     {
         var read = await gd.ReadAsync<DepartmentRow>(Sql, null, ct);
         if (read.Rows is not { } rows) return ErrorOf(read.Failure);
@@ -33,8 +33,8 @@ internal sealed class GdUnitSource(ExternalDatabase<GdDatabase> gd, GdAccounts a
         if (matched.Rows is not { } matches) return ErrorOf(matched.Failure);
         var byId = matches.ToDictionary(x => x.GdId, StringComparer.OrdinalIgnoreCase);
 
-        return Result<IReadOnlyList<SourceUnit>>.Ok([.. departments.Select(x => new SourceUnit(x.Row.Key, x.Row.Name, x.Row.ParentKey, x.Row.SortOrder, x.Row.Disabled,
-            [.. x.Ids.Select(y => Manager(byId[y.Id], y.Deputy))]))]);
+        return departments.Select(x => new SourceUnit(x.Row.Key, x.Row.Name, x.Row.ParentKey, x.Row.SortOrder, x.Row.Disabled,
+            [.. x.Ids.Select(y => Manager(byId[y.Id], y.Deputy))])).ToArray();
     }
 
     /// <summary>主管在前、副主管在後；空項與重複（不分大小寫，主管優先）略過。</summary>

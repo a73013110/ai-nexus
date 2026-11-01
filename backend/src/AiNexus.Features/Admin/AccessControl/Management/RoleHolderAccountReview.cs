@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Accounts;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,11 +15,10 @@ internal sealed class RoleHolderAccountReview(AppDbContext db, IActiveUsers acti
     public async Task<AccountReviewReading> ReadAsync(CancellationToken ct)
     {
         var active = activeUsers.Ids;
-        var assignments = db.Set<UserRole>();
-        var rows = await (from assignment in assignments
-                          join role in db.Set<Role>() on assignment.RoleId equals role.Id
+        var rows = await (from assignment in db.UserRoles
+                          join role in db.Roles on assignment.RoleId equals role.Id
                           where role.Enabled && !active.Contains(assignment.UserId)
-                                && !assignments.Any(x => x.RoleId == role.Id && active.Contains(x.UserId))
+                                && !db.UserRoles.Any(x => x.RoleId == role.Id && active.Contains(x.UserId))
                           select new { assignment.UserId, role.Name }).AsNoTracking().ToListAsync(ct);
         return new([.. rows.GroupBy(x => x.UserId).Select(x => new AccountReviewItem(x.Key, Orphaned, "帳號已停用，角色已沒有啟用中的持有人",
             string.Join("、", x.Select(y => y.Name).Order(StringComparer.CurrentCulture)) + "。", FeatureCatalog.AccessControlRoles))]);

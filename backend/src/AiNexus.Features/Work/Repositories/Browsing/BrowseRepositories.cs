@@ -22,22 +22,22 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
 
     public static void MapList(RouteGroupBuilder routes) => routes
         .MapGet("", (string? q, int? page, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
-            handler.ListAsync(user.Id, q, page ?? 1, ct).ToHttpResultAsync())
+            handler.ListAsync(user.Id, q, page ?? 1, ct))
         .Audited(RepositoriesAudit.RepositoryRead)
         .WithName("ListRepositories");
 
     public static void Map(RouteGroupBuilder repository)
     {
         repository.MapGet("", (string owner, string name, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
-                handler.ReadAsync(user.Id, owner + "/" + name, ct).ToHttpResultAsync())
+                handler.ReadAsync(user.Id, owner + "/" + name, ct))
             .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepository");
         repository.MapGet("/tree", (string owner, string name, string commit, string? path, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
-                handler.TreeAsync(user.Id, owner + "/" + name, commit, path ?? "", ct).ToHttpResultAsync())
+                handler.TreeAsync(user.Id, owner + "/" + name, commit, path ?? "", ct))
             .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepositoryTree");
         repository.MapGet("/file", (string owner, string name, string commit, string path, ICurrentUser user, RepositoryService gitea, CancellationToken ct) =>
-                gitea.FileAsync(user.Id, owner + "/" + name, commit, path, ct).ToHttpResultAsync())
+                gitea.FileAsync(user.Id, owner + "/" + name, commit, path, ct))
             .Audited(RepositoriesAudit.FileRead)
             .WithName("ReadRepositoryFile");
     }
@@ -48,11 +48,11 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         var q = (query ?? "").Trim();
         if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidRepository;
         var read = await gitea.GetAsync(owner, $"api/v1/repos/search?q={Uri.EscapeDataString(q)}&page={page}&limit={PageSize}&sort=updated&order=desc", ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         if (json.RootElement.ValueKind != JsonValueKind.Object) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
         var rows = GiteaJson.Items(json.RootElement, "data").Take(PageSize).ToArray();
-        var pins = await db.Set<RepositoryPin>().AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl)
+        var pins = await db.RepositoryPins.AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl)
             .OrderByDescending(x => x.PinnedAt).Take(RepositoryPin.Limit).ToListAsync(ct);
         var pinned = pins.Select(x => x.Repository).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var items = rows.Select(x => Describe(x, pinned.Contains)).Where(x => RepositoryService.IsRepository(x.FullName)).ToArray();
@@ -64,9 +64,9 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         var route = RepositoryService.Route(repo);
         var read = await gitea.GetAsync(owner, route, ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var metadata = read.Value!;
-        var pinned = await db.Set<RepositoryPin>().AsNoTracking().AnyAsync(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo, ct);
+        if (!read.IsSuccess) return read.Error;
+        using var metadata = read.Value;
+        var pinned = await db.RepositoryPins.AsNoTracking().AnyAsync(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo, ct);
         var repository = Describe(metadata.RootElement, _ => pinned);
         if (repository.Empty) return new RepositoryDetailDto(repository, null, [], []);
         // token 此時已快取，兩份參照清單可以並行讀取。
@@ -81,8 +81,8 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         if (commit is null && repository.DefaultBranch.Length > 0)
         {
             var head = await gitea.GetAsync(owner, route + "/branches/" + Uri.EscapeDataString(repository.DefaultBranch), ct);
-            if (!head.IsSuccess) return head.Error!;
-            using var branch = head.Value!;
+            if (!head.IsSuccess) return head.Error;
+            using var branch = head.Value;
             commit = GiteaJson.Text(GiteaJson.Child(branch.RootElement, "commit"), "id", 64);
         }
         return new RepositoryDetailDto(repository, RepositoryService.IsCommit(commit) ? commit.ToLowerInvariant() : null, branches, tags);
@@ -94,9 +94,9 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
         if (!RepositoryService.IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         if (!RepositoryService.IsFilePath(path, true)) return RepositoriesErrors.InvalidPath;
         var read = await gitea.GetAsync(owner, RepositoryService.ContentsRoute(repo, path, commit), ct);
-        if (!read.IsSuccess) return read.Error!;
+        if (!read.IsSuccess) return read.Error;
         RepositoryEntryDto[] entries;
-        using (var json = read.Value!)
+        using (var json = read.Value)
         {
             if (json.RootElement.ValueKind != JsonValueKind.Array) return RepositoriesErrors.NotDirectory;
             entries = json.RootElement.EnumerateArray().Take(500).Select(x => new RepositoryEntryDto(GiteaJson.Text(x, "name", 180), GiteaJson.Text(x, "path", 500),

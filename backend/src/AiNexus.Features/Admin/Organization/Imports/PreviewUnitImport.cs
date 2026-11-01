@@ -12,8 +12,9 @@ namespace AiNexus.Features.Admin.Organization.Imports;
 internal sealed class PreviewUnitImport(AppDbContext db, GdUnitSource source)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/import", async (PreviewUnitImport handler, CancellationToken ct) => (await handler.HandleAsync(ct)).ToHttpResult())
-        .RequireAuthorization(Policies.OrganizationImport)
+        .MapGet("/import", (PreviewUnitImport handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
+        .RequireFeature(FeatureCatalog.OrganizationImport)
         .Audited(OrganizationAudit.UnitImportRead)
         .WithName("PreviewOrganizationImport");
 

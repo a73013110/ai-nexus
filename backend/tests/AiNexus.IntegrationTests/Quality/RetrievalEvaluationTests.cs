@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Quality;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -38,9 +36,9 @@ public sealed class RetrievalEvaluationTests
         var json = await client.GetStringAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report");
         Assert.DoesNotContain("採購如何核准", json); Assert.DoesNotContain("主管簽署", json); Assert.DoesNotContain(seed.Document.Id.ToString(), json);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.DoesNotContain("採購應先核准", JsonSerializer.Serialize(await db.Set<RetrievalEvaluationResult>().ToListAsync()));
+        Assert.DoesNotContain("採購應先核准", JsonSerializer.Serialize(await db.RetrievalEvaluationResults.ToListAsync()));
         using var bob = await factory.SignedInAsync("bob"); Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}")).StatusCode);
-        db.Remove(await db.Set<RoleGroupFeature>().SingleAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Knowledge)); await db.SaveChangesAsync();
+        db.Remove(await db.RoleGroupFeatures.SingleAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.Knowledge)); await db.SaveChangesAsync();
         using var revoked = await client.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report");
         Assert.Equal(HttpStatusCode.Forbidden, revoked.StatusCode); Assert.Contains("feature_forbidden", await revoked.Content.ReadAsStringAsync());
     }

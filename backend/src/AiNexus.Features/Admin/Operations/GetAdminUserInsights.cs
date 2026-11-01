@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Admin.Billing.Reports;
@@ -18,7 +17,8 @@ public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usag
 internal sealed class GetAdminUserInsights(AppDbContext db, AccessService access, UsageReports usage, PersonalUsage personal)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users/{id:guid}/insights", async (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapGet("/users/{id:guid}/insights", (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(OperationsAudit.UserUsageRead)
         .WithName("GetAdminUserInsights");
 
@@ -27,7 +27,7 @@ internal sealed class GetAdminUserInsights(AppDbContext db, AccessService access
         if (!await access.HoldsAsync(actor, FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.FeatureForbidden;
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null) return OperationsErrors.AdminResourceNotFound;
-        var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
+        var roles = await db.UserRoles.Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
         var report = await personal.ForOwnerAsync(id, ct);
         var detail = new AdminUserDetailDto(
             new(id, UserAccounts.LoginName(user), user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage, user.Email, user.EmailSource, user.EmailVerifiedAt),

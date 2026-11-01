@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Billing;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +9,11 @@ internal sealed class ManagePrices(AppDbContext db, BillingService billing)
 {
     public static void Map(RouteGroupBuilder admin)
     {
-        admin.MapGet("/targets", (ManagePrices handler) => TypedResults.Ok(handler.Targets()))
+        admin.MapGet("/targets", (ManagePrices handler) => handler.Targets())
             .NotAudited("價格表單的選項")
             .WithName("ListPriceTargets");
-        admin.MapGet("/prices", async (ManagePrices handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(ct)))
+        admin.MapGet("/prices", (ManagePrices handler, CancellationToken ct) =>
+            handler.ListAsync(ct))
             .Audited(BillingAudit.PriceRead)
             .WithName("ListModelPrices");
     }
@@ -22,7 +22,7 @@ internal sealed class ManagePrices(AppDbContext db, BillingService billing)
 
     public async Task<IReadOnlyList<PriceDto>> ListAsync(CancellationToken ct)
     {
-        var prices = await db.Set<ModelPrice>().AsNoTracking()
+        var prices = await db.ModelPrices.AsNoTracking()
             .OrderByDescending(x => x.EffectiveAt)
             .Take(500)
             .ToListAsync(ct);

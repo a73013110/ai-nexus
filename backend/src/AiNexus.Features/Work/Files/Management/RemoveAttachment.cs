@@ -15,14 +15,14 @@ namespace AiNexus.Features.Work.Files.Management;
 internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota, AttachmentLifecycle lifecycle)
 {
     public static void MapDraft(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, fromLibrary: false, ct)).ToHttpResult())
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, fromLibrary: false, ct))
         .Audited(FilesAudit.FileDeleted)
         .WithName("RemoveDraftAttachment");
 
     public static void MapLibrary(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, fromLibrary: true, ct)).ToHttpResult())
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, fromLibrary: true, ct))
         .Audited(FilesAudit.FileDeleted)
         .WithName("DeleteLibraryFile");
 
@@ -39,14 +39,14 @@ internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files,
             if (file.Value.InLibrary && !fromLibrary) return Result.Success;
 
             // 已送出的檔案由對話保留；其他資源必須自行釋放對檔案的引用。
-            if (await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct)) return FilesErrors.InUse;
-            if (await db.Set<ResourceAttachment>().AnyAsync(x => x.AttachmentId == id && !lifecycle.PrivateReaders(owner).Contains(x.ResourceId), ct))
+            if (await db.MessageAttachments.AnyAsync(x => x.AttachmentId == id, ct)) return FilesErrors.InUse;
+            if (await db.ResourceAttachments.AnyAsync(x => x.AttachmentId == id && !lifecycle.PrivateReaders(owner).Contains(x.ResourceId), ct))
             {
                 return FilesErrors.InUse;
             }
 
             await lifecycle.RemovePrivateReadersAsync(owner, [id], ct);
-            await db.Set<Attachment>()
+            await db.Attachments
                 .Where(x => x.Id == id)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, false).SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
                         await transaction.CommitAsync(ct);

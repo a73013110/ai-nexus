@@ -25,8 +25,8 @@ internal sealed class GetStatus(
     IOptions<AdAuthenticationOptions> auth)
 {
     public static void Map(RouteGroupBuilder api) => api
-        .MapGet("/status", async (GetStatus handler, CancellationToken ct) =>
-            TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/status", (GetStatus handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .NotAudited("服務狀態")
         .WithName("GetStatus");
 

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -57,8 +56,9 @@ internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer
     public const int MaxDays = 31;
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (PunchReimportRequest body, ICurrentUser user, ReimportPunchFiles handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.AttendanceImportsReimport)
+        .MapPost("", (PunchReimportRequest body, ICurrentUser user, ReimportPunchFiles handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct))
+        .RequireFeature(FeatureCatalog.AttendanceImportsReimport)
         .Audited(AttendanceAudit.PunchFileImported)
         .WithName("ReimportAttendancePunchFiles");
 
@@ -75,7 +75,7 @@ internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer
             else return result.Error;
         }
         if (imported.Count == 0) return AttendanceErrors.ImportFileNotFound;
-        var imports = await db.Set<PunchImport>().AsNoTracking().Where(x => imported.Contains(x.Id)).ToDtos(db).ToListAsync(ct);
+        var imports = await db.PunchImports.AsNoTracking().Where(x => imported.Contains(x.Id)).ToDtos(db).ToListAsync(ct);
         return new PunchReimportResult([.. imports.OrderBy(x => x.FileName, StringComparer.Ordinal)], missing);
     }
 }

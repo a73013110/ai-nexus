@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -29,7 +28,7 @@ internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositorySer
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/reviews/{id:guid}/comment", (Guid id, PostRepositoryReviewCommentRequest body, ICurrentUser user, PostRepositoryReviewComment handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, body.Body.Trim(), ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, body.Body.Trim(), ct))
         .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCommented).WithName("PostRepositoryReviewComment");
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, Guid id, string body, CancellationToken ct)
@@ -37,15 +36,15 @@ internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositorySer
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var row = await db.Set<RepositoryReview>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
+            var row = await db.RepositoryReviews.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
             if (row is null) return RepositoriesErrors.ReviewNotFound;
             if (row.CommentUrl is not null) return RepositoriesErrors.CommentPosted;
-            var finished = await db.Set<RepositoryReviewResult>().AnyAsync(x => x.ReviewId == id && x.Ordinal == RepositoryReviewPlan.ReportOrdinal, ct);
+            var finished = await db.RepositoryReviewResults.AnyAsync(x => x.ReviewId == id && x.Ordinal == RepositoryReviewPlan.ReportOrdinal, ct);
             if (row.PullRequest is not { } number || !finished) return RepositoriesErrors.CommentUnavailable;
-            if (await reviews.CheckSourceAsync(owner, row, ct) is { IsSuccess: false } source) return source.Error!;
+            if (await reviews.CheckSourceAsync(owner, row, ct) is { IsSuccess: false } source) return source.Error;
             var posted = await gitea.PostCommentAsync(owner, row.Repository, number, body, ct);
-            if (!posted.IsSuccess) return posted.Error!;
-            using (var comment = posted.Value!)
+            if (!posted.IsSuccess) return posted.Error;
+            using (var comment = posted.Value)
             {
                 var url = GiteaJson.Text(comment.RootElement, "html_url", 500);
                 row.CommentUrl = url.StartsWith(gitea.BaseUrl, StringComparison.Ordinal) ? url : gitea.Link(row.Repository) + "/pulls/" + number;

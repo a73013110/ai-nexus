@@ -1,3 +1,4 @@
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -8,8 +9,9 @@ namespace AiNexus.Features.Admin.Diagnostics;
 internal sealed class GetSystemLogDetail(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetSystemLogDetail handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
-        .RequireAuthorization(DiagnosticConfiguration.DetailPolicy).Audited(DiagnosticsAudit.LogDetailRead).WithName("GetSystemLogDetail");
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetSystemLogDetail handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
+        .RequireFeature(FeatureCatalog.DiagnosticsLogsDetail).Audited(DiagnosticsAudit.LogDetailRead).WithName("GetSystemLogDetail");
 
     public Task<Result<DiagnosticDetail>> HandleAsync(Guid actor, Guid id, CancellationToken ct) => query.DetailAsync(actor, id, ct);
 }

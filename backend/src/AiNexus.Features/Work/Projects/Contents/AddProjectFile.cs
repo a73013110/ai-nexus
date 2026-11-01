@@ -13,8 +13,8 @@ namespace AiNexus.Features.Work.Projects.Contents;
 internal sealed class AddProjectFile(AppDbContext db, ResourceAccess access, DocumentService documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/files", async (Guid id, AddDocumentRequest body, ICurrentUser user, AddProjectFile handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body.AttachmentId, ct)).ToHttpResult()).Audited(ProjectsAudit.FileCreated);
+        .MapPost("/{id:guid}/files", (Guid id, AddDocumentRequest body, ICurrentUser user, AddProjectFile handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body.AttachmentId, ct)).Audited(ProjectsAudit.FileCreated);
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, Guid attachment, CancellationToken ct)
     {

@@ -25,10 +25,11 @@ internal sealed class UserPositionRequestValidator : RequestValidator<UserPositi
 /// 使用者表上的拖曳、方向鍵或輸入編號：只傳「移到第幾位」，值由伺服器依整份名單計算（<see cref="ManualOrder"/>）。
 /// 列表會分頁、搜尋，前端看不到完整順序，所以不讓前端算值。計算與寫入在同一個交易；會稽核。
 /// </summary>
-internal sealed class MoveUser(AppDbContext db, AdministrativeAudit audit)
+internal sealed class MoveUser(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}/position", async (Guid id, UserPositionRequest body, IRequestActor actor, MoveUser handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/users/{id:guid}/position", (Guid id, UserPositionRequest body, IRequestActor actor, MoveUser handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, body, ct))
         .Audited(IdentityAudit.UserMoved)
         .WithName("MoveUser");
 
@@ -39,7 +40,7 @@ internal sealed class MoveUser(AppDbContext db, AdministrativeAudit audit)
         if (planned is null) return IdentityErrors.UserOrderStale;
         if (planned.Count == 0) return Result.Success;
         var ids = planned.Select(x => x.Id).ToArray();
-        return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token), async () =>
+        return await write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.IdentityUsers, id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token)), async () =>
         {
             var writes = await PlanAsync(id, request.Position, ct);
             if (writes is null || !writes.SequenceEqual(planned)) return IdentityErrors.UserOrderStale;

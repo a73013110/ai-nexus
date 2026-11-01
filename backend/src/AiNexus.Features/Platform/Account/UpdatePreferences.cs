@@ -24,8 +24,8 @@ internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation model
     private const int MaxModelIdLength = 160;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/preferences", async (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
+        .MapPut("/preferences", (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
+            handler.HandleAsync(user.User, body, ct))
         .NotAudited("介面偏好（主題、側欄）")
         .WithName("UpdatePreferences");
 

@@ -13,7 +13,7 @@ internal static class EvaluationSetQueries
     {
         var resource = await access.RequireAsync(actor, id, EvaluationSet.Kind, ct);
         if (!resource.IsSuccess) return resource.Error;
-        var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        var set = await db.EvaluationSets.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return set.ToDto(await access.DescribeAsync(actor, resource.Value, ct));
     }
 }

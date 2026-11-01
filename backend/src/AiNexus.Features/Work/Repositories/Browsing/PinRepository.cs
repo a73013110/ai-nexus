@@ -12,7 +12,7 @@ internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, Re
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPut("/pin", (string owner, string name, ICurrentUser user, PinRepository handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, owner + "/" + name, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, owner + "/" + name, ct))
         .Audited(RepositoriesAudit.RepositoryPinned)
         .WithName("PinRepository");
 
@@ -20,9 +20,9 @@ internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, Re
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         var read = await gitea.GetAsync(owner, RepositoryService.Route(repo), ct);
-        if (!read.IsSuccess) return read.Error!;
+        if (!read.IsSuccess) return read.Error;
         string name, description; bool isPrivate;
-        using (var json = read.Value!)
+        using (var json = read.Value)
         {
             name = GiteaJson.Text(json.RootElement, "full_name", 201);
             description = GiteaJson.Text(json.RootElement, "description", 500);
@@ -33,7 +33,7 @@ internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, Re
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var pins = db.Set<RepositoryPin>().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl);
+            var pins = db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl);
             var row = await pins.SingleOrDefaultAsync(x => x.Repository == name, ct);
             if (row is null)
             {

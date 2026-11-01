@@ -15,16 +15,17 @@ public sealed record UserUnitDto(Guid UnitId, IReadOnlyList<string> Path, bool E
 internal sealed class ListUserUnits(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users/{id:guid}/organization-units", async (Guid id, ListUserUnits handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(id, ct)))
+        .MapGet("/users/{id:guid}/organization-units", (Guid id, ListUserUnits handler, CancellationToken ct) =>
+            handler.HandleAsync(id, ct))
         .Audited(OrganizationAudit.MemberRead)
         .WithName("ListUserOrganizationUnits");
 
     public async Task<IReadOnlyList<UserUnitDto>> HandleAsync(Guid userId, CancellationToken ct)
     {
-        var memberships = await db.Set<UnitMember>().AsNoTracking().Where(x => x.UserId == userId).ToListAsync(ct);
+        var memberships = await db.UnitMembers.AsNoTracking().Where(x => x.UserId == userId).ToListAsync(ct);
         if (memberships.Count == 0) return [];
         // 單位表很小（部門數以百計），整表讀進來組路徑比遞迴 CTE 簡單。
-        var units = await db.Set<Unit>().AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
+        var units = await db.Units.AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
         return [.. memberships
             .Select(x => new UserUnitDto(x.UnitId, Path(units, x.UnitId), units[x.UnitId].Enabled, x.IsPrimary, x.IsManager))
             .OrderByDescending(x => x.IsPrimary).ThenBy(x => string.Join('\u0001', x.Path), StringComparer.CurrentCulture)];

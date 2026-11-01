@@ -8,7 +8,8 @@ namespace AiNexus.Features.Admin.Diagnostics;
 internal sealed class QuerySystemLogs(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs
-        .MapGet("", ([AsParameters] DiagnosticFilter filter, ICurrentUser user, QuerySystemLogs handler, CancellationToken ct) => handler.HandleAsync(user.Id, filter, ct).ToHttpResultAsync())
+        .MapGet("", ([AsParameters] DiagnosticFilter filter, ICurrentUser user, QuerySystemLogs handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, filter, ct))
         .Audited(DiagnosticsAudit.LogRead)
         .WithName("QuerySystemLogs");
 

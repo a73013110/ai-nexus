@@ -38,7 +38,7 @@ internal sealed class CreateConversation(AppDbContext db, TimeProvider clock, Au
         if (!Conversation.TitleIsValid(title)) return ConversationsErrors.InvalidTitle;
         var now = clock.GetUtcNow();
         var conversation = new Conversation { OwnerId = owner, Title = title, CreatedAt = now, UpdatedAt = now };
-        db.Set<Conversation>().Add(conversation);
+        db.Conversations.Add(conversation);
         audit.Describe(resource: conversation.Id);
         await db.SaveChangesAsync(ct);
         return conversation.ToDto();

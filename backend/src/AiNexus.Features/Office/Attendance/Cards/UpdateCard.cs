@@ -21,20 +21,21 @@ internal sealed class CardUpdateRequestValidator : RequestValidator<CardUpdateRe
 /// 修改是否在出勤紀錄隱藏與備註。隱藏只影響 HR 看全公司的出勤紀錄（見 <see cref="Card.HiddenFromRecords"/>），持有期間與刷卡不動。
 /// 會稽核（<c>admin.attendance_card</c>），快照含前後的隱藏旗標；備註不進稽核。
 /// </summary>
-internal sealed class UpdateCard(AppDbContext db, AdministrativeAudit audit)
+internal sealed class UpdateCard(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", (Guid id, CardUpdateRequest body, ICurrentUser user, UpdateCard handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .MapPut("/{id:guid}", (Guid id, CardUpdateRequest body, ICurrentUser user, UpdateCard handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
+        .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.CardUpdated)
         .WithName("UpdateAttendanceCard");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CardUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, id, id.ToString(), token => CardRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, CardUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, CardRules.Target(db, id), async () =>
     {
-        var card = await db.Set<Card>().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var card = await db.Cards.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;
         card.HiddenFromRecords = request.HiddenFromRecords;
-        card.Note = CardRules.Normalize(request.Note);
+        card.Note = TextRules.TrimToNull(request.Note);
         return Result.Success;
     }, ct);
 }

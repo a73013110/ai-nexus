@@ -16,19 +16,20 @@ public sealed record UnitMemberRequest(bool IsPrimary, bool IsManager);
 /// 加入或更新成員。只能加入未刪除的使用者，停用的單位不能再加入新成員（既有成員仍可修改）；有首長單位的單位不能勾選主管（ADR 0024）。
 /// 主要所屬在同一個交易內轉移；先清掉舊的再寫新的，否則一人一筆的 filtered unique index 會在中途擋下。會稽核。
 /// </summary>
-internal sealed class SaveUnitMember(AppDbContext db, AdministrativeAudit audit)
+internal sealed class SaveUnitMember(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, UnitMemberRequest body, IRequestActor actor, SaveUnitMember handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, userId, body, ct)).ToHttpResult())
+        .MapPut("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, UnitMemberRequest body, IRequestActor actor, SaveUnitMember handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, userId, body, ct))
         .Audited(OrganizationAudit.MemberUpdated)
         .WithName("SaveOrganizationUnitMember");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, userId.ToString(), token => UnitRules.MembershipsAsync(db, userId, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct) => write.ExecuteAsync(actor, UnitRules.MemberTarget(db, id, userId), async () =>
     {
-        var unit = await db.Set<Unit>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var unit = await db.Units.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (unit is null) return OrganizationErrors.UnitNotFound;
-        if (request.IsManager && await db.Set<Unit>().AnyAsync(x => x.ParentId == id && x.HeadRank != null, ct)) return OrganizationErrors.ManagerByHeadUnit;
-        var member = await db.Set<UnitMember>().SingleOrDefaultAsync(x => x.UnitId == id && x.UserId == userId, ct);
+        if (request.IsManager && await db.Units.AnyAsync(x => x.ParentId == id && x.HeadRank != null, ct)) return OrganizationErrors.ManagerByHeadUnit;
+        var member = await db.UnitMembers.SingleOrDefaultAsync(x => x.UnitId == id && x.UserId == userId, ct);
         if (member is null)
         {
             if (!await db.Users.AnyAsync(x => x.Id == userId && x.DeletedAt == null, ct)) return OrganizationErrors.UserNotFound;
@@ -37,7 +38,7 @@ internal sealed class SaveUnitMember(AppDbContext db, AdministrativeAudit audit)
             db.Add(member);
         }
         if (request.IsPrimary && !member.IsPrimary)
-            await db.Set<UnitMember>().Where(x => x.UserId == userId && x.UnitId != id && x.IsPrimary).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsPrimary, false), ct);
+            await db.UnitMembers.Where(x => x.UserId == userId && x.UnitId != id && x.IsPrimary).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsPrimary, false), ct);
         member.IsPrimary = request.IsPrimary; member.IsManager = request.IsManager;
         return Result.Success;
     }, ct);

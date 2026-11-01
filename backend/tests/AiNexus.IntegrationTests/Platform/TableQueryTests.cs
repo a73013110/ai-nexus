@@ -17,7 +17,7 @@ public sealed class TableQueryTests
         CompleteUpTo = 5,
     }
         .Range("startedAt", x => x.StartedAt)
-        .Text("fileName", x => db.Set<PunchFile>().Where(f => f.Id == x.PunchFileId).Select(f => f.FileName).FirstOrDefault())
+        .Text("fileName", x => db.PunchFiles.Where(f => f.Id == x.PunchFileId).Select(f => f.FileName).FirstOrDefault())
         .Options("triggerKind", x => x.TriggerKind)
         .Range("punchCount", x => x.PunchCount)
         .Key(x => x.Id)
@@ -36,7 +36,7 @@ public sealed class TableQueryTests
         }
         using var scope = session.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var imports = db.Set<PunchImport>().AsNoTracking();
+        var imports = db.PunchImports.AsNoTracking();
         var ct = TestContext.Current.CancellationToken;
 
         var first = (await imports.ToTablePageAsync(new TableRequest { Limit = 4 }, Columns(db), q => q.Select(x => x.Id), ct)).Value!;

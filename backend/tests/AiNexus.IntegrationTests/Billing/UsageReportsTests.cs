@@ -23,7 +23,7 @@ public sealed class UsageReportsTests
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         ModelInvocation Call(DateTimeOffset at, long input) => new() { OwnerId = owner, Kind = "ocr", ModelId = "test-model", Status = "completed", InputTokens = input, OutputTokens = 1, CreatedAt = at };
-        db.Set<ModelInvocation>().AddRange(Call(from.AddTicks(-1), 1), Call(from, 10), Call(until.AddTicks(-1), 20), Call(until, 100), Call(DateTimeOffset.UtcNow.AddDays(1), 1000));
+        db.ModelInvocations.AddRange(Call(from.AddTicks(-1), 1), Call(from, 10), Call(until.AddTicks(-1), 20), Call(until, 100), Call(DateTimeOffset.UtcNow.AddDays(1), 1000));
         await db.SaveChangesAsync();
         var reports = scope.ServiceProvider.GetRequiredService<UsageReports>();
 

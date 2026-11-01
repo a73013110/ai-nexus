@@ -30,14 +30,14 @@ public sealed class CreateRunTests
         await WaitForTerminal(client, (await CreateRun(client, conversation.Id, "second")).Id);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var runs = await db.Runs.OrderBy(x => x.CreatedAt).ToListAsync();
+        var runs = await db.GenerationRuns.OrderBy(x => x.CreatedAt).ToListAsync();
         Assert.Equal(2, runs.Count);
         runs[0].ActiveOwnerId = runs[0].OwnerId; await db.SaveChangesAsync();
 
         runs[1].ActiveOwnerId = runs[1].OwnerId;
         Assert.Equal(2601, Assert.IsType<SqlException>((await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync())).InnerException).Number);
         db.ChangeTracker.Clear();
-        var second = await db.Runs.SingleAsync(x => x.Id == runs[1].Id);
+        var second = await db.GenerationRuns.SingleAsync(x => x.Id == runs[1].Id);
         second.IdempotencyKey = runs[0].IdempotencyKey;
         Assert.Equal(2601, Assert.IsType<SqlException>((await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync())).InnerException).Number);
     }
@@ -63,7 +63,7 @@ public sealed class CreateRunTests
         Assert.Equal("high", factory.Provider.LastParameters!.ReasoningEffort);
         Assert.Equal("google-level", factory.Provider.LastParameters.ReasoningControl);
         using var scope = factory.Services.CreateScope();
-        var json = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Runs.SingleAsync()).ParametersJson;
+        var json = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().GenerationRuns.SingleAsync()).ParametersJson;
         Assert.Equal("high", JsonSerializer.Deserialize<GenerationParameters>(json)!.ReasoningEffort);
     }
 
@@ -139,7 +139,7 @@ public sealed class CreateRunTests
         await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}"), HttpStatusCode.NotFound, "conversation_not_found");
         await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}/events"), HttpStatusCode.NotFound, "conversation_not_found");
         using var scope = factory.Services.CreateScope();
-        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().Runs.CountAsync());
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().GenerationRuns.CountAsync());
     }
 
     private static async Task AssertError(HttpResponseMessage response, HttpStatusCode status, string code)

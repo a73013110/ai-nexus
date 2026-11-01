@@ -11,7 +11,8 @@ namespace AiNexus.Features.Admin.Quality.Evaluations;
 internal sealed class DeleteEvaluationSet(ResourceLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/sets/{id:guid}", (Guid id, ICurrentUser user, DeleteEvaluationSet handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapDelete("/sets/{id:guid}", (Guid id, ICurrentUser user, DeleteEvaluationSet handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetDeleted);
 
     public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => lifecycle.DeleteAsync(actor, id, EvaluationSet.Kind, ct);

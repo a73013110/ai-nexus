@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,8 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 internal sealed class GetConversationKnowledge(AppDbContext db, ConversationService conversations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (Guid id, ICurrentUser user, GetConversationKnowledge handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("", (Guid id, ICurrentUser user, GetConversationKnowledge handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .NotAudited("對話設定的知識庫選項")
         .WithName("ConversationKnowledge");
 
@@ -21,6 +21,6 @@ internal sealed class GetConversationKnowledge(AppDbContext db, ConversationServ
     {
         var owned = await conversations.RequireOwnedAsync(actor, conversation, ct);
         if (!owned.IsSuccess) return owned.Error;
-        return new KnowledgeSelectionDto(await db.Set<ConversationCollection>().Where(x => x.ConversationId == conversation).Select(x => x.CollectionId).ToListAsync(ct));
+        return new KnowledgeSelectionDto(await db.ConversationCollections.Where(x => x.ConversationId == conversation).Select(x => x.CollectionId).ToListAsync(ct));
     }
 }

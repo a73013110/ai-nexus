@@ -33,12 +33,12 @@ public sealed partial class RunRecoveryWorker(
 
                     if (tracked.Length > 0)
                     {
-                        await db.Runs
+                        await db.GenerationRuns
                             .Where(x => tracked.Contains(x.Id) && x.ExecutorId == scheduler.InstanceId && x.ActiveOwnerId != null)
                             .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseExpiresAt, now + GenerationScheduler.LeaseDuration), stoppingToken);
 
                         // 本機仍在追蹤、但資料庫已不是活躍狀態的 Run，代表被別處取消或結算，這裡同步發出取消
-                        var active = await db.Runs
+                        var active = await db.GenerationRuns
                             .Where(x => tracked.Contains(x.Id) && x.ActiveOwnerId != null)
                             .Select(x => x.Id)
                             .ToArrayAsync(stoppingToken);

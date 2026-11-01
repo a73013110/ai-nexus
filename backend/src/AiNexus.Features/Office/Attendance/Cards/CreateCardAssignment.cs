@@ -28,14 +28,15 @@ internal sealed class CardAssignmentCreateRequestValidator : RequestValidator<Ca
 
 /// <summary>
 /// 新增持有期間（會稽核，<c>admin.attendance_assignment</c>）。規則見 <see cref="AssignmentRules.Place"/>；
-/// 檢查與寫入在 <c>AdministrativeAudit</c> 的 Serializable 交易與行政寫入鎖內，兩個人同時指派同一張卡時後到的會看到先到的結果，不會雙雙通過。
+/// 檢查與寫入在 <see cref="AdministrativeWrite"/> 的 Serializable 交易與行政寫入鎖內，兩個人同時指派同一張卡時後到的會看到先到的結果，不會雙雙通過。
 /// 被拒絕的 <c>attendance_card_held</c> 不帶目前的持有人（錯誤回應不帶資料）：前端由持有歷史得知是誰持有，提示後以 <c>TakeOver</c> 重送。
 /// </summary>
-internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeAudit audit)
+internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (CardAssignmentCreateRequest body, ICurrentUser user, CreateCardAssignment handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.AttendanceCardsMaintain)
+        .MapPost("", (CardAssignmentCreateRequest body, ICurrentUser user, CreateCardAssignment handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct))
+        .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.AssignmentCreated)
         .WithName("CreateAttendanceCardAssignment");
 
@@ -45,22 +46,22 @@ internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeAudit 
         {
             CardId = request.CardId,
             UserId = request.UserId,
-            HolderName = CardRules.Normalize(request.HolderName),
+            HolderName = TextRules.TrimToNull(request.HolderName),
             StartsAt = request.StartsAt,
             EndsAt = request.EndsAt,
-            Note = CardRules.Normalize(request.Note),
+            Note = TextRules.TrimToNull(request.Note),
         };
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AttendanceCardsMaintain, assignment.Id, assignment.Id.ToString(), token => AssignmentRules.SnapshotAsync(db, request.CardId, token), async () =>
+        var outcome = await write.ExecuteAsync(actor, AssignmentRules.Target(db, assignment.Id, request.CardId), async () =>
         {
-            if (!await db.Set<Card>().AnyAsync(x => x.Id == request.CardId, ct)) return AttendanceErrors.CardNotFound;
+            if (!await db.Cards.AnyAsync(x => x.Id == request.CardId, ct)) return AttendanceErrors.CardNotFound;
             if (request.UserId is { } userId && !await AssignmentRules.HolderExistsAsync(db, userId, ct)) return AttendanceErrors.UserNotFound;
             // 追蹤中的實體：接手時 Place 改掉前一段的 EndsAt，與新段在同一次 SaveChanges 寫入、同一筆稽核。
-            var existing = await db.Set<CardAssignment>().Where(x => x.CardId == request.CardId).ToListAsync(ct);
+            var existing = await db.CardAssignments.Where(x => x.CardId == request.CardId).ToListAsync(ct);
             if (AssignmentRules.Place(existing, assignment, request.TakeOver) is { } refused) return refused;
             db.Add(assignment);
             return Result.Success;
         }, ct);
         if (!outcome.IsSuccess) return outcome.Error;
-        return await db.Set<CardAssignment>().AsNoTracking().Where(x => x.Id == assignment.Id).ToDtos(db).SingleAsync(ct);
+        return await db.CardAssignments.AsNoTracking().Where(x => x.Id == assignment.Id).ToDtos(db).SingleAsync(ct);
     }
 }

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Work.Conversations;
@@ -25,8 +24,8 @@ internal sealed class DuplicateConversation(
     TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/duplicate", async (Guid id, ICurrentUser user, DuplicateConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapPost("/{id:guid}/duplicate", (Guid id, ICurrentUser user, DuplicateConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationDuplicated)
         .WithName("DuplicateConversation");
 
@@ -49,7 +48,7 @@ internal sealed class DuplicateConversation(
                 return ConversationsErrors.GenerationActive;
             }
 
-            var messages = await db.Set<Message>()
+            var messages = await db.Messages
                 .AsNoTracking()
                 .Where(x => x.ConversationId == id)
                 .OrderBy(x => x.CreatedAt)
@@ -78,11 +77,11 @@ internal sealed class DuplicateConversation(
                 })
                 .ToList();
 
-            db.Set<Conversation>().Add(clone);
+            db.Conversations.Add(clone);
 
             foreach (var message in messages)
             {
-                db.Set<Message>().Add(new()
+                db.Messages.Add(new()
                 {
                     Id = ids[message.Id],
                     ConversationId = clone.Id,
@@ -98,14 +97,14 @@ internal sealed class DuplicateConversation(
             }
 
             // 複製訊息與附件的關聯：實體檔案多引用共享，不需物理複製檔案本體
-            var links = await db.Set<MessageAttachment>()
+            var links = await db.MessageAttachments
                 .AsNoTracking()
                 .Where(x => ids.Keys.Contains(x.MessageId))
                 .ToListAsync(ct);
 
             foreach (var link in links)
             {
-                db.Set<MessageAttachment>().Add(new()
+                db.MessageAttachments.Add(new()
                 {
                     MessageId = ids[link.MessageId],
                     AttachmentId = link.AttachmentId

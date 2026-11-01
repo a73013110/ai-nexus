@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -12,8 +11,8 @@ namespace AiNexus.Features.Work.Files.Management;
 internal sealed class RetainLibraryFile(AppDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/retain", async (Guid id, ICurrentUser user, RetainLibraryFile handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapPost("/{id:guid}/retain", (Guid id, ICurrentUser user, RetainLibraryFile handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(FilesAudit.FileRetained)
         .WithName("RetainLibraryFile");
 
@@ -27,7 +26,7 @@ internal sealed class RetainLibraryFile(AppDbContext db, AttachmentService files
             var file = await files.OwnedAsync(actor, id, ct);
             if (!file.IsSuccess) return file.Error;
             if (file.Value.InLibrary) return Result.Success;
-            await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
+            await db.Attachments.Where(x => x.Id == id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return Result.Success;

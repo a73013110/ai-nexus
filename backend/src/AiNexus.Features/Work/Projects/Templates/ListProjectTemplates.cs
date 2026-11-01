@@ -12,11 +12,12 @@ namespace AiNexus.Features.Work.Projects.Templates;
 internal sealed class ListProjectTemplates(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/templates", (Guid id, ICurrentUser user, ListProjectTemplates handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.TemplateRead);
+        .MapGet("/{id:guid}/templates", (Guid id, ICurrentUser user, ListProjectTemplates handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.TemplateRead);
 
-    public async Task<Result<IReadOnlyList<ProjectTemplateDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<ProjectTemplateDto[]>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         if (await access.RequireAsync(actor, id, Project.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
-        return await db.Set<ProjectTemplate>().Where(x => x.ProjectId == id).OrderBy(x => x.Title).Select(x => new ProjectTemplateDto(x.Id, x.Title, x.Content)).ToListAsync(ct);
+        return await db.ProjectTemplates.Where(x => x.ProjectId == id).OrderBy(x => x.Title).Select(x => new ProjectTemplateDto(x.Id, x.Title, x.Content)).ToArrayAsync(ct);
     }
 }

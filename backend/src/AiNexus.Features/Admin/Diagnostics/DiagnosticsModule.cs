@@ -18,8 +18,6 @@ public sealed class DiagnosticsModule : IFeatureModule
         services.AddScoped<DiagnosticQuery>();
         services.AddSingleton<ClientIssueDeduplication>();
         services.AddMonitoringSource<LogPipelineMonitoring>();
-        foreach (var feature in new[] { DiagnosticConfiguration.Query, DiagnosticConfiguration.Detail, DiagnosticConfiguration.Export })
-            services.AddFeaturePolicy(feature);
         services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
     }
 
@@ -27,7 +25,7 @@ public sealed class DiagnosticsModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 日誌讀取有速率限制，且不進一般請求日誌（查日誌不該再產生日誌）；稽核由 DiagnosticQuery 負責。
-        var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).RequireRateLimiting(QueryRateLimit)
+        var logs = api.MapGroup("/admin/logs").RequireFeature(FeatureCatalog.DiagnosticsLogs).RequireRateLimiting(QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog());
         QuerySystemLogs.Map(logs);
         GetSystemLogDetail.Map(logs);

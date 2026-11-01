@@ -25,19 +25,19 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
     public static void Map(RouteGroupBuilder repository)
     {
         repository.MapGet("/issues", (string owner, string name, string? state, string? q, int? page, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
-                handler.IssuesAsync(user.Id, owner + "/" + name, state ?? "open", q, page ?? 1, ct).ToHttpResultAsync())
+                handler.IssuesAsync(user.Id, owner + "/" + name, state ?? "open", q, page ?? 1, ct))
             .Audited(RepositoriesAudit.IssueRead)
             .WithName("ListRepositoryIssues");
         repository.MapGet("/issues/{number:int}", (string owner, string name, int number, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
-                handler.IssueAsync(user.Id, owner + "/" + name, number, ct).ToHttpResultAsync())
+                handler.IssueAsync(user.Id, owner + "/" + name, number, ct))
             .Audited(RepositoriesAudit.IssueRead)
             .WithName("ReadRepositoryIssue");
         repository.MapGet("/pulls", (string owner, string name, string? state, int? page, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
-                handler.PullsAsync(user.Id, owner + "/" + name, state ?? "open", page ?? 1, ct).ToHttpResultAsync())
+                handler.PullsAsync(user.Id, owner + "/" + name, state ?? "open", page ?? 1, ct))
             .Audited(RepositoriesAudit.PullRequestRead)
             .WithName("ListRepositoryPulls");
         repository.MapGet("/pulls/{number:int}", (string owner, string name, int number, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
-                handler.PullAsync(user.Id, owner + "/" + name, number, ct).ToHttpResultAsync())
+                handler.PullAsync(user.Id, owner + "/" + name, number, ct))
             .Audited(RepositoriesAudit.PullRequestRead)
             .WithName("ReadRepositoryPull");
     }
@@ -49,8 +49,8 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
         if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidState;
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + $"/issues?state={state}&type=issues&page={page}&limit={PageSize}" +
             (q.Length > 0 ? "&q=" + Uri.EscapeDataString(q) : ""), ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var rows = json.RootElement.EnumerateArray().Take(PageSize).ToArray();
         return new RepositoryIssuePageDto(rows.Select(x => Issue(repo, x)).Where(x => x.Number > 0).ToArray(), page, rows.Length == PageSize);
     }
@@ -60,24 +60,24 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (number < 1) return RepositoriesErrors.NotFound;
         var read = await gitea.GetAsync(owner, RepositoryService.Route(repo) + "/issues/" + number, ct);
-        if (!read.IsSuccess) return read.Error!;
+        if (!read.IsSuccess) return read.Error;
         RepositoryIssueDto issue; string body;
-        using (var json = read.Value!)
+        using (var json = read.Value)
         {
             // Gitea 也會從 issue 端點回傳 pull request，但它們有自己的頁面；這裡必須排除，否則會被當成 issue 顯示。
             if (json.RootElement.TryGetProperty("pull_request", out var pull) && pull.ValueKind == JsonValueKind.Object) return RepositoriesErrors.NotFound;
             issue = Issue(repo, json.RootElement); body = GiteaJson.Text(json.RootElement, "body", 32000);
         }
         var comments = await CommentsAsync(owner, repo, number, "issues", ct);
-        return comments.IsSuccess ? new RepositoryIssueDetailDto(issue, body, comments.Value!) : comments.Error!;
+        return comments.IsSuccess ? new RepositoryIssueDetailDto(issue, body, comments.Value) : comments.Error;
     }
 
     public async Task<Result<RepositoryPullPageDto>> PullsAsync(Guid owner, string repo, string state, int page, CancellationToken ct)
     {
         if (Check(repo, state, page) is { } invalid) return invalid;
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + $"/pulls?state={state}&sort=recentupdate&page={page}&limit={PageSize}", ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var rows = json.RootElement.EnumerateArray().Take(PageSize).ToArray();
         return new RepositoryPullPageDto(rows.Select(x => Pull(repo, x)).Where(x => x.Number > 0).ToArray(), page, rows.Length == PageSize);
     }
@@ -87,9 +87,9 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (number < 1) return RepositoriesErrors.NotFound;
         var read = await gitea.GetAsync(owner, RepositoryService.Route(repo) + "/pulls/" + number, ct);
-        if (!read.IsSuccess) return read.Error!;
+        if (!read.IsSuccess) return read.Error;
         RepositoryPullDto pull; string body, head, basis;
-        using (var json = read.Value!)
+        using (var json = read.Value)
         {
             var root = json.RootElement;
             pull = Pull(repo, root); body = GiteaJson.Text(root, "body", 32000);
@@ -99,17 +99,17 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
         }
         if (!RepositoryService.IsCommit(head) || !RepositoryService.IsCommit(basis)) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
         var comments = await CommentsAsync(owner, repo, number, "pulls", ct);
-        return comments.IsSuccess ? new RepositoryPullDetailDto(pull, body, head, basis, comments.Value!) : comments.Error!;
+        return comments.IsSuccess ? new RepositoryPullDetailDto(pull, body, head, basis, comments.Value) : comments.Error;
     }
 
-    private async Task<Result<IReadOnlyList<RepositoryCommentDto>>> CommentsAsync(Guid owner, string repo, int number, string kind, CancellationToken ct)
+    private async Task<Result<RepositoryCommentDto[]>> CommentsAsync(Guid owner, string repo, int number, string kind, CancellationToken ct)
     {
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + "/issues/" + number + "/comments", ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var link = gitea.Link(repo) + "/" + kind + "/" + number;
-        return Result<IReadOnlyList<RepositoryCommentDto>>.Ok(json.RootElement.EnumerateArray().Take(MaxComments).Select(x => new RepositoryCommentDto(GiteaJson.Number(x, "id"),
-            GiteaJson.Login(x, "user"), GiteaJson.Text(x, "body", 16000), GiteaJson.Date(x, "created_at"), link + "#issuecomment-" + GiteaJson.Number(x, "id"))).ToArray());
+        return json.RootElement.EnumerateArray().Take(MaxComments).Select(x => new RepositoryCommentDto(GiteaJson.Number(x, "id"),
+            GiteaJson.Login(x, "user"), GiteaJson.Text(x, "body", 16000), GiteaJson.Date(x, "created_at"), link + "#issuecomment-" + GiteaJson.Number(x, "id"))).ToArray();
     }
 
     private static Error? Check(string repo, string state, int page) =>

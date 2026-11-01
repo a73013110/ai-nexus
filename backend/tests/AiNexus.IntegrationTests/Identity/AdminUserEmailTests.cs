@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
-using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Operations;
 using Microsoft.EntityFrameworkCore;
@@ -57,7 +56,7 @@ public sealed class AdminUserEmailTests
         Assert.All(details, x => Assert.DoesNotContain("Bob.Smith", x));
         Assert.Contains(details, x => x!.Contains("\"source\":\"admin\""));
         // 沒有已驗證的舊信箱，不寄通知。
-        Assert.False(await db.Set<OutboundMessage>().AnyAsync(x => x.Category == "account.security-notice"));
+        Assert.False(await db.OutboundMessages.AnyAsync(x => x.Category == "account.security-notice"));
     }
 
     [Fact]
@@ -82,7 +81,7 @@ public sealed class AdminUserEmailTests
         Assert.Equal(("robert@fixture.test", EmailSources.Admin), (user.Email, user.EmailSource));
         Assert.Null(user.EmailVerifiedAt);
         using var check = f.Services.CreateScope();
-        var notice = await check.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AsNoTracking().SingleAsync(x => x.Category == "account.security-notice");
+        var notice = await check.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AsNoTracking().SingleAsync(x => x.Category == "account.security-notice");
         Assert.Equal(("bob@fixture.test", bob.Id), (notice.RecipientAddress, notice.RecipientUserId));
         await Dispatcher(f).DispatchAsync(CancellationToken.None);
         var body = f.Mail.Sent.Last().Message.TextBody ?? "";
@@ -120,6 +119,6 @@ public sealed class AdminUserEmailTests
     private static async Task<bool> NoticeExistsAsync(AppFactory f)
     {
         using var scope = f.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AnyAsync(x => x.Category == "account.security-notice");
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AnyAsync(x => x.Category == "account.security-notice");
     }
 }

@@ -8,14 +8,15 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Work.Files.Storage;
 
 /// <summary>設定或清除使用者個人的附件容量上限，於擁有者的配額鎖內更新。會稽核。</summary>
-internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeAudit audit, AttachmentQuota quota)
+internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeWrite write, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}/storage", async (Guid id, AttachmentStorageLimitRequest body, ICurrentUser user, SetUserAttachmentStorage handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/users/{id:guid}/storage", (Guid id, AttachmentStorageLimitRequest body, ICurrentUser user, SetUserAttachmentStorage handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(FilesAudit.StorageLimitUpdated)
         .WithName("SetUserAttachmentStorage");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
     {
         if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
         if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;

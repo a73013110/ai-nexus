@@ -25,8 +25,6 @@ public sealed class QualityModule : IFeatureModule
         services.AddScoped<RetrievalEvaluationService>();
         services.AddBackgroundJobHandler<RetrievalEvaluationHandler>(RetrievalEvaluationHandler.JobKind);
         services.AddBackgroundJobHandler<EvaluationHandler>(EvaluationHandler.JobKind);
-        services.AddFeaturePolicy(FeatureCatalog.Quality);
-        services.AddFeaturePolicy(FeatureCatalog.QualityRetrieval);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
@@ -34,11 +32,11 @@ public sealed class QualityModule : IFeatureModule
         ReadFeedback.MapForMessage(api);
         SaveMessageFeedback.Map(api);
         // 檢索評測是獨立頁面與授權（quality.retrieval），其餘題組、執行與回饋屬於品質評測頁。
-        var retrieval = api.MapGroup("/quality").RequireAuthorization(Policies.QualityRetrieval);
+        var retrieval = api.MapGroup("/quality").RequireFeature(FeatureCatalog.QualityRetrieval);
         ListRetrievalEvaluations.Map(retrieval);
         CreateRetrievalEvaluation.Map(retrieval);
         GetRetrievalReport.Map(retrieval);
-        var routes = api.MapGroup("/quality").RequireAuthorization(Policies.Quality);
+        var routes = api.MapGroup("/quality").RequireFeature(FeatureCatalog.Quality);
         ReadFeedback.MapList(routes);
         BrowseEvaluationSets.MapList(routes);
         SaveEvaluationSet.MapCreate(routes);

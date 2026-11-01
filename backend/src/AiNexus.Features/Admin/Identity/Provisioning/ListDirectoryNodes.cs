@@ -22,7 +22,8 @@ public sealed record DirectoryNodesDto(DirectoryNodeDto Node, IReadOnlyList<Dire
 internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuthenticationOptions> options)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/directory-nodes", (string? parent, ListDirectoryNodes handler, CancellationToken ct) => handler.HandleAsync(parent, ct).ToHttpResultAsync())
+        .MapGet("/directory-nodes", (string? parent, ListDirectoryNodes handler, CancellationToken ct) =>
+            handler.HandleAsync(parent, ct))
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)
         .Audited(IdentityAudit.DirectoryRead)
         .WithName("ListDirectoryNodes");

@@ -22,8 +22,8 @@ internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService a
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/conversations/{id:guid}/files/{file:guid}/preview", async (Guid id, Guid file, ICurrentUser user, OpenAdminConversationFile handler, CancellationToken ct) =>
-                (await handler.PreviewAsync(user.Id, id, file, ct)).ToHttpResult())
+        routes.MapGet("/conversations/{id:guid}/files/{file:guid}/preview", (Guid id, Guid file, ICurrentUser user, OpenAdminConversationFile handler, CancellationToken ct) =>
+                handler.PreviewAsync(user.Id, id, file, ct))
             .Audited(ConversationsAudit.ConversationFileRead)
             .WithName("PreviewAdminConversationFile");
         routes.MapGet("/conversations/{id:guid}/files/{file:guid}", (Guid id, Guid file, bool? download, ICurrentUser user, OpenAdminConversationFile handler, HttpContext http, CancellationToken ct) =>
@@ -65,10 +65,10 @@ internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService a
         var owner = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking()
             .Where(x => x.Id == id).Select(x => (Guid?)x.OwnerId).SingleOrDefaultAsync(ct);
         if (owner is null) return ConversationsErrors.AdminResourceNotFound;
-        var linked = await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == fileId
+        var linked = await db.MessageAttachments.AnyAsync(x => x.AttachmentId == fileId
             && db.Messages.Any(m => m.Id == x.MessageId && m.ConversationId == id), ct);
         var file = linked
-            ? await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct)
+            ? await db.Attachments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct)
             : null;
         if (file is null) return ConversationsErrors.AdminResourceNotFound;
         audit.Describe(subject: owner.Value, details: new { file = fileId });

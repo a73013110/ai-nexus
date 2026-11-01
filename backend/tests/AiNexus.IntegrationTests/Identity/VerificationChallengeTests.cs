@@ -126,6 +126,6 @@ public sealed class VerificationChallengeTests
     private static async Task<VerificationChallenge> RowAsync(AppFactory f, Guid id)
     {
         using var scope = f.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<VerificationChallenge>().AsNoTracking().SingleAsync(x => x.Id == id);
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().VerificationChallenges.AsNoTracking().SingleAsync(x => x.Id == id);
     }
 }

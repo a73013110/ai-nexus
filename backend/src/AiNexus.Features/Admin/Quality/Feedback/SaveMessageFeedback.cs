@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Quality;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
@@ -33,7 +32,7 @@ internal sealed class SaveMessageFeedback(AppDbContext db, ResourceWriteLock wri
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
-        .RequireAuthorization(Policies.Chat).Audited(QualityAudit.FeedbackUpdated);
+        .RequireFeature(FeatureCatalog.Chat).Audited(QualityAudit.FeedbackUpdated);
 
     public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {
@@ -43,7 +42,7 @@ internal sealed class SaveMessageFeedback(AppDbContext db, ResourceWriteLock wri
         // 每則訊息只能有一筆：同一回答並行儲存時，不可讓兩個請求都 INSERT。
         using (await writes.AcquireAsync("feedback", message, ct))
         {
-            var row = await db.Set<MessageFeedback>().FindAsync([message], ct);
+            var row = await db.MessageFeedback.FindAsync([message], ct);
             if (request.Rating == 0) { if (row is not null) db.Remove(row); await db.SaveChangesAsync(ct); return new FeedbackOutcome(null); }
             if (row is null) { row = new() { MessageId = message, OwnerId = actor }; db.Add(row); }
             row.Rating = request.Rating; row.Reason = request.Reason; row.Note = request.Note.Trim(); row.UpdatedAt = clock.GetUtcNow();

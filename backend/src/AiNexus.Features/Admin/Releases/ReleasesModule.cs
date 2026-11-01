@@ -24,7 +24,6 @@ public sealed class ReleasesModule : IFeatureModule
         services.AddHostedService<AppDeploymentRecorder>();
         services.AddHostedService<SchemaChangeWatch>();
         services.AddMonitoringSource<ReleasesMonitoring>();
-        services.AddFeaturePolicy(FeatureCatalog.Releases);
         services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
     }
 
@@ -32,7 +31,7 @@ public sealed class ReleasesModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         GetCurrentRelease.Map(api);
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.Releases);
+        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.Releases);
         GetReleaseStatus.Map(admin);
         ListDeployments.Map(admin);
         var changes = admin.MapGroup("/schema-changes");

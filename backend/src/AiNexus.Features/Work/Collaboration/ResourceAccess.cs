@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
@@ -32,9 +31,9 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
         var effective = await access.ForUserAsync(actor, ct);
         var groups = effective.Groups.Select(x => x.Id).ToArray();
         var inheritProjects = await access.HoldsAsync(actor, "projects", ct);
-        var direct = db.Set<Resource>().Where(x =>
-            x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId)));
-        return db.Set<Resource>().Where(x => x.Kind == kind &&
+        var direct = db.Resources.Where(x =>
+            x.OwnerId == actor || db.ResourceMembers.Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.ResourceGroups.Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId)));
+        return db.Resources.Where(x => x.Kind == kind &&
             (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == Project.Kind && r.Id == x.ParentId)));
     }
     public async Task<Result<Resource>> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
@@ -83,21 +82,21 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
         => new(value.Id, value.Name, value.Kind, canEdit, value.OwnerId == actor, value.UpdatedAt);
 
     /// <summary>使用者以具名編輯者身分加入的資源連結；群組授權只給唯讀，不在此列。</summary>
-    private IQueryable<ResourceMember> EditorLinks(Guid actor) => db.Set<ResourceMember>().Where(x => x.UserId == actor && x.Role == "editor");
+    private IQueryable<ResourceMember> EditorLinks(Guid actor) => db.ResourceMembers.Where(x => x.UserId == actor && x.Role == "editor");
 
     /// <summary>使用者可編輯的專案：專案的編輯者也能編輯其下的子資源。</summary>
     private IQueryable<Resource> EditableProjects(Guid actor)
     {
         var editors = EditorLinks(actor);
-        return db.Set<Resource>().Where(x => x.Kind == Project.Kind && (x.OwnerId == actor || editors.Any(m => m.ResourceId == x.Id)));
+        return db.Resources.Where(x => x.Kind == Project.Kind && (x.OwnerId == actor || editors.Any(m => m.ResourceId == x.Id)));
     }
     public async Task<Result<ResourceAclDto>> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         var owned = await OwnerAsync(actor, id, kind, ct);
         if (!owned.IsSuccess) return owned.Error;
-        var members = await (from link in db.Set<ResourceMember>() join user in db.Users on link.UserId equals user.Id where link.ResourceId == id
+        var members = await (from link in db.ResourceMembers join user in db.Users on link.UserId equals user.Id where link.ResourceId == id
             select new ResourceMemberDto(user.Id, user.AdAccount ?? user.LocalAccount ?? "", user.DisplayName, link.Role)).ToListAsync(ct);
-        return new ResourceAclDto(members, await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).Select(x => x.GroupId).ToListAsync(ct));
+        return new ResourceAclDto(members, await db.ResourceGroups.Where(x => x.ResourceId == id).Select(x => x.GroupId).ToListAsync(ct));
     }
     public async Task<Result> SetAclAsync(Guid actor, Guid id, string kind, ResourceAclRequest request, CancellationToken ct)
     {
@@ -108,10 +107,10 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
             var resource = owned.Value;
             if (request.Members.Any(x => x.UserId == resource.OwnerId)) return CollaborationErrors.OwnerIsImplicit;
             var users = request.Members.Select(x => x.UserId).ToArray();
-            var oldMembers = await db.Set<ResourceMember>().Where(x => x.ResourceId == id).ToListAsync(ct);
+            var oldMembers = await db.ResourceMembers.Where(x => x.ResourceId == id).ToListAsync(ct);
             // 新加入的成員必須是啟用中的人；已是成員的停用者可以留著（ADR 0019：停用只凍結，復職即恢復），所以只檢查新加的。
             var added = users.Except(oldMembers.Select(x => x.UserId)).ToArray();
-            if (await activeUsers.Ids.CountAsync(x => added.Contains(x), ct) != added.Length || await db.Set<RoleGroup>().CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
+            if (await activeUsers.Ids.CountAsync(x => added.Contains(x), ct) != added.Length || await db.RoleGroups.CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
                 return CollaborationErrors.UnknownMember;
             // 群組授權刻意只給唯讀；可編輯者必須是具名成員，不能靠群組取得編輯權。
             db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
@@ -121,7 +120,7 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
                 if (member is null) { member = new() { ResourceId = id, UserId = item.UserId }; db.Add(member); }
                 member.Role = item.Role;
             }
-            var oldGroups = await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).ToListAsync(ct);
+            var oldGroups = await db.ResourceGroups.Where(x => x.ResourceId == id).ToListAsync(ct);
             db.RemoveRange(oldGroups.Where(x => !request.GroupIds.Contains(x.GroupId)));
             db.AddRange(request.GroupIds.Except(oldGroups.Select(x => x.GroupId)).Select(x => new ResourceGroup { ResourceId = id, GroupId = x }));
             resource.UpdatedAt = clock.GetUtcNow();
@@ -131,7 +130,7 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
         return Result.Success;
     }
     public async Task<Result<Resource>> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
-        => await db.Set<Resource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
+        => await db.Resources.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
             ? resource : CollaborationErrors.ResourceNotFound;
 
     /// <summary>資源名稱：去除前後空白後 1 到 120 字，且不可含控制字元。</summary>

@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using System.Security.Claims;
-using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using AiNexus.Features.Admin.Identity.Authentication;
@@ -31,7 +30,6 @@ internal static class AuthSession
 
     public static AuthSessionDto Describe(HttpContext http, AdAuthenticationOptions options, IAntiforgery csrf)
     {
-        WebSecurity.NoStore(http.Response);
         TestIdentityDto? testing = null;
         if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId)
             && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId)

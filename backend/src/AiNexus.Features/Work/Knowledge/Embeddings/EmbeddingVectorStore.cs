@@ -18,12 +18,12 @@ public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbCont
 {
     public IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile) => profile.Dimensions switch
     {
-        768 => db.Set<ChunkEmbedding768>().AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
-        1024 => db.Set<ChunkEmbedding1024>().AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
+        768 => db.ChunkEmbeddings768.AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
+        1024 => db.ChunkEmbeddings1024.AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
         _ => throw new ArgumentOutOfRangeException(nameof(profile))
     };
     public async Task<IReadOnlyList<Guid>> ExistingAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) =>
-        await Rows(profile).Where(e => db.Set<Chunk>().Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
+        await Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
     public async Task<Dictionary<string, float[]>> CachedAsync(EmbeddingProfile profile, IReadOnlyList<byte[]> hashes, CancellationToken ct)
     {
         if (hashes.Count == 0) return new(StringComparer.Ordinal);

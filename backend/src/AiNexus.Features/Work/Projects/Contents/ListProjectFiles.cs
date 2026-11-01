@@ -13,9 +13,10 @@ namespace AiNexus.Features.Work.Projects.Contents;
 internal sealed class ListProjectFiles(AppDbContext db, ResourceAccess access, DocumentService documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/files", (Guid id, ICurrentUser user, ListProjectFiles handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.FileRead);
+        .MapGet("/{id:guid}/files", (Guid id, ICurrentUser user, ListProjectFiles handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.FileRead);
 
-    public async Task<Result<IReadOnlyList<DocumentDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<DocumentDto[]>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         if (await access.RequireAsync(actor, id, Project.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
         var ids = await db.ProjectFiles(id).Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);

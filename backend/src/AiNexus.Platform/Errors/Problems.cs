@@ -1,5 +1,7 @@
+using System.Reflection;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AiNexus.Platform.Errors;
@@ -45,6 +47,10 @@ public static class Problems
     public static ProblemHttpResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
         => TypedResults.Problem(Details(Status(error.Kind), error.Code, errors));
 
+    // 沿用框架對應回應型別的 metadata，OpenAPI 才不會因端點直接回傳 Result 而改變。
+    internal static void PopulateMetadata<TResult>(MethodInfo method, EndpointBuilder builder) where TResult : IEndpointMetadataProvider
+        => TResult.PopulateMetadata(method, builder);
+
     /// <summary>
     /// 適用於已由 <see cref="Issues.Report(Error)"/> 記錄過的失敗（例如同時要寫入稽核日誌）。
     /// 回應會沿用既有的查證代碼，不另外產生新的。
@@ -65,12 +71,6 @@ public static class Problems
     /// <summary>適用於成功時不回傳 JSON 本體的端點，例如檔案下載、重新導向或 <c>201 Created</c>。</summary>
     public static Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(this Result<T> result, Func<T, TSuccess> success)
         where TSuccess : IResult => result.IsSuccess ? success(result.Value) : result.Error.ToProblem();
-
-    public static async Task<Results<Ok<T>, ProblemHttpResult>> ToHttpResultAsync<T>(this Task<Result<T>> result)
-        => (await result).ToHttpResult();
-
-    public static async Task<Results<NoContent, ProblemHttpResult>> ToHttpResultAsync(this Task<Result> result)
-        => (await result).ToHttpResult();
 
     public static async Task<Results<TSuccess, ProblemHttpResult>> ToHttpResultAsync<T, TSuccess>(this Task<Result<T>> result, Func<T, TSuccess> success)
         where TSuccess : IResult => (await result).ToHttpResult(success);

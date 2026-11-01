@@ -142,14 +142,14 @@ public sealed partial class PunchImporter(
         if (punches.Count > 0)
         {
             var (first, last) = (punches.Min(x => x.AttendanceDate), punches.Max(x => x.AttendanceDate));
-            var rows = await db.Set<Punch>().AsNoTracking().Where(x => x.PunchFileId != file.Id && x.AttendanceDate >= first && x.AttendanceDate <= last)
+            var rows = await db.Punches.AsNoTracking().Where(x => x.PunchFileId != file.Id && x.AttendanceDate >= first && x.AttendanceDate <= last)
                 .Select(x => new { x.CardNumber, x.PunchedAt, x.MachineCode }).ToListAsync(ct);
             foreign = [.. rows.Select(x => ParsedPunch.KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode))];
         }
 
         // 結果與「刪光再寫入新內容」相同，但只動有差異的列：寫入量小，不變的列也保留原本的 Id。
         var incoming = punches.ToDictionary(x => x.Key);
-        var owned = await db.Set<Punch>().Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
+        var owned = await db.Punches.Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
         var dropped = new List<Punch>();
         foreach (var row in owned)
         {
@@ -184,7 +184,7 @@ public sealed partial class PunchImporter(
         // 卡號比對與資料庫定序一致（不分大小寫）。
         var numbers = added.Select(x => x.CardNumber).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (numbers.Count == 0) return;
-        var known = await db.Set<Card>().Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync(ct);
+        var known = await db.Cards.Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync(ct);
         db.AddRange(numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }));
     }
 
@@ -197,7 +197,7 @@ public sealed partial class PunchImporter(
         if (dropped.Count == 0) return 0;
         var names = dropped.Select(x => x.AttendanceDate).Distinct()
             .SelectMany(date => new[] { date.AddDays(-1), date, date.AddDays(1) }).Select(PunchFileParser.FileNameFor).Distinct().ToList();
-        return await db.Set<PunchFile>().Where(x => names.Contains(x.FileName) && x.Id != file.Id && x.ImportedModifiedAt != null)
+        return await db.PunchFiles.Where(x => names.Contains(x.FileName) && x.Id != file.Id && x.ImportedModifiedAt != null)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.ImportedModifiedAt, (DateTimeOffset?)null).SetProperty(x => x.ImportedSize, (long?)null), ct);
     }
 
@@ -215,7 +215,7 @@ public sealed partial class PunchImporter(
 
     private async Task<PunchFile> FileRowAsync(string fileName, CancellationToken ct)
     {
-        var file = await db.Set<PunchFile>().SingleOrDefaultAsync(x => x.FileName == fileName, ct);
+        var file = await db.PunchFiles.SingleOrDefaultAsync(x => x.FileName == fileName, ct);
         if (file is not null) return file;
         file = new() { FileName = fileName };
         db.Add(file);

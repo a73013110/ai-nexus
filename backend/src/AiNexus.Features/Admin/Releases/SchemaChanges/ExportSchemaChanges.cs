@@ -13,7 +13,7 @@ namespace AiNexus.Features.Admin.Releases.SchemaChanges;
 internal sealed class ExportSchemaChanges(SchemaChangeReader changes, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/export", (ExportSchemaChanges handler, CancellationToken ct) => handler.HandleAsync(ct).ToHttpResultAsync(file => file.ToHttpResult()))
+        .MapGet("/export", (ExportSchemaChanges handler, CancellationToken ct) => handler.HandleAsync(ct).ToFileResultAsync())
         .RequireRateLimiting(ReleasesModule.ExportRateLimit)
         .Audited(ReleasesAudit.SchemaChangesExported)
         .WithName("ExportSchemaChanges");

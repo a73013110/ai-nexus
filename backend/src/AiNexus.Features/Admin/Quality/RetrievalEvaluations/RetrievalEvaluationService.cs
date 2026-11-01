@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Quality;
@@ -30,7 +29,7 @@ public sealed class RetrievalEvaluationService(AppDbContext db, RetrievalAuthori
     /// <summary>工作執行與重試用：除了擁有者與知識庫權限，也要求索引與設定指紋與建立時相同。</summary>
     public async Task<Result<RetrievalEvaluation>> RequireUnchangedAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        var run = await db.Set<RetrievalEvaluation>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
+        var run = await db.RetrievalEvaluations.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
         if (run is null) return QualityErrors.RetrievalMissing;
         var collections = Parse<Guid>(run.CollectionsJson);
         if (await RequireAccessAsync(actor, collections, ct) is { IsSuccess: false } denied) return denied.Error;
@@ -45,7 +44,7 @@ public sealed class RetrievalEvaluationService(AppDbContext db, RetrievalAuthori
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
-        var documents = await (from d in db.Set<Document>().AsNoTracking() join r in db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
+        var documents = await (from d in db.Documents.AsNoTracking() join r in db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
             where !d.IsDeleted && d.CollectionId != null && collections.Contains(d.CollectionId.Value) orderby d.Id select new { d.Id, d.TextVersion, r.UpdatedAt, d.Status }).ToArrayAsync(ct);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new { profile.Key, Settings = options.Value, Ollama = inference.Value.Providers.Ollama.Endpoint, Documents = documents }, Json);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

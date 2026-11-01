@@ -67,7 +67,6 @@ internal sealed class StreamRunEvents(
         using var subscription = signals.Subscribe(id);
 
         http.Response.ContentType = "text/event-stream; charset=utf-8";
-        http.Response.Headers.CacheControl = "no-cache, no-store";
         http.Response.Headers["X-Accel-Buffering"] = "no";
         http.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
@@ -86,7 +85,7 @@ internal sealed class StreamRunEvents(
                 .Take(Batch)
                 .ToListAsync(ct);
 
-            var state = await db.Runs
+            var state = await db.GenerationRuns
                 .AsNoTracking()
                 .Where(x => x.Id == id)
                 .Select(x => new { x.LastSequence, x.Status })
@@ -99,7 +98,7 @@ internal sealed class StreamRunEvents(
             if ((events.Count == 0 && lastSequence > cursor) ||
                 (events.Count > 0 && events[0].Sequence != cursor + 1))
             {
-                var snapshot = await db.Runs
+                var snapshot = await db.GenerationRuns
                     .AsNoTracking()
                     .Where(x => x.Id == id)
                     .Select(x => new RunEventDto(1, x.LastSequence, x.Id, "snapshot", x.Status, x.Content, x.ErrorCode, x.IssueCode))

@@ -24,5 +24,5 @@ internal static class ReleaseCompatibility
 
     /// <summary>該部分（<see cref="DeploymentComponents"/>）最近一次的部署，即目前版本；走 <c>(Component, Id)</c> 索引。</summary>
     public static Task<Deployment?> LatestAsync(AppDbContext db, string component, CancellationToken ct)
-        => db.Set<Deployment>().AsNoTracking().Where(x => x.Component == component).OrderByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+        => db.Deployments.AsNoTracking().Where(x => x.Component == component).OrderByDescending(x => x.Id).FirstOrDefaultAsync(ct);
 }

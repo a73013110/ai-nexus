@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +11,14 @@ internal sealed class ListShares(AppDbContext db, ShareAccess shares, TimeProvid
     private const int PageSize = 100;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, sent ?? false, ct))).Audited(SharingAudit.ShareRead);
+        .MapGet("", (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, sent ?? false, ct)).Audited(SharingAudit.ShareRead);
 
     public async Task<IReadOnlyList<ShareDto>> HandleAsync(Guid actor, bool sent, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var rows = await db.Set<ShareLink>().AsNoTracking()
-            .Where(x => sent ? x.OwnerId == actor : !x.IsRevoked && x.ExpiresAt > now && db.Set<ShareRecipient>().Any(r => r.ShareId == x.Id && r.UserId == actor))
+        var rows = await db.ShareLinks.AsNoTracking()
+            .Where(x => sent ? x.OwnerId == actor : !x.IsRevoked && x.ExpiresAt > now && db.ShareRecipients.Any(r => r.ShareId == x.Id && r.UserId == actor))
             .OrderByDescending(x => x.CreatedAt).Take(PageSize).ToListAsync(ct);
         return await shares.DescribeAllAsync(actor, sent ? rows : await shares.WithSourcesAsync(rows, ct), ct);
     }

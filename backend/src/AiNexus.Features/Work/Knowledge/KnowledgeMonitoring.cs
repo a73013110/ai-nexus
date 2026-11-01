@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Knowledge.Embeddings;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +18,7 @@ internal sealed class KnowledgeMonitoring(AppDbContext db, EmbeddingService embe
     public async Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
         // Document 沒有軟刪除的全域過濾，已刪除的文件必須在這裡明確排除。
-        var counts = await db.Set<Document>().AsNoTracking().Where(x => !x.IsDeleted && x.Status != "ready")
+        var counts = await db.Documents.AsNoTracking().Where(x => !x.IsDeleted && x.Status != "ready")
             .GroupBy(x => x.Status).Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
         var pending = counts.Where(x => x.Status == "queued").Sum(x => x.Count);
         var failed = counts.Where(x => x.Status == "failed").Sum(x => x.Count);

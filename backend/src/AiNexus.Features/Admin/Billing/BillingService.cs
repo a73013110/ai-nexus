@@ -33,7 +33,7 @@ public sealed class BillingService(
     public async Task<ModelCharge> ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider,
         string model, string operation, DateTimeOffset created, CancellationToken ct)
     {
-        var price = await db.Set<ModelPrice>().AsNoTracking()
+        var price = await db.ModelPrices.AsNoTracking()
             .Where(x => x.Provider == provider && x.ModelId == model && x.EffectiveAt <= created)
             .OrderByDescending(x => x.EffectiveAt)
             .FirstOrDefaultAsync(ct);
@@ -61,7 +61,7 @@ public sealed class BillingService(
 
     public async Task StartAsync(Guid id, CancellationToken ct)
     {
-        var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
+        var charge = await db.ModelCharges.FindAsync([id], ct);
         // 遷移前的呼叫沒有費用紀錄，這裡不補算價格，費用保持未知。
         if (charge is null) return;
         charge.StartedAt ??= clock.GetUtcNow();
@@ -70,7 +70,7 @@ public sealed class BillingService(
 
     public async Task MeterAsync(Guid id, long? input, long? output, long? cached, long? reasoning, CancellationToken ct, bool complete = false)
     {
-        var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
+        var charge = await db.ModelCharges.FindAsync([id], ct);
         if (charge is null) return;
         charge.InputTokens = input ?? charge.InputTokens;
         charge.OutputTokens = output ?? charge.OutputTokens;
@@ -86,7 +86,7 @@ public sealed class BillingService(
     public async Task MeterInPlaceAsync(Guid id, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
     {
         if (input is null && output is null && cached is null && reasoning is null && !complete) return;
-        await db.Set<ModelCharge>().Where(x => x.Id == id).ExecuteUpdateAsync(p =>
+        await db.ModelCharges.Where(x => x.Id == id).ExecuteUpdateAsync(p =>
         {
             if (input is long i) p.SetProperty(x => x.InputTokens, i);
             if (output is long o) p.SetProperty(x => x.OutputTokens, o);
@@ -98,7 +98,7 @@ public sealed class BillingService(
 
     public async Task FinishAsync(Guid id, string outcome, CancellationToken ct)
     {
-        var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
+        var charge = await db.ModelCharges.FindAsync([id], ct);
         if (charge is null) return;
         charge.FinishedAt ??= clock.GetUtcNow();
         ChargeCalculator.Finalize(charge, outcome);

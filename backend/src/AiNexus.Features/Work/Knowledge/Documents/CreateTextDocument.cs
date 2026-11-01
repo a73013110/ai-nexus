@@ -12,8 +12,8 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 internal sealed class CreateTextDocument(ResourceAccess access, AttachmentService attachments, AddKnowledgeDocument add)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/collections/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, CreateTextDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPost("/collections/{id:guid}/text", (Guid id, TextDocumentRequest body, ICurrentUser user, CreateTextDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentCreated).WithName("CreateTextDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid collection, TextDocumentRequest request, CancellationToken ct)

@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Knowledge;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -59,13 +58,12 @@ public sealed partial class GenerationWorker(
             // 先復原上一個程序遺留的孤兒 Run，再同步設定；兩者都完成後才標記就緒，避免接收新生成
             await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(clock.GetUtcNow(), stoppingToken);
 
-            var profiles = db.Set<ModelProfile>();
             foreach (var model in options.Value.Models)
             {
-                var profile = await profiles.FindAsync([model.Id], stoppingToken);
+                var profile = await db.ModelProfiles.FindAsync([model.Id], stoppingToken);
                 if (profile is null)
                 {
-                    profiles.Add(profile = new ModelProfile { Id = model.Id });
+                    db.ModelProfiles.Add(profile = new ModelProfile { Id = model.Id });
                 }
 
                 // 依屬性名稱複製資料表有的欄位；推理強度、圖片能力等只存在設定檔。
@@ -155,7 +153,7 @@ public sealed partial class GenerationWorker(
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
+            var run = await db.GenerationRuns.SingleAsync(x => x.Id == job.RunId, stoppingToken);
 
             if (!RunStates.IsActive(run.Status) || run.ExecutorId != scheduler.InstanceId) return;
 
@@ -268,7 +266,7 @@ public sealed partial class GenerationWorker(
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
+            var run = await db.GenerationRuns.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
             if (RunStates.IsActive(run.Status))
             {
                 await scope.ServiceProvider.GetRequiredService<RunService>()
@@ -292,7 +290,7 @@ public sealed partial class GenerationWorker(
             return refused.Error;
         }
 
-        var sources = await db.Set<MessageCitation>()
+        var sources = await db.MessageCitations
             .Where(x => x.MessageId == run.AssistantMessageId)
             .Select(x => new KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage))
             .ToListAsync(ct);
@@ -362,7 +360,7 @@ public sealed partial class GenerationWorker(
             // 以序號做樂觀並行控制：序號不符代表其他寫入者已先寫入，改查最新序號後重試
             if (await AppendRunAsync(db, job.RunId, expected, delta, newInput, newOutput, ct) == 0)
             {
-                var current = await db.Runs
+                var current = await db.GenerationRuns
                     .Where(x => x.Id == job.RunId)
                     .Select(x => new { x.Status, x.LastSequence })
                     .SingleAsync(ct);
@@ -413,7 +411,7 @@ public sealed partial class GenerationWorker(
         long? input,
         long? output,
         CancellationToken ct) =>
-        db.Runs.Where(x => x.Id == id && x.LastSequence == expected && (x.Status == RunStates.Queued || x.Status == RunStates.Running))
+        db.GenerationRuns.Where(x => x.Id == id && x.LastSequence == expected && (x.Status == RunStates.Queued || x.Status == RunStates.Running))
             .ExecuteUpdateAsync(setters =>
             {
                 setters.SetProperty(x => x.LastSequence, expected + (delta.Length > 0 ? 1 : 0));

@@ -26,8 +26,8 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
 
     public static void Map(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct)
-            => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.IdentityUsers).Audited(IdentityAudit.TestIdentityStarted).WithName("StartTestIdentity");
+            => handler.HandleAsync(http, body, ct))
+        .RequireFeature(FeatureCatalog.IdentityUsers).Audited(IdentityAudit.TestIdentityStarted).WithName("StartTestIdentity");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, TestIdentityRequest body, CancellationToken ct)
     {

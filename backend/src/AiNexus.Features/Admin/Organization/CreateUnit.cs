@@ -17,25 +17,25 @@ internal sealed class UnitCreateRequestValidator : RequestValidator<UnitCreateRe
 }
 
 /// <summary>新增單位，排到同層最後。Id 由伺服器產生。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>
-internal sealed class CreateUnit(AppDbContext db, AdministrativeAudit audit)
+internal sealed class CreateUnit(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", async (UnitCreateRequest body, IRequestActor actor, CreateUnit handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .MapPost("", (UnitCreateRequest body, IRequestActor actor, CreateUnit handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
         .Audited(OrganizationAudit.UnitCreated)
         .WithName("CreateOrganizationUnit");
 
-    public async Task<Result<UnitDto>> HandleAsync(Guid actor, UnitCreateRequest request, CancellationToken ct)
+    public Task<Result<UnitDto>> HandleAsync(Guid actor, UnitCreateRequest request, CancellationToken ct)
     {
         var unit = new Unit { Id = Guid.NewGuid(), ParentId = request.ParentId, Name = request.Name.Trim(), Enabled = request.Enabled, HeadRank = request.HeadRank };
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.Organization, unit.Id, unit.Id.ToString(), token => UnitRules.SnapshotAsync(db, unit.Id, token), async () =>
+        return write.ExecuteAsync<UnitDto>(actor, UnitRules.Target(db, unit.Id), async () =>
         {
-            var units = await db.Set<Unit>().ToListAsync(ct);
+            var units = await db.Units.ToListAsync(ct);
             unit.SortOrder = UnitRules.NextSortOrder(units, unit.ParentId);
             if (UnitRules.Structure([.. units, unit]) is { } invalid) return invalid;
             db.Add(unit);
             await UnitRules.ClearLedManagersAsync(db, unit, ct);
-            return Result.Success;
+            return UnitDto.From(unit, 0);
         }, ct);
-        return outcome.IsSuccess ? UnitDto.From(unit, 0) : outcome.Error!;
     }
 }

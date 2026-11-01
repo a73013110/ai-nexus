@@ -11,11 +11,11 @@ internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews,
     public static void Map(RouteGroupBuilder routes)
     {
         routes.MapPost("/reviews/{id:guid}/cancel", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
-                handler.HandleAsync(user.Id, id, false, ct).ToHttpResultAsync())
+                handler.HandleAsync(user.Id, id, false, ct))
             .Audited(RepositoriesAudit.ReviewCancelled)
             .WithName("CancelRepositoryReview");
         routes.MapPost("/reviews/{id:guid}/retry", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
-                handler.HandleAsync(user.Id, id, true, ct).ToHttpResultAsync())
+                handler.HandleAsync(user.Id, id, true, ct))
             .Audited(RepositoriesAudit.ReviewRetried)
             .WithName("RetryRepositoryReview");
     }

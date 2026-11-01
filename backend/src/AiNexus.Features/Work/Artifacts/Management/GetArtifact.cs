@@ -12,8 +12,8 @@ namespace AiNexus.Features.Work.Artifacts.Management;
 internal sealed class GetArtifact(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", async (Guid id, int? version, ICurrentUser user, GetArtifact handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, version, ct)).ToHttpResult())
+        .MapGet("/{id:guid}", (Guid id, int? version, ICurrentUser user, GetArtifact handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, version, ct))
         .Audited(ArtifactsAudit.ArtifactRead)
         .WithName("GetArtifact");
 
@@ -22,9 +22,9 @@ internal sealed class GetArtifact(AppDbContext db, ResourceAccess access)
         var found = await access.RequireAsync(actor, id, Artifact.Kind, ct);
         if (!found.IsSuccess) return found.Error;
         var resource = found.Value;
-        var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        var item = await db.Artifacts.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         var wanted = version ?? item.Version;
-        var revision = await db.Set<ArtifactRevision>().AsNoTracking()
+        var revision = await db.ArtifactRevisions.AsNoTracking()
             .SingleOrDefaultAsync(x => x.ArtifactId == id && x.Version == wanted, ct);
         if (revision is null) return ArtifactsErrors.VersionMissing;
         var info = await access.DescribeAsync(actor, resource, ct);

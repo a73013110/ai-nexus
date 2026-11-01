@@ -68,8 +68,6 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddControlledHttpClient(RetrievalModelsClient);
         services.AddBackgroundJobHandler<DocumentIngestHandler>(DocumentIngestHandler.JobKind);
         services.AddBackgroundJobHandler<DocumentEmbeddingHandler>(DocumentEmbeddingHandler.JobKind);
-        services.AddFeaturePolicy(FeatureCatalog.Knowledge);
-        services.AddFeaturePolicy(FeatureCatalog.KnowledgeRetrieval);
     }
 
     /// <summary>設定的向量與重排供應商都要有實作，不等到第一次索引或檢索才失敗。</summary>
@@ -83,7 +81,7 @@ public sealed class KnowledgeModule : IFeatureModule
     // 端點註冊順序即為發布的 OpenAPI 順序；調整順序會改變 contracts/openapi.json 的內容。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge);
+        var routes = api.MapGroup("/knowledge").RequireFeature(FeatureCatalog.Knowledge);
         CreateTextDocument.Map(routes);
         ListKnowledgeCollections.Map(routes);
         SaveKnowledgeCollection.MapCreate(routes);
@@ -95,7 +93,7 @@ public sealed class KnowledgeModule : IFeatureModule
         SaveKnowledgeAccess.Map(routes);
         SearchKnowledge.Map(routes);
 
-        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization(Policies.Knowledge).RequireAuthorization(Policies.Chat);
+        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireFeature(FeatureCatalog.Knowledge).RequireFeature(FeatureCatalog.Chat);
         GetConversationKnowledge.Map(selection);
         SaveConversationKnowledge.Map(selection);
 
@@ -111,10 +109,10 @@ public sealed class KnowledgeModule : IFeatureModule
 
         AddKnowledgeDocument.MapAttachment(api);
 
-        ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files));
+        ListLibraryFiles.Map(api.MapGroup("/files").RequireFeature(FeatureCatalog.Files));
 
         // 管理端的 embedding profile 與檢索測試，只給檢索管理頁使用。
-        var admin = api.MapGroup("/admin/knowledge").RequireAuthorization(Policies.KnowledgeRetrieval);
+        var admin = api.MapGroup("/admin/knowledge").RequireFeature(FeatureCatalog.KnowledgeRetrieval);
         ManageEmbeddingProfiles.MapList(admin);
         ManageEmbeddingProfiles.MapRebuild(admin);
         ManageEmbeddingProfiles.MapActivate(admin);

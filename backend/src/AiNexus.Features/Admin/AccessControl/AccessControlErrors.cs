@@ -12,7 +12,7 @@ public static class AccessControlErrors
     /// </summary>
     public static readonly Error FeatureForbidden = Error.Forbidden("feature_forbidden");
 
-    /// <summary>行政變更會讓執行者失去自己的管理權限（<see cref="AdministrativeAudit"/> 與帳號管理共用）。</summary>
+    /// <summary>行政變更會讓執行者失去自己的管理權限（<see cref="AdministrativeWrite"/> 與帳號管理共用）。</summary>
     public static readonly Error Lockout = Error.Conflict("admin_lockout");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
     public static readonly Error InvalidAccessId = Error.Invalid("invalid_access_id");

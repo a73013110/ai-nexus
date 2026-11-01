@@ -17,7 +17,7 @@ internal sealed class RequestEmailChange(Reauthentication reauthentication, User
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/email-changes", (EmailChangeRequest body, HttpContext http, ICurrentUser user, RequestEmailChange handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, body, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
         .Audited(AccountAudit.EmailRequested)
         .WithName("RequestEmailChange");

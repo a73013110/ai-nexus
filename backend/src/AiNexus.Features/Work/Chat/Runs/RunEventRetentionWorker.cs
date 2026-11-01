@@ -53,7 +53,7 @@ public sealed partial class RunEventRetentionWorker(
 
         var expired = db.RunEvents.Where(x =>
             x.CreatedAt < cutoff &&
-            db.Runs.Any(r => r.Id == x.RunId && r.ActiveOwnerId == null));
+            db.GenerationRuns.Any(r => r.Id == x.RunId && r.ActiveOwnerId == null));
 
         var total = 0;
         while (true)

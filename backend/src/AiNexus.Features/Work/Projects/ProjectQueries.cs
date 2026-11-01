@@ -15,7 +15,7 @@ internal static class ProjectQueries
     {
         var resource = await access.RequireAsync(actor, id, Project.Kind, ct);
         if (!resource.IsSuccess) return resource.Error;
-        var project = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        var project = await db.Projects.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return project.ToDto(await access.DescribeAsync(actor, resource.Value, ct));
     }
 
@@ -23,11 +23,11 @@ internal static class ProjectQueries
     public static async Task<Result<Project>> RequireActiveAsync(this ResourceAccess access, AppDbContext db, Guid actor, Guid id, bool write, CancellationToken ct)
     {
         if (await access.RequireAsync(actor, id, Project.Kind, ct, write) is { IsSuccess: false } denied) return denied.Error;
-        var row = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        var row = await db.Projects.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         if (row.IsArchived) return ProjectsErrors.Archived;
         return row;
     }
 
     /// <summary>專案的參考文件資源；新增時的 <see cref="Project.MaxFiles"/> 上限、列表與提示詞上下文都以同一個條件計算。</summary>
-    public static IQueryable<Resource> ProjectFiles(this AppDbContext db, Guid id) => db.Set<Resource>().Where(x => x.ParentId == id && x.Kind == Document.Kind);
+    public static IQueryable<Resource> ProjectFiles(this AppDbContext db, Guid id) => db.Resources.Where(x => x.ParentId == id && x.Kind == Document.Kind);
 }

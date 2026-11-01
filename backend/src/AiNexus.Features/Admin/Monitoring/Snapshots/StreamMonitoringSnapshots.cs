@@ -81,7 +81,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             await audit.CompleteAsync(AuditEvent.Completed);
             http.Response.ContentType = "text/event-stream";
             // 關閉代理（如 nginx）與 ASP.NET 的回應緩衝，否則事件會被攢住，頁面收不到即時快照。
-            http.Response.Headers.CacheControl = "no-store"; http.Response.Headers["X-Accel-Buffering"] = "no";
+            http.Response.Headers["X-Accel-Buffering"] = "no";
             http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(options.Value.RefreshSeconds), clock);
             var expires = clock.GetUtcNow().AddMinutes(10); var nextCheck = DateTimeOffset.MinValue;
@@ -114,7 +114,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
         var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
         if (!identity.IsSuccess) return identity.Error;
         var access = scope.ServiceProvider.GetRequiredService<AccessService>();
-        if (!await access.HoldsAsync(identity.Value.Id, MonitoringModule.Feature, ct)) return AccessControlErrors.FeatureForbidden;
+        if (!await access.HoldsAsync(identity.Value.Id, FeatureCatalog.Monitoring, ct)) return AccessControlErrors.FeatureForbidden;
         if (!Guid.TryParse(principal.FindFirstValue(SessionIdentity.ActorId), out var actorId)) return Result.Success;
         var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var actor = await scopedDb.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);

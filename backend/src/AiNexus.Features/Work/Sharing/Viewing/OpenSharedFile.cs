@@ -19,8 +19,8 @@ internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, Attach
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/{id:guid}/files/{file:guid}/preview", async (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, CancellationToken ct) =>
-                (await handler.PreviewAsync(user.Id, id, file, ct)).ToHttpResult())
+        routes.MapGet("/{id:guid}/files/{file:guid}/preview", (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, CancellationToken ct) =>
+                handler.PreviewAsync(user.Id, id, file, ct))
             .Audited(SharingAudit.SharedFileRead)
             .WithName("PreviewSharedFile");
         routes.MapGet("/{id:guid}/files/{file:guid}", (Guid id, Guid file, bool? download, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
@@ -51,8 +51,8 @@ internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, Attach
     {
         var share = await shares.RequireAsync(actor, id, ct);
         if (!share.IsSuccess) return share.Error;
-        if (!share.Value.IncludeAttachments || !await db.Set<ResourceAttachment>().AnyAsync(x => x.ResourceId == id && x.AttachmentId == fileId, ct)) return SharingErrors.Unavailable;
-        var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct);
+        if (!share.Value.IncludeAttachments || !await db.ResourceAttachments.AnyAsync(x => x.ResourceId == id && x.AttachmentId == fileId, ct)) return SharingErrors.Unavailable;
+        var file = await db.Attachments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct);
         if (file is null) return SharingErrors.Unavailable;
         var metadata = JsonSerializer.Deserialize<ShareSnapshot>(share.Value.SnapshotJson)!.Messages.SelectMany(x => x.Attachments).FirstOrDefault(x => x.Id == fileId);
         if (metadata is null) return SharingErrors.Unavailable;

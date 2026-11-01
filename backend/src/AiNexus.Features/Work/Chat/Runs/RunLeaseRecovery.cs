@@ -29,7 +29,7 @@ public sealed class RunLeaseRecovery(
     /// </summary>
     public async Task<int> RecoverAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var expired = await db.Runs.AsNoTracking()
+        var expired = await db.GenerationRuns.AsNoTracking()
             .Where(x => x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
             .OrderBy(x => x.LeaseExpiresAt).ThenBy(x => x.Id)
             .Select(x => new { x.Id, x.ConversationId })
@@ -43,7 +43,7 @@ public sealed class RunLeaseRecovery(
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
             // 條件式 UPDATE：若原執行者剛好續約，影響行數為 0，直接略過，不會誤判為失敗
-            var changed = await db.Runs
+            var changed = await db.GenerationRuns
                 .Where(x => x.Id == id && x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, RunStates.Failed)
                     .SetProperty(x => x.ErrorCode, ChatErrors.ExecutorLost.Code)
@@ -57,7 +57,7 @@ public sealed class RunLeaseRecovery(
                 continue;
             }
 
-            var run = await db.Runs.SingleAsync(x => x.Id == id, ct);
+            var run = await db.GenerationRuns.SingleAsync(x => x.Id == id, ct);
             await db.Entry(run).ReloadAsync(ct);
 
             using var activity = DiagnosticTrace.Start("generation.recover", run.TraceId, run.ParentSpanId);

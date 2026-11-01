@@ -18,11 +18,11 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
     public static void Map(RouteGroupBuilder repository)
     {
         repository.MapGet("/commits", (string owner, string name, string? @ref, int? page, ICurrentUser user, BrowseRepositoryHistory handler, CancellationToken ct) =>
-                handler.CommitsAsync(user.Id, owner + "/" + name, @ref, page ?? 1, ct).ToHttpResultAsync())
+                handler.CommitsAsync(user.Id, owner + "/" + name, @ref, page ?? 1, ct))
             .Audited(RepositoriesAudit.CommitRead)
             .WithName("ListRepositoryCommits");
         repository.MapGet("/diff", (string owner, string name, string head, string? @base, ICurrentUser user, BrowseRepositoryHistory handler, CancellationToken ct) =>
-                handler.DiffAsync(user.Id, owner + "/" + name, head, @base, ct).ToHttpResultAsync())
+                handler.DiffAsync(user.Id, owner + "/" + name, head, @base, ct))
             .Audited(RepositoriesAudit.CommitRead)
             .WithName("ReadRepositoryDiff");
     }
@@ -34,8 +34,8 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
         if (!RepositoryService.IsPage(page)) return RepositoriesErrors.InvalidPage;
         var query = (reference is null ? "" : "sha=" + Uri.EscapeDataString(reference) + "&") + $"page={page}&limit={PageSize}&stat=false&verification=false&files=false";
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + "/commits?" + query, ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var rows = json.RootElement.EnumerateArray().Take(PageSize).ToArray();
         return new RepositoryCommitPageDto(rows.Select(Commit).Where(x => RepositoryService.IsCommit(x.Sha)).ToArray(), page, rows.Length == PageSize);
     }
@@ -46,25 +46,25 @@ internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
         if (!RepositoryService.IsCommit(head) || (basis is not null && !RepositoryService.IsCommit(basis))) return RepositoriesErrors.InvalidCommit;
         if (string.Equals(head, basis, StringComparison.OrdinalIgnoreCase)) return RepositoriesErrors.ReviewEmptyRange;
         var headCommit = await ReadCommitAsync(owner, repo, head, ct);
-        if (!headCommit.IsSuccess) return headCommit.Error!;
+        if (!headCommit.IsSuccess) return headCommit.Error;
         RepositoryCommitDto? baseCommit = null;
         if (basis is not null)
         {
             var read = await ReadCommitAsync(owner, repo, basis, ct);
-            if (!read.IsSuccess) return read.Error!;
+            if (!read.IsSuccess) return read.Error;
             baseCommit = read.Value;
         }
         var diff = await gitea.DiffAsync(owner, repo, head.ToLowerInvariant(), basis?.ToLowerInvariant(), ct);
-        if (diff.Error == RepositoriesErrors.DiffLimit) return new RepositoryDiffDto(headCommit.Value!, baseCommit, "", true);
-        if (!diff.IsSuccess) return diff.Error!;
-        return new RepositoryDiffDto(headCommit.Value!, baseCommit, diff.Value!, false);
+        if (diff.Error == RepositoriesErrors.DiffLimit) return new RepositoryDiffDto(headCommit.Value, baseCommit, "", true);
+        if (!diff.IsSuccess) return diff.Error;
+        return new RepositoryDiffDto(headCommit.Value, baseCommit, diff.Value, false);
     }
 
     private async Task<Result<RepositoryCommitDto>> ReadCommitAsync(Guid owner, string repo, string sha, CancellationToken ct)
     {
         var read = await gitea.GetAsync(owner, RepositoryService.CommitRoute(repo, sha), ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var commit = Commit(json.RootElement);
         return RepositoryService.IsCommit(commit.Sha) ? commit : throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
     }

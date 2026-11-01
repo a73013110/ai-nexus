@@ -17,7 +17,8 @@ namespace AiNexus.Features.Admin.Identity.Sessions;
 internal sealed class EndTestIdentity(AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail audit)
 {
     public static void Map(RouteGroupBuilder auth) => auth
-        .MapPost("/test-identity/end", (HttpContext http, EndTestIdentity handler, CancellationToken ct) => handler.HandleAsync(http, ct).ToHttpResultAsync())
+        .MapPost("/test-identity/end", (HttpContext http, EndTestIdentity handler, CancellationToken ct) =>
+            handler.HandleAsync(http, ct))
         .Audited(IdentityAudit.TestIdentityEnded).WithName("EndTestIdentity");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, CancellationToken ct)

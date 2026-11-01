@@ -72,7 +72,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
     private static LogLevel[]? Levels(DiagnosticFilter f) => f.Levels?.Distinct().Order().ToArray();
     private IQueryable<DiagnosticEvent> Filter(DiagnosticFilter f, DateTimeOffset from, DateTimeOffset to)
     {
-        var query = db.Set<DiagnosticEvent>().AsNoTracking().Where(x => x.At >= from && x.At <= to);
+        var query = db.DiagnosticEvents.AsNoTracking().Where(x => x.At >= from && x.At <= to);
         if (Levels(f) is { Length: > 0 } levels) query = query.Where(x => levels.Contains(x.Level));
         if (f.Category is { Length: > 0 } category) query = query.Where(x => x.Category == category);
         if (f.EventId is { } eventId) query = query.Where(x => x.EventId == eventId);
@@ -128,7 +128,7 @@ public sealed class DiagnosticQuery(AppDbContext db, IDataProtectionProvider pro
     {
         using var suppress = DiagnosticSuppression.Enter();
         BeginRead(null, null);
-        var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
+        var item = await db.DiagnosticEvents.AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
         if (item is null) return DiagnosticsErrors.NotFound;
         return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
     }

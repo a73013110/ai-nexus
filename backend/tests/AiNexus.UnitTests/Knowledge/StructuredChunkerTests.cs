@@ -43,7 +43,7 @@ public sealed class StructuredChunkerTests
         Assert.Single(shortChunks);
         var sentences = Enumerable.Range(0, 12).Select(i => i + new string('文', 19) + "。").ToArray();
         var chunks = Chunker(80, 120, 10, .3).Chunk([new() { PageNumber = 1, Text = string.Concat(sentences) }]).Value!;
-        Assert.True(chunks.Count > 1);
+        Assert.True(chunks.Length > 1);
         Assert.All(chunks, x => Assert.EndsWith("。", x.Text));
         Assert.Contains(sentences[3], chunks[0].Text); Assert.StartsWith(sentences[3], chunks[1].Text);
     }

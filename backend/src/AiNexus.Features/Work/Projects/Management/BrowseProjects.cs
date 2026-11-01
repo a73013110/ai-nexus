@@ -12,15 +12,17 @@ namespace AiNexus.Features.Work.Projects.Management;
 internal sealed class BrowseProjects(AppDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
-        .MapGet("", async (ICurrentUser user, BrowseProjects handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(user.Id, ct))).Audited(ProjectsAudit.ProjectRead);
+        .MapGet("", (ICurrentUser user, BrowseProjects handler, CancellationToken ct) =>
+            handler.ListAsync(user.Id, ct)).Audited(ProjectsAudit.ProjectRead);
 
     public static RouteHandlerBuilder MapGet(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, BrowseProjects handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(ProjectsAudit.ProjectRead);
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, BrowseProjects handler, CancellationToken ct) =>
+            handler.GetAsync(user.Id, id, ct)).Audited(ProjectsAudit.ProjectRead);
 
     public async Task<IReadOnlyList<ProjectDto>> ListAsync(Guid actor, CancellationToken ct)
     {
         var rows = await (await access.QueryAsync(actor, Project.Kind, ct)).AsNoTracking()
-            .Join(db.Set<Project>().AsNoTracking(), resource => resource.Id, project => project.Id, (resource, project) => new { resource, project })
+            .Join(db.Projects.AsNoTracking(), resource => resource.Id, project => project.Id, (resource, project) => new { resource, project })
             .OrderByDescending(x => x.resource.UpdatedAt).Take(100).ToListAsync(ct);
         var described = await access.DescribeAllAsync(actor, [.. rows.Select(x => x.resource)], ct);
         return [.. rows.Zip(described, (row, resource) => row.project.ToDto(resource))];

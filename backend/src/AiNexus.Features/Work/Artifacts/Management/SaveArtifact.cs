@@ -33,9 +33,9 @@ internal sealed class SaveArtifact(
     TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (
+        .MapPut("/{id:guid}", (
                 Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
+            handler.HandleAsync(user.Id, id, request, ct))
         .Audited(ArtifactsAudit.ArtifactUpdated)
         .WithName("SaveArtifact");
 
@@ -50,7 +50,7 @@ internal sealed class SaveArtifact(
             if (!found.IsSuccess) return found.Error;
             var resource = found.Value;
             // 版本號以條件式 UPDATE 遞增：只有讀到的版本仍是最新時才會成功，否則即為併發衝突。
-            var changed = await db.Set<Artifact>()
+            var changed = await db.Artifacts
                 .Where(x => x.Id == id && x.Version == request.ExpectedVersion)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
             if (changed != 1) return ArtifactsErrors.VersionConflict;

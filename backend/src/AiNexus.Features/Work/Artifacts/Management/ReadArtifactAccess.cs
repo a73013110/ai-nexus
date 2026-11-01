@@ -11,7 +11,7 @@ internal sealed class ReadArtifactAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ReadArtifactAccess handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ArtifactsAudit.AccessRead)
         .WithName("ArtifactAccess");
 

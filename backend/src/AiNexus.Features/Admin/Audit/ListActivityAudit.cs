@@ -23,15 +23,15 @@ internal sealed class ListActivityAudit(AppDbContext db, AuditDataScope scope)
     public static readonly int[] PageSizes = [25, 50, 100];
 
     public static void Map(RouteGroupBuilder audit) => audit
-        .MapGet("", async ([AsParameters] ActivityAuditFilter filter, long? before, int? take, ICurrentUser user, ListActivityAudit handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, filter, before, take, ct)).ToHttpResult())
+        .MapGet("", ([AsParameters] ActivityAuditFilter filter, long? before, int? take, ICurrentUser user, ListActivityAudit handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, filter, before, take, ct))
         .Audited(AuditAudit.EventRead)
         .WithName("ListAdminAudit");
 
-    public async Task<Result<IReadOnlyList<AuditDto>>> HandleAsync(Guid user, ActivityAuditFilter filter, long? before, int? take, CancellationToken ct)
+    public async Task<Result<AuditDto[]>> HandleAsync(Guid user, ActivityAuditFilter filter, long? before, int? take, CancellationToken ct)
     {
         if (!filter.IsValid() || before is <= 0 || take is { } size && !PageSizes.Contains(size)) return AuditErrors.InvalidFilter;
         var rows = await filter.Query(db, await scope.PeopleAsync(user, FeatureCatalog.Audit, ct), before).Take(take ?? 100).ToListAsync(ct);
-        return Result<IReadOnlyList<AuditDto>>.Ok(rows.Select(ActivityAuditFilter.Present).ToArray());
+        return rows.Select(ActivityAuditFilter.Present).ToArray();
     }
 }

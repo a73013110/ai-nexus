@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Sharing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing;
@@ -11,8 +9,8 @@ public sealed class ShareService(AppDbContext db, TimeProvider clock)
     /// <summary>撤銷來源的所有分享並移除其檔案授權。交易由呼叫端管理。</summary>
     internal async Task RevokeSourceAsync(string kind, Guid id, CancellationToken ct)
     {
-        var rows = db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id);
-        await db.Set<ResourceAttachment>().Where(x => rows.Select(s => s.Id).Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
+        var rows = db.ShareLinks.Where(x => x.Kind == kind && x.SourceId == id);
+        await db.ResourceAttachments.Where(x => rows.Select(s => s.Id).Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
         await rows.ExecuteUpdateAsync(p => p.SetProperty(x => x.IsRevoked, true).SetProperty(x => x.SnapshotJson, ""), ct);
     }
 
@@ -21,9 +19,9 @@ public sealed class ShareService(AppDbContext db, TimeProvider clock)
     {
         var now = clock.GetUtcNow();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var ids = db.Set<ShareLink>().Where(x => x.ExpiresAt <= now || x.IsRevoked).Select(x => x.Id);
-        await db.Set<ResourceAttachment>().Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
-        await db.Set<ShareLink>().Where(x => x.ExpiresAt <= now && x.SnapshotJson != "").ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, ""), ct);
+        var ids = db.ShareLinks.Where(x => x.ExpiresAt <= now || x.IsRevoked).Select(x => x.Id);
+        await db.ResourceAttachments.Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
+        await db.ShareLinks.Where(x => x.ExpiresAt <= now && x.SnapshotJson != "").ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, ""), ct);
         await tx.CommitAsync(ct);
     }
 }

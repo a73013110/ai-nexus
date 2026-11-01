@@ -80,7 +80,7 @@ public sealed class ConversationKnowledgeTests
         Assert.Equal("conversation_not_found", (await ForRunAsync(factory, bobId, new(conversation.Id, "採購", null, null), seed.Collection)).Error!.Code);
     }
 
-    private static async Task<AiNexus.Platform.Errors.Result<IReadOnlyList<KnowledgeHitDto>>> ForRunAsync(AppFactory factory, Guid actor, ConversationTurn turn, Guid collection)
+    private static async Task<AiNexus.Platform.Errors.Result<KnowledgeHitDto[]>> ForRunAsync(AppFactory factory, Guid actor, ConversationTurn turn, Guid collection)
     {
         using var scope = factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<KnowledgeRetrieval>().ForRunAsync(actor, turn, CancellationToken.None, [collection]);

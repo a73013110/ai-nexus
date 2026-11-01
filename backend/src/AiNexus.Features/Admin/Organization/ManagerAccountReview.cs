@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Accounts;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +16,7 @@ internal sealed class ManagerAccountReview(AppDbContext db, OrganizationDirector
     public async Task<AccountReviewReading> ReadAsync(CancellationToken ct)
     {
         var active = activeUsers.Ids;
-        var managers = await db.Set<UnitMember>().AsNoTracking().Where(x => x.IsManager && !active.Contains(x.UserId)).Select(x => new { x.UserId, x.UnitId }).ToListAsync(ct);
+        var managers = await db.UnitMembers.AsNoTracking().Where(x => x.IsManager && !active.Contains(x.UserId)).Select(x => new { x.UserId, x.UnitId }).ToListAsync(ct);
         if (managers.Count == 0) return new([]);
         var vacant = await directory.ActiveUnitsWithoutManagerAsync(ct);
         return new([.. managers.Where(x => vacant.ContainsKey(x.UnitId)).GroupBy(x => x.UserId).Select(x =>

@@ -34,11 +34,11 @@ internal static class PunchImportQueries
     /// </summary>
     public static IQueryable<PunchImportDto> ToDtos(this IQueryable<PunchImport> imports, AppDbContext db)
         => from i in imports
-           join f in db.Set<PunchFile>() on i.PunchFileId equals f.Id
+           join f in db.PunchFiles on i.PunchFileId equals f.Id
            join u in db.Users on i.RequestedById equals u.Id into users
            from u in users.DefaultIfEmpty()
            select new PunchImportDto(i.Id, i.PunchFileId, f.FileName, i.TriggerKind, i.RequestedById, u.DisplayName, i.StartedAt, i.FinishedAt,
                i.SourceModifiedAt, i.SourceSize, i.PunchCount, i.Status, i.ErrorMessage,
-               i.Status == PunchImportStatuses.Succeeded && !db.Set<PunchImport>().Any(later => later.PunchFileId == i.PunchFileId
+               i.Status == PunchImportStatuses.Succeeded && !db.PunchImports.Any(later => later.PunchFileId == i.PunchFileId
                    && later.Status == PunchImportStatuses.Succeeded && later.StartedAt > i.StartedAt));
 }

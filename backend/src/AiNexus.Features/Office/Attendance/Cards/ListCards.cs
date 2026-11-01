@@ -35,42 +35,42 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
     private const int SearchMaxLength = 100;
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (string? search, string? status, ListCards handler, CancellationToken ct) => handler.HandleAsync(search, status, ct).ToHttpResultAsync())
+        .MapGet("", (string? search, string? status, ListCards handler, CancellationToken ct) =>
+            handler.HandleAsync(search, status, ct))
         .Audited(AttendanceAudit.CardRead)
         .WithName("ListAttendanceCards");
 
-    public async Task<Result<IReadOnlyList<CardDto>>> HandleAsync(string? search, string? status, CancellationToken ct)
+    public async Task<Result<CardDto[]>> HandleAsync(string? search, string? status, CancellationToken ct)
     {
         if (status is not null && !CardStatuses.IsDefined(status)) return AttendanceErrors.FilterInvalid;
         var now = clock.GetUtcNow();
-        var assignments = db.Set<CardAssignment>();
-        var unattributed = db.Set<AttributedPunch>().Where(p => p.IsUnattributed);
-        var covering = assignments.CoveringAt(now);
+        var unattributed = db.AttributedPunches.Where(p => p.IsUnattributed);
+        var covering = db.CardAssignments.CoveringAt(now);
         var query = status switch
         {
-            CardStatuses.Held => db.Set<Card>().Where(c => covering.Any(a => a.CardId == c.Id)),
-            CardStatuses.Unheld => db.Set<Card>().Where(c => !c.HiddenFromRecords && !covering.Any(a => a.CardId == c.Id)),
-            CardStatuses.Hidden => db.Set<Card>().Where(c => c.HiddenFromRecords),
-            _ => db.Set<Card>(),
+            CardStatuses.Held => db.Cards.Where(c => covering.Any(a => a.CardId == c.Id)),
+            CardStatuses.Unheld => db.Cards.Where(c => !c.HiddenFromRecords && !covering.Any(a => a.CardId == c.Id)),
+            CardStatuses.Hidden => db.Cards.Where(c => c.HiddenFromRecords),
+            _ => db.Cards,
         };
         if (search?.Trim() is { Length: > 0 } text)
         {
             if (text.Length > SearchMaxLength) text = text[..SearchMaxLength];
             query = query.Where(c => c.CardNumber.Contains(text) || (c.Note != null && c.Note.Contains(text))
-                || assignments.Any(a => a.CardId == c.Id
+                || db.CardAssignments.Any(a => a.CardId == c.Id
                     && ((a.HolderName != null && a.HolderName.Contains(text)) || (a.UserId != null && db.Users.Any(u => u.Id == a.UserId && u.DisplayName.Contains(text))))));
         }
         var cards = await query.AsNoTracking().OrderBy(x => x.CardNumber).ToListAsync(ct);
-        if (cards.Count == 0) return Result<IReadOnlyList<CardDto>>.Ok([]);
+        if (cards.Count == 0) return Array.Empty<CardDto>();
 
         // 其餘三次查詢都以同一個篩選當子查詢，不把整份卡號清單展開成參數。
         var ids = query.Select(c => c.Id);
         var numbers = query.Select(c => c.CardNumber);
-        var current = await assignments.AsNoTracking().Where(a => ids.Contains(a.CardId)).CoveringAt(now).ToDtos(db).ToListAsync(ct);
+        var current = await db.CardAssignments.AsNoTracking().Where(a => ids.Contains(a.CardId)).CoveringAt(now).ToDtos(db).ToListAsync(ct);
         // 同一張卡的期間不重疊，正常只有一段；壞資料時取開始最晚的那段，不讓清單失敗。
         var holders = current.GroupBy(x => x.CardId).ToDictionary(x => x.Key, x => x.MaxBy(y => y.StartsAt));
         // 卡號比對與資料庫定序一致（不分大小寫）。
-        var lastPunches = await db.Set<Punch>().Where(p => numbers.Contains(p.CardNumber))
+        var lastPunches = await db.Punches.Where(p => numbers.Contains(p.CardNumber))
             .GroupBy(p => p.CardNumber).Select(g => new { g.Key, Last = g.Max(p => p.PunchedAt) })
             .ToDictionaryAsync(x => x.Key, x => x.Last, StringComparer.OrdinalIgnoreCase, ct);
         var pending = await unattributed.Where(p => p.CardId != null && ids.Contains(p.CardId.Value))
@@ -83,6 +83,6 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
             return new CardDto(card.Id, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, holders.GetValueOrDefault(card.Id),
                 lastPunches.TryGetValue(card.CardNumber, out var last) ? last : null, gap?.Count ?? 0, gap?.First, gap?.Last);
         });
-        return Result<IReadOnlyList<CardDto>>.Ok([.. rows]);
+        return rows.ToArray();
     }
 }

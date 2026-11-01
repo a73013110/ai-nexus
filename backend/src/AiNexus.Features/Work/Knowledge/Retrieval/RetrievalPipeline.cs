@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Knowledge;
 using System.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +60,7 @@ public sealed class RetrievalPipeline(AppDbContext db, RetrievalAuthorization au
         if (skippedRewrite) actual += "(rewrite-skipped)";
         if (await authorization.CollectionsAsync(actor, request.CollectionIds, ct, fresh: true) is { IsSuccess: false } final) return final.Error;
         if (await authorization.HitsAsync(actor, hits, ct, request.CollectionIds) is { IsSuccess: false } moved) return moved.Error;
-        if (!await db.Set<EmbeddingProfile>().AsNoTracking().AnyAsync(x => x.Id == profile.Id && x.Status == "active", ct)) return KnowledgeErrors.ProfileChanged;
+        if (!await db.EmbeddingProfiles.AsNoTracking().AnyAsync(x => x.Id == profile.Id && x.Status == "active", ct)) return KnowledgeErrors.ProfileChanged;
         return new KnowledgeSearchDto(actual, RetrievalRanking.Context(hits, settings.Retrieval), rewriteMs, embedMs, searchMs, rerankMs);
     }
 }

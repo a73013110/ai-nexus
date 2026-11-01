@@ -26,10 +26,11 @@ internal sealed class NavigationItemCreateRequestValidator : RequestValidator<Na
 }
 
 /// <summary>新增分群、頁面或外部連結，排到同層最後。Id 由伺服器產生（內建節點的可讀 Id 只來自 Seed）。會稽核。</summary>
-internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit audit, IOptions<AccessControlOptions> settings)
+internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/navigation-items", async (NavigationItemCreateRequest body, IRequestActor actor, CreateNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .MapPost("/navigation-items", (NavigationItemCreateRequest body, IRequestActor actor, CreateNavigationItem handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
         .Audited(AccessControlAudit.NavigationCreated)
         .WithName("CreateNavigationItem");
 
@@ -37,10 +38,10 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit 
     {
         var id = Guid.NewGuid().ToString("N");
         var audiences = request.AudienceGroupIds ?? [];
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+        var outcome = await write.ExecuteAsync(actor, NavigationRules.Target(db, id), async () =>
         {
             if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
-            var items = await db.Set<NavigationItem>().ToListAsync(ct);
+            var items = await db.NavigationItems.ToListAsync(ct);
             var last = items.Where(x => x.ParentId == request.ParentId).Select(x => (int?)x.SortOrder).Max();
             var item = new NavigationItem
             {
@@ -56,8 +57,8 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeAudit 
             await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
             return Result.Success;
         }, ct);
-        if (!outcome.IsSuccess) return outcome.Error!;
-        var created = await db.Set<NavigationItem>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        if (!outcome.IsSuccess) return outcome.Error;
+        var created = await db.NavigationItems.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return NavigationItemDto.From(created, [.. audiences.Order(StringComparer.Ordinal)]);
     }
 }

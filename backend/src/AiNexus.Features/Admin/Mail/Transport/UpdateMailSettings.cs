@@ -19,29 +19,28 @@ public sealed record MailSettingsDto(bool AutoRetry, DateTimeOffset? UpdatedAt);
 /// 切換自動重試（<c>mail.DeliverySettings</c>，下一輪寄送就生效、不必重啟）；寫行政稽核 <c>admin.mail_settings</c>。
 /// 關閉後暫時性與傳輸層失敗第一次就結束，已在等待重試的信不受影響，仍可立即重試或重寄。權限與重寄相同（<c>mail.messages.resend</c>）。
 /// </summary>
-internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeAudit audit, TimeProvider clock)
+internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite write, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("", (MailSettingsRequest body, IRequestActor actor, UpdateMailSettings handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.MailMessagesResend)
+        .MapPut("", (MailSettingsRequest body, IRequestActor actor, UpdateMailSettings handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
+        .RequireFeature(FeatureCatalog.MailMessagesResend)
         .Audited(MailAudit.SettingsUpdated)
         .WithName("UpdateMailSettings");
 
-    public async Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
+    public Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
     {
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessagesResend, null, "mail.settings", Snapshot, async () =>
+        return write.ExecuteAsync<MailSettingsDto>(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, "mail.settings", Snapshot), async () =>
         {
-            var setting = await db.Set<DeliverySetting>().SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
+            var setting = await db.DeliverySettings.SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
             if (setting is null) db.Add(setting = new DeliverySetting());
             setting.AutoRetry = request.AutoRetry;
             setting.UpdatedAt = clock.GetUtcNow();
             setting.UpdatedById = actor;
-            return Result.Success;
+            return new MailSettingsDto(request.AutoRetry, setting.UpdatedAt);
         }, ct);
-        if (!outcome.IsSuccess) return outcome.Error!;
-        return new MailSettingsDto(request.AutoRetry, clock.GetUtcNow());
     }
 
     private async Task<object?> Snapshot(CancellationToken ct)
-        => await db.Set<DeliverySetting>().AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(ct);
+        => await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(ct);
 }

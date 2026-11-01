@@ -13,7 +13,7 @@ namespace AiNexus.Features.Work.Repositories.Reviews;
 public sealed class RepositoryReviewService(AppDbContext db, RepositoryService repositories, ModelPresentation presentation)
 {
     public async Task<Result<RepositoryReview>> FindAsync(Guid owner, Guid id, CancellationToken ct)
-        => await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } row
+        => await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } row
             ? row : RepositoriesErrors.ReviewNotFound;
 
     /// <summary>使用者在 review 建立時所在的主機上，仍能讀取兩個固定的 commit。</summary>
@@ -26,7 +26,7 @@ public sealed class RepositoryReviewService(AppDbContext db, RepositoryService r
     }
 
     internal async Task<RepositoryReviewDto> DescribeAsync(RepositoryReview x, CancellationToken ct) =>
-        Describe(x, await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct));
+        Describe(x, await db.BackgroundJobs.AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct));
 
     /// <summary>review 的摘要；只讀取欄位，不讀 <see cref="RepositoryReview.SnapshotJson"/>。</summary>
     internal RepositoryReviewDto Describe(RepositoryReview x, BackgroundJob job) => new(x.Id, x.Repository, x.Commit, x.BaseCommit, x.PullRequest,

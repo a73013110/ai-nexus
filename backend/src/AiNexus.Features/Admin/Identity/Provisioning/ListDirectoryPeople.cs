@@ -20,7 +20,8 @@ internal sealed class ListDirectoryPeople(IAdDirectory directory, DirectoryProvi
     public const int MaxQuery = 64;
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/directory-people", (string? node, bool? subtree, string? q, ListDirectoryPeople handler, CancellationToken ct) => handler.HandleAsync(node, subtree == true, q, ct).ToHttpResultAsync())
+        .MapGet("/directory-people", (string? node, bool? subtree, string? q, ListDirectoryPeople handler, CancellationToken ct) =>
+            handler.HandleAsync(node, subtree == true, q, ct))
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)
         .Audited(IdentityAudit.DirectoryRead)
         .WithName("ListDirectoryPeople");

@@ -1,8 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Conversations;
-using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -32,18 +30,18 @@ public sealed class ListAdminUsersTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             (await db.Users.SingleAsync(x => x.Id == bobId)).AttachmentLimitBytes = 5000;
             (await db.Users.SingleAsync(x => x.Id == daveId)).DeletedAt = DateTimeOffset.UtcNow;
-            db.Set<Attachment>().Add(new() { OwnerId = bobId, FileName = "a.txt", ContentType = "text/plain", Size = 1200 });
-            db.Set<ModelInvocation>().AddRange(
+            db.Attachments.Add(new() { OwnerId = bobId, FileName = "a.txt", ContentType = "text/plain", Size = 1200 });
+            db.ModelInvocations.AddRange(
                 new() { OwnerId = bobId, Kind = "evaluation", ModelId = "test-model", Status = "completed", InputTokens = 600, OutputTokens = 200, DurationMilliseconds = 50 },
                 new() { OwnerId = bobId, Kind = "ocr", ModelId = "test-model", Status = "failed" },
                 new() { OwnerId = bobId, Kind = "transform", ModelId = "test-model", Status = "completed", InputTokens = 900, OutputTokens = 500, CreatedAt = DateTimeOffset.UtcNow.AddDays(-40) });
             db.Conversations.AddRange(new Conversation { OwnerId = bobId }, new Conversation { OwnerId = bobId, IsDeleted = true });
             // carol 經由啟用的角色與群組取得群組儲存上限；停用的群組不算。
-            db.Set<Role>().Add(new() { Id = "storage-probe", Name = "儲存測試" });
-            db.Set<RoleGroup>().AddRange(new RoleGroup { Id = "storage-probe", Name = "儲存測試" }, new RoleGroup { Id = "storage-off", Name = "停用", Enabled = false });
-            db.Set<RoleGroupRole>().AddRange(new RoleGroupRole { RoleId = "storage-probe", GroupId = "storage-probe" }, new RoleGroupRole { RoleId = "storage-probe", GroupId = "storage-off" });
-            db.Set<GroupModelPolicy>().AddRange(new GroupModelPolicy { GroupId = "storage-probe", StoredAttachmentLimitBytes = 7000 }, new GroupModelPolicy { GroupId = "storage-off", StoredAttachmentLimitBytes = 10 });
-            db.Set<UserRole>().Add(new() { UserId = carolId, RoleId = "storage-probe" });
+            db.Roles.Add(new() { Id = "storage-probe", Name = "儲存測試" });
+            db.RoleGroups.AddRange(new RoleGroup { Id = "storage-probe", Name = "儲存測試" }, new RoleGroup { Id = "storage-off", Name = "停用", Enabled = false });
+            db.RoleGroupRoles.AddRange(new RoleGroupRole { RoleId = "storage-probe", GroupId = "storage-probe" }, new RoleGroupRole { RoleId = "storage-probe", GroupId = "storage-off" });
+            db.GroupModelPolicies.AddRange(new GroupModelPolicy { GroupId = "storage-probe", StoredAttachmentLimitBytes = 7000 }, new GroupModelPolicy { GroupId = "storage-off", StoredAttachmentLimitBytes = 10 });
+            db.UserRoles.Add(new() { UserId = carolId, RoleId = "storage-probe" });
             await db.SaveChangesAsync();
         }
 
@@ -61,7 +59,7 @@ public sealed class ListAdminUsersTests
                 Assert.Equal(await quota.ForAsync(user.Id, CancellationToken.None), user.Storage);
                 Assert.Equal(usage.GetValueOrDefault(user.Id) ?? new(0, 0, 0, 0, 0, 0, 0), user.Activity!.Usage);
                 Assert.Equal(await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == user.Id), user.Activity.Conversations);
-                Assert.Equal(await db.Set<UserRole>().Where(x => x.UserId == user.Id).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(), user.RoleIds);
+                Assert.Equal(await db.UserRoles.Where(x => x.UserId == user.Id).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(), user.RoleIds);
             }
         }
         var bobRow = page.Users.Single(x => x.Id == bobId);

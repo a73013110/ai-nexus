@@ -31,9 +31,9 @@ internal sealed class TransformTextRequestValidator : RequestValidator<Transform
 internal sealed class TransformText(ModelTaskService models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapPost("/text/transform", async (
+        .MapPost("/text/transform", (
                 TransformTextRequest request, ICurrentUser user, TransformText handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
+            handler.HandleAsync(user.Id, request, ct))
         .RequireAuthorization(Policies.Text).Audited(ArtifactsAudit.TextTransformed).WithName("TransformText");
 
     public async Task<Result<TransformTextDto>> HandleAsync(Guid actor, TransformTextRequest request, CancellationToken ct)

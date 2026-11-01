@@ -12,9 +12,11 @@ internal sealed class ShareEvaluationSet(ResourceAccess access)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/sets/{id:guid}/access", (Guid id, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync())
+        routes.MapGet("/sets/{id:guid}/access", (Guid id, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) =>
+            handler.GetAsync(user.Id, id, ct))
             .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetAccessRead);
-        routes.MapPut("/sets/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) => handler.SetAsync(user.Id, id, body, ct).ToHttpResultAsync())
+        routes.MapPut("/sets/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) =>
+            handler.SetAsync(user.Id, id, body, ct))
             .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetShared);
     }
 

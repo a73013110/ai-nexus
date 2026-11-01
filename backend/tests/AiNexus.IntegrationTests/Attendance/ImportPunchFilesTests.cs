@@ -24,7 +24,7 @@ public sealed class ImportPunchFilesTests
 
         Assert.Equal((true, 1, 1, 0), (scan.SourceAvailable, scan.Found, scan.Imported, scan.Failed));
         using var scope = session.Factory.Services.CreateScope();
-        var punches = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Punch>().AsNoTracking().OrderBy(x => x.PunchedAt).ThenBy(x => x.CardNumber).ToListAsync();
+        var punches = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Punches.AsNoTracking().OrderBy(x => x.PunchedAt).ThenBy(x => x.CardNumber).ToListAsync();
         Assert.Equal([new DateTimeOffset(2026, 10, 1, 8, 29, 15, Taipei), At(10, 1, 8, 45), new DateTimeOffset(2026, 10, 1, 18, 2, 3, Taipei)], punches.Select(x => x.PunchedAt));
         Assert.All(punches, x => Assert.Equal(Taipei, x.PunchedAt.Offset));
         Assert.Equal(("002", "15"), (punches[2].MachineCode, punches[2].EventCode));
@@ -46,7 +46,7 @@ public sealed class ImportPunchFilesTests
         await session.ScanAsync();
 
         using var scope = session.Factory.Services.CreateScope();
-        var dates = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Punch>().AsNoTracking().OrderBy(x => x.PunchedAt).Select(x => x.AttendanceDate).ToListAsync();
+        var dates = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Punches.AsNoTracking().OrderBy(x => x.PunchedAt).Select(x => x.AttendanceDate).ToListAsync();
         Assert.Equal([new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 2)], dates);
     }
 

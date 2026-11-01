@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
@@ -10,14 +9,14 @@ namespace AiNexus.Features.Work.Conversations;
 internal sealed class ListConversationLabels(AppDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/labels", async (ICurrentUser user, ListConversationLabels handler, CancellationToken ct) =>
-            TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .MapGet("/labels", (ICurrentUser user, ListConversationLabels handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, ct))
         .NotAudited("側欄的標籤清單")
         .WithName("ListConversationLabels");
 
     public async Task<IReadOnlyList<string>> HandleAsync(Guid owner, CancellationToken ct) => await (
-            from label in db.Set<ConversationLabel>()
-            join conversation in db.Set<Conversation>() on label.ConversationId equals conversation.Id
+            from label in db.ConversationLabels
+            join conversation in db.Conversations on label.ConversationId equals conversation.Id
             where conversation.OwnerId == owner
             select label.Name)
         .Distinct()

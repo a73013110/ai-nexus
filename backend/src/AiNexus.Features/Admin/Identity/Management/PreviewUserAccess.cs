@@ -10,7 +10,8 @@ namespace AiNexus.Features.Admin.Identity.Management;
 internal sealed class PreviewUserAccess(AppDbContext db, AccessView access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users/{id:guid}/access", async (Guid id, PreviewUserAccess handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())
+        .MapGet("/users/{id:guid}/access", (Guid id, PreviewUserAccess handler, CancellationToken ct) =>
+            handler.HandleAsync(id, ct))
         .Audited(IdentityAudit.UserAccessRead)
         .WithName("PreviewUserAccess");
 

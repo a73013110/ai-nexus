@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -25,18 +24,19 @@ public sealed record MailMessageDetailDto(MailMessageDto Message, string HeaderM
 internal sealed class GetMailMessage(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, GetMailMessage handler, CancellationToken ct) => handler.HandleAsync(id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}", (Guid id, GetMailMessage handler, CancellationToken ct) =>
+            handler.HandleAsync(id, ct))
         .Audited(MailAudit.MessageRead)
         .WithName("GetMailMessage");
 
     public async Task<Result<MailMessageDetailDto>> HandleAsync(Guid id, CancellationToken ct)
     {
-        var message = await db.Set<OutboundMessage>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var message = await db.OutboundMessages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (message is null) return MailErrors.MessageNotFound;
         var requester = message.RequestedById is { } requestedBy ? await db.Users.AsNoTracking().Where(x => x.Id == requestedBy).Select(x => x.DisplayName).SingleOrDefaultAsync(ct) : null;
-        var content = message.Sensitive ? null : await db.Set<OutboundMessageContent>().AsNoTracking().Where(x => x.MessageId == id && !x.Protected)
+        var content = message.Sensitive ? null : await db.OutboundMessageContents.AsNoTracking().Where(x => x.MessageId == id && !x.Protected)
             .Select(x => x.Text).SingleOrDefaultAsync(ct);
-        var attempts = await db.Set<DeliveryAttempt>().AsNoTracking().Where(x => x.MessageId == id).OrderBy(x => x.Attempt)
+        var attempts = await db.DeliveryAttempts.AsNoTracking().Where(x => x.MessageId == id).OrderBy(x => x.Attempt)
             .Select(x => new MailAttemptDto(x.Attempt, x.Transport, x.StartedAt, x.FinishedAt, x.Outcome, x.SmtpStatus, x.EnhancedStatus, x.Response, x.ErrorCode, x.IssueCode, x.Stage))
             .ToListAsync(ct);
         var blocked = ResendMailMessage.Blocker(message, content is not null)?.Code;

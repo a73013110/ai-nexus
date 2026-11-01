@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -16,11 +15,11 @@ internal sealed class ListConversations(AppDbContext db)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", (
                 string? search, int? offset, string? view, string? label, ICurrentUser user, ListConversations handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, search, offset ?? 0, view ?? "active", label, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, search, offset ?? 0, view ?? "active", label, ct))
         .NotAudited("側欄的自己對話清單")
         .WithName("ListConversations");
 
-    public async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(
+    public async Task<Result<ConversationDto[]>> HandleAsync(
         Guid owner, string? search, int offset, string view, string? label, CancellationToken ct)
     {
         var invalid = search?.Length > 120
@@ -30,7 +29,7 @@ internal sealed class ListConversations(AppDbContext db)
             || offset > 100000;
         if (invalid) return ConversationsErrors.InvalidQuery;
 
-        var query = db.Set<Conversation>().Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == owner);
+        var query = db.Conversations.Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == owner);
         if (view != "all") query = query.Where(x => x.IsArchived == (view == "archived"));
         if (view == "favorites") query = query.Where(x => x.IsFavorite);
         if (!string.IsNullOrWhiteSpace(label)) query = query.Where(x => x.Labels.Any(l => l.Name == label));
@@ -38,7 +37,7 @@ internal sealed class ListConversations(AppDbContext db)
         {
             // 標題與任一訊息內文都會被搜尋，只要其中一處命中即列出。
             var term = search.Trim();
-            query = query.Where(x => x.Title.Contains(term) || db.Set<Message>().Any(m => m.ConversationId == x.Id && m.Content.Contains(term)));
+            query = query.Where(x => x.Title.Contains(term) || db.Messages.Any(m => m.ConversationId == x.Id && m.Content.Contains(term)));
         }
         var rows = await query
             .OrderByDescending(x => x.IsFavorite)
@@ -47,6 +46,6 @@ internal sealed class ListConversations(AppDbContext db)
             .Skip(offset)
             .Take(100)
             .ToListAsync(ct);
-        return Result<IReadOnlyList<ConversationDto>>.Ok(rows.Select(x => x.ToDto()).ToList());
+        return rows.Select(x => x.ToDto()).ToArray();
     }
 }

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
@@ -16,13 +15,14 @@ public sealed record UnitCandidateDto(Guid Id, string Account, string DisplayNam
 internal sealed class ListUnitCandidates(AppDbContext db, IActiveUsers activeUsers)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/candidates", async (ListUnitCandidates handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/candidates", (ListUnitCandidates handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .NotAudited("選人下拉的候選名單")
         .WithName("ListOrganizationUnitCandidates");
 
     public async Task<IReadOnlyList<UnitCandidateDto>> HandleAsync(CancellationToken ct)
         => await db.Users.AsNoTracking().Where(x => activeUsers.Ids.Contains(x.Id)).OrderBy(x => x.AdAccount ?? x.LocalAccount)
             .Select(x => new UnitCandidateDto(x.Id, x.AdAccount ?? x.LocalAccount ?? "", x.DisplayName,
-                db.Set<UnitMember>().Where(y => y.UserId == x.Id && y.IsPrimary).Select(y => (Guid?)y.UnitId).FirstOrDefault()))
+                db.UnitMembers.Where(y => y.UserId == x.Id && y.IsPrimary).Select(y => (Guid?)y.UnitId).FirstOrDefault()))
             .ToListAsync(ct);
 }

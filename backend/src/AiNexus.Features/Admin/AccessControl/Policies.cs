@@ -1,46 +1,12 @@
 namespace AiNexus.Features.Admin.AccessControl;
 
 /// <summary>
-/// 授權 policy 名稱。單一功能的 policy 名稱是 <c>feature:&lt;id&gt;</c>，id 引用 <see cref="FeatureCatalog"/>；
-/// 端點一律引用這些常數而非字串字面值，<c>EndpointConventionTests</c> 會檢查每個被引用的 policy 都已註冊。
-/// 端點的 policy＝呼叫它的頁面；多個頁面共用的端點用 any-of policy（名稱不對應單一功能），在下面註明原因。
+/// 授權 policy。單一功能的 policy 名稱是 <c>feature:&lt;id&gt;</c>，由 <see cref="RequireFeature"/> 組出，<see cref="FeatureCatalog.Grants"/> 的功能都已註冊；
+/// 端點的 policy＝呼叫它的頁面；多個頁面共用的端點用 any-of policy（名稱不對應單一功能），在下面註明原因，由需要的模組以 <see cref="AddFeaturePolicy"/> 註冊。
 /// </summary>
 public static class Policies
 {
     public const string Prefix = "feature:";
-    public const string Chat = Prefix + FeatureCatalog.Chat;
-    public const string Projects = Prefix + FeatureCatalog.Projects;
-    public const string Artifacts = Prefix + FeatureCatalog.Artifacts;
-    public const string Sharing = Prefix + FeatureCatalog.Sharing;
-    public const string Quality = Prefix + FeatureCatalog.Quality;
-    public const string QualityRetrieval = Prefix + FeatureCatalog.QualityRetrieval;
-    public const string Knowledge = Prefix + FeatureCatalog.Knowledge;
-    public const string KnowledgeRetrieval = Prefix + FeatureCatalog.KnowledgeRetrieval;
-    public const string Jobs = Prefix + FeatureCatalog.Jobs;
-    public const string Files = Prefix + FeatureCatalog.Files;
-    public const string Dashboard = Prefix + FeatureCatalog.Dashboard;
-    public const string Repositories = Prefix + FeatureCatalog.Repositories;
-    public const string IdentityUsers = Prefix + FeatureCatalog.IdentityUsers;
-    public const string IdentityUsersImport = Prefix + FeatureCatalog.IdentityUsersImport;
-    public const string IdentityUsersSync = Prefix + FeatureCatalog.IdentityUsersSync;
-    public const string AccessControlRoles = Prefix + FeatureCatalog.AccessControlRoles;
-    public const string AccessControlGroups = Prefix + FeatureCatalog.AccessControlGroups;
-    public const string AccessControlFeatures = Prefix + FeatureCatalog.AccessControlFeatures;
-    public const string AccessControlNavigation = Prefix + FeatureCatalog.AccessControlNavigation;
-    public const string Organization = Prefix + FeatureCatalog.Organization;
-    public const string OrganizationImport = Prefix + FeatureCatalog.OrganizationImport;
-    public const string OperationsUsage = Prefix + FeatureCatalog.OperationsUsage;
-    public const string BillingPrices = Prefix + FeatureCatalog.BillingPrices;
-    public const string MailMessages = Prefix + FeatureCatalog.MailMessages;
-    public const string MailMessagesResend = Prefix + FeatureCatalog.MailMessagesResend;
-    public const string Releases = Prefix + FeatureCatalog.Releases;
-    public const string AttendanceRecords = Prefix + FeatureCatalog.AttendanceRecords;
-    public const string AttendanceCards = Prefix + FeatureCatalog.AttendanceCards;
-    public const string AttendanceCardsMaintain = Prefix + FeatureCatalog.AttendanceCardsMaintain;
-    public const string AttendanceImports = Prefix + FeatureCatalog.AttendanceImports;
-    public const string AttendanceImportsReimport = Prefix + FeatureCatalog.AttendanceImportsReimport;
-    public const string AttendanceCalendar = Prefix + FeatureCatalog.AttendanceCalendar;
-    public const string AttendanceCalendarMaintain = Prefix + FeatureCatalog.AttendanceCalendarMaintain;
 
     /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";
@@ -53,4 +19,12 @@ public static class Policies
     /// （選單頁要功能名稱與外部連結可選的群組），所以這些頁任一授權都可讀。
     /// </summary>
     public const string AccessCatalog = Prefix + "access-catalog";
+
+    /// <summary>已登入且持有任一指定功能的使用者；每個請求都依當下的授權判斷。</summary>
+    public static IServiceCollection AddFeaturePolicy(this IServiceCollection services, string policy, params string[] features)
+        => services.AddAuthorization(options => options.AddPolicy(policy, p => p.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(features))));
+
+    /// <summary>端點或群組要求持有 <see cref="FeatureCatalog"/> 的某個功能。</summary>
+    public static TBuilder RequireFeature<TBuilder>(this TBuilder builder, string feature) where TBuilder : IEndpointConventionBuilder
+        => builder.RequireAuthorization(Prefix + feature);
 }

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -13,17 +12,17 @@ internal sealed class ListRepositoryReviews(AppDbContext db, RepositoryService g
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapGet("/reviews", (string owner, string name, ICurrentUser user, ListRepositoryReviews handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, owner + "/" + name, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, owner + "/" + name, ct))
         .Audited(RepositoriesAudit.ReviewRead)
         .WithName("ListRepositoryReviews");
 
-    public async Task<Result<IReadOnlyList<RepositoryReviewDto>>> HandleAsync(Guid owner, string repo, CancellationToken ct)
+    public async Task<Result<RepositoryReviewDto[]>> HandleAsync(Guid owner, string repo, CancellationToken ct)
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         // 只查列表需要的欄位；凍結的快照（每筆最多一百萬字元）留在資料庫，不載入記憶體。
-        var rows = await db.Set<RepositoryReview>().AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo)
+        var rows = await db.RepositoryReviews.AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo)
             .OrderByDescending(x => x.CreatedAt).Take(50)
-            .Join(db.Set<BackgroundJob>().AsNoTracking(), x => x.JobId, job => job.Id, (x, job) => new
+            .Join(db.BackgroundJobs.AsNoTracking(), x => x.JobId, job => job.Id, (x, job) => new
             {
                 Review = new RepositoryReview
                 {
@@ -32,6 +31,6 @@ internal sealed class ListRepositoryReviews(AppDbContext db, RepositoryService g
                 },
                 Job = job
             }).ToListAsync(ct);
-        return Result<IReadOnlyList<RepositoryReviewDto>>.Ok(rows.Select(x => reviews.Describe(x.Review, x.Job)).ToArray());
+        return rows.Select(x => reviews.Describe(x.Review, x.Job)).ToArray();
     }
 }

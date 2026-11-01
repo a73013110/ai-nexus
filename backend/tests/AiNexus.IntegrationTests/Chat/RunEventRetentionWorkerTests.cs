@@ -24,8 +24,8 @@ public sealed class RunEventRetentionWorkerTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var owner = await db.Runs.Where(x => x.Id == active.Id).Select(x => x.OwnerId).SingleAsync();
-            await db.Runs.Where(x => x.Id == active.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ActiveOwnerId, owner));
+            var owner = await db.GenerationRuns.Where(x => x.Id == active.Id).Select(x => x.OwnerId).SingleAsync();
+            await db.GenerationRuns.Where(x => x.Id == active.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ActiveOwnerId, owner));
             await db.RunEvents.Where(x => x.RunId == finished.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow));
             db.RunEvents.AddRange(Enumerable.Range(1, backlog).Select(i => new RunEvent { RunId = finished.Id, Sequence = 1000 + i, CreatedAt = expired }));
             db.RunEvents.AddRange(Enumerable.Range(1, 5).Select(i => new RunEvent { RunId = active.Id, Sequence = 1000 + i, CreatedAt = expired }));

@@ -32,7 +32,7 @@ internal sealed class Reauthenticate(AppDbContext db, AccountSecurity security, 
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/reauthentications", (ReauthenticationRequest body, HttpContext http, ICurrentUser user, Reauthenticate handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, body, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
         .Audited(AccountAudit.Reauthenticated)
         .WithName("Reauthenticate");

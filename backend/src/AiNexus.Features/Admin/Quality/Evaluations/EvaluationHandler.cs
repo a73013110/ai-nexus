@@ -31,7 +31,7 @@ public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, Ac
     private async Task<Result<EvaluationRun>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
         if (!await features.HoldsAsync(job.OwnerId, FeatureCatalog.Quality, ct)) return AccessControlErrors.FeatureForbidden;
-        var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
+        var run = await db.EvaluationRuns.AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
         if (run is null) return QualityErrors.RunMissing;
         if (await access.RequireAsync(job.OwnerId, run.SetId, EvaluationSet.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
         return run;
@@ -53,7 +53,7 @@ public sealed class EvaluationHandler(AppDbContext db, ResourceAccess access, Ac
         var required = await RequireAsync(execution.Job, ct);
         if (!required.IsSuccess) return required.Error;
         var run = required.Value; var cases = EvaluationJson.Parse<EvaluationCase>(run.CasesJson); var variants = EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson);
-        var done = (await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.VariantIndex }).ToListAsync(ct))
+        var done = (await db.EvaluationResults.AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.VariantIndex }).ToListAsync(ct))
             .Select(x => (x.CaseIndex, x.VariantIndex)).ToHashSet();
         var completed = done.Count; var total = cases.Length * variants.Length;
         for (var c = 0; c < cases.Length; c++)

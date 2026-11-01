@@ -102,7 +102,7 @@ internal sealed class CreateRun(
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))));
 
         // 鎖外的快速路徑：同一 Key 的重送直接回放既有結果；進鎖後還會再比對一次
-        var previous = await db.Runs
+        var previous = await db.GenerationRuns
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
 
@@ -163,7 +163,7 @@ internal sealed class CreateRun(
         try
         {
             // 進入鎖後再次進行冪等比對（防止並發同 Key 重複進入）
-            var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
+            var existing = await db.GenerationRuns.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (existing is not null)
             {
                 return await ReplayAsync(owner, existing, hash, ct);
@@ -191,12 +191,12 @@ internal sealed class CreateRun(
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
 
             // 持有帳號列鎖後再檢查一次，擋下並行送出、同一 Key 的重複請求
-            if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
+            if (await db.GenerationRuns.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
             {
                 return await ReplayAsync(owner, raced, hash, ct);
             }
 
-            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct))
+            if (await db.GenerationRuns.AnyAsync(x => x.ActiveOwnerId == owner, ct))
             {
                 return InferenceErrors.GenerationActive;
             }
@@ -274,13 +274,13 @@ internal sealed class CreateRun(
 
             foreach (var file in files)
             {
-                db.Set<MessageAttachment>().Add(new() { MessageId = user.Id, AttachmentId = file.Id });
+                db.MessageAttachments.Add(new() { MessageId = user.Id, AttachmentId = file.Id });
             }
 
             var fileIds = files.Select(x => x.Id).ToArray();
             if (fileIds.Length > 0)
             {
-                await db.Set<Attachment>()
+                await db.Attachments
                     .Where(x => fileIds.Contains(x.Id) && x.OwnerId == owner)
                     .ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             }
@@ -305,7 +305,7 @@ internal sealed class CreateRun(
             run.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             run.ParametersJson = JsonSerializer.Serialize(parameters);
 
-            db.Runs.Add(run);
+            db.GenerationRuns.Add(run);
             RunService.AddEvent(db, run, "status");
             audit.Describe(resource: run.Id);
 
@@ -342,7 +342,7 @@ internal sealed class CreateRun(
     private async Task<Error?> AdmissionAsync(Guid owner, CancellationToken ct)
     {
         if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
-        return await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct) ? InferenceErrors.GenerationActive : null;
+        return await db.GenerationRuns.AnyAsync(x => x.ActiveOwnerId == owner, ct) ? InferenceErrors.GenerationActive : null;
     }
 
     /// <summary>系統提示詞：基底與對話偏好，再接專案、知識庫來源與網路搜尋結果；鎖外預組與鎖內建立必須組出相同字串才能沿用上下文。</summary>
@@ -393,10 +393,10 @@ internal sealed class CreateRun(
         string ProjectContext,
         string SystemPrompt,
         IReadOnlyList<Attachment> Files,
-        Result<IReadOnlyList<InferenceMessage>> Messages)
+        Result<InferenceMessage[]> Messages)
     {
         /// <summary>參數與附件都未變時複用鎖外準備的上下文；任一不同即回傳 null，由呼叫端重新組裝。</summary>
-        public Result<IReadOnlyList<InferenceMessage>>? ContextFor(string systemPrompt, IReadOnlyList<Attachment> files)
+        public Result<InferenceMessage[]>? ContextFor(string systemPrompt, IReadOnlyList<Attachment> files)
         {
             static (Guid, string, string, string?) Key(Attachment x) => (x.Id, x.FileName, x.ContentType, x.ExtractedText);
             if (systemPrompt != SystemPrompt || !files.Select(Key).SequenceEqual(Files.Select(Key))) return null;

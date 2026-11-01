@@ -52,6 +52,20 @@ public sealed class DatabaseModelTests
         Assert.True(missing.Count == 0, "Add an IEntityTypeConfiguration for:\n" + string.Join("\n", missing));
     }
 
+    /// <summary>每張表與檢視都有 <see cref="AppDbContext"/> 屬性，名稱＝資料庫物件名（檢視去掉 <c>vw_</c>），知道表名就知道怎麼查；沒有獨立查詢的附屬與函式對應除外。</summary>
+    [Fact]
+    public void EveryTableHasADbSetNamedAfterIt()
+    {
+        var properties = typeof(AppDbContext).GetProperties()
+            .Where(p => p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .ToDictionary(p => p.PropertyType.GetGenericArguments()[0], p => p.Name);
+        var expected = EntityTypes().Where(e => !e.IsOwned() && (e.GetTableName() ?? e.GetViewName()) is not null)
+            .ToDictionary(e => e.ClrType, e => (e.GetTableName() ?? e.GetViewName())!.Replace("vw_", "", StringComparison.Ordinal));
+        var wrong = expected.Where(e => properties.GetValueOrDefault(e.Key) != e.Value)
+            .Select(e => $"public DbSet<{e.Key.Name}> {e.Value} => Set<{e.Key.Name}>();").Order(StringComparer.Ordinal).ToList();
+        Assert.True(wrong.Count == 0, "Declare these properties in AppDbContext:\n" + string.Join("\n", wrong));
+    }
+
     /// <summary>實體對應的資料庫物件：表，沒有表時是檢視（AttributedPunch）或函式（UsageEntry）。</summary>
     private static (string Schema, string? Name) StoreObject(IEntityType entity)
     {

@@ -8,7 +8,8 @@ namespace AiNexus.Features.Platform.Account.Security;
 internal sealed class GetAccountSecurity(AccountSecurity security)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/settings/account", (HttpContext http, ICurrentUser user, GetAccountSecurity handler) => TypedResults.Ok(handler.Handle(http, user.User)))
+        .MapGet("/settings/account", (HttpContext http, ICurrentUser user, GetAccountSecurity handler) =>
+            handler.Handle(http, user.User))
         .NotAudited("使用者自己的帳號安全狀態")
         .WithName("GetAccountSecurity");
 

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Artifacts;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -25,10 +24,10 @@ public sealed class DeleteProjectTests
         var project = await CreateProject(owner, "container");
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{project.Resource.Id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using (var scope = f.Services.CreateScope())
-            Assert.Equal(project.Resource.Id, (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
+            Assert.Equal(project.Resource.Id, (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Artifacts.SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/projects/{project.Resource.Id}")).StatusCode);
         using (var scope = f.Services.CreateScope())
-            Assert.Null((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Artifact>().SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
+            Assert.Null((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Artifacts.SingleAsync(x => x.Id == artifact.Resource.Id)).ProjectId);
         Assert.Equal("body", (await owner.GetFromJsonAsync<ArtifactDto>($"/api/v1/artifacts/{artifact.Resource.Id}"))!.Content);
     }
 

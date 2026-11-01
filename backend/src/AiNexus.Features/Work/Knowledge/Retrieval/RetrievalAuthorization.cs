@@ -29,7 +29,7 @@ public sealed class RetrievalAuthorization(AppDbContext db, ResourceAccess acces
     {
         if (hits.Count == 0) return Result.Success;
         var ids = hits.Select(x => x.DocumentId).Distinct().ToArray();
-        var docs = await db.Set<Document>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null)
+        var docs = await db.Documents.AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null)
             .Select(x => new { x.Id, Collection = x.CollectionId!.Value }).ToListAsync(ct);
         if (docs.Count != ids.Length) return KnowledgeErrors.SourceChanged;
         var collections = docs.Select(x => x.Collection).Distinct().ToArray();

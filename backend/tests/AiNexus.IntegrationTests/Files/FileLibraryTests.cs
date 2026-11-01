@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Knowledge;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -53,8 +51,8 @@ public sealed class FileLibraryTests
         Assert.Equal(HttpStatusCode.NotFound, (await bob.DeleteAsync($"/api/v1/files/{privateFile.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await alice.DeleteAsync($"/api/v1/files/{privateFile.Id}")).StatusCode);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(3, await db.Set<Attachment>().CountAsync());
-        Assert.Single(await db.Set<Document>().ToListAsync());
+        Assert.Equal(3, await db.Attachments.CountAsync());
+        Assert.Single(await db.Documents.ToListAsync());
         var json = await alice.GetStringAsync("/api/v1/files");
         Assert.DoesNotContain("extractedText", json); Assert.DoesNotContain("\"data\"", json);
     }

@@ -40,18 +40,18 @@ public static class MailFixtures
     public static async Task<OutboundMessage> MessageAsync(AppFactory factory, Guid id)
     {
         using var scope = factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AsNoTracking().SingleAsync(x => x.Id == id);
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AsNoTracking().SingleAsync(x => x.Id == id);
     }
 
     public static async Task<List<DeliveryAttempt>> AttemptsAsync(AppFactory factory, Guid id)
     {
         using var scope = factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<DeliveryAttempt>().AsNoTracking().Where(x => x.MessageId == id).OrderBy(x => x.Attempt).ToListAsync();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().DeliveryAttempts.AsNoTracking().Where(x => x.MessageId == id).OrderBy(x => x.Attempt).ToListAsync();
     }
 
     public static async Task<OutboundMessageContent?> ContentAsync(AppFactory factory, Guid id)
     {
         using var scope = factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessageContent>().AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id);
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessageContents.AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id);
     }
 }

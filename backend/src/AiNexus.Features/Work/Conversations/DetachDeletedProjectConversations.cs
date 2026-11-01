@@ -16,7 +16,7 @@ internal sealed class DetachDeletedProjectConversations(AppDbContext db) : IDoma
     public async Task<Result> CheckAsync(string kind, Guid containerId, CancellationToken ct)
     {
         if (kind != "project") return Result.Success;
-        var generating = await db.Runs.AnyAsync(
+        var generating = await db.GenerationRuns.AnyAsync(
             r => r.ActiveOwnerId != null && Conversations(containerId).Any(c => c.Id == r.ConversationId), ct);
         return generating ? ConversationsErrors.GenerationActive : Result.Success;
     }

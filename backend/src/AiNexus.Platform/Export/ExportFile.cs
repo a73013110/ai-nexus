@@ -1,3 +1,4 @@
+using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace AiNexus.Platform.Export;
@@ -9,4 +10,11 @@ namespace AiNexus.Platform.Export;
 public sealed record ExportFile(string Name, string ContentType, byte[] Content)
 {
     public FileContentHttpResult ToHttpResult() => TypedResults.File(Content, ContentType, Name);
+}
+
+public static class ExportFileResults
+{
+    /// <summary>匯出端點的回應：成功下載檔案，失敗回 problem。</summary>
+    public static Task<Results<FileContentHttpResult, ProblemHttpResult>> ToFileResultAsync(this Task<Result<ExportFile>> result)
+        => result.ToHttpResultAsync(file => file.ToHttpResult());
 }

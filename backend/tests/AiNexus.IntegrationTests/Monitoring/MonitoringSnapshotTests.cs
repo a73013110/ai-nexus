@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Jobs;
 using System.Net.Http.Json;
 using AiNexus.Features.Admin.Monitoring;
 using AiNexus.Features.Admin.Monitoring.Presence;
@@ -46,7 +44,7 @@ public sealed class MonitoringSnapshotTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<BackgroundJob>().Add(new() { OwnerId = db.Users.Select(x => x.Id).First(), Kind = "document-ingest", Status = "running", LeaseToken = Guid.NewGuid(),
+            db.BackgroundJobs.Add(new() { OwnerId = db.Users.Select(x => x.Id).First(), Kind = "document-ingest", Status = "running", LeaseToken = Guid.NewGuid(),
                 LeaseUntil = clock.GetUtcNow().AddMinutes(-1), OperationId = Guid.NewGuid(), SubjectId = Guid.NewGuid() });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -116,7 +114,7 @@ public sealed class MonitoringSnapshotTests
         using var alice = await factory.SignedInAsync();
         Assert.True(await StreamEndsAfterAsync(factory, alice, clock, db =>
         {
-            db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators"));
+            db.Remove(db.RoleGroupFeatures.Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators"));
             return db.SaveChangesAsync();
         }));
     }

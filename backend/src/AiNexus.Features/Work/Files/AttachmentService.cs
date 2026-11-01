@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Work.Files.Extraction;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Platform.Errors;
@@ -51,7 +50,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var reserved = await quota.ReserveAsync(owner, bytes.Length, ct);
             if (!reserved.IsSuccess) return reserved.Error;
-            db.Set<Attachment>().Add(attachment);
+            db.Attachments.Add(attachment);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
@@ -59,7 +58,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
         try
         {
             await storage.WriteAsync(attachment.StorageKey, bytes, ct);
-            var activated = await db.Set<Attachment>().Where(x => x.Id == attachment.Id && x.StorageState == AttachmentStates.Pending)
+            var activated = await db.Attachments.Where(x => x.Id == attachment.Id && x.StorageState == AttachmentStates.Pending)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Ready), ct);
             if (activated == 1) return Describe(attachment);
             await lifecycle.AbortUploadAsync(attachment, CancellationToken.None);
@@ -96,17 +95,17 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
     /// </summary>
     public async Task<Result<Attachment>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct);
+        var file = await db.Attachments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct);
         if (file is null) return FilesErrors.NotFound;
-        if (!file.InLibrary && !await db.Set<ResourceAttachment>().AnyAsync(x => x.AttachmentId == id, ct) && await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
-            !await (from link in db.Set<MessageAttachment>() join message in db.Set<Message>() on link.MessageId equals message.Id join conversation in db.Set<Conversation>() on message.ConversationId equals conversation.Id where link.AttachmentId == id && conversation.OwnerId == owner select link).AnyAsync(ct))
+        if (!file.InLibrary && !await db.ResourceAttachments.AnyAsync(x => x.AttachmentId == id, ct) && await db.MessageAttachments.AnyAsync(x => x.AttachmentId == id, ct) &&
+            !await (from link in db.MessageAttachments join message in db.Messages on link.MessageId equals message.Id join conversation in db.Conversations on message.ConversationId equals conversation.Id where link.AttachmentId == id && conversation.OwnerId == owner select link).AnyAsync(ct))
             return FilesErrors.NotFound;
         return file;
     }
 
-    public async Task<Result<IReadOnlyList<Attachment>>> RequireAsync(Guid owner, IReadOnlyList<Guid>? ids, CancellationToken ct)
+    public async Task<Result<Attachment[]>> RequireAsync(Guid owner, IReadOnlyList<Guid>? ids, CancellationToken ct)
     {
-        if (ids is null || ids.Count == 0) return Result<IReadOnlyList<Attachment>>.Ok([]);
+        if (ids is null || ids.Count == 0) return Array.Empty<Attachment>();
         if (ids.Count > options.Value.MaxFilesPerMessage || ids.Distinct().Count() != ids.Count) return FilesErrors.AttachmentLimit;
         var files = new List<Attachment>();
         foreach (var id in ids)
@@ -117,6 +116,6 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
         }
         if (files.Any(NeedsOcr)) return FilesErrors.ProcessingRequired;
         if (files.Sum(x => x.Size) > options.Value.MaxMessageBytes) return FilesErrors.TotalLimit;
-        return files;
+        return files.ToArray();
     }
 }

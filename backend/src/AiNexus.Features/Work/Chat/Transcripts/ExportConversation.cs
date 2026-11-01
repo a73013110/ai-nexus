@@ -16,7 +16,7 @@ internal sealed class ExportConversation(GetConversation conversations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/export", (Guid id, ICurrentUser user, ExportConversation handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationExported)
         .WithName("ExportConversation");
 

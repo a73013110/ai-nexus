@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
@@ -19,5 +18,5 @@ internal sealed class UnpinRepository(AppDbContext db, RepositoryService gitea)
         .WithName("UnpinRepository");
 
     public Task HandleAsync(Guid owner, string repo, CancellationToken ct) =>
-        db.Set<RepositoryPin>().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo).ExecuteDeleteAsync(ct);
+        db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo).ExecuteDeleteAsync(ct);
 }

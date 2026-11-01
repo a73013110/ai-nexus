@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Work.Artifacts;
@@ -51,7 +50,7 @@ public sealed class ListSharesTests
 
         // 來源已消失但未撤銷分享時，對接收者隱藏，但仍會列在分享者的清單中。
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Resource>().Where(x => x.Id == artifact.Resource.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true));
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Resources.Where(x => x.Id == artifact.Resource.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true));
         Assert.DoesNotContain((await bob.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!, x => x.Id == document.Id);
         Assert.Contains((await alice.GetFromJsonAsync<ShareDto[]>("/api/v1/shares?sent=true"))!, x => x.Id == document.Id);
         Assert.Single((await carol.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!);

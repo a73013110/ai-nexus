@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
@@ -14,15 +13,15 @@ public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptio
     private bool Applies(User user) => options.Value.Administrators.Contains(UserAccounts.LoginName(user), StringComparer.OrdinalIgnoreCase);
 
     public async Task<bool> PendingAsync(User user, CancellationToken ct)
-        => Applies(user) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
+        => Applies(user) && !await db.AdministratorBootstraps.AnyAsync(x => x.UserId == user.Id, ct);
     // 永久標記（AdministratorBootstrap）確保管理員權限被撤銷後，下次登入不會再被自動補回。
     public async Task ApplyAsync(User user, CancellationToken ct)
     {
         if (!Applies(user) ||
-            await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct)) return;
-        if (!await db.Set<UserRole>().AnyAsync(x => x.UserId == user.Id && x.RoleId == BuiltInAccess.AdministratorRole, ct))
-            db.Set<UserRole>().Add(new() { UserId = user.Id, RoleId = BuiltInAccess.AdministratorRole });
-        db.Set<AdministratorBootstrap>().Add(new() { UserId = user.Id });
+            await db.AdministratorBootstraps.AnyAsync(x => x.UserId == user.Id, ct)) return;
+        if (!await db.UserRoles.AnyAsync(x => x.UserId == user.Id && x.RoleId == BuiltInAccess.AdministratorRole, ct))
+            db.UserRoles.Add(new() { UserId = user.Id, RoleId = BuiltInAccess.AdministratorRole });
+        db.AdministratorBootstraps.Add(new() { UserId = user.Id });
         audit.Record(IdentityAudit.AdministratorGranted, user.Id, user.Id, user.Id);
         await db.SaveChangesAsync(ct);
         access.Invalidate();

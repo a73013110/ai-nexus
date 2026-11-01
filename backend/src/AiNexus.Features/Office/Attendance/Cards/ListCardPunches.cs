@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Office.Attendance.Punches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Tables;
@@ -16,15 +15,15 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 internal sealed class ListCardPunches(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/punches", (Guid id, [AsParameters] TableRequest table, ListCardPunches handler, CancellationToken ct)
-            => handler.HandleAsync(id, table, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}/punches", (Guid id, [AsParameters] TableRequest table, ListCardPunches handler, CancellationToken ct) =>
+            handler.HandleAsync(id, table, ct))
         .Audited(AttendanceAudit.PunchRead)
         .WithName("ListAttendanceCardPunches");
 
     public async Task<Result<TablePage<PunchDto>>> HandleAsync(Guid id, TableRequest table, CancellationToken ct)
     {
-        if (!await db.Set<Card>().AnyAsync(x => x.Id == id, ct)) return AttendanceErrors.CardNotFound;
-        var punches = db.Set<AttributedPunch>().Where(x => x.CardId == id);
+        if (!await db.Cards.AnyAsync(x => x.Id == id, ct)) return AttendanceErrors.CardNotFound;
+        var punches = db.AttributedPunches.Where(x => x.CardId == id);
         return await punches.ToTablePageAsync(table, db.PunchColumns().DefaultSort("punchedAt", descending: true), x => x.ToDtos(db), ct);
     }
 }

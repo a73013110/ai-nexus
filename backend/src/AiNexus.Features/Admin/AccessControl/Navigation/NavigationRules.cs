@@ -7,12 +7,15 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
 /// <summary>
-/// 選單節點需要查資料或設定的規則，在 <see cref="AdministrativeAudit"/> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
+/// 選單節點需要查資料或設定的規則，在 <see cref="AdministrativeWrite"/> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
 /// 結構規則一律套在「變更後的完整節點清單」上檢查，新增、修改與批次移動共用同一套判斷。
 /// </summary>
 internal static class NavigationRules
 {
     public const int MaxSortOrder = 10000, SortStep = 10;
+
+    /// <summary>新增、修改與刪除節點共用的寫入對象。</summary>
+    public static AuditTarget Target(AppDbContext db, string id) => AuditTarget.Of(FeatureCatalog.AccessControlNavigation, id, ct => SnapshotAsync(db, id, ct));
 
     /// <summary>
     /// 父節點必須存在且是分群、不可成環、深度不超過 <see cref="NavigationTree.MaxDepth"/>、同一層不可重複同一頁面。
@@ -48,7 +51,7 @@ internal static class NavigationRules
 
     /// <summary>page 的功能必須是目錄的頁面且已寫進 <c>Features</c>；動作與閱讀器沒有網址，放進選單只會是死連結。</summary>
     private static async Task<Error?> PageAsync(AppDbContext db, string featureId, CancellationToken ct)
-        => FeatureCatalog.Find(featureId) is { Kind: FeatureKind.Page } && await db.Set<Feature>().AnyAsync(x => x.Id == featureId, ct)
+        => FeatureCatalog.Find(featureId) is { Kind: FeatureKind.Page } && await db.Features.AnyAsync(x => x.Id == featureId, ct)
             ? null
             : AccessControlErrors.UnknownAccessId;
 
@@ -56,13 +59,13 @@ internal static class NavigationRules
     private static async Task<Error?> LinkAsync(AppDbContext db, string url, IReadOnlyList<string> audiences, IReadOnlyList<string> hosts, CancellationToken ct)
     {
         if (!NavigationLinks.HostAllowed(url, hosts)) return AccessControlErrors.NavigationLinkHostNotAllowed;
-        return await AccessRules.ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), audiences, ct);
+        return await AccessRules.ExistingAsync(db.RoleGroups.Select(x => x.Id), audiences, ct);
     }
 
     /// <summary>以 <paramref name="groups"/> 取代節點的可見群組；外鍵是 NO ACTION，刪除節點前也要先呼叫這裡清空。</summary>
     public static async Task ReplaceAudiencesAsync(AppDbContext db, string id, IReadOnlyList<string> groups, CancellationToken ct)
     {
-        var old = await db.Set<NavigationItemAudience>().Where(x => x.NavigationItemId == id).ToListAsync(ct);
+        var old = await db.NavigationItemAudiences.Where(x => x.NavigationItemId == id).ToListAsync(ct);
         db.RemoveRange(old.Where(x => !groups.Contains(x.GroupId)));
         db.AddRange(groups.Where(x => !old.Any(y => y.GroupId == x)).Select(x => new NavigationItemAudience { NavigationItemId = id, GroupId = x }));
     }
@@ -72,9 +75,9 @@ internal static class NavigationRules
     /// </summary>
     public static async Task<object?> SnapshotAsync(AppDbContext db, string id, CancellationToken ct)
     {
-        var item = await db.Set<NavigationItem>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var item = await db.NavigationItems.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return null;
-        var audiences = await db.Set<NavigationItemAudience>().AsNoTracking().Where(x => x.NavigationItemId == id).OrderBy(x => x.GroupId).Select(x => x.GroupId).ToArrayAsync(ct);
+        var audiences = await db.NavigationItemAudiences.AsNoTracking().Where(x => x.NavigationItemId == id).OrderBy(x => x.GroupId).Select(x => x.GroupId).ToArrayAsync(ct);
         return new { item.ParentId, item.Kind, item.FeatureId, item.Name, item.OpenInNewTab, item.Icon, item.SortOrder, audienceGroupIds = audiences };
     }
 }

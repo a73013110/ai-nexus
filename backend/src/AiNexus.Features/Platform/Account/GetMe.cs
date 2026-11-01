@@ -5,7 +5,6 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
-using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,14 +16,14 @@ public sealed record MeDto(Guid Id, string Account, string DisplayName, Preferen
 internal sealed class GetMe(AppDbContext db, IAntiforgery csrf, AccessView access, ModelPresentation models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/me", async (HttpContext http, ICurrentUser user, GetMe handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(http, user.User, ct)))
+        .MapGet("/me", (HttpContext http, ICurrentUser user, GetMe handler, CancellationToken ct) =>
+            handler.HandleAsync(http, user.User, ct))
         .NotAudited("每個頁面載入都會查詢的自身資料")
         .WithName("GetMe");
 
     public async Task<MeDto> HandleAsync(HttpContext http, User user, CancellationToken ct)
     {
-        var active = await db.Runs.AsNoTracking().Where(x => x.ActiveOwnerId == user.Id).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
-        WebSecurity.NoStore(http.Response);
+        var active = await db.GenerationRuns.AsNoTracking().Where(x => x.ActiveOwnerId == user.Id).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
         return new MeDto(user.Id, UserAccounts.LoginName(user), user.DisplayName, models.Preferences(user.Preferences), csrf.GetAndStoreTokens(http).RequestToken!, active, await access.ForUserAsync(user.Id, ct));
     }
 }

@@ -97,7 +97,7 @@ public sealed class SendTestMailTests
         await AssertCodeAsync(await admin.PostAsJsonAsync(Tests, new MailTestRequest("ops@company.com", "account.security-notice",
             new Dictionary<string, string?> { ["Secret"] = "x" })), HttpStatusCode.BadRequest, MailErrors.SampleInvalid.Code);
         using var scope = factory.Services.CreateScope();
-        Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().AnyAsync());
+        Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.AnyAsync());
     }
 
     [Fact]

@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
@@ -27,8 +26,8 @@ public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int
 internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, AccessService features, AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct)).ToHttpResult())
+        .MapGet("", (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct))
         .Audited(FilesAudit.FileRead)
         .WithName("ListLibraryFiles");
 
@@ -37,20 +36,20 @@ internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, A
         if (search?.Length > 180 || type is not ("all" or "images" or "documents") || source is not ("all" or "chat" or "knowledge" or "projects" or "library") || offset is < 0 or > 100000 || limit is < 1 or > 60)
             return FilesErrors.FilterInvalid;
         var grants = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet();
-        var collections = grants.Contains(FeatureCatalog.Knowledge) ? (await access.QueryAsync(actor, Collection.Kind, ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
-        var projects = grants.Contains(FeatureCatalog.Projects) ? (await access.QueryAsync(actor, Project.Kind, ct)).Select(x => x.Id) : db.Set<Resource>().Where(x => false).Select(x => x.Id);
-        var chatFiles = from link in db.Set<MessageAttachment>() join message in db.Messages on link.MessageId equals message.Id
+        var collections = grants.Contains(FeatureCatalog.Knowledge) ? (await access.QueryAsync(actor, Collection.Kind, ct)).Select(x => x.Id) : db.Resources.Where(x => false).Select(x => x.Id);
+        var projects = grants.Contains(FeatureCatalog.Projects) ? (await access.QueryAsync(actor, Project.Kind, ct)).Select(x => x.Id) : db.Resources.Where(x => false).Select(x => x.Id);
+        var chatFiles = from link in db.MessageAttachments join message in db.Messages on link.MessageId equals message.Id
             join conversation in db.Conversations on message.ConversationId equals conversation.Id
             where conversation.OwnerId == actor && grants.Contains(FeatureCatalog.Chat)
             select new { link.AttachmentId, conversation.Id, conversation.Title };
-        var resourceFiles = from doc in db.Set<Document>() join resource in db.Set<Resource>() on doc.Id equals resource.Id
+        var resourceFiles = from doc in db.Documents join resource in db.Resources on doc.Id equals resource.Id
             where !doc.IsDeleted && doc.AttachmentId != null
             select new { AttachmentId = doc.AttachmentId!.Value, doc.CollectionId, resource.ParentId, DocumentId = doc.Id, doc.Status };
         var knowledgeFiles = resourceFiles.Where(x => x.CollectionId != null && collections.Contains(x.CollectionId.Value));
         var projectFiles = resourceFiles.Where(x => x.ParentId != null && projects.Contains(x.ParentId.Value));
-        var privateReaders = from doc in db.Set<Document>() join resource in db.Set<Resource>() on doc.Id equals resource.Id
+        var privateReaders = from doc in db.Documents join resource in db.Resources on doc.Id equals resource.Id
             where !doc.IsDeleted && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == actor select doc.Id;
-        var owned = db.Set<Attachment>().AsNoTracking().Where(x => x.OwnerId == actor && x.InLibrary && x.StorageState == AttachmentStates.Ready);
+        var owned = db.Attachments.AsNoTracking().Where(x => x.OwnerId == actor && x.InLibrary && x.StorageState == AttachmentStates.Ready);
         var storage = await quota.ForAsync(actor, ct);
         var query = owned;
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.FileName.Contains(search.Trim()));
@@ -65,15 +64,15 @@ internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, A
         var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip(offset).Take(limit)
             .Select(x => new { x.Id, x.FileName, x.ContentType, x.Size, x.CreatedAt,
                 HasText = x.ExtractedText != null && x.ExtractedText != "",
-                CanDelete = !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<ResourceAttachment>().Any(l => l.AttachmentId == x.Id && !privateReaders.Contains(l.ResourceId)) }).ToListAsync(ct);
+                CanDelete = !db.MessageAttachments.Any(l => l.AttachmentId == x.Id) && !db.ResourceAttachments.Any(l => l.AttachmentId == x.Id && !privateReaders.Contains(l.ResourceId)) }).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray();
         var usage = new List<(Guid FileId, FileUsageDto Value)>();
         var chats = await chatFiles.Where(x => ids.Contains(x.AttachmentId)).Distinct().OrderBy(x => x.Id).Take(500).ToListAsync(ct);
         usage.AddRange(chats.Select(x => (x.AttachmentId, new FileUsageDto("chat", x.Id, x.Title, null, null))));
-        var knowledge = await (from link in knowledgeFiles join resource in db.Set<Resource>() on link.CollectionId equals resource.Id
+        var knowledge = await (from link in knowledgeFiles join resource in db.Resources on link.CollectionId equals resource.Id
             where ids.Contains(link.AttachmentId) orderby resource.Name select new { link.AttachmentId, resource.Id, resource.Name, link.DocumentId, link.Status }).Take(500).ToListAsync(ct);
         usage.AddRange(knowledge.Select(x => (x.AttachmentId, new FileUsageDto("knowledge", x.Id, x.Name, x.DocumentId, x.Status))));
-        var project = await (from link in projectFiles join resource in db.Set<Resource>() on link.ParentId equals resource.Id
+        var project = await (from link in projectFiles join resource in db.Resources on link.ParentId equals resource.Id
             where ids.Contains(link.AttachmentId) orderby resource.Name select new { link.AttachmentId, resource.Id, resource.Name, link.DocumentId, link.Status }).Take(500).ToListAsync(ct);
         usage.AddRange(project.Select(x => (x.AttachmentId, new FileUsageDto("projects", x.Id, x.Name, x.DocumentId, x.Status))));
         var byFile = usage.ToLookup(x => x.FileId, x => x.Value);

@@ -22,7 +22,8 @@ public sealed record AccountReviewsDto(IReadOnlyList<AccountReviewUserDto> Users
 internal sealed class ListAccountReviews(AppDbContext db, AccessService access, IEnumerable<IAccountReviewSource> sources)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/account-reviews", async (ICurrentUser user, ListAccountReviews handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .MapGet("/account-reviews", (ICurrentUser user, ListAccountReviews handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, ct))
         .Audited(IdentityAudit.AccountReviewRead)
         .WithName("ListAccountReviews");
 

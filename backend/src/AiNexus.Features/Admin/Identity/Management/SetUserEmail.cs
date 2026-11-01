@@ -34,14 +34,15 @@ public sealed record UserEmailChanged(Guid UserId, string DisplayName, string? P
 /// 管理員無法證明使用者持有該信箱，所以步升驗證碼等安全用途仍只用本人驗證過的地址，直到本人在帳號設定完成驗證。
 /// 不遞增 <c>SecurityVersion</c>：未驗證的地址不授予任何能力，不必登出使用者；舊的已驗證信箱會收到通知。
 /// </summary>
-internal sealed class SetUserEmail(AppDbContext db, AdministrativeAudit audit, UserCredentials credentials, DomainEvents events)
+internal sealed class SetUserEmail(AppDbContext db, AdministrativeWrite write, UserCredentials credentials, DomainEvents events)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}/email", (Guid id, UserEmailRequest body, ICurrentUser user, SetUserEmail handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+        .MapPut("/users/{id:guid}/email", (Guid id, UserEmailRequest body, ICurrentUser user, SetUserEmail handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(IdentityAudit.UserEmailUpdated)
         .WithName("SetUserEmail");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
     {
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
         if (user is null) return IdentityErrors.UserNotFound;

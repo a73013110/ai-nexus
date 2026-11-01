@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Conversations;
-using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Conversations;
@@ -23,8 +22,8 @@ public sealed record ProjectConversationDto(ConversationDto Conversation, string
 internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess access, AccessService features)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/conversations", async (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ConversationCreated);
+        .MapPost("/{id:guid}/conversations", (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct)).Audited(ProjectsAudit.ConversationCreated);
 
     public async Task<Result<ProjectConversationDto>> HandleAsync(Guid actor, Guid id, ProjectConversationRequest request, CancellationToken ct)
     {
@@ -35,7 +34,7 @@ internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess a
         var title = request.Title ?? CreateConversation.DefaultTitle;
         if (request.TemplateId is Guid key)
         {
-            var template = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == key && x.ProjectId == id, ct);
+            var template = await db.ProjectTemplates.SingleOrDefaultAsync(x => x.Id == key && x.ProjectId == id, ct);
             if (template is null) return ProjectsErrors.TemplateMissing;
             title = template.Title;
             prompt = template.Content;

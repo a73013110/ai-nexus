@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -70,6 +69,6 @@ public sealed class ManagePricesTests
         Assert.Equal("測試模型", Assert.Single(spend.Models).Label);
         Assert.Equal(HttpStatusCode.NotFound, (await alice.GetAsync($"/api/v1/conversations/{conversation.Id}/spend")).StatusCode);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(2, await db.Set<ModelCharge>().CountAsync(x => x.ConversationId == conversation.Id));
+        Assert.Equal(2, await db.ModelCharges.CountAsync(x => x.ConversationId == conversation.Id));
     }
 }

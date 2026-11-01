@@ -89,7 +89,7 @@ public sealed class ModelPolicyTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await db.Set<RoleGroup>().SingleAsync(x => x.Id == "specialists")).Enabled = false;
+            (await db.RoleGroups.SingleAsync(x => x.Id == "specialists")).Enabled = false;
             await db.SaveChangesAsync();
         }
         effective = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;

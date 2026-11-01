@@ -82,9 +82,9 @@ public sealed class SoftDeleteFilterTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Add(deletedChild); db.Add(deletedConversation); await db.SaveChangesAsync();
-            Assert.False(await db.Set<Resource>().AnyAsync(x => x.Id == artifact.Resource.Id));
-            Assert.Equal([project], await db.Set<Resource>().Where(x => x.OwnerId == me.Id).Select(x => x.Id).ToListAsync());
-            Assert.True((await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == artifact.Resource.Id)).IsDeleted);
+            Assert.False(await db.Resources.AnyAsync(x => x.Id == artifact.Resource.Id));
+            Assert.Equal([project], await db.Resources.Where(x => x.OwnerId == me.Id).Select(x => x.Id).ToListAsync());
+            Assert.True((await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == artifact.Resource.Id)).IsDeleted);
         }
         Assert.Empty((await owner.GetFromJsonAsync<ArtifactSummaryDto[]>("/api/v1/artifacts"))!);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/artifacts/{artifact.Resource.Id}")).StatusCode);
@@ -95,9 +95,9 @@ public sealed class SoftDeleteFilterTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Null((await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedChild.Id)).ParentId);
+            Assert.Null((await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedChild.Id)).ParentId);
             Assert.Null((await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deletedConversation.Id)).ProjectId);
-            Assert.Empty(await db.Set<Resource>().Where(x => x.OwnerId == me.Id).ToListAsync());
+            Assert.Empty(await db.Resources.Where(x => x.OwnerId == me.Id).ToListAsync());
         }
     }
 }

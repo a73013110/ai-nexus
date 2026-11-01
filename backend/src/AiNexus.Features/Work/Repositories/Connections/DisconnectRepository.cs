@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +22,7 @@ internal sealed class DisconnectRepository(AppDbContext db, RepositoryWriteLock 
         await writes.Gate.WaitAsync(ct);
         try
         {
-            await db.Set<RepositoryConnection>().Where(x => x.OwnerId == owner).ExecuteDeleteAsync(ct);
+            await db.RepositoryConnections.Where(x => x.OwnerId == owner).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
         }
         finally { writes.Gate.Release(); }

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -16,19 +15,20 @@ public sealed record FeatureUpdateRequest(string? Name, bool Enabled);
 /// <summary>
 /// 更名、啟用或停用既有功能。會稽核；若會移除執行者自己的功能管理權限則拒絕。
 /// </summary>
-internal sealed class SaveFeature(AppDbContext db, AdministrativeAudit audit)
+internal sealed class SaveFeature(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/features/{id}", async (string id, FeatureUpdateRequest body, IRequestActor actor, SaveFeature handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/features/{id}", (string id, FeatureUpdateRequest body, IRequestActor actor, SaveFeature handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, body, ct))
         .Audited(AccessControlAudit.FeatureUpdated)
         .WithName("SaveFeature");
 
-    public Task<Result> HandleAsync(Guid actor, string id, FeatureUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlFeatures, null, id, token => SnapshotAsync(id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, FeatureUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlFeatures, id, token => SnapshotAsync(id, token)), async () =>
     {
         // 不檢查 id 格式：功能 id 由目錄定義，資料庫也可能有目錄不認得的舊列；查無此 id 就直接回 NotFound。
-        var name = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim();
+        var name = TextRules.TrimToNull(request.Name);
         if (name is not null && AccessRules.Name(name) is { } invalid) return invalid;
-        var feature = await db.Set<Feature>().FindAsync([id], ct);
+        var feature = await db.Features.FindAsync([id], ct);
         if (feature is null) return AccessControlErrors.AdminResourceNotFound;
         // 與預設相同就不存覆寫，目錄日後改預設名稱時這一列會跟著變。目錄不認得的功能沒有預設，照存。
         feature.Name = name == FeatureCatalog.Find(id)?.Name ? null : name;
@@ -38,7 +38,7 @@ internal sealed class SaveFeature(AppDbContext db, AdministrativeAudit audit)
 
     private async Task<object?> SnapshotAsync(string id, CancellationToken ct)
     {
-        var feature = await db.Set<Feature>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var feature = await db.Features.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         return feature is null ? null : new { feature.Name, feature.Enabled };
     }
 }

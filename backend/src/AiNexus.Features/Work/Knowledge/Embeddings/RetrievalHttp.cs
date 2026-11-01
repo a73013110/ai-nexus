@@ -59,7 +59,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
             var start = UtcDay.Start(call.CreatedAt); var end = start.AddDays(1);
             // 所有嵌入與重排呼叫都經過這裡（位於索引與搜尋的深處），因此每日上限要回報成供應商限制（RateLimited），
             // 而不是一般的內部錯誤。
-            if (await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && (x.Kind == "embedding" || x.Kind == "rerank") && x.CreatedAt >= start && x.CreatedAt < end, ct) >= options.Value.Embedding.MaxDailyRequests)
+            if (await db.ModelInvocations.CountAsync(x => x.OwnerId == owner && (x.Kind == "embedding" || x.Kind == "rerank") && x.CreatedAt >= start && x.CreatedAt < end, ct) >= options.Value.Embedding.MaxDailyRequests)
                 throw new ExternalServiceException(KnowledgeErrors.EmbeddingDailyQuota, "今日索引、語意查詢與重排次數已達系統上限，請稍後重試。");
             await billing.ReserveAsync(call.Id, owner, null, provider, model, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

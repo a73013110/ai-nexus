@@ -24,7 +24,7 @@ public sealed class RetrievalEvaluationHandler(AppDbContext db, RetrievalEvaluat
         if (!required.IsSuccess) return required.Error;
         var run = required.Value;
         var cases = RetrievalEvaluationService.Parse<RetrievalEvaluationCase>(run.CasesJson); var collections = RetrievalEvaluationService.Parse<Guid>(run.CollectionsJson);
-        var done = (await db.Set<RetrievalEvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.Mode }).ToListAsync(ct))
+        var done = (await db.RetrievalEvaluationResults.AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.Mode }).ToListAsync(ct))
             .Select(x => (x.CaseIndex, x.Mode)).ToHashSet();
         var completed = done.Count; var total = cases.Length * RetrievalMetrics.Modes.Count;
         for (var i = 0; i < cases.Length; i++)

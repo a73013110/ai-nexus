@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -11,15 +10,16 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 internal sealed class ListDocumentPages(AppDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentRead)
         .WithName("DocumentPages");
 
-    public async Task<Result<IReadOnlyList<DocumentPageDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<DocumentPageDto[]>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var document = await documents.FindAsync(actor, id, ct);
         if (!document.IsSuccess) return document.Error;
-        return Result<IReadOnlyList<DocumentPageDto>>.Ok(await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == id).OrderBy(x => x.PageNumber)
-            .Select(x => new DocumentPageDto(x.PageNumber, x.Text, x.Extraction, x.NeedsReview)).ToListAsync(ct));
+        return await db.DocumentPages.AsNoTracking().Where(x => x.DocumentId == id).OrderBy(x => x.PageNumber)
+            .Select(x => new DocumentPageDto(x.PageNumber, x.Text, x.Extraction, x.NeedsReview)).ToArrayAsync(ct);
     }
 }

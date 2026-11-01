@@ -17,8 +17,8 @@ internal sealed class CancelRun(
     ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/runs/{id:guid}/cancel", async (Guid id, ICurrentUser user, CancelRun handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
+        .MapPost("/runs/{id:guid}/cancel", (Guid id, ICurrentUser user, CancelRun handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.RunCancelled)
         .WithName("CancelRun");
 

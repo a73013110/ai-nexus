@@ -12,7 +12,8 @@ public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 internal sealed class ReadShare(ShareAccess shares, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, ReadShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(SharingAudit.SharedContentRead);
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, ReadShare handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct)).Audited(SharingAudit.SharedContentRead);
 
     public async Task<Result<SharedContentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

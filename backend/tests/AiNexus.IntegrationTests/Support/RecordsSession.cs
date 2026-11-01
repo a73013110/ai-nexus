@@ -2,7 +2,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Office.Attendance.Records;
@@ -63,7 +62,7 @@ internal sealed class RecordsSession : IAsyncDisposable
     public Task HoldAsync(Guid? userId, string card, DateTimeOffset? startsAt = null, DateTimeOffset? endsAt = null)
         => WithDbAsync(async db =>
         {
-            var entity = await db.Set<Card>().SingleOrDefaultAsync(x => x.CardNumber == card);
+            var entity = await db.Cards.SingleOrDefaultAsync(x => x.CardNumber == card);
             if (entity is null)
             {
                 entity = new Card { CardNumber = card };
@@ -86,20 +85,20 @@ internal sealed class RecordsSession : IAsyncDisposable
     public Task GrantAsync(Guid userId, string scope) => WithDbAsync(async db =>
     {
         var id = "test-records-" + scope;
-        if (!await db.Set<RoleGroup>().AnyAsync(x => x.Id == id))
+        if (!await db.RoleGroups.AnyAsync(x => x.Id == id))
         {
-            db.Set<Role>().Add(new() { Id = id, Name = id });
-            db.Set<RoleGroup>().Add(new() { Id = id, Name = id });
-            db.Set<RoleGroupRole>().Add(new() { RoleId = id, GroupId = id });
-            db.Set<RoleGroupFeature>().Add(new() { GroupId = id, FeatureId = FeatureCatalog.AttendanceRecords, Scope = scope });
+            db.Roles.Add(new() { Id = id, Name = id });
+            db.RoleGroups.Add(new() { Id = id, Name = id });
+            db.RoleGroupRoles.Add(new() { RoleId = id, GroupId = id });
+            db.RoleGroupFeatures.Add(new() { GroupId = id, FeatureId = FeatureCatalog.AttendanceRecords, Scope = scope });
         }
-        db.Set<UserRole>().Add(new() { UserId = userId, RoleId = id });
+        db.UserRoles.Add(new() { UserId = userId, RoleId = id });
         await db.SaveChangesAsync();
     });
 
     /// <summary>把卡片設為在出勤紀錄隱藏。</summary>
     public Task HideAsync(string cardNumber) => WithDbAsync(db =>
-        db.Set<Card>().Where(x => x.CardNumber == cardNumber).ExecuteUpdateAsync(x => x.SetProperty(c => c.HiddenFromRecords, true)));
+        db.Cards.Where(x => x.CardNumber == cardNumber).ExecuteUpdateAsync(x => x.SetProperty(c => c.HiddenFromRecords, true)));
 
     public async Task WithDbAsync(Func<AppDbContext, Task> action)
     {

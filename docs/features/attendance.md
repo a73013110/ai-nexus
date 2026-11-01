@@ -30,7 +30,7 @@
 - 同一張卡的期間不可重疊，同一人可同時持有多張。
 - **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`（不帶持有人，前端由持有歷史提示是誰持有）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
 - 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
-- 檢查與寫入在 `AdministrativeAudit` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
+- 檢查與寫入在 `AdministrativeWrite` 的 Serializable 交易與行政寫入鎖內，並發的指派會依序處理。
 
 ## 出勤判定
 

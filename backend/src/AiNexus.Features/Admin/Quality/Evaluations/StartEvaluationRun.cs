@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Quality;
 using System.Text.Json;
 using AiNexus.Features.Work.Collaboration;
@@ -48,7 +47,8 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
     IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/sets/{id:guid}/runs", async (Guid id, EvaluationRunRequest body, ICurrentUser user, StartEvaluationRun handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPost("/sets/{id:guid}/runs", (Guid id, EvaluationRunRequest body, ICurrentUser user, StartEvaluationRun handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.RunQueued);
 
     public async Task<Result<EvaluationRunDto>> HandleAsync(Guid actor, Guid setId, EvaluationRunRequest request, CancellationToken ct)
@@ -69,9 +69,9 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
             var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
             if (!allowed.IsSuccess) return allowed.Error;
             var resource = allowed.Value;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == EvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
-            if (await db.Set<EvaluationRun>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
-            var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == setId, ct);
+            if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == EvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
+            if (await db.EvaluationRuns.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
+            var set = await db.EvaluationSets.AsNoTracking().SingleAsync(x => x.Id == setId, ct);
             var run = new EvaluationRun { SetId = setId, OwnerId = actor, SetTitle = resource.Name, SetVersion = set.Version, CasesJson = set.CasesJson, VariantsJson = JsonSerializer.Serialize(variants), CreatedAt = clock.GetUtcNow() };
             var job = jobs.Enqueue(actor, setId, run.Id, EvaluationHandler.JobKind, "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
             audit.Describe(resource: run.Id);

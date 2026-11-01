@@ -25,8 +25,8 @@ internal sealed class RenameLibraryFileRequestValidator : RequestValidator<Renam
 internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/name", async (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/{id:guid}/name", (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(FilesAudit.FileRenamed)
         .WithName("RenameLibraryFile");
 
@@ -43,7 +43,7 @@ internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files
         if (!file.InLibrary) return FilesErrors.LibraryFileNotFound;
         if (!string.Equals(Path.GetExtension(name), Path.GetExtension(file.FileName), StringComparison.OrdinalIgnoreCase)) return FilesErrors.ExtensionChanged;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var changed = await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
+        var changed = await db.Attachments.Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
         if (changed != 1) return FilesErrors.FileNameChanged;
         await db.SaveChangesAsync(ct);

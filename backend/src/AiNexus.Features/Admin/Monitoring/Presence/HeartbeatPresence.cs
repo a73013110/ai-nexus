@@ -34,7 +34,8 @@ public sealed record PresenceReceipt(bool Enabled, int HeartbeatSeconds);
 internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
 {
     public static void Map(RouteGroupBuilder api) => api
-        .MapPost("/presence", (PresenceRequest request, HttpContext http, ICurrentUser user, HeartbeatPresence handler) => TypedResults.Ok(handler.Handle(http, user.User, request)))
+        .MapPost("/presence", (PresenceRequest request, HttpContext http, ICurrentUser user, HeartbeatPresence handler) =>
+            handler.Handle(http, user.User, request))
         .RequireRateLimiting(MonitoringModule.PresenceRateLimit).WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("HeartbeatPresence");
 
     public PresenceReceipt Handle(HttpContext http, User user, PresenceRequest request)

@@ -12,10 +12,11 @@ namespace AiNexus.Features.Admin.Identity.Management;
 /// <c>AdAccount</c> 與登入方式保留，下次以該帳號名 AD 驗證或匯入時綁定新的 SID；要換成不同帳號名用 <see cref="RebindDirectoryAccount"/>。
 /// UserId、角色與歷史資料都不動；遞增 <c>SecurityVersion</c>，以舊 SID 建立的工作階段一併失效。
 /// </summary>
-internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeAudit audit, IdentityWriteLock writeLock)
+internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IdentityWriteLock writeLock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/{id:guid}/ad-binding", (Guid id, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapDelete("/users/{id:guid}/ad-binding", (Guid id, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(IdentityAudit.DirectoryUnbound)
         .WithName("UnbindUserDirectoryAccount");
 
@@ -25,7 +26,7 @@ internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeAudi
         await writeLock.Gate.WaitAsync(ct);
         try
         {
-            return await audit.MutateAsync(actor, FeatureCatalog.IdentityUsers, id, id.ToString(), token => RebindDirectoryAccount.SnapshotAsync(db, id, token), async () =>
+            return await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => RebindDirectoryAccount.SnapshotAsync(db, id, token)), async () =>
             {
                 var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
                 if (user is null) return IdentityErrors.UserNotFound;

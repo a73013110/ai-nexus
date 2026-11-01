@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Office.Attendance.Records;
@@ -35,7 +34,7 @@ public sealed class GetAttendanceRulesTests
         Assert.Equal((new TimeOnly(9, 30), 9d), (full.FlexEnd, full.WorkHours));
         Assert.Contains("09:40 到，遲到 10 分", Assert.Single(rules.Rules, x => x.Title == "遲到").Text);
 
-        await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        await session.WithDbAsync(db => db.RoleGroupFeatures
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync());
         await AssertCodeAsync(await client.GetAsync(Rules), HttpStatusCode.Forbidden, "feature_forbidden");
     }

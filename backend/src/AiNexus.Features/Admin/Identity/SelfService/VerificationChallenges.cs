@@ -28,23 +28,22 @@ public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfService
     {
         var settings = options.Value;
         var now = clock.GetUtcNow();
-        var challenges = db.Set<VerificationChallenge>();
-        var recent = await challenges.AsNoTracking().Where(x => x.UserId == userId && x.CreatedAt > now.AddHours(-1))
+        var recent = await db.VerificationChallenges.AsNoTracking().Where(x => x.UserId == userId && x.CreatedAt > now.AddHours(-1))
             .Select(x => new { x.Purpose, x.CreatedAt }).ToListAsync(ct);
         if (recent.Count >= settings.CodesPerHour) return IdentityErrors.VerificationRateLimited;
         if (recent.Any(x => x.Purpose == purpose && x.CreatedAt > now.AddSeconds(-settings.CodeCooldownSeconds))) return IdentityErrors.VerificationCooldown;
-        var open = challenges.Where(x => x.UserId == userId && x.Purpose == purpose && x.ConsumedAt == null && x.RevokedAt == null);
+        var open = db.VerificationChallenges.Where(x => x.UserId == userId && x.Purpose == purpose && x.ConsumedAt == null && x.RevokedAt == null);
         var superseded = await open.Where(x => x.MailMessageId != null).Select(x => x.MailMessageId!.Value).ToListAsync(ct);
         await open.ExecuteUpdateAsync(p => p.SetProperty(x => x.RevokedAt, now), ct);
         // 量極小，發新碼時順手清掉 30 天前的紀錄，不另開清理工作。
-        await challenges.Where(x => x.UserId == userId && x.CreatedAt < now - Retention).ExecuteDeleteAsync(ct);
+        await db.VerificationChallenges.Where(x => x.UserId == userId && x.CreatedAt < now - Retention).ExecuteDeleteAsync(ct);
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
         var challenge = new VerificationChallenge
         {
             Id = Guid.NewGuid(), UserId = userId, Purpose = purpose, Target = target, CreatedAt = now, ExpiresAt = now.AddMinutes(settings.CodeMinutes),
         };
         challenge.CodeHash = Hash(challenge.Id, code);
-        challenges.Add(challenge);
+        db.VerificationChallenges.Add(challenge);
         return new IssuedChallenge(challenge, code, superseded);
     }
 
@@ -60,7 +59,7 @@ public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfService
 
     /// <summary>使用者自己的驗證碼（顯示到期時間、剩餘次數與寄送狀態）；別人的或不存在時為 null。</summary>
     public Task<VerificationChallenge?> FindAsync(Guid userId, Guid id, CancellationToken ct)
-        => db.Set<VerificationChallenge>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+        => db.VerificationChallenges.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
 
     public int AttemptsLeft(VerificationChallenge challenge) => Math.Max(0, options.Value.CodeAttempts - challenge.Attempts);
 
@@ -78,7 +77,7 @@ public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfService
         if (challenge is null || challenge.Purpose != purpose || !Open(challenge)) return IdentityErrors.VerificationExpired;
         var max = options.Value.CodeAttempts;
         var now = clock.GetUtcNow();
-        var rows = db.Set<VerificationChallenge>().Where(x => x.Id == id && x.ConsumedAt == null && x.RevokedAt == null && x.ExpiresAt > now && x.Attempts < max);
+        var rows = db.VerificationChallenges.Where(x => x.Id == id && x.ConsumedAt == null && x.RevokedAt == null && x.ExpiresAt > now && x.Attempts < max);
         var candidate = code?.Trim() ?? "";
         if (candidate.Length != 6 || !candidate.All(char.IsAsciiDigit) || !CryptographicOperations.FixedTimeEquals(Hash(id, candidate), challenge.CodeHash))
         {

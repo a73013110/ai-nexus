@@ -21,7 +21,7 @@ internal sealed class StorageMonitoring(AppDbContext db, IOptions<FilesOptions> 
 
     public async Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
-        var stored = await db.Set<Attachment>().AsNoTracking().Where(x => x.StorageState == AttachmentStates.Ready).GroupBy(x => 1)
+        var stored = await db.Attachments.AsNoTracking().Where(x => x.StorageState == AttachmentStates.Ready).GroupBy(x => 1)
             .Select(g => new { Files = g.Count(), Bytes = g.Sum(x => x.Size) }).SingleOrDefaultAsync(ct);
         var (free, total) = Volume(options.Value.StoragePath);
         var percent = free is { } f && total > 0 ? Math.Round(100d * f / total.Value, 1) : (double?)null;

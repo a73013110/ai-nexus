@@ -95,9 +95,9 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         // 每批各自 autocommit，總工作量由取消與逾時限制；刻意不用一筆長交易清除。
         for (var batch = 0; batch < 100; batch++)
         {
-            var ids = await db.Set<DiagnosticEvent>().Where(x => x.At < diagnosticBefore).OrderBy(x => x.At).Select(x => x.LogId).Take(settings.CleanupBatchSize).ToArrayAsync(ct);
+            var ids = await db.DiagnosticEvents.Where(x => x.At < diagnosticBefore).OrderBy(x => x.At).Select(x => x.LogId).Take(settings.CleanupBatchSize).ToArrayAsync(ct);
             var auditIds = await db.AuditEvents.Where(x => x.At < auditBefore).OrderBy(x => x.At).Select(x => x.Id).Take(settings.CleanupBatchSize).ToArrayAsync(ct);
-            if (ids.Length > 0) await db.Set<DiagnosticEvent>().Where(x => ids.Contains(x.LogId)).ExecuteDeleteAsync(ct);
+            if (ids.Length > 0) await db.DiagnosticEvents.Where(x => ids.Contains(x.LogId)).ExecuteDeleteAsync(ct);
             if (auditIds.Length > 0) await db.AuditEvents.Where(x => auditIds.Contains(x.Id)).ExecuteDeleteAsync(ct);
             if (ids.Length < settings.CleanupBatchSize && auditIds.Length < settings.CleanupBatchSize) break;
         }

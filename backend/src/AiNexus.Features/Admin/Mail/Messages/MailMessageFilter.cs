@@ -26,7 +26,7 @@ public sealed class MailMessageFilter
     /// <summary>符合條件的列，新到舊（<c>CreatedAt</c>、<c>Id</c> 遞減，走 <c>ix_OutboundMessages_CreatedAt</c>）。</summary>
     internal IQueryable<OutboundMessage> Query(AppDbContext db)
     {
-        var query = db.Set<OutboundMessage>().AsNoTracking();
+        var query = db.OutboundMessages.AsNoTracking();
         if (!string.IsNullOrEmpty(Status)) { var status = Status; query = query.Where(x => x.Status == status); }
         if (!string.IsNullOrWhiteSpace(Category)) { var category = Category.Trim(); query = query.Where(x => x.Category.StartsWith(category)); }
         if (From is { } start) query = query.Where(x => x.CreatedAt >= start);

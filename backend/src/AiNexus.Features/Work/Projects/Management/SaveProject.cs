@@ -36,16 +36,18 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ProjectCreated);
+        .MapPost("", (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
+            handler.CreateAsync(user.Id, body, ct)).Audited(ProjectsAudit.ProjectCreated);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.UpdateAsync(user.Id, id, body, ct)).ToHttpResult()).Audited(ProjectsAudit.ProjectUpdated);
+        .MapPut("/{id:guid}", (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
+            handler.UpdateAsync(user.Id, id, body, ct)).Audited(ProjectsAudit.ProjectUpdated);
 
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
-        if (await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
+        if (await db.Resources.CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
         var resource = new Resource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
         db.Add(resource);
         db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
@@ -64,7 +66,7 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
             var allowed = await access.RequireAsync(actor, id, Project.Kind, ct, write: true);
             if (!allowed.IsSuccess) return allowed.Error;
             var resource = allowed.Value;
-            var count = await db.Set<Project>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
+            var count = await db.Projects.Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
             if (count != 1) return ProjectsErrors.Conflict;
             resource.Name = name.Value;
             resource.UpdatedAt = clock.GetUtcNow();

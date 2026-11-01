@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Projects;
 using AiNexus.Data.App.Quality;
 using System.Data;
@@ -30,15 +28,15 @@ public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, Re
             if (!owned.IsSuccess) return owned.Error;
             var resource = owned.Value;
             // 已邏輯刪除的子資源也要納入檢查（查詢需忽略軟刪除過濾器）：它們仍在進行中的工作會阻擋刪除。
-            var children = db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
-            if (await db.Set<BackgroundJob>().AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
+            var children = db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
+            if (await db.BackgroundJobs.AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
                 return CollaborationErrors.TasksActive;
             foreach (var check in checks)
                 if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
             if (kind == Project.Kind)
             {
                 // 子資源的直接分享與擁有者保持不變；只有靠專案繼承的存取會隨專案失效，所以要清空它們的 ParentId。
-                await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
+                await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
             }
             resource.IsDeleted = true;
             resource.UpdatedAt = clock.GetUtcNow();

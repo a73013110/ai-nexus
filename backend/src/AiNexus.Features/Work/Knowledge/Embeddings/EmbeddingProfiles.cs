@@ -15,10 +15,10 @@ public sealed class EmbeddingProfiles(AppDbContext db, IOptions<KnowledgeOptions
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            var target = await db.Set<EmbeddingProfile>().SingleOrDefaultAsync(x => x.Key == key, ct);
+            var target = await db.EmbeddingProfiles.SingleOrDefaultAsync(x => x.Key == key, ct);
             if (target is null)
             {
-                var active = await db.Set<EmbeddingProfile>().AnyAsync(x => x.Status == "active", ct);
+                var active = await db.EmbeddingProfiles.AnyAsync(x => x.Status == "active", ct);
                 target = new() { Key = key, Provider = settings.Embedding.Provider, Model = settings.Embedding.Model, Dimensions = settings.Embedding.Dimensions,
                     InputFormat = settings.Embedding.InputFormat, QueryInstruction = settings.Embedding.QueryInstruction, Revision = settings.Embedding.Revision,
                     Status = active ? "building" : "active",
@@ -35,7 +35,7 @@ public sealed class EmbeddingProfiles(AppDbContext db, IOptions<KnowledgeOptions
     }
     public async Task<EmbeddingProfile> ActiveAsync(CancellationToken ct)
     {
-        var active = await db.Set<EmbeddingProfile>().AsNoTracking().SingleOrDefaultAsync(x => x.Status == "active", ct);
+        var active = await db.EmbeddingProfiles.AsNoTracking().SingleOrDefaultAsync(x => x.Status == "active", ct);
         return active ?? await TargetAsync(ct);
     }
 }

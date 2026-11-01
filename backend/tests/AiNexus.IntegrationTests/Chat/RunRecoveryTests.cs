@@ -44,7 +44,7 @@ public sealed class RunRecoveryTests
         await ChatApi.WaitForTerminal(client, created.Id);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var run = await db.Runs.SingleAsync(x => x.Id == created.Id);
+        var run = await db.GenerationRuns.SingleAsync(x => x.Id == created.Id);
         run.Status = RunStates.Running; run.ActiveOwnerId = run.OwnerId; run.ExecutorId = Guid.NewGuid();
         run.LeaseExpiresAt = DateTimeOffset.UtcNow.AddMinutes(2); run.Content = "partial answer";
         await db.SaveChangesAsync();

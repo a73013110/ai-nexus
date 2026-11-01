@@ -12,7 +12,7 @@ internal sealed class SaveArtifactAccess(ResourceAccess access)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/access", (
                 Guid id, ResourceAclRequest request, ICurrentUser user, SaveArtifactAccess handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, request, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, request, ct))
         .Audited(ArtifactsAudit.ArtifactShared)
         .WithName("SaveArtifactAccess");
 

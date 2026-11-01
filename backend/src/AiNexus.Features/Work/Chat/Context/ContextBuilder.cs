@@ -44,7 +44,7 @@ public sealed class ContextBuilder(
     /// <summary>
     /// 建置指定葉節點訊息為止的完整模型上下文（包含圖片二進位內容）。
     /// </summary>
-    public async Task<Result<IReadOnlyList<InferenceMessage>>> BuildAsync(
+    public async Task<Result<InferenceMessage[]>> BuildAsync(
         Guid conversation,
         Guid leaf,
         GenerationParameters parameters,
@@ -61,7 +61,7 @@ public sealed class ContextBuilder(
     /// 預先準備即將發問（或重新生成）的上下文（不包含圖片位元組資料，僅保留元資料）。
     /// 由於歷史對話不可變，此處計算出的修剪範圍與儲存後呼叫 BuildAsync 的結果完全一致。
     /// </summary>
-    public async Task<Result<IReadOnlyList<InferenceMessage>>> PrepareAsync(
+    public async Task<Result<InferenceMessage[]>> PrepareAsync(
         Guid conversation,
         Guid? parent,
         Guid? regenerate,
@@ -85,7 +85,7 @@ public sealed class ContextBuilder(
         var imageIds = ImageIds(messages);
         if (imageIds.Length == 0) return Result.Success;
 
-        var readyCount = await db.Set<Attachment>()
+        var readyCount = await db.Attachments
             .AsNoTracking()
             .CountAsync(x => imageIds.Contains(x.Id) && x.StorageState == AttachmentStates.Ready, ct);
 
@@ -100,14 +100,14 @@ public sealed class ContextBuilder(
     /// <summary>
     /// 載入訊息鏈中所參照圖片的實體二進位資料。
     /// </summary>
-    public async Task<Result<IReadOnlyList<InferenceMessage>>> WithImagesAsync(
+    public async Task<Result<InferenceMessage[]>> WithImagesAsync(
         IReadOnlyList<InferenceMessage> messages,
         CancellationToken ct)
     {
         var imageIds = ImageIds(messages);
-        if (imageIds.Length == 0) return Result<IReadOnlyList<InferenceMessage>>.Ok(messages);
+        if (imageIds.Length == 0) return messages.ToArray();
 
-        var originals = await db.Set<Attachment>()
+        var originals = await db.Attachments
             .AsNoTracking()
             .Where(x => imageIds.Contains(x.Id) && x.StorageState == AttachmentStates.Ready)
             .Select(x => new Attachment { Id = x.Id, StorageKey = x.StorageKey, Size = x.Size })
@@ -127,7 +127,7 @@ public sealed class ContextBuilder(
         return messages.Select(x => x with
         {
             Images = x.Images?.Select(i => i with { Data = data[i.AttachmentId] }).ToArray()
-        }).ToList();
+        }).ToArray();
     }
 
     /// <summary>
@@ -162,7 +162,7 @@ public sealed class ContextBuilder(
         return usage;
     }
 
-    private static Result<IReadOnlyList<InferenceMessage>> Finish(Composed composed, GenerationParameters parameters)
+    private static Result<InferenceMessage[]> Finish(Composed composed, GenerationParameters parameters)
     {
         var usage = Trim(composed, parameters);
         if (usage.BudgetExceeded) return InferenceErrors.ContextBudgetExceeded;
@@ -170,7 +170,7 @@ public sealed class ContextBuilder(
 
         return new[] { new InferenceMessage("system", parameters.SystemPrompt) }
             .Concat(composed.Messages)
-            .ToList();
+            .ToArray();
     }
 
     private static Guid[] ImageIds(IReadOnlyList<InferenceMessage> messages) =>
@@ -259,7 +259,7 @@ public sealed class ContextBuilder(
             .Select(x => new { x.Id, x.Content })
             .ToDictionaryAsync(x => x.Id, x => x.Content, ct);
 
-        var links = await db.Set<MessageAttachment>()
+        var links = await db.MessageAttachments
             .AsNoTracking()
             .Where(x => ids.Contains(x.MessageId))
             .Select(x => new

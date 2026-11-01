@@ -1,5 +1,4 @@
 using System.Net;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
@@ -117,7 +116,7 @@ public sealed class AttendanceRecordsScopeTests
         queries.Clear();
         Assert.Equal(Sorted(bob, frank, carol, erin, dave, grace), await PeopleAsync(client));
         Assert.Equal(0, queries.Count(Records, "[organization].[Units]"));
-        await session.WithDbAsync(db => db.Set<UserRole>().Where(x => x.UserId == bob && x.RoleId == "test-records-" + DataScopes.Unit).ExecuteDeleteAsync());
+        await session.WithDbAsync(db => db.UserRoles.Where(x => x.UserId == bob && x.RoleId == "test-records-" + DataScopes.Unit).ExecuteDeleteAsync());
 
         // 主管範圍存在授權上，可逐群組調整：不另外時只看自己；managed 只含所管單位本身，不含下層的系統部。
         await SetManagerScopeAsync(session, null);
@@ -127,12 +126,12 @@ public sealed class AttendanceRecordsScopeTests
         await SetManagerScopeAsync(session, DataScopes.ManagedTree);
 
         // 取消主管勾選就失效。
-        await session.WithDbAsync(db => db.Set<UnitMember>().Where(x => x.UserId == bob && x.UnitId == lab)
+        await session.WithDbAsync(db => db.UnitMembers.Where(x => x.UserId == bob && x.UnitId == lab)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false)));
         Assert.Equal(Sorted(bob, frank, carol), await PeopleAsync(client));
 
         // 主管範圍不授予功能：沒有授權仍是 403。
-        await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        await session.WithDbAsync(db => db.RoleGroupFeatures
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteDeleteAsync());
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"{Records}?{Week}")).StatusCode);
     }
@@ -143,7 +142,7 @@ public sealed class AttendanceRecordsScopeTests
         await using var session = Create();
         var bob = await session.PersonAsync("bob");
         await session.HoldAsync(bob, "A1");
-        await session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+        await session.WithDbAsync(db => db.RoleGroupFeatures
             .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, (string?)null)));
         using var client = await session.Factory.SignedInAsync("bob");
@@ -153,9 +152,9 @@ public sealed class AttendanceRecordsScopeTests
 
     private static Guid[] Sorted(params Guid[] ids) => [.. ids.Order()];
 
-    private static Task SetManagerScopeAsync(RecordsSession session, string? scope) => session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+    private static Task SetManagerScopeAsync(RecordsSession session, string? scope) => session.WithDbAsync(db => db.RoleGroupFeatures
         .Where(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == FeatureCatalog.AttendanceRecords).ExecuteUpdateAsync(x => x.SetProperty(y => y.ManagerScope, scope)));
 
-    private static Task SetScopeAsync(RecordsSession session, string scope) => session.WithDbAsync(db => db.Set<RoleGroupFeature>()
+    private static Task SetScopeAsync(RecordsSession session, string scope) => session.WithDbAsync(db => db.RoleGroupFeatures
         .Where(x => x.GroupId == "test-records-" + DataScopes.Unit).ExecuteUpdateAsync(x => x.SetProperty(y => y.Scope, scope)));
 }

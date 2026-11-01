@@ -8,8 +8,8 @@ namespace AiNexus.Features.Work.Files.Storage;
 /// <summary>刪除是持久化的 outbox 狀態：中繼資料與配額要保留到實體檔案真的刪除為止。</summary>
 public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<FilesOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
 {
-    private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
-        !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<ResourceAttachment>().Any(l => l.AttachmentId == x.Id));
+    private IQueryable<Attachment> Unreferenced() => db.Attachments.Where(x =>
+        !db.MessageAttachments.Any(l => l.AttachmentId == x.Id) && !db.ResourceAttachments.Any(l => l.AttachmentId == x.Id));
 
     public async Task<int> MarkUnusedAsync(IEnumerable<Guid> ids, CancellationToken ct)
     {
@@ -17,7 +17,7 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
         var files = ids.Distinct().ToArray();
         // 協作者可以移除別人擁有的讀取器，所以要鎖原始檔案的擁有者（與所有建立引用的路徑一致），
         // 才能判斷位元組可以刪除。
-        var owners = await db.Set<Attachment>().Where(x => files.Contains(x.Id) && !x.InLibrary).Select(x => x.OwnerId).Distinct().Order().ToListAsync(ct);
+        var owners = await db.Attachments.Where(x => files.Contains(x.Id) && !x.InLibrary).Select(x => x.OwnerId).Distinct().Order().ToListAsync(ct);
         foreach (var owner in owners) await quota.LockOwnerAsync(owner, ct);
         return await Unreferenced().Where(x => files.Contains(x.Id) && !x.InLibrary)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
@@ -31,10 +31,10 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
     private IQueryable<Attachment> ExpiredDrafts(DateTimeOffset cutoff, DateTimeOffset interrupted)
     {
         // 只被擁有者自己的私人讀取器引用的檔案，仍視為草稿
-        return db.Set<Attachment>().Where(x => !x.InLibrary &&
+        return db.Attachments.Where(x => !x.InLibrary &&
             (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
-            !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
-            !db.Set<ResourceAttachment>().Any(l => l.AttachmentId == x.Id && !readers.All.Any(r => r.Id == l.ResourceId && r.OwnerId == x.OwnerId)));
+            !db.MessageAttachments.Any(l => l.AttachmentId == x.Id) &&
+            !db.ResourceAttachments.Any(l => l.AttachmentId == x.Id && !readers.All.Any(r => r.Id == l.ResourceId && r.OwnerId == x.OwnerId)));
     }
 
     public async Task AbortUploadAsync(Attachment upload, CancellationToken ct)
@@ -43,12 +43,12 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
             await quota.LockOwnerAsync(upload.OwnerId, ct);
-            var state = await db.Set<Attachment>().Where(x => x.Id == upload.Id).Select(x => x.StorageState).SingleOrDefaultAsync(ct);
+            var state = await db.Attachments.Where(x => x.Id == upload.Id).Select(x => x.StorageState).SingleOrDefaultAsync(ct);
             // 啟用可能已經提交，只是確認回應遺失，所以要先看狀態
             if (state == AttachmentStates.Ready) return;
             // 過期的預約可能已被回收，寫入端才恢復。清理時換一個新的 row 身分，避免較早的收集者
             // 在檢查磁碟後、遲到的寫入實際落地前，把這筆 outbox 刪掉。
-            await db.Set<Attachment>().Where(x => x.Id == upload.Id && x.StorageState != AttachmentStates.Ready).ExecuteDeleteAsync(ct);
+            await db.Attachments.Where(x => x.Id == upload.Id && x.StorageState != AttachmentStates.Ready).ExecuteDeleteAsync(ct);
             db.Entry(upload).State = EntityState.Detached;
             var cleanup = new Attachment { OwnerId = upload.OwnerId, FileName = upload.FileName, ContentType = upload.ContentType,
                 Size = upload.Size, StorageKey = upload.StorageKey, StorageState = AttachmentStates.Deleting };
@@ -64,14 +64,14 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
 
     private async Task DeletePendingAsync(IReadOnlyCollection<Guid>? ids, CancellationToken ct)
     {
-        var rows = await db.Set<Attachment>().AsNoTracking().Where(x => x.StorageState == AttachmentStates.Deleting && (ids == null || ids.Contains(x.Id)))
+        var rows = await db.Attachments.AsNoTracking().Where(x => x.StorageState == AttachmentStates.Deleting && (ids == null || ids.Contains(x.Id)))
             .OrderBy(x => x.CreatedAt).Take(100).Select(x => new { x.Id, x.StorageKey }).ToListAsync(ct);
         foreach (var file in rows)
         {
             try
             {
                 await storage.DeleteAsync(file.StorageKey, ct);
-                await db.Set<Attachment>().Where(x => x.Id == file.Id && x.StorageState == AttachmentStates.Deleting).ExecuteDeleteAsync(ct);
+                await db.Attachments.Where(x => x.Id == file.Id && x.StorageState == AttachmentStates.Deleting).ExecuteDeleteAsync(ct);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             { LogDeletionDeferred(logger, file.Id, ex.GetType().Name); }
@@ -123,7 +123,7 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
 
     private async Task RemoveUntrackedAsync(IReadOnlySet<string> keys, CancellationToken ct)
     {
-        var tracked = await db.Set<Attachment>().Where(x => keys.Contains(x.StorageKey)).Select(x => x.StorageKey).ToHashSetAsync(ct);
+        var tracked = await db.Attachments.Where(x => keys.Contains(x.StorageKey)).Select(x => x.StorageKey).ToHashSetAsync(ct);
         foreach (var key in keys.Where(x => !tracked.Contains(x)))
         {
             try { await storage.DeleteAsync(key, ct); }

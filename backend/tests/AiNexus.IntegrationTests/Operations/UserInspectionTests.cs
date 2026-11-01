@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Inference;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -102,7 +100,7 @@ public sealed class UserInspectionTests
         var actor = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!; var user = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<ModelInvocation>().AddRange(
+            db.ModelInvocations.AddRange(
                 new() { OwnerId = user.Id, Kind = "evaluation", ModelId = "test-model", Status = "completed", InputTokens = 600, OutputTokens = 200 },
                 new() { OwnerId = user.Id, Kind = "ocr", ModelId = "test-model", Status = "failed" },
                 new() { OwnerId = user.Id, Kind = "transform", ModelId = "test-model", Status = "completed", InputTokens = 900, OutputTokens = 500, CreatedAt = DateTimeOffset.UtcNow.AddDays(-40) },
@@ -123,7 +121,7 @@ public sealed class UserInspectionTests
         var me = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
+            db.Remove(await db.UserRoles.SingleAsync(x => x.UserId == me.Id && x.RoleId == "administrator")); await db.SaveChangesAsync();
         }
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync($"/api/v1/admin/users/{me.Id}/insights")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync($"/api/v1/admin/users/{me.Id}/conversations")).StatusCode);

@@ -39,21 +39,21 @@ public sealed class ChatModule : IFeatureModule
     /// <summary>註冊對話相關之 HTTP 端點。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var runs = api.MapGroup("").RequireAuthorization(Policies.Chat);
+        var runs = api.MapGroup("").RequireFeature(FeatureCatalog.Chat);
         PreviewContext.Map(runs);
         CreateRun.Map(runs);
         GetRun.Map(runs);
         CancelRun.Map(runs);
         StreamRunEvents.Map(runs);
 
-        var conversations = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat);
+        var conversations = api.MapGroup("/conversations").RequireFeature(FeatureCatalog.Chat);
         GetConversation.Map(conversations);
         DuplicateConversation.Map(conversations);
         ExportConversation.Map(conversations);
         DeleteConversation.Map(conversations);
 
         // 管理端稽核式讀取任一使用者的對話內容與附件，從使用者頁開啟；列表在 Conversations。
-        var admin = api.MapGroup("/admin").RequireAuthorization(Policies.IdentityUsers);
+        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
         ReadAdminConversation.Map(admin);
         OpenAdminConversationFile.Map(admin);
     }

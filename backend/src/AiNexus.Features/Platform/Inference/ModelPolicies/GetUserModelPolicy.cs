@@ -11,7 +11,8 @@ public sealed record AdminUserModelPolicyDto(ModelPolicyRequest Personal, Effect
 internal sealed class GetUserModelPolicy(AppDbContext db, ModelPolicyService policies)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users/{id:guid}/model-policy", async (Guid id, GetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())
+        .MapGet("/users/{id:guid}/model-policy", (Guid id, GetUserModelPolicy handler, CancellationToken ct) =>
+            handler.HandleAsync(id, ct))
         .Audited(InferenceAudit.UserPolicyRead)
         .WithName("GetUserModelPolicy");
 

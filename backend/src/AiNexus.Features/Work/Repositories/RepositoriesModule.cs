@@ -31,7 +31,6 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddBackgroundJobHandler<RepositoryReviewHandler>(RepositoryReviewHandler.JobKind);
         services.AddBackgroundJobHandler<RepositoryImportHandler>(RepositoryImportHandler.JobKind);
         services.AddSingleton<RepositoryWriteLock>();
-        services.AddFeaturePolicy(FeatureCatalog.Repositories);
         // 每次讀取都會實際呼叫 Gitea（使用使用者的 token）；寫入還可能啟動模型工作、上傳檔案或遠端留言，所以限制較嚴。
         services.AddRateLimiter(options => options.AddPerUserLimit(ReadRateLimit, 240).AddPerUserLimit(WriteRateLimit, 20));
     }
@@ -39,7 +38,7 @@ public sealed class RepositoriesModule : IFeatureModule
     // 端點註冊順序即為發布的 OpenAPI 順序；調整時需同步重產 openapi.json。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).RequireRateLimiting(ReadRateLimit);
+        var routes = api.MapGroup("/repositories").RequireFeature(FeatureCatalog.Repositories).RequireRateLimiting(ReadRateLimit);
         GetRepositoryConnection.Map(routes);
         ConnectRepository.Map(routes);
         DisconnectRepository.Map(routes);

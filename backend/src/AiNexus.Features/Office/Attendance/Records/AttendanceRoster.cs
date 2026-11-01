@@ -38,8 +38,8 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
     public async Task<IQueryable<CardAssignment>> HoldingsAsync(Guid viewer, EffectiveDataScope scope, AttendanceRecordsFilter filter,
         (DateOnly Start, DateOnly Last)? period, bool includeHidden, CancellationToken ct)
     {
-        var holdings = from a in db.Set<CardAssignment>()
-                       join c in db.Set<Card>() on a.CardId equals c.Id
+        var holdings = from a in db.CardAssignments
+                       join c in db.Cards on a.CardId equals c.Id
                        select new { Assignment = a, c.CardNumber, c.HiddenFromRecords };
         if (period is { } days)
         {
@@ -67,7 +67,7 @@ internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory or
     public async Task<IReadOnlyList<RosterPerson>> PeopleAsync(IQueryable<CardAssignment> holdings, CancellationToken ct)
     {
         var rows = await holdings
-            .Join(db.Set<Card>(), a => a.CardId, c => c.Id, (a, c) => new { a, c.CardNumber, c.HiddenFromRecords })
+            .Join(db.Cards, a => a.CardId, c => c.Id, (a, c) => new { a, c.CardNumber, c.HiddenFromRecords })
             .LeftJoin(db.Users, x => x.a.UserId, u => (Guid?)u.Id, (x, u) => new
             {
                 x.a.Id, x.a.UserId, x.a.HolderName, x.CardNumber, x.HiddenFromRecords, DisplayName = u == null ? null : u.DisplayName, Account = u == null ? null : u.AdAccount ?? u.LocalAccount,

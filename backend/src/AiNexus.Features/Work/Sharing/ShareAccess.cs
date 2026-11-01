@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Artifacts;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
@@ -20,7 +19,7 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
     public async Task<Result<ShareLink>> RequireAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var row = await db.Set<ShareLink>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && !x.IsRevoked && x.ExpiresAt > now && (x.OwnerId == actor || db.Set<ShareRecipient>().Any(r => r.ShareId == id && r.UserId == actor)), ct);
+        var row = await db.ShareLinks.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && !x.IsRevoked && x.ExpiresAt > now && (x.OwnerId == actor || db.ShareRecipients.Any(r => r.ShareId == id && r.UserId == actor)), ct);
         if (row is null) return SharingErrors.Unavailable;
         if (!await SourceExistsAsync(row, ct)) return SharingErrors.Unavailable;
         if (!await HasSourceFeatureAsync(row.OwnerId, row.Kind, ct)) return SharingErrors.Unavailable;
@@ -29,7 +28,7 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
 
     public async Task<bool> SourceExistsAsync(ShareLink row, CancellationToken ct) => row.Kind == ConversationKind
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
-        : await db.Set<Resource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == Artifact.Kind, ct);
+        : await db.Resources.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == Artifact.Kind, ct);
 
     /// <summary><paramref name="rows"/> 中來源仍存在的列（見 <see cref="SourceExistsAsync"/>），維持原順序，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
@@ -40,7 +39,7 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
         if (conversations.Length > 0)
             owners.UnionWith((await db.Conversations.Where(x => conversations.Contains(x.Id)).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         if (artifacts.Length > 0)
-            owners.UnionWith((await db.Set<Resource>().Where(x => artifacts.Contains(x.Id) && x.Kind == Artifact.Kind).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
+            owners.UnionWith((await db.Resources.Where(x => artifacts.Contains(x.Id) && x.Kind == Artifact.Kind).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
         return rows.Where(x => owners.Contains((x.SourceId, x.OwnerId))).ToArray();
     }
 
@@ -56,7 +55,7 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
         var ownerIds = rows.Select(x => x.OwnerId).Distinct().ToArray();
         var owners = await db.Users.Where(u => ownerIds.Contains(u.Id)).Select(u => new { u.Id, u.DisplayName }).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
         var sent = rows.Where(x => x.OwnerId == actor).Select(x => x.Id).ToArray();
-        var recipients = sent.Length == 0 ? [] : (await (from r in db.Set<ShareRecipient>() join u in db.Users on r.UserId equals u.Id where sent.Contains(r.ShareId) select new { r.ShareId, u.DisplayName }).ToListAsync(ct))
+        var recipients = sent.Length == 0 ? [] : (await (from r in db.ShareRecipients join u in db.Users on r.UserId equals u.Id where sent.Contains(r.ShareId) select new { r.ShareId, u.DisplayName }).ToListAsync(ct))
             .GroupBy(x => x.ShareId).ToDictionary(g => g.Key, g => g.Select(x => x.DisplayName).ToList());
         return rows.Select(x => new ShareDto(x.Id, x.Kind, x.Title, owners.TryGetValue(x.OwnerId, out var owner) ? owner : throw new InvalidOperationException("Share owner is missing."),
             x.OwnerId == actor, x.IsRevoked, x.ExpiresAt, x.CreatedAt, x.OwnerId == actor ? recipients.GetValueOrDefault(x.Id) ?? [] : [], x.IncludeAttachments)).ToArray();

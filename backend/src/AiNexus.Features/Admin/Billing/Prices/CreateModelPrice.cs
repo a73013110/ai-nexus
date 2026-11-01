@@ -54,7 +54,7 @@ internal sealed class CreateModelPrice(AppDbContext db, ISqlDatabase<AppDbContex
 {
     public static void Map(RouteGroupBuilder admin) => admin
         .MapPost("/prices", (PriceRequest body, ICurrentUser user, CreateModelPrice handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, body, ct))
         .Audited(BillingAudit.PriceCreated)
         .WithName("CreateModelPrice");
 

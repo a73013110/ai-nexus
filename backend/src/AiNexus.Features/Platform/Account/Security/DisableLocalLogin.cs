@@ -16,7 +16,7 @@ internal sealed class DisableLocalLogin(AppDbContext db, AccountSecurity securit
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/settings/account/local-login", (HttpContext http, ICurrentUser user, DisableLocalLogin handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, ct))
         .RequireRateLimiting(AccountModule.CredentialsRateLimit)
         .Audited(AccountAudit.LocalLoginDisabled)
         .WithName("DisableLocalLogin");

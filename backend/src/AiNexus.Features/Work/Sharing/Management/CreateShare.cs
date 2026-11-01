@@ -3,9 +3,7 @@ using AiNexus.Data.App.Artifacts;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Conversations;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Sharing;
-using AiNexus.Data.App.WebSearch;
 using System.Text.Json;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
@@ -48,8 +46,8 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("", async (CreateShareRequest body, ICurrentUser user, CreateShare handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult()).Audited(SharingAudit.ShareCreated);
+        .MapPost("", (CreateShareRequest body, ICurrentUser user, CreateShare handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct)).Audited(SharingAudit.ShareCreated);
 
     private sealed record SourceSnapshot(string Title, ShareSnapshot Snapshot, Guid[] Files);
 
@@ -71,7 +69,7 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
                 await quota.LockOwnerAsync(actor, ct);
 
                 var now = clock.GetUtcNow();
-                var activeCount = await db.Set<ShareLink>()
+                var activeCount = await db.ShareLinks
                     .CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct);
                 if (activeCount >= ShareLink.MaxActivePerOwner) return SharingErrors.LimitReached;
                 if (!await shares.HasSourceFeatureAsync(actor, request.Kind, ct)) return SharingErrors.Unavailable;
@@ -125,15 +123,15 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
         {
             var source = await access.OwnerAsync(actor, request.SourceId, Artifact.Kind, ct);
             if (!source.IsSuccess) return source.Error;
-            var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == source.Value.Id, ct);
+            var item = await db.Artifacts.AsNoTracking().SingleAsync(x => x.Id == source.Value.Id, ct);
             var version = request.ArtifactVersion ?? item.Version;
-            var revision = await db.Set<ArtifactRevision>().AsNoTracking().SingleOrDefaultAsync(x => x.ArtifactId == item.Id && x.Version == version, ct);
+            var revision = await db.ArtifactRevisions.AsNoTracking().SingleOrDefaultAsync(x => x.ArtifactId == item.Id && x.Version == version, ct);
             if (revision is null) return SharingErrors.Unavailable;
             return new SourceSnapshot(revision.Title, new(revision.Content, revision.Version, []), []);
         }
         var conversation = await db.Conversations.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.SourceId && x.OwnerId == actor, ct);
         if (conversation is null) return SharingErrors.Unavailable;
-        if (await db.Runs.AnyAsync(x => x.ConversationId == conversation.Id && x.ActiveOwnerId != null, ct)) return SharingErrors.GenerationActive;
+        if (await db.GenerationRuns.AnyAsync(x => x.ConversationId == conversation.Id && x.ActiveOwnerId != null, ct)) return SharingErrors.GenerationActive;
         var all = await db.Messages.AsNoTracking().Where(x => x.ConversationId == conversation.Id).ToListAsync(ct);
         var lookup = all.ToDictionary(x => x.Id);
         var branch = new List<Message>();
@@ -153,16 +151,16 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
 
         var ids = branch.Select(x => x.Id).ToArray();
         var links = request.IncludeAttachments
-            ? await db.Set<MessageAttachment>()
+            ? await db.MessageAttachments
                 .Where(x => ids.Contains(x.MessageId))
                 .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size })
                 .ToListAsync(ct)
             : [];
         var attachments = links.ToLookup(x => x.MessageId);
-        var citations = (await db.Set<MessageCitation>().AsNoTracking().Where(x => ids.Contains(x.MessageId)).ToListAsync(ct)).ToLookup(x => x.MessageId);
-        var runs = await db.Runs.AsNoTracking().Where(x => ids.Contains(x.AssistantMessageId)).ToDictionaryAsync(x => x.AssistantMessageId, ct);
+        var citations = (await db.MessageCitations.AsNoTracking().Where(x => ids.Contains(x.MessageId)).ToListAsync(ct)).ToLookup(x => x.MessageId);
+        var runs = await db.GenerationRuns.AsNoTracking().Where(x => ids.Contains(x.AssistantMessageId)).ToDictionaryAsync(x => x.AssistantMessageId, ct);
         var runIds = runs.Values.Select(x => x.Id).ToArray();
-        var searches = (await db.Set<WebSearchRecord>().AsNoTracking()
+        var searches = (await db.WebSearches.AsNoTracking()
             .Where(x => x.RunId != null && runIds.Contains(x.RunId.Value))
             .ToListAsync(ct)).ToLookup(x => x.RunId!.Value);
 

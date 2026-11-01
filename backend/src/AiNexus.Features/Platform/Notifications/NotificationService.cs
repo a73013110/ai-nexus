@@ -13,8 +13,8 @@ public sealed class NotificationService(AppDbContext db)
         if (!NotificationDisplay.IsTarget(target) || severity is not ("info" or "success" or NotificationDisplay.Error))
             throw new InvalidOperationException("Unknown notification target or severity.");
         // 同一交易裡尚未儲存的通知只存在 Local，資料庫查不到，所以兩邊都要檢查，否則同一交易內的重複會撞上唯一索引。
-        if (db.Set<Notification>().Local.Any(x => x.OwnerId == owner && x.EventKey == key)
-            || await db.Set<Notification>().AnyAsync(x => x.OwnerId == owner && x.EventKey == key, ct)) return;
+        if (db.Notifications.Local.Any(x => x.OwnerId == owner && x.EventKey == key)
+            || await db.Notifications.AnyAsync(x => x.OwnerId == owner && x.EventKey == key, ct)) return;
         db.Add(new Notification { OwnerId = owner, EventKey = key, Type = type, Severity = severity,
             Title = NotificationDisplay.Title(severity, string.Concat(title.Take(180))), Body = NotificationDisplay.Body(severity, string.Concat(body.Take(600)), issueCode), IssueCode = issueCode, TargetKind = target, TargetId = id });
     }

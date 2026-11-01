@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Data.App.Jobs;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +21,7 @@ internal sealed class JobsMonitoring(AppDbContext db, TimeProvider clock) : IMon
         var now = clock.GetUtcNow();
         var hour = now.AddHours(-1);
         var day = now.AddDays(-1);
-        var jobs = db.Set<BackgroundJob>().AsNoTracking();
+        var jobs = db.BackgroundJobs.AsNoTracking();
         var active = await jobs.Where(x => x.Status == RunStates.Queued || x.Status == RunStates.Running).GroupBy(x => 1).Select(g => new
         {
             Queued = g.Count(x => x.Status == RunStates.Queued),

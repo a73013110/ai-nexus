@@ -46,7 +46,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/reviews", (string owner, string name, CreateRepositoryReviewRequest body, ICurrentUser user, CreateRepositoryReview handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, owner + "/" + name, body, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, owner + "/" + name, body, ct))
         .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCreated).WithName("CreateRepositoryReview");
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, string repo, CreateRepositoryReviewRequest request, CancellationToken ct)
@@ -61,8 +61,8 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
         if (request.PullRequest is { } number)
         {
             var pull = await pulls.PullAsync(owner, repo, number, ct);
-            if (!pull.IsSuccess) return pull.Error!;
-            (head, basis) = (pull.Value!.HeadCommit, pull.Value.BaseCommit);
+            if (!pull.IsSuccess) return pull.Error;
+            (head, basis) = (pull.Value.HeadCommit, pull.Value.BaseCommit);
         }
         else
         {
@@ -82,7 +82,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var existing = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
+            var existing = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (existing is not null)
             {
                 if (existing.RequestHash != hash) return RepositoriesErrors.IdempotencyConflict;
@@ -91,16 +91,16 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
                 return await reviews.DescribeAsync(existing, ct);
             }
             var profile = await catalog.RequireAsync(request.ModelId, ct);
-            if (!profile.IsSuccess) return profile.Error!;
-            var model = profile.Value!;
-            if (await policy.RequireAsync(owner, model.Id, ct) is { IsSuccess: false } refused) return refused.Error!;
+            if (!profile.IsSuccess) return profile.Error;
+            var model = profile.Value;
+            if (await policy.RequireAsync(owner, model.Id, ct) is { IsSuccess: false } refused) return refused.Error;
             var headExists = await gitea.RequireCommitAsync(owner, repo, head, ct);
-            if (!headExists.IsSuccess) return headExists.Error!;
-            if (basis is not null && await gitea.RequireCommitAsync(owner, repo, basis, ct) is { IsSuccess: false } missing) return missing.Error!;
+            if (!headExists.IsSuccess) return headExists.Error;
+            if (basis is not null && await gitea.RequireCommitAsync(owner, repo, basis, ct) is { IsSuccess: false } missing) return missing.Error;
             var diff = await gitea.DiffAsync(owner, repo, head, basis, ct);
-            if (!diff.IsSuccess) return diff.Error!;
-            var snapshot = RepositoryReviewPlan.Create(diff.Value!, model, repo, head, basis, note, request.Purpose);
-            if (!snapshot.IsSuccess) return snapshot.Error!;
+            if (!diff.IsSuccess) return diff.Error;
+            var snapshot = RepositoryReviewPlan.Create(diff.Value, model, repo, head, basis, note, request.Purpose);
+            if (!snapshot.IsSuccess) return snapshot.Error;
             var row = new RepositoryReview { OwnerId = owner, Repository = repo, Commit = head, BaseCommit = basis, PullRequest = request.PullRequest,
                 BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
                 SnapshotJson = JsonSerializer.Serialize(snapshot.Value), Purpose = snapshot.Value.Purpose, IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
@@ -108,7 +108,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
             // 對使用者列做一次 UPDATE（值不變）以取得該列的鎖，讓同一使用者的並行建立請求依序進行；
             // 它與唯一的 request key 一起，也能防止多台應用程式主機重複建立。
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var duplicate = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
+            var duplicate = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (duplicate is not null) return duplicate.RequestHash == hash ? await reviews.DescribeAsync(duplicate, ct) : RepositoriesErrors.IdempotencyConflict;
             var label = repo + (request.PullRequest is { } pr ? " · PR #" + pr : " · " + head[..10]);
             row.JobId = jobs.Enqueue(owner, null, row.Id, RepositoryReviewHandler.JobKind, label).Id;

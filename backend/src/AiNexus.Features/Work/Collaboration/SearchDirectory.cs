@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
@@ -14,12 +13,14 @@ namespace AiNexus.Features.Work.Collaboration;
 internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers)
 {
     public static RouteHandlerBuilder MapUsers(RouteGroupBuilder api) => api
-        .MapGet("/directory", async (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.UsersAsync(search, ct)))
+        .MapGet("/directory", (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
+            handler.UsersAsync(search, ct))
         .NotAudited("分享對象的選人搜尋")
         .WithName("SearchUserDirectory");
 
     public static RouteHandlerBuilder MapGroups(RouteGroupBuilder api) => api
-        .MapGet("/directory/groups", async (ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.GroupsAsync(ct)))
+        .MapGet("/directory/groups", (ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
+            handler.GroupsAsync(ct))
         .NotAudited("分享對象的群組選項")
         .WithName("ListDirectoryGroups");
 
@@ -32,5 +33,5 @@ internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers)
     }
 
     public async Task<IReadOnlyList<DirectoryGroupDto>> GroupsAsync(CancellationToken ct)
-        => await db.Set<RoleGroup>().AsNoTracking().Where(x => x.Enabled).OrderBy(x => x.Name).Select(x => new DirectoryGroupDto(x.Id, x.Name)).ToListAsync(ct);
+        => await db.RoleGroups.AsNoTracking().Where(x => x.Enabled).OrderBy(x => x.Name).Select(x => new DirectoryGroupDto(x.Id, x.Name)).ToListAsync(ct);
 }

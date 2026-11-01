@@ -8,7 +8,8 @@ namespace AiNexus.Features.Work.Files.Management;
 internal sealed class GetAttachment(AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetAttachment handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetAttachment handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct))
         .Audited(FilesAudit.FileRead)
         .WithName("GetAttachment");
 

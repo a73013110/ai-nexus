@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data;
@@ -17,25 +16,25 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
     private async Task<List<EmbeddingProfile>> CurrentAsync(CancellationToken ct)
     {
         await profiles.TargetAsync(ct);
-        return await db.Set<EmbeddingProfile>().AsNoTracking().Where(x => x.Status == "active" || x.Status == "building").OrderBy(x => x.Status == "active" ? 0 : 1).ToListAsync(ct);
+        return await db.EmbeddingProfiles.AsNoTracking().Where(x => x.Status == "active" || x.Status == "building").OrderBy(x => x.Status == "active" ? 0 : 1).ToListAsync(ct);
     }
     public async Task<Result> PrepareAsync(JobExecution execution, Document document, CancellationToken ct)
     {
         var current = await CurrentAsync(ct);
-        var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == document.Id).OrderBy(x => x.PageNumber).ToListAsync(ct);
+        var pages = await db.DocumentPages.AsNoTracking().Where(x => x.DocumentId == document.Id).OrderBy(x => x.PageNumber).ToListAsync(ct);
         var chunked = chunker.Chunk(pages);
         if (!chunked.IsSuccess) return chunked.Error;
         var pieces = chunked.Value;
-        if (pieces.Count == 0) return KnowledgeErrors.DocumentHasNoText;
+        if (pieces.Length == 0) return KnowledgeErrors.DocumentHasNoText;
         var hashes = pieces.Select(x => EmbeddingInput.Hash(EmbeddingInput.Document(document.FileName, x.HeadingPath, x.Text))).ToArray();
         var cached = new Dictionary<int, Dictionary<string, float[]>>();
         foreach (var profile in current.Where(x => x.Provider != "none")) cached[profile.Id] = await vectors.CachedAsync(profile, hashes, ct);
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var existing = await db.Set<Chunk>().Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
+            var existing = await db.Chunks.Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
             var chunks = new List<Chunk>();
-            for (var i = 0; i < pieces.Count; i++)
+            for (var i = 0; i < pieces.Length; i++)
             {
                 var piece = pieces[i];
                 var old = existing.FirstOrDefault(x => x.Ordinal == i);
@@ -51,7 +50,7 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
             }
             var retained = chunks.Select(x => x.Id).ToArray(); document.ChunkCount = chunks.Count; document.Status = "indexing";
             await execution.CheckpointAsync("結構化片段已保存", 0, chunks.Count, ct, async () => {
-                await db.Set<Chunk>().Where(x => x.DocumentId == document.Id && !retained.Contains(x.Id)).ExecuteDeleteAsync(ct);
+                await db.Chunks.Where(x => x.DocumentId == document.Id && !retained.Contains(x.Id)).ExecuteDeleteAsync(ct);
                 foreach (var old in existing.Where(x => !retained.Contains(x.Id))) db.Entry(old).State = EntityState.Detached;
                 db.AddRange(chunks.Where(x => !existing.Any(e => e.Id == x.Id))); await db.SaveChangesAsync(ct);
                 // 舊片段列可能在工作之間被移除，因此要在此先把已快取的向量複製到保留下來的片段上。
@@ -78,7 +77,7 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
     {
         if (profile.Provider == "none") return Result.Success;
         var version = document.TextVersion;
-        var all = await db.Set<Chunk>().AsNoTracking().Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
+        var all = await db.Chunks.AsNoTracking().Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
         var complete = (await vectors.ExistingAsync(profile, document.Id, ct)).ToHashSet(); var completed = complete.Count;
         foreach (var batch in all.Where(x => !complete.Contains(x.Id)).Chunk(options.Value.Embedding.BatchSize))
         {
@@ -100,15 +99,15 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
     {
         var allowed = await documents.RequireAsync(actor, document.Id, ct, write: true);
         if (!allowed.IsSuccess) return allowed.Error;
-        if (!await db.Set<Document>().AsNoTracking().AnyAsync(x => x.Id == document.Id && x.TextVersion == version && !x.IsDeleted, ct)
-            || !await db.Set<EmbeddingProfile>().AsNoTracking().AnyAsync(x => x.Id == profile.Id && (x.Status == "active" || x.Status == "building"), ct))
+        if (!await db.Documents.AsNoTracking().AnyAsync(x => x.Id == document.Id && x.TextVersion == version && !x.IsDeleted, ct)
+            || !await db.EmbeddingProfiles.AsNoTracking().AnyAsync(x => x.Id == profile.Id && (x.Status == "active" || x.Status == "building"), ct))
             return KnowledgeErrors.IndexSourceChanged;
         return Result.Success;
     }
     private async Task ReadyAsync(JobExecution execution, Document document, CancellationToken ct)
     {
         document.Status = "ready";
-        (await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
+        (await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
         await execution.CheckpointAsync("使用中索引已完成", document.ChunkCount, document.ChunkCount, ct);
     }
     public async Task<Result> IndexCurrentAsync(JobExecution execution, Document document, CancellationToken ct)
@@ -126,7 +125,7 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
     public async Task<Result> IndexAsync(JobExecution execution, Document document, EmbeddingProfile target, CancellationToken ct)
     {
         // 重新索引使用已儲存的頁面，並沿用來源擁有者的 ACL 與配額，不重新開啟 OCR。
-        var owner = await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == document.Id).Select(x => x.OwnerId).SingleAsync(ct);
+        var owner = await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == document.Id).Select(x => x.OwnerId).SingleAsync(ct);
         var allowed = await documents.RequireAsync(owner, document.Id, ct, write: true);
         if (!allowed.IsSuccess) return allowed.Error;
         var prepared = await PrepareAsync(execution, document, ct);

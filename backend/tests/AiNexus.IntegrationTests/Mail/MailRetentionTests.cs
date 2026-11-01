@@ -19,7 +19,7 @@ public sealed class MailRetentionTests
         var pending = await EnqueueAsync(factory, new Greeting(), "pending", "pending@company.com");
         Assert.Equal(2, await Dispatcher(factory).DispatchAsync(CancellationToken.None));
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<OutboundMessage>().Where(x => x.Id == pending)
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.Where(x => x.Id == pending)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Queued).SetProperty(x => x.SentAt, (DateTimeOffset?)null));
         var worker = ActivatorUtilities.CreateInstance<MailRetentionWorker>(factory.Services);
 
@@ -39,8 +39,8 @@ public sealed class MailRetentionTests
         Assert.Equal(new MailPurge(0, 0, 0, 1), await worker.PurgeAsync(CancellationToken.None));
         using var check = factory.Services.CreateScope();
         var db = check.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal([pending], await db.Set<OutboundMessage>().Select(x => x.Id).ToListAsync());
-        Assert.False(await db.Set<DeliveryAttempt>().AnyAsync(x => x.MessageId == old));
+        Assert.Equal([pending], await db.OutboundMessages.Select(x => x.Id).ToListAsync());
+        Assert.False(await db.DeliveryAttempts.AnyAsync(x => x.MessageId == old));
     }
 
     [Fact]

@@ -49,7 +49,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         var user = new User { Id = id, Sid = sid, AdAccount = UserAccounts.Normalize(UserAccounts.AccountName(account)), DisplayName = profile.DisplayName, LastSeenAt = now };
         if (DirectoryEmail(profile.Email) is { } email) { user.Email = email; user.EmailSource = EmailSources.Directory; user.EmailVerifiedAt = now; }
         db.Users.Add(user);
-        db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
+        db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
         await NewUserOrder.AppendAsync(db, user, ct);
         return user;
     }

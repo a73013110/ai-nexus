@@ -28,15 +28,15 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
     DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder MapCollection(RouteGroupBuilder routes) => routes
-        .MapPost("/collections/{id:guid}/documents", async (Guid id, AddDocumentRequest request, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, request.AttachmentId, ct)).ToHttpResult())
+        .MapPost("/collections/{id:guid}/documents", (Guid id, AddDocumentRequest request, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, request.AttachmentId, ct))
         .Audited(KnowledgeAudit.DocumentCreated)
         .WithName("AddKnowledgeDocument");
 
     /// <summary>把附件讀成獨立文件，供對話中的文件檢視器使用。</summary>
     public static RouteHandlerBuilder MapAttachment(RouteGroupBuilder api) => api
-        .MapPost("/attachments/{id:guid}/document", async (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, null, id, ct)).ToHttpResult())
+        .MapPost("/attachments/{id:guid}/document", (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, null, id, ct))
         .RequireAuthorization(Policies.Attachments).Audited(KnowledgeAudit.DocumentCreated).WithName("ReadAttachmentDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
@@ -53,14 +53,14 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
             var file = owned.Value;
             if (collection is null)
             {
-                var existing = await (from doc in db.Set<Document>() join ownerResource in db.Set<Resource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
+                var existing = await (from doc in db.Documents join ownerResource in db.Resources on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
                 if (existing is not null) return await documents.DescribeAsync(actor, existing, ct);
             }
             else
             {
-                var existing = await db.Set<Document>().SingleOrDefaultAsync(x => x.CollectionId == collection && x.AttachmentId == attachment && !x.IsDeleted, ct);
+                var existing = await db.Documents.SingleOrDefaultAsync(x => x.CollectionId == collection && x.AttachmentId == attachment && !x.IsDeleted, ct);
                 if (existing is not null) return await documents.DescribeAsync(actor, existing, ct);
-                if (await db.Set<Document>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted, ct) >= options.Value.Indexing.MaxDocumentsPerCollection)
+                if (await db.Documents.CountAsync(x => x.CollectionId == collection && !x.IsDeleted, ct) >= options.Value.Indexing.MaxDocumentsPerCollection)
                     return KnowledgeErrors.DocumentLimit;
             }
             var now = clock.GetUtcNow();
@@ -69,12 +69,12 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
             if (text is not null) { document.TextContent = text.Text; document.TextVersion = 1; }
             db.Add(resource); db.Add(document); db.Add(new ResourceAttachment { ResourceId = resource.Id, AttachmentId = file.Id });
             if (collection is not null || project is not null)
-                await db.Set<Attachment>().Where(x => x.Id == file.Id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
+                await db.Attachments.Where(x => x.Id == file.Id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             // 同一原始檔不會改變，已完成的擷取可直接複製；但每個知識庫仍各自保有 ACL 與索引。
-            var extracted = await db.Set<Document>().AsNoTracking().Where(x => x.AttachmentId == attachment && !x.IsDeleted && x.Status == "ready").OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
+            var extracted = await db.Documents.AsNoTracking().Where(x => x.AttachmentId == attachment && !x.IsDeleted && x.Status == "ready").OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
             if (extracted is not null)
             {
-                var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == extracted.Id).ToListAsync(ct);
+                var pages = await db.DocumentPages.AsNoTracking().Where(x => x.DocumentId == extracted.Id).ToListAsync(ct);
                 foreach (var page in pages) db.Add(new DocumentPage { DocumentId = document.Id, PageNumber = page.PageNumber, Text = page.Text, Extraction = page.Extraction, NeedsReview = page.NeedsReview });
                 document.Warning = extracted.Warning;
             }

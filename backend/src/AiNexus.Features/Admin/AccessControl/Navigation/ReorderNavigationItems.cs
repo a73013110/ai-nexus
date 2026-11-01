@@ -35,31 +35,32 @@ internal sealed class NavigationOrderRequestValidator : RequestValidator<Navigat
 /// 拖曳或鍵盤排序後一次送出的移動與排序。套到完整的節點清單後才檢查結構（父節點、成環、深度、同層重複），
 /// 全部通過才寫入；同一個交易，不會留下移了一半的樹。會稽核。
 /// </summary>
-internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeAudit audit)
+internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/navigation-items/order", async (NavigationOrderRequest body, IRequestActor actor, ReorderNavigationItems handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, body, ct)).ToHttpResult())
+        .MapPut("/navigation-items/order", (NavigationOrderRequest body, IRequestActor actor, ReorderNavigationItems handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
         .Audited(AccessControlAudit.NavigationReordered)
         .WithName("ReorderNavigationItems");
 
     public Task<Result> HandleAsync(Guid actor, NavigationOrderRequest request, CancellationToken ct)
     {
         var ids = request.Items.Select(x => x.Id).ToArray();
-        return audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, "order", token => SnapshotAsync(ids, token), async () =>
+        return write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlNavigation, "order", token => SnapshotAsync(ids, token)), async () =>
         {
-            var items = await db.Set<NavigationItem>().ToListAsync(ct);
+            var items = await db.NavigationItems.ToListAsync(ct);
             var byId = items.ToDictionary(x => x.Id, StringComparer.Ordinal);
             foreach (var move in request.Items)
             {
                 if (!byId.TryGetValue(move.Id, out var item)) return AccessControlErrors.NavigationItemNotFound;
                 item.ParentId = move.ParentId; item.SortOrder = move.SortOrder;
             }
-            // 失敗時 AdministrativeAudit 不會 SaveChanges，並在寫失敗稽核前清空 ChangeTracker，上面改到一半的實體不會寫入。
+            // 失敗時 AdministrativeWrite 不會 SaveChanges，並在寫失敗稽核前清空 ChangeTracker，上面改到一半的實體不會寫入。
             return NavigationRules.Structure(items) is { } invalid ? invalid : Result.Success;
         }, ct);
     }
 
     private async Task<object?> SnapshotAsync(IReadOnlyList<string> ids, CancellationToken ct)
-        => await db.Set<NavigationItem>().AsNoTracking().Where(x => ids.Contains(x.Id)).OrderBy(x => x.Id)
+        => await db.NavigationItems.AsNoTracking().Where(x => ids.Contains(x.Id)).OrderBy(x => x.Id)
             .Select(x => new { x.Id, x.ParentId, x.SortOrder }).ToArrayAsync(ct);
 }

@@ -1,4 +1,3 @@
-using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Dashboard;
@@ -8,7 +7,6 @@ public sealed class DashboardModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddFeaturePolicy(FeatureCatalog.Dashboard);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => GetDashboard.Map(api);

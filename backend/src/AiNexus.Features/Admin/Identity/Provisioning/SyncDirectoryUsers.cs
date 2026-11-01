@@ -28,7 +28,8 @@ internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory
 {
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/directory-syncs", (DirectorySyncRequest body, ICurrentUser user, SyncDirectoryUsers handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .MapPost("/directory-syncs", (DirectorySyncRequest body, ICurrentUser user, SyncDirectoryUsers handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)
         .Audited(IdentityAudit.DirectoryBatchSynced)
         .WithName("SyncDirectoryUsers");

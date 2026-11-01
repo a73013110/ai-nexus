@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
@@ -16,9 +15,9 @@ public sealed record SelectBranchRequest(Guid LeafId);
 internal sealed class SelectBranch(AppDbContext db, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPatch("/{id:guid}/branch", async (
+        .MapPatch("/{id:guid}/branch", (
                 Guid id, SelectBranchRequest body, ICurrentUser user, SelectBranch handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body.LeafId, ct)).ToHttpResult())
+            handler.HandleAsync(user.Id, id, body.LeafId, ct))
         .NotAudited("切換顯示的分支，只影響自己的畫面")
         .WithName("SelectBranch");
 
@@ -28,7 +27,7 @@ internal sealed class SelectBranch(AppDbContext db, GenerationScheduler schedule
         var conversation = await db.OwnedConversationAsync(owner, id, ct);
         if (conversation is null) return ConversationsErrors.NotFound;
         if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
-        if (!await db.Set<Message>().AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationsErrors.MessageNotFound;
+        if (!await db.Messages.AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationsErrors.MessageNotFound;
         conversation.ActiveLeafId = leaf;
         conversation.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);

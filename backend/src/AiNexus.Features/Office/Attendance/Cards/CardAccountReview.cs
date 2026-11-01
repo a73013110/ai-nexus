@@ -1,6 +1,5 @@
 using System.Globalization;
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Accounts;
 using Microsoft.EntityFrameworkCore;
@@ -23,16 +22,16 @@ internal sealed class CardAccountReview(AppDbContext db, IActiveUsers activeUser
     {
         var now = clock.GetUtcNow();
         var active = activeUsers.Ids;
-        var assignments = db.Set<CardAssignment>().AsNoTracking();
+        var assignments = db.CardAssignments.AsNoTracking();
         var held = await assignments.UnendedAt(now).Where(x => x.UserId != null && !active.Contains(x.UserId.Value)).ToDtos(db).ToListAsync(ct);
         var heldIds = held.Select(x => x.Id).ToArray();
-        var lastPunches = await db.Set<AttributedPunch>().Where(x => x.AssignmentId != null && heldIds.Contains(x.AssignmentId.Value))
+        var lastPunches = await db.AttributedPunches.Where(x => x.AssignmentId != null && heldIds.Contains(x.AssignmentId.Value))
             .GroupBy(x => x.AssignmentId!.Value).Select(x => new { x.Key, Last = x.Max(y => y.PunchedAt) }).ToDictionaryAsync(x => x.Key, x => x.Last, ct);
 
         var unended = assignments.UnendedAt(now).Where(x => x.UserId != null).Select(x => x.UserId!.Value);
         var lost = await assignments.Where(x => x.UserId != null && active.Contains(x.UserId.Value) && !unended.Contains(x.UserId.Value))
             .GroupBy(x => x.UserId!.Value).Select(x => x.OrderByDescending(y => y.EndsAt).First().Id).ToListAsync(ct);
-        var hidden = db.Set<Card>().Where(x => x.HiddenFromRecords).Select(x => x.Id);
+        var hidden = db.Cards.Where(x => x.HiddenFromRecords).Select(x => x.Id);
         var last = await assignments.Where(x => lost.Contains(x.Id) && !hidden.Contains(x.CardId)).ToDtos(db).ToListAsync(ct);
         var cards = last.Select(x => x.CardId).ToArray();
         var holders = await assignments.Where(x => cards.Contains(x.CardId)).UnendedAt(now).ToDtos(db).ToListAsync(ct);

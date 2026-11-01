@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.Organization;
 
 /// <summary>
-/// 單位樹需要查資料的規則，在 <c>AdministrativeAudit</c> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
+/// 單位樹需要查資料的規則，在 <c>AdministrativeWrite</c> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
 /// 結構規則一律套在「變更後的完整單位清單」上檢查，新增、修改與排序共用同一套判斷。
 /// </summary>
 internal static class UnitRules
@@ -55,15 +56,21 @@ internal static class UnitRules
             yield return at;
     }
 
+    /// <summary>新增、修改與刪除單位共用的寫入對象（稽核 <c>admin.organization_unit*</c>）。</summary>
+    public static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(FeatureCatalog.Organization, id, ct => SnapshotAsync(db, id, ct));
+
+    /// <summary>加入、修改與移除成員共用的寫入對象；快照是這位使用者的所有單位。</summary>
+    public static AuditTarget MemberTarget(AppDbContext db, Guid id, Guid userId) => new(FeatureCatalog.Organization, id, userId.ToString(), ct => MembershipsAsync(db, userId, ct));
+
     /// <summary>
     /// 新增、修改與刪除單位共用的稽核快照（<c>admin.organization_unit*</c>）。<c>parentManagerIds</c> 是上層目前勾選的主管：
     /// 設成首長單位會在同一個交易內取消它們，前後快照才看得出來。
     /// </summary>
     public static async Task<object?> SnapshotAsync(AppDbContext db, Guid id, CancellationToken ct)
-        => await db.Set<Unit>().AsNoTracking().Where(x => x.Id == id).Select(x => new
+        => await db.Units.AsNoTracking().Where(x => x.Id == id).Select(x => new
         {
             x.ParentId, x.Name, x.Enabled, x.SortOrder, x.HeadRank,
-            ParentManagerIds = db.Set<UnitMember>().Where(y => y.UnitId == x.ParentId && y.IsManager).OrderBy(y => y.UserId).Select(y => y.UserId).ToArray(),
+            ParentManagerIds = db.UnitMembers.Where(y => y.UnitId == x.ParentId && y.IsManager).OrderBy(y => y.UserId).Select(y => y.UserId).ToArray(),
         }).SingleOrDefaultAsync(ct);
 
     /// <summary>
@@ -72,7 +79,7 @@ internal static class UnitRules
     /// </summary>
     public static Task ClearLedManagersAsync(AppDbContext db, Unit unit, CancellationToken ct)
         => unit is { HeadRank: not null, ParentId: { } parent }
-            ? db.Set<UnitMember>().Where(x => x.UnitId == parent && x.IsManager).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false), ct)
+            ? db.UnitMembers.Where(x => x.UnitId == parent && x.IsManager).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsManager, false), ct)
             : Task.CompletedTask;
 
     /// <summary>
@@ -82,7 +89,7 @@ internal static class UnitRules
         => new
         {
             userId,
-            memberships = await db.Set<UnitMember>().AsNoTracking().Where(x => x.UserId == userId).OrderBy(x => x.UnitId)
+            memberships = await db.UnitMembers.AsNoTracking().Where(x => x.UserId == userId).OrderBy(x => x.UnitId)
                 .Select(x => new { x.UnitId, x.IsPrimary, x.IsManager }).ToArrayAsync(ct),
         };
 }

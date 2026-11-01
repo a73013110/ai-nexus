@@ -48,10 +48,10 @@ public static class PunchImportPlanner
     /// </summary>
     internal static IQueryable<PunchFileState> States(AppDbContext db, string? fileName = null)
     {
-        var files = db.Set<PunchFile>().AsNoTracking();
+        var files = db.PunchFiles.AsNoTracking();
         if (fileName is not null) files = files.Where(x => x.FileName == fileName);
         return from file in files
-               join import in db.Set<PunchImport>().AsNoTracking() on file.LastImportId equals import.Id into imports
+               join import in db.PunchImports.AsNoTracking() on file.LastImportId equals import.Id into imports
                from last in imports.DefaultIfEmpty()
                select new PunchFileState(file, last);
     }

@@ -74,7 +74,7 @@ public sealed partial class MailDispatcher(
         if (settings.MaxPerDay > 0)
         {
             var day = now.AddDays(-1);
-            wanted = Math.Min(wanted, settings.MaxPerDay - await db.Set<OutboundMessage>().CountAsync(x => x.SentAt >= day, stop));
+            wanted = Math.Min(wanted, settings.MaxPerDay - await db.OutboundMessages.CountAsync(x => x.SentAt >= day, stop));
             if (wanted <= 0) return 0;
         }
         var allowed = throttle.Take(wanted);
@@ -131,7 +131,7 @@ public sealed partial class MailDispatcher(
     private async Task<bool> DeliverAsync(AppDbContext db, MailContents contents, IMailSession session, Guid id, Guid lease, bool autoRetry, CancellationToken stop)
     {
         db.ChangeTracker.Clear();
-        var message = await db.Set<OutboundMessage>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.LeaseToken == lease, stop);
+        var message = await db.OutboundMessages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.LeaseToken == lease, stop);
         if (message is null) return false;
         var settings = options.Value;
         var started = clock.GetUtcNow();
@@ -140,7 +140,7 @@ public sealed partial class MailDispatcher(
             await FinishAsync(db, message, lease, started, refused, null);
             return false;
         }
-        var content = await db.Set<OutboundMessageContent>().AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id, stop);
+        var content = await db.OutboundMessageContents.AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id, stop);
         if ((content is null ? null : contents.Read(content)) is not { } body)
         {
             await FinishAsync(db, message, lease, started, Local(MailErrors.ContentUnavailable.Code), null);
@@ -218,7 +218,7 @@ public sealed partial class MailDispatcher(
         var transportName = transport.Name;
 
         await using var transaction = await db.Database.BeginTransactionAsync(CancellationToken.None);
-        var updated = await db.Set<OutboundMessage>().Where(x => x.Id == message.Id && x.LeaseToken == lease && x.Status == MailStates.Sending)
+        var updated = await db.OutboundMessages.Where(x => x.Id == message.Id && x.LeaseToken == lease && x.Status == MailStates.Sending)
             .ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Status, status)
                 .SetProperty(x => x.LeaseToken, (Guid?)null)
@@ -233,7 +233,7 @@ public sealed partial class MailDispatcher(
                 .SetProperty(x => x.UpdatedAt, now), CancellationToken.None);
         // 租約已被接手（寄送超過 LeaseDuration）：結果交給新的持有者，不覆寫。
         if (updated == 0) return;
-        if (purge) await db.Set<OutboundMessageContent>().Where(x => x.MessageId == message.Id).ExecuteDeleteAsync(CancellationToken.None);
+        if (purge) await db.OutboundMessageContents.Where(x => x.MessageId == message.Id).ExecuteDeleteAsync(CancellationToken.None);
         db.Add(new DeliveryAttempt
         {
             MessageId = message.Id,
@@ -257,7 +257,7 @@ public sealed partial class MailDispatcher(
     private async Task ReleaseAsync(AppDbContext db, List<Guid> ids, Guid lease)
     {
         var now = clock.GetUtcNow();
-        var released = await db.Set<OutboundMessage>().Where(x => ids.Contains(x.Id) && x.LeaseToken == lease && x.Status == MailStates.Sending)
+        var released = await db.OutboundMessages.Where(x => ids.Contains(x.Id) && x.LeaseToken == lease && x.Status == MailStates.Sending)
             .ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Status, MailStates.Queued)
                 .SetProperty(x => x.Attempts, x => x.Attempts - 1)
@@ -273,7 +273,7 @@ public sealed partial class MailDispatcher(
         var abandoned = claimed.Where(x => x.PreviousStatus == MailStates.Sending && x.Attempts > 1).ToList();
         if (abandoned.Count == 0) return;
         var ids = abandoned.Select(x => x.Id).ToList();
-        var recorded = await db.Set<DeliveryAttempt>().Where(x => ids.Contains(x.MessageId)).Select(x => new { x.MessageId, x.Attempt }).ToListAsync(CancellationToken.None);
+        var recorded = await db.DeliveryAttempts.Where(x => ids.Contains(x.MessageId)).Select(x => new { x.MessageId, x.Attempt }).ToListAsync(CancellationToken.None);
         foreach (var claim in abandoned.Where(x => !recorded.Any(r => r.MessageId == x.Id && r.Attempt == x.Attempts - 1)))
             db.Add(new DeliveryAttempt { MessageId = claim.Id, Attempt = claim.Attempts - 1, Transport = transport.Name, StartedAt = now, FinishedAt = now, Outcome = MailAttemptOutcomes.Abandoned });
         await db.SaveChangesAsync(CancellationToken.None);
@@ -283,7 +283,7 @@ public sealed partial class MailDispatcher(
     private async Task AdvanceAsync(AppDbContext db, string reason, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var advanced = await db.Set<OutboundMessage>()
+        var advanced = await db.OutboundMessages
             .Where(x => x.Status == MailStates.Queued && x.NextAttemptAt > now && x.ErrorCode != null && Deferrable.Contains(x.ErrorCode))
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.NextAttemptAt, now).SetProperty(x => x.UpdatedAt, now), ct);
         if (advanced > 0) LogQueueAdvanced(logger, advanced, reason);

@@ -42,7 +42,7 @@ public sealed class ModelVisibilityTests
         Assert.DoesNotContain("test-model", await cancelled.Content.ReadAsStringAsync());
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal("test-model", (await db.Runs.SingleAsync()).ModelId);
+        Assert.Equal("test-model", (await db.GenerationRuns.SingleAsync()).ModelId);
     }
 
     [Fact]

@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
-using AiNexus.Data.App.Inference;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Platform.Inference.Models;
@@ -67,7 +65,7 @@ public sealed class ModelPolicyService(
     /// <summary>使用者的個人策略；沒有資料列時兩項皆為「未設定」。</summary>
     internal async Task<ModelPolicyRequest> PersonalAsync(Guid owner, CancellationToken ct)
     {
-        var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
+        var personal = await db.UserModelPolicies.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
         return Read(personal?.AllowedModelsJson, personal?.DailyTokenLimitsJson);
     }
 
@@ -115,7 +113,7 @@ public sealed class ModelPolicyService(
         var grants = await access.ForUserAsync(owner, ct);
         var groups = grants.Groups.Select(x => x.Id).ToArray();
 
-        var policies = await db.Set<GroupModelPolicy>()
+        var policies = await db.GroupModelPolicies
             .AsNoTracking()
             .Where(x => groups.Contains(x.GroupId))
             .ToListAsync(ct);
@@ -134,7 +132,7 @@ public sealed class ModelPolicyService(
         var end = start.AddDays(1);
 
         // 對話生成與其他背景任務都會消耗同一份每日配額，因此兩邊的用量要合併計算
-        var chatRunsQuery = db.Runs
+        var chatRunsQuery = db.GenerationRuns
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end)
             .Select(x => new
@@ -146,7 +144,7 @@ public sealed class ModelPolicyService(
                 Active = x.ActiveOwnerId != null
             });
 
-        var taskInvocationsQuery = db.Set<ModelInvocation>()
+        var taskInvocationsQuery = db.ModelInvocations
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end && x.Kind != "embedding" && x.Kind != "web-search")
             .Select(x => new

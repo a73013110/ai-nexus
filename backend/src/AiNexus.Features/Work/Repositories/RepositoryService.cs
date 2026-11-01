@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Repositories;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,7 +28,7 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
 
     public async Task<RepositoryStatusDto> StatusAsync(Guid owner, CancellationToken ct)
     {
-        var connection = await db.Set<RepositoryConnection>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner, ct);
+        var connection = await db.RepositoryConnections.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner, ct);
         var connected = connection is not null && connection.BaseUrl == BaseUrl;
         return new(Enabled, connected, BaseUrl, connected ? connection!.Login : null, connected ? connection!.ConnectedAt : null);
     }
@@ -40,14 +39,14 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     public async Task<Result<JsonDocument>> GetAsync(Guid owner, string path, CancellationToken ct)
     {
         var access = await TokenAsync(owner, ct);
-        return access.IsSuccess ? Result<JsonDocument>.Ok(await client.GetAsync(access.Value!, path, ct)) : access.Error!;
+        return access.IsSuccess ? Result<JsonDocument>.Ok(await client.GetAsync(access.Value, path, ct)) : access.Error;
     }
 
     /// <summary>要求 JSON 陣列回應；其他形狀代表 Gitea 回應格式不正確，直接拋出例外。</summary>
     public async Task<Result<JsonDocument>> GetListAsync(Guid owner, string path, CancellationToken ct)
     {
         var read = await GetAsync(owner, path, ct);
-        if (read.IsSuccess && read.Value!.RootElement.ValueKind != JsonValueKind.Array)
+        if (read.IsSuccess && read.Value.RootElement.ValueKind != JsonValueKind.Array)
         {
             read.Value.Dispose();
             throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
@@ -58,7 +57,7 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     public async Task<Result<JsonDocument>> PostCommentAsync(Guid owner, string repo, int number, string body, CancellationToken ct)
     {
         var access = await TokenAsync(owner, ct);
-        return access.IsSuccess ? Result<JsonDocument>.Ok(await client.PostCommentAsync(access.Value!, Route(repo) + "/issues/" + number + "/comments", body, ct)) : access.Error!;
+        return access.IsSuccess ? Result<JsonDocument>.Ok(await client.PostCommentAsync(access.Value, Route(repo) + "/issues/" + number + "/comments", body, ct)) : access.Error;
     }
 
     public async Task<Result> RequireCommitAsync(Guid owner, string repo, string commit, CancellationToken ct)
@@ -66,8 +65,8 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         var read = await GetAsync(owner, CommitRoute(repo, commit), ct);
-        if (!read.IsSuccess) return read.Error!;
-        read.Value!.Dispose();
+        if (!read.IsSuccess) return read.Error;
+        read.Value.Dispose();
         return Result.Success;
     }
 
@@ -77,10 +76,10 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!IsCommit(head) || (basis is not null && !IsCommit(basis))) return RepositoriesErrors.InvalidCommit;
         var access = await TokenAsync(owner, ct);
-        if (!access.IsSuccess) return access.Error!;
+        if (!access.IsSuccess) return access.Error;
         var route = Route(repo);
         var path = basis is null ? route + "/git/commits/" + head + ".diff" : route + "/compare/" + basis + ".." + head + "?output=diff";
-        var diff = await client.GetTextAsync(access.Value!, path, MaxDiffBytes, ct);
+        var diff = await client.GetTextAsync(access.Value, path, MaxDiffBytes, ct);
         if (diff is null) return RepositoriesErrors.DiffLimit;
         if (!string.IsNullOrWhiteSpace(diff) && !diff.TrimStart().StartsWith("diff --git ", StringComparison.Ordinal)) return RepositoriesErrors.DiffUnsupported;
         return diff;
@@ -98,8 +97,8 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
         if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         if (!IsFilePath(path, false)) return RepositoriesErrors.InvalidPath;
         var read = await GetAsync(owner, ContentsRoute(repo, path, commit), ct);
-        if (!read.IsSuccess) return read.Error!;
-        using var json = read.Value!;
+        if (!read.IsSuccess) return read.Error;
+        using var json = read.Value;
         var root = json.RootElement;
         if (root.ValueKind != JsonValueKind.Object || GiteaJson.Text(root, "type", 16) != "file") return RepositoriesErrors.NotText;
         var size = GiteaJson.Number(root, "size");
@@ -119,11 +118,11 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     {
         if (token is { } cached) return cached;
         if (!Enabled) return RepositoriesErrors.Disabled;
-        var connection = await db.Set<RepositoryConnection>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.BaseUrl == BaseUrl, ct);
+        var connection = await db.RepositoryConnections.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.BaseUrl == BaseUrl, ct);
         if (connection is null) return RepositoriesErrors.NotConnected;
         try { token = Protector(owner).Unprotect(connection.ProtectedToken); }
         catch (CryptographicException) { token = RepositoriesErrors.ReconnectRequired; }
-        return token.Value;
+        return token;
     }
 
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), BaseUrl);

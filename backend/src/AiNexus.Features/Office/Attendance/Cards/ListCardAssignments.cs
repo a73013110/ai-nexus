@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -13,16 +12,17 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 internal sealed class ListCardAssignments(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (Guid? cardId, Guid? userId, ListCardAssignments handler, CancellationToken ct) => handler.HandleAsync(cardId, userId, ct).ToHttpResultAsync())
+        .MapGet("", (Guid? cardId, Guid? userId, ListCardAssignments handler, CancellationToken ct) =>
+            handler.HandleAsync(cardId, userId, ct))
         .Audited(AttendanceAudit.AssignmentRead)
         .WithName("ListAttendanceCardAssignments");
 
-    public async Task<Result<IReadOnlyList<CardAssignmentDto>>> HandleAsync(Guid? cardId, Guid? userId, CancellationToken ct)
+    public async Task<Result<CardAssignmentDto[]>> HandleAsync(Guid? cardId, Guid? userId, CancellationToken ct)
     {
         if (cardId is null && userId is null) return AttendanceErrors.FilterInvalid;
-        var query = db.Set<CardAssignment>().AsNoTracking();
+        var query = db.CardAssignments.AsNoTracking();
         if (cardId is { } card) query = query.Where(x => x.CardId == card);
         if (userId is { } user) query = query.Where(x => x.UserId == user);
-        return Result<IReadOnlyList<CardAssignmentDto>>.Ok(await query.OrderByDescending(x => x.StartsAt).ThenByDescending(x => x.Id).ToDtos(db).ToListAsync(ct));
+        return await query.OrderByDescending(x => x.StartsAt).ThenByDescending(x => x.Id).ToDtos(db).ToArrayAsync(ct);
     }
 }

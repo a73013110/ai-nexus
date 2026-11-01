@@ -17,8 +17,8 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("", async (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
+        .MapPut("", (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, request, ct))
         .Audited(KnowledgeAudit.ConversationCollectionUpdated)
         .WithName("SaveConversationKnowledge");
 
@@ -31,8 +31,8 @@ internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationSer
         if (!owned.IsSuccess) return owned.Error;
         var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
         if (!allowed.IsSuccess) return allowed.Error;
-        if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
-        var existing = await db.Set<ConversationCollection>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
+        if (await db.GenerationRuns.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
+        var existing = await db.ConversationCollections.Where(x => x.ConversationId == conversation).ToListAsync(ct);
         db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));
         db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationCollection { ConversationId = conversation, CollectionId = x }));
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

@@ -22,7 +22,7 @@ internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope,
 
     public static void Map(RouteGroupBuilder audit) => audit
         .MapGet("/export", ([AsParameters] ActivityAuditFilter filter, ICurrentUser user, ExportActivityAudit handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, filter, ct).ToHttpResultAsync(file => file.ToHttpResult()))
+            handler.HandleAsync(user.Id, filter, ct).ToFileResultAsync())
         .RequireRateLimiting(AuditModule.ExportRateLimit).Audited(AuditAudit.EventExported).WithName("ExportActivityAudit");
 
     public async Task<Result<ExportFile>> HandleAsync(Guid actor, ActivityAuditFilter filter, CancellationToken ct)

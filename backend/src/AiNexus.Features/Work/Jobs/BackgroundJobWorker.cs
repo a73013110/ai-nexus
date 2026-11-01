@@ -43,7 +43,7 @@ public sealed partial class BackgroundJobWorker(
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = clock.GetUtcNow();
-        var candidate = await db.Set<BackgroundJob>().AsNoTracking()
+        var candidate = await db.BackgroundJobs.AsNoTracking()
             .Where(Claimable(now))
             .OrderBy(x => x.CreatedAt)
             .Select(x => (Guid?)x.Id)
@@ -52,7 +52,7 @@ public sealed partial class BackgroundJobWorker(
 
         // 以條件式 UPDATE 認領工作：只有仍是可認領狀態的列會被改寫，其他 worker 搶到就直接放棄這次嘗試。
         var lease = Guid.NewGuid();
-        var claimed = await db.Set<BackgroundJob>()
+        var claimed = await db.BackgroundJobs
             .Where(Claimable(now))
             .Where(x => x.Id == id)
             .ExecuteUpdateAsync(p => p
@@ -63,13 +63,13 @@ public sealed partial class BackgroundJobWorker(
                 .SetProperty(x => x.UpdatedAt, now), stop);
         if (claimed != 1) return true;
 
-        var job = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id, stop);
+        var job = await db.BackgroundJobs.AsNoTracking().SingleAsync(x => x.Id == id, stop);
         if (job.TraceId is null || job.ParentSpanId is null || job.OperationId == Guid.Empty)
         {
             job.TraceId ??= ActivityTraceId.CreateRandom().ToHexString();
             job.ParentSpanId ??= ActivitySpanId.CreateRandom().ToHexString();
             job.OperationId = job.Id;
-            await db.Set<BackgroundJob>()
+            await db.BackgroundJobs
                 .Where(x => x.Id == id && x.LeaseToken == lease)
                 .ExecuteUpdateAsync(p => p
                     .SetProperty(x => x.TraceId, job.TraceId)
@@ -152,7 +152,7 @@ public sealed partial class BackgroundJobWorker(
             _ => "需要重試",
         };
         await using var completion = await db.Database.BeginTransactionAsync(CancellationToken.None);
-        var finished = await db.Set<BackgroundJob>()
+        var finished = await db.BackgroundJobs
             .Where(x => x.Id == id && x.LeaseToken == lease && x.Status == RunStates.Running)
             .ExecuteUpdateAsync(p => p
                 // 取消要求以資料庫當下的值為準：執行期間才送達的取消也會收尾為 cancelled。
@@ -167,7 +167,7 @@ public sealed partial class BackgroundJobWorker(
                 .SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), CancellationToken.None);
         if (finished == 1)
         {
-            var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id, CancellationToken.None);
+            var final = await db.BackgroundJobs.AsNoTracking().SingleAsync(x => x.Id == id, CancellationToken.None);
             var isRepositoryReview = final.Kind == "repository-review";
             var (level, title) = final.Status switch
             {
@@ -202,7 +202,7 @@ public sealed partial class BackgroundJobWorker(
                 await Task.Delay(2000, ct);
                 using var scope = scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var count = await db.Set<BackgroundJob>()
+                var count = await db.BackgroundJobs
                     .Where(x => x.Id == id && x.LeaseToken == lease && x.Status == RunStates.Running && !x.CancelRequested)
                     .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddSeconds(JobService.LeaseSeconds)), ct);
                 if (count == 0)

@@ -1,4 +1,3 @@
-using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
@@ -34,7 +33,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         var total = pdf?.NumberOfPages ?? 1;
         if (total > limits.Value.MaxPdfPages) return KnowledgeErrors.PdfPageLimit;
         document.PageCount = total;
-        var existing = await db.Set<DocumentPage>().Where(x => x.DocumentId == document.Id).ToDictionaryAsync(x => x.PageNumber, ct);
+        var existing = await db.DocumentPages.Where(x => x.DocumentId == document.Id).ToDictionaryAsync(x => x.PageNumber, ct);
         await execution.CheckpointAsync("讀取文件", existing.Count, total, ct);
         var characters = existing.Values.Sum(x => x.Text.Length);
         for (var number = 1; number <= total; number++)
@@ -88,7 +87,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         await execution.CheckpointAsync("文件文字已完成", total, total, ct);
         if (document.CollectionId is not null) return await indexer.QueueAsync(execution, document, ct);
         document.Status = "ready";
-        (await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
+        (await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
         await execution.CheckpointAsync("處理完成", total, total, ct);
         return Result.Success;
     }

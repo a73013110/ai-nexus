@@ -10,18 +10,16 @@ namespace AiNexus.Features.Admin.Operations;
 /// </summary>
 public sealed class OperationsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-        => builder.Services.AddFeaturePolicy(FeatureCatalog.OperationsUsage);
+    public static void AddServices(IHostApplicationBuilder builder) { }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 每個端點由呼叫它的頁面授權，所以同一個 /admin 前綴依授權各開一組。
-        RouteGroupBuilder Admin(string policy) => api.MapGroup("/admin").RequireAuthorization(policy);
-        GetAdminCatalog.Map(Admin(Policies.AccessCatalog));
-        var users = Admin(Policies.IdentityUsers);
+        GetAdminCatalog.Map(api.MapGroup("/admin").RequireAuthorization(Policies.AccessCatalog));
+        var users = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
         ListAdminUsers.Map(users);
         GetAdminUserInsights.Map(users);
-        SaveRoleGroup.Map(Admin(Policies.AccessControlGroups));
-        GetAdminUsage.Map(Admin(Policies.OperationsUsage));
+        SaveRoleGroup.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlGroups));
+        GetAdminUsage.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.OperationsUsage));
     }
 }

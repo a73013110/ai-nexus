@@ -13,7 +13,7 @@ internal sealed class GetRun(RunService runs, ModelPresentation presentation)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/runs/{id:guid}", (Guid id, ICurrentUser user, GetRun handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, ct))
         .NotAudited("生成中的輪詢，開啟對話與送出訊息已留證")
         .WithName("GetRun");
 

@@ -19,8 +19,8 @@ public sealed record AdminConversationPageDto(IReadOnlyList<AdminConversationDto
 internal sealed class ListAdminUserConversations(AppDbContext db, AccessService access, AuditTrail audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/users/{id:guid}/conversations", async (Guid id, string? search, int? offset, bool? includeDeleted, ICurrentUser user, ListAdminUserConversations handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, search, offset ?? 0, includeDeleted ?? false, ct)).ToHttpResult())
+        .MapGet("/users/{id:guid}/conversations", (Guid id, string? search, int? offset, bool? includeDeleted, ICurrentUser user, ListAdminUserConversations handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, search, offset ?? 0, includeDeleted ?? false, ct))
         .Audited(ConversationsAudit.UserConversationRead)
         .WithName("ListAdminUserConversations");
 

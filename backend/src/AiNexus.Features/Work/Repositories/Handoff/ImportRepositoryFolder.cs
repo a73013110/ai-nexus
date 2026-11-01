@@ -33,22 +33,22 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/imports", (string owner, string name, ImportRepositoryFolderRequest body, ICurrentUser user, ImportRepositoryFolder handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, owner + "/" + name, body, ct).ToHttpResultAsync())
-        .RequireAuthorization(Policies.Knowledge).RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.FolderImported).WithName("ImportRepositoryFolder");
+            handler.HandleAsync(user.Id, owner + "/" + name, body, ct))
+        .RequireFeature(FeatureCatalog.Knowledge).RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.FolderImported).WithName("ImportRepositoryFolder");
 
     public async Task<Result<RepositoryFolderImportDto>> HandleAsync(Guid owner, string repo, ImportRepositoryFolderRequest request, CancellationToken ct)
     {
-        if (await access.RequireAsync(owner, request.CollectionId, Collection.Kind, ct, write: true) is { IsSuccess: false } denied) return denied.Error!;
+        if (await access.RequireAsync(owner, request.CollectionId, Collection.Kind, ct, write: true) is { IsSuccess: false } denied) return denied.Error;
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!RepositoryService.IsCommit(request.Commit)) return RepositoriesErrors.InvalidCommit;
         var folder = request.Path.Trim('/');
         if (!RepositoryService.IsFilePath(folder, true)) return RepositoriesErrors.InvalidPath;
         var commit = request.Commit.ToLowerInvariant();
         var listed = await ListAsync(owner, repo, commit, folder, ct);
-        if (!listed.IsSuccess) return listed.Error!;
-        var paths = listed.Value!;
-        if (paths.Count == 0) return RepositoriesErrors.ImportEmpty;
-        if (paths.Count > gitea.Options.MaxImportFiles) return RepositoriesErrors.ImportLimit;
+        if (!listed.IsSuccess) return listed.Error;
+        var paths = listed.Value;
+        if (paths.Length == 0) return RepositoriesErrors.ImportEmpty;
+        if (paths.Length > gitea.Options.MaxImportFiles) return RepositoriesErrors.ImportLimit;
         await writes.Gate.WaitAsync(ct);
         try
         {
@@ -56,18 +56,18 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
                 CollectionId = request.CollectionId, PathsJson = JsonSerializer.Serialize(paths) };
             var label = repo.Split('/')[1] + (folder.Length > 0 ? "/" + folder : "") + " · " + commit[..7];
             var job = jobs.Enqueue(owner, request.CollectionId, row.Id, RepositoryImportHandler.JobKind, string.Concat(label.Take(180)));
-            job.TotalUnits = paths.Count;
+            job.TotalUnits = paths.Length;
             row.JobId = job.Id;
             db.Add(row);
             audit.Describe(resource: request.CollectionId);
             await db.SaveChangesAsync(ct);
-            return new RepositoryFolderImportDto(row.Id, paths.Count, JobService.Describe(job));
+            return new RepositoryFolderImportDto(row.Id, paths.Length, JobService.Describe(job));
         }
         finally { writes.Gate.Release(); }
     }
 
     /// <summary>從 Gitea 的遞迴樹列出資料夾下的文字檔；超過上限就提早停止。</summary>
-    private async Task<Result<IReadOnlyList<string>>> ListAsync(Guid owner, string repo, string commit, string folder, CancellationToken ct)
+    private async Task<Result<string[]>> ListAsync(Guid owner, string repo, string commit, string folder, CancellationToken ct)
     {
         var route = RepositoryService.Route(repo);
         var tree = commit;
@@ -75,8 +75,8 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
         {
             var parent = folder.Contains('/') ? folder[..folder.LastIndexOf('/')] : "";
             var read = await gitea.GetAsync(owner, RepositoryService.ContentsRoute(repo, parent, commit), ct);
-            if (!read.IsSuccess) return read.Error!;
-            using var listing = read.Value!;
+            if (!read.IsSuccess) return read.Error;
+            using var listing = read.Value;
             var name = folder[(folder.LastIndexOf('/') + 1)..];
             tree = GiteaJson.Items(listing.RootElement).Where(x => GiteaJson.Text(x, "name", 180) == name && GiteaJson.Text(x, "type", 16) == "dir")
                 .Select(x => GiteaJson.Text(x, "sha", 64)).FirstOrDefault() ?? "";
@@ -87,8 +87,8 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
         for (var page = 1; page <= 20; page++)
         {
             var read = await gitea.GetAsync(owner, route + "/git/trees/" + tree + $"?recursive=true&page={page}&per_page=1000", ct);
-            if (!read.IsSuccess) return read.Error!;
-            using var json = read.Value!;
+            if (!read.IsSuccess) return read.Error;
+            using var json = read.Value;
             foreach (var entry in GiteaJson.Items(json.RootElement, "tree"))
             {
                 var path = GiteaJson.Text(entry, "path", 500);
@@ -99,10 +99,10 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
                 var isTextFile = TextExtensions.Contains(Path.GetExtension(fileName)) || TextNames.Contains(Path.GetFileNameWithoutExtension(fileName));
                 if (!RepositoryService.IsFilePath(full, false) || !isTextFile) continue;
                 paths.Add(full);
-                if (paths.Count > gitea.Options.MaxImportFiles) return Result<IReadOnlyList<string>>.Ok(paths);
+                if (paths.Count > gitea.Options.MaxImportFiles) return paths.ToArray();
             }
             if (!GiteaJson.Flag(json.RootElement, "truncated")) break;
         }
-        return Result<IReadOnlyList<string>>.Ok(paths);
+        return paths.ToArray();
     }
 }

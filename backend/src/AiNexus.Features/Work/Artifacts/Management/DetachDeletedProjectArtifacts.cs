@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ internal sealed class DetachDeletedProjectArtifacts(AppDbContext db) : IDomainEv
     public async Task HandleAsync(ContainerDeleted e, CancellationToken ct)
     {
         if (e.Kind != "project") return;
-        await db.Set<Artifact>()
+        await db.Artifacts
             .Where(x => x.ProjectId == e.ContainerId)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.ProjectId, (Guid?)null), ct);
     }

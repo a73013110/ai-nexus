@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -21,16 +20,17 @@ internal sealed class NavigationItemUpdateRequestValidator : RequestValidator<Na
 }
 
 /// <summary>修改分群、頁面或外部連結的內容（不改種類、不改位置）。會稽核。</summary>
-internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeAudit audit, IOptions<AccessControlOptions> settings)
+internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/navigation-items/{id}", async (string id, NavigationItemUpdateRequest body, IRequestActor actor, UpdateNavigationItem handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/navigation-items/{id}", (string id, NavigationItemUpdateRequest body, IRequestActor actor, UpdateNavigationItem handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, body, ct))
         .Audited(AccessControlAudit.NavigationUpdated)
         .WithName("UpdateNavigationItem");
 
-    public Task<Result> HandleAsync(Guid actor, string id, NavigationItemUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.AccessControlNavigation, null, id, token => NavigationRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, string id, NavigationItemUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, NavigationRules.Target(db, id), async () =>
     {
-        var items = await db.Set<NavigationItem>().ToListAsync(ct);
+        var items = await db.NavigationItems.ToListAsync(ct);
         var item = items.SingleOrDefault(x => x.Id == id);
         if (item is null) return AccessControlErrors.NavigationItemNotFound;
         if (item.Kind != request.Kind) return AccessControlErrors.NavigationKindMismatch;

@@ -33,8 +33,8 @@ public sealed class IssueCorrelationTests
         var stream = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events"); Assert.Contains(terminal.IssueCode!, stream); Assert.DoesNotContain("fixture failure", stream); Assert.DoesNotContain(Secret, stream);
         var notifications = await client.GetStringAsync("/api/v1/notifications"); Assert.Contains(terminal.IssueCode!, notifications); Assert.DoesNotContain("fixture failure", notifications);
         var item = await WaitForIssue(factory, terminal.IssueCode!); Assert.Equal(run.Id, item.RunId); Assert.Equal(run.Id, item.OperationId); Assert.NotNull(item.TraceId); Assert.DoesNotContain("fixture failure", item.ExceptionDetail ?? "");
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var persisted = await db.Runs.FindAsync(run.Id); Assert.Equal(persisted!.TraceId, item.TraceId);
-        Assert.True(await db.Set<DiagnosticEvent>().AnyAsync(x => x.TraceId == item.TraceId && x.RequestId != null));
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var persisted = await db.GenerationRuns.FindAsync(run.Id); Assert.Equal(persisted!.TraceId, item.TraceId);
+        Assert.True(await db.DiagnosticEvents.AnyAsync(x => x.TraceId == item.TraceId && x.RequestId != null));
         Assert.Equal(1, await CountIssue(factory, terminal.IssueCode!));
     }
 

@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Releases;
 using AiNexus.Platform.Auditing;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +17,6 @@ internal sealed class ListDeployments(AppDbContext db)
         .WithName("ListDeployments");
 
     public async Task<IReadOnlyList<DeploymentDto>> HandleAsync(CancellationToken ct)
-        => await db.Set<Deployment>().AsNoTracking().OrderByDescending(x => x.Id).Take(Limit)
+        => await db.Deployments.AsNoTracking().OrderByDescending(x => x.Id).Take(Limit)
             .Select(x => new DeploymentDto(x.Id, x.Component, x.Version, x.Revision, x.StartPoint, x.DeployedAt, x.Host)).ToListAsync(ct);
 }

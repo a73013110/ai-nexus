@@ -16,7 +16,7 @@ internal sealed class ListPunchImports(AppDbContext db)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid? fileId, string? fileName, string? status, DateTimeOffset? from, DateTimeOffset? until, [AsParameters] TableRequest table, ListPunchImports handler, CancellationToken ct)
-            => handler.HandleAsync(fileId, fileName, status, from, until, table, ct).ToHttpResultAsync())
+            => handler.HandleAsync(fileId, fileName, status, from, until, table, ct))
         .Audited(AttendanceAudit.ImportRead)
         .WithName("ListAttendancePunchImports");
 
@@ -24,9 +24,9 @@ internal sealed class ListPunchImports(AppDbContext db)
     {
         if (status is not null and not (PunchImportStatuses.Succeeded or PunchImportStatuses.Failed) || from > until || fileName?.Length > PunchFile.FileNameMaxLength)
             return AttendanceErrors.ImportFilterInvalid;
-        var imports = db.Set<PunchImport>().AsNoTracking();
+        var imports = db.PunchImports.AsNoTracking();
         if (fileId is { } id) imports = imports.Where(x => x.PunchFileId == id);
-        if (fileName?.Trim() is { Length: > 0 } name) imports = imports.Where(x => db.Set<PunchFile>().Any(f => f.Id == x.PunchFileId && f.FileName == name));
+        if (fileName?.Trim() is { Length: > 0 } name) imports = imports.Where(x => db.PunchFiles.Any(f => f.Id == x.PunchFileId && f.FileName == name));
         if (status is not null) imports = imports.Where(x => x.Status == status);
         if (from is { } start) imports = imports.Where(x => x.StartedAt >= start);
         if (until is { } end) imports = imports.Where(x => x.StartedAt < end);
@@ -36,7 +36,7 @@ internal sealed class ListPunchImports(AppDbContext db)
     /// <summary>欄位 ID 與 <see cref="PunchImportDto"/> 的屬性同名，前端在本機排序時直接取同名欄位。</summary>
     private TableColumns<PunchImport> Columns() => new TableColumns<PunchImport>()
         .Range("startedAt", x => x.StartedAt)
-        .Text("fileName", x => db.Set<PunchFile>().Where(f => f.Id == x.PunchFileId).Select(f => f.FileName).FirstOrDefault())
+        .Text("fileName", x => db.PunchFiles.Where(f => f.Id == x.PunchFileId).Select(f => f.FileName).FirstOrDefault())
         .Range("punchCount", x => x.PunchCount)
         .Options("triggerKind", x => x.TriggerKind)
         .Options("status", x => x.Status)

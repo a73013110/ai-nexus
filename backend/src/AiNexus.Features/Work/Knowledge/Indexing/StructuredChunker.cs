@@ -12,7 +12,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
 {
     public const int Version = 1;
     private sealed record Block(int Page, string Heading, string Text, bool Boundary, bool Table);
-    public Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages)
+    public Result<StructuredChunk[]> Chunk(IReadOnlyList<DocumentPage> pages)
     {
         var settings = options.Value; var blocks = new List<Block>(); var headings = new SortedDictionary<int, string>();
         foreach (var page in pages.OrderBy(x => x.PageNumber))
@@ -100,7 +100,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
             }
             Flush(false);
         }
-        return Result<IReadOnlyList<StructuredChunk>>.Ok(result);
+        return result.ToArray();
     }
     private static string SafePrefix(string text, int length)
     {

@@ -67,7 +67,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 ## 必須遵守
 
-- 資料庫優先：結構由開發庫匯出到 `database/App/`，EF 只做對應，不用 migration。實體與組態一表一檔放 `AiNexus.Data/App/<Module>/<Entity>.cs`（資料夾＝schema、實體＝表單數名），Features 只引用；組態不寫索引、約束、預設值與說明。
+- 資料庫優先：結構由開發庫匯出到 `database/App/`，EF 只做對應，不用 migration。實體與組態一表一檔放 `AiNexus.Data/App/<Module>/<Entity>.cs`（資料夾＝schema、實體＝表單數名），Features 只引用；`AppDbContext` 為每張表宣告屬性（屬性名＝表名），查詢一律 `db.<表名>`；組態不寫索引、約束、預設值與說明。
 - 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Area>/<Module>/`（區見 ADR 0016，只是資料夾、不是依賴邊界；模組名全域唯一）；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
 - 前端 `features/<area>/<module-kebab>/` 與後端區、模組同名（能力子資料夾也同名，唯一例外 `admin/design/`）；選單是資料（`accesscontrol.NavigationItems`），不反映在目錄。跨模組引用用 `@core`／`@shared`／`@features` 別名。
 - 頁面與動作只宣告在 `FeatureCatalog`（ID `<module>.<page>[.<action>]`，網址由它推得）；前端路由以 `data: { feature }` 指向它，後端連結用 `RouteOf`，不寫死路徑。

@@ -10,16 +10,17 @@ namespace AiNexus.Features.Office.Attendance.Calendar;
 internal sealed class ListCalendarDays(CalendarReader calendar)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("", (DateOnly? from, DateOnly? to, ListCalendarDays handler, CancellationToken ct) => handler.HandleAsync(from, to, ct).ToHttpResultAsync())
+        .MapGet("", (DateOnly? from, DateOnly? to, ListCalendarDays handler, CancellationToken ct) =>
+            handler.HandleAsync(from, to, ct))
         .Audited(AttendanceAudit.CalendarDayRead)
         .WithName("ListAttendanceCalendarDays");
 
-    public async Task<Result<IReadOnlyList<CalendarDayDto>>> HandleAsync(DateOnly? from, DateOnly? to, CancellationToken ct)
+    public async Task<Result<CalendarDayDto[]>> HandleAsync(DateOnly? from, DateOnly? to, CancellationToken ct)
     {
         if (from is not { } start || to is not { } end || end < start || !CalendarDates.IsSupported(start) || !CalendarDates.IsSupported(end)
             || end.DayNumber - start.DayNumber >= CalendarDates.MaxRangeDays)
             return AttendanceErrors.CalendarRangeInvalid;
         if (await calendar.ReadAsync(start, end, ct) is not { } days) return AttendanceErrors.GdUnavailable;
-        return Result<IReadOnlyList<CalendarDayDto>>.Ok(days);
+        return days.ToArray();
     }
 }

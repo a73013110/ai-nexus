@@ -20,8 +20,8 @@ public sealed class RoleHolderAccountReviewTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<Role>().AddRange(new Role { Id = "payroll", Name = "薪資" }, new Role { Id = "retired", Name = "舊系統", Enabled = false });
-            db.Set<UserRole>().AddRange(new UserRole { UserId = bob, RoleId = "payroll" }, new UserRole { UserId = bob, RoleId = "retired" });
+            db.Roles.AddRange(new Role { Id = "payroll", Name = "薪資" }, new Role { Id = "retired", Name = "舊系統", Enabled = false });
+            db.UserRoles.AddRange(new UserRole { UserId = bob, RoleId = "payroll" }, new UserRole { UserId = bob, RoleId = "retired" });
             await db.SaveChangesAsync();
         }
 
@@ -34,7 +34,7 @@ public sealed class RoleHolderAccountReviewTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<UserRole>().Add(new UserRole { UserId = carol, RoleId = "payroll" }); await db.SaveChangesAsync();
+            db.UserRoles.Add(new UserRole { UserId = carol, RoleId = "payroll" }); await db.SaveChangesAsync();
         }
         Assert.Empty(await ReviewCodesAsync(admin, bob));
     }

@@ -65,7 +65,7 @@ public sealed class ReportSpendTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             // 計費上線前的執行紀錄沒有費用紀錄。
-            Assert.Equal(1, await db.Set<ModelCharge>().Where(x => x.Id == run.Id).ExecuteDeleteAsync());
+            Assert.Equal(1, await db.ModelCharges.Where(x => x.Id == run.Id).ExecuteDeleteAsync());
             foreach (var (amount, state) in new[] { (2m, "metered"), ((decimal?)null, "failed"), (null, "pending") })
                 db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = owner, ConversationId = conversation.Id, Provider = "google", ModelId = "test-model", Currency = "USD", Kind = "api", Amount = amount, State = state, CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();

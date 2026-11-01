@@ -1,10 +1,5 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Billing;
 using AiNexus.Data.App.Conversations;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Knowledge;
-using AiNexus.Data.App.Quality;
-using AiNexus.Data.App.WebSearch;
 using AiNexus.Features.Admin.Billing.Charges;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
@@ -30,7 +25,7 @@ internal sealed class TranscriptReader(AppDbContext db, ModelPresentation presen
     {
         var id = conversation.Id;
         var owner = conversation.OwnerId;
-        var messages = await db.Set<Message>()
+        var messages = await db.Messages
             .AsNoTracking()
             .Where(x => x.ConversationId == id)
             .OrderBy(x => x.CreatedAt)
@@ -38,7 +33,7 @@ internal sealed class TranscriptReader(AppDbContext db, ModelPresentation presen
             .ToListAsync(ct);
         var messageIds = messages.Select(m => m.Id).ToList();
 
-        var attachments = (await db.Set<MessageAttachment>()
+        var attachments = (await db.MessageAttachments
             .AsNoTracking()
             .Where(x => messageIds.Contains(x.MessageId))
             .Select(x => new
@@ -61,24 +56,24 @@ internal sealed class TranscriptReader(AppDbContext db, ModelPresentation presen
                     x.ContentType.StartsWith("image/", StringComparison.Ordinal),
                     x.HasText ? "extracted-text" : "vision"));
 
-        var citations = (await db.Set<MessageCitation>()
+        var citations = (await db.MessageCitations
             .AsNoTracking()
             .Where(x => messageIds.Contains(x.MessageId))
             .OrderBy(x => x.Number)
             .ToListAsync(ct))
             .ToLookup(x => x.MessageId, x => new CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt, x.EndPage));
 
-        var ratings = await db.Set<MessageFeedback>()
+        var ratings = await db.MessageFeedback
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && messageIds.Contains(x.MessageId))
             .ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
 
-        var charges = await db.Set<ModelCharge>()
+        var charges = await db.ModelCharges
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && x.ConversationId == id)
             .ToDictionaryAsync(x => x.Id, ct);
 
-        var searches = await db.Set<WebSearchRecord>()
+        var searches = await db.WebSearches
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null)
             .ToDictionaryAsync(x => x.RunId!.Value, ct);

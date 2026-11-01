@@ -15,7 +15,7 @@ internal sealed class ConfirmEmailChange(AccountSecurity security, UserCredentia
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/email-changes/{id:guid}/confirmation", (Guid id, VerificationCodeConfirmation body, HttpContext http, ICurrentUser user, ConfirmEmailChange handler, CancellationToken ct)
-            => handler.HandleAsync(http, user.User, id, body, ct).ToHttpResultAsync())
+            => handler.HandleAsync(http, user.User, id, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)
         .Audited(AccountAudit.EmailConfirmed)
         .WithName("ConfirmEmailChange");

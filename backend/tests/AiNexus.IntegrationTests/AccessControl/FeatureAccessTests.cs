@@ -49,10 +49,10 @@ public sealed class FeatureAccessTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             switch (target)
             {
-                case "role": (await db.Set<Role>().SingleAsync(x => x.Id == "member")).Enabled = false; break;
-                case "group": (await db.Set<RoleGroup>().SingleAsync(x => x.Id == "workspace")).Enabled = false; break;
-                case "feature": (await db.Set<Feature>().SingleAsync(x => x.Id == "chat")).Enabled = false; break;
-                case "membership": db.Set<UserRole>().RemoveRange(db.Set<UserRole>()); break;
+                case "role": (await db.Roles.SingleAsync(x => x.Id == "member")).Enabled = false; break;
+                case "group": (await db.RoleGroups.SingleAsync(x => x.Id == "workspace")).Enabled = false; break;
+                case "feature": (await db.Features.SingleAsync(x => x.Id == "chat")).Enabled = false; break;
+                case "membership": db.UserRoles.RemoveRange(db.UserRoles); break;
             }
             await db.SaveChangesAsync();
         }
@@ -75,11 +75,11 @@ public sealed class FeatureAccessTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Set<Role>().Add(new() { Id = "reviewer", Name = "覆核人員" });
-            db.Set<RoleGroup>().Add(new() { Id = "review", Name = "覆核工作區" });
-            db.Set<UserRole>().Add(new() { UserId = me.Id, RoleId = "reviewer" });
-            db.Set<RoleGroupRole>().AddRange(new RoleGroupRole { RoleId = "reviewer", GroupId = "workspace" }, new RoleGroupRole { RoleId = "reviewer", GroupId = "review" });
-            db.Set<RoleGroupFeature>().Add(new() { GroupId = "review", FeatureId = "chat" });
+            db.Roles.Add(new() { Id = "reviewer", Name = "覆核人員" });
+            db.RoleGroups.Add(new() { Id = "review", Name = "覆核工作區" });
+            db.UserRoles.Add(new() { UserId = me.Id, RoleId = "reviewer" });
+            db.RoleGroupRoles.AddRange(new RoleGroupRole { RoleId = "reviewer", GroupId = "workspace" }, new RoleGroupRole { RoleId = "reviewer", GroupId = "review" });
+            db.RoleGroupFeatures.Add(new() { GroupId = "review", FeatureId = "chat" });
             await db.SaveChangesAsync();
         }
         var access = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
@@ -158,7 +158,7 @@ public sealed class FeatureAccessTests
         (await client.GetAsync(path)).EnsureSuccessStatusCode();
         Assert.Equal(2, queries.Count(path, GrantRead));
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<RoleGroupFeature>().Where(x => x.FeatureId == FeatureCatalog.Projects).ExecuteDeleteAsync();
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().RoleGroupFeatures.Where(x => x.FeatureId == FeatureCatalog.Projects).ExecuteDeleteAsync();
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync(path)).StatusCode);
     }
 

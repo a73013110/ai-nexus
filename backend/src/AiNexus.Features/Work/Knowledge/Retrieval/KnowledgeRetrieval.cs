@@ -26,12 +26,12 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
         var allowed = await authorization.CollectionsAsync(actor, selection.CollectionIds, ct);
         if (!allowed.IsSuccess) return allowed.Error;
         if (selection.CollectionIds.Count == 0) return 0;
-        var count = await (from chunk in db.Set<Chunk>() join doc in db.Set<Document>() on chunk.DocumentId equals doc.Id
+        var count = await (from chunk in db.Chunks join doc in db.Documents on chunk.DocumentId equals doc.Id
             where doc.CollectionId != null && selection.CollectionIds.Contains(doc.CollectionId.Value) && doc.Status == "ready" && !doc.IsDeleted
             select chunk.Id).CountAsync(ct);
         return count == 0 ? 0 : Math.Min(options.Value.Retrieval.ContextTokens, Math.Min(count, options.Value.Retrieval.TopK) * (options.Value.Indexing.ChunkMaxTokens + 100)) + TokenEstimator.Estimate(Prompt([new(Guid.Empty, "參考資料", 1, "", 0, Guid.Empty)]));
     }
-    public async Task<Result<IReadOnlyList<KnowledgeHitDto>>> ForRunAsync(Guid actor, ConversationTurn request, CancellationToken ct, IReadOnlyList<Guid>? collections = null)
+    public async Task<Result<KnowledgeHitDto[]>> ForRunAsync(Guid actor, ConversationTurn request, CancellationToken ct, IReadOnlyList<Guid>? collections = null)
     {
         KnowledgeSelectionDto selection;
         if (collections is not null) selection = new(collections);
@@ -41,7 +41,7 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
             if (!selected.IsSuccess) return selected.Error;
             selection = selected.Value;
         }
-        if (selection.CollectionIds.Count == 0) return Result<IReadOnlyList<KnowledgeHitDto>>.Ok([]);
+        if (selection.CollectionIds.Count == 0) return Array.Empty<KnowledgeHitDto>();
         var owned = await conversations.RequireOwnedAsync(actor, request.ConversationId, ct);
         if (!owned.IsSuccess) return owned.Error;
         var query = request.Prompt; var parent = request.ParentMessageId;
@@ -55,7 +55,7 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
         if (!history.IsSuccess) return history.Error;
         var length = Math.Min(query.Length, 2000); if (char.IsHighSurrogate(query[length - 1])) length--;
         var result = await pipeline.SearchAsync(actor, new(query[..length], selection.CollectionIds), ct, history.Value);
-        return result.IsSuccess ? Result<IReadOnlyList<KnowledgeHitDto>>.Ok(result.Value.Hits) : result.Error;
+        return result.IsSuccess ? result.Value.Hits.ToArray() : result.Error;
     }
 
     private sealed record Node(Guid Id, Guid? ParentId, string Role, string Status, int Length);
@@ -64,9 +64,9 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
     /// 取最多 <paramref name="limit"/> 則非空的使用者訊息與已完成的回答（位於 <paramref name="parent"/> 之上），依由舊到新排列。
     /// 先一次讀取分支的結構，再只載入保留下來的文字，避免每則訊息各打一次資料庫。
     /// </summary>
-    private async Task<Result<IReadOnlyList<RewriteTurn>>> HistoryAsync(Guid conversation, Guid? parent, int limit, CancellationToken ct)
+    private async Task<Result<RewriteTurn[]>> HistoryAsync(Guid conversation, Guid? parent, int limit, CancellationToken ct)
     {
-        if (parent is null || limit <= 0) return Result<IReadOnlyList<RewriteTurn>>.Ok([]);
+        if (parent is null || limit <= 0) return Array.Empty<RewriteTurn>();
         var tree = await db.Messages.AsNoTracking().Where(x => x.ConversationId == conversation)
             .Select(x => new Node(x.Id, x.ParentId, x.Role, x.Status, x.Content.Length)).ToDictionaryAsync(x => x.Id, ct);
         // 由新到舊走訪。SQL Server 的 LEN 會忽略結尾空白，長度為 0 的訊息仍可能是空白文字，因此這類訊息會被讀取，
@@ -82,7 +82,7 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
             }
             parent = node.ParentId;
         }
-        if (candidates.Count == 0) return Result<IReadOnlyList<RewriteTurn>>.Ok([]);
+        if (candidates.Count == 0) return Array.Empty<RewriteTurn>();
         var ids = candidates.Select(x => x.Id).ToArray();
         var texts = await db.Messages.AsNoTracking().Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.Content }).ToDictionaryAsync(x => x.Id, x => x.Content, ct);
         var history = new List<RewriteTurn>(limit);
@@ -92,7 +92,7 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
             if (content.Length > 0 && history.Count < limit) history.Add(new(node.Role, content));
         }
         history.Reverse();
-        return Result<IReadOnlyList<RewriteTurn>>.Ok(history);
+        return history.ToArray();
     }
     public Task<Result> ValidateHitsAsync(Guid actor, IReadOnlyList<KnowledgeHitDto> hits, CancellationToken ct) => authorization.HitsAsync(actor, hits, ct);
     private static readonly System.Text.Json.JsonSerializerOptions Readable = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };

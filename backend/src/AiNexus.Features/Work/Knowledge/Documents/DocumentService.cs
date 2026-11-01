@@ -24,7 +24,7 @@ public sealed class DocumentService
     public Task<Result<DocumentDto>> DetailAsync(Guid actor, Guid id, CancellationToken ct) => documents.DetailAsync(actor, id, ct);
 
     /// <summary><see cref="DetailAsync"/> 的批次版本，回傳順序與輸入 ids 相同，查詢次數固定。</summary>
-    public Task<Result<IReadOnlyList<DocumentDto>>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct) => documents.DetailsAsync(actor, ids, ct);
+    public Task<Result<DocumentDto[]>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct) => documents.DetailsAsync(actor, ids, ct);
 
     public Task<Result<Attachment>> OriginalAsync(Guid actor, Guid id, CancellationToken ct) => documents.OriginalAsync(actor, id, ct);
 }

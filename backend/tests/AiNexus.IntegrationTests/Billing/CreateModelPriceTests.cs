@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Audit;
-using AiNexus.Data.App.Billing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -38,7 +37,7 @@ public sealed class CreateModelPriceTests
         Assert.Equal((aliceId, AuditEvent.Completed, (Guid?)price.Id, "administration", clock.GetUtcNow()), (audit.OwnerId, audit.Result, audit.ResourceId, audit.Category, audit.At));
         using var details = JsonDocument.Parse(audit.DetailsJson!);
         Assert.Equal("test-model", details.RootElement.GetProperty("modelId").GetString());
-        var row = await db.Set<ModelPrice>().SingleAsync();
+        var row = await db.ModelPrices.SingleAsync();
         Assert.Equal((aliceId, clock.GetUtcNow()), (row.CreatedBy, row.CreatedAt));
     }
 
@@ -56,7 +55,7 @@ public sealed class CreateModelPriceTests
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Contains("price_exists", await duplicate.Content.ReadAsStringAsync());
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(0, (await db.Set<ModelPrice>().SingleAsync()).PerRequest);
+        Assert.Equal(0, (await db.ModelPrices.SingleAsync()).PerRequest);
         var results = await db.AuditEvents.Where(x => x.Action == Action).OrderBy(x => x.Id).Select(x => new { x.Result, x.OwnerId, x.DetailsJson }).ToListAsync();
         Assert.Equal([AuditEvent.Completed, "price_exists"], results.Select(x => x.Result));
         Assert.Equal(aliceId, results[1].OwnerId); Assert.Contains("\"modelId\":\"test-model\"", results[1].DetailsJson);
@@ -73,7 +72,7 @@ public sealed class CreateModelPriceTests
         Assert.True((int)(await alice.PostAsJsonAsync("/api/v1/admin/billing/prices", request)).StatusCode >= 500);
         Assert.Single(events.Seen);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.False(await db.Set<ModelPrice>().AnyAsync());
+        Assert.False(await db.ModelPrices.AnyAsync());
         // 價格隨交易回復；請求稽核另外記下這次失敗，不會留下成功紀錄。
         Assert.Equal("unexpected_error", (await db.AuditEvents.SingleAsync(x => x.Action == Action)).Result);
     }
@@ -90,7 +89,7 @@ public sealed class CreateModelPriceTests
         {
             public async Task HandleAsync(ModelPriceCreated e, CancellationToken ct)
             {
-                owner.Seen.Add((e.PriceId, await db.Set<ModelPrice>().AnyAsync(x => x.Id == e.PriceId, ct)));
+                owner.Seen.Add((e.PriceId, await db.ModelPrices.AnyAsync(x => x.Id == e.PriceId, ct)));
                 if (owner.Fail) throw new InvalidOperationException("fixture handler failure");
             }
         }

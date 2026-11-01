@@ -42,6 +42,6 @@ internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock)
     public Task OneAsync(Guid owner, Guid id, CancellationToken ct) => MarkReadAsync(owner, x => x.Id == id, ct);
 
     // 只更新收件匣中仍未讀的列，已讀時間不會被重複呼叫覆寫。
-    private Task MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct) => db.Set<Notification>().Inbox(owner)
+    private Task MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct) => db.Notifications.Inbox(owner)
         .Where(x => x.ReadAt == null).Where(which).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
 }

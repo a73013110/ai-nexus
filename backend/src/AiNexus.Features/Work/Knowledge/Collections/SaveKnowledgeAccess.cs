@@ -11,7 +11,7 @@ internal sealed class SaveKnowledgeAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/collections/{id:guid}/access", (Guid id, ResourceAclRequest request, ICurrentUser user, SaveKnowledgeAccess handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, request, ct).ToHttpResultAsync())
+            handler.HandleAsync(user.Id, id, request, ct))
         .Audited(KnowledgeAudit.CollectionShared)
         .WithName("SaveKnowledgeAccess");
 

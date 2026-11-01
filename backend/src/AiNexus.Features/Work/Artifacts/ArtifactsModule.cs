@@ -22,7 +22,6 @@ public sealed class ArtifactsModule : IFeatureModule
         var services = builder.Services;
         services.AddDashboardSource<ArtifactsDashboard>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
-        services.AddFeaturePolicy(FeatureCatalog.Artifacts);
         services.AddFeaturePolicy(Policies.Text, FeatureCatalog.Chat, FeatureCatalog.Artifacts);
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
     }
@@ -31,7 +30,7 @@ public sealed class ArtifactsModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/artifacts")
-            .RequireAuthorization(Policies.Artifacts)
+            .RequireFeature(FeatureCatalog.Artifacts)
             .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxContentCharacters));
         ListArtifacts.Map(routes);
         CreateArtifact.Map(routes);

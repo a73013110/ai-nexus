@@ -1,4 +1,5 @@
 using AiNexus.Features.Office.Attendance.Calendar;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Office.Attendance.Records;
 
@@ -39,7 +40,7 @@ public sealed class AttendanceRecordsFilter
             && end.DayNumber - start.DayNumber < MaxRangeDays ? (start, end) : null;
 
     /// <summary>去掉前後空白的卡號（與匯入、卡片登錄相同）；空白視同沒有指定。</summary>
-    internal string? CardNumber => string.IsNullOrWhiteSpace(Card) ? null : Card.Trim();
+    internal string? CardNumber => TextRules.TrimToNull(Card);
 
     /// <summary>有指定人（使用者或卡號）：在出勤紀錄隱藏的卡照常列出，指定誰就看誰。</summary>
     internal bool NamesSomeone => UserId is not null || CardNumber is not null;

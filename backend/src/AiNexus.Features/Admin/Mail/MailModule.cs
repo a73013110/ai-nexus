@@ -57,22 +57,20 @@ public sealed class MailModule : IFeatureModule
                 x.Time(nameof(TestMailModel.RequestedAt), "要求時間（信內以 UTC 顯示）", x.Context.Now),
                 x.Text(nameof(TestMailModel.Transport), "傳輸名稱（只影響信內文字，不改變實際傳輸）", x.Context.Transport),
                 x.Text(nameof(TestMailModel.From), "寄件地址（預設為目前的 Mail:From 系統信箱；只影響信內文字，不改變實際寄件者）", x.Context.From)));
-        services.AddFeaturePolicy(FeatureCatalog.MailMessages);
-        services.AddFeaturePolicy(FeatureCatalog.MailMessagesResend);
         services.AddRateLimiter(options => options.AddPerUserLimit(TestRateLimit, 3).AddPerUserLimit(DiagnosisRateLimit, 5));
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var messages = api.MapGroup("/admin/mail-messages").RequireAuthorization(Policies.MailMessages);
+        var messages = api.MapGroup("/admin/mail-messages").RequireFeature(FeatureCatalog.MailMessages);
         ListMailMessages.Map(messages);
         GetMailMessage.Map(messages);
         ResendMailMessage.Map(messages);
         RetryMailMessage.Map(messages);
-        SendTestMail.Map(api.MapGroup("/admin/mail-tests").RequireAuthorization(Policies.MailMessages));
-        ListMailSamples.Map(api.MapGroup("/admin/mail-samples").RequireAuthorization(Policies.MailMessages));
-        GetMailStatus.Map(api.MapGroup("/admin/mail-status").RequireAuthorization(Policies.MailMessages));
-        DiagnoseMailTransport.Map(api.MapGroup("/admin/mail-diagnoses").RequireAuthorization(Policies.MailMessages));
-        UpdateMailSettings.Map(api.MapGroup("/admin/mail-settings").RequireAuthorization(Policies.MailMessages));
+        SendTestMail.Map(api.MapGroup("/admin/mail-tests").RequireFeature(FeatureCatalog.MailMessages));
+        ListMailSamples.Map(api.MapGroup("/admin/mail-samples").RequireFeature(FeatureCatalog.MailMessages));
+        GetMailStatus.Map(api.MapGroup("/admin/mail-status").RequireFeature(FeatureCatalog.MailMessages));
+        DiagnoseMailTransport.Map(api.MapGroup("/admin/mail-diagnoses").RequireFeature(FeatureCatalog.MailMessages));
+        UpdateMailSettings.Map(api.MapGroup("/admin/mail-settings").RequireFeature(FeatureCatalog.MailMessages));
     }
 }

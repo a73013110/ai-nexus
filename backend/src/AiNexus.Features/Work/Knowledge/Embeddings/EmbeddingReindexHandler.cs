@@ -30,15 +30,15 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
         var found = await ProfileAsync(execution.Job, ct);
         if (!found.IsSuccess) return found.Error;
         var profile = found.Value;
-        var ids = await db.Set<Document>().AsNoTracking().Where(x => x.CollectionId != null && !x.IsDeleted).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
+        var ids = await db.Documents.AsNoTracking().Where(x => x.CollectionId != null && !x.IsDeleted).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
         var done = 0;
         foreach (var id in ids)
         {
             if (await ValidateRetryAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
             // 匯入或嵌入工作正在改寫這份文件，由它們自己的檢查點填入此向量模型，這裡直接略過。
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) continue;
-            var doc = await db.Set<Document>().SingleAsync(x => x.Id == id, ct);
-            if (!await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct)) return KnowledgeErrors.DocumentPagesMissing;
+            if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) continue;
+            var doc = await db.Documents.SingleAsync(x => x.Id == id, ct);
+            if (!await db.DocumentPages.AnyAsync(x => x.DocumentId == id, ct)) return KnowledgeErrors.DocumentPagesMissing;
             var indexed = await VectorsCompleteAsync(doc, profile, ct);
             if (!indexed && await indexer.IndexAsync(execution, doc, profile, ct) is { IsSuccess: false } failed) return failed;
             await execution.CheckpointAsync("逐文件重建索引", ++done, ids.Count, ct);
@@ -64,12 +64,12 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
     private async Task<bool> VectorsCompleteAsync(Document doc, EmbeddingProfile profile, CancellationToken ct)
     {
         if (doc.Status != "ready") return false;
-        var chunks = await db.Set<Chunk>().CountAsync(x => x.DocumentId == doc.Id, ct);
+        var chunks = await db.Chunks.CountAsync(x => x.DocumentId == doc.Id, ct);
         if (chunks == 0) return false;
         if (profile.Provider == "none") return true;
         var embeddings = profile.Dimensions == 768
-            ? await (from e in db.Set<ChunkEmbedding768>() join c in db.Set<Chunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct)
-            : await (from e in db.Set<ChunkEmbedding1024>() join c in db.Set<Chunk>() on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct);
+            ? await (from e in db.ChunkEmbeddings768 join c in db.Chunks on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct)
+            : await (from e in db.ChunkEmbeddings1024 join c in db.Chunks on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct);
         return chunks == embeddings;
     }
 }

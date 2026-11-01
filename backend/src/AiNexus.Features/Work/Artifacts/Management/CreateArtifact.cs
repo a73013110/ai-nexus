@@ -39,8 +39,8 @@ internal sealed class CreateArtifact(
     TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("", async (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
+        .MapPost("", (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, request, ct))
         .Audited(ArtifactsAudit.ArtifactCreated)
         .WithName("CreateArtifact");
 
@@ -55,7 +55,7 @@ internal sealed class CreateArtifact(
             var owned = await conversations.RequireOwnedAsync(actor, conversation.Value, ct);
             if (!owned.IsSuccess) return owned.Error;
         }
-        var count = await db.Set<Resource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct);
+        var count = await db.Resources.CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct);
         if (count >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {

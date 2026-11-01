@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.Models;
@@ -17,7 +16,8 @@ public sealed record AdminUsageDto(int Users, int Requests, int Completed, long 
 internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/usage", async (GetAdminUsage handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .MapGet("/usage", (GetAdminUsage handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .Audited(OperationsAudit.UsageRead)
         .WithName("GetAdminUsage");
 
@@ -28,8 +28,8 @@ internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, U
         var providers = await catalog.ProviderStatusesAsync(ct);
         var users = await activeUsers.Ids.CountAsync(ct);
         var activeOwners = await reports.ActiveOwnersAsync(ct);
-        var storedBytes = await db.Set<Attachment>().SumAsync(x => x.Size, ct);
-        var storedFiles = await db.Set<Attachment>().CountAsync(ct);
+        var storedBytes = await db.Attachments.SumAsync(x => x.Size, ct);
+        var storedFiles = await db.Attachments.CountAsync(ct);
         var kinds = await reports.PlatformKindsAsync(ct);
         return new(users, totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, totals.TotalDurationMilliseconds, totals.TimedRequests,
             activeOwners, totals.Failed, totals.Cancelled, storedBytes, storedFiles,

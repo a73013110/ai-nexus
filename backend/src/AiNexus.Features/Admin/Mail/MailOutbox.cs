@@ -72,7 +72,7 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
 
     /// <summary>目前寄送狀態；不存在（已依保存期限刪除）時為 null。</summary>
     public Task<MailDelivery?> GetDeliveryAsync(Guid messageId, CancellationToken ct)
-        => db.Set<OutboundMessage>().AsNoTracking().Where(x => x.Id == messageId)
+        => db.OutboundMessages.AsNoTracking().Where(x => x.Id == messageId)
             .Select(x => new MailDelivery(x.Id, x.Status, x.SentAt, x.ErrorCode)).SingleOrDefaultAsync(ct);
 
     /// <summary>
@@ -81,9 +81,9 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
     public async Task<bool> CancelAsync(Guid messageId, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var cancelled = await db.Set<OutboundMessage>().Where(x => x.Id == messageId && x.Status == MailStates.Queued)
+        var cancelled = await db.OutboundMessages.Where(x => x.Id == messageId && x.Status == MailStates.Queued)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Cancelled).SetProperty(x => x.UpdatedAt, now).SetProperty(x => x.ContentPurgedAt, now), ct);
-        if (cancelled == 1) await db.Set<OutboundMessageContent>().Where(x => x.MessageId == messageId).ExecuteDeleteAsync(ct);
+        if (cancelled == 1) await db.OutboundMessageContents.Where(x => x.MessageId == messageId).ExecuteDeleteAsync(ct);
         return cancelled == 1;
     }
 
@@ -92,7 +92,7 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
     {
         var rendered = new RenderedMail(original.Category, original.Priority, false, original.Subject, content.Html ?? "", content.Text);
         var message = Add(rendered, new(address, original.RecipientName, original.RecipientUserId), enqueue, original.Id);
-        db.Set<OutboundMessageContent>().Local.Single(x => x.MessageId == message.Id).Html = content.Html;
+        db.OutboundMessageContents.Local.Single(x => x.MessageId == message.Id).Html = content.Html;
         return message;
     }
 
@@ -105,8 +105,8 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
         if (key is null) return null;
         if (key.Length > OutboundMessage.IdempotencyKeyMaxLength) throw new ArgumentException("Idempotency key is too long.", nameof(key));
         // 同一交易裡尚未儲存的列只存在 Local，資料庫查不到，所以兩邊都要檢查；唯一索引再擋一次並行。
-        return db.Set<OutboundMessage>().Local.FirstOrDefault(x => x.IdempotencyKey == key)?.Id
-            ?? await db.Set<OutboundMessage>().Where(x => x.IdempotencyKey == key).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
+        return db.OutboundMessages.Local.FirstOrDefault(x => x.IdempotencyKey == key)?.Id
+            ?? await db.OutboundMessages.Where(x => x.IdempotencyKey == key).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
     }
 
     private Error? Check(string address)

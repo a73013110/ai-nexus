@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -16,21 +15,21 @@ internal sealed class ListMailMessages(AppDbContext db)
 
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("", ([AsParameters] MailMessageFilter filter, Guid? before, int? take, ListMailMessages handler, CancellationToken ct) =>
-            handler.HandleAsync(filter, before, take, ct).ToHttpResultAsync())
+            handler.HandleAsync(filter, before, take, ct))
         .Audited(MailAudit.MessageRead)
         .WithName("ListMailMessages");
 
-    public async Task<Result<IReadOnlyList<MailMessageDto>>> HandleAsync(MailMessageFilter filter, Guid? before, int? take, CancellationToken ct)
+    public async Task<Result<MailMessageDto[]>> HandleAsync(MailMessageFilter filter, Guid? before, int? take, CancellationToken ct)
     {
         if (!filter.IsValid() || take is { } size && !PageSizes.Contains(size)) return MailErrors.FilterInvalid;
         var query = filter.Query(db);
         if (before is { } cursor)
         {
-            var previous = await db.Set<OutboundMessage>().AsNoTracking().Where(x => x.Id == cursor).Select(x => (DateTimeOffset?)x.CreatedAt).SingleOrDefaultAsync(ct);
+            var previous = await db.OutboundMessages.AsNoTracking().Where(x => x.Id == cursor).Select(x => (DateTimeOffset?)x.CreatedAt).SingleOrDefaultAsync(ct);
             if (previous is not { } at) return MailErrors.CursorInvalid;
             query = query.Where(x => x.CreatedAt < at || (x.CreatedAt == at && x.Id.CompareTo(cursor) < 0));
         }
         var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Take(take ?? 50).ToListAsync(ct);
-        return Result<IReadOnlyList<MailMessageDto>>.Ok(rows.Select(MailMessageDto.From).ToArray());
+        return rows.Select(MailMessageDto.From).ToArray();
     }
 }

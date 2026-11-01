@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +24,7 @@ public sealed class ManagerAccountReviewTests
         (await SaveMemberAsync(admin, closed.Id, carol, manager: true)).EnsureSuccessStatusCode();
         (await SaveMemberAsync(admin, it.Id, carol)).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
-            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<Unit>().Where(x => x.Id == closed.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Enabled, false));
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Units.Where(x => x.Id == closed.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Enabled, false));
 
         await DisableAsync(factory, bob);
         await DisableAsync(factory, carol);

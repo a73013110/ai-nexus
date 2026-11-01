@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -33,20 +32,20 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     /// <summary>目前持有 <paramref name="feature"/> 的使用者（規則同 <see cref="ForUserAsync"/>），給背景工作決定通知誰。</summary>
     public async Task<IReadOnlyList<Guid>> HoldersAsync(string feature, CancellationToken ct)
         => await (from userId in activeUsers.Ids
-                  join assignment in db.Set<UserRole>() on userId equals assignment.UserId
-                  join role in db.Set<Role>() on assignment.RoleId equals role.Id
-                  join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
-                  join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
-                  join grant in db.Set<RoleGroupFeature>() on roleGroup.Id equals grant.GroupId
-                  join granted in db.Set<Feature>() on grant.FeatureId equals granted.Id
+                  join assignment in db.UserRoles on userId equals assignment.UserId
+                  join role in db.Roles on assignment.RoleId equals role.Id
+                  join link in db.RoleGroupRoles on role.Id equals link.RoleId
+                  join roleGroup in db.RoleGroups on link.GroupId equals roleGroup.Id
+                  join grant in db.RoleGroupFeatures on roleGroup.Id equals grant.GroupId
+                  join granted in db.Features on grant.FeatureId equals granted.Id
                   where role.Enabled && roleGroup.Enabled && granted.Enabled && granted.Id == feature
                   select userId).Distinct().ToListAsync(ct);
 
     /// <summary>所有選單節點（平面清單、含外部連結的可見群組），同層依 <c>SortOrder</c>、再依 Id；管理端清單與選單樹共用。</summary>
     public async Task<IReadOnlyList<NavigationItemDto>> NavigationItemsAsync(CancellationToken ct)
     {
-        var items = await db.Set<NavigationItem>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).ToListAsync(ct);
-        var audiences = (await db.Set<NavigationItemAudience>().AsNoTracking().ToListAsync(ct))
+        var items = await db.NavigationItems.AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).ToListAsync(ct);
+        var audiences = (await db.NavigationItemAudiences.AsNoTracking().ToListAsync(ct))
             .ToLookup(x => x.NavigationItemId, x => x.GroupId, StringComparer.Ordinal);
         return [.. items.Select(x => NavigationItemDto.From(x, [.. audiences[x.Id].Order(StringComparer.Ordinal)]))];
     }
@@ -58,16 +57,16 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     private async Task<AccessDto> ReadAsync(Guid user, CancellationToken ct)
     {
         if (!await activeUsers.Ids.AnyAsync(x => x == user, ct)) return new([], [], [], []);
-        var roleIds = db.Set<UserRole>().Where(x => x.UserId == user).Select(x => x.RoleId);
-        var roles = await db.Set<Role>().AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
+        var roleIds = db.UserRoles.Where(x => x.UserId == user).Select(x => x.RoleId);
+        var roles = await db.Roles.AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var groupIds = GroupIds(user);
-        var groups = await db.Set<RoleGroup>().AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
+        var groups = await db.RoleGroups.AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
         // 一次讀出授權與範圍：同一功能可能由多個群組授予，各帶一個成員範圍與一個主管範圍。
-        var granted = await (from grant in db.Set<RoleGroupFeature>()
-                             join feature in db.Set<Feature>() on grant.FeatureId equals feature.Id
+        var granted = await (from grant in db.RoleGroupFeatures
+                             join feature in db.Features on grant.FeatureId equals feature.Id
                              where enabledGroups.Contains(grant.GroupId) && feature.Enabled
                              select new { Feature = feature, grant.Scope, grant.ManagerScope }).AsNoTracking().ToListAsync(ct);
         var rows = granted.Select(x => x.Feature).DistinctBy(x => x.Id);
@@ -90,10 +89,10 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     private IQueryable<string> GroupIds(Guid user) =>
         from userId in activeUsers.Ids
         where userId == user
-        join assignment in db.Set<UserRole>() on userId equals assignment.UserId
-        join role in db.Set<Role>() on assignment.RoleId equals role.Id
-        join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
-        join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
+        join assignment in db.UserRoles on userId equals assignment.UserId
+        join role in db.Roles on assignment.RoleId equals role.Id
+        join link in db.RoleGroupRoles on role.Id equals link.RoleId
+        join roleGroup in db.RoleGroups on link.GroupId equals roleGroup.Id
         where role.Enabled && roleGroup.Enabled
         select roleGroup.Id;
 }

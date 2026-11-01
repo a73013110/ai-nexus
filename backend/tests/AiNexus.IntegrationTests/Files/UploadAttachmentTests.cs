@@ -1,5 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -25,7 +24,7 @@ public sealed class UploadAttachmentTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var files = await db.Set<Attachment>().ToListAsync();
+            var files = await db.Attachments.ToListAsync();
             foreach (var file in files) file.CreatedAt = DateTimeOffset.UtcNow.AddDays(-15);
             await db.SaveChangesAsync();
         }

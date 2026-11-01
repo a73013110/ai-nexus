@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -19,7 +20,7 @@ internal interface IAssignmentFields
 
 /// <summary>
 /// 持有期間的規則：[StartsAt, EndsAt) 不可與同一張卡的其他期間重疊（資料庫不擋，程式保證），指派已有人持有的卡必須明確接手。
-/// 需要資料的檢查在 <c>AdministrativeAudit</c> 的交易內執行；<see cref="Place"/> 只看已讀出的期間，不碰資料庫。
+/// 需要資料的檢查在 <see cref="AdministrativeWrite"/> 的交易內執行；<see cref="Place"/> 只看已讀出的期間，不碰資料庫。
 /// </summary>
 internal static class AssignmentRules
 {
@@ -67,24 +68,27 @@ internal static class AssignmentRules
         return null;
     }
 
+    /// <summary>持有期間行政寫入共用的對象：稽核的資源是這段期間，快照則是 <paramref name="cardId"/> 整張卡（見 <see cref="SnapshotAsync"/>）。</summary>
+    public static AuditTarget Target(AppDbContext db, Guid id, Guid? cardId) => AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, ct => SnapshotAsync(db, cardId, ct));
+
     /// <summary>持有期間所屬的卡；修改與刪除的稽核快照以整張卡為單位，刪除後就查不到，所以要在變更前先查。</summary>
     public static Task<Guid?> CardOfAsync(AppDbContext db, Guid assignmentId, CancellationToken ct)
-        => db.Set<CardAssignment>().AsNoTracking().Where(x => x.Id == assignmentId).Select(x => (Guid?)x.CardId).SingleOrDefaultAsync(ct);
+        => db.CardAssignments.AsNoTracking().Where(x => x.Id == assignmentId).Select(x => (Guid?)x.CardId).SingleOrDefaultAsync(ct);
 
     /// <summary>
     /// 一張卡的全部持有期間，給稽核快照（<c>admin.attendance_assignment*</c>）：接手會同時改掉前一段的結束時間，只看單一列會漏掉。
     /// 卡不存在（或不知道是哪張卡）時為 null。備註不進稽核（<c>AuditRedactor</c> 不收自由文字），所以不讀。
     /// </summary>
-    public static async Task<object?> SnapshotAsync(AppDbContext db, Guid? cardId, CancellationToken ct)
+    private static async Task<object?> SnapshotAsync(AppDbContext db, Guid? cardId, CancellationToken ct)
     {
         if (cardId is not { } id) return null;
-        var number = await db.Set<Card>().AsNoTracking().Where(x => x.Id == id).Select(x => x.CardNumber).SingleOrDefaultAsync(ct);
+        var number = await db.Cards.AsNoTracking().Where(x => x.Id == id).Select(x => x.CardNumber).SingleOrDefaultAsync(ct);
         if (number is null) return null;
         return new
         {
             cardId = id,
             cardNumber = number,
-            assignments = await db.Set<CardAssignment>().AsNoTracking().Where(x => x.CardId == id).OrderBy(x => x.StartsAt).ThenBy(x => x.Id)
+            assignments = await db.CardAssignments.AsNoTracking().Where(x => x.CardId == id).OrderBy(x => x.StartsAt).ThenBy(x => x.Id)
                 .Select(x => new { x.Id, x.UserId, x.HolderName, x.StartsAt, x.EndsAt }).ToArrayAsync(ct),
         };
     }

@@ -35,7 +35,7 @@ public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provide
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var previous = await db.Set<WebSearchRecord>().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
+            var previous = await db.WebSearches.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (previous is not null)
             {
                 if (previous.RequestHash != hash || previous.ConversationId != conversation) return WebSearchErrors.IdempotencyConflict;
@@ -44,7 +44,7 @@ public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provide
             }
             record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
             var since = UtcDay.Start(record.CreatedAt); var until = since.AddDays(1);
-            if (await db.Set<WebSearchRecord>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
+            if (await db.WebSearches.CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
                 return WebSearchErrors.DailyQuota;
             call = new() { Id = record.Id, OwnerId = owner, ModelId = "web-search", Kind = "web-search", CreatedAt = record.CreatedAt };
             await billing.ReserveAsync(call.Id, owner, conversation, options.Value.Provider, call.ModelId, call.Kind, call.CreatedAt, ct);

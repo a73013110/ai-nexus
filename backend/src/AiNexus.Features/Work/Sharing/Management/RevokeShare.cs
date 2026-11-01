@@ -1,6 +1,4 @@
 using AiNexus.Data.App;
-using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -12,7 +10,8 @@ namespace AiNexus.Features.Work.Sharing.Management;
 internal sealed class RevokeShare(AppDbContext db, ShareWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RevokeShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync()).Audited(SharingAudit.ShareRevoked);
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RevokeShare handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct)).Audited(SharingAudit.ShareRevoked);
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
@@ -20,11 +19,11 @@ internal sealed class RevokeShare(AppDbContext db, ShareWriteLock writes)
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var row = await db.Set<ShareLink>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
+            var row = await db.ShareLinks.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
             if (row is null) return SharingErrors.Unavailable;
             row.IsRevoked = true;
             row.SnapshotJson = "";
-            await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+            await db.ResourceAttachments.Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
             return Result.Success;

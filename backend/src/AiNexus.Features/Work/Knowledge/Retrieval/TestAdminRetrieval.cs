@@ -24,7 +24,7 @@ internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct)
-            => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+            => handler.HandleAsync(user.Id, body, ct))
         .Audited(KnowledgeAudit.RetrievalSearched)
         .WithName("TestAdminRetrieval");
 

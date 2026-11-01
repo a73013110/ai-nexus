@@ -33,13 +33,14 @@ internal sealed class MailTestRequestValidator : RequestValidator<MailTestReques
 /// 以任一已登記的系統信範本入列一封測試信（照常排隊、節流與重試），回傳訊息 ID 供在紀錄追蹤。分類維持範本原值，紀錄可依分類篩選；
 /// 主旨加「[測試]」以免收件者或查紀錄的人當成真的通知。寫行政稽核 <c>admin.mail_test</c>，不記收件地址與參數值（驗證碼信的參數可能像真的驗證碼）。
 /// </summary>
-internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRenderer renderer, IEnumerable<MailSample> samples, AdministrativeAudit audit,
+internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRenderer renderer, IEnumerable<MailSample> samples, AdministrativeWrite write,
     IOptions<MailOptions> options, TimeProvider clock)
 {
     public const string SubjectPrefix = "[測試] ";
 
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (MailTestRequest body, IRequestActor actor, SendTestMail handler, CancellationToken ct) => handler.HandleAsync(actor.Id, body, ct).ToHttpResultAsync())
+        .MapPost("", (MailTestRequest body, IRequestActor actor, SendTestMail handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, body, ct))
         .RequireRateLimiting(MailModule.TestRateLimit)
         .Audited(MailAudit.TestMessageSent)
         .WithName("SendTestMail");
@@ -55,17 +56,16 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
         var mail = rendered.Value;
         if (category != TestMail.TestCategory) mail = mail with { Subject = MailRenderer.Subject(SubjectPrefix + mail.Subject) };
         MailEnqueuedDto? result = null;
-        var outcome = await audit.MutateAsync(actor, FeatureCatalog.MailMessages, null, "test",
-            token => Snapshot(result?.MessageId, token), () =>
+        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessages, "test", token => Snapshot(result?.MessageId, token)), () =>
             {
                 var enqueued = outbox.Enqueue(mail, new(request.To), new(RequestedBy: actor));
                 if (!enqueued.IsSuccess) return Task.FromResult<Result>(enqueued.Error);
                 result = new(enqueued.Value.MessageId, false);
                 return Task.FromResult(Result.Success);
             }, ct);
-        return outcome.IsSuccess ? result! : outcome.Error!;
+        return outcome.IsSuccess ? result! : outcome.Error;
     }
 
     private async Task<object?> Snapshot(Guid? created, CancellationToken ct)
-        => created is { } id ? await db.Set<OutboundMessage>().AsNoTracking().Where(x => x.Id == id).Select(x => new { id = x.Id, status = x.Status, category = x.Category }).SingleOrDefaultAsync(ct) : null;
+        => created is { } id ? await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { id = x.Id, status = x.Status, category = x.Category }).SingleOrDefaultAsync(ct) : null;
 }

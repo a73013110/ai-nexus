@@ -19,16 +19,17 @@ internal sealed class UnitUpdateRequestValidator : RequestValidator<UnitUpdateRe
 }
 
 /// <summary>修改或搬移單位；搬移時整棵下層跟著走，成員不變。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>
-internal sealed class UpdateUnit(AppDbContext db, AdministrativeAudit audit)
+internal sealed class UpdateUnit(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (Guid id, UnitUpdateRequest body, IRequestActor actor, UpdateUnit handler, CancellationToken ct) => (await handler.HandleAsync(actor.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/{id:guid}", (Guid id, UnitUpdateRequest body, IRequestActor actor, UpdateUnit handler, CancellationToken ct) =>
+            handler.HandleAsync(actor.Id, id, body, ct))
         .Audited(OrganizationAudit.UnitUpdated)
         .WithName("UpdateOrganizationUnit");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UnitUpdateRequest request, CancellationToken ct) => audit.MutateAsync(actor, FeatureCatalog.Organization, id, id.ToString(), token => UnitRules.SnapshotAsync(db, id, token), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, UnitUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, UnitRules.Target(db, id), async () =>
     {
-        var units = await db.Set<Unit>().ToListAsync(ct);
+        var units = await db.Units.ToListAsync(ct);
         var unit = units.SingleOrDefault(x => x.Id == id);
         if (unit is null) return OrganizationErrors.UnitNotFound;
         if (unit.ParentId != request.ParentId)
@@ -37,7 +38,7 @@ internal sealed class UpdateUnit(AppDbContext db, AdministrativeAudit audit)
             unit.ParentId = request.ParentId;
         }
         unit.Name = request.Name.Trim(); unit.Enabled = request.Enabled; unit.HeadRank = request.HeadRank;
-        // 失敗時 AdministrativeAudit 不會 SaveChanges，並在寫失敗稽核前清空 ChangeTracker，改到一半的實體不會寫入。
+        // 失敗時 AdministrativeWrite 不會 SaveChanges，並在寫失敗稽核前清空 ChangeTracker，改到一半的實體不會寫入。
         if (UnitRules.Structure(units) is { } invalid) return invalid;
         await UnitRules.ClearLedManagersAsync(db, unit, ct);
         return Result.Success;

@@ -1,4 +1,3 @@
-using AiNexus.Data.App.AccessControl;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Inference.Models;
@@ -14,7 +13,7 @@ public sealed class ListModelsTests
     public async Task EmptyCatalogDistinguishesUnavailableProfilesFromGroupRestrictions(bool profileInstalled)
     {
         await using var factory = new AppFactory(
-            seed: db => { db.Set<GroupModelPolicy>().Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
+            seed: db => { db.GroupModelPolicies.Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
             inference: options => { if (!profileInstalled) { options.Models[0].Id = "not-installed"; options.DefaultModelId = "not-installed"; } });
         using var client = await factory.SignedInAsync();
         var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;

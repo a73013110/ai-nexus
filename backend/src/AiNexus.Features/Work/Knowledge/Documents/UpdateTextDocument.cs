@@ -1,8 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
-using AiNexus.Data.App.Collaboration;
-using AiNexus.Data.App.Jobs;
-using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
@@ -23,8 +20,8 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentQuota quota, JobService jobs, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
+        .MapPut("/{id:guid}/text", (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentUpdated).WithName("UpdateTextDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, TextDocumentRequest request, CancellationToken ct)
@@ -49,15 +46,15 @@ internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documen
             var document = current.Value;
             await db.Entry(document).ReloadAsync(ct);
             if (document.IsDeleted || document.TextContent is null || request.ExpectedVersion != document.TextVersion) return KnowledgeErrors.TextVersionChanged;
-            if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) return KnowledgeErrors.DocumentProcessing;
+            if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) return KnowledgeErrors.DocumentProcessing;
             document.TextContent = source.Text; document.TextVersion++; document.FileName = source.Title + ".txt";
             document.AttachmentId = uploaded.Id; document.Status = "queued"; document.PageCount = 0; document.ChunkCount = 0;
             document.Warning = null;
-            await db.Set<ResourceAttachment>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+            await db.ResourceAttachments.Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             db.Add(new ResourceAttachment { ResourceId = id, AttachmentId = uploaded.Id });
-            await db.Set<Attachment>().Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            var resource = await db.Set<Resource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
+            await db.Attachments.Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
+            await db.DocumentPages.Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
+            var resource = await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
             document.JobId = jobs.Enqueue(actor, id, id, DocumentIngestHandler.JobKind, document.FileName).Id;
             try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return KnowledgeErrors.TextVersionChanged; }
