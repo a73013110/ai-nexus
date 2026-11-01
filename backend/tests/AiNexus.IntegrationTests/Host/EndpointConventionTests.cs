@@ -2,7 +2,6 @@ using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +51,7 @@ public sealed class EndpointConventionTests
     {
         await using var factory = new AppFactory();
         _ = factory.CreateClient();
-        var registered = factory.Services.GetRequiredService<RequestValidators>();
+        var registered = factory.Services.GetServices<IRequestValidator>().Select(x => x.RequestType).ToHashSet();
         var bodies = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .Select(e => e.Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType).OfType<Type>()
             .Where(t => t.Namespace?.StartsWith("AiNexus.", StringComparison.Ordinal) == true).Distinct().ToList();
@@ -65,23 +64,18 @@ public sealed class EndpointConventionTests
         Assert.True(both.Count == 0, "Request bodies with a validator must not also be marked [ValidatedInHandler]:\n" + string.Join('\n', both));
     }
 
-    // 驗證過濾器在建置端點時從根容器查好驗證器、跨請求共用：不是 singleton 的註冊，或注入 scoped 服務（DbContext、ICurrentUser），
-    // 都會讓所有請求共用第一次解析的實例。lifetime 逐一檢查所有註冊，依賴由範圍檢查在建置容器時攔下。
+    // 驗證過濾器在建置端點時從根容器查好驗證器、跨請求共用：注入 scoped 服務（DbContext、ICurrentUser）會讓所有請求共用第一次解析的實例，
+    // 由範圍檢查在建置容器時攔下。每個驗證器都註冊成 singleton 由 CompositionTests 檢查。
     [Fact]
-    public async Task RequestValidatorsAreSingletonsWithoutScopedDependencies()
+    public async Task RequestValidatorsHaveNoScopedDependencies()
     {
         await using var factory = new AppFactory();
-        List<ServiceDescriptor> validators = [];
-        await using var app = factory.WithWebHostBuilder(builder => builder
-            .UseDefaultServiceProvider(options =>
-            {
-                options.ValidateScopes = true;
-                options.ValidateOnBuild = true;
-            })
-            .ConfigureTestServices(services => validators.AddRange(services.Where(x => x.ServiceType == typeof(IRequestValidator)))));
+        await using var app = factory.WithWebHostBuilder(builder => builder.UseDefaultServiceProvider(options =>
+        {
+            options.ValidateScopes = true;
+            options.ValidateOnBuild = true;
+        }));
         _ = app.CreateClient();
-        Assert.NotEmpty(validators);
-        var wrong = validators.Where(x => x.Lifetime != ServiceLifetime.Singleton).Select(x => $"{x.ServiceType.FullName} ({x.Lifetime})").Order(StringComparer.Ordinal).ToList();
-        Assert.True(wrong.Count == 0, "Request validators must be registered as singletons (AddRequestValidators):\n" + string.Join('\n', wrong));
+        Assert.NotEmpty(app.Services.GetServices<IRequestValidator>());
     }
 }

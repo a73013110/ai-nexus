@@ -62,8 +62,6 @@ public sealed class RequestValidators
         byType = all.ToFrozenDictionary(x => x.RequestType);
     }
 
-    public bool Contains(Type requestType) => byType.ContainsKey(requestType);
-
     internal IRequestValidator? Find(Type requestType) => byType.GetValueOrDefault(requestType);
 }
 

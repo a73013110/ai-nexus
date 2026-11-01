@@ -27,6 +27,6 @@ internal static class CompositionDiagnostics
 
     public static readonly DiagnosticDescriptor DuplicateValidator = new(
         "AINX1005", "同一個 request 型別只能有一個請求驗證器",
-        "'{0}' 驗證 '{1}'，但 '{2}' 也驗證它；過濾器只會套用一個，另一個的規則會悄悄失效，把規則合併到同一個驗證器", Category,
+        "'{0}' 驗證 '{1}'，但 '{2}' 也驗證它；過濾器依 request 型別只能套用一個（啟動時也會失敗），把規則合併到同一個驗證器", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

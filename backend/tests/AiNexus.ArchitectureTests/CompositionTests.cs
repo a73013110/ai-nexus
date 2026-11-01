@@ -39,6 +39,10 @@ public sealed class CompositionTests
         var missing = validators.Where(t => !Registered.Value.Any(x => x.ServiceType == typeof(IRequestValidator) && x.ImplementationType == t && x.Lifetime == ServiceLifetime.Singleton))
             .Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
         Assert.True(missing.Count == 0, "Request validators not registered as IRequestValidator singletons by the composition generator:\n" + string.Join('\n', missing));
+        // 過濾器在建置端點時查好驗證器並跨請求共用；模組自行加上的其他 lifetime 註冊也不行。
+        var wrong = Registered.Value.Where(x => x.ServiceType == typeof(IRequestValidator) && x.Lifetime != ServiceLifetime.Singleton)
+            .Select(x => $"{x.ImplementationType?.FullName} ({x.Lifetime})").Order(StringComparer.Ordinal).ToList();
+        Assert.True(wrong.Count == 0, "Request validators must be registered as singletons:\n" + string.Join('\n', wrong));
     }
 
     private static bool IsRequestValidator(Type type)
