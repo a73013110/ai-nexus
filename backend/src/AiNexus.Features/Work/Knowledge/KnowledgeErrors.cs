@@ -48,6 +48,9 @@ internal static class KnowledgeErrors
     public static readonly Error RerankInvalid = Error.Upstream("rerank_invalid");
     public static readonly Error EmbeddingProbeInvalid = Error.Upstream("embedding_probe_invalid");
     public static readonly Error RerankProbeInvalid = Error.Upstream("rerank_probe_invalid");
+    // 連線測試失敗只寫日誌，畫面顯示查證代碼。
+    public static readonly Error EmbeddingProbeFailed = Error.Unavailable("embedding_probe_failed");
+    public static readonly Error RerankProbeFailed = Error.Unavailable("rerank_probe_failed");
     public static readonly Error RerankDisabled = Error.Unavailable("rerank_disabled");
     public static readonly Error RerankUnavailable = Error.Unavailable("rerank_unavailable");
     public static readonly Error FullTextUnavailable = Error.Unavailable("fulltext_unavailable");

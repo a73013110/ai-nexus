@@ -273,7 +273,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                     if (offset > length)
                     {
                         offset = 0;
-                        health.Emergency("journal_checkpoint_invalid");
+                        health.Emergency(DiagnosticComponent.Journal, "journal_checkpoint_invalid");
                     }
                     if (offset == length) continue;
 
@@ -355,7 +355,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                 catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException or ArgumentException)
                 {
                     Interlocked.Increment(ref health.Corrupt);
-                    health.Emergency("journal_corrupt_record", 1);
+                    health.Emergency(DiagnosticComponent.Journal, "journal_corrupt_record", 1);
                 }
 
                 line.Clear();
@@ -369,7 +369,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         if (sealedFile && (line.Count > 0 || oversized))
         {
             Interlocked.Increment(ref health.Corrupt);
-            health.Emergency("journal_truncated_record", 1);
+            health.Emergency(DiagnosticComponent.Journal, "journal_truncated_record", 1);
             checkpoint = consumed;
         }
 

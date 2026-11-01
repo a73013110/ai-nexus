@@ -47,7 +47,7 @@ public sealed class DiagnosticExporter : IDisposable
                 if (tag.Key == "error.type" && tag.Value is string reason && reason is "queue_full" or "already_shutdown")
                 {
                     Interlocked.Add(ref health.ExportFailures, count);
-                    health.Emergency("otlp_queue_full");
+                    health.Emergency(DiagnosticComponent.Otlp, "otlp_queue_full");
                     break;
                 }
             }
@@ -131,7 +131,7 @@ public sealed class DiagnosticExporter : IDisposable
             catch (Exception)
             {
                 Interlocked.Increment(ref health.ExportFailures);
-                health.Emergency("otlp_export_failed");
+                health.Emergency(DiagnosticComponent.Otlp, "otlp_export_failed");
             }
         }
     }
@@ -179,11 +179,11 @@ public sealed class DiagnosticExporter : IDisposable
             if (result == ExportResult.Failure)
             {
                 Interlocked.Increment(ref health.ExportFailures);
-                health.Emergency("otlp_export_failed");
+                health.Emergency(DiagnosticComponent.Otlp, "otlp_export_failed");
             }
             else
             {
-                health.Recovered("otlp");
+                health.Recovered(DiagnosticComponent.Otlp);
             }
             return result;
         }

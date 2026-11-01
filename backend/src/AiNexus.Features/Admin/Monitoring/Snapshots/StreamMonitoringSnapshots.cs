@@ -71,7 +71,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
 
     public async Task<Result> HandleAsync(HttpContext http, Guid user, int window, CancellationToken ct)
     {
-        if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidRequest;
+        if (!MonitoringReads.ValidWindow(window)) return HttpErrors.InvalidRequest;
         using var lease = streams.Enter(user);
         using var stream = CancellationTokenSource.CreateLinkedTokenSource(ct, lease.Superseded);
         try

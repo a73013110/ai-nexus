@@ -1,3 +1,5 @@
+using AiNexus.Platform.Errors;
+
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
@@ -373,5 +375,5 @@ public static class PublicErrorCatalog
 
     /// <summary>取得代碼的核准提示；未登錄的代碼依狀態碼退回 401／403 的預設提示或通用提示。</summary>
     public static string Message(string code, int status) => Hints.GetValueOrDefault(code)
-        ?? (status == 401 ? Hints["authentication_required"] : status == 403 ? Hints["access_denied"] : "操作未完成，請確認輸入或稍後再試。");
+        ?? (status == 401 ? Hints[HttpErrors.AuthenticationRequired.Code] : status == 403 ? Hints[HttpErrors.AccessDenied.Code] : "操作未完成，請確認輸入或稍後再試。");
 }

@@ -162,7 +162,7 @@ public sealed partial class MailDispatcher(
         catch (Exception ex)
         {
             var failure = MailFailures.Classify(ex);
-            var issue = failure.Unexpected ? issues.Report(ex, MailFailures.DeliveryFailed, LogLevel.Warning) : null;
+            var issue = failure.Unexpected ? issues.Report(ex, MailErrors.DeliveryFailed, LogLevel.Warning) : null;
             var stage = failure.Stage ?? "unknown";
             var reason = failure.Reason ?? failure.ErrorType;
             if (failure.Outcome == MailAttemptOutcomes.Transport)

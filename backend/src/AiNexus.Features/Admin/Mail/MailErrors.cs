@@ -3,7 +3,8 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Admin.Mail;
 
 /// <summary>
-/// 郵件的預期失敗。寄送結果的分類代碼（<c>mail_rejected</c> 等）不是 API 錯誤，只寫在寄送紀錄，見 <c>Delivery/MailFailures</c>。
+/// 郵件的預期失敗。寄送結果的分類代碼（<c>mail_rejected</c> 等）不是 API 錯誤，只寫在寄送紀錄，見 <c>Delivery/MailFailures</c>；
+/// 其中無法分類的 <see cref="DeliveryFailed"/> 也寫日誌並產生查證代碼，所以定義在這裡。
 /// </summary>
 public static class MailErrors
 {
@@ -23,4 +24,5 @@ public static class MailErrors
     public static readonly Error SampleNotFound = Error.NotFound("mail_sample_not_found");
     /// <summary>寄信測試的參數有未知名稱，或值不符合型別。</summary>
     public static readonly Error SampleInvalid = Error.Invalid("mail_sample_invalid");
+    public static readonly Error DeliveryFailed = Error.Unavailable("mail_delivery_failed");
 }

@@ -53,7 +53,7 @@ public static class DiagnosticStartup
         }
         catch (Exception)
         {
-            health.Emergency("startup_journal_failed", 1);
+            health.Emergency(DiagnosticComponent.Journal, "startup_journal_failed", 1);
         }
 
         // 查證代碼也寫到標準錯誤流，方便本機或維運人員在應用程式無法啟動時比對。

@@ -4,6 +4,19 @@ using System.Collections.Concurrent;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
+/// 日誌管線的元件。每個元件只記最近一次的故障，該元件恢復正常時清除（<see cref="DiagnosticHealth.Recovered"/>）；
+/// <see cref="Admission"/> 沒有恢復事件，佇列滿或關機時沒寫完的紀錄已經遺失，留到重新啟動。
+/// </summary>
+public enum DiagnosticComponent
+{
+    Admission,
+    Journal,
+    Sql,
+    Cleanup,
+    Otlp,
+}
+
+/// <summary>
 /// 診斷管線的健康指標：追蹤佇列深度、寫入與重放次數、失敗、遺失與抽樣數量；
 /// 管線降級或發生嚴重故障時，觸發緊急處置。
 /// </summary>
@@ -14,7 +27,7 @@ public sealed class DiagnosticHealth : IDisposable
     public long QueueDepth, Accepted, Written, Replayed, WriteFailures, Lost, Sampled, Corrupt, ExportFailures;
     public long DiskBytes, PendingBytes, EstimatedSqlRows;
     private long lastFileTicks, lastSqlTicks;
-    private readonly ConcurrentDictionary<string, string> failures = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<DiagnosticComponent, string> failures = new();
 
     public DateTimeOffset? LastFileWrite
     {
@@ -32,7 +45,7 @@ public sealed class DiagnosticHealth : IDisposable
 
     private static DateTimeOffset? Timestamp(long ticks) => ticks == 0 ? null : new DateTimeOffset(ticks, TimeSpan.Zero);
 
-    public void Recovered(string component) => failures.TryRemove(component, out _);
+    public void Recovered(DiagnosticComponent component) => failures.TryRemove(component, out _);
 
     private long lastEmergency;
     private int emergencyPending;
@@ -52,16 +65,10 @@ public sealed class DiagnosticHealth : IDisposable
 
     /// <summary>
     /// 觸發日誌管線的緊急降級警報。刻意繞過 ILogger、EF Core 與所有外部日誌管道，也不夾帶原始例外內容。
-    /// 寫入本機主控台與 Windows 事件日誌時會限流。
+    /// 寫入本機主控台與 Windows 事件日誌時會限流。<paramref name="code"/> 是給維運看的短原因，只出現在監控與事件日誌，不是 API 錯誤代碼。
     /// </summary>
-    public void Emergency(string code, long lost = 0, string? issueCode = null)
+    public void Emergency(DiagnosticComponent component, string code, long lost = 0, string? issueCode = null)
     {
-        var component = code.StartsWith("sql_cleanup", StringComparison.Ordinal) ? "cleanup"
-            : code.StartsWith("sql_", StringComparison.Ordinal) ? "sql"
-            : code.StartsWith("otlp_", StringComparison.Ordinal) ? "otlp"
-            : code.StartsWith("journal_", StringComparison.Ordinal) ? "journal"
-            : "admission";
-
         failures[component] = code;
         Interlocked.Increment(ref WriteFailures);
         Interlocked.Add(ref Lost, lost);

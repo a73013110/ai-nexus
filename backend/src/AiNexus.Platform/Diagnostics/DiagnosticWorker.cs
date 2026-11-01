@@ -33,7 +33,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                 try
                 {
                     await FlushAsync(ct);
-                    health.Recovered("journal");
+                    health.Recovered(DiagnosticComponent.Journal);
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
                 {
@@ -41,7 +41,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                         : e is UnauthorizedAccessException or System.Security.SecurityException ? "journal_access_denied"
                         : (e.HResult & 0xffff) is 112 or 39 ? "journal_disk_full"
                         : "journal_write_failed";
-                    health.Emergency(reason);
+                    health.Emergency(DiagnosticComponent.Journal, reason);
                     await Task.Delay(options.Value.RetrySeconds * 1000, ct);
                 }
             }
@@ -62,7 +62,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             {
                 using var timeout = SqlTimeout(ct);
                 await journal.ReplayAsync(store, timeout.Token);
-                if (health.PendingBytes == 0) health.Recovered("sql");
+                if (health.PendingBytes == 0) health.Recovered(DiagnosticComponent.Sql);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -73,7 +73,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                 var reason = e is DiagnosticCapacityException ? "sql_capacity_exhausted"
                     : e is Microsoft.Data.SqlClient.SqlException sql ? "sql_import_failed_" + sql.Number
                     : "sql_import_failed";
-                health.Emergency(reason);
+                health.Emergency(DiagnosticComponent.Sql, reason);
                 delay = options.Value.RetrySeconds * 1000;
             }
 
@@ -85,7 +85,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                     using var timeout = SqlTimeout(ct);
                     await store.CleanupAsync(timeout.Token);
                     journal.Cleanup();
-                    health.Recovered("cleanup");
+                    health.Recovered(DiagnosticComponent.Cleanup);
                     cleanupAt = clock.GetUtcNow().AddMinutes(5);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -94,7 +94,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                 }
                 catch (Exception)
                 {
-                    health.Emergency("sql_cleanup_failed");
+                    health.Emergency(DiagnosticComponent.Cleanup, "sql_cleanup_failed");
                     cleanupAt = clock.GetUtcNow().AddSeconds(options.Value.RetrySeconds);
                 }
             }
@@ -131,7 +131,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
         if (ExecuteTask is { IsCompleted: false })
         {
             // 主機關閉期限已逾。不可啟動並行的寫入器，也不能假裝記憶體佇列已排清；未結的容量控制碼由日誌生命週期負責關閉。
-            health.Emergency("shutdown_flush_incomplete", pending.Count + Interlocked.Read(ref health.QueueDepth));
+            health.Emergency(DiagnosticComponent.Admission, "shutdown_flush_incomplete", pending.Count + Interlocked.Read(ref health.QueueDepth));
             return;
         }
 
@@ -152,6 +152,6 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
         }
 
         var remaining = pending.Count + Interlocked.Read(ref health.QueueDepth);
-        if (remaining > 0) health.Emergency("shutdown_flush_incomplete", remaining);
+        if (remaining > 0) health.Emergency(DiagnosticComponent.Admission, "shutdown_flush_incomplete", remaining);
     }
 }

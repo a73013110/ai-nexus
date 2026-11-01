@@ -86,7 +86,10 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     public static string Message(Error error, string issue)
         => Problems.Status(error.Kind) is var status && status < 500 ? PublicErrorCatalog.Message(error.Code, status) + " 查證代碼：" + issue : Message(issue);
 
-    public string Report(Exception exception, string code, LogLevel level = LogLevel.Error) => Report(exception, code, level, rejection: false);
+    /// <summary>
+    /// 記錄非預期的例外。<paramref name="error"/> 是日誌裡的錯誤代碼，與回應、稽核共用同一套 <see cref="Error"/>；只寫日誌、不回給使用者的也一樣宣告成靜態欄位。
+    /// </summary>
+    public string Report(Exception exception, Error error, LogLevel level = LogLevel.Error) => Report(exception, error.Code, level, rejection: false);
 
     /// <summary>
     /// 記錄無例外的預期失敗，例如回傳 <see cref="Error"/> 的背景任務。
@@ -122,11 +125,14 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     /// </summary>
     public static (int Status, string Code) Classify(Exception exception) => exception switch
     {
-        ExternalServiceException external => (Problems.Status(external.Error.Kind), external.Error.Code),
-        BadHttpRequestException bad => (bad.StatusCode, bad.StatusCode switch { 413 => "request_too_large", 400 => "invalid_request", _ => "service_unavailable" }),
-        AntiforgeryValidationException => (403, "csrf_invalid"),
-        _ => (503, "service_unavailable"),
+        ExternalServiceException external => Of(external.Error),
+        // Kestrel 的狀態碼照原樣回（408、431 等），代碼只分這三類。
+        BadHttpRequestException bad => (bad.StatusCode, (bad.StatusCode switch { 413 => HttpErrors.RequestTooLarge, 400 => HttpErrors.InvalidRequest, _ => HttpErrors.ServiceUnavailable }).Code),
+        AntiforgeryValidationException => Of(HttpErrors.CsrfInvalid),
+        _ => Of(HttpErrors.ServiceUnavailable),
     };
+
+    private static (int Status, string Code) Of(Error error) => (Problems.Status(error.Kind), error.Code);
 
     public PublicProblem Problem(Exception exception)
     {
@@ -135,10 +141,13 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
         return Public(status, code, issue);
     }
 
+    /// <summary>沒有例外時寫入的公開問題，例如串流中途的 <see cref="Error"/> 結果。</summary>
+    public PublicProblem Problem(Error error) => Problem(Problems.Status(error.Kind), error.Code);
+
     /// <summary>
-    /// 沒有例外時寫入的公開問題，例如 <see cref="Error"/> 結果、模型驗證失敗，或框架的空狀態。
+    /// 只給 <see cref="ProblemWriter"/>：框架的空狀態只有狀態碼，代碼由 <see cref="Problems.DefaultCode"/> 補上。
     /// </summary>
-    public PublicProblem Problem(int status, string code, string? recordedIssue = null) => Public(status, code, recordedIssue ?? Record(status, code));
+    internal PublicProblem Problem(int status, string code, string? recordedIssue = null) => Public(status, code, recordedIssue ?? Record(status, code));
 
     private string Record(int status, string code)
     {

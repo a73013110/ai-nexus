@@ -31,7 +31,7 @@ public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, 
         storage.RequireConfigured();
         var http = accessor.HttpContext;
         var principal = http?.User;
-        if (principal?.Identity?.IsAuthenticated != true) return IdentityErrors.AuthenticationRequired;
+        if (principal?.Identity?.IsAuthenticated != true) return HttpErrors.AuthenticationRequired;
         var user = Guid.TryParse(principal.FindFirstValue(SessionIdentity.UserId), out var userId)
             ? await SessionUserAsync(http!, principal, userId, ct)
             : await DirectoryUserAsync(principal, ct);

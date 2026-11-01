@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
 using AiNexus.UnitTests.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -28,7 +29,7 @@ public sealed class DiagnosticRequestMiddlewareTests
         var boundary = new DiagnosticRequestMiddleware(_ => throw failure);
         await boundary.InvokeAsync(http, services.GetRequiredService<Issues>(), services.GetRequiredService<ILogger<DiagnosticRequestMiddleware>>());
         var response = Encoding.UTF8.GetString(body.ToArray()); Assert.Contains("event: error", response); Assert.DoesNotContain(Secret, response); Assert.DoesNotContain("private.test", response);
-        var issue = services.GetRequiredService<Issues>().Report(failure, "service_unavailable");
+        var issue = services.GetRequiredService<Issues>().Report(failure, HttpErrors.ServiceUnavailable);
         Assert.Contains(issue, response); Assert.Single(buffer.Drain(), x => x.IssueCode == issue);
     }
 

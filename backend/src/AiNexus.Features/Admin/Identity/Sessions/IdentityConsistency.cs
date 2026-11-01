@@ -22,7 +22,7 @@ public static class IdentityConsistency
             !http.Request.Path.StartsWithSegments("/api/v1/auth"))
         {
             // 這個請求是以測試目標身分送出的，但 cookie 驗證時已切回管理者；不能改在管理者身分下執行，所以回 identity_changed。
-            await Problems.WriteAsync(http, Problems.Status(IdentityErrors.IdentityChanged.Kind), IdentityErrors.IdentityChanged.Code);
+            await Problems.WriteAsync(http, IdentityErrors.IdentityChanged);
             return;
         }
         await next(http);

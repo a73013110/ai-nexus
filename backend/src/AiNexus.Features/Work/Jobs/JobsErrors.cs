@@ -10,4 +10,6 @@ internal static class JobsErrors
     public static readonly Error JobHandlerMissing = Error.Conflict("job_handler_missing");
     public static readonly Error JobActive = Error.Conflict("job_active");
     public static readonly Error JobChanged = Error.Conflict("job_changed");
+    /// <summary>處理器拋出非外部服務的例外。</summary>
+    public static readonly Error JobProcessingFailed = Error.Unavailable("job_processing_failed");
 }

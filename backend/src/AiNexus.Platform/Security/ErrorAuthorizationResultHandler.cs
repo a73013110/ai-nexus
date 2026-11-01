@@ -11,6 +11,6 @@ public sealed class ErrorAuthorizationResultHandler : IAuthorizationMiddlewareRe
 
     public Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult authorizeResult)
         => authorizeResult.AuthorizationFailure?.FailureReasons.OfType<ErrorFailureReason>().FirstOrDefault() is { } reason
-            ? Problems.WriteAsync(context, Problems.Status(reason.Error.Kind), reason.Error.Code)
+            ? Problems.WriteAsync(context, reason.Error)
             : fallback.HandleAsync(next, context, policy, authorizeResult);
 }

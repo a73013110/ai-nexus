@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using AiNexus.Data.App.Mail;
+using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Admin.Mail.Delivery;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -22,7 +23,7 @@ public sealed class MailFailuresTests
         { new SocketException((int)SocketError.ConnectionRefused), MailAttemptOutcomes.Transient, MailFailures.ConnectionFailed },
         { new IOException("reset"), MailAttemptOutcomes.Transient, MailFailures.ConnectionFailed },
         { new TimeoutException(), MailAttemptOutcomes.Transient, MailFailures.Timeout },
-        { new InvalidOperationException("bug"), MailAttemptOutcomes.Transient, MailFailures.DeliveryFailed },
+        { new InvalidOperationException("bug"), MailAttemptOutcomes.Transient, MailErrors.DeliveryFailed.Code },
     };
 
     [Theory]
@@ -32,7 +33,7 @@ public sealed class MailFailuresTests
         var failure = MailFailures.Classify(exception);
         Assert.Equal(outcome, failure.Outcome);
         Assert.Equal(code, failure.ErrorCode);
-        Assert.Equal(code == MailFailures.DeliveryFailed, failure.Unexpected);
+        Assert.Equal(code == MailErrors.DeliveryFailed.Code, failure.Unexpected);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ internal sealed class AuditingAuthorizationResultHandler : IAuthorizationMiddlew
         if (authorizeResult is { Forbidden: true, AuthorizationFailure: { } failure })
         {
             // 結果與回應的錯誤代碼相同；沒有 ErrorFailureReason 時框架回 403，用它的預設代碼。FeatureId 由 FeatureAuthorizationHandler 記下。
-            var code = failure.FailureReasons.OfType<ErrorFailureReason>().FirstOrDefault()?.Error.Code ?? Problems.DefaultCode(StatusCodes.Status403Forbidden);
+            var code = failure.FailureReasons.OfType<ErrorFailureReason>().FirstOrDefault()?.Error.Code ?? HttpErrors.AccessDenied.Code;
             await RequestAudit.DeniedAsync(context, code);
         }
         await inner.HandleAsync(next, context, policy, authorizeResult);

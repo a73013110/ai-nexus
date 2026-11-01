@@ -122,10 +122,10 @@ public sealed partial class BackgroundJobWorker(
         catch (Exception ex)
         {
             status = RunStates.Failed;
-            var external = (ex as ExternalServiceException)?.Error;
-            code = external?.Code ?? "job_processing_failed";
-            issue = issues.Report(ex, code);
-            message = external is null ? Issues.Message(issue) : Issues.Message(external, issue);
+            var error = (ex as ExternalServiceException)?.Error ?? JobsErrors.JobProcessingFailed;
+            code = error.Code;
+            issue = issues.Report(ex, error);
+            message = Issues.Message(error, issue);
         }
         finally
         {

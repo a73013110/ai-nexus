@@ -32,4 +32,6 @@ internal static class ChatErrors
     public static readonly Error ServerStopping = Error.Unavailable("server_stopping");
     public static readonly Error GenerationTimeout = Error.Unavailable("generation_timeout");
     public static readonly Error InternalError = Error.Unavailable("internal_error");
+    /// <summary>生成結束後寫回資料庫失敗；只寫日誌，run 本身記成 <see cref="InternalError"/>。</summary>
+    public static readonly Error PersistenceFailed = Error.Unavailable("generation_persistence_failed");
 }

@@ -226,7 +226,7 @@ internal sealed class CreateRun(
 
             if (request.RegenerateUserMessageId is not null && request.AttachmentIds?.Count > 0)
             {
-                return InferenceErrors.RegenerateWithAttachments;
+                return HttpErrors.InvalidRequest;
             }
 
             var bound = await attachments.RequireAsync(owner, request.AttachmentIds, ct);

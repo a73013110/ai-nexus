@@ -118,7 +118,7 @@ public sealed partial class ModelCatalog(
         {
             // 清掉 refreshing 才能讓下次呼叫重新探測；舊的 current 快取保留，繼續對外服務
             lock (gate) refreshing = null;
-            issues.Report(error, "provider_discovery_unavailable", LogLevel.Warning);
+            issues.Report(error, InferenceErrors.ProviderDiscoveryUnavailable, LogLevel.Warning);
             throw;
         }
     }
@@ -136,7 +136,7 @@ public sealed partial class ModelCatalog(
             }
             catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or ExternalServiceException)
             {
-                issues.Report(error, "provider_capability_unavailable", LogLevel.Warning);
+                issues.Report(error, InferenceErrors.ProviderCapabilityUnavailable, LogLevel.Warning);
                 images = false;
             }
         }
@@ -192,7 +192,7 @@ public sealed partial class ModelCatalog(
         {
             // 逾時的例外訊息會被遮罩，沒有 Provider 就只能從堆疊猜是哪個供應商。
             using var scope = logger.BeginScope(new Dictionary<string, object?> { ["Provider"] = id });
-            var issue = issues.Report(exception, "provider_discovery_unavailable", LogLevel.Warning);
+            var issue = issues.Report(exception, InferenceErrors.ProviderDiscoveryUnavailable, LogLevel.Warning);
             return (new(id, false, AiNexus.Platform.Diagnostics.Issues.Message(issue)), new HashSet<string>(), issue);
         }
     }

@@ -38,7 +38,7 @@ public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddin
             {
                 ct.ThrowIfCancellationRequested();
                 using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });
-                var issue = issues.Report(error, "embedding_probe_failed", LogLevel.Warning);
+                var issue = issues.Report(error, KnowledgeErrors.EmbeddingProbeFailed, LogLevel.Warning);
                 embedding = embedding with { Available = false, Notice = Issues.Message(issue) };
             }
         }
@@ -59,7 +59,7 @@ public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddin
             {
                 ct.ThrowIfCancellationRequested();
                 using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "rerank-probe", ["ExternalService"] = "rerank" });
-                var issue = issues.Report(error, "rerank_probe_failed", LogLevel.Warning);
+                var issue = issues.Report(error, KnowledgeErrors.RerankProbeFailed, LogLevel.Warning);
                 rerank = rerank with { Available = false, Notice = Issues.Message(issue) };
             }
         }

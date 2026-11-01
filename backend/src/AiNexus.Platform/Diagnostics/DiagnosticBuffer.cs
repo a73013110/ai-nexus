@@ -51,7 +51,7 @@ public sealed class DiagnosticBuffer(IOptions<DiagnosticOptions> options, Diagno
         }
 
         Interlocked.Decrement(ref health.QueueDepth);
-        health.Emergency(significant ? "important_queue_full" : "queue_full", 1, item.IssueCode);
+        health.Emergency(DiagnosticComponent.Admission, significant ? "important_queue_full" : "queue_full", 1, item.IssueCode);
         return false;
     }
 

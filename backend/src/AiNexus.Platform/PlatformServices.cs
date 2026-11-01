@@ -50,7 +50,7 @@ public static class PlatformServices
             {
                 context.HttpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
             }
-            return new ValueTask(Problems.WriteAsync(context.HttpContext, 429, "rate_limited"));
+            return new ValueTask(Problems.WriteAsync(context.HttpContext, HttpErrors.RateLimited));
         });
 
         services.ConfigureHttpJsonOptions(options =>

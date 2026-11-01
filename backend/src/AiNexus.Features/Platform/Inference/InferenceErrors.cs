@@ -12,7 +12,6 @@ internal static class InferenceErrors
     public static readonly Error QueueFull = new(ErrorKind.RateLimited, "queue_full");
     public static readonly Error KnowledgeSelectionChanged = Error.Conflict("knowledge_selection_changed");
     /// <summary>重新生成對話時自動重複使用原始提問之附件。</summary>
-    public static readonly Error RegenerateWithAttachments = Error.Invalid("invalid_request");
     public static readonly Error ModelGroupForbidden = Error.Forbidden("model_group_forbidden");
     public static readonly Error ModelTokenQuota = Error.RateLimited("model_token_quota");
     public static readonly Error TaskInputTooLong = Error.Invalid("task_input_too_long");
@@ -42,4 +41,7 @@ internal static class InferenceErrors
     public static readonly Error GoogleModelUnavailable = Error.Unavailable("google_model_unavailable");
     public static readonly Error GoogleServiceUnavailable = Error.Unavailable("google_service_unavailable");
     public static readonly Error ProviderDisabled = Error.Unavailable("provider_disabled");
+    // 模型清單探測失敗只寫日誌，沿用上次的清單。
+    public static readonly Error ProviderDiscoveryUnavailable = Error.Unavailable("provider_discovery_unavailable");
+    public static readonly Error ProviderCapabilityUnavailable = Error.Unavailable("provider_capability_unavailable");
 }

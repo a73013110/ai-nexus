@@ -81,7 +81,7 @@ public sealed partial class DiagnosticBrowserTests
         var download = await page.RunAndWaitForDownloadAsync(() => page.GetByRole(AriaRole.Button, new() { Name = "匯出 CSV", Exact = true }).ClickAsync());
         var csvPath = Path.Combine(evidence, "safe-export.csv"); await download.SaveAsAsync(csvPath);
         Assert.Contains("'=HYPERLINK", await File.ReadAllTextAsync(csvPath));
-        factory.Services.GetRequiredService<DiagnosticHealth>().Emergency("important_queue_full", 1); // 受控地注入健康狀態，並非實際的磁碟故障。
+        factory.Services.GetRequiredService<DiagnosticHealth>().Emergency(DiagnosticComponent.Admission, "important_queue_full", 1); // 受控地注入健康狀態，並非實際的磁碟故障。
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "日誌系統降級" })).ToBeVisibleAsync();
         await page.RouteAsync("**/api/v1/admin/logs?*", route => route.FulfillAsync(new() { Status = 503, ContentType = "application/problem+json", Body = JsonSerializer.Serialize(new { code = "service_unavailable", title = "Password=fixture-ui-secret https://private.test/provider", issueCode = issue }) }));

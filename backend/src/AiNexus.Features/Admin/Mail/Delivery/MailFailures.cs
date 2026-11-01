@@ -29,7 +29,6 @@ public static partial class MailFailures
     public const string Timeout = "mail_timeout";
     public const string ConnectionFailed = "mail_connection_failed";
     public const string Deferred = "mail_deferred";
-    public const string DeliveryFailed = "mail_delivery_failed";
 
     public static MailFailure Classify(Exception exception)
     {
@@ -54,7 +53,7 @@ public static partial class MailFailures
         TimeoutException or OperationCanceledException => new(MailAttemptOutcomes.Transient, Timeout, null, null, true, false, exception.GetType().Name),
         SmtpProtocolException or ServiceNotConnectedException or IOException or SocketException
             => new(MailAttemptOutcomes.Transient, ConnectionFailed, null, null, true, false, exception.GetType().Name),
-        _ => new(MailAttemptOutcomes.Transient, DeliveryFailed, null, null, false, true, exception.GetType().Name),
+        _ => new(MailAttemptOutcomes.Transient, MailErrors.DeliveryFailed.Code, null, null, false, true, exception.GetType().Name),
     };
 
     private static MailFailure Command(SmtpCommandException command)

@@ -8,6 +8,7 @@ namespace AiNexus.ArchitectureTests;
 /// <summary>
 /// 錯誤代碼是公開合約，只在一處宣告：Features 放 <c>&lt;Module&gt;Errors</c>，Platform／Data／Host 放擁有它的型別（如 <c>TableQuery.Invalid</c>），一律是靜態欄位。
 /// 這樣反射看得到每一個代碼，提示檢查才完整；行內 <c>Error.Upstream("x")</c> 或以字串參數組出的錯誤都看不到。
+/// 只寫日誌的代碼（<c>Issues.Report</c>）也是 <see cref="Error"/>，與回應、稽核共用同一套。
 /// </summary>
 public sealed partial class ErrorDefinitionTests
 {
@@ -28,6 +29,23 @@ public sealed partial class ErrorDefinitionTests
     [Fact]
     public void EveryClientErrorHasAReviewedHint()
     {
+        var missing = Declared().Where(x => Problems.Status(x.Error.Kind) < 500 && !PublicErrorCatalog.Contains(x.Error.Code))
+            .Select(x => $"{x.Field}: {x.Error.Code}").Order(StringComparer.Ordinal).ToList();
+        Assert.True(missing.Count == 0, "Client errors need a reviewed hint in PublicErrorCatalog:\n" + string.Join('\n', missing));
+    }
+
+    // 通用代碼只有 HttpErrors 一份；模組再宣告一份同代碼的，分類或提示改了就會分岔。意思更精確時另取專屬代碼。
+    [Fact]
+    public void GenericErrorsAreNotRedeclared()
+    {
+        var generic = typeof(HttpErrors).GetFields().Select(field => ((Error)field.GetValue(null)!).Code).ToHashSet(StringComparer.Ordinal);
+        var redeclared = Declared().Where(x => !x.Field.StartsWith(nameof(HttpErrors) + ".", StringComparison.Ordinal) && generic.Contains(x.Error.Code))
+            .Select(x => $"{x.Field}: {x.Error.Code}").ToList();
+        Assert.True(redeclared.Count == 0, "Use HttpErrors instead of redeclaring a generic code:\n" + string.Join('\n', redeclared));
+    }
+
+    private static List<(string Field, Error Error)> Declared()
+    {
         var errors = new[] { Assemblies.Platform, Assemblies.Data, Assemblies.Features, Assemblies.Host }
             .SelectMany(assembly => assembly.GetTypes()).Where(type => !type.ContainsGenericParameters)
             .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly))
@@ -35,9 +53,7 @@ public sealed partial class ErrorDefinitionTests
             .Select(field => (Field: field.DeclaringType!.Name + "." + field.Name, Error: (Error)field.GetValue(null)!))
             .ToList();
         Assert.NotEmpty(errors);
-        var missing = errors.Where(x => Problems.Status(x.Error.Kind) < 500 && !PublicErrorCatalog.Contains(x.Error.Code))
-            .Select(x => $"{x.Field}: {x.Error.Code}").Order(StringComparer.Ordinal).ToList();
-        Assert.True(missing.Count == 0, "Client errors need a reviewed hint in PublicErrorCatalog:\n" + string.Join('\n', missing));
+        return errors;
     }
 
     [GeneratedRegex(@"\bError\.(?:Invalid|Unauthenticated|Forbidden|NotFound|Conflict|TooLarge|Unprocessable|RateLimited|Upstream|Unavailable|Timeout)\(")]

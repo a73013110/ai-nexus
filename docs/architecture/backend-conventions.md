@@ -51,6 +51,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 
 - 預期內的失敗（找不到、衝突、無權限、配額）回傳 `Result<T>`／`Result`，錯誤定義在 `<Module>Errors`：`Error.NotFound("template_not_found")`。
 - 錯誤只宣告成靜態欄位：Features 放 `<Module>Errors`，Platform／Data／Host 放擁有它的型別（如 `TableQuery.Invalid`）；不寫行內 `Error.X("…")`、不以字串參數組錯誤。4xx 代碼必須有 `PublicErrorCatalog` 提示（皆由 `ErrorDefinitionTests` 檢查），前後端提示一致（`PublicErrorCatalogTests`）。
+- 通用代碼（`invalid_request`、`not_found`、`rate_limited` 等）用 `HttpErrors`，模組不再宣告同代碼的錯誤。`Issues.Report(例外, Error)` 只寫日誌的代碼也是靜態欄位，類別用 `Unavailable`（不需提示）。
 - HTTP 狀態碼只由 `Problems.Status(ErrorKind)` 決定。
 - 呼叫端傳遞失敗：`if (await X(...) is { IsSuccess: false } failed) return failed.Error;`；背景工作 `ExecuteAsync` 回傳的錯誤記為任務的錯誤代碼。
 - 外部系統故障或拒絕、又無法回傳 `Result`（HTTP client、串流中途、探測）時，丟 `ExternalServiceException(Error, detail)`：狀態碼依 `Error.Kind`，`detail` 只進日誌。

@@ -30,14 +30,14 @@ public static class Problems
     };
 
     /// <summary>針對框架未附帶回應本體的狀態碼（如驗證挑戰、存取拒絕、未配對路由）提供預設公開代碼。</summary>
-    public static string DefaultCode(int status) => status switch
+    public static string DefaultCode(int status) => (status switch
     {
-        401 => "authentication_required",
-        403 => "access_denied",
-        404 => "not_found",
-        429 => "rate_limited",
-        _ => "invalid_request",
-    };
+        401 => HttpErrors.AuthenticationRequired,
+        403 => HttpErrors.AccessDenied,
+        404 => HttpErrors.NotFound,
+        429 => HttpErrors.RateLimited,
+        _ => HttpErrors.InvalidRequest,
+    }).Code;
 
     /// <summary>problem 的公開錯誤代碼；稽核以它記錄失敗的結果。</summary>
     public static string? CodeOf(ProblemDetails details) => details.Extensions.TryGetValue(CodeKey, out var code) ? code as string : null;
@@ -85,14 +85,14 @@ public static class Problems
         if (outcome.IsSuccess) return TypedResults.Empty;
         if (!http.Response.HasStarted) return outcome.Error.ToProblem();
         if (!http.RequestAborted.IsCancellationRequested)
-            await Issues.WriteEventAsync(http, http.RequestServices.GetRequiredService<Issues>().Problem(Status(outcome.Error.Kind), outcome.Error.Code));
+            await Issues.WriteEventAsync(http, http.RequestServices.GetRequiredService<Issues>().Problem(outcome.Error));
         return TypedResults.Empty;
     }
 
     /// <summary>供端點管線之外的中介軟體（Middleware）直接寫出錯誤回應。</summary>
-    public static Task WriteAsync(HttpContext http, int status, string code)
+    public static Task WriteAsync(HttpContext http, Error error)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
-            .WriteAsync(new() { HttpContext = http, ProblemDetails = Details(status, code, null) }).AsTask();
+            .WriteAsync(new() { HttpContext = http, ProblemDetails = Details(Status(error.Kind), error.Code, null) }).AsTask();
 
     /// <summary>把請求管線中拋出的例外轉成錯誤回應並寫出。</summary>
     public static Task WriteAsync(HttpContext http, Exception exception)

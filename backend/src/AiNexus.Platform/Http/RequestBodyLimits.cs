@@ -32,7 +32,7 @@ public static class RequestBodyLimits
         var limit = http.GetEndpoint()?.Metadata.GetMetadata<RequestBodyLimitMetadata>()?.Resolve(http.RequestServices) ?? Default;
         if (http.Request.ContentLength > limit)
         {
-            await Problems.WriteAsync(http, StatusCodes.Status413PayloadTooLarge, "request_too_large");
+            await Problems.WriteAsync(http, HttpErrors.RequestTooLarge);
             return;
         }
         var bodySize = http.Features.Get<IHttpMaxRequestBodySizeFeature>();

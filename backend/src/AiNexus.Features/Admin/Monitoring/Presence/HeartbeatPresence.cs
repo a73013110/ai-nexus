@@ -16,7 +16,7 @@ public sealed record PresenceRequest(Guid SessionId, string Feature, string Stat
 
 internal sealed class PresenceRequestValidator : RequestValidator<PresenceRequest>
 {
-    public override Error Problem => MonitoringErrors.InvalidRequest;
+    public override Error Problem => HttpErrors.InvalidRequest;
 
     public PresenceRequestValidator()
     {

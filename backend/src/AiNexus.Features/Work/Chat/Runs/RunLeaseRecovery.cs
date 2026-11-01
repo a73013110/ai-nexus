@@ -46,7 +46,7 @@ public sealed class RunLeaseRecovery(
             var changed = await db.Runs
                 .Where(x => x.Id == id && x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, RunStates.Failed)
-                    .SetProperty(x => x.ErrorCode, "executor_lost")
+                    .SetProperty(x => x.ErrorCode, ChatErrors.ExecutorLost.Code)
                     .SetProperty(x => x.ActiveOwnerId, (Guid?)null)
                     .SetProperty(x => x.LeaseExpiresAt, (DateTimeOffset?)null)
                     .SetProperty(x => x.FinishedAt, now), ct);
@@ -83,7 +83,7 @@ public sealed class RunLeaseRecovery(
             RunService.AddEvent(db, run, "status");
             await conversations.UpdateAnswerAsync(run, ct);
 
-            audit.Record(ChatAudit.RunRecovered, run.OwnerId, id, result: "executor_lost").IssueCode = run.IssueCode;
+            audit.Record(ChatAudit.RunRecovered, run.OwnerId, id, result: ChatErrors.ExecutorLost.Code).IssueCode = run.IssueCode;
 
             await notifications.PublishAsync(
                 run.OwnerId,

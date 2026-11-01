@@ -73,7 +73,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
         {
             if (request.Prompt is not null || request.ParentMessageId is not null)
             {
-                return ConversationsErrors.RegenerateWithPrompt;
+                return HttpErrors.InvalidRequest;
             }
 
             var original = await db.Set<Message>()

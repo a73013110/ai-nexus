@@ -60,8 +60,8 @@ public sealed class IdentityModule : IFeatureModule
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);
                 options.SlidingExpiration = true;
                 options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
-                options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext, 401, "authentication_required");
-                options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, 403, "access_denied");
+                options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AuthenticationRequired);
+                options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AccessDenied);
             });
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.ClientAddress()?.ToString() ?? "local",

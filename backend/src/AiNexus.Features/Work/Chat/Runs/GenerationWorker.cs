@@ -120,7 +120,7 @@ public sealed partial class GenerationWorker(
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                var issue = issues.Report(ex, "generation_persistence_failed");
+                var issue = issues.Report(ex, ChatErrors.PersistenceFailed);
                 try
                 {
                     await FinishIfActiveAsync(job, RunStates.Failed, ChatErrors.InternalError, issue);
@@ -250,7 +250,7 @@ public sealed partial class GenerationWorker(
         {
             finalStatus = RunStates.Failed;
             error = (ex as ExternalServiceException)?.Error ?? (ex is HttpRequestException or IOException ? InferenceErrors.ProviderConnectionLost : InferenceErrors.ProviderProtocolError);
-            issueCode = issues.Report(ex, error.Code);
+            issueCode = issues.Report(ex, error);
         }
 
         // 結束前寫入剩餘的文字與用量。使用 CancellationToken.None，即使已被取消，局部產出也要保存下來

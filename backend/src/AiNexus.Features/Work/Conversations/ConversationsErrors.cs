@@ -12,7 +12,6 @@ internal static class ConversationsErrors
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
     public static readonly Error MessageNotFound = Error.NotFound("message_not_found");
     public static readonly Error Archived = Error.Conflict("conversation_archived");
-    public static readonly Error RegenerateWithPrompt = Error.Invalid("invalid_request");
     public static readonly Error PromptRequired = Error.Invalid("prompt_required");
     public static readonly Error InvalidParent = Error.Invalid("invalid_parent");
     public static readonly Error InvalidSearch = Error.Invalid("invalid_search");
