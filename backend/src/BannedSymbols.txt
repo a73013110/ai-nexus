@@ -30,3 +30,63 @@ M:System.Reflection.PropertyInfo.GetValue(System.Object);不以反射讀屬性�
 M:System.Reflection.PropertyInfo.SetValue(System.Object,System.Object);不以反射寫屬性：改用強型別存取。
 M:System.Reflection.FieldInfo.GetValue(System.Object);不以反射讀欄位：清單改由 source generator 列出（[FieldCatalog]）。
 M:System.Reflection.FieldInfo.SetValue(System.Object,System.Object);不以反射寫欄位：改用強型別存取。
+// 同一類 API 的其他入口：以字串找成員、反射建立委派、載入組件、其他多載。
+M:System.Linq.Expressions.Expression.Call(System.Linq.Expressions.Expression,System.String,System.Type[],System.Linq.Expressions.Expression[]);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Call(System.Type,System.String,System.Type[],System.Linq.Expressions.Expression[]);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression,System.String);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression,System.Type,System.String);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression,System.String,System.Linq.Expressions.Expression[]);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Field(System.Linq.Expressions.Expression,System.String);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.Field(System.Linq.Expressions.Expression,System.Type,System.String);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Linq.Expressions.Expression.PropertyOrField(System.Linq.Expressions.Expression,System.String);以字串找成員要到執行期才知道存不存在：改用強型別的 lambda 運算式，或以方法群組轉成委派取得 MethodInfo。
+M:System.Reflection.MethodInfo.CreateDelegate(System.Type);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Reflection.MethodInfo.CreateDelegate(System.Type,System.Object);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Reflection.MethodInfo.CreateDelegate``1;不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Reflection.MethodInfo.CreateDelegate``1(System.Object);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Reflection.MethodInfo);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Reflection.MethodInfo,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Object,System.Reflection.MethodInfo);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Object,System.Reflection.MethodInfo,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Object,System.String);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Object,System.String,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Object,System.String,System.Boolean,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Type,System.String);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Type,System.String,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+M:System.Delegate.CreateDelegate(System.Type,System.Type,System.String,System.Boolean,System.Boolean);不以反射建立委派：直接以方法群組或 lambda 建立強型別委派。
+T:System.Reflection.MethodInvoker;不以反射呼叫方法：改用強型別呼叫、介面或委派。
+T:System.Reflection.ConstructorInvoker;不以反射建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.AppDomain.GetAssemblies;不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Reflection.Assembly.Load(System.String);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Reflection.Assembly.Load(System.Reflection.AssemblyName);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Reflection.Assembly.Load(System.Byte[]);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Reflection.Assembly.LoadFrom(System.String);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Reflection.Assembly.LoadFile(System.String);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Runtime.Loader.AssemblyLoadContext.LoadFromAssemblyPath(System.String);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Runtime.Loader.AssemblyLoadContext.LoadFromAssemblyName(System.Reflection.AssemblyName);不在執行期載入或列舉組件：清單由 source generator 在編譯期列出（ADR 0030；需要外掛時重新評估）。
+M:System.Type.GetType(System.String,System.Func{System.Reflection.AssemblyName,System.Reflection.Assembly},System.Func{System.Reflection.Assembly,System.String,System.Boolean,System.Type});不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Type.GetType(System.String,System.Func{System.Reflection.AssemblyName,System.Reflection.Assembly},System.Func{System.Reflection.Assembly,System.String,System.Boolean,System.Type},System.Boolean);不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Type.GetType(System.String,System.Func{System.Reflection.AssemblyName,System.Reflection.Assembly},System.Func{System.Reflection.Assembly,System.String,System.Boolean,System.Type},System.Boolean,System.Boolean);不以字串找型別：直接引用型別（typeof）或由 source generator 產生對照。
+M:System.Activator.CreateInstance(System.String,System.String);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Activator.CreateInstance(System.String,System.String,System.Object[]);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Activator.CreateInstance(System.String,System.String,System.Boolean,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo,System.Object[]);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Activator.CreateInstanceFrom(System.String,System.String);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Activator.CreateInstanceFrom(System.String,System.String,System.Object[]);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Activator.CreateInstanceFrom(System.String,System.String,System.Boolean,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo,System.Object[]);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Reflection.ConstructorInfo.Invoke(System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(System.Type);不以字串或 Type 建立物件：改用 new、泛型 new() 約束或 DI。
+M:System.Reflection.PropertyInfo.GetValue(System.Object,System.Object[]);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.PropertyInfo.GetValue(System.Object,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.PropertyInfo.SetValue(System.Object,System.Object,System.Object[]);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.PropertyInfo.SetValue(System.Object,System.Object,System.Reflection.BindingFlags,System.Reflection.Binder,System.Object[],System.Globalization.CultureInfo);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.FieldInfo.SetValue(System.Object,System.Object,System.Reflection.BindingFlags,System.Reflection.Binder,System.Globalization.CultureInfo);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.FieldInfo.GetValueDirect(System.TypedReference);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Reflection.FieldInfo.SetValueDirect(System.TypedReference,System.Object);不以反射讀寫成員：改用強型別存取、模式比對或 EF 模型的存取子。
+M:System.Array.CreateInstance(System.Type,System.Int32);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstance(System.Type,System.Int32,System.Int32);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstance(System.Type,System.Int32,System.Int32,System.Int32);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstance(System.Type,System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstance(System.Type,System.Int64[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstance(System.Type,System.Int32[],System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
+M:System.Array.CreateInstanceFromArrayType(System.Type,System.Int32[],System.Int32[]);在型別已知的地方以 new T[n] 建立陣列，或由 source generator 產生。
