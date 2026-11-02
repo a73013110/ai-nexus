@@ -128,7 +128,7 @@ public sealed class ModelPolicyService(
             personal);
 
         // 計算當日 UTC 日曆日區間（00:00:00Z ~ 隔日 00:00:00Z）
-        var start = UtcDay.Start(asOf ?? clock.GetUtcNow());
+        var start = (asOf ?? clock.GetUtcNow()).UtcDayStart();
         var end = start.AddDays(1);
 
         // 對話生成與其他背景任務都會消耗同一份每日配額，因此兩邊的用量要合併計算

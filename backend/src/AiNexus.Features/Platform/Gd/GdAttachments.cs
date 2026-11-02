@@ -50,8 +50,8 @@ public sealed partial class GdAttachments(ExternalDatabase<GdDatabase> gd)
     private static GdAttachment? Attachment(AttachmentRow row)
     {
         if (PathOf(row.Folder, row.StoredName) is not { } path) return null;
-        var fileName = TextRules.TrimToNull(row.FileName) ?? row.StoredName!.Trim();
-        return new(fileName, TextRules.TrimToNull(row.Memo), TextRules.TrimToNull(row.Uploader), new(GdFileSource.SourceName, path));
+        var fileName = row.FileName.TrimToNull() ?? row.StoredName!.Trim();
+        return new(fileName, row.Memo.TrimToNull(), row.Uploader.TrimToNull(), new(GdFileSource.SourceName, path));
     }
 
     [GeneratedRegex("^/attfile/[0-9]{2,3}$")]

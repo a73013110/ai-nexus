@@ -25,7 +25,7 @@ public sealed class Conversation
     public string SystemInstruction { get; set; } = "";
     public List<ConversationLabel> Labels { get; set; } = [];
 
-    public static bool TitleIsValid(string? title) => TextRules.IsLine(title, TitleMaxLength);
+    public static bool TitleIsValid(string? title) => title.IsLine(TitleMaxLength);
 }
 
 internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conversation>

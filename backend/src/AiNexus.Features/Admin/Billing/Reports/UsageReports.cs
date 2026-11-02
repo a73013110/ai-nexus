@@ -19,7 +19,7 @@ public sealed record TokenUsageDto(DateTimeOffset From, DateTimeOffset Until, in
 public sealed class UsageReports(AppDbContext db, ModelPresentation presentation, TimeProvider clock)
 {
     /// <summary>近 30 天的起點（含今日，以 UTC 日界切分），沒有指定期間時的預設起點。</summary>
-    public DateTimeOffset Since => UtcDay.Start(clock.GetUtcNow()).AddDays(-29);
+    public DateTimeOffset Since => clock.GetUtcNow().UtcDayStart().AddDays(-29);
 
     // 聊天執行與模型工作合併成同一種紀錄（inference.udf_UsageEntries），之後的統計才能一起計算；預設期間為近 30 天。
     private IQueryable<UsageEntry> Entries(DateTimeOffset? from = null, DateTimeOffset? until = null) => db.UsageEntries(from ?? Since, until);

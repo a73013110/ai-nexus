@@ -1,3 +1,4 @@
+using AiNexus.Data.App.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 
 namespace AiNexus.Features.Admin.AccessControl;
@@ -187,10 +188,11 @@ public static class FeatureCatalog
     private static readonly Dictionary<string, int> Positions = All.Select((x, i) => (x.Id, i)).ToDictionary(x => x.Id, x => x.i, StringComparer.Ordinal);
 
     /// <summary>
-    /// 功能清單的排序鍵：<see cref="All"/> 的宣告順序（ADR 0016：選單位置在 NavigationItems，功能本身不再有排序欄位）。
-    /// 目錄不認得的舊列排在最後，呼叫端再依 ID 排出穩定順序。
+    /// 依 <see cref="All"/> 的宣告順序排列（ADR 0016：選單位置在 NavigationItems，功能本身不再有排序欄位）。
+    /// 目錄不認得的舊列排在最後、依 ID；<c>/me</c>、管理目錄與稽核目錄共用。
     /// </summary>
-    public static int Position(string id) => Positions.GetValueOrDefault(id, int.MaxValue);
+    public static IEnumerable<Feature> InCatalogOrder(this IEnumerable<Feature> rows)
+        => rows.OrderBy(x => Positions.GetValueOrDefault(x.Id, int.MaxValue)).ThenBy(x => x.Id, StringComparer.Ordinal);
 
     /// <summary>
     /// 查目錄。資料庫可能有程式不認得的功能列（舊資料或 fork 移除的功能），呼叫端拿到 null 時要照未知功能處理，不可拋例外。

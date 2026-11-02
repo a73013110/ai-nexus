@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Records;
@@ -33,7 +34,7 @@ internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, App
         // 稽核記查詢條件與人數，不記名單本身；請求稽核在回應送出前寫入，寫不進去檔案就不會送出（失敗即拒絕）。
         audit.Describe(details: new { count = data.People.Count });
 
-        var exportedAt = TaipeiTime.Of(clock.GetUtcNow());
+        var exportedAt = clock.GetUtcNow().ToTaipei();
         var content = AttendanceReportWorkbook.Write(data, await CardsAsync(data, ct));
         return new ExportFile(Invariant($"出缺勤計算_{exportedAt:yyyyMMdd_HHmmss}({data.From:yyyyMMdd}to{data.To:yyyyMMdd}).xlsx"), Spreadsheet.ContentType, content);
     }

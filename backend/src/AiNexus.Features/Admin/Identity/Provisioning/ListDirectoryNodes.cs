@@ -48,6 +48,6 @@ internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuth
     {
         if (string.IsNullOrWhiteSpace(node)) return settings.Base;
         var dn = node.Trim();
-        return dn.Length <= 1024 && !TextRules.HasLineControl(dn) && DirectoryNames.Within(dn, settings.Base) ? dn : null;
+        return dn.Length <= 1024 && !dn.HasLineControl() && DirectoryNames.Within(dn, settings.Base) ? dn : null;
     }
 }

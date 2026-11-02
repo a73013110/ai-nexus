@@ -134,7 +134,7 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
             ? resource : CollaborationErrors.ResourceNotFound;
 
     /// <summary>資源名稱：去除前後空白後 1 到 120 字，且不可含控制字元。</summary>
-    public static bool IsValidName(string? value) => TextRules.IsLine(value, 120);
+    public static bool IsValidName(string? value) => value.IsLine(120);
 
     public static Result<string> Name(string value) => IsValidName(value) ? value.Trim() : CollaborationErrors.InvalidName;
 }

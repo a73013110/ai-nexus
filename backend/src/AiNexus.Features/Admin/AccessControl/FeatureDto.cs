@@ -17,8 +17,4 @@ public sealed record FeatureDto(string Id, string Name, string Route, string Ico
 
     /// <summary>顯示名稱：覆寫優先，其次目錄預設名稱，都沒有時用 id。</summary>
     public static string DisplayName(string id, string? overrideName) => overrideName ?? FeatureCatalog.Find(id)?.Name ?? id;
-
-    /// <summary>依 <see cref="FeatureCatalog.All"/> 的宣告順序排列（目錄不認得的列在最後、依 ID）；<c>/me</c>、管理目錄與稽核目錄共用。</summary>
-    public static IEnumerable<Feature> InCatalogOrder(IEnumerable<Feature> rows)
-        => rows.OrderBy(x => FeatureCatalog.Position(x.Id)).ThenBy(x => x.Id, StringComparer.Ordinal);
 }

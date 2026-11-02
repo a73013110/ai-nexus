@@ -71,14 +71,14 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
             // 兩次權限檢查都在交易內讀 SQL，不信任請求一開始授權時的快取結果。
             access.Invalidate();
             if (!await access.HoldsAsync(actor, target.Feature, ct)) return AccessControlErrors.FeatureForbidden;
-            before = await target.Snapshot(ct);
+            before = await SnapshotAsync(target, ct);
             if (item is null) audit.Describe(target.Resource, target.Subject, new { resourceKey = target.Key, before });
             var outcome = await mutation();
             if (!outcome.IsSuccess) return outcome.Error;
             await db.SaveChangesAsync(ct);
             access.Invalidate();
             if (!await access.HoldsAsync(actor, target.Feature, ct)) return AccessControlErrors.Lockout;
-            var after = await target.Snapshot(ct);
+            var after = await SnapshotAsync(target, ct);
             if (item is null) audit.Describe(details: new { after });
             else audit.Record(item, actor, target.Resource, target.Subject, new { resourceKey = target.Key, before, after });
             await db.SaveChangesAsync(ct);
@@ -94,6 +94,16 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
             audit.Record(item, actor, target.Resource, target.Subject, new { resourceKey = target.Key[..Math.Min(target.Key.Length, 64)], before, failureCode = code }, code);
             await db.SaveChangesAsync(ct);
         }
+    }
+
+    // 變更可能繞過追蹤（ExecuteUpdate、procedure）：查到追蹤中的實體會得到舊值，稽核卻不會報錯。
+    // 所以快照一律不追蹤，不只靠每個 slice 記得寫 AsNoTracking。
+    private async Task<object?> SnapshotAsync(AuditTarget target, CancellationToken ct)
+    {
+        var tracking = db.ChangeTracker.QueryTrackingBehavior;
+        db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+        try { return await target.Snapshot(ct); }
+        finally { db.ChangeTracker.QueryTrackingBehavior = tracking; }
     }
 }
 

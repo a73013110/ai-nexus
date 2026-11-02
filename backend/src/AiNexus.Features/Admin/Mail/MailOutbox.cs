@@ -3,6 +3,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -147,7 +148,7 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
         var now = clock.GetUtcNow();
         var settings = options.Value;
         var id = Guid.NewGuid();
-        var name = to.DisplayName?.Trim();
+        var name = to.DisplayName.TrimToNull();
         return new()
         {
             Id = id,
@@ -159,7 +160,7 @@ public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailConte
             ResendOfId = resendOf,
             RequestedById = enqueue.RequestedBy,
             RecipientUserId = to.UserId,
-            RecipientName = string.IsNullOrEmpty(name) ? null : name.Length > OutboundMessage.NameMaxLength ? name[..OutboundMessage.NameMaxLength] : name,
+            RecipientName = name is { Length: > OutboundMessage.NameMaxLength } ? name[..OutboundMessage.NameMaxLength] : name,
             FromAddress = settings.From.Address,
             Subject = mail.Subject,
             // 固定的 Message-ID 讓「到底有沒有寄出」能拿去 mail server 或 Google 的紀錄比對；租約過期重寄同一列時也不變，收件端有機會去重。

@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Imports;
@@ -26,7 +27,7 @@ internal sealed class ListPunchImports(AppDbContext db)
             return AttendanceErrors.ImportFilterInvalid;
         var imports = db.PunchImports.AsNoTracking();
         if (fileId is { } id) imports = imports.Where(x => x.PunchFileId == id);
-        if (fileName?.Trim() is { Length: > 0 } name) imports = imports.Where(x => db.PunchFiles.Any(f => f.Id == x.PunchFileId && f.FileName == name));
+        if (fileName.TrimToNull() is { } name) imports = imports.Where(x => db.PunchFiles.Any(f => f.Id == x.PunchFileId && f.FileName == name));
         if (status is not null) imports = imports.Where(x => x.Status == status);
         if (from is { } start) imports = imports.Where(x => x.StartedAt >= start);
         if (until is { } end) imports = imports.Where(x => x.StartedAt < end);

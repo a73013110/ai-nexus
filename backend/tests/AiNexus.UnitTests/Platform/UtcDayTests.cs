@@ -12,7 +12,7 @@ public sealed class UtcDayTests
     [InlineData("2026-10-05T20:00:00-04:00", "2026-10-06T00:00:00Z")]
     public void ResetBoundariesAreAbsoluteUtcRegardlessOfInputAndServerOffsets(string instant, string expected)
     {
-        var start = UtcDay.Start(DateTimeOffset.Parse(instant, CultureInfo.InvariantCulture));
+        var start = DateTimeOffset.Parse(instant, CultureInfo.InvariantCulture).UtcDayStart();
         Assert.Equal(DateTimeOffset.Parse(expected, CultureInfo.InvariantCulture), start);
         Assert.Equal(TimeSpan.Zero, start.Offset);
     }

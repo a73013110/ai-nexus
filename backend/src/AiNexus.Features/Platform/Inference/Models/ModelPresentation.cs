@@ -2,6 +2,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Data.App.Inference;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Inference.Models;
@@ -33,8 +34,8 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IEnume
         if (index >= 0)
         {
             // 非管理員且系統設定隱藏真實模型名稱，或模型沒有顯示名稱時，統一以「AI 助理 N」呈現
-            var name = administrator || options.Value.ShowModelNames ? options.Value.Models[index].DisplayName?.Trim() : null;
-            return !string.IsNullOrEmpty(name) ? name : $"AI 助理 {index + 1}";
+            var name = administrator || options.Value.ShowModelNames ? options.Value.Models[index].DisplayName.TrimToNull() : null;
+            return name ?? $"AI 助理 {index + 1}";
         }
 
         return services.FirstOrDefault(x => x.Id == id && (provider is null || provider == x.Provider))?.DisplayName ?? "已停用的模型";

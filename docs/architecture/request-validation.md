@@ -21,7 +21,7 @@ request body 的格式規則、欄位規則代碼與文字規則。slice 其餘�
 | 欄位 | 驗證器 | 實體、handler | 控制字元 |
 |---|---|---|---|
 | 單行：名稱、標題、標籤、路徑 | `RequiredText`／`OptionalText` | `IsLine`、`HasLineControl` | 全部拒絕 |
-| 可換行：內文、說明、備註、留言 | `RequiredContent`／`OptionalContent` | `IsContent`、`HasContentControl` | 只允許換行與 Tab |
+| 可換行：內文、說明、備註、留言 | `RequiredContent`／`OptionalContent` | `IsContent` | 只允許換行與 Tab |
 
 - 失敗回 `required`／`too_long`／`format`。
 - 不套用：識別碼、密碼與驗證碼（只限長度，用 `MaximumLength`）、聊天提問（原樣交給模型，只限長度）、email 與網址（有自己的字元規則）。

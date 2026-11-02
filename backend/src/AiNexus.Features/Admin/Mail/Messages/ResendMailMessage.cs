@@ -24,7 +24,7 @@ internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, Admi
     public async Task<Result<MailEnqueuedDto>> HandleAsync(Guid actor, Guid id, Guid? requestKey, CancellationToken ct)
     {
         MailEnqueuedDto? result = null;
-        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, token => Snapshot(result?.MessageId, token)), async () =>
+        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), async () =>
             {
                 var original = await db.OutboundMessages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
                 if (original is null) return MailErrors.MessageNotFound;
@@ -44,8 +44,4 @@ internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, Admi
         => message.Sensitive || !hasContent ? MailErrors.ContentUnavailable
             : message.RecipientAddress is null ? MailErrors.RecipientUnavailable
             : null;
-
-    // 稽核只記新信的 ID、狀態與分類，不記收件者與內容。
-    private async Task<object?> Snapshot(Guid? created, CancellationToken ct)
-        => created is { } id ? await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { id = x.Id, status = x.Status, category = x.Category }).SingleOrDefaultAsync(ct) : null;
 }

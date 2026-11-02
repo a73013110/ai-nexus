@@ -1,4 +1,5 @@
 using AiNexus.Features.Office.Attendance.Calendar;
+using AiNexus.Platform.Time;
 
 namespace AiNexus.Features.Office.Attendance.Records;
 
@@ -209,7 +210,7 @@ public static class AttendanceEvaluator
 
     private static DateTimeOffset Truncate(DateTimeOffset value)
     {
-        var local = TaipeiTime.Of(value);
+        var local = value.ToTaipei();
         return local.AddTicks(-(local.Ticks % TimeSpan.TicksPerSecond));
     }
 

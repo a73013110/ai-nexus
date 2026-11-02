@@ -35,7 +35,7 @@ internal sealed class UpdateCard(AppDbContext db, AdministrativeWrite write)
         var card = await db.Cards.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;
         card.HiddenFromRecords = request.HiddenFromRecords;
-        card.Note = TextRules.TrimToNull(request.Note);
+        card.Note = request.Note.TrimToNull();
         return Result.Success;
     }, ct);
 }

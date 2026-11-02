@@ -55,7 +55,7 @@ public sealed class TokenBudgetTests
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.UsedTokens);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.GenerationRuns.Where(x => x.Id == run.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, UtcDay.Start(DateTimeOffset.UtcNow).AddDays(-1)));
+        await db.GenerationRuns.Where(x => x.Id == run.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.UtcDayStart().AddDays(-1)));
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(0, budget.ReservedTokens); Assert.Equal(500, budget.RemainingTokens);
     }
@@ -85,7 +85,7 @@ public sealed class TokenBudgetTests
     {
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync(); var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
-        var day = UtcDay.Start(DateTimeOffset.UtcNow);
+        var day = DateTimeOffset.UtcNow.UtcDayStart();
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(DailyTokenLimits: new Dictionary<string, long> { ["test-model"] = 500 }))).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {

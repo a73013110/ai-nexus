@@ -4,5 +4,5 @@ namespace AiNexus.Platform.Time;
 public static class UtcDay
 {
     /// <summary>取得指定時間點所在 UTC 日的 00:00:00。</summary>
-    public static DateTimeOffset Start(DateTimeOffset instant) => new(instant.UtcDateTime.Date, TimeSpan.Zero);
+    public static DateTimeOffset UtcDayStart(this DateTimeOffset instant) => new(instant.UtcDateTime.Date, TimeSpan.Zero);
 }

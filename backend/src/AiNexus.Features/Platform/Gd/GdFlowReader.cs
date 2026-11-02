@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Data.External;
+using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Platform.Gd;
@@ -60,7 +61,7 @@ public sealed partial class GdFlowReader(ExternalDatabase<GdDatabase> gd)
     /// GD 的 <c>STATUS</c> 轉成畫面字樣：送出時 GD 寫「待處理表單」（承辦人的待辦匣名稱），對看單的人來說是「送出」；
     /// 其他（「請假代理人」「串簽」「決行」等）本來就是關卡名稱，照原字顯示，沒見過的字也一樣。
     /// </summary>
-    public static string ActionOf(string? status) => TextRules.TrimToNull(status) switch
+    public static string ActionOf(string? status) => status.TrimToNull() switch
     {
         null => "簽核",
         "待處理表單" => "送出",
@@ -82,12 +83,12 @@ public sealed partial class GdFlowReader(ExternalDatabase<GdDatabase> gd)
         """;
 
     private static GdFlowStep Step(StepRow row) => new((GdFlowStepState)row.Stage, ActionOf(row.Status), GdPeople.Person(row.Name, row.Unit, row.Title),
-        TextRules.TrimToNull(row.AgentName), RecordedAt(row.RecordedAt), TextRules.TrimToNull(row.Memo));
+        row.AgentName.TrimToNull(), RecordedAt(row.RecordedAt), row.Memo.TrimToNull());
 
     // GD 以 REPLACE(CONVERT(varchar(19), GETDATE(), 120), '-', '/') 寫入，是台灣時間的字串；解析不了就當沒有時間，不讓整段流程失敗。
     private static DateTimeOffset? RecordedAt(string? value)
         => DateTime.TryParseExact(value?.Trim(), ["yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy/MM/dd HH:mm", "yyyy/MM/dd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
-            ? new DateTimeOffset(time, TimeSpan.FromHours(8)) : null;
+            ? TaipeiTime.At(time) : null;
 
     [GeneratedRegex(@"^[A-Za-z]([0-9]{3})")]
     private static partial Regex BackupYear();

@@ -1,6 +1,7 @@
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.Organization.Imports;
 
@@ -41,7 +42,7 @@ internal sealed class GdUnitSource(ExternalDatabase<GdDatabase> gd, GdAccounts a
     private static IReadOnlyList<(string Id, bool Deputy)> ManagerIds(DepartmentRow row)
     {
         var ids = new List<(string Id, bool Deputy)>();
-        if (row.Chief?.Trim() is { Length: > 0 } chief) ids.Add((chief, false));
+        if (row.Chief.TrimToNull() is { } chief) ids.Add((chief, false));
         foreach (var deputy in (row.Deputies ?? "").Split(Separators, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             if (!ids.Any(x => string.Equals(x.Id, deputy, StringComparison.OrdinalIgnoreCase))) ids.Add((deputy, true));
         return ids;

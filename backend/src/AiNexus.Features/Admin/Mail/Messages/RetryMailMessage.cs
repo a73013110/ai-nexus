@@ -24,7 +24,10 @@ internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, Adm
 
     public async Task<Result<MailMessageDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, token => Snapshot(id, token)), async () =>
+        // 稽核只記狀態與下次嘗試時間，不記收件者與內容。
+        var target = AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, async token =>
+            await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { status = x.Status, attempts = x.Attempts, nextAttemptAt = x.NextAttemptAt }).SingleOrDefaultAsync(token));
+        var outcome = await write.ExecuteAsync(actor, target, async () =>
         {
             var status = await db.OutboundMessages.Where(x => x.Id == id).Select(x => x.Status).SingleOrDefaultAsync(ct);
             if (status is null) return MailErrors.MessageNotFound;
@@ -39,8 +42,4 @@ internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, Adm
         var message = await db.OutboundMessages.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return MailMessageDto.From(message);
     }
-
-    // 稽核只記狀態與下次嘗試時間，不記收件者與內容。
-    private Task<object?> Snapshot(Guid id, CancellationToken ct)
-        => db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => (object?)new { status = x.Status, attempts = x.Attempts, nextAttemptAt = x.NextAttemptAt }).SingleOrDefaultAsync(ct);
 }

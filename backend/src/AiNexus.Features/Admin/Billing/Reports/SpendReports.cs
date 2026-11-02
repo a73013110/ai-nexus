@@ -3,6 +3,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Time;
 
 namespace AiNexus.Features.Admin.Billing.Reports;
 
@@ -13,7 +14,7 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
     {
         var end = until ?? now;
         var start = from ?? end.AddDays(-30);
-        var zone = offset ?? 480;
+        var zone = offset ?? (int)TaipeiTime.Offset.TotalMinutes;
         if (start >= end || end - start > TimeSpan.FromDays(366) || zone is < -840 or > 840) return BillingErrors.InvalidSpendPeriod;
         return new SpendPeriod(start.ToUniversalTime(), end.ToUniversalTime(), zone);
     }

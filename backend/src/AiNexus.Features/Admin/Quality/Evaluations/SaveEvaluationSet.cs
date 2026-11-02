@@ -42,7 +42,7 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
     }
 
     // 詞彙最多 20 個，去除空白後不分大小寫不得重複，每個 1 至 80 字元。
-    private static bool TermsValid(IReadOnlyList<string>? terms) => terms is null || terms.Count <= 20 && terms.All(x => TextRules.IsLine(x, 80)) && terms.Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == terms.Count;
+    private static bool TermsValid(IReadOnlyList<string>? terms) => terms is null || terms.Count <= 20 && terms.All(x => x.IsLine(80)) && terms.Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == terms.Count;
 }
 
 /// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>

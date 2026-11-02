@@ -17,7 +17,7 @@ internal static class TextDocuments
         var named = ResourceAccess.Name(request.Title);
         if (!named.IsSuccess) return named.Error;
         var title = named.Value;
-        if (title.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || TextRules.HasLineControl(title))
+        if (title.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || title.HasLineControl())
             return KnowledgeErrors.TextTitleInvalid;
         if (string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > MaxCharacters || request.Text.Contains('\0'))
             return KnowledgeErrors.TextContentInvalid;

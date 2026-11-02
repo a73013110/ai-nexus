@@ -10,6 +10,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 修改內容 | 先讀 |
 |---|---|
 | 後端 slice、錯誤、軟刪除 | `docs/architecture/backend-conventions.md` |
+| 管理功能的寫入、`AdministrativeWrite`、前後快照 | `docs/architecture/administrative-writes.md` |
 | 請求驗證、欄位規則代碼、文字欄位規則 | `docs/architecture/request-validation.md` |
 | 模組邊界、跨模組依賴、domain event | `docs/architecture/module-boundaries.md` |
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |

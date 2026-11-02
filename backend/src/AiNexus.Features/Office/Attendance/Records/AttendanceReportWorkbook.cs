@@ -1,6 +1,7 @@
 using System.Globalization;
 using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Platform.Gd;
+using AiNexus.Platform.Time;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -118,7 +119,7 @@ internal static class AttendanceReportWorkbook
     {
         if (day.FormState == FormState.Unavailable) return "無法取得";
         return string.Join("、", day.Forms.Select(x => Invariant(
-            $"【{Flow(x.FlowStatus)}】【{(x.Kind == GdFormKind.Travel ? "出差單" : x.Title)}】{x.DesNo}〔{TaipeiTime.Of(x.StartsAt):yyyy-MM-dd HH:mm:ss} ~ {TaipeiTime.Of(x.EndsAt):yyyy-MM-dd HH:mm:ss}〕")));
+            $"【{Flow(x.FlowStatus)}】【{(x.Kind == GdFormKind.Travel ? "出差單" : x.Title)}】{x.DesNo}〔{x.StartsAt.ToTaipei():yyyy-MM-dd HH:mm:ss} ~ {x.EndsAt.ToTaipei():yyyy-MM-dd HH:mm:ss}〕")));
     }
 
     /// <summary>
@@ -136,7 +137,7 @@ internal static class AttendanceReportWorkbook
     internal static string Flow(GdFormFlowOver status) => GdFlowOver.Label(status);
 
     private static Cell Clock(DateTimeOffset? at, bool flagged)
-        => at is { } value ? Str(Invariant($"{TaipeiTime.Of(value):HH:mm:ss}"), flagged ? Red : Center) : Blank();
+        => at is { } value ? Str(Invariant($"{value.ToTaipei():HH:mm:ss}"), flagged ? Red : Center) : Blank();
 
     private static void WriteRow(OpenXmlWriter writer, uint number, IReadOnlyList<Cell> cells)
     {

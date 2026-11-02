@@ -31,7 +31,7 @@ public static partial class AccessRules
     }
 
     public static Error? Name(string name)
-        => TextRules.IsLine(name, 120) ? null : AccessControlErrors.InvalidAccessName;
+        => name.IsLine(120) ? null : AccessControlErrors.InvalidAccessName;
 
     /// <summary>
     /// 群組授權的資料範圍（ADR 0017、0022），成員範圍與主管範圍套同一條規則：成員範圍在目錄有宣告時必須選一個它支援的，主管範圍可以不選（不另外）；

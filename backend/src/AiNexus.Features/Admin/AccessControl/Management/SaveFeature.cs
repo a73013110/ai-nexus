@@ -26,7 +26,7 @@ internal sealed class SaveFeature(AppDbContext db, AdministrativeWrite write)
     public Task<Result> HandleAsync(Guid actor, string id, FeatureUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlFeatures, id, token => SnapshotAsync(id, token)), async () =>
     {
         // 不檢查 id 格式：功能 id 由目錄定義，資料庫也可能有目錄不認得的舊列；查無此 id 就直接回 NotFound。
-        var name = TextRules.TrimToNull(request.Name);
+        var name = request.Name.TrimToNull();
         if (name is not null && AccessRules.Name(name) is { } invalid) return invalid;
         var feature = await db.Features.FindAsync([id], ct);
         if (feature is null) return AccessControlErrors.AdminResourceNotFound;

@@ -45,6 +45,7 @@
 - **寫入**：需要跨命令交易時用 `OpenAsync` 自己管理連線與交易；先看 `Configured`、`ReadOnly`。這條路不更新可用狀態，失敗由呼叫端記日誌。寫入範圍寫在 SQL，不靠帳號權限。
 - **逾時**：`Databases:<Name>:CommandTimeoutSeconds` 寫進連線字串，所有命令（含 `OpenAsync` 開的連線）沿用；外部系統設短一點，讓頁面早點降級。
 - **例外**：呼叫端取消與程式錯誤（欄位型別對不上等）照常拋出，不算對方的失敗。
+- **時間**：對方沒有時區的 `DATETIME` 是台灣本地時間時，用 Platform 的 `TaipeiTime.At` 轉成 `DateTimeOffset`，不自己寫位移。
 
 ## 失敗分類與監控
 

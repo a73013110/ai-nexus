@@ -2,6 +2,7 @@ using System.Globalization;
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Accounts;
+using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
@@ -52,5 +53,5 @@ internal sealed class CardAccountReview(AppDbContext db, IActiveUsers activeUser
 
     private static string Search(string cardNumber) => "search=" + Uri.EscapeDataString(cardNumber);
 
-    private static string Time(DateTimeOffset value) => TaipeiTime.Of(value).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+    private static string Time(DateTimeOffset value) => value.ToTaipei().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 }

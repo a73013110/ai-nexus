@@ -16,7 +16,7 @@ public sealed class ConversationLabel
     public static string[]? Clean(IReadOnlyList<string> labels)
     {
         if (labels.Count > MaxPerConversation
-            || labels.Any(x => !TextRules.IsLine(x, NameMaxLength)))
+            || labels.Any(x => !x.IsLine(NameMaxLength)))
         {
             return null;
         }

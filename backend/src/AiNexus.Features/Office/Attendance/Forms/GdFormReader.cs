@@ -1,5 +1,6 @@
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
+using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Office.Attendance.Forms;
@@ -64,7 +65,7 @@ public sealed class GdFormReader(GdAccounts accounts, ExternalDatabase<GdDatabas
             // SQL 已限定兩種狀態；解析不了（GD 改版出現新寫法）就略過，不當成核准。
             if (!GdFlowOver.TryParse(row.FlowStatus, out var flow)) continue;
             var form = new GdForm(row.DesNo, row.Kind, row.Title, TaipeiTime.At(row.StartsAt), TaipeiTime.At(row.EndsAt), flow,
-                TextRules.TrimToNull(row.CurrentSigner), TextRules.TrimToNull(row.CurrentStep));
+                row.CurrentSigner.TrimToNull(), row.CurrentStep.TrimToNull());
             foreach (var user in usersByGdId[row.GdId.Trim()])
             {
                 if (!forms.TryGetValue(user, out var list)) forms[user] = list = [];

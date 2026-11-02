@@ -22,9 +22,9 @@ public sealed class TextRulesTests
     [Fact]
     public void ContentAllowsLineBreaksButLinesDoNot()
     {
-        Assert.True(TextRules.IsContent("a\r\n\tb", 10));
-        Assert.False(TextRules.IsLine("a\nb", 10));
-        Assert.False(TextRules.IsContent("a\u0085b", 10));
+        Assert.True("a\r\n\tb".IsContent(10));
+        Assert.False("a\nb".IsLine(10));
+        Assert.False("a\u0085b".IsContent(10));
     }
 
     [Theory]
@@ -33,8 +33,21 @@ public sealed class TextRulesTests
     [InlineData("abcdef")]
     public void RequiredTextRejectsMissingOrLongValues(string? value)
     {
-        Assert.False(TextRules.IsLine(value, 5));
-        Assert.False(TextRules.IsContent(value, 5));
+        Assert.False(value.IsLine(5));
+        Assert.False(value.IsContent(5));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("   ", null)]
+    [InlineData("  a b  ", "a b")]
+    public void OptionalTextIsTrimmedAndBlankBecomesNull(string? value, string? expected) => Assert.Equal(expected, value.TrimToNull());
+
+    [Fact]
+    public void LineControlIsFoundOnPlainStrings()
+    {
+        Assert.True("a\nb".HasLineControl());
+        Assert.False("a b".HasLineControl());
     }
 
     private sealed record Text(string? Line, string? OptionalLine, string? Content, string? OptionalContent);

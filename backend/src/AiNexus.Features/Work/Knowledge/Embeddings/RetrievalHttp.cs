@@ -56,7 +56,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var start = UtcDay.Start(call.CreatedAt); var end = start.AddDays(1);
+            var start = call.CreatedAt.UtcDayStart(); var end = start.AddDays(1);
             // 所有嵌入與重排呼叫都經過這裡（位於索引與搜尋的深處），因此每日上限要回報成供應商限制（RateLimited），
             // 而不是一般的內部錯誤。
             if (await db.ModelInvocations.CountAsync(x => x.OwnerId == owner && (x.Kind == "embedding" || x.Kind == "rerank") && x.CreatedAt >= start && x.CreatedAt < end, ct) >= options.Value.Embedding.MaxDailyRequests)

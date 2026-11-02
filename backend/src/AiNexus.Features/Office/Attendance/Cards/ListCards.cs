@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
@@ -53,7 +54,7 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
             CardStatuses.Hidden => db.Cards.Where(c => c.HiddenFromRecords),
             _ => db.Cards,
         };
-        if (search?.Trim() is { Length: > 0 } text)
+        if (search.TrimToNull() is { } text)
         {
             if (text.Length > SearchMaxLength) text = text[..SearchMaxLength];
             query = query.Where(c => c.CardNumber.Contains(text) || (c.Note != null && c.Note.Contains(text))

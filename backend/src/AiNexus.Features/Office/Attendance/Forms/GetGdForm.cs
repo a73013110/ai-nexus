@@ -9,6 +9,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Office.Attendance.Forms;
@@ -95,9 +96,9 @@ internal sealed partial class GetGdForm(ExternalDatabase<GdDatabase> gd, GdAccou
 
         return new GdFormDetailDto(desNo.Trim(), form.Kind, flow, form.Title.Trim(), form.SubmittedAt is { } submitted ? TaipeiTime.At(submitted) : null,
             GdPeople.Person(form.ApplicantName, form.ApplicantUnit, form.ApplicantTitle), GdPeople.Person(form.AgentName, form.AgentUnit, form.AgentTitle),
-            TaipeiTime.At(starts), TaipeiTime.At(ends), form.Hours, segments, TextRules.TrimToNull(form.Reason), TextRules.TrimToNull(form.AttachmentNote),
+            TaipeiTime.At(starts), TaipeiTime.At(ends), form.Hours, segments, form.Reason.TrimToNull(), form.AttachmentNote.TrimToNull(),
             form.Kind == GdFormKind.Leave ? new GdLeaveDetail(Relation(form.BereaveType), Kinds(form.AttachmentKinds)) : null,
-            form.Kind == GdFormKind.Travel ? new GdTravelDetail(TextRules.TrimToNull(form.Place), TextRules.TrimToNull(form.Transport), StudyKind(form.StudyMode, form.StudyKind), form.Phone) : null,
+            form.Kind == GdFormKind.Travel ? new GdTravelDetail(form.Place.TrimToNull(), form.Transport.TrimToNull(), StudyKind(form.StudyMode, form.StudyKind), form.Phone) : null,
             steps,
             files?.Select(x => new GdFormAttachmentDto(tickets.Issue(x.File, x.FileName, viewer), x.Memo, x.Uploader)).ToList());
     }

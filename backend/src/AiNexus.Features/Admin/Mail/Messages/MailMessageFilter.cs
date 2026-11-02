@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -31,8 +32,8 @@ public sealed class MailMessageFilter
         if (!string.IsNullOrWhiteSpace(Category)) { var category = Category.Trim(); query = query.Where(x => x.Category.StartsWith(category)); }
         if (From is { } start) query = query.Where(x => x.CreatedAt >= start);
         if (Until is { } end) query = query.Where(x => x.CreatedAt < end);
-        var search = Search?.Trim();
-        if (string.IsNullOrEmpty(search)) return query;
+        var search = Search.TrimToNull();
+        if (search is null) return query;
         if (Guid.TryParse(search, out var id)) return query.Where(x => x.Id == id || x.BatchId == id);
         if (HeaderId(search) is { } header) return query.Where(x => x.Id == header);
         if (MailAddresses.TryNormalize(search, out var address)) { var hash = MailAddresses.Hash(address); return query.Where(x => x.RecipientHash == hash); }

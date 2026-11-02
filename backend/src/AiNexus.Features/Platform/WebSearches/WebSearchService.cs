@@ -43,7 +43,7 @@ public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provide
                 return previous;
             }
             record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
-            var since = UtcDay.Start(record.CreatedAt); var until = since.AddDays(1);
+            var since = record.CreatedAt.UtcDayStart(); var until = since.AddDays(1);
             if (await db.WebSearches.CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
                 return WebSearchesErrors.DailyQuota;
             call = new() { Id = record.Id, OwnerId = owner, ModelId = "web-search", Kind = "web-search", CreatedAt = record.CreatedAt };

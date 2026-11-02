@@ -39,7 +39,7 @@ internal sealed class CreateCard(AppDbContext db, AdministrativeWrite write)
 
     public Task<Result<CardDto>> HandleAsync(Guid actor, CardCreateRequest request, CancellationToken ct)
     {
-        var card = new Card { CardNumber = request.CardNumber.Trim(), HiddenFromRecords = request.HiddenFromRecords, Note = TextRules.TrimToNull(request.Note) };
+        var card = new Card { CardNumber = request.CardNumber.Trim(), HiddenFromRecords = request.HiddenFromRecords, Note = request.Note.TrimToNull() };
         return write.ExecuteAsync<CardDto>(actor, CardRules.Target(db, card.Id), async () =>
         {
             // 唯一索引是最後一道防線；先查才能回固定的錯誤代碼並寫進稽核。

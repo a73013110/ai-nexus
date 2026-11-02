@@ -1,3 +1,5 @@
+using AiNexus.Platform.Validation;
+
 namespace AiNexus.Features.Platform.Gd;
 
 /// <summary>
@@ -71,7 +73,7 @@ public static class GdFlowOver
     public static bool TryParse(string? code, out GdFormFlowOver flow)
     {
         flow = default;
-        var text = code?.Trim();
-        return !string.IsNullOrEmpty(text) && char.IsLetter(text[0]) && Enum.TryParse(text, ignoreCase: true, out flow) && Enum.IsDefined(flow);
+        var text = code.TrimToNull();
+        return text is not null && char.IsLetter(text[0]) && Enum.TryParse(text, ignoreCase: true, out flow) && Enum.IsDefined(flow);
     }
 }

@@ -5,7 +5,6 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -56,7 +55,7 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
         var mail = rendered.Value;
         if (category != TestMail.TestCategory) mail = mail with { Subject = MailRenderer.Subject(SubjectPrefix + mail.Subject) };
         MailEnqueuedDto? result = null;
-        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessages, "test", token => Snapshot(result?.MessageId, token)), () =>
+        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessages, "test", token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), () =>
             {
                 var enqueued = outbox.Enqueue(mail, new(request.To), new(RequestedBy: actor));
                 if (!enqueued.IsSuccess) return Task.FromResult<Result>(enqueued.Error);
@@ -65,7 +64,4 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
             }, ct);
         return outcome.IsSuccess ? result! : outcome.Error;
     }
-
-    private async Task<object?> Snapshot(Guid? created, CancellationToken ct)
-        => created is { } id ? await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { id = x.Id, status = x.Status, category = x.Category }).SingleOrDefaultAsync(ct) : null;
 }

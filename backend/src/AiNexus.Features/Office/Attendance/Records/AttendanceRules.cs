@@ -1,4 +1,5 @@
 using System.Globalization;
+using AiNexus.Platform.Time;
 
 namespace AiNexus.Features.Office.Attendance.Records;
 
@@ -95,7 +96,7 @@ public static class AttendanceRules
     private static AttendanceEvaluation Example(TimeOnly arrival, TimeOnly leaving, WorkdayOptions options, params FormPeriod[] forms)
         => AttendanceEvaluator.Evaluate(new(ExampleDate, AttendanceDayType.FullDay, TaipeiTime.At(ExampleDate, arrival), TaipeiTime.At(ExampleDate, leaving), forms), options);
 
-    private static TimeOnly ClockTime(DateTimeOffset? value) => TimeOnly.FromTimeSpan(TaipeiTime.Of(value!.Value).TimeOfDay);
+    private static TimeOnly ClockTime(DateTimeOffset? value) => TimeOnly.FromTimeSpan(value!.Value.ToTaipei().TimeOfDay);
 
     /// <summary>某個上班時間的應下班（不看表單）。</summary>
     private static TimeOnly ExpectedClockOut(TimeOnly arrival, WorkdayOptions options)

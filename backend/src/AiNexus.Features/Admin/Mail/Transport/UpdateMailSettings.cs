@@ -30,7 +30,9 @@ internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite wr
 
     public Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
     {
-        return write.ExecuteAsync<MailSettingsDto>(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, "mail.settings", Snapshot), async () =>
+        var target = AuditTarget.Of(FeatureCatalog.MailMessagesResend, "mail.settings", async token =>
+            await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(token));
+        return write.ExecuteAsync<MailSettingsDto>(actor, target, async () =>
         {
             var setting = await db.DeliverySettings.SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
             if (setting is null) db.Add(setting = new DeliverySetting());
@@ -40,7 +42,4 @@ internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite wr
             return new MailSettingsDto(request.AutoRetry, setting.UpdatedAt);
         }, ct);
     }
-
-    private async Task<object?> Snapshot(CancellationToken ct)
-        => await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(ct);
 }

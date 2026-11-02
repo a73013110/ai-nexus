@@ -46,10 +46,10 @@ internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeWrite 
         {
             CardId = request.CardId,
             UserId = request.UserId,
-            HolderName = TextRules.TrimToNull(request.HolderName),
+            HolderName = request.HolderName.TrimToNull(),
             StartsAt = request.StartsAt,
             EndsAt = request.EndsAt,
-            Note = TextRules.TrimToNull(request.Note),
+            Note = request.Note.TrimToNull(),
         };
         var outcome = await write.ExecuteAsync(actor, AssignmentRules.Target(db, assignment.Id, request.CardId), async () =>
         {

@@ -25,7 +25,7 @@ internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, Acc
         .WithName("GetAuditCatalog");
 
     public async Task<AuditCatalogDto> HandleAsync(CancellationToken ct) => new(
-        [.. FeatureDto.InCatalogOrder(await db.Features.AsNoTracking().ToListAsync(ct)).Select(FeatureDto.From)],
+        [.. (await db.Features.AsNoTracking().ToListAsync(ct)).InCatalogOrder().Select(FeatureDto.From)],
         (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(),
         AuditCategories.All,
         AuditActions.Modules,

@@ -31,5 +31,5 @@ public static class GdPeople
         """;
 
     public static GdPerson? Person(string? name, string? unit, string? title)
-        => TextRules.TrimToNull(name) is null && TextRules.TrimToNull(unit) is null ? null : new(TextRules.TrimToNull(name), TextRules.TrimToNull(unit), TextRules.TrimToNull(title));
+        => string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(unit) ? null : new(name.TrimToNull(), unit.TrimToNull(), title.TrimToNull());
 }

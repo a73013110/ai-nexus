@@ -74,7 +74,7 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var scopes = granted.SelectMany(x => SupportedScopes(x.Feature.Id, x.Scope, x.ManagerScope).Select(scope => (x.Feature.Id, Scope: scope)))
             .GroupBy(x => x.Id, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
-        return new(roles, groups, [.. FeatureDto.InCatalogOrder(rows).Select(FeatureDto.From)], []) { GrantedScopes = scopes };
+        return new(roles, groups, [.. rows.InCatalogOrder().Select(FeatureDto.From)], []) { GrantedScopes = scopes };
     }
 
     private static IEnumerable<string> SupportedScopes(string featureId, string? scope, string? managerScope)

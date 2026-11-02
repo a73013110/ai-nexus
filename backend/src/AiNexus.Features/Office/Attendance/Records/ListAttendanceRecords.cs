@@ -9,6 +9,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Office.Attendance.Records;
@@ -154,7 +155,7 @@ internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, 
                 if (!includeDaysOff && dayType == AttendanceDayType.DayOff && clockIn is null) continue;
                 IReadOnlyList<FormPeriod>? periods = formsAvailable ? [.. filed.Select(s => new FormPeriod(s.StartsAt, s.EndsAt, s.Approved))] : null;
                 var e = AttendanceEvaluator.Evaluate(new(date, dayType, clockIn, clockOut, periods), rules, today);
-                records.Add(new(e.Date, e.DayType, TextRules.TrimToNull(calendarDay?.Remark), e.Status, e.Reason, e.ClockIn, e.ClockOut, e.ExpectedClockOut,
+                records.Add(new(e.Date, e.DayType, calendarDay?.Remark.TrimToNull(), e.Status, e.Reason, e.ClockIn, e.ClockOut, e.ExpectedClockOut,
                     e.LateSeconds, e.EarlyLeaveSeconds, e.FormState, e.FormSeconds, e.AdjustedClockOut, e.Coverage, e.ShortSeconds, e.Gaps, filed));
             }
             return new AttendancePersonDto(person.UserId, person.CardNumber, person.DisplayName, person.Account, formsAvailable, person.Hidden, records);

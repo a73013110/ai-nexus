@@ -26,11 +26,11 @@ public sealed class Artifact
 
     /// <summary>與 <c>ResourceAccess.Name</c> 相同的規則：去除頭尾空白後 1 到 120 字元，且不含控制字元。</summary>
     public static bool TitleIsValid(string? title) =>
-        TextRules.IsLine(title, TitleMaxLength);
+        title.IsLine(TitleMaxLength);
 
     /// <summary>1 到 64,000 字元、不可全為空白，且除換行與 Tab 外不得含控制字元。</summary>
     public static bool ContentIsValid(string? content) =>
-        content is { Length: <= ContentMaxLength } && TextRules.IsContent(content, ContentMaxLength);
+        content is { Length: <= ContentMaxLength } && content.IsContent(ContentMaxLength);
 }
 
 internal sealed class ArtifactConfiguration : IEntityTypeConfiguration<Artifact>

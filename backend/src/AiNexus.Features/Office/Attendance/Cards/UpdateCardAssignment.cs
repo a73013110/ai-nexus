@@ -47,10 +47,10 @@ internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeWrite 
             var others = await db.CardAssignments.AsNoTracking().Where(x => x.CardId == assignment.CardId && x.Id != id).ToListAsync(ct);
             if (others.Any(x => AssignmentRules.Overlaps(request.StartsAt, request.EndsAt, x))) return AttendanceErrors.AssignmentOverlap;
             assignment.UserId = request.UserId;
-            assignment.HolderName = TextRules.TrimToNull(request.HolderName);
+            assignment.HolderName = request.HolderName.TrimToNull();
             assignment.StartsAt = request.StartsAt;
             assignment.EndsAt = request.EndsAt;
-            assignment.Note = TextRules.TrimToNull(request.Note);
+            assignment.Note = request.Note.TrimToNull();
             return Result.Success;
         }, ct);
     }

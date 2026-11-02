@@ -24,7 +24,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
     {
         if (file.Length is < 1 || file.Length > options.Value.MaxFileBytes) return FilesErrors.FileSizeLimit;
         var name = Path.GetFileName(file.FileName.Replace('\\', '/'));
-        if (name.Length is < 1 or > Attachment.FileNameMaxLength || TextRules.HasLineControl(name)) return FilesErrors.InvalidFileName;
+        if (name.Length is < 1 or > Attachment.FileNameMaxLength || name.HasLineControl()) return FilesErrors.InvalidFileName;
         using var data = new MemoryStream();
         await using (var input = file.OpenReadStream())
         {

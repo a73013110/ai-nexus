@@ -16,16 +16,18 @@ internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeWr
         .Audited(FilesAudit.StorageLimitUpdated)
         .WithName("SetUserAttachmentStorage");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
+    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct)
     {
-        if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
-        if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;
-        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-        if (user is null) return FilesErrors.AdminResourceNotFound;
-        user.AttachmentLimitBytes = request.LimitBytes;
-        return Result.Success;
-    }, ct);
-
-    private async Task<object?> SnapshotAsync(Guid id, CancellationToken ct)
-        => await db.Users.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(ct);
+        var target = AuditTarget.Of(FeatureCatalog.IdentityUsers, id, async token =>
+            await db.Users.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(token));
+        return write.ExecuteAsync(actor, target, async () =>
+        {
+            if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
+            if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;
+            var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+            if (user is null) return FilesErrors.AdminResourceNotFound;
+            user.AttachmentLimitBytes = request.LimitBytes;
+            return Result.Success;
+        }, ct);
+    }
 }

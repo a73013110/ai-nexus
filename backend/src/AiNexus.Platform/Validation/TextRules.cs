@@ -15,19 +15,16 @@ public static class TextRules
     private static readonly SearchValues<char> ContentControls = SearchValues.Create(Controls(allowed: "\t\n\r"));
 
     /// <summary>選填文字的儲存形式：去掉前後空白，空白存成 null。</summary>
-    public static string? TrimToNull(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+    public static string? TrimToNull(this string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     /// <summary>單行文字含控制字元。</summary>
-    public static bool HasLineControl(ReadOnlySpan<char> text) => text.ContainsAny(LineControls);
-
-    /// <summary>可換行的內容含換行與 Tab 以外的控制字元。</summary>
-    public static bool HasContentControl(ReadOnlySpan<char> text) => text.ContainsAny(ContentControls);
+    public static bool HasLineControl(this ReadOnlySpan<char> text) => text.ContainsAny(LineControls);
 
     /// <summary>必填單行：去掉前後空白後 1 到 <paramref name="maxLength"/> 字，不含控制字元。</summary>
-    public static bool IsLine([NotNullWhen(true)] string? text, int maxLength) => Fits(text, maxLength) && !HasLineControl(text);
+    public static bool IsLine([NotNullWhen(true)] this string? text, int maxLength) => Fits(text, maxLength) && !text.HasLineControl();
 
     /// <summary>必填內容：去掉前後空白後 1 到 <paramref name="maxLength"/> 字，換行與 Tab 以外不含控制字元。</summary>
-    public static bool IsContent([NotNullWhen(true)] string? text, int maxLength) => Fits(text, maxLength) && !HasContentControl(text);
+    public static bool IsContent([NotNullWhen(true)] this string? text, int maxLength) => Fits(text, maxLength) && !text.AsSpan().ContainsAny(ContentControls);
 
     /// <summary>必填單行；規則同 <see cref="IsLine"/>。</summary>
     public static IRuleBuilderOptions<T, string?> RequiredText<T>(this IRuleBuilder<T, string?> rule, int maxLength)

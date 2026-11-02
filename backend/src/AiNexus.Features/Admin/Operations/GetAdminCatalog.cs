@@ -38,7 +38,7 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
     {
         var roles = await db.Roles.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
         var groups = await db.RoleGroups.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct);
-        var features = FeatureDto.InCatalogOrder(await db.Features.AsNoTracking().ToListAsync(ct));
+        var features = (await db.Features.AsNoTracking().ToListAsync(ct)).InCatalogOrder();
         var links = (await db.RoleGroupRoles.AsNoTracking().ToListAsync(ct)).ToLookup(x => x.RoleId, x => x.GroupId);
         var grants = (await db.RoleGroupFeatures.AsNoTracking().ToListAsync(ct)).ToLookup(x => x.GroupId);
         var policies = await db.GroupModelPolicies.AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);

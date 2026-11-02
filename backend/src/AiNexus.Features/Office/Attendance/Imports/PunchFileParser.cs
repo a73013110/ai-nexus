@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Platform.Time;
 
 namespace AiNexus.Features.Office.Attendance.Imports;
 
@@ -91,7 +92,7 @@ public static class PunchFileParser
         if (!IsToken(eventCode, Punch.CodeMaxLength)) return (null, "的事件代號是空的、過長或含控制字元、雙引號");
         if (!TryDate(fields[2], out var date)) return (null, "的日期不是有效的 yyyyMMdd");
         if (!TryTime(fields[3], out var time)) return (null, "的時間不是有效的 HHmmss");
-        return (new(card, TaipeiTime.At(date.ToDateTime(time)), date, machine, eventCode), "");
+        return (new(card, TaipeiTime.At(date, time), date, machine, eventCode), "");
     }
 
     /// <summary>

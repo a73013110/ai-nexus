@@ -106,10 +106,10 @@ internal sealed class UnitImportPlan
         var names = new Dictionary<int, string?>();
         foreach (var row in rows.Values)
         {
-            var name = row.Name?.Trim();
-            names[row.Key] = string.IsNullOrEmpty(name) ? null : name;
-            if (string.IsNullOrEmpty(name)) skipped[row.Key] = UnitImportIssueCode.NameMissing;
-            else if (name.Length > Unit.NameMaxLength || TextRules.HasLineControl(name)) skipped[row.Key] = UnitImportIssueCode.NameInvalid;
+            var name = row.Name.TrimToNull();
+            names[row.Key] = name;
+            if (name is null) skipped[row.Key] = UnitImportIssueCode.NameMissing;
+            else if (name.Length > Unit.NameMaxLength || name.HasLineControl()) skipped[row.Key] = UnitImportIssueCode.NameInvalid;
         }
 
         // 0、null 或不存在的上層都是最上層；指向自己算成環。

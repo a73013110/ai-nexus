@@ -146,16 +146,16 @@ public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDat
     public static bool IsCommit([NotNullWhen(true)] string? value) => value is { Length: 40 or 64 } && value.All(char.IsAsciiHexDigit);
 
     /// <summary>分支、標籤或 commit 名稱；只會以跳脫後的查詢參數送到 Gitea。</summary>
-    public static bool IsRef([NotNullWhen(true)] string? value) => value is { Length: >= 1 and <= 250 } && !TextRules.HasLineControl(value) &&
+    public static bool IsRef([NotNullWhen(true)] string? value) => value is { Length: >= 1 and <= 250 } && !value.HasLineControl() &&
         !value.Contains("..", StringComparison.Ordinal) && !value.Any(c => c is ' ' or '~' or '^' or ':' or '?' or '*' or '[' or '\\');
 
     public static bool IsFilePath([NotNullWhen(true)] string? value, bool directory) => value is not null && value.Length <= 500 && (directory || value.Length > 0) &&
-        !value.Contains('\\') && !TextRules.HasLineControl(value) && (value.Length == 0 || value.Split('/').All(p => p.Length > 0 && p is not ("." or "..")));
+        !value.Contains('\\') && !value.HasLineControl() && (value.Length == 0 || value.Split('/').All(p => p.Length > 0 && p is not ("." or "..")));
 
     public static bool IsState(string? value) => value is "open" or "closed" or "all";
 
     public static bool IsPage(int page) => page is >= 1 and <= 1000;
 
     /// <summary>已去除前後空白的搜尋字串；只會以跳脫後的查詢參數送到 Gitea。</summary>
-    public static bool IsSearch(string query) => query.Length <= 100 && !TextRules.HasLineControl(query);
+    public static bool IsSearch(string query) => query.Length <= 100 && !query.HasLineControl();
 }
