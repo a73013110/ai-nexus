@@ -7,6 +7,7 @@ CREATE TABLE [attendance].[CardAssignments] (
     [EndsAt]     DATETIMEOFFSET (7) NULL,
     [Note]       NVARCHAR (200)     NULL,
     [CreatedAt]  DATETIMEOFFSET (7) NOT NULL,
+    [RowVersion] ROWVERSION         NOT NULL,
     CONSTRAINT [pk_CardAssignments] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [ck_CardAssignments_Holder] CHECK ([UserId] IS NOT NULL OR isnull(len(ltrim(rtrim([HolderName]))),(0))>(0)),
     CONSTRAINT [ck_CardAssignments_Period] CHECK ([EndsAt] IS NULL OR [EndsAt]>[StartsAt]),
@@ -62,6 +63,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'資料的�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'備註，例如換卡或離職原因。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'CardAssignments', @level2type = N'COLUMN', @level2name = N'Note';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'並行控制版本：資料列每次異動由資料庫自動更新。前端帶回讀取時的值，不符時拒絕寫入，不會覆蓋別人的修改。', @level0type = N'SCHEMA', @level0name = N'attendance', @level1type = N'TABLE', @level1name = N'CardAssignments', @level2type = N'COLUMN', @level2name = N'RowVersion';
 
 
 GO

@@ -15,11 +15,15 @@ import { AttendanceApi } from '../attendance-api';
 import { errorCode } from '../attendance-presentation';
 import { punchTable } from '../punches/punch-table';
 
-/** 寫入的結果：失敗時 `error` 是審核過的訊息；使用者取消接手時兩者皆空。 */
-export type WriteOutcome<T = unknown> = { saved: true; value: T } | { saved: false; error: string };
+/**
+ * 寫入的結果：失敗時 `error` 是審核過的訊息；使用者取消接手時為空。
+ * `stale` 表示送出的版本已過期（期間有人改過）：畫面已重讀，表單手上的版本再送也一樣被拒。
+ */
+export type WriteOutcome<T = unknown> =
+  { saved: true; value: T } | { saved: false; error: string; stale?: boolean };
 
-/** 新增持有期間；接手旗標由 `assign` 在使用者確認後才帶上。 */
-export type AssignRequest = Omit<CardAssignmentCreateRequest, 'takeOver'>;
+/** 新增持有期間；要接手的那一段的版本由 `assign` 在使用者確認後才帶上。 */
+export type AssignRequest = Omit<CardAssignmentCreateRequest, 'takeOverRowVersion'>;
 
 /** 持有期間 `[startsAt, endsAt)` 是否涵蓋某個時間點。 */
 export const covers = (item: CardAssignmentDto, at: number) =>
@@ -80,7 +84,11 @@ export class AttendanceCardsStore {
   });
   /** 寫入按鈕只給有 `attendance.cards.maintain` 的人。 */
   readonly canMaintain = computed(() => this.session.has('attendance.cards.maintain'));
-  readonly busy = signal(false);
+  private readonly writing = signal(false);
+  /** 寫入中或資料重讀中：重讀完之前畫面上的版本是舊的，這時送出只會被拒，所以寫入鈕一起停用。 */
+  readonly busy = computed(
+    () => this.writing() || this.cardsRefreshing() || this.assignmentsRefreshing(),
+  );
   /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `busy` 停用。 */
   readonly working = signal('');
 
@@ -96,14 +104,24 @@ export class AttendanceCardsStore {
   }
   saveNote(card: CardDto, note: string | null) {
     return this.write(
-      () => this.api.updateCard(card.id, { hiddenFromRecords: card.hiddenFromRecords, note }),
+      () =>
+        this.api.updateCard(card.id, {
+          hiddenFromRecords: card.hiddenFromRecords,
+          note,
+          rowVersion: card.rowVersion,
+        }),
       '已儲存備註',
     );
   }
   /** 切換是否在出勤紀錄顯示；開關旁轉圈（`working` 為 `hidden:<id>`），備註照舊送回。 */
   setHidden(card: CardDto, hidden: boolean) {
     return this.write(
-      () => this.api.updateCard(card.id, { hiddenFromRecords: hidden, note: card.note ?? null }),
+      () =>
+        this.api.updateCard(card.id, {
+          hiddenFromRecords: hidden,
+          note: card.note ?? null,
+          rowVersion: card.rowVersion,
+        }),
       hidden
         ? `卡號 ${card.cardNumber} 已在出勤紀錄隱藏`
         : `卡號 ${card.cardNumber} 已在出勤紀錄顯示`,
@@ -112,7 +130,7 @@ export class AttendanceCardsStore {
   }
   async deleteCard(card: CardDto) {
     const outcome = await this.write(
-      () => this.api.deleteCard(card.id),
+      () => this.api.deleteCard(card.id, card.rowVersion),
       `已刪除卡號 ${card.cardNumber}`,
       `card:${card.id}`,
     );
@@ -122,7 +140,8 @@ export class AttendanceCardsStore {
 
   /**
    * 指派持有人。卡片已有人持有時伺服器回 409 `attendance_card_held`（不帶持有人）：
-   * 讀這張卡的持有歷史找出新開始時間落在誰的期間，交給 `confirmTakeOver` 問使用者，同意才以 `takeOver` 重送。
+   * 讀這張卡的持有歷史找出新開始時間落在誰的期間，交給 `confirmTakeOver` 問使用者，同意才帶那一段的版本重送；
+   * 確認期間那一段又被改過時，伺服器回 409，不會結束使用者沒看過的內容。
    */
   async assign(
     request: AssignRequest,
@@ -130,9 +149,9 @@ export class AttendanceCardsStore {
   ): Promise<WriteOutcome<CardAssignmentDto>> {
     if (this.busy()) return { saved: false, error: '' };
     const alive = this.scope.guard();
-    this.busy.set(true);
+    this.writing.set(true);
     try {
-      const body: CardAssignmentCreateRequest = { ...request, takeOver: false };
+      const body: CardAssignmentCreateRequest = { ...request, takeOverRowVersion: null };
       let saved: CardAssignmentDto;
       try {
         saved = await this.api.createAssignment(body);
@@ -141,14 +160,17 @@ export class AttendanceCardsStore {
         const history = await this.api.assignments(body.cardId);
         const at = Date.parse(body.startsAt);
         const current = history.find((item) => covers(item, at));
-        this.busy.set(false);
+        this.writing.set(false);
         const agreed = await confirmTakeOver(current ? holderName(current) : '目前的持有人');
         if (!alive() || !agreed) {
           this.afterWrite();
           return { saved: false, error: '' };
         }
-        this.busy.set(true);
-        saved = await this.api.createAssignment({ ...body, takeOver: true });
+        this.writing.set(true);
+        saved = await this.api.createAssignment({
+          ...body,
+          takeOverRowVersion: current?.rowVersion ?? null,
+        });
       }
       if (!alive()) return { saved: false, error: '' };
       this.toast.success(`已將卡號 ${saved.cardNumber} 指派給 ${holderName(saved)}`);
@@ -157,9 +179,9 @@ export class AttendanceCardsStore {
     } catch (error) {
       if (!alive()) return { saved: false, error: '' };
       this.afterWrite();
-      return { saved: false, error: safeMessage(error) };
+      return this.failure(error);
     } finally {
-      if (alive()) this.busy.set(false);
+      if (alive()) this.writing.set(false);
     }
   }
   updateAssignment(id: string, body: CardAssignmentUpdateRequest, done = '已儲存持有期間') {
@@ -167,7 +189,7 @@ export class AttendanceCardsStore {
   }
   deleteAssignment(item: CardAssignmentDto) {
     return this.write(
-      () => this.api.deleteAssignment(item.id),
+      () => this.api.deleteAssignment(item.id, item.rowVersion),
       `已刪除 ${holderName(item)} 的持有期間`,
       `assignment:${item.id}`,
     );
@@ -180,11 +202,21 @@ export class AttendanceCardsStore {
     this.punches.reload();
   }
 
+  private failure(error: unknown): WriteOutcome<never> {
+    return errorCode(error) === 'admin_write_conflict'
+      ? {
+          saved: false,
+          error: '這筆資料剛被其他操作變更，畫面已更新，請確認後再操作。',
+          stale: true,
+        }
+      : { saved: false, error: safeMessage(error) };
+  }
+
   /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */
   private async write<T>(run: () => Promise<T>, done: string, key = ''): Promise<WriteOutcome<T>> {
     if (this.busy()) return { saved: false, error: '' };
     const alive = this.scope.guard();
-    this.busy.set(true);
+    this.writing.set(true);
     this.working.set(key);
     try {
       const value = await run();
@@ -196,10 +228,10 @@ export class AttendanceCardsStore {
       if (!alive()) return { saved: false, error: '' };
       // 例如期間有人改了同一張卡：重讀，讓畫面回到伺服器的狀態。
       this.afterWrite();
-      return { saved: false, error: safeMessage(error) };
+      return this.failure(error);
     } finally {
       if (alive()) {
-        this.busy.set(false);
+        this.writing.set(false);
         this.working.set('');
       }
     }

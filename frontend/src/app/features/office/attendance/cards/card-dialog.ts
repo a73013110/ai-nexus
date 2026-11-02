@@ -176,6 +176,8 @@ export class CardDialog {
   readonly noteMax = NOTE_MAX;
   /** 新增的卡片，頁面用來直接開啟它的詳情。 */
   readonly created = output<CardDto>();
+  /** 改備註時版本已過期：對話框已關閉，由頁面顯示這則訊息。 */
+  readonly stale = output<string>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('cardDialog');
   private readonly numberInput = viewChild<ElementRef<HTMLInputElement>>('number');
   private readonly confirmation = viewChild.required(ConfirmDialog);
@@ -248,9 +250,12 @@ export class CardDialog {
     this.error.set('');
     if (editor.card) {
       const outcome = await this.store.saveNote(editor.card, note);
-      if (!outcome.saved) return this.error.set(outcome.error);
+      if (!outcome.saved && !outcome.stale) return this.error.set(outcome.error);
+      // 版本已過期時也關掉：再送也會被拒，要從重讀後的資料重新開始。
       this.opened.set(draft);
-      return this.dialog().nativeElement.close();
+      this.dialog().nativeElement.close();
+      if (!outcome.saved) this.stale.emit(outcome.error);
+      return;
     }
     const cardNumber = draft.cardNumber.trim();
     if (!cardNumber || cardNumber.length > NUMBER_MAX) {

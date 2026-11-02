@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -31,21 +30,24 @@ internal sealed class CardCreateRequestValidator : RequestValidator<CardCreateRe
 internal sealed class CreateCard(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (CardCreateRequest body, ICurrentUser user, CreateCard handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, body, ct))
+        .MapPost("", (CardCreateRequest body, CreateCard handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.CardCreated)
         .WithName("CreateAttendanceCard");
 
-    public Task<Result<CardDto>> HandleAsync(Guid actor, CardCreateRequest request, CancellationToken ct)
+    public async Task<Result<CardDto>> HandleAsync(CardCreateRequest request, CancellationToken ct)
     {
         var card = new Card { CardNumber = request.CardNumber.Trim(), HiddenFromRecords = request.HiddenFromRecords, Note = request.Note.TrimToNull() };
-        return write.ExecuteAsync<CardDto>(actor, CardRules.Target(db, card.Id), async () =>
-        {
-            // 唯一索引是最後一道防線；先查才能回固定的錯誤代碼並寫進稽核。
-            if (await db.Cards.AnyAsync(x => x.CardNumber == card.CardNumber, ct)) return AttendanceErrors.CardNumberDuplicate;
-            db.Add(card);
-            return CardDto.New(card);
-        }, ct);
+        var begun = await write.BeginAsync(CardRules.Target(db, card.Id).Locking(AttendanceLocks.PunchImport), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        // 唯一索引是最後一道防線；先查才能回固定的錯誤代碼並寫進稽核。
+        if (await db.Cards.AnyAsync(x => x.CardNumber == card.CardNumber, ct)) return AttendanceErrors.CardNumberDuplicate;
+        db.Add(card);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? CardDto.New(card) : committed.Error;
     }
 }

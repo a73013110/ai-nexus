@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CardAssignmentDto, CardDto, PunchDto, TablePageOfPunchDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ApiError } from '@core/errors/safe-errors';
 import { tourSteps, type ProductTourDefinition } from '@shared/ui/product-tour';
 import { ToastService } from '@shared/ui/toast-service';
 import { CollaborationApi } from '@features/work/collaboration/collaboration-api';
@@ -16,6 +17,7 @@ import { AttendanceCardsPage } from './attendance-cards-page';
 const PAGE = 'nx-attendance-cards-page';
 const held: CardAssignmentDto = {
   id: 'a1',
+  rowVersion: 11,
   cardId: 'c1',
   cardNumber: '0012345',
   userId: 'u1',
@@ -28,6 +30,7 @@ const held: CardAssignmentDto = {
 };
 const card: CardDto = {
   id: 'c1',
+  rowVersion: 7,
   cardNumber: '0012345',
   hiddenFromRecords: false,
   note: null,
@@ -204,7 +207,31 @@ describe('AttendanceCardsPage', () => {
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     toggle.click();
     await settle();
-    expect(api.updateCard).toHaveBeenCalledWith(card.id, { hiddenFromRecords: true, note: null });
+    expect(api.updateCard).toHaveBeenCalledWith(card.id, {
+      hiddenFromRecords: true,
+      note: null,
+      rowVersion: card.rowVersion,
+    });
+  });
+
+  it('closes the note dialog and explains in the drawer when the card changed meanwhile', async () => {
+    const { host, page, api, settle } = setup();
+    await settle();
+    page.store.selectedId.set(card.id);
+    await settle();
+    api.updateCard.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
+    const dialog = host.querySelector<HTMLDialogElement>('nx-card-dialog dialog')!;
+    page.cardAction(card, 'note');
+    await settle();
+    expect(dialog.open).toBe(true);
+    const note = dialog.querySelector<HTMLInputElement>('input')!;
+    note.value = '後存的';
+    note.dispatchEvent(new Event('input'));
+    await settle();
+    dialog.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+    expect(dialog.open).toBe(false);
+    expect(host.querySelector('nx-detail-drawer nx-notice')?.textContent).toContain('畫面已更新');
   });
 
   it('lists the card punches newest first in a table without the card number', async () => {

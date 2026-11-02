@@ -42,7 +42,7 @@ public sealed class CardAccountReviewTests
         Assert.Contains("這張卡目前由", lost.Detail);
 
         // 上次持有的卡已在出勤紀錄隱藏（例如董事、外派），HR 本來就不看，不提示。
-        (await hr.PutAsJsonAsync($"{Cards}/{returned.Id}", new CardUpdateRequest(true, null))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Cards}/{returned.Id}", new CardUpdateRequest(true, null, returned.RowVersion))).EnsureSuccessStatusCode();
         Assert.Empty(await ReviewCodesAsync(admin, session.Carol));
     }
 }

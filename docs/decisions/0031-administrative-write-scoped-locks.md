@@ -1,6 +1,6 @@
 # 0031 行政寫入依範圍以資料庫鎖排隊，不用 Serializable
 
-- **狀態**：採用（2026-11-02）
+- **狀態**：採用（2026-11-02），只適用尚未遷移的 `ExecuteAsync`；新寫法見 [ADR 0032](0032-administrative-write-begin-commit.md)
 - **決定**：`AdministrativeWrite` 在 READ COMMITTED（RCSI）交易內先取 `sp_getapplock`，鎖隨交易釋放。範圍由 `AuditTarget.Feature` 推得：一個模組一把，帳號與存取控制共用一把。不再用程序內的全域 semaphore，也不再用 Serializable。
 - **修訂**：[ADR 0001](0001-single-iis-in-process-locks.md)（行政寫入不再是程序內鎖）。
 

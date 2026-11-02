@@ -9,6 +9,7 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// </summary>
 public sealed record CardDto(
     Guid Id,
+    long RowVersion,
     string CardNumber,
     bool HiddenFromRecords,
     string? Note,
@@ -19,6 +20,6 @@ public sealed record CardDto(
     DateTimeOffset? FirstUnattributedAt,
     DateTimeOffset? LastUnattributedAt)
 {
-    /// <summary>剛建立、還沒有持有期間與刷卡的卡。</summary>
-    public static CardDto New(Card card) => new(card.Id, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, null, null, 0, null, null);
+    /// <summary>剛建立、還沒有持有期間與刷卡的卡；提交之後才有 <see cref="RowVersion"/>。</summary>
+    public static CardDto New(Card card) => new(card.Id, card.RowVersion, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, null, null, 0, null, null);
 }

@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -14,21 +13,24 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 internal sealed class DeleteCardAssignment(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteCardAssignment handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct))
+        .MapDelete("/{id:guid}", (Guid id, long rowVersion, DeleteCardAssignment handler, CancellationToken ct) =>
+            handler.HandleAsync(id, rowVersion, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.AssignmentDeleted)
         .WithName("DeleteAttendanceCardAssignment");
 
-    public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid id, long rowVersion, CancellationToken ct)
     {
         var cardId = await AssignmentRules.CardOfAsync(db, id, ct);
-        return await write.ExecuteAsync(actor, AssignmentRules.Target(db, id, cardId), async () =>
-        {
-            var assignment = await db.CardAssignments.SingleOrDefaultAsync(x => x.Id == id, ct);
-            if (assignment is null) return AttendanceErrors.AssignmentNotFound;
-            db.Remove(assignment);
-            return Result.Success;
-        }, ct);
+        var begun = await write.BeginAsync(AssignmentRules.Target(db, id, cardId), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var assignment = await db.CardAssignments.SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (assignment is null) return AttendanceErrors.AssignmentNotFound;
+        db.ExpectRowVersion(assignment, rowVersion);
+        db.Remove(assignment);
+
+        return await transaction.CommitAsync(ct);
     }
 }

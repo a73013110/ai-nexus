@@ -6,6 +6,7 @@ import {
   afterNextRender,
   computed,
   inject,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -37,9 +38,9 @@ export interface AssignmentDraft {
   endsAt: string;
   note: string;
 }
-interface Editor {
-  /** 修改既有期間時的 ID；新增時為 null。 */
-  id: string | null;
+/** 修改既有期間時帶打開時讀到的版本，期間被別人改過就回 409，不蓋掉對方的修改；新增時兩者都是 null。 */
+type Editor = EditorFields & ({ id: string; rowVersion: number } | { id: null; rowVersion: null });
+interface EditorFields {
   cardId: string;
   cardNumber: string;
   title: string;
@@ -234,6 +235,8 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
 export class AssignmentDialog {
   readonly id = uniqueId('nx-assignment-dialog');
   readonly store = inject(AttendanceCardsStore);
+  /** 修改時版本已過期：對話框已關閉，由頁面顯示這則訊息。 */
+  readonly stale = output<string>();
   readonly nameMax = NAME_MAX;
   readonly noteMax = NOTE_MAX;
   protected readonly initial = nameInitial;
@@ -282,6 +285,7 @@ export class AssignmentDialog {
   ) {
     this.show({
       id: null,
+      rowVersion: null,
       cardId: card.id,
       cardNumber: card.cardNumber,
       title: card.holder ? '轉給其他人' : '指派持有人',
@@ -310,6 +314,7 @@ export class AssignmentDialog {
     this.show(
       {
         id: item.id,
+        rowVersion: item.rowVersion,
         cardId: item.cardId,
         cardNumber: item.cardNumber,
         title: ending ? '結束持有' : '編輯持有期間',
@@ -404,7 +409,7 @@ export class AssignmentDialog {
     const outcome = editor.id
       ? await this.store.updateAssignment(
           editor.id,
-          body,
+          { ...body, rowVersion: editor.rowVersion },
           editor.ending ? '已結束持有' : '已儲存持有期間',
         )
       : await this.store.assign({ ...body, cardId: editor.cardId }, (holder) =>
@@ -417,7 +422,12 @@ export class AssignmentDialog {
               }),
         );
     if (!outcome.saved) {
-      this.error.set(outcome.error);
+      // 打開時的版本已過期，再送也會被拒：關掉，從重讀後的資料重新開始。新增不帶版本，接手重送時會重讀歷史，留著就好。
+      if (outcome.stale && editor.id) {
+        this.opened.set(editor.draft);
+        this.dialog().nativeElement.close();
+        this.stale.emit(outcome.error);
+      } else this.error.set(outcome.error);
       return;
     }
     this.opened.set(editor.draft);

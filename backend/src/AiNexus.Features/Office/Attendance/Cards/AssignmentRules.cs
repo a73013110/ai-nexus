@@ -20,7 +20,7 @@ internal interface IAssignmentFields
 
 /// <summary>
 /// 持有期間的規則：[StartsAt, EndsAt) 不可與同一張卡的其他期間重疊（資料庫不擋，程式保證），指派已有人持有的卡必須明確接手。
-/// 需要資料的檢查在 <see cref="AdministrativeWrite"/> 的交易內執行；<see cref="Place"/> 只看已讀出的期間，不碰資料庫。
+/// 需要資料的檢查在 <see cref="AdministrativeWrite"/> 的交易與這張卡的鎖內執行；<see cref="Place"/> 只看已讀出的期間，不碰資料庫。
 /// </summary>
 internal static class AssignmentRules
 {
@@ -52,9 +52,10 @@ internal static class AssignmentRules
     /// <item>任何重疊的既有期間與新段同時或更晚開始：一律拒絕（<see cref="AttendanceErrors.StartsNotAfterPrevious"/>），接手只會結束前一段的尾端，不能往前蓋。</item>
     /// <item>否則重疊的只會是涵蓋新段開始時間的那一段。新段比它早結束時拒絕（<see cref="AttendanceErrors.AssignmentOverlap"/>）：
     /// 接手會把它結束在新段開始，它在新段結束之後的那一截就悄悄變成無人持有。其餘沒有明確接手回 <see cref="AttendanceErrors.CardHeld"/>。</item>
+    /// <item><paramref name="takeOverRowVersion"/> 是使用者確認接手時看到的那一段的版本：確認之後那一段又被改過（可能已換人）回 <see cref="AccessControlErrors.WriteConflict"/>，不結束使用者沒看過的期間。</item>
     /// </list>
     /// </summary>
-    public static Error? Place(IReadOnlyCollection<CardAssignment> existing, CardAssignment added, bool takeOver)
+    public static Error? Place(IReadOnlyCollection<CardAssignment> existing, CardAssignment added, long? takeOverRowVersion)
     {
         var overlapping = existing.Where(x => Overlaps(added.StartsAt, added.EndsAt, x)).ToList();
         if (overlapping.Count == 0) return null;
@@ -63,13 +64,21 @@ internal static class AssignmentRules
         if (overlapping.Count > 1) return AttendanceErrors.AssignmentOverlap;
         var holder = overlapping[0];
         if (added.EndsAt is { } end && (holder.EndsAt is null || end < holder.EndsAt)) return AttendanceErrors.AssignmentOverlap;
-        if (!takeOver) return AttendanceErrors.CardHeld;
+        if (takeOverRowVersion is null) return AttendanceErrors.CardHeld;
+        if (takeOverRowVersion != holder.RowVersion) return AccessControlErrors.WriteConflict;
         holder.EndsAt = added.StartsAt;
         return null;
     }
 
-    /// <summary>持有期間行政寫入共用的對象：稽核的資源是這段期間，快照則是 <paramref name="cardId"/> 整張卡（見 <see cref="SnapshotAsync"/>）。</summary>
-    public static AuditTarget Target(AppDbContext db, Guid id, Guid? cardId) => AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, ct => SnapshotAsync(db, cardId, ct));
+    /// <summary>
+    /// 持有期間行政寫入共用的對象：稽核的資源是這段期間，快照則是 <paramref name="cardId"/> 整張卡（見 <see cref="SnapshotAsync"/>）。
+    /// 同一張卡的寫入排隊，重疊的檢查才不會雙雙通過；不知道是哪張卡（期間不存在）時沒有東西要保護，也就不取鎖。
+    /// </summary>
+    public static AuditTarget Target(AppDbContext db, Guid id, Guid? cardId)
+    {
+        var target = AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, ct => SnapshotAsync(db, cardId, ct));
+        return cardId is { } card ? target.Locking(AttendanceLocks.Card(card)) : target;
+    }
 
     /// <summary>持有期間所屬的卡；修改與刪除的稽核快照以整張卡為單位，刪除後就查不到，所以要在變更前先查。</summary>
     public static Task<Guid?> CardOfAsync(AppDbContext db, Guid assignmentId, CancellationToken ct)

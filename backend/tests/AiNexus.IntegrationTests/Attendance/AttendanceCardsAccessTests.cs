@@ -24,11 +24,11 @@ public sealed class AttendanceCardsAccessTests
             await member.GetAsync(Cards),
             await member.GetAsync($"{Assignments}?cardId={session.Card.Id}"),
             await member.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)),
-            await member.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null)),
-            await member.DeleteAsync($"{Cards}/{session.Card.Id}"),
+            await member.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null, session.Card.RowVersion)),
+            await member.DeleteAsync($"{Cards}/{session.Card.Id}?rowVersion={session.Card.RowVersion}"),
             await AssignAsync(member, session.Card.Id, session.Bob, At(10, 1)),
-            await member.PutAsJsonAsync($"{Assignments}/{any}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), null, null)),
-            await member.DeleteAsync($"{Assignments}/{any}"),
+            await member.PutAsJsonAsync($"{Assignments}/{any}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), null, null, 1)),
+            await member.DeleteAsync($"{Assignments}/{any}?rowVersion=1"),
         })
             await AssertCodeAsync(response, HttpStatusCode.Forbidden, "feature_forbidden");
         Assert.Single((await session.Hr.GetFromJsonAsync<CardDto[]>(Cards))!);
@@ -48,11 +48,11 @@ public sealed class AttendanceCardsAccessTests
         foreach (var response in new[]
         {
             await viewer.PostAsJsonAsync(Cards, new CardCreateRequest("X1", false, null)),
-            await viewer.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null)),
-            await viewer.DeleteAsync($"{Cards}/{session.Card.Id}"),
+            await viewer.PutAsJsonAsync($"{Cards}/{session.Card.Id}", new CardUpdateRequest(true, null, session.Card.RowVersion)),
+            await viewer.DeleteAsync($"{Cards}/{session.Card.Id}?rowVersion={session.Card.RowVersion}"),
             await AssignAsync(viewer, session.Card.Id, session.Carol, At(10, 5), takeOver: true),
-            await viewer.PutAsJsonAsync($"{Assignments}/{assignment.Id}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), At(10, 2), null)),
-            await viewer.DeleteAsync($"{Assignments}/{assignment.Id}"),
+            await viewer.PutAsJsonAsync($"{Assignments}/{assignment.Id}", new CardAssignmentUpdateRequest(session.Bob, null, At(10, 1), At(10, 2), null, assignment.RowVersion)),
+            await viewer.DeleteAsync($"{Assignments}/{assignment.Id}?rowVersion={assignment.RowVersion}"),
         })
             await AssertCodeAsync(response, HttpStatusCode.Forbidden, "feature_forbidden");
         var unchanged = Assert.Single(await HistoryAsync(session.Hr, session.Card.Id));

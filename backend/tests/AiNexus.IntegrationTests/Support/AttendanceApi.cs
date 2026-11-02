@@ -36,8 +36,12 @@ internal static class AttendanceApi
         return (await response.Content.ReadFromJsonAsync<CardDto>())!;
     }
 
-    internal static Task<HttpResponseMessage> AssignAsync(HttpClient client, Guid cardId, Guid? userId, DateTimeOffset startsAt, DateTimeOffset? endsAt = null, bool takeOver = false, string? holderName = null)
-        => client.PostAsJsonAsync(Assignments, new CardAssignmentCreateRequest(cardId, userId, holderName, startsAt, endsAt, null, takeOver));
+    /// <summary><paramref name="takeOver"/> 時與前端相同：從持有歷史找出開始時間落在誰的期間，帶那一段的版本。</summary>
+    internal static async Task<HttpResponseMessage> AssignAsync(HttpClient client, Guid cardId, Guid? userId, DateTimeOffset startsAt, DateTimeOffset? endsAt = null, bool takeOver = false, string? holderName = null)
+    {
+        var holder = takeOver ? (await HistoryAsync(client, cardId)).FirstOrDefault(x => x.StartsAt <= startsAt && (x.EndsAt is null || x.EndsAt > startsAt)) : null;
+        return await client.PostAsJsonAsync(Assignments, new CardAssignmentCreateRequest(cardId, userId, holderName, startsAt, endsAt, null, holder?.RowVersion));
+    }
 
     internal static async Task<CardAssignmentDto> AssignOkAsync(HttpClient client, Guid cardId, Guid? userId, DateTimeOffset startsAt, DateTimeOffset? endsAt = null, bool takeOver = false, string? holderName = null)
     {

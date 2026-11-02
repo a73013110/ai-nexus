@@ -4944,12 +4944,14 @@ export interface components {
             /** Format: date-time */
             endsAt: null | string;
             note: null | string;
-            /** @default false */
-            takeOver: boolean;
+            /** Format: int64 */
+            takeOverRowVersion?: null | number;
         };
         CardAssignmentDto: {
             /** Format: uuid */
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             /** Format: uuid */
             cardId: string;
             cardNumber: string;
@@ -4974,6 +4976,8 @@ export interface components {
             /** Format: date-time */
             endsAt: null | string;
             note: null | string;
+            /** Format: int64 */
+            rowVersion: number;
         };
         CardCreateRequest: {
             cardNumber: string;
@@ -4983,6 +4987,8 @@ export interface components {
         CardDto: {
             /** Format: uuid */
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             cardNumber: string;
             hiddenFromRecords: boolean;
             note: null | string;
@@ -5001,6 +5007,8 @@ export interface components {
         CardUpdateRequest: {
             hiddenFromRecords: boolean;
             note: null | string;
+            /** Format: int64 */
+            rowVersion: number;
         };
         ChargeDto: {
             state: string;
@@ -10271,7 +10279,9 @@ export interface operations {
     };
     DeleteAttendanceCard: {
         parameters: {
-            query?: never;
+            query: {
+                rowVersion: number;
+            };
             header?: never;
             path: {
                 id: string;
@@ -10394,7 +10404,9 @@ export interface operations {
     };
     DeleteAttendanceCardAssignment: {
         parameters: {
-            query?: never;
+            query: {
+                rowVersion: number;
+            };
             header?: never;
             path: {
                 id: string;

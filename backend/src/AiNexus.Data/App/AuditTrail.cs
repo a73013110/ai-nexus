@@ -36,6 +36,7 @@ public sealed partial class AuditTrail(AppDbContext db, AuditContextSource sourc
     private JsonObject? request;
     private JsonObject? details;
     private bool completed;
+    private bool rolledBack;
 
     /// <summary>這個請求是否有宣告稽核。</summary>
     public bool Active => current is not null;
@@ -94,13 +95,18 @@ public sealed partial class AuditTrail(AppDbContext db, AuditContextSource sourc
         return entry;
     }
 
+    /// <summary>這個請求有一筆行政寫入沒有提交就結束；請求之後若回成功，就是 handler 漏了提交。</summary>
+    public void NoteRollback() => rolledBack = true;
+
     /// <summary>
     /// 請求結束時定案：<paramref name="result"/> 是 <see cref="AuditEvent.Completed"/> 或錯誤代碼。
     /// 寫不進去時拋出，呼叫端不可吞掉（查詢的資料因此不會送出）。
+    /// 寫入已回滾卻要回成功時也拋出：寧可回錯誤，也不能讓使用者以為存好了。
     /// </summary>
     public async Task CompleteAsync(string result)
     {
         if (current is not { } audit || completed) return;
+        if (rolledBack && result == AuditEvent.Completed) throw new InvalidOperationException("Administrative write returned success without committing.");
         completed = true;
         audit.Result = result;
         var entry = db.Entry(audit);

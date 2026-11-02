@@ -28,9 +28,9 @@
 
 - 期間是 `[StartsAt, EndsAt)`，`EndsAt` 為空表示持有中。持有人是使用者或姓名，至少一個；只有姓名的期間之後用修改綁上使用者，先前的刷卡隨之歸戶。
 - 同一張卡的期間不可重疊，同一人可同時持有多張。
-- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOver` 回 409 `attendance_card_held`（不帶持有人，前端由持有歷史提示是誰持有）；帶了就把前一段的 `EndsAt` 設成新段的 `StartsAt`。
+- **接手**：新段開始時間落在有人持有的期間內時，沒有帶 `takeOverRowVersion` 回 409 `attendance_card_held`（不帶持有人，前端由持有歷史提示是誰持有）；帶了那一段的版本就把它的 `EndsAt` 設成新段的 `StartsAt`，版本不符回 409 `admin_write_conflict`。
 - 一律拒絕：新段開始時間不晚於它重疊的既有期間的開始時間（`attendance_assignment_starts_not_after_previous`）；新段比它重疊的既有期間早結束，接手後那一截會無人持有（`attendance_assignment_overlap`）。修改既有期間時重疊一律拒絕，不接手。
-- 檢查與寫入在 `AdministrativeWrite` 的交易與行政寫入鎖內，並發的指派會依序處理；刷卡匯入寫入時也取同一把鎖。
+- **並行**：同一張卡的指派依序處理，不同卡互不等待；看舊畫面存檔回 409 `admin_write_conflict`。鎖的範圍見 [ADR 0032](../decisions/0032-administrative-write-begin-commit.md)。
 
 ## 出勤判定
 

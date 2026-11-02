@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Office.Attendance.Imports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -175,7 +176,7 @@ public sealed class ImportPunchFilesTests
 
     // 匯入中尚未提交的刷卡，刪卡的檢查看不到（RCSI）；不排隊就可能刪掉正要用到的卡。
     [Fact]
-    public async Task AnImportWaitsForACardWriteInProgress()
+    public async Task AnImportWaitsForAnotherHolderOfTheImportLock()
     {
         await using var session = await PunchImportSession.CreateAsync();
         session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
@@ -185,7 +186,7 @@ public sealed class ImportPunchFilesTests
 
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
             var import = session.ReimportAsync(Oct1);
             await Task.Delay(200, ct);
             Assert.False(import.IsCompleted);
@@ -209,7 +210,7 @@ public sealed class ImportPunchFilesTests
         await using (var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(ct))
         {
             // 鎖被別的程序佔住時，手動與排程都只能等，這也是跨程序的保證。
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
             manual = session.ReimportAsync(Oct1);
             scheduled = session.ScanAsync();
             await Task.Delay(200, ct);
@@ -238,7 +239,7 @@ public sealed class ImportPunchFilesTests
         Task<PunchScanResult> scheduled;
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
             scheduled = session.ScanAsync();
             await Task.Delay(200, ct);
             db.Add(new PunchFile { FileName = Oct1, ImportedModifiedAt = new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero), ImportedSize = info.Length });

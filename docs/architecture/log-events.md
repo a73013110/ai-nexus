@@ -17,6 +17,7 @@
 | --- | --- | --- |
 | 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected` | `Platform/Diagnostics/Issues.cs` |
 | 1003 | `audit.failure_unrecorded` | `Admin/Identity/RequestAudit.cs` |
+| 1004 | `admin_write.held_too_long` | `Admin/AccessControl/AdministrativeWrite.cs` |
 | 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` | `Knowledge/Retrieval/RetrievalDiagnostics.cs`、`Knowledge/Embeddings/RetrievalHttp.cs` |
 | 2003 | `embedding.bootstrap_deferred` | `Knowledge/Embeddings/EmbeddingBootstrapWorker.cs` |
 | 3000 / 3001 | `job.started` / `job.finished` | `Jobs/BackgroundJobWorker.cs` |

@@ -69,7 +69,7 @@ public sealed class ListCardsTests
         Assert.Equal(0, (await CardAsync()).UnattributedCount);
 
         // 期間在最後一筆刷卡之前結束時，之後的刷卡又會變成待指派。
-        (await hr.PutAsJsonAsync($"{Assignments}/{period.Id}", new CardAssignmentUpdateRequest(session.Bob, null, period.StartsAt, At(10, 3), null))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Assignments}/{period.Id}", new CardAssignmentUpdateRequest(session.Bob, null, period.StartsAt, At(10, 3), null, period.RowVersion))).EnsureSuccessStatusCode();
         var again = await CardAsync();
         Assert.Equal((1, At(10, 3, 8, 45)), (again.UnattributedCount, again.FirstUnattributedAt));
     }

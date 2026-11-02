@@ -11,6 +11,7 @@ import { AttendanceUserCards } from './attendance-user-cards';
 
 const period = (id: string, patch: Partial<CardAssignmentDto> = {}): CardAssignmentDto => ({
   id,
+  rowVersion: 1,
   cardId: 'card-' + id,
   cardNumber: '000' + id,
   userId: 'u1',

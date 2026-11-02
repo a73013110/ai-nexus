@@ -42,13 +42,13 @@ public sealed class AssignCardTests
         var first = await AssignOkAsync(hr, card.Id, bob, At(10, 1), At(10, 10));
         var second = await AssignOkAsync(hr, card.Id, carol, At(10, 10));
 
-        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 9), null, null)), HttpStatusCode.Conflict, "attendance_assignment_overlap");
+        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 9), null, null, second.RowVersion)), HttpStatusCode.Conflict, "attendance_assignment_overlap");
         // 更正自己的期間不與自己比較；結束持有就是填上結束時間。
-        (await hr.PutAsJsonAsync($"{Assignments}/{first.Id}", new CardAssignmentUpdateRequest(bob, null, At(10, 1), At(10, 9), "提早離職"))).EnsureSuccessStatusCode();
-        (await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 9), At(10, 30), null))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Assignments}/{first.Id}", new CardAssignmentUpdateRequest(bob, null, At(10, 1), At(10, 9), "提早離職", first.RowVersion))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 9), At(10, 30), null, second.RowVersion))).EnsureSuccessStatusCode();
         var history = await HistoryAsync(hr, card.Id);
         Assert.Equal([At(10, 30), At(10, 9)], history.Select(x => x.EndsAt));
-        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{Guid.NewGuid()}", new CardAssignmentUpdateRequest(bob, null, At(11, 1), null, null)), HttpStatusCode.NotFound, "attendance_assignment_not_found");
+        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{Guid.NewGuid()}", new CardAssignmentUpdateRequest(bob, null, At(11, 1), null, null, 1)), HttpStatusCode.NotFound, "attendance_assignment_not_found");
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class AssignCardTests
         Assert.Equal(0, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
         Assert.Equal([(Guid?)null, null], await HolderIdsAsync(factory));
 
-        (await hr.PutAsJsonAsync($"{Assignments}/{named.Id}", new CardAssignmentUpdateRequest(dave, "王新進", At(10, 1), null, null))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Assignments}/{named.Id}", new CardAssignmentUpdateRequest(dave, "王新進", At(10, 1), null, null, named.RowVersion))).EnsureSuccessStatusCode();
         var bound = Assert.Single(await HistoryAsync(hr, card.Id));
         Assert.Equal((dave, "dave", "王新進"), (bound.UserId, bound.UserDisplayName, bound.HolderName));
         // 先前的刷卡隨之歸戶，不必改刷卡資料。
@@ -130,7 +130,7 @@ public sealed class AssignCardTests
         Assert.Equal([bound.Id], (await hr.GetFromJsonAsync<CardAssignmentDto[]>($"{Assignments}?userId={dave}"))!.Select(x => x.Id));
         Assert.Empty((await hr.GetFromJsonAsync<CardAssignmentDto[]>($"{Assignments}?userId={bob}"))!);
 
-        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{named.Id}", new CardAssignmentUpdateRequest(Guid.NewGuid(), null, At(10, 1), null, null)), HttpStatusCode.NotFound, "attendance_user_not_found");
+        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Assignments}/{named.Id}", new CardAssignmentUpdateRequest(Guid.NewGuid(), null, At(10, 1), null, null, bound.RowVersion)), HttpStatusCode.NotFound, "attendance_user_not_found");
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class AssignCardTests
         Assert.All(responses.Where(x => !x.IsSuccessStatusCode), x => Assert.Equal(HttpStatusCode.Conflict, x.StatusCode));
         Assert.Single(await HistoryAsync(hr, session.Card.Id));
 
-        // 起始時間不同、都帶接手旗標：每個都成功，但結果是首尾相接的一串，任何時刻只有一人持有。
+        // 起始時間不同、都要接手：看到的版本過期的回 409，其餘首尾相接成一串，任何時刻只有一人持有。
         var chain = await Task.WhenAll(users.Select((user, i) => AssignAsync(hr, session.Card.Id, user, At(10, 2 + i), takeOver: true)));
         Assert.All(chain, x => Assert.True(x.IsSuccessStatusCode || x.StatusCode == HttpStatusCode.Conflict));
         var history = (await HistoryAsync(hr, session.Card.Id)).OrderBy(x => x.StartsAt).ToList();
@@ -183,10 +183,10 @@ public sealed class AssignCardTests
         await AddPunchesAsync(factory, ("A001", At(10, 2)));
         Assert.Equal(0, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await hr.DeleteAsync($"{Assignments}/{period.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await hr.DeleteAsync($"{Assignments}/{period.Id}?rowVersion={period.RowVersion}")).StatusCode);
         Assert.Empty(await HistoryAsync(hr, card.Id));
         Assert.Equal(1, Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!).UnattributedCount);
-        await AssertCodeAsync(await hr.DeleteAsync($"{Assignments}/{period.Id}"), HttpStatusCode.NotFound, "attendance_assignment_not_found");
+        await AssertCodeAsync(await hr.DeleteAsync($"{Assignments}/{period.Id}?rowVersion={period.RowVersion}"), HttpStatusCode.NotFound, "attendance_assignment_not_found");
     }
 
     [Fact]
@@ -197,8 +197,10 @@ public sealed class AssignCardTests
         var first = await AssignOkAsync(hr, card.Id, bob, At(10, 1));
         await AssertCodeAsync(await AssignAsync(hr, card.Id, carol, At(10, 5)), HttpStatusCode.Conflict, "attendance_card_held");
         var second = await AssignOkAsync(hr, card.Id, carol, At(10, 5), takeOver: true);
-        (await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 5), At(10, 20), "調職"))).EnsureSuccessStatusCode();
-        (await hr.DeleteAsync($"{Assignments}/{first.Id}")).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Assignments}/{second.Id}", new CardAssignmentUpdateRequest(carol, null, At(10, 5), At(10, 20), "調職", second.RowVersion))).EnsureSuccessStatusCode();
+        // 接手結束了前一段，它的版本也跟著變。
+        var ended = (await HistoryAsync(hr, card.Id)).Single(x => x.Id == first.Id);
+        (await hr.DeleteAsync($"{Assignments}/{first.Id}?rowVersion={ended.RowVersion}")).EnsureSuccessStatusCode();
 
         var created = await AuditAsync(factory, "attendance.card_assignment.created");
         Assert.Equal(["completed", "attendance_card_held", "completed"], created.Select(x => x.Result));

@@ -4091,6 +4091,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "rowVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
           }
         ],
         "responses": {
@@ -4294,6 +4303,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "rowVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -11903,15 +11921,19 @@
               "string"
             ]
           },
-          "takeOver": {
-            "type": "boolean",
-            "default": false
+          "takeOverRowVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
       "CardAssignmentDto": {
         "required": [
           "id",
+          "rowVersion",
           "cardId",
           "cardNumber",
           "userId",
@@ -11927,6 +11949,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "cardId": {
             "type": "string",
@@ -11983,7 +12009,8 @@
           "holderName",
           "startsAt",
           "endsAt",
-          "note"
+          "note",
+          "rowVersion"
         ],
         "type": "object",
         "properties": {
@@ -12016,6 +12043,10 @@
               "null",
               "string"
             ]
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -12044,6 +12075,7 @@
       "CardDto": {
         "required": [
           "id",
+          "rowVersion",
           "cardNumber",
           "hiddenFromRecords",
           "note",
@@ -12059,6 +12091,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "cardNumber": {
             "type": "string"
@@ -12116,7 +12152,8 @@
       "CardUpdateRequest": {
         "required": [
           "hiddenFromRecords",
-          "note"
+          "note",
+          "rowVersion"
         ],
         "type": "object",
         "properties": {
@@ -12128,6 +12165,10 @@
               "null",
               "string"
             ]
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

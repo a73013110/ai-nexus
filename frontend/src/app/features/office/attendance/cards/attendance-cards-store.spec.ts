@@ -12,6 +12,7 @@ import { AttendanceCardsStore, type AssignRequest } from './attendance-cards-sto
 
 const held: CardAssignmentDto = {
   id: 'a1',
+  rowVersion: 11,
   cardId: 'c1',
   cardNumber: '0012345',
   userId: 'u1',
@@ -24,6 +25,7 @@ const held: CardAssignmentDto = {
 };
 const card: CardDto = {
   id: 'c1',
+  rowVersion: 7,
   cardNumber: '0012345',
   hiddenFromRecords: false,
   note: null,
@@ -59,7 +61,7 @@ function setup({ maintain = true } = {}) {
     assignments: vi.fn(async () => [held]),
     updateCard: vi.fn(async () => undefined),
     createAssignment: vi.fn(async (body: CardAssignmentCreateRequest) => {
-      if (!body.takeOver && body.cardId === 'c1')
+      if (body.takeOverRowVersion === null && body.cardId === 'c1')
         throw new ApiError(409, 'attendance_card_held', undefined, 'NX-' + '0'.repeat(32));
       return created(body);
     }),
@@ -93,7 +95,7 @@ function setup({ maintain = true } = {}) {
 describe('AttendanceCardsStore', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('asks to take over a held card, naming the holder from the history, then resends with takeOver', async () => {
+  it('asks to take over a held card, naming the holder from the history, then resends with its version', async () => {
     const { store, api, toast, settle } = setup();
     await settle();
     const confirm = vi.fn(async () => true);
@@ -101,14 +103,18 @@ describe('AttendanceCardsStore', () => {
     expect(confirm).toHaveBeenCalledWith('王小明');
     expect(api.assignments).toHaveBeenCalledWith('c1');
     expect(api.createAssignment).toHaveBeenCalledTimes(2);
-    expect(api.createAssignment.mock.calls[0][0]).toMatchObject({ cardId: 'c1', takeOver: false });
+    expect(api.createAssignment.mock.calls[0][0]).toMatchObject({
+      cardId: 'c1',
+      takeOverRowVersion: null,
+    });
     expect(api.createAssignment.mock.calls[1][0]).toMatchObject({
       cardId: 'c1',
       holderName: '新進同仁',
-      takeOver: true,
+      takeOverRowVersion: held.rowVersion,
     });
     expect(outcome.saved).toBe(true);
     expect(toast.success).toHaveBeenCalledWith('已將卡號 0012345 指派給 新進同仁');
+    await settle();
     expect(store.busy()).toBe(false);
   });
 
@@ -118,6 +124,7 @@ describe('AttendanceCardsStore', () => {
     const outcome = await store.assign(request, async () => false);
     expect(outcome).toEqual({ saved: false, error: '' });
     expect(api.createAssignment).toHaveBeenCalledOnce();
+    await settle();
     expect(store.busy()).toBe(false);
   });
 
@@ -127,15 +134,48 @@ describe('AttendanceCardsStore', () => {
     const saving = store.setHidden({ ...card, note: '訪客' }, true);
     expect(store.working()).toBe('hidden:c1');
     expect((await saving).saved).toBe(true);
-    expect(api.updateCard).toHaveBeenCalledWith('c1', { hiddenFromRecords: true, note: '訪客' });
+    expect(api.updateCard).toHaveBeenCalledWith('c1', {
+      hiddenFromRecords: true,
+      note: '訪客',
+      rowVersion: card.rowVersion,
+    });
     expect(toast.success).toHaveBeenCalledWith('卡號 0012345 已在出勤紀錄隱藏');
     expect(store.working()).toBe('');
+    // 重讀完才能再寫：重讀前畫面上的版本是舊的。
+    expect(store.busy()).toBe(true);
+    await settle();
+    expect(store.busy()).toBe(false);
     // 改備註時隱藏旗標照舊送回。
     await store.saveNote({ ...card, hiddenFromRecords: true }, '董事');
     expect(api.updateCard).toHaveBeenLastCalledWith('c1', {
       hiddenFromRecords: true,
       note: '董事',
+      rowVersion: card.rowVersion,
     });
+  });
+
+  it('sends the version it read when deleting, so a stale delete is refused', async () => {
+    const { store, api, settle } = setup();
+    await settle();
+    await store.deleteCard(card);
+    expect(api.deleteCard).toHaveBeenCalledWith('c1', card.rowVersion);
+    await settle();
+    await store.deleteAssignment(held);
+    expect(api.deleteAssignment).toHaveBeenCalledWith('a1', held.rowVersion);
+  });
+
+  it('shows the reviewed message and reloads when someone else changed the card first', async () => {
+    const { store, api, settle } = setup();
+    await settle();
+    api.updateCard.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
+    const reads = api.cards.mock.calls.length;
+    const outcome = await store.saveNote(card, '後存的');
+    expect(outcome).toMatchObject({ saved: false, stale: true });
+    expect(outcome.saved ? '' : outcome.error).toContain('畫面已更新');
+    expect(store.busy()).toBe(true);
+    await settle();
+    expect(api.cards.mock.calls.length).toBeGreaterThan(reads);
+    expect(store.busy()).toBe(false);
   });
 
   it('turns other refusals into a reviewed message', async () => {

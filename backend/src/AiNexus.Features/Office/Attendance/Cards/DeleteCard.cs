@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -14,19 +13,26 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 internal sealed class DeleteCard(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteCard handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct))
+        .MapDelete("/{id:guid}", (Guid id, long rowVersion, DeleteCard handler, CancellationToken ct) =>
+            handler.HandleAsync(id, rowVersion, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)
         .Audited(AttendanceAudit.CardDeleted)
         .WithName("DeleteAttendanceCard");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, CardRules.Target(db, id), async () =>
+    public async Task<Result> HandleAsync(Guid id, long rowVersion, CancellationToken ct)
     {
+        // 「沒有持有期間、沒有刷卡」才能刪：兩把鎖分別與指派、匯入排隊，檢查之後不會才冒出新的資料。
+        var begun = await write.BeginAsync(CardRules.Target(db, id).Locking(AttendanceLocks.Card(id), AttendanceLocks.PunchImport), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var card = await db.Cards.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (card is null) return AttendanceErrors.CardNotFound;
         if (await db.CardAssignments.AnyAsync(x => x.CardId == id, ct) || await db.Punches.AnyAsync(x => x.CardNumber == card.CardNumber, ct))
             return AttendanceErrors.CardInUse;
+        db.ExpectRowVersion(card, rowVersion);
         db.Remove(card);
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

@@ -18,8 +18,9 @@ public sealed class ManageCardsTests
 
         var card = await CreateCardAsync(hr, " ab0012 ", note: "  備用卡  ");
         Assert.Equal(("ab0012", false, "備用卡"), (card.CardNumber, card.HiddenFromRecords, card.Note));
-        // DTO 在寫入前就產生，建立時間要在 Add 時補上。
+        // 提交之後才產生 DTO：建立時間與版本都是實際寫入的值。
         Assert.NotEqual(default, card.CreatedAt);
+        Assert.True(card.RowVersion > 0);
 
         await AssertCodeAsync(await hr.PostAsJsonAsync(Cards, new CardCreateRequest("AB0012", false, null)), HttpStatusCode.Conflict, "attendance_card_number_duplicate");
         await CreateCardAsync(hr, "ab0013", hidden: true);
@@ -42,8 +43,8 @@ public sealed class ManageCardsTests
         Assert.Equal(HttpStatusCode.BadRequest, (await hr.PostAsJsonAsync(Cards, new CardCreateRequest(new string('9', 33), false, null))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await hr.PostAsJsonAsync(Cards, new CardCreateRequest("001", false, new string('備', 201)))).StatusCode);
         Assert.Empty((await hr.GetFromJsonAsync<CardDto[]>(Cards))!);
-        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Cards}/{Guid.NewGuid()}", new CardUpdateRequest(true, null)), HttpStatusCode.NotFound, "attendance_card_not_found");
-        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{Guid.NewGuid()}"), HttpStatusCode.NotFound, "attendance_card_not_found");
+        await AssertCodeAsync(await hr.PutAsJsonAsync($"{Cards}/{Guid.NewGuid()}", new CardUpdateRequest(true, null, 1)), HttpStatusCode.NotFound, "attendance_card_not_found");
+        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{Guid.NewGuid()}?rowVersion=1"), HttpStatusCode.NotFound, "attendance_card_not_found");
     }
 
     [Fact]
@@ -60,9 +61,9 @@ public sealed class ManageCardsTests
         // 有刷卡的卡刪掉後，下次匯入又會建回來；有持有期間的刪了就失去歸戶依據。
         await AddPunchesAsync(factory, ("A102", At(10, 2, 9)));
 
-        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{held.Id}"), HttpStatusCode.Conflict, "attendance_card_in_use");
-        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{punched.Id}"), HttpStatusCode.Conflict, "attendance_card_in_use");
-        Assert.Equal(HttpStatusCode.NoContent, (await hr.DeleteAsync($"{Cards}/{unused.Id}")).StatusCode);
+        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{held.Id}?rowVersion={held.RowVersion}"), HttpStatusCode.Conflict, "attendance_card_in_use");
+        await AssertCodeAsync(await hr.DeleteAsync($"{Cards}/{punched.Id}?rowVersion={punched.RowVersion}"), HttpStatusCode.Conflict, "attendance_card_in_use");
+        Assert.Equal(HttpStatusCode.NoContent, (await hr.DeleteAsync($"{Cards}/{unused.Id}?rowVersion={unused.RowVersion}")).StatusCode);
         Assert.Equal(["A100", "A102"], (await hr.GetFromJsonAsync<CardDto[]>(Cards))!.Select(x => x.CardNumber));
     }
 
@@ -76,7 +77,7 @@ public sealed class ManageCardsTests
         var card = await CreateCardAsync(hr, "B1");
         await AssignOkAsync(hr, card.Id, bob, At(10, 1));
 
-        (await hr.PutAsJsonAsync($"{Cards}/{card.Id}", new CardUpdateRequest(true, "  董事  "))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Cards}/{card.Id}", new CardUpdateRequest(true, "  董事  ", card.RowVersion))).EnsureSuccessStatusCode();
 
         var saved = Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!);
         Assert.Equal((true, "董事", (Guid?)bob), (saved.HiddenFromRecords, saved.Note, saved.Current?.UserId));
@@ -116,9 +117,10 @@ public sealed class ManageCardsTests
         await GrantCardsAsync(factory, await UserIdAsync(factory, "hr"));
         using var hr = await factory.SignedInAsync("hr");
         var card = await CreateCardAsync(hr, "D1");
-        (await hr.PutAsJsonAsync($"{Cards}/{card.Id}", new CardUpdateRequest(true, "外派"))).EnsureSuccessStatusCode();
+        (await hr.PutAsJsonAsync($"{Cards}/{card.Id}", new CardUpdateRequest(true, "外派", card.RowVersion))).EnsureSuccessStatusCode();
         await AssertCodeAsync(await hr.PostAsJsonAsync(Cards, new CardCreateRequest("D1", false, null)), HttpStatusCode.Conflict, "attendance_card_number_duplicate");
-        (await hr.DeleteAsync($"{Cards}/{card.Id}")).EnsureSuccessStatusCode();
+        var current = Assert.Single((await hr.GetFromJsonAsync<CardDto[]>(Cards))!);
+        (await hr.DeleteAsync($"{Cards}/{card.Id}?rowVersion={current.RowVersion}")).EnsureSuccessStatusCode();
 
         Assert.Equal(["completed", "attendance_card_number_duplicate"], (await AuditAsync(factory, "attendance.card.created")).Select(x => x.Result));
         var updated = Assert.Single(await AuditAsync(factory, "attendance.card.updated"));

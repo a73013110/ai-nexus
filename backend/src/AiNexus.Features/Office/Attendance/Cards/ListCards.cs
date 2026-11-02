@@ -81,7 +81,7 @@ internal sealed class ListCards(AppDbContext db, TimeProvider clock)
         var rows = cards.Select(card =>
         {
             var gap = pending.GetValueOrDefault(card.Id);
-            return new CardDto(card.Id, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, holders.GetValueOrDefault(card.Id),
+            return new CardDto(card.Id, card.RowVersion, card.CardNumber, card.HiddenFromRecords, card.Note, card.CreatedAt, holders.GetValueOrDefault(card.Id),
                 lastPunches.TryGetValue(card.CardNumber, out var last) ? last : null, gap?.Count ?? 0, gap?.First, gap?.Last);
         });
         return rows.ToArray();

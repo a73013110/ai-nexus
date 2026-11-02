@@ -52,7 +52,8 @@ export class AttendanceApi {
   /** 卡號建立後不改；只改是否在出勤紀錄隱藏與備註。 */
   updateCard = (id: string, body: CardUpdateRequest) =>
     this.api.put('/api/v1/attendance-cards/{id}', { path: { id }, body });
-  deleteCard = (id: string) => this.api.delete('/api/v1/attendance-cards/{id}', { path: { id } });
+  deleteCard = (id: string, rowVersion: number) =>
+    this.api.delete('/api/v1/attendance-cards/{id}', { path: { id }, query: { rowVersion } });
   /** 一張卡的刷卡與歸戶結果，預設新到舊；走共用表格查詢。 */
   cardPunches = (id: string, table: TableRequestQuery, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-cards/{id}/punches', {
@@ -66,13 +67,17 @@ export class AttendanceApi {
   /** 某位使用者持有過的卡，新到舊；只有姓名、還沒綁上帳號的期間不在其中。 */
   userAssignments = (userId: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-card-assignments', { query: { userId }, signal });
-  /** 已有人持有時回 409 `attendance_card_held`；使用者確認後以 `takeOver: true` 重送。 */
+  /** 已有人持有時回 409 `attendance_card_held`；使用者確認後帶那一段的 `rowVersion` 為 `takeOverRowVersion` 重送。 */
   createAssignment = (body: CardAssignmentCreateRequest) =>
     this.api.post('/api/v1/attendance-card-assignments', { body });
+  /** 修改與刪除都帶讀到的 `rowVersion`；期間被別人改過時回 409 `admin_write_conflict`。 */
   updateAssignment = (id: string, body: CardAssignmentUpdateRequest) =>
     this.api.put('/api/v1/attendance-card-assignments/{id}', { path: { id }, body });
-  deleteAssignment = (id: string) =>
-    this.api.delete('/api/v1/attendance-card-assignments/{id}', { path: { id } });
+  deleteAssignment = (id: string, rowVersion: number) =>
+    this.api.delete('/api/v1/attendance-card-assignments/{id}', {
+      path: { id },
+      query: { rowVersion },
+    });
 
   imports = (filters: PunchImportFilters, table: TableRequestQuery, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-imports', { query: { ...filters, ...table }, signal });

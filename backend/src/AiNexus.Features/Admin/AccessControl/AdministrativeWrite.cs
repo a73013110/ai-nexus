@@ -20,14 +20,59 @@ public sealed record AuditTarget(string Feature, Guid? Resource, string Key, Fun
 
     /// <summary>沒有單一資源的寫入（如匯入、排序、設定）：只有稽核 key。</summary>
     public static AuditTarget Of(string feature, string key, Func<CancellationToken, Task<object?>> snapshot) => new(feature, null, key, snapshot);
+
+    /// <summary><see cref="AdministrativeWrite.BeginAsync"/> 要先取得的鎖；預設不取。只給跨列、又沒有約束能擋的規則，範圍取規則涵蓋的最小單位（如一張卡）。</summary>
+    public IReadOnlyList<string> Locks { get; init; } = [];
+
+    /// <summary>同一個寫入對象，加上要取得的鎖。</summary>
+    public AuditTarget Locking(params string[] names) => this with { Locks = names };
 }
 
 /// <summary>
 /// 管理端寫入的資料稽核：變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。
 /// 快照由擁有該資料的 slice 提供（<see cref="AuditTarget"/>），執行者由呼叫端傳入，所以這裡不依賴任何上層模組。
 /// </summary>
-public sealed class AdministrativeWrite(AppDbContext db, AccessService access, AdministrativeWriteLock writes, AuditTrail audit)
+public sealed partial class AdministrativeWrite(AppDbContext db, AccessService access, AdministrativeWriteLock writes, AuditTrail audit, IOptions<AccessControlOptions> options, TimeProvider time, ILogger<AdministrativeWrite> logger)
 {
+    /// <summary>
+    /// 開交易、依 <see cref="AuditTarget.Locks"/> 取鎖並記下前值。業務邏輯寫在這之後，最後呼叫 <see cref="AdministrativeTransaction.CommitAsync"/>。
+    /// 權限由端點的 <c>RequireFeature</c> 在同一個請求檢查過，這裡不再重查。只用在有請求稽核的端點：沒有提交的保護靠它。等不到鎖回 <see cref="AccessControlErrors.WriteBusy"/>。
+    /// </summary>
+    public async Task<Result<AdministrativeTransaction>> BeginAsync(AuditTarget target, CancellationToken ct)
+    {
+        // 隔離等級明確寫出：連線池重用的連線可能帶著別的交易留下的等級。
+        var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        try
+        {
+            // 依名稱排序：同時取多把鎖的寫入順序一致，不會互等成死結。
+            foreach (var name in target.Locks.Order(StringComparer.Ordinal))
+            {
+                if (await writes.TryAcquireNamedAsync(name, ct)) continue;
+                await transaction.DisposeAsync();
+                return AccessControlErrors.WriteBusy;
+            }
+            // 取得鎖之後才計時：等別人不算自己佔用。
+            var startedAt = time.GetTimestamp();
+            audit.Describe(target.Resource, target.Subject, new { resourceKey = target.Key, before = await SnapshotAsync(target, ct) });
+            return new AdministrativeTransaction(db, transaction, audit, cancellation => SnapshotAsync(target, cancellation), () => NoteHeld(target, startedAt));
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
+
+    // 佔到別人等鎖的上限，等的人就會收到 503：通常是耗時工作放在開始與提交之間。
+    private void NoteHeld(AuditTarget target, long startedAt)
+    {
+        var held = time.GetElapsedTime(startedAt);
+        if (held.TotalSeconds >= options.Value.WriteLockTimeoutSeconds) LogHeldTooLong(logger, target.Feature, (long)held.TotalMilliseconds);
+    }
+
+    [LoggerMessage(EventId = 1004, EventName = "admin_write.held_too_long", Level = LogLevel.Warning, Message = "Administrative write for {Kind} held its transaction for {ElapsedMs} ms.")]
+    private static partial void LogHeldTooLong(ILogger logger, string kind, long elapsedMs);
+
     /// <summary>
     /// 在交易與 <see cref="AdministrativeWriteLock"/> 內執行變更，並於交易內前後各檢一次 <see cref="AuditTarget.Feature"/> 權限（不採用請求開始時的授權快取）。
     /// 變更後執行者不再持有該功能（例如撤掉自己的角色）時回滾並回 lockout。稽核寫進這個請求（端點宣告的動作），失敗由請求稽核記下錯誤代碼與 <c>before</c>。
@@ -101,7 +146,7 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
 
     // 鎖只排隊行政寫入；本機登入、本人改資料等鎖外的寫入仍可能撞上同一列，由唯一索引、並行控制欄位或死結偵測擋下。
     // 這是時機問題、不是程式錯誤，重送就會成功，所以回 409 而不是 500。mutation 可能改過閉包內的狀態，這裡不自動重試。
-    private static bool IsWriteConflict(Exception error) => error is DbUpdateConcurrencyException
+    internal static bool IsWriteConflict(Exception error) => error is DbUpdateConcurrencyException
         || (error as DbUpdateException)?.InnerException is SqlException { Number: 2601 or 2627 or 1205 }
         || error is SqlException { Number: 1205 };
 
@@ -123,8 +168,11 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
 public sealed class AdministrativeWriteLock(AppDbContext db, IOptions<AccessControlOptions> options)
 {
     /// <summary>取得 <paramref name="feature"/> 所屬範圍的鎖，持有到目前的交易結束；等到逾時回 <c>false</c>。</summary>
-    public Task<bool> TryAcquireAsync(string feature, CancellationToken ct) => db.Database.TryAcquireApplicationLockAsync(
-        $"administrative-write:{ScopeOf(feature)}", TimeSpan.FromSeconds(options.Value.WriteLockTimeoutSeconds), ct);
+    public Task<bool> TryAcquireAsync(string feature, CancellationToken ct) => TryAcquireNamedAsync($"administrative-write:{ScopeOf(feature)}", ct);
+
+    /// <summary>取得指定名稱的鎖（範圍由規則決定，如 <see cref="AuditTarget.Locks"/>），持有到目前的交易結束；等到逾時回 <c>false</c>。</summary>
+    public Task<bool> TryAcquireNamedAsync(string name, CancellationToken ct) => db.Database.TryAcquireApplicationLockAsync(
+        name, TimeSpan.FromSeconds(options.Value.WriteLockTimeoutSeconds), ct);
 
     /// <summary>同上，等到逾時拋 <see cref="AccessControlErrors.WriteBusy"/>：給不回傳 <see cref="Result"/> 的路徑（背景工作、回傳實體的服務）。</summary>
     public async Task AcquireAsync(string feature, CancellationToken ct)

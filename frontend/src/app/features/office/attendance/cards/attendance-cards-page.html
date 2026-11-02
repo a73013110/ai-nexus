@@ -344,6 +344,6 @@
     </div>
   }
 </nx-detail-drawer>
-<nx-card-dialog (created)="created($event)" />
-<nx-assignment-dialog />
+<nx-card-dialog (created)="created($event)" (stale)="drawerError.set($event)" />
+<nx-assignment-dialog (stale)="drawerError.set($event)" />
 <nx-confirm-dialog />

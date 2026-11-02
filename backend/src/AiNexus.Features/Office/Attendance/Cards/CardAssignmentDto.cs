@@ -9,6 +9,7 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// </summary>
 public sealed record CardAssignmentDto(
     Guid Id,
+    long RowVersion,
     Guid CardId,
     string CardNumber,
     Guid? UserId,
@@ -35,5 +36,5 @@ internal static class CardAssignmentQueries
            join c in db.Cards on a.CardId equals c.Id
            join u in db.Users on a.UserId equals u.Id into users
            from u in users.DefaultIfEmpty()
-           select new CardAssignmentDto(a.Id, a.CardId, c.CardNumber, a.UserId, u.DisplayName, a.HolderName, a.StartsAt, a.EndsAt, a.Note, a.CreatedAt);
+           select new CardAssignmentDto(a.Id, a.RowVersion, a.CardId, c.CardNumber, a.UserId, u.DisplayName, a.HolderName, a.StartsAt, a.EndsAt, a.Note, a.CreatedAt);
 }

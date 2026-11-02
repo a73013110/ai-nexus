@@ -23,7 +23,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 /// 這筆刷卡便改歸 B。標記與刪除同交易，所以不會有「已刪除但還沒標記」的瞬間，程序在中間中止也不會遺失。
 /// </para>
 /// <para>
-/// <b>併行</b>：讀檔與解析不持鎖（來源可能是慢的網路資料夾）；寫入交易的第一步取出勤模組的 <see cref="AdministrativeWriteLock"/>，跨程序也一次一個寫入。
+/// <b>併行</b>：讀檔與解析不持鎖（來源可能是慢的網路資料夾）；寫入交易的第一步取 <see cref="AttendanceLocks.PunchImport"/>，跨程序也一次一個寫入。
 /// 跨檔去重與鄰檔補救要讀寫別的檔案的列，所以不分檔案；卡號對應的管理操作共用同一把，否則正在匯入、尚未提交的刷卡看不到（RCSI），刪卡時會判斷成沒用過而把它的卡刪掉。
 /// 兩個匯入先後讀到不同版本時，較舊的內容可能較晚寫入；它記下的也是舊版本，下一輪掃描會發現與檔案不同而重匯。
 /// </para>
@@ -126,7 +126,7 @@ public sealed partial class PunchImporter(
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         // 拿不到鎖就當這次寫入失敗：由外層記下失敗的匯入列，下一輪掃描重匯。
-        if (!await writes.TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct)) throw new TimeoutException("Timed out waiting for the attendance write lock.");
+        if (!await writes.TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct)) throw new TimeoutException("Timed out waiting for the punch import lock.");
         if (attempt.Trigger == PunchImportTriggers.Scheduled)
         {
             var state = await PunchImportPlanner.States(db, attempt.FileName).SingleOrDefaultAsync(ct);
@@ -207,7 +207,7 @@ public sealed partial class PunchImporter(
         db.ChangeTracker.Clear();
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         // 只為了避開同一檔名第一次建立檔案列時的唯一鍵衝突；失敗的原因可能就是等不到鎖，等不到也照寫。
-        await writes.TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct);
+        await writes.TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct);
         var file = await FileRowAsync(attempt.FileName, ct);
         var import = await RecordAsync(file, attempt, 0, message.Length > PunchImport.ErrorMessageMaxLength ? message[..PunchImport.ErrorMessageMaxLength] : message, ct);
         await transaction.CommitAsync(ct);
