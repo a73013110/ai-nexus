@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { writeFailureMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { ToastService } from '@shared/ui/toast-service';
@@ -64,8 +64,14 @@ export class AdminUserStore {
     source: this.key,
     computation: () => null,
   });
-  /** 分頁儲存中或帳號動作送出中時，欄位唯讀。 */
-  readonly locked = computed(() => !!this.saving() || !!this.acting());
+  /**
+   * 分頁儲存中、帳號動作送出中，或寫入後重讀中時，欄位唯讀：重讀回來前手上的版本還是舊的，
+   * 再送一筆只會版本衝突。還沒有詳情時用列表的資料與版本，不必等。
+   */
+  readonly locked = computed(
+    () =>
+      !!this.saving() || !!this.acting() || (this.overviewRead.refreshing() && !!this.overview()),
+  );
 
   private readonly request = computed(() => {
     const key = this.key(),
@@ -85,6 +91,7 @@ export class AdminUserStore {
   readonly overviewRefreshing = this.overviewRead.refreshing;
   /** 已儲存的使用者：詳情讀取回來前用列表的資料。 */
   readonly current = computed(() => this.overview()?.user ?? this.user());
+  private readonly profileVersion = computed(() => this.current()?.profileVersion ?? 0);
 
   // 已儲存的基準會跟隨伺服器，儲存後立即設定；如此在新讀取還在途中時，
   // 草稿不會被誤判為未儲存。
@@ -198,9 +205,15 @@ export class AdminUserStore {
     return this.save(
       'account',
       async (id, valid) => {
+        let version = this.profileVersion();
         if (account) {
           const enabled = this.current()?.enabled ?? true;
-          await this.api.updateUser(id, userAccountRequest(draft, [...this.savedRoles()], enabled));
+          await this.api.updateUser(
+            id,
+            userAccountRequest(draft, [...this.savedRoles()], enabled, version),
+          );
+          // 成功的帳號寫入一定把版本加一；後送的端點要帶加過的版本，不必為此多讀一次。
+          version += 1;
           if (valid())
             this.savedAccount.set({
               ...draft,
@@ -209,7 +222,7 @@ export class AdminUserStore {
             });
         }
         if (mail) {
-          await this.api.email(id, email || null);
+          await this.api.email(id, email || null, version);
           if (valid()) this.savedEmail.set(email);
         }
       },
@@ -227,7 +240,7 @@ export class AdminUserStore {
   saveRoles() {
     return this.save(
       'roles',
-      (id) => this.api.roles(id, this.roles()),
+      (id) => this.api.roles(id, this.roles(), this.profileVersion()),
       () => {
         this.savedRoles.set(this.roles());
         this.changed('角色已儲存', '授權變更會在下一次操作生效。');
@@ -265,7 +278,7 @@ export class AdminUserStore {
   rebind(adAccount: string) {
     return this.act(
       'rebind',
-      (id) => this.api.rebindDirectory(id, adAccount),
+      (id) => this.api.rebindDirectory(id, adAccount, this.profileVersion()),
       'AD 帳號已改綁',
       '角色與歷史資料沿用；舊的工作階段已失效。',
     );
@@ -273,7 +286,7 @@ export class AdminUserStore {
   unbind() {
     return this.act(
       'unbind',
-      (id) => this.api.unbindDirectory(id),
+      (id) => this.api.unbindDirectory(id, this.profileVersion()),
       'AD 綁定已解除',
       '下次以 AD 帳號驗證或從 AD 匯入時重新綁定。',
     );
@@ -285,7 +298,12 @@ export class AdminUserStore {
       (id) =>
         this.api.updateUser(
           id,
-          userAccountRequest(this.savedAccount(), [...this.savedRoles()], enabled),
+          userAccountRequest(
+            this.savedAccount(),
+            [...this.savedRoles()],
+            enabled,
+            this.profileVersion(),
+          ),
         ),
       enabled ? '已啟用使用者' : '已停用使用者',
       enabled ? '可以再次登入。' : '既有工作階段已失效；資料與稽核保留。',
@@ -310,10 +328,21 @@ export class AdminUserStore {
       if (valid()) this.changed(title, description);
       return valid();
     } catch (error) {
-      if (valid()) this.errors.update((errors) => ({ ...errors, account: safeMessage(error) }));
+      if (valid()) this.failed('account', error);
       return false;
     } finally {
       if (valid()) this.acting.set(null);
+    }
+  }
+  /**
+   * 失敗訊息放在分頁。帳號與角色帶版本：版本可能已過期，帳號分頁也可能先送的端點已成功升版，
+   * 所以一律重讀；內容沒變的草稿會留著，換上新版本就能再送。
+   */
+  private failed(tab: UserSettingsTab, error: unknown) {
+    this.errors.update((errors) => ({ ...errors, [tab]: writeFailureMessage(error) }));
+    if (tab === 'account' || tab === 'roles') {
+      this.overviewRead.reload();
+      this.admin.readUsers();
     }
   }
   /** 帳號與角色的授權變更：目錄、列表與自己的工作階段會重新讀取。 */
@@ -337,7 +366,7 @@ export class AdminUserStore {
       const result = await work(id, valid);
       if (valid()) done(result);
     } catch (error) {
-      if (valid()) this.errors.update((errors) => ({ ...errors, [tab]: safeMessage(error) }));
+      if (valid()) this.failed(tab, error);
     } finally {
       if (valid()) this.saving.set(null);
     }

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
 /// <summary>
-/// 選單節點需要查資料或設定的規則，在 <see cref="AdministrativeWrite"/> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
+/// 選單節點需要查資料或設定的規則，在 <see cref="AdministrativeWrite"/> 的交易內執行。
 /// 結構規則一律套在「變更後的完整節點清單」上檢查，新增、修改與批次移動共用同一套判斷。
 /// </summary>
 internal static class NavigationRules
@@ -15,7 +15,7 @@ internal static class NavigationRules
     public const int MaxSortOrder = 10000, SortStep = 10;
 
     /// <summary>新增、修改與刪除節點共用的寫入對象。</summary>
-    public static AuditTarget Target(AppDbContext db, string id) => AuditTarget.Of(FeatureCatalog.AccessControlNavigation, id, ct => SnapshotAsync(db, id, ct));
+    public static AuditTarget Target(AppDbContext db, string id) => AuditTarget.Of(id, ct => SnapshotAsync(db, id, ct)).Locking(AccessControlLocks.Navigation);
 
     /// <summary>
     /// 父節點必須存在且是分群、不可成環、深度不超過 <see cref="NavigationTree.MaxDepth"/>、同一層不可重複同一頁面。

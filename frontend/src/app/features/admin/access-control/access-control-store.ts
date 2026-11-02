@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { ChoiceOption } from '@shared/ui/choice-groups';
@@ -40,9 +41,15 @@ export class AccessControlStore {
   }
   /** 授權已改變：重新讀取目錄與此帳號的授權。 */
   saved(title: string, description?: string) {
+    this.actionError.set('');
     this.toast.success(title, description);
     this.catalogRead.reload();
     void this.session.load(true);
+  }
+  /** 送出的版本已過期：對話框的草稿作廢，由頁面的 Notice 說明，目錄重讀成最新。 */
+  stale() {
+    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.catalogRead.reload();
   }
   /** 選單已改變：只重新讀取此帳號的導覽（側邊欄），目錄不受影響。 */
   navigationChanged() {

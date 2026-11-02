@@ -4,13 +4,38 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
+import { ApiError, STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
 
 const units = [
-  { id: 'company', parentId: null, name: '總公司', enabled: true, sortOrder: 10, memberCount: 0 },
-  { id: 'it', parentId: 'company', name: '資訊處', enabled: true, sortOrder: 10, memberCount: 1 },
-  { id: 'hr', parentId: 'company', name: '人資處', enabled: true, sortOrder: 20, memberCount: 0 },
+  {
+    id: 'company',
+    rowVersion: 11,
+    parentId: null,
+    name: '總公司',
+    enabled: true,
+    sortOrder: 10,
+    memberCount: 0,
+  },
+  {
+    id: 'it',
+    rowVersion: 12,
+    parentId: 'company',
+    name: '資訊處',
+    enabled: true,
+    sortOrder: 10,
+    memberCount: 1,
+  },
+  {
+    id: 'hr',
+    rowVersion: 13,
+    parentId: 'company',
+    name: '人資處',
+    enabled: true,
+    sortOrder: 20,
+    memberCount: 0,
+  },
 ];
 const member = {
   userId: 'bob',
@@ -29,7 +54,7 @@ function setup() {
     orderUnits: vi.fn(async () => undefined),
     saveMember: vi.fn(async () => undefined),
     removeMember: vi.fn(async () => undefined),
-    deleteUnit: vi.fn(async () => {
+    deleteUnit: vi.fn(async (): Promise<void> => {
       throw new Error('unexpected');
     }),
   };
@@ -85,7 +110,41 @@ describe('organization store', () => {
     await settle();
     expect(await store.saveMember('bob', true, false)).toBe(true);
     expect(api.saveMember).toHaveBeenCalledWith('it', 'bob', { isPrimary: true, isManager: false });
+    await settle();
     expect(await store.remove(store.units()[1])).toBe(false);
     expect(store.error()).not.toBe('');
+  });
+
+  it('keeps writes off until the tree is reread, so the next write has the new versions', async () => {
+    const { store, settle } = setup();
+    await settle();
+    expect(await store.move(store.units()[2], -1)).toBe(true);
+    expect(store.busy()).toBe(true);
+    expect(await store.move(store.units()[2], -1)).toBe(false);
+    await settle();
+    expect(store.busy()).toBe(false);
+  });
+
+  it('deletes with the version it read and rereads when someone else changed the unit first', async () => {
+    const { store, api, settle } = setup();
+    await settle();
+    api.deleteUnit.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
+    const reads = api.units.mock.calls.length;
+    const unit = store.units()[1];
+    expect(await store.remove(unit)).toBe(false);
+    expect(api.deleteUnit).toHaveBeenCalledWith('it', 12);
+    expect(store.error()).toBe(STALE_WRITE_MESSAGE);
+    await settle();
+    expect(api.units.mock.calls.length).toBeGreaterThan(reads);
+  });
+
+  it('clears the conflict notice once a dialog saves', async () => {
+    const { store, settle } = setup();
+    await settle();
+    store.stale();
+    expect(store.error()).toBe(STALE_WRITE_MESSAGE);
+    await settle();
+    store.changed();
+    expect(store.error()).toBe('');
   });
 });

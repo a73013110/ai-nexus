@@ -17,7 +17,7 @@ public sealed class RoleManagementTests
         await using var factory = new AppFactory(); using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/admin/catalog")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["administrator"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["administrator"], await factory.ProfileVersionAsync(me.Id)))).StatusCode);
     }
 
     [Fact]
@@ -25,9 +25,9 @@ public sealed class RoleManagementTests
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var actor = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!; var target = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
-        (await alice.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "administrator"]))).EnsureSuccessStatusCode();
+        (await alice.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "administrator"], await factory.ProfileVersionAsync(target.Id)))).EnsureSuccessStatusCode();
         (await bob.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}/roles", new UserRolesRequest(["member"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}/roles", new UserRolesRequest(["member"], await factory.ProfileVersionAsync(actor.Id)))).StatusCode);
         Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "identity.users");
         var audit = await alice.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit");
         Assert.Contains(audit!, x => x.Action == "identity.user_role.updated" && x.ResourceId == target.Id && x.DetailsJson!.Contains("administrator"));
@@ -37,19 +37,19 @@ public sealed class RoleManagementTests
     public async Task UnknownGrantsAreRejectedAndMissingCsrfCannotMutateAdministration()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/broken", new RoleUpdateRequest("無效", true, ["missing"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/broken", new RoleUpdateRequest("無效", true, ["missing"], RowVersion: await factory.RoleVersionAsync("broken")))).StatusCode);
         var catalog = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!; Assert.DoesNotContain(catalog.Roles, x => x.Id == "broken");
         admin.DefaultRequestHeaders.Remove("X-CSRF-Token");
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", true))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", true, await factory.FeatureVersionAsync("chat")))).StatusCode);
     }
 
     [Fact]
     public async Task FailedMutationsAreRolledBackAuditedAndFiltersKeepAStableCursor()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
-        (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("分析人員", true, ["workspace"]))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("資深分析人員", true, ["workspace"]))).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("不可儲存的名稱", true, ["missing"]))).StatusCode);
+        (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("分析人員", true, ["workspace"], RowVersion: await factory.RoleVersionAsync("analyst")))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("資深分析人員", true, ["workspace"], RowVersion: await factory.RoleVersionAsync("analyst")))).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/analyst", new RoleUpdateRequest("不可儲存的名稱", true, ["missing"], RowVersion: await factory.RoleVersionAsync("analyst")))).StatusCode);
         var failed = Assert.Single((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.role.updated&result=failed"))!);
         Assert.Equal("unknown_access_id", failed.Result);
         var saved = (await admin.GetFromJsonAsync<AuditDto[]>($"/api/v1/admin/audit?action=access-control.role.updated&result=success&before={failed.Id}&search=analyst"))!;

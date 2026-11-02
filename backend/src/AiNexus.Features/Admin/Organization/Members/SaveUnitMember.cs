@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>成員在該單位的身分；設為主要所屬時，會取消該使用者在其他單位的主要所屬。</summary>
-[ValidatedInHandler("Only two booleans; whether the unit and user exist is checked inside the administrative transaction so rejections are audited.")]
+[ValidatedInHandler("Only two booleans; whether the unit and user exist is checked inside the administrative transaction.")]
 public sealed record UnitMemberRequest(bool IsPrimary, bool IsManager);
 
 /// <summary>
@@ -19,13 +19,17 @@ public sealed record UnitMemberRequest(bool IsPrimary, bool IsManager);
 internal sealed class SaveUnitMember(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, UnitMemberRequest body, IRequestActor actor, SaveUnitMember handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, userId, body, ct))
+        .MapPut("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, UnitMemberRequest body, SaveUnitMember handler, CancellationToken ct) =>
+            handler.HandleAsync(id, userId, body, ct))
         .Audited(OrganizationAudit.MemberUpdated)
         .WithName("SaveOrganizationUnitMember");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct) => write.ExecuteAsync(actor, UnitRules.MemberTarget(db, id, userId), async () =>
+    public async Task<Result> HandleAsync(Guid id, Guid userId, UnitMemberRequest request, CancellationToken ct)
     {
+        var begun = await write.BeginAsync(UnitRules.MemberTarget(db, id, userId).Locking(OrganizationLocks.Tree), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var unit = await db.Units.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (unit is null) return OrganizationErrors.UnitNotFound;
         if (request.IsManager && await db.Units.AnyAsync(x => x.ParentId == id && x.HeadRank != null, ct)) return OrganizationErrors.ManagerByHeadUnit;
@@ -40,6 +44,7 @@ internal sealed class SaveUnitMember(AppDbContext db, AdministrativeWrite write)
         if (request.IsPrimary && !member.IsPrimary)
             await db.UnitMembers.Where(x => x.UserId == userId && x.UnitId != id && x.IsPrimary).ExecuteUpdateAsync(x => x.SetProperty(y => y.IsPrimary, false), ct);
         member.IsPrimary = request.IsPrimary; member.IsManager = request.IsManager;
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

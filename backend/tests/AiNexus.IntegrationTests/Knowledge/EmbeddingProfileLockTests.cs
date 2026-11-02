@@ -36,7 +36,7 @@ public sealed class EmbeddingProfileLockTests
 
         await using var scope = factory.Services.CreateAsyncScope();
         await using var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(ct);
-        Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.KnowledgeRetrieval, ct));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(KnowledgeLocks.EmbeddingProfile, ct));
 
         await TargetAsync(factory).WaitAsync(TimeSpan.FromSeconds(30), ct);
         factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Dimensions = 1024;

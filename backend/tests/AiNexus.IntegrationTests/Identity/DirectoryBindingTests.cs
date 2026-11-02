@@ -36,7 +36,7 @@ public sealed class DirectoryBindingTests
         }
 
         // bob 換了 AD 帳號：目錄裡的新帳號是 erin.chen（另一個 SID）。
-        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest(" Erin.Chen "))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest(" Erin.Chen ", await f.ProfileVersionAsync(bobId)))).StatusCode);
 
         using (var scope = f.Services.CreateScope())
         {
@@ -63,20 +63,20 @@ public sealed class DirectoryBindingTests
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var alice = await Login(admin, "alice");
         using var member = f.CreateClient(); var bobId = (await Login(member, "bob")).Id;
-        await AssertCodeAsync(await member.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("erin.chen")), HttpStatusCode.Forbidden, "feature_forbidden");
+        await AssertCodeAsync(await member.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("erin.chen", await f.ProfileVersionAsync(bobId))), HttpStatusCode.Forbidden, "feature_forbidden");
 
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("a b")), HttpStatusCode.BadRequest, "invalid_account");
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("nobody")), HttpStatusCode.NotFound, "directory_person_not_found");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("a b", await f.ProfileVersionAsync(bobId))), HttpStatusCode.BadRequest, "invalid_account");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("nobody", await f.ProfileVersionAsync(bobId))), HttpStatusCode.NotFound, "directory_person_not_found");
         // SID 已綁定另一位使用者（匯入建立的 carol）。
         await Import(admin, FixtureAdDirectory.Carol);
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("carol.lin")), HttpStatusCode.Conflict, "ad_binding_taken");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("carol.lin", await f.ProfileVersionAsync(bobId))), HttpStatusCode.Conflict, "ad_binding_taken");
         // 帳號名已被預建帳號使用：改綁不能搶走別人的 AdAccount。
         await CreateUser(admin, new UserAccountRequest("吳大衛", true, true, false, "dave.wu", null, ["member"]));
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("dave.wu")), HttpStatusCode.Conflict, "account_exists");
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(alice.Id), new DirectoryBindingRequest("erin.chen")), HttpStatusCode.Conflict, "admin_lockout");
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(Guid.NewGuid()), new DirectoryBindingRequest("erin.chen")), HttpStatusCode.NotFound, "user_not_found");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("dave.wu", await f.ProfileVersionAsync(bobId))), HttpStatusCode.Conflict, "account_exists");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(alice.Id), new DirectoryBindingRequest("erin.chen", await f.ProfileVersionAsync(alice.Id))), HttpStatusCode.Conflict, "admin_lockout");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(Guid.NewGuid()), new DirectoryBindingRequest("erin.chen", await f.ProfileVersionAsync(Guid.NewGuid()))), HttpStatusCode.NotFound, "user_not_found");
         f.AdDirectory.Unavailable = true;
-        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("erin.chen")), HttpStatusCode.ServiceUnavailable, "directory_unavailable");
+        await AssertCodeAsync(await admin.PutAsJsonAsync(Binding(bobId), new DirectoryBindingRequest("erin.chen", await f.ProfileVersionAsync(bobId))), HttpStatusCode.ServiceUnavailable, "directory_unavailable");
 
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(Bob, (await db.Users.AsNoTracking().SingleAsync(x => x.Id == bobId)).Sid);
@@ -89,7 +89,7 @@ public sealed class DirectoryBindingTests
         using var admin = f.CreateClient(); var alice = await Login(admin, "alice");
         using var bob = f.CreateClient(); var bobId = (await Login(bob, "bob")).Id;
 
-        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync(Binding(bobId))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"{Binding(bobId)}?profileVersion={await f.ProfileVersionAsync(bobId)}")).StatusCode);
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -100,8 +100,8 @@ public sealed class DirectoryBindingTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await bob.GetAsync("/api/v1/me")).StatusCode);
         var row = (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?search=bob"))!.Users.Single();
         Assert.False(row.Authentication!.DirectoryBound);
-        await AssertCodeAsync(await admin.DeleteAsync(Binding(bobId)), HttpStatusCode.Conflict, "ad_not_bound");
-        await AssertCodeAsync(await admin.DeleteAsync(Binding(alice.Id)), HttpStatusCode.Conflict, "admin_lockout");
+        await AssertCodeAsync(await admin.DeleteAsync($"{Binding(bobId)}?profileVersion={await f.ProfileVersionAsync(bobId)}"), HttpStatusCode.Conflict, "ad_not_bound");
+        await AssertCodeAsync(await admin.DeleteAsync($"{Binding(alice.Id)}?profileVersion={await f.ProfileVersionAsync(alice.Id)}"), HttpStatusCode.Conflict, "admin_lockout");
 
         // 下次以同名 AD 帳號驗證時綁定回同一位使用者，不另建。
         using var again = f.CreateClient();

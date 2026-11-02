@@ -42,16 +42,16 @@ public sealed class ManageUnitsTests
         var systems = await CreateUnitAsync(admin, "系統部", it.Id);
         var other = await CreateUnitAsync(admin, "子公司");
 
-        (await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(other.Id, "資訊處", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(other.Id, "資訊處", true, null, await factory.UnitVersionAsync(it.Id)))).EnsureSuccessStatusCode();
         var units = await ListUnitsAsync(admin);
         Assert.Equal(other.Id, units.Single(x => x.Id == it.Id).ParentId);
         Assert.Equal(it.Id, units.Single(x => x.Id == systems.Id).ParentId);
 
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{other.Id}", new UnitUpdateRequest(systems.Id, "子公司", true)), HttpStatusCode.BadRequest, "organization_unit_cycle");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(it.Id, "資訊處", true)), HttpStatusCode.BadRequest, "organization_unit_cycle");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(Guid.NewGuid(), "資訊處", true)), HttpStatusCode.BadRequest, "organization_parent_invalid");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{other.Id}", new UnitUpdateRequest(systems.Id, "子公司", true, null, await factory.UnitVersionAsync(other.Id))), HttpStatusCode.BadRequest, "organization_unit_cycle");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(it.Id, "資訊處", true, null, await factory.UnitVersionAsync(it.Id))), HttpStatusCode.BadRequest, "organization_unit_cycle");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{it.Id}", new UnitUpdateRequest(Guid.NewGuid(), "資訊處", true, null, await factory.UnitVersionAsync(it.Id))), HttpStatusCode.BadRequest, "organization_parent_invalid");
         await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(other.Id, "資訊處", true)), HttpStatusCode.Conflict, "organization_unit_name_duplicate");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{Guid.NewGuid()}", new UnitUpdateRequest(null, "不存在", true)), HttpStatusCode.NotFound, "organization_unit_not_found");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{Guid.NewGuid()}", new UnitUpdateRequest(null, "不存在", true, null, await factory.UnitVersionAsync(Guid.NewGuid()))), HttpStatusCode.NotFound, "organization_unit_not_found");
 
         var parent = systems.Id;
         // 上限 8 層（UnitRules.MaxDepth）；目前已有 3 層。
@@ -72,7 +72,7 @@ public sealed class ManageUnitsTests
         (await SaveMemberAsync(admin, office.Id, bob, primary: true, manager: true)).EnsureSuccessStatusCode();
 
         // 設成首長單位：上層的主管改由它擔任，同一個交易內取消上層的主管勾選（成員資格保留），前後快照看得出來。
-        (await admin.PutAsJsonAsync($"{Units}/{office.Id}", new UnitUpdateRequest(company.Id, "總經理室", true, 2))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Units}/{office.Id}", new UnitUpdateRequest(company.Id, "總經理室", true, 2, await factory.UnitVersionAsync(office.Id)))).EnsureSuccessStatusCode();
         Assert.Equal((byte?)2, (await ListUnitsAsync(admin)).Single(x => x.Id == office.Id).HeadRank);
         Assert.False(Assert.Single(await MembersAsync(admin, company.Id)).IsManager);
         var audit = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.updated&result=success"))!.Single();
@@ -97,8 +97,8 @@ public sealed class ManageUnitsTests
         var other = await CreateUnitAsync(admin, "子公司");
         var advisor = await admin.PostAsJsonAsync(Units, new UnitCreateRequest(other.Id, "顧問室", true, 1));
         var advisorId = (await advisor.Content.ReadFromJsonAsync<UnitDto>())!.Id;
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 1)), HttpStatusCode.Conflict, "organization_head_rank_duplicate");
-        (await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 3))).EnsureSuccessStatusCode();
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 1, await factory.UnitVersionAsync(advisorId))), HttpStatusCode.Conflict, "organization_head_rank_duplicate");
+        (await admin.PutAsJsonAsync($"{Units}/{advisorId}", new UnitUpdateRequest(company.Id, "顧問室", true, 3, await factory.UnitVersionAsync(advisorId)))).EnsureSuccessStatusCode();
     }
 
     [Fact]
@@ -110,13 +110,13 @@ public sealed class ManageUnitsTests
         var it = await CreateUnitAsync(admin, "資訊處", company.Id);
         (await SaveMemberAsync(admin, it.Id, bob)).EnsureSuccessStatusCode();
 
-        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{company.Id}"), HttpStatusCode.Conflict, "organization_unit_not_empty");
-        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{it.Id}"), HttpStatusCode.Conflict, "organization_unit_not_empty");
+        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{company.Id}?rowVersion={await factory.UnitVersionAsync(company.Id)}"), HttpStatusCode.Conflict, "organization_unit_not_empty");
+        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{it.Id}?rowVersion={await factory.UnitVersionAsync(it.Id)}"), HttpStatusCode.Conflict, "organization_unit_not_empty");
         (await admin.DeleteAsync($"{Units}/{it.Id}/members/{bob}")).EnsureSuccessStatusCode();
-        (await admin.DeleteAsync($"{Units}/{it.Id}")).EnsureSuccessStatusCode();
-        (await admin.DeleteAsync($"{Units}/{company.Id}")).EnsureSuccessStatusCode();
+        (await admin.DeleteAsync($"{Units}/{it.Id}?rowVersion={await factory.UnitVersionAsync(it.Id)}")).EnsureSuccessStatusCode();
+        (await admin.DeleteAsync($"{Units}/{company.Id}?rowVersion={await factory.UnitVersionAsync(company.Id)}")).EnsureSuccessStatusCode();
         Assert.Empty(await ListUnitsAsync(admin));
-        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{company.Id}"), HttpStatusCode.NotFound, "organization_unit_not_found");
+        await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{company.Id}?rowVersion={await factory.UnitVersionAsync(company.Id)}"), HttpStatusCode.NotFound, "organization_unit_not_found");
         Assert.Equal(2, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.deleted&result=success"))!.Length);
     }
 

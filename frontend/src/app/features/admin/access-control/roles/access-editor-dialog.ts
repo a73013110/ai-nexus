@@ -19,7 +19,7 @@ import type {
 import { catalogFeature, featureSections } from '@core/api/catalog';
 import { CATALOG_SCOPES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
+import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { featureIcon } from '@core/layout/navigation-tree';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { uniqueId } from '@shared/browser/unique-id';
@@ -60,6 +60,8 @@ const LABELS: Record<AccessKind, string> = { role: '角色', group: '功能群�
 interface Editor {
   kind: AccessKind;
   id: string;
+  /** 開啟時讀到的版本；新增時沒有。 */
+  rowVersion: number | null;
   name: string;
   /** 開啟時固定，讓標題顯示正在編輯的對象，而不是草稿名稱。 */
   title: string;
@@ -396,6 +398,8 @@ export class AccessEditorDialog {
   });
   /** 關閉後草稿仍保留，讓對話框在退場動畫中不會被清空。 */
   open(kind: AccessKind, item?: AccessItem) {
+    // 重讀中列上的版本可能還是舊的（例如剛存完同一列），等重讀完才能開。
+    if (item && this.store.refreshing()) return;
     this.editorError.set('');
     const role = kind === 'role' ? (item as AdminRoleDto) : null,
       group = kind === 'group' ? (item as AdminGroupDto) : null,
@@ -404,6 +408,7 @@ export class AccessEditorDialog {
     const draft: Editor = {
       kind,
       id: item?.id || '',
+      rowVersion: item?.rowVersion ?? null,
       name,
       title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
       // 沒有頁面的功能（例如 `diagnostics.logs.export` 這類動作）沒有網址可顯示。
@@ -508,6 +513,7 @@ export class AccessEditorDialog {
           name: draft.name,
           enabled: draft.enabled,
           groupIds: draft.ids,
+          rowVersion: draft.rowVersion,
         });
       if (draft.kind === 'group' && policy)
         await this.api.group(draft.id, {
@@ -517,11 +523,13 @@ export class AccessEditorDialog {
           scopes: grantScopes(draft.ids, draft.scopes),
           managerScopes: grantManagerScopes(draft.ids, draft.scopes, draft.managerScopes),
           policy,
+          rowVersion: draft.rowVersion,
         });
       if (draft.kind === 'feature')
         await this.api.feature(draft.id, {
           name: featureNameOverride(draft.name, draft.defaultName),
           enabled: draft.enabled,
+          rowVersion: draft.rowVersion ?? 0,
         });
       this.opened.set(draft);
       this.dialog().nativeElement.close();
@@ -530,7 +538,12 @@ export class AccessEditorDialog {
         '授權變更會在下一次操作生效。',
       );
     } catch (error) {
-      this.editorError.set(safeMessage(error));
+      if (isStaleWrite(error)) {
+        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
+        this.opened.set(draft);
+        this.dialog().nativeElement.close();
+        this.store.stale();
+      } else this.editorError.set(safeMessage(error));
     } finally {
       this.saving.set(false);
     }

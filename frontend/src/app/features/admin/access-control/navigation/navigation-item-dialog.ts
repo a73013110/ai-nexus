@@ -12,7 +12,7 @@ import {
 import type { NavigationItemDto } from '@core/api/schema';
 import { CATALOG_FEATURES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
+import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
@@ -53,11 +53,9 @@ interface FieldError {
   field: 'featureId' | 'name' | 'url';
   message: string;
 }
-interface Editor {
-  id: string | null;
-  title: string;
-  draft: Draft;
-}
+/** 編輯的節點與開啟時讀到的版本；新增時兩者都沒有。 */
+type Target = { id: string; rowVersion: number } | { id: null; rowVersion: null };
+type Editor = Target & { title: string; draft: Draft };
 
 /**
  * 外部連結的網址：絕對 `https://`、不含帳號密碼，與後端 `NavigationLinks.WellFormed` 相同。
@@ -195,7 +193,7 @@ export class NavigationItemDialog {
 
   /** 新增：`parentId` 為 `null` 時放在最上層。 */
   create(kind: NavigationKind, parentId: string | null = null) {
-    this.show(null, '新增選單項目', {
+    this.show({ id: null, rowVersion: null }, '新增選單項目', {
       kind,
       parentId: parentId ?? '',
       featureId: '',
@@ -208,21 +206,25 @@ export class NavigationItemDialog {
   }
   edit(item: NavigationItemDto) {
     const kind = item.kind as NavigationKind;
-    this.show(item.id, `編輯${navigationKindLabel(kind)}：${this.store.name(item)}`, {
-      kind,
-      parentId: item.parentId ?? '',
-      featureId: item.featureId ?? '',
-      name: item.name ?? '',
-      url: item.url ?? '',
-      openInNewTab: item.openInNewTab,
-      icon: item.icon ?? '',
-      audienceGroupIds: [...item.audienceGroupIds],
-    });
+    this.show(
+      { id: item.id, rowVersion: item.rowVersion },
+      `編輯${navigationKindLabel(kind)}：${this.store.name(item)}`,
+      {
+        kind,
+        parentId: item.parentId ?? '',
+        featureId: item.featureId ?? '',
+        name: item.name ?? '',
+        url: item.url ?? '',
+        openInNewTab: item.openInNewTab,
+        icon: item.icon ?? '',
+        audienceGroupIds: [...item.audienceGroupIds],
+      },
+    );
   }
-  private show(id: string | null, title: string, draft: Draft) {
+  private show(target: Target, title: string, draft: Draft) {
     this.error.set('');
     this.fieldError.set(null);
-    this.editor.set({ id, title, draft });
+    this.editor.set({ ...target, title, draft });
     this.opened.set(draft);
     this.dialog().nativeElement.showModal();
   }
@@ -297,7 +299,11 @@ export class NavigationItemDialog {
     this.saving.set(true);
     this.error.set('');
     try {
-      if (editor.id) await this.api.updateNavigationItem(editor.id, content);
+      if (editor.id)
+        await this.api.updateNavigationItem(editor.id, {
+          ...content,
+          rowVersion: editor.rowVersion,
+        });
       else await this.api.createNavigationItem({ ...content, parentId: draft.parentId || null });
       this.opened.set(draft);
       this.dialog().nativeElement.close();
@@ -307,7 +313,12 @@ export class NavigationItemDialog {
       );
       this.store.changed();
     } catch (error) {
-      this.error.set(safeMessage(error));
+      if (isStaleWrite(error)) {
+        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
+        this.opened.set(draft);
+        this.dialog().nativeElement.close();
+        this.store.stale();
+      } else this.error.set(safeMessage(error));
     } finally {
       this.saving.set(false);
     }

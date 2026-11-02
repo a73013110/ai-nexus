@@ -41,6 +41,9 @@ public sealed partial class AuditTrail(AppDbContext db, AuditContextSource sourc
     /// <summary>這個請求是否有宣告稽核。</summary>
     public bool Active => current is not null;
 
+    /// <summary>這個請求稽核的動作名稱；沒有請求稽核時為 null。</summary>
+    public string? ActionName => current?.Action;
+
     /// <summary>
     /// 請求稽核呼叫：以端點宣告的動作開始這個請求的稽核。<paramref name="route"/> 指出的路由參數是 GUID 時，預設為對象與資料主體。
     /// </summary>

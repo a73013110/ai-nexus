@@ -8,6 +8,6 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 internal static class CardRules
 {
     /// <summary>新增、修改與刪除卡片共用的寫入對象（稽核 <c>admin.attendance_card*</c>）。卡不存在時快照為 null；備註不進稽核，所以不讀。</summary>
-    public static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, async ct =>
+    public static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(id, async ct =>
         await db.Cards.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.CardNumber, x.HiddenFromRecords }).SingleOrDefaultAsync(ct));
 }

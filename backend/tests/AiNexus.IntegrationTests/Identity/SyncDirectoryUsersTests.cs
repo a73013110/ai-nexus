@@ -26,7 +26,7 @@ public sealed class SyncDirectoryUsersTests
         var (carolId, bobId, erinId, daveId) = (ids[0], ids[1], ids[2], ids[3]);
         var prebuiltId = await CreateUser(admin, LocalAccount("prebuilt"));
         // bob 在 AD 沒有信箱，管理員替他設定；之後 AD 補上 mail 也不覆寫管理員的值。
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{bobId}/email", new UserEmailRequest("bob.personal@example.test"))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{bobId}/email", new UserEmailRequest("bob.personal@example.test", await f.ProfileVersionAsync(bobId)))).EnsureSuccessStatusCode();
 
         f.AdDirectory.Put(f.AdDirectory.Get(FixtureAdDirectory.Carol) with { DisplayName = "林可蘿（平台部）", Email = "carol.new@example.test" });
         f.AdDirectory.Put(f.AdDirectory.Get(Bob) with { DisplayName = "鮑伯", Email = "bob@example.test" });

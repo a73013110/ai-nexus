@@ -12,11 +12,11 @@ public static class AccessControlErrors
     /// </summary>
     public static readonly Error FeatureForbidden = Error.Forbidden("feature_forbidden");
 
-    /// <summary>行政變更會讓執行者失去自己的管理權限（<see cref="AdministrativeWrite"/> 與帳號管理共用）。</summary>
+    /// <summary>行政變更會讓執行者失去自己的管理權限（<see cref="AuditTarget.KeepingAccess"/> 與帳號管理共用）。</summary>
     public static readonly Error Lockout = Error.Conflict("admin_lockout");
-    /// <summary>同範圍的前一筆行政寫入遲遲沒有結束，等到逾時（<see cref="AdministrativeWriteLock"/>）。</summary>
+    /// <summary>同一把鎖的前一筆行政寫入遲遲沒有結束，等到逾時（<see cref="AdministrativeWriteLock"/>）。</summary>
     public static readonly Error WriteBusy = Error.Unavailable("admin_write_busy");
-    /// <summary>行政寫入與鎖外的寫入撞上同一筆資料，已整筆回滾，重送即可。</summary>
+    /// <summary>行政寫入撞上別人的修改（版本不符、唯一索引、死結），已整筆回滾；要讓使用者看過新資料再決定。</summary>
     public static readonly Error WriteConflict = Error.Conflict("admin_write_conflict");
     public static readonly Error AdminResourceNotFound = Error.NotFound("admin_resource_not_found");
     public static readonly Error InvalidAccessId = Error.Invalid("invalid_access_id");

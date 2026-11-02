@@ -84,7 +84,7 @@ public sealed class AdministrativeTransactionTests
         await using var holder = session.Factory.Services.CreateAsyncScope();
         await using (await Services(holder).Db.Database.BeginTransactionAsync(Ct))
         {
-            Assert.True(await holder.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(second, Ct));
+            Assert.True(await holder.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(second, Ct));
             await using var scope = session.Factory.Services.CreateAsyncScope();
             scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AccessControlOptions>>().Value.WriteLockTimeoutSeconds = 1;
             var (db, write, _) = Services(scope);
@@ -95,7 +95,7 @@ public sealed class AdministrativeTransactionTests
             // first 排序在前、已經取得：失敗時要跟著交易放掉，別人才拿得到。
             await using var other = session.Factory.Services.CreateAsyncScope();
             await using (await Services(other).Db.Database.BeginTransactionAsync(Ct))
-                Assert.True(await other.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(first, Ct));
+                Assert.True(await other.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(first, Ct));
         }
         // 兩把鎖都放開後，同樣的寫入就能開始。
         await using var again = session.Factory.Services.CreateAsyncScope();
@@ -198,7 +198,7 @@ public sealed class AdministrativeTransactionTests
         await using var other = session.Factory.Services.CreateAsyncScope();
         other.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AccessControlOptions>>().Value.WriteLockTimeoutSeconds = 1;
         await using (await Services(other).Db.Database.BeginTransactionAsync(Ct))
-            Assert.True(await other.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(name, Ct));
+            Assert.True(await other.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(name, Ct));
     }
 
     private sealed class Logs : ILoggerProvider
@@ -218,6 +218,6 @@ public sealed class AdministrativeTransactionTests
     private static (AppDbContext Db, AdministrativeWrite Write, AuditTrail Trail) Services(AsyncServiceScope scope)
         => (scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<AdministrativeWrite>(), scope.ServiceProvider.GetRequiredService<AuditTrail>());
 
-    private static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, async ct =>
+    private static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(id, async ct =>
         await db.Cards.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.CardNumber, x.HiddenFromRecords }).SingleOrDefaultAsync(ct));
 }

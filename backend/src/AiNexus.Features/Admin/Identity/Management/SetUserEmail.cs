@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.Identity.Management;
 
 /// <summary>管理員設定的通知信箱；空白或 null 表示清除。</summary>
-public sealed record UserEmailRequest(string? Email);
+public sealed record UserEmailRequest(string? Email, int ProfileVersion);
 
 internal sealed class UserEmailRequestValidator : RequestValidator<UserEmailRequest>
 {
@@ -42,8 +42,12 @@ internal sealed class SetUserEmail(AppDbContext db, AdministrativeWrite write, U
         .Audited(IdentityAudit.UserEmailUpdated)
         .WithName("SetUserEmail");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
+    public async Task<Result> HandleAsync(Guid actor, Guid id, UserEmailRequest request, CancellationToken ct)
     {
+        var begun = await write.BeginAsync(AuditTarget.Of(id, token => SnapshotAsync(id, token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
         if (user is null) return IdentityErrors.UserNotFound;
         if (!UserCredentials.EmailEditable(user)) return IdentityErrors.EmailManagedByDirectory;
@@ -54,15 +58,19 @@ internal sealed class SetUserEmail(AppDbContext db, AdministrativeWrite write, U
             if (!checkedAddress.IsSuccess) return checkedAddress.Error;
             address = checkedAddress.Value;
         }
+        db.ExpectProfileVersion(user, request.ProfileVersion);
         // 同一地址不重設：否則本人已驗證的信箱會被降為未驗證。
-        if (user.Email is null ? address is null : UserEmails.Same(user.Email, address)) return Result.Success;
-        var previous = user.EmailVerifiedAt is null ? null : user.Email;
-        user.Email = address;
-        user.EmailSource = address is null ? null : EmailSources.Admin;
-        user.EmailVerifiedAt = null;
-        events.Raise(new UserEmailChanged(user.Id, user.DisplayName, previous, address, actor));
-        return Result.Success;
-    }, ct);
+        if (user.Email is null ? address is not null : !UserEmails.Same(user.Email, address))
+        {
+            var previous = user.EmailVerifiedAt is null ? null : user.Email;
+            user.Email = address;
+            user.EmailSource = address is null ? null : EmailSources.Admin;
+            user.EmailVerifiedAt = null;
+            events.Raise(new UserEmailChanged(user.Id, user.DisplayName, previous, address, actor));
+        }
+
+        return await transaction.CommitAsync(ct);
+    }
 
     /// <summary><c>admin.user_email</c> 的稽核快照：信箱只記遮罩後的值。</summary>
     private async Task<object?> SnapshotAsync(Guid id, CancellationToken ct)

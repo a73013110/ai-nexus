@@ -228,6 +228,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "rowVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
           }
         ],
         "responses": {
@@ -1307,6 +1316,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "profileVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -1368,6 +1386,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "profileVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -2785,6 +2812,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "rowVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -10457,6 +10493,7 @@
       "AdminFeatureDto": {
         "required": [
           "id",
+          "rowVersion",
           "name",
           "route",
           "enabled",
@@ -10466,6 +10503,10 @@
         "properties": {
           "id": {
             "type": "string"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "name": {
             "type": "string"
@@ -10484,6 +10525,7 @@
       "AdminGroupDto": {
         "required": [
           "id",
+          "rowVersion",
           "name",
           "enabled",
           "featureIds",
@@ -10495,6 +10537,10 @@
         "properties": {
           "id": {
             "type": "string"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "name": {
             "type": "string"
@@ -10566,6 +10612,7 @@
       "AdminRoleDto": {
         "required": [
           "id",
+          "rowVersion",
           "name",
           "enabled",
           "groupIds",
@@ -10575,6 +10622,10 @@
         "properties": {
           "id": {
             "type": "string"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "name": {
             "type": "string"
@@ -10747,6 +10798,7 @@
       "AdminUserDto": {
         "required": [
           "id",
+          "profileVersion",
           "account",
           "displayName",
           "lastSeenAt",
@@ -10766,6 +10818,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int32"
           },
           "account": {
             "type": "string"
@@ -13528,12 +13584,17 @@
       },
       "DirectoryBindingRequest": {
         "required": [
-          "adAccount"
+          "adAccount",
+          "profileVersion"
         ],
         "type": "object",
         "properties": {
           "adAccount": {
             "type": "string"
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -14756,7 +14817,8 @@
       "FeatureUpdateRequest": {
         "required": [
           "name",
-          "enabled"
+          "enabled",
+          "rowVersion"
         ],
         "type": "object",
         "properties": {
@@ -14768,6 +14830,10 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -15542,6 +15608,13 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "rowVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -17254,6 +17327,7 @@
       "NavigationItemDto": {
         "required": [
           "id",
+          "rowVersion",
           "parentId",
           "kind",
           "featureId",
@@ -17268,6 +17342,10 @@
         "properties": {
           "id": {
             "type": "string"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "parentId": {
             "type": [
@@ -17325,7 +17403,8 @@
           "url",
           "openInNewTab",
           "icon",
-          "audienceGroupIds"
+          "audienceGroupIds",
+          "rowVersion"
         ],
         "type": "object",
         "properties": {
@@ -17367,6 +17446,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -19965,6 +20048,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "rowVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -21486,6 +21576,7 @@
       "UnitDto": {
         "required": [
           "id",
+          "rowVersion",
           "parentId",
           "name",
           "enabled",
@@ -21499,6 +21590,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           },
           "parentId": {
             "type": [
@@ -21877,7 +21972,9 @@
         "required": [
           "parentId",
           "name",
-          "enabled"
+          "enabled",
+          "headRank",
+          "rowVersion"
         ],
         "type": "object",
         "properties": {
@@ -21900,6 +21997,10 @@
               "integer"
             ],
             "format": "uint8"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -22105,6 +22206,13 @@
               "null",
               "string"
             ]
+          },
+          "profileVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -22147,7 +22255,8 @@
       },
       "UserEmailRequest": {
         "required": [
-          "email"
+          "email",
+          "profileVersion"
         ],
         "type": "object",
         "properties": {
@@ -22156,6 +22265,10 @@
               "null",
               "string"
             ]
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -22173,7 +22286,8 @@
       },
       "UserRolesRequest": {
         "required": [
-          "roleIds"
+          "roleIds",
+          "profileVersion"
         ],
         "type": "object",
         "properties": {
@@ -22182,6 +22296,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

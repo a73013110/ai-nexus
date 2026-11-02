@@ -1,6 +1,5 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -11,23 +10,25 @@ namespace AiNexus.Features.Work.Files.Storage;
 internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeWrite write, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}/storage", (Guid id, AttachmentStorageLimitRequest body, ICurrentUser user, SetUserAttachmentStorage handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, body, ct))
+        .MapPut("/users/{id:guid}/storage", (Guid id, AttachmentStorageLimitRequest body, SetUserAttachmentStorage handler, CancellationToken ct) =>
+            handler.HandleAsync(id, body, ct))
         .Audited(FilesAudit.StorageLimitUpdated)
         .WithName("SetUserAttachmentStorage");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, AttachmentStorageLimitRequest request, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid id, AttachmentStorageLimitRequest request, CancellationToken ct)
     {
-        var target = AuditTarget.Of(FeatureCatalog.IdentityUsers, id, async token =>
-            await db.Users.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(token));
-        return write.ExecuteAsync(actor, target, async () =>
-        {
-            if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
-            if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;
-            var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-            if (user is null) return FilesErrors.AdminResourceNotFound;
-            user.AttachmentLimitBytes = request.LimitBytes;
-            return Result.Success;
-        }, ct);
+        if (request.LimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return FilesErrors.InvalidStorageLimit;
+
+        var begun = await write.BeginAsync(AuditTarget.Of(id, async token =>
+            await db.Users.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        if (await quota.LockOwnerAsync(id, ct) != 1) return FilesErrors.AdminResourceNotFound;
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+        if (user is null) return FilesErrors.AdminResourceNotFound;
+        user.AttachmentLimitBytes = request.LimitBytes;
+
+        return await transaction.CommitAsync(ct);
     }
 }

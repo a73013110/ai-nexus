@@ -14,11 +14,11 @@ public sealed class UpdateNavigationItemTests
     public async Task AdministratorEditsContentWithoutMovingTheNode()
     {
         await using var factory = new AppFactory(administrators: ["alice"], services: AllowLinks()); using var admin = await factory.SignedInAsync();
-        (await admin.PutAsJsonAsync($"{Items}/{BuiltInAccess.CollaborationNavigation}", new NavigationItemUpdateRequest("group", null, " 團隊協作 ", null, true, "share", null))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Items}/{BuiltInAccess.CollaborationNavigation}", new NavigationItemUpdateRequest("group", null, " 團隊協作 ", null, true, "share", null, await factory.NavigationVersionAsync(BuiltInAccess.CollaborationNavigation)))).EnsureSuccessStatusCode();
         var link = await CreateAsync(admin, Link("公告", $"https://{LinkHost}/a", BuiltInAccess.WorkNavigation));
-        (await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "人資公告", $"https://{LinkHost}/hr", false, null, [BuiltInAccess.AdministratorsGroup]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "人資公告", $"https://{LinkHost}/hr", false, null, [BuiltInAccess.AdministratorsGroup], await factory.NavigationVersionAsync(link.Id)))).EnsureSuccessStatusCode();
         // page 只能換功能；換成同層沒有的頁面可以。
-        (await admin.PutAsJsonAsync($"{Items}/collaboration.jobs", new NavigationItemUpdateRequest("page", FeatureCatalog.Design, null, null, true, null, null))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Items}/collaboration.jobs", new NavigationItemUpdateRequest("page", FeatureCatalog.Design, null, null, true, null, null, await factory.NavigationVersionAsync("collaboration.jobs")))).EnsureSuccessStatusCode();
 
         var items = await ListAsync(admin);
         var group = Assert.Single(items, x => x.Id == BuiltInAccess.CollaborationNavigation);
@@ -29,7 +29,7 @@ public sealed class UpdateNavigationItemTests
         Assert.Equal(FeatureCatalog.Design, Assert.Single(items, x => x.Id == "collaboration.jobs").FeatureId);
 
         // 清空可見群組＝所有登入者可見。
-        (await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "人資公告", $"https://{LinkHost}/hr", false, null, []))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "人資公告", $"https://{LinkHost}/hr", false, null, [], await factory.NavigationVersionAsync(link.Id)))).EnsureSuccessStatusCode();
         Assert.Empty(Assert.Single(await ListAsync(admin), x => x.Id == link.Id).AudienceGroupIds);
         Assert.Contains((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.navigation_item.updated&result=success"))!, x => x.DetailsJson!.Contains("\"audienceGroupIds\":[\"administrators\"]", StringComparison.Ordinal));
     }
@@ -39,11 +39,11 @@ public sealed class UpdateNavigationItemTests
     {
         await using var factory = new AppFactory(administrators: ["alice"], services: AllowLinks()); using var admin = await factory.SignedInAsync();
         var link = await CreateAsync(admin, Link("公告", $"https://{LinkHost}/a"));
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{BuiltInAccess.WorkNavigation}", new NavigationItemUpdateRequest("link", null, "工作", $"https://{LinkHost}/", true, null, null)), HttpStatusCode.BadRequest, "validation_failed");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/missing", new NavigationItemUpdateRequest("group", null, "不存在", null, true, null, null)), HttpStatusCode.NotFound, "navigation_item_not_found");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/work.projects", new NavigationItemUpdateRequest("page", FeatureCatalog.Chat, null, null, true, null, null)), HttpStatusCode.Conflict, "navigation_page_duplicate");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "公告", "https://evil.example.net/", true, null, null)), HttpStatusCode.BadRequest, "navigation_link_host_not_allowed");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "公告", $"https://{LinkHost}/", true, null, ["missing"])), HttpStatusCode.BadRequest, "unknown_access_id");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{BuiltInAccess.WorkNavigation}", new NavigationItemUpdateRequest("link", null, "工作", $"https://{LinkHost}/", true, null, null, await factory.NavigationVersionAsync(BuiltInAccess.WorkNavigation))), HttpStatusCode.BadRequest, "validation_failed");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/missing", new NavigationItemUpdateRequest("group", null, "不存在", null, true, null, null, await factory.NavigationVersionAsync("missing"))), HttpStatusCode.NotFound, "navigation_item_not_found");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/work.projects", new NavigationItemUpdateRequest("page", FeatureCatalog.Chat, null, null, true, null, null, await factory.NavigationVersionAsync("work.projects"))), HttpStatusCode.Conflict, "navigation_page_duplicate");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "公告", "https://evil.example.net/", true, null, null, await factory.NavigationVersionAsync(link.Id))), HttpStatusCode.BadRequest, "navigation_link_host_not_allowed");
+        await AssertCodeAsync(await admin.PutAsJsonAsync($"{Items}/{link.Id}", new NavigationItemUpdateRequest("link", null, "公告", $"https://{LinkHost}/", true, null, ["missing"], await factory.NavigationVersionAsync(link.Id))), HttpStatusCode.BadRequest, "unknown_access_id");
 
         var items = await ListAsync(admin);
         Assert.Equal("group", Assert.Single(items, x => x.Id == BuiltInAccess.WorkNavigation).Kind);

@@ -62,6 +62,8 @@ export function recordedProblem(code: string | null | undefined, issueCode: stri
     ? `${publicErrorHints[code]} 查證代碼：${issueCode}`
     : systemProblem(issueCode);
 }
+/** 版本衝突時的提示：呼叫端已重讀畫面，所以不說「請重新整理」（通用提示見 `publicErrorHints`）。 */
+export const STALE_WRITE_MESSAGE = '這筆資料剛被其他操作變更，畫面已更新，請確認後再操作。';
 /** 只有經過審閱的操作提示或不透明的問題代碼，才會進入一般的 UI。 */
 export class ApiError extends Error {
   readonly issueCode: string;
@@ -84,6 +86,14 @@ export class ApiError extends Error {
     );
     this.issueCode = issue;
   }
+}
+/** 送出的版本已過期（期間有人改過）：手上的草稿再送也一樣被拒，要先重讀。 */
+export function isStaleWrite(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'admin_write_conflict';
+}
+/** 失敗後會重讀畫面的寫入用：版本衝突換成說明畫面已更新的提示。 */
+export function writeFailureMessage(error: unknown): string {
+  return isStaleWrite(error) ? STALE_WRITE_MESSAGE : safeMessage(error);
 }
 export function safeMessage(error: unknown): string {
   if (error instanceof ApiError || error instanceof ClientValidationError) return error.message;

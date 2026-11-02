@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import type { NavigationItemDto } from '@core/api/schema';
 import { apiResource } from '@core/api/api-resource';
 import { catalogFeature } from '@core/api/catalog';
+import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { ToastService } from '@shared/ui/toast-service';
 import { AccessControlApi } from './access-control-api';
 import { AccessControlStore } from './access-control-store';
@@ -38,8 +39,14 @@ export class NavigationStore {
   }
   /** 選單已寫入：重讀節點，以及此帳號的側欄（`/me` 的選單樹）。 */
   changed() {
+    this.actionError.set('');
     this.read.reload();
     this.access.navigationChanged();
+  }
+  /** 送出的版本已過期：由頁面的 Notice 說明，節點重讀成最新。 */
+  stale() {
+    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.read.reload();
   }
   /** 頁面節點顯示功能的有效名稱（含管理員的覆寫）；目錄外的 ID 原樣顯示。 */
   name(item: NavigationItemDto) {

@@ -24,19 +24,22 @@ internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, Admi
     public async Task<Result<MailEnqueuedDto>> HandleAsync(Guid actor, Guid id, Guid? requestKey, CancellationToken ct)
     {
         MailEnqueuedDto? result = null;
-        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), async () =>
-            {
-                var original = await db.OutboundMessages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
-                if (original is null) return MailErrors.MessageNotFound;
-                var content = await db.OutboundMessageContents.AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id && !x.Protected, ct);
-                if (Blocker(original, content is not null) is { } blocked) return blocked;
-                var key = requestKey is { } request ? $"mail.resend:{id:N}:{request:N}" : null;
-                if (await outbox.ExistingAsync(key, ct) is { } existing) { result = new(existing, true); return Result.Success; }
-                var copy = outbox.AddCopy(original, content!, original.RecipientAddress!, new(IdempotencyKey: key, RequestedBy: actor));
-                result = new(copy.Id, false);
-                return Result.Success;
-            }, ct);
-        return outcome.IsSuccess ? result! : outcome.Error;
+        var begun = await write.BeginAsync(AuditTarget.Of(id, token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var original = await db.OutboundMessages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (original is null) return MailErrors.MessageNotFound;
+        var content = await db.OutboundMessageContents.AsNoTracking().SingleOrDefaultAsync(x => x.MessageId == id && !x.Protected, ct);
+        if (Blocker(original, content is not null) is { } blocked) return blocked;
+        var key = requestKey is { } request ? $"mail.resend:{id:N}:{request:N}" : null;
+        // 同一個冪等鍵重送：不再建立，回傳先前那封。同時送出的兩筆由冪等鍵的唯一索引擋下。
+        result = await outbox.ExistingAsync(key, ct) is { } existing
+            ? new(existing, true)
+            : new(outbox.AddCopy(original, content!, original.RecipientAddress!, new(IdempotencyKey: key, RequestedBy: actor)).Id, false);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? result : committed.Error;
     }
 
     /// <summary>不能重寄的原因；詳情頁也用它決定是否顯示重寄按鈕。</summary>

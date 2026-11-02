@@ -31,9 +31,9 @@ public sealed class CancelDisabledOwnerJobsTests
         }
 
         // 只改姓名不算停用，工作照常。
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{testerId}", LocalAccount() with { DisplayName = "改名", Password = null })).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{testerId}", LocalAccount() with { DisplayName = "改名", Password = null } with { ProfileVersion = await f.ProfileVersionAsync(testerId) })).EnsureSuccessStatusCode();
         Assert.Empty(await CancelledAsync());
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{testerId}", LocalAccount() with { Enabled = false, Password = null })).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{testerId}", LocalAccount() with { Enabled = false, Password = null } with { ProfileVersion = await f.ProfileVersionAsync(testerId) })).EnsureSuccessStatusCode();
         Assert.Equal(new[] { queued, running }.Order(), await CancelledAsync());
 
         async Task<Guid[]> CancelledAsync()

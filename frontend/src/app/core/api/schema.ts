@@ -4573,6 +4573,8 @@ export interface components {
         };
         AdminFeatureDto: {
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             name: string;
             route: string;
             enabled: boolean;
@@ -4580,6 +4582,8 @@ export interface components {
         };
         AdminGroupDto: {
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             name: string;
             enabled: boolean;
             featureIds: string[];
@@ -4599,6 +4603,8 @@ export interface components {
         };
         AdminRoleDto: {
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             name: string;
             enabled: boolean;
             groupIds: string[];
@@ -4656,6 +4662,8 @@ export interface components {
         AdminUserDto: {
             /** Format: uuid */
             id: string;
+            /** Format: int32 */
+            profileVersion: number;
             account: string;
             displayName: string;
             /** Format: date-time */
@@ -5367,6 +5375,8 @@ export interface components {
         };
         DirectoryBindingRequest: {
             adAccount: string;
+            /** Format: int32 */
+            profileVersion: number;
         };
         DirectoryChange: {
             field: string;
@@ -5664,6 +5674,8 @@ export interface components {
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
+            /** Format: int64 */
+            rowVersion: number;
         };
         FeatureUsageDayDto: {
             /** Format: date */
@@ -5856,6 +5868,8 @@ export interface components {
             managerScopes?: null | {
                 [key: string]: string;
             };
+            /** Format: int64 */
+            rowVersion?: null | number;
         };
         HealthIssue: {
             code: string;
@@ -6309,6 +6323,8 @@ export interface components {
         };
         NavigationItemDto: {
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             parentId: null | string;
             kind: string;
             featureId: null | string;
@@ -6328,6 +6344,8 @@ export interface components {
             openInNewTab: boolean;
             icon: null | string;
             audienceGroupIds: null | string[];
+            /** Format: int64 */
+            rowVersion: number;
         };
         NavigationNodeDto: {
             id: string;
@@ -7033,6 +7051,8 @@ export interface components {
             name: string;
             enabled: boolean;
             groupIds: string[];
+            /** Format: int64 */
+            rowVersion?: null | number;
         };
         RunDto: {
             /** Format: uuid */
@@ -7462,6 +7482,8 @@ export interface components {
         UnitDto: {
             /** Format: uuid */
             id: string;
+            /** Format: int64 */
+            rowVersion: number;
             /** Format: uuid */
             parentId: null | string;
             name: string;
@@ -7565,7 +7587,9 @@ export interface components {
             name: string;
             enabled: boolean;
             /** Format: uint8 */
-            headRank?: null | number;
+            headRank: null | number;
+            /** Format: int64 */
+            rowVersion: number;
         };
         UsageDayDto: {
             /** Format: date */
@@ -7637,6 +7661,8 @@ export interface components {
             localAccount: null | string;
             roleIds: string[];
             password?: null | string;
+            /** Format: int32 */
+            profileVersion?: null | number;
         };
         UserAuthenticationDto: {
             adEnabled: boolean;
@@ -7648,6 +7674,8 @@ export interface components {
         };
         UserEmailRequest: {
             email: null | string;
+            /** Format: int32 */
+            profileVersion: number;
         };
         UserPositionRequest: {
             /** Format: int32 */
@@ -7655,6 +7683,8 @@ export interface components {
         };
         UserRolesRequest: {
             roleIds: string[];
+            /** Format: int32 */
+            profileVersion: number;
         };
         UserSettingsDto: {
             appearance: components["schemas"]["PreferencesDto"];
@@ -8231,7 +8261,9 @@ export interface operations {
     };
     DeleteNavigationItem: {
         parameters: {
-            query?: never;
+            query: {
+                rowVersion: number;
+            };
             header?: never;
             path: {
                 id: string;
@@ -8747,7 +8779,9 @@ export interface operations {
     };
     DeleteAdminUser: {
         parameters: {
-            query?: never;
+            query: {
+                profileVersion: number;
+            };
             header?: never;
             path: {
                 id: string;
@@ -8793,7 +8827,9 @@ export interface operations {
     };
     UnbindUserDirectoryAccount: {
         parameters: {
-            query?: never;
+            query: {
+                profileVersion: number;
+            };
             header?: never;
             path: {
                 id: string;
@@ -9838,7 +9874,9 @@ export interface operations {
     };
     DeleteOrganizationUnit: {
         parameters: {
-            query?: never;
+            query: {
+                rowVersion: number;
+            };
             header?: never;
             path: {
                 id: string;

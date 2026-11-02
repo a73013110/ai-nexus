@@ -8,6 +8,7 @@ CREATE TABLE [accesscontrol].[NavigationItems] (
     [OpenInNewTab] BIT             CONSTRAINT [df_NavigationItems_OpenInNewTab] DEFAULT ((1)) NOT NULL,
     [Icon]         NVARCHAR (50)   NULL,
     [SortOrder]    INT             NOT NULL,
+    [RowVersion]   ROWVERSION      NOT NULL,
     CONSTRAINT [pk_NavigationItems] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [ck_NavigationItems_Kind] CHECK ([Kind]=N'link' OR [Kind]=N'page' OR [Kind]=N'group'),
     CONSTRAINT [ck_NavigationItems_KindColumns] CHECK ([Kind]=N'group' AND [FeatureId] IS NULL AND [Name] IS NOT NULL AND [Url] IS NULL OR [Kind]=N'page' AND [FeatureId] IS NOT NULL AND [Name] IS NULL AND [Url] IS NULL AND [Icon] IS NULL OR [Kind]=N'link' AND [FeatureId] IS NULL AND [Name] IS NOT NULL AND [Url] IS NOT NULL),
@@ -73,6 +74,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'外部連�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'上層分群；null 表示位於選單最上層。', @level0type = N'SCHEMA', @level0name = N'accesscontrol', @level1type = N'TABLE', @level1name = N'NavigationItems', @level2type = N'COLUMN', @level2name = N'ParentId';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'並行控制版本：資料列每次異動由資料庫自動更新。前端帶回讀取時的值，不符時拒絕寫入，不會覆蓋別人的修改。', @level0type = N'SCHEMA', @level0name = N'accesscontrol', @level1type = N'TABLE', @level1name = N'NavigationItems', @level2type = N'COLUMN', @level2name = N'RowVersion';
 
 
 GO

@@ -19,6 +19,12 @@ public sealed class User
     public string? LocalAccount { get; set; }
     public string? PasswordHash { get; set; }
     public int SecurityVersion { get; set; }
+
+    /// <summary>
+    /// 帳號資料的版本：管理端與本人修改帳號、角色、信箱、登入方式時遞增，登入與活動不動它。前端帶回讀取時的值，不符就拒絕，不會覆蓋別人的修改（<see cref="UserProfileVersion"/>）。
+    /// 不用 rowversion：登入、活動時間與配額鎖都會更新這一列，版本每次都變，會把沒有衝突的修改擋掉。從 1 起算，沒帶版本（0）一定不符。
+    /// </summary>
+    public int ProfileVersion { get; set; } = 1;
     public bool ProfileManaged { get; set; }
     public int FailedLogins { get; set; }
     public DateTimeOffset? LockedUntil { get; set; }
@@ -50,6 +56,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         user.Property(x => x.Email).HasMaxLength(EmailSources.AddressMaxLength);
         user.Property(x => x.EmailSource).HasMaxLength(16);
         user.Property(x => x.SecurityVersion).IsConcurrencyToken();
+        user.Property(x => x.ProfileVersion).IsConcurrencyToken();
         user.OwnsOne(x => x.Preferences, p =>
         {
             p.ToTable("UserPreferences", "identity");

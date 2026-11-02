@@ -41,7 +41,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         user.Email = address;
         user.EmailSource = EmailSources.User;
         user.EmailVerifiedAt = clock.GetUtcNow();
-        user.SecurityVersion++;
+        user.SecurityVersion++; user.ProfileVersion++;
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         user.PasswordHash = await passwords.HashAsync(password, ct);
         user.PasswordChangedAt = clock.GetUtcNow();
         user.LocalEnabled = true; user.FailedLogins = 0; user.LockedUntil = null;
-        user.SecurityVersion++;
+        user.SecurityVersion++; user.ProfileVersion++;
         return new LocalLoginChange(enabled, renamed && !enabled, !enabled);
     }
 
@@ -74,7 +74,7 @@ public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, 
         if (!user.AdEnabled) return IdentityErrors.LocalLoginRequired;
         if (!user.LocalEnabled && user.PasswordHash is null) return false;
         user.LocalEnabled = false; user.PasswordHash = null; user.FailedLogins = 0; user.LockedUntil = null;
-        user.SecurityVersion++;
+        user.SecurityVersion++; user.ProfileVersion++;
         return true;
     }
 

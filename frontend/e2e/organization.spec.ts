@@ -29,6 +29,7 @@ async function organization(page: Page, canImport = false) {
   const units: UnitDto[] = [
     {
       id: company,
+      rowVersion: 1,
       parentId: null,
       name: "總公司",
       enabled: true,
@@ -38,6 +39,7 @@ async function organization(page: Page, canImport = false) {
     },
     {
       id: it,
+      rowVersion: 1,
       parentId: company,
       name: "資訊處",
       enabled: true,
@@ -47,6 +49,7 @@ async function organization(page: Page, canImport = false) {
     },
     {
       id: hr,
+      rowVersion: 1,
       parentId: company,
       name: "人資處",
       enabled: false,
@@ -108,6 +111,7 @@ async function organization(page: Page, canImport = false) {
       if (method === "POST") {
         const unit: UnitDto = {
           id: randomUUID(),
+          rowVersion: 1,
           parentId: (body!["parentId"] as string | null) ?? null,
           name: body!["name"] as string,
           enabled: body!["enabled"] as boolean,

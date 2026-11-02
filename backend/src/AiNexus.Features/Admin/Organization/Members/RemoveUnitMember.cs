@@ -10,16 +10,22 @@ namespace AiNexus.Features.Admin.Organization.Members;
 internal sealed class RemoveUnitMember(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, IRequestActor actor, RemoveUnitMember handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, userId, ct))
+        .MapDelete("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, RemoveUnitMember handler, CancellationToken ct) =>
+            handler.HandleAsync(id, userId, ct))
         .Audited(OrganizationAudit.MemberDeleted)
         .WithName("RemoveOrganizationUnitMember");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, Guid userId, CancellationToken ct) => write.ExecuteAsync(actor, UnitRules.MemberTarget(db, id, userId), async () =>
+    public async Task<Result> HandleAsync(Guid id, Guid userId, CancellationToken ct)
     {
+        // 只動一列：兩人同時移除時後者刪不到，回寫入衝突。
+        var begun = await write.BeginAsync(UnitRules.MemberTarget(db, id, userId), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var member = await db.UnitMembers.SingleOrDefaultAsync(x => x.UnitId == id && x.UserId == userId, ct);
         if (member is null) return OrganizationErrors.MemberNotFound;
         db.Remove(member);
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

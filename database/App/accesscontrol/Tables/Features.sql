@@ -1,7 +1,8 @@
 CREATE TABLE [accesscontrol].[Features] (
-    [Id]      NVARCHAR (64)  NOT NULL,
-    [Name]    NVARCHAR (120) NULL,
-    [Enabled] BIT            NOT NULL,
+    [Id]         NVARCHAR (64)  NOT NULL,
+    [Name]       NVARCHAR (120) NULL,
+    [Enabled]    BIT            NOT NULL,
+    [RowVersion] ROWVERSION     NOT NULL,
     CONSTRAINT [PK_Features] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -24,6 +25,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'資料的�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'管理員覆寫的顯示名稱；null 時使用程式目錄的預設名稱。', @level0type = N'SCHEMA', @level0name = N'accesscontrol', @level1type = N'TABLE', @level1name = N'Features', @level2type = N'COLUMN', @level2name = N'Name';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'並行控制版本：資料列每次異動由資料庫自動更新。前端帶回讀取時的值，不符時拒絕寫入，不會覆蓋別人的修改。', @level0type = N'SCHEMA', @level0name = N'accesscontrol', @level1type = N'TABLE', @level1name = N'Features', @level2type = N'COLUMN', @level2name = N'RowVersion';
 
 
 GO

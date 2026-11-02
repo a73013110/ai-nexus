@@ -9,17 +9,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
 
-public sealed record AdminRoleDto(string Id, string Name, bool Enabled, IReadOnlyList<string> GroupIds, int UserCount);
+public sealed record AdminRoleDto(string Id, long RowVersion, string Name, bool Enabled, IReadOnlyList<string> GroupIds, int UserCount);
 
 /// <summary>
 /// <c>Scopes</c>：已授予且帶資料範圍的功能 → 所有成員的範圍（ADR 0017）；沒有範圍概念的功能不出現。
 /// <c>ManagerScopes</c>：另外給主管範圍的功能 → 主管範圍（ADR 0022）；不另外的功能不出現。
 /// </summary>
-public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy, IReadOnlyDictionary<string, string> Scopes,
+public sealed record AdminGroupDto(string Id, long RowVersion, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy, IReadOnlyDictionary<string, string> Scopes,
     IReadOnlyDictionary<string, string> ManagerScopes);
 
 /// <summary>管理端的功能列；<c>Name</c> 是覆寫或目錄預設名稱，<c>Route</c>、<c>Icon</c> 由 <see cref="FeatureCatalog"/> 填入（同 <see cref="FeatureDto"/>）。</summary>
-public sealed record AdminFeatureDto(string Id, string Name, string Route, bool Enabled, string Icon);
+public sealed record AdminFeatureDto(string Id, long RowVersion, string Name, string Route, bool Enabled, string Icon);
 
 /// <summary><c>NavigationSections</c>：功能在完整選單上的位置，授權清單據此照側欄分組（持有使用者或存取控制任一頁面的人都要用，不能依賴選單管理授權）。</summary>
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models,
@@ -44,12 +44,13 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
         var policies = await db.GroupModelPolicies.AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
         var counts = await db.UserRoles.GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
         var roleDtos = roles
-            .Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links[x.Id].ToArray(), counts.GetValueOrDefault(x.Id)))
+            .Select(x => new AdminRoleDto(x.Id, x.RowVersion, x.Name, x.Enabled, links[x.Id].ToArray(), counts.GetValueOrDefault(x.Id)))
             .ToArray();
         // 沒有模型策略列時 Policy 為 null，代表該群組未設定策略。
         var groupDtos = groups
             .Select(x => new AdminGroupDto(
                 x.Id,
+                x.RowVersion,
                 x.Name,
                 x.Enabled,
                 grants[x.Id].Select(y => y.FeatureId).ToArray(),
@@ -64,6 +65,6 @@ internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, Acc
     private static AdminFeatureDto ToDto(Feature row)
     {
         var dto = FeatureDto.From(row);
-        return new(dto.Id, dto.Name, dto.Route, row.Enabled, dto.Icon);
+        return new(dto.Id, row.RowVersion, dto.Name, dto.Route, row.Enabled, dto.Icon);
     }
 }

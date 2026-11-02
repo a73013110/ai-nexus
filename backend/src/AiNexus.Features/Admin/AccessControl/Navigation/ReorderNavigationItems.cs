@@ -38,26 +38,29 @@ internal sealed class NavigationOrderRequestValidator : RequestValidator<Navigat
 internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/navigation-items/order", (NavigationOrderRequest body, IRequestActor actor, ReorderNavigationItems handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, body, ct))
+        .MapPut("/navigation-items/order", (NavigationOrderRequest body, ReorderNavigationItems handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .Audited(AccessControlAudit.NavigationReordered)
         .WithName("ReorderNavigationItems");
 
-    public Task<Result> HandleAsync(Guid actor, NavigationOrderRequest request, CancellationToken ct)
+    public async Task<Result> HandleAsync(NavigationOrderRequest request, CancellationToken ct)
     {
         var ids = request.Items.Select(x => x.Id).ToArray();
-        return write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlNavigation, "order", token => SnapshotAsync(ids, token)), async () =>
+        var begun = await write.BeginAsync(AuditTarget.Of("order", token => SnapshotAsync(ids, token)).Locking(AccessControlLocks.Navigation), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var items = await db.NavigationItems.ToListAsync(ct);
+        var byId = items.ToDictionary(x => x.Id, StringComparer.Ordinal);
+        foreach (var move in request.Items)
         {
-            var items = await db.NavigationItems.ToListAsync(ct);
-            var byId = items.ToDictionary(x => x.Id, StringComparer.Ordinal);
-            foreach (var move in request.Items)
-            {
-                if (!byId.TryGetValue(move.Id, out var item)) return AccessControlErrors.NavigationItemNotFound;
-                item.ParentId = move.ParentId; item.SortOrder = move.SortOrder;
-            }
-            // 失敗時 AdministrativeWrite 不會 SaveChanges，並在寫失敗稽核前清空 ChangeTracker，上面改到一半的實體不會寫入。
-            return NavigationRules.Structure(items) is { } invalid ? invalid : Result.Success;
-        }, ct);
+            if (!byId.TryGetValue(move.Id, out var item)) return AccessControlErrors.NavigationItemNotFound;
+            item.ParentId = move.ParentId; item.SortOrder = move.SortOrder;
+        }
+        // 沒有提交就離開會回滾並清空 ChangeTracker，上面改到一半的實體不會寫入。
+        if (NavigationRules.Structure(items) is { } invalid) return invalid;
+
+        return await transaction.CommitAsync(ct);
     }
 
     private async Task<object?> SnapshotAsync(IReadOnlyList<string> ids, CancellationToken ct)

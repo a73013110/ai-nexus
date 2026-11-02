@@ -1,11 +1,12 @@
 CREATE TABLE [organization].[Units] (
-    [Id]        UNIQUEIDENTIFIER NOT NULL,
-    [ParentId]  UNIQUEIDENTIFIER NULL,
-    [Name]      NVARCHAR (120)   NOT NULL,
-    [Enabled]   BIT              CONSTRAINT [df_Units_Enabled] DEFAULT ((1)) NOT NULL,
-    [SortOrder] INT              NOT NULL,
-    [GdDepNo]   INT              NULL,
-    [HeadRank]  TINYINT          NULL,
+    [Id]         UNIQUEIDENTIFIER NOT NULL,
+    [ParentId]   UNIQUEIDENTIFIER NULL,
+    [Name]       NVARCHAR (120)   NOT NULL,
+    [Enabled]    BIT              CONSTRAINT [df_Units_Enabled] DEFAULT ((1)) NOT NULL,
+    [SortOrder]  INT              NOT NULL,
+    [GdDepNo]    INT              NULL,
+    [HeadRank]   TINYINT          NULL,
+    [RowVersion] ROWVERSION       NOT NULL,
     CONSTRAINT [pk_Units] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [ck_Units_HeadRank] CHECK ([HeadRank] IS NULL OR [HeadRank]>=(1) AND [HeadRank]<=(9) AND [ParentId] IS NOT NULL),
     CONSTRAINT [ck_Units_Name] CHECK (len(ltrim(rtrim([Name])))>(0)),
@@ -65,6 +66,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'單位名�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'上層單位；null 表示最上層。不可成環、深度上限由程式檢查。', @level0type = N'SCHEMA', @level0name = N'organization', @level1type = N'TABLE', @level1name = N'Units', @level2type = N'COLUMN', @level2name = N'ParentId';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'並行控制版本：資料列每次異動由資料庫自動更新。前端帶回讀取時的值，不符時拒絕寫入，不會覆蓋別人的修改。', @level0type = N'SCHEMA', @level0name = N'organization', @level1type = N'TABLE', @level1name = N'Units', @level2type = N'COLUMN', @level2name = N'RowVersion';
 
 
 GO

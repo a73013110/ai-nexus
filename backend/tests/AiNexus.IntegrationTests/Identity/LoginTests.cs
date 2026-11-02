@@ -63,7 +63,7 @@ public sealed class LoginTests
         for (var i = 0; i < 5; i++) Assert.Equal(HttpStatusCode.Unauthorized, (await local.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("tester", "wrong password!", "local"))).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await local.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("tester", Password, "local"))).StatusCode);
         using (var scope = f.Services.CreateScope()) Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(x => x.Id == id)).LockedUntil > DateTimeOffset.UtcNow);
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount())).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount() with { ProfileVersion = await f.ProfileVersionAsync(id) })).EnsureSuccessStatusCode();
         Assert.Equal(id, (await Login(local, "tester", "local")).Id);
     }
 

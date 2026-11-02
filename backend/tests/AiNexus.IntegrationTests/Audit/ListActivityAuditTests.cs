@@ -28,9 +28,9 @@ public sealed class ListActivityAuditTests
         var target = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit/catalog")).StatusCode);
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, ["audit"], Scopes: new Dictionary<string, string> { ["audit"] = "all" }))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/roles/auditor", new RoleUpdateRequest("稽核人員", true, ["auditors"]))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "auditor"]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, ["audit"], Scopes: new Dictionary<string, string> { ["audit"] = "all" }, RowVersion: await factory.GroupVersionAsync("auditors")))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/roles/auditor", new RoleUpdateRequest("稽核人員", true, ["auditors"], RowVersion: await factory.RoleVersionAsync("auditor")))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "auditor"], await factory.ProfileVersionAsync(target.Id)))).EnsureSuccessStatusCode();
         var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Contains(me.Access.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
         Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "identity.users");
@@ -50,8 +50,8 @@ public sealed class ListActivityAuditTests
         Assert.Contains(rows, row => row.Action == IdentityAudit.UserRoleUpdated.Name && row.ResourceId == target.Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/catalog")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/users")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["administrator"]))).StatusCode);
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, []))).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["administrator"], await factory.ProfileVersionAsync(target.Id)))).StatusCode);
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, [], RowVersion: await factory.GroupVersionAsync("auditors")))).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit/catalog")).StatusCode);
     }

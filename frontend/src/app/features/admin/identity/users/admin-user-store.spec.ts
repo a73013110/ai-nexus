@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminUserDto } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
+import { ApiError, STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 import { IdentityApi } from '../identity-api';
@@ -14,6 +15,7 @@ const user = {
   displayName: '王小明',
   account: 'wang',
   enabled: true,
+  profileVersion: 3,
   roleIds: ['member'],
   authentication: null,
   storage: { personalLimitBytes: null },
@@ -25,15 +27,31 @@ function setup() {
   const api = {
     insights: vi.fn(async () => ({ user: saved, usage: {}, kinds: [], conversations: 0 })),
     updateUser: vi.fn(async (_id: string, body: { displayName: string; enabled: boolean }) => {
-      saved = { ...saved, displayName: body.displayName, enabled: body.enabled };
+      saved = {
+        ...saved,
+        displayName: body.displayName,
+        enabled: body.enabled,
+        profileVersion: saved.profileVersion + 1,
+      };
     }),
-    roles: vi.fn(async () => undefined),
+    roles: vi.fn(async (): Promise<void> => {
+      saved = { ...saved, profileVersion: saved.profileVersion + 1 };
+    }),
     rebindDirectory: vi.fn(async (_id: string, adAccount: string) => {
       if (adAccount === 'taken') throw new Error('ad_binding_taken');
+      saved = { ...saved, profileVersion: saved.profileVersion + 1 };
     }),
-    unbindDirectory: vi.fn(async () => undefined),
+    unbindDirectory: vi.fn(async () => {
+      saved = { ...saved, profileVersion: saved.profileVersion + 1 };
+    }),
     email: vi.fn(async (_id: string, email: string | null) => {
-      saved = { ...saved, email, emailSource: email ? 'admin' : null, emailVerifiedAt: null };
+      saved = {
+        ...saved,
+        email,
+        emailSource: email ? 'admin' : null,
+        emailVerifiedAt: null,
+        profileVersion: saved.profileVersion + 1,
+      };
     }),
   };
   const admin = { saved: vi.fn(), readUsers: vi.fn() };
@@ -69,7 +87,7 @@ describe('admin user store', () => {
     await store.saveAccount();
     expect(api.updateUser).toHaveBeenCalledWith(
       'u1',
-      expect.objectContaining({ displayName: '王大明', roleIds: ['member'] }),
+      expect.objectContaining({ displayName: '王大明', roleIds: ['member'], profileVersion: 3 }),
     );
     expect(store.dirty().account).toBe(false);
     expect(admin.saved).toHaveBeenCalled();
@@ -82,13 +100,58 @@ describe('admin user store', () => {
     store.open(user);
     await settle();
     expect(await store.rebind('wang.new')).toBe(true);
-    expect(api.rebindDirectory).toHaveBeenCalledWith('u1', 'wang.new');
+    expect(api.rebindDirectory).toHaveBeenCalledWith('u1', 'wang.new', 3);
     expect(admin.saved).toHaveBeenCalledWith('AD 帳號已改綁', expect.any(String));
+    await settle();
     expect(await store.rebind('taken')).toBe(false);
     expect(store.errors().account).toBeTruthy();
+    await settle();
     expect(await store.unbind()).toBe(true);
-    expect(api.unbindDirectory).toHaveBeenCalledWith('u1');
+    expect(api.unbindDirectory).toHaveBeenCalledWith('u1', 4);
     expect(store.errors().account).toBe('');
+  });
+
+  it('sends the email with the raised version when the account endpoint went first', async () => {
+    const { store, api, settle } = setup();
+    store.open(user);
+    await settle();
+    store.account.set({ ...store.account(), name: '王大明' });
+    store.email.set('wang@corp.test');
+    await store.saveAccount();
+    expect(api.updateUser).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ profileVersion: 3 }),
+    );
+    expect(api.email).toHaveBeenCalledWith('u1', 'wang@corp.test', 4);
+  });
+
+  it('keeps fields read-only until the write is reread, then uses the new version', async () => {
+    const { store, api, settle } = setup();
+    store.open(user);
+    await settle();
+    store.roles.set(['member', 'reviewer']);
+    await store.saveRoles();
+    expect(store.locked()).toBe(true);
+    await settle();
+    expect(store.locked()).toBe(false);
+    store.roles.set(['member']);
+    await store.saveRoles();
+    expect(api.roles).toHaveBeenLastCalledWith('u1', ['member'], 4);
+  });
+
+  it('explains a version conflict, rereads, and keeps an unchanged draft to send again', async () => {
+    const { store, api, admin, settle } = setup();
+    store.open(user);
+    await settle();
+    store.roles.set(['member', 'reviewer']);
+    api.roles.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
+    const reads = api.insights.mock.calls.length;
+    await store.saveRoles();
+    expect(store.errors().roles).toBe(STALE_WRITE_MESSAGE);
+    expect(admin.readUsers).toHaveBeenCalled();
+    await settle();
+    expect(api.insights.mock.calls.length).toBeGreaterThan(reads);
+    expect(store.roles()).toEqual(['member', 'reviewer']);
   });
 
   it('saves roles on their own and reverts a draft to the saved values', async () => {
@@ -97,7 +160,7 @@ describe('admin user store', () => {
     await settle();
     store.roles.set(['member', 'reviewer']);
     await store.saveRoles();
-    expect(api.roles).toHaveBeenCalledWith('u1', ['member', 'reviewer']);
+    expect(api.roles).toHaveBeenCalledWith('u1', ['member', 'reviewer'], 3);
     expect(store.dirty().roles).toBe(false);
     store.storage.set('10');
     expect(store.dirty().usage).toBe(true);
@@ -113,7 +176,7 @@ describe('admin user store', () => {
     store.email.set('  wang@corp.test ');
     expect(store.dirty().account).toBe(true);
     await store.saveAccount();
-    expect(api.email).toHaveBeenCalledWith('u1', 'wang@corp.test');
+    expect(api.email).toHaveBeenCalledWith('u1', 'wang@corp.test', 3);
     expect(api.updateUser).not.toHaveBeenCalled();
     expect(store.dirty().account).toBe(false);
     expect(admin.saved).toHaveBeenCalled();
@@ -121,7 +184,7 @@ describe('admin user store', () => {
     expect(store.current()?.emailSource).toBe('admin');
     store.email.set('');
     await store.saveAccount();
-    expect(api.email).toHaveBeenLastCalledWith('u1', null);
+    expect(api.email).toHaveBeenLastCalledWith('u1', null, 4);
   });
 
   it('enables and disables at once with the saved account, keeping the draft out', async () => {

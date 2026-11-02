@@ -29,14 +29,21 @@ export class IdentityApi {
   storage = (id: string, limitBytes: number | null) =>
     this.api.put('/api/v1/admin/users/{id}/storage', { path: { id }, body: { limitBytes } });
   /** `null` 清除；AD 提供的信箱由後端拒絕。 */
-  email = (id: string, email: string | null) =>
-    this.api.put('/api/v1/admin/users/{id}/email', { path: { id }, body: { email } });
-  roles = (id: string, roleIds: string[]) =>
-    this.api.put('/api/v1/admin/users/{id}/roles', { path: { id }, body: { roleIds } });
+  email = (id: string, email: string | null, profileVersion: number) =>
+    this.api.put('/api/v1/admin/users/{id}/email', {
+      path: { id },
+      body: { email, profileVersion },
+    });
+  roles = (id: string, roleIds: string[], profileVersion: number) =>
+    this.api.put('/api/v1/admin/users/{id}/roles', {
+      path: { id },
+      body: { roleIds, profileVersion },
+    });
   createUser = (body: UserAccountRequest) => this.api.post('/api/v1/admin/users', { body });
   updateUser = (id: string, body: UserAccountRequest) =>
     this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
-  deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
+  deleteUser = (id: string, profileVersion: number) =>
+    this.api.delete('/api/v1/admin/users/{id}', { path: { id }, query: { profileVersion } });
   /**
    * 使用者順序（出勤紀錄等依人分組的列表）：移到整份名單第 `position` 位（從 1 起算，值由伺服器計算），或清除全部。
    */
@@ -44,10 +51,16 @@ export class IdentityApi {
     this.api.put('/api/v1/admin/users/{id}/position', { path: { id }, body: { position } });
   resetUserOrder = () => this.api.delete('/api/v1/admin/users/order');
   /** 依 AD 短帳號查 SID 後改綁（ADR 0019）；解除後回到預建，下次以同名 AD 帳號驗證或匯入時綁定。 */
-  rebindDirectory = (id: string, adAccount: string) =>
-    this.api.put('/api/v1/admin/users/{id}/ad-binding', { path: { id }, body: { adAccount } });
-  unbindDirectory = (id: string) =>
-    this.api.delete('/api/v1/admin/users/{id}/ad-binding', { path: { id } });
+  rebindDirectory = (id: string, adAccount: string, profileVersion: number) =>
+    this.api.put('/api/v1/admin/users/{id}/ad-binding', {
+      path: { id },
+      body: { adAccount, profileVersion },
+    });
+  unbindDirectory = (id: string, profileVersion: number) =>
+    this.api.delete('/api/v1/admin/users/{id}/ad-binding', {
+      path: { id },
+      query: { profileVersion },
+    });
   /** 瀏覽 AD 與匯入需要 `identity.users.import`；從 AD 更新需要 `identity.users.sync`。未指定 `parent` 時是搜尋根。 */
   directoryNodes = (parent: string | undefined, signal?: AbortSignal) =>
     this.api.get('/api/v1/admin/directory-nodes', { query: { parent }, signal });

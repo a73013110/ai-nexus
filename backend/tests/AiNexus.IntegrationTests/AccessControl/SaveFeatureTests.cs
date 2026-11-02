@@ -28,14 +28,14 @@ public sealed class SaveFeatureTests
     public async Task NamesEqualToTheCatalogDefaultOrBlankAreStoredAsNoOverride()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("排程工作", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("排程工作", true, await factory.FeatureVersionAsync("jobs")))).EnsureSuccessStatusCode();
         Assert.Equal("排程工作", await StoredNameAsync(factory));
         Assert.Contains((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == FeatureCatalog.Jobs && x.Name == "排程工作");
 
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest(" 背景任務 ", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest(" 背景任務 ", true, await factory.FeatureVersionAsync("jobs")))).EnsureSuccessStatusCode();
         Assert.Null(await StoredNameAsync(factory));
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("排程工作", true))).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("  ", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("排程工作", true, await factory.FeatureVersionAsync("jobs")))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest("  ", true, await factory.FeatureVersionAsync("jobs")))).EnsureSuccessStatusCode();
         Assert.Null(await StoredNameAsync(factory));
         Assert.Contains((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == FeatureCatalog.Jobs && x.Name == "背景任務");
         Assert.Equal(4, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=access-control.feature.updated&result=success"))!.Length);
@@ -45,11 +45,11 @@ public sealed class SaveFeatureTests
     public async Task DisablingAFeatureHidesItsMenuEntryAndUnknownFeaturesAreNotFound()
     {
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/jobs", new FeatureUpdateRequest(null, false, await factory.FeatureVersionAsync("jobs")))).EnsureSuccessStatusCode();
         Assert.False(Assert.Single((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == FeatureCatalog.Jobs).Enabled);
         var collaboration = Assert.Single((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation, x => x.Id == BuiltInAccess.CollaborationNavigation);
         Assert.DoesNotContain(collaboration.Children, x => x.FeatureId == FeatureCatalog.Jobs);
-        await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/features/missing", new FeatureUpdateRequest(null, true)), HttpStatusCode.NotFound, "admin_resource_not_found");
+        await AssertCodeAsync(await admin.PutAsJsonAsync("/api/v1/admin/features/missing", new FeatureUpdateRequest(null, true, await factory.FeatureVersionAsync("missing"))), HttpStatusCode.NotFound, "admin_resource_not_found");
     }
 
     private static async Task<string?> StoredNameAsync(AppFactory factory)

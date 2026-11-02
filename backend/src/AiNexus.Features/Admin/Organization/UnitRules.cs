@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.Organization;
 
 /// <summary>
-/// 單位樹需要查資料的規則，在 <c>AdministrativeWrite</c> 的交易內執行，被拒絕的變更仍會留下錯誤代碼的稽核。
+/// 單位樹需要查資料的規則，在 <c>AdministrativeWrite</c> 的交易內、<see cref="OrganizationLocks.Tree"/> 排隊後執行。
 /// 結構規則一律套在「變更後的完整單位清單」上檢查，新增、修改與排序共用同一套判斷。
 /// </summary>
 internal static class UnitRules
@@ -57,10 +57,10 @@ internal static class UnitRules
     }
 
     /// <summary>新增、修改與刪除單位共用的寫入對象（稽核 <c>admin.organization_unit*</c>）。</summary>
-    public static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(FeatureCatalog.Organization, id, ct => SnapshotAsync(db, id, ct));
+    public static AuditTarget Target(AppDbContext db, Guid id) => AuditTarget.Of(id, ct => SnapshotAsync(db, id, ct)).Locking(OrganizationLocks.Tree);
 
     /// <summary>加入、修改與移除成員共用的寫入對象；快照是這位使用者的所有單位。</summary>
-    public static AuditTarget MemberTarget(AppDbContext db, Guid id, Guid userId) => new(FeatureCatalog.Organization, id, userId.ToString(), ct => MembershipsAsync(db, userId, ct));
+    public static AuditTarget MemberTarget(AppDbContext db, Guid id, Guid userId) => new(id, userId.ToString(), ct => MembershipsAsync(db, userId, ct));
 
     /// <summary>
     /// 新增、修改與刪除單位共用的稽核快照（<c>admin.organization_unit*</c>）。<c>parentManagerIds</c> 是上層目前勾選的主管：

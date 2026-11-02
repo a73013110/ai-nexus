@@ -9,19 +9,25 @@ namespace AiNexus.Features.Admin.AccessControl.Navigation;
 internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/navigation-items/{id}", (string id, IRequestActor actor, DeleteNavigationItem handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, ct))
+        .MapDelete("/navigation-items/{id}", (string id, long rowVersion, DeleteNavigationItem handler, CancellationToken ct) =>
+            handler.HandleAsync(id, rowVersion, ct))
         .Audited(AccessControlAudit.NavigationDeleted)
         .WithName("DeleteNavigationItem");
 
-    public Task<Result> HandleAsync(Guid actor, string id, CancellationToken ct) => write.ExecuteAsync(actor, NavigationRules.Target(db, id), async () =>
+    public async Task<Result> HandleAsync(string id, long rowVersion, CancellationToken ct)
     {
+        var begun = await write.BeginAsync(NavigationRules.Target(db, id), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var item = await db.NavigationItems.FindAsync([id], ct);
         if (item is null) return AccessControlErrors.NavigationItemNotFound;
         if (await db.NavigationItems.AnyAsync(x => x.ParentId == id, ct)) return AccessControlErrors.NavigationItemNotEmpty;
         // 外鍵是 NO ACTION：可見群組要先刪。
         await NavigationRules.ReplaceAudiencesAsync(db, id, [], ct);
+        db.ExpectRowVersion(item, rowVersion);
         db.Remove(item);
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

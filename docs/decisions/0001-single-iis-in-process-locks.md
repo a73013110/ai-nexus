@@ -16,8 +16,8 @@
 
 | 原本的鎖 | 保護的規則 | 現在 |
 | --- | --- | --- |
-| `IdentityWriteLock` | SID 與帳號綁定、登入失敗次數 | 目錄登入建立或更新帳號時取行政寫入鎖（與帳號管理同一把）；沒有變更的登入不取鎖。本機帳號鎖該使用者的列，雜湊在鎖外計算 |
-| `KnowledgeWriteLock` | 向量模型只有一個啟用中、重建與清除互斥；文件片段的差異寫入 | 模型生命週期取行政寫入鎖，模型沒換的查詢不取鎖；片段寫入鎖文件列 |
+| `IdentityWriteLock` | SID 與帳號綁定、登入失敗次數 | 目錄登入建立或更新帳號時取 `AccessControlLocks.Authorization`（與帳號管理同一把）；沒有變更的登入不取鎖。本機帳號鎖該使用者的列，雜湊在鎖外計算 |
+| `KnowledgeWriteLock` | 向量模型只有一個啟用中、重建與清除互斥；文件片段的差異寫入 | 模型生命週期取 `KnowledgeLocks.EmbeddingProfile`，模型沒換的查詢不取鎖；片段寫入鎖文件列 |
 | `AttachmentWriteLock` | 配額、檔案引用 | 拿掉：擁有者的 `Users` 列鎖本來就涵蓋。跨擁有者的規則（知識庫文件上限、刪除知識庫）用依知識庫分鍵的 `DocumentWriteLock` |
 | `PunchImportGate` | 同一檔不重複匯入、寫入順序等於開始順序 | 讀檔與解析不持鎖；提交前取匯入鎖（[ADR 0032](0032-administrative-write-begin-commit.md)），排程在鎖內再判斷一次是否還要匯入 |
 | `ResourceWriteLock` | 版本化儲存、ACL 變更與刪除互斥；每人上限與評分唯一 | 依資源的應用程式鎖，鎖後才檢查資源是否還在。每人的規則改鎖 `Users` 列（`UserRowLock`），不再用字串範圍 |
@@ -27,7 +27,7 @@
 Serializable 也一併拿掉，因為它在 RCSI 下只擋得住「檢查之後才插入」，擋不住已通過檢查的對方，範圍鎖還會讓不相關的工作互等：
 
 - 刪除專案等容器時「不能有進行中的工作」改用 [`ContainerLock`](../../backend/src/AiNexus.Features/Work/Collaboration/ContainerLock.cs)：開始工作取共用鎖、刪除取獨佔鎖，同容器的工作彼此不等。
-- 向量模型生命週期改用行政寫入鎖，唯一索引（`Key`、啟用中的 `Status`）是最後防線。
+- 向量模型生命週期改用 `KnowledgeLocks.EmbeddingProfile`，唯一索引（`Key`、啟用中的 `Status`）是最後防線。
 
 取鎖順序固定為應用程式鎖（資源 → 容器）→ `Users` 列（依 ID 排序）→ 其他列；背景工作是工作列 → 文件列。順序意外反過來時由 SQL Server 的死結偵測解開，不會寫出錯誤資料。
 

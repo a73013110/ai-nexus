@@ -53,7 +53,7 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
             await execution.CheckpointAsync("啟用完成的索引", coverage.CompletedChunks, coverage.TotalChunks, ct, async () => {
                 if (await lifecycle.ActivateCoreAsync(profile.Id, ct) is { IsSuccess: false } refused) { failure = refused.Error; return; }
                 audit.Record(KnowledgeAudit.ProfileActivated, execution.Job.OwnerId, details: new { profileId = profile.Id, automatic = true }); await db.SaveChangesAsync(ct);
-            }, first: () => writes.AcquireAsync(FeatureCatalog.KnowledgeRetrieval, ct));
+            }, first: () => writes.AcquireAsync(KnowledgeLocks.EmbeddingProfile, ct));
             if (failure is not null) return failure;
         }
         return Result.Success;

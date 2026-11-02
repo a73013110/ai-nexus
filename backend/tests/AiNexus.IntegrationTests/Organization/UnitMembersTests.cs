@@ -54,7 +54,7 @@ public sealed class UnitMembersTests
         await AssertCodeAsync(await SaveMemberAsync(admin, closed.Id, bob), HttpStatusCode.Conflict, "organization_unit_disabled");
 
         (await SaveMemberAsync(admin, open.Id, bob)).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync($"{Units}/{open.Id}", new UnitUpdateRequest(null, "營運處", false))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Units}/{open.Id}", new UnitUpdateRequest(null, "營運處", false, null, await factory.UnitVersionAsync(open.Id)))).EnsureSuccessStatusCode();
         // 停用後既有成員仍可修改。
         (await SaveMemberAsync(admin, open.Id, bob, manager: true)).EnsureSuccessStatusCode();
 
@@ -63,7 +63,7 @@ public sealed class UnitMembersTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Users.Where(x => x.Id == carol).ExecuteUpdateAsync(x => x.SetProperty(y => y.DeletedAt, DateTimeOffset.UnixEpoch));
         }
-        (await admin.PutAsJsonAsync($"{Units}/{open.Id}", new UnitUpdateRequest(null, "營運處", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"{Units}/{open.Id}", new UnitUpdateRequest(null, "營運處", true, null, await factory.UnitVersionAsync(open.Id)))).EnsureSuccessStatusCode();
         await AssertCodeAsync(await SaveMemberAsync(admin, open.Id, carol), HttpStatusCode.NotFound, "organization_user_not_found");
         await AssertCodeAsync(await admin.DeleteAsync($"{Units}/{open.Id}/members/{carol}"), HttpStatusCode.NotFound, "organization_member_not_found");
         await AssertCodeAsync(await admin.GetAsync($"{Units}/{Guid.NewGuid()}/members"), HttpStatusCode.NotFound, "organization_unit_not_found");

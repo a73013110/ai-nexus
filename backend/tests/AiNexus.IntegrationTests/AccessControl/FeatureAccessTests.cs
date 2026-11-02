@@ -96,7 +96,7 @@ public sealed class FeatureAccessTests
         using var admin = await factory.SignedInAsync();
         Assert.Contains((await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!.Features, x => x.Id == "files" && x.Name == "檔案庫");
         (await admin.GetAsync("/api/v1/files")).EnsureSuccessStatusCode();
-        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false, await factory.FeatureVersionAsync("files")))).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/files")).StatusCode);
         Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "files");
     }
@@ -126,7 +126,7 @@ public sealed class FeatureAccessTests
             await AssertFeatureForbiddenAsync(await bob.GetAsync($"/api/v1/{route}"));
         }
         await AssertFeatureForbiddenAsync(await alice.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null));
-        await AssertFeatureForbiddenAsync(await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false)));
+        await AssertFeatureForbiddenAsync(await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", false, await factory.FeatureVersionAsync("files"))));
         var bobFeatures = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
         Assert.Contains(bobFeatures, x => x.Id == FeatureCatalog.OperationsUsage);
         Assert.DoesNotContain(bobFeatures, x => x.Id == FeatureCatalog.IdentityUsers);
@@ -169,7 +169,7 @@ public sealed class FeatureAccessTests
         using var alice = await factory.SignedInAsync();
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         // 請求原本以管理員授權通過；寫入後撤銷這些授權，仍必須被偵測到。
-        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["member"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new UserRolesRequest(["member"], await factory.ProfileVersionAsync(me.Id)))).StatusCode);
         Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == FeatureCatalog.IdentityUsers);
     }
 }

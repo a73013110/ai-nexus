@@ -19,7 +19,7 @@
 
 - 沒提交就離開（回傳錯誤、拋例外）一律回滾，並留下含前值的失敗稽核。
 - 回成功卻沒提交時拋例外回 503，不會回成功卻沒存。
-- 與其他寫入撞上（版本不符、唯一索引、死結）回 409 `admin_write_conflict`，不自動重試。
+- `CommitAsync` 與其他寫入撞上（版本不符、唯一索引、死結）回 409 `admin_write_conflict`，不自動重試。提交前的 `ExecuteUpdate` 只可能是死結犧牲者（會撞約束的都在鎖內或走提交），回可重試的 503。
 - 取鎖逾時回 503 `admin_write_busy`，所以耗時的操作放在交易外面，使用者端的高頻寫入不用它。
 
 ## 怎麼寫
@@ -54,7 +54,11 @@ return await transaction.CommitAsync(ct);
 
 使用者會看著畫面改的表都加。實體實作 [`IRowVersioned`](../../backend/src/AiNexus.Data/App/IRowVersioned.cs)，組態 `IsRowVersion().HasConversion<byte[]>()`；DTO 帶出，PUT 放 body、DELETE 放 `?rowVersion=`。
 
-- `ExpectRowVersion` 比對的是使用者讀到的版本，不是 handler 剛查的。內容沒變時 EF 不送 UPDATE，也就不比對。
+- `ExpectRowVersion` 比對的是使用者讀到的版本，不是 handler 剛查的。內容沒變也會送 UPDATE：比對一定發生，只改子表也會升主列的版本。
+- 新增與修改同一端點（upsert）時，不帶版本是新增、帶版本是修改；對不上回 409，例如 [`SaveRole`](../../backend/src/AiNexus.Features/Admin/AccessControl/Management/SaveRole.cs)。
+- 排序、匯入、成員、個人模型政策與容量上限不帶版本：它們的規則靠鎖與整層比對，或是一人一列的整包覆寫。寫入後畫面都會重讀。
+- **`Users` 用 `ProfileVersion`**：登入與活動一直在改這張表，rowversion 會讓管理員存不了檔。只有帳號內容的寫入才遞增（`ExpectProfileVersion`，本人改信箱或密碼也算），沒有變更的登入不動；從 1 起算，沒帶版本一定不符。
+- **前端**：寫入與寫入後重讀期間停用會帶版本的動作，衝突時草稿作廢並在頁內說明，見 [版本衝突](../frontend/write-conflicts.md)。
 - 會影響別筆資料的確認（例如接手會結束別人的期間）帶被影響那筆的版本，使用者確認的才是實際被改的內容。
 
 ## 要不要鎖
@@ -67,8 +71,22 @@ return await transaction.CommitAsync(ct);
 
 - 鎖名集中在模組的 `<Module>Locks`，例如 [`AttendanceLocks`](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceLocks.cs)。多把鎖依名稱排序後才取，不會互相死結。
 - 規則要靠鎖才成立、又有不經這裡的寫入者時，對方在交易的第一步也取同一把鎖，例如 [`PunchImporter`](../../backend/src/AiNexus.Features/Office/Attendance/Imports/PunchImporter.cs)。
-- 宣告了鎖就要有並行測試，例如 [`CardConcurrencyTests`](../../backend/tests/AiNexus.IntegrationTests/Attendance/CardConcurrencyTests.cs)。
+- 宣告了鎖就要有並行測試，例如 [`CardConcurrencyTests`](../../backend/tests/AiNexus.IntegrationTests/Attendance/CardConcurrencyTests.cs)、[`AdministrativeVersionTests`](../../backend/tests/AiNexus.IntegrationTests/AccessControl/AdministrativeVersionTests.cs)。
 
-## 遷移中：`ExecuteAsync`
+現有的鎖：
 
-尚未遷移的模組仍用 callback 版：一個模組一把鎖，交易內前後各檢查一次權限（[ADR 0031](../decisions/0031-administrative-write-scoped-locks.md)）。帳號與存取控制要在交易內檢查 lockout，遷移時另行設計；其他模組遷移時逐一列出跨列規則，再決定鎖。新程式一律用 `BeginAsync`。
+| 鎖 | 保護的規則 |
+| --- | --- |
+| [`AccessControlLocks`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlLocks.cs) `Authorization` | 誰持有什麼功能（帳號、角色、群組、功能）；兩位管理員不能互相撤權 |
+| `AccessControlLocks.Navigation` | 選單的層數、同頁只出現一次 |
+| [`OrganizationLocks`](../../backend/src/AiNexus.Features/Admin/Organization/OrganizationLocks.cs) `Tree` | 單位樹的層數、循環、同層名稱、首長與成員 |
+| [`KnowledgeLocks`](../../backend/src/AiNexus.Features/Work/Knowledge/Embeddings/KnowledgeLocks.cs) `EmbeddingProfile` | 只有一個啟用中的向量模型；重建與清除互斥 |
+| [`AttendanceLocks`](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceLocks.cs) | 同一張卡的期間、匯入與卡片的關係 |
+
+## 會改變權限的寫入
+
+`AuditTarget.KeepingAccess(actor, 功能)` 宣告：寫入者要持有這個功能，變更後仍要持有。它會取 `Authorization` 鎖，開始時不持有回 403，提交前不再持有回 `Lockout` 並整筆回滾。用於角色、群組、功能與帳號，例如 [`SetUserRoles`](../../backend/src/AiNexus.Features/Admin/Identity/Management/SetUserRoles.cs)。
+
+## 一次處理多筆
+
+`AuditTarget.AuditedPerItem(動作, actor)` 用於匯入這類一批多筆的寫入：每筆各開一次交易、各記一筆稽核。單筆失敗以 `RecordItemFailureAsync` 留失敗稽核後繼續，例如 [`DirectoryProvisioning`](../../backend/src/AiNexus.Features/Admin/Identity/Provisioning/DirectoryProvisioning.cs)。

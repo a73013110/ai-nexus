@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -34,13 +34,14 @@ interface Draft {
   /** 首長單位的層級；空字串為一般單位。 */
   headRank: string;
 }
-interface Editor {
-  id: string | null;
+/** 編輯的單位與開啟時讀到的版本；新增時兩者都沒有。 */
+type Target = { id: string; rowVersion: number } | { id: null; rowVersion: null };
+type Editor = Target & {
   title: string;
   draft: Draft;
   /** 來自公文系統的單位（`gdDepNo` 有值）。 */
   imported: boolean;
-}
+};
 
 const sameDraft = (a: Draft, b: Draft) =>
   a.parentId === b.parentId &&
@@ -266,7 +267,8 @@ export class UnitDialog {
   });
 
   create(parent: UnitDto | null = null) {
-    this.show(null, parent ? `新增下層單位：${parent.name}` : '新增單位', false, {
+    const title = parent ? `新增下層單位：${parent.name}` : '新增單位';
+    this.show({ id: null, rowVersion: null }, title, false, {
       parentId: parent?.id ?? '',
       name: '',
       enabled: true,
@@ -274,17 +276,18 @@ export class UnitDialog {
     });
   }
   edit(unit: UnitDto) {
-    this.show(unit.id, `編輯單位：${unit.name}`, unit.gdDepNo != null, {
+    const target = { id: unit.id, rowVersion: unit.rowVersion };
+    this.show(target, `編輯單位：${unit.name}`, unit.gdDepNo != null, {
       parentId: unit.parentId ?? '',
       name: unit.name,
       enabled: unit.enabled,
       headRank: unit.headRank == null ? '' : String(unit.headRank),
     });
   }
-  private show(id: string | null, title: string, imported: boolean, draft: Draft) {
+  private show(target: Target, title: string, imported: boolean, draft: Draft) {
     this.error.set('');
     this.nameError.set('');
-    this.editor.set({ id, title, draft, imported });
+    this.editor.set({ ...target, title, draft, imported });
     this.opened.set(draft);
     this.dialog().nativeElement.showModal();
   }
@@ -342,14 +345,20 @@ export class UnitDialog {
     this.saving.set(true);
     this.error.set('');
     try {
-      if (editor.id) await this.api.updateUnit(editor.id, body);
+      if (editor.id)
+        await this.api.updateUnit(editor.id, { ...body, rowVersion: editor.rowVersion });
       else this.store.select(await this.api.createUnit(body));
       this.opened.set(draft);
       this.dialog().nativeElement.close();
       this.store.toast.success(editor.id ? '已儲存' : `已新增「${name}」`);
       this.store.changed();
     } catch (error) {
-      this.error.set(safeMessage(error));
+      if (isStaleWrite(error)) {
+        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
+        this.opened.set(draft);
+        this.dialog().nativeElement.close();
+        this.store.stale();
+      } else this.error.set(safeMessage(error));
     } finally {
       this.saving.set(false);
     }

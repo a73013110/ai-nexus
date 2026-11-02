@@ -10,16 +10,19 @@ namespace AiNexus.Features.Admin.Identity.Ordering;
 internal sealed class ResetUserOrder(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/order", (IRequestActor actor, ResetUserOrder handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, ct))
+        .MapDelete("/users/order", (ResetUserOrder handler, CancellationToken ct) =>
+            handler.HandleAsync(ct))
         .Audited(IdentityAudit.UserReordered)
         .WithName("ResetUserOrder");
 
-    public Task<Result> HandleAsync(Guid actor, CancellationToken ct)
-        => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, "order", token => UserOrderSnapshot.OfAsync(db, null, token)), async () =>
-        {
-            // 在 AdministrativeWrite 的交易內執行；第二次權限檢查失敗時隨交易回滾。
-            await db.Users.Where(x => x.SortOrder != null).ExecuteUpdateAsync(x => x.SetProperty(u => u.SortOrder, (int?)null), ct);
-            return Result.Success;
-        }, ct);
+    public async Task<Result> HandleAsync(CancellationToken ct)
+    {
+        var begun = await write.BeginAsync(AuditTarget.Of("order", token => UserOrderSnapshot.OfAsync(db, null, token)).Locking(AccessControlLocks.Authorization), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        await db.Users.Where(x => x.SortOrder != null).ExecuteUpdateAsync(x => x.SetProperty(u => u.SortOrder, (int?)null), ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

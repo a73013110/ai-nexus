@@ -20,6 +20,7 @@ const item = (
   extra: Partial<NavigationItemDto> = {},
 ): NavigationItemDto => ({
   id,
+  rowVersion: 1,
   parentId,
   kind,
   featureId: kind === 'page' ? id : null,
@@ -53,6 +54,8 @@ function setup() {
     toast: { success: vi.fn() },
     replace: vi.fn((next: NavigationItemDto[]) => items.set(next)),
     changed: vi.fn(),
+    stale: vi.fn(),
+    refreshing: signal(false),
     name: (entry: NavigationItemDto) => entry.name ?? entry.featureId ?? '',
     disabled: () => false,
   };
@@ -171,6 +174,16 @@ describe('NavigationEditor', () => {
     expect(store.changed).not.toHaveBeenCalled();
   });
 
+  it('keeps edit and delete off while rereading, because the versions are old until then', () => {
+    const { editor, store } = setup();
+    store.refreshing.set(true);
+    editor.openMenu(row(editor, 'wiki'), document.createElement('button'));
+    const actions = Object.fromEntries(editor.actions().map((action) => [action.id, action]));
+    expect(actions['edit'].disabled).toBe(true);
+    expect(actions['delete'].disabled).toBe(true);
+    expect(actions['up'].disabled).toBe(false);
+  });
+
   it('offers only the moves the tree allows and refuses to delete a group that is not empty', () => {
     const { editor } = setup();
     const actions = (id: string) => {
@@ -215,7 +228,7 @@ describe('NavigationEditor', () => {
     await vi.waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
     expect(api.deleteNavigationItem).not.toHaveBeenCalled();
     editor.act('delete');
-    await vi.waitFor(() => expect(api.deleteNavigationItem).toHaveBeenCalledWith('wiki'));
+    await vi.waitFor(() => expect(api.deleteNavigationItem).toHaveBeenCalledWith('wiki', 1));
     expect(ask).toHaveBeenLastCalledWith(
       expect.objectContaining({ title: '刪除外部連結？', danger: true }),
     );

@@ -25,7 +25,7 @@ public sealed class CurrentUserTests
         var writes = scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>();
         await using (var held = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct));
+            Assert.True(await writes.TryAcquireAsync(AccessControlLocks.Authorization, ct));
             (await client.GetAsync("/api/v1/me", ct).WaitAsync(TimeSpan.FromSeconds(10), ct)).EnsureSuccessStatusCode();
             (await client.GetAsync("/api/v1/me", ct).WaitAsync(TimeSpan.FromSeconds(10), ct)).EnsureSuccessStatusCode();
         }
@@ -36,7 +36,7 @@ public sealed class CurrentUserTests
         Task<HttpResponseMessage> pending;
         await using (var held = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct));
+            Assert.True(await writes.TryAcquireAsync(AccessControlLocks.Authorization, ct));
             pending = client.GetAsync("/api/v1/me", ct);
             await Task.Delay(200, ct);
             Assert.False(pending.IsCompleted);

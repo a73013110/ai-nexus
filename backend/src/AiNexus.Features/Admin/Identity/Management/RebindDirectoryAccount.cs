@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Users;
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Admin.Identity.Management;
 
 /// <summary>要改綁的 AD 短帳號（<c>sAMAccountName</c>，不含網域）。</summary>
-public sealed record DirectoryBindingRequest(string AdAccount);
+public sealed record DirectoryBindingRequest(string AdAccount, int ProfileVersion);
 
 internal sealed class DirectoryBindingRequestValidator : RequestValidator<DirectoryBindingRequest>
 {
@@ -37,24 +38,32 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrit
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, DirectoryBindingRequest request, CancellationToken ct)
     {
+        // 換掉自己的 SID 會讓自己目前的工作階段失效，交由另一位管理員處理。
+        if (id == actor) return AccessControlErrors.Lockout;
         // 目錄查詢在鎖與交易外：AD 慢或連不上時不擋住其他管理操作與登入；連不上時拋出 directory_unavailable。
         var person = await directory.FindAccountAsync(request.AdAccount.Trim(), ct);
         if (person is null) return IdentityErrors.DirectoryPersonNotFound;
         var adAccount = UserAccounts.Normalize(person.AccountName)!;
-        return await write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.IdentityUsers, id, person.Sid, token => SnapshotAsync(db, id, token)), async () =>
+
+        // SID 與帳號名不可被別人佔用是跨列規則，與登入時的綁定共用授權鎖。
+        var begun = await write.BeginAsync(new AuditTarget(id, person.Sid, token => SnapshotAsync(db, id, token)).Locking(AccessControlLocks.Authorization), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+        if (user is null) return IdentityErrors.UserNotFound;
+        if (await db.Users.AnyAsync(x => x.Id != id && x.Sid == person.Sid, ct)) return IdentityErrors.AdBindingTaken;
+        if (await db.Users.AnyAsync(x => x.Id != id && x.AdAccount == adAccount, ct)) return IdentityErrors.AccountExists;
+        db.ExpectProfileVersion(user, request.ProfileVersion);
+        if (user.Sid != person.Sid || user.AdAccount != adAccount || !user.AdEnabled)
         {
-            var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-            if (user is null) return IdentityErrors.UserNotFound;
-            if (id == actor) return AccessControlErrors.Lockout;
-            if (await db.Users.AnyAsync(x => x.Id != id && x.Sid == person.Sid, ct)) return IdentityErrors.AdBindingTaken;
-            if (await db.Users.AnyAsync(x => x.Id != id && x.AdAccount == adAccount, ct)) return IdentityErrors.AccountExists;
-            if (user.Sid == person.Sid && user.AdAccount == adAccount && user.AdEnabled) return Result.Success;
             user.Sid = person.Sid;
             user.AdAccount = adAccount;
             user.AdEnabled = true;
             user.SecurityVersion++;
-            return Result.Success;
-        }, ct);
+        }
+
+        return await transaction.CommitAsync(ct);
     }
 
     /// <summary>改綁與解除綁定共用的稽核快照（<c>admin.user_ad_bind</c>、<c>admin.user_ad_unbind</c>）：SID 記完整值，舊 SID 才查得回來。</summary>

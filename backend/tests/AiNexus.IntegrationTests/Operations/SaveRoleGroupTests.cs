@@ -18,7 +18,7 @@ public sealed class SaveRoleGroupTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         const string Group = "/api/v1/admin/groups/reviewers";
-        Task<HttpResponseMessage> Save(string[] features, Dictionary<string, string>? scopes) => admin.PutAsJsonAsync(Group, new GroupUpdateRequest("稽核查閱", true, features, Scopes: scopes));
+        async Task<HttpResponseMessage> Save(string[] features, Dictionary<string, string>? scopes) => await admin.PutAsJsonAsync(Group, new GroupUpdateRequest("稽核查閱", true, features, Scopes: scopes, RowVersion: await factory.GroupVersionAsync("reviewers")));
 
         // 有宣告範圍的功能一定要選一個它支援的；沒有宣告的不能帶；範圍只能給這次授予的功能。
         await AssertCodeAsync(await Save(["audit"], null), HttpStatusCode.BadRequest, "invalid_data_scope");
@@ -52,8 +52,8 @@ public sealed class SaveRoleGroupTests
         using var admin = await factory.SignedInAsync();
         const string Group = "/api/v1/admin/groups/leads";
         const string Records = FeatureCatalog.AttendanceRecords;
-        Task<HttpResponseMessage> Save(string[] features, Dictionary<string, string> scopes, Dictionary<string, string>? managers) =>
-            admin.PutAsJsonAsync(Group, new GroupUpdateRequest("單位主管", true, features, Scopes: scopes, ManagerScopes: managers));
+        async Task<HttpResponseMessage> Save(string[] features, Dictionary<string, string> scopes, Dictionary<string, string>? managers) =>
+            await admin.PutAsJsonAsync(Group, new GroupUpdateRequest("單位主管", true, features, Scopes: scopes, ManagerScopes: managers, RowVersion: await factory.GroupVersionAsync("leads")));
 
         // 沒宣告主管範圍的功能不能帶；帶了就要是宣告支援的值；只能給這次授予的功能。
         await AssertCodeAsync(await Save(["audit"], new() { ["audit"] = "own" }, new() { ["audit"] = "managed" }), HttpStatusCode.BadRequest, "invalid_data_scope");

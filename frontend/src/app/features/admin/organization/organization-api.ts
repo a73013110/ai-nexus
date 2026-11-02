@@ -18,8 +18,11 @@ export class OrganizationApi {
     this.api.put('/api/v1/admin/organization-units/{id}', { path: { id }, body });
   orderUnits = (body: UnitOrderRequest) =>
     this.api.put('/api/v1/admin/organization-units/order', { body });
-  deleteUnit = (id: string) =>
-    this.api.delete('/api/v1/admin/organization-units/{id}', { path: { id } });
+  deleteUnit = (id: string, rowVersion: number) =>
+    this.api.delete('/api/v1/admin/organization-units/{id}', {
+      path: { id },
+      query: { rowVersion },
+    });
   members = (id: string) =>
     this.api.get('/api/v1/admin/organization-units/{id}/members', { path: { id } });
   saveMember = (id: string, userId: string, body: UnitMemberRequest) =>

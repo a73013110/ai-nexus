@@ -133,7 +133,7 @@ public sealed class ImportDirectoryUsersTests
 
         // 已刪除的帳號保留 SID 防止接管，匯入不會悄悄復原。
         var carolId = Assert.Single(await Import(admin, FixtureAdDirectory.Carol)).UserId!.Value;
-        (await admin.DeleteAsync($"/api/v1/admin/users/{carolId}")).EnsureSuccessStatusCode();
+        (await admin.DeleteAsync($"/api/v1/admin/users/{carolId}?profileVersion={await f.ProfileVersionAsync(carolId)}")).EnsureSuccessStatusCode();
         Assert.Equal(DirectoryOutcomes.Deleted, Assert.Single(await Import(admin, FixtureAdDirectory.Carol)).Outcome);
     }
 }

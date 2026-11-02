@@ -24,7 +24,7 @@ public sealed class ModelPolicyTests
     {
         await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.ShowModelNames = false);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new([])))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new([]), RowVersion: await factory.GroupVersionAsync("workspace")))).EnsureSuccessStatusCode();
         Assert.Empty((await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "test", "model-1"))).StatusCode);
         var conversation = await CreateConversation(bob);
@@ -71,7 +71,7 @@ public sealed class ModelPolicyTests
         await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", DisplayName = "另一模型" }));
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 1 })))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 1 }), RowVersion: await factory.GroupVersionAsync("workspace")))).EnsureSuccessStatusCode();
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -107,7 +107,7 @@ public sealed class ModelPolicyTests
         await using var factory = new AppFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", Provider = "google", ProviderModelId = "not-approved", DisplayName = "另一模型" }));
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 500 })))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 500 }), RowVersion: await factory.GroupVersionAsync("workspace")))).EnsureSuccessStatusCode();
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(["test-model", "not-approved"], new Dictionary<string, long> { ["test-model"] = 2000 }))).EnsureSuccessStatusCode();
         var policy = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
         Assert.Equal("test-model", Assert.Single(policy.AllowedModelIds!));

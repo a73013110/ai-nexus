@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Platform.Auditing;
@@ -9,8 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Management;
 
-[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
-public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
+[ValidatedInHandler("Format failures return the specific codes of AccessRules, checked in the handler before the transaction.")]
+public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds, int ProfileVersion);
 
 /// <summary>整批取代使用者的角色。會稽核；若會移除執行者自己的管理員權限則拒絕。</summary>
 internal sealed class SetUserRoles(AppDbContext db, AdministrativeWrite write)
@@ -21,14 +22,23 @@ internal sealed class SetUserRoles(AppDbContext db, AdministrativeWrite write)
         .Audited(IdentityAudit.UserRoleUpdated)
         .WithName("SetUserRoles");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, UserRolesRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
+    public async Task<Result> HandleAsync(Guid actor, Guid id, UserRolesRequest request, CancellationToken ct)
     {
         if (AccessRules.Keys(request.RoleIds) is { } invalid) return invalid;
-        if (!await db.Users.AnyAsync(x => x.Id == id, ct)) return IdentityErrors.AdminResourceNotFound;
+
+        var begun = await write.BeginAsync(AuditTarget.Of(id, token => SnapshotAsync(id, token)).KeepingAccess(actor, FeatureCatalog.IdentityUsers), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (user is null) return IdentityErrors.AdminResourceNotFound;
         if (await AccessRules.ExistingAsync(db.Roles.Select(x => x.Id), request.RoleIds, ct) is { } unknown) return unknown;
+        // 角色在子表，主列的版本也要比對並升版，否則兩人同時改角色時後者會蓋掉前者。
+        db.ExpectProfileVersion(user, request.ProfileVersion);
         await ReplaceAsync(db, id, request.RoleIds, ct);
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 
     private async Task<object?> SnapshotAsync(Guid id, CancellationToken ct) => new { roleIds = await RoleIdsAsync(db, id, ct) };
 

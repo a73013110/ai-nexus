@@ -13,17 +13,23 @@ namespace AiNexus.Features.Admin.Organization;
 internal sealed class DeleteUnit(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, IRequestActor actor, DeleteUnit handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, ct))
+        .MapDelete("/{id:guid}", (Guid id, long rowVersion, DeleteUnit handler, CancellationToken ct) =>
+            handler.HandleAsync(id, rowVersion, ct))
         .Audited(OrganizationAudit.UnitDeleted)
         .WithName("DeleteOrganizationUnit");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, UnitRules.Target(db, id), async () =>
+    public async Task<Result> HandleAsync(Guid id, long rowVersion, CancellationToken ct)
     {
+        var begun = await write.BeginAsync(UnitRules.Target(db, id), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var unit = await db.Units.FindAsync([id], ct);
         if (unit is null) return OrganizationErrors.UnitNotFound;
         if (await db.Units.AnyAsync(x => x.ParentId == id, ct) || await db.UnitMembers.AnyAsync(x => x.UnitId == id, ct)) return OrganizationErrors.UnitNotEmpty;
+        db.ExpectRowVersion(unit, rowVersion);
         db.Remove(unit);
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

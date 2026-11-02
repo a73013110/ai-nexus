@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { UnitDto, UnitMemberDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { STALE_WRITE_MESSAGE, writeFailureMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { OrganizationApi } from './organization-api';
@@ -55,7 +55,9 @@ export class OrganizationStore {
   readonly membersError = this.membersRead.error;
   /** 成員重讀中（寫入後、重試）：清單淡化。 */
   readonly membersRefreshing = this.membersRead.refreshing;
-  readonly busy = signal(false);
+  private readonly writing = signal(false);
+  /** 寫入中或重讀中：重讀完之前列上的版本還是舊的，此時送出修改或刪除只會版本衝突。 */
+  readonly busy = computed(() => this.writing() || this.unitsRead.refreshing());
   /**
    * 正在寫入的對象（例：`unit:<id>`、`primary:<userId>`）：只有那個控制項轉圈，
    * 其他寫入仍由 `busy` 擋下。
@@ -91,6 +93,12 @@ export class OrganizationStore {
   }
   /** 單位已寫入（對話框）：重讀清單，成員數跟著更新。 */
   changed() {
+    this.actionError.set('');
+    this.unitsRead.reload();
+  }
+  /** 送出的版本已過期：由頁面的 Notice 說明，單位重讀成最新。 */
+  stale() {
+    this.actionError.set(STALE_WRITE_MESSAGE);
     this.unitsRead.reload();
   }
 
@@ -106,7 +114,7 @@ export class OrganizationStore {
   }
   remove(unit: UnitDto) {
     return this.run(
-      () => this.api.deleteUnit(unit.id),
+      () => this.api.deleteUnit(unit.id, unit.rowVersion),
       `已刪除「${unit.name}」`,
       () => {
         if (this.selectedId() === unit.id) this.selectedId.set(null);
@@ -146,7 +154,7 @@ export class OrganizationStore {
   private async run(write: () => Promise<unknown>, done: string, after: () => void, key: string) {
     if (this.busy()) return false;
     const alive = this.scope.guard();
-    this.busy.set(true);
+    this.writing.set(true);
     this.working.set(key || null);
     this.settling.set(null);
     this.actionError.set('');
@@ -159,13 +167,13 @@ export class OrganizationStore {
       return true;
     } catch (error) {
       if (!alive()) return false;
-      this.actionError.set(safeMessage(error));
+      this.actionError.set(writeFailureMessage(error));
       // 例如期間有人改了同一層：重讀，讓畫面回到伺服器的狀態。
       this.unitsRead.reload();
       return false;
     } finally {
       if (alive()) {
-        this.busy.set(false);
+        this.writing.set(false);
         this.working.set(null);
       }
     }

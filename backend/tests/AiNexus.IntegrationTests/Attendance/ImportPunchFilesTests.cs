@@ -186,7 +186,7 @@ public sealed class ImportPunchFilesTests
 
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(AttendanceLocks.PunchImport, ct));
             var import = session.ReimportAsync(Oct1);
             await Task.Delay(200, ct);
             Assert.False(import.IsCompleted);
@@ -210,7 +210,7 @@ public sealed class ImportPunchFilesTests
         await using (var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(ct))
         {
             // 鎖被別的程序佔住時，手動與排程都只能等，這也是跨程序的保證。
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(AttendanceLocks.PunchImport, ct));
             manual = session.ReimportAsync(Oct1);
             scheduled = session.ScanAsync();
             await Task.Delay(200, ct);
@@ -239,7 +239,7 @@ public sealed class ImportPunchFilesTests
         Task<PunchScanResult> scheduled;
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(AttendanceLocks.PunchImport, ct));
             scheduled = session.ScanAsync();
             await Task.Delay(200, ct);
             db.Add(new PunchFile { FileName = Oct1, ImportedModifiedAt = new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero), ImportedSize = info.Length });

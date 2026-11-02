@@ -14,6 +14,7 @@ import { NavigationItemDialog, wellFormedLink } from './navigation-item-dialog';
 const items: NavigationItemDto[] = [
   {
     id: 'system',
+    rowVersion: 1,
     parentId: null,
     kind: 'group',
     featureId: null,
@@ -26,6 +27,7 @@ const items: NavigationItemDto[] = [
   },
   {
     id: 'wiki',
+    rowVersion: 7,
     parentId: 'system',
     kind: 'link',
     featureId: null,
@@ -41,12 +43,13 @@ const items: NavigationItemDto[] = [
 function setup() {
   const api = {
     createNavigationItem: vi.fn(async () => undefined),
-    updateNavigationItem: vi.fn(async () => undefined),
+    updateNavigationItem: vi.fn(async (): Promise<void> => undefined),
   };
   const store = {
     items: signal(items),
     toast: { success: vi.fn() },
     changed: vi.fn(),
+    stale: vi.fn(),
     name: (item: NavigationItemDto) => item.name ?? item.featureId ?? '',
   };
   TestBed.configureTestingModule({
@@ -176,7 +179,22 @@ describe('NavigationItemDialog', () => {
       openInNewTab: true,
       icon: 'globe',
       audienceGroupIds: ['administrators'],
+      rowVersion: 7,
     });
+  });
+
+  it('drops the draft and reports on the page when someone else changed the item first', async () => {
+    const { dialog, api, store } = setup();
+    dialog.edit(items[1]);
+    dialog.update('openInNewTab', true);
+    api.updateNavigationItem.mockRejectedValueOnce(
+      new ApiError(409, 'admin_write_conflict', undefined, ''),
+    );
+    await dialog.save(new Event('submit'));
+    expect(store.stale).toHaveBeenCalled();
+    expect(store.changed).not.toHaveBeenCalled();
+    expect(dialog.error()).toBe('');
+    expect(dialog.dirty()).toBe(false);
   });
 
   it('requires a name for a group', async () => {

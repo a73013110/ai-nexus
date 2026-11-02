@@ -485,7 +485,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await page.route("**/api/v1/admin/features/chat", async (route) => {
     const body = route.request().postDataJSON();
     // 功能只剩名稱與開關；選單位置在選單頁。
-    expect(body).toEqual({ name: "AI 對話", enabled: true });
+    expect(body).toMatchObject({ name: "AI 對話", enabled: true });
     Object.assign(
       state.catalog.features.find((feature) => feature.id === "chat")!,
       body,

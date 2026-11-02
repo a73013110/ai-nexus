@@ -16,28 +16,30 @@ namespace AiNexus.Features.Admin.Mail.Messages;
 internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, AdministrativeWrite write, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/retry", (Guid id, IRequestActor actor, RetryMailMessage handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, ct))
+        .MapPost("/{id:guid}/retry", (Guid id, RetryMailMessage handler, CancellationToken ct) =>
+            handler.HandleAsync(id, ct))
         .RequireFeature(FeatureCatalog.MailMessagesResend)
         .Audited(MailAudit.MessageRetried)
         .WithName("RetryMailMessage");
 
-    public async Task<Result<MailMessageDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<MailMessageDto>> HandleAsync(Guid id, CancellationToken ct)
     {
         // 稽核只記狀態與下次嘗試時間，不記收件者與內容。
-        var target = AuditTarget.Of(FeatureCatalog.MailMessagesResend, id, async token =>
-            await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { status = x.Status, attempts = x.Attempts, nextAttemptAt = x.NextAttemptAt }).SingleOrDefaultAsync(token));
-        var outcome = await write.ExecuteAsync(actor, target, async () =>
-        {
-            var status = await db.OutboundMessages.Where(x => x.Id == id).Select(x => x.Status).SingleOrDefaultAsync(ct);
-            if (status is null) return MailErrors.MessageNotFound;
-            var now = clock.GetUtcNow();
-            // 條件式更新：寄送中被認領的信不受影響，也不會把剛結束的信改回去。
-            var updated = await db.OutboundMessages.Where(x => x.Id == id && x.Status == MailStates.Queued)
-                .ExecuteUpdateAsync(p => p.SetProperty(x => x.NextAttemptAt, now).SetProperty(x => x.UpdatedAt, now), ct);
-            return updated == 1 ? Result.Success : MailErrors.NotRetryable;
-        }, ct);
-        if (!outcome.IsSuccess) return outcome.Error;
+        var begun = await write.BeginAsync(AuditTarget.Of(id, async token =>
+            await db.OutboundMessages.AsNoTracking().Where(x => x.Id == id).Select(x => new { status = x.Status, attempts = x.Attempts, nextAttemptAt = x.NextAttemptAt }).SingleOrDefaultAsync(token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var status = await db.OutboundMessages.Where(x => x.Id == id).Select(x => x.Status).SingleOrDefaultAsync(ct);
+        if (status is null) return MailErrors.MessageNotFound;
+        var now = clock.GetUtcNow();
+        // 條件式更新：寄送中被認領的信不受影響，也不會把剛結束的信改回去。
+        var updated = await db.OutboundMessages.Where(x => x.Id == id && x.Status == MailStates.Queued)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.NextAttemptAt, now).SetProperty(x => x.UpdatedAt, now), ct);
+        if (updated != 1) return MailErrors.NotRetryable;
+
+        var committed = await transaction.CommitAsync(ct);
+        if (!committed.IsSuccess) return committed.Error;
         circuit.Resume();
         var message = await db.OutboundMessages.AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return MailMessageDto.From(message);

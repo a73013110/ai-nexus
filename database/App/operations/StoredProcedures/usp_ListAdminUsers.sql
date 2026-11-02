@@ -1,9 +1,10 @@
 
+
 -- =============================================
 -- Author:      Yikai
 -- Create date: 2026-10-20
 -- Description: 管理頁的使用者列表：未刪除的使用者每頁 100 筆、依使用者順序排列，附通知信箱、角色、近期用量、對話數與儲存空間。
---              結果集依序為：總筆數與已排序人數、本頁使用者（含在整份名單的位置）、本頁使用者的角色。
+--              結果集依序為：總筆數與已排序人數、本頁使用者（含在整份名單的位置）、本頁使用者的角色、本頁使用者的帳號版本。
 --              使用者順序與程式的 UserOrder 相同：有 SortOrder 的在前，同值依姓名、帳號（AD 帳號優先，否則本地帳號）的二進位比較（程式用 ordinal），最後依 Id。
 --              @Since 與 @DefaultAttachmentLimitBytes 由程式傳入（TimeProvider 與設定），不用資料庫時鐘。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
@@ -11,6 +12,7 @@
 -- Modify:      2026-10-24 Yikai 多回傳是否已以 SID 綁定 AD（DirectoryBound）
 -- Modify:      2026-10-25 Yikai 改依使用者順序排列，多回傳 SortOrder、Position 與已排序人數
 -- Modify:      2026-10-25 Yikai 移除 Users.Account，帳號改回傳 AD 帳號（沒有時為本地帳號）
+-- Modify:      2026-11-02 Yikai 帳號版本另成最後一個結果集，還沒換版的程式仍讀得了前三個
 -- =============================================
 CREATE   PROCEDURE [operations].[usp_ListAdminUsers]
     @Search                      NVARCHAR (120) = NULL,
@@ -99,6 +101,10 @@ BEGIN
     FROM [accesscontrol].[UserRoles] AS ur
     JOIN @page AS p ON p.Id = ur.UserId
     ORDER BY ur.UserId, ur.RoleId;
+
+    SELECT p.Id, u.ProfileVersion
+    FROM @page AS p
+    JOIN [identity].[Users] AS u ON u.Id = p.Id;
 END;
 
 GO

@@ -113,7 +113,7 @@ public sealed class UserOrderTests
         await using var factory = new AppFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         var bob = await OrganizationApi.UserIdAsync(factory, "bob");
         var carol = await OrganizationApi.UserIdAsync(factory, "carol");
-        (await admin.DeleteAsync($"{Users}/{carol}")).EnsureSuccessStatusCode();
+        (await admin.DeleteAsync($"{Users}/{carol}?profileVersion={await factory.ProfileVersionAsync(carol)}")).EnsureSuccessStatusCode();
 
         await AssertCodeAsync(await MoveAsync(admin, carol, 1), HttpStatusCode.Conflict, "user_order_stale");
         await AssertCodeAsync(await MoveAsync(admin, Guid.NewGuid(), 1), HttpStatusCode.Conflict, "user_order_stale");

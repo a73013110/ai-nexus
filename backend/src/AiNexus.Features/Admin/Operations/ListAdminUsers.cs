@@ -15,7 +15,7 @@ public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversation
 /// 使用者列與詳情共用；<paramref name="Activity"/> 只有列表回傳，詳情另有用量明細。
 /// <paramref name="Position"/> 是在整份名單（使用者順序）中的位置，從 1 起算，只有列表回傳；<paramref name="SortOrder"/> 為 null 是未排序。
 /// </summary>
-public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null,
+public sealed record AdminUserDto(Guid Id, int ProfileVersion, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null,
     string? Email = null, string? EmailSource = null, DateTimeOffset? EmailVerifiedAt = null, int? SortOrder = null, int? Position = null);
 
 /// <summary><paramref name="Sorted"/> 是整份名單中已排序的人數（不受搜尋影響）。</summary>
@@ -49,7 +49,8 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
             var counts = await results.ReadSingleAsync<CountRow>();
             var rows = await results.ReadAsync<Row>();
             var roles = (await results.ReadAsync<RoleRow>()).ToLookup(x => x.UserId, x => x.RoleId);
-            return new AdminUsersDto([.. rows.Select(x => x.ToDto([.. roles[x.Id]]))], counts.Total, offset, counts.Sorted);
+            var versions = (await results.ReadAsync<VersionRow>()).ToDictionary(x => x.Id, x => x.ProfileVersion);
+            return new AdminUsersDto([.. rows.Select(x => x.ToDto([.. roles[x.Id]], versions[x.Id]))], counts.Total, offset, counts.Sorted);
         }, cancellationToken: ct);
     }
 
@@ -61,7 +62,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
         long TotalDurationMilliseconds, int TimedRequests, int Conversations,
         long UsedBytes, long LimitBytes, long RemainingBytes, long? PersonalLimitBytes, long? GroupLimitBytes, long DefaultLimitBytes, string LimitSource)
     {
-        public AdminUserDto ToDto(IReadOnlyList<string> roleIds) => new(Id, Account, DisplayName, LastSeenAt, roleIds,
+        public AdminUserDto ToDto(IReadOnlyList<string> roleIds, int profileVersion) => new(Id, profileVersion, Account, DisplayName, LastSeenAt, roleIds,
             new(new(Requests, Completed, Failed, Cancelled, InputTokens, OutputTokens, RequestsWithUsage, TotalDurationMilliseconds, TimedRequests), Conversations),
             Enabled,
             new(AdEnabled, LocalEnabled, AdAccount, LocalAccount, HasLocalPassword, DirectoryBound),
@@ -72,4 +73,7 @@ internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReport
     private sealed record CountRow(int Total, int Sorted);
 
     private sealed record RoleRow(Guid UserId, string RoleId);
+
+    /// <summary>版本另成一個結果集：Dapper 依欄位數對應 record 的建構子，共用資料庫時在既有結果集加欄位會讓還沒換版的程式讀不了。</summary>
+    private sealed record VersionRow(Guid Id, int ProfileVersion);
 }

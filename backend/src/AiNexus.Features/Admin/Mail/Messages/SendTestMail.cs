@@ -49,19 +49,21 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
         if (!outbox.Available) return MailErrors.NotConfigured;
         var category = string.IsNullOrWhiteSpace(request.Category) ? TestMail.TestCategory : request.Category.Trim();
         if (samples.FirstOrDefault(x => x.Category == category) is not { } sample) return MailErrors.SampleNotFound;
-        // 渲染只用參數與設定、不碰資料庫，參數錯誤在進入行政寫入鎖之前就回錯誤。
+        // 渲染只用參數與設定、不碰資料庫，放在交易之前。
         var rendered = sample.Render(renderer, ListMailSamples.Context(options.Value, clock), request.Parameters ?? new Dictionary<string, string?>());
         if (!rendered.IsSuccess) return rendered.Error;
         var mail = rendered.Value;
         if (category != TestMail.TestCategory) mail = mail with { Subject = MailRenderer.Subject(SubjectPrefix + mail.Subject) };
         MailEnqueuedDto? result = null;
-        var outcome = await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.MailMessages, "test", token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), () =>
-            {
-                var enqueued = outbox.Enqueue(mail, new(request.To), new(RequestedBy: actor));
-                if (!enqueued.IsSuccess) return Task.FromResult<Result>(enqueued.Error);
-                result = new(enqueued.Value.MessageId, false);
-                return Task.FromResult(Result.Success);
-            }, ct);
-        return outcome.IsSuccess ? result! : outcome.Error;
+        var begun = await write.BeginAsync(AuditTarget.Of("test", token => MailAudit.CreatedMessageAsync(db, result?.MessageId, token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var enqueued = outbox.Enqueue(mail, new(request.To), new(RequestedBy: actor));
+        if (!enqueued.IsSuccess) return enqueued.Error;
+        result = new(enqueued.Value.MessageId, false);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? result : committed.Error;
     }
 }

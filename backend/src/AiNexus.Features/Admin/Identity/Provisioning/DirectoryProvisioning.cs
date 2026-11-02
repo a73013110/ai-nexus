@@ -34,7 +34,7 @@ public static class DirectoryPersonStates
 /// <summary>
 /// 管理員從 AD 匯入與更新使用者的共用流程：逐人「規劃 → 在稽核交易內重新規劃並寫入」。
 /// 建立、綁定與欄位同步都交給 <see cref="DirectoryAccounts"/>（與首次登入同一份規則）；每人一筆稽核、一個交易，一人失敗不影響其他人。
-/// 與登入共用帳號與存取控制的行政寫入鎖（<see cref="AdministrativeWrite"/> 內），所以交易外的規劃只供判斷要不要寫，寫入前一定在鎖內重新規劃。
+/// 與登入共用授權鎖（<see cref="AccessControlLocks.Authorization"/>），所以交易外的規劃只供判斷要不要寫，寫入前一定在鎖內重新規劃。
 /// </summary>
 internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeWrite write,
     TimeProvider clock, ILogger<DirectoryProvisioning> logger)
@@ -101,20 +101,29 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             var plan = await PlanAsync(person, includeDisabled, allowCreate, ct);
             if (!plan.Writes) return Describe(plan);
             var id = plan.User?.Id ?? Guid.NewGuid();
-            Plan? applied = null;
-            var saved = await write.ExecuteItemAsync(actor, new AuditTarget(feature, id, person.Sid, token => SnapshotAsync(id, token), id), action, async () =>
-            {
-                var fresh = await PlanAsync(person, includeDisabled, allowCreate, ct);
-                if (!fresh.Writes || fresh.Outcome != plan.Outcome || (fresh.User is not null && fresh.User.Id != id)) return IdentityErrors.DirectoryChanged;
-                var now = clock.GetUtcNow();
-                if (fresh.Outcome == DirectoryOutcomes.Create) fresh = fresh with { User = await accounts.CreateAsync(id, person.Sid, fresh.Account, Profile(person), now, ct) };
-                else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
-                applied = fresh;
-                return Result.Success;
-            }, ct);
-            return saved.IsSuccess ? Describe(applied!) : Describe(plan) with { Outcome = DirectoryOutcomes.Failed, ErrorCode = saved.Error.Code };
+            var target = new AuditTarget(id, person.Sid, token => SnapshotAsync(id, token), id).KeepingAccess(actor, feature).AuditedPerItem(action, actor);
+            var saved = await SaveAsync(target, id, person, plan, includeDisabled, allowCreate, ct);
+            if (saved.IsSuccess) return Describe(saved.Value);
+            await write.RecordItemFailureAsync(target, saved.Error, ct);
+            return Describe(plan) with { Outcome = DirectoryOutcomes.Failed, ErrorCode = saved.Error.Code };
         }
         finally { db.ChangeTracker.Clear(); }
+    }
+
+    private async Task<Result<Plan>> SaveAsync(AuditTarget target, Guid id, DirectoryPerson person, Plan plan, bool includeDisabled, bool allowCreate, CancellationToken ct)
+    {
+        var begun = await write.BeginAsync(target, ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var fresh = await PlanAsync(person, includeDisabled, allowCreate, ct);
+        if (!fresh.Writes || fresh.Outcome != plan.Outcome || (fresh.User is not null && fresh.User.Id != id)) return IdentityErrors.DirectoryChanged;
+        var now = clock.GetUtcNow();
+        if (fresh.Outcome == DirectoryOutcomes.Create) fresh = fresh with { User = await accounts.CreateAsync(id, person.Sid, fresh.Account, Profile(person), now, ct) };
+        else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? fresh : committed.Error;
     }
 
     /// <summary>沒有目錄資料可比對的使用者（目錄找不到、沒有綁定 AD、已刪除）：以平台資料回報。</summary>

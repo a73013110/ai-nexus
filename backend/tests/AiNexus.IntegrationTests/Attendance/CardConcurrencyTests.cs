@@ -117,7 +117,7 @@ public sealed class CardConcurrencyTests
     {
         var scope = session.Factory.Services.CreateAsyncScope();
         var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireNamedAsync(name, TestContext.Current.CancellationToken));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(name, TestContext.Current.CancellationToken));
         return new(async () =>
         {
             await transaction.DisposeAsync();

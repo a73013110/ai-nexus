@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { STALE_WRITE_MESSAGE, safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { endpointTable } from '@shared/ui/table-model';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
@@ -92,6 +92,11 @@ export class AdminUsersStore {
     if (first && this.table.pageIndex()) this.table.goTo(0);
     else this.readUsers();
     this.reviewsRead.reload();
+  }
+  /** 送出的版本已過期：由頁面的 Notice 說明，顯示中的使用者重讀成最新。 */
+  stale() {
+    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.changed();
   }
   /** 授權已改變：重新讀取目錄、顯示中的使用者、帳號待辦與此帳號的授權。 */
   saved(title: string, description?: string) {

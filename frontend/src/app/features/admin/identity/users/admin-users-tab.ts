@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import type { AdminUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
+import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { formatBytes, formatNumber } from '@shared/browser/format';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -141,7 +141,8 @@ export class AdminUsersTab {
         label: '刪除使用者',
         icon: 'trash',
         danger: true,
-        disabled: user.id === this.session.me()?.id,
+        // 重讀完之前列上的版本可能還是舊的。
+        disabled: user.id === this.session.me()?.id || this.store.loadingUsers(),
       },
     ];
   }
@@ -162,12 +163,14 @@ export class AdminUsersTab {
       )
         return;
       this.acting.set(user.id);
+      this.store.actionError.set('');
       try {
-        await this.api.deleteUser(user.id);
+        await this.api.deleteUser(user.id, user.profileVersion);
         this.store.changed(true);
         this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
       } catch (error) {
-        this.store.actionError.set(safeMessage(error));
+        if (isStaleWrite(error)) this.store.stale();
+        else this.store.actionError.set(safeMessage(error));
       } finally {
         this.acting.set(null);
       }

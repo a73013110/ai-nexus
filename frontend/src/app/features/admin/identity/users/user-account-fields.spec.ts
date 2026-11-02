@@ -37,7 +37,7 @@ describe('user account form', () => {
 
   it('sends only the accounts of enabled methods, the given status and never an empty password', () => {
     const draft = { ...userAccountDraft(user), localAccount: 'wang.local' };
-    expect(userAccountRequest(draft, ['member'], false)).toEqual({
+    expect(userAccountRequest(draft, ['member'], false, 4)).toEqual({
       displayName: '王小明',
       enabled: false,
       adEnabled: true,
@@ -46,6 +46,7 @@ describe('user account form', () => {
       localAccount: null,
       password: null,
       roleIds: ['member'],
+      profileVersion: 4,
     });
   });
 

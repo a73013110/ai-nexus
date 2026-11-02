@@ -126,7 +126,7 @@ public sealed partial class PunchImporter(
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         // 拿不到鎖就當這次寫入失敗：由外層記下失敗的匯入列，下一輪掃描重匯。
-        if (!await writes.TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct)) throw new TimeoutException("Timed out waiting for the punch import lock.");
+        if (!await writes.TryAcquireAsync(AttendanceLocks.PunchImport, ct)) throw new TimeoutException("Timed out waiting for the punch import lock.");
         if (attempt.Trigger == PunchImportTriggers.Scheduled)
         {
             var state = await PunchImportPlanner.States(db, attempt.FileName).SingleOrDefaultAsync(ct);
@@ -207,7 +207,7 @@ public sealed partial class PunchImporter(
         db.ChangeTracker.Clear();
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         // 只為了避開同一檔名第一次建立檔案列時的唯一鍵衝突；失敗的原因可能就是等不到鎖，等不到也照寫。
-        await writes.TryAcquireNamedAsync(AttendanceLocks.PunchImport, ct);
+        await writes.TryAcquireAsync(AttendanceLocks.PunchImport, ct);
         var file = await FileRowAsync(attempt.FileName, ct);
         var import = await RecordAsync(file, attempt, 0, message.Length > PunchImport.ErrorMessageMaxLength ? message[..PunchImport.ErrorMessageMaxLength] : message, ct);
         await transaction.CommitAsync(ct);

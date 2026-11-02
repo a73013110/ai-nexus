@@ -21,6 +21,7 @@ CREATE TABLE [identity].[Users] (
     [DirectoryVerifiedAt]  DATETIMEOFFSET (7) NULL,
     [PasswordChangedAt]    DATETIMEOFFSET (7) NULL,
     [SortOrder]            INT                NULL,
+    [ProfileVersion]       INT                CONSTRAINT [df_Users_ProfileVersion] DEFAULT ((1)) NOT NULL,
     CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [CK_Users_AttachmentLimitBytes] CHECK ([AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes]>=(0) AND [AttachmentLimitBytes]<=(1000000000000000.)),
     CONSTRAINT [ck_Users_EmailSource] CHECK ([Email] IS NULL AND [EmailSource] IS NULL AND [EmailVerifiedAt] IS NULL OR [Email] IS NOT NULL AND ([EmailSource]=N'admin' OR [EmailSource]=N'user' OR [EmailSource]=N'directory')),
@@ -151,6 +152,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'本地密�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'姓名與信箱是否由管理者維護；開啟後 AD 目錄不覆寫姓名與信箱。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'ProfileManaged';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'帳號資料的版本：管理端與本人修改帳號、角色、信箱、登入方式、AD 綁定與目錄同步時遞增；登入與活動不動它，所以不用 rowversion。前端帶回讀取時的值，不符時拒絕寫入。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'Users', @level2type = N'COLUMN', @level2name = N'ProfileVersion';
 
 
 GO

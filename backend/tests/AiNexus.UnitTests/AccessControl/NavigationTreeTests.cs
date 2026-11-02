@@ -8,9 +8,9 @@ public sealed class NavigationTreeTests
 {
     private static readonly string[] Hosts = ["intranet.example.com", "*.docs.example.com", "tools.example.com:8443"];
 
-    private static NavigationItemDto Group(string id, string? parent, int order, string name = "分群") => new(id, parent, "group", null, name, null, true, "apps", order, []);
-    private static NavigationItemDto Page(string id, string? parent, string feature, int order) => new(id, parent, "page", feature, null, null, true, null, order, []);
-    private static NavigationItemDto Link(string id, string? parent, string url, int order, params string[] audiences) => new(id, parent, "link", null, "連結", url, false, null, order, audiences);
+    private static NavigationItemDto Group(string id, string? parent, int order, string name = "分群") => new(id, 1, parent, "group", null, name, null, true, "apps", order, []);
+    private static NavigationItemDto Page(string id, string? parent, string feature, int order) => new(id, 1, parent, "page", feature, null, null, true, null, order, []);
+    private static NavigationItemDto Link(string id, string? parent, string url, int order, params string[] audiences) => new(id, 1, parent, "link", null, "連結", url, false, null, order, audiences);
     private static FeatureDto Feature(string id, string? name = null) => new(id, name ?? FeatureCatalog.Find(id)?.Name ?? id, FeatureCatalog.Find(id)?.Route ?? "", "x");
 
     private static IReadOnlyList<NavigationNodeDto> Build(IReadOnlyList<NavigationItemDto> items, IEnumerable<FeatureDto> features, params string[] groups)

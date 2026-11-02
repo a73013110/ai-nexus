@@ -47,13 +47,13 @@ public sealed class DirectorySignIn(AppDbContext db, AdministrativeWriteLock wri
     }
 
     /// <summary>
-    /// 綁定是依帳號跨 SID 進行，管理員的匯入、改綁與授權寫的也是同一批資料列與角色，所以與它們共用帳號與存取控制的行政寫入鎖（ADR 0031），並在鎖內重新比對。
+    /// 綁定是依帳號跨 SID 進行，管理員的匯入、改綁與授權寫的也是同一批資料列與角色，所以與它們共用授權鎖（<see cref="AccessControlLocks.Authorization"/>），並在鎖內重新比對。
     /// 目錄查詢在這之前就做完，持鎖時只有 SQL。
     /// </summary>
     private async Task<Result<User>> WriteAsync(string sid, string account, DirectoryProfile? profile, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        if (!await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.WriteBusy;
+        if (!await writes.TryAcquireAsync(AccessControlLocks.Authorization, ct)) return AccessControlErrors.WriteBusy;
         var match = await accounts.MatchAsync(sid, account, ct);
         if (!match.IsSuccess) return match.Error;
         var user = match.Value.Existing;

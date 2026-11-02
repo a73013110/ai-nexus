@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace AiNexus.Data.App;
 
@@ -15,8 +16,14 @@ public static class RowVersionedExtensions
 {
     /// <summary>
     /// 要求 <paramref name="entity"/> 的版本還是 <paramref name="version"/>（前端讀到的值）：SaveChanges 以它比對，不符時拋 <see cref="DbUpdateConcurrencyException"/>。
-    /// 內容完全沒變時 EF 不送 UPDATE，也就不比對；此時沒有東西會被蓋掉，所以不算衝突。
+    /// 一定會送 UPDATE：只改子表或內容完全沒變時，主列也要比對並升版，前端才看得出整筆表單變過。
     /// </summary>
     public static void ExpectRowVersion<T>(this DbContext db, T entity, long version) where T : class, IRowVersioned
-        => db.Entry(entity).Property<long>(nameof(IRowVersioned.RowVersion)).OriginalValue = version;
+    {
+        var entry = db.Entry(entity);
+        entry.Property<long>(nameof(IRowVersioned.RowVersion)).OriginalValue = version;
+        // 不能看實體狀態：版本不同時 EF 會把 rowversion 標成已修改、狀態變 Modified，但資料庫產生的欄位不會寫入，
+        // 沒有別的欄位要寫就不送 UPDATE，舊版本反而悄悄成功。所以一律把一個一般欄位標成已修改（值不變）。
+        entry.Properties.First(x => x.Metadata is { ValueGenerated: ValueGenerated.Never, IsConcurrencyToken: false } && !x.Metadata.IsPrimaryKey()).IsModified = true;
+    }
 }

@@ -34,7 +34,7 @@ public sealed class MenuNavigationTests
         // 成員有兩個評測頁時，系統管理只剩「評測與開發」這個子分群。
         await using var factory = new AppFactory(seed: PlatformGrants.QualityForMembers, administrators: ["alice"]); using var admin = await factory.SignedInAsync();
         using var member = await factory.SignedInAsync("bob");
-        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.QualityRetrieval}", new FeatureUpdateRequest(null, false, await factory.FeatureVersionAsync(FeatureCatalog.QualityRetrieval)))).EnsureSuccessStatusCode();
         var tree = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation;
         // 評測分群與系統管理都只剩這一頁，兩層分群仍照常輸出。
         var system = Assert.Single(tree, x => x.Id == BuiltInAccess.SystemNavigation);
@@ -44,7 +44,7 @@ public sealed class MenuNavigationTests
         Assert.Equal(("page", FeatureCatalog.Quality), (quality.Kind, quality.FeatureId));
 
         // 改名後的有效名稱進入選單。
-        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.Quality}", new FeatureUpdateRequest("評測", true))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/features/{FeatureCatalog.Quality}", new FeatureUpdateRequest("評測", true, await factory.FeatureVersionAsync(FeatureCatalog.Quality)))).EnsureSuccessStatusCode();
         Assert.Equal("評測", Assert.Single(Flatten((await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Navigation), x => x.Id == "system.evaluation.quality").Name);
     }
 

@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
@@ -15,20 +16,27 @@ namespace AiNexus.Features.Admin.Identity.Management;
 internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/{id:guid}/ad-binding", (Guid id, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct))
+        .MapDelete("/users/{id:guid}/ad-binding", (Guid id, int profileVersion, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, profileVersion, ct))
         .Audited(IdentityAudit.DirectoryUnbound)
         .WithName("UnbindUserDirectoryAccount");
 
-    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => RebindDirectoryAccount.SnapshotAsync(db, id, token)), async () =>
+    public async Task<Result> HandleAsync(Guid actor, Guid id, int profileVersion, CancellationToken ct)
     {
-        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-        if (user is null) return IdentityErrors.UserNotFound;
         // 換掉自己的 SID 會讓自己目前的工作階段失效，交由另一位管理員處理。
         if (id == actor) return AccessControlErrors.Lockout;
+
+        var begun = await write.BeginAsync(AuditTarget.Of(id, token => RebindDirectoryAccount.SnapshotAsync(db, id, token)).Locking(AccessControlLocks.Authorization), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+        if (user is null) return IdentityErrors.UserNotFound;
         if (!UserAccounts.DirectoryBound(user)) return IdentityErrors.AdNotBound;
+        db.ExpectProfileVersion(user, profileVersion);
         user.Sid = UserAccounts.ManagedSid(id);
         user.SecurityVersion++;
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 }

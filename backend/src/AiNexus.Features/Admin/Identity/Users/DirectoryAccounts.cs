@@ -17,7 +17,7 @@ public sealed record DirectoryMatch(User? Existing, bool Bound);
 /// <summary>
 /// AD 身分與平台使用者的對應與同步規則。首次登入（<see cref="CurrentUser"/>）、管理員匯入與「從 AD 更新」共用這一份，
 /// 三條路徑建立的帳號（AdAccount、member 角色）與同步的欄位（AD 帳號、姓名、信箱）因此一致。
-/// 呼叫端負責取帳號與存取控制的 <see cref="AdministrativeWriteLock"/>（<see cref="AdministrativeWrite"/> 內已取）、寫稽核與儲存。
+/// 呼叫端負責取 <see cref="AccessControlLocks.Authorization"/>、寫稽核與儲存。
 /// </summary>
 public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<DirectoryAccounts> logger)
 {
@@ -37,6 +37,7 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
         if (user is null) return new DirectoryMatch(null, false);
         if (UserAccounts.DirectoryBound(user)) return IdentityErrors.AdBindingConflict;
         user.Sid = sid;
+        user.ProfileVersion++;
         return new DirectoryMatch(user, true);
     }
 
@@ -91,8 +92,9 @@ public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<Directory
     }
 
     /// <summary>寫入 <see cref="ChangesAsync"/> 算出的變更；目錄信箱寫入即視為已驗證，目錄移除 <c>mail</c> 時一併清空。</summary>
-    public static void Apply(User user, IEnumerable<DirectoryChange> changes, DateTimeOffset now)
+    public static void Apply(User user, IReadOnlyCollection<DirectoryChange> changes, DateTimeOffset now)
     {
+        if (changes.Count > 0) user.ProfileVersion++;
         foreach (var change in changes)
         {
             switch (change.Field)

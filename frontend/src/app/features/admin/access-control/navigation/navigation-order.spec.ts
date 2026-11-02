@@ -21,6 +21,7 @@ const item = (
   featureId: string | null = kind === 'page' ? id : null,
 ): NavigationItemDto => ({
   id,
+  rowVersion: 1,
   parentId,
   kind,
   featureId,

@@ -90,7 +90,7 @@ public sealed class ImportUnitsTests
         var office = await CreateUnitAsync(session.Admin, "專案辦公室", before[1].Id);
         (await SaveMemberAsync(session.Admin, before[5].Id, dave, primary: true)).EnsureSuccessStatusCode();
         // 管理員在本地改了匯入的單位：下次匯入以 GD 為準。
-        (await session.Admin.PutAsJsonAsync($"{Units}/{before[3].Id}", new UnitUpdateRequest(before[1].Id, "工程處", true))).EnsureSuccessStatusCode();
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[3].Id}", new UnitUpdateRequest(before[1].Id, "工程處", true, null, await session.Factory.UnitVersionAsync(before[3].Id)))).EnsureSuccessStatusCode();
 
         gd.UpdateDepartment(2, "DEP_NAME = N'業務一部', DEP_CHIEF = 'G-CAR'");
         gd.UpdateDepartment(3, "PARENT_NO = 2");
@@ -132,7 +132,7 @@ public sealed class ImportUnitsTests
         await ImportAsync(session.Admin);
         var before = (await ListUnitsAsync(session.Admin)).ToDictionary(x => x.GdDepNo ?? 0);
         // 管理員在本地停用業務部，不想被公文系統重新啟用。
-        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "業務部", false))).EnsureSuccessStatusCode();
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "業務部", false, null, await session.Factory.UnitVersionAsync(before[2].Id)))).EnsureSuccessStatusCode();
         gd.UpdateDepartment(2, "DEP_CHIEF = 'G-BOB'");
         gd.RemoveDepartment(3);
         gd.AddDepartment(5, "新事業部", parent: 1);
@@ -172,8 +172,8 @@ public sealed class ImportUnitsTests
         Assert.True(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
 
         // 本地把董事會與總經理室設成首長單位：總公司的主管改由它們擔任，GD 的主管（常是無意義的帳號）不再同步。
-        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "董事會", true, 1))).EnsureSuccessStatusCode();
-        (await session.Admin.PutAsJsonAsync($"{Units}/{before[3].Id}", new UnitUpdateRequest(before[1].Id, "總經理室", true, 2))).EnsureSuccessStatusCode();
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[2].Id}", new UnitUpdateRequest(before[1].Id, "董事會", true, 1, await session.Factory.UnitVersionAsync(before[2].Id)))).EnsureSuccessStatusCode();
+        (await session.Admin.PutAsJsonAsync($"{Units}/{before[3].Id}", new UnitUpdateRequest(before[1].Id, "總經理室", true, 2, await session.Factory.UnitVersionAsync(before[3].Id)))).EnsureSuccessStatusCode();
         Assert.False(Assert.Single(await MembersAsync(session.Admin, before[1].Id)).IsManager);
         var (preview, _) = await ImportAsync(session.Admin);
         Assert.Empty(preview.Units);

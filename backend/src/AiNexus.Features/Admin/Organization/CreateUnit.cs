@@ -20,22 +20,25 @@ internal sealed class UnitCreateRequestValidator : RequestValidator<UnitCreateRe
 internal sealed class CreateUnit(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", (UnitCreateRequest body, IRequestActor actor, CreateUnit handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, body, ct))
+        .MapPost("", (UnitCreateRequest body, CreateUnit handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .Audited(OrganizationAudit.UnitCreated)
         .WithName("CreateOrganizationUnit");
 
-    public Task<Result<UnitDto>> HandleAsync(Guid actor, UnitCreateRequest request, CancellationToken ct)
+    public async Task<Result<UnitDto>> HandleAsync(UnitCreateRequest request, CancellationToken ct)
     {
         var unit = new Unit { Id = Guid.NewGuid(), ParentId = request.ParentId, Name = request.Name.Trim(), Enabled = request.Enabled, HeadRank = request.HeadRank };
-        return write.ExecuteAsync<UnitDto>(actor, UnitRules.Target(db, unit.Id), async () =>
-        {
-            var units = await db.Units.ToListAsync(ct);
-            unit.SortOrder = UnitRules.NextSortOrder(units, unit.ParentId);
-            if (UnitRules.Structure([.. units, unit]) is { } invalid) return invalid;
-            db.Add(unit);
-            await UnitRules.ClearLedManagersAsync(db, unit, ct);
-            return UnitDto.From(unit, 0);
-        }, ct);
+        var begun = await write.BeginAsync(UnitRules.Target(db, unit.Id), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var units = await db.Units.ToListAsync(ct);
+        unit.SortOrder = UnitRules.NextSortOrder(units, unit.ParentId);
+        if (UnitRules.Structure([.. units, unit]) is { } invalid) return invalid;
+        db.Add(unit);
+        await UnitRules.ClearLedManagersAsync(db, unit, ct);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? UnitDto.From(unit, 0) : committed.Error;
     }
 }

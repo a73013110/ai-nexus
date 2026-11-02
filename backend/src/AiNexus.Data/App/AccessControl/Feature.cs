@@ -7,9 +7,10 @@ namespace AiNexus.Data.App.AccessControl;
 /// 授權用的功能列：啟用狀態與名稱覆寫。頁面網址、預設名稱與圖示由程式的 FeatureCatalog 提供，選單位置在 <see cref="NavigationItem"/>；
 /// 內建資料列由 <c>database/App/Seed</c> 寫入。<see cref="Name"/> 為 null 代表使用目錄的預設名稱。
 /// </summary>
-public sealed class Feature
+public sealed class Feature : IRowVersioned
 {
     public string Id { get; set; } = "";
+    public long RowVersion { get; set; }
     public string? Name { get; set; }
     public bool Enabled { get; set; } = true;
 }
@@ -20,6 +21,7 @@ internal sealed class FeatureConfiguration : IEntityTypeConfiguration<Feature>
     {
         feature.ToTable("Features", "accesscontrol");
         feature.HasKey(x => x.Id);
+        feature.Property(x => x.RowVersion).IsRowVersion().HasConversion<byte[]>();
         feature.Property(x => x.Id).HasMaxLength(64);
         feature.Property(x => x.Name).HasMaxLength(120);
     }

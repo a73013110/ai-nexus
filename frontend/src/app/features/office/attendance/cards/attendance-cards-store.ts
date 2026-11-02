@@ -8,7 +8,7 @@ import type {
   CardDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
+import { STALE_WRITE_MESSAGE, isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
@@ -203,12 +203,8 @@ export class AttendanceCardsStore {
   }
 
   private failure(error: unknown): WriteOutcome<never> {
-    return errorCode(error) === 'admin_write_conflict'
-      ? {
-          saved: false,
-          error: '這筆資料剛被其他操作變更，畫面已更新，請確認後再操作。',
-          stale: true,
-        }
+    return isStaleWrite(error)
+      ? { saved: false, error: STALE_WRITE_MESSAGE, stale: true }
       : { saved: false, error: safeMessage(error) };
   }
 

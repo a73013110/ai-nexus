@@ -29,36 +29,36 @@ internal sealed class NavigationItemCreateRequestValidator : RequestValidator<Na
 internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/navigation-items", (NavigationItemCreateRequest body, IRequestActor actor, CreateNavigationItem handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, body, ct))
+        .MapPost("/navigation-items", (NavigationItemCreateRequest body, CreateNavigationItem handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .Audited(AccessControlAudit.NavigationCreated)
         .WithName("CreateNavigationItem");
 
-    public async Task<Result<NavigationItemDto>> HandleAsync(Guid actor, NavigationItemCreateRequest request, CancellationToken ct)
+    public async Task<Result<NavigationItemDto>> HandleAsync(NavigationItemCreateRequest request, CancellationToken ct)
     {
         var id = Guid.NewGuid().ToString("N");
         var audiences = request.AudienceGroupIds ?? [];
-        var outcome = await write.ExecuteAsync(actor, NavigationRules.Target(db, id), async () =>
+        var begun = await write.BeginAsync(NavigationRules.Target(db, id), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
+        var items = await db.NavigationItems.ToListAsync(ct);
+        var last = items.Where(x => x.ParentId == request.ParentId).Select(x => (int?)x.SortOrder).Max();
+        var item = new NavigationItem
         {
-            if (await NavigationRules.ContentAsync(db, request, settings.Value.NavigationLinkHosts, ct) is { } content) return content;
-            var items = await db.NavigationItems.ToListAsync(ct);
-            var last = items.Where(x => x.ParentId == request.ParentId).Select(x => (int?)x.SortOrder).Max();
-            var item = new NavigationItem
-            {
-                Id = id,
-                ParentId = request.ParentId,
-                Kind = request.Kind,
-                // 排到最後；同層已排到上限時與最後一個同值，再依 Id 排，不因此拒絕新增。
-                SortOrder = Math.Min((last ?? 0) + NavigationRules.SortStep, NavigationRules.MaxSortOrder),
-            };
-            NavigationRules.Apply(item, request);
-            if (NavigationRules.Structure([.. items, item]) is { } invalid) return invalid;
-            db.Add(item);
-            await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
-            return Result.Success;
-        }, ct);
-        if (!outcome.IsSuccess) return outcome.Error;
-        var created = await db.NavigationItems.AsNoTracking().SingleAsync(x => x.Id == id, ct);
-        return NavigationItemDto.From(created, [.. audiences.Order(StringComparer.Ordinal)]);
+            Id = id,
+            ParentId = request.ParentId,
+            Kind = request.Kind,
+            // 排到最後；同層已排到上限時與最後一個同值，再依 Id 排，不因此拒絕新增。
+            SortOrder = Math.Min((last ?? 0) + NavigationRules.SortStep, NavigationRules.MaxSortOrder),
+        };
+        NavigationRules.Apply(item, request);
+        if (NavigationRules.Structure([.. items, item]) is { } invalid) return invalid;
+        db.Add(item);
+        await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? NavigationItemDto.From(item, [.. audiences.Order(StringComparer.Ordinal)]) : committed.Error;
     }
 }

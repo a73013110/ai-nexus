@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Data.App.AccessControl;
 
-public sealed class RoleGroup
+public sealed class RoleGroup : IRowVersioned
 {
     public string Id { get; set; } = "";
+    public long RowVersion { get; set; }
     public string Name { get; set; } = "";
     public bool Enabled { get; set; } = true;
 }
@@ -16,6 +17,7 @@ internal sealed class RoleGroupConfiguration : IEntityTypeConfiguration<RoleGrou
     {
         group.ToTable("RoleGroups", "accesscontrol");
         group.HasKey(x => x.Id);
+        group.Property(x => x.RowVersion).IsRowVersion().HasConversion<byte[]>();
         group.Property(x => x.Id).HasMaxLength(64);
         group.Property(x => x.Name).HasMaxLength(120);
     }

@@ -14,7 +14,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Management;
 
-public sealed record UserAccountRequest(string DisplayName, bool Enabled, bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, IReadOnlyList<string> RoleIds, string? Password = null);
+/// <summary><c>ProfileVersion</c> 是修改時讀到的版本；新增時不帶。</summary>
+public sealed record UserAccountRequest(string DisplayName, bool Enabled, bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, IReadOnlyList<string> RoleIds, string? Password = null, int? ProfileVersion = null);
 
 public sealed record CreatedUserDto(Guid Id);
 
@@ -52,8 +53,8 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite wr
         .WithName("SaveAdminUser");
 
     public static void MapDelete(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/{id:guid}", (Guid id, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) =>
-            handler.DeleteAsync(user.Id, id, ct))
+        .MapDelete("/users/{id:guid}", (Guid id, int profileVersion, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) =>
+            handler.DeleteAsync(user.Id, id, profileVersion, ct))
         .Audited(IdentityAudit.UserDeleted)
         .WithName("DeleteAdminUser");
 
@@ -70,55 +71,70 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite wr
         if (noLoginMethod || missingAccount) return IdentityErrors.InvalidLoginMethods;
         if (request.Password is { Length: > 0 } candidate && !Argon2Passwords.IsAcceptable(candidate))
             return IdentityErrors.InvalidPassword;
+        var currentMethod = http.HttpContext?.User.FindFirst(SessionIdentity.Method)?.Value ?? "ad";
+        var disablesSelf = !request.Enabled
+            || (currentMethod == "local" && !request.LocalEnabled)
+            || (currentMethod != "local" && !request.AdEnabled);
+        if (id == actor && disablesSelf) return AccessControlErrors.Lockout;
+        // 雜湊刻意很慢，放在交易之前。
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
         var key = id ?? Guid.NewGuid();
-        return await write.ExecuteAsync<Guid>(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, key, token => SnapshotAsync(key, token)), async () =>
+
+        var begun = await write.BeginAsync(Target(actor, key), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var user = id is null ? new User { Id = key, Sid = UserAccounts.ManagedSid(key), ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
+            await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
+        if (user is null) return IdentityErrors.UserNotFound;
+        if (request.LocalEnabled && hash is null && user.PasswordHash is null)
+            return IdentityErrors.LocalPasswordRequired;
+        if (await db.Users.AnyAsync(x => x.Id != key && ((local != null && x.LocalAccount == local) || (ad != null && x.AdAccount == ad)), ct))
+            return IdentityErrors.AccountExists;
+        // 已以 SID 綁定 AD 的使用者，AD 帳號名跟著目錄（改名用「改綁」）；只改大小寫不算改名。
+        if (ad is not null && UserAccounts.DirectoryBound(user) && !UserAccounts.Same(user.AdAccount, ad))
+            return IdentityErrors.AdBindingImmutable;
+        var validRoles = await db.Roles.CountAsync(x => request.RoleIds.Contains(x.Id), ct);
+        if (validRoles != request.RoleIds.Count) return IdentityErrors.InvalidRoles;
+        if (id is null)
         {
-            var user = id is null ? new User { Id = key, Sid = UserAccounts.ManagedSid(key), ProfileManaged = true, LastSeenAt = clock.GetUtcNow() } :
-                await db.Users.SingleOrDefaultAsync(x => x.Id == key && x.DeletedAt == null, ct);
-            if (user is null) return IdentityErrors.UserNotFound;
-            if (request.LocalEnabled && hash is null && user.PasswordHash is null)
-                return IdentityErrors.LocalPasswordRequired;
-            var currentMethod = http.HttpContext?.User.FindFirst(SessionIdentity.Method)?.Value ?? "ad";
-            var disablesSelf = !request.Enabled
-                || (currentMethod == "local" && !request.LocalEnabled)
-                || (currentMethod != "local" && !request.AdEnabled);
-            if (key == actor && disablesSelf) return AccessControlErrors.Lockout;
-            if (await db.Users.AnyAsync(x => x.Id != key && ((local != null && x.LocalAccount == local) || (ad != null && x.AdAccount == ad)), ct))
-                return IdentityErrors.AccountExists;
-            // 已以 SID 綁定 AD 的使用者，AD 帳號名跟著目錄（改名用「改綁」）；只改大小寫不算改名。
-            if (ad is not null && UserAccounts.DirectoryBound(user) && !UserAccounts.Same(user.AdAccount, ad))
-                return IdentityErrors.AdBindingImmutable;
-            var validRoles = await db.Roles.CountAsync(x => request.RoleIds.Contains(x.Id), ct);
-            if (validRoles != request.RoleIds.Count) return IdentityErrors.InvalidRoles;
-            if (id is null)
-            {
-                db.Users.Add(user);
-                await NewUserOrder.AppendAsync(db, user, ct);
-            }
-            var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
-            var credentialsChanged = !UserAccounts.Same(user.AdAccount, ad) || !UserAccounts.Same(user.LocalAccount, local) || hash is not null;
-            if (flagsChanged || credentialsChanged) user.SecurityVersion++;
-            if (user.Enabled && !request.Enabled && id is not null) events.Raise(new UserDisabled(key, actor));
-            user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
-            user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
-            user.AdAccount = ad; user.LocalAccount = local;
-            if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
-            await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
-            return key;
-        }, ct);
+            db.Users.Add(user);
+            await NewUserOrder.AppendAsync(db, user, ct);
+        }
+        else db.ExpectProfileVersion(user, request.ProfileVersion ?? 0);
+        var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
+        var credentialsChanged = !UserAccounts.Same(user.AdAccount, ad) || !UserAccounts.Same(user.LocalAccount, local) || hash is not null;
+        if (flagsChanged || credentialsChanged) user.SecurityVersion++;
+        if (user.Enabled && !request.Enabled && id is not null) events.Raise(new UserDisabled(key, actor));
+        user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
+        user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
+        user.AdAccount = ad; user.LocalAccount = local;
+        if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
+        await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? key : committed.Error;
     }
 
-    public Task<Result> DeleteAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => SnapshotAsync(id, token)), async () =>
-        {
-            var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-            if (user is null) return IdentityErrors.UserNotFound;
-            if (user.Enabled) events.Raise(new UserDisabled(id, actor));
-            user.DeletedAt = clock.GetUtcNow(); user.Enabled = false; user.AdEnabled = false; user.LocalEnabled = false;
-            user.PasswordHash = null; user.SecurityVersion++;
-            // 只做軟刪除並保留 SID、帳號名與關聯資料：帳號名不會被重新註冊接管，歷史資料也不會連帶遺失。
-            return Result.Success;
-        }, ct);
+    public async Task<Result> DeleteAsync(Guid actor, Guid id, int profileVersion, CancellationToken ct)
+    {
+        var begun = await write.BeginAsync(Target(actor, id), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+        if (user is null) return IdentityErrors.UserNotFound;
+        db.ExpectProfileVersion(user, profileVersion);
+        if (user.Enabled) events.Raise(new UserDisabled(id, actor));
+        user.DeletedAt = clock.GetUtcNow(); user.Enabled = false; user.AdEnabled = false; user.LocalEnabled = false;
+        user.PasswordHash = null; user.SecurityVersion++;
+        // 只做軟刪除並保留 SID、帳號名與關聯資料：帳號名不會被重新註冊接管，歷史資料也不會連帶遺失。
+
+        return await transaction.CommitAsync(ct);
+    }
+
+    private AuditTarget Target(Guid actor, Guid id)
+        => AuditTarget.Of(id, token => SnapshotAsync(id, token)).KeepingAccess(actor, FeatureCatalog.IdentityUsers);
 
     /// <summary>建立、編輯與刪除帳號共用的稽核快照（<c>admin.user</c>、<c>admin.user_delete</c>）。</summary>
     private async Task<object?> SnapshotAsync(Guid id, CancellationToken ct)

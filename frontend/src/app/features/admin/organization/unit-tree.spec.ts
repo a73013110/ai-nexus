@@ -4,6 +4,7 @@ import { headsOf, heightOf, moved, subtree, unitNodes, unitRows } from './unit-t
 
 const unit = (id: string, parentId: string | null, sortOrder: number, enabled = true): UnitDto => ({
   id,
+  rowVersion: 1,
   parentId,
   name: id,
   enabled,

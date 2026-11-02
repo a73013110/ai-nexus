@@ -76,7 +76,7 @@ internal static class AssignmentRules
     /// </summary>
     public static AuditTarget Target(AppDbContext db, Guid id, Guid? cardId)
     {
-        var target = AuditTarget.Of(FeatureCatalog.AttendanceCardsMaintain, id, ct => SnapshotAsync(db, cardId, ct));
+        var target = AuditTarget.Of(id, ct => SnapshotAsync(db, cardId, ct));
         return cardId is { } card ? target.Locking(AttendanceLocks.Card(card)) : target;
     }
 

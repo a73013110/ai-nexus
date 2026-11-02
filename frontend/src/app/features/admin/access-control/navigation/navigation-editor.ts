@@ -13,7 +13,7 @@ import {
 import { GripVertical } from 'lucide';
 import { catalogFeature } from '@core/api/catalog';
 import type { NavigationItemDto, NavigationOrderItem } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { featureIcon, type NavigationKind } from '@core/layout/navigation-tree';
 import { ThemeService } from '@core/preferences/theme-service';
 import { edgeScrollSpeed, flipRows, layoutBox, settleMotion } from '@shared/browser/reorder-motion';
@@ -170,6 +170,8 @@ export class NavigationEditor {
   readonly actions = computed<MenuAction[]>(() => {
     const row = this.chosen();
     if (!row) return [];
+    // 排序不帶版本；編輯與刪除要等重讀完，才拿得到寫入後的版本。
+    const versionPending = this.store.refreshing();
     const busy = this.saving(),
       items = this.store.items(),
       id = row.item.id;
@@ -179,7 +181,7 @@ export class NavigationEditor {
     const above = this.previousGroup(row);
     const group = row.item.kind === 'group';
     return [
-      { id: 'edit', label: '編輯…', icon: 'edit', disabled: busy },
+      { id: 'edit', label: '編輯…', icon: 'edit', disabled: busy || versionPending },
       { id: 'up', label: '上移', icon: 'arrow', disabled: busy || row.index === 0 },
       { id: 'down', label: '下移', icon: 'down', disabled: busy || row.index === row.count - 1 },
       { id: 'first', label: '移到同層最前', icon: 'chevron-up', disabled: busy || row.index === 0 },
@@ -217,7 +219,7 @@ export class NavigationEditor {
         label: group && row.children ? '刪除（請先清空分群）' : '刪除',
         icon: 'trash',
         danger: true,
-        disabled: busy || (group && row.children > 0),
+        disabled: busy || versionPending || (group && row.children > 0),
       },
     ];
   });
@@ -354,13 +356,14 @@ export class NavigationEditor {
     this.deleting.set(row.item.id);
     this.store.actionError.set('');
     try {
-      await this.api.deleteNavigationItem(row.item.id);
+      await this.api.deleteNavigationItem(row.item.id, row.item.rowVersion);
       this.store.replace(this.store.items().filter((item) => item.id !== row.item.id));
       this.announcement.set(`已刪除${label}：${row.name}`);
       this.store.toast.success(`已刪除${label}`, '側欄選單已更新。');
       this.store.changed();
     } catch (error) {
-      this.store.actionError.set(safeMessage(error));
+      if (isStaleWrite(error)) this.store.stale();
+      else this.store.actionError.set(safeMessage(error));
     } finally {
       this.saving.set(false);
       this.deleting.set(null);

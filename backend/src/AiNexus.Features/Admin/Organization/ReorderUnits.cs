@@ -25,18 +25,23 @@ internal sealed class UnitOrderRequestValidator : RequestValidator<UnitOrderRequ
 internal sealed class ReorderUnits(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/order", (UnitOrderRequest body, IRequestActor actor, ReorderUnits handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, body, ct))
+        .MapPut("/order", (UnitOrderRequest body, ReorderUnits handler, CancellationToken ct) =>
+            handler.HandleAsync(body, ct))
         .Audited(OrganizationAudit.UnitReordered)
         .WithName("ReorderOrganizationUnits");
 
-    public Task<Result> HandleAsync(Guid actor, UnitOrderRequest request, CancellationToken ct) => write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.Organization, request.ParentId, request.ParentId?.ToString() ?? "root", token => SnapshotAsync(request.ParentId, token)), async () =>
+    public async Task<Result> HandleAsync(UnitOrderRequest request, CancellationToken ct)
     {
+        var begun = await write.BeginAsync(new AuditTarget(request.ParentId, request.ParentId?.ToString() ?? "root", token => SnapshotAsync(request.ParentId, token)).Locking(OrganizationLocks.Tree), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         var siblings = await db.Units.Where(x => x.ParentId == request.ParentId).ToListAsync(ct);
         if (siblings.Count != request.UnitIds.Count || siblings.Any(x => !request.UnitIds.Contains(x.Id))) return OrganizationErrors.OrderStale;
         for (var i = 0; i < request.UnitIds.Count; i++) siblings.Single(x => x.Id == request.UnitIds[i]).SortOrder = (i + 1) * UnitRules.SortStep;
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 
     private async Task<object?> SnapshotAsync(Guid? parentId, CancellationToken ct) => new
     {

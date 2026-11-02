@@ -9,32 +9,32 @@ namespace AiNexus.IntegrationTests.AccessControl;
 
 public sealed class AdministrativeWriteLockTests
 {
+    private const string First = "test:first", Second = "test:second";
     private static readonly TimeSpan Limit = TimeSpan.FromSeconds(30);
 
     [Fact]
-    public async Task WritesInDifferentModulesDoNotWaitForEachOther()
+    public async Task WritesThatDeclareDifferentLocksDoNotWaitForEachOther()
     {
         await using var session = await Session.CreateAsync();
-        await using var held = await session.HoldAsync(FeatureCatalog.Organization);
+        await using var held = await session.HoldAsync(First);
 
-        // 前一筆還卡在 mutation：如果兩個模組共用一把鎖，這裡會等到逾時。
-        var other = await session.WriteAsync(FeatureCatalog.MailMessagesResend).WaitAsync(Limit, TestContext.Current.CancellationToken);
+        // 前一筆還卡在交易內：如果共用一把鎖，這裡會等到逾時。
+        var other = await session.WriteAsync(Second).WaitAsync(Limit, TestContext.Current.CancellationToken);
+        var unlocked = await session.WriteAsync(null).WaitAsync(Limit, TestContext.Current.CancellationToken);
 
         Assert.True(other.IsSuccess);
+        Assert.True(unlocked.IsSuccess);
         Assert.True((await held.FinishAsync()).IsSuccess);
     }
 
-    [Theory]
-    [InlineData(FeatureCatalog.Organization, FeatureCatalog.OrganizationImport)]
-    // 帳號與角色都會改變權限，不同模組也要排隊，否則互相撤權會雙雙通過 lockout 檢查。
-    [InlineData(FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles)]
-    public async Task WritesInTheSameScopeRunOneAtATime(string first, string second)
+    [Fact]
+    public async Task WritesThatDeclareTheSameLockRunOneAtATime()
     {
         await using var session = await Session.CreateAsync();
-        await using var held = await session.HoldAsync(first);
+        await using var held = await session.HoldAsync(First);
         var entered = new TaskCompletionSource();
 
-        var next = session.WriteAsync(second, entered);
+        var next = session.WriteAsync(First, entered);
         await Task.Delay(200, TestContext.Current.CancellationToken);
         Assert.False(entered.Task.IsCompleted);
 
@@ -47,10 +47,10 @@ public sealed class AdministrativeWriteLockTests
     public async Task WaitingPastTheTimeoutFailsWithoutRunningTheMutation()
     {
         await using var session = await Session.CreateAsync(services => services.PostConfigure<AccessControlOptions>(x => x.WriteLockTimeoutSeconds = 1));
-        await using var held = await session.HoldAsync(FeatureCatalog.Organization);
+        await using var held = await session.HoldAsync(First);
         var entered = new TaskCompletionSource();
 
-        var late = await session.WriteAsync(FeatureCatalog.Organization, entered).WaitAsync(Limit, TestContext.Current.CancellationToken);
+        var late = await session.WriteAsync(First, entered).WaitAsync(Limit, TestContext.Current.CancellationToken);
 
         Assert.Equal(AccessControlErrors.WriteBusy, late.Error);
         Assert.False(entered.Task.IsCompleted);
@@ -63,11 +63,27 @@ public sealed class AdministrativeWriteLockTests
         await using var session = await Session.CreateAsync();
         var rejected = AccessControlErrors.AdminResourceNotFound;
 
-        var outcome = await session.WriteAsync(FeatureCatalog.Organization, mutation: () => Task.FromResult<Result>(rejected));
-        var next = await session.WriteAsync(FeatureCatalog.Organization).WaitAsync(Limit, TestContext.Current.CancellationToken);
+        var outcome = await session.WriteAsync(First, mutation: () => Task.FromResult<Result>(rejected));
+        var next = await session.WriteAsync(First).WaitAsync(Limit, TestContext.Current.CancellationToken);
 
         Assert.Equal(rejected, outcome.Error);
         Assert.True(next.IsSuccess);
+    }
+
+    // 兩把鎖的宣告順序相反也不能互等成死結：都依名稱排序後才取。
+    [Fact]
+    public async Task LocksAreTakenInNameOrderWhateverTheDeclaredOrder()
+    {
+        await using var session = await Session.CreateAsync();
+        await using var scope = session.Factory.Services.CreateAsyncScope();
+        var write = scope.ServiceProvider.GetRequiredService<AdministrativeWrite>();
+        var target = AuditTarget.Of("test", _ => Task.FromResult<object?>(null)).Locking(Second, First);
+
+        var begun = await write.BeginAsync(target, TestContext.Current.CancellationToken);
+        await using var transaction = begun.Value!;
+
+        Assert.Equal([Second, First], target.Locks);
+        Assert.True((await transaction.CommitAsync(TestContext.Current.CancellationToken)).IsSuccess);
     }
 
     // 鎖外的寫入（登入、匯入）仍可能撞上唯一索引：這是時機問題，要回可重送的 409，不是 500。
@@ -80,7 +96,7 @@ public sealed class AdministrativeWriteLockTests
         db.Add(new Card { CardNumber = "A001" });
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var outcome = await session.WriteAsync(FeatureCatalog.Organization, scope, () =>
+        var outcome = await Session.WriteAsync(First, scope, () =>
         {
             db.Add(new Card { CardNumber = "A002" });
             db.Add(new Card { CardNumber = "A001" });
@@ -99,7 +115,7 @@ public sealed class AdministrativeWriteLockTests
         await using var scope = session.Factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var outcome = await session.WriteAsync(FeatureCatalog.IdentityUsers, scope, async () =>
+        var outcome = await Session.WriteAsync(First, scope, async () =>
         {
             var user = await db.Users.SingleAsync(x => x.Id == session.Actor);
             // 別的連線（例如本人改密碼）先提交：交易內的讀取不持有鎖，不會擋住它。
@@ -126,21 +142,28 @@ public sealed class AdministrativeWriteLockTests
         }
 
         /// <summary>每筆寫入一個 scope（各自的連線），才是真的併行。</summary>
-        public async Task<Result> WriteAsync(string feature, TaskCompletionSource? entered = null, Func<Task<Result>>? mutation = null)
+        public async Task<Result> WriteAsync(string? name, TaskCompletionSource? entered = null, Func<Task<Result>>? mutation = null)
         {
             await using var scope = factory.Services.CreateAsyncScope();
-            return await WriteAsync(feature, scope, mutation ?? (() => { entered?.TrySetResult(); return Task.FromResult(Result.Success); }));
+            return await WriteAsync(name, scope, mutation ?? (() => { entered?.TrySetResult(); return Task.FromResult(Result.Success); }));
         }
 
-        public Task<Result> WriteAsync(string feature, AsyncServiceScope scope, Func<Task<Result>> mutation)
-            => scope.ServiceProvider.GetRequiredService<AdministrativeWrite>().ExecuteAsync(actor, AuditTarget.Of(feature, "test", _ => Task.FromResult<object?>(null)), mutation, CancellationToken.None);
+        public static async Task<Result> WriteAsync(string? name, AsyncServiceScope scope, Func<Task<Result>> mutation)
+        {
+            var target = AuditTarget.Of("test", _ => Task.FromResult<object?>(null));
+            var begun = await scope.ServiceProvider.GetRequiredService<AdministrativeWrite>().BeginAsync(name is null ? target : target.Locking(name), CancellationToken.None);
+            if (!begun.IsSuccess) return begun.Error;
+            await using var transaction = begun.Value!;
+            var outcome = await mutation();
+            return outcome.IsSuccess ? await transaction.CommitAsync(CancellationToken.None) : outcome.Error;
+        }
 
-        /// <summary>開始一筆寫入，停在 mutation 內直到 <see cref="HeldWrite.FinishAsync"/>，回傳時已持有鎖。</summary>
-        public async Task<HeldWrite> HoldAsync(string feature)
+        /// <summary>開始一筆寫入，停在交易內直到 <see cref="HeldWrite.FinishAsync"/>，回傳時已持有鎖。</summary>
+        public async Task<HeldWrite> HoldAsync(string name)
         {
             var entered = new TaskCompletionSource();
             var release = new TaskCompletionSource();
-            var running = WriteAsync(feature, mutation: async () =>
+            var running = WriteAsync(name, mutation: async () =>
             {
                 entered.TrySetResult();
                 await release.Task;

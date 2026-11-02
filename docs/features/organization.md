@@ -11,6 +11,7 @@
 - 編輯可換上層，整棵下層跟著搬、成員不變；不能移到自己或下層底下（`organization_unit_cycle`），搬過去超過 8 層也拒絕（`organization_depth_exceeded`）。
 - **停用**：保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入新成員（`organization_unit_disabled`）。不再使用的單位用停用，不刪除。
 - **刪除**：必須沒有下層單位、也沒有成員（`organization_unit_not_empty`），不級聯。
+- 看舊畫面修改或刪除單位會被拒絕（`admin_write_conflict`），畫面重讀後要再確認一次。
 
 ## 首長單位
 

@@ -19,8 +19,8 @@ public sealed class AdminUserEmailTests
     {
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var admin = f.CreateClient(); var alice = await Login(admin, "alice");
-        await AssertCodeAsync(await PutEmail(admin, alice.Id, "other@fixture.test"), HttpStatusCode.Conflict, "email_managed_by_directory");
-        await AssertCodeAsync(await PutEmail(admin, alice.Id, null), HttpStatusCode.Conflict, "email_managed_by_directory");
+        await AssertCodeAsync(await PutEmail(f, admin, alice.Id, "other@fixture.test"), HttpStatusCode.Conflict, "email_managed_by_directory");
+        await AssertCodeAsync(await PutEmail(f, admin, alice.Id, null), HttpStatusCode.Conflict, "email_managed_by_directory");
         var user = await UserAsync(f, alice.Id);
         Assert.Equal(("Alice@fixture.test", EmailSources.Directory), (user.Email, user.EmailSource));
         Assert.Equal(["email_managed_by_directory", "email_managed_by_directory"], await ResultsAsync(f, alice.Id));
@@ -33,7 +33,7 @@ public sealed class AdminUserEmailTests
         using var admin = f.CreateClient(); await Login(admin, "alice");
         using var bobClient = f.CreateClient(); var bob = await Login(bobClient, "bob");
 
-        (await PutEmail(admin, bob.Id, " Bob.Smith@Fixture.Test ")).EnsureSuccessStatusCode();
+        (await PutEmail(f, admin, bob.Id, " Bob.Smith@Fixture.Test ")).EnsureSuccessStatusCode();
         var user = await UserAsync(f, bob.Id);
         Assert.Equal(("Bob.Smith@fixture.test", EmailSources.Admin), (user.Email, user.EmailSource));
         Assert.Null(user.EmailVerifiedAt);
@@ -45,7 +45,7 @@ public sealed class AdminUserEmailTests
         var row = Assert.Single(listed.Users);
         Assert.Equal((bob.Id, "Bob.Smith@fixture.test", EmailSources.Admin, (DateTimeOffset?)null), (row.Id, row.Email, row.EmailSource, row.EmailVerifiedAt));
 
-        (await PutEmail(admin, bob.Id, "")).EnsureSuccessStatusCode();
+        (await PutEmail(f, admin, bob.Id, "")).EnsureSuccessStatusCode();
         user = await UserAsync(f, bob.Id);
         Assert.Equal((null, null), (user.Email, user.EmailSource));
         Assert.Equal(["completed", "completed"], await ResultsAsync(f, bob.Id));
@@ -69,14 +69,14 @@ public sealed class AdminUserEmailTests
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Where(x => x.Id == bob.Id).ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Email, "bob@fixture.test").SetProperty(x => x.EmailSource, EmailSources.User).SetProperty(x => x.EmailVerifiedAt, DateTimeOffset.UtcNow));
 
-        await AssertCodeAsync(await PutEmail(admin, bob.Id, "alice@fixture.test"), HttpStatusCode.Conflict, "email_in_use");
-        await AssertCodeAsync(await PutEmail(admin, bob.Id, "not an address"), HttpStatusCode.BadRequest, "email_invalid");
+        await AssertCodeAsync(await PutEmail(f, admin, bob.Id, "alice@fixture.test"), HttpStatusCode.Conflict, "email_in_use");
+        await AssertCodeAsync(await PutEmail(f, admin, bob.Id, "not an address"), HttpStatusCode.BadRequest, "email_invalid");
         // 同一地址不重設，本人的驗證保留。
-        (await PutEmail(admin, bob.Id, "BOB@fixture.test")).EnsureSuccessStatusCode();
+        (await PutEmail(f, admin, bob.Id, "BOB@fixture.test")).EnsureSuccessStatusCode();
         Assert.NotNull((await UserAsync(f, bob.Id)).EmailVerifiedAt);
         Assert.False(await NoticeExistsAsync(f));
 
-        (await PutEmail(admin, bob.Id, "robert@fixture.test")).EnsureSuccessStatusCode();
+        (await PutEmail(f, admin, bob.Id, "robert@fixture.test")).EnsureSuccessStatusCode();
         var user = await UserAsync(f, bob.Id);
         Assert.Equal(("robert@fixture.test", EmailSources.Admin), (user.Email, user.EmailSource));
         Assert.Null(user.EmailVerifiedAt);
@@ -95,13 +95,13 @@ public sealed class AdminUserEmailTests
     {
         await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
         using var bobClient = f.CreateClient(); var bob = await Login(bobClient, "bob");
-        Assert.Equal(HttpStatusCode.Forbidden, (await PutEmail(bobClient, bob.Id, "bob@fixture.test")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PutEmail(f, bobClient, bob.Id, "bob@fixture.test")).StatusCode);
         using var admin = f.CreateClient(); await Login(admin, "alice");
-        await AssertCodeAsync(await PutEmail(admin, Guid.NewGuid(), "x@fixture.test"), HttpStatusCode.NotFound, "user_not_found");
+        await AssertCodeAsync(await PutEmail(f, admin, Guid.NewGuid(), "x@fixture.test"), HttpStatusCode.NotFound, "user_not_found");
     }
 
-    private static Task<HttpResponseMessage> PutEmail(HttpClient client, Guid id, string? email)
-        => client.PutAsJsonAsync($"/api/v1/admin/users/{id}/email", new UserEmailRequest(email));
+    private static async Task<HttpResponseMessage> PutEmail(AppFactory f, HttpClient client, Guid id, string? email)
+        => await client.PutAsJsonAsync($"/api/v1/admin/users/{id}/email", new UserEmailRequest(email, await f.ProfileVersionAsync(id)));
 
     private static async Task<User> UserAsync(AppFactory f, Guid id)
     {

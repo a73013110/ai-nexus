@@ -28,26 +28,29 @@ internal sealed class UserPositionRequestValidator : RequestValidator<UserPositi
 internal sealed class MoveUser(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}/position", (Guid id, UserPositionRequest body, IRequestActor actor, MoveUser handler, CancellationToken ct) =>
-            handler.HandleAsync(actor.Id, id, body, ct))
+        .MapPut("/users/{id:guid}/position", (Guid id, UserPositionRequest body, MoveUser handler, CancellationToken ct) =>
+            handler.HandleAsync(id, body, ct))
         .Audited(IdentityAudit.UserMoved)
         .WithName("MoveUser");
 
-    public async Task<Result> HandleAsync(Guid actor, Guid id, UserPositionRequest request, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid id, UserPositionRequest request, CancellationToken ct)
     {
         // 先算一次決定稽核要記哪些人；交易內重算，結果不同（期間有人改了順序）就拒絕，不寫半套。
         var planned = await PlanAsync(id, request.Position, ct);
         if (planned is null) return IdentityErrors.UserOrderStale;
         if (planned.Count == 0) return Result.Success;
         var ids = planned.Select(x => x.Id).ToArray();
-        return await write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.IdentityUsers, id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token)), async () =>
-        {
-            var writes = await PlanAsync(id, request.Position, ct);
-            if (writes is null || !writes.SequenceEqual(planned)) return IdentityErrors.UserOrderStale;
-            var users = await db.Users.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-            foreach (var (userId, sortOrder) in writes) users[userId].SortOrder = sortOrder;
-            return Result.Success;
-        }, ct);
+
+        var begun = await write.BeginAsync(new AuditTarget(id, request.Position.ToString(CultureInfo.InvariantCulture), token => UserOrderSnapshot.OfAsync(db, ids, token)).Locking(AccessControlLocks.Authorization), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var writes = await PlanAsync(id, request.Position, ct);
+        if (writes is null || !writes.SequenceEqual(planned)) return IdentityErrors.UserOrderStale;
+        var users = await db.Users.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+        foreach (var (userId, sortOrder) in writes) users[userId].SortOrder = sortOrder;
+
+        return await transaction.CommitAsync(ct);
     }
 
     /// <summary>移動所需的寫入；使用者不存在或已刪除時為 null。</summary>

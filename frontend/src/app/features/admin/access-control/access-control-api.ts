@@ -30,6 +30,9 @@ export class AccessControlApi {
     this.api.put('/api/v1/admin/navigation-items/{id}', { path: { id }, body });
   orderNavigationItems = (body: NavigationOrderRequest) =>
     this.api.put('/api/v1/admin/navigation-items/order', { body });
-  deleteNavigationItem = (id: string) =>
-    this.api.delete('/api/v1/admin/navigation-items/{id}', { path: { id } });
+  deleteNavigationItem = (id: string, rowVersion: number) =>
+    this.api.delete('/api/v1/admin/navigation-items/{id}', {
+      path: { id },
+      query: { rowVersion },
+    });
 }

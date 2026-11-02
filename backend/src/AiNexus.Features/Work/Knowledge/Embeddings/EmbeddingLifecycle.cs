@@ -58,7 +58,7 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
     }
     /// <summary>
     /// 把向量模型的重建排入佇列；若已有進行中的重建，直接回傳它。與下方其他管理變更相同，呼叫端要在
-    /// <see cref="AdministrativeWrite"/> 內呼叫（已持有檢索管理的鎖並會稽核），這裡不儲存任何變更。
+    /// <see cref="AdministrativeWrite"/> 內呼叫（已持有 <see cref="KnowledgeLocks.EmbeddingProfile"/> 並會稽核），這裡不儲存任何變更。
     /// </summary>
     public async Task<Result<BackgroundJob>> QueueRebuildAsync(Guid actor, int id, CancellationToken ct)
     {

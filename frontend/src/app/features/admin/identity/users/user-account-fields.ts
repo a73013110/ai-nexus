@@ -37,6 +37,8 @@ export function userAccountRequest(
   draft: UserAccountDraft,
   roleIds: string[],
   enabled = true,
+  /** 修改時讀到的版本；新增時不帶。 */
+  profileVersion?: number,
 ): UserAccountRequest {
   return {
     displayName: draft.name,
@@ -47,6 +49,7 @@ export function userAccountRequest(
     localAccount: draft.localEnabled ? draft.localAccount : null,
     password: draft.password || null,
     roleIds,
+    profileVersion: profileVersion ?? null,
   };
 }
 

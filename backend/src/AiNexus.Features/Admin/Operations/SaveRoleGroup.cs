@@ -23,10 +23,11 @@ public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds =
 /// <summary>
 /// <c>Scopes</c>：功能 ID → 所有成員的資料範圍，只放目錄有宣告範圍的功能，而且每個這類功能都要有（ADR 0017）。
 /// <c>ManagerScopes</c>：功能 ID → 主管另可看的範圍，只放目錄有宣告主管範圍、而且要另外給主管的功能；不列＝不另外（ADR 0022）。
+/// <c>RowVersion</c> 是修改既有群組時讀到的版本；新增時為 null。
 /// </summary>
-[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
+[ValidatedInHandler("Format failures return the specific codes of AccessRules, checked in the handler before the transaction.")]
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null, IReadOnlyDictionary<string, string>? Scopes = null,
-    IReadOnlyDictionary<string, string>? ManagerScopes = null);
+    IReadOnlyDictionary<string, string>? ManagerScopes = null, long? RowVersion = null);
 
 /// <summary>建立或更新群組、其功能（含資料範圍）與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
 internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, ModelPolicyService policies)
@@ -37,7 +38,7 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, 
         .Audited(AccessControlAudit.GroupUpdated)
         .WithName("SaveRoleGroup");
 
-    public Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.AccessControlGroups, id, token => SnapshotAsync(id, token)), async () =>
+    public async Task<Result> HandleAsync(Guid actor, string id, GroupUpdateRequest request, CancellationToken ct)
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.FeatureKeys(request.FeatureIds) ?? AccessRules.Scopes(request.FeatureIds, request.Scopes, request.ManagerScopes)) is { } invalid) return invalid;
         if (request.Policy is { } policy)
@@ -45,9 +46,17 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, 
             if (policies.Check(new(policy.AllowedModelIds, policy.DailyTokenLimits)) is { } rejected) return rejected;
             if (policy.StoredAttachmentLimitBytes is < 0 or > FilesOptions.MaximumLimitBytes) return InferenceErrors.InvalidModelPolicy;
         }
+
+        var begun = await write.BeginAsync(AuditTarget.Of(id, token => SnapshotAsync(id, token)).KeepingAccess(actor, FeatureCatalog.AccessControlGroups), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
         if (await AccessRules.ExistingAsync(db.Features.Select(x => x.Id), request.FeatureIds, ct) is { } unknown) return unknown;
         var group = await db.RoleGroups.FindAsync([id], ct);
+        // 新增不帶版本、修改一定帶：同一個 id 剛被別人建立或刪除時，不會悄悄變成另一種操作。
+        if ((group is null) != (request.RowVersion is null)) return AccessControlErrors.WriteConflict;
         if (group is null) { group = new() { Id = id }; db.Add(group); }
+        else db.ExpectRowVersion(group, request.RowVersion!.Value);
         group.Name = request.Name.Trim(); group.Enabled = request.Enabled;
         var old = await db.RoleGroupFeatures.Where(x => x.GroupId == id).ToListAsync(ct);
         db.RemoveRange(old.Where(x => !request.FeatureIds.Contains(x.FeatureId)));
@@ -66,8 +75,9 @@ internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, 
             value.AllowedModelsJson = ModelPolicyService.SerializeAllowed(request.Policy.AllowedModelIds);
             value.DailyTokenLimitsJson = ModelPolicyService.SerializeLimits(request.Policy.DailyTokenLimits); value.StoredAttachmentLimitBytes = request.Policy.StoredAttachmentLimitBytes;
         }
-        return Result.Success;
-    }, ct);
+
+        return await transaction.CommitAsync(ct);
+    }
 
     private async Task<object?> SnapshotAsync(string id, CancellationToken ct)
     {

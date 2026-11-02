@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ApiError } from '@core/errors/safe-errors';
 import { AccessControlApi } from '../access-control-api';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { AccessControlStore } from '../access-control-store';
@@ -10,22 +11,28 @@ import { AccessEditorDialog } from './access-editor-dialog';
 
 const catalog = {
   roles: [
-    { id: 'member', name: '成員', enabled: true, groupIds: ['basic'] },
-    { id: 'reviewer', name: '審閱者', enabled: true, groupIds: ['review'] },
-    { id: 'retired', name: '退役', enabled: false, groupIds: ['admin'] },
+    { rowVersion: 5, id: 'member', name: '成員', enabled: true, groupIds: ['basic'] },
+    { rowVersion: 5, id: 'reviewer', name: '審閱者', enabled: true, groupIds: ['review'] },
+    { rowVersion: 5, id: 'retired', name: '退役', enabled: false, groupIds: ['admin'] },
   ],
   groups: [
-    { id: 'basic', name: '基本', enabled: true, featureIds: ['chat'] },
-    { id: 'review', name: '審閱', enabled: true, featureIds: ['repositories', 'off'] },
-    { id: 'admin', name: '管理', enabled: true, featureIds: ['admin'] },
+    { rowVersion: 5, id: 'basic', name: '基本', enabled: true, featureIds: ['chat'] },
+    {
+      rowVersion: 5,
+      id: 'review',
+      name: '審閱',
+      enabled: true,
+      featureIds: ['repositories', 'off'],
+    },
+    { rowVersion: 5, id: 'admin', name: '管理', enabled: true, featureIds: ['admin'] },
   ],
   features: [
-    { id: 'chat', name: '對話', enabled: true, icon: 'chat' },
-    { id: 'repositories', name: '程式庫', enabled: true, icon: 'git' },
-    { id: 'off', name: '停用功能', enabled: false, icon: 'x' },
-    { id: 'admin', name: '平台管理', enabled: true, icon: 'lock' },
-    { id: 'audit', name: '活動稽核', enabled: true, icon: 'audit' },
-    { id: 'attendance.records', name: '出勤紀錄', enabled: true, icon: 'clock' },
+    { rowVersion: 5, id: 'chat', name: '對話', enabled: true, icon: 'chat' },
+    { rowVersion: 5, id: 'repositories', name: '程式庫', enabled: true, icon: 'git' },
+    { rowVersion: 5, id: 'off', name: '停用功能', enabled: false, icon: 'x' },
+    { rowVersion: 5, id: 'admin', name: '平台管理', enabled: true, icon: 'lock' },
+    { rowVersion: 5, id: 'audit', name: '活動稽核', enabled: true, icon: 'audit' },
+    { rowVersion: 5, id: 'attendance.records', name: '出勤紀錄', enabled: true, icon: 'clock' },
   ],
   models: [],
   navigationSections: [
@@ -45,6 +52,8 @@ function setup() {
   const store = {
     catalog: signal(catalog),
     saved: vi.fn(),
+    stale: vi.fn(),
+    refreshing: signal(false),
     toast: { success: vi.fn() },
   };
   TestBed.configureTestingModule({
@@ -98,8 +107,30 @@ describe('AccessEditorDialog', () => {
       name: '成員',
       enabled: true,
       groupIds: ['basic', 'review'],
+      rowVersion: 5,
     });
     expect(store.saved).toHaveBeenCalled();
+  });
+
+  it('drops the draft and reports on the page when someone else changed the row first', async () => {
+    const { dialog, api, store } = setup();
+    dialog.open('role', role);
+    dialog.update('name', '後存的');
+    api.role.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
+    await dialog.save(new Event('submit'));
+    expect(store.stale).toHaveBeenCalled();
+    expect(store.saved).not.toHaveBeenCalled();
+    expect(dialog.editorError()).toBe('');
+    expect(dialog.dirty()).toBe(false);
+  });
+
+  it('does not open a row while the catalog is rereading, because its version may be old', () => {
+    const { dialog, store } = setup();
+    store.refreshing.set(true);
+    dialog.open('role', role);
+    expect(dialog.editor()).toBeNull();
+    dialog.open('role');
+    expect(dialog.editor()?.isNew).toBe(true);
   });
 
   it('requires an identifier and a name for new roles', async () => {
@@ -139,6 +170,7 @@ describe('AccessEditorDialog', () => {
     const feature = (id: string, route: string) =>
       ({
         id,
+        rowVersion: 5,
         name: '日誌匯出',
         route,
         enabled: true,
@@ -153,6 +185,7 @@ describe('AccessEditorDialog', () => {
     expect(api.feature).toHaveBeenCalledWith('diagnostics.logs.export', {
       name: '匯出日誌',
       enabled: true,
+      rowVersion: 5,
     });
   });
 
@@ -200,6 +233,7 @@ describe('AccessEditorDialog', () => {
       scopes: {},
       managerScopes: {},
       policy: { allowedModelIds: null, dailyTokenLimits: {}, storedAttachmentLimitBytes: 2e9 },
+      rowVersion: 5,
     });
   });
 

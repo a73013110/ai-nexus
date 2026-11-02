@@ -45,7 +45,7 @@
 
 - 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、監控的 `IMonitoringSource`、[帳號待辦](../decisions/0019-account-disable-and-departure.md#帳號待辦)的 `IAccountReviewSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring、Identity 因此不必引用上層模組。
 - 共用的識別字放在下層模組，例如功能 ID 的 `FeatureCatalog` 與 `Policies` 在 AccessControl，其他模組的管理端點直接引用。常數不產生依賴，放下層是為了不誤導讀者。
-- 管理寫入的 `AdministrativeWrite` 在 AccessControl，由呼叫端傳入 actor 與寫入對象（[`AuditTarget`](administrative-writes.md)）；快照由擁有資料的 slice 提供，AccessControl 不必認得各模組的資料形狀。
+- 管理寫入的 `AdministrativeWrite` 在 AccessControl，由呼叫端傳入寫入對象（[`AuditTarget`](administrative-writes.md)）；快照由擁有資料的 slice 提供，AccessControl 不必認得各模組的資料形狀。
 
 ## 直接呼叫或 domain event
 

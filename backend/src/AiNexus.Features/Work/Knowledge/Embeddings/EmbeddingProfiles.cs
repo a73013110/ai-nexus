@@ -16,8 +16,8 @@ public sealed class EmbeddingProfiles(AppDbContext db, IOptions<KnowledgeOptions
         var current = await db.EmbeddingProfiles.AsNoTracking().SingleOrDefaultAsync(x => x.Key == key, ct);
         if (current is not null && current.Status != "retired") return current;
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        // 「沒有 active 才直接啟用」跨多列，與啟用模型共用檢索管理的鎖；唯一索引（Key、active）是最後防線。
-        await writes.AcquireAsync(FeatureCatalog.KnowledgeRetrieval, ct);
+        // 「沒有 active 才直接啟用」跨多列，與啟用模型共用同一把鎖；唯一索引（Key、active）是最後防線。
+        await writes.AcquireAsync(KnowledgeLocks.EmbeddingProfile, ct);
         var target = await db.EmbeddingProfiles.SingleOrDefaultAsync(x => x.Key == key, ct);
         if (target is null)
         {

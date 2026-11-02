@@ -29,9 +29,9 @@ public sealed class UserAccountTests
             Assert.StartsWith($"$argon2id$v=19$m={AppFactory.PasswordCost.MemoryKiB},t={AppFactory.PasswordCost.Iterations},p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
             Assert.DoesNotContain(Password, (await db.AuditEvents.SingleAsync(x => x.Action == "identity.user.created")).DetailsJson);
         }
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount() with { DisplayName = "更新姓名", Password = "a replacement password 99!" })).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", LocalAccount() with { DisplayName = "更新姓名", Password = "a replacement password 99!" } with { ProfileVersion = await f.ProfileVersionAsync(id) })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Unauthorized, (await local.GetAsync("/api/v1/me")).StatusCode);
-        (await admin.DeleteAsync($"/api/v1/admin/users/{id}")).EnsureSuccessStatusCode();
+        (await admin.DeleteAsync($"/api/v1/admin/users/{id}?profileVersion={await f.ProfileVersionAsync(id)}")).EnsureSuccessStatusCode();
         using var check = f.Services.CreateScope(); var database = check.ServiceProvider.GetRequiredService<AppDbContext>();
         var deleted = await database.Users.SingleAsync(x => x.Id == id);
         Assert.NotNull(deleted.DeletedAt); Assert.Null(deleted.PasswordHash);
@@ -51,7 +51,7 @@ public sealed class UserAccountTests
         Assert.Equal(id, (await Login(ad, "bob")).Id);
         Assert.Equal(id, (await Login(local, "local-bob", "local")).Id);
         Assert.Equal("手動使用者", (await ad.GetFromJsonAsync<MeDto>("/api/v1/me"))!.DisplayName);
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", request with { AdEnabled = false, Password = null })).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", request with { AdEnabled = false, Password = null } with { ProfileVersion = await f.ProfileVersionAsync(id) })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Unauthorized, (await ad.GetAsync("/api/v1/me")).StatusCode);
         using var again = f.CreateClient(); await Csrf(again);
         Assert.Equal(HttpStatusCode.Forbidden, (await again.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("bob", "fixture-password"))).StatusCode);
@@ -66,8 +66,8 @@ public sealed class UserAccountTests
         using var admin = f.CreateClient(); var actor = await Login(admin, "alice");
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount() with { Password = null })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount() with { RoleIds = ["missing"] })).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await admin.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}", LocalAccount("alice") with { Enabled = false, AdEnabled = true, AdAccount = "alice", RoleIds = ["administrator"] })).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync($"/api/v1/admin/users/{actor.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PutAsJsonAsync($"/api/v1/admin/users/{actor.Id}", LocalAccount("alice") with { Enabled = false, AdEnabled = true, AdAccount = "alice", RoleIds = ["administrator"] } with { ProfileVersion = await f.ProfileVersionAsync(actor.Id) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync($"/api/v1/admin/users/{actor.Id}?profileVersion={await f.ProfileVersionAsync(actor.Id)}")).StatusCode);
         admin.DefaultRequestHeaders.Remove("X-CSRF-Token");
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/admin/users", LocalAccount())).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "檢查權限"))).StatusCode);

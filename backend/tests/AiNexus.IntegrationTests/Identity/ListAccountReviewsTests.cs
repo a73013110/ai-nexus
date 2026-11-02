@@ -29,7 +29,7 @@ public sealed class ListAccountReviewsTests
         Assert.Null(missing.Items.Single().Route);
         Assert.Empty(await ReviewCodesAsync(admin, carol));
 
-        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{dave}", new UserAccountRequest("吳大衛", false, true, false, "dave.wu", null, ["member"]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{dave}", new UserAccountRequest("吳大衛", false, true, false, "dave.wu", null, ["member"]) with { ProfileVersion = await f.ProfileVersionAsync(dave) })).EnsureSuccessStatusCode();
         Assert.Empty(await ReviewCodesAsync(admin, dave));
 
         using var member = f.CreateClient(); await Login(member, "bob");

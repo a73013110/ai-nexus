@@ -28,18 +28,21 @@ internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite wr
         .Audited(MailAudit.SettingsUpdated)
         .WithName("UpdateMailSettings");
 
-    public Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
+    public async Task<Result<MailSettingsDto>> HandleAsync(Guid actor, MailSettingsRequest request, CancellationToken ct)
     {
-        var target = AuditTarget.Of(FeatureCatalog.MailMessagesResend, "mail.settings", async token =>
-            await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(token));
-        return write.ExecuteAsync<MailSettingsDto>(actor, target, async () =>
-        {
-            var setting = await db.DeliverySettings.SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
-            if (setting is null) db.Add(setting = new DeliverySetting());
-            setting.AutoRetry = request.AutoRetry;
-            setting.UpdatedAt = clock.GetUtcNow();
-            setting.UpdatedById = actor;
-            return new MailSettingsDto(request.AutoRetry, setting.UpdatedAt);
-        }, ct);
+        // 單一設定、後寫的贏，前後值都在稽核；第一次新增撞上主鍵時回寫入衝突。
+        var begun = await write.BeginAsync(AuditTarget.Of("mail.settings", async token =>
+            await db.DeliverySettings.AsNoTracking().Where(x => x.Id == DeliverySetting.SingletonId).Select(x => new { autoRetry = x.AutoRetry }).SingleOrDefaultAsync(token)), ct);
+        if (!begun.IsSuccess) return begun.Error;
+        await using var transaction = begun.Value;
+
+        var setting = await db.DeliverySettings.SingleOrDefaultAsync(x => x.Id == DeliverySetting.SingletonId, ct);
+        if (setting is null) db.Add(setting = new DeliverySetting());
+        setting.AutoRetry = request.AutoRetry;
+        setting.UpdatedAt = clock.GetUtcNow();
+        setting.UpdatedById = actor;
+
+        var committed = await transaction.CommitAsync(ct);
+        return committed.IsSuccess ? new MailSettingsDto(request.AutoRetry, setting.UpdatedAt) : committed.Error;
     }
 }

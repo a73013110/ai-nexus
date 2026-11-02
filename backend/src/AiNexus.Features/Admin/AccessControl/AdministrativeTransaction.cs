@@ -14,26 +14,29 @@ namespace AiNexus.Features.Admin.AccessControl;
 /// </remarks>
 public sealed class AdministrativeTransaction : IAsyncDisposable
 {
+    private readonly AdministrativeWrite write;
     private readonly AppDbContext db;
     private readonly IDbContextTransaction transaction;
-    private readonly AuditTrail audit;
-    private readonly Func<CancellationToken, Task<object?>> snapshot;
-    private readonly Action released;
+    private readonly AuditTarget target;
+    private readonly object? before;
+    private readonly long startedAt;
     private bool committed;
     private bool finished;
 
-    internal AdministrativeTransaction(AppDbContext db, IDbContextTransaction transaction, AuditTrail audit, Func<CancellationToken, Task<object?>> snapshot, Action released)
+    internal AdministrativeTransaction(AdministrativeWrite write, AppDbContext db, IDbContextTransaction transaction, AuditTarget target, object? before, long startedAt)
     {
+        this.write = write;
         this.db = db;
         this.transaction = transaction;
-        this.audit = audit;
-        this.snapshot = snapshot;
-        this.released = released;
+        this.target = target;
+        this.before = before;
+        this.startedAt = startedAt;
     }
 
     /// <summary>
     /// 儲存變更、記下後值再提交；提交之後才讀得到資料庫產生的值（<c>RowVersion</c>）。只能呼叫一次。
     /// 與其他寫入撞上（版本不符、唯一索引、死結）回 <see cref="AccessControlErrors.WriteConflict"/>，不自動重試：要讓使用者看過新的資料再決定。
+    /// 宣告 <see cref="AuditTarget.KeepingAccess"/> 時，變更後執行者不再持有該功能（例如撤掉自己的角色）就回滾並回 <see cref="AccessControlErrors.Lockout"/>。
     /// </summary>
     public async Task<Result> CommitAsync(CancellationToken ct)
     {
@@ -42,7 +45,8 @@ public sealed class AdministrativeTransaction : IAsyncDisposable
         try
         {
             await db.SaveChangesAsync(ct);
-            audit.Describe(details: new { after = await snapshot(ct) });
+            if (!await write.HoldsAsync(target, ct)) return AccessControlErrors.Lockout;
+            await write.NoteAfterAsync(target, before, ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             committed = true;
@@ -65,10 +69,6 @@ public sealed class AdministrativeTransaction : IAsyncDisposable
         if (finished) return;
         finished = true;
         await transaction.DisposeAsync();
-        released();
-        if (committed) return;
-        // 交易已回滾：清掉未提交的異動，之後補寫失敗稽核時才不會一併寫入。
-        db.ChangeTracker.Clear();
-        audit.NoteRollback();
+        write.NoteFinished(target, startedAt, committed);
     }
 }
