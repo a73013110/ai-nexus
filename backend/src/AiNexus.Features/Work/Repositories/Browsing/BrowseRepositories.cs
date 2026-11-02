@@ -4,6 +4,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -45,7 +46,7 @@ internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gite
     public async Task<Result<RepositoryPageDto>> ListAsync(Guid owner, string? query, int page, CancellationToken ct)
     {
         if (!RepositoryService.IsPage(page)) return RepositoriesErrors.InvalidPage;
-        var q = (query ?? "").Trim();
+        var q = query.TrimToEmpty();
         if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidRepository;
         var read = await gitea.GetAsync(owner, $"api/v1/repos/search?q={Uri.EscapeDataString(q)}&page={page}&limit={PageSize}&sort=updated&order=desc", ct);
         if (!read.IsSuccess) return read.Error;

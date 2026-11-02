@@ -1,5 +1,6 @@
 using System.Net.Mail;
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.Identity.Users;
 
@@ -12,7 +13,7 @@ public static class UserEmails
     public static bool TryNormalize(string? input, out string address)
     {
         address = "";
-        var value = input?.Trim() ?? "";
+        var value = input.TrimToEmpty();
         if (value.Length is 0 or > EmailSources.AddressMaxLength || value.Any(c => char.IsControl(c) || char.IsWhiteSpace(c) || c is '"' or '<' or '>' or '(' or ')' or ',' or ';'))
             return false;
         if (!MailAddress.TryCreate(value, out var parsed) || parsed.Address != value || parsed.DisplayName.Length > 0) return false;

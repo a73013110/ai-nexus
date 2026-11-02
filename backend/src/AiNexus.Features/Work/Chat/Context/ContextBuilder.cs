@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -72,7 +73,7 @@ public sealed class ContextBuilder(
     {
         var composed = regenerate is Guid user
             ? await ComposeAsync(conversation, user, null, parameters, ct)
-            : await ComposeAsync(parent is null ? null : conversation, parent, WithFiles("user", prompt?.Trim() ?? "", files), parameters, ct);
+            : await ComposeAsync(parent is null ? null : conversation, parent, WithFiles("user", prompt.TrimToEmpty(), files), parameters, ct);
 
         return composed.IsSuccess ? Finish(composed.Value, parameters) : composed.Error;
     }
@@ -147,7 +148,7 @@ public sealed class ContextBuilder(
         }
 
         var added = !string.IsNullOrWhiteSpace(prompt) || files?.Count > 0
-            ? WithFiles("user", prompt?.Trim() ?? "", files ?? [])
+            ? WithFiles("user", prompt.TrimToEmpty(), files ?? [])
             : null;
 
         var composed = await ComposeAsync(parent is null ? null : conversation, parent, added, parameters, ct);

@@ -17,6 +17,9 @@ public static class TextRules
     /// <summary>選填文字的儲存形式：去掉前後空白，空白存成 null。</summary>
     public static string? TrimToNull(this string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
+    /// <summary>沒有值也要用空字串往下處理時（比對、組字串、不可為 null 的欄位）：去掉前後空白，null 變成空字串。</summary>
+    public static string TrimToEmpty(this string? text) => text?.Trim() ?? "";
+
     /// <summary>單行文字含控制字元。</summary>
     public static bool HasLineControl(this ReadOnlySpan<char> text) => text.ContainsAny(LineControls);
 

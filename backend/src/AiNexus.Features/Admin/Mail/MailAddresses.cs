@@ -2,6 +2,7 @@ using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using AiNexus.Data.App.Mail;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.Mail;
 
@@ -14,7 +15,7 @@ public static class MailAddresses
     public static bool TryNormalize(string? input, out string address)
     {
         address = "";
-        var value = input?.Trim() ?? "";
+        var value = input.TrimToEmpty();
         if (value.Length is 0 or > OutboundMessage.AddressMaxLength || value.Any(c => char.IsControl(c) || char.IsWhiteSpace(c) || c is '"' or '<' or '>' or '(' or ')' or ',' or ';'))
             return false;
         if (!MailAddress.TryCreate(value, out var parsed) || parsed.Address != value || parsed.DisplayName.Length > 0) return false;

@@ -43,6 +43,12 @@ public sealed class TextRulesTests
     [InlineData("  a b  ", "a b")]
     public void OptionalTextIsTrimmedAndBlankBecomesNull(string? value, string? expected) => Assert.Equal(expected, value.TrimToNull());
 
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("   ", "")]
+    [InlineData("  a b  ", "a b")]
+    public void TextIsTrimmedAndMissingBecomesEmpty(string? value, string expected) => Assert.Equal(expected, value.TrimToEmpty());
+
     [Fact]
     public void LineControlIsFoundOnPlainStrings()
     {

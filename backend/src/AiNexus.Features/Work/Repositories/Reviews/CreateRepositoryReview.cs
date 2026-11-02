@@ -75,7 +75,7 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
             }
         }
         if (basis == head) return RepositoriesErrors.ReviewEmptyRange;
-        var note = request.Note?.Trim() ?? "";
+        var note = request.Note.TrimToEmpty();
         // 請求指紋只涵蓋會改變結果的欄位；同一個 idempotency key 若指紋不同，就視為衝突。
         var fingerprintInput = new { repo, head, basis, request.PullRequest, request.ModelId, note, request.Purpose };
         var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(fingerprintInput)));

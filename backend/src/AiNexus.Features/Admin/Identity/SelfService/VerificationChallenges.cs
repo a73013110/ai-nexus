@@ -4,6 +4,7 @@ using System.Text;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -78,7 +79,7 @@ public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfService
         var max = options.Value.CodeAttempts;
         var now = clock.GetUtcNow();
         var rows = db.VerificationChallenges.Where(x => x.Id == id && x.ConsumedAt == null && x.RevokedAt == null && x.ExpiresAt > now && x.Attempts < max);
-        var candidate = code?.Trim() ?? "";
+        var candidate = code.TrimToEmpty();
         if (candidate.Length != 6 || !candidate.All(char.IsAsciiDigit) || !CryptographicOperations.FixedTimeEquals(Hash(id, candidate), challenge.CodeHash))
         {
             var counted = await rows.ExecuteUpdateAsync(p => p

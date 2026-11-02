@@ -24,4 +24,5 @@ request body 的格式規則、欄位規則代碼與文字規則。slice 其餘�
 | 可換行：內文、說明、備註、留言 | `RequiredContent`／`OptionalContent` | `IsContent` | 只允許換行與 Tab |
 
 - 失敗回 `required`／`too_long`／`format`。
+- 去掉前後空白：沒有值要存 null 用 `TrimToNull()`，要空字串用 `TrimToEmpty()`；驗證器已保證有值的必填欄位直接 `Trim()`。
 - 不套用：識別碼、密碼與驗證碼（只限長度，用 `MaximumLength`）、聊天提問（原樣交給模型，只限長度）、email 與網址（有自己的字元規則）。

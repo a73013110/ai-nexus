@@ -20,7 +20,7 @@ public sealed record AuditTarget(string Feature, Guid? Resource, string Key, Fun
 }
 
 /// <summary>
-/// 權限敏感的行政寫入：變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。
+/// 管理端寫入的資料稽核：變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。
 /// 快照由擁有該資料的 slice 提供（<see cref="AuditTarget"/>），執行者由呼叫端傳入，所以這裡不依賴任何上層模組。
 /// </summary>
 public sealed class AdministrativeWrite(AppDbContext db, AccessService access, AdministrativeWriteLock writes, AuditTrail audit)

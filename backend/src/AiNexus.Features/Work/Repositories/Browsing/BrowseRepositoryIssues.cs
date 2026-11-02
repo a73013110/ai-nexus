@@ -2,6 +2,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
 
@@ -45,7 +46,7 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
     public async Task<Result<RepositoryIssuePageDto>> IssuesAsync(Guid owner, string repo, string state, string? query, int page, CancellationToken ct)
     {
         if (Check(repo, state, page) is { } invalid) return invalid;
-        var q = (query ?? "").Trim();
+        var q = query.TrimToEmpty();
         if (!RepositoryService.IsSearch(q)) return RepositoriesErrors.InvalidState;
         var read = await gitea.GetListAsync(owner, RepositoryService.Route(repo) + $"/issues?state={state}&type=issues&page={page}&limit={PageSize}" +
             (q.Length > 0 ? "&q=" + Uri.EscapeDataString(q) : ""), ct);
