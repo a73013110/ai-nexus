@@ -49,7 +49,7 @@
 
 ## 讀取隔離（RCSI）
 
-資料庫開啟 `READ_COMMITTED_SNAPSHOT`：一般讀取取最後已提交版本，不等寫入。所以防併發只能靠會加鎖的做法：`Serializable`、`UPDLOCK`／`HOLDLOCK`、唯一索引、條件式 `ExecuteUpdate`，或先以無害 UPDATE 鎖擁有者列再查詢（查詢開始時才取快照）。啟動時只檢查並警告（`DatabaseSchema`）；既有庫的切換步驟與代價見 [資料庫建置與權限](../operations/database-setup.md)。
+資料庫開啟 `READ_COMMITTED_SNAPSHOT`：一般讀取取最後已提交版本，不等寫入。所以防併發只能靠會加鎖的做法：`Serializable`、`UPDLOCK`／`HOLDLOCK`、應用程式鎖（[`ApplicationLocks`](../../backend/src/AiNexus.Platform/Data/ApplicationLocks.cs)）、唯一索引、條件式 `ExecuteUpdate`，或先以無害 UPDATE 鎖擁有者列再查詢（查詢開始時才取快照）。跨列規則優先用應用程式鎖：`Serializable` 擋不住已通過檢查的對方，範圍鎖還會波及不相關的列（[ADR 0001](../decisions/0001-single-iis-in-process-locks.md)）。啟動時只檢查並警告（`DatabaseSchema`）；既有庫的切換步驟與代價見 [資料庫建置與權限](../operations/database-setup.md)。
 
 ## 手寫 SQL
 

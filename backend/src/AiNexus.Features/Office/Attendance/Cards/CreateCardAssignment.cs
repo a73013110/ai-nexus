@@ -28,7 +28,7 @@ internal sealed class CardAssignmentCreateRequestValidator : RequestValidator<Ca
 
 /// <summary>
 /// 新增持有期間（會稽核，<c>admin.attendance_assignment</c>）。規則見 <see cref="AssignmentRules.Place"/>；
-/// 檢查與寫入在 <see cref="AdministrativeWrite"/> 的 Serializable 交易與行政寫入鎖內，兩個人同時指派同一張卡時後到的會看到先到的結果，不會雙雙通過。
+/// 檢查與寫入在 <see cref="AdministrativeWrite"/> 的交易與行政寫入鎖內，兩個人同時指派同一張卡時後到的會看到先到的結果，不會雙雙通過。
 /// 被拒絕的 <c>attendance_card_held</c> 不帶目前的持有人（錯誤回應不帶資料）：前端由持有歷史得知是誰持有，提示後以 <c>TakeOver</c> 重送。
 /// </summary>
 internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeWrite write)

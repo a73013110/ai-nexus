@@ -32,6 +32,8 @@
 
 啟用需所有文件 ready 且片段覆蓋率 100%，在 serializable transaction 內將舊 active 改 retired、building 改 active。`AutoActivate=true` 會排重建並完成後自動切換，需已有管理員；預設 false。退役向量可由管理員清除，或每小時清理超過 `RetiredRetentionDays=7` 的資料；保留 profile 與原文。操作有權限檢查及稽核。這支援往後模型版本管理，不提供舊版 JSON 索引兼容。
 
+清除退役向量由 `embedding-clear` 背景工作或保留期清理分批刪除，每批 1000 筆各自提交、不持有程序內鎖；模型在途中恢復使用時停止，已刪的向量由重建補回。
+
 ## 混合排名與授權
 
 SQL 的 Authorized CTE 先限制授權 collections、ready 與非刪除文件，再計算 cosine／全文候選，向量 40、全文 40，合併取 30 供重排。RRF 為：

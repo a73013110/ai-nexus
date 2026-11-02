@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -21,11 +22,15 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 /// （檔名日期為該刷卡出勤日的前一天、當天與後一天）標記為要重匯（清掉 <c>ImportedModifiedAt</c> 與 <c>ImportedSize</c>），排程下一輪就會重匯它們，
 /// 這筆刷卡便改歸 B。標記與刪除同交易，所以不會有「已刪除但還沒標記」的瞬間，程序在中間中止也不會遺失。
 /// </para>
-/// 一次只處理一個匯入（<see cref="PunchImportGate"/>）。
+/// <para>
+/// <b>併行</b>：讀檔與解析不持鎖（來源可能是慢的網路資料夾）；寫入交易的第一步取出勤模組的 <see cref="AdministrativeWriteLock"/>，跨程序也一次一個寫入。
+/// 跨檔去重與鄰檔補救要讀寫別的檔案的列，所以不分檔案；卡號對應的管理操作共用同一把，否則正在匯入、尚未提交的刷卡看不到（RCSI），刪卡時會判斷成沒用過而把它的卡刪掉。
+/// 兩個匯入先後讀到不同版本時，較舊的內容可能較晚寫入；它記下的也是舊版本，下一輪掃描會發現與檔案不同而重匯。
+/// </para>
 /// </summary>
 public sealed partial class PunchImporter(
     AppDbContext db,
-    PunchImportGate gate,
+    AdministrativeWriteLock writes,
     IOptions<AttendanceOptions> options,
     ILogger<PunchImporter> logger,
     TimeProvider clock)
@@ -33,37 +38,22 @@ public sealed partial class PunchImporter(
     /// <summary>HR 手動重匯一個檔（區間由 <see cref="ReimportPunchFiles"/> 逐檔呼叫）：不論檔案有沒有變動都重匯。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
     public async Task<Result<PunchImport>> ReimportAsync(string fileName, Guid requestedBy, CancellationToken ct)
     {
-        await gate.Gate.WaitAsync(ct);
-        try
-        {
-            var located = await Task.Run(() => Locate(fileName), ct);
-            if (!located.IsSuccess) return located.Error;
-            return await ImportAsync(located.Value, PunchImportTriggers.Manual, requestedBy, ct);
-        }
-        finally
-        {
-            gate.Gate.Release();
-        }
+        var located = await Task.Run(() => Locate(fileName), ct);
+        if (!located.IsSuccess) return located.Error;
+        // 手動重匯不看版本，所以一定有結果。
+        return (await ImportAsync(located.Value, PunchImportTriggers.Manual, requestedBy, ct))!;
     }
 
     /// <summary>
-    /// 排程匯入：進入互斥鎖後以最新的檔案與資料庫狀態重新判斷，等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
+    /// 排程匯入：以最新的檔案與資料庫狀態判斷，取得寫入鎖後再判斷一次，等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
     /// </summary>
     public async Task<PunchImport?> ImportIfChangedAsync(string fileName, CancellationToken ct)
     {
-        await gate.Gate.WaitAsync(ct);
-        try
-        {
-            var located = await Task.Run(() => Locate(fileName), ct);
-            if (!located.IsSuccess) return null;
-            var current = await PunchImportPlanner.States(db, fileName).SingleOrDefaultAsync(ct);
-            if (!PunchImportPlanner.NeedsImport(current, located.Value, clock.GetUtcNow(), options.Value.Import)) return null;
-            return await ImportAsync(located.Value, PunchImportTriggers.Scheduled, null, ct);
-        }
-        finally
-        {
-            gate.Gate.Release();
-        }
+        var located = await Task.Run(() => Locate(fileName), ct);
+        if (!located.IsSuccess) return null;
+        var current = await PunchImportPlanner.States(db, fileName).SingleOrDefaultAsync(ct);
+        if (!PunchImportPlanner.NeedsImport(current, located.Value, clock.GetUtcNow(), options.Value.Import)) return null;
+        return await ImportAsync(located.Value, PunchImportTriggers.Scheduled, null, ct);
     }
 
     private Result<FileInfo> Locate(string fileName)
@@ -81,7 +71,7 @@ public sealed partial class PunchImporter(
         }
     }
 
-    private async Task<PunchImport> ImportAsync(FileInfo info, string trigger, Guid? requester, CancellationToken ct)
+    private async Task<PunchImport?> ImportAsync(FileInfo info, string trigger, Guid? requester, CancellationToken ct)
     {
         // 版本在讀檔之前取：讀的途中檔案又被寫入，記下的是較舊的版本，下一輪掃描會發現不同而重匯；反過來才會漏掉。
         var attempt = new Attempt(info.Name, PunchImportPlanner.ModifiedAt(info), info.Length, trigger, requester, clock.GetUtcNow());
@@ -92,7 +82,7 @@ public sealed partial class PunchImporter(
             var punches = PunchFileParser.Parse(PunchFileParser.Decode(await ReadAsync(info, ct)));
             try
             {
-                var (import, requeued) = await CommitAsync(attempt, punches, ct);
+                if (await CommitAsync(attempt, punches, ct) is not var (import, requeued)) return null;
                 LogImported(logger, trigger, import.PunchCount, import.PunchFileId);
                 if (requeued > 0) LogRequeued(logger, requeued, import.PunchFileId);
                 return import;
@@ -132,9 +122,18 @@ public sealed partial class PunchImporter(
     private static PunchFileFormatException TooLarge(int limit)
         => new(limit >= 1 << 20 ? $"檔案超過 {limit / (double)(1 << 20):0.#} MB 的上限。" : $"檔案超過 {limit / 1024} KB 的上限。");
 
-    private async Task<(PunchImport Import, int Requeued)> CommitAsync(Attempt attempt, IReadOnlyList<ParsedPunch> punches, CancellationToken ct)
+    private async Task<(PunchImport Import, int Requeued)?> CommitAsync(Attempt attempt, IReadOnlyList<ParsedPunch> punches, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // 拿不到鎖就當這次寫入失敗：由外層記下失敗的匯入列，下一輪掃描重匯。
+        if (!await writes.TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct)) throw new TimeoutException("Timed out waiting for the attendance write lock.");
+        if (attempt.Trigger == PunchImportTriggers.Scheduled)
+        {
+            var state = await PunchImportPlanner.States(db, attempt.FileName).SingleOrDefaultAsync(ct);
+            if (!PunchImportPlanner.NeedsImport(state?.File, state?.Last, attempt.ModifiedAt, attempt.Size, clock.GetUtcNow(), TimeSpan.FromSeconds(options.Value.Import.FailedRetrySeconds))) return null;
+        }
+        // 匯入紀錄以開始時間判斷哪一次是目前的內容（PunchImportQueries），所以在鎖內才定：先後一定與寫入的先後相同。
+        attempt = attempt with { StartedAt = clock.GetUtcNow() };
         var file = await FileRowAsync(attempt.FileName, ct);
 
         // 只載入新內容涵蓋的出勤日、屬於別的檔的刷卡：同一筆刷卡的出勤日必定相同，範圍之外不可能重複。
@@ -177,7 +176,7 @@ public sealed partial class PunchImporter(
 
     /// <summary>
     /// 新刷卡的卡號沒有卡片時建立（不隱藏），卡號對應頁因此是一張完整的表：已指派與待指派的卡都在裡面。
-    /// 與刷卡同一個交易，匯入失敗就一起回復。HR 剛好同時手動新增同一個卡號時唯一索引會擋下，這次匯入失敗、下一輪掃描重匯。
+    /// 與刷卡同一個交易，匯入失敗就一起回復。
     /// </summary>
     private async Task RegisterCardsAsync(List<Punch> added, CancellationToken ct)
     {
@@ -207,6 +206,8 @@ public sealed partial class PunchImporter(
         // 失敗的交易留下的追蹤狀態不能再用。
         db.ChangeTracker.Clear();
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // 只為了避開同一檔名第一次建立檔案列時的唯一鍵衝突；失敗的原因可能就是等不到鎖，等不到也照寫。
+        await writes.TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct);
         var file = await FileRowAsync(attempt.FileName, ct);
         var import = await RecordAsync(file, attempt, 0, message.Length > PunchImport.ErrorMessageMaxLength ? message[..PunchImport.ErrorMessageMaxLength] : message, ct);
         await transaction.CommitAsync(ct);

@@ -23,6 +23,16 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
     }
 
+    /// <summary>
+    /// 鎖住這些檔案的擁有者，順序固定。要解除引用的呼叫端在改文件之前先呼叫：
+    /// 其他路徑都是先鎖擁有者再改文件（如 <see cref="RemovePrivateReadersAsync"/>），反過來會互等成死結；協作者的刪除也才不會與對方鎖成環。
+    /// </summary>
+    public async Task LockOwnersAsync(IReadOnlyCollection<Guid> files, CancellationToken ct)
+    {
+        var owners = await db.Attachments.Where(x => files.Contains(x.Id)).Select(x => x.OwnerId).Distinct().Order().ToListAsync(ct);
+        foreach (var owner in owners) await quota.LockOwnerAsync(owner, ct);
+    }
+
     /// <summary>擁有者的獨立文件（讀取器），包含已刪除的。</summary>
     public IQueryable<Guid> PrivateReaders(Guid owner) => readers.All.Where(x => x.OwnerId == owner).Select(x => x.Id);
 

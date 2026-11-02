@@ -15,10 +15,13 @@
 
 ## 它做了什麼
 
-取得行政寫入鎖，開 Serializable 交易，檢查權限並讀前值，執行變更並 `SaveChanges`，再檢查一次權限並讀後值，最後提交。
+開交易並取得行政寫入鎖，檢查權限並讀前值，執行變更並 `SaveChanges`，再檢查一次權限並讀後值，最後提交（原因見 [ADR 0031](../decisions/0031-administrative-write-scoped-locks.md)）。
 
 - 操作者變更後失去該功能（例如撤掉自己的角色）時回滾並回 lockout。
-- 這把鎖由所有模組共用，同時只有一筆寫入能進行：耗時的操作放在 mutation 外面，使用者端的高頻寫入不用它。
+- 鎖的範圍由 `AuditTarget.Feature` 的模組決定，不用另外宣告：同模組排隊，不同模組互不等待；帳號與存取控制共用一把。
+- 等到逾時回 503 `admin_write_busy`，所以耗時的操作放在 mutation 外面，使用者端的高頻寫入不用它。
+- 與鎖外的寫入撞上（唯一索引、並行控制欄位、死結）時回滾並回 409 `admin_write_conflict`，不會自動重試。
+- 規則要靠鎖才成立、又有不經這裡的寫入者時，對方在交易的第一步也取同一把鎖（`AdministrativeWriteLock`），例如 [`PunchImporter`](../../backend/src/AiNexus.Features/Office/Attendance/Imports/PunchImporter.cs)、[`DirectorySignIn`](../../backend/src/AiNexus.Features/Admin/Identity/Authentication/DirectorySignIn.cs)。
 
 ## 怎麼寫
 

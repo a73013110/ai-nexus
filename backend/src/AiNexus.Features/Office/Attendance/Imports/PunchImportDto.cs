@@ -30,7 +30,7 @@ internal static class PunchImportQueries
 {
     /// <summary>
     /// 匯入紀錄連同檔名與操作者姓名；排程的匯入沒有操作者，所以使用者是 left join。
-    /// 同一個檔的匯入由 <see cref="PunchImportGate"/> 串行，開始時間的先後就是寫入的先後。
+    /// 匯入的開始時間在寫入鎖內才定（<see cref="PunchImporter"/>），先後就是寫入的先後。
     /// </summary>
     public static IQueryable<PunchImportDto> ToDtos(this IQueryable<PunchImport> imports, AppDbContext db)
         => from i in imports

@@ -22,7 +22,7 @@ public sealed class AccessControlModule : IFeatureModule
         services.AddScoped<AccessView>();
         services.AddScoped<AdministrativeWrite>();
         services.AddAccountReviewSource<RoleHolderAccountReview>();
-        services.AddSingleton<AdministrativeWriteLock>();
+        services.AddScoped<AdministrativeWriteLock>();
         // 每個可授予的功能都有標準 policy，新增功能只要宣告在 FeatureCatalog；any-of policy 由需要的模組自行註冊。
         foreach (var feature in FeatureCatalog.Grants) services.AddFeaturePolicy(Policies.Prefix + feature.Id, feature.Id);
         services.AddFeaturePolicy(Policies.AccessCatalog, FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles,

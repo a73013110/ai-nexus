@@ -13,7 +13,7 @@ namespace AiNexus.Features.Work.Files;
 /// 檔案模組（Files）對其他模組的契約：上傳、擁有者查詢、配額鎖定與讀取儲存位元組。
 /// 儲存的檔案若遺失或與記錄不符，屬於基礎設施錯誤，會直接拋出例外。
 /// </summary>
-public sealed class AttachmentService(DocumentExtractor extractor, IOptions<FilesOptions> options, AttachmentWriteLock writes, AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
+public sealed class AttachmentService(DocumentExtractor extractor, IOptions<FilesOptions> options, AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), NeedsOcr(file) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
 
@@ -44,17 +44,14 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<File
         // 只回收此擁有者的過期草稿，它們不應計入下方的配額檢查；其他人的草稿交給清理 Worker。
         await lifecycle.ReclaimAsync(ct, owner);
         var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Size = bytes.Length, ExtractedText = text, StorageState = AttachmentStates.Pending, CreatedAt = clock.GetUtcNow() };
-        await writes.Gate.WaitAsync(ct);
-        try
+        await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var reserved = await quota.ReserveAsync(owner, bytes.Length, ct);
             if (!reserved.IsSuccess) return reserved.Error;
             db.Attachments.Add(attachment);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
         try
         {
             await storage.WriteAsync(attachment.StorageKey, bytes, ct);

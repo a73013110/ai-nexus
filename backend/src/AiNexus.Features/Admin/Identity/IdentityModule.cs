@@ -67,7 +67,6 @@ public sealed class IdentityModule : IFeatureModule
             http.ClientAddress()?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = LoginsPerAddressPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
             .AddPerUserLimit(DirectoryReadRateLimit, 60).AddPerUserLimit(DirectoryPersonRateLimit, 180).AddPerUserLimit(DirectoryWriteRateLimit, 20));
-        services.AddSingleton<IdentityWriteLock>();
         services.AddSingleton<LoginThrottle>();
         services.AddSingleton<DirectoryProfileCache>();
         services.AddSingleton<IDirectoryProfileLookup, WindowsDirectoryProfiles>();

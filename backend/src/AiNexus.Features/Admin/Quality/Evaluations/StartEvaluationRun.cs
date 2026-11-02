@@ -43,7 +43,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
-internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPolicyService policy,
+internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, ContainerLock containers, JobService jobs, ModelCatalog models, ModelPolicyService policy,
     IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -66,6 +66,7 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
         using (await writes.AcquireAsync(setId, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            if (!await containers.TryStartWorkAsync(setId, ct)) return CollaborationErrors.ResourceBusy;
             var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
             if (!allowed.IsSuccess) return allowed.Error;
             var resource = allowed.Value;

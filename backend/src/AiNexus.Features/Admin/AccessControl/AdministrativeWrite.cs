@@ -1,8 +1,11 @@
 using AiNexus.Data.App;
 using System.Data;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.AccessControl;
 
@@ -26,8 +29,9 @@ public sealed record AuditTarget(string Feature, Guid? Resource, string Key, Fun
 public sealed class AdministrativeWrite(AppDbContext db, AccessService access, AdministrativeWriteLock writes, AuditTrail audit)
 {
     /// <summary>
-    /// 在行政寫入鎖與 Serializable 交易內執行變更，並於交易內前後各檢一次 <see cref="AuditTarget.Feature"/> 權限（不採用請求開始時的授權快取）。
+    /// 在交易與 <see cref="AdministrativeWriteLock"/> 內執行變更，並於交易內前後各檢一次 <see cref="AuditTarget.Feature"/> 權限（不採用請求開始時的授權快取）。
     /// 變更後執行者不再持有該功能（例如撤掉自己的角色）時回滾並回 lockout。稽核寫進這個請求（端點宣告的動作），失敗由請求稽核記下錯誤代碼與 <c>before</c>。
+    /// 等不到鎖回 <see cref="AccessControlErrors.WriteBusy"/>；與鎖外的寫入撞上時回 <see cref="AccessControlErrors.WriteConflict"/>。
     /// </summary>
     public Task<Result> ExecuteAsync(Guid actor, AuditTarget target, Func<Task<Result>> mutation, CancellationToken ct)
         => RunAsync(actor, target, item: null, mutation, ct);
@@ -52,22 +56,21 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
 
     private async Task<Result> RunAsync(Guid actor, AuditTarget target, AuditAction? item, Func<Task<Result>> mutation, CancellationToken ct)
     {
-        await writes.Gate.WaitAsync(ct);
         object? before = null;
-        try
-        {
-            Error? failure;
-            try { failure = await CommitAsync(); }
-            catch (ExternalServiceException error) { await FailAsync(error.Error.Code); throw; }
-            if (failure is null) return Result.Success;
-            await FailAsync(failure.Code);
-            return failure;
-        }
-        finally { writes.Gate.Release(); }
+        Error? failure;
+        try { failure = await CommitAsync(); }
+        catch (ExternalServiceException error) { await FailAsync(error.Error.Code); throw; }
+        catch (Exception error) when (IsWriteConflict(error)) { failure = AccessControlErrors.WriteConflict; }
+        if (failure is null) return Result.Success;
+        await FailAsync(failure.Code);
+        return failure;
 
         async Task<Error?> CommitAsync()
         {
-            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            // 同範圍的寫入已由鎖排隊，不需要 Serializable：它的範圍鎖會讓不同範圍的寫入在共同讀取的權限表上互等甚至死結。
+            // 隔離等級明確寫出：連線池重用的連線可能帶著別的交易留下的等級。
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+            if (!await writes.TryAcquireAsync(target.Feature, ct)) return AccessControlErrors.WriteBusy;
             // 兩次權限檢查都在交易內讀 SQL，不信任請求一開始授權時的快取結果。
             access.Invalidate();
             if (!await access.HoldsAsync(actor, target.Feature, ct)) return AccessControlErrors.FeatureForbidden;
@@ -96,6 +99,12 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
         }
     }
 
+    // 鎖只排隊行政寫入；本機登入、本人改資料等鎖外的寫入仍可能撞上同一列，由唯一索引、並行控制欄位或死結偵測擋下。
+    // 這是時機問題、不是程式錯誤，重送就會成功，所以回 409 而不是 500。mutation 可能改過閉包內的狀態，這裡不自動重試。
+    private static bool IsWriteConflict(Exception error) => error is DbUpdateConcurrencyException
+        || (error as DbUpdateException)?.InnerException is SqlException { Number: 2601 or 2627 or 1205 }
+        || error is SqlException { Number: 1205 };
+
     // 變更可能繞過追蹤（ExecuteUpdate、procedure）：查到追蹤中的實體會得到舊值，稽核卻不會報錯。
     // 所以快照一律不追蹤，不只靠每個 slice 記得寫 AsNoTracking。
     private async Task<object?> SnapshotAsync(AuditTarget target, CancellationToken ct)
@@ -108,7 +117,25 @@ public sealed class AdministrativeWrite(AppDbContext db, AccessService access, A
 }
 
 /// <summary>
-/// 行政變更的串行化鎖。目前部署為單一 IIS 執行個體，程序內的 semaphore 即足夠；
-/// 若改為多執行個體，這把鎖會失效，需改用資料庫層級的鎖。
+/// 行政寫入的序列化範圍：預設一個模組一把，因為模組內的規則常跨多列（整棵單位樹、整份選單、同一張卡的所有期間）；不同模組互不等待。
+/// 用資料庫鎖而不是程序內鎖，本機與 IIS 共用資料庫時一樣有效。必須是交易的第一個動作，說明見 <see cref="ApplicationLocks"/>。
 /// </summary>
-public sealed class AdministrativeWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
+public sealed class AdministrativeWriteLock(AppDbContext db, IOptions<AccessControlOptions> options)
+{
+    /// <summary>取得 <paramref name="feature"/> 所屬範圍的鎖，持有到目前的交易結束；等到逾時回 <c>false</c>。</summary>
+    public Task<bool> TryAcquireAsync(string feature, CancellationToken ct) => db.Database.TryAcquireApplicationLockAsync(
+        $"administrative-write:{ScopeOf(feature)}", TimeSpan.FromSeconds(options.Value.WriteLockTimeoutSeconds), ct);
+
+    /// <summary>同上，等到逾時拋 <see cref="AccessControlErrors.WriteBusy"/>：給不回傳 <see cref="Result"/> 的路徑（背景工作、回傳實體的服務）。</summary>
+    public async Task AcquireAsync(string feature, CancellationToken ct)
+    {
+        if (!await TryAcquireAsync(feature, ct)) throw new ExternalServiceException(AccessControlErrors.WriteBusy);
+    }
+
+    private static string ScopeOf(string feature) => FeatureCatalog.Find(feature)?.Module.Id switch
+    {
+        // 帳號與角色都會改變「誰持有什麼功能」。分開鎖時，兩位管理員可以互相撤權，並都在對方提交前通過 lockout 檢查。
+        "identity" or "access-control" => "authorization",
+        var module => module ?? feature,
+    };
+}

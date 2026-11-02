@@ -36,13 +36,14 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<DocumentAccess>();
         services.AddScoped<IPrivateReaders, PrivateReaders>();
         services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
-        services.AddSingleton<KnowledgeWriteLock>();
+        services.AddScoped<DocumentWriteLock>();
         services.AddScoped<EmbeddingProfiles>();
         services.AddScoped<EmbeddingVectorStore>();
         services.AddScoped<DocumentIndexer>();
         services.AddScoped<EmbeddingLifecycle>();
         services.AddScoped<RetrievalModelProbe>();
         services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind);
+        services.AddBackgroundJobHandler<EmbeddingClearHandler>(EmbeddingClearHandler.JobKind);
         services.AddHostedService<EmbeddingBootstrapWorker>();
         services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
         services.AddScoped<KnowledgeRetrieval>();

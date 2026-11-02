@@ -135,4 +135,44 @@ describe('SortableRows', () => {
     type('99');
     expect(host.moves).toEqual([{ id: 'a', index: 3 }]);
   });
+
+  describe('the click a browser sends after a drag', () => {
+    function drag(name: string) {
+      const { element, handle, live } = setup();
+      const row = element.querySelector<HTMLElement>('tbody tr')!;
+      const clicks: unknown[] = [];
+      row.addEventListener('click', (event) => clicks.push(event));
+      handle(name).dispatchEvent(
+        new PointerEvent('pointerdown', { button: 0, pointerId: 1, bubbles: true }),
+      );
+      return { row, clicks, live };
+    }
+    const release = () => window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+    const click = (row: HTMLElement) =>
+      row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    it('does not click the row when released after Escape cancelled the drag', () => {
+      const { row, clicks, live } = drag('周雅婷');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(live()).toBe('已取消移動');
+      release();
+      click(row);
+      expect(clicks).toEqual([]);
+    });
+
+    it('does not click the row when dropped', () => {
+      const { row, clicks } = drag('周雅婷');
+      release();
+      click(row);
+      expect(clicks).toEqual([]);
+    });
+
+    it('leaves later clicks alone', async () => {
+      const { row, clicks } = drag('周雅婷');
+      release();
+      await new Promise((resolve) => setTimeout(resolve));
+      click(row);
+      expect(clicks).toHaveLength(1);
+    });
+  });
 });

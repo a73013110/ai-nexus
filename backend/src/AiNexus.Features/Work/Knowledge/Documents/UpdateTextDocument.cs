@@ -1,3 +1,4 @@
+using AiNexus.Features.Work.Collaboration;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Work.Files;
@@ -17,7 +18,7 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// 取代使用者可編輯的純文字來源內容並重新索引。編輯需附上所依據的版本號；若已有更新的儲存版本，
 /// 或來源仍在處理中，即為衝突。
 /// </summary>
-internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentQuota quota, JobService jobs, TimeProvider clock)
+internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, DocumentWriteLock writes, ContainerLock containers, AttachmentQuota quota, JobService jobs, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/text", (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
@@ -36,31 +37,29 @@ internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documen
         var upload = await TextDocuments.UploadAsync(attachments, actor, source, ct);
         if (!upload.IsSuccess) return upload.Error;
         var uploaded = upload.Value;
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await quota.LockOwnerAsync(actor, ct);
-            var current = await documents.FindAsync(actor, id, ct, write: true);
-            if (!current.IsSuccess) return current.Error;
-            var document = current.Value;
-            await db.Entry(document).ReloadAsync(ct);
-            if (document.IsDeleted || document.TextContent is null || request.ExpectedVersion != document.TextVersion) return KnowledgeErrors.TextVersionChanged;
-            if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) return KnowledgeErrors.DocumentProcessing;
-            document.TextContent = source.Text; document.TextVersion++; document.FileName = source.Title + ".txt";
-            document.AttachmentId = uploaded.Id; document.Status = "queued"; document.PageCount = 0; document.ChunkCount = 0;
-            document.Warning = null;
-            await db.ResourceAttachments.Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
-            db.Add(new ResourceAttachment { ResourceId = id, AttachmentId = uploaded.Id });
-            await db.Attachments.Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            await db.DocumentPages.Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            var resource = await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
-            resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
-            document.JobId = jobs.Enqueue(actor, id, id, DocumentIngestHandler.JobKind, document.FileName).Id;
-            try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return KnowledgeErrors.TextVersionChanged; }
-            await transaction.CommitAsync(ct);
-            return await documents.DetailAsync(actor, id, ct);
-        }
-        finally { writes.Gate.Release(); }
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // 專案內的文件重新匯入算是專案的進行中工作。
+        if (await db.Resources.Where(x => x.Id == id).Select(x => x.ParentId).SingleOrDefaultAsync(ct) is Guid container && !await containers.TryStartWorkAsync(container, ct)) return CollaborationErrors.ResourceBusy;
+        if (!await writes.TryAcquireForDocumentAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        await quota.LockOwnerAsync(actor, ct);
+        var current = await documents.FindAsync(actor, id, ct, write: true);
+        if (!current.IsSuccess) return current.Error;
+        var document = current.Value;
+        await db.Entry(document).ReloadAsync(ct);
+        if (document.IsDeleted || document.TextContent is null || request.ExpectedVersion != document.TextVersion) return KnowledgeErrors.TextVersionChanged;
+        if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) return KnowledgeErrors.DocumentProcessing;
+        document.TextContent = source.Text; document.TextVersion++; document.FileName = source.Title + ".txt";
+        document.AttachmentId = uploaded.Id; document.Status = "queued"; document.PageCount = 0; document.ChunkCount = 0;
+        document.Warning = null;
+        await db.ResourceAttachments.Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
+        db.Add(new ResourceAttachment { ResourceId = id, AttachmentId = uploaded.Id });
+        await db.Attachments.Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
+        await db.DocumentPages.Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
+        var resource = await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
+        resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
+        document.JobId = jobs.Enqueue(actor, id, id, DocumentIngestHandler.JobKind, document.FileName).Id;
+        try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return KnowledgeErrors.TextVersionChanged; }
+        await transaction.CommitAsync(ct);
+        return await documents.DetailAsync(actor, id, ct);
     }
 }

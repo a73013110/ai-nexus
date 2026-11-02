@@ -1,4 +1,5 @@
 import { motionDuration } from './motion-tokens';
+import { swallowClick } from './swallow-click';
 
 /** 按下後移動多少距離才算拖曳，讓把手上的點擊仍然有效。 */
 const SLOP = 6;
@@ -118,14 +119,4 @@ export function bindSwipe(target: HTMLElement | Document, gesture: SwipeGesture)
   };
   target.addEventListener('pointerdown', down);
   return () => target.removeEventListener('pointerdown', down);
-}
-
-/** 在按鈕上放開的拖曳，不可以同時觸發該按鈕。 */
-function swallowClick() {
-  const swallow = (event: Event) => {
-    event.stopPropagation();
-    event.preventDefault();
-  };
-  window.addEventListener('click', swallow, { capture: true, once: true });
-  setTimeout(() => window.removeEventListener('click', swallow, { capture: true }));
 }

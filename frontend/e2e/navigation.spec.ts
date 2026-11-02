@@ -64,13 +64,11 @@ test("chat history stays primary with grouped tools collapsed and settings only 
     tools.getByRole("link", { name: "設定", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "登入者選單", exact: true }).click();
-  await expect(
-    page.getByRole("menuitem", { name: "設定", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("menuitem", { name: "切換登入方式", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("menuitem")).toHaveCount(2);
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "設定",
+    "切換登入方式",
+    /^關於/,
+  ]);
   await page.keyboard.press("Escape");
   // On the collapsed rail the menu opens beside it, wide enough for its labels and naming the
   // account the rail no longer shows.

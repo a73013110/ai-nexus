@@ -12,7 +12,7 @@ namespace AiNexus.Features.Admin.Identity.Management;
 /// <c>AdAccount</c> 與登入方式保留，下次以該帳號名 AD 驗證或匯入時綁定新的 SID；要換成不同帳號名用 <see cref="RebindDirectoryAccount"/>。
 /// UserId、角色與歷史資料都不動；遞增 <c>SecurityVersion</c>，以舊 SID 建立的工作階段一併失效。
 /// </summary>
-internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IdentityWriteLock writeLock)
+internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapDelete("/users/{id:guid}/ad-binding", (Guid id, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) =>
@@ -20,24 +20,15 @@ internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrit
         .Audited(IdentityAudit.DirectoryUnbound)
         .WithName("UnbindUserDirectoryAccount");
 
-    public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct) => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => RebindDirectoryAccount.SnapshotAsync(db, id, token)), async () =>
     {
-        // 登入綁定 SID 時也取身分鎖；鎖的順序同 DirectoryProvisioning：身分鎖在稽核交易外先取。
-        await writeLock.Gate.WaitAsync(ct);
-        try
-        {
-            return await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.IdentityUsers, id, token => RebindDirectoryAccount.SnapshotAsync(db, id, token)), async () =>
-            {
-                var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-                if (user is null) return IdentityErrors.UserNotFound;
-                // 換掉自己的 SID 會讓自己目前的工作階段失效，交由另一位管理員處理。
-                if (id == actor) return AccessControlErrors.Lockout;
-                if (!UserAccounts.DirectoryBound(user)) return IdentityErrors.AdNotBound;
-                user.Sid = UserAccounts.ManagedSid(id);
-                user.SecurityVersion++;
-                return Result.Success;
-            }, ct);
-        }
-        finally { writeLock.Gate.Release(); }
-    }
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+        if (user is null) return IdentityErrors.UserNotFound;
+        // 換掉自己的 SID 會讓自己目前的工作階段失效，交由另一位管理員處理。
+        if (id == actor) return AccessControlErrors.Lockout;
+        if (!UserAccounts.DirectoryBound(user)) return IdentityErrors.AdNotBound;
+        user.Sid = UserAccounts.ManagedSid(id);
+        user.SecurityVersion++;
+        return Result.Success;
+    }, ct);
 }

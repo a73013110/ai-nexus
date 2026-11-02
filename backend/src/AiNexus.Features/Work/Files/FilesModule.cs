@@ -30,7 +30,6 @@ public sealed class FilesModule : IFeatureModule
         services.AddMonitoringSource<StorageMonitoring>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<DocumentExtractor>();
-        services.AddSingleton<AttachmentWriteLock>();
         services.AddSingleton<IAttachmentStorage, FileAttachmentStorage>();
         services.AddScoped<AttachmentQuota>();
         services.AddScoped<AttachmentLifecycle>();

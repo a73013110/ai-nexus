@@ -171,13 +171,17 @@ export class RetrievalAdmin {
     this.working.set({ id: profile.id, action });
     this.actionError.set('');
     try {
-      if (action === 'clear') await this.api.clearProfileVectors(profile.id);
+      if (action === 'clear') this.jobToasts.track(await this.api.clearProfileVectors(profile.id));
       else if (action === 'rebuild')
         this.jobToasts.track(await this.api.rebuildProfile(profile.id));
       else await this.api.activateProfile(profile.id);
       if (!guard()) return;
-      if (action === 'rebuild') this.toast.success('重建工作已排入佇列', '進度顯示在索引列。');
-      else this.toast.success(action === 'activate' ? '使用中索引已切換' : '退役向量已清除');
+      if (action === 'activate') this.toast.success('使用中索引已切換');
+      else
+        this.toast.success(
+          action === 'rebuild' ? '重建工作已排入佇列' : '清除工作已排入佇列',
+          '進度顯示在索引列。',
+        );
       this.profilesRead.reload();
     } catch (error) {
       if (guard()) this.actionError.set(this.scope.message(error));
@@ -249,7 +253,8 @@ const confirmations: Record<ProfileAction, (profile: EmbeddingProfileDto) => Con
   }),
   clear: (profile) => ({
     title: '清除退役向量',
-    message: `清除 ${profile.model} 的退役向量。原始檔、逐頁文字與索引紀錄會保留。`,
+    message: `在背景清除 ${profile.model} 的退役向量，進度顯示在索引列。
+原始檔、逐頁文字與索引紀錄會保留。`,
     confirm: '清除向量',
     danger: true,
   }),

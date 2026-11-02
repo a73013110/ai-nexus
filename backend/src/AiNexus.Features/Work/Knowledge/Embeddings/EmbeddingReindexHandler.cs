@@ -11,7 +11,7 @@ using AiNexus.Features.Work.Knowledge.Indexing;
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle lifecycle, DocumentIndexer indexer,
-    AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes, AuditTrail audit) : IBackgroundJobHandler
+    AccessService access, IOptions<KnowledgeOptions> options, AdministrativeWriteLock writes, AuditTrail audit) : IBackgroundJobHandler
 {
     public const string JobKind = "embedding-reindex";
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await ProfileAsync(job, ct)) is { IsSuccess: false } invalid ? invalid.Error : Result.Success;
@@ -49,14 +49,11 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
         if (!coverage.Complete) return KnowledgeErrors.ProfileIncomplete;
         if (options.Value.Embedding.AutoActivate && profile.Status == "building")
         {
-            await writes.Gate.WaitAsync(ct);
             Error? failure = null;
-            try {
-                await execution.CheckpointAsync("啟用完成的索引", coverage.CompletedChunks, coverage.TotalChunks, ct, async () => {
-                    if (await lifecycle.ActivateCoreAsync(profile.Id, ct) is { IsSuccess: false } refused) { failure = refused.Error; return; }
-                    audit.Record(KnowledgeAudit.ProfileActivated, execution.Job.OwnerId, details: new { profileId = profile.Id, automatic = true }); await db.SaveChangesAsync(ct);
-                }, isolation: System.Data.IsolationLevel.Serializable);
-            } finally { writes.Gate.Release(); }
+            await execution.CheckpointAsync("啟用完成的索引", coverage.CompletedChunks, coverage.TotalChunks, ct, async () => {
+                if (await lifecycle.ActivateCoreAsync(profile.Id, ct) is { IsSuccess: false } refused) { failure = refused.Error; return; }
+                audit.Record(KnowledgeAudit.ProfileActivated, execution.Job.OwnerId, details: new { profileId = profile.Id, automatic = true }); await db.SaveChangesAsync(ct);
+            }, first: () => writes.AcquireAsync(FeatureCatalog.KnowledgeRetrieval, ct));
             if (failure is not null) return failure;
         }
         return Result.Success;

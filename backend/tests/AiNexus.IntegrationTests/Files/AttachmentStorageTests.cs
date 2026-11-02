@@ -100,18 +100,36 @@ public sealed class AttachmentStorageTests
     }
 
     [Fact]
-    public async Task DatabaseReservationPreventsConcurrentUploadsAcrossIndependentProcessGates()
+    public async Task DatabaseReservationPreventsConcurrentUploads()
     {
-        await using var factory = new AppFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; }, services: services =>
-        {
-            // 每個服務 scope 各自使用獨立的 semaphore，模擬彼此獨立的應用程式程序。
-            services.RemoveAll<AttachmentWriteLock>(); services.AddScoped<AttachmentWriteLock>();
-        });
+        await using var factory = new AppFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; });
         using var client = await factory.SignedInAsync();
         var responses = await Task.WhenAll(Upload(client), Upload(client));
         Assert.Single(responses, x => x.IsSuccessStatusCode); Assert.Single(responses, x => x.StatusCode == HttpStatusCode.RequestEntityTooLarge);
         var capacity = (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!;
         Assert.Equal(600, capacity.UsedBytes);
+    }
+
+    [Fact]
+    public async Task AnUploadWaitsOnlyForItsOwnOwner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var factory = new AppFactory();
+        using var alice = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob");
+        var aliceId = (await alice.GetFromJsonAsync<AiNexus.Features.Platform.Account.MeDto>("/api/v1/me", ct))!.Id;
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        await using var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(ct);
+        await scope.ServiceProvider.GetRequiredService<AttachmentQuota>().LockOwnerAsync(aliceId, ct);
+
+        (await Upload(bob).WaitAsync(TimeSpan.FromSeconds(30), ct)).EnsureSuccessStatusCode();
+        var waiting = Upload(alice);
+        await Task.Delay(200, ct);
+        Assert.False(waiting.IsCompleted);
+
+        await transaction.CommitAsync(ct);
+        (await waiting).EnsureSuccessStatusCode();
     }
 
     [Fact]

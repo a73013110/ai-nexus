@@ -13,6 +13,9 @@ public sealed class AccessControlOptions
     /// 預設空清單＝不允許任何外部連結（失敗即拒絕）。儲存連結與產生 <c>/me</c> 時各檢查一次，移出清單的主機在設定生效（站台重新啟動）後就不再輸出。
     /// </summary>
     [MaxLength(100), HostPatternItems] public string[] NavigationLinkHosts { get; set; } = [];
+
+    /// <summary>行政寫入等候同範圍前一筆完成的上限（秒），逾時回 <c>admin_write_busy</c>。要短於 SQL 命令逾時（預設 30 秒），否則先到的是 SQL 例外。</summary>
+    [Range(1, 25)] public int WriteLockTimeoutSeconds { get; set; } = 15;
 }
 
 [OptionsValidator]

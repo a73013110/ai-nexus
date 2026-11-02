@@ -16,10 +16,12 @@ public sealed class JobExecution(AppDbContext db, BackgroundJob job, Guid lease)
         int? total,
         CancellationToken ct,
         Func<Task>? afterSave = null,
-        System.Data.IsolationLevel isolation = System.Data.IsolationLevel.ReadCommitted)
+        Func<Task>? first = null)
     {
         ct.ThrowIfCancellationRequested();
-        await using var transaction = await db.Database.BeginTransactionAsync(isolation, ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        // 在碰任何資料列之前執行，用來取應用程式鎖（順序規則見 ApplicationLocks）。
+        if (first is not null) await first();
         var changed = await db.BackgroundJobs
             .Where(x => x.Id == job.Id && x.LeaseToken == lease && x.Status == RunStates.Running && !x.CancelRequested)
             .ExecuteUpdateAsync(p => p

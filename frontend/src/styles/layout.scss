@@ -67,9 +67,11 @@ nx-feature-page {
   margin-block: 0;
 }
 // 只放 top layer 內容（對話框、popover、確認框）的元件與沒有內容的元件不佔位置，免得多出一段 gap。
+// `:empty` 只看子節點，`<textarea>`、`<input>`、`<img>` 也符合，套上 contents 就不會畫出來；Angular 元件的
+// 宿主是未註冊的自訂元素，用 `:not(:defined)` 限定在元件。
 :is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body)
   > :is(
-    :empty,
+    :not(:defined):empty,
     :has(> :is(dialog, [popover])):not(:has(> :not(dialog, [popover], nx-confirm-dialog)))
   ) {
   display: contents;

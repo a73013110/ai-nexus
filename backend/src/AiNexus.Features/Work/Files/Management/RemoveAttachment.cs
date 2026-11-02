@@ -12,7 +12,7 @@ namespace AiNexus.Features.Work.Files.Management;
 /// 移除尚未送出的輸入框草稿，或從檔案庫刪除檔案。仍被對話或其他工作區資源持有的檔案會保留；
 /// 擁有者對該檔案的私人讀取器會一併移除。位元組在交易提交後才刪除。
 /// </summary>
-internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota, AttachmentLifecycle lifecycle)
+internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files, AttachmentQuota quota, AttachmentLifecycle lifecycle)
 {
     public static void MapDraft(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
@@ -28,10 +28,8 @@ internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files,
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, bool fromLibrary, CancellationToken ct)
     {
-        await writes.Gate.WaitAsync(ct);
-        try
+        await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await quota.LockOwnerAsync(owner, ct);
             var file = await files.OwnedAsync(owner, id, ct);
             if (!file.IsSuccess) return file.Error;
@@ -49,9 +47,8 @@ internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files,
             await db.Attachments
                 .Where(x => x.Id == id)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, false).SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
-                        await transaction.CommitAsync(ct);
+            await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
         await lifecycle.DeletePendingAsync(ct, id);
         return Result.Success;
     }

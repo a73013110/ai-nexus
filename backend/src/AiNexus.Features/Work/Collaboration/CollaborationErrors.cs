@@ -11,5 +11,7 @@ public static class CollaborationErrors
     public static readonly Error UnknownMember = Error.Invalid("unknown_resource_member");
     public static readonly Error InvalidName = Error.Invalid("invalid_resource_name");
     public static readonly Error TasksActive = Error.Conflict("resource_tasks_active");
+    /// <summary>同一份資源的前一筆寫入遲遲沒有結束，等到逾時（<see cref="ContainerLock"/>、文件寫入鎖）。</summary>
+    public static readonly Error ResourceBusy = Error.Unavailable("resource_busy");
     public static readonly Error InvalidAcl = Error.Invalid("invalid_resource_acl");
 }

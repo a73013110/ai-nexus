@@ -1,5 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
+using System.Data;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
@@ -11,7 +13,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// 剛通過 AD 驗證（Windows 整合驗證或 LDAP 登入）的 SID 對應到平台使用者：必要時建立、綁定或同步，並套用 <see cref="ISignInGrant"/>。
 /// 建立與同步的規則在 <see cref="DirectoryAccounts"/>，與管理員從 AD 匯入、更新共用。
 /// </summary>
-public sealed class DirectorySignIn(AppDbContext db, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants, DirectoryProfileCache profiles,
+public sealed class DirectorySignIn(AppDbContext db, AdministrativeWriteLock writes, IEnumerable<ISignInGrant> grants, DirectoryProfileCache profiles,
     IDirectoryProfileLookup directory, DirectoryAccounts accounts, TimeProvider clock, AuditTrail audit)
 {
     private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(5);
@@ -45,36 +47,35 @@ public sealed class DirectorySignIn(AppDbContext db, IdentityWriteLock writeLock
     }
 
     /// <summary>
-    /// 綁定是依帳號跨 SID 進行，且本地登入與管理員匯入寫的也是同一批資料列，所以共用全域寫入鎖，並在鎖內重新比對。
+    /// 綁定是依帳號跨 SID 進行，管理員的匯入、改綁與授權寫的也是同一批資料列與角色，所以與它們共用帳號與存取控制的行政寫入鎖（ADR 0031），並在鎖內重新比對。
+    /// 目錄查詢在這之前就做完，持鎖時只有 SQL。
     /// </summary>
     private async Task<Result<User>> WriteAsync(string sid, string account, DirectoryProfile? profile, CancellationToken ct)
     {
-        await writeLock.Gate.WaitAsync(ct);
-        try
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        if (!await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct)) return AccessControlErrors.WriteBusy;
+        var match = await accounts.MatchAsync(sid, account, ct);
+        if (!match.IsSuccess) return match.Error;
+        var user = match.Value.Existing;
+        if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
+        var now = clock.GetUtcNow();
+        if (user is null)
         {
-            var match = await accounts.MatchAsync(sid, account, ct);
-            if (!match.IsSuccess) return match.Error;
-            var user = match.Value.Existing;
-            if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
-            var now = clock.GetUtcNow();
-            if (user is null)
-            {
-                // 目錄資料未知時先用帳號名建立，之後的定期同步會補上姓名與信箱。
-                user = await accounts.CreateAsync(Guid.NewGuid(), sid, account, profile ?? new(UserAccounts.AccountName(account), null), now, ct);
-                audit.Record(IdentityAudit.AccountCreated, user.Id, user.Id, user.Id);
-            }
-            else
-            {
-                DirectoryAccounts.Apply(user, await accounts.ChangesAsync(user, account, profile, ct), now);
-                user.LastSeenAt = now;
-            }
-            // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據；管理員匯入的帳號則留空，直到本人登入。
-            user.DirectoryVerifiedAt = now;
-            await db.SaveChangesAsync(ct);
-            foreach (var grant in grants) await grant.ApplyAsync(user, ct);
-            return user;
+            // 目錄資料未知時先用帳號名建立，之後的定期同步會補上姓名與信箱。
+            user = await accounts.CreateAsync(Guid.NewGuid(), sid, account, profile ?? new(UserAccounts.AccountName(account), null), now, ct);
+            audit.Record(IdentityAudit.AccountCreated, user.Id, user.Id, user.Id);
         }
-        finally { writeLock.Gate.Release(); }
+        else
+        {
+            DirectoryAccounts.Apply(user, await accounts.ChangesAsync(user, account, profile, ct), now);
+            user.LastSeenAt = now;
+        }
+        // 走到這裡的請求都剛通過 AD（LDAP bind 或 Kerberos／NTLM），是本地密碼新鮮度規則的依據；管理員匯入的帳號則留空，直到本人登入。
+        user.DirectoryVerifiedAt = now;
+        await db.SaveChangesAsync(ct);
+        foreach (var grant in grants) await grant.ApplyAsync(user, ct);
+        await transaction.CommitAsync(ct);
+        return user;
     }
 
     private async Task TouchAsync(User user, DateTimeOffset now, CancellationToken ct)

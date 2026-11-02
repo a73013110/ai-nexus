@@ -36,12 +36,87 @@ public sealed class EmbeddingProfileTests
         var all = await Profiles(client); Assert.Equal(target.Id, all.Single(x => x.Status == "active").Id); Assert.Equal("retired", all.Single(x => x.Id == original.Id).Status);
         (await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]))).EnsureSuccessStatusCode();
         Assert.Equal(target.Id, factory.Embeddings.LastProfileId);
-        (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode();
+        (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode(); await Drain(factory);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Empty(await db.ChunkEmbeddings768.ToListAsync()); Assert.NotEmpty(await db.ChunkEmbeddings1024.ToListAsync()); Assert.NotEmpty(await db.DocumentPages.ToListAsync());
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "completed");
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "knowledge.embedding_profile.activated" && x.Result == "profile_incomplete");
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/vectors")).StatusCode);
+    }
+
+    /// <summary>切到 1024 維並啟用，讓原本的 768 維模型退役且保留向量；回傳退役的模型與 1024 維模型的重建結果都已完成。</summary>
+    private static async Task<EmbeddingProfileDto> RetireOriginalAsync(AppFactory factory, HttpClient client)
+    {
+        await KnowledgeApi.SeedAsync(factory, client);
+        var original = Assert.Single(await Profiles(client));
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Dimensions = 1024;
+        var target = (await Profiles(client)).Single(x => x.Status == "building");
+        (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).EnsureSuccessStatusCode(); await Drain(factory);
+        (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/activate", null)).EnsureSuccessStatusCode();
+        return original;
+    }
+
+    [Fact]
+    public async Task ClearingIsAJobThatDeletesTheVectorsAndRecordsHowMany()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var original = await RetireOriginalAsync(factory, client);
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var before = await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id);
+        Assert.True(before > 0);
+
+        using var response = await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors"); response.EnsureSuccessStatusCode();
+        var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
+        Assert.Equal(EmbeddingClearHandler.JobKind, job.Kind);
+        // 排入時還沒刪：請求不會因為向量多而變慢。
+        Assert.Equal(before, await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id));
+        // 連按兩次只有一個工作。
+        using var again = await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors");
+        Assert.Equal(job.Id, (await again.Content.ReadFromJsonAsync<JobDto>())!.Id);
+        await Drain(factory);
+
+        Assert.Equal(0, await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id));
+        Assert.Equal(job.Id, (await Profiles(client)).Single(x => x.Id == original.Id).Job!.Id);
+        var audits = await db.AuditEvents.AsNoTracking().Where(x => x.Action == KnowledgeAudit.ProfileCleared.Name).ToListAsync();
+        Assert.Contains(audits, x => x.DetailsJson != null && x.DetailsJson.Contains($"\"vectors\":{before}"));
+    }
+
+    // 設定改回舊模型會讓它恢復使用：還沒開始的清除不能把正要重用的向量刪掉。
+    [Fact]
+    public async Task AQueuedClearStopsWhenTheProfileIsBackInUse()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var original = await RetireOriginalAsync(factory, client);
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var before = await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id);
+
+        (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{original.Id}/vectors")).EnsureSuccessStatusCode();
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Dimensions = 768;
+        Assert.Equal("building", (await Profiles(client)).Single(x => x.Id == original.Id).Status);
+        await Drain(factory);
+
+        Assert.Equal(before, await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id));
+        var job = await db.BackgroundJobs.AsNoTracking().SingleAsync(x => x.Kind == EmbeddingClearHandler.JobKind);
+        Assert.Equal("profile_not_retired", job.ErrorCode);
+    }
+
+    [Fact]
+    public async Task TheRetentionCleanupOnlyDeletesExpiredRetiredVectors()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var original = await RetireOriginalAsync(factory, client);
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<EmbeddingLifecycle>();
+        var kept = await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id);
+
+        await lifecycle.CleanupExpiredAsync(CancellationToken.None);
+        Assert.Equal(kept, await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id));
+
+        await db.EmbeddingProfiles.Where(x => x.Id == original.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.RetiredAt, DateTimeOffset.UtcNow.AddYears(-1)));
+        await lifecycle.CleanupExpiredAsync(CancellationToken.None);
+
+        Assert.Equal(0, await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == original.Id));
+        Assert.NotEqual(0, await db.ChunkEmbeddings1024.CountAsync());
     }
 
     [Fact]

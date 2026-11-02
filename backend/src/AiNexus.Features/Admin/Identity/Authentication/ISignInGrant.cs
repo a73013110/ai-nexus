@@ -7,9 +7,9 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// </summary>
 public interface ISignInGrant
 {
-    /// <summary>回報 <see cref="ApplyAsync"/> 是否會實際授權；為 true 時登入必須先取得 identity 寫入鎖。</summary>
+    /// <summary>回報 <see cref="ApplyAsync"/> 是否會實際授權；為 true 時登入不走快速路徑，改在 <see cref="DirectorySignIn"/> 的寫入交易內套用。</summary>
     Task<bool> PendingAsync(User user, CancellationToken ct);
 
-    /// <summary>在 identity 寫入鎖內呼叫。</summary>
+    /// <summary>在 <see cref="DirectorySignIn"/> 的寫入交易內呼叫，已持有帳號與存取控制的行政寫入鎖。</summary>
     Task ApplyAsync(User user, CancellationToken ct);
 }

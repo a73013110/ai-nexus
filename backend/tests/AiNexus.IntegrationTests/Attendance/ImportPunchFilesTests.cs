@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Office.Attendance.Imports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -172,26 +173,81 @@ public sealed class ImportPunchFilesTests
         Assert.Equal((imported.ImportedModifiedAt, imported.ImportedSize, imports[1].Id), (file.ImportedModifiedAt, file.ImportedSize, file.LastImportId));
     }
 
+    // 匯入中尚未提交的刷卡，刪卡的檢查看不到（RCSI）；不排隊就可能刪掉正要用到的卡。
     [Fact]
-    public async Task ImportsOfTheSameFileNeverRunAtTheSameTime()
+    public async Task AnImportWaitsForACardWriteInProgress()
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
+        await using var scope = session.Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var transaction = await db.Database.BeginTransactionAsync(ct))
+        {
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            var import = session.ReimportAsync(Oct1);
+            await Task.Delay(200, ct);
+            Assert.False(import.IsCompleted);
+
+            await transaction.CommitAsync(ct);
+            Assert.True((await import).IsSuccess);
+        }
+        Assert.Single(await session.PunchesAsync());
+    }
+
+    [Fact]
+    public async Task ImportsOfTheSameFileNeverWriteAtTheSameTime()
     {
         await using var session = await PunchImportSession.CreateAsync();
         session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 18, 0)]);
-        var gate = session.Factory.Services.GetRequiredService<PunchImportGate>();
+        await using var scope = session.Factory.Services.CreateAsyncScope();
+        var ct = TestContext.Current.CancellationToken;
 
-        await gate.Gate.WaitAsync(TestContext.Current.CancellationToken);
-        var manual = session.ReimportAsync(Oct1);
-        var scheduled = session.ScanAsync();
-        // 鎖被別的匯入佔住時，手動與排程都只能等；這是不讓同一檔被兩個匯入同時處理的保證。
-        await Task.Delay(200, TestContext.Current.CancellationToken);
-        Assert.False(manual.IsCompleted);
-        Assert.False(scheduled.IsCompleted);
-        gate.Gate.Release();
+        Task<AiNexus.Platform.Errors.Result<PunchImport>> manual;
+        Task<PunchScanResult> scheduled;
+        await using (var transaction = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.BeginTransactionAsync(ct))
+        {
+            // 鎖被別的程序佔住時，手動與排程都只能等，這也是跨程序的保證。
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            manual = session.ReimportAsync(Oct1);
+            scheduled = session.ScanAsync();
+            await Task.Delay(200, ct);
+            Assert.False(manual.IsCompleted);
+            Assert.False(scheduled.IsCompleted);
+            await transaction.CommitAsync(ct);
+        }
 
         Assert.True((await manual).IsSuccess);
         await scheduled;
         Assert.Equal(2, (await session.PunchesAsync()).Count);
         Assert.DoesNotContain(await session.ImportsAsync(), x => x.Status == PunchImportStatuses.Failed);
+    }
+
+    // 讀檔不持鎖，排程可能等到鎖時另一個程序已寫入同一版；再判斷一次，不重複寫。
+    [Fact]
+    public async Task AScheduledImportSkipsAVersionWrittenWhileItWaited()
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
+        var info = new FileInfo(Path.Combine(session.Source.Folder, Oct1));
+        await using var scope = session.Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var ct = TestContext.Current.CancellationToken;
+
+        Task<PunchScanResult> scheduled;
+        await using (var transaction = await db.Database.BeginTransactionAsync(ct))
+        {
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>().TryAcquireAsync(FeatureCatalog.AttendanceCardsMaintain, ct));
+            scheduled = session.ScanAsync();
+            await Task.Delay(200, ct);
+            db.Add(new PunchFile { FileName = Oct1, ImportedModifiedAt = new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero), ImportedSize = info.Length });
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+
+        Assert.Equal(0, (await scheduled).Imported);
+        Assert.Empty(await session.ImportsAsync());
     }
 
     [Fact]

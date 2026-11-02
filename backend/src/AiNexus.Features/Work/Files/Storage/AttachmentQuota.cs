@@ -26,7 +26,7 @@ public sealed class AttachmentQuota(AppDbContext db, ISqlDatabase<AppDbContext> 
         """, new { Owner = owner, DefaultLimitBytes }, cancellationToken: ct);
 
     // 需在呼叫端的交易內呼叫，並在檢查位元組或綁定、解除引用之前執行。
-    // 資料庫列鎖讓同一個 SQL 資料庫的所有程序彼此協調。
+    // 這把列鎖就是配額與引用規則的全部保護：同一個 SQL 資料庫的所有程序彼此協調，不同擁有者互不等待。
     public Task<int> LockOwnerAsync(Guid owner, CancellationToken ct) => db.Users.Where(x => x.Id == owner)
         .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
 

@@ -114,10 +114,14 @@
                     type="button"
                     class="danger-button retrieval-clear"
                     [pending]="isWorking(profile, 'clear')"
-                    [disabled]="blocked(profile, 'clear') || profile.coverage.completedChunks === 0"
+                    [disabled]="
+                      blocked(profile, 'clear') ||
+                      jobActive(profile) ||
+                      profile.coverage.completedChunks === 0
+                    "
                     (click)="operate(profile, 'clear')"
                   >
-                    {{ isWorking(profile, 'clear') ? '清除中…' : '清除退役向量' }}
+                    {{ isWorking(profile, 'clear') ? '排入中…' : '清除退役向量' }}
                   </button>
                 }
               }

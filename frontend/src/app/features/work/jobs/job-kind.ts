@@ -19,6 +19,7 @@ const KINDS: Record<string, { name: string; icon: string }> = {
   'document-ingest': { name: '文件辨識與索引', icon: 'document' },
   'document-embedding': { name: '文件批次向量化', icon: 'database' },
   'embedding-reindex': { name: '檢索索引重建', icon: 'database' },
+  'embedding-clear': { name: '退役向量清除', icon: 'database' },
   'retrieval-eval': { name: '檢索品質評測', icon: 'chart' },
   evaluation: { name: '品質評測', icon: 'lines' },
   'repository-review': { name: '程式碼 Review', icon: 'git' },

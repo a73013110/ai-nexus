@@ -1,6 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
-using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
@@ -13,33 +13,34 @@ namespace AiNexus.IntegrationTests.Identity;
 public sealed class CurrentUserTests
 {
     [Fact]
-    public async Task ExistingWindowsUsersAreResolvedWithoutTheIdentityWriteGate()
+    public async Task ExistingWindowsUsersAreResolvedWithoutWaitingForTheAuthorizationLock()
     {
         await using var factory = new AppFactory();
         using var client = await factory.SignedInAsync();
-        var gate = factory.Services.GetRequiredService<IdentityWriteLock>().Gate;
-        // 過了同步間隔、但目錄資料沒變的使用者只刷新驗證時間，也不必等閘門。
+        // 過了同步間隔、但目錄資料沒變的使用者只刷新驗證時間，也不必等鎖。
         await SetAliceAsync(factory, p => p.SetProperty(x => x.LastSeenAt, DateTimeOffset.UtcNow.AddHours(-1)));
-        await gate.WaitAsync();
-        try
+        var ct = TestContext.Current.CancellationToken;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var writes = scope.ServiceProvider.GetRequiredService<AdministrativeWriteLock>();
+        await using (var held = await db.Database.BeginTransactionAsync(ct))
         {
-            (await client.GetAsync("/api/v1/me").WaitAsync(TimeSpan.FromSeconds(10))).EnsureSuccessStatusCode();
-            (await client.GetAsync("/api/v1/me").WaitAsync(TimeSpan.FromSeconds(10))).EnsureSuccessStatusCode();
+            Assert.True(await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct));
+            (await client.GetAsync("/api/v1/me", ct).WaitAsync(TimeSpan.FromSeconds(10), ct)).EnsureSuccessStatusCode();
+            (await client.GetAsync("/api/v1/me", ct).WaitAsync(TimeSpan.FromSeconds(10), ct)).EnsureSuccessStatusCode();
         }
-        finally { gate.Release(); }
         Assert.True((await AliceAsync(factory)).LastSeenAt > DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        // 欄位要跟著目錄改的使用者，仍要先通過閘門才會更新。
+        // 欄位要跟著目錄改的使用者，仍要先取得鎖才會更新。
         await SetAliceAsync(factory, p => p.SetProperty(x => x.DisplayName, "舊名"));
-        await gate.WaitAsync();
         Task<HttpResponseMessage> pending;
-        try
+        await using (var held = await db.Database.BeginTransactionAsync(ct))
         {
-            pending = client.GetAsync("/api/v1/me");
-            await Task.Delay(200);
+            Assert.True(await writes.TryAcquireAsync(FeatureCatalog.IdentityUsers, ct));
+            pending = client.GetAsync("/api/v1/me", ct);
+            await Task.Delay(200, ct);
             Assert.False(pending.IsCompleted);
         }
-        finally { gate.Release(); }
         (await pending).EnsureSuccessStatusCode();
         Assert.Equal("alice", (await AliceAsync(factory)).DisplayName);
     }

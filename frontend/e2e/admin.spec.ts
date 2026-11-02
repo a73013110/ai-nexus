@@ -155,7 +155,17 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     }
     if (path.endsWith("/vectors")) {
       profiles[0].coverage.completedChunks = 0;
-      return route.fulfill({ status: 204 });
+      return json({
+        id: randomUUID(),
+        kind: "embedding-clear",
+        subjectId: randomUUID(),
+        status: "queued",
+        label: "清除退役向量",
+        stage: "等待處理",
+        attempt: 0,
+        completedUnits: 0,
+        totalUnits: 1,
+      });
     }
     if (path.endsWith("/search")) {
       const body = route.request().postDataJSON();
@@ -239,7 +249,7 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     .getByRole("button", { name: "清除向量", exact: true })
     .click();
   await expect(
-    toasts(page).filter({ hasText: "退役向量已清除" }),
+    toasts(page).filter({ hasText: "清除工作已排入佇列" }),
   ).toBeVisible();
   for (const theme of ["light", "dark"] as const) {
     const dialog = await openSettings(page);
@@ -972,6 +982,7 @@ test("使用者表上直接以方向鍵、輸入位置或拖曳調整順序，�
     .poll(names)
     .toEqual(["陳大文", "林小華", "王小明", "張美玲", "測試使用者"]);
   expect(moves()).toHaveLength(writes);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // 搜尋時編號仍是整份名單的位置；拖曳把手停用，只能輸入編號。
   await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("王");

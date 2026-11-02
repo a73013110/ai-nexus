@@ -1,3 +1,4 @@
+using AiNexus.Features.Work.Collaboration;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Inference;
@@ -68,7 +69,7 @@ internal sealed class CreateRun(
     AppDbContext db,
     ConversationService conversations,
     AttachmentService attachments,
-    AttachmentWriteLock attachmentWrites,
+    ContainerLock containers,
     GenerationScheduler scheduler,
     ModelCatalog models,
     ContextBuilder context,
@@ -155,10 +156,9 @@ internal sealed class CreateRun(
 
         var prepared = await PrepareAsync(owner, request, profile, sources, search, ct);
 
-        // 取得順序固定為：對話鎖 → 佇列名額 → 附件閘門 → 交易與帳號列鎖（finally 反向釋放）
+        // 取得順序固定為：對話鎖 → 佇列名額 → 交易與帳號列鎖（finally 反向釋放）
         using var conversationLock = await scheduler.LockConversationAsync(request.ConversationId, ct);
         var reserved = false;
-        var attachmentsLocked = false;
 
         try
         {
@@ -176,16 +176,10 @@ internal sealed class CreateRun(
                 return InferenceErrors.QueueFull;
             }
 
-            // 鎖定附件寫入閘門，防止未綁定的附件在短暫空檔被清理任務刪除
-            if (request.AttachmentIds?.Count > 0)
-            {
-                await attachmentWrites.Gate.WaitAsync(ct);
-                attachmentsLocked = true;
-            }
-
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-            // 透過無害更新觸發帳號行鎖，將同使用者跨對話、跨主機的提問請求串行化
+            // 透過無害更新觸發帳號行鎖，將同使用者跨對話、跨主機的提問請求串行化；
+            // 清理草稿也先鎖同一列，所以綁定中的附件不會在短暫空檔被刪除。
             await db.Users
                 .Where(x => x.Id == owner)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
@@ -204,6 +198,12 @@ internal sealed class CreateRun(
             var owned = await conversations.OwnedAsync(owner, request.ConversationId, ct);
             if (!owned.IsSuccess) return owned.Error;
             var conversation = owned.Value;
+
+            // 生成中的專案不能刪。對話的專案要讀了才知道，所以不是交易的第一個動作；刪除專案不碰帳號列，先持有它再等這把鎖不會互等。
+            if (conversation.ProjectId is Guid container && !await containers.TryStartWorkAsync(container, ct))
+            {
+                return CollaborationErrors.ResourceBusy;
+            }
 
             var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId
                 ? prepared.ProjectContext
@@ -320,7 +320,6 @@ internal sealed class CreateRun(
         finally
         {
             if (reserved) scheduler.ReleaseReservation();
-            if (attachmentsLocked) attachmentWrites.Gate.Release();
         }
     }
 

@@ -11,7 +11,7 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 namespace AiNexus.Features.Work.Knowledge.Indexing;
 
 public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles, EmbeddingService embeddings, EmbeddingVectorStore vectors,
-    DocumentService documents, ITextChunker chunker, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes, JobService jobs)
+    DocumentService documents, ITextChunker chunker, IOptions<KnowledgeOptions> options, JobService jobs)
 {
     private async Task<List<EmbeddingProfile>> CurrentAsync(CancellationToken ct)
     {
@@ -29,9 +29,11 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
         var hashes = pieces.Select(x => EmbeddingInput.Hash(EmbeddingInput.Document(document.FileName, x.HeadingPath, x.Text))).ToArray();
         var cached = new Dictionary<int, Dictionary<string, float[]>>();
         foreach (var profile in current.Where(x => x.Provider != "none")) cached[profile.Id] = await vectors.CachedAsync(profile, hashes, ct);
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
+        document.ChunkCount = pieces.Length; document.Status = "indexing";
+        await execution.CheckpointAsync("結構化片段已保存", 0, pieces.Length, ct, async () => {
+            // 同一份文件可能同時有兩個工作走到這裡（模型重建與使用者重新索引）。先鎖文件列再讀既有片段，後到的才會以前一個提交的結果為準，
+            // 否則兩邊各自刪舊、加新會撞上片段的唯一鍵。順序與所有檢查點相同：工作列 → 文件列。
+            await db.Documents.Where(x => x.Id == document.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ChunkCount, x => x.ChunkCount), ct);
             var existing = await db.Chunks.Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
             var chunks = new List<Chunk>();
             for (var i = 0; i < pieces.Length; i++)
@@ -48,21 +50,18 @@ public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles,
                 chunks.Add(new() { DocumentId = document.Id, Ordinal = i,
                     StartPage = piece.StartPage, EndPage = piece.EndPage, HeadingPath = piece.HeadingPath, Text = piece.Text, ContentHash = hashes[i], TokenEstimate = piece.TokenEstimate });
             }
-            var retained = chunks.Select(x => x.Id).ToArray(); document.ChunkCount = chunks.Count; document.Status = "indexing";
-            await execution.CheckpointAsync("結構化片段已保存", 0, chunks.Count, ct, async () => {
-                await db.Chunks.Where(x => x.DocumentId == document.Id && !retained.Contains(x.Id)).ExecuteDeleteAsync(ct);
-                foreach (var old in existing.Where(x => !retained.Contains(x.Id))) db.Entry(old).State = EntityState.Detached;
-                db.AddRange(chunks.Where(x => !existing.Any(e => e.Id == x.Id))); await db.SaveChangesAsync(ct);
-                // 舊片段列可能在工作之間被移除，因此要在此先把已快取的向量複製到保留下來的片段上。
-                foreach (var profile in current.Where(x => x.Provider != "none"))
-                {
-                    var copy = chunks.Where(x => cached[profile.Id].ContainsKey(Convert.ToHexString(x.ContentHash)))
-                        .Select(x => new EmbeddingWrite(x.Id, x.ContentHash, cached[profile.Id][Convert.ToHexString(x.ContentHash)]));
-                    foreach (var batch in copy.Chunk(options.Value.Embedding.BatchSize)) await vectors.WriteBatchAsync(profile, batch, ct);
-                }
-            });
-        }
-        finally { writes.Gate.Release(); }
+            var retained = chunks.Select(x => x.Id).ToArray();
+            await db.Chunks.Where(x => x.DocumentId == document.Id && !retained.Contains(x.Id)).ExecuteDeleteAsync(ct);
+            foreach (var old in existing.Where(x => !retained.Contains(x.Id))) db.Entry(old).State = EntityState.Detached;
+            db.AddRange(chunks.Where(x => !existing.Any(e => e.Id == x.Id))); await db.SaveChangesAsync(ct);
+            // 舊片段列可能在工作之間被移除，因此要在此先把已快取的向量複製到保留下來的片段上。
+            foreach (var profile in current.Where(x => x.Provider != "none"))
+            {
+                var copy = chunks.Where(x => cached[profile.Id].ContainsKey(Convert.ToHexString(x.ContentHash)))
+                    .Select(x => new EmbeddingWrite(x.Id, x.ContentHash, cached[profile.Id][Convert.ToHexString(x.ContentHash)]));
+                foreach (var batch in copy.Chunk(options.Value.Embedding.BatchSize)) await vectors.WriteBatchAsync(profile, batch, ct);
+            }
+        });
         return Result.Success;
     }
     public async Task<Result> QueueAsync(JobExecution execution, Document document, CancellationToken ct)

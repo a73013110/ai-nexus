@@ -34,13 +34,12 @@ public static class DirectoryPersonStates
 /// <summary>
 /// 管理員從 AD 匯入與更新使用者的共用流程：逐人「規劃 → 在稽核交易內重新規劃並寫入」。
 /// 建立、綁定與欄位同步都交給 <see cref="DirectoryAccounts"/>（與首次登入同一份規則）；每人一筆稽核、一個交易，一人失敗不影響其他人。
-/// 鎖的順序固定為 <see cref="IdentityWriteLock"/> → 行政寫入鎖（<see cref="AdministrativeWrite"/> 內），且身分鎖在交易外取得：
-/// 登入只取身分鎖，所以不會互相等待成死結。
+/// 與登入共用帳號與存取控制的行政寫入鎖（<see cref="AdministrativeWrite"/> 內），所以交易外的規劃只供判斷要不要寫，寫入前一定在鎖內重新規劃。
 /// </summary>
-internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeWrite write, IdentityWriteLock writeLock,
+internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeWrite write,
     TimeProvider clock, ILogger<DirectoryProvisioning> logger)
 {
-    /// <summary>單次匯入、預覽或更新的人數上限：每人一個 Serializable 交易，上限讓一次操作維持在數秒內。</summary>
+    /// <summary>單次匯入、預覽或更新的人數上限：每人一個交易，上限讓一次操作維持在數秒內。</summary>
     public const int MaxBatch = 100;
 
     /// <summary>格式檢查：<c>S-1-</c> 開頭、只含英數與連字號；實際是否存在由目錄判斷。</summary>
@@ -92,12 +91,11 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
     }
 
     /// <summary>
-    /// 套用一位人員：取身分鎖 → 規劃 → 需要寫入時在 <see cref="AdministrativeWrite"/> 的交易內重新規劃再寫入（每位人員各一筆 <paramref name="action"/> 稽核）。
+    /// 套用一位人員：規劃 → 需要寫入時在 <see cref="AdministrativeWrite"/> 的交易內重新規劃再寫入（每位人員各一筆 <paramref name="action"/> 稽核）。
     /// 交易內的規劃與交易外不同（預覽後資料被改）時不寫入，回 <c>directory_changed</c>。<paramref name="allowCreate"/> 為 false 時只更新既有帳號。
     /// </summary>
     public async Task<DirectoryOutcomeDto> ApplyAsync(Guid actor, string feature, AuditAction action, DirectoryPerson person, bool includeDisabled, bool allowCreate, CancellationToken ct)
     {
-        await writeLock.Gate.WaitAsync(ct);
         try
         {
             var plan = await PlanAsync(person, includeDisabled, allowCreate, ct);
@@ -116,11 +114,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
             }, ct);
             return saved.IsSuccess ? Describe(applied!) : Describe(plan) with { Outcome = DirectoryOutcomes.Failed, ErrorCode = saved.Error.Code };
         }
-        finally
-        {
-            db.ChangeTracker.Clear();
-            writeLock.Gate.Release();
-        }
+        finally { db.ChangeTracker.Clear(); }
     }
 
     /// <summary>沒有目錄資料可比對的使用者（目錄找不到、沒有綁定 AD、已刪除）：以平台資料回報。</summary>

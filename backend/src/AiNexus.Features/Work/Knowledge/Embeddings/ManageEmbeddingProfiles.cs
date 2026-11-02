@@ -11,10 +11,10 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 /// <summary>
-/// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量。
-/// 每次變更都先取得 knowledge 寫入鎖，再經 <see cref="AdministrativeWrite"/> 以檢索管理頁（<see cref="FeatureCatalog.KnowledgeRetrieval"/>）的權限執行並稽核。
+/// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量（重建與清除只排入背景工作，交易內不做耗時的事）。
+/// 每次變更都經 <see cref="AdministrativeWrite"/> 以檢索管理頁（<see cref="FeatureCatalog.KnowledgeRetrieval"/>）的權限執行並稽核。
 /// </summary>
-internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, KnowledgeWriteLock writes, AdministrativeWrite write)
+internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, AdministrativeWrite write)
 {
     public static void MapList(RouteGroupBuilder routes) => routes
         .MapGet("/profiles", (ManageEmbeddingProfiles handler, CancellationToken ct) =>
@@ -42,29 +42,27 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
 
     public Task<IReadOnlyList<EmbeddingProfileDto>> ListAsync(CancellationToken ct) => lifecycle.ListAsync(ct);
 
-    public async Task<Result<JobDto>> RebuildAsync(Guid actor, int id, CancellationToken ct)
+    public Task<Result<JobDto>> RebuildAsync(Guid actor, int id, CancellationToken ct) => QueueAsync(actor, id, lifecycle.QueueRebuildAsync, ct);
+
+    public Task<Result> ActivateAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, id, () => lifecycle.ActivateCoreAsync(id, ct), ct);
+
+    public Task<Result<JobDto>> ClearAsync(Guid actor, int id, CancellationToken ct) => QueueAsync(actor, id, lifecycle.QueueClearAsync, ct);
+
+    private async Task<Result<JobDto>> QueueAsync(Guid actor, int id, Func<Guid, int, CancellationToken, Task<Result<BackgroundJob>>> queue, CancellationToken ct)
     {
         BackgroundJob? job = null;
         var queued = await LockedAsync(actor, id, async () =>
         {
-            var rebuild = await lifecycle.QueueRebuildAsync(actor, id, ct);
-            if (!rebuild.IsSuccess) return rebuild.Error;
-            job = rebuild.Value;
+            var enqueued = await queue(actor, id, ct);
+            if (!enqueued.IsSuccess) return enqueued.Error;
+            job = enqueued.Value;
             return Result.Success;
         }, ct);
         return queued.IsSuccess ? JobService.Describe(job!) : queued.Error;
     }
 
-    public Task<Result> ActivateAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, id, () => lifecycle.ActivateCoreAsync(id, ct), ct);
-
-    public Task<Result> ClearAsync(Guid actor, int id, CancellationToken ct) => LockedAsync(actor, id, () => lifecycle.ClearCoreAsync(id, ct), ct);
-
-    private async Task<Result> LockedAsync(Guid actor, int id, Func<Task<Result>> mutation, CancellationToken ct)
-    {
-        await writes.Gate.WaitAsync(ct);
-        try { return await write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.KnowledgeRetrieval, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token)), mutation, ct); }
-        finally { writes.Gate.Release(); }
-    }
+    private Task<Result> LockedAsync(Guid actor, int id, Func<Task<Result>> mutation, CancellationToken ct)
+        => write.ExecuteAsync(actor, AuditTarget.Of(FeatureCatalog.KnowledgeRetrieval, id.ToString(CultureInfo.InvariantCulture), token => SnapshotAsync(id, token)), mutation, ct);
 
     /// <summary>所有 profile 的狀態，以及這個 profile 目前的向量數。</summary>
     private async Task<object?> SnapshotAsync(int profile, CancellationToken ct) => new

@@ -14,6 +14,7 @@ import { GripVertical } from 'lucide';
 import { ThemeService } from '@core/preferences/theme-service';
 import { edgeScrollSpeed, flipRows, layoutBox, scrollParent } from '../browser/reorder-motion';
 import { shiftId, type OrderShift } from '../browser/sort-order';
+import { swallowClick } from '../browser/swallow-click';
 import { EXTRA_ICONS, Icon } from './icon';
 
 /** 一次移動：`index` 是放下後在這組列（`nxSortableRows` 的 `ids`）中的位置，從 0 起算。 */
@@ -142,6 +143,22 @@ export class SortableRows {
     window.addEventListener('pointerup', this.drop);
     window.addEventListener('pointercancel', this.cancel);
     window.addEventListener('keydown', this.escape, true);
+    this.awaitRelease(event.pointerId);
+  }
+
+  /**
+   * 手勢到放開才結束，Esc 取消後指標還按著，所以不跟拖曳狀態一起清除。
+   * 列跟著指標走，放開處常在同一列上，補發的 click 會被當成點了那一列（例如開啟詳情）。
+   */
+  private awaitRelease(pointer: number) {
+    const released = (event: PointerEvent) => {
+      if (event.pointerId !== pointer) return;
+      window.removeEventListener('pointerup', released);
+      window.removeEventListener('pointercancel', released);
+      if (event.type === 'pointerup') swallowClick();
+    };
+    window.addEventListener('pointerup', released);
+    window.addEventListener('pointercancel', released);
   }
 
   private readonly pointerMove = (event: PointerEvent) => {

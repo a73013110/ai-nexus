@@ -42,7 +42,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 }
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
-internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
+internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, ShareWriteLock writes,
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -62,8 +62,6 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
         try
         {
             using var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
-            await attachmentWrites.Gate.WaitAsync(ct);
-            try
             {
                 await using var tx = await db.Database.BeginTransactionAsync(ct);
                 await quota.LockOwnerAsync(actor, ct);
@@ -105,10 +103,6 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
                 return await shares.DescribeAsync(actor, share, ct);
-            }
-            finally
-            {
-                attachmentWrites.Gate.Release();
             }
         }
         finally

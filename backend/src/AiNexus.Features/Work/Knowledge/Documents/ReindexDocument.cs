@@ -1,6 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
@@ -13,7 +13,7 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// <summary>
 /// 把使用者可編輯的知識庫文件重新排入索引：頁面已擷取過就只重做嵌入，否則完整重跑匯入。仍在處理中的文件回傳衝突。
 /// </summary>
-internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, AttachmentWriteLock writes, JobService jobs)
+internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, DocumentWriteLock writes, JobService jobs)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/reindex", (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
@@ -23,19 +23,17 @@ internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents,
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
-            var found = await documents.FindAsync(actor, id, ct, write: true);
-            if (!found.IsSuccess) return found.Error;
-            var doc = found.Value;
-            if (doc.CollectionId is null) return KnowledgeErrors.DocumentNotIndexed;
-            if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running), ct)) return KnowledgeErrors.JobActive;
-            var savedPages = await db.DocumentPages.AnyAsync(x => x.DocumentId == id, ct);
-            doc.Status = "queued"; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, savedPages ? DocumentEmbeddingHandler.JobKind : DocumentIngestHandler.JobKind, doc.FileName).Id;
-            await db.SaveChangesAsync(ct);
-            return DocumentAccess.Describe(doc, true);
-        }
-        finally { writes.Gate.Release(); }
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        if (!await writes.TryAcquireForDocumentAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        var found = await documents.FindAsync(actor, id, ct, write: true);
+        if (!found.IsSuccess) return found.Error;
+        var doc = found.Value;
+        if (doc.CollectionId is null) return KnowledgeErrors.DocumentNotIndexed;
+        if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && (x.Status == RunStates.Queued || x.Status == RunStates.Running), ct)) return KnowledgeErrors.JobActive;
+        var savedPages = await db.DocumentPages.AnyAsync(x => x.DocumentId == id, ct);
+        doc.Status = "queued"; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, savedPages ? DocumentEmbeddingHandler.JobKind : DocumentIngestHandler.JobKind, doc.FileName).Id;
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return DocumentAccess.Describe(doc, true);
     }
 }

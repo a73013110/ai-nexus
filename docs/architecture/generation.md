@@ -28,7 +28,7 @@
 
 ## 程序內鎖
 
-- 同一程序內的互斥用 `KeyedAsyncLock` 依鍵分開：生成狀態依對話、資源寫入依資源，不同對話或資源互不等待。
+- 同一程序內的互斥用 `KeyedAsyncLock` 依鍵分開：生成狀態依對話、資源寫入依資源，不同對話或資源互不等待。哪些規則改用資料庫鎖見 [ADR 0001](../decisions/0001-single-iis-in-process-locks.md)。
 - 每人一個進行中的生成與配額由 `Users` 列鎖在交易內保證（filtered unique index 再擋一次）。
 - Gitea 的連線、解除與匯入由本機鎖協調，固定 commit 的成功匯入重用既有文件。
 

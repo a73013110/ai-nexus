@@ -16,12 +16,28 @@ public sealed class EmbeddingRow
 
 public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbContext> sql)
 {
+    private const int DeleteBatchSize = 1000;
+
     public IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile) => profile.Dimensions switch
     {
         768 => db.ChunkEmbeddings768.AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
         1024 => db.ChunkEmbeddings1024.AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
         _ => throw new ArgumentOutOfRangeException(nameof(profile))
     };
+    /// <summary>
+    /// 刪除一批退役模型的向量，回傳筆數（0＝刪完，或模型已不是退役）。自動提交，呼叫端不要包交易：這個方法的用意就是不持有長交易。
+    /// 狀態條件與刪除在同一句，恢復使用的模型不會被接著刪掉。
+    /// </summary>
+    public Task<int> DeleteRetiredBatchAsync(EmbeddingProfile profile, CancellationToken ct)
+    {
+        var retired = db.EmbeddingProfiles.Where(x => x.Id == profile.Id && x.Status == "retired");
+        return profile.Dimensions switch
+        {
+            768 => db.ChunkEmbeddings768.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(DeleteBatchSize).ExecuteDeleteAsync(ct),
+            1024 => db.ChunkEmbeddings1024.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(DeleteBatchSize).ExecuteDeleteAsync(ct),
+            _ => throw new ArgumentOutOfRangeException(nameof(profile))
+        };
+    }
     public async Task<IReadOnlyList<Guid>> ExistingAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) =>
         await Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
     public async Task<Dictionary<string, float[]>> CachedAsync(EmbeddingProfile profile, IReadOnlyList<byte[]> hashes, CancellationToken ct)

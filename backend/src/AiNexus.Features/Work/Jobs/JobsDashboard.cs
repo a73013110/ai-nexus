@@ -17,6 +17,7 @@ internal sealed class JobsDashboard(ISqlDatabase<AppDbContext> sql) : IDashboard
         ["document-ingest"] = "文字擷取",
         ["document-embedding"] = "向量索引",
         ["embedding-reindex"] = "重新索引",
+        ["embedding-clear"] = "清除退役向量",
         ["evaluation"] = "品質評測",
         ["retrieval-eval"] = "檢索評測",
         ["repository-review"] = "程式碼 review",

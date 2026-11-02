@@ -41,7 +41,7 @@ internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReim
 /// HR 手動重匯一段日期的每日檔：不論檔案有沒有變動都重匯，匯入紀錄記為 <c>manual</c> 並帶操作者。操作本身就是匯入紀錄，不另寫稽核。
 /// <para>
 /// 依檔名日期由舊到新逐檔交給 <see cref="PunchImporter"/>，與排程掃描同一個順序，所以相鄰兩天重複的刷卡一樣歸先寫入的檔。
-/// 每個檔各自取得 <see cref="PunchImportGate"/>、各自一個交易：排程可以插在兩個檔之間，不會被整段重匯擋住；中途失敗或請求中斷時，已完成的檔照常保留。
+/// 每個檔各自取得寫入鎖、各自一個交易：排程可以插在兩個檔之間，不會被整段重匯擋住；中途失敗或請求中斷時，已完成的檔照常保留。
 /// </para>
 /// <para>
 /// 在請求內同步處理，不走背景工作：每日檔每張卡只有最早與最晚兩筆，單檔通常不到一秒，區間上限 <see cref="MaxDays"/> 天也在數十秒內，

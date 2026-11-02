@@ -82,9 +82,10 @@ export class MonitoringSessions {
     pageSizes: [10],
   });
   constructor() {
-    // 搜尋或換功能是新的一批資料：回到第一頁。
+    // 搜尋或換功能是新的一批資料：回到第一頁。只看這兩個條件：即時快照每次都換新陣列，看 matched 會把正在翻頁的人拉回去。
     effect(() => {
-      this.matched();
+      this.query();
+      this.feature();
       this.table.goTo(0);
     });
   }

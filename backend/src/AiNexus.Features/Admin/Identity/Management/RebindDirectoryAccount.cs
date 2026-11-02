@@ -27,7 +27,7 @@ internal sealed class DirectoryBindingRequestValidator : RequestValidator<Direct
 /// UserId、角色、部門與歷史資料沿用，不另建使用者。同時寫入新的 <c>AdAccount</c> 並開啟 AD 驗證；姓名與信箱留給「從 AD 更新」。
 /// SID 已綁定其他使用者（含已刪除者）或帳號名已被他人使用時拒絕，避免接管別人的身分。遞增 <c>SecurityVersion</c>，舊工作階段失效。
 /// </summary>
-internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IdentityWriteLock writeLock, IAdDirectory directory)
+internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IAdDirectory directory)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/ad-binding", (Guid id, DirectoryBindingRequest body, ICurrentUser user, RebindDirectoryAccount handler, CancellationToken ct) =>
@@ -37,29 +37,24 @@ internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrit
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, DirectoryBindingRequest request, CancellationToken ct)
     {
-        // 目錄查詢在鎖與交易外：AD 慢或連不上時不擋住登入；連不上時拋出 directory_unavailable。
+        // 目錄查詢在鎖與交易外：AD 慢或連不上時不擋住其他管理操作與登入；連不上時拋出 directory_unavailable。
         var person = await directory.FindAccountAsync(request.AdAccount.Trim(), ct);
         if (person is null) return IdentityErrors.DirectoryPersonNotFound;
         var adAccount = UserAccounts.Normalize(person.AccountName)!;
-        await writeLock.Gate.WaitAsync(ct);
-        try
+        return await write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.IdentityUsers, id, person.Sid, token => SnapshotAsync(db, id, token)), async () =>
         {
-            return await write.ExecuteAsync(actor, new AuditTarget(FeatureCatalog.IdentityUsers, id, person.Sid, token => SnapshotAsync(db, id, token)), async () =>
-            {
-                var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
-                if (user is null) return IdentityErrors.UserNotFound;
-                if (id == actor) return AccessControlErrors.Lockout;
-                if (await db.Users.AnyAsync(x => x.Id != id && x.Sid == person.Sid, ct)) return IdentityErrors.AdBindingTaken;
-                if (await db.Users.AnyAsync(x => x.Id != id && x.AdAccount == adAccount, ct)) return IdentityErrors.AccountExists;
-                if (user.Sid == person.Sid && user.AdAccount == adAccount && user.AdEnabled) return Result.Success;
-                user.Sid = person.Sid;
-                user.AdAccount = adAccount;
-                user.AdEnabled = true;
-                user.SecurityVersion++;
-                return Result.Success;
-            }, ct);
-        }
-        finally { writeLock.Gate.Release(); }
+            var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
+            if (user is null) return IdentityErrors.UserNotFound;
+            if (id == actor) return AccessControlErrors.Lockout;
+            if (await db.Users.AnyAsync(x => x.Id != id && x.Sid == person.Sid, ct)) return IdentityErrors.AdBindingTaken;
+            if (await db.Users.AnyAsync(x => x.Id != id && x.AdAccount == adAccount, ct)) return IdentityErrors.AccountExists;
+            if (user.Sid == person.Sid && user.AdAccount == adAccount && user.AdEnabled) return Result.Success;
+            user.Sid = person.Sid;
+            user.AdAccount = adAccount;
+            user.AdEnabled = true;
+            user.SecurityVersion++;
+            return Result.Success;
+        }, ct);
     }
 
     /// <summary>改綁與解除綁定共用的稽核快照（<c>admin.user_ad_bind</c>、<c>admin.user_ad_unbind</c>）：SID 記完整值，舊 SID 才查得回來。</summary>
