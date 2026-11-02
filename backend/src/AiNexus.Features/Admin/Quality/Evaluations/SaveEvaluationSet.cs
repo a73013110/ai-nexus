@@ -9,6 +9,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.Evaluations;
@@ -61,28 +62,27 @@ internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {
         if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return QualityErrors.InvalidName;
-        // 更新只鎖該題組；建立則改鎖擁有者，讓上限計數在並行建立時仍然準確。
-        using (await (id is Guid key ? writes.AcquireAsync(key, ct) : writes.AcquireAsync("evaluation-sets", actor, ct)))
+        await using var tx = await db.Database.BeginTransactionAsync(ct); Resource resource;
+        if (id is Guid existing)
         {
-            await using var tx = await db.Database.BeginTransactionAsync(ct); Resource resource;
-            if (id is Guid existing)
-            {
-                var allowed = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
-                if (!allowed.IsSuccess) return allowed.Error;
-                resource = allowed.Value;
-                var changed = await db.EvaluationSets.Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
-                if (changed != 1) return QualityErrors.SetConflict;
-                resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
-            }
-            else
-            {
-                if (await db.Resources.CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
-                resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
-                db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
-            }
-            audit.Describe(resource: resource.Id);
-            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-            return await access.LoadSetAsync(db, actor, resource.Id, ct);
+            if (!await writes.TryAcquireAsync(existing, ct)) return CollaborationErrors.ResourceBusy;
+            var allowed = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
+            if (!allowed.IsSuccess) return allowed.Error;
+            resource = allowed.Value;
+            var changed = await db.EvaluationSets.Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
+            if (changed != 1) return QualityErrors.SetConflict;
+            resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
         }
+        else
+        {
+            // 先計數再新增，鎖擁有者才能讓上限在並行建立時仍然準確。
+            await db.LockUserRowAsync(actor, ct);
+            if (await db.Resources.CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
+            resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
+            db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
+        }
+        audit.Describe(resource: resource.Id);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        return await access.LoadSetAsync(db, actor, resource.Id, ct);
     }
 }

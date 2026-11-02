@@ -39,7 +39,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
             handler.HandleAsync(user.Id, null, id, ct))
         .RequireAuthorization(Policies.Attachments).Audited(KnowledgeAudit.DocumentCreated).WithName("ReadAttachmentDocument");
 
-    public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
+    public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null, Action<Document>? alongside = null)
     {
         if (await RequireContainerAsync(actor, collection, project, ct) is { IsSuccess: false } denied) return denied.Error;
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -79,6 +79,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
             document.Warning = extracted.Warning;
         }
         document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, DocumentIngestHandler.JobKind, file.FileName).Id;
+        alongside?.Invoke(document);
         audit.Describe(resource: resource.Id);
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return DocumentAccess.Describe(document, true);

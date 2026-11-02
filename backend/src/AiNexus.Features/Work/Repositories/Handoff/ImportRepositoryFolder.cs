@@ -20,7 +20,7 @@ public sealed record RepositoryFolderImportDto(Guid Id, int Files, JobDto Job);
 /// 列出固定 commit 上某資料夾底下的文字檔，並把匯入排入知識庫的佇列。
 /// 檔案清單在此時固定，因此工作重試時匯入的仍是同一份快照。
 /// </summary>
-internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, RepositoryWriteLock writes, AuditTrail audit)
+internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, AuditTrail audit)
 {
     // 值得當成文字建立索引的副檔名；其他多半是二進位或產生的檔案，直接略過。
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -49,21 +49,17 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
         var paths = listed.Value;
         if (paths.Length == 0) return RepositoriesErrors.ImportEmpty;
         if (paths.Length > gitea.Options.MaxImportFiles) return RepositoriesErrors.ImportLimit;
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
-            var row = new RepositoryFolderImport { OwnerId = owner, BaseUrl = gitea.BaseUrl, Repository = repo, Commit = commit, Path = folder,
-                CollectionId = request.CollectionId, PathsJson = JsonSerializer.Serialize(paths) };
-            var label = repo.Split('/')[1] + (folder.Length > 0 ? "/" + folder : "") + " · " + commit[..7];
-            var job = jobs.Enqueue(owner, request.CollectionId, row.Id, RepositoryImportHandler.JobKind, string.Concat(label.Take(180)));
-            job.TotalUnits = paths.Length;
-            row.JobId = job.Id;
-            db.Add(row);
-            audit.Describe(resource: request.CollectionId);
-            await db.SaveChangesAsync(ct);
-            return new RepositoryFolderImportDto(row.Id, paths.Length, JobService.Describe(job));
-        }
-        finally { writes.Gate.Release(); }
+        // 只是一次儲存新增兩列，沒有跨列規則，不必排隊；知識庫這時被刪除也無妨，工作每個檔案都會重新檢查權限與知識庫。
+        var row = new RepositoryFolderImport { OwnerId = owner, BaseUrl = gitea.BaseUrl, Repository = repo, Commit = commit, Path = folder,
+            CollectionId = request.CollectionId, PathsJson = JsonSerializer.Serialize(paths) };
+        var label = repo.Split('/')[1] + (folder.Length > 0 ? "/" + folder : "") + " · " + commit[..7];
+        var job = jobs.Enqueue(owner, request.CollectionId, row.Id, RepositoryImportHandler.JobKind, string.Concat(label.Take(180)));
+        job.TotalUnits = paths.Length;
+        row.JobId = job.Id;
+        db.Add(row);
+        audit.Describe(resource: request.CollectionId);
+        await db.SaveChangesAsync(ct);
+        return new RepositoryFolderImportDto(row.Id, paths.Length, JobService.Describe(job));
     }
 
     /// <summary>從 Gitea 的遞迴樹列出資料夾下的文字檔；超過上限就提早停止。</summary>

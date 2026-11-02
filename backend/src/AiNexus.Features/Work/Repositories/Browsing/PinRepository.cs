@@ -3,12 +3,13 @@ using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
 
 /// <summary>把使用者可讀取的程式庫釘在清單頂端，並同步為 Gitea 目前的名稱與說明。</summary>
-internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, RepositoryWriteLock writes)
+internal sealed class PinRepository(AppDbContext db, RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPut("/pin", (string owner, string name, ICurrentUser user, PinRepository handler, CancellationToken ct) =>
@@ -29,22 +30,20 @@ internal sealed class PinRepository(AppDbContext db, RepositoryService gitea, Re
             isPrivate = GiteaJson.Flag(json.RootElement, "private");
         }
         if (!RepositoryService.IsRepository(name)) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
-        // 釘選數量上限是先計數再新增，兩個並行請求可能同時通過檢查，所以用寫入鎖序列化。
-        await writes.Gate.WaitAsync(ct);
-        try
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // 釘選數量上限是先計數再新增，兩個並行請求可能同時通過檢查，所以鎖擁有者讓他們排隊。
+        await db.LockUserRowAsync(owner, ct);
+        var pins = db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl);
+        var row = await pins.SingleOrDefaultAsync(x => x.Repository == name, ct);
+        if (row is null)
         {
-            var pins = db.RepositoryPins.Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl);
-            var row = await pins.SingleOrDefaultAsync(x => x.Repository == name, ct);
-            if (row is null)
-            {
-                if (await pins.CountAsync(ct) >= RepositoryPin.Limit) return RepositoriesErrors.PinLimit;
-                row = new RepositoryPin { OwnerId = owner, BaseUrl = gitea.BaseUrl, Repository = name };
-                db.Add(row);
-            }
-            row.Description = description; row.Private = isPrivate;
-            await db.SaveChangesAsync(ct);
-            return new RepositoryPinDto(row.Repository, row.Description, row.Private, row.PinnedAt);
+            if (await pins.CountAsync(ct) >= RepositoryPin.Limit) return RepositoriesErrors.PinLimit;
+            row = new RepositoryPin { OwnerId = owner, BaseUrl = gitea.BaseUrl, Repository = name };
+            db.Add(row);
         }
-        finally { writes.Gate.Release(); }
+        row.Description = description; row.Private = isPrivate;
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return new RepositoryPinDto(row.Repository, row.Description, row.Private, row.PinnedAt);
     }
 }

@@ -19,6 +19,18 @@ public sealed class EvaluationRunTests
     private static readonly EvaluationSetRequest Sample = new("公文摘要檢核", "固定題目", [new("整理通知", "秘密參考答案不可送入模型", ["測試", "ABC"], ["不存在"])]);
 
     [Fact]
+    public async Task ConcurrentStartsQueueOneRunPerOwner()
+    {
+        await using var f = new AppFactory(seed: PlatformGrants.QualityForMembers); using var owner = await f.SignedInAsync();
+        var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", Sample)).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("原始方案", "test-model", "保持精簡")]))));
+
+        Assert.Single(responses, x => x.IsSuccessStatusCode);
+        Assert.Equal(3, responses.Count(x => x.StatusCode == HttpStatusCode.Conflict));
+    }
+
+    [Fact]
     public async Task FrozenCasesRunThroughDurableQueueAndResultsRequireSetAccess()
     {
         await using var f = new AppFactory(seed: PlatformGrants.QualityForMembers); using var owner = await f.SignedInAsync(); using var viewer = await f.SignedInAsync("viewer");

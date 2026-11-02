@@ -17,7 +17,6 @@ public sealed class SharingModule : IFeatureModule
         builder.Services.AddDashboardSource<SharingDashboard>();
         builder.Services.AddScoped<ShareService>();
         builder.Services.AddScoped<ShareAccess>();
-        builder.Services.AddSingleton<ShareWriteLock>();
         builder.Services.AddHostedService<ShareCleanupWorker>();
         builder.Services.AddDomainEventHandler<ConversationDeleted, RevokeDeletedSourceShares>();
         builder.Services.AddDomainEventHandler<ArtifactDeleted, RevokeDeletedSourceShares>();

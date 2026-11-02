@@ -8,6 +8,19 @@ namespace AiNexus.IntegrationTests.Quality;
 
 public sealed class MessageFeedbackTests
 {
+    // 每則回答只能有一筆評分；每個請求各自一條連線，不排隊就會同時新增而撞上主鍵。
+    [Fact]
+    public async Task ConcurrentRatingsOfOneAnswerAllSucceed()
+    {
+        await using var f = new AppFactory(seed: PlatformGrants.QualityForMembers); using var owner = await f.SignedInAsync();
+        var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "問題"); await WaitForTerminal(owner, run.Id);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => owner.PutAsJsonAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback", new FeedbackRequest(1))));
+
+        Assert.All(responses, x => Assert.True(x.IsSuccessStatusCode));
+        Assert.Single((await owner.GetFromJsonAsync<List<FeedbackDto>>("/api/v1/quality/feedback"))!);
+    }
+
     [Fact]
     public async Task FeedbackIsOwnedTerminalAndPersistsInConversationWithoutPublishingText()
     {

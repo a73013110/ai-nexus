@@ -11,7 +11,7 @@
 | Enable 32-Bit Applications | False |
 | Identity | 固定 ApplicationPoolIdentity 或經規劃的專用服務帳號 |
 | Load User Profile | True，維持 DPAPI 的執行身分 |
-| Maximum Worker Processes | 1；目前生成佇列與部分寫入鎖在程序內 |
+| Maximum Worker Processes | 1；生成佇列與模型容量在程序內 |
 | Start Mode | AlwaysRunning |
 | Idle Time-out | 0，避免使用者閱讀時或背景索引時被閒置停止 |
 | Disable Overlapped Recycle | True，部署／回收期間避免舊版與新版並存 |

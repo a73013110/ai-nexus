@@ -21,34 +21,32 @@ public sealed class ResourceLifecycle(AppDbContext db, ResourceAccess access, Re
     public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         if (kind is not (Project.Kind or EvaluationSet.Kind)) throw new InvalidOperationException("Unsupported container lifecycle.");
-        using (await writes.AcquireAsync(id, ct))
+        // 不用 Serializable：它只能擋住「檢查之後才插入」卻擋不住對方已通過存活檢查、等鎖後照樣寫入，
+        // 範圍鎖還會讓不相關的工作與串流卡在掃描過的列上。這條規則改由兩邊取同一把鎖，見 ContainerLock。
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        if (!await writes.TryAcquireAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        // 等不到鎖表示有工作正在開始，與檢查到進行中的工作是同一個結果。
+        if (!await containers.TryDeleteAsync(id, ct)) return CollaborationErrors.TasksActive;
+        var owned = await access.OwnerAsync(actor, id, kind, ct);
+        if (!owned.IsSuccess) return owned.Error;
+        var resource = owned.Value;
+        // 已邏輯刪除的子資源也要納入檢查（查詢需忽略軟刪除過濾器）：它們仍在進行中的工作會阻擋刪除。
+        var children = db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
+        if (await db.BackgroundJobs.AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
+            return CollaborationErrors.TasksActive;
+        foreach (var check in checks)
+            if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
+        if (kind == Project.Kind)
         {
-            // 不用 Serializable：它只能擋住「檢查之後才插入」卻擋不住對方已通過存活檢查、等鎖後照樣寫入，
-            // 範圍鎖還會讓不相關的工作與串流卡在掃描過的列上。這條規則改由兩邊取同一把鎖，見 ContainerLock。
-            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-            // 等不到鎖表示有工作正在開始，與檢查到進行中的工作是同一個結果。
-            if (!await containers.TryDeleteAsync(id, ct)) return CollaborationErrors.TasksActive;
-            var owned = await access.OwnerAsync(actor, id, kind, ct);
-            if (!owned.IsSuccess) return owned.Error;
-            var resource = owned.Value;
-            // 已邏輯刪除的子資源也要納入檢查（查詢需忽略軟刪除過濾器）：它們仍在進行中的工作會阻擋刪除。
-            var children = db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
-            if (await db.BackgroundJobs.AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
-                return CollaborationErrors.TasksActive;
-            foreach (var check in checks)
-                if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
-            if (kind == Project.Kind)
-            {
-                // 子資源的直接分享與擁有者保持不變；只有靠專案繼承的存取會隨專案失效，所以要清空它們的 ParentId。
-                await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
-            }
-            resource.IsDeleted = true;
-            resource.UpdatedAt = clock.GetUtcNow();
-            events.Raise(new ContainerDeleted(kind, id, actor));
-            audit.Describe(resource: id);
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
+            // 子資源的直接分享與擁有者保持不變；只有靠專案繼承的存取會隨專案失效，所以要清空它們的 ParentId。
+            await db.Resources.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
         }
+        resource.IsDeleted = true;
+        resource.UpdatedAt = clock.GetUtcNow();
+        events.Raise(new ContainerDeleted(kind, id, actor));
+        audit.Describe(resource: id);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return Result.Success;
     }
 }

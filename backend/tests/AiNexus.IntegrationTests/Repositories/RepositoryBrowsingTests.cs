@@ -1,4 +1,7 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Repositories;
+using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Work.Knowledge.Documents;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Work.Jobs;
@@ -75,6 +78,67 @@ public sealed class RepositoryBrowsingTests
         var pull = await client.PostAsJsonAsync($"{Repo}/chat", new StartRepositoryChatRequest(null, null, null, 2)); pull.EnsureSuccessStatusCode();
         Assert.Contains("Pull Request #2", (await pull.Content.ReadFromJsonAsync<RepositoryChatDto>())!.Prompt);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync($"{Repo}/chat", new StartRepositoryChatRequest(FixtureGitea.Head, ["README.md"], 1, null))).StatusCode);
+    }
+
+    // 另一個工作在讀 Gitea 的期間匯入了同一路徑：要沿用它，不能多一份文件，也不能讓工作失敗。
+    [Fact]
+    public async Task AnImportLosingARaceForAPathReusesTheWinner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source = new FixtureGitea();
+        await using var factory = Factory(source); using var client = await factory.SignedInAsync(); await ConnectAsync(client);
+        var collection = (await KnowledgeApi.CreateCollection(client)).Resource.Id;
+        var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var response = await client.PostAsJsonAsync($"{Repo}/imports", new ImportRepositoryFolderRequest(FixtureGitea.Head, "docs", collection), ct); response.EnsureSuccessStatusCode();
+        var queued = (await response.Content.ReadFromJsonAsync<RepositoryFolderImportDto>(ct))!;
+        var stall = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.GuideStall = stall.Task;
+
+        var worker = BackgroundJobs.Drain(factory);
+        await source.GuideRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
+        var file = await AttachmentApi.Upload(client, "guide.md", "另一個工作匯入的內容");
+        var added = await client.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection}/documents", new AddDocumentRequest(file.Id), ct); added.EnsureSuccessStatusCode();
+        var winner = (await added.Content.ReadFromJsonAsync<DocumentDto>(ct))!.Id;
+        await using (var seed = factory.Services.CreateAsyncScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Add(new RepositoryImport { OwnerId = owner, CollectionId = collection, DocumentId = winner, Repository = "hanglong/nexus", Commit = FixtureGitea.Head, Path = "docs/guide.md", BaseUrl = "https://gitea.fixture.test" });
+            await db.SaveChangesAsync(ct);
+        }
+        stall.SetResult();
+        await worker;
+
+        Assert.Equal("completed", (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{queued.Job.Id}", ct))!.Status);
+        await using var check = factory.Services.CreateAsyncScope();
+        var data = check.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(winner, (await data.Documents.SingleAsync(x => x.CollectionId == collection && !x.IsDeleted, ct)).Id);
+        Assert.Equal(winner, (await data.RepositoryImports.SingleAsync(ct)).DocumentId);
+        Assert.Equal(1, (await data.RepositoryFolderImports.SingleAsync(ct)).Imported);
+    }
+
+    [Fact]
+    public async Task ReimportingAFileWhoseDocumentWasDeletedCreatesItAgain()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var factory = Factory(new FixtureGitea()); using var client = await factory.SignedInAsync(); await ConnectAsync(client);
+        var collection = (await KnowledgeApi.CreateCollection(client)).Resource.Id;
+        var request = new ImportRepositoryFolderRequest(FixtureGitea.Head, "docs", collection);
+        (await client.PostAsJsonAsync($"{Repo}/imports", request, ct)).EnsureSuccessStatusCode();
+        await BackgroundJobs.Drain(factory);
+        Guid first;
+        await using (var scope = factory.Services.CreateAsyncScope())
+            first = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Documents.SingleAsync(x => x.CollectionId == collection, ct)).Id;
+        (await client.DeleteAsync($"/api/v1/documents/{first}", ct)).EnsureSuccessStatusCode();
+
+        var again = await client.PostAsJsonAsync($"{Repo}/imports", request, ct); again.EnsureSuccessStatusCode();
+        await BackgroundJobs.Drain(factory);
+
+        Assert.Equal("completed", (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{(await again.Content.ReadFromJsonAsync<RepositoryFolderImportDto>(ct))!.Job.Id}", ct))!.Status);
+        await using var check = factory.Services.CreateAsyncScope();
+        var db = check.ServiceProvider.GetRequiredService<AppDbContext>();
+        var live = await db.Documents.SingleAsync(x => x.CollectionId == collection && !x.IsDeleted, ct);
+        Assert.NotEqual(first, live.Id);
+        Assert.Equal(live.Id, (await db.RepositoryImports.SingleAsync(ct)).DocumentId);
     }
 
     [Fact]

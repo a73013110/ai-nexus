@@ -47,7 +47,7 @@ BaseUrl 可在子路徑；必須 HTTPS，HTTP 只允許 loopback。IIS 主機要
 
 ## 匯入知識庫
 
-只能從資料夾匯入（不提供單檔匯入），目標是自己能編輯的知識庫。建立時用 Gitea 遞迴樹列出固定版本下的文字檔（副檔名白名單、`MaxFileBytes` 內，最多 `MaxImportFiles`=200 個），存在 `repositories.RepositoryFolderImports`，交給背景任務「程式庫匯入」逐檔處理。每個檔案匯入前重新確認 Gitea、功能與知識庫權限；之前匯入過的同一來源與 commit 會重用文件（`repositories.RepositoryImports`），所以重試從斷點繼續。
+只能從資料夾匯入（不提供單檔匯入），目標是自己能編輯的知識庫。建立時用 Gitea 遞迴樹列出固定版本下的文字檔（副檔名白名單、`MaxFileBytes` 內，最多 `MaxImportFiles`=200 個），存在 `repositories.RepositoryFolderImports`，交給背景任務「程式庫匯入」逐檔處理。每個檔案匯入前重新確認 Gitea、功能與知識庫權限；之前匯入過的同一來源與 commit 會重用文件（`repositories.RepositoryImports`，唯一索引擋下重疊的匯入），所以重試從斷點繼續。
 
 匯入後是 AI Nexus 的獨立資料，依知識庫 ACL 保存，**不同步 Gitea 之後的撤權、修改或刪除**；分享前確認內容適合該知識庫的成員。
 

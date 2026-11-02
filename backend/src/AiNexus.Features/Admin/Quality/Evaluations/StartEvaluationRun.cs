@@ -13,6 +13,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -43,7 +44,7 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
-internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, ContainerLock containers, JobService jobs, ModelCatalog models, ModelPolicyService policy,
+internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ContainerLock containers, JobService jobs, ModelCatalog models, ModelPolicyService policy,
     IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -61,23 +62,20 @@ internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access,
             if (await policy.RequireAsync(actor, model.Value.Id, ct) is { IsSuccess: false } refused) return refused.Error;
             variants.Add(new(variant.Label.Trim(), model.Value.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model.Value, inference.Value)));
         }
-        // 固定先取擁有者的鎖、後取題組的鎖；反向取鎖會與其他請求死鎖。上限與進行中檢查也都在鎖內完成。
-        using (await writes.AcquireAsync("evaluation-runs", actor, ct))
-        using (await writes.AcquireAsync(setId, ct))
-        {
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
-            if (!await containers.TryStartWorkAsync(setId, ct)) return CollaborationErrors.ResourceBusy;
-            var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
-            if (!allowed.IsSuccess) return allowed.Error;
-            var resource = allowed.Value;
-            if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == EvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
-            if (await db.EvaluationRuns.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
-            var set = await db.EvaluationSets.AsNoTracking().SingleAsync(x => x.Id == setId, ct);
-            var run = new EvaluationRun { SetId = setId, OwnerId = actor, SetTitle = resource.Name, SetVersion = set.Version, CasesJson = set.CasesJson, VariantsJson = JsonSerializer.Serialize(variants), CreatedAt = clock.GetUtcNow() };
-            var job = jobs.Enqueue(actor, setId, run.Id, EvaluationHandler.JobKind, "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
-            audit.Describe(resource: run.Id);
-            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-            return run.ToDto(job, actor);
-        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        if (!await containers.TryStartWorkAsync(setId, ct)) return CollaborationErrors.ResourceBusy;
+        // 上限與「一人一個進行中」都是每人的規則，所以鎖擁有者。題組內容是單列快照讀取，不必與儲存題組排隊。
+        await db.LockUserRowAsync(actor, ct);
+        var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
+        if (!allowed.IsSuccess) return allowed.Error;
+        var resource = allowed.Value;
+        if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == EvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
+        if (await db.EvaluationRuns.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
+        var set = await db.EvaluationSets.AsNoTracking().SingleAsync(x => x.Id == setId, ct);
+        var run = new EvaluationRun { SetId = setId, OwnerId = actor, SetTitle = resource.Name, SetVersion = set.Version, CasesJson = set.CasesJson, VariantsJson = JsonSerializer.Serialize(variants), CreatedAt = clock.GetUtcNow() };
+        var job = jobs.Enqueue(actor, setId, run.Id, EvaluationHandler.JobKind, "品質評測 · " + resource.Name); run.JobId = job.Id; db.Add(run);
+        audit.Describe(resource: run.Id);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        return run.ToDto(job, actor);
     }
 }

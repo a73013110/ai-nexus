@@ -30,7 +30,6 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<RepositoryReviewService>();
         services.AddBackgroundJobHandler<RepositoryReviewHandler>(RepositoryReviewHandler.JobKind);
         services.AddBackgroundJobHandler<RepositoryImportHandler>(RepositoryImportHandler.JobKind);
-        services.AddSingleton<RepositoryWriteLock>();
         // 每次讀取都會實際呼叫 Gitea（使用使用者的 token）；寫入還可能啟動模型工作、上傳檔案或遠端留言，所以限制較嚴。
         services.AddRateLimiter(options => options.AddPerUserLimit(ReadRateLimit, 240).AddPerUserLimit(WriteRateLimit, 20));
     }

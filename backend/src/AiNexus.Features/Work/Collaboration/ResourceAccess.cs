@@ -3,25 +3,10 @@ using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
-using AiNexus.Platform.Threading;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Collaboration;
-
-/// <summary>
-/// 只在本程序內序列化寫入（多實例部署不互斥）：依資源鎖住版本化儲存、ACL 變更與刪除，或依其他以 ID 為範圍的不變式。
-/// 不同資源互不等待。同時取兩把鎖時，必須先取擁有者範圍的鎖，否則可能死結。
-/// </summary>
-public sealed class ResourceWriteLock
-{
-    private readonly KeyedAsyncLock<(string Scope, Guid Id)> keys = new();
-
-    public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
-
-    /// <summary>為不屬於資源本身、但以 ID 為範圍的不變式加鎖，例如單一擁有者的額度或單一訊息的回饋。<paramref name="scope"/> 用來區分用途，避免不同用途的鎖互相等待。</summary>
-    public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
-}
 
 /// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
 public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiveUsers activeUsers, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
@@ -100,33 +85,33 @@ public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiv
     }
     public async Task<Result> SetAclAsync(Guid actor, Guid id, string kind, ResourceAclRequest request, CancellationToken ct)
     {
-        using (await writes.AcquireAsync(id, ct))
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        if (!await writes.TryAcquireAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        var owned = await OwnerAsync(actor, id, kind, ct);
+        if (!owned.IsSuccess) return owned.Error;
+        var resource = owned.Value;
+        if (request.Members.Any(x => x.UserId == resource.OwnerId)) return CollaborationErrors.OwnerIsImplicit;
+        var users = request.Members.Select(x => x.UserId).ToArray();
+        var oldMembers = await db.ResourceMembers.Where(x => x.ResourceId == id).ToListAsync(ct);
+        // 新加入的成員必須是啟用中的人；已是成員的停用者可以留著（ADR 0019：停用只凍結，復職即恢復），所以只檢查新加的。
+        var added = users.Except(oldMembers.Select(x => x.UserId)).ToArray();
+        if (await activeUsers.Ids.CountAsync(x => added.Contains(x), ct) != added.Length || await db.RoleGroups.CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
+            return CollaborationErrors.UnknownMember;
+        // 群組授權刻意只給唯讀；可編輯者必須是具名成員，不能靠群組取得編輯權。
+        db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
+        foreach (var item in request.Members)
         {
-            var owned = await OwnerAsync(actor, id, kind, ct);
-            if (!owned.IsSuccess) return owned.Error;
-            var resource = owned.Value;
-            if (request.Members.Any(x => x.UserId == resource.OwnerId)) return CollaborationErrors.OwnerIsImplicit;
-            var users = request.Members.Select(x => x.UserId).ToArray();
-            var oldMembers = await db.ResourceMembers.Where(x => x.ResourceId == id).ToListAsync(ct);
-            // 新加入的成員必須是啟用中的人；已是成員的停用者可以留著（ADR 0019：停用只凍結，復職即恢復），所以只檢查新加的。
-            var added = users.Except(oldMembers.Select(x => x.UserId)).ToArray();
-            if (await activeUsers.Ids.CountAsync(x => added.Contains(x), ct) != added.Length || await db.RoleGroups.CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
-                return CollaborationErrors.UnknownMember;
-            // 群組授權刻意只給唯讀；可編輯者必須是具名成員，不能靠群組取得編輯權。
-            db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
-            foreach (var item in request.Members)
-            {
-                var member = oldMembers.SingleOrDefault(x => x.UserId == item.UserId);
-                if (member is null) { member = new() { ResourceId = id, UserId = item.UserId }; db.Add(member); }
-                member.Role = item.Role;
-            }
-            var oldGroups = await db.ResourceGroups.Where(x => x.ResourceId == id).ToListAsync(ct);
-            db.RemoveRange(oldGroups.Where(x => !request.GroupIds.Contains(x.GroupId)));
-            db.AddRange(request.GroupIds.Except(oldGroups.Select(x => x.GroupId)).Select(x => new ResourceGroup { ResourceId = id, GroupId = x }));
-            resource.UpdatedAt = clock.GetUtcNow();
-            audit.Describe(resource: id, details: new { kind, users = users.Length, groups = request.GroupIds.Count });
-            await db.SaveChangesAsync(ct);
+            var member = oldMembers.SingleOrDefault(x => x.UserId == item.UserId);
+            if (member is null) { member = new() { ResourceId = id, UserId = item.UserId }; db.Add(member); }
+            member.Role = item.Role;
         }
+        var oldGroups = await db.ResourceGroups.Where(x => x.ResourceId == id).ToListAsync(ct);
+        db.RemoveRange(oldGroups.Where(x => !request.GroupIds.Contains(x.GroupId)));
+        db.AddRange(request.GroupIds.Except(oldGroups.Select(x => x.GroupId)).Select(x => new ResourceGroup { ResourceId = id, GroupId = x }));
+        resource.UpdatedAt = clock.GetUtcNow();
+        audit.Describe(resource: id, details: new { kind, users = users.Length, groups = request.GroupIds.Count });
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return Result.Success;
     }
     public async Task<Result<Resource>> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)

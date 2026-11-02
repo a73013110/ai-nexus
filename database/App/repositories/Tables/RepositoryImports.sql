@@ -20,7 +20,7 @@ CREATE NONCLUSTERED INDEX [IX_RepositoryImports_DocumentId]
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_RepositoryImports_OwnerId_CollectionId_Repository_Commit_Path]
+CREATE UNIQUE NONCLUSTERED INDEX [ux_RepositoryImports_OwnerId_CollectionId_Repository_Commit_Path]
     ON [repositories].[RepositoryImports]([OwnerId] ASC, [CollectionId] ASC, [Repository] ASC, [Commit] ASC, [Path] ASC);
 
 

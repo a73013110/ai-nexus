@@ -1,13 +1,13 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Quality;
 using System.Text.Json;
-using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Jobs;
@@ -34,7 +34,7 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
 
 /// <summary>凍結檢索驗收題組並附上索引與設定的指紋，然後排入背景工作。</summary>
 internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
-    ResourceWriteLock writes, JobService jobs, TimeProvider clock, AuditTrail audit)
+    JobService jobs, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/retrieval-evals", (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
@@ -51,21 +51,19 @@ internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvalua
         if (request.Cases.SelectMany(x => x.Relevant).Any(x => x.Pages.Any(p => !pages.Any(page => page.DocumentId == x.DocumentId && page.PageNumber == p)))) return QualityErrors.PagesInvalid;
         await profiles.ActiveAsync(ct);
         // 擁有者同時只能有一個進行中的檢索評測，並有總執行次數上限。
-        using (await writes.AcquireAsync("retrieval-evaluations", actor, ct))
-        {
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
-            if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } revoked) return revoked.Error;
-            if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == RetrievalEvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
-            if (await db.RetrievalEvaluations.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
-            var profile = await profiles.ActiveAsync(ct);
-            var json = RetrievalEvaluationService.Json;
-            var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),
-                TopK = options.Value.Retrieval.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
-            var job = jobs.Enqueue(actor, null, run.Id, RetrievalEvaluationHandler.JobKind, "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
-            audit.Describe(resource: run.Id);
-            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-            return RetrievalEvaluationService.Describe(run, job);
-        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.LockUserRowAsync(actor, ct);
+        if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } revoked) return revoked.Error;
+        if (await db.BackgroundJobs.AnyAsync(x => x.OwnerId == actor && x.Kind == RetrievalEvaluationHandler.JobKind && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
+        if (await db.RetrievalEvaluations.CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
+        var profile = await profiles.ActiveAsync(ct);
+        var json = RetrievalEvaluationService.Json;
+        var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),
+            TopK = options.Value.Retrieval.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
+        var job = jobs.Enqueue(actor, null, run.Id, RetrievalEvaluationHandler.JobKind, "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
+        audit.Describe(resource: run.Id);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        return RetrievalEvaluationService.Describe(run, job);
     }
 
     // 案例 id 唯一、查詢長度有界；有答案的題目須指向分級為正、頁碼為正且不重複的相關文件；無答案的題目則不得指定任何文件。

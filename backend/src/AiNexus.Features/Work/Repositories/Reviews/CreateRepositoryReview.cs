@@ -13,6 +13,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -42,7 +43,7 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 /// 之後的 push 不會改變這次 review。request key 讓同一請求的重試回傳同一個 review；同一個 key 用於不同請求則為衝突。
 /// </summary>
 internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
-    RepositoryWriteLock writes, ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
+    ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
         .MapPost("/reviews", (string owner, string name, CreateRepositoryReviewRequest body, ICurrentUser user, CreateRepositoryReview handler, CancellationToken ct) =>
@@ -79,45 +80,40 @@ internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService 
         // 請求指紋只涵蓋會改變結果的欄位；同一個 idempotency key 若指紋不同，就視為衝突。
         var fingerprintInput = new { repo, head, basis, request.PullRequest, request.ModelId, note, request.Purpose };
         var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(fingerprintInput)));
-        await writes.Gate.WaitAsync(ct);
-        try
+        // 讀 Gitea 不持鎖，同一請求併發重試時頂多多讀一次 diff；交易內鎖住擁有者後會再確認一次。
+        var existing = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
+        if (existing is not null)
         {
-            var existing = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
-            if (existing is not null)
-            {
-                if (existing.RequestHash != hash) return RepositoriesErrors.IdempotencyConflict;
-                var source = await reviews.CheckSourceAsync(owner, existing, ct);
-                if (!source.IsSuccess) return source.Error;
-                return await reviews.DescribeAsync(existing, ct);
-            }
-            var profile = await catalog.RequireAsync(request.ModelId, ct);
-            if (!profile.IsSuccess) return profile.Error;
-            var model = profile.Value;
-            if (await policy.RequireAsync(owner, model.Id, ct) is { IsSuccess: false } refused) return refused.Error;
-            var headExists = await gitea.RequireCommitAsync(owner, repo, head, ct);
-            if (!headExists.IsSuccess) return headExists.Error;
-            if (basis is not null && await gitea.RequireCommitAsync(owner, repo, basis, ct) is { IsSuccess: false } missing) return missing.Error;
-            var diff = await gitea.DiffAsync(owner, repo, head, basis, ct);
-            if (!diff.IsSuccess) return diff.Error;
-            var snapshot = RepositoryReviewPlan.Create(diff.Value, model, repo, head, basis, note, request.Purpose);
-            if (!snapshot.IsSuccess) return snapshot.Error;
-            var row = new RepositoryReview { OwnerId = owner, Repository = repo, Commit = head, BaseCommit = basis, PullRequest = request.PullRequest,
-                BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
-                SnapshotJson = JsonSerializer.Serialize(snapshot.Value), Purpose = snapshot.Value.Purpose, IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            // 對使用者列做一次 UPDATE（值不變）以取得該列的鎖，讓同一使用者的並行建立請求依序進行；
-            // 它與唯一的 request key 一起，也能防止多台應用程式主機重複建立。
-            await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var duplicate = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
-            if (duplicate is not null) return duplicate.RequestHash == hash ? await reviews.DescribeAsync(duplicate, ct) : RepositoriesErrors.IdempotencyConflict;
-            var label = repo + (request.PullRequest is { } pr ? " · PR #" + pr : " · " + head[..10]);
-            row.JobId = jobs.Enqueue(owner, null, row.Id, RepositoryReviewHandler.JobKind, label).Id;
-            db.Add(row);
-            audit.Describe(resource: row.Id);
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-            return await reviews.DescribeAsync(row, ct);
+            if (existing.RequestHash != hash) return RepositoriesErrors.IdempotencyConflict;
+            var source = await reviews.CheckSourceAsync(owner, existing, ct);
+            if (!source.IsSuccess) return source.Error;
+            return await reviews.DescribeAsync(existing, ct);
         }
-        finally { writes.Gate.Release(); }
+        var profile = await catalog.RequireAsync(request.ModelId, ct);
+        if (!profile.IsSuccess) return profile.Error;
+        var model = profile.Value;
+        if (await policy.RequireAsync(owner, model.Id, ct) is { IsSuccess: false } refused) return refused.Error;
+        var headExists = await gitea.RequireCommitAsync(owner, repo, head, ct);
+        if (!headExists.IsSuccess) return headExists.Error;
+        if (basis is not null && await gitea.RequireCommitAsync(owner, repo, basis, ct) is { IsSuccess: false } missing) return missing.Error;
+        var diff = await gitea.DiffAsync(owner, repo, head, basis, ct);
+        if (!diff.IsSuccess) return diff.Error;
+        var snapshot = RepositoryReviewPlan.Create(diff.Value, model, repo, head, basis, note, request.Purpose);
+        if (!snapshot.IsSuccess) return snapshot.Error;
+        var row = new RepositoryReview { OwnerId = owner, Repository = repo, Commit = head, BaseCommit = basis, PullRequest = request.PullRequest,
+            BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
+            SnapshotJson = JsonSerializer.Serialize(snapshot.Value), Purpose = snapshot.Value.Purpose, IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // 同一使用者的並行建立請求依序進行；它與唯一的 request key 一起，也能防止多個程序重複建立。
+        await db.LockUserRowAsync(owner, ct);
+        var duplicate = await db.RepositoryReviews.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
+        if (duplicate is not null) return duplicate.RequestHash == hash ? await reviews.DescribeAsync(duplicate, ct) : RepositoriesErrors.IdempotencyConflict;
+        var label = repo + (request.PullRequest is { } pr ? " · PR #" + pr : " · " + head[..10]);
+        row.JobId = jobs.Enqueue(owner, null, row.Id, RepositoryReviewHandler.JobKind, label).Id;
+        db.Add(row);
+        audit.Describe(resource: row.Id);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return await reviews.DescribeAsync(row, ct);
     }
 }

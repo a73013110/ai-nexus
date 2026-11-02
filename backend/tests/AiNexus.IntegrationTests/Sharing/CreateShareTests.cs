@@ -1,4 +1,8 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Collaboration;
+using AiNexus.Data.App.Sharing;
+using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Features.Work.Collaboration;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -12,6 +16,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Sharing.Management;
 using AiNexus.Features.Work.Sharing.Viewing;
 using AiNexus.Features.Work.Artifacts.Management;
+using static AiNexus.IntegrationTests.Support.ArtifactApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
@@ -38,6 +43,95 @@ public sealed class CreateShareTests
         var ownerId = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         await AssertCodeAsync(await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(owner)).Id, [ownerId])), HttpStatusCode.BadRequest, "share_invalid");
         (await reader.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(reader)).Id, [ownerId]))).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task ParallelSharesCannotPassTheActiveLimit()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        var ownerId = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var readerId = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var conversations = await Task.WhenAll(CreateConversation(owner), CreateConversation(owner));
+        await using (var seed = f.Services.CreateAsyncScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            foreach (var _ in Enumerable.Range(0, ShareLink.MaxActivePerOwner - 1))
+            {
+                var resource = new Resource { OwnerId = ownerId, Kind = "share", Name = "既有分享" };
+                db.Add(resource);
+                db.Add(new ShareLink { Id = resource.Id, OwnerId = ownerId, SourceId = Guid.NewGuid(), Kind = "conversation", Title = "既有分享", CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddDays(1) });
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        var responses = await Task.WhenAll(conversations.Select(x => owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", x.Id, [readerId]), ct)));
+
+        Assert.Single(responses, x => x.IsSuccessStatusCode);
+        Assert.Single(responses, x => x.StatusCode == HttpStatusCode.Conflict);
+    }
+
+    // 上限是每人的規則：別人的分享不用等，也不像全域鎖一樣排在同一條隊伍。
+    [Fact]
+    public async Task ASharerWaitsOnlyForTheirOwnAccount()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var f = new AppFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob"); using var reader = await f.SignedInAsync("reader");
+        var aliceId = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var readerId = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var aliceConversation = await CreateConversation(alice); var bobConversation = await CreateConversation(bob);
+
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await db.LockUserRowAsync(aliceId, ct);
+
+        (await bob.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", bobConversation.Id, [readerId]), ct).WaitAsync(TimeSpan.FromSeconds(30), ct)).EnsureSuccessStatusCode();
+        var waiting = alice.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", aliceConversation.Id, [readerId]), ct);
+        await Task.Delay(200, ct);
+        Assert.False(waiting.IsCompleted);
+
+        await transaction.CommitAsync(ct);
+        (await waiting).EnsureSuccessStatusCode();
+    }
+
+    // 刪除成果會撤銷它的分享；排在刪除之後的分享要看得到成果已刪除，不能留下一筆漏撤銷的分享。
+    [Fact]
+    public async Task SharingAnArtifactDuringItsDeletionWaitsAndFails()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        var readerId = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var artifact = (await CreateArtifact(owner)).Resource.Id;
+
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        Assert.True(await scope.ServiceProvider.GetRequiredService<ResourceWriteLock>().TryAcquireAsync(artifact, ct));
+        await db.Resources.Where(x => x.Id == artifact).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
+
+        var share = owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("artifact", artifact, [readerId]), ct);
+        await Task.Delay(200, ct);
+        Assert.False(share.IsCompleted);
+
+        await transaction.CommitAsync(ct);
+        Assert.Equal(HttpStatusCode.NotFound, (await share).StatusCode);
+    }
+
+    [Fact]
+    public async Task ParallelRevokesAllSucceed()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var f = new AppFactory(); using var owner = await f.SignedInAsync(); using var reader = await f.SignedInAsync("reader");
+        var readerId = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me", ct))!.Id;
+        var created = await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(owner)).Id, [readerId]), ct);
+        var share = (await created.Content.ReadFromJsonAsync<ShareDto>(ct))!.Id;
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => owner.DeleteAsync($"/api/v1/shares/{share}", ct)));
+
+        Assert.All(responses, x => Assert.True(x.IsSuccessStatusCode));
+        await using var scope = f.Services.CreateAsyncScope();
+        Assert.True((await scope.ServiceProvider.GetRequiredService<AppDbContext>().ShareLinks.AsNoTracking().SingleAsync(x => x.Id == share, ct)).IsRevoked);
     }
 
     [Fact]

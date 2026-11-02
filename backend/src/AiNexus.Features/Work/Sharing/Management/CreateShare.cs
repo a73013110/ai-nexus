@@ -42,7 +42,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 }
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
-internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, ShareWriteLock writes,
+internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, ResourceWriteLock writes,
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -58,57 +58,50 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
         var recipientCount = await activeUsers.Ids.CountAsync(x => request.RecipientIds.Contains(x), ct);
         if (recipientCount != request.RecipientIds.Count) return SharingErrors.RecipientUnknown;
 
-        await writes.Gate.WaitAsync(ct);
-        try
+        using var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // 刪除成果時會在同一交易撤銷它的分享；要排在它之後才看得到已刪除，否則會多出一筆漏撤銷的分享。
+        if (request.Kind == Artifact.Kind && !await writes.TryAcquireAsync(request.SourceId, ct)) return CollaborationErrors.ResourceBusy;
+        // 有效分享的上限是每人的規則，鎖擁有者即可，不同人互不等待。
+        await quota.LockOwnerAsync(actor, ct);
+
+        var now = clock.GetUtcNow();
+        var activeCount = await db.ShareLinks
+            .CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct);
+        if (activeCount >= ShareLink.MaxActivePerOwner) return SharingErrors.LimitReached;
+        if (!await shares.HasSourceFeatureAsync(actor, request.Kind, ct)) return SharingErrors.Unavailable;
+
+        var snapshot = await SnapshotAsync(actor, request, ct);
+        if (!snapshot.IsSuccess) return snapshot.Error;
+        var (title, content, files) = snapshot.Value;
+
+        var resource = new Resource { OwnerId = actor, Kind = "share", Name = title };
+        var share = new ShareLink
         {
-            using var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
-            {
-                await using var tx = await db.Database.BeginTransactionAsync(ct);
-                await quota.LockOwnerAsync(actor, ct);
+            Id = resource.Id,
+            OwnerId = actor,
+            SourceId = request.SourceId,
+            Kind = request.Kind,
+            Title = title,
+            IncludeAttachments = request.IncludeAttachments,
+            CreatedAt = now,
+            ExpiresAt = now.AddHours(request.Hours),
+            SnapshotJson = JsonSerializer.Serialize(content),
+        };
+        db.Add(resource);
+        db.Add(share);
+        db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
+        db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
+        audit.Describe(resource: share.Id, details: new { kind = request.Kind, recipients = request.RecipientIds.Count, expiresAt = share.ExpiresAt, includeAttachments = request.IncludeAttachments });
 
-                var now = clock.GetUtcNow();
-                var activeCount = await db.ShareLinks
-                    .CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct);
-                if (activeCount >= ShareLink.MaxActivePerOwner) return SharingErrors.LimitReached;
-                if (!await shares.HasSourceFeatureAsync(actor, request.Kind, ct)) return SharingErrors.Unavailable;
-
-                var snapshot = await SnapshotAsync(actor, request, ct);
-                if (!snapshot.IsSuccess) return snapshot.Error;
-                var (title, content, files) = snapshot.Value;
-
-                var resource = new Resource { OwnerId = actor, Kind = "share", Name = title };
-                var share = new ShareLink
-                {
-                    Id = resource.Id,
-                    OwnerId = actor,
-                    SourceId = request.SourceId,
-                    Kind = request.Kind,
-                    Title = title,
-                    IncludeAttachments = request.IncludeAttachments,
-                    CreatedAt = now,
-                    ExpiresAt = now.AddHours(request.Hours),
-                    SnapshotJson = JsonSerializer.Serialize(content),
-                };
-                db.Add(resource);
-                db.Add(share);
-                db.AddRange(request.RecipientIds.Select(id => new ShareRecipient { ShareId = share.Id, UserId = id }));
-                db.AddRange(files.Select(file => new ResourceAttachment { ResourceId = share.Id, AttachmentId = file }));
-                audit.Describe(resource: share.Id, details: new { kind = request.Kind, recipients = request.RecipientIds.Count, expiresAt = share.ExpiresAt, includeAttachments = request.IncludeAttachments });
-
-                foreach (var recipient in request.RecipientIds)
-                {
-                    await notifications.PublishAsync(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id, ct);
-                }
-
-                await db.SaveChangesAsync(ct);
-                await tx.CommitAsync(ct);
-                return await shares.DescribeAsync(actor, share, ct);
-            }
-        }
-        finally
+        foreach (var recipient in request.RecipientIds)
         {
-            writes.Gate.Release();
+            await notifications.PublishAsync(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id, ct);
         }
+
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await shares.DescribeAsync(actor, share, ct);
     }
 
     private async Task<Result<SourceSnapshot>> SnapshotAsync(Guid actor, CreateShareRequest request, CancellationToken ct)

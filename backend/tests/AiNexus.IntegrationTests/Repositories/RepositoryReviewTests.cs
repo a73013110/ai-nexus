@@ -208,6 +208,102 @@ public sealed class RepositoryReviewTests
     }
 
     [Fact]
+    public async Task ConcurrentRetriesOfOneRequestCreateOneReview()
+    {
+        var source = new FixtureGitea(); var provider = new ReviewProvider();
+        await using var factory = Factory(source, provider); using var client = await factory.SignedInAsync();
+        (await client.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
+        var request = new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString());
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => client.PostAsJsonAsync(Reviews, request)));
+
+        Assert.All(responses, x => Assert.True(x.IsSuccessStatusCode));
+        var reviews = await Task.WhenAll(responses.Select(x => x.Content.ReadFromJsonAsync<RepositoryReviewDto>()));
+        Assert.Single(reviews.Select(x => x!.Id).Distinct());
+        using var scope = factory.Services.CreateScope();
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().RepositoryReviews.CountAsync());
+    }
+
+    // 讀 Gitea 可能花上數十秒，不能佔住任何鎖。
+    [Fact]
+    public async Task AReviewWaitingForGiteaDoesNotBlockOtherWrites()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var slow = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new FixtureGitea(); var provider = new ReviewProvider();
+        await using var factory = Factory(source, provider); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        (await alice.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"), ct)).EnsureSuccessStatusCode();
+        source.Stall = slow.Task;
+
+        var waiting = alice.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString()), ct);
+        await source.SeenAsync($"api/v1/repos/hanglong/nexus/git/commits/{new string('a', 40)}.diff", ct).WaitAsync(TimeSpan.FromSeconds(30), ct);
+
+        (await bob.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"), ct).WaitAsync(TimeSpan.FromSeconds(30), ct)).EnsureSuccessStatusCode();
+        (await alice.PutAsync("/api/v1/repositories/hanglong/nexus/pin", null, ct).WaitAsync(TimeSpan.FromSeconds(30), ct)).EnsureSuccessStatusCode();
+        Assert.False(waiting.IsCompleted);
+
+        slow.SetResult();
+        (await waiting).EnsureSuccessStatusCode();
+    }
+
+    // 認領之後才送出：第二個請求不等 Gitea 回應，也不會再貼一次。
+    [Fact]
+    public async Task ACommentBeingPostedIsNotPostedAgain()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (factory, source, client, comment) = await FinishedPullRequestReviewAsync();
+        await using (factory)
+        using (client)
+        {
+            var slow = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            source.Stall = slow.Task;
+            var first = client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"), ct);
+            await source.CommentRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
+
+            var second = await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"), ct).WaitAsync(TimeSpan.FromSeconds(30), ct);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, second.StatusCode);
+            Assert.Contains("resource_busy", await second.Content.ReadAsStringAsync(ct));
+
+            slow.SetResult();
+            (await first).EnsureSuccessStatusCode();
+            Assert.Single(source.Comments);
+        }
+    }
+
+    // 程序在送出途中結束時，認領不會自己消失：租約內不重送，到期後可以重試。
+    [Fact]
+    public async Task ACommentClaimLeftBehindExpires()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (factory, source, client, comment) = await FinishedPullRequestReviewAsync();
+        await using (factory)
+        using (client)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.RepositoryReviews.ExecuteUpdateAsync(p => p.SetProperty(x => x.CommentedAt, DateTimeOffset.UtcNow), ct);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"), ct)).StatusCode);
+            Assert.Empty(source.Comments);
+
+            await db.RepositoryReviews.ExecuteUpdateAsync(p => p.SetProperty(x => x.CommentedAt, DateTimeOffset.UtcNow.AddHours(-1)), ct);
+            (await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"), ct)).EnsureSuccessStatusCode();
+            Assert.Single(source.Comments);
+        }
+    }
+
+    private static async Task<(AppFactory Factory, FixtureGitea Source, HttpClient Client, string Comment)> FinishedPullRequestReviewAsync()
+    {
+        var source = new FixtureGitea { Diff = Diff(2, 10) };
+        var factory = Factory(source, new ReviewProvider());
+        var client = await factory.SignedInAsync();
+        (await client.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
+        var created = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(null, null, 2, "test-model", "", Guid.NewGuid().ToString(), "summary"));
+        created.EnsureSuccessStatusCode();
+        await ProcessOne(factory);
+        return (factory, source, client, $"/api/v1/repositories/reviews/{(await created.Content.ReadFromJsonAsync<RepositoryReviewDto>())!.Id}/comment");
+    }
+
+    [Fact]
     public async Task CommitReviewsCannotBePostedAsComments()
     {
         var provider = new ReviewProvider(); await using var factory = Factory(new() { Diff = Diff(1, 10) }, provider); using var client = await factory.SignedInAsync();

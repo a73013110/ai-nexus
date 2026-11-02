@@ -14,9 +14,9 @@ public sealed class DocumentService
 
     internal DocumentService(DocumentAccess documents, AddKnowledgeDocument add) => (this.documents, this.add) = (documents, add);
 
-    /// <summary>把附件加入知識庫或專案；兩者皆為 null 時成為獨立文件。詳見 <see cref="AddKnowledgeDocument"/>。</summary>
-    public Task<Result<DocumentDto>> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
-        => add.HandleAsync(actor, collection, attachment, ct, project, text);
+    /// <summary>把附件加入知識庫或專案；兩者皆為 null 時成為獨立文件。<paramref name="alongside"/> 在新文件儲存前呼叫，呼叫端加入的資料列與文件一起提交或回復。詳見 <see cref="AddKnowledgeDocument"/>。</summary>
+    public Task<Result<DocumentDto>> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null, Action<Document>? alongside = null)
+        => add.HandleAsync(actor, collection, attachment, ct, project, text, alongside);
 
     /// <summary>以與文件端點相同的權限檢查取得追蹤中的文件。</summary>
     public Task<Result<Document>> RequireAsync(Guid actor, Guid id, CancellationToken ct, bool write = false) => documents.FindAsync(actor, id, ct, write);

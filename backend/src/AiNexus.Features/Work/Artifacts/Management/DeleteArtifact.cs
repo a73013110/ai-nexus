@@ -23,17 +23,15 @@ internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, Res
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        using (await writes.AcquireAsync(id, ct))
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var resource = await access.OwnerAsync(actor, id, Artifact.Kind, ct);
-            if (!resource.IsSuccess) return resource.Error;
-            resource.Value.IsDeleted = true;
-            events.Raise(new ArtifactDeleted(id, actor));
-            await db.ArtifactRevisions.Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-            return Result.Success;
-        }
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        if (!await writes.TryAcquireAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        var resource = await access.OwnerAsync(actor, id, Artifact.Kind, ct);
+        if (!resource.IsSuccess) return resource.Error;
+        resource.Value.IsDeleted = true;
+        events.Raise(new ArtifactDeleted(id, actor));
+        await db.ArtifactRevisions.Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return Result.Success;
     }
 }

@@ -19,25 +19,56 @@ internal sealed class FixtureGitea : IGiteaClient
     public List<(string Path, string Body)> Comments { get; } = [];
     public bool Revoked { get; set; }
     public bool ReadOnly { get; set; }
+    /// <summary>設定後，讀 diff 與貼留言會等到它完成，用來模擬 Gitea 回應很慢。</summary>
+    public Task? Stall { get; set; }
+    /// <summary>設定後，讀 docs/guide.md 會等到它完成；開始等時完成 <see cref="GuideRequested"/>，測試才知道匯入已經走到讀檔。</summary>
+    public Task? GuideStall { get; set; }
+    public TaskCompletionSource GuideRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <summary>貼留言開始時完成。不能用路徑判斷：建立 pull request review 時已經 GET 過同一個 comments 路徑。</summary>
+    public TaskCompletionSource CommentRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public string Diff { get; set; } = "diff --git a/app.cs b/app.cs\n--- a/app.cs\n+++ b/app.cs\n@@ -1 +1 @@\n-old\n+new\n";
 
-    public Task<string?> GetTextAsync(string token, string path, int maxBytes, CancellationToken ct)
+    public async Task<string?> GetTextAsync(string token, string path, int maxBytes, CancellationToken ct)
     {
         Check(path);
-        return Task.FromResult(Encoding.UTF8.GetByteCount(Diff) > maxBytes ? null : Diff);
+        if (Stall is { } stall) await stall;
+        return Encoding.UTF8.GetByteCount(Diff) > maxBytes ? null : Diff;
     }
 
-    public Task<JsonDocument> PostCommentAsync(string token, string path, string body, CancellationToken ct)
+    public async Task<JsonDocument> PostCommentAsync(string token, string path, string body, CancellationToken ct)
     {
         Check(path);
+        CommentRequested.TrySetResult();
+        if (Stall is { } stall) await stall;
         if (ReadOnly) throw new ExternalServiceException(Error.Forbidden("gitea_forbidden"), "Read-only token.");
-        Comments.Add((path, body));
-        return Json(new { id = 9, html_url = "https://gitea.hanglong.com.tw/hanglong/nexus/pulls/2#issuecomment-9", body });
+        lock (Comments) Comments.Add((path, body));
+        return await Json(new { id = 9, html_url = "https://gitea.hanglong.com.tw/hanglong/nexus/pulls/2#issuecomment-9", body });
     }
 
-    public Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct)
+    /// <summary>等到某個路徑真的被呼叫過，測試才知道對方已經走到外部呼叫。</summary>
+    public async Task SeenAsync(string path, CancellationToken ct)
+    {
+        while (!Saw(path)) await Task.Delay(20, ct);
+    }
+
+    private bool Saw(string path)
+    {
+        lock (Requests) return Requests.Contains(path);
+    }
+
+    public async Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct)
     {
         Check(path);
+        if (GuideStall is { } stall && path.Contains("/contents/docs/guide.md", StringComparison.Ordinal))
+        {
+            GuideRequested.TrySetResult();
+            await stall;
+        }
+        return await RespondAsync(path);
+    }
+
+    private static Task<JsonDocument> RespondAsync(string path)
+    {
         const string repo = "api/v1/repos/hanglong/nexus";
         object response = path switch
         {
@@ -80,7 +111,7 @@ internal sealed class FixtureGitea : IGiteaClient
 
     private void Check(string path)
     {
-        Requests.Add(path);
+        lock (Requests) Requests.Add(path);
         if (Revoked) throw new ExternalServiceException(Error.Forbidden("gitea_unauthorized"), "Revoked.");
     }
 

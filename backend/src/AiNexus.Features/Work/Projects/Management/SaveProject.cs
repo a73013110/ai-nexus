@@ -60,19 +60,17 @@ internal sealed class SaveProject(AppDbContext db, ResourceAccess access, Resour
     {
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
-        using (await writes.AcquireAsync(id, ct))
-        {
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var allowed = await access.RequireAsync(actor, id, Project.Kind, ct, write: true);
-            if (!allowed.IsSuccess) return allowed.Error;
-            var resource = allowed.Value;
-            var count = await db.Projects.Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
-            if (count != 1) return ProjectsErrors.Conflict;
-            resource.Name = name.Value;
-            resource.UpdatedAt = clock.GetUtcNow();
-            await db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            return await access.LoadProjectAsync(db, actor, id, ct);
-        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        if (!await writes.TryAcquireAsync(id, ct)) return CollaborationErrors.ResourceBusy;
+        var allowed = await access.RequireAsync(actor, id, Project.Kind, ct, write: true);
+        if (!allowed.IsSuccess) return allowed.Error;
+        var resource = allowed.Value;
+        var count = await db.Projects.Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
+        if (count != 1) return ProjectsErrors.Conflict;
+        resource.Name = name.Value;
+        resource.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await access.LoadProjectAsync(db, actor, id, ct);
     }
 }

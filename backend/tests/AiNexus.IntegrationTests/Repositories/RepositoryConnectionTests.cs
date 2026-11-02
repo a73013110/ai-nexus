@@ -25,6 +25,23 @@ public sealed class RepositoryConnectionTests
     internal static async Task ConnectAsync(HttpClient client) =>
         (await client.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest(Token))).EnsureSuccessStatusCode();
 
+    // 每個請求各自一條連線，等於不同程序同時連線：先讀再新增，不排隊就會撞上主鍵。
+    [Fact]
+    public async Task ConcurrentConnectionsAndPinsOfOneUserAllSucceed()
+    {
+        await using var factory = Factory(new FixtureGitea());
+        using var client = await factory.SignedInAsync();
+
+        await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => ConnectAsync(client)));
+        var pins = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => client.PutAsync("/api/v1/repositories/hanglong/nexus/pin", null)));
+
+        Assert.All(pins, x => Assert.True(x.IsSuccessStatusCode));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.RepositoryConnections.CountAsync());
+        Assert.Equal(1, await db.RepositoryPins.CountAsync());
+    }
+
     [Fact]
     public async Task TokensAreEncryptedPerUserAndHostAndDisconnectingStopsReads()
     {

@@ -7,7 +7,7 @@ public sealed class CollaborationModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<ResourceWriteLock>();
+        builder.Services.AddScoped<ResourceWriteLock>();
         builder.Services.AddScoped<ContainerLock>();
         builder.Services.AddScoped<ResourceAccess>();
         builder.Services.AddScoped<ResourceLifecycle>();
