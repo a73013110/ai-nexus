@@ -63,7 +63,6 @@ internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRende
         if (!enqueued.IsSuccess) return enqueued.Error;
         result = new(enqueued.Value.MessageId, false);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? result : committed.Error;
+        return await transaction.CommitAsync(() => result, ct);
     }
 }

@@ -58,7 +58,6 @@ internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeWrite 
         db.Add(item);
         await NavigationRules.ReplaceAudiencesAsync(db, id, audiences, ct);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? NavigationItemDto.From(item, [.. audiences.Order(StringComparer.Ordinal)]) : committed.Error;
+        return await transaction.CommitAsync(() => NavigationItemDto.From(item, [.. audiences.Order(StringComparer.Ordinal)]), ct);
     }
 }

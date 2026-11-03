@@ -42,7 +42,6 @@ internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite wr
         setting.UpdatedAt = clock.GetUtcNow();
         setting.UpdatedById = actor;
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? new MailSettingsDto(request.AutoRetry, setting.UpdatedAt) : committed.Error;
+        return await transaction.CommitAsync(() => new MailSettingsDto(request.AutoRetry, setting.UpdatedAt), ct);
     }
 }

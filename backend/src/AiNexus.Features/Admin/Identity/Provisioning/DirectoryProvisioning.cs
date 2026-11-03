@@ -122,8 +122,7 @@ internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAc
         if (fresh.Outcome == DirectoryOutcomes.Create) fresh = fresh with { User = await accounts.CreateAsync(id, person.Sid, fresh.Account, Profile(person), now, ct) };
         else DirectoryAccounts.Apply(fresh.User!, fresh.Changes, now);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? fresh : committed.Error;
+        return await transaction.CommitAsync(() => fresh, ct);
     }
 
     /// <summary>沒有目錄資料可比對的使用者（目錄找不到、沒有綁定 AD、已刪除）：以平台資料回報。</summary>

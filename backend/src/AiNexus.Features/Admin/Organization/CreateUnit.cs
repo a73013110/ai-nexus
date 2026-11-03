@@ -38,7 +38,6 @@ internal sealed class CreateUnit(AppDbContext db, AdministrativeWrite write)
         db.Add(unit);
         await UnitRules.ClearLedManagersAsync(db, unit, ct);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? UnitDto.From(unit, 0) : committed.Error;
+        return await transaction.CommitAsync(() => UnitDto.From(unit, 0), ct);
     }
 }

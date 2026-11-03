@@ -65,8 +65,7 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
         var job = await queue(actor, id, ct);
         if (!job.IsSuccess) return job.Error;
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? JobService.Describe(job.Value) : committed.Error;
+        return await transaction.CommitAsync(() => JobService.Describe(job.Value), ct);
     }
 
     private AuditTarget Target(int id)

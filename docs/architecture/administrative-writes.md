@@ -39,7 +39,7 @@ return await transaction.CommitAsync(ct);
 
 - **寫入對象 `AuditTarget`**：功能、資源 ID、快照怎麼讀。同一資源有多個 slice 時放在 `<Resource>Rules.Target`，稽核形狀才不會各寫各的；只有一個 slice 用時直接寫在 handler。
 - **快照**：只投影要留證的欄位，鍵名必須在 [`AuditRedactor`](../../backend/src/AiNexus.Platform/Auditing/AuditRedactor.cs) 白名單內。照常寫 `AsNoTracking`；不要用 `FindAsync`：它先查追蹤中的實體，會記到未存的值。
-- **資料庫產生的值**：提交後才讀得到（例如新的 `RowVersion`），回應的 DTO 在 `CommitAsync` 之後才組。
+- **資料庫產生的值**：提交後才讀得到（例如新的 `RowVersion`），回應的 DTO 用 `CommitAsync(() => dto, ct)` 在提交成功後才組；還要查資料庫時，先判斷提交成功再查。
 
 ## 交易佔多久
 
@@ -66,8 +66,8 @@ return await transaction.CommitAsync(ct);
 預設不鎖。依序問：
 
 1. 只改一列？`RowVersion` 就夠。
-2. 規則能寫成唯一索引或條件式 UPDATE？用它們，撞上就回 409。
-3. 規則跨多列又沒有約束可用（例如同一張卡的期間不可重疊）？才以 `AuditTarget.Locking(名稱)` 宣告，範圍取規則涵蓋的最小資源。
+2. 規則能寫成唯一索引或條件式 UPDATE，撞上時一筆請求回 409 就好？用它們。
+3. 規則跨多列又沒有約束可用（例如同一張卡的期間不可重疊），或撞上時輸的是整批寫入（例如新增卡片與匯入）？才以 `AuditTarget.Locking(名稱)` 宣告，範圍取規則涵蓋的最小資源。
 
 - 鎖名集中在模組的 `<Module>Locks`，例如 [`AttendanceLocks`](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceLocks.cs)。多把鎖依名稱排序後才取，不會互相死結。
 - 規則要靠鎖才成立、又有不經這裡的寫入者時，對方在交易的第一步也取同一把鎖，例如 [`PunchImporter`](../../backend/src/AiNexus.Features/Office/Attendance/Imports/PunchImporter.cs)。

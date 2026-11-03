@@ -62,6 +62,13 @@ public sealed class AdministrativeTransaction : IAsyncDisposable
         }
     }
 
+    /// <summary>同 <see cref="CommitAsync(CancellationToken)"/>，提交成功才組回應：<paramref name="response"/> 讀得到資料庫產生的值，提交失敗時不會執行。組回應還要查資料庫時，改用不帶回應的版本，判斷成功後再查。</summary>
+    public async Task<Result<T>> CommitAsync<T>(Func<T> response, CancellationToken ct)
+    {
+        var committed = await CommitAsync(ct);
+        return committed.IsSuccess ? response() : committed.Error;
+    }
+
     public ValueTask DisposeAsync() => FinishAsync();
 
     private async ValueTask FinishAsync()

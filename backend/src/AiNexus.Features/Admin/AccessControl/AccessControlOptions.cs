@@ -14,7 +14,7 @@ public sealed class AccessControlOptions
     /// </summary>
     [MaxLength(100), HostPatternItems] public string[] NavigationLinkHosts { get; set; } = [];
 
-    /// <summary>行政寫入等候同範圍前一筆完成的上限（秒），逾時回 <c>admin_write_busy</c>。要短於 SQL 命令逾時（預設 30 秒），否則先到的是 SQL 例外。</summary>
+    /// <summary>行政寫入等候同範圍前一筆完成的上限（秒），逾時回 <c>admin_write_busy</c>。等候時佔著請求與一條連線，所以上限不長。</summary>
     [Range(1, 25)] public int WriteLockTimeoutSeconds { get; set; } = 15;
 }
 

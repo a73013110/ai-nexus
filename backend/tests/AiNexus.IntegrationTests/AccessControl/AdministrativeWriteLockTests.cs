@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +56,23 @@ public sealed class AdministrativeWriteLockTests
         Assert.Equal(AccessControlErrors.WriteBusy, late.Error);
         Assert.False(entered.Task.IsCompleted);
         Assert.True((await held.FinishAsync()).IsSuccess);
+    }
+
+    // 命令逾時比等鎖的上限短時，也要回「等不到鎖」而不是 SQL 例外；其他命令的逾時不受影響。
+    [Fact]
+    public async Task WaitingForALockOutlastsAShorterCommandTimeout()
+    {
+        await using var session = await Session.CreateAsync();
+        await using var held = await session.HoldAsync(First);
+        await using var scope = session.Factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>().Database;
+        await using var transaction = await database.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        database.SetCommandTimeout(1);
+
+        var acquired = await database.TryAcquireApplicationLockAsync(First, TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+
+        Assert.False(acquired);
+        Assert.Equal(1, database.GetCommandTimeout());
     }
 
     [Fact]

@@ -47,7 +47,6 @@ internal sealed class CreateCard(AppDbContext db, AdministrativeWrite write)
         if (await db.Cards.AnyAsync(x => x.CardNumber == card.CardNumber, ct)) return AttendanceErrors.CardNumberDuplicate;
         db.Add(card);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? CardDto.New(card) : committed.Error;
+        return await transaction.CommitAsync(() => CardDto.New(card), ct);
     }
 }

@@ -50,8 +50,7 @@ internal sealed class ApplyUnitImport(AppDbContext db, GdUnitSource source, Admi
         if (!chosen.IsSuccess) return chosen.Error;
         result = await chosen.Value.ApplyAsync(db, ct);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? result : committed.Error;
+        return await transaction.CommitAsync(() => result, ct);
 
         // 變更前後各一次；變動數只在套用後才有，變更前為 null。
         async Task<object?> SnapshotAsync(CancellationToken token) => new

@@ -38,8 +38,7 @@ internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, Admi
             ? new(existing, true)
             : new(outbox.AddCopy(original, content!, original.RecipientAddress!, new(IdempotencyKey: key, RequestedBy: actor)).Id, false);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? result : committed.Error;
+        return await transaction.CommitAsync(() => result, ct);
     }
 
     /// <summary>不能重寄的原因；詳情頁也用它決定是否顯示重寄按鈕。</summary>

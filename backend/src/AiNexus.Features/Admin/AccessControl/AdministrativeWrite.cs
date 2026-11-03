@@ -70,7 +70,10 @@ public sealed partial class AdministrativeWrite(AppDbContext db, AccessService a
         var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         try
         {
-            if (await RefusalAsync(target, ct) is { } refusal)
+            Error? refusal = !await TryAcquireLocksAsync(target, ct) ? AccessControlErrors.WriteBusy
+                : !await HoldsAsync(target, ct) ? AccessControlErrors.FeatureForbidden
+                : null;
+            if (refusal is not null)
             {
                 await transaction.DisposeAsync();
                 return refusal;
@@ -97,12 +100,12 @@ public sealed partial class AdministrativeWrite(AppDbContext db, AccessService a
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task<Error?> RefusalAsync(AuditTarget target, CancellationToken ct)
+    private async Task<bool> TryAcquireLocksAsync(AuditTarget target, CancellationToken ct)
     {
         // 依名稱排序：同時取多把鎖的寫入順序一致，不會互等成死結。
         foreach (var name in target.Locks.Order(StringComparer.Ordinal))
-            if (!await writes.TryAcquireAsync(name, ct)) return AccessControlErrors.WriteBusy;
-        return await HoldsAsync(target, ct) ? null : AccessControlErrors.FeatureForbidden;
+            if (!await writes.TryAcquireAsync(name, ct)) return false;
+        return true;
     }
 
     /// <summary>沒有宣告 <see cref="AuditTarget.Guard"/> 時一律為真。在交易內讀 SQL，不信任請求一開始授權時的快取結果。</summary>

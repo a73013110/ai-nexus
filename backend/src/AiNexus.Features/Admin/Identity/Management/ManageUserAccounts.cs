@@ -112,8 +112,7 @@ internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite wr
         if (hash is not null) { user.PasswordHash = hash; user.PasswordChangedAt = clock.GetUtcNow(); user.FailedLogins = 0; user.LockedUntil = null; }
         await SetUserRoles.ReplaceAsync(db, key, request.RoleIds, ct);
 
-        var committed = await transaction.CommitAsync(ct);
-        return committed.IsSuccess ? key : committed.Error;
+        return await transaction.CommitAsync(() => key, ct);
     }
 
     public async Task<Result> DeleteAsync(Guid actor, Guid id, int profileVersion, CancellationToken ct)
