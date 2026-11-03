@@ -1,6 +1,6 @@
 # 監控子系統
 
-結論：要讓一個子系統出現在即時監控，就在自己的模組實作 `IMonitoringSource` 並以 `services.AddMonitoringSource<XxxMonitoring>()` 註冊。Monitoring 只認得 Platform 的介面，不依賴上層模組；前端以通用卡片顯示未知的子系統。頁面行為與健康判定見 [即時營運監控](../features/monitoring.md)。
+結論：要讓一個子系統出現在即時監控，就在自己的模組實作 `IMonitoringSource`；組合產生器會註冊它，不必在 `AddServices` 寫。Monitoring 只認得 Platform 的介面，不依賴上層模組；前端以通用卡片顯示未知的子系統。頁面行為與健康判定見 [即時營運監控](../features/monitoring.md)。
 
 ## 寫一個來源
 

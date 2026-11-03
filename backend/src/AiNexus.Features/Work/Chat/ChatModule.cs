@@ -3,7 +3,6 @@ using AiNexus.Features.Work.Chat.Context;
 using AiNexus.Features.Work.Chat.Runs;
 using AiNexus.Features.Work.Chat.Transcripts;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Chat;
@@ -21,17 +20,12 @@ public sealed class ChatModule : IFeatureModule
     {
         var services = builder.Services;
 
-        services.AddDashboardSource<ChatDashboard>();
         services.AddScoped<RunService>();
         services.AddScoped<RunLeaseRecovery>();
         services.AddScoped<ContextBuilder>();
         services.AddScoped<TranscriptReader>();
         services.AddSingleton<SubscriptionLimits>();
         services.AddSingleton<RunSignals>();
-
-        services.AddHostedService<GenerationWorker>();
-        services.AddHostedService<RunRecoveryWorker>();
-        services.AddHostedService<RunEventRetentionWorker>();
 
         services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
     }

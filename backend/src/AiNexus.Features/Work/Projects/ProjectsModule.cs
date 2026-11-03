@@ -2,7 +2,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Projects.Contents;
 using AiNexus.Features.Work.Projects.Management;
 using AiNexus.Features.Work.Projects.Templates;
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Projects;
@@ -13,7 +12,6 @@ public sealed class ProjectsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDashboardSource<ProjectsDashboard>();
         services.AddScoped<ProjectService>();
     }
 

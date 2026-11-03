@@ -29,4 +29,13 @@ internal static class CompositionDiagnostics
         "AINX1005", "同一個 request 型別只能有一個請求驗證器",
         "'{0}' 驗證 '{1}'，但 '{2}' 也驗證它；過濾器依 request 型別只能套用一個（啟動時也會失敗），把規則合併到同一個驗證器", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InvalidService = new(
+        "AINX1006", "標記的服務必須能註冊",
+        "'{0}' 標了 [{1}]，但{2}", Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor ManualRegistration = new(
+        "AINX1007", "組合產生器已註冊的契約實作不可再手動註冊",
+        "'{0}' 實作 '{1}'，組合產生器已自動註冊；這裡再註冊一次會重複（例如監控或總覽出現兩次），刪掉這個呼叫", Category,
+        DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

@@ -6,7 +6,8 @@ using AiNexus.Platform.Validation;
 namespace AiNexus.Features;
 
 /// <summary>
-/// 業務功能模組的組合點。組件內的模組、端點切片與請求驗證器由組合產生器在編譯期列出（<see cref="FeatureCompositionAttribute"/>、ADR 0029），
+/// 業務功能模組的組合點。組件內的模組、端點切片、請求驗證器（<see cref="FeatureCompositionAttribute"/>、ADR 0029），
+/// 以及類別自己宣告的服務（實作組合擴充點的介面、標了 <see cref="ScopedAttribute"/>／<see cref="SingletonAttribute"/>，ADR 0033）由組合產生器在編譯期列出，
 /// 新增模組只要在 <c>&lt;Area&gt;/&lt;Module&gt;/&lt;Module&gt;Module.cs</c> 實作 <see cref="IFeatureModule"/>，不必改這個檔案。
 /// 模組依完整型別名稱排序註冊與掛載；順序固定但沒有意義，模組之間不可依賴它。
 /// </summary>
@@ -18,6 +19,7 @@ public static partial class FeatureModules
     {
         builder.AddAppDatabase();
         AddModules(builder);
+        AddDeclaredServices(builder.Services);
         AddEndpointHandlers(builder.Services);
         AddRequestValidators(builder.Services);
         return builder;
@@ -50,6 +52,9 @@ public static partial class FeatureModules
 
     // 以下由組合產生器實作（AiNexus.Generators/Composition）。
     private static partial void AddModules(IHostApplicationBuilder builder);
+
+    // 在模組之後：模組自己註冊的同一型別優先（TryAdd）。
+    private static partial void AddDeclaredServices(IServiceCollection services);
 
     private static partial void MapModules(RouteGroupBuilder api);
 

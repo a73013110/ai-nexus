@@ -8,10 +8,8 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 using AiNexus.Features.Work.Knowledge.Indexing;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Platform.Configuration;
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Knowledge;
@@ -29,8 +27,6 @@ public sealed class KnowledgeModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDashboardSource<KnowledgeDashboard>();
-        services.AddMonitoringSource<KnowledgeMonitoring>();
         services.AddSettings<KnowledgeOptions, KnowledgeOptionsValidator>(KnowledgeOptions.Section);
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();
@@ -44,7 +40,6 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddScoped<RetrievalModelProbe>();
         services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind);
         services.AddBackgroundJobHandler<EmbeddingClearHandler>(EmbeddingClearHandler.JobKind);
-        services.AddHostedService<EmbeddingBootstrapWorker>();
         services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
         services.AddScoped<KnowledgeRetrieval>();
         services.AddScoped<RetrievalAuthorization>();

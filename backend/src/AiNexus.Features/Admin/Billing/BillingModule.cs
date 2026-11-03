@@ -3,7 +3,6 @@ using AiNexus.Features.Admin.Billing.Prices;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Admin.Billing;
 
@@ -18,7 +17,6 @@ public sealed class BillingModule : IFeatureModule
         builder.Services.AddScoped<IModelCallMeter>(sp => sp.GetRequiredService<BillingService>());
         builder.Services.AddScoped<SpendReports>();
         builder.Services.AddScoped<UsageReports>();
-        builder.Services.AddMonitoringSource<UsageMonitoring>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

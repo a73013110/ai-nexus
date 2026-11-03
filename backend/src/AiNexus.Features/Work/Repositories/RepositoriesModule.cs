@@ -6,7 +6,6 @@ using AiNexus.Features.Work.Repositories.Connections;
 using AiNexus.Features.Work.Repositories.Handoff;
 using AiNexus.Features.Work.Repositories.Reviews;
 using AiNexus.Platform.Configuration;
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Repositories;
@@ -23,7 +22,6 @@ public sealed class RepositoriesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDashboardSource<RepositoriesDashboard>();
         services.AddSettings<GiteaOptions, GiteaOptionsValidator>(GiteaOptions.Section);
         services.AddScoped<IGiteaClient, GiteaClient>();
         services.AddScoped<RepositoryService>();

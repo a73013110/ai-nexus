@@ -25,6 +25,11 @@ internal static class CompositionEmitter
                 + $"global::Microsoft.AspNetCore.Builder.EndpointRouteBuilderExtensions.MapGroup(api, \"\"), \"{module.Tag}\"));");
         writer.Close().Line();
 
+        writer.Open("private static partial void AddDeclaredServices(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+        foreach (var service in Valid(composition.Services, x => x.Problem))
+            foreach (var call in service.Calls) writer.Line($"{call.Method}<{call.TypeArguments}>(services);");
+        writer.Close().Line();
+
         writer.Open("private static partial void VerifyModules(global::System.IServiceProvider services)");
         foreach (var module in Valid(composition.Modules, x => x.Problem).Where(x => x.VerifiesStartup)) writer.Line($"{module.Type}.VerifyStartup(services);");
         writer.Close().Line();

@@ -4,11 +4,10 @@
 
 ## 後端：一個模組一個來源
 
-1. 在模組根目錄新增 `<Module>Dashboard.cs`（`internal sealed class`），實作 [`IDashboardSource`](../../backend/src/AiNexus.Platform/Dashboard/IDashboardSource.cs)：`Feature` 是決定是否顯示的功能 grant。總覽對每個人都一樣，不加管理員專用的區塊；平台層級的監控與帳號狀況放在各自的管理頁。
-2. 在模組的 `AddServices` 呼叫 `services.AddDashboardSource<XxxDashboard>()`。
-3. 數字由一支 procedure `<schema>.usp_Get<Module>Dashboard` 一次往返取回，以 [`DashboardProcedure.QueryDashboardAsync`](../../backend/src/AiNexus.Platform/Dashboard/DashboardProcedure.cs) 呼叫；schema 是擁有該模組的 schema，模組沒有自己的 schema 時用主要資料表的（Chat → `conversations`）。檔頭與排版見 [SQL 物件](sql-objects.md)。
-4. 用 [`DashboardSection`](../../backend/src/AiNexus.Platform/Dashboard/DashboardSection.cs) 組出內容：`Count`（目前數量）、`Period`（依查詢期間）、`Size`、`Daily`、`Share`、`Item`。範例：[`JobsDashboard`](../../backend/src/AiNexus.Features/Work/Jobs/JobsDashboard.cs) 與 `jobs.usp_GetJobsDashboard`。
-5. 在 `backend/tests/AiNexus.IntegrationTests/Dashboard/DashboardProcedureTests.cs` 的 `Shapes` 登記結果集形狀，在 `GetDashboardTests.cs` 或模組自己的測試驗證數字口徑，並重產合約（`Export-Contracts.ps1`）。
+1. 在模組根目錄新增 `<Module>Dashboard.cs`（`internal sealed class`），實作 [`IDashboardSource`](../../backend/src/AiNexus.Platform/Dashboard/IDashboardSource.cs)：`Feature` 是決定是否顯示的功能 grant。實作介面就由組合產生器註冊，不必在 `AddServices` 寫。總覽對每個人都一樣，不加管理員專用的區塊；平台層級的監控與帳號狀況放在各自的管理頁。
+2. 數字由一支 procedure `<schema>.usp_Get<Module>Dashboard` 一次往返取回，以 [`DashboardProcedure.QueryDashboardAsync`](../../backend/src/AiNexus.Platform/Dashboard/DashboardProcedure.cs) 呼叫；schema 是擁有該模組的 schema，模組沒有自己的 schema 時用主要資料表的（Chat → `conversations`）。檔頭與排版見 [SQL 物件](sql-objects.md)。
+3. 用 [`DashboardSection`](../../backend/src/AiNexus.Platform/Dashboard/DashboardSection.cs) 組出內容：`Count`（目前數量）、`Period`（依查詢期間）、`Size`、`Daily`、`Share`、`Item`。範例：[`JobsDashboard`](../../backend/src/AiNexus.Features/Work/Jobs/JobsDashboard.cs) 與 `jobs.usp_GetJobsDashboard`。
+4. 在 `backend/tests/AiNexus.IntegrationTests/Dashboard/DashboardProcedureTests.cs` 的 `Shapes` 登記結果集形狀，在 `GetDashboardTests.cs` 或模組自己的測試驗證數字口徑，並重產合約（`Export-Contracts.ps1`）。
 
 procedure 的寫法：
 

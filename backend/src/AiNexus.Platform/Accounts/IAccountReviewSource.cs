@@ -1,3 +1,5 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Platform.Accounts;
 
 /// <summary>
@@ -15,6 +17,7 @@ public sealed record AccountReviewReading(IReadOnlyList<AccountReviewItem> Items
 /// 和 <c>IDashboardSource</c> 一樣是各層模組都要實作的組合擴充點，放在 Platform 才不會造成依賴循環。
 /// 來源共用同一個請求的 DbContext、依序讀取；只回有待辦的使用者，不要載入整張使用者表的資料。
 /// </summary>
+[RegisterImplementations(typeof(AccountReviewSourceRegistration), nameof(AccountReviewSourceRegistration.AddAccountReviewSource))]
 public interface IAccountReviewSource
 {
     Task<AccountReviewReading> ReadAsync(CancellationToken ct);

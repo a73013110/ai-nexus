@@ -1,9 +1,5 @@
-using AiNexus.Platform.Dashboard;
-using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Work.Jobs.Management;
-using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Work.Jobs;
 
@@ -15,11 +11,7 @@ public sealed class JobsModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddDashboardSource<JobsDashboard>();
-        builder.Services.AddMonitoringSource<JobsMonitoring>();
         builder.Services.AddScoped<JobService>();
-        builder.Services.AddHostedService<BackgroundJobWorker>();
-        builder.Services.AddDomainEventHandler<UserDisabled, CancelDisabledOwnerJobs>();
     }
 
     // 端點註冊順序即 OpenAPI 發佈順序。

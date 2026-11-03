@@ -3,9 +3,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Artifacts.Export;
 using AiNexus.Features.Work.Artifacts.Management;
 using AiNexus.Features.Work.Artifacts.Transforms;
-using AiNexus.Features.Work.Collaboration;
-using AiNexus.Platform.Dashboard;
-using AiNexus.Platform.Events;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 
@@ -20,10 +17,8 @@ public sealed class ArtifactsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDashboardSource<ArtifactsDashboard>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
         services.AddFeaturePolicy(Policies.Text, FeatureCatalog.Chat, FeatureCatalog.Artifacts);
-        services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
     }
 
     // 端點註冊順序即 OpenAPI 發佈順序；調整順序會改變 contracts/openapi.json。

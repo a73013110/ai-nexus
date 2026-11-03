@@ -1,13 +1,11 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Features.Admin.Identity;
-using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Monitoring.Presence;
 using AiNexus.Features.Admin.Monitoring.Snapshots;
 using AiNexus.Features.Admin.Monitoring.Traffic;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Diagnostics;
-using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Monitoring;
@@ -24,12 +22,10 @@ public sealed class MonitoringModule : IFeatureModule
         services.AddSingleton<RuntimeTraffic>();
         services.AddSingleton<SubsystemReadings>();
         services.AddSingleton<MonitoringSnapshots>();
-        services.AddDomainEventHandler<UserSignedOut, LeaveSignedOutSession>();
         services.AddSingleton<DependencyCatalog>();
         services.AddSingleton<MonitoringStreams>();
         services.AddTransient<TrafficHttpHandler>();
         services.ConfigureHttpClientDefaults(client => client.AddHttpMessageHandler<TrafficHttpHandler>());
-        services.AddHostedService<RuntimeSampler>();
         services.AddRateLimiter(options => options.AddPerUserLimit(PresenceRateLimit, 120));
     }
 

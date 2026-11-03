@@ -1,5 +1,6 @@
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Office.Attendance.Calendar;
 
@@ -7,6 +8,7 @@ namespace AiNexus.Features.Office.Attendance.Calendar;
 /// 讀 GD 假日行事曆（<c>dbo.Pub_Days</c>）：假日設定頁與出勤紀錄共用，走唯讀的查詢（<see cref="ExternalDatabase{TDatabase}"/>）。
 /// GD 不可用時回傳 <see langword="null"/>（與「沒有列」的空清單不同），由呼叫端決定拒絕（假日設定）還是降級（出勤紀錄）。
 /// </summary>
+[Singleton]
 internal sealed class CalendarReader(ExternalDatabase<GdDatabase> gd)
 {
     // hDate 是 datetime，以整天的半開區間比對，帶了時間的列也算在當天。

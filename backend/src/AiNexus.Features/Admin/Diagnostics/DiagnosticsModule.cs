@@ -2,7 +2,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Admin.Diagnostics;
 
@@ -17,7 +16,6 @@ public sealed class DiagnosticsModule : IFeatureModule
         services.AddSingleton<IDiagnosticStore, DiagnosticStore>();
         services.AddScoped<DiagnosticQuery>();
         services.AddSingleton<ClientIssueDeduplication>();
-        services.AddMonitoringSource<LogPipelineMonitoring>();
         services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
     }
 

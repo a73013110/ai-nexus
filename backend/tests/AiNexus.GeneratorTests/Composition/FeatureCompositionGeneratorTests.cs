@@ -19,6 +19,7 @@ public sealed class FeatureCompositionGeneratorTests
         public static partial class Composition
         {
             private static partial void AddModules(IHostApplicationBuilder builder);
+            private static partial void AddDeclaredServices(IServiceCollection services);
             private static partial void MapModules(RouteGroupBuilder api);
             private static partial void VerifyModules(System.IServiceProvider services);
             private static partial void AddEndpointHandlers(IServiceCollection services);
@@ -136,6 +137,114 @@ public sealed class FeatureCompositionGeneratorTests
             Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
     }
 
+    /// <summary>契約與註冊方法都是範例自己宣告的：產生器只看介面上的 [RegisterImplementations]，不認得 Platform 的哪個介面。</summary>
+    internal const string Contracts = """
+        using AiNexus.Platform.Modules;
+        using Microsoft.Extensions.DependencyInjection;
+
+        namespace Sample;
+
+        [RegisterImplementations(typeof(SourceRegistration), nameof(SourceRegistration.AddSource))]
+        public interface ISource;
+
+        [RegisterImplementations(typeof(SourceRegistration), nameof(SourceRegistration.AddHandler))]
+        public interface IHandler<in TEvent>;
+
+        public static class SourceRegistration
+        {
+            public static IServiceCollection AddSource<TSource>(this IServiceCollection services) where TSource : class, ISource => services;
+            public static IServiceCollection AddHandler<TEvent, THandler>(this IServiceCollection services) where THandler : class, IHandler<TEvent> => services;
+        }
+
+        public interface IClock;
+        """;
+
+    [Fact]
+    public void ServicesAreRegisteredByTheirContractsAndLifetimeMarkers()
+    {
+        const string services = """
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AiNexus.Platform.Modules;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Sample;
+
+            public sealed record Created;
+
+            public sealed record Deleted;
+
+            internal abstract class SourceBase : ISource;
+
+            internal sealed class ItemSource : SourceBase;
+
+            internal sealed class ItemHandler : IHandler<Created>, IHandler<Deleted>;
+
+            internal sealed class Worker : BackgroundService
+            {
+                protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
+            }
+
+            [Scoped]
+            internal sealed class Reader;
+
+            [Singleton, Singleton<IClock>]
+            internal sealed partial class Clock;
+
+            internal sealed partial class Clock : IClock;
+
+            internal sealed class Plain;
+            """;
+
+        var run = GeneratorHarness.Run(new FeatureCompositionGenerator(), Target, Contracts, services);
+
+        Assert.Empty(run.Diagnostics);
+        Assert.Empty(run.Errors);
+        string[] expected =
+        [
+            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredSingleton<global::Sample.Clock>(services);",
+            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredSingleton<global::Sample.IClock, global::Sample.Clock>(services);",
+            // 以不同型別引數實作同一個泛型契約兩次，各註冊一次，型別引數排在實作前面。
+            "global::Sample.SourceRegistration.AddHandler<global::Sample.Created, global::Sample.ItemHandler>(services);",
+            "global::Sample.SourceRegistration.AddHandler<global::Sample.Deleted, global::Sample.ItemHandler>(services);",
+            // 契約由基底類別實作也算；抽象的基底類別本身不註冊。
+            "global::Sample.SourceRegistration.AddSource<global::Sample.ItemSource>(services);",
+            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredScoped<global::Sample.Reader>(services);",
+            "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionHostedServiceExtensions.AddHostedService<global::Sample.Worker>(services);",
+        ];
+        var positions = expected.Select(line => run.Source.IndexOf(line, StringComparison.Ordinal)).ToList();
+        Assert.DoesNotContain(-1, positions);
+        Assert.Equal(positions.Order(), positions);
+        // partial 類別的每個宣告都會轉換一次，註冊只產生一次。
+        Assert.Single(run.Source.Split('\n'), line => line.Trim() == expected[0]);
+        foreach (var excluded in new[] { "Sample.SourceBase", "Sample.Plain" })
+            Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LifetimeMarkersThatCannotBeRegisteredAreReported()
+    {
+        const string invalid = """
+            using AiNexus.Platform.Modules;
+
+            namespace Sample;
+
+            [Scoped]
+            internal abstract class Broken;
+
+            [Singleton<IClock>]
+            internal sealed class NotAClock;
+            """;
+
+        var run = GeneratorHarness.Run(new FeatureCompositionGenerator(), Target, Contracts, invalid);
+
+        Assert.Equal(["AINX1006", "AINX1006"], run.Diagnostics.Select(x => x.Id));
+        Assert.Contains(run.Diagnostics, x => x.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("沒有實作 'Sample.IClock'", StringComparison.Ordinal));
+        Assert.Empty(run.Errors);
+        Assert.DoesNotContain("Broken", run.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("NotAClock", run.Source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TypesTheGeneratedCodeCannotSeeAreReportedInsteadOfRegistered()
     {
@@ -225,7 +334,7 @@ public sealed class FeatureCompositionGeneratorTests
         var result = driver.RunGenerators(compilation.ReplaceSyntaxTree(original, edited)).GetRunResult().Results.Single();
 
         string[] steps = [FeatureCompositionGenerator.TargetsStep, FeatureCompositionGenerator.ModulesStep, FeatureCompositionGenerator.SlicesStep,
-            FeatureCompositionGenerator.ValidatorsStep, FeatureCompositionGenerator.CompositionStep];
+            FeatureCompositionGenerator.ValidatorsStep, FeatureCompositionGenerator.ServicesStep, FeatureCompositionGenerator.CompositionStep];
         var recomputed = steps.SelectMany(step => result.TrackedSteps.GetValueOrDefault(step, []).SelectMany(x => x.Outputs).Select(output => (step, output.Reason)))
             .Concat(result.TrackedOutputSteps.SelectMany(x => x.Value).SelectMany(x => x.Outputs).Select(output => (step: "Output", output.Reason)))
             .Where(x => x.Reason is not (IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged)).ToList();

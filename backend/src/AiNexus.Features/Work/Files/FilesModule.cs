@@ -4,9 +4,7 @@ using AiNexus.Features.Work.Files.Management;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Configuration;
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Work.Files;
 
@@ -26,14 +24,11 @@ public sealed class FilesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDashboardSource<FilesDashboard>();
-        services.AddMonitoringSource<StorageMonitoring>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<DocumentExtractor>();
         services.AddSingleton<IAttachmentStorage, FileAttachmentStorage>();
         services.AddScoped<AttachmentQuota>();
         services.AddScoped<AttachmentLifecycle>();
-        services.AddHostedService<AttachmentCleanupWorker>();
         services.AddSettings<FilesOptions, FilesOptionsValidator>(FilesOptions.Section)
             .Configure<IHostEnvironment, IConfiguration>((x, environment, config) =>
             {

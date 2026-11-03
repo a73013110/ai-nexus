@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 /// 兩個匯入先後讀到不同版本時，較舊的內容可能較晚寫入；它記下的也是舊版本，下一輪掃描會發現與檔案不同而重匯。
 /// </para>
 /// </summary>
+[Scoped]
 public sealed partial class PunchImporter(
     AppDbContext db,
     AdministrativeWriteLock writes,

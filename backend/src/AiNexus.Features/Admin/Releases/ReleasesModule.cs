@@ -3,7 +3,6 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Releases.SchemaChanges;
 using AiNexus.Features.Admin.Releases.Versions;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Admin.Releases;
 
@@ -21,9 +20,6 @@ public sealed class ReleasesModule : IFeatureModule
         var services = builder.Services;
         services.AddSingleton<AppRelease>();
         services.AddScoped<SchemaChangeReader>();
-        services.AddHostedService<AppDeploymentRecorder>();
-        services.AddHostedService<SchemaChangeWatch>();
-        services.AddMonitoringSource<ReleasesMonitoring>();
         services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
     }
 

@@ -2,7 +2,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Organization.Imports;
 using AiNexus.Features.Admin.Organization.Members;
-using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Organization;
@@ -21,7 +20,6 @@ public sealed class OrganizationModule : IFeatureModule
     {
         builder.Services.AddScoped<OrganizationDirectory>();
         builder.Services.AddScoped<IUnitMembership>(sp => sp.GetRequiredService<OrganizationDirectory>());
-        builder.Services.AddAccountReviewSource<ManagerAccountReview>();
         builder.Services.AddScoped<GdUnitSource>();
         builder.Services.AddFeaturePolicy(UserUnitsPolicy, FeatureCatalog.Organization, FeatureCatalog.IdentityUsers);
     }

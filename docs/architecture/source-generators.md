@@ -1,13 +1,14 @@
 # Source generator
 
-結論：編譯期就能決定的組合與樣板（模組清單、DI 註冊、各模組宣告的清單）由 source generator 產生，不在執行期反射掃描，也不維護集中清單；執行期反射由 `backend/src/BannedSymbols.txt` 擋下。產生器與配套的 analyzer 都放在 `backend/src/AiNexus.Generators`，一個產生器一個資料夾。為什麼這樣做見 [ADR 0029](../decisions/0029-compile-time-composition.md)、[ADR 0030](../decisions/0030-no-runtime-reflection.md)。
+結論：編譯期就能決定的組合與樣板（模組清單、DI 註冊、各模組宣告的清單）由 source generator 產生，不在執行期反射掃描，也不維護集中清單；執行期反射由 `backend/src/BannedSymbols.txt` 擋下。產生器與配套的 analyzer 都放在 `backend/src/AiNexus.Generators`，一個產生器一個資料夾。為什麼這樣做見 [ADR 0029](../decisions/0029-compile-time-composition.md)、[ADR 0030](../decisions/0030-no-runtime-reflection.md)、[ADR 0033](../decisions/0033-declared-service-registration.md)。
 
 ## 現有產生器
 
 | 元件 | 觸發 | 產出 |
 | --- | --- | --- |
-| [`FeatureCompositionGenerator`](../../backend/src/AiNexus.Generators/Composition/FeatureCompositionGenerator.cs) | `[FeatureComposition]`（`FeatureModules`） | 組件內每個模組的 `AddServices`、`MapEndpoints`（OpenAPI tag＝模組名）與 `VerifyStartup`；端點切片註冊為 scoped；`RequestValidator<T>` 以 `IRequestValidator` 註冊為 singleton |
+| [`FeatureCompositionGenerator`](../../backend/src/AiNexus.Generators/Composition/FeatureCompositionGenerator.cs) | `[FeatureComposition]`（`FeatureModules`） | 組件內每個模組的 `AddServices`、`MapEndpoints`（OpenAPI tag＝模組名）與 `VerifyStartup`；端點切片註冊為 scoped；`RequestValidator<T>` 以 `IRequestValidator` 註冊為 singleton；類別自己宣告的服務（ADR 0033） |
 | [`UnmappedSliceAnalyzer`](../../backend/src/AiNexus.Generators/Composition/UnmappedSliceAnalyzer.cs) | 切片的 `Map*` 方法 | 組件內沒有任何呼叫或方法群組引用時回報 AINX1004（建置失敗） |
+| [`ManualRegistrationAnalyzer`](../../backend/src/AiNexus.Generators/Composition/ManualRegistrationAnalyzer.cs) | 註冊方法的呼叫 | 手動註冊產生器已註冊的擴充點實作時回報 AINX1007 |
 | [`FieldCatalogGenerator`](../../backend/src/AiNexus.Generators/Catalogs/FieldCatalogGenerator.cs) | `[FieldCatalog]` 方法（`AuditActions`） | 回傳組件內 static 類別裡、型別等於元素型別的 public static 欄位，依類別完整名稱再依宣告順序；元素型別要專用（AINX2003） |
 
 組合的規則：
@@ -16,6 +17,7 @@
 - **切片**：類別有 static `Map*` 方法，且第一個參數是 `RouteGroupBuilder`。排除模組與 static、abstract、泛型類別。產生器與 analyzer 共用 `SliceRegistration.IsMapMethod`；架構測試 `CompositionTests` 用反射重述同一條規則，對照產生的註冊。
 - **掛載**：切片只會被自動註冊，端點仍由模組的 `MapEndpoints` 明確掛到自己的群組。群組帶著功能 policy、body 上限與 OpenAPI 順序；交給切片各自宣告，漏寫 policy 就只剩「有登入」。忘了掛載由 AINX1004 擋下。
 - **驗證器**：繼承 `RequestValidator<T>` 的非抽象、非泛型類別；單純的 `AbstractValidator<T>` 是子驗證器，不註冊。同一 request 型別有兩個驗證器時回報 AINX1005。
+- **服務**：具體類別實作了標 `[RegisterImplementations(註冊類別, 方法)]` 的介面（或 `IHostedService`），就以該方法註冊，型別參數是介面的型別引數加上實作；標了 `[Scoped]`、`[Singleton]`（或 `<TService>` 版）就以該生命週期註冊。產生的註冊排在模組的 `AddServices` 之後，標記用 TryAdd。標記的類別不能建立或沒實作所標的介面時回報 AINX1006；擴充點的實作又手動註冊時回報 AINX1007，兩者共用 `ServiceRegistration.Contracts`。
 - **順序**：依完整型別名稱排序。順序固定但沒有意義，模組之間不可依賴註冊順序。消費 `IEnumerable<T>` 而在意順序的地方要自己排序，例如監控來源的 `Order`、總覽前端的 `ORDER`。
 - **範圍**：產生器只看得到目前的組件，所以模組都在 Features。主資料庫是模組共同的依賴、不是模組，由 `AddFeatures` 呼叫 Data 的 `AddAppDatabase`。
 

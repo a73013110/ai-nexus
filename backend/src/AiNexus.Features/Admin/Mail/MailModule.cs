@@ -5,7 +5,6 @@ using AiNexus.Features.Admin.Mail.Messages;
 using AiNexus.Features.Admin.Mail.Transport;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Mail;
@@ -48,9 +47,6 @@ public sealed class MailModule : IFeatureModule
             MailTransports.Pickup => ActivatorUtilities.CreateInstance<PickupMailTransport>(provider),
             _ => new DisabledMailTransport(),
         });
-        services.AddHostedService<MailDispatcher>();
-        services.AddHostedService<MailRetentionWorker>();
-        services.AddMonitoringSource<MailMonitoring>();
         services.AddMailSample(new TestMail(), "郵件設定測試", "管理頁原本的測試信：確認設定能寄出，內容是要求者、時間、傳輸與寄件地址。",
             x => new TestMailModel(
                 x.Text(nameof(TestMailModel.RequestedBy), "要求者顯示名稱", MailSampleContext.ExampleName),

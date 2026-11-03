@@ -1,9 +1,12 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Platform.Dashboard;
 
 /// <summary>
 /// 總覽儀表板的區塊資料來源，由統計該資料的業務模組自行擁有。
-/// 儀表板會動態讀取檢視者有權限看見的所有註冊來源，因此新增功能時只需在自身模組中註冊來源，前端即可透過通用 Widget 自動渲染。
+/// 儀表板會動態讀取檢視者有權限看見的所有來源，新增功能時只要實作這個介面（由組合產生器註冊），前端即可透過通用 Widget 自動渲染。
 /// </summary>
+[RegisterImplementations(typeof(DashboardSourceRegistration), nameof(DashboardSourceRegistration.AddDashboardSource))]
 public interface IDashboardSource
 {
     /// <summary>區塊所需的功能授權代碼；未提供 Title 或 Route 時，會沿用該功能的名稱與路徑。</summary>

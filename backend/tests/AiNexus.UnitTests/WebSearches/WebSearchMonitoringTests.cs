@@ -1,4 +1,6 @@
+using AiNexus.Features;
 using AiNexus.Features.Platform.WebSearches;
+using AiNexus.Platform;
 using AiNexus.Platform.Monitoring;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -21,11 +23,14 @@ public sealed class WebSearchMonitoringTests
         {
             ["WebSearches:Enabled"] = enabled.ToString(), ["WebSearches:Provider"] = provider, ["WebSearches:ApiKey"] = apiKey,
         });
-        WebSearchesModule.AddServices(builder);
+        // 監控來源由組合產生器註冊（ADR 0033），要經過 AddFeatures 才會出現。
+        // 只解析這個模組的來源：其他模組的來源需要各自的設定與資料庫。
+        builder.AddPlatform();
+        builder.AddFeatures();
         await using var services = builder.Services.BuildServiceProvider();
         await using var scope = services.CreateAsyncScope();
-        var source = scope.ServiceProvider.GetServices<MonitoringSourceRegistration>()
-            .Select(x => (IMonitoringSource)scope.ServiceProvider.GetRequiredService(x.Type)).Single(x => x.Id == "web-search");
+        var registration = scope.ServiceProvider.GetServices<MonitoringSourceRegistration>().Single(x => x.Type.Namespace == typeof(WebSearchesModule).Namespace);
+        var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(registration.Type);
 
         var reading = await source.ReadAsync(TestContext.Current.CancellationToken);
 

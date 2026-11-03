@@ -1,5 +1,6 @@
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Office.Attendance.Forms;
 /// 每一列一筆 <see cref="GdForm"/>。期間與查詢區間相交才取出，起訖保留原值、不裁切到區間；結束剛好等於區間起點、或開始剛好等於區間終點的不算。
 /// 流程中的單另從 <c>FLOW_CURRENT</c> 取目前關卡（<c>PERSON_ID</c> 是「部門_公文帳號」）與簽核人姓名；同一單同時停在多關時取最後一關。
 /// </remarks>
+[Scoped]
 public sealed class GdFormReader(GdAccounts accounts, ExternalDatabase<GdDatabase> gd)
 {
     // SQL Server 比較字串時忽略尾端空白，所以只有空白的 DayOfWeek 也算空。排序留給呼叫端（分批查詢後本來就要重排）。

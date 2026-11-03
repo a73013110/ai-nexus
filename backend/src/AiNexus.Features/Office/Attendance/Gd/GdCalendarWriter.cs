@@ -3,6 +3,7 @@ using System.Data.Common;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Features.Office.Attendance.Gd;
@@ -19,6 +20,7 @@ public sealed record GdCalendarValues(bool MorningOff, bool AfternoonOff, string
 /// <c>ISqlDatabase</c> 每次呼叫各開一條連線、不支援跨命令的交易，
 /// 而「鎖定讀前值 → 更新 → 讀回 → 等稽核寫完再提交」必須在同一條連線、同一個交易，所以這裡直接用 SqlClient。
 /// </remarks>
+[Singleton]
 public sealed partial class GdCalendarWriter(ExternalDatabase<GdDatabase> gd, ILogger<GdCalendarWriter> logger)
 {
     // hDate 是 datetime，以整天的區間比對：公文系統寫入的日期理應是午夜，萬一帶了時間也不會漏掉。同一天有多列時一起更新，前值取第一列。

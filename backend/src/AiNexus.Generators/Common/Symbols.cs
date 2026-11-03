@@ -19,6 +19,14 @@ internal static class Symbols
     public static IEnumerable<INamedTypeSymbol> Interfaces(INamedTypeSymbol type, string ns, string name, int arity = 0)
         => type.AllInterfaces.Where(x => Is(x, ns, name, arity));
 
+    /// <summary>型別能否當成 <paramref name="target"/> 使用：是它本身、它的基底類別之一，或實作了它（泛型比對完整的型別引數）。</summary>
+    public static bool IsAssignableTo(INamedTypeSymbol type, ITypeSymbol target)
+    {
+        for (ITypeSymbol? current = type; current is not null; current = current.BaseType)
+            if (SymbolEqualityComparer.Default.Equals(current, target)) return true;
+        return type.AllInterfaces.Contains(target, SymbolEqualityComparer.Default);
+    }
+
     /// <summary>
     /// 同組件的產生程式碼能否引用此型別：型別、每一層外層型別與泛型引數都要是 public 或 internal。
     /// <c>file</c> 型別只在宣告檔可見，也不行。

@@ -1,7 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Conversations.Administration;
-using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Conversations;
@@ -28,8 +27,7 @@ public sealed class ConversationsModule : IFeatureModule
 
         services.AddScoped<ConversationService>();
 
-        // 同一個類別同時是專案刪除的事件處理常式與刪除前檢查：生成中的對話會阻擋專案刪除。
-        services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectConversations>();
+        // 同一個類別也是專案刪除的事件處理常式（由組合產生器註冊）：生成中的對話會阻擋專案刪除。
         services.AddScoped<IContainerDeletionCheck, DetachDeletedProjectConversations>();
 
     }

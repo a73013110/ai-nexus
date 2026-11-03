@@ -15,7 +15,6 @@ using AiNexus.Features.Admin.Identity.Reviews;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.Users;
-using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Admin.Identity;
@@ -80,7 +79,6 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditingAuthorizationResultHandler>();
         services.AddScoped<IActiveUsers, ActiveUsers>();
-        services.AddAccountReviewSource<DirectoryAccountReview>();
         services.AddSingleton(Argon2Cost.Recommended);
         services.AddSingleton<Argon2Passwords>();
         services.AddScoped<LocalAuthenticator>();

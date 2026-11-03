@@ -1,3 +1,5 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Platform.Monitoring;
 
 /// <summary>
@@ -5,6 +7,7 @@ namespace AiNexus.Platform.Monitoring;
 /// 監控採延遲讀取：只有有人檢視時才讀，至多每 <see cref="Refresh"/> 週期一次，在獨立的 DI Scope 中執行，並設有短逾時，
 /// 確保單一來源故障不會拖慢整個頁面。讀取實作要保持極低成本，只查記憶體狀態、設定值或有索引的彙總。
 /// </summary>
+[RegisterImplementations(typeof(MonitoringSourceRegistrations), nameof(MonitoringSourceRegistrations.AddMonitoringSource))]
 public interface IMonitoringSource
 {
     /// <summary>前端作為索引鍵的穩定識別碼，例如 <c>jobs</c>。</summary>

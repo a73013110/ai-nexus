@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNexus.Generators.Composition;
 
 /// <summary>
-/// 為標了 <c>[FeatureComposition]</c> 的類別產生組件內所有功能模組、端點切片與請求驗證器的註冊（ADR 0029）。
+/// 為標了 <c>[FeatureComposition]</c> 的類別產生組件內所有功能模組、端點切片、請求驗證器（ADR 0029）與類別自己宣告的服務（ADR 0033）的註冊。
 /// 新增模組或 use case 只動自己的資料夾，不必維護集中清單；執行期也不必反射掃描組件。
 /// </summary>
 [Generator(LanguageNames.CSharp)]
@@ -15,7 +15,8 @@ public sealed class FeatureCompositionGenerator : IIncrementalGenerator
     public const string AttributeName = "AiNexus.Platform.Modules.FeatureCompositionAttribute";
 
     /// <summary>pipeline 各步驟的追蹤名稱；測試以它們確認無關的編輯不會讓步驟重算。</summary>
-    public const string TargetsStep = "Targets", ModulesStep = "Modules", SlicesStep = "Slices", ValidatorsStep = "Validators", CompositionStep = "Composition";
+    public const string TargetsStep = "Targets", ModulesStep = "Modules", SlicesStep = "Slices", ValidatorsStep = "Validators", ServicesStep = "Services",
+        CompositionStep = "Composition";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -55,8 +56,18 @@ public sealed class FeatureCompositionGenerator : IIncrementalGenerator
             .Collect()
             .Select(static (items, _) => Sorted(items, x => x.Type));
 
-        var composition = modules.Combine(slices).Combine(validators)
-            .Select(static (x, _) => new FeatureComposition(x.Left.Left, x.Left.Right, x.Right))
+        // 宣告服務的類別有基底清單（契約）或屬性（生命週期）；partial 類別的屬性可能只在其中一個宣告上，轉換時看完整的符號。
+        var services = context.SyntaxProvider
+            .CreateSyntaxProvider(static (node, _) => node is ClassDeclarationSyntax declaration && (declaration.BaseList is not null || declaration.AttributeLists.Count > 0),
+                static (source, ct) => source.SemanticModel.GetDeclaredSymbol(source.Node, ct) is INamedTypeSymbol type ? ServiceRegistration.From(type) : null)
+            .Where(static x => x is not null)
+            .Select(static (x, _) => x!)
+            .WithTrackingName(ServicesStep)
+            .Collect()
+            .Select(static (items, _) => Sorted(items, x => x.Type));
+
+        var composition = modules.Combine(slices).Combine(validators).Combine(services)
+            .Select(static (x, _) => new FeatureComposition(x.Left.Left.Left, x.Left.Left.Right, x.Left.Right, x.Right))
             .WithTrackingName(CompositionStep);
 
         context.RegisterSourceOutput(targets.Combine(composition), static (output, source) => Generate(output, source.Left, source.Right));

@@ -1,10 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Work.Artifacts.Management;
-using AiNexus.Features.Work.Chat.Transcripts;
 using AiNexus.Features.Work.Sharing.Management;
 using AiNexus.Features.Work.Sharing.Viewing;
-using AiNexus.Platform.Dashboard;
-using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Sharing;
@@ -14,12 +10,8 @@ public sealed class SharingModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddDashboardSource<SharingDashboard>();
         builder.Services.AddScoped<ShareService>();
         builder.Services.AddScoped<ShareAccess>();
-        builder.Services.AddHostedService<ShareCleanupWorker>();
-        builder.Services.AddDomainEventHandler<ConversationDeleted, RevokeDeletedSourceShares>();
-        builder.Services.AddDomainEventHandler<ArtifactDeleted, RevokeDeletedSourceShares>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

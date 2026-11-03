@@ -1,4 +1,3 @@
-using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -9,7 +8,6 @@ public sealed class NotificationsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<NotificationService>();
-        builder.Services.AddDashboardSource<NotificationsDashboard>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

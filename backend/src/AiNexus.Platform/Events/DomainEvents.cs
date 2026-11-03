@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AiNexus.Platform.Events;
@@ -9,6 +10,7 @@ public interface IDomainEvent;
 /// 跨模組的同交易處理常式。處理器在發布端的 SaveChanges 內、寫入資料庫之前執行，與發布端共用同一個 DbContext 與交易。
 /// 可以追蹤實體、執行 ExecuteUpdate／ExecuteDelete，或再引發後續事件；但絕不可自行呼叫 SaveChanges，也不可開始或認可交易。
 /// </summary>
+[RegisterImplementations(typeof(DomainEventServices), nameof(DomainEventServices.AddDomainEventHandler))]
 public interface IDomainEventHandler<in TEvent> where TEvent : IDomainEvent
 {
     Task HandleAsync(TEvent e, CancellationToken ct);
@@ -102,7 +104,7 @@ public static class DomainEventServices
         return services;
     }
 
-    /// <summary>在訂閱端模組的 AddServices 中註冊事件處理器（scoped，與發布端共用 DbContext）；同一個處理器不重複註冊。</summary>
+    /// <summary>註冊事件處理器（scoped，與發布端共用 DbContext）；同一個處理器不重複註冊。Features 的實作由組合產生器呼叫，不必手寫。</summary>
     public static IServiceCollection AddDomainEventHandler<TEvent, THandler>(this IServiceCollection services)
         where TEvent : IDomainEvent where THandler : class, IDomainEventHandler<TEvent>
     {

@@ -7,10 +7,8 @@ using AiNexus.Features.Office.Attendance.Imports;
 using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Features.Platform.Gd;
-using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Office.Attendance;
 
@@ -31,16 +29,6 @@ public sealed class AttendanceModule : IFeatureModule
     {
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 5));
         builder.Services.AddSettings<AttendanceOptions, AttendanceOptionsValidator>(AttendanceOptions.Section);
-        builder.Services.AddSingleton<PunchImportState>();
-        builder.Services.AddScoped<PunchImporter>();
-        builder.Services.AddHostedService<PunchImportWorker>();
-        builder.Services.AddMonitoringSource<PunchImportMonitoring>();
-        builder.Services.AddAccountReviewSource<CardAccountReview>();
-        // GD 的連線、帳號對應與監控由 Gd 模組註冊；出勤只註冊自己的讀取與回寫。
-        builder.Services.AddScoped<GdFormReader>();
-        builder.Services.AddScoped<AttendanceRoster>();
-        builder.Services.AddSingleton<CalendarReader>();
-        builder.Services.AddSingleton<GdCalendarWriter>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

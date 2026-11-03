@@ -7,7 +7,6 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Inference;
@@ -55,8 +54,6 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelCatalog>();
         services.AddSingleton<ModelPresentation>();
         services.AddSingleton<GenerationScheduler>();
-        services.AddMonitoringSource<GenerationQueueMonitoring>();
-        services.AddMonitoringSource<ModelProvidersMonitoring>();
     }
 
     /// <summary>啟用的供應商都要有轉接器，不等到第一次生成才失敗。</summary>

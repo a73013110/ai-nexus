@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Organization;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,7 @@ internal sealed record RosterHolding(Guid Id, DateTimeOffset StartsAt, DateTimeO
 /// <item>沒有持有期間涵蓋的刷卡不屬於任何人，不在名單；在卡號對應頁以「待指派」處理。</item>
 /// </list>
 /// </remarks>
+[Scoped]
 internal sealed class AttendanceRoster(AppDbContext db, OrganizationDirectory organization)
 {
     /// <summary>
