@@ -5,11 +5,13 @@ using AiNexus.Features.Admin.Billing.Prices;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Features.Platform.Inference.Models;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Billing;
 
+[Scoped, Scoped<IModelCallMeter>]
 public sealed class BillingService(
     AppDbContext db,
     ModelPresentation presentation,

@@ -1,4 +1,5 @@
 using AiNexus.Data.App.Inference;
+using AiNexus.Platform.Modules;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using AiNexus.Platform.Threading;
@@ -33,6 +34,7 @@ public sealed record ProviderQueue(ChannelReader<GenerationJob> Reader, int Conc
 /// 3. 容量保護（SemaphoreSlim）：當排隊加執行中數量達到 Capacity 上限時，新請求直接拒絕以保護伺服器記憶體。
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
+[Singleton]
 public sealed class GenerationScheduler
 {
     private readonly Dictionary<string, Channel<GenerationJob>> queues = new(StringComparer.Ordinal);

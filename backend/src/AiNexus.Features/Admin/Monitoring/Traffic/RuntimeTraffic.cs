@@ -1,4 +1,5 @@
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Modules;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using AiNexus.Features.Admin.Monitoring.Presence;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
 
 /// <summary>單一實例的滾動式遙測；基數、取樣數與保留時間都有上限，避免監控本身耗盡記憶體。</summary>
+[Singleton]
 public sealed class RuntimeTraffic : IDisposable
 {
     private readonly IOptions<MonitoringOptions> options;

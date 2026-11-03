@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Data.External;
@@ -37,6 +38,7 @@ public sealed record GdFlowStep(GdFlowStepState State, string Action, GdPerson? 
 /// <item>同一階段依 <c>FLOW_NO</c>（GD 寫成補零的三位數字串）排序；流程表沒有外鍵，人員對不到時只有動作與時間。</item>
 /// </list>
 /// </remarks>
+[Scoped]
 public sealed partial class GdFlowReader(ExternalDatabase<GdDatabase> gd)
 {
     private const string Columns = "[FLOW_NO], [TIMERECORD], [STATUS], [PERSON_ID], [ORIGIN_ID], CAST([MEMO] AS nvarchar(max))";

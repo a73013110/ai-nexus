@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Platform.Inference.Models;
@@ -43,6 +44,7 @@ public sealed record EffectiveModelPolicyDto(
 /// 模型使用原則與每日 Token 配額管理服務。
 /// 統一負責對話（Chat）、文件 OCR、文字轉換與評估等所有推論任務的權限校驗與配額扣減。
 /// </summary>
+[Scoped]
 public sealed class ModelPolicyService(
     AppDbContext db,
     AccessService access,

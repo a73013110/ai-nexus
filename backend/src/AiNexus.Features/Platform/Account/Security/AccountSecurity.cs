@@ -5,12 +5,14 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
 /// <summary>帳號安全各 slice 共用：組出畫面資料、寫稽核與通知信、儲存後重發 session 與 CSRF token。</summary>
+[Scoped]
 internal sealed class AccountSecurity(AppDbContext db, Reauthentication reauthentication, UserCredentials credentials, MailOutbox outbox, IAntiforgery csrf, AuditTrail audit)
 {
     public bool MailAvailable => outbox.Available;

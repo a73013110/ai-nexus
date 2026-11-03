@@ -9,12 +9,6 @@ namespace AiNexus.Features.Work.Projects;
 /// <summary>共用專案：設定、分享、參考檔案、範本，以及使用者在專案中的對話。每個用例各自一個檔案。</summary>
 public sealed class ProjectsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-        services.AddScoped<ProjectService>();
-    }
-
     // 端點順序即已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {

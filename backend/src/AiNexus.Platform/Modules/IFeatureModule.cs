@@ -8,10 +8,10 @@ namespace AiNexus.Platform.Modules;
 public interface IFeatureModule
 {
     /// <summary>
-    /// 註冊需要參數或判斷的服務：設定選項（Options）、授權原則（Policies）、rate limit、HttpClient、工廠與轉接。
+    /// 註冊需要參數或判斷的服務：設定選項（Options）、授權原則（Policies）、rate limit、HttpClient、工廠。沒有這類註冊的模組不必實作。
     /// 一般服務標 <see cref="ScopedAttribute"/>／<see cref="SingletonAttribute"/>，擴充點的實作只要實作介面，都由組合產生器註冊（ADR 0033）。
     /// </summary>
-    static abstract void AddServices(IHostApplicationBuilder builder);
+    static virtual void AddServices(IHostApplicationBuilder builder) { }
 
     /// <summary>
     /// 將模組端點掛載至 <c>/api/v1</c> 路由群組下；預設要求登入，功能 policy 或匿名存取才需要另外宣告。

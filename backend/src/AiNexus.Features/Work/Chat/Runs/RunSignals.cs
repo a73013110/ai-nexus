@@ -1,3 +1,5 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Features.Work.Chat.Runs;
 
 /// <summary>
@@ -6,6 +8,7 @@ namespace AiNexus.Features.Work.Chat.Runs;
 /// 這樣寫入即使落在「查詢結束」與「開始等待」之間，已取得的 Task 仍會被完成，不會漏掉喚醒。
 /// 多個程序寫入時無法跨程序喚醒，因此另有 1 秒輪詢作為後備。
 /// </summary>
+[Singleton]
 public sealed class RunSignals
 {
     private readonly Dictionary<Guid, Entry> entries = [];

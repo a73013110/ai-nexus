@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data.External;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Gd;
@@ -34,6 +35,7 @@ public sealed record GdUserMatch(string GdId, Guid? UserId, GdAccountIssue? Issu
 /// 讀假單與回寫假日（換算操作者）用使用者查公文帳號；組織匯入（部門主管）反過來用公文帳號查使用者（<see cref="UsersOfAsync"/>）。
 /// GD 不可用時回傳 <see langword="null"/>（或失敗原因），不能當成所有人都對不到。
 /// </summary>
+[Scoped]
 public sealed class GdAccounts(AppDbContext db, ExternalDatabase<GdDatabase> gd)
 {
     private const string Sql = "SELECT [ID] AS GdId, [ACCOUNT] AS Account, [Disable] AS Disabled FROM [dbo].[Sys_User] WHERE [ACCOUNT] IN @Accounts";

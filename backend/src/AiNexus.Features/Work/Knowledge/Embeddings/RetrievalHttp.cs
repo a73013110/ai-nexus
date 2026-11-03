@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
+using AiNexus.Platform.Modules;
 using System.Net;
 using System.Text.Json;
 using AiNexus.Features.Admin.Billing;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 // 所有檢索模型端點共用同一套傳輸、有上限的重試與呼叫計量。
+[Singleton]
 public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalHttp> logger)
 {
     public async Task<JsonDocument> PostAsync(string client, string url, object payload, CancellationToken ct, string? apiKey = null)
@@ -45,6 +47,7 @@ public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<Re
     private static partial void LogRetry(ILogger logger, Exception? exception, int attempt);
 }
 
+[Singleton]
 public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
     public async Task<T> RunAsync<T>(Guid owner, string kind, string provider, string model, Func<Task<(T Value, long? Tokens)>> action, CancellationToken ct)

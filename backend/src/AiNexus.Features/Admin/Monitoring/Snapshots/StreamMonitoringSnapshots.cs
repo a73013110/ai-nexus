@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Audit;
+using AiNexus.Platform.Modules;
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
@@ -17,6 +18,7 @@ namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 /// 原因是重新整理後，舊串流可能還掛著，要等伺服器察覺瀏覽器已離開（代理伺服器可能會隱藏這件事，直到串流逾時）。
 /// 這段時間若拒絕，新頁面就會被擋在外面。
 /// </summary>
+[Singleton]
 public sealed class MonitoringStreams
 {
     public const int PerUser = 3;

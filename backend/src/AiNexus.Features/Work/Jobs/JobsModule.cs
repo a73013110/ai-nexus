@@ -9,11 +9,6 @@ namespace AiNexus.Features.Work.Jobs;
 /// </summary>
 public sealed class JobsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        builder.Services.AddScoped<JobService>();
-    }
-
     // 端點註冊順序即 OpenAPI 發佈順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {

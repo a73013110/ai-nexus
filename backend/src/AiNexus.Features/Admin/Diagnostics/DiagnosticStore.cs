@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Data;
 using System.Transactions;
@@ -14,6 +15,7 @@ using AiNexus.Platform.Diagnostics;
 namespace AiNexus.Features.Admin.Diagnostics;
 
 /// <summary>使用自己的連線與交易寫入，絕不共用呼叫端的業務 DbContext 或交易，避免日誌寫入跟著業務交易一起回滾。</summary>
+[Singleton<IDiagnosticStore>]
 public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
 {
     private static readonly string ConfigurationAction = DiagnosticsAudit.ConfigurationActivated.Name;

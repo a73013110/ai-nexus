@@ -1,3 +1,5 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Features.Admin.AccessControl.Scopes;
 
 /// <summary>
@@ -5,6 +7,7 @@ namespace AiNexus.Features.Admin.AccessControl.Scopes;
 /// 單位由 <see cref="IUnitMembership"/>（Organization）在需要時才計算：讀一次就有各種範圍的單位，不隨範圍或單位數增加。
 /// 每個範圍算哪些單位由 <see cref="DataScopeDefinition"/> 宣告，這裡不分辨成員範圍或主管範圍。
 /// </summary>
+[Scoped<IDataScope>]
 internal sealed class DataScopeService(AccessService access, IUnitMembership units) : IDataScope
 {
     public async Task<EffectiveDataScope> ForAsync(Guid userId, string featureId, CancellationToken ct)

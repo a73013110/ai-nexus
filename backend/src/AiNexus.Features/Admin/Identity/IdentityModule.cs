@@ -5,7 +5,6 @@ using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
@@ -14,7 +13,6 @@ using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Reviews;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Sessions;
-using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Admin.Identity;
@@ -42,8 +40,6 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
         services.AddSettings<SelfServiceOptions, SelfServiceOptionsValidator>(SelfServiceOptions.Section);
-        services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
-        services.AddSingleton<IAdDirectory, LdapDirectory>();
         services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
@@ -66,27 +62,7 @@ public sealed class IdentityModule : IFeatureModule
             http.ClientAddress()?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = LoginsPerAddressPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
             .AddPerUserLimit(DirectoryReadRateLimit, 60).AddPerUserLimit(DirectoryPersonRateLimit, 180).AddPerUserLimit(DirectoryWriteRateLimit, 20));
-        services.AddSingleton<LoginThrottle>();
-        services.AddSingleton<DirectoryProfileCache>();
-        services.AddSingleton<IDirectoryProfileLookup, WindowsDirectoryProfiles>();
-        services.AddScoped<DirectoryAccounts>();
-        services.AddScoped<DirectoryProvisioning>();
-        services.AddScoped<DirectorySignIn>();
-        services.AddScoped<CurrentUser>();
-        services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
-        services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
-        services.AddScoped<IRequestActor>(sp => sp.GetRequiredService<CurrentUser>());
-        services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
-        services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditingAuthorizationResultHandler>();
-        services.AddScoped<IActiveUsers, ActiveUsers>();
         services.AddSingleton(Argon2Cost.Recommended);
-        services.AddSingleton<Argon2Passwords>();
-        services.AddScoped<LocalAuthenticator>();
-        services.AddScoped<AuthenticationAudit>();
-        services.AddScoped<ISignInGrant, AdminBootstrap>();
-        services.AddScoped<VerificationChallenges>();
-        services.AddScoped<Reauthentication>();
-        services.AddScoped<UserCredentials>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

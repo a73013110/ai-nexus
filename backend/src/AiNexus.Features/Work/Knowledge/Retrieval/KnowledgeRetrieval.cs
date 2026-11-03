@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Modules;
 using System.Text;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Work.Knowledge.Collections;
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Work.Knowledge.Retrieval;
 /// 本模組提供給生成流程的檢索契約：對話所選的知識庫、單次執行經權限檢查的來源、預留的上下文與引用。
 /// 模組自己的端點是本檔旁邊的各個 slice。
 /// </summary>
+[Scoped]
 public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options)
 {
     public Task<Result<KnowledgeSelectionDto>> SelectionAsync(Guid actor, Guid conversation, CancellationToken ct) => new GetConversationKnowledge(db, conversations).HandleAsync(actor, conversation, ct);

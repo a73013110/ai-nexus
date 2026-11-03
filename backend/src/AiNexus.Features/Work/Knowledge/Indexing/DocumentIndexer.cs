@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Jobs;
@@ -10,6 +11,7 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Work.Knowledge.Indexing;
 
+[Scoped]
 public sealed class DocumentIndexer(AppDbContext db, EmbeddingProfiles profiles, EmbeddingService embeddings, EmbeddingVectorStore vectors,
     DocumentService documents, ITextChunker chunker, IOptions<KnowledgeOptions> options, JobService jobs)
 {

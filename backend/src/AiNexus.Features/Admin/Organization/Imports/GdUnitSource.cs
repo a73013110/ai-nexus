@@ -1,6 +1,7 @@
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Admin.Organization.Imports;
@@ -9,6 +10,7 @@ namespace AiNexus.Features.Admin.Organization.Imports;
 /// 組織匯入的來源：GD 的部門表 <c>Sys_User_DEPT_BAS</c>，主管經 <see cref="GdAccounts.UsersOfAsync"/> 對到使用者。
 /// 只讀用得到的欄位；登記桌 Email、單位類別、機關等目前沒有用途，不讀。名稱、上層等規則交給 Organization 的匯入計畫判斷，這裡原樣帶回。
 /// </summary>
+[Scoped]
 internal sealed class GdUnitSource(ExternalDatabase<GdDatabase> gd, GdAccounts accounts)
 {
     private const string Sql = """

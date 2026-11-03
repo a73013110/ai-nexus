@@ -58,16 +58,47 @@ public sealed class CompositionTests
         Assert.True(missing.Count == 0, "Contract implementations not registered by the composition generator:\n" + string.Join('\n', missing));
     }
 
+    /// <summary>只標一個時直接註冊；標了多個時類別本身註冊一次，各介面轉接到它（同一個實例）。</summary>
     [Fact]
     public void EveryLifetimeMarkerIsRegistered()
     {
-        var expected = ConcreteClasses().SelectMany(t => t.GetCustomAttributes(inherit: false).Select(a => Expected(t, a.GetType()))).OfType<Marker>().ToList();
-        Assert.NotEmpty(expected);
-        var missing = expected.Where(e => !Registered.Value.Any(x => !x.IsKeyedService && x.ServiceType == e.Service && x.ImplementationType == e.Implementation && x.Lifetime == e.Lifetime))
-            .Select(e => $"{e.Implementation.FullName} as {e.Service.Name} ({e.Lifetime})").Order(StringComparer.Ordinal).ToList();
+        var marked = ConcreteClasses().Select(t => (Type: t, Marks: t.GetCustomAttributes(inherit: false).Select(a => Mark(t, a.GetType())).OfType<Marker>().ToList()))
+            .Where(x => x.Marks.Count > 0).ToList();
+        Assert.NotEmpty(marked);
+        Assert.Contains(marked, x => x.Marks.Count > 1);
+        var missing = marked.SelectMany(x => x.Marks.Count == 1 ? x.Marks.Where(m => !Direct(m)) : Shared(x.Type, x.Marks))
+            .Select(m => $"{m.Implementation.FullName} as {m.Service.Name} ({m.Lifetime})").Order(StringComparer.Ordinal).ToList();
         Assert.True(missing.Count == 0, "Lifetime markers not registered by the composition generator:\n" + string.Join('\n', missing));
 
-        static Marker? Expected(Type type, Type attribute)
+        static bool Direct(Marker m) => Registered.Value.Any(x => !x.IsKeyedService && x.ServiceType == m.Service && x.ImplementationType == m.Implementation && x.Lifetime == m.Lifetime);
+
+        // 轉接的工廠要回傳類別本身的那個實例：以只會回傳同一個物件的 provider 呼叫它，不必建出真的依賴。
+        static IEnumerable<Marker> Shared(Type type, List<Marker> marks)
+        {
+            var lifetime = marks[0].Lifetime;
+            var self = new Marker(type, type, lifetime);
+            if (!Direct(self)) yield return self;
+            var instance = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(type);
+            var provider = new SingleInstanceProvider(type, instance);
+            foreach (var mark in marks.Where(m => m.Service != type))
+                if (!Registered.Value.Any(x => !x.IsKeyedService && x.ServiceType == mark.Service && x.Lifetime == lifetime && Forwards(x, provider, instance)))
+                    yield return mark;
+        }
+
+        // 同一個介面的其他工廠可能需要真的依賴，解析失敗就不是轉接到這個類別。
+        static bool Forwards(ServiceDescriptor descriptor, IServiceProvider provider, object instance)
+        {
+            try
+            {
+                return descriptor.ImplementationFactory?.Invoke(provider) == instance;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        static Marker? Mark(Type type, Type attribute)
         {
             var definition = attribute.IsGenericType ? attribute.GetGenericTypeDefinition() : attribute;
             var service = attribute.IsGenericType ? attribute.GetGenericArguments()[0] : type;
@@ -78,6 +109,11 @@ public sealed class CompositionTests
     }
 
     private sealed record Marker(Type Service, Type Implementation, ServiceLifetime Lifetime);
+
+    private sealed class SingleInstanceProvider(Type type, object instance) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) => serviceType == type ? instance : null;
+    }
 
     private static IEnumerable<Type> ConcreteClasses() => Assemblies.Features.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, ContainsGenericParameters: false });
 

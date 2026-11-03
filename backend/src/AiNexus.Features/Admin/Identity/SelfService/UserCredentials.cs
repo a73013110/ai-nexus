@@ -3,6 +3,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ public sealed record LocalLoginChange(bool Enabled, bool Renamed, bool PasswordC
 /// 使用者自行變更的信箱與本地登入。這裡只檢查並修改追蹤中的 <see cref="User"/>（含 <c>SecurityVersion++</c>），不呼叫 <c>SaveChanges</c>：
 /// 呼叫端與稽核、通知信一起儲存。<c>SecurityVersion</c> 是並行 token，期間有其他變更時儲存會失敗，不會覆蓋。
 /// </summary>
+[Scoped]
 public sealed class UserCredentials(AppDbContext db, Argon2Passwords passwords, IOptions<SelfServiceOptions> options, TimeProvider clock)
 {
     /// <summary>本人能否設定信箱：AD 提供的信箱由目錄維護。</summary>

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Features.Admin.Identity.SelfService;
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// 有設定 <see cref="SelfServiceOptions.DirectoryFreshnessDays"/>（大於 0）時，AD 綁定且仍允許 AD 登入的使用者，最近一次 AD 驗證超過該天數就拒絕本地密碼：
 /// AD 帳號停用（離職）後，自行設定的本地密碼最晚在這個期限後失效。管理員把 AD 登入關掉的帳號是明確的本地專用帳號，不套用。
 /// </summary>
+[Scoped]
 public sealed class LocalAuthenticator(AppDbContext db, Argon2Passwords passwords, IOptions<SelfServiceOptions> selfService, TimeProvider clock)
 {
     public async Task<Result<User>> AuthenticateAsync(string account, string password, CancellationToken ct)

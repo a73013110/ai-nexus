@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,7 @@ namespace AiNexus.Features.Work.Repositories;
 /// 通往 Gitea 的唯一路徑：解密使用者自己的 token、組出受控路徑，並提供多個切片共用的讀取方法。
 /// 預期內的失敗（未連線、名稱不合法、內容不支援）以結果回傳；Gitea 的傳輸失敗與拒絕則由 <see cref="IGiteaClient"/> 丟出 <see cref="ExternalServiceException"/>。
 /// </summary>
+[Scoped]
 public sealed class RepositoryService(AppDbContext db, IGiteaClient client, IDataProtectionProvider protection, IOptions<GiteaOptions> options)
 {
     // 同一個實例（即同一個請求）只解密一次 token；解密失敗的結果也會被快取，不會在同一請求中重試。

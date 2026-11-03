@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public static class EmbeddingJobs
     public static int Profile(Guid subject) => int.Parse(subject.ToString("N")[..8], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 }
 
+[Scoped]
 public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors,
     JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {

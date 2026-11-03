@@ -1,11 +1,13 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Files.Storage;
 
 /// <summary>刪除是持久化的 outbox 狀態：中繼資料與配額要保留到實體檔案真的刪除為止。</summary>
+[Scoped]
 public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<FilesOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
 {
     private IQueryable<Attachment> Unreferenced() => db.Attachments.Where(x =>

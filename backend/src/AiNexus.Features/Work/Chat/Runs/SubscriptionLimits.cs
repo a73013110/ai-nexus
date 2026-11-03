@@ -1,3 +1,5 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Features.Work.Chat.Runs;
 
 /// <summary>
@@ -5,6 +7,7 @@ namespace AiNexus.Features.Work.Chat.Runs;
 /// 限制單一使用者最多同時開啟 2 個事件串流，全系統最多 64 個同時連線，
 /// 防止惡意或異常客戶端開大量連線耗盡 Web 伺服器線程與記憶體。
 /// </summary>
+[Singleton]
 public sealed class SubscriptionLimits
 {
     private readonly object gate = new();

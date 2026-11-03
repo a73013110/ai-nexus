@@ -27,8 +27,6 @@ public sealed class InferenceModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<ModelPolicyService>();
-        services.AddScoped<ModelTaskService>();
         services.AddSettings<InferenceOptions, InferenceOptionsValidator>(InferenceOptions.Section)
             .Configure(x => x.RouteProviders());
 
@@ -49,11 +47,6 @@ public sealed class InferenceModule : IFeatureModule
 
         services.AddKeyedService<IInferenceProvider>("ollama", ServiceLifetime.Singleton, sp =>
             new OllamaProvider(sp.GetRequiredService<IHttpClientFactory>().CreateClient("Ollama")));
-
-        services.AddSingleton<InferenceRouter>();
-        services.AddSingleton<ModelCatalog>();
-        services.AddSingleton<ModelPresentation>();
-        services.AddSingleton<GenerationScheduler>();
     }
 
     /// <summary>啟用的供應商都要有轉接器，不等到第一次生成才失敗。</summary>

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.DirectoryServices.AccountManagement;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -5,6 +6,7 @@ using System.Runtime.Versioning;
 namespace AiNexus.Features.Admin.Identity.Users;
 
 /// <summary>以執行身分（IIS 應用程式集區）查網域的 <see cref="IDirectoryProfileLookup"/>；不在 Windows 上時一律回 null。</summary>
+[Singleton<IDirectoryProfileLookup>]
 public sealed partial class WindowsDirectoryProfiles(ILogger<WindowsDirectoryProfiles> logger) : IDirectoryProfileLookup
 {
     public DirectoryProfile? Find(string sid, string account) => OperatingSystem.IsWindows() ? FindInDomain(sid, account) : null;

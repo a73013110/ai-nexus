@@ -1,4 +1,5 @@
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Modules;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,7 @@ namespace AiNexus.Features.Work.Knowledge.Indexing;
 
 public sealed record StructuredChunk(int StartPage, int EndPage, string HeadingPath, string Text, int TokenEstimate);
 
+[Singleton<ITextChunker>]
 public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options) : ITextChunker
 {
     public const int Version = 1;

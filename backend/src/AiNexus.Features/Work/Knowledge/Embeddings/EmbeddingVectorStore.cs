@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Modules;
 using System.Text.Json;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Data.SqlTypes;
@@ -14,6 +15,7 @@ public sealed class EmbeddingRow
     public SqlVector<float> Vector { get; set; }
 }
 
+[Scoped]
 public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbContext> sql)
 {
     private const int DeleteBatchSize = 1000;

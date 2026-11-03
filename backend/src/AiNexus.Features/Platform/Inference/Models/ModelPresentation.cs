@@ -2,6 +2,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Data.App.Inference;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +19,7 @@ public sealed record ServiceModel(string Provider, string Id, string DisplayName
 /// 當系統組態啟用名稱隱藏（ShowModelNames = false）時，自動將模型名稱遮蔽為「AI 助理 1」等泛用代稱，
 /// 以達到權限防禦與外部模型隔離。
 /// </summary>
+[Singleton]
 public sealed class ModelPresentation(IOptions<InferenceOptions> options, IEnumerable<ServiceModel> services)
 {
     /// <summary>

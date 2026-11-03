@@ -1,9 +1,11 @@
+using AiNexus.Platform.Modules;
 using System.Runtime.CompilerServices;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Files.Storage;
 
+[Singleton<IAttachmentStorage>]
 public sealed class FileAttachmentStorage : IAttachmentStorage
 {
     // Windows 檔案系統不分大小寫，比較路徑（站台目錄判斷、分片位置）時要跟著作業系統。

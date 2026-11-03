@@ -3,6 +3,7 @@ using AiNexus.Data.App.Files;
 using AiNexus.Features.Work.Files.Extraction;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ namespace AiNexus.Features.Work.Files;
 /// 檔案模組（Files）對其他模組的契約：上傳、擁有者查詢、配額鎖定與讀取儲存位元組。
 /// 儲存的檔案若遺失或與記錄不符，屬於基礎設施錯誤，會直接拋出例外。
 /// </summary>
+[Scoped]
 public sealed class AttachmentService(DocumentExtractor extractor, IOptions<FilesOptions> options, AppDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), NeedsOcr(file) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");

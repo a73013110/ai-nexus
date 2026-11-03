@@ -9,8 +9,6 @@ public sealed class WebSearchesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddSettings<WebSearchesOptions, WebSearchesOptionsValidator>(WebSearchesOptions.Section);
-        builder.Services.AddScoped<WebSearchService>();
-        builder.Services.AddScoped<IWebSearchProvider, WebSearchProvider>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => GetWebSearchStatus.Map(api);

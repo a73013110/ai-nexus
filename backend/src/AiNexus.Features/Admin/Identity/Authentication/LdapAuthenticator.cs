@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.DirectoryServices.Protocols;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -9,6 +10,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 
 /// <summary>以 LDAP 驗證 AD 帳密：先用服務帳號查出使用者的 DN 與 SID，再以使用者自己的密碼 bind 驗證。連線規則在 <see cref="LdapConnections"/>。</summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
+[Singleton<IAdAuthenticator>]
 public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options) : IAdAuthenticator
 {
     private readonly SemaphoreSlim gate = new(4, 4);

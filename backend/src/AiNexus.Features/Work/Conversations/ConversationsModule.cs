@@ -1,5 +1,4 @@
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Work.Conversations.Administration;
 using AiNexus.Platform.Modules;
 
@@ -20,17 +19,6 @@ public sealed class ConversationsModule : IFeatureModule
     /// 並預留 JSON 跳脫與分支結構的空間。
     /// </summary>
     public const long ImportBodyLimit = 8 * 1024 * 1024;
-
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-
-        services.AddScoped<ConversationService>();
-
-        // 同一個類別也是專案刪除的事件處理常式（由組合產生器註冊）：生成中的對話會阻擋專案刪除。
-        services.AddScoped<IContainerDeletionCheck, DetachDeletedProjectConversations>();
-
-    }
 
     /// <summary>註冊對話 REST 端點群組；註冊順序即 OpenAPI 發佈順序。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)

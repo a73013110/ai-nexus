@@ -15,7 +15,6 @@ public sealed class AuditModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<AuditDataScope>();
         builder.Services.AddSettings<AuditOptions, AuditOptionsValidator>(AuditOptions.Section);
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
     }

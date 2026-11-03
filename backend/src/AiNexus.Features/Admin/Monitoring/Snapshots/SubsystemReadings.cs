@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Admin.Monitoring.Snapshots;
@@ -8,6 +9,7 @@ namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 /// 逾時為 <see cref="Timeout"/>），呼叫端拿到的是上一次的讀數。沒有人要快照時完全不讀。
 /// 應用程式停止後不再啟動新讀取，並最多等待進行中的讀取 <see cref="Timeout"/>，確保關機期間不再碰資料庫。
 /// </summary>
+[Singleton]
 public sealed partial class SubsystemReadings
 {
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);

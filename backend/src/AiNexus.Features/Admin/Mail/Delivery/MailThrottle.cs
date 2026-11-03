@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Mail.Delivery;
@@ -6,6 +7,7 @@ namespace AiNexus.Features.Admin.Mail.Delivery;
 /// 每分鐘寄送上限（token bucket：容量＝<c>MaxPerMinute</c>，每分鐘補滿）。程序內即可：單一 IIS 執行個體只有一個 dispatcher（ADR 0001）。
 /// 自己實作而不用 <c>TokenBucketRateLimiter</c>，是為了吃 <see cref="TimeProvider"/>，測試才能控制時間。
 /// </summary>
+[Singleton]
 public sealed class MailThrottle(IOptions<MailOptions> options, TimeProvider clock)
 {
     private readonly Lock gate = new();

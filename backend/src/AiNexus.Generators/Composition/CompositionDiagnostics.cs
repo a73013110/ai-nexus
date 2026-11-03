@@ -35,7 +35,7 @@ internal static class CompositionDiagnostics
         "'{0}' 標了 [{1}]，但{2}", Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor ManualRegistration = new(
-        "AINX1007", "組合產生器已註冊的契約實作不可再手動註冊",
-        "'{0}' 實作 '{1}'，組合產生器已自動註冊；這裡再註冊一次會重複（例如監控或總覽出現兩次），刪掉這個呼叫", Category,
+        "AINX1007", "組合產生器已註冊的類別不可再手動註冊",
+        "'{0}' {1}，組合產生器已註冊它；這裡再註冊一次會重複（監控或總覽出現兩次）或與標記的生命週期不一致，刪掉這個呼叫", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

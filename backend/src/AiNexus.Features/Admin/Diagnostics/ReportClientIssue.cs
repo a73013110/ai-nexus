@@ -3,6 +3,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -50,6 +51,7 @@ internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, 
 }
 
 /// <summary>以使用者與指紋在一分鐘內去重，避免同一錯誤被瀏覽器反覆回報而灌爆日誌。</summary>
+[Singleton]
 public sealed class ClientIssueDeduplication : IDisposable
 {
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 10000 });

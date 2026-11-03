@@ -1,4 +1,5 @@
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -9,6 +10,7 @@ namespace AiNexus.Features.Admin.Identity;
 /// 授權拒絕先寫請求稽核（ADR 0023），再交給 <see cref="ErrorAuthorizationResultHandler"/> 寫出 problem。
 /// 放在結果處理而非 requirement handler：每個請求只執行一次（群組與端點的 policy 合併後才到這裡），評估授權本身不帶寫入副作用。
 /// </summary>
+[Singleton<IAuthorizationMiddlewareResultHandler>]
 internal sealed class AuditingAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly ErrorAuthorizationResultHandler inner = new();

@@ -6,6 +6,7 @@ using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// 若屬於專案則再加上專案的 ACL。找不到文件或功能未開通時一律回傳 <see cref="KnowledgeErrors.DocumentNotFound"/>，
 /// 不區分兩者，以免洩漏文件是否存在；ACL 失敗則回傳 <see cref="ResourceAccess"/> 的錯誤。
 /// </summary>
+[Scoped]
 internal sealed class DocumentAccess(AppDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>獨立文件（對話附件、專案文件）由這些功能任一開啟；屬於專案的另需專案功能。</summary>

@@ -17,10 +17,7 @@ public sealed class ReleasesModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        var services = builder.Services;
-        services.AddSingleton<AppRelease>();
-        services.AddScoped<SchemaChangeReader>();
-        services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
+        builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
     }
 
     // 端點順序即為已發布的 OpenAPI 順序。

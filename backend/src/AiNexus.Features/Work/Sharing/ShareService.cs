@@ -1,9 +1,11 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing;
 
 /// <summary>分享的撤銷與過期清除；來源被刪除時，其分享立即失效。</summary>
+[Scoped]
 public sealed class ShareService(AppDbContext db, TimeProvider clock)
 {
     /// <summary>撤銷來源的所有分享並移除其檔案授權。交易由呼叫端管理。</summary>

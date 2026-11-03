@@ -1,11 +1,13 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
 /// <summary>不屬於任何知識庫與專案的獨立文件；讀取其 Resource 時需略過軟刪除過濾。</summary>
+[Scoped<IPrivateReaders>]
 internal sealed class PrivateReaders(AppDbContext db) : IPrivateReaders
 {
     public IQueryable<PrivateReader> All => from doc in db.Documents join resource in db.Resources.IgnoreQueryFilters([SoftDelete.Filter]) on doc.Id equals resource.Id

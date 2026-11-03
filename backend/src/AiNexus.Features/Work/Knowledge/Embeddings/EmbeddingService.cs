@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
+[Singleton]
 public sealed class EmbeddingService(KeyedServices<IEmbeddingClient> clients, RetrievalInvocation invocations, EmbeddingBatchScheduler scheduler, IOptions<KnowledgeOptions> options)
 {
     public bool Enabled => options.Value.Embedding.Provider != "none";

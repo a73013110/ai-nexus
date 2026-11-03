@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Diagnostics;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
@@ -30,6 +31,7 @@ public sealed record MailDelivery(Guid MessageId, string Status, DateTimeOffset?
 /// 其他模組寄信的唯一入口（transactional outbox）。只把信件加入呼叫端的 <see cref="AppDbContext"/>，不呼叫 <c>SaveChanges</c>：
 /// 由呼叫端與業務變更一起儲存，業務失敗就不會寄出，寄信也不會在業務提交前發生。實際寄送由 <see cref="MailDispatcher"/> 在背景進行。
 /// </summary>
+[Scoped]
 public sealed class MailOutbox(AppDbContext db, MailRenderer renderer, MailContents contents, IOptions<MailOptions> options, TimeProvider clock)
 {
     /// <summary>傳輸已設定（Smtp 或 Pickup）。Disabled 時仍可入列，只是不會寄出；需要使用者等信的流程應先檢查並回 <see cref="MailErrors.NotConfigured"/>。</summary>

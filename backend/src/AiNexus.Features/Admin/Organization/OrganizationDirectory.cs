@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization;
@@ -15,6 +16,7 @@ public sealed record UnitMembership(Guid UnitId, bool IsPrimary, bool IsManager)
 /// 每次呼叫整表讀取單位：部門數以百計，比遞迴 CTE 簡單，也讓「上層停用」與首長單位（<see cref="HeadUnits"/>）的判斷只寫一次。
 /// 也是 AccessControl 的 <see cref="IUnitMembership"/>：資料範圍的 <c>unit</c>、<c>unit-tree</c> 與主管範圍由這裡計算。
 /// </summary>
+[Scoped, Scoped<IUnitMembership>]
 public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUsers) : IUnitMembership
 {
     /// <summary>使用者目前所屬的有效單位；帳號停用或刪除時回空清單。<c>IsManager</c> 是生效的主管勾選（被首長單位帶領的上層不算），實際管轄另含首長單位的上層（ADR 0024）。</summary>

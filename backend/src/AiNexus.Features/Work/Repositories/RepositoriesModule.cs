@@ -23,9 +23,6 @@ public sealed class RepositoriesModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddSettings<GiteaOptions, GiteaOptionsValidator>(GiteaOptions.Section);
-        services.AddScoped<IGiteaClient, GiteaClient>();
-        services.AddScoped<RepositoryService>();
-        services.AddScoped<RepositoryReviewService>();
         services.AddBackgroundJobHandler<RepositoryReviewHandler>(RepositoryReviewHandler.JobKind);
         services.AddBackgroundJobHandler<RepositoryImportHandler>(RepositoryImportHandler.JobKind);
         // 每次讀取都會實際呼叫 Gitea（使用使用者的 token）；寫入還可能啟動模型工作、上傳檔案或遠端留言，所以限制較嚴。

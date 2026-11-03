@@ -4,6 +4,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Ordering;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Users;
@@ -19,6 +20,7 @@ public sealed record DirectoryMatch(User? Existing, bool Bound);
 /// 三條路徑建立的帳號（AdAccount、member 角色）與同步的欄位（AD 帳號、姓名、信箱）因此一致。
 /// 呼叫端負責取 <see cref="AccessControlLocks.Authorization"/>、寫稽核與儲存。
 /// </summary>
+[Scoped]
 public sealed partial class DirectoryAccounts(AppDbContext db, ILogger<DirectoryAccounts> logger)
 {
     /// <summary>

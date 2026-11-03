@@ -15,7 +15,7 @@ internal static class CompositionEmitter
         writer.Line().Open($"static partial class {target.Name}");
 
         writer.Open("private static partial void AddModules(global::Microsoft.Extensions.Hosting.IHostApplicationBuilder builder)");
-        foreach (var module in Valid(composition.Modules, x => x.Problem)) writer.Line($"{module.Type}.AddServices(builder);");
+        foreach (var module in Valid(composition.Modules, x => x.Problem).Where(x => x.AddsServices)) writer.Line($"{module.Type}.AddServices(builder);");
         writer.Close().Line();
 
         // 每個模組掛在一個空前綴、帶模組名 tag 的群組：端點自己不加 tag，管理端點分散在各模組時才找得到。

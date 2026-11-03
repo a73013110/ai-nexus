@@ -3,10 +3,12 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
+[Scoped]
 public sealed class RetrievalAuthorization(AppDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>

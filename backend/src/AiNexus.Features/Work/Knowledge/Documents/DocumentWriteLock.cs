@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -9,6 +10,7 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// 知識庫內的文件鎖整個知識庫，因為規則跨文件（文件上限、刪除知識庫時取消所有工作），而協作者是不同人，擁有者列鎖擋不住；獨立文件只鎖自己。不同知識庫互不等待。
 /// 背景工作不取這把鎖，由工作的租約與取消旗標隔開。
 /// </summary>
+[Scoped]
 public sealed class DocumentWriteLock(AppDbContext db)
 {
     // 持有者只做幾句 SQL，等這麼久表示異常，交給使用者重試。

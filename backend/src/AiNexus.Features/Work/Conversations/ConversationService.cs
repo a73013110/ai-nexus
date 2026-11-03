@@ -3,6 +3,7 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Inference;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Conversations;
@@ -21,6 +22,7 @@ public sealed record ConversationTurn(
 /// <summary>
 /// 其他模組（Chat、Inference、Knowledge、Artifacts）操作對話歷史與訊息樹的入口。
 /// </summary>
+[Scoped]
 public sealed class ConversationService(AppDbContext db, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>取得使用者擁有的對話並交由 EF 追蹤（不預先載入標籤），供之後修改對話屬性時使用。</summary>

@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
@@ -36,6 +37,7 @@ public static class DirectoryPersonStates
 /// 建立、綁定與欄位同步都交給 <see cref="DirectoryAccounts"/>（與首次登入同一份規則）；每人一筆稽核、一個交易，一人失敗不影響其他人。
 /// 與登入共用授權鎖（<see cref="AccessControlLocks.Authorization"/>），所以交易外的規劃只供判斷要不要寫，寫入前一定在鎖內重新規劃。
 /// </summary>
+[Scoped]
 internal sealed partial class DirectoryProvisioning(AppDbContext db, DirectoryAccounts accounts, AdministrativeWrite write,
     TimeProvider clock, ILogger<DirectoryProvisioning> logger)
 {

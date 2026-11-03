@@ -17,9 +17,6 @@ public sealed class GdModule : IFeatureModule
     {
         builder.Services.AddExternalDatabase<GdDatabase>();
         builder.Services.AddSettings<GdOptions, GdOptionsValidator>(GdOptions.Section);
-        builder.Services.AddScoped<GdAccounts>();
-        builder.Services.AddScoped<GdFlowReader>();
-        builder.Services.AddScoped<GdAttachments>();
         builder.Services.AddRemoteFileSource<GdFileSource>(GdFileSource.SourceName);
     }
 }

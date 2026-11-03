@@ -36,11 +36,6 @@ public sealed class MailModule : IFeatureModule
                 if (x.From.Address.Length == 0) x.From.Address = "no-reply@ainexus.localhost";
                 if (x.PublicBaseUrl.Length == 0) x.PublicBaseUrl = "https://localhost:5080";
             });
-        services.AddSingleton<MailRenderer>();
-        services.AddSingleton<MailContents>();
-        services.AddScoped<MailOutbox>();
-        services.AddSingleton<MailCircuit>();
-        services.AddSingleton<MailThrottle>();
         services.AddSingleton<IMailTransport>(provider => provider.GetRequiredService<IOptions<MailOptions>>().Value.Transport switch
         {
             MailTransports.Smtp => ActivatorUtilities.CreateInstance<SmtpMailTransport>(provider),

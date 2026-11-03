@@ -1,6 +1,5 @@
 using AiNexus.Features.Admin.AccessControl.Management;
 using AiNexus.Features.Admin.AccessControl.Navigation;
-using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
@@ -15,12 +14,6 @@ public sealed class AccessControlModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<AccessService>();
-        // IUnitMembership 由 Organization 註冊（AccessControl 不依賴它）。
-        services.AddScoped<IDataScope, DataScopeService>();
-        services.AddScoped<AccessView>();
-        services.AddScoped<AdministrativeWrite>();
-        services.AddScoped<AdministrativeWriteLock>();
         // 每個可授予的功能都有標準 policy，新增功能只要宣告在 FeatureCatalog；any-of policy 由需要的模組自行註冊。
         foreach (var feature in FeatureCatalog.Grants) services.AddFeaturePolicy(Policies.Prefix + feature.Id, feature.Id);
         services.AddFeaturePolicy(Policies.AccessCatalog, FeatureCatalog.IdentityUsers, FeatureCatalog.AccessControlRoles,

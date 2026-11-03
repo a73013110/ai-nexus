@@ -1,9 +1,11 @@
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
+[Singleton]
 public sealed class EmbeddingBatchScheduler(IOptions<KnowledgeOptions> options, GenerationScheduler generation)
 {
     private readonly SemaphoreSlim gate = new(options.Value.Embedding.MaxConcurrentBatches);

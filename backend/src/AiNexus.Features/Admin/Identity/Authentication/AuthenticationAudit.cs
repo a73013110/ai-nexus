@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Security.Claims;
 using AiNexus.Data.App.Audit;
 using AiNexus.Platform.Auditing;
@@ -11,6 +12,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// 登入與登出的稽核。以獨立 scope（新的 DbContext）寫入，不受同一請求中失敗的寫入回滾影響，讓失敗紀錄一定留得下來。
 /// 登入端點本身宣告 NotAudited：請求稽核要先有身分，登入失敗時還沒有。
 /// </summary>
+[Scoped]
 public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContextAccessor accessor)
 {
     /// <summary><paramref name="failureCode"/> 為 null 是成功；失敗時 <paramref name="userId"/> 為 null（帳號未驗證，擁有者記空識別碼）。</summary>

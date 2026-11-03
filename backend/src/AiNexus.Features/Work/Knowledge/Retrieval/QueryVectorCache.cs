@@ -1,4 +1,5 @@
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Modules;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
+[Singleton]
 public sealed partial class QueryVectorCache(EmbeddingService embeddings, IOptions<KnowledgeOptions> options) : IDisposable
 {
     private readonly IMemoryCache cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 512 });

@@ -12,11 +12,7 @@ public sealed class DiagnosticsModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        var services = builder.Services;
-        services.AddSingleton<IDiagnosticStore, DiagnosticStore>();
-        services.AddScoped<DiagnosticQuery>();
-        services.AddSingleton<ClientIssueDeduplication>();
-        services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
+        builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
     }
 
     // 端點註冊順序即公開的 OpenAPI 順序，調整會改變對外文件。

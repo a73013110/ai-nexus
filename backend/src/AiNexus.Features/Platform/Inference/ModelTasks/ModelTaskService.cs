@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
+using AiNexus.Platform.Modules;
 using System.Text;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Features.Platform.Inference.Models;
@@ -27,6 +28,7 @@ public sealed record ModelTaskResult(
 /// - 透過資料庫事務更新使用者列鎖（Row Lock）串行化配額預扣；
 /// - 預約完成並提交事務後，在無資料庫鎖的情況下發起外部 HTTP 串流調用，避免長連線耗盡連線池。
 /// </summary>
+[Scoped]
 public sealed class ModelTaskService(
     IServiceScopeFactory scopes,
     ModelCatalog catalog,

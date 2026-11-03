@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Modules;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Data.Sql;
@@ -9,6 +10,7 @@ using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
+[Scoped<IRetrievalStore>]
 public sealed class SqlServerRetrievalStore(ISqlDatabase<AppDbContext> sql, IOptions<KnowledgeOptions> options, IMemoryCache cache, ILogger<SqlServerRetrievalStore> logger) : IRetrievalStore
 {
     public async Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, EmbeddingProfile profile, string query, float[]? vector, string mode, CancellationToken ct)

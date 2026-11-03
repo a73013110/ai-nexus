@@ -18,16 +18,7 @@ public sealed class ChatModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        var services = builder.Services;
-
-        services.AddScoped<RunService>();
-        services.AddScoped<RunLeaseRecovery>();
-        services.AddScoped<ContextBuilder>();
-        services.AddScoped<TranscriptReader>();
-        services.AddSingleton<SubscriptionLimits>();
-        services.AddSingleton<RunSignals>();
-
-        services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
+        builder.Services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
     }
 
     /// <summary>註冊對話相關之 HTTP 端點。</summary>

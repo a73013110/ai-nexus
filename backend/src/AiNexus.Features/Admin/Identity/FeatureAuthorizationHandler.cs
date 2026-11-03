@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
 
@@ -7,6 +8,7 @@ namespace AiNexus.Features.Admin.Identity;
 
 // 授權每個請求都從 SQL 重讀，讓撤銷立即生效，不必等 cookie 過期。
 // 記下授權或被拒絕的功能（稽核與功能使用量依它統計）；拒絕的稽核由 AuditingAuthorizationResultHandler 寫（ADR 0023）。
+[Scoped<IAuthorizationHandler>]
 public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessService access, IHttpContextAccessor http)
     : AuthorizationHandler<FeatureRequirement>
 {

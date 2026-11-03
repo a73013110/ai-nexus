@@ -1,7 +1,6 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Prices;
 using AiNexus.Features.Admin.Billing.Reports;
-using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Billing;
@@ -11,14 +10,6 @@ namespace AiNexus.Features.Admin.Billing;
 /// </summary>
 public sealed class BillingModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        builder.Services.AddScoped<BillingService>();
-        builder.Services.AddScoped<IModelCallMeter>(sp => sp.GetRequiredService<BillingService>());
-        builder.Services.AddScoped<SpendReports>();
-        builder.Services.AddScoped<UsageReports>();
-    }
-
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         ReportSpend.MapPersonal(api);

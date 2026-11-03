@@ -49,6 +49,8 @@ public sealed class FeatureCompositionGeneratorTests
                 public static void AddServices(IHostApplicationBuilder builder) { }
             }
 
+            public sealed class BetaModule : IFeatureModule;
+
             public abstract class SkippedModule : IFeatureModule
             {
                 public static void AddServices(IHostApplicationBuilder builder) { }
@@ -71,6 +73,7 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Contains("global::Sample.Work.ZetaModule.VerifyStartup(services);", run.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("AlphaModule.MapEndpoints", run.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("AlphaModule.VerifyStartup", run.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("BetaModule", run.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("SkippedModule", run.Source, StringComparison.Ordinal);
     }
 
@@ -193,6 +196,9 @@ public sealed class FeatureCompositionGeneratorTests
 
             internal sealed partial class Clock : IClock;
 
+            [Scoped<IClock>]
+            internal sealed class ScopedClock : IClock;
+
             internal sealed class Plain;
             """;
 
@@ -202,14 +208,17 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Empty(run.Errors);
         string[] expected =
         [
+            // 標了多個：類別本身註冊一次，介面轉接到它，共用同一個實例。
             "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredSingleton<global::Sample.Clock>(services);",
-            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredSingleton<global::Sample.IClock, global::Sample.Clock>(services);",
+            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddForwardedSingleton<global::Sample.IClock, global::Sample.Clock>(services);",
             // 以不同型別引數實作同一個泛型契約兩次，各註冊一次，型別引數排在實作前面。
             "global::Sample.SourceRegistration.AddHandler<global::Sample.Created, global::Sample.ItemHandler>(services);",
             "global::Sample.SourceRegistration.AddHandler<global::Sample.Deleted, global::Sample.ItemHandler>(services);",
             // 契約由基底類別實作也算；抽象的基底類別本身不註冊。
             "global::Sample.SourceRegistration.AddSource<global::Sample.ItemSource>(services);",
             "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredScoped<global::Sample.Reader>(services);",
+            // 只標一個介面：直接以介面註冊，類別本身不註冊。
+            "global::AiNexus.Platform.Modules.DeclaredServiceRegistration.AddDeclaredScoped<global::Sample.IClock, global::Sample.ScopedClock>(services);",
             "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionHostedServiceExtensions.AddHostedService<global::Sample.Worker>(services);",
         ];
         var positions = expected.Select(line => run.Source.IndexOf(line, StringComparison.Ordinal)).ToList();
@@ -217,7 +226,7 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Equal(positions.Order(), positions);
         // partial 類別的每個宣告都會轉換一次，註冊只產生一次。
         Assert.Single(run.Source.Split('\n'), line => line.Trim() == expected[0]);
-        foreach (var excluded in new[] { "Sample.SourceBase", "Sample.Plain" })
+        foreach (var excluded in new[] { "Sample.SourceBase", "Sample.Plain", "AddDeclaredScoped<global::Sample.ScopedClock>" })
             Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
     }
 
@@ -234,15 +243,20 @@ public sealed class FeatureCompositionGeneratorTests
 
             [Singleton<IClock>]
             internal sealed class NotAClock;
+
+            [Scoped, Singleton<IClock>]
+            internal sealed class MixedClock : IClock;
             """;
 
         var run = GeneratorHarness.Run(new FeatureCompositionGenerator(), Target, Contracts, invalid);
 
-        Assert.Equal(["AINX1006", "AINX1006"], run.Diagnostics.Select(x => x.Id));
-        Assert.Contains(run.Diagnostics, x => x.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("沒有實作 'Sample.IClock'", StringComparison.Ordinal));
+        Assert.Equal(["AINX1006", "AINX1006", "AINX1006"], run.Diagnostics.Select(x => x.Id));
+        var messages = run.Diagnostics.Select(x => x.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).ToList();
+        Assert.Contains(messages, x => x.Contains("'Sample.NotAClock' 標了 [Singleton<IClock>]，但沒有實作 'Sample.IClock'", StringComparison.Ordinal));
+        Assert.Contains(messages, x => x.Contains("'Sample.MixedClock' 標了 [Singleton<IClock>]，但也標了 [Scoped]", StringComparison.Ordinal));
         Assert.Empty(run.Errors);
-        Assert.DoesNotContain("Broken", run.Source, StringComparison.Ordinal);
-        Assert.DoesNotContain("NotAClock", run.Source, StringComparison.Ordinal);
+        foreach (var excluded in new[] { "Broken", "NotAClock", "MixedClock" })
+            Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
     }
 
     [Fact]

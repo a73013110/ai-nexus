@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,6 +13,7 @@ public sealed record Argon2Cost(int MemoryKiB, int Iterations)
 }
 
 /// <summary>PHC 格式的密碼雜湊（內含版本與參數）。記憶體與工作量有上下限，比對採固定時間以避免時序攻擊。</summary>
+[Singleton]
 public sealed class Argon2Passwords(Argon2Cost cost) : IDisposable
 {
     // 低於 OWASP 下限（19 MiB、2 次）的既有雜湊會被拒絕；但若目前設定的成本本身就低於下限，則以設定值為準，否則自己產生的雜湊也驗不過。

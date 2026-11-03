@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
+using AiNexus.Platform.Modules;
 using System.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.Work.Jobs.Management;
@@ -9,6 +10,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Work.Jobs;
 
 /// <summary>其他模組使用背景工作的入口：以業務對象排入工作、取得描述、取消與重試。</summary>
+[Scoped]
 public sealed class JobService(AppDbContext db, IServiceProvider services)
 {
     /// <summary>每個工作（含重試）的嘗試上限；worker 拒絕執行超過上限的認領，重試也不再受理。</summary>

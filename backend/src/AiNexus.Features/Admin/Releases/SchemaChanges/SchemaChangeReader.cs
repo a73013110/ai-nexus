@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Diagnostics;
 using System.Text.Json;
 using AiNexus.Data.App;
@@ -21,6 +22,7 @@ public sealed record SchemaDefinitionDto(string SchemaName, string Name, string 
 /// 呼叫 <c>releases</c> 的 procedure：雜湊在伺服器端計算、只傳回有差異的列；定義本文在打開差異時才讀。
 /// update.sql 的前置檢查用同一支，所以網站與更新包對「異動」的判定一致。
 /// </summary>
+[Scoped]
 internal sealed partial class SchemaChangeReader(ISqlDatabase<AppDbContext> sql, ILogger<SchemaChangeReader> logger)
 {
     /// <summary>快照是空的（還沒有任何 update.sql 或建庫腳本寫入）時回傳空清單；是否有快照由 <see cref="HasSnapshotAsync"/> 分辨。</summary>

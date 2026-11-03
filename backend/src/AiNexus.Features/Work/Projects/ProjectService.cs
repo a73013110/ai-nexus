@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Collaboration;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Work.Projects;
 
 /// <summary>專案模組對其他模組（生成與上下文預覽）的契約。</summary>
+[Scoped]
 public sealed class ProjectService(AppDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>專案的共用指示與完整參考文字，用於對話的提示詞；沒有專案時為空字串。</summary>

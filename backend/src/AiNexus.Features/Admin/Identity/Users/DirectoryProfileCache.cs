@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Collections.Concurrent;
 
 namespace AiNexus.Features.Admin.Identity.Users;
@@ -6,6 +7,7 @@ namespace AiNexus.Features.Admin.Identity.Users;
 public sealed record DirectoryProfile(string DisplayName, string? Email);
 
 /// <summary>依 SID 快取目錄的姓名與信箱一小時；容量有上限，避免程序長時間執行時無限制成長。</summary>
+[Singleton]
 public sealed class DirectoryProfileCache(TimeProvider clock)
 {
     private const int Capacity = 4096;

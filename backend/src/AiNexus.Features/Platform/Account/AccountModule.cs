@@ -15,8 +15,6 @@ public sealed class AccountModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<PersonalUsage>();
-        builder.Services.AddScoped<AccountSecurity>();
         AddMailSamples(builder.Services);
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(VerificationRateLimit, 10).AddPerUserLimit(CredentialsRateLimit, 5));
     }

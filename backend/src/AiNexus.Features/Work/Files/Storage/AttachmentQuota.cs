@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Admin.Identity.Users;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,7 @@ namespace AiNexus.Features.Work.Files.Storage;
 [ValidatedInHandler("The limit is checked inside the audited administrative transaction (SetUserAttachmentStorage).")]
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
 
+[Scoped]
 public sealed class AttachmentQuota(AppDbContext db, ISqlDatabase<AppDbContext> sql, IOptions<FilesOptions> options)
 {
     /// <summary>沒有個人與群組上限時的預設儲存上限（設定）。</summary>

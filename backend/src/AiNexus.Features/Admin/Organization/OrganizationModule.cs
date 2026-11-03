@@ -1,5 +1,4 @@
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Organization.Imports;
 using AiNexus.Features.Admin.Organization.Members;
 using AiNexus.Platform.Modules;
@@ -18,9 +17,6 @@ public sealed class OrganizationModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<OrganizationDirectory>();
-        builder.Services.AddScoped<IUnitMembership>(sp => sp.GetRequiredService<OrganizationDirectory>());
-        builder.Services.AddScoped<GdUnitSource>();
         builder.Services.AddFeaturePolicy(UserUnitsPolicy, FeatureCatalog.Organization, FeatureCatalog.IdentityUsers);
     }
 

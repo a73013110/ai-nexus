@@ -1,5 +1,4 @@
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Work.Files.Extraction;
 using AiNexus.Features.Work.Files.Management;
 using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
@@ -24,11 +23,6 @@ public sealed class FilesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<AttachmentService>();
-        services.AddScoped<DocumentExtractor>();
-        services.AddSingleton<IAttachmentStorage, FileAttachmentStorage>();
-        services.AddScoped<AttachmentQuota>();
-        services.AddScoped<AttachmentLifecycle>();
         services.AddSettings<FilesOptions, FilesOptionsValidator>(FilesOptions.Section)
             .Configure<IHostEnvironment, IConfiguration>((x, environment, config) =>
             {

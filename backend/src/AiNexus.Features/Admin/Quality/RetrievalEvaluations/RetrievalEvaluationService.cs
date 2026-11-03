@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Quality;
+using AiNexus.Platform.Modules;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
@@ -21,6 +22,7 @@ namespace AiNexus.Features.Admin.Quality.RetrievalEvaluations;
 /// 檢索評測各切片與 <see cref="RetrievalEvaluationHandler"/> 共用的存取與可比較性檢查。
 /// 每個工作步驟之間都會重新檢查；失敗時以其代碼讓工作失敗。
 /// </summary>
+[Scoped]
 public sealed class RetrievalEvaluationService(AppDbContext db, RetrievalAuthorization authorization, AccessService features,
     EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference)
 {

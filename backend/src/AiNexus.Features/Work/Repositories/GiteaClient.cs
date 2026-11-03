@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -22,6 +23,7 @@ public interface IGiteaClient
 /// <summary>
 /// 只能連到設定中的 Gitea 主機。遠端狀態碼會轉成固定的公開錯誤；遠端回應內容、token 與重新導向都不會傳給呼叫端，也不會寫進日誌。
 /// </summary>
+[Scoped<IGiteaClient>]
 public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOptions> options) : IGiteaClient
 {
     public Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct) => CallAsync(async timeout =>

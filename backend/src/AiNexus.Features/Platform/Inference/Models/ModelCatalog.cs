@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Text.Json;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Platform.Errors;
@@ -18,6 +19,7 @@ public sealed record ProviderStatusDto(string Id, bool Available, string? Notice
 /// - 過期時啟動背景單趟更新（single-flight），後續呼叫端可立即取得過期快取；
 /// - 僅有首次無任何快取時呼叫端才需要同步等待更新完成。
 /// </summary>
+[Singleton]
 public sealed partial class ModelCatalog(
     InferenceRouter router,
     IOptions<InferenceOptions> options,

@@ -5,11 +5,6 @@ namespace AiNexus.Features.Platform.Notifications;
 /// <summary>工作區收件匣。其他模組透過 <see cref="NotificationService"/> 排入通知。</summary>
 public sealed class NotificationsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        builder.Services.AddScoped<NotificationService>();
-    }
-
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/notifications");

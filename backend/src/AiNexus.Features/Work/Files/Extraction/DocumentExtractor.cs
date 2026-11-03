@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Text;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
@@ -6,6 +7,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace AiNexus.Features.Work.Files.Extraction;
 
+[Scoped]
 public sealed class DocumentExtractor(IOptions<FilesOptions> options)
 {
     public static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".webp", ".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".csv", ".tsv", ".json", ".log", ".xml", ".yaml", ".yml", ".toml", ".ini", ".html", ".css", ".cs", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".sql"];

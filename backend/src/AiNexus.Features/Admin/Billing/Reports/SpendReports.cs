@@ -3,6 +3,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 
 namespace AiNexus.Features.Admin.Billing.Reports;
@@ -24,6 +25,7 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
 /// 花費報表的查詢：期間報表在 <c>billing.usp_GetSpendReport</c>、單一對話在 <c>billing.usp_GetConversationSpend</c>，各一次往返。
 /// procedure 只依 Provider、ModelId 回傳原始彙總；模型顯示名稱的隱藏與合併、是否列出使用者，以及對話找不到時回哪個錯誤，都在這裡決定。
 /// </summary>
+[Scoped]
 public sealed class SpendReports(ISqlDatabase<AppDbContext> sql, ModelPresentation presentation)
 {
     public Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)

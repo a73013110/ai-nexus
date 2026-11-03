@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Data;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
@@ -57,6 +58,7 @@ public sealed record ItemAudit(AuditAction Action, Guid Actor);
 /// 管理端寫入的資料稽核：變更與其前後快照共用同一個交易，變更與稽核要嘛一起成功、要嘛一起回滾。
 /// 快照由擁有該資料的 slice 提供（<see cref="AuditTarget"/>），所以這裡不依賴任何上層模組。
 /// </summary>
+[Scoped]
 public sealed partial class AdministrativeWrite(AppDbContext db, AccessService access, AdministrativeWriteLock writes, AuditTrail audit, IOptions<AccessControlOptions> options, TimeProvider time, ILogger<AdministrativeWrite> logger)
 {
     /// <summary>
@@ -161,6 +163,7 @@ public sealed partial class AdministrativeWrite(AppDbContext db, AccessService a
 /// 行政寫入的具名鎖：範圍由規則決定（一張卡、整棵單位樹），名稱集中在各模組的 <c>Locks</c> 類別。
 /// 用資料庫鎖而不是程序內鎖，本機與 IIS 共用資料庫時一樣有效。必須是交易的第一個動作，說明見 <see cref="ApplicationLocks"/>。
 /// </summary>
+[Scoped]
 public sealed class AdministrativeWriteLock(AppDbContext db, IOptions<AccessControlOptions> options)
 {
     /// <summary>取得指定名稱的鎖，持有到目前的交易結束；等到逾時回 <c>false</c>。</summary>

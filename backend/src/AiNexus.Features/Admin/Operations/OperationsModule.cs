@@ -10,8 +10,6 @@ namespace AiNexus.Features.Admin.Operations;
 /// </summary>
 public sealed class OperationsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder) { }
-
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 每個端點由呼叫它的頁面授權，所以同一個 /admin 前綴依授權各開一組。

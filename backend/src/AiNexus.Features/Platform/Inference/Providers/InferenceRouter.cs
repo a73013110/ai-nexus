@@ -10,6 +10,7 @@ namespace AiNexus.Features.Platform.Inference.Providers;
 /// 負責根據設定檔控管各供應商的最大並行請求數（SemaphoreSlim），
 /// 並將推論需求分派至對應的推論實作轉接器。
 /// </summary>
+[Singleton]
 public sealed class InferenceRouter(KeyedServices<IInferenceProvider> providers, IOptions<InferenceOptions> options)
 {
     private readonly IReadOnlyDictionary<string, SemaphoreSlim> capacity = options.Value.ProviderConcurrency

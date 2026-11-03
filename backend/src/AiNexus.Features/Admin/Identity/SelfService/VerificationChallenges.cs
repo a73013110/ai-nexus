@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,7 @@ public sealed record IssuedChallenge(VerificationChallenge Challenge, string Cod
 /// 一次性 6 位數驗證碼（變更信箱、步升驗證）。只保存 HMAC 雜湊；到期、錯誤次數上限、成功使用或被新碼取代後即結束。
 /// Identity 不認識 Mail：寄信由呼叫端（Account）在同一交易入列，再把信件 Id 寫回 <see cref="VerificationChallenge.MailMessageId"/>。
 /// </summary>
+[Scoped]
 public sealed class VerificationChallenges(AppDbContext db, IOptions<SelfServiceOptions> options, TimeProvider clock)
 {
     private static readonly TimeSpan Retention = TimeSpan.FromDays(30);

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Text.RegularExpressions;
 using AiNexus.Data.App.Mail;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,7 @@ namespace AiNexus.Features.Admin.Mail;
 public sealed record RenderedMail(string Category, MailPriority Priority, bool Sensitive, string Subject, string Html, string Text);
 
 /// <summary>把範本套上共用版型（產品名、頁尾），並檢查分類與大小上限。超過上限是範本的程式錯誤，直接拋出。</summary>
+[Singleton]
 public sealed partial class MailRenderer(IOptions<MailOptions> options)
 {
     public const string ProductName = "AI Nexus";

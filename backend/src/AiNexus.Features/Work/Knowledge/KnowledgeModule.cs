@@ -1,5 +1,4 @@
 using AiNexus.Features.Admin.AccessControl;
-using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge.Collections;
@@ -29,23 +28,9 @@ public sealed class KnowledgeModule : IFeatureModule
         var services = builder.Services;
         services.AddSettings<KnowledgeOptions, KnowledgeOptionsValidator>(KnowledgeOptions.Section);
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
-        services.AddScoped<DocumentAccess>();
-        services.AddScoped<IPrivateReaders, PrivateReaders>();
         services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
-        services.AddScoped<DocumentWriteLock>();
-        services.AddScoped<EmbeddingProfiles>();
-        services.AddScoped<EmbeddingVectorStore>();
-        services.AddScoped<DocumentIndexer>();
-        services.AddScoped<EmbeddingLifecycle>();
-        services.AddScoped<RetrievalModelProbe>();
         services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind);
         services.AddBackgroundJobHandler<EmbeddingClearHandler>(EmbeddingClearHandler.JobKind);
-        services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
-        services.AddScoped<KnowledgeRetrieval>();
-        services.AddScoped<RetrievalAuthorization>();
-        services.AddScoped<RetrievalPipeline>();
-        services.AddSingleton<QueryVectorCache>();
-        services.AddSingleton<RerankService>();
         // 鍵＝KnowledgeOptions 的 Provider 允許值；設定的供應商沒有實作時啟動失敗（VerifyStartup）。
         services.AddKeyedService<IRerankClient, NoneRerankClient>("none", ServiceLifetime.Singleton);
         services.AddKeyedService<IRerankClient, TeiRerankClient>("tei", ServiceLifetime.Singleton);
@@ -53,14 +38,9 @@ public sealed class KnowledgeModule : IFeatureModule
         // 查詢改寫會用到 ModelTaskService 與其 scoped 的資料庫 context，因此這裡必須是 scoped，不可改成 singleton。
         services.AddScoped<IQueryRewriter>(s => s.GetRequiredService<IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
             ? ActivatorUtilities.CreateInstance<ModelQueryRewriter>(s) : new NoopQueryRewriter());
-        services.AddSingleton<RetrievalHttp>();
-        services.AddSingleton<RetrievalInvocation>();
-        services.AddSingleton<EmbeddingBatchScheduler>();
         services.AddKeyedService<IEmbeddingClient, OllamaEmbeddingClient>("ollama", ServiceLifetime.Singleton);
         services.AddKeyedService<IEmbeddingClient, GoogleEmbeddingClient>("google", ServiceLifetime.Singleton);
         services.AddKeyedService<IEmbeddingClient, NoneEmbeddingClient>("none", ServiceLifetime.Singleton);
-        services.AddSingleton<EmbeddingService>();
-        services.AddSingleton<ITextChunker, StructuredChunker>();
         services.AddControlledHttpClient(RetrievalModelsClient);
         services.AddBackgroundJobHandler<DocumentIngestHandler>(DocumentIngestHandler.JobKind);
         services.AddBackgroundJobHandler<DocumentEmbeddingHandler>(DocumentEmbeddingHandler.JobKind);

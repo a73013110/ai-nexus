@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Modules;
 using System.Security.Claims;
 using System.Security.Principal;
 using AiNexus.Features.Admin.AccessControl;
@@ -16,6 +17,7 @@ namespace AiNexus.Features.Admin.Identity;
 /// 目前請求的使用者解析器，結果在同一請求內快取。有 session cookie 時依 cookie 的使用者，
 /// 否則（Windows 整合驗證、LDAP 登入當下）交給 <see cref="DirectorySignIn"/> 由 SID 對應。
 /// </summary>
+[Scoped, Scoped<IRequestUser>, Scoped<ICurrentUser>, Scoped<IRequestActor>]
 public sealed class CurrentUser(AppDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, DirectorySignIn directory) : IRequestUser, ICurrentUser, IRequestActor
 {
     private User? resolved;

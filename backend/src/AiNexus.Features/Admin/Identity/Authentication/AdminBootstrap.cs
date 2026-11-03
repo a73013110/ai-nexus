@@ -2,12 +2,14 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Authentication;
 
 /// <summary>依 <see cref="AdminBootstrapOptions.Administrators"/> 所列的帳號，一次性授予管理者角色。</summary>
+[Scoped<ISignInGrant>]
 public sealed class AdminBootstrap(AppDbContext db, AccessService access, IOptions<AdminBootstrapOptions> options, AuditTrail audit) : ISignInGrant
 {
     private bool Applies(User user) => options.Value.Administrators.Contains(UserAccounts.LoginName(user), StringComparer.OrdinalIgnoreCase);

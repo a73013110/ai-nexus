@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Data.App;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Platform.WebSearches;
 
 /// <summary>聊天網路搜尋的服務：負責配額、計費、稽核，並把結果組成提示詞。</summary>
+[Scoped]
 public sealed class WebSearchService(AppDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchesOptions> options, TimeProvider clock, AuditTrail audit)
 {
     /// <summary>為搜尋摘要保留的提示詞預算（UTF-8 位元組）。</summary>

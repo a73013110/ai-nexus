@@ -9,6 +9,7 @@ using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -17,6 +18,7 @@ namespace AiNexus.Features.Work.Chat.Runs;
 /// 生成任務管理服務。
 /// 提供生成紀錄查詢、結算終止狀態與生成事件累加功能，供端點、串流與背景 Worker 共用。
 /// </summary>
+[Scoped]
 public sealed partial class RunService(
     AppDbContext db,
     RunSignals signals,

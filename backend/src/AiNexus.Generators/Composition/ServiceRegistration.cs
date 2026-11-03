@@ -27,10 +27,12 @@ internal sealed record ServiceRegistration
 
     private const string HostingNamespace = "Microsoft.Extensions.Hosting", HostedService = "IHostedService";
 
-    // IHostedService 在框架裡、無法標屬性，是唯一內建的契約；它的註冊方法已經是 TryAddEnumerable。
-    private const string AddHostedService = "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionHostedServiceExtensions.AddHostedService";
+    private const string DependencyInjection = "Microsoft.Extensions.DependencyInjection", AttributeSuffix = "Attribute";
 
-    private const string AttributeSuffix = "Attribute";
+    // IHostedService 在框架裡、無法標屬性，是唯一內建的契約；它的註冊方法已經是 TryAddEnumerable。
+    private const string AddHostedService = "global::" + DependencyInjection + ".ServiceCollectionHostedServiceExtensions.AddHostedService";
+
+    private const string Registration = "global::" + Namespace + ".DeclaredServiceRegistration";
 
     private ServiceRegistration(string type, EquatableArray<ServiceCall> calls, DiagnosticInfo? problem)
     {
@@ -41,17 +43,17 @@ internal sealed record ServiceRegistration
 
     public string Type { get; }
 
-    /// <summary>依序產生的呼叫：契約、hosted service，最後是標記的生命週期。</summary>
+    /// <summary>依序產生的呼叫：契約、hosted service，最後是生命週期標記（類別本身在前、介面在後）。</summary>
     public EquatableArray<ServiceCall> Calls { get; }
 
     public DiagnosticInfo? Problem { get; }
 
     public static ServiceRegistration? From(INamedTypeSymbol type)
     {
-        var declared = type.GetAttributes().Where(x => x.AttributeClass is { } attribute && IsLifetime(attribute)).ToList();
+        var marks = type.GetAttributes().Select(x => x.AttributeClass).OfType<INamedTypeSymbol>().Where(IsLifetime).ToList();
         // 抽象基底類別實作契約很正常（具體的子類別才註冊）；標了生命週期卻不能建立才是錯。
         if (!Symbols.IsConcreteClass(type))
-            return declared.Count == 0 ? null : new(Symbols.FullName(type), new([]), Invalid(type, declared[0], "不能由 DI 建立（static、abstract 或開放泛型）"));
+            return marks.Count == 0 ? null : Invalid(type, marks[0], "不能由 DI 建立（static、abstract 或開放泛型）");
 
         var calls = new List<ServiceCall>();
         var self = Symbols.FullName(type);
@@ -59,18 +61,20 @@ internal sealed record ServiceRegistration
             calls.Add(new($"{Symbols.FullName(registrar)}.{method}", string.Join(", ", contract.TypeArguments.Select(Symbols.FullName).Concat([self]))));
         if (Symbols.Interfaces(type, HostingNamespace, HostedService).Any()) calls.Add(new(AddHostedService, self));
 
-        foreach (var attribute in declared)
+        if (marks.Count > 0)
         {
-            var lifetime = attribute.AttributeClass!.Name.Substring(0, attribute.AttributeClass.Name.Length - AttributeSuffix.Length);
-            var method = $"global::{Namespace}.DeclaredServiceRegistration.AddDeclared{lifetime}";
-            if (attribute.AttributeClass.TypeArguments.Length == 0)
+            foreach (var mark in marks)
             {
-                calls.Add(new(method, self));
-                continue;
+                if (mark.Name != marks[0].Name) return Invalid(type, mark, $"也標了 [{Lifetime(marks[0])}]；一個類別只能有一種生命週期");
+                if (mark.TypeArguments.FirstOrDefault() is { } service && !Symbols.IsAssignableTo(type, service)) return Invalid(type, mark, $"沒有實作 '{service.ToDisplayString()}'");
             }
-            var service = attribute.AttributeClass.TypeArguments[0];
-            if (!Symbols.IsAssignableTo(type, service)) return new(self, new([]), Invalid(type, attribute, $"沒有實作 '{service.ToDisplayString()}'"));
-            calls.Add(new(method, $"{Symbols.FullName(service)}, {self}"));
+
+            // 只標一個時直接註冊；標了多個時類別本身註冊一次，各介面轉接到它，同一個範圍內拿到的是同一個實例。
+            var lifetime = Lifetime(marks[0]);
+            var shared = marks.Count > 1;
+            if (shared || marks[0].TypeArguments.Length == 0) calls.Add(new($"{Registration}.AddDeclared{lifetime}", self));
+            foreach (var service in marks.Where(x => x.TypeArguments.Length == 1).Select(x => Symbols.FullName(x.TypeArguments[0])))
+                calls.Add(new($"{Registration}.{(shared ? "AddForwarded" : "AddDeclared")}{lifetime}", $"{service}, {self}"));
         }
 
         if (calls.Count == 0) return null;
@@ -93,20 +97,34 @@ internal sealed record ServiceRegistration
                     yield return (contract, registrar, method);
     }
 
-    /// <summary>手動呼叫的是不是產生器會為 <paramref name="type"/> 產生的同一個註冊；是的話回傳對應的契約名稱。和 <see cref="From"/> 一樣只看能建立、看得到的類別。</summary>
-    public static string? GeneratedContract(IMethodSymbol method, INamedTypeSymbol type)
+    /// <summary>
+    /// 手動註冊的是不是產生器會為 <paramref name="type"/> 產生的註冊；是的話回傳原因（實作的契約或標記）。
+    /// 和 <see cref="From"/> 一樣只看能建立、看得到的類別。標了生命週期的類別再以 DI 的 Add*、TryAdd* 或 <c>ServiceDescriptor</c> 註冊，生命週期可能和標記不一致，也算重複。
+    /// </summary>
+    public static string? GeneratedBy(IMethodSymbol method, INamedTypeSymbol type)
     {
         if (!Symbols.IsConcreteClass(type) || !Symbols.IsVisibleToAssembly(type)) return null;
-        if (method.Name == "AddHostedService" && Symbols.Is(method.ContainingType, "Microsoft.Extensions.DependencyInjection", "ServiceCollectionHostedServiceExtensions"))
-            return Symbols.Interfaces(type, HostingNamespace, HostedService).FirstOrDefault()?.ToDisplayString();
+        if (method.Name == "AddHostedService" && Symbols.Is(method.ContainingType, DependencyInjection, "ServiceCollectionHostedServiceExtensions"))
+            return Symbols.Interfaces(type, HostingNamespace, HostedService).FirstOrDefault() is { } hosted ? $"實作 '{hosted.ToDisplayString()}'" : null;
+        if (Symbols.Is(method.ContainingType, DependencyInjection, "ServiceCollectionServiceExtensions")
+            || Symbols.Is(method.ContainingType, DependencyInjection, "ServiceDescriptor")
+            || Symbols.Is(method.ContainingType, DependencyInjection + ".Extensions", "ServiceCollectionDescriptorExtensions"))
+            return type.GetAttributes().Select(x => x.AttributeClass).OfType<INamedTypeSymbol>().FirstOrDefault(IsLifetime) is { } mark ? $"標了 [{Display(mark)}]" : null;
         return Contracts(type).Where(x => x.Method == method.Name && SymbolEqualityComparer.Default.Equals(x.Registrar, method.ContainingType))
-            .Select(x => x.Contract.ToDisplayString()).FirstOrDefault();
+            .Select(x => $"實作 '{x.Contract.ToDisplayString()}'").FirstOrDefault();
     }
 
     // [Scoped]、[Singleton] 與各自的 <TService> 版：同名，型別參數數量不同。
     private static bool IsLifetime(INamedTypeSymbol attribute) => attribute is { Name: "ScopedAttribute" or "SingletonAttribute", Arity: <= 1 }
         && attribute.ContainingNamespace.ToDisplayString() == Namespace;
 
-    private static DiagnosticInfo Invalid(INamedTypeSymbol type, AttributeData attribute, string reason)
-        => new(CompositionDiagnostics.InvalidService, LocationInfo.From(type), type.ToDisplayString(), attribute.AttributeClass!.ToDisplayString(), reason);
+    private static string Lifetime(INamedTypeSymbol mark) => mark.Name.Substring(0, mark.Name.Length - AttributeSuffix.Length);
+
+    // 寫成程式碼裡的樣子：[Scoped]、[Singleton<IFoo>]。
+    private static string Display(INamedTypeSymbol mark)
+        => mark.TypeArguments.Length == 0 ? Lifetime(mark) : $"{Lifetime(mark)}<{mark.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}>";
+
+    private static ServiceRegistration Invalid(INamedTypeSymbol type, INamedTypeSymbol mark, string reason)
+        => new(Symbols.FullName(type), new([]),
+            new DiagnosticInfo(CompositionDiagnostics.InvalidService, LocationInfo.From(type), type.ToDisplayString(), Display(mark), reason));
 }

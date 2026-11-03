@@ -1,9 +1,11 @@
+using AiNexus.Platform.Modules;
 using System.Data.Common;
 using AiNexus.Platform.Data;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
 
+[Singleton]
 public sealed class DependencyCatalog
 {
     private readonly List<(string Host, int Port, string Id)> http = [];

@@ -1,12 +1,14 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Modules;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
+[Scoped]
 public sealed class EmbeddingProfiles(AppDbContext db, IOptions<KnowledgeOptions> options, AdministrativeWriteLock writes, TimeProvider clock)
 {
     public async Task<EmbeddingProfile> TargetAsync(CancellationToken ct)

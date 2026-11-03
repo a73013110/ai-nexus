@@ -5,6 +5,7 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
+[Singleton]
 public sealed class RerankService(KeyedServices<IRerankClient> clients, RetrievalInvocation invocations, IOptions<KnowledgeOptions> options)
 {
     public async Task<IReadOnlyList<KnowledgeHitDto>> RerankAsync(Guid actor, string query, IReadOnlyList<KnowledgeHitDto> candidates, CancellationToken ct)

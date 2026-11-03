@@ -17,7 +17,6 @@ public sealed class RemoteFilesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddSettings<RemoteFilesOptions, RemoteFilesOptionsValidator>(RemoteFilesOptions.Section);
-        builder.Services.AddSingleton<RemoteFileTickets>();
         builder.Services.AddRateLimiter(options => options.AddPerUserLimit(RateLimit, 120));
     }
 

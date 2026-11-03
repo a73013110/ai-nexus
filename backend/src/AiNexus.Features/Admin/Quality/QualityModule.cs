@@ -20,7 +20,6 @@ public sealed class QualityModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<RetrievalEvaluationService>();
         services.AddBackgroundJobHandler<RetrievalEvaluationHandler>(RetrievalEvaluationHandler.JobKind);
         services.AddBackgroundJobHandler<EvaluationHandler>(EvaluationHandler.JobKind);
     }

@@ -1,10 +1,12 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
 
 /// <summary>其他模組排入通知的契約入口。</summary>
+[Scoped]
 public sealed class NotificationService(AppDbContext db)
 {
     /// <summary>必須與來源變更在同一個交易中由呼叫端儲存；同一 EventKey 重複排入會被忽略。</summary>

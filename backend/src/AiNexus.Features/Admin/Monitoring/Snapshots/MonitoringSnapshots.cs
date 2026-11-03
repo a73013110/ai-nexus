@@ -1,4 +1,5 @@
 using AiNexus.Features.Admin.Monitoring.Traffic;
+using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 
 /// <summary>
@@ -6,6 +7,7 @@ namespace AiNexus.Features.Admin.Monitoring.Snapshots;
 /// 同一時間窗內，距上次建置不到 <see cref="ReuseFor"/> 就直接共用，
 /// 因此不論有幾位檢視者，每個時間窗每秒只建置一次，子系統讀數也來自快取。
 /// </summary>
+[Singleton]
 public sealed class MonitoringSnapshots(RuntimeTraffic traffic, SubsystemReadings subsystems, TimeProvider clock)
 {
     public static readonly TimeSpan ReuseFor = TimeSpan.FromSeconds(1);

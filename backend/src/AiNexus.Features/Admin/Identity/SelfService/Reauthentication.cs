@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Security.Claims;
 using AiNexus.Data.App;
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Admin.Identity.SelfService;
 /// 成功時把時間寫進目前 session cookie 的 <see cref="SessionIdentity.Reauthenticated"/>；Windows 整合驗證沒有 cookie、
 /// 每個請求都由 Kerberos／NTLM 重新驗證，所以直接視為已步升。
 /// </summary>
+[Scoped]
 public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthenticator local, AppDbContext db, IOptions<SelfServiceOptions> options,
     IOptions<AdAuthenticationOptions> ad, TimeProvider clock)
 {

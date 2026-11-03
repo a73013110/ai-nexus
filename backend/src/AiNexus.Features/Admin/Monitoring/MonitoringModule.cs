@@ -19,11 +19,6 @@ public sealed class MonitoringModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddSettings<MonitoringOptions, MonitoringOptionsValidator>(MonitoringOptions.Section);
-        services.AddSingleton<RuntimeTraffic>();
-        services.AddSingleton<SubsystemReadings>();
-        services.AddSingleton<MonitoringSnapshots>();
-        services.AddSingleton<DependencyCatalog>();
-        services.AddSingleton<MonitoringStreams>();
         services.AddTransient<TrafficHttpHandler>();
         services.ConfigureHttpClientDefaults(client => client.AddHttpMessageHandler<TrafficHttpHandler>());
         services.AddRateLimiter(options => options.AddPerUserLimit(PresenceRateLimit, 120));

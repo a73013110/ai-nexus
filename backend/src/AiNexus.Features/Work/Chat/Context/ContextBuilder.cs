@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using AiNexus.Data.App.Inference;
+using AiNexus.Platform.Modules;
 using System.Text;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Conversations;
@@ -20,6 +21,7 @@ namespace AiNexus.Features.Work.Chat.Context;
 /// 採兩階段載入：先以節點長度試算保留範圍，只讀保留節點的內容；圖片位元組延後到推論前才載入
 /// （見 <see cref="WithImagesAsync"/>），排隊中的生成不持有圖片資料。
 /// </summary>
+[Scoped]
 public sealed class ContextBuilder(
     AppDbContext db,
     IOptions<FilesOptions> attachments,

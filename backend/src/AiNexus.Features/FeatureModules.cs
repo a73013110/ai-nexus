@@ -53,7 +53,6 @@ public static partial class FeatureModules
     // 以下由組合產生器實作（AiNexus.Generators/Composition）。
     private static partial void AddModules(IHostApplicationBuilder builder);
 
-    // 在模組之後：模組自己註冊的同一型別優先（TryAdd）。
     private static partial void AddDeclaredServices(IServiceCollection services);
 
     private static partial void MapModules(RouteGroupBuilder api);

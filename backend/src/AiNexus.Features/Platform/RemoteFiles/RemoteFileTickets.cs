@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AiNexus.Platform.RemoteFiles;
@@ -21,6 +22,7 @@ public sealed record RemoteFileDto(string Ticket, string FileName, string Conten
 /// 到期時間寫在內容裡、以 <see cref="TimeProvider"/> 檢查，不用 <c>ITimeLimitedDataProtector</c>：後者吃系統時鐘，測不了過期。
 /// 憑證只給發給的那位使用者用；換了帳號（含測試身分）就失效。
 /// </remarks>
+[Singleton]
 public sealed class RemoteFileTickets(IDataProtectionProvider protection, TimeProvider clock, IOptions<RemoteFilesOptions> options)
 {
     /// <summary>檔名的上限：憑證放在查詢字串，太長會撞到 IIS 的網址上限。</summary>

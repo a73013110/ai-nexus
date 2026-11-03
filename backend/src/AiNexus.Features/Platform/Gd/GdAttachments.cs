@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.RemoteFiles;
@@ -16,6 +17,7 @@ public sealed record GdAttachment(string FileName, string? Memo, string? Uploade
 /// 只收位置合規則的列：附件路徑會拿去組公文系統的網址，<c>attFilePath</c> 必須是 <c>/attfile/&lt;民國年&gt;</c>、<c>attNo</c> 只有英數與 <c>._-</c>，
 /// 其他的列（手動改過、舊版資料）略過，不讓資料庫裡的字串決定後端要連去哪裡。
 /// </summary>
+[Scoped]
 public sealed partial class GdAttachments(ExternalDatabase<GdDatabase> gd)
 {
     private const string Sql = """

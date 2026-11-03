@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Threading.RateLimiting;
 using AiNexus.Features.Admin.Identity.Users;
 
@@ -8,6 +9,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// 來源位址只做寬鬆的總上限（<see cref="IdentityModule.LoginRateLimit"/>）：站台前方有 NAT 時全公司共用一個位址，依位址嚴格限流會讓正常使用者互相擋住。
 /// 帳號不存在也照樣計數，回應才不會透露帳號是否存在；計數只在記憶體，站台只有一個 worker（見 IIS 部署）。
 /// </summary>
+[Singleton]
 internal sealed class LoginThrottle : IDisposable
 {
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(5);

@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Admin.AccessControl.Scopes;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.AccessControl;
@@ -9,6 +10,7 @@ namespace AiNexus.Features.Admin.AccessControl;
 /// 供 <c>/me</c> 與存取預覽使用；授權檢查直接呼叫 <see cref="AccessService.ForUserAsync"/>，略過這些查詢。
 /// 外部連結每次都再比對允許清單：主機移出清單（設定改完、站台重新啟動）後，已存的連結就不再輸出。
 /// </summary>
+[Scoped]
 public sealed class AccessView(AccessService access, IDataScope scopes, IOptions<AccessControlOptions> settings)
 {
     public async Task<AccessDto> ForUserAsync(Guid user, CancellationToken ct)

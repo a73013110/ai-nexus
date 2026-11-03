@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Linq.Expressions;
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
@@ -6,6 +7,7 @@ using AiNexus.Features.Admin.AccessControl;
 namespace AiNexus.Features.Admin.Identity.Users;
 
 /// <summary>已啟用且未刪除的使用者 id 查詢，供其他模組透過 <see cref="IActiveUsers"/> 取得可用使用者集合。</summary>
+[Scoped<IActiveUsers>]
 internal sealed class ActiveUsers(AppDbContext db) : IActiveUsers
 {
     /// <summary>

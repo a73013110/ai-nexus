@@ -3,6 +3,7 @@ using AiNexus.Data.App.Artifacts;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing;
@@ -11,6 +12,7 @@ namespace AiNexus.Features.Work.Sharing;
 /// 誰能看見分享。分享綁定帳號，且獨立於來源本身的 ACL 檢查：分享必須仍有效並寄給該讀者、
 /// 來源必須仍存在，且擁有者仍具備來源所屬的功能。
 /// </summary>
+[Scoped]
 internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeProvider clock)
 {
     /// <summary>對話來源的種類；成果來源沿用 <see cref="Artifact.Kind"/>。</summary>

@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Modules;
 using System.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using AiNexus.Features.Work.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
+[Scoped]
 public sealed class RetrievalPipeline(AppDbContext db, RetrievalAuthorization authorization, EmbeddingProfiles profiles, QueryVectorCache cache,
     IRetrievalStore store, IQueryRewriter rewriter, RerankService reranker, IOptions<KnowledgeOptions> options, ILogger<RetrievalPipeline> logger)
 {

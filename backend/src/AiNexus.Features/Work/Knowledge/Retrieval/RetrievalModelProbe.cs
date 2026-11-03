@@ -10,6 +10,7 @@ namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
 public sealed record RetrievalConnectionDto(string Provider, string Model, string Endpoint, bool? Available, string Notice);
 
+[Scoped]
 public sealed class RetrievalModelProbe(KeyedServices<IEmbeddingClient> embeddings, KeyedServices<IRerankClient> rerankers, EmbeddingService embeddingService,
     RerankService rerankService, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference, ILogger<RetrievalModelProbe> logger, Issues issues)
 {

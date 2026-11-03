@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
+using AiNexus.Platform.Modules;
 using System.Data;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Sessions;
@@ -13,6 +14,7 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// 剛通過 AD 驗證（Windows 整合驗證或 LDAP 登入）的 SID 對應到平台使用者：必要時建立、綁定或同步，並套用 <see cref="ISignInGrant"/>。
 /// 建立與同步的規則在 <see cref="DirectoryAccounts"/>，與管理員從 AD 匯入、更新共用。
 /// </summary>
+[Scoped]
 public sealed class DirectorySignIn(AppDbContext db, AdministrativeWriteLock writes, IEnumerable<ISignInGrant> grants, DirectoryProfileCache profiles,
     IDirectoryProfileLookup directory, DirectoryAccounts accounts, TimeProvider clock, AuditTrail audit)
 {

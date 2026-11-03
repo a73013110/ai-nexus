@@ -1,9 +1,12 @@
+using AiNexus.Platform.Modules;
+
 namespace AiNexus.Features.Admin.Mail.Delivery;
 
 /// <summary>
 /// 傳輸層斷路器：認證、TLS、relay 拒絕或連續 <see cref="ConnectionFailureLimit"/> 次連線失敗時暫停認領 <see cref="OpenFor"/>，
 /// 避免整批信在故障期間耗盡重試。狀態只在記憶體（單一 dispatcher）；重啟後 <see cref="MailDispatcher"/> 會把因故障延後的信提前，等於重試一次。
 /// </summary>
+[Singleton]
 public sealed class MailCircuit(TimeProvider clock)
 {
     public static readonly TimeSpan OpenFor = TimeSpan.FromMinutes(5);

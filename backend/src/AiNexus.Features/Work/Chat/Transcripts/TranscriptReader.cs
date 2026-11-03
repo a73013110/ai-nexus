@@ -6,6 +6,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Knowledge.Retrieval;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -19,6 +20,7 @@ namespace AiNexus.Features.Work.Chat.Transcripts;
 /// 評分、費用與網路搜尋屬於對話擁有者，所以以 <see cref="Conversation.OwnerId"/> 過濾，不用檢視者。
 /// 呼叫端負責授權；這裡不檢查誰在讀。
 /// </remarks>
+[Scoped]
 internal sealed class TranscriptReader(AppDbContext db, ModelPresentation presentation)
 {
     public async Task<IReadOnlyList<MessageDto>> ReadAsync(Conversation conversation, CancellationToken ct)

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.Reflection;
 using System.Text.Json;
 
@@ -11,6 +12,7 @@ public sealed record ReleaseNoteDto(string Type, string Scope, string Subject);
 /// （<c>Build.ps1</c> 以 <c>-p:Version</c>、<c>-p:SourceRevisionId</c> 寫入）；建置時間、需要的最低資料庫版本與本版更新來自
 /// <c>Release.ps1</c> 寫在內容根目錄的 <c>version.json</c>，只有發布包才有（ADR 0027）。
 /// </summary>
+[Singleton]
 public sealed class AppRelease
 {
     public const string FileName = "version.json";

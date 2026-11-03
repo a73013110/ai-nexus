@@ -5,6 +5,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -14,6 +15,7 @@ namespace AiNexus.Features.Work.Chat.Runs;
 /// 把懸掛的孤兒生成標記為失敗。租約檢查寫在同一條條件式 UPDATE 中，原執行者若剛好續約會回傳 0 行而略過；
 /// 每個生成仍在所屬對話鎖下結算，避免與本機沖刷或取消互相競態。
 /// </summary>
+[Scoped]
 public sealed class RunLeaseRecovery(
     AppDbContext db,
     GenerationScheduler scheduler,

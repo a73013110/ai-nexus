@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using System.DirectoryServices.Protocols;
 using System.Globalization;
 using System.Runtime.Versioning;
@@ -15,6 +16,7 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 /// 用 paged results 控制每次取回的筆數。分頁游標綁在連線上，所以每次呼叫在同一條連線內讀完，不跨 HTTP 請求翻頁。
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
+[Singleton<IAdDirectory>]
 public sealed partial class LdapDirectory(IOptions<AdAuthenticationOptions> options) : IAdDirectory
 {
     /// <summary>人員：<c>objectCategory=person</c> 排除電腦，<c>objectClass=user</c> 排除聯絡人。</summary>

@@ -3,12 +3,14 @@ using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Projects;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Collaboration;
 
 /// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
+[Scoped]
 public sealed class ResourceAccess(AppDbContext db, AccessService access, IActiveUsers activeUsers, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
 {
     public async Task<IQueryable<Resource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
