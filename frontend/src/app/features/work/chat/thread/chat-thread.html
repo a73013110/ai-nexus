@@ -25,9 +25,10 @@
     </section>
   } @else {
     <section class="message-list chat-column" aria-label="目前對話訊息">
-      @for (message of store.visibleMessages(); track message.id) {
+      @for (message of store.visibleMessages(); track message.id; let last = $last) {
         <nx-chat-message
           [message]="message"
+          [latest]="last"
           [tree]="store.tree()"
           [matched]="matched().has(message.id)"
           [currentMatch]="currentMatch() === message.id"

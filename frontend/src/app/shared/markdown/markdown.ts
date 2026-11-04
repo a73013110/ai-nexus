@@ -32,8 +32,20 @@ markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
   // 語法高亮稍後在視窗附近進行（code-highlighting.ts）；這裡先跳脫文字。
   const deferred =
     !env?.['streaming'] && label !== 'text' ? ` data-language="${escape(label)}"` : '';
-  return `<div class="code-block"><div class="code-toolbar"><span>${escape(label)}</span><button type="button" class="code-copy" title="複製程式碼" aria-label="複製程式碼">複製程式碼</button></div><pre><code${deferred}>${escape(token.content)}</code></pre></div>`;
+  return `<div class="embed embed-code">${codeEmbedBar(label)}<pre class="embed-body"><code${deferred}>${escape(token.content)}</code></pre></div>`;
 };
+// 表格包進內嵌區塊：寬表格在區塊內橫向捲動，不撐寬回答。
+markdown.renderer.rules['table_open'] = () => '<div class="embed embed-table"><table>';
+markdown.renderer.rules['table_close'] = () => '</table></div>';
+
+/**
+ * 程式碼區塊的標頭（語言＋複製鈕），點擊由 `MarkdownView` 以 `.embed-copy` 委派。
+ * 串流中的圍欄（`StreamingAnswer`）以 Angular 範本畫同一組 class：它不經過這個可信 HTML 邊界，
+ * 改這裡時兩邊一起改，串流結束換成完整渲染才不會跳動。
+ */
+export function codeEmbedBar(language: string) {
+  return `<div class="embed-bar"><span class="embed-label">${escape(language)}</span><span class="embed-actions"><button type="button" class="embed-copy" title="複製程式碼" aria-label="複製程式碼">複製</button></span></div>`;
+}
 /** 最上層區塊的起始行；若最後一個區塊是列表，則也包含其項目的起始行。 */
 export function markdownBlockStructure(content: string) {
   const starts: number[] = [];

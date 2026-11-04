@@ -1,15 +1,11 @@
 :host {
   display: block;
 }
-.streaming-copy {
-  line-height: var(--line-reading);
-  overflow-wrap: anywhere;
-}
 .streaming-copy > nx-markdown-view {
   display: block;
 }
 .streaming-copy .stream-committed {
-  margin-bottom: 16px;
+  margin-bottom: var(--p-space-4);
 }
 .streaming-copy .stream-continues {
   margin-bottom: 0;

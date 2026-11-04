@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Files.Thumbnails;
 using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
@@ -19,7 +20,7 @@ namespace AiNexus.Features.Work.Chat.Transcripts;
 /// <see cref="FeatureCatalog.IdentityUsers"/>，不是對原始附件的擁有權；每次開啟都稽核，主體是對話擁有者。
 /// 路由形狀與分享的檔案相同（預覽、原檔、HTML 沙箱），前端閱讀器以同一套範圍處理兩者。
 /// </summary>
-internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService access, AuditTrail audit, AttachmentService files) : IEndpointSlice
+internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService access, AuditTrail audit, AttachmentService files, AttachmentThumbnails thumbnails) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes)
     {
@@ -35,6 +36,18 @@ internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService a
                 handler.RenderAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
             .Audited(ConversationsAudit.ConversationFileRead)
             .WithName("RenderAdminConversationFile");
+        routes.MapGet("/conversations/{id:guid}/files/{file:guid}/thumbnail", (Guid id, Guid file, ICurrentUser user, OpenAdminConversationFile handler, HttpContext http, CancellationToken ct) =>
+                handler.ThumbnailAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x, AttachmentThumbnails.ContentType, "thumbnail.webp", false)))
+            .Audited(ConversationsAudit.ConversationFileRead)
+            .WithName("AdminConversationFileThumbnail");
+    }
+
+    public async Task<Result<byte[]>> ThumbnailAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
+    {
+        var found = await FindAsync(actor, id, fileId, ct);
+        if (!found.IsSuccess) return found.Error;
+        var rendered = await thumbnails.RenderAsync(found.Value, token => files.OpenAsync(found.Value, token), ct);
+        return rendered.IsSuccess ? rendered : ConversationsErrors.AdminResourceNotFound;
     }
 
     public async Task<Result<FilePreviewDto>> PreviewAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)

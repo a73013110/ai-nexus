@@ -46,6 +46,7 @@
 - `markdown.ts` 只輸出跳脫後的程式碼，已知語言加上 `data-language`。
 - `code-highlighting.ts` 用 IntersectionObserver 等區塊接近可視區，再延後載入 `code-highlight.ts`（highlight.js），每次最多處理約 8ms 就讓出主執行緒。
 - 高亮過的（語言＋內容）進 LRU，重新掛載時立即上色，不閃回純文字。
+- 程式碼、圖表、表格共用 `.embed` 外框（`frontend/src/styles/embeds.scss`）；新的內嵌區塊沿用，不另畫框。
 - 高亮結果只允許 `<span class>`（DOMPurify），不是另一個信任 HTML 的入口。新增語言在 `code-highlight.ts` 註冊。
 
 ## Markdown 安全邊界
@@ -63,6 +64,7 @@
 - 同一原始碼＋主題（由 token 算出的完整設定）只繪一次：結果進 LRU，掛載共用同一個 Blob URL，串流轉完成不重繪也不閃；沒有掛載使用約 2 秒後釋放 URL。主題改變就是新的鍵；失敗不快取，重試會重繪。
 - strict 模式、站點固定的 init 設定；輸出 SVG 再經 DOMPurify SVG allowlist，以 Blob 圖片顯示，沒有第二個 active SVG 的 trusted HTML 入口。CSP 因此只需為圖片加 `blob:`。
 - 外觀集中在 `mermaid-theme.ts`：常用 classDef（`process`／`decision`／`error`／`result`）對應站點語意 token，壓掉模型常輸出的亮黃、粗框與陰影；其他自訂類別保留來源配色，原始碼不改寫。標籤對比不足 4.5:1 時改用黑／白字，下載沿用相同結果。
+- 接近可視區（`nearViewport`）才繪製，之前是同高的骨架。
 - 長圖在自己的畫布捲動，不撐寬頁面；錯誤時保留原始碼。
 - `package.json` 的 `overrides` 把 Mermaid 間接依賴的 KaTeX 固定在已修正版本（[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)）。它不會替換 Mermaid 發行檔內已打包的數學引擎；升級 Mermaid 時重新檢查，上游修正後移除 override。不要接受 npm audit 建議的 Mermaid 降級。
 

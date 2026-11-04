@@ -440,13 +440,16 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
       id="design-files"
       title="檔案清單"
       api="FileList"
-      description="附件、分享檔案與其他系統的檔案共用：點卡片在閱讀器預覽，右側下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。"
+      description="附件、分享檔案與其他系統的檔案共用：點檔案在閱讀器預覽、另有下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。縮圖讀不到時改顯示檔案類型。"
     >
       <nx-design-example label="可移除的附件">
         <nx-file-list [files]="files" [editable]="true" />
       </nx-design-example>
-      <nx-design-example label="stacked · 單據的附件一檔一列">
-        <nx-file-list [files]="files" [stacked]="true" />
+      <nx-design-example label="tiles · 訊息裡的附件方塊">
+        <nx-file-list [files]="files" layout="tiles" />
+      </nx-design-example>
+      <nx-design-example label="rows · 單據的附件一檔一列">
+        <nx-file-list [files]="files" layout="rows" />
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
@@ -683,8 +686,16 @@ export class DesignData {
     { label: '電子郵件', before: null, after: 'carol@example.test' },
     { label: '分機', before: '2051', after: null },
   ];
-  // 範例檔案沒有真的內容：預覽會顯示找不到檔案，下載連結不會離開本頁。
+  // 範例檔案沒有真的內容：預覽會顯示找不到檔案，下載連結不會離開本頁。照片的縮圖用站內的品牌圖示代替。
   readonly files: FileListItem[] = [
+    {
+      key: 'sample-photo',
+      fileName: '現場照片.png',
+      detail: '1.2 MB · 圖片分析',
+      reader: { id: 'sample-photo', attachment: true },
+      downloadUrl: '#design-files',
+      thumbnail: 'brand.svg',
+    },
     {
       key: 'sample-pdf',
       fileName: '研習證明.pdf',

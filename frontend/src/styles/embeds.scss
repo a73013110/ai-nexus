@@ -1,0 +1,88 @@
+// 內嵌區塊：Markdown 的程式碼與表格、Mermaid 圖、CodeBlock 共用同一個外框與標頭。
+// Markdown 是 innerHTML、元件樣式碰不到，所以留在全域；新的內嵌內容（圖片、圖表…）只要套
+// `.embed`＋`.embed-bar`（名稱在 `.embed-label`、操作在 `.embed-actions`），外觀與互動就一致。
+.embed {
+  position: relative;
+  min-width: 0;
+  margin-block: var(--p-space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
+  overflow: clip;
+  transition: border-color var(--motion) var(--ease);
+}
+.embed-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--control-height-compact);
+  padding-inline: var(--p-space-3) var(--p-space-1);
+  border-bottom: 1px solid var(--line);
+  font: 500 var(--p-font-xs) / var(--line-ui) var(--font-ui);
+  letter-spacing: 0.01em;
+  color: var(--secondary);
+}
+.embed-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  --icon-size: var(--icon-sm);
+}
+.embed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-left: auto;
+  color: var(--muted);
+  transition: color var(--motion) var(--ease);
+  --icon-size: var(--icon-md);
+}
+// 操作平時退到 --muted，指到區塊或焦點進入時才回到正常色：一長串程式碼與圖表不會滿是按鈕。
+.embed:is(:hover, :focus-within) {
+  border-color: color-mix(in srgb, var(--ink) 18%, var(--line));
+}
+.embed:is(:hover, :focus-within) .embed-actions {
+  color: var(--secondary);
+}
+.embed-actions :is(button, a) {
+  min-width: var(--control-height-compact);
+  min-height: var(--control-height-compact);
+  border-radius: var(--radius-action);
+  color: inherit;
+}
+// Markdown 的複製鈕是 innerHTML 裡的文字按鈕（CSP 不允許 data: 圖示），點下後文字換成「已複製」。
+.embed-copy {
+  padding-inline: var(--p-space-2);
+  font: inherit;
+  transition:
+    background-color var(--motion) var(--ease),
+    color var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
+  &:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  &:active {
+    transform: scale(0.96);
+  }
+  &[data-copied] {
+    color: var(--signal);
+    animation: copy-confirm var(--motion-enter) var(--ease-spring);
+  }
+}
+.embed-body {
+  margin: 0;
+  padding: var(--p-space-3) var(--p-space-4);
+  overflow: auto;
+  max-width: 100%;
+}
+@media (pointer: coarse) {
+  .embed-actions :is(button, a) {
+    min-width: var(--button-target);
+    min-height: var(--button-target);
+  }
+}

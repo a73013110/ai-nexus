@@ -95,6 +95,33 @@
     transform: scale(0.82);
   }
 }
+// 等過才出現的 Mermaid 圖：從略小、略低處淡入定位，像紙張放到桌上。
+@keyframes diagram-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+// 複製後的「已複製」：輕輕彈一下確認，不位移版面。
+@keyframes copy-confirm {
+  from {
+    transform: scale(0.88);
+  }
+}
+// 自己送出的提問：從右下角（送出鈕的方向）長出來，以彈簧收尾。
+@keyframes prompt-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+// 回答完成後操作列依序浮現（每個按鈕以 --i 錯開 --motion-stagger）。
+@keyframes action-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
 @keyframes arrive {
   from {
     opacity: 0;

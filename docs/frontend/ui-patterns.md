@@ -39,7 +39,7 @@
 - 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`（區塊堆疊，段落間距比頁面寬）。
 - 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」，不必切過去才知道。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
-- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用，呼叫端只負責組 `FileListItem`；其他系統的檔案以 `ReaderTarget.remote` 預覽；唯讀單據加 `stacked` 一檔一列。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
+- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用，呼叫端只負責組 `FileListItem`；其他系統的檔案以 `ReaderTarget.remote` 預覽；`layout` 選 `cards`／`tiles`／`rows`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
 
 ## 提示、載入與錯誤
 

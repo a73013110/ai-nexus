@@ -1,35 +1,20 @@
 @use 'breakpoints' as bp;
 
+// 外框、標頭與操作是共用的內嵌區塊（styles/embeds.scss）；這裡只排 Mermaid 自己多出來的部分。
 .mermaid-frame {
   margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-block);
-  background: var(--surface);
 }
-.mermaid-toolbar,
+.mermaid-toolbar {
+  flex-wrap: wrap;
+  padding-block: var(--p-space-1);
+}
 .mermaid-actions,
-.mermaid-zoom,
-.mermaid-label {
+.mermaid-zoom {
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
 }
-.mermaid-toolbar {
-  flex-wrap: wrap;
-  padding: var(--p-space-2) var(--p-space-3);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-subtle);
-  font-size: var(--text-caption);
-  line-height: 1.4;
-  color: var(--secondary);
-}
-.mermaid-label {
-  gap: var(--p-space-2);
-  margin-right: var(--p-space-2);
-}
 .mermaid-actions {
-  margin-left: auto;
   flex-wrap: wrap;
 }
 .mermaid-scale {
@@ -40,24 +25,17 @@
 }
 .mermaid-source {
   max-height: 28rem;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--code);
 }
-.mermaid-status {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  margin: 0;
-  padding: var(--p-space-3);
-  font-size: var(--text-caption);
-  color: var(--secondary);
+// 繪製中佔住接近完成後的高度，光帶掃過；圖好了以 diagram-reveal 淡入同一個位置。
+.mermaid-placeholder {
+  padding: var(--p-space-4);
 }
-.mermaid-frame > .mermaid-status:only-of-type {
-  min-height: 10rem;
-  justify-content: center;
+.mermaid-placeholder .skeleton {
+  height: 11rem;
+  border-radius: var(--radius-block);
+}
+.diagram-reveal {
+  animation: diagram-reveal var(--motion-enter) var(--ease);
 }
 // 展開的對話框：縮放工具浮在畫布上方（nx-floating-toolbar），畫布貼齊標題列與外框。
 .mermaid-viewer {

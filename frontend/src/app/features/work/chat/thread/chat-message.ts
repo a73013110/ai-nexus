@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   output,
   signal,
   type Signal,
@@ -20,6 +21,7 @@ import { generationStatus } from '@core/api/generation-status';
 import { MessageFeedback } from '@features/admin/quality/message-feedback';
 import { ChargeLabel } from '@features/admin/billing/charge-label';
 import { StreamingAnswer } from '@shared/markdown/streaming-answer';
+import { RunTimingDisplay } from '@features/work/conversations/run-timing';
 import { formatModelDisplayName } from '@shared/browser/format';
 
 const idle: Signal<string> = signal('').asReadonly();
@@ -34,14 +36,16 @@ const idle: Signal<string> = signal('').asReadonly();
     MessageFeedback,
     ChargeLabel,
     StreamingAnswer,
+    RunTimingDisplay,
   ],
   providers: [CopyFeedback],
   host: { '[attr.data-role]': 'message().role' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-message.scss',
-  template: ` <article
+  template: `<article
     class="message"
     [class.user]="message().role === 'user'"
+    [class.is-latest]="latest()"
     [class.search-match]="matched()"
     [class.search-current]="currentMatch()"
     [attr.data-message-id]="message().id"
@@ -49,14 +53,14 @@ const idle: Signal<string> = signal('').asReadonly();
     [attr.aria-busy]="active() || null"
     [animate.enter]="enter() ? 'message-enter' : ''"
   >
-    <!-- The bubble already marks the user's turn; only answers name who wrote them and how. -->
+    <!-- 提問的泡泡已經表明是誰；只有回答標出作者與模型。 -->
     @if (message().role === 'assistant') {
-      <div class="message-heading">
+      <header class="message-heading">
         <span class="role-mark" aria-hidden="true">N</span><strong>AI Nexus</strong>
         @if (showModelNames() && message().modelId) {
           <span class="message-model">{{ modelName(message()) }}</span>
         }
-      </div>
+      </header>
     }
     @if (active() && message().role === 'assistant') {
       @if (streamContent()) {
@@ -69,88 +73,92 @@ const idle: Signal<string> = signal('').asReadonly();
         />
       }
     } @else {
-      <nx-message-content [message]="message()" [scope]="fileScope()" />
-      @if (message().role === 'assistant') {
-        <div class="message-charges">
-          @if (message().charge; as charge) {
-            <nx-charge-label [charge]="charge" />
+      <nx-message-content [message]="message()" [scope]="fileScope()" [showTiming]="false" />
+      <!-- 回答剛完成或提問剛送出時操作列依序浮現；開啟對話時已完成的訊息直接顯示。 -->
+      <footer class="message-footer" [class.footer-enter]="enter() || settled()">
+        <div class="message-actions" role="group" aria-label="訊息操作">
+          <button
+            class="icon-button"
+            (click)="copyAnswer()"
+            [attr.aria-label]="copied() ? '已複製' : '複製訊息'"
+            [title]="copied() ? '已複製' : '複製'"
+          >
+            <nx-icon [name]="copied() ? 'check' : 'copy'" [class.is-confirmed]="copied()" />
+          </button>
+          <!-- 唯讀檢視只能複製與切換版本，不能改寫別人的對話。 -->
+          @if (!readOnly()) {
+            @if (message().role === 'user') {
+              <button
+                class="icon-button"
+                (click)="edit.emit(message())"
+                [disabled]="busy()"
+                aria-label="編輯提問"
+                title="編輯"
+              >
+                <nx-icon name="edit" />
+              </button>
+            } @else {
+              <button
+                class="icon-button"
+                (click)="regenerate.emit(message())"
+                [disabled]="busy()"
+                aria-label="重新生成"
+                title="重新生成"
+              >
+                <nx-icon name="repeat" />
+              </button>
+              @if (allowArtifacts()) {
+                <button
+                  class="icon-button"
+                  (click)="saveArtifact.emit(message())"
+                  [disabled]="busy()"
+                  aria-label="儲存回答為成果文件"
+                  title="儲存成果"
+                >
+                  <nx-icon name="document" />
+                </button>
+              }
+            }
           }
-          @if (message().webSearchCharge; as charge) {
-            <span>搜尋</span><nx-charge-label [charge]="charge" />
+          @if (versions().length > 1) {
+            <div class="version-picker">
+              <button
+                class="icon-button"
+                aria-label="上一個版本"
+                (click)="version.emit(-1)"
+                [disabled]="versionIndex() === 0 || busy()"
+              >
+                <nx-icon name="left" /></button
+              ><span aria-label="目前版本">{{ versionIndex() + 1 }} / {{ versions().length }}</span
+              ><button
+                class="icon-button"
+                aria-label="下一個版本"
+                (click)="version.emit(1)"
+                [disabled]="versionIndex() === versions().length - 1 || busy()"
+              >
+                <nx-icon name="chevron" />
+              </button>
+            </div>
+          }
+          @if (!readOnly() && message().role === 'assistant' && message().content) {
+            <nx-message-feedback [message]="message()" (rated)="rated.emit($event)" />
           }
         </div>
-      }
-    }
-    @if (!active()) {
-      <div class="message-actions">
-        <button
-          class="quiet-button"
-          (click)="copyAnswer()"
-          [attr.aria-label]="copied() ? '已複製' : '複製訊息'"
-        >
-          <nx-icon [name]="copied() ? 'check' : 'copy'" /><span>{{
-            copied() ? '已複製' : '複製'
-          }}</span>
-        </button>
-        <!-- 唯讀檢視只能複製與切換版本，不能改寫別人的對話。 -->
-        @if (!readOnly()) {
-          @if (message().role === 'user') {
-            <button
-              class="quiet-button"
-              (click)="edit.emit(message())"
-              [disabled]="busy()"
-              aria-label="編輯提問"
-            >
-              <nx-icon name="edit" /><span>編輯</span>
-            </button>
-          } @else {
-            @if (allowArtifacts()) {
-              <button
-                class="quiet-button"
-                (click)="saveArtifact.emit(message())"
-                [disabled]="busy()"
-                aria-label="儲存回答為成果文件"
-              >
-                <nx-icon name="document" /><span>儲存成果</span>
-              </button>
+        @if (message().role === 'assistant') {
+          <div class="message-meta">
+            <nx-run-timing [value]="message().timing" />
+            @if (message().charge; as charge) {
+              <nx-charge-label [charge]="charge" />
             }
-            <button
-              class="quiet-button"
-              (click)="regenerate.emit(message())"
-              [disabled]="busy()"
-              aria-label="重新生成"
-            >
-              <nx-icon name="repeat" /><span>重新生成</span>
-            </button>
-          }
-        }
-        @if (versions().length > 1) {
-          <div class="version-picker">
-            <button
-              class="icon-button"
-              aria-label="上一個版本"
-              (click)="version.emit(-1)"
-              [disabled]="versionIndex() === 0 || busy()"
-            >
-              <nx-icon name="left" /></button
-            ><span aria-label="目前版本">{{ versionIndex() + 1 }} / {{ versions().length }}</span
-            ><button
-              class="icon-button"
-              aria-label="下一個版本"
-              (click)="version.emit(1)"
-              [disabled]="versionIndex() === versions().length - 1 || busy()"
-            >
-              <nx-icon name="chevron" />
-            </button>
+            @if (message().webSearchCharge; as charge) {
+              <span class="meta-label">搜尋</span><nx-charge-label [charge]="charge" />
+            }
           </div>
         }
-      </div>
+      </footer>
     }
     @if (copyError()) {
       <nx-notice [message]="copyError()" />
-    }
-    @if (!readOnly() && !active() && message().role === 'assistant' && message().content) {
-      <nx-message-feedback [message]="message()" (rated)="rated.emit($event)" />
     }
   </article>`,
 })
@@ -160,6 +168,8 @@ export class ChatMessage {
   readonly tree = input.required<MessageTree>();
   readonly matched = input(false);
   readonly currentMatch = input(false);
+  /** 最後一則：操作列一直顯示；其他訊息在指到或焦點進入時才顯示（觸控一直顯示）。 */
+  readonly latest = input(false);
   readonly active = input(false);
   readonly showModelNames = input(true);
   readonly allowArtifacts = input(false);
@@ -176,6 +186,11 @@ export class ChatMessage {
   readonly status = input('');
   /** 對話顯示之後才抵達，因此會有進場動畫。 */
   readonly enter = input(false);
+  /** 這則回答在畫面上從生成中變成完成（不是開啟對話時就已完成）。 */
+  readonly settled = linkedSignal<boolean, boolean>({
+    source: this.active,
+    computation: (active, previous) => !active && (previous?.source ?? false),
+  });
   readonly generation = computed(() => generationStatus(this.status(), !!this.streamContent()));
   readonly rendered = output<void>();
   readonly edit = output<MessageDto>();

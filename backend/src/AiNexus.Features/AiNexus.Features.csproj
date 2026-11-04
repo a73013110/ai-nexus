@@ -20,6 +20,8 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="PdfPig" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" />

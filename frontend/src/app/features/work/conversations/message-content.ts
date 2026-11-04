@@ -19,13 +19,17 @@ export type MessageDisplay = Pick<
   imports: [Notice, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './message-content.scss',
-  template: `@if (message().role === 'user') {
+  template: `<!-- 提問的附件在文字上方（先附檔、再說要做什麼）；回答的附件跟在內容後面。 -->
+    @if (message().role === 'user') {
+      @if (message().attachments?.length) {
+        <nx-attachment-list [files]="message().attachments!" [scope]="scope()" layout="tiles" />
+      }
       <div class="user-copy">{{ message().content }}</div>
     } @else {
       <nx-markdown-view [content]="message().content" />
-    }
-    @if (message().attachments?.length) {
-      <nx-attachment-list [files]="message().attachments!" [scope]="scope()" />
+      @if (message().attachments?.length) {
+        <nx-attachment-list [files]="message().attachments!" [scope]="scope()" layout="tiles" />
+      }
     }
     @if (message().sources?.length) {
       <nav class="source-citations" aria-label="回答引用來源">
@@ -39,7 +43,8 @@ export type MessageDisplay = Pick<
               [nxReaderLink]="source.documentId"
               [readerPage]="source.pageNumber"
               [title]="source.excerpt"
-              ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
+              ><strong>{{ source.number }}</strong
+              ><span>{{ source.title }}</span
               ><small>第 {{ pages }} 頁</small><nx-icon name="document"
             /></a>
           } @else {
@@ -60,7 +65,8 @@ export type MessageDisplay = Pick<
               target="_blank"
               rel="noopener noreferrer"
               [title]="source.excerpt + ' · ' + source.retrievedAt"
-              ><strong>[網路{{ source.number }}]</strong><span>{{ source.title }}</span
+              ><strong>網路{{ source.number }}</strong
+              ><span>{{ source.title }}</span
               ><nx-icon name="globe"
             /></a>
           }
@@ -75,7 +81,7 @@ export type MessageDisplay = Pick<
     @if (message().status === 'failed') {
       <nx-notice tone="danger" [message]="failure()" />
     }
-    @if (message().role === 'assistant') {
+    @if (showTiming() && message().role === 'assistant') {
       <nx-run-timing [value]="message().timing" />
     }`,
 })
@@ -86,5 +92,7 @@ export class MessageContent {
    * 所以引用改成就地展開摘錄，不連到閱讀器。
    */
   readonly scope = input<FileScope | null>(null);
+  /** 聊天把耗時與費用並排在回答下方的資訊列，這裡就不再顯示。 */
+  readonly showTiming = input(true);
   readonly failure = computed(() => systemProblem(this.message().issueCode));
 }

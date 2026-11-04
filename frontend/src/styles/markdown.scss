@@ -3,10 +3,11 @@
   line-height: var(--line-reading);
   overflow-wrap: anywhere;
 }
+// 圖表元件掛載前先佔一塊與完成後相近的高度，掛上時不推動下方文字。
 .markdown-diagram-slot {
   display: block;
   min-width: 0;
-  margin-block: var(--p-space-4);
+  margin-block: var(--p-space-5);
 }
 .markdown-diagram-slot:empty {
   min-height: 14rem;
@@ -21,15 +22,17 @@
   margin-bottom: 0;
 }
 .markdown p {
-  margin: 0 0 16px;
+  margin: 0 0 var(--p-space-4);
 }
 .markdown h1,
 .markdown h2,
 .markdown h3,
 .markdown h4 {
-  line-height: 1.6;
-  margin: 28px 0 12px;
+  margin: var(--p-space-6) 0 var(--p-space-3);
+  line-height: 1.4;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 .markdown h1 {
   font-size: var(--p-font-2xl);
@@ -45,98 +48,82 @@
 }
 .markdown ul,
 .markdown ol {
-  padding-left: 25px;
-  margin: 12px 0 20px;
+  padding-left: 1.5rem;
+  margin: var(--p-space-3) 0 var(--p-space-5);
 }
 .markdown li {
-  padding-left: 3px;
-  margin: 6px 0;
+  padding-left: var(--p-space-1);
+  margin: var(--p-space-1) 0;
+}
+.markdown li::marker {
+  color: var(--muted);
 }
 .markdown a {
   color: var(--accent);
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
   text-underline-offset: 3px;
+  transition: text-decoration-color var(--motion) var(--ease);
 }
+.markdown a:hover {
+  text-decoration-color: currentColor;
+}
+// 引文（原文、摘錄、對照）是凹下的一塊，不用側邊線：回答本身沒有外框，線條只留給區塊。
 .markdown blockquote {
-  border-left: 1px solid var(--line);
-  padding: 2px 18px;
-  margin: 20px 0;
-  color: var(--secondary);
+  margin: var(--p-space-4) 0;
+  padding: var(--p-space-3) var(--p-space-4);
+  border-radius: var(--radius-block);
+  background: var(--surface-inset);
 }
-.markdown blockquote > p:last-child {
+.markdown blockquote + blockquote {
+  margin-top: calc(-1 * var(--p-space-2));
+}
+.markdown blockquote > :last-child {
   margin-bottom: 0;
 }
 .markdown hr {
   border: 0;
   border-top: 1px solid var(--line);
-  margin: 30px 0;
+  margin: var(--p-space-8) 0;
+}
+// 表格放在內嵌區塊裡橫向捲動：外框與圓角交給 .embed，表格本身只畫列與列之間的線。
+.embed-table {
+  overflow-x: auto;
 }
 .markdown table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
+  width: 100%;
   border-collapse: collapse;
-  margin: 20px 0;
   font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
 }
-.markdown td,
-.markdown th {
+.markdown th,
+.markdown td {
   text-align: left;
-  border: 1px solid var(--line);
-  padding: 9px 13px;
+  vertical-align: top;
+  padding: var(--p-space-2) var(--p-space-3);
 }
 .markdown th {
-  background: var(--sidebar);
+  background: var(--surface-inset);
   font-weight: 600;
+  white-space: nowrap;
+}
+.markdown tr + tr > td,
+.markdown thead + tbody > tr:first-child > td {
+  border-top: 1px solid var(--line);
 }
 .markdown code {
-  font:
-    var(--text-caption)/1.7 'Cascadia Code',
-    Consolas,
-    ui-monospace,
-    monospace;
-  background: var(--code);
-  padding: 2px 5px;
+  font: var(--p-font-data) / 1.6 var(--font-code);
+  background: var(--surface-inset);
+  padding: 0.125rem 0.3125rem;
   border-radius: var(--radius-mark);
 }
-.code-block {
-  border: 1px solid var(--line);
-  background: var(--code);
-  border-radius: var(--radius-block);
-  margin: 20px 0;
-  overflow: hidden;
-}
-.code-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 14px;
-  border-bottom: 1px solid var(--line);
-  font:
-    var(--text-caption)/1.6 ui-monospace,
-    monospace;
-  color: var(--secondary);
-}
-.code-copy {
-  font:
-    var(--text-caption) 'Segoe UI',
-    'Microsoft JhengHei',
-    sans-serif;
-  padding: 5px 8px;
-  border-radius: var(--radius-action);
-  min-height: 26px;
-}
-.markdown pre {
-  margin: 0;
-  padding: 17px;
-  overflow: auto;
-  max-width: 100%;
-}
 .markdown pre > code {
+  display: block;
   padding: 0;
   background: none;
+  line-height: 1.7;
   white-space: pre;
-  display: block;
+  tab-size: 2;
 }
 .hljs-keyword,
 .hljs-selector-tag {

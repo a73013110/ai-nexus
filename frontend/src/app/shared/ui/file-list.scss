@@ -1,15 +1,18 @@
 @use 'breakpoints' as bp;
 
+// 版面由 data-layout 決定：cards（預設）、rows（一檔一列），tiles 在 file-tiles.scss。
+// 父層以 --attachment-list-justify 決定靠哪一側（例如提問的附件靠右）。
 .attachment-list {
   container-type: inline-size;
   list-style: none;
   display: flex;
   flex-wrap: wrap;
+  justify-content: var(--attachment-list-justify, flex-start);
   gap: var(--p-space-2);
   margin: var(--p-space-3) 0;
   padding: 0;
 }
-:host(.is-stacked) .attachment-list {
+:host([data-layout='rows']) .attachment-list {
   flex-direction: column;
   margin: 0;
 }
@@ -105,6 +108,7 @@
     background: var(--error-bg);
   }
 }
+// 縮圖載入完成才淡入，之前是同尺寸的底色，不會先閃一張空白或破圖。
 .attachment-card img {
   width: var(--attachment-thumb);
   height: var(--attachment-thumb);
@@ -112,6 +116,14 @@
   flex: none;
   border-radius: var(--radius-mark);
   background: var(--hover);
+  opacity: 0;
+  transition: opacity var(--motion) var(--ease);
+  &.is-loaded {
+    opacity: 1;
+  }
+}
+.attachment-kind {
+  display: none;
 }
 .attachment-symbol {
   width: var(--attachment-thumb);
@@ -168,6 +180,8 @@
     max-width: none;
   }
 }
+// 一次加入多個檔案時依序進場。
 .attachment-enter {
-  animation: attachment-arrive var(--motion-panel) var(--ease);
+  animation: attachment-arrive var(--motion-panel) var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 6) * var(--motion-stagger));
 }

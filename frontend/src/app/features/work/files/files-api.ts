@@ -6,9 +6,13 @@ import { scopedFileRoute, type FileScope } from '@shared/browser/reader-overlay'
 
 type FileFilters = ApiQuery<'/api/v1/files', 'get'>;
 
-/** 原檔內容的網址，給縮圖與下載連結由瀏覽器直接載入。 */
+/** 原檔內容的網址，給下載連結與閱讀器由瀏覽器直接載入。 */
 export const attachmentContent = (id: string) =>
   apiHref('/api/v1/attachments/{id}/content', { path: { id } });
+
+/** 圖片附件的縮圖（伺服器縮成 256px WebP），清單與訊息用它，不載入原圖。 */
+export const attachmentThumbnail = (id: string) =>
+  apiHref('/api/v1/attachments/{id}/thumbnail', { path: { id } });
 
 /** 單一檔案的副檔名與大小是否符合附件政策；份數與總量上限由呼叫端依情境檢查。 */
 export const acceptsFile = (policy: AttachmentPolicyDto, file: File) =>

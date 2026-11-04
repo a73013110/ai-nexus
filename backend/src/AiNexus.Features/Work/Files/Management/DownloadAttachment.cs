@@ -1,5 +1,6 @@
 using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Work.Files.Thumbnails;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
@@ -7,8 +8,8 @@ using AiNexus.Platform.Security;
 
 namespace AiNexus.Features.Work.Files.Management;
 
-/// <summary>以安全的檔案回應串流呼叫者的附件，可選擇內嵌預覽或當作下載。</summary>
-internal sealed class DownloadAttachment(AttachmentService files) : IEndpointSlice
+/// <summary>以安全的檔案回應串流呼叫者的附件，可選擇內嵌預覽、縮圖或當作下載。</summary>
+internal sealed class DownloadAttachment(AttachmentService files, AttachmentThumbnails thumbnails) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes)
     {
@@ -20,6 +21,17 @@ internal sealed class DownloadAttachment(AttachmentService files) : IEndpointSli
                 handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
             .Audited(FilesAudit.FileDownloaded)
             .WithName("DownloadAttachment");
+        routes.MapGet("/{id:guid}/thumbnail", (Guid id, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
+                handler.ThumbnailAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x, AttachmentThumbnails.ContentType, "thumbnail.webp", false)))
+            .Audited(FilesAudit.FileRead)
+            .WithName("AttachmentThumbnail");
+    }
+
+    public async Task<Result<byte[]>> ThumbnailAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        var file = await files.OwnedAsync(owner, id, ct);
+        if (!file.IsSuccess) return file.Error;
+        return await thumbnails.RenderAsync(file.Value, token => files.OpenAsync(file.Value, token), ct);
     }
 
     public async Task<Result<Stream>> HandleHtmlAsync(Guid owner, Guid id, CancellationToken ct)

@@ -2454,11 +2454,9 @@ test("administrators inspect user usage and deleted conversations through an aud
   await expect(
     dialog.getByRole("button", { name: /重新生成|編輯/ }),
   ).toHaveCount(0);
-  await dialog.locator("nx-run-timing summary").click();
-  await expect(dialog.locator("nx-run-timing details")).toContainText(
-    "輸入 300",
-  );
-  await expect(dialog.locator("nx-run-timing details")).toContainText("1.5 秒");
+  await dialog.locator("nx-run-timing button").click();
+  await expect(dialog.locator("nx-run-timing")).toContainText("輸入 300");
+  await expect(dialog.locator("nx-run-timing")).toContainText("1.5 秒");
   await expect(
     dialog.getByRole("button", { name: "送出訊息", exact: true }),
   ).toHaveCount(0);

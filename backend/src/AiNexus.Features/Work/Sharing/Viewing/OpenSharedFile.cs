@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Files;
 using System.Text.Json;
 using AiNexus.Features.Work.Files;
+using AiNexus.Features.Work.Files.Thumbnails;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Platform.Auditing;
@@ -16,7 +17,7 @@ namespace AiNexus.Features.Work.Sharing.Viewing;
 /// 預覽與下載擁有者明確納入分享的檔案。授權來源是分享本身的引用，絕不是收件人對原始附件的存取權；
 /// 顯示的名稱是快照中凍結的那一個。
 /// </summary>
-internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, AttachmentService files) : IEndpointSlice
+internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, AttachmentService files, AttachmentThumbnails thumbnails) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes)
     {
@@ -31,6 +32,18 @@ internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, Attach
                 handler.RenderAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
             .Audited(SharingAudit.SharedFileRead)
             .WithName("RenderSharedFileHtml");
+        routes.MapGet("/{id:guid}/files/{file:guid}/thumbnail", (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
+                handler.ThumbnailAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x, AttachmentThumbnails.ContentType, "thumbnail.webp", false)))
+            .Audited(SharingAudit.SharedFileRead)
+            .WithName("SharedFileThumbnail");
+    }
+
+    public async Task<Result<byte[]>> ThumbnailAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
+    {
+        var found = await FindAsync(actor, id, fileId, ct);
+        if (!found.IsSuccess) return found.Error;
+        var rendered = await thumbnails.RenderAsync(found.Value, token => files.OpenAsync(found.Value, token), ct);
+        return rendered.IsSuccess ? rendered : SharingErrors.Unavailable;
     }
 
     public async Task<Result<(Attachment File, Stream Content)>> OpenAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)

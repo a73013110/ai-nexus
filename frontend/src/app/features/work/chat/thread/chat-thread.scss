@@ -52,8 +52,7 @@
 .skeleton-answer {
   display: grid;
   gap: 0.75em;
-  padding: var(--p-space-2) 0 var(--p-space-2) var(--p-space-4);
-  border-left: 2px solid var(--line);
+  padding-block: var(--p-space-2);
   .skeleton {
     height: 1em;
   }

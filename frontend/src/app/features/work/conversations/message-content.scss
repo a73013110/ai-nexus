@@ -1,5 +1,21 @@
 // Chat and shared snapshots restyle the user copy through these custom properties.
+// 提問與附件上下排列；附件與文字之間的距離固定，不靠各自的外距。
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: var(--message-content-align, stretch);
+  gap: var(--p-space-2);
+}
+// 附件清單是 inline-size 容器、沒有內容寬度，靠邊對齊時會縮成 0；一律撐滿，方塊靠哪側交給 --attachment-list-justify。
+:host > nx-attachment-list {
+  align-self: stretch;
+}
+:host > nx-markdown-view + nx-attachment-list {
+  margin-top: var(--p-space-2);
+}
 .user-copy {
+  width: fit-content;
+  max-width: 100%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: var(--line-reading);
@@ -8,30 +24,50 @@
   border: var(--user-copy-border, 1px solid var(--line));
   border-radius: var(--user-copy-radius, var(--radius-block));
 }
+// 引用是膠囊：編號一顆圓點、標題、頁碼；hover 只加深外框與底色，不換色相。
 .source-citations {
   display: flex;
   gap: var(--p-space-2);
   flex-wrap: wrap;
-  margin-top: var(--p-space-4);
+  margin-top: var(--p-space-2);
   a {
     display: flex;
     gap: var(--p-space-2);
     align-items: center;
-    padding: var(--p-space-2) var(--p-space-3);
-    min-height: var(--button-target);
+    padding: var(--p-space-1) var(--p-space-3) var(--p-space-1) var(--p-space-1);
+    min-height: var(--control-height-compact);
     border: 1px solid var(--line);
-    border-radius: var(--radius-item);
+    border-radius: var(--radius-full);
     background: var(--surface);
-    font-size: var(--text-caption);
+    color: var(--secondary);
+    font-size: var(--p-font-xs);
     max-width: 100%;
+    transition:
+      border-color var(--motion) var(--ease),
+      background-color var(--motion) var(--ease),
+      color var(--motion) var(--ease);
+    --icon-size: var(--icon-sm);
+    strong {
+      display: inline-grid;
+      place-items: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding-inline: var(--p-space-1);
+      border-radius: var(--radius-full);
+      background: var(--surface-inset);
+      color: var(--ink);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
     span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: var(--ink);
     }
     &:hover {
-      border-color: var(--signal);
-      color: var(--signal);
+      border-color: color-mix(in srgb, var(--ink) 24%, var(--line));
+      background: var(--surface-subtle);
     }
   }
 }

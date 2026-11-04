@@ -124,7 +124,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   ).toBeEnabled();
   expect(fixture.posts).toBe(1);
   await expect(page.locator("nx-run-timing")).toContainText("1.5 秒");
-  await page.locator("nx-run-timing summary").click();
+  await page.locator("nx-run-timing button").click();
   await expect(page.locator("nx-run-timing")).toContainText("輸入 123");
   await expect(page.locator("nx-run-timing")).toContainText("輸出 12");
   await page.getByRole("button", { name: "複製程式碼", exact: true }).click();

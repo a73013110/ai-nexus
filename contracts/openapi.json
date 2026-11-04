@@ -6193,6 +6193,42 @@
         }
       }
     },
+    "/api/v1/admin/conversations/{id}/files/{file}/thumbnail": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "AdminConversationFileThumbnail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/directory": {
       "get": {
         "tags": [
@@ -6877,6 +6913,33 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{id}/thumbnail": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "operationId": "AttachmentThumbnail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -10032,6 +10095,42 @@
           "Sharing"
         ],
         "operationId": "RenderSharedFileHtml",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/shares/{id}/files/{file}/thumbnail": {
+      "get": {
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "SharedFileThumbnail",
         "parameters": [
           {
             "name": "id",

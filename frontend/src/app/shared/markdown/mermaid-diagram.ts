@@ -27,6 +27,7 @@ import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
 import { ViewSwitch } from '../ui/view-switch';
 import { cachedDiagram, renderDiagram, type Diagram, type DiagramView } from './mermaid-renderer';
 import { diagramTheme } from './mermaid-theme';
+import { nearViewport } from '../browser/near-viewport';
 
 @Component({
   selector: 'nx-diagram-canvas',
@@ -165,12 +166,14 @@ export class DiagramCanvas {
   styleUrl: './mermaid-diagram.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<figure
-      class="mermaid-frame"
+      class="embed mermaid-frame"
       aria-label="Mermaid 圖表與原始碼"
       [attr.aria-busy]="loading() || null"
     >
-      <figcaption class="mermaid-toolbar ui-density-compact">
-        <span class="mermaid-label"><nx-icon name="integrations" />Mermaid</span>
+      <figcaption class="embed-bar mermaid-toolbar ui-density-compact">
+        <span class="embed-label"
+          ><nx-icon name="integrations" />{{ diagram()?.title || '圖表' }}</span
+        >
         <nx-view-switch
           label="Mermaid 顯示方式"
           appearance="segment"
@@ -178,7 +181,7 @@ export class DiagramCanvas {
           [value]="view()"
           (valueChange)="view.set($event)"
         />
-        <div class="mermaid-actions">
+        <div class="embed-actions mermaid-actions">
           @if (view() === 'diagram' && diagram()) {
             <ng-container [ngTemplateOutlet]="zoomTools" />
             <button
@@ -213,7 +216,10 @@ export class DiagramCanvas {
         </div>
       </figcaption>
       @if (loading() && !diagram()) {
-        <p class="mermaid-status" role="status"><nx-icon name="loading" />正在繪製圖表…</p>
+        <div class="mermaid-placeholder" role="status">
+          <span class="skeleton" aria-hidden="true"></span>
+          <span class="sr-only">正在繪製圖表…</span>
+        </div>
       }
       @if (error()) {
         <nx-notice tone="warning" [message]="error()">
@@ -223,12 +229,13 @@ export class DiagramCanvas {
         </nx-notice>
       }
       @if (view() === 'source') {
-        <pre class="mermaid-source"><code>{{ source() }}</code></pre>
+        <pre class="embed-body mermaid-source"><code>{{ source() }}</code></pre>
       } @else if (diagram(); as graph) {
         <nx-diagram-canvas
           [diagram]="graph"
           [url]="url()"
           [zoom]="zoom()"
+          [animate.enter]="revealed() ? 'diagram-reveal' : ''"
           (zoomChange)="setZoom($event)"
         />
       }
@@ -321,6 +328,10 @@ export class MermaidDiagram implements OnInit {
   readonly view = signal('diagram');
   readonly zoom = signal(1);
   readonly percent = computed(() => Math.round(this.zoom() * 100));
+  /** 等過才出現的圖淡入就位；開啟對話時已在快取裡的圖直接顯示，不重播。 */
+  readonly revealed = signal(false);
+  // 圖表引擎很重：長對話開啟時只繪製接近畫面的圖，其他的等捲到附近（已快取的在 ngOnInit 就顯示）。
+  private readonly near = nearViewport('75%');
   readonly views = [
     { value: 'diagram', label: '圖表', icon: 'integrations' },
     { value: 'source', label: '原始碼', icon: 'code' },
@@ -341,7 +352,7 @@ export class MermaidDiagram implements OnInit {
     afterRenderEffect(() => {
       const source = this.source();
       this.refresh();
-      untracked(() => void this.render(source));
+      if (this.near()) untracked(() => void this.render(source));
     });
     inject(DestroyRef).onDestroy(() => {
       ++this.revision;
@@ -403,6 +414,7 @@ export class MermaidDiagram implements OnInit {
       const view = await renderDiagram(source, config, active, semantics);
       if (!view) return;
       if (!active()) return view.release();
+      this.revealed.set(!this.diagram());
       this.show(view);
     } catch {
       if (active()) {

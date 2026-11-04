@@ -14,18 +14,19 @@
   padding: 0 0 var(--message-gap);
   font-size: var(--text-body);
 }
+// 提問靠右、寬度隨文字；附件方塊在泡泡上方同樣靠右。
 .message.user {
   --user-copy-background: var(--user-bubble);
   --user-copy-border: 1px solid var(--user-bubble-border);
   --user-copy-radius: var(--radius-surface) var(--radius-surface) var(--radius-mark)
     var(--radius-surface);
-  width: var(--message-user-width);
+  --user-copy-padding: var(--p-space-2) var(--p-space-4);
+  --message-content-align: flex-end;
+  --attachment-list-justify: flex-end;
+  max-width: var(--message-user-width);
   margin-left: auto;
 }
-.message:not(.user) {
-  padding-left: var(--p-space-4);
-  border-left: 2px solid var(--line);
-}
+// 回答沒有外框也沒有側邊線：靠開頭的身分列與字級層次分段，線條只留給內嵌區塊。
 .message.search-match {
   background: var(--accent-soft);
   border-radius: var(--radius-block);
@@ -34,22 +35,25 @@
   box-shadow: -3px 0 0 var(--accent);
 }
 .message-enter {
-  animation: arrive var(--motion) var(--ease);
+  animation: arrive var(--motion-enter) var(--ease);
 }
-.message.user .message-actions {
-  justify-content: flex-end;
+// 自己的提問從送出鈕的方向（右下）長出來，彈簧收尾。
+.message.user.message-enter {
+  transform-origin: 100% 100%;
+  animation: prompt-arrive var(--motion-morph) var(--ease-spring);
 }
 .message-heading {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
-  margin-bottom: var(--p-space-2);
+  margin-bottom: var(--p-space-3);
 }
 .message-heading strong {
   flex: none;
   white-space: nowrap;
   font-size: var(--text-caption);
   font-weight: 600;
+  letter-spacing: -0.005em;
 }
 .role-mark {
   flex: none;
@@ -57,52 +61,100 @@
   place-items: center;
   width: var(--icon-2xl);
   height: var(--icon-2xl);
+  border: 1px solid var(--line);
   border-radius: var(--radius-icon);
-  background: var(--accent);
-  color: var(--accent-text);
-  font-size: var(--text-caption);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 var(--p-font-xs) / 1 var(--font-ui);
+  box-shadow: var(--shadow);
 }
 .message-model {
   min-width: 0;
-  font: var(--text-caption) var(--font-code);
+  font: var(--p-font-xs) var(--font-code);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.message-charges {
+// 回答下方一列：左邊是操作（只有圖示，名稱在 title 與報讀），右邊是耗時與費用。
+.message-footer {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--p-space-3);
-}
-// 費用鈕的文字對齊回答的左緣，hover 底色往外留白。
-.message-charges > nx-charge-label:first-child {
+  gap: var(--p-space-1) var(--p-space-3);
+  margin-top: var(--p-space-2);
   margin-inline-start: calc(-1 * var(--p-space-2));
+  color: var(--muted);
+  --icon-size: var(--icon-md);
+}
+.message.user .message-footer {
+  justify-content: flex-end;
+  margin-inline: 0 calc(-1 * var(--p-space-2));
 }
 .message-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  transition: opacity var(--motion) var(--ease);
+}
+.message-actions .icon-button {
+  color: inherit;
+  transition:
+    color var(--motion) var(--ease),
+    background-color var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
+  &:hover:not(:disabled) {
+    color: var(--ink);
+  }
+  &:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+}
+.is-confirmed {
+  color: var(--signal);
+  animation: copy-confirm var(--motion-enter) var(--ease-spring);
+}
+// 回饋（讚／倒讚）與操作同一列；補充回饋的表單換到下一列，佔滿寬度。
+.message-actions nx-message-feedback {
+  display: contents;
+}
+.message-meta {
+  display: flex;
+  align-items: center;
   gap: var(--p-space-1);
-  margin-top: var(--p-space-2);
-  color: var(--muted);
+  margin-left: auto;
+  font-size: var(--p-font-xs);
+  --info-popover-trigger-padding: var(--p-space-1) var(--p-space-2);
+}
+.meta-label {
+  padding-inline-start: var(--p-space-1);
 }
 .version-picker {
   display: flex;
   align-items: center;
   margin-left: var(--p-space-1);
-  font-size: var(--text-caption);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
   gap: var(--p-space-1);
-}
-.version-picker .icon-button {
-  width: var(--button-target);
-  height: var(--button-target);
 }
 .version-picker nx-icon {
   --icon-size: var(--icon-xs);
 }
+// 剛完成的回答：操作鈕依序浮現（sibling-index 不支援時一起出現）。
+.footer-enter .message-actions > *,
+.footer-enter .message-meta {
+  animation: action-arrive var(--motion) var(--ease) both;
+  animation-delay: calc((sibling-index() - 1) * var(--motion-stagger));
+}
+// 較早的訊息：操作退到幕後，指到或焦點進入才出現；耗時與費用仍在。觸控沒有 hover，一直顯示。
+@media (hover: hover) and (pointer: fine) {
+  .message:not(.is-latest, :hover, :focus-within) .message-actions {
+    opacity: 0;
+  }
+}
 @include bp.below(narrow) {
   .message.user {
-    width: 92%;
+    max-width: 92%;
   }
 }

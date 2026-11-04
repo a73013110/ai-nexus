@@ -245,7 +245,7 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   await expect(cards).toHaveCount(1);
   await cards.click();
   await expect(page).toHaveURL(new RegExp(`/work/sharing/${id}\\?sent=true$`));
-  await page.locator("nx-run-timing summary").click();
+  await page.locator("nx-run-timing button").click();
   await expect(page.locator("nx-run-timing")).toContainText("100");
   await page.locator(".shared-citation summary").click();
   await expect(page.locator(".shared-citation")).toContainText(

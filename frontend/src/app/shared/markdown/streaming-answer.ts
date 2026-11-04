@@ -32,21 +32,26 @@ import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './s
       />
     }
     @if (fence(); as fence) {
+      <!-- 與 markdown.ts 的 codeEmbedBar 同一組 class；串流中逐段附加文字，不重建整個區塊。 -->
       <div class="markdown stream-frontier">
-        <div class="code-block">
-          <div class="code-toolbar">
-            <span>{{ fence.language }}</span
-            ><button
-              type="button"
-              class="code-copy"
-              title="複製程式碼"
-              aria-label="複製程式碼"
-              (click)="copyFence($event)"
+        <div class="embed embed-code">
+          <div class="embed-bar">
+            <span class="embed-label">{{ fence.language }}</span
+            ><span class="embed-actions"
+              ><button
+                type="button"
+                class="embed-copy"
+                title="複製程式碼"
+                aria-label="複製程式碼"
+                (click)="copyFence($event)"
+              >
+                複製
+              </button></span
             >
-              複製程式碼
-            </button>
           </div>
-          <pre><code>@for (chunk of fence.chunks; track chunk.id) {<span>{{ chunk.text }}</span>}{{ fence.tail }}</code></pre>
+          <pre
+            class="embed-body"
+          ><code>@for (chunk of fence.chunks; track chunk.id) {<span>{{ chunk.text }}</span>}{{ fence.tail }}</code></pre>
         </div>
       </div>
     } @else {

@@ -2656,6 +2656,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/conversations/{id}/files/{file}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminConversationFileThumbnail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/directory": {
         parameters: {
             query?: never;
@@ -2936,6 +2952,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["DownloadAttachment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attachments/{id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AttachmentThumbnail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4457,6 +4489,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["RenderSharedFileHtml"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shares/{id}/files/{file}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SharedFileThumbnail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11716,6 +11764,28 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    AdminConversationFileThumbnail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     SearchUserDirectory: {
         parameters: {
             query: {
@@ -12165,6 +12235,27 @@ export interface operations {
             query?: {
                 download?: boolean;
             };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    AttachmentThumbnail: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 id: string;
@@ -13695,6 +13786,28 @@ export interface operations {
         };
     };
     RenderSharedFileHtml: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    SharedFileThumbnail: {
         parameters: {
             query?: never;
             header?: never;

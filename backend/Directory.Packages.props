@@ -25,6 +25,9 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="PuppeteerSharp" Version="25.15.0" />
+    <PackageVersion Include="SkiaSharp" Version="4.154.0" />
+    <!-- SkiaSharp 只內建 Windows 與 macOS 的原生庫；linux-x64 發布要另外帶這份（不依賴系統的 fontconfig）。 -->
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.154.0" />
   </ItemGroup>
   <ItemGroup Label="Security">
     <!-- Microsoft.Data.SqlClient still asks for 9.0.11 (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7). -->

@@ -889,7 +889,8 @@ export class ApiFixture {
         limit,
       });
     }
-    const attachmentRoute = /^\/attachments\/([^/]+)(\/content)?$/.exec(path);
+    const attachmentRoute =
+      /^\/attachments\/([^/]+)(\/content|\/thumbnail)?$/.exec(path);
     if (attachmentRoute) {
       const file = this.attachments.find(
         (file) => file.id === attachmentRoute[1],
@@ -901,6 +902,12 @@ export class ApiFixture {
         this.attachments.splice(this.attachments.indexOf(file), 1);
         return route.fulfill({ status: 204 });
       }
+      // 縮圖端點只給圖片；測試的圖已經很小，直接回原圖代替縮小後的 WebP。
+      if (
+        attachmentRoute[2] === "/thumbnail" &&
+        !file.contentType.startsWith("image/")
+      )
+        return json({ title: "找不到附件。" }, 404);
       if (attachmentRoute[2])
         return route.fulfill({
           contentType: file.contentType,

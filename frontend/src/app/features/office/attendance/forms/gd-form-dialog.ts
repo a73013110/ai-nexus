@@ -126,7 +126,7 @@ interface SidePerson {
               @if (form.attachments === null) {
                 <p class="form-missing">附件暫時讀不到，請稍後再開一次。</p>
               } @else if (files().length) {
-                <nx-file-list [files]="files()" [stacked]="true" />
+                <nx-file-list [files]="files()" layout="rows" />
               } @else if (!form.attachmentNote && !kinds().length) {
                 <p class="form-missing">沒有附件。</p>
               }

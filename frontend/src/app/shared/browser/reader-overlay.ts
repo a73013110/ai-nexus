@@ -31,18 +31,20 @@ export interface ReaderTarget {
   remote?: RemoteReaderFile | null;
 }
 
-export type ScopedFilePart = 'content' | 'preview' | 'render';
+export type ScopedFilePart = 'content' | 'preview' | 'render' | 'thumbnail';
 
 const SCOPED_FILE_ROUTES = {
   share: {
     content: '/api/v1/shares/{id}/files/{file}',
     preview: '/api/v1/shares/{id}/files/{file}/preview',
     render: '/api/v1/shares/{id}/files/{file}/render',
+    thumbnail: '/api/v1/shares/{id}/files/{file}/thumbnail',
   },
   conversation: {
     content: '/api/v1/admin/conversations/{id}/files/{file}',
     preview: '/api/v1/admin/conversations/{id}/files/{file}/preview',
     render: '/api/v1/admin/conversations/{id}/files/{file}/render',
+    thumbnail: '/api/v1/admin/conversations/{id}/files/{file}/thumbnail',
   },
 } as const satisfies Record<FileScope['kind'], Record<ScopedFilePart, string>>;
 

@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AuthService } from '@core/auth/auth-service';
 import { ReaderOverlay } from '@shared/browser/reader-overlay';
-import { FileList, fileSize, type FileListItem } from './file-list';
+import { FileList, fileKind, fileSize, type FileListItem } from './file-list';
 
 const remote: FileListItem = {
   key: 't1',
@@ -58,13 +58,36 @@ describe('FileList', () => {
     );
   });
 
-  it('stacks one file per row only when asked', () => {
+  it('exposes the layout to its styles, cards by default', () => {
     const { fixture } = render([remote]);
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.classList).not.toContain('is-stacked');
-    fixture.componentRef.setInput('stacked', true);
+    expect(host.dataset['layout']).toBe('cards');
+    fixture.componentRef.setInput('layout', 'tiles');
     fixture.detectChanges();
-    expect(host.classList).toContain('is-stacked');
+    expect(host.dataset['layout']).toBe('tiles');
+  });
+
+  it('fades a thumbnail in once loaded and falls back to the file kind when it fails', () => {
+    const { fixture, root } = render([
+      { ...remote, key: 'a', thumbnail: '/a' },
+      { ...remote, key: 'b', thumbnail: '/b' },
+    ]);
+    const [first, second] = Array.from(root.querySelectorAll('img'));
+    first.dispatchEvent(new Event('load'));
+    second.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(root.querySelectorAll('img')).toHaveLength(1);
+    expect(root.querySelector('img')!.classList).toContain('is-loaded');
+    expect(root.querySelector('.attachment-kind')!.textContent).toBe('PDF');
+  });
+
+  it('names the file kind from a short extension only', () => {
+    expect([
+      fileKind('報告.docx'),
+      fileKind('photo.JPEG'),
+      fileKind('README'),
+      fileKind('a.backup'),
+    ]).toEqual(['DOCX', 'JPEG', '檔案', '檔案']);
   });
 
   it('formats sizes in KB below a megabyte', () => {

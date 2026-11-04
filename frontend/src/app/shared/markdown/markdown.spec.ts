@@ -20,7 +20,8 @@ describe('Markdown security', () => {
     const html = renderMarkdown(
       '|欄位|內容|\n|---|---|\n|A|B|\n\n```html" onclick="alert(1)\n<script>evil()</script>\n```',
     );
-    expect(html).toContain('<table>');
+    expect(html).toContain('<div class="embed embed-table"><table>');
+    expect(html).toContain('<div class="embed embed-code"><div class="embed-bar">');
     expect(html).not.toContain('onclick=');
     expect(html).not.toContain('<script>');
     expect(html).toContain('複製程式碼');

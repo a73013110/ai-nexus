@@ -1,5 +1,6 @@
-:host {
-  display: block;
+// 在聊天的操作列裡與其他按鈕同一列（宿主是 display: contents）；補充回饋的表單換到下一列佔滿寬度。
+.message-feedback {
+  display: contents;
 }
 .feedback-buttons {
   display: flex;
@@ -11,6 +12,8 @@
   background: var(--accent-soft);
 }
 .feedback-detail {
+  flex-basis: 100%;
+  order: 1;
   padding: var(--section-padding);
   border: 1px solid var(--line);
   border-radius: var(--radius-block);

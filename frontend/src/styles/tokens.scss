@@ -36,6 +36,8 @@
   --sidebar: var(--p-stone-100);
   --surface: var(--p-white);
   --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
+  // 凹下一階的底：引文、使用者的提問、表頭。往 --ink 混而不是取固定色，放在 --canvas 或 --surface 上都看得出來。
+  --surface-inset: color-mix(in srgb, var(--ink) 4%, var(--canvas));
   --hover: var(--p-stone-200);
   --ink: var(--p-ink-900);
   --secondary: var(--p-stone-600);
@@ -264,9 +266,9 @@
   --composer-input-max: min(12rem, 25dvh);
   --composer-radius: var(--radius-surface);
   --message-gap: var(--p-space-4);
-  --message-user-width: 85%;
-  --user-bubble: var(--accent-soft);
-  --user-bubble-border: var(--line);
+  --message-user-width: min(75%, 40rem);
+  --user-bubble: var(--surface-inset);
+  --user-bubble-border: transparent;
   --outline-space: 2.5rem;
   --outline-card-width: 21rem;
   --settings-sidebar-width: 17rem;
@@ -284,6 +286,9 @@
   --dialog-inset: var(--p-space-2);
   --dialog-padding: var(--p-space-5);
   --attachment-thumb: 3rem;
+  // 訊息裡的附件方塊：圖片顯示縮圖、其他檔案顯示類型與名稱；縮圖端點輸出 256px，3x 螢幕仍清晰。
+  --attachment-tile: 4.5rem;
+  --attachment-tile-wide: 11rem;
   --attachment-list-max: min(11rem, 22dvh);
 }
 
@@ -325,6 +330,7 @@
   --sidebar: var(--p-night-950);
   --surface: var(--p-night-800);
   --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
+  --surface-inset: color-mix(in srgb, var(--ink) 5%, var(--canvas));
   --hover: var(--p-night-700);
   --ink: var(--p-silver-50);
   --secondary: var(--p-silver-200);

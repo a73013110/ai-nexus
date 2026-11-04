@@ -18,12 +18,19 @@ export class CopyFeedback {
       await navigator.clipboard.writeText(text);
       if (this.destroyed) return;
       this.error.set('');
-      if (button) button.textContent = '已複製';
-      else this.copied.set(true);
+      // innerHTML 裡的按鈕（Markdown 程式碼）不在 Angular 的檢視內，直接換文字並標上 data-copied 讓樣式回饋；
+      // 報讀名稱由 aria-label 決定，不受影響。
+      const label = button?.textContent ?? '';
+      if (button) {
+        button.textContent = '已複製';
+        button.setAttribute('data-copied', '');
+      } else this.copied.set(true);
       const timer = setTimeout(() => {
         this.timers.delete(timer);
-        if (button) button.textContent = '複製程式碼';
-        else this.copied.set(false);
+        if (button) {
+          button.textContent = label;
+          button.removeAttribute('data-copied');
+        } else this.copied.set(false);
       }, 1800);
       this.timers.add(timer);
     } catch {
