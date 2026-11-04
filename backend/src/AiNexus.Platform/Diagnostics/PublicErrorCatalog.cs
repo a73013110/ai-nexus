@@ -185,7 +185,7 @@ public static class PublicErrorCatalog
         ["job_handler_missing"] = "此任務類型已停用。",
         ["job_not_found"] = "找不到這個背景任務。",
         ["job_not_retryable"] = "只有失敗或已取消的任務可以重試。",
-        ["job_retry_limit"] = "此任務已嘗試六次。請確認設定後重新建立來源。",
+        ["job_recovery_limit"] = "任務在執行中多次中斷，已停止自動接續。可再重試；仍失敗請聯絡管理員。",
         ["knowledge_collection_limit"] = "每次最多使用三個不同知識庫。",
         ["knowledge_query_invalid"] = "查詢需為 1 至 2000 個字元。",
         ["knowledge_selection_changed"] = "知識來源剛剛已變更，請重新送出提問。",

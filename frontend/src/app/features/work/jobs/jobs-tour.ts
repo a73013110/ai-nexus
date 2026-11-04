@@ -48,7 +48,7 @@ export function jobsTour(options: {
       target: 'nx-jobs-page .job-control',
       title: '停止或重試',
       description:
-        '處理中的任務可要求停止，會在目前步驟結束後停下。\n失敗或已停止的任務可重試，最多處理六次。',
+        '處理中的任務可要求停止，會在目前步驟結束後停下。\n失敗或已停止的任務可隨時重試。',
     },
   ];
   return { steps };

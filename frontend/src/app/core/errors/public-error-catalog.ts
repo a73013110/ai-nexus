@@ -268,7 +268,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   notification_cursor_required: '請提供本次通知清單的時間。',
   job_not_found: '找不到這個背景任務。',
   job_not_retryable: '只有失敗或已取消的任務可以重試。',
-  job_retry_limit: '此任務已嘗試六次。請確認設定後重新建立來源。',
+  job_recovery_limit: '任務在執行中多次中斷，已停止自動接續。可再重試；仍失敗請聯絡管理員。',
   job_handler_missing: '此任務類型已停用。',
   job_changed: '任務狀態已改變，請重新載入。',
   project_limit: '個人專案已達 100 個上限。',

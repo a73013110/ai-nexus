@@ -13,8 +13,11 @@ namespace AiNexus.Features.Work.Jobs;
 [Scoped]
 public sealed class JobService(AppDbContext db, IServiceProvider services)
 {
-    /// <summary>每個工作（含重試）的嘗試上限；worker 拒絕執行超過上限的認領，重試也不再受理。</summary>
-    internal const int MaxAttempts = 6;
+    /// <summary>
+    /// 自動接手的嘗試上限：租約到期（前一個 worker 中止）時，總嘗試次數已超過它就不再執行而直接失敗，
+    /// 避免讓程序中止的工作無限循環。使用者的重試是明確決定，不受此限。
+    /// </summary>
+    internal const int MaxRecoveredAttempts = 6;
 
     /// <summary>認領、heartbeat 與檢查點每次把租約延長的秒數；heartbeat 間隔必須遠小於它。</summary>
     internal const int LeaseSeconds = 60;

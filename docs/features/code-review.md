@@ -20,7 +20,7 @@
 
 ## 執行與權限
 
-沿用 BackgroundJobWorker 的租約、取消、checkpoint；區段分析、中間彙整、最終報告均持久化，失敗／取消最多六次處理，重試只處理未完成步驟。結果 ordinal `0..slices-1` 是區段、`slices..` 是可重用的中間彙整、`-1` 是整體報告。快照只有目前版本（`ReviewSnapshot.Current`）；改變指令或結果契約時升版，舊版快照不再支援。每次模型呼叫前後重新驗證 Gitea 及功能權限，模型設定變更拒絕沿用舊任務。共用 ModelTaskService 的額度、用量及價格快照；結果僅 owner 可讀，每次仍確認目前 Gitea 權限，不因保存 diff 繞過撤銷。
+沿用 BackgroundJobWorker 的租約、取消、checkpoint；區段分析、中間彙整、最終報告均持久化，失敗／取消可隨時重試，只處理未完成步驟。結果 ordinal `0..slices-1` 是區段、`slices..` 是可重用的中間彙整、`-1` 是整體報告。快照只有目前版本（`ReviewSnapshot.Current`）；改變指令或結果契約時升版，舊版快照不再支援。每次模型呼叫前後重新驗證 Gitea 及功能權限，模型設定變更拒絕沿用舊任務。共用 ModelTaskService 的額度、用量及價格快照；結果僅 owner 可讀，每次仍確認目前 Gitea 權限，不因保存 diff 繞過撤銷。
 
 ## API
 

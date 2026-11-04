@@ -46,15 +46,18 @@ public sealed partial class BackgroundJobWorker(
         var candidate = await db.BackgroundJobs.AsNoTracking()
             .Where(Claimable(now))
             .OrderBy(x => x.CreatedAt)
-            .Select(x => (Guid?)x.Id)
+            .Select(x => new { x.Id, x.Status })
             .FirstOrDefaultAsync(stop);
-        if (candidate is not Guid id) return false;
+        if (candidate is null) return false;
+        var id = candidate.Id;
+        // 執行中卻租約到期，表示前一個 worker 中止了，這次是自動接手；中止的原因可能正是這個工作。
+        var recovered = candidate.Status == RunStates.Running;
 
-        // 以條件式 UPDATE 認領工作：只有仍是可認領狀態的列會被改寫，其他 worker 搶到就直接放棄這次嘗試。
+        // 以條件式 UPDATE 認領工作：只有仍是讀到的可認領狀態的列會被改寫，其他 worker 搶到就直接放棄這次嘗試。
         var lease = Guid.NewGuid();
         var claimed = await db.BackgroundJobs
             .Where(Claimable(now))
-            .Where(x => x.Id == id)
+            .Where(x => x.Id == id && x.Status == candidate.Status)
             .ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Status, RunStates.Running)
                 .SetProperty(x => x.LeaseToken, lease)
@@ -104,7 +107,7 @@ public sealed partial class BackgroundJobWorker(
             }
             // 種類沒有（或已不再有）處理器時為 null。
             var handler = scope.ServiceProvider.GetRequiredService<KeyedServices<IBackgroundJobHandler>>().Find(job.Kind);
-            var outcome = job.Attempt > JobService.MaxAttempts ? JobsErrors.JobRetryLimit
+            var outcome = recovered && job.Attempt > JobService.MaxRecoveredAttempts ? JobsErrors.JobRecoveryLimit
                 : handler is null ? JobsErrors.JobHandlerMissing
                 : await handler.ExecuteAsync(new(db, job, lease), execution.Token);
             if (!outcome.IsSuccess)
