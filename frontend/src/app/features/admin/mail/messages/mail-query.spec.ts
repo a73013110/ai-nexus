@@ -1,11 +1,14 @@
 import { convertToParamMap } from '@angular/router';
-import { emptyMailQuery, mailFilters, mailQueryOptions } from './mail-query';
+import { queryDefaults, readQuery, writeQuery } from '@shared/ui/query-state';
+import { mailFilters, mailQueryOptions } from './mail-query';
+
+const empty = () => queryDefaults(mailQueryOptions);
 
 describe('mail query', () => {
   it('turns the applied query into API filters and rejects malformed categories', () => {
     const now = Date.parse('2026-10-20T08:00:00Z');
     expect(
-      mailFilters({ ...emptyMailQuery(), status: 'failed', search: '  chen@company.com ' }, now),
+      mailFilters({ ...empty(), status: 'failed', search: '  chen@company.com ' }, now),
     ).toEqual({
       status: 'failed',
       search: 'chen@company.com',
@@ -13,23 +16,20 @@ describe('mail query', () => {
       from: undefined,
       until: undefined,
     });
-    const recent = mailFilters(
-      { ...emptyMailQuery(), range: { preset: '24h', from: '', to: '' } },
-      now,
-    );
+    const recent = mailFilters({ ...empty(), range: { preset: '24h', from: '', to: '' } }, now);
     expect(typeof recent === 'object' && recent.from).toBe('2026-10-19T08:01:00.000Z');
-    expect(mailFilters({ ...emptyMailQuery(), category: 'Account Code' }, now)).toContain('分類');
+    expect(mailFilters({ ...empty(), category: 'Account Code' }, now)).toContain('分類');
   });
 
   it('reads links and ignores parameters it does not understand', () => {
-    const query = mailQueryOptions.fromParams!(
+    const query = readQuery(
+      mailQueryOptions,
       convertToParamMap({
         status: 'sent',
         category: 'account.email-change-code',
         range: '7d',
         search: 'x',
       }),
-      emptyMailQuery(),
     );
     expect(query).toEqual({
       status: 'sent',
@@ -37,12 +37,12 @@ describe('mail query', () => {
       category: 'account.email-change-code',
       range: { preset: '7d', from: '', to: '' },
     });
-    const ignored = mailQueryOptions.fromParams!(
+    const ignored = readQuery(
+      mailQueryOptions,
       convertToParamMap({ status: 'lost', category: '<script>', range: '9y' }),
-      emptyMailQuery(),
     );
-    expect(ignored).toEqual(emptyMailQuery());
-    expect(mailQueryOptions.toParams!(query)).toEqual({
+    expect(ignored).toEqual(empty());
+    expect(writeQuery(mailQueryOptions, query)).toEqual({
       status: 'sent',
       search: 'x',
       category: 'account.email-change-code',

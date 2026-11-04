@@ -1,7 +1,7 @@
 import { convertToParamMap } from '@angular/router';
+import { queryChips, queryDefaults, readQuery, writeQuery } from '@shared/ui/query-state';
 import { describe, expect, it } from 'vitest';
 import {
-  emptyLogQuery,
   logFilter,
   logQueryOptions,
   MAX_QUERY_DAYS,
@@ -10,8 +10,10 @@ import {
   type LogQuery,
 } from './log-query';
 
+const empty = () => queryDefaults(logQueryOptions);
+
 const now = Date.parse('2026-10-16T00:00:00Z');
-const query = (values: Partial<LogQuery>): LogQuery => ({ ...emptyLogQuery(), ...values });
+const query = (values: Partial<LogQuery>): LogQuery => ({ ...empty(), ...values });
 const issue = 'NX-0123456789abcdef0123456789abcdef';
 const trace = 'ABCDEF0123456789ABCDEF0123456789';
 const guid = '6f1c2d3e-4a5b-4c6d-8e9f-0a1b2c3d4e5f';
@@ -62,7 +64,7 @@ describe('log query', () => {
 
   it('presets the query from links, including the older single-ID links', () => {
     const read = (params: Record<string, string | string[]>) =>
-      logQueryOptions.fromParams!(convertToParamMap(params), emptyLogQuery());
+      readQuery(logQueryOptions, convertToParamMap(params));
     const link = read({
       traceId: trace,
       from: '2026-10-01T00:00:00Z',
@@ -84,20 +86,20 @@ describe('log query', () => {
   });
 
   it('writes only conditions away from their defaults, and chips for them', () => {
-    expect(logQueryOptions.toParams!(emptyLogQuery())).toEqual({});
+    expect(writeQuery(logQueryOptions, empty())).toEqual({});
     const applied = query({
       levels: ['Error'],
       search: guid,
       guid: 'jobId',
       category: ' Inference ',
     });
-    expect(logQueryOptions.toParams!(applied)).toEqual({
+    expect(writeQuery(logQueryOptions, applied)).toEqual({
       level: ['Error'],
       q: guid,
       match: 'jobId',
       category: 'Inference',
     });
-    expect(logQueryOptions.chips!(applied).map((chip) => chip.label)).toEqual([
+    expect(queryChips(logQueryOptions, applied).map((chip) => chip.label)).toEqual([
       '等級：Error',
       'JobId：' + guid,
       '模組 Category：Inference',

@@ -1,12 +1,7 @@
 import { convertToParamMap } from '@angular/router';
+import { queryChips, queryDefaults, readQuery, writeQuery } from '@shared/ui/query-state';
 import { describe, expect, it } from 'vitest';
-import {
-  actionLabel,
-  actionsFor,
-  auditFilters,
-  auditQueryOptions,
-  emptyAuditQuery,
-} from './audit-query';
+import { actionLabel, actionsFor, auditFilters, auditQueryOptions } from './audit-query';
 
 const actions = [
   {
@@ -27,6 +22,7 @@ const options = auditQueryOptions(
   () => actions,
   () => modules,
 );
+const empty = () => queryDefaults(options);
 
 describe('audit query', () => {
   it('lists the actions of a category', () => {
@@ -45,7 +41,7 @@ describe('audit query', () => {
   it('sends results and a date range to the API', () => {
     expect(
       auditFilters({
-        ...emptyAuditQuery(),
+        ...empty(),
         results: ['failed'],
         feature: 'attendance.records',
         range: { preset: 'custom', from: '2026-10-01', to: '2026-10-02' },
@@ -64,7 +60,7 @@ describe('audit query', () => {
 
   it('reads links from user details and system logs', () => {
     const read = (params: Record<string, string | string[]>) =>
-      options.fromParams!(convertToParamMap(params), emptyAuditQuery());
+      readQuery(options, convertToParamMap(params));
     expect(read({ search: 'user-1', category: 'access' })).toMatchObject({
       search: 'user-1',
       category: 'access',
@@ -91,20 +87,20 @@ describe('audit query', () => {
 
   it('names chips from the catalog and leaves the category to the view switch', () => {
     const query = {
-      ...emptyAuditQuery(),
+      ...empty(),
       category: 'access',
       action: 'identity.',
       feature: 'attendance.records',
       results: ['success'],
       range: { preset: '7d', from: '', to: '' },
     };
-    expect(options.chips!(query).map((chip) => chip.label)).toEqual([
+    expect(queryChips(options, query).map((chip) => chip.label)).toEqual([
       '動作：使用者（全部）',
       '功能：出勤紀錄',
       '結果：完成',
       '時間：最近 7 天',
     ]);
-    expect(options.toParams!(query)).toEqual({
+    expect(writeQuery(options, query)).toEqual({
       category: 'access',
       action: 'identity.',
       feature: 'attendance.records',

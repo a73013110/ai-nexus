@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryBar, QueryField } from './query-bar';
+import { queryField } from './query-fields';
 import { QueryState } from './query-state';
 
 interface Sample {
@@ -21,11 +22,10 @@ interface Sample {
 class Host {
   readonly busy = signal(false);
   readonly state = new QueryState<Sample>({
-    defaults: () => ({ text: '', tag: '' }),
-    chips: (value) => [
-      ...(value.text ? [{ id: 'text', label: '文字：' + value.text, clear: { text: '' } }] : []),
-      ...(value.tag ? [{ id: 'tag', label: '標籤：' + value.tag, clear: { tag: '' } }] : []),
-    ],
+    fields: {
+      text: queryField.text('text', { chip: '文字' }),
+      tag: queryField.text('tag', { chip: '標籤' }),
+    },
   });
 }
 
@@ -145,12 +145,11 @@ describe('QueryBar', () => {
 class OrderedHost {
   // chips 先列文字，欄位卻是標籤在前：chip 要跟著欄位。
   readonly state = new QueryState<Sample & { extra: string }>({
-    defaults: () => ({ text: '', tag: '', extra: '' }),
-    chips: (value) => [
-      ...(value.extra ? [{ id: 'extra', label: '其他', clear: { extra: '' } }] : []),
-      ...(value.text ? [{ id: 'text', label: '文字', clear: { text: '' } }] : []),
-      ...(value.tag ? [{ id: 'tag', label: '標籤', clear: { tag: '' } }] : []),
-    ],
+    fields: {
+      extra: { initial: () => '', chip: () => '其他' },
+      text: { initial: () => '', chip: () => '文字' },
+      tag: { initial: () => '', chip: () => '標籤' },
+    },
   });
 }
 

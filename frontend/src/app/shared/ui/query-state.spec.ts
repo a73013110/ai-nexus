@@ -1,24 +1,29 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { Router, convertToParamMap, provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it } from 'vitest';
-import { QueryState, queryState, type QueryStateOptions } from './query-state';
+import { queryField } from './query-fields';
+import {
+  QueryState,
+  queryChips,
+  queryState,
+  readQuery,
+  writeQuery,
+  type QueryStateOptions,
+} from './query-state';
 
 interface Sample {
   text: string;
   tags: string[];
 }
 const options: QueryStateOptions<Sample> = {
-  defaults: () => ({ text: '', tags: [] }),
-  toParams: (value) => ({
-    q: value.text || undefined,
-    tag: value.tags.length ? value.tags : undefined,
-  }),
-  fromParams: (params, defaults) => ({
-    text: params.get('q') ?? defaults.text,
-    tags: params.getAll('tag'),
-  }),
-  chips: (value) =>
-    value.text ? [{ id: 'text', label: '文字：' + value.text, clear: { text: '' } }] : [],
+  fields: {
+    text: queryField.text('q', { chip: '文字' }),
+    tags: {
+      initial: () => [],
+      read: (params) => params.getAll('tag'),
+      write: (tags) => ({ tag: tags }),
+    },
+  },
   validate: (value) => (value.text === 'bad' ? '不可查詢' : ''),
 };
 
@@ -41,6 +46,16 @@ describe('QueryState', () => {
     expect(state.applied()).not.toBe(before);
   });
 
+  it('writes and chips only conditions away from their defaults', () => {
+    expect(writeQuery(options, { text: '', tags: [] })).toEqual({});
+    expect(writeQuery(options, { text: ' a ', tags: ['x'] })).toEqual({ q: 'a', tag: ['x'] });
+    expect(queryChips(options, { text: 'a', tags: ['x'] })).toEqual([
+      { id: 'text', label: '文字：a', clear: { text: '' } },
+    ]);
+    // 缺少的參數沿用預設值。
+    expect(readQuery(options, convertToParamMap({ tag: 'x' }))).toEqual({ text: '', tags: ['x'] });
+  });
+
   it('refuses invalid conditions and keeps the applied ones', () => {
     const state = new QueryState(options);
     state.set('text', 'bad');
@@ -50,8 +65,9 @@ describe('QueryState', () => {
   });
 
   it('clears dependent conditions when their parent changes to another value', () => {
+    const blank = { initial: () => '' };
     const state = new QueryState<{ unit: string; person: string; text: string }>({
-      defaults: () => ({ unit: '', person: '', text: '' }),
+      fields: { unit: blank, person: blank, text: blank },
       dependents: { unit: ['person'] },
     });
     state.set('person', 'amy');

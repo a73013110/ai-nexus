@@ -1,5 +1,5 @@
-import type { ParamMap, Params } from '@angular/router';
-import type { QueryChip, QueryStateOptions } from '@shared/ui/query-state';
+import { queryField } from '@shared/ui/query-fields';
+import type { QueryStateOptions } from '@shared/ui/query-state';
 import { CUSTOM_RANGE, type TimeRange, type TimeRangePreset } from '@shared/ui/time-range-picker';
 import type { AttendanceRecordFilters } from '../attendance-api';
 import { monthBounds, shiftMonth, taipeiToday } from '../attendance-presentation';
@@ -49,14 +49,6 @@ export const cardKey = (cardNumber: string) => CARD + cardNumber;
 /** `cardKey` 的卡號；不是卡號時為空字串。 */
 export const cardOf = (person: string) =>
   person.startsWith(CARD) ? person.slice(CARD.length) : '';
-
-export const emptyRecordsQuery = (): RecordsQuery => ({
-  range: { preset: DEFAULT_RANGE, from: '', to: '' },
-  person: '',
-  unitId: '',
-  includeDaysOff: false,
-  coverage: '',
-});
 
 const dayNumber = (date: string) => Date.parse(date + 'T00:00:00Z') / 86_400_000;
 
@@ -120,46 +112,6 @@ export function recordFilters(
   };
 }
 
-function toParams(query: RecordsQuery): Params {
-  const custom = query.range.preset === CUSTOM_RANGE;
-  const card = cardOf(query.person);
-  return {
-    range: !custom && query.range.preset !== DEFAULT_RANGE ? query.range.preset : undefined,
-    from: custom ? query.range.from || undefined : undefined,
-    to: custom ? query.range.to || undefined : undefined,
-    user: !card ? query.person || undefined : undefined,
-    card: card || undefined,
-    unit: query.unitId || undefined,
-    holidays: query.includeDaysOff ? 'true' : undefined,
-    coverage: RECORD_COVERAGES.find((item) => item.value === query.coverage)?.param || undefined,
-  };
-}
-
-/** 連結帶入的條件；格式不對的參數沿用預設值，自訂區間超過上限時由 `validate` 擋下並說明。 */
-function fromParams(params: ParamMap, defaults: RecordsQuery): RecordsQuery {
-  const day = (key: string) => (DAY.test(params.get(key) ?? '') ? params.get(key)! : '');
-  const id = (key: string) =>
-    GUID.test(params.get(key) ?? '') ? params.get(key)!.toLowerCase() : '';
-  const from = day('from'),
-    to = day('to');
-  const preset = params.get('range') ?? '';
-  const card = (params.get('card') ?? '').trim();
-  return {
-    range:
-      from || to
-        ? { preset: CUSTOM_RANGE, from, to }
-        : RECORD_RANGES.some((item) => item.value === preset)
-          ? { preset, from: '', to: '' }
-          : defaults.range,
-    person: id('user') || (card && card.length <= CARD_MAX ? cardKey(card) : ''),
-    unitId: id('unit'),
-    includeDaysOff: params.get('holidays') === 'true',
-    coverage:
-      RECORD_COVERAGES.find((item) => item.param && item.param === params.get('coverage'))?.value ??
-      '',
-  };
-}
-
 /** 區間的一行摘要：預設區間名稱加上實際起訖。 */
 export function recordsRangeLabel(range: TimeRange, now = Date.now()) {
   const bounds = recordsRange(range, now);
@@ -173,47 +125,47 @@ export function recordsRangeLabel(range: TimeRange, now = Date.now()) {
 
 /**
  * 人員與單位 chip 的名稱由頁面提供（人員選單、單位清單）；還不知道名稱時顯示「指定的人員」，卡號則顯示卡號。
+ * 連結帶入的條件格式不對時沿用預設值，自訂區間超過上限時由 `validate` 擋下並說明。
  */
 export function recordsQueryOptions(names: {
   person: (id: string) => string | undefined;
   unit: (id: string) => string | undefined;
 }): QueryStateOptions<RecordsQuery> {
+  const id = (param: string) =>
+    queryField.text(param, { pattern: GUID, normalize: (value) => value.toLowerCase() });
   return {
-    defaults: emptyRecordsQuery,
-    toParams,
-    fromParams,
+    fields: {
+      range: queryField.range(RECORD_RANGES, {
+        initial: DEFAULT_RANGE,
+        chip: '區間',
+        label: (range) => recordsRangeLabel(range),
+      }),
+      unitId: {
+        ...id('unit'),
+        chip: (unitId) => '單位：' + (names.unit(unitId) ?? '指定的單位（含下層）'),
+      },
+      // 使用者寫 `user`、只有姓名的持有人寫 `card`，兩者擇一。
+      person: {
+        initial: () => '',
+        read: (params) => {
+          const user = id('user').read!(params);
+          const card = (params.get('card') ?? '').trim();
+          return user ?? (card && card.length <= CARD_MAX ? cardKey(card) : undefined);
+        },
+        write: (person) => (cardOf(person) ? { card: cardOf(person) } : { user: person }),
+        chip: (person) =>
+          '人員：' +
+          (names.person(person) ?? (cardOf(person) ? `卡號 ${cardOf(person)}` : '指定的人員')),
+      },
+      includeDaysOff: queryField.flag('holidays', '含放假日'),
+      // 查詢列前方的切換本身就看得到目前的值，不另做條件標籤。
+      coverage: queryField.choice('coverage', RECORD_COVERAGES),
+    },
     // 人員選單依單位重讀，換單位時原本選的人可能不在新單位。
     dependents: { unitId: ['person'] },
     validate: (query) => {
       const range = recordsRange(query.range);
       return typeof range === 'string' ? range : '';
-    },
-    chips: (query) => {
-      const list: QueryChip<RecordsQuery>[] = [];
-      if (query.range.preset !== DEFAULT_RANGE)
-        list.push({
-          id: 'range',
-          label: '區間：' + recordsRangeLabel(query.range),
-          clear: { range: emptyRecordsQuery().range },
-        });
-      if (query.unitId)
-        list.push({
-          id: 'unit',
-          label: '單位：' + (names.unit(query.unitId) ?? '指定的單位（含下層）'),
-          clear: { unitId: '' },
-        });
-      if (query.person)
-        list.push({
-          id: 'person',
-          label:
-            '人員：' +
-            (names.person(query.person) ??
-              (cardOf(query.person) ? `卡號 ${cardOf(query.person)}` : '指定的人員')),
-          clear: { person: '' },
-        });
-      if (query.includeDaysOff)
-        list.push({ id: 'holidays', label: '含放假日', clear: { includeDaysOff: false } });
-      return list;
     },
   };
 }

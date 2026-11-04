@@ -18,7 +18,8 @@
 
 ## 查詢
 
-- 條件用 `QueryBar`＋`queryState()`：欄位改的是草稿，按「查詢」（或欄位內 Enter）才套用；有未套用的變更就提示。已套用的條件成為可逐一移除的 chip（欄位標 `nxQueryField` 時依欄位順序），並寫入 URL：重新整理與分享連結都以它為準。分類 `ViewSwitch` 與移除 chip 立即套用（`commit`），不帶走其他未套用的草稿。連結的條件驗證不過時不查詢：結果維持預設、條件留在草稿並顯示原因。
+- 條件用 `QueryBar`＋`queryState()`：欄位改的是草稿，按「查詢」或 Enter 才套用。已套用、不等於預設值的條件寫入 URL（重新整理、分享連結以它為準）並成為可移除 chip（欄位標 `nxQueryField` 時依欄位順序）。分類 `ViewSwitch` 與移除 chip 立即套用（`commit`），不帶走其他未套用的草稿。
+- 每個條件在 `fields` 宣告一次（預設值、URL 參數、chip），常見的用 [`queryField`](../../frontend/src/app/shared/ui/query-fields.ts)。
 - 連動條件（單位→人員）：上層放前面，以 `dependents` 宣告；上層換值清下層，清回預設保留。下層選項依草稿的上層值向後端重讀。
 - 分類 `ViewSwitch` 只篩同一份資料時放 `QueryBar` 的 `[query-lead]`；切換成另一份資料（例：價格表的「目前價格／價格歷史」）時，segment `ViewSwitch` 放在 `.page-toolbar`，該頁的一句說明以 `.form-note` 放同一列，放不下自動換列。間距由容器提供，頁面不替 `ViewSwitch` 或說明補 margin。
 - `.page-toolbar` 只分左右兩端：左邊搜尋或說明，右邊的多顆動作包進 `.page-actions`；手機上動作鈕只留圖示。

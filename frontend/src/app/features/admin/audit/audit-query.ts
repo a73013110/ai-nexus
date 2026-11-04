@@ -1,13 +1,11 @@
-import type { ParamMap, Params } from '@angular/router';
 import { catalogFeature } from '@core/api/catalog';
 import type { AuditActionDto, AuditModuleDto } from '@core/api/schema';
 import { TRACE_ID } from '@core/errors/safe-errors';
-import type { QueryChip, QueryStateOptions } from '@shared/ui/query-state';
+import { queryField } from '@shared/ui/query-fields';
+import type { QueryStateOptions } from '@shared/ui/query-state';
 import {
-  CUSTOM_RANGE,
   hoursAgo,
   timeRangeBounds,
-  timeRangeLabel,
   type TimeRange,
   type TimeRangePreset,
 } from '@shared/ui/time-range-picker';
@@ -38,19 +36,8 @@ export const AUDIT_RESULTS = [
   { value: 'success', label: '完成' },
   { value: 'failed', label: '失敗或拒絕' },
 ];
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ACTION = /^[a-z0-9_.-]{1,120}$/;
 const FEATURE = /^[a-z0-9.-]{1,100}$/;
-
-export const emptyAuditQuery = (): AuditQuery => ({
-  category: '',
-  search: '',
-  action: '',
-  feature: '',
-  results: [],
-  range: { preset: 'all', from: '', to: '' },
-  traceId: '',
-});
 
 /** 分類下可選的動作；未選分類時列出全部。 */
 export const actionsFor = (actions: readonly AuditActionDto[], category: string) =>
@@ -82,94 +69,37 @@ export function auditFilters(query: AuditQuery, now = Date.now()): AuditFilters 
   };
 }
 
-function toParams(query: AuditQuery): Params {
-  const custom = query.range.preset === CUSTOM_RANGE;
-  return {
-    category: query.category || undefined,
-    search: query.search.trim() || undefined,
-    action: query.action || undefined,
-    feature: query.feature || undefined,
-    result: query.results.length ? query.results : undefined,
-    range: !custom && query.range.preset !== 'all' ? query.range.preset : undefined,
-    from: custom ? query.range.from || undefined : undefined,
-    until: custom ? query.range.to || undefined : undefined,
-    traceId: query.traceId || undefined,
-  };
-}
-
-/** 使用者詳情（`search`）、系統日誌（`traceId`）與功能使用量（`feature`）的連結會帶入條件；日期只收 `YYYY-MM-DD`。 */
-function fromParams(params: ParamMap, defaults: AuditQuery): AuditQuery {
-  const day = (key: string) => (DAY.test(params.get(key) ?? '') ? params.get(key)! : '');
-  const from = day('from'),
-    until = day('until');
-  const preset = params.get('range') ?? '';
-  const traceId = params.get('traceId') ?? '';
-  return {
-    category: /^[a-z]{1,40}$/.test(params.get('category') ?? '') ? params.get('category')! : '',
-    search: (params.get('search') ?? '').slice(0, 120),
-    action: ACTION.test(params.get('action') ?? '') ? params.get('action')! : '',
-    feature: FEATURE.test(params.get('feature') ?? '') ? params.get('feature')! : '',
-    results: AUDIT_RESULTS.map((item) => item.value).filter((value) =>
-      params.getAll('result').includes(value),
-    ),
-    range:
-      from || until
-        ? { preset: CUSTOM_RANGE, from, to: until }
-        : AUDIT_RANGES.some((item) => item.value === preset)
-          ? { preset, from: '', to: '' }
-          : defaults.range,
-    traceId: TRACE_ID.test(traceId) ? traceId.toLowerCase() : '',
-  };
-}
-
-/** 稽核頁 `QueryState` 的設定；動作 chip 的名稱來自 catalog，catalog 載入前先顯示原始值。 */
+/**
+ * 稽核頁 `QueryState` 的設定；動作 chip 的名稱來自 catalog，catalog 載入前先顯示原始值。
+ * 使用者詳情（`search`）、系統日誌（`traceId`）與功能使用量（`feature`）的連結會帶入條件。
+ */
 export function auditQueryOptions(
   actions: () => readonly AuditActionDto[],
   modules: () => readonly AuditModuleDto[],
 ): QueryStateOptions<AuditQuery> {
   return {
-    defaults: emptyAuditQuery,
-    toParams,
-    fromParams,
+    fields: {
+      category: queryField.text('category', { pattern: /^[a-z]{1,40}$/ }),
+      search: queryField.text('search', { max: 120, chip: '搜尋' }),
+      action: {
+        ...queryField.text('action', { pattern: ACTION }),
+        chip: (action) => '動作：' + actionLabel(action, actions(), modules()),
+      },
+      feature: {
+        ...queryField.text('feature', { pattern: FEATURE }),
+        chip: (feature) => '功能：' + (catalogFeature(feature)?.name ?? feature),
+      },
+      results: queryField.choices('result', AUDIT_RESULTS, { chip: '結果' }),
+      range: queryField.range(AUDIT_RANGES, { initial: 'all', to: 'until', chip: '時間' }),
+      traceId: queryField.text('traceId', {
+        pattern: TRACE_ID,
+        normalize: (value) => value.toLowerCase(),
+        chip: '同一流程',
+      }),
+    },
     validate: (query) => {
       const filters = auditFilters(query);
       return typeof filters === 'string' ? filters : '';
-    },
-    chips: (query) => {
-      const list: QueryChip<AuditQuery>[] = [];
-      if (query.search.trim())
-        list.push({ id: 'search', label: '搜尋：' + query.search.trim(), clear: { search: '' } });
-      if (query.action)
-        list.push({
-          id: 'action',
-          label: '動作：' + actionLabel(query.action, actions(), modules()),
-          clear: { action: '' },
-        });
-      if (query.feature)
-        list.push({
-          id: 'feature',
-          label: '功能：' + (catalogFeature(query.feature)?.name ?? query.feature),
-          clear: { feature: '' },
-        });
-      if (query.results.length)
-        list.push({
-          id: 'results',
-          label:
-            '結果：' +
-            AUDIT_RESULTS.filter((item) => query.results.includes(item.value))
-              .map((item) => item.label)
-              .join('、'),
-          clear: { results: [] },
-        });
-      if (query.range.preset !== 'all')
-        list.push({
-          id: 'range',
-          label: '時間：' + timeRangeLabel(query.range, AUDIT_RANGES),
-          clear: { range: emptyAuditQuery().range },
-        });
-      if (query.traceId)
-        list.push({ id: 'traceId', label: '同一流程：' + query.traceId, clear: { traceId: '' } });
-      return list;
     },
   };
 }

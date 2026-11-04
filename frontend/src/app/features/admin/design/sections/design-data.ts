@@ -21,6 +21,7 @@ import { Field } from '@shared/ui/field';
 import { FileList, FileListItem } from '@shared/ui/file-list';
 import { Icon } from '@shared/ui/icon';
 import { QueryBar, QueryField } from '@shared/ui/query-bar';
+import { queryField } from '@shared/ui/query-fields';
 import { QueryState } from '@shared/ui/query-state';
 import { Panel } from '@shared/ui/panel';
 import { PropertyGroup, PropertyList } from '@shared/ui/property-list';
@@ -576,11 +577,10 @@ export class DesignData {
   readonly selected = signal<string | null>(null);
   /** 只存在本地：工作台保留自己的 URL，因此狀態不需要路由。 */
   readonly query = new QueryState<{ view: string; event: string }>({
-    defaults: () => ({ view: 'all', event: '' }),
-    chips: (query) =>
-      query.event.trim()
-        ? [{ id: 'event', label: '事件：' + query.event.trim(), clear: { event: '' } }]
-        : [],
+    fields: {
+      view: { initial: () => 'all' },
+      event: queryField.text('event', { chip: '事件' }),
+    },
   });
   readonly tableStates = [
     { value: 'rows', label: '資料' },

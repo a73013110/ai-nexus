@@ -22,6 +22,7 @@ import { Icon } from '@shared/ui/icon';
 import { CalendarDayTemplate, MonthCalendar, type CalendarDay } from '@shared/ui/month-calendar';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
+import { queryField } from '@shared/ui/query-fields';
 import { queryState, type QueryStateOptions } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
@@ -48,25 +49,21 @@ interface CalendarQuery {
   view: CalendarView;
 }
 const currentMonth = () => taipeiToday().slice(0, 7);
-/** 月份與檢視寫進網址（本月、月曆不寫），重新整理與分享連結停在同一個月、同一種檢視。 */
-const calendarQueryOptions: QueryStateOptions<CalendarQuery> = {
-  defaults: () => ({ month: currentMonth(), view: 'calendar' }),
-  toParams: (query) => ({
-    month: query.month === currentMonth() ? undefined : query.month,
-    view: query.view === 'list' ? 'list' : undefined,
-  }),
-  fromParams: (params, defaults) => {
-    const month = params.get('month') ?? '';
-    return {
-      month: MONTH.test(month) ? month : defaults.month,
-      view: params.get('view') === 'list' ? 'list' : 'calendar',
-    };
-  },
-};
-const VIEWS: ViewOption[] = [
+const VIEWS: (ViewOption & { value: CalendarView })[] = [
   { value: 'calendar', label: '月曆', icon: 'calendar' },
   { value: 'list', label: '清單', icon: 'list' },
 ];
+/** 月份與檢視寫進網址（本月、月曆不寫），重新整理與分享連結停在同一個月、同一種檢視。 */
+const calendarQueryOptions: QueryStateOptions<CalendarQuery> = {
+  fields: {
+    month: {
+      initial: currentMonth,
+      read: (params) => (MONTH.test(params.get('month') ?? '') ? params.get('month')! : undefined),
+      write: (month) => ({ month }),
+    },
+    view: queryField.choice('view', VIEWS),
+  },
+};
 const MISSING =
   '未建立：公文系統沒有這一天，不能在這裡新增。出勤判定時，週末當放假，平日無法判定。';
 

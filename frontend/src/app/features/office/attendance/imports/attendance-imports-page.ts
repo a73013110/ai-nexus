@@ -34,7 +34,6 @@ import { PunchTable, punchTable } from '../punches/punch-table';
 import {
   IMPORT_RANGES,
   IMPORT_STATUSES,
-  emptyImportsQuery,
   importFilters,
   importsQueryOptions,
 } from './imports-query';
@@ -191,7 +190,7 @@ export class AttendanceImportsPage {
   }
   /** 已被取代的匯入：只看這個檔的紀錄，最新一次成功的就在最前面。 */
   showFile(fileName: string) {
-    this.query.commit({ fileName, status: '', range: emptyImportsQuery().range });
+    this.query.commit({ ...this.query.defaults(), fileName });
   }
   openReimport() {
     this.failure.set('');

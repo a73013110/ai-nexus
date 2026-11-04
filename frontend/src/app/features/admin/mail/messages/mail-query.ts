@@ -1,11 +1,9 @@
-import type { ParamMap, Params } from '@angular/router';
-import type { QueryChip, QueryStateOptions } from '@shared/ui/query-state';
+import { queryField } from '@shared/ui/query-fields';
+import type { QueryStateOptions } from '@shared/ui/query-state';
 import type { SelectOption } from '@shared/ui/select';
 import {
-  CUSTOM_RANGE,
   hoursAgo,
   timeRangeBounds,
-  timeRangeLabel,
   type TimeRange,
   type TimeRangePreset,
 } from '@shared/ui/time-range-picker';
@@ -35,15 +33,7 @@ export const MAIL_RANGES: TimeRangePreset[] = [
   { value: '30d', label: '最近 30 天', duration: hoursAgo(24 * 30) },
 ];
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const CATEGORY = /^[a-z0-9.-]{1,64}$/;
-
-export const emptyMailQuery = (): MailQuery => ({
-  status: '',
-  search: '',
-  category: '',
-  range: { preset: 'all', from: '', to: '' },
-});
 
 export function mailFilters(query: MailQuery, now = Date.now()): MailFilters | string {
   const bounds = timeRangeBounds(query.range, MAIL_RANGES, now);
@@ -59,63 +49,15 @@ export function mailFilters(query: MailQuery, now = Date.now()): MailFilters | s
   };
 }
 
-function toParams(query: MailQuery): Params {
-  const custom = query.range.preset === CUSTOM_RANGE;
-  return {
-    status: query.status || undefined,
-    search: query.search.trim() || undefined,
-    category: query.category.trim() || undefined,
-    range: !custom && query.range.preset !== 'all' ? query.range.preset : undefined,
-    from: custom ? query.range.from || undefined : undefined,
-    until: custom ? query.range.to || undefined : undefined,
-  };
-}
-
-/** 連結帶入的條件；格式不對的參數沿用預設值。日期只收 `YYYY-MM-DD`。 */
-function fromParams(params: ParamMap, defaults: MailQuery): MailQuery {
-  const day = (key: string) => (DAY.test(params.get(key) ?? '') ? params.get(key)! : '');
-  const from = day('from'),
-    until = day('until');
-  const status = params.get('status') ?? '';
-  const category = params.get('category') ?? '';
-  const preset = params.get('range') ?? '';
-  return {
-    status: MAIL_STATUSES.some((item) => item.value === status) ? status : '',
-    search: (params.get('search') ?? '').slice(0, 254),
-    category: CATEGORY.test(category) ? category : '',
-    range:
-      from || until
-        ? { preset: CUSTOM_RANGE, from, to: until }
-        : MAIL_RANGES.some((item) => item.value === preset)
-          ? { preset, from: '', to: '' }
-          : defaults.range,
-  };
-}
-
 export const mailQueryOptions: QueryStateOptions<MailQuery> = {
-  defaults: emptyMailQuery,
-  toParams,
-  fromParams,
+  fields: {
+    status: queryField.choice('status', MAIL_STATUSES),
+    search: queryField.text('search', { max: 254, chip: '搜尋' }),
+    category: queryField.text('category', { pattern: CATEGORY, chip: '分類' }),
+    range: queryField.range(MAIL_RANGES, { initial: 'all', to: 'until', chip: '時間' }),
+  },
   validate: (query) => {
     const filters = mailFilters(query);
     return typeof filters === 'string' ? filters : '';
-  },
-  chips: (query) => {
-    const list: QueryChip<MailQuery>[] = [];
-    if (query.search.trim())
-      list.push({ id: 'search', label: '搜尋：' + query.search.trim(), clear: { search: '' } });
-    if (query.category.trim())
-      list.push({
-        id: 'category',
-        label: '分類：' + query.category.trim(),
-        clear: { category: '' },
-      });
-    if (query.range.preset !== 'all')
-      list.push({
-        id: 'range',
-        label: '時間：' + timeRangeLabel(query.range, MAIL_RANGES),
-        clear: { range: emptyMailQuery().range },
-      });
-    return list;
   },
 };

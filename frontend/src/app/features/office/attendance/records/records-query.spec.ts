@@ -1,8 +1,8 @@
 import { convertToParamMap } from '@angular/router';
 import { describe, expect, it } from 'vitest';
+import { queryChips, queryDefaults, readQuery, writeQuery } from '@shared/ui/query-state';
 import { CUSTOM_RANGE } from '@shared/ui/time-range-picker';
 import {
-  emptyRecordsQuery,
   cardKey,
   recordFilters,
   recordsQueryOptions,
@@ -13,6 +13,7 @@ import {
 // 2026-10-31 20:00 台北＝當天 UTC 12:00；瀏覽器在別的時區也以台北日期換算。
 const NOW = Date.parse('2026-10-31T12:00:00Z');
 const options = recordsQueryOptions({ person: () => '王小明', unit: () => undefined });
+const empty = () => queryDefaults(options);
 const preset = (value: string) => ({ preset: value, from: '', to: '' });
 
 describe('records query', () => {
@@ -61,31 +62,25 @@ describe('records query', () => {
 
   it('keeps applied conditions in the URL and reads them back', () => {
     const query = {
-      ...emptyRecordsQuery(),
+      ...empty(),
       range: { preset: CUSTOM_RANGE, from: '2026-09-15', to: '2026-10-14' },
       person: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
       includeDaysOff: true,
       coverage: 'Unexplained' as const,
     };
-    const params = options.toParams!(query);
+    const params = writeQuery(options, query);
     expect(params).toEqual({
-      range: undefined,
       from: '2026-09-15',
       to: '2026-10-14',
       user: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-      card: undefined,
-      unit: undefined,
       holidays: 'true',
       coverage: 'unexplained',
     });
-    const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value));
-    expect(options.fromParams!(convertToParamMap(clean), emptyRecordsQuery())).toEqual(query);
+    expect(readQuery(options, convertToParamMap(params))).toEqual(query);
     // 缺口切換不是 chip（查詢列前方已看得到），但一樣送給伺服器並寫進網址。
     expect(recordFilters(query, NOW)).toMatchObject({ coverage: 'Unexplained' });
-    expect(
-      Object.values(options.toParams!(emptyRecordsQuery())).every((value) => value === undefined),
-    ).toBe(true);
-    expect(options.chips!(query).map((chip) => chip.label)).toEqual([
+    expect(writeQuery(options, empty())).toEqual({});
+    expect(queryChips(options, query).map((chip) => chip.label)).toEqual([
       '區間：2026/09/15 — 10/14',
       '人員：王小明',
       '含放假日',
@@ -94,29 +89,26 @@ describe('records query', () => {
 
   it('sends data without an account by its card number, never as a user', () => {
     const query = {
-      ...emptyRecordsQuery(),
+      ...empty(),
       range: preset('year'),
       person: cardKey('3368'),
     };
-    expect(options.toParams!(query)).toMatchObject({
-      range: 'year',
-      user: undefined,
-      card: '3368',
+    expect(writeQuery(options, query)).toEqual({ range: 'year', card: '3368' });
+    expect(readQuery(options, convertToParamMap({ card: ' 3368 ' }))).toMatchObject({
+      person: cardKey('3368'),
     });
-    expect(
-      options.fromParams!(convertToParamMap({ card: ' 3368 ' }), { ...emptyRecordsQuery() }),
-    ).toMatchObject({ person: cardKey('3368') });
     expect(recordFilters(query, NOW)).toMatchObject({ userId: undefined, card: '3368' });
     // 人員選單還沒讀到時，chip 以卡號顯示。
     const unnamed = recordsQueryOptions({ person: () => undefined, unit: () => undefined });
-    expect(unnamed.chips!(query).map((chip) => chip.label)).toEqual([
+    expect(queryChips(unnamed, query).map((chip) => chip.label)).toEqual([
       '區間：今年（' + recordsRangeLabel(preset('year')).split('（')[1],
       '人員：卡號 3368',
     ]);
   });
 
   it('ignores malformed link parameters', () => {
-    const query = options.fromParams!(
+    const query = readQuery(
+      options,
       convertToParamMap({
         range: 'decade',
         user: 'not-a-guid',
@@ -125,9 +117,8 @@ describe('records query', () => {
         holidays: '1',
         coverage: 'Covered',
       }),
-      emptyRecordsQuery(),
     );
-    expect(query).toEqual(emptyRecordsQuery());
+    expect(query).toEqual(empty());
     expect(recordFilters(query, NOW)).toEqual({
       from: '2026-10-01',
       to: '2026-10-31',
