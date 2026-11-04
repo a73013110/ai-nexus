@@ -7,6 +7,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -47,17 +48,18 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
 }
 
 /// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>
-internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
+internal sealed class SaveEvaluationSet(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/sets", (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapPost("/sets", (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, null, body, ct))
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetCreated);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetCreated);
 
-    public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/sets/{id:guid}", (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
+        routes.MapPut("/sets/{id:guid}", (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetUpdated);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetUpdated);
+    }
 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {

@@ -21,5 +21,6 @@ public sealed class RemoteFilesModule : IFeatureModule
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
-        => DownloadRemoteFile.Map(api.MapGroup("/remote-files").RequireRateLimiting(RateLimit));
+        => api.MapGroup("/remote-files").RequireRateLimiting(RateLimit)
+            .MapSlice<DownloadRemoteFile>();
 }

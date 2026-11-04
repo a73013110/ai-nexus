@@ -33,33 +33,35 @@ public sealed class AttendanceModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var records = api.MapGroup("/attendance-records").RequireFeature(FeatureCatalog.AttendanceRecords);
-        ListAttendanceRecords.Map(records);
-        ListAttendancePeople.Map(records);
-        ExportAttendanceRecords.Map(records);
-        GetAttendanceRules.Map(api.MapGroup("/attendance-rules").RequireFeature(FeatureCatalog.AttendanceRecords));
-        GetGdForm.Map(api.MapGroup("/attendance-forms").RequireFeature(FeatureCatalog.AttendanceRecords));
+        api.MapGroup("/attendance-records").RequireFeature(FeatureCatalog.AttendanceRecords)
+            .MapSlice<ListAttendanceRecords>()
+            .MapSlice<ListAttendancePeople>()
+            .MapSlice<ExportAttendanceRecords>();
+        api.MapGroup("/attendance-rules").RequireFeature(FeatureCatalog.AttendanceRecords)
+            .MapSlice<GetAttendanceRules>();
+        api.MapGroup("/attendance-forms").RequireFeature(FeatureCatalog.AttendanceRecords)
+            .MapSlice<GetGdForm>();
 
-        var cards = api.MapGroup("/attendance-cards").RequireFeature(FeatureCatalog.AttendanceCards);
-        ListCards.Map(cards);
-        CreateCard.Map(cards);
-        UpdateCard.Map(cards);
-        DeleteCard.Map(cards);
-        ListCardPunches.Map(cards);
+        api.MapGroup("/attendance-cards").RequireFeature(FeatureCatalog.AttendanceCards)
+            .MapSlice<ListCards>()
+            .MapSlice<CreateCard>()
+            .MapSlice<UpdateCard>()
+            .MapSlice<DeleteCard>()
+            .MapSlice<ListCardPunches>();
 
-        var assignments = api.MapGroup("/attendance-card-assignments").RequireFeature(FeatureCatalog.AttendanceCards);
-        ListCardAssignments.Map(assignments);
-        CreateCardAssignment.Map(assignments);
-        UpdateCardAssignment.Map(assignments);
-        DeleteCardAssignment.Map(assignments);
+        api.MapGroup("/attendance-card-assignments").RequireFeature(FeatureCatalog.AttendanceCards)
+            .MapSlice<ListCardAssignments>()
+            .MapSlice<CreateCardAssignment>()
+            .MapSlice<UpdateCardAssignment>()
+            .MapSlice<DeleteCardAssignment>();
 
-        var imports = api.MapGroup("/attendance-imports").RequireFeature(FeatureCatalog.AttendanceImports);
-        ListPunchImports.Map(imports);
-        ListPunchImportPunches.Map(imports);
-        ReimportPunchFiles.Map(imports);
+        api.MapGroup("/attendance-imports").RequireFeature(FeatureCatalog.AttendanceImports)
+            .MapSlice<ListPunchImports>()
+            .MapSlice<ListPunchImportPunches>()
+            .MapSlice<ReimportPunchFiles>();
 
-        var calendar = api.MapGroup("/attendance-calendar-days").RequireFeature(FeatureCatalog.AttendanceCalendar);
-        ListCalendarDays.Map(calendar);
-        UpdateCalendarDay.Map(calendar);
+        api.MapGroup("/attendance-calendar-days").RequireFeature(FeatureCatalog.AttendanceCalendar)
+            .MapSlice<ListCalendarDays>()
+            .MapSlice<UpdateCalendarDay>();
     }
 }

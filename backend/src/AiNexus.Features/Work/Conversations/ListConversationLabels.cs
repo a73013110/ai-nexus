@@ -1,14 +1,15 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Conversations;
 
 /// <summary>使用者未被軟刪除的對話上所有不重複的標籤，依名稱排序。</summary>
-internal sealed class ListConversationLabels(AppDbContext db)
+internal sealed class ListConversationLabels(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/labels", (ICurrentUser user, ListConversationLabels handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .NotAudited("側欄的標籤清單")

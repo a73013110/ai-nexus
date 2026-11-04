@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -34,9 +35,9 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
 
 /// <summary>凍結檢索驗收題組並附上索引與設定的指紋，然後排入背景工作。</summary>
 internal sealed class CreateRetrievalEvaluation(AppDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
-    JobService jobs, TimeProvider clock, AuditTrail audit)
+    JobService jobs, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/retrieval-evals", (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct)).Audited(QualityAudit.RetrievalQueued);
 

@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
 /// <summary>使用者可讀取文件的每一頁擷取文字，並標示 AI 辨識結果是否需要人工審閱。</summary>
-internal sealed class ListDocumentPages(AppDbContext db, DocumentAccess documents)
+internal sealed class ListDocumentPages(AppDbContext db, DocumentAccess documents) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentRead)

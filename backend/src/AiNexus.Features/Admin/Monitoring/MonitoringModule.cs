@@ -27,14 +27,14 @@ public sealed class MonitoringModule : IFeatureModule
     // 端點順序即為已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        HeartbeatPresence.Map(api);
-        LeavePresence.Map(api);
+        api.MapSlice<HeartbeatPresence>()
+            .MapSlice<LeavePresence>();
         // 監控讀取與日誌查詢共用速率限制、會被稽核，且不列入請求日誌，避免監控自己的查詢洗版日誌。
-        var monitor = api.MapGroup("/admin/monitoring").RequireFeature(FeatureCatalog.Monitoring).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
-            .WithMetadata(new SuppressSuccessfulRequestLog());
-        GetMonitoringSnapshot.Map(monitor);
-        ExportMonitoringSnapshot.Map(monitor);
-        StreamMonitoringSnapshots.Map(monitor);
+        api.MapGroup("/admin/monitoring").RequireFeature(FeatureCatalog.Monitoring).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
+            .WithMetadata(new SuppressSuccessfulRequestLog())
+            .MapSlice<GetMonitoringSnapshot>()
+            .MapSlice<ExportMonitoringSnapshot>()
+            .MapSlice<StreamMonitoringSnapshots>();
     }
 }
 

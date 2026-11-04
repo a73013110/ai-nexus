@@ -10,11 +10,11 @@ public sealed class SharingModule : IFeatureModule
 {
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/shares").RequireFeature(FeatureCatalog.Sharing);
-        ListShares.Map(routes);
-        CreateShare.Map(routes);
-        ReadShare.Map(routes);
-        RevokeShare.Map(routes);
-        OpenSharedFile.Map(routes);
+        api.MapGroup("/shares").RequireFeature(FeatureCatalog.Sharing)
+            .MapSlice<ListShares>()
+            .MapSlice<CreateShare>()
+            .MapSlice<ReadShare>()
+            .MapSlice<RevokeShare>()
+            .MapSlice<OpenSharedFile>();
     }
 }

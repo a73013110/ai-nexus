@@ -7,72 +7,73 @@ public sealed class UnmappedSliceAnalyzerTests
 {
     private const string Slices = """
         using AiNexus.Platform.Modules;
+        using Microsoft.AspNetCore.Builder;
         using Microsoft.AspNetCore.Routing;
-        using Microsoft.Extensions.Hosting;
 
         namespace Sample;
 
-        internal sealed class SaveItem
+        internal sealed class CreateItem : IEndpointSlice
         {
-            public static void MapCreate(RouteGroupBuilder routes) { }
-            public static void MapUpdate(RouteGroupBuilder routes) { }
+            public static void MapEndpoints(RouteGroupBuilder group) { }
         }
 
-        internal sealed class ListItems
+        internal sealed class UpdateItem : IEndpointSlice
         {
-            public static void Map(RouteGroupBuilder routes) { }
+            public static void MapEndpoints(RouteGroupBuilder group) { }
+        }
+
+        internal sealed class ListItems : IEndpointSlice
+        {
+            public static void MapEndpoints(RouteGroupBuilder group) { }
         }
 
         public sealed class ItemsModule : IFeatureModule
         {
-            public static void AddServices(IHostApplicationBuilder builder) { }
-
             public static void MapEndpoints(RouteGroupBuilder api)
             {
-                SaveItem.MapCreate(api);
-                System.Action<RouteGroupBuilder> map = ListItems.Map;
-                map(api);
+                api.MapGroup("/items").MapSlice<CreateItem>();
+                EndpointSlices.MapSlice<ListItems>(api);
+                // 直接呼叫切片的 MapEndpoints 不算掛載：只有 MapSlice 一種寫法。
+                UpdateItem.MapEndpoints(api);
             }
         }
         """;
 
     [Fact]
-    public async Task MapMethodsNobodyCallsAreReportedWhereTheyAreDeclared()
+    public async Task SlicesNobodyMountsAreReportedWhereTheyAreDeclared()
     {
         var diagnostics = await GeneratorHarness.AnalyzeAsync(new UnmappedSliceAnalyzer(), Slices);
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("AINX1004", diagnostic.Id);
-        Assert.Contains("Sample.SaveItem.MapUpdate", diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        Assert.Equal("MapUpdate", diagnostic.Location.SourceTree!.GetText(TestContext.Current.CancellationToken).ToString(diagnostic.Location.SourceSpan));
+        Assert.Contains("Sample.UpdateItem", diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        Assert.Equal("UpdateItem", diagnostic.Location.SourceTree!.GetText(TestContext.Current.CancellationToken).ToString(diagnostic.Location.SourceSpan));
     }
 
-    /// <summary>規則與產生器註冊切片的規則相同：模組本身、static 類別的擴充方法與不收 RouteGroupBuilder 的方法都不是切片。</summary>
+    /// <summary>規則與產生器註冊切片的規則相同：模組本身、抽象類別與只是方法形狀相同的類別都不是切片。</summary>
     [Fact]
-    public async Task MethodsThatAreNotSliceMapsAreIgnored()
+    public async Task TypesThatAreNotSlicesAreIgnored()
     {
         const string others = """
             using AiNexus.Platform.Modules;
             using Microsoft.AspNetCore.Routing;
-            using Microsoft.Extensions.Hosting;
 
             namespace Sample;
 
             public sealed class EmptyModule : IFeatureModule
             {
-                public static void AddServices(IHostApplicationBuilder builder) { }
                 public static void MapEndpoints(RouteGroupBuilder api) { }
             }
 
-            internal static class Extensions
+            internal abstract class AbstractSlice : IEndpointSlice
             {
-                public static void MapHelpers(this RouteGroupBuilder api) { }
+                public static void MapEndpoints(RouteGroupBuilder group) { }
             }
 
             internal sealed class NotASlice
             {
-                public static void Map(IEndpointRouteBuilder api) { }
-                public void MapInstance(RouteGroupBuilder api) { }
+                public static void Map(RouteGroupBuilder api) { }
+                public static void MapEndpoints(RouteGroupBuilder api) { }
             }
             """;
 

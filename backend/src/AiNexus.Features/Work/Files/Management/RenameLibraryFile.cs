@@ -3,6 +3,7 @@ using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,9 @@ internal sealed class RenameLibraryFileRequestValidator : RequestValidator<Renam
 }
 
 /// <summary>重新命名檔案庫中的檔案。副檔名必須保留；若別人已先改名，這次改名會失敗。</summary>
-internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files)
+internal sealed class RenameLibraryFile(AppDbContext db, AttachmentService files) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/name", (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .Audited(FilesAudit.FileRenamed)

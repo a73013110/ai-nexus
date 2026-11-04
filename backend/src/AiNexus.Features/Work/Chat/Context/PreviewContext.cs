@@ -10,6 +10,7 @@ using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
@@ -65,9 +66,9 @@ internal sealed class PreviewContext(
     IOptions<InferenceOptions> options,
     ModelPolicyService policies,
     KnowledgeRetrieval knowledge,
-    ProjectService projects)
+    ProjectService projects) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/context", (ContextPreviewRequest body, ICurrentUser user, PreviewContext handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .WithRequestBodyLimit(InferenceModule.PromptBodyLimit)

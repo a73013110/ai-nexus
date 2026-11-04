@@ -3,13 +3,14 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
 
 /// <summary>擁有者整批取代知識庫的指定成員與群組授權。</summary>
-internal sealed class SaveKnowledgeAccess(ResourceAccess access)
+internal sealed class SaveKnowledgeAccess(ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/collections/{id:guid}/access", (Guid id, ResourceAclRequest request, ICurrentUser user, SaveKnowledgeAccess handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, request, ct))
         .Audited(KnowledgeAudit.CollectionShared)

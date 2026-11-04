@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Jobs.Management;
 
 /// <summary>使用者的單一背景工作。</summary>
-internal sealed class GetJob(AppDbContext db)
+internal sealed class GetJob(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetJob handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(JobsAudit.JobRead)

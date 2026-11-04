@@ -3,14 +3,15 @@ using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Files.Management;
 
 /// <summary>把呼叫者的一個附件保留到檔案庫；對已在檔案庫的檔案重複保留不會有任何變更。</summary>
-internal sealed class RetainLibraryFile(AppDbContext db, AttachmentService files, AttachmentQuota quota)
+internal sealed class RetainLibraryFile(AppDbContext db, AttachmentService files, AttachmentQuota quota) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retain", (Guid id, ICurrentUser user, RetainLibraryFile handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(FilesAudit.FileRetained)

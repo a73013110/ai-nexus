@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,9 @@ internal sealed class UnitImportRequestValidator : RequestValidator<UnitImportRe
 /// 所以套用的一定是使用者看過的那份變更；管理員取消勾選的部門（<c>Excluded</c>）再從同一份輸入排除後套用。GD 在交易外讀取，不讓別人的系統拖住行政寫入鎖；讀不到時請求稽核照樣記下錯誤代碼。
 /// 稽核 <c>organization.unit.imported</c> 只記數量（前後的單位、已匯入單位與主管數，以及這次的變動數），完整清單在預覽，會超過稽核的大小上限。
 /// </summary>
-internal sealed class ApplyUnitImport(AppDbContext db, GdUnitSource source, AdministrativeWrite write)
+internal sealed class ApplyUnitImport(AppDbContext db, GdUnitSource source, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/import", (UnitImportRequest body, ApplyUnitImport handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .RequireFeature(FeatureCatalog.OrganizationImport)

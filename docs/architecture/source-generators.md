@@ -7,15 +7,15 @@
 | 元件 | 觸發 | 產出 |
 | --- | --- | --- |
 | [`FeatureCompositionGenerator`](../../backend/src/AiNexus.Generators/Composition/FeatureCompositionGenerator.cs) | `[FeatureComposition]`（`FeatureModules`） | 組件內每個模組的 `AddServices`、`MapEndpoints`（OpenAPI tag＝模組名）與 `VerifyStartup`；端點切片註冊為 scoped；`RequestValidator<T>` 以 `IRequestValidator` 註冊為 singleton；類別自己宣告的服務（ADR 0033） |
-| [`UnmappedSliceAnalyzer`](../../backend/src/AiNexus.Generators/Composition/UnmappedSliceAnalyzer.cs) | 切片的 `Map*` 方法 | 組件內沒有任何呼叫或方法群組引用時回報 AINX1004（建置失敗） |
+| [`UnmappedSliceAnalyzer`](../../backend/src/AiNexus.Generators/Composition/UnmappedSliceAnalyzer.cs) | 實作 `IEndpointSlice` 的切片 | 組件內沒有任何 `MapSlice<T>()` 掛載它時回報 AINX1004（建置失敗） |
 | [`ManualRegistrationAnalyzer`](../../backend/src/AiNexus.Generators/Composition/ManualRegistrationAnalyzer.cs) | 註冊方法的呼叫 | 手動註冊產生器已註冊的類別（擴充點實作、標了生命週期的類別）時回報 AINX1007 |
 | [`FieldCatalogGenerator`](../../backend/src/AiNexus.Generators/Catalogs/FieldCatalogGenerator.cs) | `[FieldCatalog]` 方法（`AuditActions`） | 回傳組件內 static 類別裡、型別等於元素型別的 public static 欄位，依類別完整名稱再依宣告順序；元素型別要專用（AINX2003） |
 
 組合的規則：
 
 - **模組**：實作 `IFeatureModule` 的非抽象、非泛型類別。`AddServices`、`MapEndpoints`、`VerifyStartup` 都有預設的空實作，只有模組自己實作時才產生呼叫。
-- **切片**：類別有 static `Map*` 方法，且第一個參數是 `RouteGroupBuilder`。排除模組與 static、abstract、泛型類別。產生器與 analyzer 共用 `SliceRegistration.IsMapMethod`；架構測試 `CompositionTests` 用反射重述同一條規則，對照產生的註冊。
-- **掛載**：切片只會被自動註冊，端點仍由模組的 `MapEndpoints` 明確掛到自己的群組。群組帶著功能 policy、body 上限與 OpenAPI 順序；交給切片各自宣告，漏寫 policy 就只剩「有登入」。忘了掛載由 AINX1004 擋下。
+- **切片**：實作 `IEndpointSlice` 的非抽象、非泛型類別。產生器與 analyzer 共用 `SliceRegistration.IsSlice`；架構測試 `CompositionTests` 用反射重述同一條規則，對照產生的註冊。
+- **掛載**：切片只會被自動註冊，端點仍由模組的 `MapEndpoints` 以 `group.MapSlice<T>()` 明確掛到自己的群組。群組帶著功能 policy、body 上限與 OpenAPI 順序；交給切片各自宣告，漏寫 policy 就只剩「有登入」。忘了掛載由 AINX1004 擋下。一個切片只對應一個授權情境：同一份邏輯要掛在不同 policy 的群組時拆成兩個切片，另一個注入原切片或模組內的服務（如 `DeleteLibraryFile` 之於 `RemoveAttachment`）；群組層級的授權不寫在切片裡。
 - **驗證器**：繼承 `RequestValidator<T>` 的非抽象、非泛型類別；單純的 `AbstractValidator<T>` 是子驗證器，不註冊。同一 request 型別有兩個驗證器時回報 AINX1005。
 - **服務**：具體類別實作了標 `[RegisterImplementations(註冊類別, 方法)]` 的介面（或 `IHostedService`），就以該方法註冊，型別參數是介面的型別引數加上實作；標了 `[Scoped]`、`[Singleton]`（或 `<TService>` 版）就以該生命週期註冊；標了多個時類別本身註冊一次，各介面轉接到它、共用同一個實例。標記的類別不能建立、沒實作所標的介面或混用兩種生命週期時回報 AINX1006；產生器會註冊的類別又手動註冊時回報 AINX1007，兩者共用 `ServiceRegistration` 的規則。
 - **順序**：依完整型別名稱排序。順序固定但沒有意義，模組之間不可依賴註冊順序。消費 `IEnumerable<T>` 而在意順序的地方要自己排序，例如監控來源的 `Order`、總覽前端的 `ORDER`。

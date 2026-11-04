@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -28,9 +29,9 @@ internal sealed class CardAssignmentUpdateRequestValidator : RequestValidator<Ca
 /// 接手是「指派給新的人」的語意，更正既有紀錄時重疊代表輸入有誤，不該悄悄改動另一段。
 /// 綁上使用者後，該使用者在這段期間內的刷卡立即歸戶（view 在讀取時計算，不必回頭改寫刷卡）。
 /// </summary>
-internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeWrite write)
+internal sealed class UpdateCardAssignment(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (Guid id, CardAssignmentUpdateRequest body, UpdateCardAssignment handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)

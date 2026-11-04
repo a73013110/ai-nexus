@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -28,9 +29,9 @@ internal sealed class TransformTextRequestValidator : RequestValidator<Transform
 }
 
 /// <summary>以使用者可用的模型，改寫、摘要、解釋或翻譯所選段落。</summary>
-internal sealed class TransformText(ModelTaskService models)
+internal sealed class TransformText(ModelTaskService models) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapPost("/text/transform", (
                 TransformTextRequest request, ICurrentUser user, TransformText handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, request, ct))

@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ internal sealed class StreamRunEvents(
     AppDbContext db,
     SubscriptionLimits limits,
     RunSignals signals,
-    TimeProvider clock)
+    TimeProvider clock) : IEndpointSlice
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -31,7 +32,7 @@ internal sealed class StreamRunEvents(
     private static readonly TimeSpan PollFallback = TimeSpan.FromSeconds(1);
     private const int Batch = 128;
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapGet("/runs/{id:guid}/events", (Guid id, long? after, HttpContext http, ICurrentUser user, StreamRunEvents handler, CancellationToken ct) =>
             handler.HandleAsync(http, user.Id, id, after, ct).ToStreamResultAsync(http))
         .NotAudited("生成串流，送出訊息已留證")

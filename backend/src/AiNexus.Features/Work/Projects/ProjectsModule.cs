@@ -12,22 +12,19 @@ public sealed class ProjectsModule : IFeatureModule
     // 端點順序即已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        AssignConversationProject.Map(api);
-        var routes = api.MapGroup("/projects").RequireFeature(FeatureCatalog.Projects);
-        BrowseProjects.MapList(routes);
-        SaveProject.MapCreate(routes);
-        DeleteProject.Map(routes);
-        BrowseProjects.MapGet(routes);
-        SaveProject.MapUpdate(routes);
-        ShareProject.Map(routes);
-        ListProjectFiles.Map(routes);
-        AddProjectFile.Map(routes);
-        ListProjectTemplates.Map(routes);
-        SaveProjectTemplate.MapCreate(routes);
-        SaveProjectTemplate.MapUpdate(routes);
-        DeleteProjectTemplate.Map(routes);
-        ListProjectConversations.Map(routes);
-        StartProjectConversation.Map(routes);
-        CreateProjectArtifact.Map(routes);
+        api.MapSlice<AssignConversationProject>();
+        api.MapGroup("/projects").RequireFeature(FeatureCatalog.Projects)
+            .MapSlice<BrowseProjects>()
+            .MapSlice<SaveProject>()
+            .MapSlice<DeleteProject>()
+            .MapSlice<ShareProject>()
+            .MapSlice<ListProjectFiles>()
+            .MapSlice<AddProjectFile>()
+            .MapSlice<ListProjectTemplates>()
+            .MapSlice<SaveProjectTemplate>()
+            .MapSlice<DeleteProjectTemplate>()
+            .MapSlice<ListProjectConversations>()
+            .MapSlice<StartProjectConversation>()
+            .MapSlice<CreateProjectArtifact>();
     }
 }

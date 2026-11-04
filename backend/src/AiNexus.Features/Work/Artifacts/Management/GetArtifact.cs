@@ -4,14 +4,15 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
 
 /// <summary>使用者可讀取的成果之單一版本，預設為目前版本。</summary>
-internal sealed class GetArtifact(AppDbContext db, ResourceAccess access)
+internal sealed class GetArtifact(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, int? version, ICurrentUser user, GetArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, version, ct))
         .Audited(ArtifactsAudit.ArtifactRead)

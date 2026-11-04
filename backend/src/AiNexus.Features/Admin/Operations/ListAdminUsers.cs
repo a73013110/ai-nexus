@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Operations;
 
@@ -25,9 +26,9 @@ public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total,
 /// 未刪除使用者的列表，每頁 100 筆、依使用者順序（<see cref="AiNexus.Data.App.Identity.UserOrder"/>）排列，附通知信箱、角色、用量、對話數與儲存空間；
 /// 搜尋涵蓋姓名、帳號與信箱。查詢在 <c>operations.usp_ListAdminUsers</c>。
 /// </summary>
-internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota)
+internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/users", (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) =>
             handler.HandleAsync(search, offset ?? 0, ct))
         .Audited(IdentityAudit.UserRead)

@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
@@ -11,9 +12,9 @@ namespace AiNexus.Features.Platform.Account.Security;
 /// 輸入寄到新信箱的驗證碼，完成信箱設定：寫入本人驗證的信箱、遞增 SecurityVersion（其他工作階段登出）並重發目前的 session。
 /// 原本有另一個已驗證的信箱時，寄通知到舊信箱（只含遮罩後的新地址）。
 /// </summary>
-internal sealed class ConfirmEmailChange(AccountSecurity security, UserCredentials credentials, VerificationChallenges challenges)
+internal sealed class ConfirmEmailChange(AccountSecurity security, UserCredentials credentials, VerificationChallenges challenges) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/email-changes/{id:guid}/confirmation", (Guid id, VerificationCodeConfirmation body, HttpContext http, ICurrentUser user, ConfirmEmailChange handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, id, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)

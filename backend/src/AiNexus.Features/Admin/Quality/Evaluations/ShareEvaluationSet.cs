@@ -4,13 +4,14 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Quality.Evaluations;
 
 /// <summary>控制誰可讀取或編輯題組，使用共用資源的存取清單。</summary>
-internal sealed class ShareEvaluationSet(ResourceAccess access)
+internal sealed class ShareEvaluationSet(ResourceAccess access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapGet("/sets/{id:guid}/access", (Guid id, ICurrentUser user, ShareEvaluationSet handler, CancellationToken ct) =>
             handler.GetAsync(user.Id, id, ct))

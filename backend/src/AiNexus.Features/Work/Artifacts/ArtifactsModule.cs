@@ -24,18 +24,18 @@ public sealed class ArtifactsModule : IFeatureModule
     // 端點註冊順序即 OpenAPI 發佈順序；調整順序會改變 contracts/openapi.json。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/artifacts")
+        api.MapGroup("/artifacts")
             .RequireFeature(FeatureCatalog.Artifacts)
-            .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxContentCharacters));
-        ListArtifacts.Map(routes);
-        CreateArtifact.Map(routes);
-        GetArtifact.Map(routes);
-        SaveArtifact.Map(routes);
-        DeleteArtifact.Map(routes);
-        ListArtifactVersions.Map(routes);
-        ReadArtifactAccess.Map(routes);
-        SaveArtifactAccess.Map(routes);
-        ExportArtifact.Map(routes);
-        TransformText.Map(api);
+            .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxContentCharacters))
+            .MapSlice<ListArtifacts>()
+            .MapSlice<CreateArtifact>()
+            .MapSlice<GetArtifact>()
+            .MapSlice<SaveArtifact>()
+            .MapSlice<DeleteArtifact>()
+            .MapSlice<ListArtifactVersions>()
+            .MapSlice<ReadArtifactAccess>()
+            .MapSlice<SaveArtifactAccess>()
+            .MapSlice<ExportArtifact>();
+        api.MapSlice<TransformText>();
     }
 }

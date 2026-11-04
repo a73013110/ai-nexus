@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,9 +31,9 @@ public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList
     IReadOnlyDictionary<string, string>? ManagerScopes = null, long? RowVersion = null);
 
 /// <summary>建立或更新群組、其功能（含資料範圍）與模型策略。會稽核；若會移除執行者自己的群組管理權限則拒絕。</summary>
-internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, ModelPolicyService policies)
+internal sealed class SaveRoleGroup(AppDbContext db, AdministrativeWrite write, ModelPolicyService policies) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/groups/{id}", (string id, GroupUpdateRequest body, ICurrentUser user, SaveRoleGroup handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .Audited(AccessControlAudit.GroupUpdated)

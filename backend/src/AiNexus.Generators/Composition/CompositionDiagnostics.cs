@@ -19,10 +19,10 @@ internal static class CompositionDiagnostics
         "AINX1003", "組合的型別必須在組件內可見",
         "'{0}' 是{1}，但它或外層型別不是 public／internal，產生的註冊程式碼無法引用", Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
-    // 要看完整個組件才知道有沒有人呼叫，屬於編譯結束時的診斷：IDE 只在完整方案分析時即時顯示，dotnet build 一定會檢查。
+    // 要看完整個組件才知道有沒有人掛載，屬於編譯結束時的診斷：IDE 只在完整方案分析時即時顯示，dotnet build 一定會檢查。
     public static readonly DiagnosticDescriptor UnmappedSlice = new(
-        "AINX1004", "端點切片的掛載方法必須有人呼叫",
-        "'{0}.{1}' 是端點切片的掛載方法，但組件裡沒有任何地方呼叫它，端點不會存在；在模組的 MapEndpoints 掛上它", Category,
+        "AINX1004", "端點切片必須掛載",
+        "'{0}' 是端點切片，但組件裡沒有任何 MapSlice<{0}>()，端點不會存在；在模組的 MapEndpoints 以 group.MapSlice<T>() 掛上它", Category,
         DiagnosticSeverity.Error, isEnabledByDefault: true, customTags: WellKnownDiagnosticTags.CompilationEnd);
 
     public static readonly DiagnosticDescriptor DuplicateValidator = new(

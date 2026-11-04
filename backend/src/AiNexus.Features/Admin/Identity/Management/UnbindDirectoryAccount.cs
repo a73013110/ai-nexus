@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Management;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Admin.Identity.Management;
 /// <c>AdAccount</c> 與登入方式保留，下次以該帳號名 AD 驗證或匯入時綁定新的 SID；要換成不同帳號名用 <see cref="RebindDirectoryAccount"/>。
 /// UserId、角色與歷史資料都不動；遞增 <c>SecurityVersion</c>，以舊 SID 建立的工作階段一併失效。
 /// </summary>
-internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write)
+internal sealed class UnbindDirectoryAccount(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/users/{id:guid}/ad-binding", (Guid id, int profileVersion, ICurrentUser user, UnbindDirectoryAccount handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, profileVersion, ct))
         .Audited(IdentityAudit.DirectoryUnbound)

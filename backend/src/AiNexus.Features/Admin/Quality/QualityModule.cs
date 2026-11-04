@@ -26,23 +26,22 @@ public sealed class QualityModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        ReadFeedback.MapForMessage(api);
-        SaveMessageFeedback.Map(api);
+        api.MapGroup("/messages").RequireFeature(FeatureCatalog.Chat)
+            .MapSlice<ReadMessageFeedback>()
+            .MapSlice<SaveMessageFeedback>();
         // 檢索評測是獨立頁面與授權（quality.retrieval），其餘題組、執行與回饋屬於品質評測頁。
-        var retrieval = api.MapGroup("/quality").RequireFeature(FeatureCatalog.QualityRetrieval);
-        ListRetrievalEvaluations.Map(retrieval);
-        CreateRetrievalEvaluation.Map(retrieval);
-        GetRetrievalReport.Map(retrieval);
-        var routes = api.MapGroup("/quality").RequireFeature(FeatureCatalog.Quality);
-        ReadFeedback.MapList(routes);
-        BrowseEvaluationSets.MapList(routes);
-        SaveEvaluationSet.MapCreate(routes);
-        DeleteEvaluationSet.Map(routes);
-        BrowseEvaluationSets.MapGet(routes);
-        SaveEvaluationSet.MapUpdate(routes);
-        ShareEvaluationSet.Map(routes);
-        StartEvaluationRun.Map(routes);
-        BrowseEvaluationRuns.Map(routes);
-        ReviewEvaluationResult.Map(routes);
+        api.MapGroup("/quality").RequireFeature(FeatureCatalog.QualityRetrieval)
+            .MapSlice<ListRetrievalEvaluations>()
+            .MapSlice<CreateRetrievalEvaluation>()
+            .MapSlice<GetRetrievalReport>();
+        api.MapGroup("/quality").RequireFeature(FeatureCatalog.Quality)
+            .MapSlice<ListFeedback>()
+            .MapSlice<BrowseEvaluationSets>()
+            .MapSlice<SaveEvaluationSet>()
+            .MapSlice<DeleteEvaluationSet>()
+            .MapSlice<ShareEvaluationSet>()
+            .MapSlice<StartEvaluationRun>()
+            .MapSlice<BrowseEvaluationRuns>()
+            .MapSlice<ReviewEvaluationResult>();
     }
 }

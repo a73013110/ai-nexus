@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Audit;
@@ -16,9 +17,9 @@ public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOn
 /// 以及分類、模組與動作（<see cref="AuditActions"/>）。
 /// 唯讀，且不依賴帳號或政策管理功能。
 /// </summary>
-internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
+internal sealed class GetAuditCatalog(AppDbContext db, ModelCatalog catalog, AccessService access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder audit) => audit
+    public static void MapEndpoints(RouteGroupBuilder audit) => audit
         .MapGet("/catalog", (GetAuditCatalog handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .NotAudited("稽核篩選用的固定目錄")

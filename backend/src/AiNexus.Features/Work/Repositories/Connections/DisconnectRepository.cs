@@ -3,14 +3,15 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Connections;
 
 /// <summary>刪除已儲存的 token。已匯入的快照與 review 會保留；要再讀取其來源，必須重新連線。</summary>
-internal sealed class DisconnectRepository(AppDbContext db)
+internal sealed class DisconnectRepository(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/connection", (ICurrentUser user, DisconnectRepository handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(RepositoriesAudit.ConnectionDisconnected)

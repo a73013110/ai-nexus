@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Artifacts.Export;
 
@@ -11,11 +12,11 @@ namespace AiNexus.Features.Work.Artifacts.Export;
 /// 下載單一版本，格式為 Word、PDF 或 Markdown；排版交給 Platform 的 <see cref="MarkdownDocument"/> 與 <see cref="PdfRenderer"/>。
 /// 渲染後會再檢查一次讀取權限：PDF 渲染較慢，期間被撤銷的權限不能被繞過。
 /// </summary>
-internal sealed class ExportArtifact(GetArtifact reader, PdfRenderer pdf)
+internal sealed class ExportArtifact(GetArtifact reader, PdfRenderer pdf) : IEndpointSlice
 {
     private const string Caption = "AI NEXUS · 成果文件";
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/export/{format}", (
                 Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, format, version, ct).ToFileResultAsync())

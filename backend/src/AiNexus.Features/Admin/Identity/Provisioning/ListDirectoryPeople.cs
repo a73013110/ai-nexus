@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
@@ -14,12 +15,12 @@ public sealed record DirectoryPeopleDto(IReadOnlyList<DirectoryPersonDto> People
 /// 一次回完整清單（上限 1000 人），篩選、搜尋與全選都在畫面上做：LDAP 的分頁游標綁在連線上，無法跨請求翻頁。
 /// 節點超過上限時畫面改帶 <c>q</c> 在目錄端找人，否則上限之後的人永遠看不到（例如所有人都在 <c>CN=Users</c>）。
 /// </summary>
-internal sealed class ListDirectoryPeople(IAdDirectory directory, DirectoryProvisioning provisioning, IOptions<AdAuthenticationOptions> options)
+internal sealed class ListDirectoryPeople(IAdDirectory directory, DirectoryProvisioning provisioning, IOptions<AdAuthenticationOptions> options) : IEndpointSlice
 {
     public const int Limit = 1000;
     public const int MaxQuery = 64;
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/directory-people", (string? node, bool? subtree, string? q, ListDirectoryPeople handler, CancellationToken ct) =>
             handler.HandleAsync(node, subtree == true, q, ct))
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)

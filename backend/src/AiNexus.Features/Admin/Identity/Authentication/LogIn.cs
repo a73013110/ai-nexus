@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using System.Globalization;
 using System.Security.Claims;
@@ -20,9 +21,9 @@ public sealed record AdLoginRequest(string Account, string Password, string Meth
 
 /// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
 internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, AppDbContext db, AuthenticationAudit audit, Issues issues,
-    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail, LoginThrottle throttle)
+    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail, LoginThrottle throttle) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder auth) => auth
+    public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/login", (AdLoginRequest body, HttpContext http, LogIn handler, CancellationToken ct) => handler.HandleAsync(http, body, ct))
         .AllowAnonymous().RequireRateLimiting(IdentityModule.LoginRateLimit).NotAudited("登入結果由登入稽核記錄").WithName("AdLogin");
 

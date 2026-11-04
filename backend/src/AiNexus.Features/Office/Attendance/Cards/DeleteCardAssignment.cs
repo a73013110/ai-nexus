@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// 刪除持有期間，用於輸入錯誤的紀錄（換人請用接手，結束持有請改 <c>EndsAt</c>）。刪除後該期間內的刷卡變成未歸戶，
 /// 刷卡原始資料不動。會稽核（<c>admin.attendance_assignment_delete</c>），快照是該卡刪除前後的全部期間。
 /// </summary>
-internal sealed class DeleteCardAssignment(AppDbContext db, AdministrativeWrite write)
+internal sealed class DeleteCardAssignment(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, long rowVersion, DeleteCardAssignment handler, CancellationToken ct) =>
             handler.HandleAsync(id, rowVersion, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)

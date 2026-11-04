@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +15,9 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// HR 核對、列印與轉交的習慣不變。
 /// 匯出是把個人出勤資料帶離系統，稽核寫不進去就不匯出（與稽核、日誌匯出相同）。
 /// </summary>
-internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, AppDbContext db, TimeProvider clock, AuditTrail audit)
+internal sealed class ExportAttendanceRecords(ListAttendanceRecords records, AppDbContext db, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/export", ([AsParameters] AttendanceRecordsFilter filter, ICurrentUser user, ExportAttendanceRecords handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, filter, ct)
                 .ToFileResultAsync())

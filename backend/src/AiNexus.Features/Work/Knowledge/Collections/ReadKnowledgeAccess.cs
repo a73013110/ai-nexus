@@ -3,13 +3,14 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
 
 /// <summary>擁有者讀取可檢視或編輯此知識庫的成員與群組授權。</summary>
-internal sealed class ReadKnowledgeAccess(ResourceAccess access)
+internal sealed class ReadKnowledgeAccess(ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/collections/{id:guid}/access", (Guid id, ICurrentUser user, ReadKnowledgeAccess handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.CollectionAccessRead)

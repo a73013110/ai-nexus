@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -21,9 +22,9 @@ public sealed record MailMessageDetailDto(MailMessageDto Message, string HeaderM
     DateTimeOffset? ExpiresAt, DateTimeOffset UpdatedAt, DateTimeOffset? ContentPurgedAt, bool RecipientAvailable, string? Text,
     bool CanResend, string? ResendBlockedBy, IReadOnlyList<MailAttemptDto> Attempts);
 
-internal sealed class GetMailMessage(AppDbContext db)
+internal sealed class GetMailMessage(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, GetMailMessage handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .Audited(MailAudit.MessageRead)

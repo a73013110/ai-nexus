@@ -16,6 +16,7 @@ using AiNexus.Features.Platform.Notifications;
 using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -43,9 +44,9 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 
 /// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
 internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, ResourceAccess access, ShareAccess shares, ResourceWriteLock writes,
-    GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit)
+    GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (CreateShareRequest body, ICurrentUser user, CreateShare handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct)).Audited(SharingAudit.ShareCreated);
 

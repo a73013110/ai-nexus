@@ -6,6 +6,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -26,9 +27,9 @@ internal sealed class DeleteConversation(
     GenerationScheduler scheduler,
     DomainEvents events,
     AttachmentLifecycle lifecycle,
-    AttachmentQuota quota)
+    AttachmentQuota quota) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationDeleted)

@@ -1,13 +1,14 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization;
 
 /// <summary>組織管理頁的全部單位（含停用）與直屬成員數；依同層排序、名稱排列，樹由前端依 <c>ParentId</c> 組回。</summary>
-internal sealed class ListUnits(AppDbContext db)
+internal sealed class ListUnits(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (ListUnits handler, CancellationToken ct) => handler.HandleAsync(ct))
         .Audited(OrganizationAudit.UnitRead)
         .WithName("ListOrganizationUnits");

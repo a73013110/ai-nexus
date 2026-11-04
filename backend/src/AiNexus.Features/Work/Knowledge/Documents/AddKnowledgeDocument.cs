@@ -5,11 +5,11 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Data.App.Projects;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Validation;
-using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Files;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Jobs;
@@ -25,19 +25,13 @@ public sealed record AddDocumentRequest(Guid AttachmentId);
 /// 同一附件重複加入會回傳既有文件；同一原始檔若已完成擷取，直接複製擷取結果，不重跑擷取。
 /// </summary>
 internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess access, AttachmentService attachments, DocumentWriteLock writes, ContainerLock containers, JobService jobs,
-    DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
+    DocumentAccess documents, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapCollection(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/collections/{id:guid}/documents", (Guid id, AddDocumentRequest request, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, request.AttachmentId, ct))
         .Audited(KnowledgeAudit.DocumentCreated)
         .WithName("AddKnowledgeDocument");
-
-    /// <summary>把附件讀成獨立文件，供對話中的文件檢視器使用。</summary>
-    public static RouteHandlerBuilder MapAttachment(RouteGroupBuilder api) => api
-        .MapPost("/attachments/{id:guid}/document", (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, null, id, ct))
-        .RequireAuthorization(Policies.Attachments).Audited(KnowledgeAudit.DocumentCreated).WithName("ReadAttachmentDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null, Action<Document>? alongside = null)
     {

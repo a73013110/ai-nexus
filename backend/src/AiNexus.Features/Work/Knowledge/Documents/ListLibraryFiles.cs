@@ -9,6 +9,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -23,9 +24,9 @@ public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int
 /// 呼叫者的檔案庫，並列出每個檔案被哪裡使用。原始檔只儲存一份；對話紀錄與知識庫各自以獨立參照指向它，
 /// 且只列出呼叫者仍能開啟的使用處。
 /// </summary>
-internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, AccessService features, AttachmentQuota quota)
+internal sealed class ListLibraryFiles(AppDbContext db, ResourceAccess access, AccessService features, AttachmentQuota quota) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct))
         .Audited(FilesAudit.FileRead)

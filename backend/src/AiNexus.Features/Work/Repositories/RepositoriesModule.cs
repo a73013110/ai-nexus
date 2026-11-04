@@ -33,23 +33,22 @@ public sealed class RepositoriesModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var routes = api.MapGroup("/repositories").RequireFeature(FeatureCatalog.Repositories).RequireRateLimiting(ReadRateLimit);
-        GetRepositoryConnection.Map(routes);
-        ConnectRepository.Map(routes);
-        DisconnectRepository.Map(routes);
-        BrowseRepositories.MapList(routes);
-        ReadRepositoryReview.Map(routes);
-        ChangeRepositoryReviewJob.Map(routes);
-        PostRepositoryReviewComment.Map(routes);
+        routes.MapSlice<GetRepositoryConnection>()
+            .MapSlice<ConnectRepository>()
+            .MapSlice<DisconnectRepository>()
+            .MapSlice<BrowseRepositories>()
+            .MapSlice<ReadRepositoryReview>()
+            .MapSlice<ChangeRepositoryReviewJob>()
+            .MapSlice<PostRepositoryReviewComment>();
 
-        var repository = routes.MapGroup("/{owner}/{name}");
-        BrowseRepositories.Map(repository);
-        PinRepository.Map(repository);
-        UnpinRepository.Map(repository);
-        BrowseRepositoryHistory.Map(repository);
-        BrowseRepositoryIssues.Map(repository);
-        StartRepositoryChat.Map(repository);
-        ImportRepositoryFolder.Map(repository);
-        ListRepositoryReviews.Map(repository);
-        CreateRepositoryReview.Map(repository);
+        routes.MapGroup("/{owner}/{name}")
+            .MapSlice<PinRepository>()
+            .MapSlice<UnpinRepository>()
+            .MapSlice<BrowseRepositoryHistory>()
+            .MapSlice<BrowseRepositoryIssues>()
+            .MapSlice<StartRepositoryChat>()
+            .MapSlice<ImportRepositoryFolder>()
+            .MapSlice<ListRepositoryReviews>()
+            .MapSlice<CreateRepositoryReview>();
     }
 }

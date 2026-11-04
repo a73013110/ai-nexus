@@ -39,18 +39,18 @@ public sealed class AccountModule : IFeatureModule
     /// <summary>端點註冊順序即公開的 OpenAPI 順序，調整會改變對外文件。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        GetMe.Map(api);
-        UpdatePreferences.Map(api);
-        GetUserSettings.Map(api);
-        SaveUserSettings.Map(api);
-        GetPersonalUsage.Map(api);
-        GetAccountSecurity.Map(api);
-        SendVerificationCode.Map(api);
-        GetVerificationCode.Map(api);
-        Reauthenticate.Map(api);
-        RequestEmailChange.Map(api);
-        ConfirmEmailChange.Map(api);
-        SetLocalLogin.Map(api);
-        DisableLocalLogin.Map(api);
+        api.MapSlice<GetMe>()
+            .MapSlice<UpdatePreferences>()
+            .MapSlice<GetUserSettings>()
+            .MapSlice<SaveUserSettings>()
+            .MapSlice<GetPersonalUsage>()
+            .MapSlice<GetAccountSecurity>()
+            .MapSlice<SendVerificationCode>()
+            .MapSlice<GetVerificationCode>()
+            .MapSlice<Reauthenticate>()
+            .MapSlice<RequestEmailChange>()
+            .MapSlice<ConfirmEmailChange>()
+            .MapSlice<SetLocalLogin>()
+            .MapSlice<DisableLocalLogin>();
     }
 }

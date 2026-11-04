@@ -3,6 +3,7 @@ using AiNexus.Data.App.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -18,9 +19,9 @@ internal sealed class RenameConversationRequestValidator : RequestValidator<Rena
 }
 
 /// <summary>重新命名使用者自己的對話。</summary>
-internal sealed class RenameConversation(AppDbContext db, TimeProvider clock)
+internal sealed class RenameConversation(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}", (
                 Guid id, RenameConversationRequest body, ICurrentUser user, RenameConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body.Title, ct))

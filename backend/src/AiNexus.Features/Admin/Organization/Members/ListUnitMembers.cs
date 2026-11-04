@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Members;
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Admin.Organization.Members;
 public sealed record UnitMemberDto(Guid UserId, string Account, string DisplayName, bool Active, bool IsPrimary, bool IsManager);
 
 /// <summary>單位的直屬成員（不含下層單位），主管在前，再依帳號排列。</summary>
-internal sealed class ListUnitMembers(AppDbContext db, IActiveUsers activeUsers)
+internal sealed class ListUnitMembers(AppDbContext db, IActiveUsers activeUsers) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/members", (Guid id, ListUnitMembers handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .Audited(OrganizationAudit.MemberRead)

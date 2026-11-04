@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
@@ -14,9 +15,9 @@ public sealed record AdminUsageDto(int Users, int Requests, int Completed, long 
     IReadOnlyList<ProviderStatusDto> Providers, WebSearchStatusDto WebSearch, DateTimeOffset Since, DateTimeOffset Until);
 
 /// <summary>自 <see cref="UsageReports.Since"/> 起的平台用量、儲存空間、模型供應商健康度與網路搜尋狀態。</summary>
-internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
+internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/usage", (GetAdminUsage handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .Audited(OperationsAudit.UsageRead)

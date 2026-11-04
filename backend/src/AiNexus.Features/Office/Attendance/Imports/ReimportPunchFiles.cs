@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
 using FluentValidation;
@@ -51,12 +52,12 @@ internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReim
 /// 單一檔案的重匯因此與以前一樣。來源資料夾讀不到（<c>attendance_import_source_unavailable</c>）就停止，之後的檔都不會成功。
 /// 檔案存在但匯入失敗（例如格式錯誤）不是請求失敗：結果裡是狀態為 <c>failed</c> 的紀錄，Punches 維持上次成功的內容。
 /// </summary>
-internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer)
+internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer) : IEndpointSlice
 {
     /// <summary>一次最多幾天（幾個檔）：一個月，與出勤紀錄查詢一致，也限制同步請求的等待時間。</summary>
     public const int MaxDays = 31;
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (PunchReimportRequest body, ICurrentUser user, ReimportPunchFiles handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .RequireFeature(FeatureCatalog.AttendanceImportsReimport)

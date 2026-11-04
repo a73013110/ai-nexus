@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization;
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Admin.Organization;
 /// 刪除單位。必須先清空下層與成員，不級聯：業務資料可能已記下這個單位 ID，一次誤刪整段組織的代價高；
 /// 不再使用但有歷史的單位改用停用。會稽核。
 /// </summary>
-internal sealed class DeleteUnit(AppDbContext db, AdministrativeWrite write)
+internal sealed class DeleteUnit(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, long rowVersion, DeleteUnit handler, CancellationToken ct) =>
             handler.HandleAsync(id, rowVersion, ct))
         .Audited(OrganizationAudit.UnitDeleted)

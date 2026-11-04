@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -23,9 +24,9 @@ internal sealed class KnowledgeSearchRequestValidator : RequestValidator<Knowled
 }
 
 /// <summary>在使用者可讀取的最多三個知識庫中搜尋，經過完整的檢索 pipeline。</summary>
-internal sealed class SearchKnowledge(RetrievalPipeline pipeline)
+internal sealed class SearchKnowledge(RetrievalPipeline pipeline) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/search", (KnowledgeSearchRequest request, ICurrentUser user, SearchKnowledge handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, request, ct))
         .Audited(KnowledgeAudit.DocumentSearched)

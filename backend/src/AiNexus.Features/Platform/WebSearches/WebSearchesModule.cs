@@ -11,5 +11,5 @@ public sealed class WebSearchesModule : IFeatureModule
         builder.Services.AddSettings<WebSearchesOptions, WebSearchesOptionsValidator>(WebSearchesOptions.Section);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => GetWebSearchStatus.Map(api);
+    public static void MapEndpoints(RouteGroupBuilder api) => api.MapSlice<GetWebSearchStatus>();
 }

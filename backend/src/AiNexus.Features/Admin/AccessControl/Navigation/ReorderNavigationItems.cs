@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +36,9 @@ internal sealed class NavigationOrderRequestValidator : RequestValidator<Navigat
 /// 拖曳或鍵盤排序後一次送出的移動與排序。套到完整的節點清單後才檢查結構（父節點、成環、深度、同層重複），
 /// 全部通過才寫入；同一個交易，不會留下移了一半的樹。會稽核。
 /// </summary>
-internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeWrite write)
+internal sealed class ReorderNavigationItems(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/navigation-items/order", (NavigationOrderRequest body, ReorderNavigationItems handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .Audited(AccessControlAudit.NavigationReordered)

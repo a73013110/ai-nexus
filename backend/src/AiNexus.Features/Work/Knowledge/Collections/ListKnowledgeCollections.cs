@@ -3,14 +3,15 @@ using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
 
 /// <summary>使用者可讀取的知識庫，依最近更新排序，最多 100 筆，附文件數與已就緒文件數。</summary>
-internal sealed class ListKnowledgeCollections(AppDbContext db, ResourceAccess access)
+internal sealed class ListKnowledgeCollections(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/collections", (ICurrentUser user, ListKnowledgeCollections handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(KnowledgeAudit.CollectionRead)

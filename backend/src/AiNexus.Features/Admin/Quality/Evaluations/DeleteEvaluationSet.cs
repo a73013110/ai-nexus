@@ -4,13 +4,14 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Quality.Evaluations;
 
 /// <summary>刪除題組（走共用的資源生命週期）；已結束的執行保有凍結的題目副本，不受影響。</summary>
-internal sealed class DeleteEvaluationSet(ResourceLifecycle lifecycle)
+internal sealed class DeleteEvaluationSet(ResourceLifecycle lifecycle) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/sets/{id:guid}", (Guid id, ICurrentUser user, DeleteEvaluationSet handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetDeleted);

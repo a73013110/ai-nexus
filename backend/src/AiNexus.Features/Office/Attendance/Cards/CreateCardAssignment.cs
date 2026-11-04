@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,9 @@ internal sealed class CardAssignmentCreateRequestValidator : RequestValidator<Ca
 /// 檢查與寫入在 <see cref="AdministrativeWrite"/> 的交易與這張卡的鎖內，兩個人同時指派同一張卡時後到的會看到先到的結果，不會雙雙通過。
 /// 被拒絕的 <c>attendance_card_held</c> 不帶目前的持有人（錯誤回應不帶資料）：前端由持有歷史得知是誰持有，提示後帶那一段的 <c>RowVersion</c> 重送。
 /// </summary>
-internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeWrite write)
+internal sealed class CreateCardAssignment(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (CardAssignmentCreateRequest body, CreateCardAssignment handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)

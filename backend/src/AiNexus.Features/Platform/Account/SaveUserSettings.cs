@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -26,9 +27,9 @@ internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 }
 
 /// <summary>一次儲存外觀偏好，以及閱讀、版面與輸入框設定。</summary>
-internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models)
+internal sealed class SaveUserSettings(AppDbContext db, ModelPresentation models) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/settings", (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
             handler.HandleAsync(user.User, body, ct))
         .Audited(AccountAudit.SettingsUpdated)

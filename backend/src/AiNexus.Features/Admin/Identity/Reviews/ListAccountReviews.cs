@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Accounts;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Reviews;
@@ -19,9 +20,9 @@ public sealed record AccountReviewsDto(IReadOnlyList<AccountReviewUserDto> Users
 /// 彙整各模組的 <see cref="IAccountReviewSource"/>（ADR 0019）。待辦每次重新查詢，不保存「已處理」：
 /// 處理完條件就不成立，項目自然消失，不會有待辦與實際資料不同步的問題。
 /// </summary>
-internal sealed class ListAccountReviews(AppDbContext db, AccessService access, IEnumerable<IAccountReviewSource> sources)
+internal sealed class ListAccountReviews(AppDbContext db, AccessService access, IEnumerable<IAccountReviewSource> sources) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/account-reviews", (ICurrentUser user, ListAccountReviews handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(IdentityAudit.AccountReviewRead)

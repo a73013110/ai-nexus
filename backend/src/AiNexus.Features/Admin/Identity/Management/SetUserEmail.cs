@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -34,9 +35,9 @@ public sealed record UserEmailChanged(Guid UserId, string DisplayName, string? P
 /// 管理員無法證明使用者持有該信箱，所以步升驗證碼等安全用途仍只用本人驗證過的地址，直到本人在帳號設定完成驗證。
 /// 不遞增 <c>SecurityVersion</c>：未驗證的地址不授予任何能力，不必登出使用者；舊的已驗證信箱會收到通知。
 /// </summary>
-internal sealed class SetUserEmail(AppDbContext db, AdministrativeWrite write, UserCredentials credentials, DomainEvents events)
+internal sealed class SetUserEmail(AppDbContext db, AdministrativeWrite write, UserCredentials credentials, DomainEvents events) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/email", (Guid id, UserEmailRequest body, ICurrentUser user, SetUserEmail handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .Audited(IdentityAudit.UserEmailUpdated)

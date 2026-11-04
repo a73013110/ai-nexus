@@ -3,6 +3,7 @@ using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,9 +20,9 @@ public sealed record MailSettingsDto(bool AutoRetry, DateTimeOffset? UpdatedAt);
 /// 切換自動重試（<c>mail.DeliverySettings</c>，下一輪寄送就生效、不必重啟）；寫行政稽核 <c>admin.mail_settings</c>。
 /// 關閉後暫時性與傳輸層失敗第一次就結束，已在等待重試的信不受影響，仍可立即重試或重寄。權限與重寄相同（<c>mail.messages.resend</c>）。
 /// </summary>
-internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite write, TimeProvider clock)
+internal sealed class UpdateMailSettings(AppDbContext db, AdministrativeWrite write, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("", (MailSettingsRequest body, IRequestActor actor, UpdateMailSettings handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, body, ct))
         .RequireFeature(FeatureCatalog.MailMessagesResend)

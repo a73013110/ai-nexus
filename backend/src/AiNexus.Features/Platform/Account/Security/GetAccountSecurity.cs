@@ -1,13 +1,14 @@
 using AiNexus.Data.App.Identity;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
 /// <summary>帳號與權限分頁的安全資料：信箱與來源、本地登入、可用的步升方式與步升期限。</summary>
-internal sealed class GetAccountSecurity(AccountSecurity security)
+internal sealed class GetAccountSecurity(AccountSecurity security) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/settings/account", (HttpContext http, ICurrentUser user, GetAccountSecurity handler) =>
             handler.Handle(http, user.User))
         .NotAudited("使用者自己的帳號安全狀態")

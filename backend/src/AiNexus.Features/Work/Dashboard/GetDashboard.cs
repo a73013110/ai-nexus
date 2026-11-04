@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Dashboard;
 
@@ -19,11 +20,11 @@ public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset Ge
 
 /// <summary>個人總覽；有平台用量頁（<see cref="FeatureCatalog.OperationsUsage"/>）授權者可看全平台總覽，且每次查看都會留稽核。</summary>
 internal sealed class GetDashboard(SpendReports reports, UsageReports usage, AccessService access,
-    IEnumerable<IDashboardSource> sources, TimeProvider clock, AuditTrail audit)
+    IEnumerable<IDashboardSource> sources, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
     private const string Personal = "personal", Platform = "platform";
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapGet("/dashboard", (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, scope ?? Personal, ownerId, from, until, offsetMinutes, ct))
         .RequireFeature(FeatureCatalog.Dashboard).Audited(DashboardAudit.OverviewRead).WithName("GetDashboard");

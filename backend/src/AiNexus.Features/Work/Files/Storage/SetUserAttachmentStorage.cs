@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Files.Storage;
 
 /// <summary>設定或清除使用者個人的附件容量上限，於擁有者的配額鎖內更新。會稽核。</summary>
-internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeWrite write, AttachmentQuota quota)
+internal sealed class SetUserAttachmentStorage(AppDbContext db, AdministrativeWrite write, AttachmentQuota quota) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/storage", (Guid id, AttachmentStorageLimitRequest body, SetUserAttachmentStorage handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .Audited(FilesAudit.StorageLimitUpdated)

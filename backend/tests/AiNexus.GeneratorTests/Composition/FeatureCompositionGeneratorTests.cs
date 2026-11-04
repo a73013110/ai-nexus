@@ -81,6 +81,7 @@ public sealed class FeatureCompositionGeneratorTests
     public void SlicesAreScopedAndRequestValidatorsAreSingletons()
     {
         const string slices = """
+            using AiNexus.Platform.Modules;
             using AiNexus.Platform.Validation;
             using FluentValidation;
             using Microsoft.AspNetCore.Builder;
@@ -88,28 +89,28 @@ public sealed class FeatureCompositionGeneratorTests
 
             namespace Sample;
 
-            internal sealed class ListItems
+            internal sealed class ListItems : IEndpointSlice
             {
-                public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api.MapGet("/items", () => "items");
+                public static void MapEndpoints(RouteGroupBuilder group) => group.MapGet("/items", () => "items");
             }
 
             internal static class Outer
             {
-                internal sealed class SaveItem
+                internal sealed class SaveItem : IEndpointSlice
                 {
-                    public static void MapCreate(RouteGroupBuilder api) { }
+                    public static void MapEndpoints(RouteGroupBuilder group) { }
                 }
             }
 
-            internal static class Extensions
+            internal abstract class AbstractSlice : IEndpointSlice
             {
-                public static void MapHelpers(RouteGroupBuilder api) { }
+                public static void MapEndpoints(RouteGroupBuilder group) { }
             }
 
             internal sealed class NotASlice
             {
-                public static void Map(IEndpointRouteBuilder api) { }
-                public static void Configure(RouteGroupBuilder api) { }
+                public static void Map(RouteGroupBuilder api) { }
+                public static void MapEndpoints(RouteGroupBuilder api) { }
             }
 
             internal sealed record ItemRequest(string Name);
@@ -136,7 +137,7 @@ public sealed class FeatureCompositionGeneratorTests
         Assert.Contains("Singleton<global::AiNexus.Platform.Validation.IRequestValidator, global::Sample.ItemRequestValidator>());", run.Source, StringComparison.Ordinal);
         Assert.Contains("Singleton<global::AiNexus.Platform.Validation.IRequestValidator, global::Sample.DerivedValidator>());", run.Source, StringComparison.Ordinal);
         // 單純的 AbstractValidator<T> 是子驗證器，不套用到端點，也不註冊。
-        foreach (var excluded in new[] { "Sample.Extensions", "Sample.NotASlice", "Sample.BaseValidator", "Sample.GenericValidator", "Sample.ChildValidator" })
+        foreach (var excluded in new[] { "Sample.AbstractSlice", "Sample.NotASlice", "Sample.BaseValidator", "Sample.GenericValidator", "Sample.ChildValidator" })
             Assert.DoesNotContain(excluded, run.Source, StringComparison.Ordinal);
     }
 
@@ -263,15 +264,16 @@ public sealed class FeatureCompositionGeneratorTests
     public void TypesTheGeneratedCodeCannotSeeAreReportedInsteadOfRegistered()
     {
         const string hidden = """
+            using AiNexus.Platform.Modules;
             using Microsoft.AspNetCore.Routing;
 
             namespace Sample;
 
             internal sealed class Outer
             {
-                private sealed class Hidden
+                private sealed class Hidden : IEndpointSlice
                 {
-                    public static void Map(RouteGroupBuilder api) { }
+                    public static void MapEndpoints(RouteGroupBuilder group) { }
                 }
             }
             """;

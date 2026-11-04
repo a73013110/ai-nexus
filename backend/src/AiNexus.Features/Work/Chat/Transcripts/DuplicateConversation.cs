@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -21,9 +22,9 @@ internal sealed class DuplicateConversation(
     AppDbContext db,
     GenerationScheduler scheduler,
     AttachmentQuota quota,
-    TimeProvider clock, AuditTrail audit)
+    TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/duplicate", (Guid id, ICurrentUser user, DuplicateConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationDuplicated)

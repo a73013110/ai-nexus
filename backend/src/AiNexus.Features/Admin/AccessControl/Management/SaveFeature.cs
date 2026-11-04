@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,9 +16,9 @@ public sealed record FeatureUpdateRequest(string? Name, bool Enabled, long RowVe
 /// <summary>
 /// 更名、啟用或停用既有功能。會稽核；若會移除執行者自己的功能管理權限則拒絕。
 /// </summary>
-internal sealed class SaveFeature(AppDbContext db, AdministrativeWrite write)
+internal sealed class SaveFeature(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/features/{id}", (string id, FeatureUpdateRequest body, IRequestActor actor, SaveFeature handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, id, body, ct))
         .Audited(AccessControlAudit.FeatureUpdated)

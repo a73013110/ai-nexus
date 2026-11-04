@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
@@ -47,9 +48,9 @@ public static class MailDiagnosisStatuses
 /// 以目前設定同步跑一次 SMTP 對話（<see cref="SmtpProbe"/>），逐步回報到哪一步失敗、為什麼；不寄出信、不經過 outbox，也不影響斷路器。
 /// 每人每分鐘 5 次；寫行政稽核 <c>admin.mail_diagnose</c>（只記結果與失敗的步驟，不記收件地址與對話內容）。
 /// </summary>
-internal sealed partial class DiagnoseMailTransport(AuditTrail audit, IOptions<MailOptions> options, TimeProvider clock, ILogger<DiagnoseMailTransport> logger)
+internal sealed partial class DiagnoseMailTransport(AuditTrail audit, IOptions<MailOptions> options, TimeProvider clock, ILogger<DiagnoseMailTransport> logger) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (MailDiagnosisRequest body, IRequestActor actor, DiagnoseMailTransport handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, body, ct))
         .RequireRateLimiting(MailModule.DiagnosisRateLimit)

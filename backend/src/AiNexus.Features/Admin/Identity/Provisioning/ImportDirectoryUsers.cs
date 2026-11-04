@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
 
@@ -9,10 +10,10 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 /// 已在平台的人以目錄資料更新，預建的同名帳號綁定 SID。AD 已停用的人除非 <see cref="DirectoryImportRequest.IncludeDisabled"/> 否則不新建。
 /// 每人一筆 <c>admin.user_import</c> 稽核；目錄連不上時整批不寫入（503）。
 /// </summary>
-internal sealed class ImportDirectoryUsers(IAdDirectory directory, DirectoryProvisioning provisioning)
+internal sealed class ImportDirectoryUsers(IAdDirectory directory, DirectoryProvisioning provisioning) : IEndpointSlice
 {
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/directory-imports", (DirectoryImportRequest body, ICurrentUser user, ImportDirectoryUsers handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)

@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Account.Security;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Platform.Account.Security;
 /// 地址綁在驗證碼上，確認時不接受請求再帶一次。
 /// </summary>
 internal sealed class RequestEmailChange(Reauthentication reauthentication, UserCredentials credentials, VerificationChallenges challenges, MailOutbox outbox,
-    IOptions<SelfServiceOptions> options)
+    IOptions<SelfServiceOptions> options) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/email-changes", (EmailChangeRequest body, HttpContext http, ICurrentUser user, RequestEmailChange handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)

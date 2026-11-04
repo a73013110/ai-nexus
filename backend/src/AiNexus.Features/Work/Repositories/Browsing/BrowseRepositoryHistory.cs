@@ -2,6 +2,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
 
@@ -11,11 +12,11 @@ public sealed record RepositoryCommitPageDto(IReadOnlyList<RepositoryCommitDto> 
 public sealed record RepositoryDiffDto(RepositoryCommitDto Head, RepositoryCommitDto? Base, string Diff, bool TooLarge);
 
 /// <summary>變更歷史：某個 ref 的 commit 清單，以及單一 commit 或兩個 commit 之間的 diff。</summary>
-internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
+internal sealed class BrowseRepositoryHistory(RepositoryService gitea) : IEndpointSlice
 {
     private const int PageSize = 30;
 
-    public static void Map(RouteGroupBuilder repository)
+    public static void MapEndpoints(RouteGroupBuilder repository)
     {
         repository.MapGet("/commits", (string owner, string name, string? @ref, int? page, ICurrentUser user, BrowseRepositoryHistory handler, CancellationToken ct) =>
                 handler.CommitsAsync(user.Id, owner + "/" + name, @ref, page ?? 1, ct))

@@ -3,13 +3,14 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
 
 /// <summary>擁有者讀取有哪些人可以檢視或編輯此成果。</summary>
-internal sealed class ReadArtifactAccess(ResourceAccess access)
+internal sealed class ReadArtifactAccess(ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ReadArtifactAccess handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ArtifactsAudit.AccessRead)

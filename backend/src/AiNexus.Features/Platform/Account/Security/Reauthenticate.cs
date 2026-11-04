@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -28,9 +29,9 @@ internal sealed class ReauthenticationRequestValidator : RequestValidator<Reauth
 /// 步升驗證：以目前的密碼或寄到信箱的驗證碼確認本人，成功後 <see cref="SelfServiceOptions.ReauthenticationMinutes"/> 內可做敏感變更。
 /// 重發 cookie 後 claims 改變，回傳新的 CSRF token。成功與失敗都寫稽核（不含密碼與驗證碼）。
 /// </summary>
-internal sealed class Reauthenticate(AppDbContext db, AccountSecurity security, Reauthentication reauthentication, VerificationChallenges challenges)
+internal sealed class Reauthenticate(AppDbContext db, AccountSecurity security, Reauthentication reauthentication, VerificationChallenges challenges) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/reauthentications", (ReauthenticationRequest body, HttpContext http, ICurrentUser user, Reauthenticate handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)

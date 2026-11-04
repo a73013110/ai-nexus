@@ -2,15 +2,16 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
 public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
 
 /// <summary>使用者可讀取的純文字來源內容與版本號。</summary>
-internal sealed class ReadTextDocument(DocumentAccess documents)
+internal sealed class ReadTextDocument(DocumentAccess documents) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/text", (Guid id, ICurrentUser user, ReadTextDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentRead).WithName("ReadTextDocument");

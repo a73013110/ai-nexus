@@ -7,6 +7,7 @@ using AiNexus.Features.Office.Attendance.Calendar;
 using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Time;
@@ -67,12 +68,12 @@ public sealed record AttendanceRecordDto(
 /// </list>
 /// </remarks>
 internal sealed class ListAttendanceRecords(AppDbContext db, IDataScope scopes, AttendanceRoster roster, CalendarReader calendar,
-    GdFormReader formReader, IOptions<AttendanceOptions> options, TimeProvider clock, AuditTrail audit)
+    GdFormReader formReader, IOptions<AttendanceOptions> options, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
     /// <summary>每頁人數的預設與上限：一人一年約 250 個上班日，50 人已是上萬列。</summary>
     public const int DefaultPageSize = 20, MaxPageSize = 50;
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", ([AsParameters] AttendanceRecordsFilter filter, int? offset, int? limit, ICurrentUser user, ListAttendanceRecords handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, filter, new(offset ?? 0, limit ?? DefaultPageSize), ct))
         .Audited(AttendanceAudit.RecordRead)

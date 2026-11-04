@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Inference.ModelPolicies;
@@ -8,9 +9,9 @@ namespace AiNexus.Features.Platform.Inference.ModelPolicies;
 public sealed record AdminUserModelPolicyDto(ModelPolicyRequest Personal, EffectiveModelPolicyDto Effective);
 
 /// <summary>使用者的個人策略與有效結果，回傳內部模型 id（供管理端使用）。</summary>
-internal sealed class GetUserModelPolicy(AppDbContext db, ModelPolicyService policies)
+internal sealed class GetUserModelPolicy(AppDbContext db, ModelPolicyService policies) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/model-policy", (Guid id, GetUserModelPolicy handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .Audited(InferenceAudit.UserPolicyRead)

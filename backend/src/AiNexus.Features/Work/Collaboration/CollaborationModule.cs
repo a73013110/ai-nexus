@@ -7,7 +7,6 @@ public sealed class CollaborationModule : IFeatureModule
 {
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        SearchDirectory.MapUsers(api);
-        SearchDirectory.MapGroups(api);
+        api.MapSlice<SearchDirectory>();
     }
 }

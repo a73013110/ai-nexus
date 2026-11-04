@@ -5,6 +5,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -33,15 +34,16 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 }
 
 /// <summary>建立個人專案（最多 100 個），或儲存使用者可編輯的專案的新版本。</summary>
-internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit)
+internal sealed class SaveProject(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("", (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapPost("", (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
             handler.CreateAsync(user.Id, body, ct)).Audited(ProjectsAudit.ProjectCreated);
 
-    public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
+        routes.MapPut("/{id:guid}", (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) =>
             handler.UpdateAsync(user.Id, id, body, ct)).Audited(ProjectsAudit.ProjectUpdated);
+    }
 
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {

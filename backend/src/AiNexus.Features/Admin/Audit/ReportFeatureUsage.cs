@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Audit;
@@ -26,11 +27,11 @@ public sealed record FeatureUsageDetailDto(string FeatureId, DateTimeOffset From
 /// 動作功能（例如 <c>attendance.cards.maintain</c>）併入所屬頁面；使用者是實際操作者，測試身分算在管理者身上。
 /// 範圍與活動稽核相同的規則（<see cref="AuditDataScope"/>），但另外授予 <see cref="FeatureCatalog.AuditUsage"/>。
 /// </summary>
-internal sealed class ReportFeatureUsage(AppDbContext db, AuditDataScope scope, TimeProvider clock)
+internal sealed class ReportFeatureUsage(AppDbContext db, AuditDataScope scope, TimeProvider clock) : IEndpointSlice
 {
     private const int TopUsers = 20;
 
-    public static void Map(RouteGroupBuilder usage)
+    public static void MapEndpoints(RouteGroupBuilder usage)
     {
         usage.MapGet("", (DateTimeOffset? from, DateTimeOffset? until, ICurrentUser user, ReportFeatureUsage handler, CancellationToken ct) =>
                 handler.ListAsync(user.Id, from, until, ct))

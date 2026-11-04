@@ -8,6 +8,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Work.Projects.Templates;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,9 +20,9 @@ public sealed record ProjectConversationRequest(string? Title = null, Guid? Temp
 public sealed record ProjectConversationDto(ConversationDto Conversation, string Prompt);
 
 /// <summary>在可讀取的有效專案中開啟使用者自己的對話；需要聊天功能。</summary>
-internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess access, AccessService features)
+internal sealed class StartProjectConversation(AppDbContext db, ResourceAccess access, AccessService features) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/conversations", (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct)).Audited(ProjectsAudit.ConversationCreated);
 

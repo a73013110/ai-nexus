@@ -61,13 +61,14 @@ public sealed class InferenceModule : IFeatureModule
     /// </summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        ListModels.Map(api.MapGroup("").RequireFeature(FeatureCatalog.Chat));
-        GetStatus.Map(api);
-        GetEffectiveModelPolicy.Map(api);
+        api.MapGroup("").RequireFeature(FeatureCatalog.Chat)
+            .MapSlice<ListModels>();
+        api.MapSlice<GetStatus>()
+            .MapSlice<GetEffectiveModelPolicy>();
 
         // 管理端的使用者模型策略，在使用者頁編輯。
-        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
-        GetUserModelPolicy.Map(admin);
-        SetUserModelPolicy.Map(admin);
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers)
+            .MapSlice<GetUserModelPolicy>()
+            .MapSlice<SetUserModelPolicy>();
     }
 }

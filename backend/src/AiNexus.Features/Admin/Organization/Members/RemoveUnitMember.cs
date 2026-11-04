@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Members;
 
 /// <summary>把使用者移出單位。移除主要所屬後不會自動指定另一個單位，由管理員決定。會稽核。</summary>
-internal sealed class RemoveUnitMember(AppDbContext db, AdministrativeWrite write)
+internal sealed class RemoveUnitMember(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, RemoveUnitMember handler, CancellationToken ct) =>
             handler.HandleAsync(id, userId, ct))
         .Audited(OrganizationAudit.MemberDeleted)

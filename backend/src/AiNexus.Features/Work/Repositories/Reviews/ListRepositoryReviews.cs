@@ -3,14 +3,15 @@ using AiNexus.Data.App.Repositories;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Reviews;
 
 /// <summary>使用者在目前 Gitea 主機上，某個程式庫最近 50 筆 review。</summary>
-internal sealed class ListRepositoryReviews(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews)
+internal sealed class ListRepositoryReviews(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
+    public static void MapEndpoints(RouteGroupBuilder repository) => repository
         .MapGet("/reviews", (string owner, string name, ICurrentUser user, ListRepositoryReviews handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, ct))
         .Audited(RepositoriesAudit.ReviewRead)

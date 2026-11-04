@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.RemoteFiles;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
@@ -26,7 +27,7 @@ namespace AiNexus.Features.Office.Attendance.Forms;
 /// </list>
 /// </remarks>
 internal sealed partial class GetGdForm(ExternalDatabase<GdDatabase> gd, GdAccounts accounts, GdFlowReader flows, GdAttachments attachments,
-    RemoteFileTickets tickets, IDataScope scopes, OrganizationDirectory organization)
+    RemoteFileTickets tickets, IDataScope scopes, OrganizationDirectory organization) : IEndpointSlice
 {
     // 「待處理表單」等 GD 字樣不在這裡；SQL 只取欄位，顯示規則在 C#。喪假（G1）才有 BereaveType。
     private static readonly string Sql = $$"""
@@ -65,7 +66,7 @@ internal sealed partial class GetGdForm(ExternalDatabase<GdDatabase> gd, GdAccou
     /// <summary>GD <c>LeaveFormBean.setSelectBereaveType</c> 的選項，<c>BereaveType</c> 存的是索引。</summary>
     private static readonly string[] Relations = ["父母", "養父母", "繼父母", "配偶", "祖父母", "子女", "配偶之父母", "配偶之養父母", "配偶之繼父母", "曾祖父母", "兄弟姊妹", "配偶之祖父母"];
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{desNo}", (string desNo, ICurrentUser user, GetGdForm handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, desNo, ct))
         .Audited(AttendanceAudit.FormRead)

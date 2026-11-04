@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -22,9 +23,9 @@ internal sealed class ConnectRepositoryRequestValidator : RequestValidator<Conne
 }
 
 /// <summary>向 Gitea 驗證個人存取 token，然後以加密形式存給此使用者與主機。</summary>
-internal sealed class ConnectRepository(AppDbContext db, RepositoryService gitea, IGiteaClient client, TimeProvider clock)
+internal sealed class ConnectRepository(AppDbContext db, RepositoryService gitea, IGiteaClient client, TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/connection", (ConnectRepositoryRequest body, ICurrentUser user, ConnectRepository handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body.Token, ct))
         .Audited(RepositoriesAudit.ConnectionConnected)

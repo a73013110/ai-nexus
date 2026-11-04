@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,11 +32,11 @@ public static class CardStatuses
 /// <c>search</c> 比對卡號、備註，以及任何一段持有期間的持有人姓名或使用者名稱（HR 常從人名找卡）；<c>status</c> 見 <see cref="CardStatuses"/>。
 /// 一律依卡號排序（HR 是拿著卡號來找卡的，順序不隨狀態改變）。卡片數以百計，不分頁。
 /// </summary>
-internal sealed class ListCards(AppDbContext db, TimeProvider clock)
+internal sealed class ListCards(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
     private const int SearchMaxLength = 100;
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (string? search, string? status, ListCards handler, CancellationToken ct) =>
             handler.HandleAsync(search, status, ct))
         .Audited(AttendanceAudit.CardRead)

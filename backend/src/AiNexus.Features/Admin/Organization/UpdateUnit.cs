@@ -3,6 +3,7 @@ using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -24,9 +25,9 @@ internal sealed class UnitUpdateRequestValidator : RequestValidator<UnitUpdateRe
 }
 
 /// <summary>修改或搬移單位；搬移時整棵下層跟著走，成員不變。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>
-internal sealed class UpdateUnit(AppDbContext db, AdministrativeWrite write)
+internal sealed class UpdateUnit(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (Guid id, UnitUpdateRequest body, UpdateUnit handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .Audited(OrganizationAudit.UnitUpdated)

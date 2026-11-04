@@ -6,6 +6,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -21,9 +22,9 @@ public sealed record ConversationDetailDto(
 /// <summary>
 /// 取得使用者指定的單一對話完整明細；訊息由 <see cref="TranscriptReader"/> 組裝。
 /// </summary>
-internal sealed class GetConversation(AppDbContext db, TranscriptReader transcripts, ModelPresentation presentation)
+internal sealed class GetConversation(AppDbContext db, TranscriptReader transcripts, ModelPresentation presentation) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationRead)

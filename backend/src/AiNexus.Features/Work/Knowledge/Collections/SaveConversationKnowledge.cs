@@ -6,6 +6,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Work.Knowledge.Retrieval;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
@@ -14,9 +15,9 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 /// 取代使用者自己的閒置對話所用的知識庫（最多三個，且須為使用者可讀取者）。
 /// 在對話的生成鎖內執行，避免正在啟動的回答讀到修改到一半的選取。
 /// </summary>
-internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
+internal sealed class SaveConversationKnowledge(AppDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("", (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, request, ct))
         .Audited(KnowledgeAudit.ConversationCollectionUpdated)

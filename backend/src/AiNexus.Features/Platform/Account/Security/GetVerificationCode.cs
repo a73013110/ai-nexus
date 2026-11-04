@@ -4,13 +4,14 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
 /// <summary>驗證碼的到期時間、剩餘次數與寄送狀態，讓使用者知道信是否已寄出。只看得到自己的驗證碼。</summary>
-internal sealed class GetVerificationCode(VerificationChallenges challenges, MailOutbox outbox)
+internal sealed class GetVerificationCode(VerificationChallenges challenges, MailOutbox outbox) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/settings/account/verification-codes/{id:guid}", (Guid id, ICurrentUser user, GetVerificationCode handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, id, ct))
         .NotAudited("輪詢驗證碼的寄送狀態")

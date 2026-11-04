@@ -4,6 +4,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,27 +18,26 @@ public sealed record RepositoryEntryDto(string Name, string Path, string Kind, l
 public sealed record RepositoryTreeDto(string Commit, string Path, IReadOnlyList<RepositoryEntryDto> Entries, RepositoryFileDto? Readme);
 
 /// <summary>以使用者自己的 token 唯讀瀏覽：程式庫清單、單一程式庫（含分支與標籤）、資料夾與檔案。</summary>
-internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gitea)
+internal sealed class BrowseRepositories(AppDbContext db, RepositoryService gitea) : IEndpointSlice
 {
     private const int PageSize = 20;
 
-    public static void MapList(RouteGroupBuilder routes) => routes
-        .MapGet("", (string? q, int? page, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
-            handler.ListAsync(user.Id, q, page ?? 1, ct))
-        .Audited(RepositoriesAudit.RepositoryRead)
-        .WithName("ListRepositories");
-
-    public static void Map(RouteGroupBuilder repository)
+    // 單一程式庫的路徑與模組的 /{owner}/{name} 子群組相同；授權都來自程式庫群組，所以掛在同一個群組。
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
-        repository.MapGet("", (string owner, string name, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
+        routes.MapGet("", (string? q, int? page, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
+                handler.ListAsync(user.Id, q, page ?? 1, ct))
+            .Audited(RepositoriesAudit.RepositoryRead)
+            .WithName("ListRepositories");
+        routes.MapGet("/{owner}/{name}", (string owner, string name, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
                 handler.ReadAsync(user.Id, owner + "/" + name, ct))
             .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepository");
-        repository.MapGet("/tree", (string owner, string name, string commit, string? path, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
+        routes.MapGet("/{owner}/{name}/tree", (string owner, string name, string commit, string? path, ICurrentUser user, BrowseRepositories handler, CancellationToken ct) =>
                 handler.TreeAsync(user.Id, owner + "/" + name, commit, path ?? "", ct))
             .Audited(RepositoriesAudit.RepositoryRead)
             .WithName("ReadRepositoryTree");
-        repository.MapGet("/file", (string owner, string name, string commit, string path, ICurrentUser user, RepositoryService gitea, CancellationToken ct) =>
+        routes.MapGet("/{owner}/{name}/file", (string owner, string name, string commit, string path, ICurrentUser user, RepositoryService gitea, CancellationToken ct) =>
                 gitea.FileAsync(user.Id, owner + "/" + name, commit, path, ct))
             .Audited(RepositoriesAudit.FileRead)
             .WithName("ReadRepositoryFile");

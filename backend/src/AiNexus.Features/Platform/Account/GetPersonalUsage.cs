@@ -1,11 +1,12 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account;
 
-internal sealed class GetPersonalUsage(PersonalUsage usage)
+internal sealed class GetPersonalUsage(PersonalUsage usage) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/settings/usage", (ICurrentUser user, GetPersonalUsage handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .NotAudited("使用者自己的用量")

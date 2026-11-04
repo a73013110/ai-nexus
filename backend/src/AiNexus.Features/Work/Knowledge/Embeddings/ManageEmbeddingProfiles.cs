@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
@@ -14,31 +15,30 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 /// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量（重建與清除只排入背景工作，交易內不做耗時的事）。
 /// 每次變更都經 <see cref="AdministrativeWrite"/> 稽核，並在 <see cref="KnowledgeLocks.EmbeddingProfile"/> 排隊。
 /// </summary>
-internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, AdministrativeWrite write)
+internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void MapList(RouteGroupBuilder routes) => routes
-        .MapGet("/profiles", (ManageEmbeddingProfiles handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapGet("/profiles", (ManageEmbeddingProfiles handler, CancellationToken ct) =>
             handler.ListAsync(ct))
-        .Audited(KnowledgeAudit.ProfileRead)
-        .WithName("ListEmbeddingProfiles");
+            .Audited(KnowledgeAudit.ProfileRead)
+            .WithName("ListEmbeddingProfiles");
 
-    public static void MapRebuild(RouteGroupBuilder routes) => routes
-        .MapPost("/profiles/{id:int}/rebuild", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) =>
+        routes.MapPost("/profiles/{id:int}/rebuild", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) =>
             handler.RebuildAsync(user.Id, id, ct))
-        .Audited(KnowledgeAudit.ProfileRebuilt)
-        .WithName("RebuildEmbeddingProfile");
+            .Audited(KnowledgeAudit.ProfileRebuilt)
+            .WithName("RebuildEmbeddingProfile");
 
-    public static void MapActivate(RouteGroupBuilder routes) => routes
-        .MapPost("/profiles/{id:int}/activate", (int id, ManageEmbeddingProfiles handler, CancellationToken ct) =>
+        routes.MapPost("/profiles/{id:int}/activate", (int id, ManageEmbeddingProfiles handler, CancellationToken ct) =>
             handler.ActivateAsync(id, ct))
-        .Audited(KnowledgeAudit.ProfileActivated)
-        .WithName("ActivateEmbeddingProfile");
+            .Audited(KnowledgeAudit.ProfileActivated)
+            .WithName("ActivateEmbeddingProfile");
 
-    public static void MapClear(RouteGroupBuilder routes) => routes
-        .MapDelete("/profiles/{id:int}/vectors", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) =>
+        routes.MapDelete("/profiles/{id:int}/vectors", (int id, ICurrentUser user, ManageEmbeddingProfiles handler, CancellationToken ct) =>
             handler.ClearAsync(user.Id, id, ct))
-        .Audited(KnowledgeAudit.ProfileCleared)
-        .WithName("ClearRetiredEmbeddingVectors");
+            .Audited(KnowledgeAudit.ProfileCleared)
+            .WithName("ClearRetiredEmbeddingVectors");
+    }
 
     public Task<IReadOnlyList<EmbeddingProfileDto>> ListAsync(CancellationToken ct) => lifecycle.ListAsync(ct);
 

@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 /// <c>from</c>（含）、<c>until</c>（不含）依開始匯入的時間；<c>fileId</c> 或 <c>fileName</c>（<c>yyyyMMdd.txt</c>，完全相同）限定單一檔案；
 /// <c>status</c> 是 <see cref="PunchImportStatuses"/> 之一。
 /// </summary>
-internal sealed class ListPunchImports(AppDbContext db)
+internal sealed class ListPunchImports(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid? fileId, string? fileName, string? status, DateTimeOffset? from, DateTimeOffset? until, [AsParameters] TableRequest table, ListPunchImports handler, CancellationToken ct)
             => handler.HandleAsync(fileId, fileName, status, from, until, table, ct))
         .Audited(AttendanceAudit.ImportRead)

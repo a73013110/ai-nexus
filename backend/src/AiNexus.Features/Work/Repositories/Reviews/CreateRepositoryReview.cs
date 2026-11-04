@@ -11,6 +11,7 @@ using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Repositories.Browsing;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -43,9 +44,9 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 /// 之後的 push 不會改變這次 review。request key 讓同一請求的重試回傳同一個 review；同一個 key 用於不同請求則為衝突。
 /// </summary>
 internal sealed class CreateRepositoryReview(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
-    ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
+    ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
+    public static void MapEndpoints(RouteGroupBuilder repository) => repository
         .MapPost("/reviews", (string owner, string name, CreateRepositoryReviewRequest body, ICurrentUser user, CreateRepositoryReview handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct))
         .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCreated).WithName("CreateRepositoryReview");

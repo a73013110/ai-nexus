@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Work.Collaboration;
@@ -25,12 +26,12 @@ internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValid
 /// 本模組唯一的 Gitea 寫入：以使用者自己的 token（需要 <c>write:issue</c> 權限）把已完成的 pull request review 貼成一則留言。
 /// 送出前會先重新檢查來源；每份 review 最多貼一次，並寫入稽核紀錄。
 /// </summary>
-internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, TimeProvider clock, AuditTrail audit)
+internal sealed class PostRepositoryReviewComment(AppDbContext db, RepositoryService gitea, RepositoryReviewService reviews, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
     // 必須長於一次 Gitea 請求的逾時上限（GiteaOptions.TimeoutSeconds 最多 30 秒）。
     private static readonly TimeSpan ClaimLease = TimeSpan.FromMinutes(2);
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/reviews/{id:guid}/comment", (Guid id, PostRepositoryReviewCommentRequest body, ICurrentUser user, PostRepositoryReviewComment handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body.Body.Trim(), ct))
         .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ReviewCommented).WithName("PostRepositoryReviewComment");

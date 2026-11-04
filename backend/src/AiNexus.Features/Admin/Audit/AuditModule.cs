@@ -22,10 +22,11 @@ public sealed class AuditModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 保留 API 路徑不變（前端與已發布的文件依賴它），只把授權與 /admin 管理功能分開。
-        var audit = api.MapGroup("/admin/audit").RequireFeature(FeatureCatalog.Audit);
-        ListActivityAudit.Map(audit);
-        GetAuditCatalog.Map(audit);
-        ExportActivityAudit.Map(audit);
-        ReportFeatureUsage.Map(api.MapGroup("/admin/audit/usage").RequireFeature(FeatureCatalog.AuditUsage));
+        api.MapGroup("/admin/audit").RequireFeature(FeatureCatalog.Audit)
+            .MapSlice<ListActivityAudit>()
+            .MapSlice<GetAuditCatalog>()
+            .MapSlice<ExportActivityAudit>();
+        api.MapGroup("/admin/audit/usage").RequireFeature(FeatureCatalog.AuditUsage)
+            .MapSlice<ReportFeatureUsage>();
     }
 }

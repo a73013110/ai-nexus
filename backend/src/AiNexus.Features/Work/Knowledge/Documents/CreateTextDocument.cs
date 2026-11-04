@@ -5,13 +5,14 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
 /// <summary>在使用者可編輯的知識庫中建立純文字來源：文字以 .txt 附件上傳，並排入索引工作。</summary>
-internal sealed class CreateTextDocument(ResourceAccess access, AttachmentService attachments, AddKnowledgeDocument add)
+internal sealed class CreateTextDocument(ResourceAccess access, AttachmentService attachments, AddKnowledgeDocument add) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/collections/{id:guid}/text", (Guid id, TextDocumentRequest body, ICurrentUser user, CreateTextDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentCreated).WithName("CreateTextDocument");

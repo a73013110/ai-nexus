@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,9 @@ internal sealed class NavigationItemUpdateRequestValidator : RequestValidator<Na
 }
 
 /// <summary>修改分群、頁面或外部連結的內容（不改種類、不改位置）。會稽核。</summary>
-internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings)
+internal sealed class UpdateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/navigation-items/{id}", (string id, NavigationItemUpdateRequest body, UpdateNavigationItem handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .Audited(AccessControlAudit.NavigationUpdated)

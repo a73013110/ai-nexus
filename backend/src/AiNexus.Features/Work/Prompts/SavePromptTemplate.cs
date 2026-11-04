@@ -3,6 +3,7 @@ using AiNexus.Data.App.Prompts;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -23,9 +24,9 @@ internal sealed class SavePromptRequestValidator : RequestValidator<SavePromptRe
 }
 
 /// <summary>建立範本，或編輯使用者自己擁有的範本。</summary>
-internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
+internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, null, body, ct))

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -9,11 +10,11 @@ namespace AiNexus.Features.Admin.Mail.Messages;
 /// 寄送紀錄，新到舊，每頁 25、50（預設）或 100 筆；<c>before</c> 是上一頁最後一筆的 ID（游標）。
 /// 不回傳總數：大表的 COUNT 與深 offset 成本隨資料量成長，期間新入列的信也不會讓翻頁重複。
 /// </summary>
-internal sealed class ListMailMessages(AppDbContext db)
+internal sealed class ListMailMessages(AppDbContext db) : IEndpointSlice
 {
     public static readonly int[] PageSizes = [25, 50, 100];
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", ([AsParameters] MailMessageFilter filter, Guid? before, int? take, ListMailMessages handler, CancellationToken ct) =>
             handler.HandleAsync(filter, before, take, ct))
         .Audited(MailAudit.MessageRead)

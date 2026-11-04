@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +27,9 @@ internal sealed class NavigationItemCreateRequestValidator : RequestValidator<Na
 }
 
 /// <summary>新增分群、頁面或外部連結，排到同層最後。Id 由伺服器產生（內建節點的可讀 Id 只來自 Seed）。會稽核。</summary>
-internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings)
+internal sealed class CreateNavigationItem(AppDbContext db, AdministrativeWrite write, IOptions<AccessControlOptions> settings) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/navigation-items", (NavigationItemCreateRequest body, CreateNavigationItem handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .Audited(AccessControlAudit.NavigationCreated)

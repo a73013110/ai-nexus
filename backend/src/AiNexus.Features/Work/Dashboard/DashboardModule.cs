@@ -5,5 +5,5 @@ namespace AiNexus.Features.Work.Dashboard;
 /// <summary>總覽的註冊入口；各區塊由其他模組以 <c>IDashboardSource</c> 自行提供。</summary>
 public sealed class DashboardModule : IFeatureModule
 {
-    public static void MapEndpoints(RouteGroupBuilder api) => GetDashboard.Map(api);
+    public static void MapEndpoints(RouteGroupBuilder api) => api.MapSlice<GetDashboard>();
 }

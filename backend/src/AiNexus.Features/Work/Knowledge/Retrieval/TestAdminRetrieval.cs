@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Platform.Errors;
@@ -20,9 +21,9 @@ internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<Ad
 }
 
 /// <summary>以管理者身分執行檢索管線，可覆寫模式與 rerank，用於管理端測試檢索結果。</summary>
-internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
+internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct)
             => handler.HandleAsync(user.Id, body, ct))
         .Audited(KnowledgeAudit.RetrievalSearched)

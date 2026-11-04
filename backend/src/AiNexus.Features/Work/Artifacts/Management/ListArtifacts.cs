@@ -3,6 +3,7 @@ using AiNexus.Data.App.Artifacts;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
@@ -10,11 +11,11 @@ namespace AiNexus.Features.Work.Artifacts.Management;
 public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
 
 /// <summary>使用者可讀取、依更新時間排序的前 200 份成果，並標示每份是否可編輯。</summary>
-internal sealed class ListArtifacts(AppDbContext db, ResourceAccess access)
+internal sealed class ListArtifacts(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
     private const int PageSize = 200;
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (ICurrentUser user, ListArtifacts handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(ArtifactsAudit.ArtifactRead)

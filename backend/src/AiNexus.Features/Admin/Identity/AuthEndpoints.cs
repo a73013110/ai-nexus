@@ -1,5 +1,6 @@
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Sessions;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Identity;
 
@@ -14,13 +15,13 @@ public static class AuthEndpoints
     /// <summary>端點註冊順序即 OpenAPI 發布順序。</summary>
     public static void MapAuthenticationEndpoints(this IEndpointRouteBuilder api)
     {
-        var auth = api.MapGroup("/auth");
-        GetAuthSession.Map(auth);
-        WindowsLogin.Map(auth);
-        LogIn.Map(auth);
-        LogOut.Map(auth);
-        SelectIdentity.Map(auth);
-        StartTestIdentity.Map(auth);
-        EndTestIdentity.Map(auth);
+        api.MapGroup("/auth")
+            .MapSlice<GetAuthSession>()
+            .MapSlice<WindowsLogin>()
+            .MapSlice<LogIn>()
+            .MapSlice<LogOut>()
+            .MapSlice<SelectIdentity>()
+            .MapSlice<StartTestIdentity>()
+            .MapSlice<EndTestIdentity>();
     }
 }

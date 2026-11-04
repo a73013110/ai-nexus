@@ -1,16 +1,17 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing.Management;
 
 /// <summary>使用者寄出的分享，或寄給使用者且來源仍存在的有效分享。</summary>
-internal sealed class ListShares(AppDbContext db, ShareAccess shares, TimeProvider clock)
+internal sealed class ListShares(AppDbContext db, ShareAccess shares, TimeProvider clock) : IEndpointSlice
 {
     private const int PageSize = 100;
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, sent ?? false, ct)).Audited(SharingAudit.ShareRead);
 

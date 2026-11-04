@@ -1,5 +1,6 @@
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Office.Attendance.Calendar;
 
@@ -7,9 +8,9 @@ namespace AiNexus.Features.Office.Attendance.Calendar;
 /// 假日設定頁：列出 <c>from</c>～<c>to</c>（都含）在 GD <c>dbo.Pub_Days</c> 的日期，依日期排序；最多 <see cref="CalendarDates.MaxRangeDays"/> 天。
 /// GD 沒有列的日期不會出現（不補空白日），因為回寫只能改既有日期。GD 不可用時回 <c>attendance_gd_unavailable</c>，不回空清單。
 /// </summary>
-internal sealed class ListCalendarDays(CalendarReader calendar)
+internal sealed class ListCalendarDays(CalendarReader calendar) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (DateOnly? from, DateOnly? to, ListCalendarDays handler, CancellationToken ct) =>
             handler.HandleAsync(from, to, ct))
         .Audited(AttendanceAudit.CalendarDayRead)

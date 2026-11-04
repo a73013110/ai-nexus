@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Provisioning;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -28,9 +29,9 @@ internal sealed class DirectoryBindingRequestValidator : RequestValidator<Direct
 /// UserId、角色、部門與歷史資料沿用，不另建使用者。同時寫入新的 <c>AdAccount</c> 並開啟 AD 驗證；姓名與信箱留給「從 AD 更新」。
 /// SID 已綁定其他使用者（含已刪除者）或帳號名已被他人使用時拒絕，避免接管別人的身分。遞增 <c>SecurityVersion</c>，舊工作階段失效。
 /// </summary>
-internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IAdDirectory directory)
+internal sealed class RebindDirectoryAccount(AppDbContext db, AdministrativeWrite write, IAdDirectory directory) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/ad-binding", (Guid id, DirectoryBindingRequest body, ICurrentUser user, RebindDirectoryAccount handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .Audited(IdentityAudit.DirectoryBound)

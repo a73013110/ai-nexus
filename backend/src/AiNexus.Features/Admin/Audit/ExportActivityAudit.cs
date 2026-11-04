@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -15,12 +16,12 @@ namespace AiNexus.Features.Admin.Audit;
 /// 匯出符合條件的全部紀錄為 CSV（新到舊），有獨立的 rate limit。
 /// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料。範圍與列表相同（<see cref="AuditDataScope"/>）。
 /// </summary>
-internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope, IOptions<AuditOptions> options)
+internal sealed class ExportActivityAudit(AppDbContext db, AuditDataScope scope, IOptions<AuditOptions> options) : IEndpointSlice
 {
     private static readonly string[] ResourceKeyFields = ["resourceKey", "conversationId", "userId"];
     private static readonly string[] Header = ["紀錄 ID", "時間（UTC）", "操作者", "測試身分", "動作", "分類", "功能", "資料主體", "資源 ID", "資源識別碼", "結果", "異動資訊", "來源 IP", "Trace ID", "Operation ID", "查證代碼"];
 
-    public static void Map(RouteGroupBuilder audit) => audit
+    public static void MapEndpoints(RouteGroupBuilder audit) => audit
         .MapGet("/export", ([AsParameters] ActivityAuditFilter filter, ICurrentUser user, ExportActivityAudit handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, filter, ct).ToFileResultAsync())
         .RequireRateLimiting(AuditModule.ExportRateLimit).Audited(AuditAudit.EventExported).WithName("ExportActivityAudit");

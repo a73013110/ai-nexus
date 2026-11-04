@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -14,9 +15,9 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// 刪除使用者可編輯的文件：取消其工作、清除索引與頁面；原始檔若無其他參照才釋放。
 /// 檔案位元組在交易提交後才刪除。
 /// </summary>
-internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, DocumentWriteLock writes, AttachmentLifecycle lifecycle)
+internal sealed class DeleteDocument(AppDbContext db, DocumentAccess documents, DocumentWriteLock writes, AttachmentLifecycle lifecycle) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentDeleted)

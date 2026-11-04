@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -27,9 +28,9 @@ internal sealed class CardCreateRequestValidator : RequestValidator<CardCreateRe
 /// <summary>
 /// 新增還沒刷過的卡（例如發給新人前先指派）；刷過的卡號在匯入時已自動建立。會稽核（<c>admin.attendance_card</c>）。
 /// </summary>
-internal sealed class CreateCard(AppDbContext db, AdministrativeWrite write)
+internal sealed class CreateCard(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (CardCreateRequest body, CreateCard handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)

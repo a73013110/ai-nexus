@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
@@ -11,9 +12,9 @@ namespace AiNexus.Features.Work.Artifacts.Management;
 public sealed record ArtifactRevisionDto(int Version, string Title, string Author, DateTimeOffset CreatedAt);
 
 /// <summary>使用者可讀取的成果之版本歷程，由新到舊。</summary>
-internal sealed class ListArtifactVersions(AppDbContext db, ResourceAccess access)
+internal sealed class ListArtifactVersions(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/versions", (Guid id, ICurrentUser user, ListArtifactVersions handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ArtifactsAudit.VersionRead)

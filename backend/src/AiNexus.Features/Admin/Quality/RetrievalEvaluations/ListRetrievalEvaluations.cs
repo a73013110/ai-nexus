@@ -1,14 +1,15 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.RetrievalEvaluations;
 
 /// <summary>擁有者最近的檢索評測；若某筆所用的知識庫已無法讀取，則略過該筆。</summary>
-internal sealed class ListRetrievalEvaluations(AppDbContext db, RetrievalEvaluationService evaluations)
+internal sealed class ListRetrievalEvaluations(AppDbContext db, RetrievalEvaluationService evaluations) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/retrieval-evals", (ICurrentUser user, ListRetrievalEvaluations handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(QualityAudit.RetrievalRead);

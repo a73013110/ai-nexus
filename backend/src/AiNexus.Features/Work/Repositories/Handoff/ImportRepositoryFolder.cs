@@ -8,6 +8,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Work.Repositories.Handoff;
@@ -20,7 +21,7 @@ public sealed record RepositoryFolderImportDto(Guid Id, int Files, JobDto Job);
 /// 列出固定 commit 上某資料夾底下的文字檔，並把匯入排入知識庫的佇列。
 /// 檔案清單在此時固定，因此工作重試時匯入的仍是同一份快照。
 /// </summary>
-internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, AuditTrail audit)
+internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService gitea, ResourceAccess access, JobService jobs, AuditTrail audit) : IEndpointSlice
 {
     // 值得當成文字建立索引的副檔名；其他多半是二進位或產生的檔案，直接略過。
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -31,7 +32,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
     };
     private static readonly HashSet<string> TextNames = new(StringComparer.OrdinalIgnoreCase) { "README", "LICENSE", "CHANGELOG", "Dockerfile", "Makefile" };
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
+    public static void MapEndpoints(RouteGroupBuilder repository) => repository
         .MapPost("/imports", (string owner, string name, ImportRepositoryFolderRequest body, ICurrentUser user, ImportRepositoryFolder handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct))
         .RequireFeature(FeatureCatalog.Knowledge).RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.FolderImported).WithName("ImportRepositoryFolder");

@@ -8,6 +8,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -40,23 +41,23 @@ internal sealed class UserAccountRequestValidator : RequestValidator<UserAccount
 }
 
 /// <summary>建立、編輯、刪除帳號；每次變更都經由 <see cref="AdministrativeWrite"/> 稽核。</summary>
-internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite write, Argon2Passwords passwords, IHttpContextAccessor http, DomainEvents events, TimeProvider clock)
+internal sealed class ManageUserAccounts(AppDbContext db, AdministrativeWrite write, Argon2Passwords passwords, IHttpContextAccessor http, DomainEvents events, TimeProvider clock) : IEndpointSlice
 {
-    public static void MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/users", (UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
-        .Audited(IdentityAudit.UserCreated)
-        .WithName("CreateAdminUser");
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapPost("/users", (UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, null, body, ct).ToHttpResultAsync(id => TypedResults.Ok(new CreatedUserDto(id))))
+            .Audited(IdentityAudit.UserCreated)
+            .WithName("CreateAdminUser");
 
-    public static void MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/users/{id:guid}", (Guid id, UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, id, body, ct).ToHttpResultAsync(_ => TypedResults.NoContent()))
-        .Audited(IdentityAudit.UserUpdated)
-        .WithName("SaveAdminUser");
+        routes.MapPut("/users/{id:guid}", (Guid id, UserAccountRequest body, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) => handler.SaveAsync(user.Id, id, body, ct).ToHttpResultAsync(_ => TypedResults.NoContent()))
+            .Audited(IdentityAudit.UserUpdated)
+            .WithName("SaveAdminUser");
 
-    public static void MapDelete(RouteGroupBuilder routes) => routes
-        .MapDelete("/users/{id:guid}", (Guid id, int profileVersion, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) =>
+        routes.MapDelete("/users/{id:guid}", (Guid id, int profileVersion, ICurrentUser user, ManageUserAccounts handler, CancellationToken ct) =>
             handler.DeleteAsync(user.Id, id, profileVersion, ct))
-        .Audited(IdentityAudit.UserDeleted)
-        .WithName("DeleteAdminUser");
+            .Audited(IdentityAudit.UserDeleted)
+            .WithName("DeleteAdminUser");
+    }
 
     public async Task<Result<Guid>> SaveAsync(Guid actor, Guid? id, UserAccountRequest request, CancellationToken ct)
     {

@@ -3,6 +3,7 @@ using System.Text;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Export;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Releases.SchemaChanges;
 
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Admin.Releases.SchemaChanges;
 /// 異動物件目前的定義，存成 <c>.sql</c> 套用到開發庫後以 <c>Export-Database.ps1</c> 匯出提交（ADR 0028：客戶端熱修的回收）。
 /// 程式物件與 synonym 是可執行的 DROP＋CREATE；資料表沒有可靠的 DDL 可還原，只附上目前的欄位、索引與約束，由工程師照著改。
 /// </summary>
-internal sealed class ExportSchemaChanges(SchemaChangeReader changes, TimeProvider clock)
+internal sealed class ExportSchemaChanges(SchemaChangeReader changes, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/export", (ExportSchemaChanges handler, CancellationToken ct) => handler.HandleAsync(ct).ToFileResultAsync())
         .RequireRateLimiting(ReleasesModule.ExportRateLimit)
         .Audited(ReleasesAudit.SchemaChangesExported)

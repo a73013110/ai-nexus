@@ -1,3 +1,4 @@
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Auditing;
 
@@ -11,9 +12,9 @@ public sealed record MailSampleDto(string Category, string Name, string Descript
     IReadOnlyList<MailSampleParameter> Parameters);
 
 /// <summary>列出各模組登記的系統信（<see cref="MailSample"/>），設定測試信 <c>mail.test</c> 在最前面，其餘依分類排序。</summary>
-internal sealed class ListMailSamples(IEnumerable<MailSample> samples, IOptions<MailOptions> options, TimeProvider clock)
+internal sealed class ListMailSamples(IEnumerable<MailSample> samples, IOptions<MailOptions> options, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (ListMailSamples handler) => handler.Handle())
         .NotAudited("固定的郵件樣張")
         .WithName("ListMailSamples");

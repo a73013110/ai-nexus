@@ -3,6 +3,7 @@ using AiNexus.Features.Office.Attendance.Punches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
@@ -12,9 +13,9 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// 出勤紀錄以人為主、會判定遲到早退；這裡以卡片為主，只列原始刷卡與歸戶結果，讓 HR 查這張卡在誰手上時刷過哪些。
 /// 刷卡依卡號字串對到卡片（與歸戶 view 同一個 join），所以卡片建立前就刷過的也會列出。
 /// </summary>
-internal sealed class ListCardPunches(AppDbContext db)
+internal sealed class ListCardPunches(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/punches", (Guid id, [AsParameters] TableRequest table, ListCardPunches handler, CancellationToken ct) =>
             handler.HandleAsync(id, table, ct))
         .Audited(AttendanceAudit.PunchRead)

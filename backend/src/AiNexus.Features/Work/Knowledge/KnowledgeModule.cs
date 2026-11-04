@@ -57,44 +57,41 @@ public sealed class KnowledgeModule : IFeatureModule
     // 端點註冊順序即為發布的 OpenAPI 順序；調整順序會改變 contracts/openapi.json 的內容。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/knowledge").RequireFeature(FeatureCatalog.Knowledge);
-        CreateTextDocument.Map(routes);
-        ListKnowledgeCollections.Map(routes);
-        SaveKnowledgeCollection.MapCreate(routes);
-        SaveKnowledgeCollection.MapUpdate(routes);
-        DeleteKnowledgeCollection.Map(routes);
-        ListKnowledgeDocuments.Map(routes);
-        AddKnowledgeDocument.MapCollection(routes);
-        ReadKnowledgeAccess.Map(routes);
-        SaveKnowledgeAccess.Map(routes);
-        SearchKnowledge.Map(routes);
+        api.MapGroup("/knowledge").RequireFeature(FeatureCatalog.Knowledge)
+            .MapSlice<CreateTextDocument>()
+            .MapSlice<ListKnowledgeCollections>()
+            .MapSlice<SaveKnowledgeCollection>()
+            .MapSlice<DeleteKnowledgeCollection>()
+            .MapSlice<ListKnowledgeDocuments>()
+            .MapSlice<AddKnowledgeDocument>()
+            .MapSlice<ReadKnowledgeAccess>()
+            .MapSlice<SaveKnowledgeAccess>()
+            .MapSlice<SearchKnowledge>();
 
-        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireFeature(FeatureCatalog.Knowledge).RequireFeature(FeatureCatalog.Chat);
-        GetConversationKnowledge.Map(selection);
-        SaveConversationKnowledge.Map(selection);
+        api.MapGroup("/conversations/{id:guid}/knowledge").RequireFeature(FeatureCatalog.Knowledge).RequireFeature(FeatureCatalog.Chat)
+            .MapSlice<GetConversationKnowledge>()
+            .MapSlice<SaveConversationKnowledge>();
 
-        var documents = api.MapGroup("/documents");
-        ReadTextDocument.Map(documents);
-        UpdateTextDocument.Map(documents);
-        GetDocument.Map(documents);
-        ListDocumentPages.Map(documents);
-        GetDocumentJob.Map(documents);
-        DownloadDocumentOriginal.Map(documents);
-        DeleteDocument.Map(documents);
-        ReindexDocument.Map(documents);
+        api.MapGroup("/documents")
+            .MapSlice<ReadTextDocument>()
+            .MapSlice<UpdateTextDocument>()
+            .MapSlice<GetDocument>()
+            .MapSlice<ListDocumentPages>()
+            .MapSlice<GetDocumentJob>()
+            .MapSlice<DownloadDocumentOriginal>()
+            .MapSlice<DeleteDocument>()
+            .MapSlice<ReindexDocument>();
 
-        AddKnowledgeDocument.MapAttachment(api);
+        api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments)
+            .MapSlice<ReadAttachmentDocument>();
 
-        ListLibraryFiles.Map(api.MapGroup("/files").RequireFeature(FeatureCatalog.Files));
+        api.MapGroup("/files").RequireFeature(FeatureCatalog.Files)
+            .MapSlice<ListLibraryFiles>();
 
         // 管理端的 embedding profile 與檢索測試，只給檢索管理頁使用。
-        var admin = api.MapGroup("/admin/knowledge").RequireFeature(FeatureCatalog.KnowledgeRetrieval);
-        ManageEmbeddingProfiles.MapList(admin);
-        ManageEmbeddingProfiles.MapRebuild(admin);
-        ManageEmbeddingProfiles.MapActivate(admin);
-        ManageEmbeddingProfiles.MapClear(admin);
-        ReadRetrievalCapabilities.MapGet(admin);
-        ReadRetrievalCapabilities.MapProbe(admin);
-        TestAdminRetrieval.Map(admin);
+        api.MapGroup("/admin/knowledge").RequireFeature(FeatureCatalog.KnowledgeRetrieval)
+            .MapSlice<ManageEmbeddingProfiles>()
+            .MapSlice<ReadRetrievalCapabilities>()
+            .MapSlice<TestAdminRetrieval>();
     }
 }

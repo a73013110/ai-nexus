@@ -1,14 +1,15 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Jobs.Management;
 
 /// <summary>使用者最新的 100 筆背景工作。</summary>
-internal sealed class ListJobs(AppDbContext db)
+internal sealed class ListJobs(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (ICurrentUser user, ListJobs handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .Audited(JobsAudit.JobRead)

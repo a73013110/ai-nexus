@@ -3,13 +3,14 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Projects.Management;
 
 /// <summary>決定誰能讀取或編輯專案，透過共用資源的存取清單設定（僅限擁有者）。</summary>
-internal sealed class ShareProject(ResourceAccess access)
+internal sealed class ShareProject(ResourceAccess access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ShareProject handler, CancellationToken ct) =>
             handler.GetAsync(user.Id, id, ct)).Audited(ProjectsAudit.AccessRead);

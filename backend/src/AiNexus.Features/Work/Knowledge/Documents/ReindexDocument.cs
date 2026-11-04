@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge.Indexing;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// <summary>
 /// 把使用者可編輯的知識庫文件重新排入索引：頁面已擷取過就只重做嵌入，否則完整重跑匯入。仍在處理中的文件回傳衝突。
 /// </summary>
-internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, DocumentWriteLock writes, JobService jobs)
+internal sealed class ReindexDocument(AppDbContext db, DocumentAccess documents, DocumentWriteLock writes, JobService jobs) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/reindex", (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentIndexRebuilt)

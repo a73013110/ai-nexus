@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Collaboration;
@@ -10,19 +11,20 @@ namespace AiNexus.Features.Work.Collaboration;
 /// 登入者分享資源時可指定的人員與已啟用群組。端點參數中的 <see cref="ICurrentUser"/> 不可省略：
 /// 請求篩選靠它先解析並放行呼叫者，之後才會讀取資料。
 /// </summary>
-internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers)
+internal sealed class SearchDirectory(AppDbContext db, IActiveUsers activeUsers) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapUsers(RouteGroupBuilder api) => api
-        .MapGet("/directory", (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapGet("/directory", (string search, ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
             handler.UsersAsync(search, ct))
-        .NotAudited("分享對象的選人搜尋")
-        .WithName("SearchUserDirectory");
+            .NotAudited("分享對象的選人搜尋")
+            .WithName("SearchUserDirectory");
 
-    public static RouteHandlerBuilder MapGroups(RouteGroupBuilder api) => api
-        .MapGet("/directory/groups", (ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
+        routes.MapGet("/directory/groups", (ICurrentUser user, SearchDirectory handler, CancellationToken ct) =>
             handler.GroupsAsync(ct))
-        .NotAudited("分享對象的群組選項")
-        .WithName("ListDirectoryGroups");
+            .NotAudited("分享對象的群組選項")
+            .WithName("ListDirectoryGroups");
+    }
 
     /// <summary>最多 20 筆。搜尋字需為 2 到 120 字，帳號或顯示名稱包含即符合；長度不符直接回傳空清單。只列啟用中的人：停用＝離職，不能再被加為成員或收件者。</summary>
     public async Task<IReadOnlyList<DirectoryUserDto>> UsersAsync(string search, CancellationToken ct)

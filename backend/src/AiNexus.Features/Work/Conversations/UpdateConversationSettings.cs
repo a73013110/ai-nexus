@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -22,9 +23,9 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 /// <summary>
 /// 修改使用者自己對話的收藏、封存、指令與標籤；只變更有帶入的欄位。在對話的生成鎖內執行，生成中的對話不能封存。
 /// </summary>
-internal sealed class UpdateConversationSettings(AppDbContext db, GenerationScheduler scheduler)
+internal sealed class UpdateConversationSettings(AppDbContext db, GenerationScheduler scheduler) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}/settings", (
                 Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))

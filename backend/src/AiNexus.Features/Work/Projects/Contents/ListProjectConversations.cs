@@ -6,14 +6,15 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Projects.Contents;
 
 /// <summary>使用者可讀取的專案中，使用者自己最新的 100 個對話；對話只對擁有者可見。</summary>
-internal sealed class ListProjectConversations(AppDbContext db, ResourceAccess access)
+internal sealed class ListProjectConversations(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/conversations", (Guid id, ICurrentUser user, ListProjectConversations handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.ConversationRead);
 

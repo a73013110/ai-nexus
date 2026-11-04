@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Platform.Account;
 public sealed record MeDto(Guid Id, string Account, string DisplayName, PreferencesDto Preferences, string CsrfToken, Guid? ActiveRunId, AccessDto Access);
 
 /// <summary>登入者資料、外觀偏好、新的 CSRF token、進行中的生成任務與存取權限。</summary>
-internal sealed class GetMe(AppDbContext db, IAntiforgery csrf, AccessView access, ModelPresentation models)
+internal sealed class GetMe(AppDbContext db, IAntiforgery csrf, AccessView access, ModelPresentation models) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/me", (HttpContext http, ICurrentUser user, GetMe handler, CancellationToken ct) =>
             handler.HandleAsync(http, user.User, ct))
         .NotAudited("每個頁面載入都會查詢的自身資料")

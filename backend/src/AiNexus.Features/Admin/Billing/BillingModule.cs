@@ -12,11 +12,14 @@ public sealed class BillingModule : IFeatureModule
 {
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        ReportSpend.MapPersonal(api);
-        var prices = api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.BillingPrices);
-        ManagePrices.Map(prices);
-        CreateModelPrice.Map(prices);
+        api.MapSlice<ReportPersonalSpend>();
+        api.MapGroup("/conversations").RequireFeature(FeatureCatalog.Chat)
+            .MapSlice<ReportConversationSpend>();
+        api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.BillingPrices)
+            .MapSlice<ManagePrices>()
+            .MapSlice<CreateModelPrice>();
         // 全平台花費報表是總覽「全平台」範圍的匯出，與平台總覽同一個授權（GetDashboard）。
-        ReportSpend.MapAdministrative(api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.OperationsUsage));
+        api.MapGroup("/admin/billing").RequireFeature(FeatureCatalog.OperationsUsage)
+            .MapSlice<ReportAdministrativeSpend>();
     }
 }

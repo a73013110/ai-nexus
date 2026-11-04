@@ -22,19 +22,20 @@ public sealed class OrganizationModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var units = api.MapGroup("/admin/organization-units").RequireFeature(FeatureCatalog.Organization);
-        ListUnits.Map(units);
-        CreateUnit.Map(units);
-        // 字面路徑 /order、/import、/candidates 與 /{id:guid} 不會互相攔截：後者限定 GUID。
-        ListUnitCandidates.Map(units);
-        ReorderUnits.Map(units);
-        PreviewUnitImport.Map(units);
-        ApplyUnitImport.Map(units);
-        UpdateUnit.Map(units);
-        DeleteUnit.Map(units);
-        ListUnitMembers.Map(units);
-        SaveUnitMember.Map(units);
-        RemoveUnitMember.Map(units);
-        ListUserUnits.Map(api.MapGroup("/admin").RequireAuthorization(UserUnitsPolicy));
+        api.MapGroup("/admin/organization-units").RequireFeature(FeatureCatalog.Organization)
+            .MapSlice<ListUnits>()
+            .MapSlice<CreateUnit>()
+            // 字面路徑 /order、/import、/candidates 與 /{id:guid} 不會互相攔截：後者限定 GUID。
+            .MapSlice<ListUnitCandidates>()
+            .MapSlice<ReorderUnits>()
+            .MapSlice<PreviewUnitImport>()
+            .MapSlice<ApplyUnitImport>()
+            .MapSlice<UpdateUnit>()
+            .MapSlice<DeleteUnit>()
+            .MapSlice<ListUnitMembers>()
+            .MapSlice<SaveUnitMember>()
+            .MapSlice<RemoveUnitMember>();
+        api.MapGroup("/admin").RequireAuthorization(UserUnitsPolicy)
+            .MapSlice<ListUserUnits>();
     }
 }

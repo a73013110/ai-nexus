@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Cards;
@@ -9,9 +10,9 @@ namespace AiNexus.Features.Office.Attendance.Cards;
 /// 持有歷史，新到舊。<c>cardId</c> 查某張卡的歷任持有人，<c>userId</c> 查某人持有過的卡（同一人可同時持有多張）；
 /// 至少要給一個，不開放整張表。只有姓名、尚未綁上帳號的持有期間不會出現在 <c>userId</c> 的結果裡。
 /// </summary>
-internal sealed class ListCardAssignments(AppDbContext db)
+internal sealed class ListCardAssignments(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (Guid? cardId, Guid? userId, ListCardAssignments handler, CancellationToken ct) =>
             handler.HandleAsync(cardId, userId, ct))
         .Audited(AttendanceAudit.AssignmentRead)

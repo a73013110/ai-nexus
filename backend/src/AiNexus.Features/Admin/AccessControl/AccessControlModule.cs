@@ -23,14 +23,16 @@ public sealed class AccessControlModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        SaveRole.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlRoles));
-        SaveFeature.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlFeatures));
-        var navigation = api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlNavigation);
-        ListNavigationItems.Map(navigation);
-        CreateNavigationItem.Map(navigation);
-        // 字面路徑 /order 的路由優先於 /{id}，所以兩個 PUT 不會互相攔截；伺服器產生的 Id 是 GUID、Seed 也沒有叫 order 的節點。
-        ReorderNavigationItems.Map(navigation);
-        UpdateNavigationItem.Map(navigation);
-        DeleteNavigationItem.Map(navigation);
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlRoles)
+            .MapSlice<SaveRole>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlFeatures)
+            .MapSlice<SaveFeature>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlNavigation)
+            .MapSlice<ListNavigationItems>()
+            .MapSlice<CreateNavigationItem>()
+            // 字面路徑 /order 的路由優先於 /{id}，所以兩個 PUT 不會互相攔截；伺服器產生的 Id 是 GUID、Seed 也沒有叫 order 的節點。
+            .MapSlice<ReorderNavigationItems>()
+            .MapSlice<UpdateNavigationItem>()
+            .MapSlice<DeleteNavigationItem>();
     }
 }

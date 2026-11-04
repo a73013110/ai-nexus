@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -24,10 +25,10 @@ internal sealed class DirectorySyncRequestValidator : RequestValidator<Directory
 /// AD 找不到或已停用的人只回報、不停用平台帳號：目錄查詢可能只是暫時不完整（搜尋根、權限、DC 複寫），
 /// 自動停用一旦誤判會一次鎖住大量使用者；AD 停用本來就擋下 AD 登入，是否停用平台帳號（含本地密碼）由管理員決定。
 /// </summary>
-internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory, DirectoryProvisioning provisioning)
+internal sealed class SyncDirectoryUsers(AppDbContext db, IAdDirectory directory, DirectoryProvisioning provisioning) : IEndpointSlice
 {
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/directory-syncs", (DirectorySyncRequest body, ICurrentUser user, SyncDirectoryUsers handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)

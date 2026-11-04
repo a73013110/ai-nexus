@@ -6,6 +6,7 @@ using AiNexus.Features.Office.Attendance.Gd;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -42,9 +43,9 @@ internal sealed class CalendarDayRequestValidator : RequestValidator<CalendarDay
 /// </list>
 /// 鎖只持有到稽核寫完（一次本機 SQL 寫入），公文系統同時讀這一天時最多等這麼久。
 /// </remarks>
-internal sealed class UpdateCalendarDay(AppDbContext db, GdAccounts accounts, GdCalendarWriter writer, AuditTrail audit)
+internal sealed class UpdateCalendarDay(AppDbContext db, GdAccounts accounts, GdCalendarWriter writer, AuditTrail audit) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{date}", (DateOnly date, CalendarDayRequest body, ICurrentUser user, UpdateCalendarDay handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, date, body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCalendarMaintain)

@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.AccessControl.Navigation;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Operations;
@@ -26,9 +27,9 @@ public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnl
     IReadOnlyList<NavigationSectionDto> NavigationSections);
 
 /// <summary>所有角色、群組（含模型策略）與功能（依目錄宣告順序）、功能的選單位置，以及已設定的模型。選單節點本身另由 <c>/admin/navigation-items</c> 提供。</summary>
-internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, AccessService access)
+internal sealed class GetAdminCatalog(AppDbContext db, ModelCatalog catalog, AccessService access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/catalog", (GetAdminCatalog handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .NotAudited("管理頁的固定目錄")

@@ -7,6 +7,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -36,9 +37,9 @@ internal sealed class CreateArtifact(
     ConversationService conversations,
     AccessService features,
     GetArtifact reader,
-    TimeProvider clock)
+    TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, request, ct))
         .Audited(ArtifactsAudit.ArtifactCreated)

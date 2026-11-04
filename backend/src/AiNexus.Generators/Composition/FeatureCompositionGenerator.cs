@@ -26,7 +26,7 @@ public sealed class FeatureCompositionGenerator : IIncrementalGenerator
             .Collect()
             .Select(static (items, _) => Sorted(items, x => x.Display));
 
-        // 模組與驗證器都是有基底清單的類別；兩條 pipeline 各自轉換，語意模型由編譯快取共用。
+        // 模組、切片與驗證器都是有基底清單的類別；各條 pipeline 各自轉換，語意模型由編譯快取共用。
         var modules = context.SyntaxProvider
             .CreateSyntaxProvider(static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
                 static (source, ct) => source.SemanticModel.GetDeclaredSymbol(source.Node, ct) is INamedTypeSymbol type ? ModuleRegistration.From(type) : null)
@@ -45,11 +45,10 @@ public sealed class FeatureCompositionGenerator : IIncrementalGenerator
             .Collect()
             .Select(static (items, _) => Sorted(items, x => x.Type));
 
-        // 切片以 static Map* 方法辨識；先用語法過濾名稱與 static，只有少數方法需要語意判斷。
+        // 切片以實作 IEndpointSlice 辨識，和模組一樣只看有基底清單的類別。
         var slices = context.SyntaxProvider
-            .CreateSyntaxProvider(static (node, _) => node is MethodDeclarationSyntax { ParameterList.Parameters.Count: > 0, Parent: TypeDeclarationSyntax } method
-                    && method.Identifier.ValueText.StartsWith("Map", StringComparison.Ordinal) && method.Modifiers.Any(x => x.ValueText == "static"),
-                static (source, ct) => source.SemanticModel.GetDeclaredSymbol(source.Node, ct) is IMethodSymbol method ? SliceRegistration.From(method) : null)
+            .CreateSyntaxProvider(static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
+                static (source, ct) => source.SemanticModel.GetDeclaredSymbol(source.Node, ct) is INamedTypeSymbol type ? SliceRegistration.From(type) : null)
             .Where(static x => x is not null)
             .Select(static (x, _) => x!)
             .WithTrackingName(SlicesStep)

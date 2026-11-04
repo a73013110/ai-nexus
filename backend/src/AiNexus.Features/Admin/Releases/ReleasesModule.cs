@@ -23,13 +23,13 @@ public sealed class ReleasesModule : IFeatureModule
     // 端點順序即為已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        GetCurrentRelease.Map(api);
+        api.MapSlice<GetCurrentRelease>();
         var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.Releases);
-        GetReleaseStatus.Map(admin);
-        ListDeployments.Map(admin);
-        var changes = admin.MapGroup("/schema-changes");
-        ListSchemaChanges.Map(changes);
-        ExportSchemaChanges.Map(changes);
-        GetSchemaChange.Map(changes);
+        admin.MapSlice<GetReleaseStatus>()
+            .MapSlice<ListDeployments>();
+        admin.MapGroup("/schema-changes")
+            .MapSlice<ListSchemaChanges>()
+            .MapSlice<ExportSchemaChanges>()
+            .MapSlice<GetSchemaChange>();
     }
 }

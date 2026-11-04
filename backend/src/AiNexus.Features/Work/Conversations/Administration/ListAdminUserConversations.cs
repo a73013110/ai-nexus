@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Conversations.Administration;
@@ -16,9 +17,9 @@ public sealed record AdminConversationPageDto(IReadOnlyList<AdminConversationDto
 /// 某使用者的對話列表，每頁 50 筆，可選擇含已刪除。稽核的資料主體是該使用者，搜尋文字只記「有填」。
 /// 從使用者頁發起，handler 再檢一次 <see cref="FeatureCatalog.IdentityUsers"/>，不放寬對話擁有者檢查。
 /// </summary>
-internal sealed class ListAdminUserConversations(AppDbContext db, AccessService access, AuditTrail audit)
+internal sealed class ListAdminUserConversations(AppDbContext db, AccessService access, AuditTrail audit) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/conversations", (Guid id, string? search, int? offset, bool? includeDeleted, ICurrentUser user, ListAdminUserConversations handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, search, offset ?? 0, includeDeleted ?? false, ct))
         .Audited(ConversationsAudit.UserConversationRead)

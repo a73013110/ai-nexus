@@ -24,9 +24,9 @@
 ## 端點與 handler
 
 ```csharp
-internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
+internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, null, body, ct))
         .WithName("CreatePromptTemplate");
@@ -35,7 +35,7 @@ internal sealed class SavePromptTemplate(AppDbContext db, TimeProvider clock)
 }
 ```
 
-- use case 是 `internal sealed class`：靜態 `Map*(RouteGroupBuilder)` 宣告端點，`HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。註冊（scoped）與掛載由[產生器](source-generators.md)處理，漏掛建置失敗；共用服務也由它依標記註冊。同一資源有多個端點時用多個 `Map*` 與具名方法。
+- use case 是實作 `IEndpointSlice` 的 `internal sealed class`：`MapEndpoints` 宣告端點，`HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。模組以 `group.MapSlice<T>()` 掛載；註冊、掛載規則與共用服務見[產生器](source-generators.md)。
 - lambda 直接回傳 handler 的 `Result`／`Result<T>`：它們本身是 `IResult`（成功 200／204，失敗 problem），回應型別也由它們進入 OpenAPI，不寫 `.Produces<T>()`；只有 SSE 與自行寫入回應的下載例外。成功不是 200 或要回檔案時傳 mapper，如 `ToHttpResultAsync(x => TypedResults.Accepted(...))`。
 - 沒有回傳值的 handler 一律回 `Result`，不回 `Task`：端點才是 204，之後要加失敗情境也不必改端點。
 - lambda 直接回傳 `Task` 時不加 `async`／`await`：只加 `async` 型別會變成 `Task<Task<…>>`，OpenAPI 錯誤。

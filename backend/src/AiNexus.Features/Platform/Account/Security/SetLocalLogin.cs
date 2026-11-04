@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Account.Security;
 
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Platform.Account.Security;
 /// 啟用本地登入、變更本地帳號名或密碼（需步升）。AD 使用者也可以建立本地密碼作為備援，但受目錄新鮮度規則限制。
 /// 完成後遞增 SecurityVersion（其他工作階段登出）、重發目前的 session，並寄通知到已驗證的信箱。
 /// </summary>
-internal sealed class SetLocalLogin(AccountSecurity security, Reauthentication reauthentication, UserCredentials credentials)
+internal sealed class SetLocalLogin(AccountSecurity security, Reauthentication reauthentication, UserCredentials credentials) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/settings/account/local-login", (LocalLoginRequest body, HttpContext http, ICurrentUser user, SetLocalLogin handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, body, ct))
         .RequireRateLimiting(AccountModule.CredentialsRateLimit)

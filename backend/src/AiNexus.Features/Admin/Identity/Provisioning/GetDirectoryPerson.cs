@@ -1,5 +1,6 @@
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
 
@@ -15,9 +16,9 @@ public sealed record DirectoryPersonDetailDto(
 /// 匯入對話框檢視一位人員的完整 AD 屬性（<c>identity.users.import</c>）。清單只帶匯入需要的欄位，其他屬性在點選人員時才讀，
 /// 一次最多上千人的清單不必為很少被看的屬性多付流量與查詢成本。只讀、不寫稽核；限流與目錄樹分開計算。
 /// </summary>
-internal sealed class GetDirectoryPerson(IAdDirectory directory)
+internal sealed class GetDirectoryPerson(IAdDirectory directory) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/directory-people/{sid}", (string sid, GetDirectoryPerson handler, CancellationToken ct) =>
             handler.HandleAsync(sid, ct))
         .RequireRateLimiting(IdentityModule.DirectoryPersonRateLimit)

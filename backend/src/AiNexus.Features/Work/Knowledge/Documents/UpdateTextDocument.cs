@@ -10,6 +10,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
@@ -18,9 +19,9 @@ namespace AiNexus.Features.Work.Knowledge.Documents;
 /// 取代使用者可編輯的純文字來源內容並重新索引。編輯需附上所依據的版本號；若已有更新的儲存版本，
 /// 或來源仍在處理中，即為衝突。
 /// </summary>
-internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, DocumentWriteLock writes, ContainerLock containers, AttachmentQuota quota, JobService jobs, TimeProvider clock)
+internal sealed class UpdateTextDocument(AppDbContext db, DocumentAccess documents, AttachmentService attachments, DocumentWriteLock writes, ContainerLock containers, AttachmentQuota quota, JobService jobs, TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/text", (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).Audited(KnowledgeAudit.DocumentUpdated).WithName("UpdateTextDocument");

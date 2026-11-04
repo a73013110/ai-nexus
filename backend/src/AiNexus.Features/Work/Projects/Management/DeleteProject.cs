@@ -3,13 +3,14 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Projects.Management;
 
 /// <summary>僅限擁有者的軟刪除，走共用資源的生命週期；對話、檔案與成果會被解除關聯，而不是被銷毀。</summary>
-internal sealed class DeleteProject(ResourceLifecycle lifecycle)
+internal sealed class DeleteProject(ResourceLifecycle lifecycle) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteProject handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.ProjectDeleted);
 

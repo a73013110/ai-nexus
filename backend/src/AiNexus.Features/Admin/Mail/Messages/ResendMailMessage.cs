@@ -3,6 +3,7 @@ using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +13,9 @@ namespace AiNexus.Features.Admin.Mail.Messages;
 /// 以原信渲染好的內容建立一封新信（<c>ResendOfId</c> 指向原信），原紀錄不變；寫行政稽核 <c>admin.mail_resend</c>。
 /// 敏感信、內文或收件原址已清除時不能重寄。<c>Idempotency-Key</c>（GUID）讓連點或重試只建立一封。
 /// </summary>
-internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, AdministrativeWrite write)
+internal sealed class ResendMailMessage(AppDbContext db, MailOutbox outbox, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/resend", (Guid id, [FromHeader(Name = "Idempotency-Key")] Guid? requestKey, IRequestActor actor, ResendMailMessage handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, id, requestKey, ct))
         .RequireFeature(FeatureCatalog.MailMessagesResend)

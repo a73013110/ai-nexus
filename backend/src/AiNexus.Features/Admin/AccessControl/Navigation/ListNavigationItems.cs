@@ -1,10 +1,11 @@
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
 /// <summary>選單管理頁的全部節點（平面清單、含外部連結的可見群組），不依登入者修剪；樹狀結構由前端依 <c>ParentId</c> 組回。</summary>
-internal sealed class ListNavigationItems(AccessService access)
+internal sealed class ListNavigationItems(AccessService access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/navigation-items", (ListNavigationItems handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .Audited(AccessControlAudit.NavigationRead)

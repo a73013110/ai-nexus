@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -43,9 +44,9 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
 /// 把備份還原為使用者的新對話，訊息會重新指派 Id。每則訊息都必須屬於完整的 user/assistant 鏈（從 user 開始且無循環），
 /// 作用中葉節點必須是回答。
 /// </summary>
-internal sealed class ImportConversation(AppDbContext db, TimeProvider clock, AuditTrail audit)
+internal sealed class ImportConversation(AppDbContext db, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/import", (ConversationBackup body, ICurrentUser user, ImportConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .WithRequestBodyLimit(ConversationsModule.ImportBodyLimit)

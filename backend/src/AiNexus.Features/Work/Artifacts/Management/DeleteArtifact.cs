@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Artifacts.Management;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Work.Artifacts.Management;
 public sealed record ArtifactDeleted(Guid ArtifactId, Guid OwnerId) : IDomainEvent;
 
 /// <summary>擁有者刪除成果：成果本身只標記為軟刪除，所有版本則實際清除，兩者與分享撤銷（由事件處理）在同一交易中完成。</summary>
-internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events)
+internal sealed class DeleteArtifact(AppDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ArtifactsAudit.ArtifactDeleted)

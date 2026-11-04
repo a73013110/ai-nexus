@@ -63,9 +63,9 @@ public sealed class MonitoringStreams
 /// 整個檢視只稽核一次（開始推送前）。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態（<see cref="StillAllowedAsync"/>），
 /// 所以權限被撤銷後，串流會以錯誤事件結束，不會一直沿用舊的授權。
 /// </summary>
-internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AuditTrail audit, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
+internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, AuditTrail audit, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder monitor) => monitor
+    public static void MapEndpoints(RouteGroupBuilder monitor) => monitor
         .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
             handler.HandleAsync(http, user.Id, minutes ?? MonitoringReads.DefaultWindow, ct).ToStreamResultAsync(http))
         .Audited(MonitoringAudit.SnapshotRead)

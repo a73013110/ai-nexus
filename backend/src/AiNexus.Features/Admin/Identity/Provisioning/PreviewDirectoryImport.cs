@@ -1,5 +1,6 @@
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Identity.Provisioning;
 
@@ -7,9 +8,9 @@ namespace AiNexus.Features.Admin.Identity.Provisioning;
 /// 匯入前的預覽（<c>identity.users.import</c>）：依 SID 重新讀目錄（不信任前端帶來的姓名與信箱），逐人回報會新建、綁定、更新哪些欄位或為何略過。
 /// 只讀、不寫稽核；確認時 <see cref="ImportDirectoryUsers"/> 以同一套規則重算，所以預覽與結果一致（預覽後資料被改的人回 <c>directory_changed</c>）。
 /// </summary>
-internal sealed class PreviewDirectoryImport(IAdDirectory directory, DirectoryProvisioning provisioning)
+internal sealed class PreviewDirectoryImport(IAdDirectory directory, DirectoryProvisioning provisioning) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/directory-imports/preview", (DirectoryImportRequest body, PreviewDirectoryImport handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .RequireRateLimiting(IdentityModule.DirectoryWriteRateLimit)

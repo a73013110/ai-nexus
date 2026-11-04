@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Organization;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Organization.Members;
@@ -12,9 +13,9 @@ public sealed record UserUnitDto(Guid UnitId, IReadOnlyList<string> Path, bool E
 /// 使用者管理頁顯示的所屬單位（唯讀），主要所屬在前。放在 Organization 而不是 Identity：Identity 是下層模組，不能讀組織資料。
 /// 使用者不存在時回空清單，與使用者頁本身的 404 不重複。
 /// </summary>
-internal sealed class ListUserUnits(AppDbContext db)
+internal sealed class ListUserUnits(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/organization-units", (Guid id, ListUserUnits handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .Audited(OrganizationAudit.MemberRead)

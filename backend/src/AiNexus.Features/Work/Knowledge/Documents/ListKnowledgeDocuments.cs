@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Auditing;
@@ -10,9 +11,9 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
 /// <summary>使用者可讀取的知識庫文件，依檔名排序並附目前工作狀態；筆數受 MaxDocumentsPerCollection 上限限制。</summary>
-internal sealed class ListKnowledgeDocuments(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options)
+internal sealed class ListKnowledgeDocuments(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/collections/{id:guid}/documents", (Guid id, ICurrentUser user, ListKnowledgeDocuments handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.DocumentRead)

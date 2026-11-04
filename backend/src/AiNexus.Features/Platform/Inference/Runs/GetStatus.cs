@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Inference.Runs;
@@ -22,9 +23,9 @@ public sealed record StatusDto(
 internal sealed class GetStatus(
     GenerationScheduler scheduler,
     ISqlDatabase<AppDbContext> db,
-    IOptions<AdAuthenticationOptions> auth)
+    IOptions<AdAuthenticationOptions> auth) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapGet("/status", (GetStatus handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .NotAudited("服務狀態")

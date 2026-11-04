@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Conversations;
@@ -10,9 +11,9 @@ namespace AiNexus.Features.Work.Conversations;
 /// 使用者對話列表，每頁 100 筆。依檢視（active、archived、favorites、all）篩選，可再依標籤，以及標題或任一訊息內文搜尋。
 /// 收藏優先，其次依更新時間由新到舊。
 /// </summary>
-internal sealed class ListConversations(AppDbContext db)
+internal sealed class ListConversations(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (
                 string? search, int? offset, string? view, string? label, ICurrentUser user, ListConversations handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, search, offset ?? 0, view ?? "active", label, ct))

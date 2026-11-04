@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,9 @@ internal sealed class SaveArtifact(
     ResourceAccess access,
     ResourceWriteLock writes,
     GetArtifact reader,
-    TimeProvider clock, AuditTrail audit)
+    TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (
                 Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, request, ct))

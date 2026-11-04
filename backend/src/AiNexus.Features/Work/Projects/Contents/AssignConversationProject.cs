@@ -8,6 +8,7 @@ using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,9 +21,9 @@ public sealed record ConversationProjectRequest(Guid? ProjectId);
 /// <summary>
 /// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答互相競爭。
 /// </summary>
-internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock, AuditTrail audit)
+internal sealed class AssignConversationProject(AppDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapPut("/conversations/{id:guid}/project", (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body.ProjectId, ct))
         .RequireFeature(FeatureCatalog.Chat).Audited(ProjectsAudit.ConversationAssigned);

@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Identity.Management;
 
 /// <summary>使用者目前實際取得的角色、群組與功能，並附上與 <c>/me</c> 相同計算的選單樹與資料範圍（唯讀預覽）。</summary>
-internal sealed class PreviewUserAccess(AppDbContext db, AccessView access)
+internal sealed class PreviewUserAccess(AppDbContext db, AccessView access) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/access", (Guid id, PreviewUserAccess handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .Audited(IdentityAudit.UserAccessRead)

@@ -2,6 +2,7 @@ using AiNexus.Data.App.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
@@ -13,9 +14,9 @@ using AiNexus.Features.Admin.Identity.Users;
 namespace AiNexus.Features.Admin.Identity.Authentication;
 
 /// <summary>Windows 整合驗證登入：呼叫者已由 Negotiate 驗證完成，這裡只負責解析使用者並寫入稽核。</summary>
-internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, AuthenticationAudit audit, Issues issues)
+internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, AuthenticationAudit audit, Issues issues) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder auth) => auth
+    public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapGet("/windows", (HttpContext http, WindowsLogin handler, CancellationToken ct) => handler.HandleAsync(http, ct))
         .RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build())
         .NotAudited("登入結果由登入稽核記錄")

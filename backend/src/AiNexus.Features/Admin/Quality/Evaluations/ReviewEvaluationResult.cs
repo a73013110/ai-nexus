@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,9 @@ internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
 }
 
 /// <summary>對執行中單一案例與變體給予人工分數；需要題組的編輯權限。</summary>
-internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess access, AuditTrail audit)
+internal sealed class ReviewEvaluationResult(AppDbContext db, ResourceAccess access, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/runs/{id:guid}/results/{caseIndex:int}/{variantIndex:int}/review", (Guid id, int caseIndex, int variantIndex, ReviewRequest body, ICurrentUser user, ReviewEvaluationResult handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, caseIndex, variantIndex, body, ct)).Audited(QualityAudit.ResultReviewed);
 

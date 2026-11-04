@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.AspNetCore.Antiforgery;
@@ -20,9 +21,9 @@ internal sealed class SelectIdentityRequestValidator : RequestValidator<SelectId
 /// 把 session 切換到帳號提供的另一個身分（<see cref="AuthSession.Identities"/>），保留同一位使用者、登入方式與 cookie 存續時間。
 /// 回應附新的 CSRF token。
 /// </summary>
-internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
+internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder auth) => auth
+    public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/identity", (SelectIdentityRequest body, HttpContext http, SelectIdentity handler) =>
             handler.HandleAsync(http, body))
         .Audited(IdentityAudit.IdentitySelected).WithName("SelectIdentity");

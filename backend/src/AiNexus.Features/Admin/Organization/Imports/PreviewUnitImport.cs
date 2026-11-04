@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Organization.Imports;
 
@@ -9,9 +10,9 @@ namespace AiNexus.Features.Admin.Organization.Imports;
 /// 預覽從公文系統匯入（不寫入）：讀 GD 的部門與主管，列出將新增、綁定、更新、停用的單位，主管的變動與略過的列。
 /// 只讀，所以測試身分也能看；套用見 <see cref="ApplyUnitImport"/>。
 /// </summary>
-internal sealed class PreviewUnitImport(AppDbContext db, GdUnitSource source)
+internal sealed class PreviewUnitImport(AppDbContext db, GdUnitSource source) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/import", (PreviewUnitImport handler, CancellationToken ct) =>
             handler.HandleAsync(ct))
         .RequireFeature(FeatureCatalog.OrganizationImport)

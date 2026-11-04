@@ -2,13 +2,14 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Prompts;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Prompts;
 
-internal sealed class ListPromptTemplates(AppDbContext db)
+internal sealed class ListPromptTemplates(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (ICurrentUser user, ListPromptTemplates handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .NotAudited("輸入框的範本選單")

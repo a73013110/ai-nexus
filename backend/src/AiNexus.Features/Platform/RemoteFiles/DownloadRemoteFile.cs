@@ -11,12 +11,12 @@ namespace AiNexus.Features.Platform.RemoteFiles;
 /// 以憑證取回遠端檔案並串流給瀏覽器（內嵌預覽或 <c>download=true</c> 下載），回應沿用 <see cref="WebSecurity.File(HttpContext, byte[], string, string, bool)"/> 的沙箱標頭。
 /// 憑證放查詢字串而不是路徑：加密後約三、四百字，超過 IIS 單一路徑段 260 字的上限。
 /// </summary>
-internal sealed class DownloadRemoteFile(RemoteFileTickets tickets, KeyedServices<IRemoteFileSource> sources)
+internal sealed class DownloadRemoteFile(RemoteFileTickets tickets, KeyedServices<IRemoteFileSource> sources) : IEndpointSlice
 {
     /// <summary>超過這個長度一定不是本系統發的憑證，不必解密。</summary>
     public const int MaxTicketLength = 2000;
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/content", (string ticket, bool? download, HttpContext http, ICurrentUser user, DownloadRemoteFile handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ticket, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.ContentType, x.FileName, download == true)))
         .Audited(RemoteFilesAudit.FileDownloaded)

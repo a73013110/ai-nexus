@@ -5,22 +5,24 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.Evaluations;
 
 /// <summary>使用者可讀取的題組：最近 100 筆，以及單一題組（含題目）。</summary>
-internal sealed class BrowseEvaluationSets(AppDbContext db, ResourceAccess access)
+internal sealed class BrowseEvaluationSets(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes
-        .MapGet("/sets", (ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapGet("/sets", (ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) =>
             handler.ListAsync(user.Id, ct))
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
 
-    public static RouteHandlerBuilder MapGet(RouteGroupBuilder routes) => routes
-        .MapGet("/sets/{id:guid}", (Guid id, ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) =>
+        routes.MapGet("/sets/{id:guid}", (Guid id, ICurrentUser user, BrowseEvaluationSets handler, CancellationToken ct) =>
             handler.GetAsync(user.Id, id, ct))
-        .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
+            .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.SetRead);
+    }
 
     public Task<Result<EvaluationSetDto>> GetAsync(Guid actor, Guid id, CancellationToken ct) => access.LoadSetAsync(db, actor, id, ct);
 

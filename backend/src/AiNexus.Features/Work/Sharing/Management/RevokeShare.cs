@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Sharing.Management;
 
 /// <summary>擁有者撤銷分享：收件人立即失去存取權與檔案授權，快照文字也會被清除。</summary>
-internal sealed class RevokeShare(AppDbContext db)
+internal sealed class RevokeShare(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RevokeShare handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(SharingAudit.ShareRevoked);
 

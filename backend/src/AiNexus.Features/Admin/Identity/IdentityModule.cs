@@ -67,25 +67,24 @@ public sealed class IdentityModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
-        ManageUserAccounts.MapCreate(admin);
-        ManageUserAccounts.MapUpdate(admin);
-        ManageUserAccounts.MapDelete(admin);
-        RebindDirectoryAccount.Map(admin);
-        UnbindDirectoryAccount.Map(admin);
-        SetUserRoles.Map(admin);
-        SetUserEmail.Map(admin);
-        PreviewUserAccess.Map(admin);
-        ListAccountReviews.Map(admin);
-        MoveUser.Map(admin);
-        ResetUserOrder.Map(admin);
-        var import = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersImport);
-        ListDirectoryNodes.Map(import);
-        ListDirectoryPeople.Map(import);
-        GetDirectoryPerson.Map(import);
-        PreviewDirectoryImport.Map(import);
-        ImportDirectoryUsers.Map(import);
-        SyncDirectoryUsers.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersSync));
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers)
+            .MapSlice<ManageUserAccounts>()
+            .MapSlice<RebindDirectoryAccount>()
+            .MapSlice<UnbindDirectoryAccount>()
+            .MapSlice<SetUserRoles>()
+            .MapSlice<SetUserEmail>()
+            .MapSlice<PreviewUserAccess>()
+            .MapSlice<ListAccountReviews>()
+            .MapSlice<MoveUser>()
+            .MapSlice<ResetUserOrder>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersImport)
+            .MapSlice<ListDirectoryNodes>()
+            .MapSlice<ListDirectoryPeople>()
+            .MapSlice<GetDirectoryPerson>()
+            .MapSlice<PreviewDirectoryImport>()
+            .MapSlice<ImportDirectoryUsers>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersSync)
+            .MapSlice<SyncDirectoryUsers>();
         api.MapAuthenticationEndpoints();
     }
 }

@@ -2,24 +2,24 @@ using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 
 namespace AiNexus.Features.Work.Files.Management;
 
 /// <summary>以安全的檔案回應串流呼叫者的附件，可選擇內嵌預覽或當作下載。</summary>
-internal sealed class DownloadAttachment(AttachmentService files)
+internal sealed class DownloadAttachment(AttachmentService files) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapGet("/{id:guid}/render", (Guid id, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
                 handler.HandleHtmlAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
             .Audited(FilesAudit.FileRead)
             .WithName("RenderAttachmentHtml");
-        return routes
-        .MapGet("/{id:guid}/content", (Guid id, bool? download, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
-        .Audited(FilesAudit.FileDownloaded)
-        .WithName("DownloadAttachment");
+        routes.MapGet("/{id:guid}/content", (Guid id, bool? download, HttpContext http, ICurrentUser user, DownloadAttachment handler, CancellationToken ct) =>
+                handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)))
+            .Audited(FilesAudit.FileDownloaded)
+            .WithName("DownloadAttachment");
     }
 
     public async Task<Result<Stream>> HandleHtmlAsync(Guid owner, Guid id, CancellationToken ct)

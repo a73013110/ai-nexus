@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -19,11 +20,11 @@ internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 }
 
 /// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>
-internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation models)
+internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation models) : IEndpointSlice
 {
     private const int MaxModelIdLength = 160;
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/preferences", (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
             handler.HandleAsync(user.User, body, ct))
         .NotAudited("介面偏好（主題、側欄）")

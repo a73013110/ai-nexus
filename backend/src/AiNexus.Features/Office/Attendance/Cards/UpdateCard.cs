@@ -3,6 +3,7 @@ using AiNexus.Data.App.Attendance;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,9 @@ internal sealed class CardUpdateRequestValidator : RequestValidator<CardUpdateRe
 /// 修改是否在出勤紀錄隱藏與備註。隱藏只影響 HR 看全公司的出勤紀錄（見 <see cref="Card.HiddenFromRecords"/>），持有期間與刷卡不動。
 /// 只動一列，由 rowversion 防止覆蓋別人的修改，不需要鎖。會稽核（<c>admin.attendance_card</c>），快照含前後的隱藏旗標；備註不進稽核。
 /// </summary>
-internal sealed class UpdateCard(AppDbContext db, AdministrativeWrite write)
+internal sealed class UpdateCard(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", (Guid id, CardUpdateRequest body, UpdateCard handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .RequireFeature(FeatureCatalog.AttendanceCardsMaintain)

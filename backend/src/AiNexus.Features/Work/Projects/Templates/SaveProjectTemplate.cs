@@ -4,6 +4,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,15 +24,16 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
 }
 
 /// <summary>在可編輯的有效專案中新增範本（每個專案最多 30 個）或編輯既有範本。</summary>
-internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access, AuditTrail audit)
+internal sealed class SaveProjectTemplate(AppDbContext db, ResourceAccess access, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/templates", (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapPost("/{id:guid}/templates", (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, null, body, ct)).Audited(ProjectsAudit.TemplateCreated);
 
-    public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}/templates/{key:guid}", (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
+        routes.MapPut("/{id:guid}/templates/{key:guid}", (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, key, body, ct)).Audited(ProjectsAudit.TemplateUpdated);
+    }
 
     public async Task<Result<ProjectTemplateDto>> HandleAsync(Guid actor, Guid id, Guid? key, ProjectTemplateRequest request, CancellationToken ct)
     {

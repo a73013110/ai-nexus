@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Audit;
@@ -18,11 +19,11 @@ public sealed record AuditDto(long Id, string Actor, string Action, string Categ
 /// 符合條件的最新 25、50 或 100（預設）筆稽核紀錄，可用游標 <c>before</c> 往舊的讀。
 /// 不回傳總筆數：游標分頁省掉大表 COUNT，期間新寫入的紀錄也不會讓翻頁重複。只列資料範圍內的紀錄（<see cref="AuditDataScope"/>）。
 /// </summary>
-internal sealed class ListActivityAudit(AppDbContext db, AuditDataScope scope)
+internal sealed class ListActivityAudit(AppDbContext db, AuditDataScope scope) : IEndpointSlice
 {
     public static readonly int[] PageSizes = [25, 50, 100];
 
-    public static void Map(RouteGroupBuilder audit) => audit
+    public static void MapEndpoints(RouteGroupBuilder audit) => audit
         .MapGet("", ([AsParameters] ActivityAuditFilter filter, long? before, int? take, ICurrentUser user, ListActivityAudit handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, filter, before, take, ct))
         .Audited(AuditAudit.EventRead)

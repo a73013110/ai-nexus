@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Repositories.Browsing;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -40,9 +41,9 @@ internal sealed class StartRepositoryChatRequestValidator : RequestValidator<Sta
 /// 草稿提示會把附件標為參考資料；使用者送出前不會呼叫任何模型。
 /// </summary>
 internal sealed class StartRepositoryChat(AccessService access, RepositoryService gitea, BrowseRepositoryIssues issues, BrowseRepositoryHistory history,
-    AttachmentService attachments, ConversationService conversations)
+    AttachmentService attachments, ConversationService conversations) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
+    public static void MapEndpoints(RouteGroupBuilder repository) => repository
         .MapPost("/chat", (string owner, string name, StartRepositoryChatRequest body, ICurrentUser user, StartRepositoryChat handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, body, ct))
         .RequireRateLimiting(RepositoriesModule.WriteRateLimit).Audited(RepositoriesAudit.ConversationCreated).WithName("StartRepositoryChat");

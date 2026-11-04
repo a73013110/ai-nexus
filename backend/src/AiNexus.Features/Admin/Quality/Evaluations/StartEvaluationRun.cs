@@ -11,6 +11,7 @@ using AiNexus.Features.Work.Jobs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -45,9 +46,9 @@ internal sealed class EvaluationRunRequestValidator : RequestValidator<Evaluatio
 
 /// <summary>凍結題組的案例與各變體的模型設定，排入比較工作；每位使用者同時只能有一個進行中的評測。</summary>
 internal sealed class StartEvaluationRun(AppDbContext db, ResourceAccess access, ContainerLock containers, JobService jobs, ModelCatalog models, ModelPolicyService policy,
-    IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit)
+    IOptions<InferenceOptions> inference, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/sets/{id:guid}/runs", (Guid id, EvaluationRunRequest body, ICurrentUser user, StartEvaluationRun handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct))
         .WithRequestBodyLimit(QualityModule.SetBodyLimit).Audited(QualityAudit.RunQueued);

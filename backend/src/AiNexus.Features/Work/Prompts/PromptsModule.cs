@@ -10,10 +10,10 @@ public sealed class PromptsModule : IFeatureModule
 {
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/prompt-templates").RequireFeature(FeatureCatalog.Chat)
-            .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(PromptTemplate.ContentMaxLength));
-        ListPromptTemplates.Map(routes);
-        SavePromptTemplate.Map(routes);
-        DeletePromptTemplate.Map(routes);
+        api.MapGroup("/prompt-templates").RequireFeature(FeatureCatalog.Chat)
+            .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(PromptTemplate.ContentMaxLength))
+            .MapSlice<ListPromptTemplates>()
+            .MapSlice<SavePromptTemplate>()
+            .MapSlice<DeletePromptTemplate>();
     }
 }

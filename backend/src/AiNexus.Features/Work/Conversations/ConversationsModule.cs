@@ -23,19 +23,18 @@ public sealed class ConversationsModule : IFeatureModule
     /// <summary>註冊對話 REST 端點群組；註冊順序即 OpenAPI 發佈順序。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/conversations")
-            .RequireFeature(FeatureCatalog.Chat);
-
-        ListConversations.Map(routes);
-        ListConversationLabels.Map(routes);
-        ImportConversation.Map(routes);
-        CreateConversation.Map(routes);
-        RenameConversation.Map(routes);
-        UpdateConversationSettings.Map(routes);
-        SelectBranch.Map(routes);
+        api.MapGroup("/conversations")
+            .RequireFeature(FeatureCatalog.Chat)
+            .MapSlice<ListConversations>()
+            .MapSlice<ListConversationLabels>()
+            .MapSlice<ImportConversation>()
+            .MapSlice<CreateConversation>()
+            .MapSlice<RenameConversation>()
+            .MapSlice<UpdateConversationSettings>()
+            .MapSlice<SelectBranch>();
 
         // 管理端稽核式列出任一使用者的對話，從使用者頁開啟；內容與附件的讀取在 Chat（訊息 DTO 屬於它）。
-        var admin = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
-        ListAdminUserConversations.Map(admin);
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers)
+            .MapSlice<ListAdminUserConversations>();
     }
 }

@@ -15,7 +15,7 @@ public interface IFeatureModule
 
     /// <summary>
     /// 將模組端點掛載至 <c>/api/v1</c> 路由群組下；預設要求登入，功能 policy 或匿名存取才需要另外宣告。
-    /// 切片由產生器註冊，但端點要在這裡呼叫它的 <c>Map*</c> 掛到群組；漏掛時建置失敗（AINX1004）。
+    /// 切片（<see cref="IEndpointSlice"/>）由產生器註冊，但要在這裡以 <c>group.MapSlice&lt;T&gt;()</c> 掛到群組；漏掛時建置失敗（AINX1004）。
     /// </summary>
     static virtual void MapEndpoints(RouteGroupBuilder api) { }
 

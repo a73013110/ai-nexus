@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
@@ -19,12 +20,12 @@ public sealed record TestIdentityRequest(Guid UserId, string Reason);
 /// <summary>
 /// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
 /// </summary>
-internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, AuditTrail audit)
+internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
     public const int MinReasonLength = 4, MaxReasonLength = 240;
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
 
-    public static void Map(RouteGroupBuilder auth) => auth
+    public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct)
             => handler.HandleAsync(http, body, ct))
         .RequireFeature(FeatureCatalog.IdentityUsers).Audited(IdentityAudit.TestIdentityStarted).WithName("StartTestIdentity");

@@ -1,6 +1,7 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -13,9 +14,9 @@ public sealed record MailStatusDto(string Transport, bool Enabled, string FromAd
     int Queued, int Sending, int FailedLastHour, int SentLastDay, DateTimeOffset? OldestQueuedAt, int MaxPerMinute, int MaxPerDay, int GiveUpAfterHours,
     bool AutoRetry);
 
-internal sealed class GetMailStatus(AppDbContext db, MailCircuit circuit, IOptions<MailOptions> options, TimeProvider clock)
+internal sealed class GetMailStatus(AppDbContext db, MailCircuit circuit, IOptions<MailOptions> options, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (GetMailStatus handler, CancellationToken ct) => handler.HandleAsync(ct))
         .NotAudited("寄送狀態摘要，不含郵件內容")
         .WithName("GetMailStatus");

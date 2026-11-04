@@ -1,13 +1,14 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Files.Management;
 
 /// <summary>呼叫者某個附件的中繼資料。</summary>
-internal sealed class GetAttachment(AttachmentService files)
+internal sealed class GetAttachment(AttachmentService files) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, GetAttachment handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(FilesAudit.FileRead)

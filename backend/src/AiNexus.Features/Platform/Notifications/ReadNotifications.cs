@@ -4,6 +4,7 @@ using AiNexus.Data.App.Notifications;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -21,9 +22,9 @@ internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadN
 }
 
 /// <summary>將使用者的通知標為已讀：截止時間（含）之前的全部，或單一 id。</summary>
-internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock)
+internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapPost("/read", (ReadNotificationsRequest body, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
             handler.ThroughAsync(user.Id, body.Through, ct))

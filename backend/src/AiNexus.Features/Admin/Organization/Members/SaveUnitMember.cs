@@ -3,6 +3,7 @@ using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +17,9 @@ public sealed record UnitMemberRequest(bool IsPrimary, bool IsManager);
 /// 加入或更新成員。只能加入未刪除的使用者，停用的單位不能再加入新成員（既有成員仍可修改）；有首長單位的單位不能勾選主管（ADR 0024）。
 /// 主要所屬在同一個交易內轉移；先清掉舊的再寫新的，否則一人一筆的 filtered unique index 會在中途擋下。會稽核。
 /// </summary>
-internal sealed class SaveUnitMember(AppDbContext db, AdministrativeWrite write)
+internal sealed class SaveUnitMember(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, UnitMemberRequest body, SaveUnitMember handler, CancellationToken ct) =>
             handler.HandleAsync(id, userId, body, ct))
         .Audited(OrganizationAudit.MemberUpdated)

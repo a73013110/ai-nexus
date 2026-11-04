@@ -5,14 +5,15 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Projects.Contents;
 
 /// <summary>使用者可讀取的專案中，最多 50 個參考文件。</summary>
-internal sealed class ListProjectFiles(AppDbContext db, ResourceAccess access, DocumentService documents)
+internal sealed class ListProjectFiles(AppDbContext db, ResourceAccess access, DocumentService documents) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/files", (Guid id, ICurrentUser user, ListProjectFiles handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.FileRead);
 

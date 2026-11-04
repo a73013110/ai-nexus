@@ -5,6 +5,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Data.SqlClient;
@@ -50,9 +51,9 @@ public sealed record ModelPriceCreated(Guid PriceId, string Provider, string Mod
 /// 新增一個價格版本，寫入在 <c>billing.usp_CreateModelPrice</c>。這是寫入 procedure 的範本（ADR 0011、0023）：
 /// 程式開交易、procedure 只寫資料、程式補上請求稽核與 domain event 後一起提交；預期內的失敗回傳錯誤，由請求稽核記下錯誤代碼。
 /// </summary>
-internal sealed class CreateModelPrice(AppDbContext db, ISqlDatabase<AppDbContext> sql, DomainEvents events, BillingService billing, AuditTrail audit, TimeProvider clock)
+internal sealed class CreateModelPrice(AppDbContext db, ISqlDatabase<AppDbContext> sql, DomainEvents events, BillingService billing, AuditTrail audit, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder admin) => admin
+    public static void MapEndpoints(RouteGroupBuilder admin) => admin
         .MapPost("/prices", (PriceRequest body, ICurrentUser user, CreateModelPrice handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, body, ct))
         .Audited(BillingAudit.PriceCreated)

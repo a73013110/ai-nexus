@@ -6,6 +6,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.Evaluations;
@@ -15,9 +16,9 @@ public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string
 public sealed record EvaluationDetailDto(EvaluationRunDto Run, IReadOnlyList<EvaluationCase> Cases, IReadOnlyList<EvaluationVariant> Variants, IReadOnlyList<EvaluationResultDto> Results, bool CanReview);
 
 /// <summary>某題組最近 100 筆執行紀錄；單筆執行另含凍結的題目、變體與結果。兩者都需要該題組的讀取權限。</summary>
-internal sealed class BrowseEvaluationRuns(AppDbContext db, ResourceAccess access, ModelPresentation presentation)
+internal sealed class BrowseEvaluationRuns(AppDbContext db, ResourceAccess access, ModelPresentation presentation) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapGet("/sets/{id:guid}/runs", (Guid id, ICurrentUser user, BrowseEvaluationRuns handler, CancellationToken ct) =>
             handler.ListAsync(user.Id, id, ct))

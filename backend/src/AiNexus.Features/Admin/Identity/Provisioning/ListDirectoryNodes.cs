@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.Extensions.Options;
 
@@ -19,9 +20,9 @@ public sealed record DirectoryNodesDto(DirectoryNodeDto Node, IReadOnlyList<Dire
 /// 匯入對話框的目錄樹（<c>identity.users.import</c>）：一次展開一層。只能瀏覽設定的搜尋根之下，DN 由前一次回應帶回，
 /// 不接受任意 DN 以免把服務帳號當成整個樹系的瀏覽器。目錄在公司內本來就可讀，所以只限流、不寫稽核。
 /// </summary>
-internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuthenticationOptions> options)
+internal sealed class ListDirectoryNodes(IAdDirectory directory, IOptions<AdAuthenticationOptions> options) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/directory-nodes", (string? parent, ListDirectoryNodes handler, CancellationToken ct) =>
             handler.HandleAsync(parent, ct))
         .RequireRateLimiting(IdentityModule.DirectoryReadRateLimit)

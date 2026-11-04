@@ -3,15 +3,16 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Chat.Runs;
 
 /// <summary>
 /// 查詢單筆生成任務最新狀態與內容端點。
 /// </summary>
-internal sealed class GetRun(RunService runs, ModelPresentation presentation)
+internal sealed class GetRun(RunService runs, ModelPresentation presentation) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/runs/{id:guid}", (Guid id, ICurrentUser user, GetRun handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .NotAudited("生成中的輪詢，開啟對話與送出訊息已留證")

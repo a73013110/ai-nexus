@@ -3,15 +3,16 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Sharing.Viewing;
 
 public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 
 /// <summary>凍結的快照，模型 ID 以目前對外呈現的樣子顯示。</summary>
-internal sealed class ReadShare(ShareAccess shares, ModelPresentation presentation)
+internal sealed class ReadShare(ShareAccess shares, ModelPresentation presentation) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", (Guid id, ICurrentUser user, ReadShare handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(SharingAudit.SharedContentRead);
 

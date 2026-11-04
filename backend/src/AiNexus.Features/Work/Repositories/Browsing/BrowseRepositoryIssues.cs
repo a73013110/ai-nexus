@@ -2,6 +2,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
@@ -18,12 +19,12 @@ public sealed record RepositoryPullPageDto(IReadOnlyList<RepositoryPullDto> Item
 public sealed record RepositoryPullDetailDto(RepositoryPullDto Pull, string Body, string HeadCommit, string BaseCommit, IReadOnlyList<RepositoryCommentDto> Comments);
 
 /// <summary>唯讀瀏覽 issue 與 pull request，包含其留言。</summary>
-internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
+internal sealed class BrowseRepositoryIssues(RepositoryService gitea) : IEndpointSlice
 {
     private const int PageSize = 20;
     private const int MaxComments = 100;
 
-    public static void Map(RouteGroupBuilder repository)
+    public static void MapEndpoints(RouteGroupBuilder repository)
     {
         repository.MapGet("/issues", (string owner, string name, string? state, string? q, int? page, ICurrentUser user, BrowseRepositoryIssues handler, CancellationToken ct) =>
                 handler.IssuesAsync(user.Id, owner + "/" + name, state ?? "open", q, page ?? 1, ct))

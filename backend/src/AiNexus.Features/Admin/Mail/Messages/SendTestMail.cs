@@ -3,6 +3,7 @@ using AiNexus.Data.App.Mail;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
@@ -33,11 +34,11 @@ internal sealed class MailTestRequestValidator : RequestValidator<MailTestReques
 /// 主旨加「[測試]」以免收件者或查紀錄的人當成真的通知。寫行政稽核 <c>admin.mail_test</c>，不記收件地址與參數值（驗證碼信的參數可能像真的驗證碼）。
 /// </summary>
 internal sealed class SendTestMail(AppDbContext db, MailOutbox outbox, MailRenderer renderer, IEnumerable<MailSample> samples, AdministrativeWrite write,
-    IOptions<MailOptions> options, TimeProvider clock)
+    IOptions<MailOptions> options, TimeProvider clock) : IEndpointSlice
 {
     public const string SubjectPrefix = "[測試] ";
 
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (MailTestRequest body, IRequestActor actor, SendTestMail handler, CancellationToken ct) =>
             handler.HandleAsync(actor.Id, body, ct))
         .RequireRateLimiting(MailModule.TestRateLimit)

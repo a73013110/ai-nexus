@@ -3,6 +3,7 @@ using AiNexus.Data.App.Organization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,9 +18,9 @@ internal sealed class UnitCreateRequestValidator : RequestValidator<UnitCreateRe
 }
 
 /// <summary>新增單位，排到同層最後。Id 由伺服器產生。設成首長單位時取消上層的主管勾選（同一個交易）。會稽核。</summary>
-internal sealed class CreateUnit(AppDbContext db, AdministrativeWrite write)
+internal sealed class CreateUnit(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("", (UnitCreateRequest body, CreateUnit handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .Audited(OrganizationAudit.UnitCreated)

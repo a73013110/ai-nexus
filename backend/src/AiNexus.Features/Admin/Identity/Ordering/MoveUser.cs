@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,9 @@ internal sealed class UserPositionRequestValidator : RequestValidator<UserPositi
 /// 使用者表上的拖曳、方向鍵或輸入編號：只傳「移到第幾位」，值由伺服器依整份名單計算（<see cref="ManualOrder"/>）。
 /// 列表會分頁、搜尋，前端看不到完整順序，所以不讓前端算值。計算與寫入在同一個交易；會稽核。
 /// </summary>
-internal sealed class MoveUser(AppDbContext db, AdministrativeWrite write)
+internal sealed class MoveUser(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/position", (Guid id, UserPositionRequest body, MoveUser handler, CancellationToken ct) =>
             handler.HandleAsync(id, body, ct))
         .Audited(IdentityAudit.UserMoved)

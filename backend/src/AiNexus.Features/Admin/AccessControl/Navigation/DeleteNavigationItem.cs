@@ -1,14 +1,15 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.AccessControl.Navigation;
 
 /// <summary>刪除選單節點。分群必須先清空，不級聯刪除子節點，避免一次誤刪整段選單。會稽核。</summary>
-internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeWrite write)
+internal sealed class DeleteNavigationItem(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/navigation-items/{id}", (string id, long rowVersion, DeleteNavigationItem handler, CancellationToken ct) =>
             handler.HandleAsync(id, rowVersion, ct))
         .Audited(AccessControlAudit.NavigationDeleted)

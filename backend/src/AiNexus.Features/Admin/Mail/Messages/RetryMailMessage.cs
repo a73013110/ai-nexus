@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Mail.Delivery;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Mail.Messages;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Admin.Mail.Messages;
 /// 暫停寄送中時一併結束暫停（<see cref="MailCircuit.Resume"/>），管理者通常是修好設定才按；仍然失敗會再暫停。
 /// 已結束（寄出、失敗、取消）的信不能重試，要用重寄建立新信。
 /// </summary>
-internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, AdministrativeWrite write, TimeProvider clock)
+internal sealed class RetryMailMessage(AppDbContext db, MailCircuit circuit, AdministrativeWrite write, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, RetryMailMessage handler, CancellationToken ct) =>
             handler.HandleAsync(id, ct))
         .RequireFeature(FeatureCatalog.MailMessagesResend)

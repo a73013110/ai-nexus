@@ -2,6 +2,7 @@ using AiNexus.Features.Work.Conversations;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
 
@@ -12,9 +13,9 @@ namespace AiNexus.Features.Work.Chat.Transcripts;
 /// 有生成中的 Run 時拒絕匯出（回傳 <see cref="ConversationsErrors.GenerationActive"/>），避免備份到不完整的回答。
 /// 附件只記檔名，不含二進位內容。
 /// </remarks>
-internal sealed class ExportConversation(GetConversation conversations)
+internal sealed class ExportConversation(GetConversation conversations) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/export", (Guid id, ICurrentUser user, ExportConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.ConversationExported)

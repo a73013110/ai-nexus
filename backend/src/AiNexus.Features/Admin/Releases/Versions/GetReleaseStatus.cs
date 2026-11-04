@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Releases;
 using AiNexus.Features.Admin.Releases.SchemaChanges;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Admin.Releases.Versions;
 
@@ -13,9 +14,9 @@ public sealed record ReleaseStatusDto(
     string AppVersion, string? AppRevision, DateTimeOffset? AppBuiltAt,
     string? DatabaseVersion, DateTimeOffset? DatabaseDeployedAt, string? MinimumDatabaseVersion, string Compatibility, bool HasSnapshot);
 
-internal sealed class GetReleaseStatus(AppDbContext db, AppRelease release, SchemaChangeReader changes)
+internal sealed class GetReleaseStatus(AppDbContext db, AppRelease release, SchemaChangeReader changes) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/release-status", (GetReleaseStatus handler, CancellationToken ct) => handler.HandleAsync(ct))
         .NotAudited("版號與部署時間，不含結構內容")
         .WithName("GetReleaseStatus");

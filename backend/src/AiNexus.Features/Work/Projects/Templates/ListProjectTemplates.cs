@@ -4,14 +4,15 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Projects.Templates;
 
 /// <summary>使用者可讀取的專案範本，依標題排序。</summary>
-internal sealed class ListProjectTemplates(AppDbContext db, ResourceAccess access)
+internal sealed class ListProjectTemplates(AppDbContext db, ResourceAccess access) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/templates", (Guid id, ICurrentUser user, ListProjectTemplates handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct)).Audited(ProjectsAudit.TemplateRead);
 

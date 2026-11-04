@@ -4,6 +4,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.SelfService;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +13,9 @@ namespace AiNexus.Features.Platform.Account.Security;
 /// <summary>
 /// 停用本地登入並清除密碼（需步升）；本地是唯一登入方式時拒絕。目前若正是以本地密碼登入，這個工作階段無法再延續，直接登出並在回應標示。
 /// </summary>
-internal sealed class DisableLocalLogin(AppDbContext db, AccountSecurity security, Reauthentication reauthentication)
+internal sealed class DisableLocalLogin(AppDbContext db, AccountSecurity security, Reauthentication reauthentication) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/settings/account/local-login", (HttpContext http, ICurrentUser user, DisableLocalLogin handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, ct))
         .RequireRateLimiting(AccountModule.CredentialsRateLimit)

@@ -2,13 +2,14 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Work.Jobs;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Repositories.Reviews;
 
 /// <summary>取消或重試 review 的背景工作。重試時會經由 <see cref="RepositoryReviewHandler"/> 重新驗證權限與來源。</summary>
-internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews, JobService jobs)
+internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews, JobService jobs) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapPost("/reviews/{id:guid}/cancel", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
                 handler.HandleAsync(user.Id, id, false, ct))

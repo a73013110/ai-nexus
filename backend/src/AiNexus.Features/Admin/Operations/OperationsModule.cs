@@ -13,11 +13,14 @@ public sealed class OperationsModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         // 每個端點由呼叫它的頁面授權，所以同一個 /admin 前綴依授權各開一組。
-        GetAdminCatalog.Map(api.MapGroup("/admin").RequireAuthorization(Policies.AccessCatalog));
-        var users = api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers);
-        ListAdminUsers.Map(users);
-        GetAdminUserInsights.Map(users);
-        SaveRoleGroup.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlGroups));
-        GetAdminUsage.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.OperationsUsage));
+        api.MapGroup("/admin").RequireAuthorization(Policies.AccessCatalog)
+            .MapSlice<GetAdminCatalog>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers)
+            .MapSlice<ListAdminUsers>()
+            .MapSlice<GetAdminUserInsights>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.AccessControlGroups)
+            .MapSlice<SaveRoleGroup>();
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.OperationsUsage)
+            .MapSlice<GetAdminUsage>();
     }
 }

@@ -7,6 +7,7 @@ using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Knowledge.Collections;
@@ -15,9 +16,9 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 /// 擁有者刪除知識庫連同所有文件：進行中的工作會取消，索引、頁面與對話選取會清除，沒有其他參照的原始檔會釋放。
 /// 檔案位元組在交易提交後才實際刪除，避免交易回滾時檔案已消失。
 /// </summary>
-internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess access, DocumentWriteLock writes, AttachmentLifecycle lifecycle)
+internal sealed class DeleteKnowledgeCollection(AppDbContext db, ResourceAccess access, DocumentWriteLock writes, AttachmentLifecycle lifecycle) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/collections/{id:guid}", (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(KnowledgeAudit.CollectionDeleted)

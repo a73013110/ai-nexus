@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Platform.Inference.ModelPolicies;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Platform.Inference.Models;
 
@@ -9,9 +10,9 @@ namespace AiNexus.Features.Platform.Inference.Models;
 /// 根據當前使用者所屬群組的模型原則，過濾出使用者有權存取的模型清單，
 /// 並決定使用者可用的預設模型。
 /// </summary>
-internal sealed class ListModels(ModelCatalog models, ModelPolicyService policies)
+internal sealed class ListModels(ModelCatalog models, ModelPolicyService policies) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/models", (ICurrentUser user, ListModels handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .NotAudited("模型選單")

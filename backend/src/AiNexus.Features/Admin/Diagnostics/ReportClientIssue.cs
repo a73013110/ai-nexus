@@ -28,9 +28,9 @@ internal sealed class ClientIssueRequestValidator : RequestValidator<ClientIssue
 /// 瀏覽器回報的未處理例外或 rejection。來源不可信，因此每位使用者與指紋每分鐘只記錄一次，日誌只寫種類與雜湊。
 /// Accepted 代表診斷佇列已接受這筆事件，不代表已寫入資料庫。
 /// </summary>
-internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger)
+internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapPost("/client-issues", (ClientIssueRequest request, ICurrentUser user, ReportClientIssue handler) =>
             handler.Handle(user.Id, request))
         .RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).NotAudited("前端錯誤回報寫進系統日誌，不是資料存取").WithName("ReportClientIssue");

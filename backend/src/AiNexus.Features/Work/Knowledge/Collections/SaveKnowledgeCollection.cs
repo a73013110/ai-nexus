@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using AiNexus.Features.Work.Collaboration;
 using AiNexus.Features.Admin.Identity;
@@ -15,19 +16,20 @@ namespace AiNexus.Features.Work.Knowledge.Collections;
 public sealed record CollectionRequest(string Name, string Description);
 
 /// <summary>建立個人知識庫（數量受設定上限限制），或修改使用者可編輯的知識庫名稱與描述。</summary>
-internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
+internal sealed class SaveKnowledgeCollection(AppDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("/collections", (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes)
+    {
+        routes.MapPost("/collections", (CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
             handler.CreateAsync(user.Id, request, ct))
-        .Audited(KnowledgeAudit.CollectionCreated)
-        .WithName("CreateKnowledgeCollection");
+            .Audited(KnowledgeAudit.CollectionCreated)
+            .WithName("CreateKnowledgeCollection");
 
-    public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/collections/{id:guid}", (Guid id, CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
+        routes.MapPut("/collections/{id:guid}", (Guid id, CollectionRequest request, ICurrentUser user, SaveKnowledgeCollection handler, CancellationToken ct) =>
             handler.UpdateAsync(user.Id, id, request, ct))
-        .Audited(KnowledgeAudit.CollectionUpdated)
-        .WithName("UpdateKnowledgeCollection");
+            .Audited(KnowledgeAudit.CollectionUpdated)
+            .WithName("UpdateKnowledgeCollection");
+    }
 
     public async Task<Result<CollectionDto>> CreateAsync(Guid actor, CollectionRequest request, CancellationToken ct)
     {

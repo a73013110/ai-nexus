@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,9 @@ internal sealed class UnitOrderRequestValidator : RequestValidator<UnitOrderRequ
 /// 重排同一層的單位，依清單順序重新編號。要求送來完整的一層：畫面過期（期間有人新增或搬走單位）時拒絕，
 /// 不會把別人剛加的單位排到意料之外的位置。會稽核。
 /// </summary>
-internal sealed class ReorderUnits(AppDbContext db, AdministrativeWrite write)
+internal sealed class ReorderUnits(AppDbContext db, AdministrativeWrite write) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/order", (UnitOrderRequest body, ReorderUnits handler, CancellationToken ct) =>
             handler.HandleAsync(body, ct))
         .Audited(OrganizationAudit.UnitReordered)

@@ -53,15 +53,20 @@ public sealed class MailModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var messages = api.MapGroup("/admin/mail-messages").RequireFeature(FeatureCatalog.MailMessages);
-        ListMailMessages.Map(messages);
-        GetMailMessage.Map(messages);
-        ResendMailMessage.Map(messages);
-        RetryMailMessage.Map(messages);
-        SendTestMail.Map(api.MapGroup("/admin/mail-tests").RequireFeature(FeatureCatalog.MailMessages));
-        ListMailSamples.Map(api.MapGroup("/admin/mail-samples").RequireFeature(FeatureCatalog.MailMessages));
-        GetMailStatus.Map(api.MapGroup("/admin/mail-status").RequireFeature(FeatureCatalog.MailMessages));
-        DiagnoseMailTransport.Map(api.MapGroup("/admin/mail-diagnoses").RequireFeature(FeatureCatalog.MailMessages));
-        UpdateMailSettings.Map(api.MapGroup("/admin/mail-settings").RequireFeature(FeatureCatalog.MailMessages));
+        api.MapGroup("/admin/mail-messages").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<ListMailMessages>()
+            .MapSlice<GetMailMessage>()
+            .MapSlice<ResendMailMessage>()
+            .MapSlice<RetryMailMessage>();
+        api.MapGroup("/admin/mail-tests").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<SendTestMail>();
+        api.MapGroup("/admin/mail-samples").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<ListMailSamples>();
+        api.MapGroup("/admin/mail-status").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<GetMailStatus>();
+        api.MapGroup("/admin/mail-diagnoses").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<DiagnoseMailTransport>();
+        api.MapGroup("/admin/mail-settings").RequireFeature(FeatureCatalog.MailMessages)
+            .MapSlice<UpdateMailSettings>();
     }
 }

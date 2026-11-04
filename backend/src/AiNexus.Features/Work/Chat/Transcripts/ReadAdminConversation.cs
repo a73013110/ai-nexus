@@ -6,6 +6,7 @@ using AiNexus.Features.Work.Conversations.Administration;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Transcripts;
@@ -17,9 +18,9 @@ namespace AiNexus.Features.Work.Chat.Transcripts;
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, Guid? ActiveLeafId, IReadOnlyList<MessageDto> Messages);
 
 /// <summary>任一使用者的單一對話（含已軟刪除），讀取會稽核；稽核只記則數，不記內容。</summary>
-internal sealed class ReadAdminConversation(AppDbContext db, AccessService access, AuditTrail audit, TranscriptReader transcripts)
+internal sealed class ReadAdminConversation(AppDbContext db, AccessService access, AuditTrail audit, TranscriptReader transcripts) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/conversations/{id:guid}", (Guid id, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ConversationsAudit.ConversationContentRead)

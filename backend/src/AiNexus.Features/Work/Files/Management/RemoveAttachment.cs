@@ -4,27 +4,22 @@ using AiNexus.Features.Work.Files.Storage;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Files.Management;
 
 /// <summary>
-/// 移除尚未送出的輸入框草稿，或從檔案庫刪除檔案。仍被對話或其他工作區資源持有的檔案會保留；
+/// 移除尚未送出的輸入框草稿；從檔案庫刪除檔案（<see cref="DeleteLibraryFile"/>）也經由這裡。仍被對話或其他工作區資源持有的檔案會保留；
 /// 擁有者對該檔案的私人讀取器會一併移除。位元組在交易提交後才刪除。
 /// </summary>
-internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files, AttachmentQuota quota, AttachmentLifecycle lifecycle)
+internal sealed class RemoveAttachment(AppDbContext db, AttachmentService files, AttachmentQuota quota, AttachmentLifecycle lifecycle) : IEndpointSlice
 {
-    public static void MapDraft(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, fromLibrary: false, ct))
         .Audited(FilesAudit.FileDeleted)
         .WithName("RemoveDraftAttachment");
-
-    public static void MapLibrary(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, fromLibrary: true, ct))
-        .Audited(FilesAudit.FileDeleted)
-        .WithName("DeleteLibraryFile");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, bool fromLibrary, CancellationToken ct)
     {

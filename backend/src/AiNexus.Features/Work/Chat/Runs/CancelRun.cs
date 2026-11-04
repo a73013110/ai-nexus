@@ -5,6 +5,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Chat.Runs;
 
@@ -14,9 +15,9 @@ namespace AiNexus.Features.Work.Chat.Runs;
 internal sealed class CancelRun(
     GenerationScheduler scheduler,
     RunService runs,
-    ModelPresentation presentation)
+    ModelPresentation presentation) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/runs/{id:guid}/cancel", (Guid id, ICurrentUser user, CancelRun handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(ChatAudit.RunCancelled)

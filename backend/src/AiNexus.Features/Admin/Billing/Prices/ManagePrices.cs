@@ -1,13 +1,14 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Billing.Prices;
 
 /// <summary>管理用價格表：可計價的模型與既有價格版本；新增版本見 <see cref="CreateModelPrice"/>。</summary>
-internal sealed class ManagePrices(AppDbContext db, BillingService billing)
+internal sealed class ManagePrices(AppDbContext db, BillingService billing) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder admin)
+    public static void MapEndpoints(RouteGroupBuilder admin)
     {
         admin.MapGet("/targets", (ManagePrices handler) => handler.Targets())
             .NotAudited("價格表單的選項")

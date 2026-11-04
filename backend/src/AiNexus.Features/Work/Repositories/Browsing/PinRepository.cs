@@ -4,14 +4,15 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Admin.Identity.Users;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Repositories.Browsing;
 
 /// <summary>把使用者可讀取的程式庫釘在清單頂端，並同步為 Gitea 目前的名稱與說明。</summary>
-internal sealed class PinRepository(AppDbContext db, RepositoryService gitea)
+internal sealed class PinRepository(AppDbContext db, RepositoryService gitea) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
+    public static void MapEndpoints(RouteGroupBuilder repository) => repository
         .MapPut("/pin", (string owner, string name, ICurrentUser user, PinRepository handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, owner + "/" + name, ct))
         .Audited(RepositoriesAudit.RepositoryPinned)

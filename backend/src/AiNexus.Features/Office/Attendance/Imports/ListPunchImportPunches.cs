@@ -4,6 +4,7 @@ using AiNexus.Features.Office.Attendance.Punches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Office.Attendance.Imports;
@@ -13,9 +14,9 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 /// 刷卡依檔案保存、不依匯入保存，所以只有這個檔最近一次成功的匯入（<see cref="PunchImportDto.IsCurrent"/>）列得出來，其餘回 <c>attendance_import_not_current</c>。
 /// 只列這個檔擁有的刷卡，與 <see cref="PunchImport.PunchCount"/> 一致：已屬於別的檔的重複刷卡不在其中。
 /// </summary>
-internal sealed class ListPunchImportPunches(AppDbContext db)
+internal sealed class ListPunchImportPunches(AppDbContext db) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/punches", (Guid id, [AsParameters] TableRequest table, ListPunchImportPunches handler, CancellationToken ct)
             => handler.HandleAsync(id, table, ct))
         .Audited(AttendanceAudit.PunchRead)

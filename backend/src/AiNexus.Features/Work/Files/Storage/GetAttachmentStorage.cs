@@ -1,12 +1,13 @@
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Files.Storage;
 
 /// <summary>呼叫者已使用的儲存位元組與生效中的上限。</summary>
-internal sealed class GetAttachmentStorage(AttachmentQuota quota)
+internal sealed class GetAttachmentStorage(AttachmentQuota quota) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/storage", (ICurrentUser user, GetAttachmentStorage handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, ct))
         .NotAudited("使用者自己的容量")

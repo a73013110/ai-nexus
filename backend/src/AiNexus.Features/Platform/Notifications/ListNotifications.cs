@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -13,11 +14,11 @@ public sealed record NotificationDto(Guid Id, int Version, string Type, string S
 
 public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
 
-internal sealed class ListNotifications(AppDbContext db)
+internal sealed class ListNotifications(AppDbContext db) : IEndpointSlice
 {
     private const int PageSize = 50;
 
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("", (bool? unread, Guid? before, ICurrentUser user, ListNotifications handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, unread ?? false, before, ct))
         .NotAudited("使用者自己的通知")

@@ -5,6 +5,7 @@ using AiNexus.Features.Admin.Identity.Users;
 using AiNexus.Features.Admin.Mail;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
@@ -20,9 +21,9 @@ internal sealed class VerificationCodeRequestValidator : RequestValidator<Verifi
 }
 
 /// <summary>寄步升驗證碼到本人已驗證的信箱（沒有密碼可用、或想改用驗證碼時）。</summary>
-internal sealed class SendVerificationCode(VerificationChallenges challenges, MailOutbox outbox, IOptions<SelfServiceOptions> options)
+internal sealed class SendVerificationCode(VerificationChallenges challenges, MailOutbox outbox, IOptions<SelfServiceOptions> options) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/settings/account/verification-codes", (VerificationCodeRequest body, HttpContext http, ICurrentUser user, SendVerificationCode handler, CancellationToken ct)
             => handler.HandleAsync(http, user.User, ct))
         .RequireRateLimiting(AccountModule.VerificationRateLimit)

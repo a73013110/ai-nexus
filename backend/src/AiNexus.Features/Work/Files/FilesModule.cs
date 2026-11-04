@@ -36,21 +36,22 @@ public sealed class FilesModule : IFeatureModule
     // 因為一個檔案的使用處可能包含文件。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var library = api.MapGroup("/files").RequireFeature(FeatureCatalog.Files);
-        RenameLibraryFile.Map(library);
-        RetainLibraryFile.Map(library);
-        RemoveAttachment.MapLibrary(library);
+        api.MapGroup("/files").RequireFeature(FeatureCatalog.Files)
+            .MapSlice<RenameLibraryFile>()
+            .MapSlice<RetainLibraryFile>()
+            .MapSlice<DeleteLibraryFile>();
 
-        var routes = api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments);
-        GetAttachmentPolicy.Map(routes);
-        GetAttachmentStorage.Map(routes);
-        UploadAttachment.Map(routes);
-        GetAttachment.Map(routes);
-        DownloadAttachment.Map(routes);
-        RemoveAttachment.MapDraft(routes);
+        api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments)
+            .MapSlice<GetAttachmentPolicy>()
+            .MapSlice<GetAttachmentStorage>()
+            .MapSlice<UploadAttachment>()
+            .MapSlice<GetAttachment>()
+            .MapSlice<DownloadAttachment>()
+            .MapSlice<RemoveAttachment>();
 
         // 管理端設定使用者的附件容量上限，在使用者頁編輯。
-        SetUserAttachmentStorage.Map(api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers));
+        api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsers)
+            .MapSlice<SetUserAttachmentStorage>();
     }
 
     /// <summary>儲存根目錄不可用時，啟動即失敗（連同每個主機指令），在接受任何請求之前就發現問題。</summary>

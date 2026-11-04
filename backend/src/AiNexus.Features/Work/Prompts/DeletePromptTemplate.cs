@@ -2,13 +2,14 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Prompts;
 
-internal sealed class DeletePromptTemplate(AppDbContext db)
+internal sealed class DeletePromptTemplate(AppDbContext db) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeletePromptTemplate handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(PromptsAudit.TemplateDeleted)

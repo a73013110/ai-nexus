@@ -23,6 +23,7 @@ using AiNexus.Features.Platform.WebSearches;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -80,9 +81,9 @@ internal sealed class CreateRun(
     ProjectService projects,
     WebSearchService webSearch,
     BillingService billing,
-    TimeProvider clock, AuditTrail audit)
+    TimeProvider clock, AuditTrail audit) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/runs", async (CreateRunRequest body, HttpContext http, ICurrentUser user, CreateRun handler, CancellationToken ct) =>
         {
             var run = await handler.HandleAsync(user.Id, body, http.Request.Headers["Idempotency-Key"].ToString(), ct);

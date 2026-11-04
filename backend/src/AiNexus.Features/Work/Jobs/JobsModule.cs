@@ -12,10 +12,10 @@ public sealed class JobsModule : IFeatureModule
     // 端點註冊順序即 OpenAPI 發佈順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var jobs = api.MapGroup("/jobs");
-        ListJobs.Map(jobs);
-        GetJob.Map(jobs);
-        CancelJob.Map(jobs);
-        RetryJob.Map(jobs);
+        api.MapGroup("/jobs")
+            .MapSlice<ListJobs>()
+            .MapSlice<GetJob>()
+            .MapSlice<CancelJob>()
+            .MapSlice<RetryJob>();
     }
 }

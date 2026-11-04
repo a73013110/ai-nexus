@@ -12,9 +12,9 @@ namespace AiNexus.Features.Work.Jobs.Management;
 /// 把使用者的失敗或已取消工作重新排入佇列。全部嘗試上限為 <see cref="JobService.MaxAttempts"/> 次；且工作種類仍有處理器、處理器接受重試，
 /// 同一業務對象沒有其他進行中的工作。更新以讀到的狀態作為條件（fencing），避免覆寫併發的狀態變更。
 /// </summary>
-internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHandler> handlers, TimeProvider clock)
+internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHandler> handlers, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .Audited(JobsAudit.JobRetried)

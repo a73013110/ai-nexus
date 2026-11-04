@@ -1,9 +1,9 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Inference;
-using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Admin.Identity.Users;
@@ -27,12 +27,12 @@ internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackReques
 }
 
 /// <summary>為使用者擁有之對話中已完成的 AI 回答評分；不複製回答內容。</summary>
-internal sealed class SaveMessageFeedback(AppDbContext db, TimeProvider clock)
+internal sealed class SaveMessageFeedback(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
+        .MapPut("/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
-        .RequireFeature(FeatureCatalog.Chat).Audited(QualityAudit.FeedbackUpdated);
+        .Audited(QualityAudit.FeedbackUpdated);
 
     public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {

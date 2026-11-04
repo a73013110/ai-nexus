@@ -6,6 +6,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,9 +16,9 @@ namespace AiNexus.Features.Work.Sharing.Viewing;
 /// 預覽與下載擁有者明確納入分享的檔案。授權來源是分享本身的引用，絕不是收件人對原始附件的存取權；
 /// 顯示的名稱是快照中凍結的那一個。
 /// </summary>
-internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, AttachmentService files)
+internal sealed class OpenSharedFile(AppDbContext db, ShareAccess shares, AttachmentService files) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes)
+    public static void MapEndpoints(RouteGroupBuilder routes)
     {
         routes.MapGet("/{id:guid}/files/{file:guid}/preview", (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, CancellationToken ct) =>
                 handler.PreviewAsync(user.Id, id, file, ct))

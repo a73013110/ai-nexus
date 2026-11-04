@@ -3,6 +3,7 @@ using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Office.Attendance.Records;
 
@@ -19,9 +20,9 @@ public sealed record AttendancePersonOptionDto(Guid? UserId, string? CardNumber,
 /// 一次回整份：名單是公司持卡人（數百人），選單在前端搜尋。
 /// <c>unitId</c> 與查詢的單位篩選同一套（該單位及下層的目前成員，沒有帳號的卡號持有人不列），畫面選了單位後人員選單只列那個單位的人。
 /// </summary>
-internal sealed class ListAttendancePeople(IDataScope scopes, AttendanceRoster roster, TimeProvider clock)
+internal sealed class ListAttendancePeople(IDataScope scopes, AttendanceRoster roster, TimeProvider clock) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/people", (Guid? unitId, ICurrentUser user, ListAttendancePeople handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, unitId, ct))
         .NotAudited("篩選用的人員選項，不含出勤資料")

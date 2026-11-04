@@ -7,6 +7,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -31,9 +32,9 @@ public sealed record PresenceReceipt(bool Enabled, int HeartbeatSeconds);
 /// 分頁心跳：記錄使用者、粗略的瀏覽器與裝置名稱、位址與固定的功能名稱。
 /// 原始 User-Agent、URL 與標題絕不進入監控資料。此端點有速率限制，且不列入請求日誌。
 /// </summary>
-internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
+internal sealed class HeartbeatPresence(RuntimeTraffic traffic) : IEndpointSlice
 {
-    public static void Map(RouteGroupBuilder api) => api
+    public static void MapEndpoints(RouteGroupBuilder api) => api
         .MapPost("/presence", (PresenceRequest request, HttpContext http, ICurrentUser user, HeartbeatPresence handler) =>
             handler.Handle(http, user.User, request))
         .RequireRateLimiting(MonitoringModule.PresenceRateLimit).WithMetadata(new SuppressSuccessfulRequestLog()).NotAudited("線上狀態心跳").WithName("HeartbeatPresence");

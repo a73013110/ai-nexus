@@ -2,14 +2,15 @@ using AiNexus.Data.App;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
 
 /// <summary>隱藏使用者的一則通知；找不到時也視為成功，可重複呼叫。</summary>
-internal sealed class DismissNotification(AppDbContext db, TimeProvider clock)
+internal sealed class DismissNotification(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+    public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DismissNotification handler, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, ct))
         .NotAudited("使用者自己的通知")
