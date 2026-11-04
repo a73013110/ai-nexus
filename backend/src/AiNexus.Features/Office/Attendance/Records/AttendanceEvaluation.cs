@@ -105,6 +105,6 @@ public enum AttendanceReason
     /// <summary>異常：只有一筆刷卡（或兩筆在同一秒），少了上班或下班；分不出缺哪一次，所以不算遲到早退。</summary>
     SinglePunch = 3,
 
-    /// <summary>無法判定：今天還沒結束，打卡檔多半還沒匯入（打卡機 23:52 才輸出當天），沒刷卡或少一筆都還不算異常。</summary>
+    /// <summary>無法判定：今天還沒結束，打卡檔還不完整（白天的轉出只到當下，23:52 那次才是當天全部），沒刷卡或少一筆都還不算異常。</summary>
     DayInProgress = 4
 }

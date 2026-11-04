@@ -113,7 +113,10 @@ public sealed class PunchImportOptions : IValidatableObject
     /// <summary>只控制背景掃描；HR 手動重匯不受影響，只要來源資料夾讀得到。</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>打卡機輸出每日檔（<c>yyyyMMdd.txt</c>）的資料夾，通常是網路共用；IIS 應用程式集區的身分必須能讀取。</summary>
+    /// <summary>
+    /// HAMS 轉出每日檔（<c>yyyyMMdd.txt</c>）的資料夾；IIS 應用程式集區的身分必須能讀取。
+    /// 正式機與 HAMS 同機，設為 <c>C:\Export\</c>；預設值是開發機讀的網路共用，只有每晚那次轉出會複製過去。
+    /// </summary>
     [Required, MaxLength(260)] public string SourceDirectory { get; set; } = @"\\192.168.2.233\Data\HAMS\";
 
     [Range(10, 86400)] public int ScanIntervalSeconds { get; set; } = 300;

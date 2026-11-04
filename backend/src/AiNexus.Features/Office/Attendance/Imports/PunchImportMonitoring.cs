@@ -8,7 +8,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 
 /// <summary>
 /// 刷卡匯入的監控。未啟用 idle；來源資料夾讀不到 failing；有檔案最近一次匯入失敗，或超過 <c>StaleAfterHours</c> 沒有任何成功匯入 degraded。
-/// 打卡機每天輸出一個新檔，所以太久沒有成功匯入代表打卡機或網路共用出了問題，HR 看到的出勤資料已經過期。
+/// HAMS 每天轉出一個新檔，所以太久沒有成功匯入代表 HAMS 排程或來源資料夾出了問題，HR 看到的出勤資料已經過期。
 /// 失敗的檔案走 <c>ix_PunchFiles_LastImportId</c>，最近成功的匯入走 <c>ix_PunchImports_StartedAt</c>。
 /// 出勤的每個外部來源各自一個監控來源，放在擁有它的能力資料夾（同 Inference 的 <c>generation</c> 與 <c>model-providers</c>）。
 /// </summary>
