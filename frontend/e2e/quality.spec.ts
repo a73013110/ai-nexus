@@ -314,18 +314,27 @@ test("answer feedback is one click, can be supplemented and toggled off", async 
   await core.attach(page);
   let rating = 0,
     note = "";
+  // 與伺服器相同：取消評分走 DELETE 回 204，未評分時讀取也回 204。
   await page.route("**/api/v1/messages/*/feedback", (route) => {
-    if (route.request().method() === "GET")
-      return route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ rating, note, reason: "" }),
-      });
+    const method = route.request().method();
+    if (method === "DELETE") {
+      rating = 0;
+      note = "";
+      return route.fulfill({ status: 204 });
+    }
+    if (method === "GET")
+      return rating
+        ? route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({ rating, note, reason: "" }),
+          })
+        : route.fulfill({ status: 204 });
     const value = route.request().postDataJSON();
     rating = value.rating;
     note = value.note;
     return route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify(value.rating ? { rating, note } : null),
+      body: JSON.stringify({ rating, note, reason: value.reason }),
     });
   });
   await page.goto("/work/chat");

@@ -3015,6 +3015,9 @@
               }
             }
           },
+          "204": {
+            "description": "No Content"
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -3055,6 +3058,30 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Quality"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "$ref": "#/components/responses/Problem"

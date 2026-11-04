@@ -28,7 +28,8 @@ public sealed class QualityModule : IFeatureModule
     {
         api.MapGroup("/messages").RequireFeature(FeatureCatalog.Chat)
             .MapSlice<ReadMessageFeedback>()
-            .MapSlice<SaveMessageFeedback>();
+            .MapSlice<SaveMessageFeedback>()
+            .MapSlice<DeleteMessageFeedback>();
         // 檢索評測是獨立頁面與授權（quality.retrieval），其餘題組、執行與回饋屬於品質評測頁。
         api.MapGroup("/quality").RequireFeature(FeatureCatalog.QualityRetrieval)
             .MapSlice<ListRetrievalEvaluations>()

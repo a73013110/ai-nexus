@@ -31,6 +31,27 @@ public sealed class MessageFeedbackTests
         (await owner.PutAsJsonAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback", new FeedbackRequest(-1, "incomplete", "需要結論"))).EnsureSuccessStatusCode();
         Assert.Equal(-1, (await owner.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!.Messages.Single(x => x.Id == run.AssistantMessageId).FeedbackRating);
         Assert.Empty((await other.GetFromJsonAsync<List<FeedbackDto>>("/api/v1/quality/feedback"))!);
-        (await owner.PutAsJsonAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback", new FeedbackRequest(0))).EnsureSuccessStatusCode(); Assert.Empty((await owner.GetFromJsonAsync<List<FeedbackDto>>("/api/v1/quality/feedback"))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/messages/{run.AssistantMessageId}/feedback")).StatusCode);
+        Assert.Empty((await owner.GetFromJsonAsync<List<FeedbackDto>>("/api/v1/quality/feedback"))!);
+    }
+
+    // 再按一次取消評分：重複移除也成功；未評分時讀取回 204，不是沒有內容的 200。
+    [Fact]
+    public async Task RemovingIsRepeatableAndUnratedAnswerReadsAsNoContent()
+    {
+        await using var f = new AppFactory(seed: PlatformGrants.QualityForMembers); using var owner = await f.SignedInAsync();
+        var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "問題"); await WaitForTerminal(owner, run.Id);
+        var url = $"/api/v1/messages/{run.AssistantMessageId}/feedback";
+
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.GetAsync(url)).StatusCode);
+        var saved = await owner.PutAsJsonAsync(url, new FeedbackRequest(1));
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.Equal(1, (await saved.Content.ReadFromJsonAsync<FeedbackDto>())!.Rating);
+        Assert.Equal(1, (await owner.GetFromJsonAsync<FeedbackDto>(url))!.Rating);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PutAsJsonAsync(url, new FeedbackRequest(0))).StatusCode);
     }
 }

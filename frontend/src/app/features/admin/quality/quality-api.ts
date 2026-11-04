@@ -9,12 +9,16 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class QualityApi {
   private readonly api = inject(ApiClient);
-  feedback = (id: string, rating: number, reason = '', note = '') =>
+  /** `rating` 為 1 或 -1；取消評分用 `removeFeedback`。 */
+  feedback = (id: string, rating: 1 | -1, reason = '', note = '') =>
     this.api.put('/api/v1/messages/{id}/feedback', {
       path: { id },
       body: { rating, reason, note },
     });
+  removeFeedback = (id: string) =>
+    this.api.delete('/api/v1/messages/{id}/feedback', { path: { id } });
   feedbackList = () => this.api.get('/api/v1/quality/feedback');
+  /** 尚未評分時伺服器回 204，結果為 `undefined`。 */
   feedbackFor = (id: string) => this.api.get('/api/v1/messages/{id}/feedback', { path: { id } });
   sets = () => this.api.get('/api/v1/quality/sets');
   get = (id: string) => this.api.get('/api/v1/quality/sets/{id}', { path: { id } });

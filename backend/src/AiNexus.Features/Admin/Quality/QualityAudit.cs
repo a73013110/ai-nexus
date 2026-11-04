@@ -16,6 +16,7 @@ public static class QualityAudit
     public static readonly AuditAction ResultReviewed = AuditAction.Activity("quality.evaluation_result.reviewed", "人工複核評測結果");
     public static readonly AuditAction FeedbackRead = AuditAction.Access("quality.feedback.read", "查詢回覆回饋");
     public static readonly AuditAction FeedbackUpdated = AuditAction.Activity("chat.message_feedback.updated", "回饋回覆品質");
+    public static readonly AuditAction FeedbackRemoved = AuditAction.Activity("chat.message_feedback.deleted", "移除回覆品質回饋");
     public static readonly AuditAction RetrievalRead = AuditAction.Access("quality.retrieval_evaluation.read", "查詢檢索評測");
     public static readonly AuditAction RetrievalQueued = AuditAction.Activity("quality.retrieval_evaluation.queued", "執行檢索評測");
 }

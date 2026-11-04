@@ -136,7 +136,8 @@ export class MessageFeedback {
     { value: 'format', label: '格式不易使用' },
     { value: 'other', label: '其他' },
   ];
-  rate(value: number) {
+  /** 按已選的那一個就是取消評分。 */
+  rate(value: 1 | -1) {
     void this.save(this.rating() === value ? 0 : value, value === 1 ? 'up' : 'down');
   }
   openDetails() {
@@ -146,17 +147,19 @@ export class MessageFeedback {
       this.requested.set(true);
     }
   }
-  async save(value: number, from: 'up' | 'down' | 'detail' = 'detail') {
+  async save(value: 1 | -1 | 0, from: 'up' | 'down' | 'detail' = 'detail') {
     if (this.busy()) return;
     const id = this.message().id;
     const outcome = await this.saving.run(
       () =>
-        this.api.feedback(
-          id,
-          value,
-          value === -1 ? this.reason() : '',
-          value === -1 ? this.note() : '',
-        ),
+        value === 0
+          ? this.api.removeFeedback(id)
+          : this.api.feedback(
+              id,
+              value,
+              value === -1 ? this.reason() : '',
+              value === -1 ? this.note() : '',
+            ),
       { key: from, current: () => this.message().id === id },
     );
     if (!outcome.ok) return;

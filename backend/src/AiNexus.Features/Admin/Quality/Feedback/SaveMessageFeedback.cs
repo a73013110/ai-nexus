@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.Feedback;
 
-/// <summary>評分 1 或 -1 即儲存；0 則清除。</summary>
+/// <summary>評分 1（有幫助）或 -1（待改善）；移除評分走 <c>DELETE</c>。</summary>
 public sealed record FeedbackRequest(int Rating, string Reason = "", string Note = "");
 
 internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackRequest>
@@ -20,7 +20,7 @@ internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackReques
 
     public FeedbackRequestValidator()
     {
-        RuleFor(x => x.Rating).InclusiveBetween(-1, 1);
+        RuleFor(x => x.Rating).Must(x => x is 1 or -1).WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.Reason).Must(x => x is "" or "incorrect" or "citation" or "incomplete" or "format" or "other").WithErrorCode(RuleCode.Unknown);
         RuleFor(x => x.Note).OptionalContent(2000);
     }
@@ -31,10 +31,10 @@ internal sealed class SaveMessageFeedback(AppDbContext db, TimeProvider clock) :
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
+            handler.HandleAsync(user.Id, id, body, ct))
         .Audited(QualityAudit.FeedbackUpdated);
 
-    public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
+    public async Task<Result<FeedbackDto>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {
         var source = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where m.Id == message && m.Role == "assistant" && c.OwnerId == actor select new { Message = m, Conversation = c }).SingleOrDefaultAsync(ct);
         if (source is null) return QualityErrors.ItemMissing;
@@ -43,11 +43,10 @@ internal sealed class SaveMessageFeedback(AppDbContext db, TimeProvider clock) :
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await db.LockUserRowAsync(actor, ct);
         var row = await db.MessageFeedback.FindAsync([message], ct);
-        if (request.Rating == 0) { if (row is not null) db.Remove(row); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return new FeedbackOutcome(null); }
         if (row is null) { row = new() { MessageId = message, OwnerId = actor }; db.Add(row); }
         row.Rating = request.Rating; row.Reason = request.Reason; row.Note = request.Note.Trim(); row.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-        return new FeedbackOutcome(new(message, source.Conversation.Id, source.Conversation.Title, row.Rating, row.Reason, row.Note, row.UpdatedAt));
+        return new FeedbackDto(message, source.Conversation.Id, source.Conversation.Title, row.Rating, row.Reason, row.Note, row.UpdatedAt);
     }
 }

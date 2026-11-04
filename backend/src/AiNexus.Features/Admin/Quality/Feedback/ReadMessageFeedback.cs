@@ -3,17 +3,22 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Quality.Feedback;
 
-/// <summary>使用者對自己對話中單則回答的評分；尚未評分時回 200 空內容。</summary>
+/// <summary>使用者對自己對話中單則回答的評分；尚未評分時回 204。</summary>
 internal sealed class ReadMessageFeedback(AppDbContext db) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/feedback", (Guid id, ICurrentUser user, ReadMessageFeedback handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(found => TypedResults.Ok(found.Feedback)))
+            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync(Respond))
         .NotAudited("使用者自己對回覆的回饋");
+
+    // 「尚未評分」是正常狀態，不是找不到：回 204，契約才同時寫出 200 的內容與 204，前端不必解析空的 200。
+    private static Results<Ok<FeedbackDto>, NoContent> Respond(FeedbackOutcome found)
+        => found.Feedback is { } feedback ? TypedResults.Ok(feedback) : TypedResults.NoContent();
 
     public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
