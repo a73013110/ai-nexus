@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Files;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Billing.Reports;
 using AiNexus.Features.Platform.Inference.Models;
@@ -28,11 +29,12 @@ internal sealed class GetAdminUsage(AppDbContext db, IActiveUsers activeUsers, U
         var providers = await catalog.ProviderStatusesAsync(ct);
         var users = await activeUsers.Ids.CountAsync(ct);
         var activeOwners = await reports.ActiveOwnersAsync(ct);
-        var storedBytes = await db.Attachments.SumAsync(x => x.Size, ct);
-        var storedFiles = await db.Attachments.CountAsync(ct);
+        // 與儲存空間監控同一口徑：只計已寫入完成的原檔，上傳中與刪除中的列不算。
+        var stored = await db.Attachments.AsNoTracking().Where(x => x.StorageState == AttachmentStates.Ready).GroupBy(x => 1)
+            .Select(g => new { Files = g.Count(), Bytes = g.Sum(x => x.Size) }).SingleOrDefaultAsync(ct);
         var kinds = await reports.PlatformKindsAsync(ct);
         return new(users, totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, totals.TotalDurationMilliseconds, totals.TimedRequests,
-            activeOwners, totals.Failed, totals.Cancelled, storedBytes, storedFiles,
+            activeOwners, totals.Failed, totals.Cancelled, stored?.Bytes ?? 0, stored?.Files ?? 0,
             models, kinds, providers, search.Status, reports.Since, clock.GetUtcNow());
     }
 }
