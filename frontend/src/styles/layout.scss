@@ -63,7 +63,7 @@ nx-feature-page {
 }
 :is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body) > *,
 :is(.feature-content, .ui-table-fill, .ui-drawer-sections, .dialog-body)
-  > :is(nx-notice, nx-query-bar, nx-view-switch, nx-filter-panel) {
+  > :is(nx-notice, nx-query-bar, nx-view-switch) {
   margin-block: 0;
 }
 // 只放 top layer 內容（對話框、popover、確認框）的元件與沒有內容的元件不佔位置，免得多出一段 gap。

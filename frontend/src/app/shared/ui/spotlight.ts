@@ -2,8 +2,7 @@ import { DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 
 /**
  * 追蹤表面上的指標：寫入 `--spot-x`／`--spot-y`（像素）與 `data-spot`，讓表面能在游標下繪製光線。
- * 樣式屬於宿主；這裡只
- * 每幀量測一次。觸控時表面不亮起。
+ * 樣式屬於宿主；這裡只負責量測，每幀最多一次。觸控時表面不亮起。
  */
 @Directive({ selector: '[nxSpotlight]' })
 export class Spotlight {
